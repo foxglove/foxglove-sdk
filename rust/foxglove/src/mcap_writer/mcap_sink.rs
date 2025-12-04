@@ -1,6 +1,6 @@
 //! Synchronous [`Sink`] implementation for an MCAP writer.
 
-use crate::{ChannelId, FoxgloveError, Metadata, RawChannel, Sink, SinkChannelFilter, SinkId};
+use crate::{ChannelDescriptor, ChannelId, FoxgloveError, Metadata, RawChannel, Sink, SinkChannelFilter, SinkId};
 use mcap::WriteOptions;
 use parking_lot::Mutex;
 use std::collections::hash_map::Entry;
@@ -9,7 +9,63 @@ use std::fmt::Debug;
 use std::io::{Seek, Write};
 use std::sync::Arc;
 
-type McapChannelId = u16;
+pub(super) type McapChannelId = u16;
+
+/// Writes a log message to an MCAP writer, handling channel registration and sequencing.
+///
+/// This is shared between sync and nonblocking sinks.
+pub(super) fn write_message<W: Write + Seek>(
+    writer: &mut mcap::Writer<W>,
+    channel_map: &mut HashMap<ChannelId, Option<McapChannelId>>,
+    channel_seq: &mut HashMap<McapChannelId, u32>,
+    descriptor: &ChannelDescriptor,
+    msg: &[u8],
+    metadata: &Metadata,
+) -> Result<(), FoxgloveError> {
+    let mcap_channel_id = match channel_map.entry(descriptor.id()) {
+        Entry::Occupied(e) => *e.get(),
+        Entry::Vacant(e) => {
+            let schema_id = if let Some(schema) = descriptor.schema() {
+                writer
+                    .add_schema(&schema.name, &schema.encoding, &schema.data)
+                    .map_err(FoxgloveError::from)?
+            } else {
+                0
+            };
+            let mcap_channel_id = writer
+                .add_channel(
+                    schema_id,
+                    descriptor.topic(),
+                    descriptor.message_encoding(),
+                    descriptor.metadata(),
+                )
+                .map_err(FoxgloveError::from)?;
+            e.insert(Some(mcap_channel_id));
+            Some(mcap_channel_id)
+        }
+    };
+
+    let Some(mcap_channel_id) = mcap_channel_id else {
+        return Ok(());
+    };
+
+    let seq = channel_seq
+        .entry(mcap_channel_id)
+        .and_modify(|s| *s += 1)
+        .or_insert(1);
+
+    writer
+        .write_to_known_channel(
+            &mcap::records::MessageHeader {
+                channel_id: mcap_channel_id,
+                sequence: *seq,
+                log_time: metadata.log_time,
+                publish_time: metadata.log_time,
+            },
+            msg,
+        )
+        .map_err(FoxgloveError::from)
+}
 
 struct WriterState<W: Write + Seek> {
     writer: mcap::Writer<W>,
@@ -115,7 +171,7 @@ impl<W: Write + Seek + Send> Debug for McapSink<W> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("McapSink")
             .field("sink_id", &self.sink_id)
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 
@@ -125,13 +181,12 @@ impl<W: Write + Seek + Send> McapSink<W> {
         writer: W,
         options: WriteOptions,
         channel_filter: Option<Arc<dyn SinkChannelFilter>>,
-    ) -> Result<Arc<McapSink<W>>, FoxgloveError> {
+    ) -> Result<Self, FoxgloveError> {
         let mcap_writer = options.create(writer).map_err(FoxgloveError::from)?;
-        let writer = Arc::new(Self {
+        Ok(Self {
             sink_id: SinkId::next(),
             inner: Mutex::new(Some(WriterState::new(mcap_writer, channel_filter))),
-        });
-        Ok(writer)
+        })
     }
 
     /// Finalizes the MCAP recording and flushes it to the file.

@@ -8,28 +8,25 @@ use std::{fmt::Debug, io::Write};
 
 use crate::library_version::get_library_version;
 use crate::sink_channel_filter::SinkChannelFilterFn;
-use crate::{ChannelDescriptor, Context, FoxgloveError, Sink, SinkChannelFilter, SinkId};
+use crate::{ChannelDescriptor, Context, FoxgloveError, Metadata, RawChannel, Sink, SinkChannelFilter, SinkId};
 
 /// Compression options for content in an MCAP file
 pub use mcap::Compression as McapCompression;
 /// Options for use with an [`McapWriter`][crate::McapWriter].
 pub use mcap::WriteOptions as McapWriteOptions;
 
-#[cfg(feature = "live_visualization")]
-mod async_mcap_sink;
 mod mcap_sink;
+mod nonblocking_mcap_sink;
 
-#[cfg(feature = "live_visualization")]
-use async_mcap_sink::AsyncMcapSink;
 use mcap_sink::McapSink;
+use nonblocking_mcap_sink::NonblockingMcapSink;
 
 /// An MCAP writer for logging events.
 ///
 /// ### Methods
 ///
-/// - [`create`](McapWriter::create) - Synchronous. Writes directly, may block on disk I/O.
-/// - [`create_async`](McapWriter::create_async) - Asynchronous. Queues writes to a background task, never blocks.
-///   Requires the `live_visualization` feature.
+/// - [`create`](McapWriter::create) - Synchronous. Writes to file directly, may block if involving disk I/O.
+/// - [`create_nonblocking`](McapWriter::create_nonblocking) - Nonblocking. Queues writes to a background thread, never blocks.
 /// - [`create_new_buffered_file`](McapWriter::create_new_buffered_file) - Synchronous.
 ///   Writes to a BufWriter, may block on disk I/O.
 ///
@@ -106,8 +103,8 @@ impl McapWriter {
     ///
     /// Each `log()` call writes directly to the file, which may block if the disk is slow.
     ///
-    /// For high-throughput or real-time applications, consider using [`McapWriter::create_async`]
-    /// instead, which queues writes and processes them in a background task.
+    /// For high-throughput or real-time applications, consider using [`McapWriter::create_nonblocking`]
+    /// instead, which queues writes and processes them in a background thread.
     ///
     /// Returns a handle. When the handle is dropped, the recording will be flushed to the writer
     /// and closed. Alternatively, the caller may choose to call [`McapWriterHandle::close`] to
@@ -117,28 +114,29 @@ impl McapWriter {
         W: Write + Seek + Send + 'static,
     {
         let mcap_sink = McapSink::new(writer, self.options, self.channel_filter)?;
-        self.context.add_sink(mcap_sink.clone());
+        let sink = Arc::new(SinkKind::Sync(mcap_sink));
+        self.context.add_sink(sink.clone());
         Ok(McapWriterHandle {
-            sink: SinkKind::Sync(mcap_sink),
+            sink,
             context: Arc::downgrade(&self.context),
         })
     }
 
-    /// Begins logging events to the specified writer (asynchronous).
+    /// Begins logging events to the specified writer (nonblocking).
     ///
-    /// Messages are queued and written by a background tokio task.
+    /// Messages are queued and written by a background thread.
     /// The `log()` method returns immediately without blocking on disk I/O.
     ///
-    /// **Note:** If the queue fills up, new messages are dropped.
-    #[cfg(feature = "live_visualization")]
-    pub fn create_async<W>(self, writer: W) -> Result<McapWriterHandle<W>, FoxgloveError>
+    /// **Note:** If the queue fills up, new messages are dropped silently.
+    pub fn create_nonblocking<W>(self, writer: W) -> Result<McapWriterHandle<W>, FoxgloveError>
     where
         W: Write + Seek + Send + 'static,
     {
-        let async_sink = AsyncMcapSink::new(writer, self.options, self.channel_filter)?;
-        self.context.add_sink(async_sink.clone());
+        let nonblocking_sink = NonblockingMcapSink::new(writer, self.options, self.channel_filter)?;
+        let sink = Arc::new(SinkKind::Nonblocking(nonblocking_sink));
+        self.context.add_sink(sink.clone());
         Ok(McapWriterHandle {
-            sink: SinkKind::Async(async_sink),
+            sink,
             context: Arc::downgrade(&self.context),
         })
     }
@@ -163,19 +161,45 @@ impl McapWriter {
     }
 }
 
-/// The kind of sink (sync or async) backing the writer handle.
+/// The kind of sink (sync or nonblocking) backing the writer handle.
+#[derive(Debug)]
 enum SinkKind<W: Write + Seek + Send + 'static> {
-    Sync(Arc<McapSink<W>>),
-    #[cfg(feature = "live_visualization")]
-    Async(Arc<AsyncMcapSink<W>>),
+    Sync(McapSink<W>),
+    Nonblocking(NonblockingMcapSink<W>),
 }
 
 impl<W: Write + Seek + Send + 'static> SinkKind<W> {
+    fn finish(&self) -> Result<W, FoxgloveError> {
+        match self {
+            SinkKind::Sync(sink) => sink.finish().map(|w| w.expect("not finished")),
+            SinkKind::Nonblocking(sink) => sink.finish(),
+        }
+    }
+
+    fn write_metadata(
+        &self,
+        name: &str,
+        metadata: std::collections::BTreeMap<String, String>,
+    ) -> Result<(), FoxgloveError> {
+        match self {
+            SinkKind::Sync(sink) => sink.write_metadata(name, metadata),
+            SinkKind::Nonblocking(sink) => sink.write_metadata(name, metadata),
+        }
+    }
+}
+
+impl<W: Write + Seek + Send + 'static> Sink for SinkKind<W> {
     fn id(&self) -> SinkId {
         match self {
             SinkKind::Sync(sink) => sink.id(),
-            #[cfg(feature = "live_visualization")]
-            SinkKind::Async(sink) => sink.id(),
+            SinkKind::Nonblocking(sink) => sink.id(),
+        }
+    }
+
+    fn log(&self, channel: &RawChannel, msg: &[u8], metadata: &Metadata) -> Result<(), FoxgloveError> {
+        match self {
+            SinkKind::Sync(sink) => sink.log(channel, msg, metadata),
+            SinkKind::Nonblocking(sink) => sink.log(channel, msg, metadata),
         }
     }
 }
@@ -185,28 +209,19 @@ impl<W: Write + Seek + Send + 'static> SinkKind<W> {
 /// When dropped, it will unregister from the [`Context`], stop logging
 /// events, and flush any buffered data to the writer.
 #[must_use]
+#[derive(Debug)]
 pub struct McapWriterHandle<W: Write + Seek + Send + 'static> {
-    sink: SinkKind<W>,
+    sink: Arc<SinkKind<W>>,
     context: Weak<Context>,
-}
-
-impl<W: Write + Seek + Send + 'static> Debug for McapWriterHandle<W> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("McapWriterHandle").finish_non_exhaustive()
-    }
 }
 
 impl<W: Write + Seek + Send + 'static> McapWriterHandle<W> {
     /// Stops logging events, flushes buffered data, and returns the writer.
     ///
-    /// This method blocks until all writes are complete (for both sync and async writers).
+    /// This method blocks until all writes are complete (for both sync and nonblocking writers).
     pub fn close(self) -> Result<W, FoxgloveError> {
         self.remove_from_context();
-        match &self.sink {
-            SinkKind::Sync(sink) => sink.finish().map(|w| w.expect("not finished")),
-            #[cfg(feature = "live_visualization")]
-            SinkKind::Async(sink) => sink.finish_blocking(),
-        }
+        self.sink.finish()
     }
 
     /// Writes MCAP metadata to the file.
@@ -222,11 +237,7 @@ impl<W: Write + Seek + Send + 'static> McapWriterHandle<W> {
         name: &str,
         metadata: std::collections::BTreeMap<String, String>,
     ) -> Result<(), FoxgloveError> {
-        match &self.sink {
-            SinkKind::Sync(sink) => sink.write_metadata(name, metadata),
-            #[cfg(feature = "live_visualization")]
-            SinkKind::Async(sink) => sink.write_metadata(name, metadata),
-        }
+        self.sink.write_metadata(name, metadata)
     }
 
     /// Removes this sink from the context (if context still exists).
