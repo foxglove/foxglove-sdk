@@ -8,7 +8,7 @@ use std::{fmt::Debug, io::Write};
 
 use crate::library_version::get_library_version;
 use crate::sink_channel_filter::SinkChannelFilterFn;
-use crate::{ChannelDescriptor, Context, FoxgloveError, Metadata, RawChannel, Sink, SinkChannelFilter, SinkId};
+use crate::{ChannelDescriptor, Context, FoxgloveError, Sink, SinkChannelFilter, SinkId};
 
 /// Compression options for content in an MCAP file
 pub use mcap::Compression as McapCompression;
@@ -113,11 +113,10 @@ impl McapWriter {
     where
         W: Write + Seek + Send + 'static,
     {
-        let mcap_sink = McapSink::new(writer, self.options, self.channel_filter)?;
-        let sink = Arc::new(SinkKind::Sync(mcap_sink));
-        self.context.add_sink(sink.clone());
+        let mcap_sink = Arc::new(McapSink::new(writer, self.options, self.channel_filter)?);
+        self.context.add_sink(mcap_sink.clone()); // Register directly, no SinkKind wrapper
         Ok(McapWriterHandle {
-            sink,
+            sink: SinkKind::Sync(mcap_sink),
             context: Arc::downgrade(&self.context),
         })
     }
@@ -127,16 +126,44 @@ impl McapWriter {
     /// Messages are queued and written by a background thread.
     /// The `log()` method returns immediately without blocking on disk I/O.
     ///
+    /// Uses the default queue capacity (1024). For custom capacity, use
+    /// [`create_nonblocking_with_capacity`](Self::create_nonblocking_with_capacity).
+    ///
     /// **Note:** If the queue fills up, new messages are dropped silently.
     pub fn create_nonblocking<W>(self, writer: W) -> Result<McapWriterHandle<W>, FoxgloveError>
     where
         W: Write + Seek + Send + 'static,
     {
-        let nonblocking_sink = NonblockingMcapSink::new(writer, self.options, self.channel_filter)?;
-        let sink = Arc::new(SinkKind::Nonblocking(nonblocking_sink));
-        self.context.add_sink(sink.clone());
+        self.create_nonblocking_with_capacity(writer, None)
+    }
+
+    /// Begins logging events to the specified writer (nonblocking) with custom queue capacity.
+    ///
+    /// Messages are queued and written by a background thread.
+    /// The `log()` method returns immediately without blocking on disk I/O.
+    ///
+    /// # Arguments
+    /// * `writer` - The underlying writer to write MCAP data to
+    /// * `queue_capacity` - Max messages to buffer before dropping. `None` uses default (1024).
+    ///
+    /// **Note:** If the queue fills up, new messages are dropped silently.
+    pub fn create_nonblocking_with_capacity<W>(
+        self,
+        writer: W,
+        queue_capacity: Option<usize>,
+    ) -> Result<McapWriterHandle<W>, FoxgloveError>
+    where
+        W: Write + Seek + Send + 'static,
+    {
+        let nonblocking_sink = Arc::new(NonblockingMcapSink::new(
+            writer,
+            self.options,
+            self.channel_filter,
+            queue_capacity,
+        )?);
+        self.context.add_sink(nonblocking_sink.clone()); // Register directly, no SinkKind wrapper
         Ok(McapWriterHandle {
-            sink,
+            sink: SinkKind::Nonblocking(nonblocking_sink),
             context: Arc::downgrade(&self.context),
         })
     }
@@ -162,13 +189,23 @@ impl McapWriter {
 }
 
 /// The kind of sink (sync or nonblocking) backing the writer handle.
+///
+/// Note: The inner sinks are registered directly with Context (not wrapped in SinkKind),
+/// so Context.log() dispatches directly to the sink without an extra enum match.
 #[derive(Debug)]
 enum SinkKind<W: Write + Seek + Send + 'static> {
-    Sync(McapSink<W>),
-    Nonblocking(NonblockingMcapSink<W>),
+    Sync(Arc<McapSink<W>>),
+    Nonblocking(Arc<NonblockingMcapSink<W>>),
 }
 
 impl<W: Write + Seek + Send + 'static> SinkKind<W> {
+    fn id(&self) -> SinkId {
+        match self {
+            SinkKind::Sync(sink) => sink.id(),
+            SinkKind::Nonblocking(sink) => sink.id(),
+        }
+    }
+
     fn finish(&self) -> Result<W, FoxgloveError> {
         match self {
             SinkKind::Sync(sink) => sink.finish().map(|w| w.expect("not finished")),
@@ -188,22 +225,6 @@ impl<W: Write + Seek + Send + 'static> SinkKind<W> {
     }
 }
 
-impl<W: Write + Seek + Send + 'static> Sink for SinkKind<W> {
-    fn id(&self) -> SinkId {
-        match self {
-            SinkKind::Sync(sink) => sink.id(),
-            SinkKind::Nonblocking(sink) => sink.id(),
-        }
-    }
-
-    fn log(&self, channel: &RawChannel, msg: &[u8], metadata: &Metadata) -> Result<(), FoxgloveError> {
-        match self {
-            SinkKind::Sync(sink) => sink.log(channel, msg, metadata),
-            SinkKind::Nonblocking(sink) => sink.log(channel, msg, metadata),
-        }
-    }
-}
-
 /// A handle to an MCAP file writer.
 ///
 /// When dropped, it will unregister from the [`Context`], stop logging
@@ -211,7 +232,7 @@ impl<W: Write + Seek + Send + 'static> Sink for SinkKind<W> {
 #[must_use]
 #[derive(Debug)]
 pub struct McapWriterHandle<W: Write + Seek + Send + 'static> {
-    sink: Arc<SinkKind<W>>,
+    sink: SinkKind<W>,
     context: Weak<Context>,
 }
 

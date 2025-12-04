@@ -7,11 +7,11 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc;
 use std::sync::Arc;
 
-use super::mcap_sink::{write_message, McapChannelId};
-use crate::{ChannelDescriptor, ChannelId, FoxgloveError, Metadata, RawChannel, Sink, SinkChannelFilter, SinkId};
+use super::mcap_sink::write_message;
+use crate::{ChannelDescriptor, FoxgloveError, Metadata, RawChannel, Sink, SinkChannelFilter, SinkId};
 
-/// Maximum number of messages that can be queued before new messages are dropped.
-const QUEUE_CAPACITY: usize = 1024;
+/// Default maximum number of messages that can be queued before new messages are dropped.
+const DEFAULT_QUEUE_CAPACITY: usize = 1024;
 
 /// A queued log message.
 struct QueuedLog {
@@ -32,8 +32,8 @@ fn run_writer_thread<W: Write + Seek>(
     rx: flume::Receiver<WriteCommand<W>>,
     mut writer: mcap::Writer<W>,
 ) {
-    let mut channel_map: HashMap<ChannelId, Option<McapChannelId>> = HashMap::new();
-    let mut channel_seq: HashMap<McapChannelId, u32> = HashMap::new();
+    let mut channel_map = HashMap::new();
+    let mut channel_seq = HashMap::new();
 
     while let Ok(cmd) = rx.recv() {
         match cmd {
@@ -87,13 +87,17 @@ impl<W: Write + Seek + Send + 'static> Debug for NonblockingMcapSink<W> {
 
 impl<W: Write + Seek + Send + 'static> NonblockingMcapSink<W> {
     /// Creates a new nonblocking sink. Spawns a background thread for writes.
+    ///
+    /// If `queue_capacity` is `None`, uses the default capacity (1024).
     pub fn new(
         writer: W,
         options: mcap::WriteOptions,
         channel_filter: Option<Arc<dyn SinkChannelFilter>>,
+        queue_capacity: Option<usize>,
     ) -> Result<Self, FoxgloveError> {
         let mcap_writer = options.create(writer)?;
-        let (tx, rx) = flume::bounded::<WriteCommand<W>>(QUEUE_CAPACITY);
+        let capacity = queue_capacity.unwrap_or(DEFAULT_QUEUE_CAPACITY);
+        let (tx, rx) = flume::bounded::<WriteCommand<W>>(capacity);
 
         std::thread::spawn(move || {
             run_writer_thread(rx, mcap_writer);
@@ -208,7 +212,7 @@ mod tests {
         let temp_path = temp_file.path().to_owned();
         let file = temp_file.reopen().expect("reopen");
 
-        let sink = NonblockingMcapSink::new(file, WriteOptions::default(), None)
+        let sink = NonblockingMcapSink::new(file, WriteOptions::default(), None, None)
             .expect("failed to create sink");
 
         sink.log(&ch1, b"msg1", &Metadata { log_time: 100 }).unwrap();
@@ -238,7 +242,7 @@ mod tests {
         let ch = new_test_channel(&ctx, "test", "schema");
 
         {
-            let sink = NonblockingMcapSink::new(file, WriteOptions::default(), None)
+            let sink = NonblockingMcapSink::new(file, WriteOptions::default(), None, None)
                 .expect("failed to create sink");
 
             sink.log(&ch, b"drop_test", &Metadata { log_time: 99 }).unwrap();
@@ -254,7 +258,7 @@ mod tests {
     ///
     /// Run with: cargo test -p foxglove stress_test --release -- --ignored --nocapture
     #[test]
-    #[ignore] // Run manually with --ignored flag
+    #[ignore]
     fn stress_test_sync_vs_nonblocking() {
         use crate::mcap_writer::mcap_sink::McapSink;
         use std::time::Instant;
@@ -268,7 +272,7 @@ mod tests {
         // =====================================================================
         // TEST 1: Small batch (fits in queue) - fair comparison
         // =====================================================================
-        const SMALL_BATCH: usize = QUEUE_CAPACITY / 2; // Less than queue size
+        const SMALL_BATCH: usize = DEFAULT_QUEUE_CAPACITY / 2; // Less than queue size
 
         let temp_sync = NamedTempFile::new().expect("create tempfile");
         let sync_sink = McapSink::new(
@@ -291,6 +295,7 @@ mod tests {
             temp_nonblocking.reopen().expect("reopen"),
             WriteOptions::default(),
             None,
+            None,
         ).expect("create nonblocking sink");
 
         let nonblocking_start = Instant::now();
@@ -311,7 +316,7 @@ mod tests {
         // =====================================================================
         // TEST 2: Large batch (exceeds queue) - shows drop behavior
         // =====================================================================
-        const LARGE_BATCH: usize = 100_000; // Much larger than QUEUE_CAPACITY
+        const LARGE_BATCH: usize = 10_000; // Larger than DEFAULT_QUEUE_CAPACITY but reasonable
 
         let temp_sync2 = NamedTempFile::new().expect("create tempfile");
         let sync_sink2 = McapSink::new(
@@ -334,6 +339,7 @@ mod tests {
             temp_nonblocking2.reopen().expect("reopen"),
             WriteOptions::default(),
             None,
+            None,
         ).expect("create nonblocking sink");
 
         let nonblocking_start2 = Instant::now();
@@ -345,7 +351,7 @@ mod tests {
         let nonblocking_total_time2 = nonblocking_start2.elapsed();
         let nonblocking_count2 = read_mcap_messages(temp_nonblocking2.path()).len();
 
-        println!("TEST 2: Large batch ({} messages x 1KB, exceeds queue of {})", LARGE_BATCH, QUEUE_CAPACITY);
+        println!("TEST 2: Large batch ({} messages x 1KB, exceeds queue of {})", LARGE_BATCH, DEFAULT_QUEUE_CAPACITY);
         println!("  SYNC:        log={:?}, total={:?}, wrote {} msgs", sync_log_time2, sync_total_time2, sync_count2);
         println!("  NONBLOCKING: log={:?}, total={:?}, wrote {} msgs (DROPPED {})",
             nonblocking_log_time2, nonblocking_total_time2, nonblocking_count2, LARGE_BATCH - nonblocking_count2);
