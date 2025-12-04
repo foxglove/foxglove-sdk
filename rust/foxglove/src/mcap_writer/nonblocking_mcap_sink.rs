@@ -95,7 +95,7 @@ impl<W: Write + Seek + Send + 'static> NonblockingMcapSink<W> {
         let mcap_writer = options.create(writer)?;
         let (tx, rx) = flume::bounded::<WriteCommand<W>>(QUEUE_CAPACITY);
 
-        tokio::task::spawn_blocking(move || {
+        std::thread::spawn(move || {
             run_writer_thread(rx, mcap_writer);
         });
 
@@ -198,8 +198,8 @@ mod tests {
     }
 
     /// Tests that messages are correctly logged to multiple channels.
-    #[tokio::test]
-    async fn test_nonblocking_log_channels() {
+    #[test]
+    fn test_nonblocking_log_channels() {
         let ctx = Context::new();
         let ch1 = new_test_channel(&ctx, "foo", "foo_schema");
         let ch2 = new_test_channel(&ctx, "bar", "bar_schema");
@@ -228,8 +228,8 @@ mod tests {
     }
 
     /// Tests that dropping the sink without calling finish still produces a valid file.
-    #[tokio::test]
-    async fn test_nonblocking_drop_finishes_file() {
+    #[test]
+    fn test_nonblocking_drop_finishes_file() {
         let temp_file = NamedTempFile::new().expect("create tempfile");
         let temp_path = temp_file.path().to_owned();
         let file = temp_file.reopen().expect("reopen");
@@ -253,9 +253,9 @@ mod tests {
     /// Stress test comparing sync vs nonblocking write performance.
     ///
     /// Run with: cargo test -p foxglove stress_test --release -- --ignored --nocapture
-    #[tokio::test]
+    #[test]
     #[ignore] // Run manually with --ignored flag
-    async fn stress_test_sync_vs_nonblocking() {
+    fn stress_test_sync_vs_nonblocking() {
         use crate::mcap_writer::mcap_sink::McapSink;
         use std::time::Instant;
 
