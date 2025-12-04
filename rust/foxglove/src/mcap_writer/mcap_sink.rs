@@ -12,8 +12,6 @@ use std::sync::Arc;
 pub(super) type McapChannelId = u16;
 
 /// Writes a log message to an MCAP writer, handling channel registration and sequencing.
-///
-/// This is shared between sync and nonblocking sinks.
 pub(super) fn write_message<W: Write + Seek>(
     writer: &mut mcap::Writer<W>,
     channel_map: &mut HashMap<ChannelId, Option<McapChannelId>>,
