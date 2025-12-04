@@ -14,7 +14,6 @@ derive = ["dep:foxglove_derive"]
 agent = ["live_visualization"]
 live_visualization = [
   "dep:base64",
-  "dep:flume",
   "dep:futures-util",
   "dep:tokio",
   "dep:tokio-util",
@@ -45,7 +44,7 @@ bimap = "0.6.3"
 bytes.workspace = true
 chrono = { version = "0.4.39", optional = true }
 delegate = "0.13.2"
-flume = { version = "0.11.1", optional = true }
+flume = "0.11.1"
 foxglove_derive = { version = "0.16.1", path = "../foxglove_derive", optional = true }
 futures-util = { version = "0.3.31", features = ["sink", "std"], optional = true }
 mcap.workspace = true
