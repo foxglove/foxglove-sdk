@@ -179,7 +179,7 @@ foxglove.websocket
 .. Parameter types and values are manually documented since nested classes (values) are not supported by automodule.
 .. automodule:: foxglove.websocket
    :members:
-   :exclude-members: Capability, ParameterType, ParameterValue, StatusLevel, PlaybackCommand, PlaybackControlRequest, PlaybackState, PlaybackStatus
+   :exclude-members: Capability, ParameterType, ParameterValue, StatusLevel 
 
 
 Enums
@@ -212,6 +212,11 @@ Enums
       server publishes time data, then timestamps of published messages must originate from the
       same time source.
 
+   .. py:data:: RangedPlayback
+
+      Indicates that the server is sending data within a fixed time range. 
+
+      This requires supplying the `playback_time_range` arg when starting the server and implementing the :py:meth:`ServerListener.on_playback_control_request` function.
 
 .. py:enum:: StatusLevel
 

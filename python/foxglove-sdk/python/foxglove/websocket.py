@@ -186,7 +186,6 @@ class ServerListener(Protocol):
 
         Requires :py:data:`Capability.RangedPlayback`.
 
-        :meta private:
         :param playback_control_request: The playback control request sent from the client
         """
         return None
