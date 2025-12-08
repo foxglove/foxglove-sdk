@@ -179,7 +179,7 @@ foxglove.websocket
 .. Parameter types and values are manually documented since nested classes (values) are not supported by automodule.
 .. automodule:: foxglove.websocket
    :members:
-   :exclude-members: Capability, ParameterType, ParameterValue, StatusLevel
+   :exclude-members: Capability, ParameterType, ParameterValue, StatusLevel, PlaybackCommand, PlaybackControlRequest, PlaybackState, PlaybackStatus
 
 
 Enums
@@ -211,6 +211,7 @@ Enums
       This allows accelerated, slowed, or stepped control over the progress of time. If the
       server publishes time data, then timestamps of published messages must originate from the
       same time source.
+
 
 .. py:enum:: StatusLevel
 

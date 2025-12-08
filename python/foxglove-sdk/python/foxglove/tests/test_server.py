@@ -1,4 +1,5 @@
 import time
+import typing
 from urllib.parse import parse_qs, urlparse
 
 import pytest
@@ -10,7 +11,7 @@ from foxglove import (
     Service,
     start_server,
 )
-from foxglove.websocket import ServiceSchema, StatusLevel
+from foxglove.websocket import PlaybackState, PlaybackStatus, ServiceSchema, StatusLevel
 
 
 def test_server_interface() -> None:
@@ -47,6 +48,15 @@ def test_server_interface() -> None:
 
     server.publish_status("test message", StatusLevel.Info, "some-id")
     server.broadcast_time(time.time_ns())
+    server.broadcast_playback_state(
+        PlaybackState(
+            status=PlaybackStatus.Paused,
+            playback_speed=1.0,
+            current_time=time.time_ns(),
+            did_seek=False,
+            request_id=None,
+        )
+    )
     server.remove_status(["some-id"])
     server.clear_session("new-session")
     server.stop()
@@ -110,3 +120,22 @@ def test_context_can_be_attached_to_server() -> None:
 
     server1.stop()
     server2.stop()
+
+
+@typing.no_type_check
+def test_server_with_invalid_playback_time_range() -> None:
+    with pytest.raises(TypeError):
+        # Tuple of a single element
+        start_server(port=0, playback_time_range=(123,))
+
+    with pytest.raises(TypeError):
+        # Tuple with invalid types
+        start_server(port=0, playback_time_range=("not-a-time", None))
+
+    with pytest.raises(TypeError):
+        # Not a tuple
+        start_server(port=0, playback_time_range=23443)
+
+    with pytest.raises(TypeError):
+        # Tuple with too many elements
+        start_server(port=0, playback_time_range=(123, 456, 789))
