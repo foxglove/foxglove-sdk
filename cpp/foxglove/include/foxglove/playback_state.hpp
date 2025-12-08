@@ -6,8 +6,6 @@
 #include <string>
 
 namespace foxglove {
-/// @cond foxglove_internal
-
 /// @brief The status of server data playback
 enum class PlaybackStatus : uint8_t {
   /// Playing at the requested playback speed
@@ -42,6 +40,4 @@ public:
   /// changed by any other condition.
   std::optional<std::string> request_id;
 };
-
-/// @endcond
 }  // namespace foxglove

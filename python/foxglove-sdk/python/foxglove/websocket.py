@@ -183,10 +183,11 @@ class ServerListener(Protocol):
     ) -> Optional[PlaybackState]:
         """
         Called by the server when it receives an updated player state from the client.
+        Return a :py:class:`PlaybackState` to broadcast the new status immediately, or ``None`` to
+        defer sending a response.
 
         Requires :py:data:`Capability.RangedPlayback`.
 
-        :meta private:
         :param playback_control_request: The playback control request sent from the client
         """
         return None

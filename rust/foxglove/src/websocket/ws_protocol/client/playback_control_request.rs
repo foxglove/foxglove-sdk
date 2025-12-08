@@ -4,7 +4,7 @@ use crate::websocket::ws_protocol::{BinaryMessage, ParseError};
 
 use super::BinaryOpcode;
 
-#[doc(hidden)]
+/// Command included in a playback control request.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum PlaybackCommand {
@@ -23,8 +23,7 @@ impl TryFrom<u8> for PlaybackCommand {
     }
 }
 
-#[doc(hidden)]
-/// A request to control playback from the client
+/// A request to control playback from the client.
 #[derive(Debug, Clone, PartialEq)]
 pub struct PlaybackControlRequest {
     /// Playback command
