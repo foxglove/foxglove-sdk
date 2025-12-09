@@ -12,6 +12,7 @@ default = ["derive", "live_visualization", "lz4", "zstd"]
 chrono = ["dep:chrono"]
 derive = ["dep:foxglove_derive"]
 agent = ["live_visualization"]
+agent_unstable = ["agent", "dep:foxglove_agent"]
 live_visualization = [
   "dep:base64",
   "dep:flume",
@@ -47,6 +48,7 @@ chrono = { version = "0.4.39", optional = true }
 delegate = "0.13.2"
 flume = { version = "0.11.1", optional = true }
 foxglove_derive = { version = "0.16.1", path = "../foxglove_derive", optional = true }
+foxglove_agent = { path = "../foxglove_agent", optional = true }
 futures-util = { version = "0.3.31", features = ["sink", "std"], optional = true }
 mcap.workspace = true
 parking_lot = "0.12.4"
