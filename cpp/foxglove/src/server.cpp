@@ -366,7 +366,6 @@ void WebSocketServer::broadcastTime(uint64_t timestamp_nanos) const noexcept {
   foxglove_server_broadcast_time(impl_.get(), timestamp_nanos);
 }
 
-/// @cond foxglove_internal
 void WebSocketServer::broadcastPlaybackState(const PlaybackState& playback_state) const noexcept {
   foxglove_playback_state c_playback_state_ptr;
   c_playback_state_ptr.status = static_cast<uint8_t>(playback_state.status);
@@ -382,7 +381,6 @@ void WebSocketServer::broadcastPlaybackState(const PlaybackState& playback_state
   }
   foxglove_server_broadcast_playback_state(impl_.get(), &c_playback_state_ptr);
 }
-/// @endcond
 
 FoxgloveError WebSocketServer::clearSession(std::optional<std::string_view> session_id
 ) const noexcept {

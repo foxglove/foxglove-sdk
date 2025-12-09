@@ -326,7 +326,6 @@ impl WebSocketServerHandle {
     /// Publish the current playback state to all clients.
     ///
     /// Requires the [`RangedPlayback`](crate::websocket::Capability::Time) capability.
-    #[doc(hidden)]
     pub fn broadcast_playback_state(&self, playback_state: PlaybackState) {
         self.0.broadcast_playback_state(playback_state);
     }

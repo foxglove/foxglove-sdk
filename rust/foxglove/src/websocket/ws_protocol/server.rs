@@ -11,7 +11,6 @@ pub mod connection_graph_update;
 pub mod fetch_asset_response;
 mod message_data;
 mod parameter_values;
-#[doc(hidden)]
 pub mod playback_state;
 mod remove_status;
 pub mod server_info;
@@ -28,7 +27,6 @@ pub use connection_graph_update::ConnectionGraphUpdate;
 pub use fetch_asset_response::FetchAssetResponse;
 pub use message_data::MessageData;
 pub use parameter_values::ParameterValues;
-#[doc(hidden)]
 pub use playback_state::PlaybackState;
 pub use remove_status::RemoveStatus;
 pub use server_info::ServerInfo;
