@@ -131,7 +131,7 @@ public:
         // current time and playback index to the start of the data buffer, and enter a Paused
         // state.
         server_->broadcastPlaybackState(
-          {foxglove::PlaybackStatus::Ended, current_time_, playback_speed_, std::nullopt}
+          {foxglove::PlaybackStatus::Ended, current_time_, playback_speed_, false, std::nullopt}
         );
         return;
       }
@@ -167,7 +167,12 @@ public:
       seekInternal(*request.seek_time);
     }
 
-    return currentPlaybackStateInternal();
+    auto playback_state = currentPlaybackStateInternal();
+    if (request.seek_time.has_value()) {
+      playback_state.did_seek = true;
+    }
+
+    return playback_state;
   }
 
   void seek(uint64_t seek_time) {
@@ -218,6 +223,7 @@ private:
       playing_ ? foxglove::PlaybackStatus::Playing : foxglove::PlaybackStatus::Paused,
       current_time_,
       playback_speed_,
+      false,
       std::nullopt,
     };
   }
