@@ -186,16 +186,12 @@ impl<W: Write + Seek + Send> Sink for McapSink<W> {
     }
 
     fn add_channels(&self, channels: &[&Arc<RawChannel>]) -> Option<Vec<ChannelId>> {
-        let Some(filter) = self.channel_filter.as_ref() else {
-            return None;
-        };
-
+        let filter = self.channel_filter.as_ref()?;
         let channel_ids = channels
             .iter()
             .filter(|channel| filter.should_subscribe(channel.descriptor()))
             .map(|channel| channel.id())
             .collect();
-
         Some(channel_ids)
     }
 }
@@ -535,7 +531,6 @@ mod tests {
     #[test]
     fn test_channel_filter() {
         use crate::McapWriter;
-        use std::io::BufWriter;
 
         let ctx = Context::new();
 
@@ -544,14 +539,14 @@ mod tests {
         let writer1 = McapWriter::new()
             .context(&ctx)
             .channel_filter_fn(|channel| channel.topic() == "/2")
-            .create(BufWriter::new(temp_file1))
+            .create(temp_file1)
             .expect("failed to create writer");
 
         let temp_file2 = NamedTempFile::new().expect("failed to create tempfile");
         let temp_path2 = temp_file2.path().to_owned();
         let writer2 = McapWriter::new()
             .context(&ctx)
-            .create(BufWriter::new(temp_file2))
+            .create(temp_file2)
             .expect("failed to create writer");
 
         let ch1 = ChannelBuilder::new("/1")
