@@ -97,6 +97,7 @@ impl StreamMcapListener {
             status: self.status(),
             current_time: self.current_time.load(Ordering::Relaxed),
             playback_speed: self.playback_speed(),
+            did_seek: false,
             request_id: None,
         }
     }
@@ -122,6 +123,7 @@ impl ServerListener for StreamMcapListener {
 
         Some(PlaybackState {
             request_id: Some(request.request_id),
+            did_seek: request.seek_time.is_some(),
             ..self.current_state()
         })
     }
