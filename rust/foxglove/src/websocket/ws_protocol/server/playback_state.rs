@@ -49,6 +49,8 @@ pub struct PlaybackState {
     pub current_time: u64,
     /// The speed of playback, as a factor of realtime
     pub playback_speed: f32,
+    /// Whether a seek forward or backward in time triggered this message to be emitted
+    pub did_seek: bool,
     /// If this message is being emitted in response to a PlaybackControlRequest message, the
     /// request_id from that message. Set this to None if the state of playback has been changed
     /// by any other condition.
@@ -61,10 +63,11 @@ impl<'a> BinaryMessage<'a> for PlaybackState {
     // + status (1 byte)
     // + current_time (8 bytes)
     // + playback_speed (4 bytes)
+    // + did_seek (1 byte)
     // + request_id_len (4 bytes)
     // + request_id
     fn parse_binary(mut data: &'a [u8]) -> Result<Self, ParseError> {
-        const HEADER_LEN: usize = 1 + 8 + 4 + 4;
+        const HEADER_LEN: usize = 1 + 8 + 4 + 1 + 4;
         if data.len() < HEADER_LEN {
             return Err(ParseError::BufferTooShort);
         }
@@ -75,6 +78,7 @@ impl<'a> BinaryMessage<'a> for PlaybackState {
 
         let current_time = data.get_u64_le();
         let playback_speed = data.get_f32_le();
+        let did_seek = data.get_u8() != 0;
         let request_id_len = data.get_u32_le() as usize;
         let request_id = if request_id_len == 0 {
             None
@@ -91,6 +95,7 @@ impl<'a> BinaryMessage<'a> for PlaybackState {
             status,
             current_time,
             playback_speed,
+            did_seek,
             request_id,
         })
     }
@@ -101,11 +106,12 @@ impl<'a> BinaryMessage<'a> for PlaybackState {
             None => 0,
         };
 
-        let mut buf = Vec::with_capacity(1 + 1 + 8 + 4 + 4 + (request_id_len as usize));
+        let mut buf = Vec::with_capacity(1 + 1 + 8 + 4 + 1 + 4 + (request_id_len as usize));
         buf.put_u8(BinaryOpcode::PlaybackState as u8);
         buf.put_u8(self.status as u8);
         buf.put_u64_le(self.current_time);
         buf.put_f32_le(self.playback_speed);
+        buf.put_u8(self.did_seek as u8);
         buf.put_u32_le(request_id_len);
         if let Some(request_id) = &self.request_id {
             buf.put_slice(request_id.as_bytes());
@@ -127,6 +133,19 @@ mod tests {
         let message = PlaybackState {
             status: PlaybackStatus::Playing,
             playback_speed: 1.0,
+            did_seek: false,
+            current_time: 12345,
+            request_id: None,
+        };
+        insta::assert_snapshot!(format!("{:#04x?}", message.to_bytes()));
+    }
+
+    #[test]
+    fn test_encode_did_seek() {
+        let message = PlaybackState {
+            status: PlaybackStatus::Playing,
+            playback_speed: 1.0,
+            did_seek: true,
             current_time: 12345,
             request_id: None,
         };
@@ -138,6 +157,7 @@ mod tests {
         let message = PlaybackState {
             status: PlaybackStatus::Playing,
             playback_speed: 1.0,
+            did_seek: false,
             current_time: 12345,
             request_id: Some("i-am-a-request".to_string()),
         };
@@ -150,6 +170,7 @@ mod tests {
             status: PlaybackStatus::Playing,
             playback_speed: 1.0,
             current_time: 12345,
+            did_seek: false,
             request_id: Some("i-am-a-request".to_string()),
         };
 
@@ -166,6 +187,7 @@ mod tests {
             status: PlaybackStatus::Playing,
             playback_speed: 1.0,
             current_time: 12345,
+            did_seek: false,
             request_id: None,
         };
 

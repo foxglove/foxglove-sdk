@@ -1705,6 +1705,36 @@ typedef struct foxglove_raw_image {
 } foxglove_raw_image;
 
 #if !defined(__wasm__)
+/**
+ * Custom writer function pointers for MCAP writing.
+ * write_fn and flush_fn must be non-null. Seek_fn may be null iff `disable_seeking` is set to true.
+ * These function pointers may be called from multiple threads.
+ * These functions are called synchronously with respect to each other within the SDK, but these
+ * calls are not synchronized with other SDK function calls.
+ */
+typedef struct foxglove_custom_writer {
+  /**
+   * User-provided context pointer, passed to all callback functions
+   */
+  void *context;
+  /**
+   * Write function: write data to the custom destination
+   * Returns number of bytes written, or sets error on failure
+   */
+  size_t (*write_fn)(void *context, const uint8_t *data, size_t len, int32_t *error);
+  /**
+   * Flush function: ensure all buffered data is written
+   */
+  int32_t (*flush_fn)(void *context);
+  /**
+   * Seek function: change the current position in the stream
+   * whence: 0=SEEK_SET, 1=SEEK_CUR, 2=SEEK_END
+   */
+  int32_t (*seek_fn)(void *context, int64_t pos, int whence, uint64_t *new_pos);
+} foxglove_custom_writer;
+#endif
+
+#if !defined(__wasm__)
 typedef struct foxglove_mcap_options {
   /**
    * `context` can be null, or a valid pointer to a context created via `foxglove_context_new`.
@@ -1713,6 +1743,10 @@ typedef struct foxglove_mcap_options {
   const struct foxglove_context *context;
   struct foxglove_string path;
   bool truncate;
+  /**
+   * Custom writer for arbitrary destinations. If non-null, `path` is ignored.
+   */
+  const struct foxglove_custom_writer *custom_writer;
   foxglove_mcap_compression compression;
   struct foxglove_string profile;
   /**
@@ -2066,6 +2100,10 @@ typedef struct foxglove_playback_state {
    * The speed of playback, as a factor of realtime
    */
   float playback_speed;
+  /**
+   * Whether a seek forward or backward in time triggered this message to be emitted
+   */
+  bool did_seek;
   /**
    * If this message is being emitted in response to a PlaybackControlRequest message, the
    * request_id from that message. Set this to an empty string if the state of playback has been changed
@@ -4249,14 +4287,19 @@ foxglove_error foxglove_vector3_encode(const struct foxglove_vector3 *msg,
 
 #if !defined(__wasm__)
 /**
- * Create or open an MCAP file for writing.
+ * Create or open an MCAP writer for writing to a file or custom destination.
  * Resources must later be freed with `foxglove_mcap_close`.
+ *
+ * If `custom_writer` is provided, the MCAP data will be written using the provided
+ * function pointers instead of to a file.
  *
  * Returns 0 on success, or returns a FoxgloveError code on error.
  *
  * # Safety
  * `path` and `profile` must contain valid UTF8. If `context` is non-null,
  * it must have been created by `foxglove_context_new`.
+ * If `custom_writer` is non-null, its function pointers must be valid and
+ * all `context` pointers must remain valid for the lifetime of the writer.
  */
 foxglove_error foxglove_mcap_open(const struct foxglove_mcap_options *FOXGLOVE_NONNULL options,
                                   struct foxglove_mcap_writer **writer);

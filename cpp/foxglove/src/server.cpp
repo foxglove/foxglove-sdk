@@ -252,6 +252,7 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
           c_playback_state->status = static_cast<uint8_t>(playback_state.status);
           c_playback_state->current_time = playback_state.current_time;
           c_playback_state->playback_speed = playback_state.playback_speed;
+          c_playback_state->did_seek = playback_state.did_seek;
         };
     }
   }
@@ -371,6 +372,7 @@ void WebSocketServer::broadcastPlaybackState(const PlaybackState& playback_state
   c_playback_state_ptr.status = static_cast<uint8_t>(playback_state.status);
   c_playback_state_ptr.current_time = playback_state.current_time;
   c_playback_state_ptr.playback_speed = playback_state.playback_speed;
+  c_playback_state_ptr.did_seek = playback_state.did_seek;
   if (!playback_state.request_id.has_value() || playback_state.request_id->empty()) {
     c_playback_state_ptr.request_id = {nullptr, 0};
   } else {

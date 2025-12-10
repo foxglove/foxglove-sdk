@@ -1005,6 +1005,7 @@ impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
             status: 0,
             current_time: 0,
             playback_speed: 0.0,
+            did_seek: false,
             request_id: (&playback_control_request.request_id).into(),
         };
 

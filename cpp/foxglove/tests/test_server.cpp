@@ -1529,7 +1529,7 @@ std::vector<std::byte> playbackControlRequestToBinary(
 }
 
 std::optional<foxglove::PlaybackState> parseBinaryPlaybackState(const std::vector<std::byte>& msg) {
-  if (msg.size() < 1 + 1 + 8 + 4 + 4) {
+  if (msg.size() < 1 + 1 + 8 + 4 + 1 + 4) {
     return std::nullopt;
   }
 
@@ -1544,10 +1544,12 @@ std::optional<foxglove::PlaybackState> parseBinaryPlaybackState(const std::vecto
   foxglove::PlaybackState playback_state;
   playback_state.status = static_cast<foxglove::PlaybackStatus>(msg.at(offset));
   offset += 1;
-  playback_state.playback_speed = static_cast<float>(readUint32LE(msg, offset));
-  offset += 4;
   playback_state.current_time = readUint64LE(msg, offset);
   offset += 8;
+  playback_state.playback_speed = static_cast<float>(readUint32LE(msg, offset));
+  offset += 4;
+  playback_state.did_seek = msg.at(offset) != std::byte{0x0};
+  offset += 1;
 
   uint32_t request_id_length = readUint32LE(msg, offset);
   offset += 4;
@@ -1591,6 +1593,7 @@ TEST_CASE("Playback control request callback") {
       foxglove::PlaybackStatus::Paused,
       0,
       1.0,
+      false,
       std::make_optional<std::string>("i have my own pls don't change it")
     };
   };
@@ -1662,6 +1665,7 @@ TEST_CASE("Broadcast playback state") {
     foxglove::PlaybackStatus::Paused,
     0,
     1.0,
+    true,
     std::nullopt,
   };
 
@@ -1675,6 +1679,7 @@ TEST_CASE("Broadcast playback state") {
 
   REQUIRE(received_playback_state.has_value());
   REQUIRE(received_playback_state->request_id == std::nullopt);
+  REQUIRE(received_playback_state->did_seek);
   REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
 }
 
