@@ -7,7 +7,6 @@ use rcgen::{CertificateParams, Issuer, KeyPair};
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
-#[cfg(feature = "unstable")]
 use std::sync::Mutex;
 use std::time::Duration;
 use tokio_tungstenite::tungstenite::{self, http::HeaderValue, Message};
