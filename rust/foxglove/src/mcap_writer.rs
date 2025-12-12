@@ -10,6 +10,12 @@ use crate::library_version::get_library_version;
 use crate::sink_channel_filter::SinkChannelFilterFn;
 use crate::{ChannelDescriptor, Context, FoxgloveError, Sink, SinkChannelFilter};
 
+/// An attachment to store in an MCAP file.
+///
+/// Attachments are arbitrary binary data that can be stored alongside messages.
+/// Common uses include storing configuration files, calibration data, or other
+/// reference material related to the recording.
+pub use mcap::Attachment as McapAttachment;
 /// Compression options for content in an MCAP file
 pub use mcap::Compression as McapCompression;
 /// Options for use with an [`McapWriter`][crate::McapWriter].
@@ -169,6 +175,35 @@ impl<W: Write + Seek + Send + 'static> McapWriterHandle<W> {
         metadata: std::collections::BTreeMap<String, String>,
     ) -> Result<(), FoxgloveError> {
         self.sink.write_metadata(name, metadata)
+    }
+
+    /// Writes an attachment to the MCAP file.
+    ///
+    /// Attachments are arbitrary binary data that can be stored alongside messages.
+    /// Common uses include storing configuration files, calibration data, or other
+    /// reference material related to the recording.
+    ///
+    /// # Example
+    /// ```no_run
+    /// use std::borrow::Cow;
+    /// use foxglove::{McapWriter, McapAttachment};
+    ///
+    /// let mcap = McapWriter::new()
+    ///     .create_new_buffered_file("test.mcap")
+    ///     .expect("create failed");
+    ///
+    /// mcap.attach(&McapAttachment {
+    ///     log_time: 0,
+    ///     create_time: 0,
+    ///     name: "config.json".to_string(),
+    ///     media_type: "application/json".to_string(),
+    ///     data: Cow::Borrowed(br#"{"setting": true}"#),
+    /// }).expect("attach failed");
+    ///
+    /// mcap.close().expect("close failed");
+    /// ```
+    pub fn attach(&self, attachment: &McapAttachment<'_>) -> Result<(), FoxgloveError> {
+        self.sink.attach(attachment)
     }
 }
 
