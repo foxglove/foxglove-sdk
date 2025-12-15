@@ -1,5 +1,6 @@
 import argparse
 import inspect
+import time
 
 import foxglove
 from foxglove.channels import LogChannel
@@ -18,6 +19,17 @@ def main() -> None:
     with foxglove.open_mcap(args.path) as writer:
         # If you want to add some MCAP metadata: https://mcap.dev/spec#metadata-op0x0c
         writer.write_metadata("platform", {"os": "linux", "arch": "x64"})
+
+        # If you want to attach arbitrary files to the recording
+        # Common uses include configuration files, calibration data, or other reference material
+        now_ns = time.time_ns()
+        writer.attach(
+            log_time=now_ns,
+            create_time=now_ns,
+            name="config.json",
+            media_type="application/json",
+            data=b'{"robot_name": "example_robot", "version": "1.0"}',
+        )
 
         for i in range(10):
             frame = inspect.currentframe()
