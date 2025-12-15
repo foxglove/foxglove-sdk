@@ -177,6 +177,29 @@ impl<W: Write + Seek> McapSink<W> {
             })
             .map_err(FoxgloveError::from)
     }
+
+    /// Writes an attachment to the MCAP file.
+    ///
+    /// Attachments are arbitrary binary data that can be stored alongside messages.
+    /// Common uses include storing configuration files, calibration data, or other
+    /// reference material related to the recording.
+    ///
+    /// # Arguments
+    /// * `attachment` - The attachment to write
+    ///
+    /// # Returns
+    /// * `Ok(())` if attachment was written successfully
+    /// * `Err(FoxgloveError::SinkClosed)` if the writer has been closed
+    /// * `Err(FoxgloveError)` if there was an error writing to the file
+    pub fn attach(&self, attachment: &mcap::Attachment<'_>) -> Result<(), FoxgloveError> {
+        let mut guard = self.inner.lock();
+        let writer = guard.as_mut().ok_or(FoxgloveError::SinkClosed)?;
+
+        writer
+            .writer
+            .attach(attachment)
+            .map_err(FoxgloveError::from)
+    }
 }
 
 impl<W: Write + Seek + Send> Sink for McapSink<W> {
@@ -585,5 +608,128 @@ mod tests {
         let summary = read_summary(&temp_path2);
         assert_eq!(summary.channels.len(), 2);
         assert_eq!(summary.stats.unwrap().message_count, 2);
+    }
+
+    fn foreach_mcap_attachment<F>(path: &Path, mut f: F) -> Result<(), McapError>
+    where
+        F: FnMut(&mcap::records::AttachmentHeader, &[u8]),
+    {
+        use mcap::read::LinearReader;
+        let contents = std::fs::read(path).map_err(McapError::Io)?;
+        for record in LinearReader::new(&contents)? {
+            if let mcap::records::Record::Attachment { header, data, .. } = record? {
+                f(&header, &data);
+            }
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn test_attach_basic() {
+        let temp_file = NamedTempFile::new().expect("create tempfile");
+        let temp_path = temp_file.path().to_owned();
+
+        let writer = McapSink::new(&temp_file, WriteOptions::default(), None)
+            .expect("failed to create writer");
+
+        let attachment_data = b"hello, attachment!";
+        writer
+            .attach(&mcap::Attachment {
+                log_time: 100,
+                create_time: 200,
+                name: "test.txt".to_string(),
+                media_type: "text/plain".to_string(),
+                data: std::borrow::Cow::Borrowed(attachment_data),
+            })
+            .expect("failed to attach");
+
+        writer.finish().expect("failed to finish recording");
+
+        let mut found_attachments = Vec::new();
+        foreach_mcap_attachment(&temp_path, |header, data| {
+            found_attachments.push((header.clone(), data.to_vec()));
+        })
+        .expect("failed to read MCAP attachments");
+
+        assert_eq!(found_attachments.len(), 1);
+        let (header, data) = &found_attachments[0];
+        assert_eq!(header.log_time, 100);
+        assert_eq!(header.create_time, 200);
+        assert_eq!(header.name, "test.txt");
+        assert_eq!(header.media_type, "text/plain");
+        assert_eq!(data, attachment_data);
+    }
+
+    #[test]
+    fn test_attach_multiple() {
+        let temp_file = NamedTempFile::new().expect("create tempfile");
+        let temp_path = temp_file.path().to_owned();
+
+        let writer = McapSink::new(&temp_file, WriteOptions::default(), None)
+            .expect("failed to create writer");
+
+        writer
+            .attach(&mcap::Attachment {
+                log_time: 100,
+                create_time: 200,
+                name: "config.json".to_string(),
+                media_type: "application/json".to_string(),
+                data: std::borrow::Cow::Borrowed(br#"{"setting": true}"#),
+            })
+            .expect("failed to attach config");
+
+        writer
+            .attach(&mcap::Attachment {
+                log_time: 300,
+                create_time: 400,
+                name: "image.png".to_string(),
+                media_type: "image/png".to_string(),
+                data: std::borrow::Cow::Borrowed(&[0x89, 0x50, 0x4E, 0x47]), // PNG magic bytes
+            })
+            .expect("failed to attach image");
+
+        writer.finish().expect("failed to finish recording");
+
+        let mut found_attachments = Vec::new();
+        foreach_mcap_attachment(&temp_path, |header, data| {
+            found_attachments.push((header.name.clone(), data.to_vec()));
+        })
+        .expect("failed to read MCAP attachments");
+
+        assert_eq!(found_attachments.len(), 2);
+
+        let config = found_attachments
+            .iter()
+            .find(|(name, _)| name == "config.json")
+            .expect("config.json not found");
+        assert_eq!(config.1, br#"{"setting": true}"#);
+
+        let image = found_attachments
+            .iter()
+            .find(|(name, _)| name == "image.png")
+            .expect("image.png not found");
+        assert_eq!(image.1, &[0x89, 0x50, 0x4E, 0x47]);
+    }
+
+    #[test]
+    fn test_attach_after_close() {
+        let temp_file = NamedTempFile::new().expect("create tempfile");
+
+        let writer = McapSink::new(&temp_file, WriteOptions::default(), None)
+            .expect("failed to create writer");
+
+        // Close the writer
+        writer.finish().expect("failed to finish recording");
+
+        // This should fail because the writer is closed
+        let result = writer.attach(&mcap::Attachment {
+            log_time: 100,
+            create_time: 200,
+            name: "test.txt".to_string(),
+            media_type: "text/plain".to_string(),
+            data: std::borrow::Cow::Borrowed(b"test"),
+        });
+        assert!(result.is_err(), "Should fail to attach after close");
+        assert!(matches!(result.unwrap_err(), FoxgloveError::SinkClosed));
     }
 }
