@@ -295,14 +295,27 @@ def test_attach_multiple(tmp_mcap: Path) -> None:
     ]
 
     with open_mcap(tmp_mcap) as writer:
-        for attachment in expected_attachments:
-            writer.attach(
-                log_time=attachment["log_time"],
-                create_time=attachment["create_time"],
-                name=attachment["name"],
-                media_type=attachment["media_type"],
-                data=attachment["data"],
-            )
+        writer.attach(
+            log_time=100,
+            create_time=200,
+            name="config.json",
+            media_type="application/json",
+            data=b'{"setting": true}',
+        )
+        writer.attach(
+            log_time=300,
+            create_time=400,
+            name="calibration.yaml",
+            media_type="text/yaml",
+            data=b"camera:\n  fx: 500\n  fy: 500",
+        )
+        writer.attach(
+            log_time=500,
+            create_time=600,
+            name="image.png",
+            media_type="image/png",
+            data=bytes([0x89, 0x50, 0x4E, 0x47]),  # PNG magic bytes
+        )
 
     _verify_attachments_in_file(tmp_mcap, expected_attachments)
 
