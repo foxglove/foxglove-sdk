@@ -221,6 +221,35 @@ impl McapWriterVariant {
             McapWriterVariant::Custom(writer) => writer.write_metadata(name, metadata),
         }
     }
+
+    fn attach(&self, attachment: &mcap::Attachment<'_>) -> Result<(), foxglove::FoxgloveError> {
+        match self {
+            McapWriterVariant::File(writer) => writer.attach(attachment),
+            McapWriterVariant::Custom(writer) => writer.attach(attachment),
+        }
+    }
+}
+
+/// An MCAP attachment to store in an MCAP file.
+///
+/// Attachments are arbitrary binary data that can be stored alongside messages.
+/// Common uses include storing configuration files, calibration data, or other
+/// reference material related to the recording.
+#[repr(C)]
+pub struct FoxgloveMcapAttachment {
+    /// Timestamp at which the attachment was recorded, in nanoseconds.
+    pub log_time: u64,
+    /// Timestamp at which the attachment was created, in nanoseconds.
+    /// If not available, set to 0.
+    pub create_time: u64,
+    /// Name of the attachment, e.g. "config.json".
+    pub name: FoxgloveString,
+    /// Media type of the attachment, e.g. "application/json".
+    pub media_type: FoxgloveString,
+    /// Pointer to the attachment data.
+    pub data: *const u8,
+    /// Length of the attachment data in bytes.
+    pub data_len: usize,
 }
 
 /// Create or open an MCAP writer for writing to a file or custom destination.
@@ -408,6 +437,69 @@ unsafe fn do_foxglove_mcap_write_metadata(
     }
 
     Ok(())
+}
+
+/// Write an attachment to an MCAP file.
+///
+/// Attachments are arbitrary binary data that can be stored alongside messages.
+/// Common uses include storing configuration files, calibration data, or other
+/// reference material related to the recording.
+///
+/// Returns 0 on success, or returns a FoxgloveError code on error.
+///
+/// # Safety
+/// `writer` must be a valid pointer to a `FoxgloveMcapWriter` created via `foxglove_mcap_open`.
+/// `attachment` must be a valid pointer to a `FoxgloveMcapAttachment`.
+/// The `name` and `media_type` fields of the attachment must be valid UTF-8 strings.
+/// The `data` field must be a valid pointer to an array of bytes with length `data_len`,
+/// or null if `data_len` is 0.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_mcap_attach(
+    writer: Option<&mut FoxgloveMcapWriter>,
+    attachment: &FoxgloveMcapAttachment,
+) -> FoxgloveError {
+    let Some(writer) = writer else {
+        tracing::error!("foxglove_mcap_attach called with null writer");
+        return FoxgloveError::ValueError;
+    };
+
+    match unsafe { do_foxglove_mcap_attach(writer, attachment) } {
+        Ok(()) => FoxgloveError::Ok,
+        Err(e) => e.into(),
+    }
+}
+
+unsafe fn do_foxglove_mcap_attach(
+    writer: &mut FoxgloveMcapWriter,
+    attachment: &FoxgloveMcapAttachment,
+) -> Result<(), foxglove::FoxgloveError> {
+    let name = unsafe { attachment.name.as_utf8_str() }.map_err(|e| {
+        foxglove::FoxgloveError::Utf8Error(format!("attachment name is invalid: {e}"))
+    })?;
+
+    let media_type = unsafe { attachment.media_type.as_utf8_str() }.map_err(|e| {
+        foxglove::FoxgloveError::Utf8Error(format!("attachment media_type is invalid: {e}"))
+    })?;
+
+    let Some(writer_handle) = writer.0.as_ref() else {
+        return Err(foxglove::FoxgloveError::SinkClosed);
+    };
+
+    let data = if attachment.data.is_null() || attachment.data_len == 0 {
+        &[]
+    } else {
+        unsafe { std::slice::from_raw_parts(attachment.data, attachment.data_len) }
+    };
+
+    let mcap_attachment = mcap::Attachment {
+        log_time: attachment.log_time,
+        create_time: attachment.create_time,
+        name: name.to_string(),
+        media_type: media_type.to_string(),
+        data: std::borrow::Cow::Borrowed(data),
+    };
+
+    writer_handle.attach(&mcap_attachment)
 }
 
 pub struct FoxgloveChannel(foxglove::RawChannel);
