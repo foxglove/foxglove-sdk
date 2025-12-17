@@ -41,7 +41,7 @@ impl JsonMessage for Advertise<'_> {}
 #[serde(rename_all = "camelCase")]
 pub struct Channel<'a> {
     /// Channel ID.
-    pub id: u64,
+    pub id: u32,
     /// Topic name.
     #[serde(borrow)]
     pub topic: Cow<'a, str>,
@@ -66,7 +66,7 @@ impl<'a> Channel<'a> {
     /// Creates a new builder for a channel advertisement.
     #[must_use]
     pub fn builder(
-        id: u64,
+        id: u32,
         topic: impl Into<Cow<'a, str>>,
         encoding: impl Into<Cow<'a, str>>,
     ) -> ChannelBuilder<'a> {
@@ -115,7 +115,7 @@ impl<'a> TryFrom<Channel<'a>> for Schema<'a> {
 
 /// Server channel advertisement builder.
 pub struct ChannelBuilder<'a> {
-    id: u64,
+    id: u32,
     topic: Cow<'a, str>,
     encoding: Cow<'a, str>,
     schema: Option<Schema<'a>>,
