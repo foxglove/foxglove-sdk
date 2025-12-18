@@ -333,6 +333,9 @@ mod testutil;
 mod throttler;
 mod time;
 
+#[cfg(feature = "stream")]
+pub mod stream;
+
 pub use app_url::AppUrl;
 // Re-export bytes crate for convenience when implementing the `Encode` trait
 pub use bytes;

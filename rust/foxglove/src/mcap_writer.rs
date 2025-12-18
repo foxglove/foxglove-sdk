@@ -24,11 +24,6 @@ pub use mcap::WriteOptions as McapWriteOptions;
 mod mcap_sink;
 use mcap_sink::McapSink;
 
-#[cfg(feature = "stream")]
-mod mcap_stream;
-#[cfg(feature = "stream")]
-pub use mcap_stream::{McapStream, McapStreamBuilder, McapStreamHandle};
-
 /// An MCAP writer for logging events.
 ///
 /// ### Buffering

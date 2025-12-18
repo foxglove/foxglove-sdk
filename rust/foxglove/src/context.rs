@@ -9,9 +9,6 @@ use tracing::warn;
 
 use crate::{ChannelBuilder, ChannelId, McapWriteOptions, McapWriter, RawChannel, Sink, SinkId};
 
-#[cfg(feature = "stream")]
-use crate::McapStreamBuilder;
-
 mod lazy_context;
 mod subscriptions;
 
@@ -263,13 +260,6 @@ impl Context {
     /// [`McapWriteOptions`].
     pub fn mcap_writer_with_options(self: &Arc<Self>, options: McapWriteOptions) -> McapWriter {
         McapWriter::with_options(options).context(self)
-    }
-
-    #[cfg(feature = "stream")]
-    /// Returns a builder for an MCAP writer in this context, that will send the written bytes to a
-    /// stream that can be used in an HTTP response.
-    pub fn mcap_stream(self: &Arc<Self>) -> McapStreamBuilder {
-        McapStreamBuilder::new(self)
     }
 
     /// Returns a builder for a websocket server in this context.
