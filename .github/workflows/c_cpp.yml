@@ -221,7 +221,7 @@ jobs:
             foxglove/
 
       - name: Upload static & shared library to artifacts
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         if: ${{ !(matrix.skip_upload || false) }}
         with:
           name: foxglove-${{inputs.sdk-version || github.sha}}-cpp-${{ matrix.target }}.zip
