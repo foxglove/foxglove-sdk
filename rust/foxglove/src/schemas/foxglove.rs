@@ -1269,7 +1269,7 @@ pub struct VoxelGrid {
     /// Frame of reference
     #[prost(string, tag = "2")]
     pub frame_id: ::prost::alloc::string::String,
-    /// Origin of grid's corner relative to frame of reference
+    /// Origin of the grid’s lower-front-left corner in the reference frame. The grid’s pose is defined relative to this corner, so an untransformed grid with an identity orientation has this corner at the origin.
     #[prost(message, optional, tag = "3")]
     pub pose: ::core::option::Option<Pose>,
     /// Number of grid rows

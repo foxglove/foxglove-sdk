@@ -821,7 +821,9 @@ struct VoxelGrid {
   /// @brief Frame of reference
   std::string frame_id;
 
-  /// @brief Origin of grid's corner relative to frame of reference
+  /// @brief Origin of the grid’s lower-front-left corner in the reference frame. The grid’s pose is
+  /// defined relative to this corner, so an untransformed grid with an identity orientation has
+  /// this corner at the origin.
   std::optional<Pose> pose;
 
   /// @brief Number of grid rows

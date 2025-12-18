@@ -10,7 +10,7 @@ jobs:
   build-cpp-docs:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: ssciwr/doxygen-install@v1
         with:
           version: "1.13.2"
@@ -27,7 +27,7 @@ jobs:
   build-python-docs:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: "3.13"
