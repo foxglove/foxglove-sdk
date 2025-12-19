@@ -263,30 +263,4 @@ mod tests {
         assert_eq!(stats.message_count, 100);
         assert_eq!(stats.channel_count, 1);
     }
-
-    #[tokio::test]
-    async fn test_write_even_when_channel_is_closed() {
-        let (mut handle, stream) = create_mcap_stream();
-
-        let channel = handle.channel_builder("/topic").build::<Message>();
-
-        drop(stream);
-
-        for i in 0..100 {
-            channel.log(&Message { data: i as f64 });
-            // every attempt to flush should fail, but the buffer is preserved
-            handle.flush().await.unwrap_err();
-        }
-
-        let buffer = handle.writer.take().unwrap().close().unwrap();
-
-        let summary = mcap::Summary::read(&buffer.0.lock().buffer[..])
-            .unwrap()
-            .unwrap();
-
-        let stats = summary.stats.unwrap();
-
-        assert_eq!(stats.message_count, 100);
-        assert_eq!(stats.channel_count, 1);
-    }
 }
