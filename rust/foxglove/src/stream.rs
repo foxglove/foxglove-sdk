@@ -208,6 +208,7 @@ impl Stream for McapStream {
 
 #[cfg(test)]
 mod tests {
+    use futures::StreamExt;
     use std::convert::Infallible;
 
     use crate::Encode;
