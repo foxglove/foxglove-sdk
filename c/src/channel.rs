@@ -465,7 +465,10 @@ pub unsafe extern "C" fn foxglove_mcap_attach(
 
     match unsafe { do_foxglove_mcap_attach(writer, attachment) } {
         Ok(()) => FoxgloveError::Ok,
-        Err(e) => e.into(),
+        Err(e) => {
+            tracing::error!("foxglove_mcap_attach failed: {e}");
+            e.into()
+        }
     }
 }
 
@@ -486,6 +489,12 @@ unsafe fn do_foxglove_mcap_attach(
     };
 
     let data = if attachment.data.is_null() || attachment.data_len == 0 {
+        if !attachment.data.is_null() {
+            return Err(foxglove::FoxgloveError::ValueError(
+                "attachment data is null but data_len is not 0".to_string(),
+            ));
+        }
+        // We'll allow a non-null data pointer with zero length. e.g. empty string
         &[]
     } else {
         unsafe { std::slice::from_raw_parts(attachment.data, attachment.data_len) }

@@ -85,7 +85,7 @@ struct Attachment {
   /// @brief Media type of the attachment, e.g. "application/json".
   std::string_view media_type;
   /// @brief Pointer to the attachment data.
-  const std::byte* data = nullptr;
+  const uint8_t* data = nullptr;
   /// @brief Length of the attachment data in bytes.
   size_t data_len = 0;
 };
