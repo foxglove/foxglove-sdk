@@ -1,3 +1,8 @@
+//! MCAP Stream
+//!
+//! This module contains utilities for writing to stream of MCAP bytes, commonly used for streaming
+//! responses from HTTP frameworks such as Axum.
+
 use std::{
     fmt::Debug,
     io::{self, Seek, SeekFrom, Write},
