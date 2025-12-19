@@ -146,6 +146,51 @@ def _verify_metadata_in_file(file_path: Path, expected_metadata: dict) -> None:
             ), f"Metadata '{name}' has wrong key-value pairs"
 
 
+def _verify_attachments_in_file(
+    file_path: Path, expected_attachments: list[dict]
+) -> None:
+    """Helper function to verify attachments in MCAP file match expected."""
+    import mcap.reader
+
+    with open(file_path, "rb") as f:
+        reader = mcap.reader.make_reader(f)
+
+        found_attachments = []
+        for attachment in reader.iter_attachments():
+            found_attachments.append(
+                {
+                    "log_time": attachment.log_time,
+                    "create_time": attachment.create_time,
+                    "name": attachment.name,
+                    "media_type": attachment.media_type,
+                    "data": attachment.data,
+                }
+            )
+
+        # Verify count
+        assert len(found_attachments) == len(
+            expected_attachments
+        ), f"Expected {len(expected_attachments)} attachments, found {len(found_attachments)}"
+
+        # Verify each attachment matches expected
+        for expected in expected_attachments:
+            matching = [a for a in found_attachments if a["name"] == expected["name"]]
+            assert len(matching) == 1, f"Attachment '{expected['name']}' not found"
+            actual = matching[0]
+            assert (
+                actual["log_time"] == expected["log_time"]
+            ), f"Attachment '{expected['name']}' has wrong log_time"
+            assert (
+                actual["create_time"] == expected["create_time"]
+            ), f"Attachment '{expected['name']}' has wrong create_time"
+            assert (
+                actual["media_type"] == expected["media_type"]
+            ), f"Attachment '{expected['name']}' has wrong media_type"
+            assert (
+                actual["data"] == expected["data"]
+            ), f"Attachment '{expected['name']}' has wrong data"
+
+
 def test_write_metadata(tmp_mcap: Path) -> None:
     """Test writing metadata to MCAP file."""
     # Define expected metadata
@@ -197,3 +242,127 @@ def test_channel_filter(make_tmp_mcap: Callable[[], Path]) -> None:
     mcap2.close()
 
     assert tmp_1.stat().st_size < tmp_2.stat().st_size
+
+
+def test_attach_basic(tmp_mcap: Path) -> None:
+    """Test writing a single attachment to MCAP file."""
+    expected_attachments = [
+        {
+            "log_time": 1000000000,
+            "create_time": 2000000000,
+            "name": "config.json",
+            "media_type": "application/json",
+            "data": b'{"setting": true}',
+        }
+    ]
+
+    with open_mcap(tmp_mcap) as writer:
+        writer.attach(
+            log_time=1000000000,
+            create_time=2000000000,
+            name="config.json",
+            media_type="application/json",
+            data=b'{"setting": true}',
+        )
+
+    _verify_attachments_in_file(tmp_mcap, expected_attachments)
+
+
+def test_attach_multiple(tmp_mcap: Path) -> None:
+    """Test writing multiple attachments to MCAP file."""
+    expected_attachments = [
+        {
+            "log_time": 100,
+            "create_time": 200,
+            "name": "config.json",
+            "media_type": "application/json",
+            "data": b'{"setting": true}',
+        },
+        {
+            "log_time": 300,
+            "create_time": 400,
+            "name": "calibration.yaml",
+            "media_type": "text/yaml",
+            "data": b"camera:\n  fx: 500\n  fy: 500",
+        },
+        {
+            "log_time": 500,
+            "create_time": 600,
+            "name": "image.png",
+            "media_type": "image/png",
+            "data": bytes([0x89, 0x50, 0x4E, 0x47]),  # PNG magic bytes
+        },
+    ]
+
+    with open_mcap(tmp_mcap) as writer:
+        writer.attach(
+            log_time=100,
+            create_time=200,
+            name="config.json",
+            media_type="application/json",
+            data=b'{"setting": true}',
+        )
+        writer.attach(
+            log_time=300,
+            create_time=400,
+            name="calibration.yaml",
+            media_type="text/yaml",
+            data=b"camera:\n  fx: 500\n  fy: 500",
+        )
+        writer.attach(
+            log_time=500,
+            create_time=600,
+            name="image.png",
+            media_type="image/png",
+            data=bytes([0x89, 0x50, 0x4E, 0x47]),  # PNG magic bytes
+        )
+
+    _verify_attachments_in_file(tmp_mcap, expected_attachments)
+
+
+def test_attach_with_messages(tmp_mcap: Path) -> None:
+    """Test writing attachments alongside messages."""
+    with open_mcap(tmp_mcap) as writer:
+        # Write some messages
+        for ii in range(5):
+            chan.log({"foo": ii})
+
+        # Write an attachment
+        writer.attach(
+            log_time=1000,
+            create_time=2000,
+            name="notes.txt",
+            media_type="text/plain",
+            data=b"Recording notes",
+        )
+
+        # Write more messages
+        for ii in range(5, 10):
+            chan.log({"foo": ii})
+
+    # Verify attachment was written
+    expected_attachments = [
+        {
+            "log_time": 1000,
+            "create_time": 2000,
+            "name": "notes.txt",
+            "media_type": "text/plain",
+            "data": b"Recording notes",
+        }
+    ]
+    _verify_attachments_in_file(tmp_mcap, expected_attachments)
+
+
+def test_attach_after_close(tmp_mcap: Path) -> None:
+    """Test that attaching after close raises an error."""
+    writer = open_mcap(tmp_mcap)
+    writer.close()
+
+    with pytest.raises(Exception):  # FoxgloveError for SinkClosed
+        writer.attach(
+            log_time=100,
+            create_time=200,
+            name="test.txt",
+            media_type="text/plain",
+            data=b"test",
+        )
