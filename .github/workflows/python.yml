@@ -41,7 +41,7 @@ jobs:
     needs: [sdist]
     steps:
       - name: Download sdist
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: wheels-sdist
       - name: Unpack sdist
@@ -95,7 +95,7 @@ jobs:
           node-version: 22
           cache: yarn
       - name: Download wheel
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: playground-wasm
           path: playground/public
@@ -181,7 +181,7 @@ jobs:
         with:
           python-version: "3.10"
       - name: Download sdist
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: wheels-sdist
       - name: Unpack sdist
@@ -219,7 +219,7 @@ jobs:
         with:
           python-version: "3.10"
       - name: Download sdist
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: wheels-sdist
       - name: Unpack sdist
@@ -267,7 +267,7 @@ jobs:
             3.10
 
       - name: Download sdist
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: wheels-sdist
       - name: Unpack sdist
@@ -301,7 +301,7 @@ jobs:
         with:
           python-version: "3.10"
       - name: Download sdist
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: wheels-sdist
       - name: Unpack sdist
@@ -351,7 +351,7 @@ jobs:
       contents: write
       attestations: write
     steps:
-      - uses: actions/download-artifact@v6
+      - uses: actions/download-artifact@v7
         with:
           path: python/foxglove-sdk
       - run: find python/foxglove-sdk/wheels-*
