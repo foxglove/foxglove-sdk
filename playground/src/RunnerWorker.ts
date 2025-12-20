@@ -37,6 +37,9 @@ export class RunnerWorker {
   #stdoutCallback: (output: string) => void = (output) => {
     console.log("[stdout]", output);
   };
+  #layoutCallback: (layoutJson: string) => void = () => {
+    // noop
+  };
   constructor() {
     this.#pyodide = this.#setup();
     this.#getCompletionItems = this.#pyodide.then(
@@ -104,9 +107,14 @@ export class RunnerWorker {
     this.#stdoutCallback = callback;
   }
 
+  onSetLayout(callback: (layoutJson: string) => void): void {
+    this.#layoutCallback = callback;
+  }
+
   async #setup(): Promise<PyodideInterface> {
     const pyodide = await loadPyodide({
       indexURL: "/pyodide", // use files bundled by @pyodide/webpack-plugin
+      jsglobals: {},
     });
     const wheelPath = `/home/pyodide/${FOXGLOVE_SDK_WHEEL_FILENAME}`;
     pyodide.FS.writeFile(
@@ -127,6 +135,17 @@ export class RunnerWorker {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
     await micropip.install(`emfs:${wheelPath}`);
     this.#abortController.signal.throwIfAborted();
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const sys = pyodide.pyimport("sys");
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+    sys.modules.set("foxglove.playground", {
+      set_layout: (json: unknown) => {
+        if (typeof json !== "string") {
+          throw new Error(`Expected string, got: ${typeof json}`);
+        }
+        this.#layoutCallback(json);
+      },
+    });
     return pyodide;
   }
 

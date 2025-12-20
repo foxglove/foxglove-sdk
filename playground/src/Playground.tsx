@@ -73,6 +73,9 @@ export function Playground(): React.JSX.Element {
   const editorRef = useRef<EditorInterface>(null);
   const viewerRef = useRef<FoxgloveViewerInterface>(null);
   const { cx, classes } = useStyles();
+  const onViewerError = useCallback((msg: string) => {
+    toast.error(msg);
+  }, []);
 
   const [initialState] = useState(() => {
     try {
@@ -108,6 +111,17 @@ export function Playground(): React.JSX.Element {
     });
     runner.on("run-completed", (value) => {
       setMcapFilename(value);
+    });
+    runner.on("set-layout", (layoutJson) => {
+      try {
+        setSelectedLayout({
+          storageKey: LAYOUT_STORAGE_KEY,
+          layout: JSON.parse(layoutJson),
+          force: true,
+        });
+      } catch (error) {
+        toast.error(`Error setting layout: ${String(error)}`);
+      }
     });
     runnerRef.current = runner;
     return () => {
@@ -278,6 +292,7 @@ export function Playground(): React.JSX.Element {
           style={{ width: "100%", height: "100%", overflow: "hidden" }}
           data={dataSource}
           layout={selectedLayout}
+          onError={onViewerError}
         />
       </Allotment.Pane>
     </Allotment>
