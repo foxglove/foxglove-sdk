@@ -116,6 +116,8 @@ export function Playground(): React.JSX.Element {
       try {
         setSelectedLayout({
           storageKey: LAYOUT_STORAGE_KEY,
+          // @ts-expect-error unreleased API
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           layout: JSON.parse(layoutJson),
           force: true,
         });
