@@ -186,6 +186,42 @@ impl PyMcapWriter {
         }
         Ok(())
     }
+
+    /// Write an attachment to the MCAP file.
+    ///
+    /// Attachments are arbitrary binary data that can be stored alongside messages.
+    /// Common uses include storing configuration files, calibration data, or other
+    /// reference material related to the recording.
+    ///
+    /// :param log_time: Time at which the attachment was logged, in nanoseconds since epoch.
+    /// :param create_time: Time at which the attachment data was created, in nanoseconds since epoch.
+    /// :param name: Name of the attachment (e.g., "config.json").
+    /// :param media_type: MIME type of the attachment (e.g., "application/json").
+    /// :param data: Binary content of the attachment.
+    #[pyo3(signature = (*, log_time, create_time, name, media_type, data))]
+    fn attach(
+        &self,
+        log_time: u64,
+        create_time: u64,
+        name: String,
+        media_type: String,
+        data: Vec<u8>,
+    ) -> PyResult<()> {
+        if let Some(writer) = &self.0 {
+            writer
+                .attach(&foxglove::McapAttachment {
+                    log_time,
+                    create_time,
+                    name,
+                    media_type,
+                    data: std::borrow::Cow::Owned(data),
+                })
+                .map_err(PyFoxgloveError::from)?;
+        } else {
+            return Err(PyFoxgloveError::from(foxglove::FoxgloveError::SinkClosed).into());
+        }
+        Ok(())
+    }
 }
 
 pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
