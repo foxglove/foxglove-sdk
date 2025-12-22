@@ -242,6 +242,7 @@ mod tests {
 
         let channel = handle.channel_builder("/topic").build::<Message>();
 
+        // Use another thread to write messages to the stream
         tokio::spawn(async move {
             for i in 0..100 {
                 channel.log(&Message { data: i as f64 });
@@ -251,13 +252,18 @@ mod tests {
             handle.close().await.unwrap();
         });
 
-        let mut out = vec![];
+        let mut mcap_bytes = vec![];
 
+        // Consume the stream and write the output to a vector.
+        //
+        // This stream will commonly be returned from an Axum handler as a streaming response.
         while let Some(bytes) = stream.next().await {
-            out.extend_from_slice(&bytes[..]);
+            mcap_bytes.extend_from_slice(&bytes[..]);
         }
 
-        let summary = mcap::Summary::read(&out[..]).unwrap().unwrap();
+        // The stream produces a complete MCAP file.
+        // Verify by loading the summary from the file.
+        let summary = mcap::Summary::read(&mcap_bytes[..]).unwrap().unwrap();
         let stats = summary.stats.unwrap();
 
         assert_eq!(stats.message_count, 100);
