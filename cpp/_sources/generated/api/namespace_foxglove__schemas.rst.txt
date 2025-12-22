@@ -1,0 +1,263 @@
+
+.. _namespace_foxglove__schemas:
+
+Namespace foxglove::schemas
+===========================
+
+
+
+Classes
+-------
+
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1ArrowPrimitive`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1CameraCalibration`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1ChannelDeleter`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1CircleAnnotation`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1Color`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1CompressedImage`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1CompressedVideo`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1CubePrimitive`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1CylinderPrimitive`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1Duration`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1FrameTransform`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1FrameTransforms`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1GeoJSON`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1Grid`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1ImageAnnotations`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1KeyValuePair`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1LaserScan`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1LinePrimitive`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1LocationFix`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1LocationFixes`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1Log`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1ModelPrimitive`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1PackedElementField`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1Point2`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1Point3`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1PointCloud`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1PointsAnnotation`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1Pose`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1PoseInFrame`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1PosesInFrame`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1Quaternion`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1RawAudio`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1RawImage`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1SceneEntity`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1SceneEntityDeletion`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1SceneUpdate`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1SpherePrimitive`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1TextAnnotation`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1TextPrimitive`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1Timestamp`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1TriangleListPrimitive`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1Vector2`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1Vector3`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1VoxelGrid`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1ArrowPrimitiveChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1CameraCalibrationChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1CircleAnnotationChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1ColorChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1CompressedImageChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1CompressedVideoChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1CubePrimitiveChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1CylinderPrimitiveChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1FrameTransformChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1FrameTransformsChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1GeoJSONChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1GridChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1ImageAnnotationsChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1KeyValuePairChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1LaserScanChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1LinePrimitiveChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1LocationFixChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1LocationFixesChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1LogChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1ModelPrimitiveChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1PackedElementFieldChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1Point2Channel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1Point3Channel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1PointCloudChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1PointsAnnotationChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1PoseChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1PoseInFrameChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1PosesInFrameChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1QuaternionChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1RawAudioChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1RawImageChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1SceneEntityChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1SceneEntityDeletionChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1SceneUpdateChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1SpherePrimitiveChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1TextAnnotationChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1TextPrimitiveChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1TriangleListPrimitiveChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1Vector2Channel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1Vector3Channel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1VoxelGridChannel`
+
+
+Functions
+---------
+
+
+- :ref:`exhale_function_schemas_8cpp_1aef52cd95fe1af25d5ed38dc6fbde0701`
+
+- :ref:`exhale_function_schemas_8cpp_1ad153fd869b3fc8954621d948051698a6`
+
+- :ref:`exhale_function_schemas_8cpp_1ab5aae2a5d34f9a70cc6b1885ace2f248`
+
+- :ref:`exhale_function_schemas_8cpp_1ad707e0db61b383e19a70b4020a9b456c`
+
+- :ref:`exhale_function_schemas_8cpp_1a011b5bca664676d9b6aa045e6d34d9c9`
+
+- :ref:`exhale_function_schemas_8cpp_1a082e71a4d9529a721ed7a09c92bbf5ce`
+
+- :ref:`exhale_function_schemas_8cpp_1af442708b6d1f6a377b8cc8c01ed95dca`
+
+- :ref:`exhale_function_schemas_8cpp_1a73e7c0fcda791dcef4896cf6d6525e50`
+
+- :ref:`exhale_function_schemas_8cpp_1ae4ad831cffcc59b91f9bfef56696b9e1`
+
+- :ref:`exhale_function_schemas_8cpp_1a794a6eddbd2236cd093344f3ccc3e273`
+
+- :ref:`exhale_function_schemas_8cpp_1a715e046dd5dd2aba58fc613818dc6856`
+
+- :ref:`exhale_function_schemas_8cpp_1a08ec2af74d58bfe4e455c842a8b90764`
+
+- :ref:`exhale_function_schemas_8cpp_1a811399bfd60aa9b0560aaf24c8975c2f`
+
+- :ref:`exhale_function_schemas_8cpp_1ae6a02af2638b4dca35b59ec2ae294d0e`
+
+- :ref:`exhale_function_schemas_8cpp_1a3e05f486473e67263d5eaafa38e1acb2`
+
+- :ref:`exhale_function_schemas_8cpp_1a8566d3b4c01073a108de0b94297fb497`
+
+- :ref:`exhale_function_schemas_8cpp_1a3ffb97ae49b803f84eb0839cdc8e3f4c`
+
+- :ref:`exhale_function_schemas_8cpp_1af36d32a99cc1ea005067b1abb4cbe6dc`
+
+- :ref:`exhale_function_schemas_8cpp_1a007bfac6d12bc558635891f62454be0e`
+
+- :ref:`exhale_function_schemas_8cpp_1aa34ba26ae9a8976ad385bd0c95384a98`
+
+- :ref:`exhale_function_schemas_8cpp_1a63ee9f939ef3c530d11288e9b131970b`
+
+- :ref:`exhale_function_schemas_8cpp_1a5d2489bccc6ba32277e3e28db36625f6`
+
+- :ref:`exhale_function_schemas_8cpp_1a38db702d1e93e80b2112c3cdd84f5f09`
+
+- :ref:`exhale_function_schemas_8cpp_1ad64a543f6f0e82b95ce1f9663904a7e5`
+
+- :ref:`exhale_function_schemas_8cpp_1a35be5dd0f2569c599d65c9b060f3da25`
+
+- :ref:`exhale_function_schemas_8cpp_1a04cd6d504b7937c1b178a3f7789e243c`
+
+- :ref:`exhale_function_schemas_8cpp_1a7ca7e969d6d72e210a4c40b19394de4a`
+
+- :ref:`exhale_function_schemas_8cpp_1a84c0f800102a1299a9dcd5e9e0dff870`
+
+- :ref:`exhale_function_schemas_8cpp_1a07e3bd47116cab267b6dc34f1c277d69`
+
+- :ref:`exhale_function_schemas_8cpp_1a001970a4b4d7a294395e54f4bece5d4b`
+
+- :ref:`exhale_function_schemas_8cpp_1a8f7258c8f0e20f8f44e11b8437be6bcb`
+
+- :ref:`exhale_function_schemas_8cpp_1a5d2c9eca98adab6904e5f413fc6e3a74`
+
+- :ref:`exhale_function_schemas_8cpp_1ab4b896515c2942bb0f6c98c0c107c209`
+
+- :ref:`exhale_function_schemas_8cpp_1a17f8d0c76daff380389d214af17ba0c2`
+
+- :ref:`exhale_function_schemas_8cpp_1aa6edba0fddaa1220381df4bf26b439a3`
+
+
+Typedefs
+--------
+
+
+- :ref:`exhale_typedef_schemas_8hpp_1ab547b1a1f1cbf46b90946047bab783fb`

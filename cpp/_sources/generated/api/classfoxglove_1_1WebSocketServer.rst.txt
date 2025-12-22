@@ -1,0 +1,17 @@
+.. _exhale_class_classfoxglove_1_1WebSocketServer:
+
+Class WebSocketServer
+=====================
+
+- Defined in :ref:`file_foxglove_include_foxglove_server.hpp`
+
+
+Class Documentation
+-------------------
+
+
+.. doxygenclass:: foxglove::WebSocketServer
+   :project: Foxglove SDK
+   :members:
+   :protected-members:
+   :undoc-members:

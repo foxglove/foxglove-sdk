@@ -1,0 +1,14 @@
+.. _exhale_enum_namespacefoxglove_1a6359c784ca82c5e60be0636693968069:
+
+Enum FoxgloveError
+==================
+
+- Defined in :ref:`file_foxglove_include_foxglove_error.hpp`
+
+
+Enum Documentation
+------------------
+
+
+.. doxygenenum:: foxglove::FoxgloveError
+   :project: Foxglove SDK

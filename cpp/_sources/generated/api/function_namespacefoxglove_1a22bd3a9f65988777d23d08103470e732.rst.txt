@@ -1,0 +1,14 @@
+.. _exhale_function_namespacefoxglove_1a22bd3a9f65988777d23d08103470e732:
+
+Function foxglove::custom_seek
+==============================
+
+- Defined in :ref:`file_foxglove_src_mcap.cpp`
+
+
+Function Documentation
+----------------------
+
+
+.. doxygenfunction:: foxglove::custom_seek(void *, int64_t, int, uint64_t *)
+   :project: Foxglove SDK

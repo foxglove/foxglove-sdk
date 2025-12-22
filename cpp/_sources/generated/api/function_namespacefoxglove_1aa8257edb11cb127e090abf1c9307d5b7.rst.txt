@@ -1,0 +1,14 @@
+.. _exhale_function_namespacefoxglove_1aa8257edb11cb127e090abf1c9307d5b7:
+
+Function foxglove::custom_write
+===============================
+
+- Defined in :ref:`file_foxglove_src_mcap.cpp`
+
+
+Function Documentation
+----------------------
+
+
+.. doxygenfunction:: foxglove::custom_write(void *, const uint8_t *, size_t, int32_t *)
+   :project: Foxglove SDK
