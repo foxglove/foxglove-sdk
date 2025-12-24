@@ -909,6 +909,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@foxglove/embed@npm:0.2.3":
+  version: 0.2.3
+  resolution: "@foxglove/embed@npm:0.2.3"
+  dependencies:
+    tslib: "npm:2.8.1"
+  checksum: 10c0/58a5af91ea86ba68039b48d50bede6a753b3bb9e6a071e906602ff9dc647e8550cb46e94dfa503cc6972df9831b0057678eff3be6de8b7f86a64951b8a74eee3
+  languageName: node
+  linkType: hard
+
 "@foxglove/eslint-plugin@npm:2.1.0":
   version: 2.1.0
   resolution: "@foxglove/eslint-plugin@npm:2.1.0"
@@ -944,7 +953,7 @@ __metadata:
   resolution: "@foxglove/notebook-frontend@workspace:python/foxglove-sdk/notebook-frontend"
   dependencies:
     "@anywidget/types": "npm:0.2.0"
-    "@foxglove/embed": "npm:0.1.8"
+    "@foxglove/embed": "npm:0.2.3"
     "@foxglove/tsconfig": "npm:2.0.0"
     esbuild: "npm:0.25.11"
     typescript: "npm:5.9.3"

@@ -24,6 +24,7 @@ function render({ model, el }: RenderProps<WidgetModel>): void {
 
   const viewer = new FoxgloveViewer({
     parent,
+    embeddedViewer: "Python",
     src: model.get("src"),
     orgSlug: undefined,
     initialLayoutParams: initialLayoutParams
