@@ -104,4 +104,17 @@ FoxgloveError McapWriter::close() {
   return FoxgloveError(error);
 }
 
+FoxgloveError McapWriter::attach(const Attachment& attachment) {
+  foxglove_mcap_attachment c_attachment;
+  c_attachment.log_time = attachment.log_time;
+  c_attachment.create_time = attachment.create_time;
+  c_attachment.name = {attachment.name.data(), attachment.name.length()};
+  c_attachment.media_type = {attachment.media_type.data(), attachment.media_type.length()};
+  c_attachment.data = reinterpret_cast<const uint8_t*>(attachment.data);
+  c_attachment.data_len = attachment.data_len;
+
+  foxglove_error error = foxglove_mcap_attach(impl_.get(), &c_attachment);
+  return FoxgloveError(error);
+}
+
 }  // namespace foxglove
