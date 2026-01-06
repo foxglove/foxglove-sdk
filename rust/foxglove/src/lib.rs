@@ -358,6 +358,8 @@ pub(crate) use time::nanoseconds_since_epoch;
 #[cfg(feature = "agent")]
 mod cloud_sink;
 #[cfg(feature = "live_visualization")]
+pub mod protocol;
+#[cfg(feature = "live_visualization")]
 mod runtime;
 #[cfg(feature = "live_visualization")]
 pub mod websocket;
