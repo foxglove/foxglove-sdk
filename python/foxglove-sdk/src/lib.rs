@@ -17,14 +17,6 @@ use std::io::BufWriter;
 use std::num::NonZeroU64;
 use std::path::PathBuf;
 
-/// Accepts either a file path (str/Path) or a file-like object.
-#[derive(FromPyObject)]
-enum PathOrFileLike {
-    #[pyo3(transparent)]
-    Path(PathBuf),
-    #[pyo3(transparent)]
-    FileLike(Py<PyAny>),
-}
 use std::sync::{Arc, OnceLock};
 #[cfg(not(target_family = "wasm"))]
 use websocket::start_server;
@@ -205,6 +197,15 @@ impl PyContext {
             .map_err(PyFoxgloveError::from)?;
         Ok(BaseChannel(channel))
     }
+}
+
+/// Accepts either a file path (str/Path) or a file-like object.
+#[derive(FromPyObject)]
+enum PathOrFileLike {
+    #[pyo3(transparent)]
+    Path(PathBuf),
+    #[pyo3(transparent)]
+    FileLike(Py<PyAny>),
 }
 
 /// Open an MCAP writer for recording.
