@@ -1,8 +1,82 @@
 use crate::errors::PyFoxgloveError;
 use foxglove::{McapCompression, McapWriteOptions, McapWriterHandle};
 use pyo3::prelude::*;
+use pyo3::types::PyBytes;
 use std::fs::File;
-use std::io::BufWriter;
+use std::io::{BufWriter, SeekFrom, Write};
+
+/// Wraps a Python file-like object, implementing Write + Seek via Python calls.
+///
+/// The Python object must support `write(bytes)`, `seek(offset, whence)`, and `flush()` methods.
+pub(crate) struct PyFileLikeWriter(pub(crate) Py<PyAny>);
+
+impl Write for PyFileLikeWriter {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        Python::with_gil(|py| {
+            let bytes = PyBytes::new(py, buf);
+            self.0
+                .call_method1(py, "write", (bytes,))
+                .and_then(|result| result.extract::<usize>(py))
+                .map_err(std::io::Error::other)
+        })
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        Python::with_gil(|py| {
+            self.0
+                .call_method0(py, "flush")
+                .map(|_| ())
+                .map_err(std::io::Error::other)
+        })
+    }
+}
+
+impl std::io::Seek for PyFileLikeWriter {
+    fn seek(&mut self, pos: SeekFrom) -> std::io::Result<u64> {
+        Python::with_gil(|py| {
+            let (offset, whence): (i64, i32) = match pos {
+                SeekFrom::Start(n) => (n as i64, 0),
+                SeekFrom::Current(n) => (n, 1),
+                SeekFrom::End(n) => (n, 2),
+            };
+            self.0
+                .call_method1(py, "seek", (offset, whence))
+                .and_then(|result| result.extract::<u64>(py))
+                .map_err(std::io::Error::other)
+        })
+    }
+}
+
+/// Unified writer enum - dispatches to File or Python file-like object.
+pub(crate) enum WriterInner {
+    File(File),
+    FileLike(PyFileLikeWriter),
+}
+
+impl Write for WriterInner {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        match self {
+            Self::File(f) => f.write(buf),
+            Self::FileLike(f) => f.write(buf),
+        }
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        match self {
+            Self::File(f) => f.flush(),
+            Self::FileLike(f) => f.flush(),
+        }
+    }
+}
+
+impl std::io::Seek for WriterInner {
+    fn seek(&mut self, pos: SeekFrom) -> std::io::Result<u64> {
+        match self {
+            Self::File(f) => f.seek(pos),
+            Self::FileLike(f) => f.seek(pos),
+        }
+    }
+}
 
 /// Compression algorithm to use for MCAP writing.
 #[pyclass(eq, eq_int, name = "MCAPCompression", module = "foxglove.mcap")]
@@ -132,7 +206,7 @@ impl From<PyMcapWriteOptions> for McapWriteOptions {
 /// If the writer is not closed by the time it is garbage collected, it will be
 /// closed automatically, and any errors will be logged.
 #[pyclass(name = "MCAPWriter", module = "foxglove.mcap")]
-pub(crate) struct PyMcapWriter(pub(crate) Option<McapWriterHandle<BufWriter<File>>>);
+pub(crate) struct PyMcapWriter(pub(crate) Option<McapWriterHandle<BufWriter<WriterInner>>>);
 
 impl Drop for PyMcapWriter {
     fn drop(&mut self) {
