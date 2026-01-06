@@ -187,7 +187,7 @@ def shutdown() -> None:
     ...
 
 def open_mcap(
-    path_or_file: str | Path | BinaryIO,
+    path: str | Path | BinaryIO,
     *,
     allow_overwrite: bool = False,
     context: Context | None = None,
@@ -195,7 +195,7 @@ def open_mcap(
     writer_options: MCAPWriteOptions | None = None,
 ) -> MCAPWriter:
     """
-    Open an MCAP writer for recording into a file.
+    Open an MCAP writer for recording.
 
     If a path is provided, the file will be created and must not already exist (unless
     allow_overwrite is True). If a file-like object is provided, it must support write(),

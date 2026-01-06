@@ -207,11 +207,11 @@ impl PyContext {
     }
 }
 
-/// Open an MCAP writer for recording into a file.
+/// Open an MCAP writer for recording.
 ///
-/// :param path_or_file: The destination to write the MCAP to. If it is a path, the file will be created and must not already exist
+/// :param path: The destination to write the MCAP to. If it is a path, the file will be created and must not already exist
 ///     unless `allow_overwrite` is `True`. If it is a file-like object, it must support `write()`, `seek()`, and `flush()` methods.
-/// :type path_or_file: str | Path | BinaryIO
+/// :type path: str | Path | BinaryIO
 /// :param allow_overwrite: Set this flag in order to overwrite an existing file at this path.
 ///     Ignored when a file-like object is provided.
 /// :type allow_overwrite: Optional[bool]
@@ -224,15 +224,15 @@ impl PyContext {
 /// :type writer_options: :py:class:`mcap.MCAPWriteOptions`
 /// :rtype: :py:class:`mcap.MCAPWriter`
 #[pyfunction]
-#[pyo3(signature = (path_or_file, *, allow_overwrite = false, context = None, channel_filter = None, writer_options = None))]
+#[pyo3(signature = (path, *, allow_overwrite = false, context = None, channel_filter = None, writer_options = None))]
 fn open_mcap(
-    path_or_file: PathOrFileLike,
+    path: PathOrFileLike,
     allow_overwrite: bool,
     context: Option<PyRef<PyContext>>,
     channel_filter: Option<Py<PyAny>>,
     writer_options: Option<PyMcapWriteOptions>,
 ) -> PyResult<PyMcapWriter> {
-    let file = match path_or_file {
+    let file = match path {
         PathOrFileLike::Path(path) => WriterInner::File(if allow_overwrite {
             File::create(path)?
         } else {

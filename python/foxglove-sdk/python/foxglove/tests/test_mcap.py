@@ -1,3 +1,4 @@
+from io import BytesIO
 from pathlib import Path
 from typing import Callable, Generator, Optional
 
@@ -366,3 +367,46 @@ def test_attach_after_close(tmp_mcap: Path) -> None:
             media_type="text/plain",
             data=b"test",
         )
+
+
+# =============================================================================
+# Tests for file-like object support
+# =============================================================================
+
+
+class TestFileLikeObject:
+    """Tests for writing MCAP to file-like objects."""
+
+    def test_write_to_bytesio(self) -> None:
+        """Test writing MCAP to a BytesIO buffer produces valid MCAP."""
+        buffer = BytesIO()
+        test_chan = Channel("test_bytesio", schema={"type": "object"})
+
+        with open_mcap(buffer):
+            for i in range(10):
+                test_chan.log({"value": i})
+
+        # Verify buffer has data with MCAP magic bytes
+        data = buffer.getvalue()
+        assert len(data) > 0
+        assert data[:8] == b"\x89MCAP0\r\n"
+
+    def test_bytesio_readable_by_mcap_reader(self) -> None:
+        """Test that MCAP written to BytesIO can be read back."""
+        import mcap.reader
+
+        buffer = BytesIO()
+        test_chan = Channel("test_readable", schema={"type": "object"})
+
+        with open_mcap(buffer):
+            for i in range(5):
+                test_chan.log({"index": i})
+
+        # Read back and verify
+        buffer.seek(0)
+        reader = mcap.reader.make_reader(buffer)
+        summary = reader.get_summary()
+
+        assert summary is not None
+        assert summary.statistics is not None
+        assert summary.statistics.message_count == 5
