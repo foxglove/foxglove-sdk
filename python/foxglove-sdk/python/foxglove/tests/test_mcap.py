@@ -1,6 +1,6 @@
 from io import SEEK_CUR, SEEK_SET, BytesIO
 from pathlib import Path
-from typing import BinaryIO, Callable, Generator, Optional, Union
+from typing import Callable, Generator, Optional, Union
 
 import pytest
 from foxglove import Channel, ChannelDescriptor, Context, open_mcap
@@ -429,9 +429,7 @@ class NonSeekableWriter:
         self._buffer = BytesIO()
         self._position = 0
 
-    # The signature of BinaryIO.write() differs between typeshed and typing.
-    # Suppress the warning.
-    def write(self, data: Union[bytes, bytearray]) -> int:  # type: ignore[override]
+    def write(self, data: Union[bytes, bytearray]) -> int:
         written = self._buffer.write(data)
         self._position += written
         return written

@@ -1,7 +1,25 @@
 from pathlib import Path
-from typing import Any, BinaryIO, Callable
+from typing import Any, BinaryIO, Callable, Protocol
 
 from foxglove.websocket import AssetHandler
+
+class McapWritable(Protocol):
+    """A writable and seekable file-like object.
+
+    This protocol defines the minimal interface required for writing MCAP data.
+    """
+
+    def write(self, data: bytes | bytearray) -> int:
+        """Write data and return the number of bytes written."""
+        ...
+
+    def seek(self, offset: int, whence: int = 0) -> int:
+        """Seek to position and return the new absolute position."""
+        ...
+
+    def flush(self) -> None:
+        """Flush any buffered data."""
+        ...
 
 from .cloud import CloudSink
 from .mcap import MCAPWriteOptions, MCAPWriter
@@ -187,7 +205,7 @@ def shutdown() -> None:
     ...
 
 def open_mcap(
-    path: str | Path | BinaryIO,
+    path: str | Path | BinaryIO | McapWritable,
     *,
     allow_overwrite: bool = False,
     context: Context | None = None,
