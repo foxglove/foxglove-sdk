@@ -1,18 +1,18 @@
 use serde::{Deserialize, Serialize};
 
-use crate::websocket::ws_protocol::JsonMessage;
+use crate::protocol::JsonMessage;
 
 /// Unsubscribe message.
 ///
 /// Spec: <https://github.com/foxglove/ws-protocol/blob/main/docs/spec.md#unsubscribe>
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "op", rename = "unsubscribe", rename_all = "camelCase")]
-pub struct Unsubscribe {
+pub struct UnsubscribeV1 {
     /// Subscription IDs.
     pub subscription_ids: Vec<u32>,
 }
 
-impl Unsubscribe {
+impl UnsubscribeV1 {
     /// Creates a new unsubscribe message.
     pub fn new(subscription_ids: impl IntoIterator<Item = u32>) -> Self {
         Self {
@@ -21,16 +21,16 @@ impl Unsubscribe {
     }
 }
 
-impl JsonMessage for Unsubscribe {}
+impl JsonMessage for UnsubscribeV1 {}
 
 #[cfg(test)]
 mod tests {
-    use crate::websocket::ws_protocol::client::ClientMessage;
+    use crate::protocol::v1::client::ClientMessageV1;
 
     use super::*;
 
-    fn message() -> Unsubscribe {
-        Unsubscribe::new([1, 2, 3])
+    fn message() -> UnsubscribeV1 {
+        UnsubscribeV1::new([1, 2, 3])
     }
 
     #[test]
@@ -42,7 +42,7 @@ mod tests {
     fn test_roundtrip() {
         let orig = message();
         let buf = orig.to_string();
-        let msg = ClientMessage::parse_json(&buf).unwrap();
-        assert_eq!(msg, ClientMessage::Unsubscribe(orig));
+        let msg = ClientMessageV1::parse_json(&buf).unwrap();
+        assert_eq!(msg, ClientMessageV1::Unsubscribe(orig));
     }
 }

@@ -1,6 +1,6 @@
 use bytes::{Buf, BufMut};
 
-use crate::websocket::ws_protocol::{BinaryMessage, ParseError};
+use crate::protocol::{BinaryMessage, ParseError};
 
 use super::BinaryOpcode;
 
@@ -40,7 +40,7 @@ impl<'a> BinaryMessage<'a> for Time {
 
 #[cfg(test)]
 mod tests {
-    use crate::websocket::ws_protocol::server::ServerMessage;
+    use crate::protocol::v1::server::ServerMessageV1;
 
     use super::*;
 
@@ -57,7 +57,7 @@ mod tests {
     fn test_roundtrip() {
         let orig = message();
         let buf = orig.to_bytes();
-        let msg = ServerMessage::parse_binary(&buf).unwrap();
-        assert_eq!(msg, ServerMessage::Time(orig));
+        let msg = ServerMessageV1::parse_binary(&buf).unwrap();
+        assert_eq!(msg, ServerMessageV1::Time(orig));
     }
 }

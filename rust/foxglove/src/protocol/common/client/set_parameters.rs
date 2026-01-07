@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
-use crate::websocket::ws_protocol::parameter::Parameter;
-use crate::websocket::ws_protocol::JsonMessage;
+use crate::protocol::parameter::Parameter;
+use crate::protocol::JsonMessage;
 
 /// Set parameters message.
 ///
@@ -37,8 +37,8 @@ impl JsonMessage for SetParameters {}
 
 #[cfg(test)]
 mod tests {
-    use crate::websocket::ws_protocol::client::ClientMessage;
-    use crate::websocket::ws_protocol::parameter::Parameter;
+    use crate::protocol::v1::client::ClientMessageV1;
+    use crate::protocol::parameter::Parameter;
 
     use super::*;
 
@@ -71,8 +71,8 @@ mod tests {
 
     fn test_roundtrip_inner(orig: SetParameters) {
         let buf = orig.to_string();
-        let msg = ClientMessage::parse_json(&buf).unwrap();
-        assert_eq!(msg, ClientMessage::SetParameters(orig));
+        let msg = ClientMessageV1::parse_json(&buf).unwrap();
+        assert_eq!(msg, ClientMessageV1::SetParameters(orig));
     }
 
     #[test]

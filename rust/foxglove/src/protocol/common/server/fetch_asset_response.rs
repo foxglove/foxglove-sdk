@@ -4,7 +4,7 @@ use std::borrow::Cow;
 
 use bytes::{Buf, BufMut};
 
-use crate::websocket::ws_protocol::{BinaryMessage, ParseError};
+use crate::protocol::{BinaryMessage, ParseError};
 
 use super::BinaryOpcode;
 
@@ -130,7 +130,7 @@ impl Payload<'_> {
 mod tests {
     use assert_matches::assert_matches;
 
-    use crate::websocket::ws_protocol::server::ServerMessage;
+    use crate::protocol::v1::server::ServerMessageV1;
 
     use super::*;
 
@@ -186,15 +186,15 @@ mod tests {
     fn test_roundtrip_asset_data() {
         let orig = asset_data();
         let buf = orig.to_bytes();
-        let msg = ServerMessage::parse_binary(&buf).unwrap();
-        assert_eq!(msg, ServerMessage::FetchAssetResponse(orig));
+        let msg = ServerMessageV1::parse_binary(&buf).unwrap();
+        assert_eq!(msg, ServerMessageV1::FetchAssetResponse(orig));
     }
 
     #[test]
     fn test_roundtrip_error_message() {
         let orig = error_message();
         let buf = orig.to_bytes();
-        let msg = ServerMessage::parse_binary(&buf).unwrap();
-        assert_eq!(msg, ServerMessage::FetchAssetResponse(orig));
+        let msg = ServerMessageV1::parse_binary(&buf).unwrap();
+        assert_eq!(msg, ServerMessageV1::FetchAssetResponse(orig));
     }
 }

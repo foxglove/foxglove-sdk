@@ -5,8 +5,8 @@ use std::convert::TryFrom;
 
 use serde::{Deserialize, Serialize};
 
-use crate::websocket::ws_protocol::schema::{self, Schema};
-use crate::websocket::ws_protocol::JsonMessage;
+use crate::protocol::schema::{self, Schema};
+use crate::protocol::JsonMessage;
 
 /// Advertise services message.
 ///
@@ -222,7 +222,7 @@ impl<'a> TryFrom<MessageSchema<'a>> for Schema<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::websocket::ws_protocol::server::ServerMessage;
+    use crate::protocol::v1::server::ServerMessageV1;
 
     use super::*;
 
@@ -299,7 +299,7 @@ mod tests {
     fn test_roundtrip() {
         let orig = message();
         let buf = orig.to_string();
-        let msg = ServerMessage::parse_json(&buf).unwrap();
-        assert_eq!(msg, ServerMessage::AdvertiseServices(orig));
+        let msg = ServerMessageV1::parse_json(&buf).unwrap();
+        assert_eq!(msg, ServerMessageV1::AdvertiseServices(orig));
     }
 }

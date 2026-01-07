@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::websocket::ws_protocol::JsonMessage;
+use crate::protocol::JsonMessage;
 
 /// Fetch asset message.
 ///
@@ -28,7 +28,7 @@ impl JsonMessage for FetchAsset {}
 
 #[cfg(test)]
 mod tests {
-    use crate::websocket::ws_protocol::client::ClientMessage;
+    use crate::protocol::v1::client::ClientMessageV1;
 
     use super::*;
 
@@ -45,7 +45,7 @@ mod tests {
     fn test_roundtrip() {
         let orig = message();
         let buf = orig.to_string();
-        let msg = ClientMessage::parse_json(&buf).unwrap();
-        assert_eq!(msg, ClientMessage::FetchAsset(orig));
+        let msg = ClientMessageV1::parse_json(&buf).unwrap();
+        assert_eq!(msg, ClientMessageV1::FetchAsset(orig));
     }
 }

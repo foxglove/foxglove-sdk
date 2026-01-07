@@ -2,19 +2,19 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::websocket::ws_protocol::JsonMessage;
+use crate::protocol::JsonMessage;
 
 /// Subscribe message.
 ///
 /// Spec: <https://github.com/foxglove/ws-protocol/blob/main/docs/spec.md#subscribe>
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "op", rename = "subscribe", rename_all = "camelCase")]
-pub struct Subscribe {
+pub struct SubscribeV1 {
     /// Subscriptions.
     pub subscriptions: Vec<Subscription>,
 }
 
-impl Subscribe {
+impl SubscribeV1 {
     /// Creates a new subscribe message.
     pub fn new(subscriptions: impl IntoIterator<Item = Subscription>) -> Self {
         Self {
@@ -23,9 +23,9 @@ impl Subscribe {
     }
 }
 
-impl JsonMessage for Subscribe {}
+impl JsonMessage for SubscribeV1 {}
 
-/// A subscription for a [`Subscribe`] message.
+/// A subscription for a [`SubscribeV1`] message.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Subscription {
@@ -44,12 +44,12 @@ impl Subscription {
 
 #[cfg(test)]
 mod tests {
-    use crate::websocket::ws_protocol::client::ClientMessage;
+    use crate::protocol::v1::client::ClientMessageV1;
 
     use super::*;
 
-    fn message() -> Subscribe {
-        Subscribe::new([Subscription::new(1, 10), Subscription::new(2, 20)])
+    fn message() -> SubscribeV1 {
+        SubscribeV1::new([Subscription::new(1, 10), Subscription::new(2, 20)])
     }
 
     #[test]
@@ -61,7 +61,7 @@ mod tests {
     fn test_roundtrip() {
         let orig = message();
         let buf = orig.to_string();
-        let msg = ClientMessage::parse_json(&buf).unwrap();
-        assert_eq!(msg, ClientMessage::Subscribe(orig));
+        let msg = ClientMessageV1::parse_json(&buf).unwrap();
+        assert_eq!(msg, ClientMessageV1::Subscribe(orig));
     }
 }

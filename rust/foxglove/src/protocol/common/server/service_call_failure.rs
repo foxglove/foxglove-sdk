@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::websocket::ws_protocol::JsonMessage;
+use crate::protocol::JsonMessage;
 
 /// Service call failure message.
 ///
@@ -31,7 +31,7 @@ impl JsonMessage for ServiceCallFailure {}
 
 #[cfg(test)]
 mod tests {
-    use crate::websocket::ws_protocol::server::ServerMessage;
+    use crate::protocol::v1::server::ServerMessageV1;
 
     use super::*;
 
@@ -52,7 +52,7 @@ mod tests {
     fn test_roundtrip() {
         let orig = message();
         let buf = orig.to_string();
-        let msg = ServerMessage::parse_json(&buf).unwrap();
-        assert_eq!(msg, ServerMessage::ServiceCallFailure(orig));
+        let msg = ServerMessageV1::parse_json(&buf).unwrap();
+        assert_eq!(msg, ServerMessageV1::ServiceCallFailure(orig));
     }
 }

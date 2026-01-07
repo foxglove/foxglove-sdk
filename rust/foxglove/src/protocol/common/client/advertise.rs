@@ -4,8 +4,8 @@ use std::borrow::Cow;
 
 use serde::{Deserialize, Serialize};
 
-use crate::websocket::ws_protocol::schema::{self, Schema};
-use crate::websocket::ws_protocol::JsonMessage;
+use crate::protocol::schema::{self, Schema};
+use crate::protocol::JsonMessage;
 
 /// Client advertise message.
 ///
@@ -162,7 +162,7 @@ impl<'a> ChannelBuilder<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::websocket::ws_protocol::client::ClientMessage;
+    use crate::protocol::v1::client::ClientMessageV1;
 
     use super::*;
 
@@ -197,7 +197,7 @@ mod tests {
     fn test_roundtrip() {
         let orig = message();
         let buf = serde_json::to_string(&orig).unwrap();
-        let msg = ClientMessage::parse_json(&buf).unwrap();
-        assert_eq!(msg, ClientMessage::Advertise(orig));
+        let msg = ClientMessageV1::parse_json(&buf).unwrap();
+        assert_eq!(msg, ClientMessageV1::Advertise(orig));
     }
 }

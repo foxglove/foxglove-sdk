@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 
-use crate::websocket::ws_protocol::JsonMessage;
+use crate::protocol::JsonMessage;
 
 /// Status message.
 // Spec: <https://github.com/foxglove/ws-protocol/blob/main/docs/spec.md#status>
@@ -66,7 +66,7 @@ pub enum Level {
 
 #[cfg(test)]
 mod tests {
-    use crate::websocket::ws_protocol::server::ServerMessage;
+    use crate::protocol::v1::server::ServerMessageV1;
 
     use super::*;
 
@@ -90,8 +90,8 @@ mod tests {
 
     fn test_roundtrip_inner(orig: Status) {
         let buf = orig.to_string();
-        let msg = ServerMessage::parse_json(&buf).unwrap();
-        assert_eq!(msg, ServerMessage::Status(orig));
+        let msg = ServerMessageV1::parse_json(&buf).unwrap();
+        assert_eq!(msg, ServerMessageV1::Status(orig));
     }
 
     #[test]

@@ -2,7 +2,7 @@ use std::any::type_name;
 
 use serde::Serialize;
 
-use crate::websocket::ws_protocol::ParseError;
+use crate::protocol::ParseError;
 
 /// Trait for JSON-serializable messages.
 pub trait JsonMessage: Serialize {

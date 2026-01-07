@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::websocket::ws_protocol::JsonMessage;
+use crate::protocol::JsonMessage;
 
 /// Type for serializing timestamps in the server info message.
 ///
@@ -138,7 +138,7 @@ pub enum Capability {
 
 #[cfg(test)]
 mod tests {
-    use crate::websocket::ws_protocol::server::ServerMessage;
+    use crate::protocol::v1::server::ServerMessageV1;
 
     use super::*;
 
@@ -173,8 +173,8 @@ mod tests {
 
     fn test_roundtrip_inner(orig: ServerInfo) {
         let buf = orig.to_string();
-        let msg = ServerMessage::parse_json(&buf).unwrap();
-        assert_eq!(msg, ServerMessage::ServerInfo(orig));
+        let msg = ServerMessageV1::parse_json(&buf).unwrap();
+        assert_eq!(msg, ServerMessageV1::ServerInfo(orig));
     }
 
     #[test]

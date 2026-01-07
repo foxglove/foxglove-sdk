@@ -2,7 +2,7 @@ use std::borrow::Cow;
 
 use bytes::{Buf, BufMut};
 
-use crate::websocket::ws_protocol::{BinaryMessage, ParseError};
+use crate::protocol::{BinaryMessage, ParseError};
 
 use super::BinaryOpcode;
 
@@ -71,7 +71,7 @@ impl<'a> BinaryMessage<'a> for ServiceCallRequest<'a> {
 mod tests {
     use assert_matches::assert_matches;
 
-    use crate::websocket::ws_protocol::client::ClientMessage;
+    use crate::protocol::v1::client::ClientMessageV1;
 
     use super::*;
 
@@ -113,7 +113,7 @@ mod tests {
     fn test_roundtrip() {
         let orig = message();
         let buf = orig.to_bytes();
-        let msg = ClientMessage::parse_binary(&buf).unwrap();
-        assert_eq!(msg, ClientMessage::ServiceCallRequest(orig));
+        let msg = ClientMessageV1::parse_binary(&buf).unwrap();
+        assert_eq!(msg, ClientMessageV1::ServiceCallRequest(orig));
     }
 }

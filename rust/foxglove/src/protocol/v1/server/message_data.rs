@@ -2,15 +2,15 @@ use std::borrow::Cow;
 
 use bytes::{Buf, BufMut};
 
-use crate::websocket::ws_protocol::{BinaryMessage, ParseError};
+use crate::protocol::{BinaryMessage, ParseError};
+use crate::protocol::common::server::BinaryOpcode;
 
-use super::BinaryOpcode;
 
 /// Message data message.
 ///
 /// Spec: <https://github.com/foxglove/ws-protocol/blob/main/docs/spec.md#message-data>
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct MessageData<'a> {
+pub struct MessageDataV1<'a> {
     /// Subscription ID.
     pub subscription_id: u32,
     /// Log time.
@@ -19,7 +19,7 @@ pub struct MessageData<'a> {
     pub data: Cow<'a, [u8]>,
 }
 
-impl<'a> MessageData<'a> {
+impl<'a> MessageDataV1<'a> {
     /// Creates a new message data message.
     pub fn new(subscription_id: u32, log_time: u64, data: impl Into<Cow<'a, [u8]>>) -> Self {
         Self {
@@ -30,8 +30,8 @@ impl<'a> MessageData<'a> {
     }
 
     /// Returns an owned version of this message.
-    pub fn into_owned(self) -> MessageData<'static> {
-        MessageData {
+    pub fn into_owned(self) -> MessageDataV1<'static> {
+        MessageDataV1 {
             subscription_id: self.subscription_id,
             log_time: self.log_time,
             data: Cow::Owned(self.data.into_owned()),
@@ -39,7 +39,7 @@ impl<'a> MessageData<'a> {
     }
 }
 
-impl<'a> BinaryMessage<'a> for MessageData<'a> {
+impl<'a> BinaryMessage<'a> for MessageDataV1<'a> {
     fn parse_binary(mut data: &'a [u8]) -> Result<Self, ParseError> {
         if data.len() < 4 + 8 {
             return Err(ParseError::BufferTooShort);
@@ -66,12 +66,12 @@ impl<'a> BinaryMessage<'a> for MessageData<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::websocket::ws_protocol::server::ServerMessage;
+    use crate::protocol::v1::server::ServerMessageV1;
 
     use super::*;
 
-    fn message() -> MessageData<'static> {
-        MessageData {
+    fn message() -> MessageDataV1<'static> {
+        MessageDataV1 {
             subscription_id: 30,
             log_time: 1234,
             data: br#"{"key": "value"}"#.into(),
@@ -87,7 +87,7 @@ mod tests {
     fn test_roundtrip() {
         let orig = message();
         let buf = orig.to_bytes();
-        let msg = ServerMessage::parse_binary(&buf).unwrap();
-        assert_eq!(msg, ServerMessage::MessageData(orig));
+        let msg = ServerMessageV1::parse_binary(&buf).unwrap();
+        assert_eq!(msg, ServerMessageV1::MessageData(orig));
     }
 }

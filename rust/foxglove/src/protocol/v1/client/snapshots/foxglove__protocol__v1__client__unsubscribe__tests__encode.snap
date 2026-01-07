@@ -1,5 +1,5 @@
 ---
-source: rust/foxglove/src/protocol/common/client/unsubscribe.rs
+source: rust/foxglove/src/protocol/v1/client/unsubscribe.rs
 expression: message()
 ---
 {

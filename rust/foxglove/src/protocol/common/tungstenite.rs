@@ -2,9 +2,12 @@
 
 use tokio_tungstenite::tungstenite::Message;
 
-use crate::websocket::ws_protocol::{client, server, BinaryMessage, JsonMessage, ParseError};
+use crate::{
+    protocol::{BinaryMessage, JsonMessage, ParseError},
+    protocol::v1::{client, server},
+};
 
-impl<'a> TryFrom<&'a Message> for client::ClientMessage<'a> {
+impl<'a> TryFrom<&'a Message> for client::ClientMessageV1<'a> {
     type Error = ParseError;
 
     fn try_from(msg: &'a Message) -> Result<Self, Self::Error> {
@@ -16,7 +19,7 @@ impl<'a> TryFrom<&'a Message> for client::ClientMessage<'a> {
     }
 }
 
-impl<'a> TryFrom<&'a Message> for server::ServerMessage<'a> {
+impl<'a> TryFrom<&'a Message> for server::ServerMessageV1<'a> {
     type Error = ParseError;
 
     fn try_from(msg: &'a Message) -> Result<Self, Self::Error> {
@@ -46,8 +49,8 @@ impl From<&client::GetParameters> for Message {
     }
 }
 
-impl From<&client::MessageData<'_>> for Message {
-    fn from(value: &client::MessageData<'_>) -> Self {
+impl From<&client::MessageDataV1<'_>> for Message {
+    fn from(value: &client::MessageDataV1<'_>) -> Self {
         Message::Binary(value.to_bytes().into())
     }
 }
@@ -70,8 +73,8 @@ impl From<&client::SetParameters> for Message {
     }
 }
 
-impl From<&client::Subscribe> for Message {
-    fn from(value: &client::Subscribe) -> Self {
+impl From<&client::SubscribeV1> for Message {
+    fn from(value: &client::SubscribeV1) -> Self {
         Message::Text(value.to_string().into())
     }
 }
@@ -94,8 +97,8 @@ impl From<&client::Unadvertise> for Message {
     }
 }
 
-impl From<&client::Unsubscribe> for Message {
-    fn from(value: &client::Unsubscribe) -> Self {
+impl From<&client::UnsubscribeV1> for Message {
+    fn from(value: &client::UnsubscribeV1) -> Self {
         Message::Text(value.to_string().into())
     }
 }
@@ -136,8 +139,8 @@ impl From<&server::FetchAssetResponse<'_>> for Message {
     }
 }
 
-impl From<&server::MessageData<'_>> for Message {
-    fn from(value: &server::MessageData<'_>) -> Self {
+impl From<&server::MessageDataV1<'_>> for Message {
+    fn from(value: &server::MessageDataV1<'_>) -> Self {
         Message::Binary(value.to_bytes().into())
     }
 }
