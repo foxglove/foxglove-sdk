@@ -417,7 +417,7 @@ class TestFileLikeObject:
 # =============================================================================
 
 
-class NonSeekableWriter(BinaryIO):
+class NonSeekableWriter:
     """A file-like object that supports write/flush but raises on actual seeks.
 
     This mimics a non-seekable stream like a pipe or network socket. It allows
