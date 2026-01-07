@@ -28,7 +28,7 @@ pub mod server {
     pub use crate::protocol::common::server::server_info;
     pub use crate::protocol::common::server::status;
     pub use crate::protocol::v1::server::{
-        Advertise, AdvertiseServices, ConnectionGraphUpdate, FetchAssetResponse,
+        Advertise, AdvertiseServices, Channel, ConnectionGraphUpdate, FetchAssetResponse,
         MessageDataV1 as MessageData, ParameterValues, PlaybackState, RemoveStatus, ServerInfo,
         ServerMessageV1 as ServerMessage, ServiceCallFailure, ServiceCallResponse, Status, Time,
         Unadvertise, UnadvertiseServices,

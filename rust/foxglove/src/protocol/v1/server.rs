@@ -11,7 +11,8 @@ mod message_data;
 #[doc(hidden)]
 pub use crate::protocol::common::server::playback_state::PlaybackState;
 pub use crate::protocol::common::server::{
-    Advertise, AdvertiseServices, ConnectionGraphUpdate, FetchAssetResponse, ParameterValues,
+    Advertise, AdvertiseServices, Channel, ConnectionGraphUpdate, FetchAssetResponse,
+    ParameterValues,
     RemoveStatus, ServerInfo, ServiceCallFailure, ServiceCallResponse, Status, Time, Unadvertise,
     UnadvertiseServices,
 };
