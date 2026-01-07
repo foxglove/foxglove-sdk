@@ -215,7 +215,8 @@ const MessageSpec& MessageDefinitionCache::load_message_spec(
   }
 
   // Get the package share directory, or throw a PackageNotFoundError
-  const std::string share_dir = ament_index_cpp::get_package_share_directory(package);
+  std::filesystem::path share_dir;
+  ament_index_cpp::get_package_share_directory(package, share_dir);
 
   // Get the rosidl_interfaces index contents for this package
   std::string index_contents;
@@ -234,7 +235,7 @@ const MessageSpec& MessageDefinitionCache::load_message_spec(
   }
 
   // Read the file
-  const std::string full_path = share_dir + std::filesystem::path::preferred_separator + *it;
+  const std::filesystem::path full_path = share_dir / *it;
   std::ifstream file{full_path};
   if (!file.good()) {
     throw DefinitionNotFoundError(definition_identifier.package_resource_name);
