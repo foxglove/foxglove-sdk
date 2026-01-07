@@ -143,6 +143,7 @@ impl PyMcapWriteOptions {
         emit_summary_offsets = true,
         emit_message_indexes = true,
         emit_chunk_indexes = true,
+        disable_seeking = false,
         repeat_channels = true,
         repeat_schemas = true,
         calculate_chunk_crcs = true,
@@ -159,6 +160,7 @@ impl PyMcapWriteOptions {
         emit_summary_offsets: Option<bool>,
         emit_message_indexes: Option<bool>,
         emit_chunk_indexes: Option<bool>,
+        disable_seeking: Option<bool>,
         repeat_channels: Option<bool>,
         repeat_schemas: Option<bool>,
         calculate_chunk_crcs: Option<bool>,
@@ -178,7 +180,8 @@ impl PyMcapWriteOptions {
             .repeat_schemas(repeat_schemas.unwrap_or(true))
             .calculate_chunk_crcs(calculate_chunk_crcs.unwrap_or(true))
             .calculate_data_section_crc(calculate_data_section_crc.unwrap_or(true))
-            .calculate_summary_section_crc(calculate_summary_section_crc.unwrap_or(true));
+            .calculate_summary_section_crc(calculate_summary_section_crc.unwrap_or(true))
+            .disable_seeking(disable_seeking.unwrap_or(false));
 
         let opts = if let Some(profile) = profile {
             opts.profile(profile)
