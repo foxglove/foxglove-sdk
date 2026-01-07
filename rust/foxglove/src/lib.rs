@@ -369,6 +369,9 @@ mod websocket_client;
 mod websocket_server;
 #[cfg(feature = "agent")]
 pub use cloud_sink::{CloudSink, CloudSinkHandle, CloudSinkListener};
+#[doc(hidden)]
+#[cfg(feature = "live_visualization")]
+pub use protocol::common;
 #[cfg(feature = "live_visualization")]
 pub(crate) use runtime::get_runtime_handle;
 #[cfg(feature = "live_visualization")]
