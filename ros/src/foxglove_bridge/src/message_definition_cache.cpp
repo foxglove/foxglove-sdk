@@ -215,8 +215,19 @@ const MessageSpec& MessageDefinitionCache::load_message_spec(
   }
 
   // Get the package share directory, or throw a PackageNotFoundError
-  std::filesystem::path share_dir;
-  ament_index_cpp::get_package_share_directory(package, share_dir);
+  // Suppress deprecation warnings for this API call. The newer API signature
+  // (taking std::filesystem::path& as an out parameter) is only available in
+  // ROS 2 rolling and later distributions. To support older distributions,
+  // we continue using the old API until all supported distributions have been updated.
+#if defined(__GNUC__) || defined(__clang__)
+  #pragma GCC diagnostic push
+  #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+  const std::string share_dir_str = ament_index_cpp::get_package_share_directory(package);
+#if defined(__GNUC__) || defined(__clang__)
+  #pragma GCC diagnostic pop
+#endif
+  const std::filesystem::path share_dir(share_dir_str);
 
   // Get the rosidl_interfaces index contents for this package
   std::string index_contents;
