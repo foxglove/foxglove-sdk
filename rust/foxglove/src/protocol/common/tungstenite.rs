@@ -3,8 +3,8 @@
 use tokio_tungstenite::tungstenite::Message;
 
 use crate::{
-    protocol::{BinaryMessage, JsonMessage, ParseError},
     protocol::v1::{client, server},
+    protocol::{BinaryMessage, JsonMessage, ParseError},
 };
 
 impl<'a> TryFrom<&'a Message> for client::ClientMessageV1<'a> {

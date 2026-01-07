@@ -2,9 +2,8 @@ use std::borrow::Cow;
 
 use bytes::{Buf, BufMut};
 
-use crate::protocol::{BinaryMessage, ParseError};
 use crate::protocol::common::server::BinaryOpcode;
-
+use crate::protocol::{BinaryMessage, ParseError};
 
 /// Message data message.
 ///

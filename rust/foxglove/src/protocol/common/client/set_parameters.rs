@@ -37,8 +37,8 @@ impl JsonMessage for SetParameters {}
 
 #[cfg(test)]
 mod tests {
-    use crate::protocol::v1::client::ClientMessageV1;
     use crate::protocol::parameter::Parameter;
+    use crate::protocol::v1::client::ClientMessageV1;
 
     use super::*;
 

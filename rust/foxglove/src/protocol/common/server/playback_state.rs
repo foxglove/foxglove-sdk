@@ -1,6 +1,6 @@
 use crate::{
-    protocol::{BinaryMessage, ParseError},
     protocol::common::server::BinaryOpcode,
+    protocol::{BinaryMessage, ParseError},
 };
 use bytes::{Buf, BufMut};
 
