@@ -215,23 +215,18 @@ const MessageSpec& MessageDefinitionCache::load_message_spec(
   }
 
   // Get the package share directory, or throw a PackageNotFoundError
-  // TODO: FLE-167: Remove warning once ament_index_cpp is updated and synced across all current
-  // ROS2 distributions.
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-  const std::string share_dir = ament_index_cpp::get_package_share_directory(package);
-#pragma GCC diagnostic pop
+  std::filesystem::path share_dir;
+  #if AMENT_INDEX_CPP_VERSION_GTE(1, 13, 0)
+    ament_index_cpp::get_package_share_directory(package, share_dir);
+  #else
+    share_dir = ament_index_cpp::get_package_share_directory(package);
+  #endif
 
   // Get the rosidl_interfaces index contents for this package
-  // TODO: FLE-167: Remove warning once ament_index_cpp is updated and synced across all current
-  // ROS2 distributions.
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
   std::string index_contents;
   if (!ament_index_cpp::get_resource("rosidl_interfaces", package, index_contents)) {
     throw DefinitionNotFoundError(definition_identifier.package_resource_name);
   }
-#pragma GCC diagnostic pop
 
   // Find the first line that ends with the filename we're looking for
   const auto lines = split_string(index_contents);
@@ -244,7 +239,7 @@ const MessageSpec& MessageDefinitionCache::load_message_spec(
   }
 
   // Read the file
-  const std::string full_path = share_dir + std::filesystem::path::preferred_separator + *it;
+  const auto full_path = share_dir / *it;
   std::ifstream file{full_path};
   if (!file.good()) {
     throw DefinitionNotFoundError(definition_identifier.package_resource_name);
