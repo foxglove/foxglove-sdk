@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, BinaryIO, Callable
 
 from foxglove.websocket import AssetHandler
 
@@ -187,7 +187,7 @@ def shutdown() -> None:
     ...
 
 def open_mcap(
-    path: str | Path,
+    path: str | Path | BinaryIO,
     *,
     allow_overwrite: bool = False,
     context: Context | None = None,
@@ -195,7 +195,11 @@ def open_mcap(
     writer_options: MCAPWriteOptions | None = None,
 ) -> MCAPWriter:
     """
-    Creates a new MCAP file for recording.
+    Open an MCAP writer for recording.
+
+    If a path is provided, the file will be created and must not already exist (unless
+    allow_overwrite is True). If a file-like object is provided, it must support write(),
+    seek(), and flush() methods; the allow_overwrite parameter is ignored.
 
     If a context is provided, the MCAP file will be associated with that context. Otherwise, the
     global context will be used.

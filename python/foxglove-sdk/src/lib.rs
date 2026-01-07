@@ -7,7 +7,7 @@ use generated::channels;
 use generated::schemas;
 use log::LevelFilter;
 use logging::init_logging;
-use mcap::{PyMcapWriteOptions, PyMcapWriter};
+use mcap::{PyFileLikeWriter, PyMcapWriteOptions, PyMcapWriter, WriterInner};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use sink_channel_filter::{PyChannelDescriptor, PySinkChannelFilter};
@@ -16,6 +16,7 @@ use std::fs::File;
 use std::io::BufWriter;
 use std::num::NonZeroU64;
 use std::path::PathBuf;
+
 use std::sync::{Arc, OnceLock};
 #[cfg(not(target_family = "wasm"))]
 use websocket::start_server;
@@ -198,11 +199,22 @@ impl PyContext {
     }
 }
 
-/// Open a new mcap file for recording.
+/// Accepts either a file path (str/Path) or a file-like object.
+#[derive(FromPyObject)]
+enum PathOrFileLike {
+    #[pyo3(transparent)]
+    Path(PathBuf),
+    #[pyo3(transparent)]
+    FileLike(Py<PyAny>),
+}
+
+/// Open an MCAP writer for recording.
 ///
-/// :param path: The path to the MCAP file. This file will be created and must not already exist.
-/// :type path: str | Path
+/// :param path: The destination to write the MCAP to. If it is a path, the file will be created and must not already exist
+///     unless `allow_overwrite` is `True`. If it is a file-like object, it must support `write()`, `seek()`, and `flush()` methods.
+/// :type path: str | Path | BinaryIO
 /// :param allow_overwrite: Set this flag in order to overwrite an existing file at this path.
+///     Ignored when a file-like object is provided.
 /// :type allow_overwrite: Optional[bool]
 /// :param context: The context to use for logging. If None, the global context is used.
 /// :type context: :py:class:`Context`
@@ -215,16 +227,19 @@ impl PyContext {
 #[pyfunction]
 #[pyo3(signature = (path, *, allow_overwrite = false, context = None, channel_filter = None, writer_options = None))]
 fn open_mcap(
-    path: PathBuf,
+    path: PathOrFileLike,
     allow_overwrite: bool,
     context: Option<PyRef<PyContext>>,
     channel_filter: Option<Py<PyAny>>,
     writer_options: Option<PyMcapWriteOptions>,
 ) -> PyResult<PyMcapWriter> {
-    let file = if allow_overwrite {
-        File::create(path)?
-    } else {
-        File::create_new(path)?
+    let file = match path {
+        PathOrFileLike::Path(path) => WriterInner::File(if allow_overwrite {
+            File::create(path)?
+        } else {
+            File::create_new(path)?
+        }),
+        PathOrFileLike::FileLike(obj) => WriterInner::FileLike(PyFileLikeWriter(obj)),
     };
 
     let options = writer_options.map_or_else(McapWriteOptions::default, |opts| opts.into());
