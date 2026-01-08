@@ -1,6 +1,6 @@
-from io import BytesIO
+from io import SEEK_CUR, SEEK_SET, BytesIO
 from pathlib import Path
-from typing import Callable, Generator, Optional
+from typing import Callable, Generator, Optional, Union
 
 import pytest
 from foxglove import Channel, ChannelDescriptor, Context, open_mcap
@@ -410,3 +410,68 @@ class TestFileLikeObject:
         assert summary is not None
         assert summary.statistics is not None
         assert summary.statistics.message_count == 5
+
+
+# =============================================================================
+# Tests for disable_seeking option
+# =============================================================================
+
+
+class NonSeekableWriter:
+    """A file-like object that supports write/flush but raises on actual seeks.
+
+    This mimics a non-seekable stream like a pipe or network socket. It allows
+    position queries (seek(0, SEEK_CUR) or tell()) and no-op seeks to the current
+    position, but raises OSError on any seek that would change the position.
+    """
+
+    def __init__(self) -> None:
+        self._buffer = BytesIO()
+        self._position = 0
+
+    def write(self, data: Union[bytes, bytearray]) -> int:
+        written = self._buffer.write(data)
+        self._position += written
+        return written
+
+    def flush(self) -> None:
+        self._buffer.flush()
+
+    def seek(self, offset: int, whence: int = SEEK_SET) -> int:
+        if whence == SEEK_CUR and offset == 0:
+            # Allow querying current position (tell())
+            return self._position
+        elif whence == SEEK_SET and offset == self._position:
+            # Allow no-op seek to current position
+            return self._position
+        else:
+            # Actual seeks that change position are not supported
+            raise OSError("Seeking is not supported")
+
+    def getvalue(self) -> bytes:
+        return self._buffer.getvalue()
+
+
+class TestDisableSeeking:
+    """Tests for the disable_seeking option in MCAPWriteOptions."""
+
+    def test_disable_seeking_prevents_seek_calls(self) -> None:
+        """Test that disable_seeking=True allows writing without seek calls."""
+        writer = NonSeekableWriter()
+        options = MCAPWriteOptions(disable_seeking=True)
+        test_chan = Channel("test_no_seek", schema={"type": "object"})
+
+        with open_mcap(writer, writer_options=options):
+            test_chan.log({"value": 1})
+
+        # Verify MCAP magic bytes are present
+        assert writer.getvalue()[:8] == b"\x89MCAP0\r\n"
+
+    def test_seeking_fails_without_disable_seeking(self) -> None:
+        """Test that seeking is attempted by default and fails on non-seekable writer."""
+        writer = NonSeekableWriter()
+        test_chan = Channel("test_seek_default", schema={"type": "object"})
+
+        with pytest.raises(RuntimeError):
+            with open_mcap(writer):
+                test_chan.log({"value": 1})
