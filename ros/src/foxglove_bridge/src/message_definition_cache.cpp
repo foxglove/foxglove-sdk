@@ -215,7 +215,12 @@ const MessageSpec& MessageDefinitionCache::load_message_spec(
   }
 
   // Get the package share directory, or throw a PackageNotFoundError
+  // TODO: FLE-167: Remove warning once ament_index_cpp is updated and synced across all current
+  // ROS2 distributions.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
   const std::string share_dir = ament_index_cpp::get_package_share_directory(package);
+#pragma GCC diagnostic pop
 
   // Get the rosidl_interfaces index contents for this package
   std::string index_contents;
