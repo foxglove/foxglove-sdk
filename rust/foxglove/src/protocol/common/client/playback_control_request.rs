@@ -40,7 +40,7 @@ pub struct PlaybackControlRequest {
 
 impl<'a> BinaryMessage<'a> for PlaybackControlRequest {
     // Message layout:
-    //   opcode (1 byte, already stripped by ClientMessageV1::parse_binary())
+    //   opcode (1 byte, already stripped by ClientMessage::parse_binary())
     // + playback_command (1 byte)
     // + playback_speed (4 bytes)
     // + had_seek (1 byte)
@@ -97,7 +97,7 @@ impl<'a> BinaryMessage<'a> for PlaybackControlRequest {
 
 #[cfg(test)]
 mod tests {
-    use crate::protocol::v1::client::ClientMessageV1;
+    use crate::protocol::v1::client::ClientMessage;
 
     use super::*;
 
@@ -143,8 +143,8 @@ mod tests {
             request_id: "some-id".to_string(),
         };
         let buf = orig.to_bytes();
-        let msg = ClientMessageV1::parse_binary(&buf).unwrap();
-        assert_eq!(msg, ClientMessageV1::PlaybackControlRequest(orig));
+        let msg = ClientMessage::parse_binary(&buf).unwrap();
+        assert_eq!(msg, ClientMessage::PlaybackControlRequest(orig));
     }
 
     #[test]
@@ -156,8 +156,8 @@ mod tests {
             request_id: "some-id".to_string(),
         };
         let buf = orig.to_bytes();
-        let msg = ClientMessageV1::parse_binary(&buf).unwrap();
-        assert_eq!(msg, ClientMessageV1::PlaybackControlRequest(orig));
+        let msg = ClientMessage::parse_binary(&buf).unwrap();
+        assert_eq!(msg, ClientMessage::PlaybackControlRequest(orig));
     }
 
     #[test]
@@ -173,9 +173,9 @@ mod tests {
         data.put_u32_le(request_id.len() as u32);
         data.put_slice(request_id.as_bytes());
 
-        let msg = ClientMessageV1::parse_binary(&data).unwrap();
+        let msg = ClientMessage::parse_binary(&data).unwrap();
         match msg {
-            ClientMessageV1::PlaybackControlRequest(request) => {
+            ClientMessage::PlaybackControlRequest(request) => {
                 assert_eq!(request.playback_command, PlaybackCommand::Play);
                 assert_eq!(request.playback_speed, 1.5);
                 assert_eq!(request.seek_time, Some(100_500_000_000));
@@ -199,9 +199,9 @@ mod tests {
         data.put_u32_le(request_id.len() as u32);
         data.put_slice(request_id.as_bytes());
 
-        let msg = ClientMessageV1::parse_binary(&data).unwrap();
+        let msg = ClientMessage::parse_binary(&data).unwrap();
         match msg {
-            ClientMessageV1::PlaybackControlRequest(request) => {
+            ClientMessage::PlaybackControlRequest(request) => {
                 assert_eq!(request.playback_command, PlaybackCommand::Play);
                 assert_eq!(request.playback_speed, 2.0);
                 assert_eq!(request.seek_time, None);

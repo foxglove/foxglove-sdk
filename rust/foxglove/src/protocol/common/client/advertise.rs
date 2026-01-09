@@ -162,7 +162,7 @@ impl<'a> ChannelBuilder<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::protocol::v1::client::ClientMessageV1;
+    use crate::protocol::v1::client::ClientMessage;
 
     use super::*;
 
@@ -197,7 +197,7 @@ mod tests {
     fn test_roundtrip() {
         let orig = message();
         let buf = serde_json::to_string(&orig).unwrap();
-        let msg = ClientMessageV1::parse_json(&buf).unwrap();
-        assert_eq!(msg, ClientMessageV1::Advertise(orig));
+        let msg = ClientMessage::parse_json(&buf).unwrap();
+        assert_eq!(msg, ClientMessage::Advertise(orig));
     }
 }

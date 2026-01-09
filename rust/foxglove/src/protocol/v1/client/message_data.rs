@@ -58,7 +58,7 @@ impl<'a> BinaryMessage<'a> for MessageDataV1<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::protocol::v1::client::ClientMessageV1;
+    use crate::protocol::v1::client::ClientMessage;
 
     use super::*;
 
@@ -75,7 +75,7 @@ mod tests {
     fn test_roundtrip() {
         let orig = message();
         let buf = orig.to_bytes();
-        let msg = ClientMessageV1::parse_binary(&buf).unwrap();
-        assert_eq!(msg, ClientMessageV1::MessageData(orig));
+        let msg = ClientMessage::parse_binary(&buf).unwrap();
+        assert_eq!(msg, ClientMessage::MessageData(orig));
     }
 }

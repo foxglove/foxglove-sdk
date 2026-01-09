@@ -19,15 +19,15 @@ pub use crate::protocol::common::client::{
 #[doc(hidden)]
 pub use crate::protocol::common::client::{PlaybackCommand, PlaybackControlRequest};
 pub use message_data::MessageDataV1;
-pub use subscribe::{SubscribeV1, Subscription};
-pub use unsubscribe::UnsubscribeV1;
+pub use subscribe::{Subscribe, Subscription};
+pub use unsubscribe::Unsubscribe;
 
 /// A representation of a client message useful for deserializing.
 #[derive(Debug, Clone, PartialEq)]
 #[allow(missing_docs)]
-pub enum ClientMessageV1<'a> {
-    Subscribe(SubscribeV1),
-    Unsubscribe(UnsubscribeV1),
+pub enum ClientMessage<'a> {
+    Subscribe(Subscribe),
+    Unsubscribe(Unsubscribe),
     Advertise(Advertise<'a>),
     Unadvertise(Unadvertise),
     MessageData(MessageDataV1<'a>),
@@ -43,7 +43,7 @@ pub enum ClientMessageV1<'a> {
     PlaybackControlRequest(PlaybackControlRequest),
 }
 
-impl<'a> ClientMessageV1<'a> {
+impl<'a> ClientMessage<'a> {
     /// Parses a client message from JSON.
     pub fn parse_json(json: &'a str) -> Result<Self, ParseError> {
         let msg = serde_json::from_str::<JsonMessage>(json)?;
@@ -58,14 +58,14 @@ impl<'a> ClientMessageV1<'a> {
             let opcode = data.get_u8();
             match BinaryOpcode::from_repr(opcode) {
                 Some(BinaryOpcode::MessageData) => {
-                    MessageDataV1::parse_binary(data).map(ClientMessageV1::MessageData)
+                    MessageDataV1::parse_binary(data).map(ClientMessage::MessageData)
                 }
                 Some(BinaryOpcode::ServiceCallRequest) => {
-                    ServiceCallRequest::parse_binary(data).map(ClientMessageV1::ServiceCallRequest)
+                    ServiceCallRequest::parse_binary(data).map(ClientMessage::ServiceCallRequest)
                 }
                 Some(BinaryOpcode::PlaybackControlRequest) => {
                     PlaybackControlRequest::parse_binary(data)
-                        .map(ClientMessageV1::PlaybackControlRequest)
+                        .map(ClientMessage::PlaybackControlRequest)
                 }
                 None => Err(ParseError::InvalidOpcode(opcode)),
             }
@@ -74,32 +74,28 @@ impl<'a> ClientMessageV1<'a> {
 
     /// Returns a client message with a static lifetime.
     #[allow(dead_code)]
-    pub fn into_owned(self) -> ClientMessageV1<'static> {
+    pub fn into_owned(self) -> ClientMessage<'static> {
         match self {
-            ClientMessageV1::Subscribe(m) => ClientMessageV1::Subscribe(m),
-            ClientMessageV1::Unsubscribe(m) => ClientMessageV1::Unsubscribe(m),
-            ClientMessageV1::Advertise(m) => ClientMessageV1::Advertise(m.into_owned()),
-            ClientMessageV1::Unadvertise(m) => ClientMessageV1::Unadvertise(m),
-            ClientMessageV1::MessageData(m) => ClientMessageV1::MessageData(m.into_owned()),
-            ClientMessageV1::GetParameters(m) => ClientMessageV1::GetParameters(m),
-            ClientMessageV1::SetParameters(m) => ClientMessageV1::SetParameters(m),
-            ClientMessageV1::SubscribeParameterUpdates(m) => {
-                ClientMessageV1::SubscribeParameterUpdates(m)
+            ClientMessage::Subscribe(m) => ClientMessage::Subscribe(m),
+            ClientMessage::Unsubscribe(m) => ClientMessage::Unsubscribe(m),
+            ClientMessage::Advertise(m) => ClientMessage::Advertise(m.into_owned()),
+            ClientMessage::Unadvertise(m) => ClientMessage::Unadvertise(m),
+            ClientMessage::MessageData(m) => ClientMessage::MessageData(m.into_owned()),
+            ClientMessage::GetParameters(m) => ClientMessage::GetParameters(m),
+            ClientMessage::SetParameters(m) => ClientMessage::SetParameters(m),
+            ClientMessage::SubscribeParameterUpdates(m) => {
+                ClientMessage::SubscribeParameterUpdates(m)
             }
-            ClientMessageV1::UnsubscribeParameterUpdates(m) => {
-                ClientMessageV1::UnsubscribeParameterUpdates(m)
+            ClientMessage::UnsubscribeParameterUpdates(m) => {
+                ClientMessage::UnsubscribeParameterUpdates(m)
             }
-            ClientMessageV1::ServiceCallRequest(m) => {
-                ClientMessageV1::ServiceCallRequest(m.into_owned())
+            ClientMessage::ServiceCallRequest(m) => {
+                ClientMessage::ServiceCallRequest(m.into_owned())
             }
-            ClientMessageV1::SubscribeConnectionGraph => ClientMessageV1::SubscribeConnectionGraph,
-            ClientMessageV1::UnsubscribeConnectionGraph => {
-                ClientMessageV1::UnsubscribeConnectionGraph
-            }
-            ClientMessageV1::FetchAsset(m) => ClientMessageV1::FetchAsset(m),
-            ClientMessageV1::PlaybackControlRequest(m) => {
-                ClientMessageV1::PlaybackControlRequest(m)
-            }
+            ClientMessage::SubscribeConnectionGraph => ClientMessage::SubscribeConnectionGraph,
+            ClientMessage::UnsubscribeConnectionGraph => ClientMessage::UnsubscribeConnectionGraph,
+            ClientMessage::FetchAsset(m) => ClientMessage::FetchAsset(m),
+            ClientMessage::PlaybackControlRequest(m) => ClientMessage::PlaybackControlRequest(m),
         }
     }
 }
@@ -107,8 +103,8 @@ impl<'a> ClientMessageV1<'a> {
 #[derive(Deserialize)]
 #[serde(tag = "op", rename_all = "camelCase")]
 enum JsonMessage<'a> {
-    Subscribe(SubscribeV1),
-    Unsubscribe(UnsubscribeV1),
+    Subscribe(Subscribe),
+    Unsubscribe(Unsubscribe),
     #[serde(borrow)]
     Advertise(Advertise<'a>),
     Unadvertise(Unadvertise),
@@ -121,7 +117,7 @@ enum JsonMessage<'a> {
     FetchAsset(FetchAsset),
 }
 
-impl<'a> From<JsonMessage<'a>> for ClientMessageV1<'a> {
+impl<'a> From<JsonMessage<'a>> for ClientMessage<'a> {
     fn from(m: JsonMessage<'a>) -> Self {
         match m {
             JsonMessage::Subscribe(m) => Self::Subscribe(m),

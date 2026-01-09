@@ -29,7 +29,7 @@ impl JsonMessage for SubscribeParameterUpdates {}
 
 #[cfg(test)]
 mod tests {
-    use crate::protocol::v1::client::ClientMessageV1;
+    use crate::protocol::v1::client::ClientMessage;
 
     use super::*;
 
@@ -46,7 +46,7 @@ mod tests {
     fn test_roundtrip() {
         let orig = message();
         let buf = orig.to_string();
-        let msg = ClientMessageV1::parse_json(&buf).unwrap();
-        assert_eq!(msg, ClientMessageV1::SubscribeParameterUpdates(orig));
+        let msg = ClientMessage::parse_json(&buf).unwrap();
+        assert_eq!(msg, ClientMessage::SubscribeParameterUpdates(orig));
     }
 }

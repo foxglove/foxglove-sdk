@@ -9,12 +9,12 @@ use crate::protocol::JsonMessage;
 /// Spec: <https://github.com/foxglove/ws-protocol/blob/main/docs/spec.md#subscribe>
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "op", rename = "subscribe", rename_all = "camelCase")]
-pub struct SubscribeV1 {
+pub struct Subscribe {
     /// Subscriptions.
     pub subscriptions: Vec<Subscription>,
 }
 
-impl SubscribeV1 {
+impl Subscribe {
     /// Creates a new subscribe message.
     pub fn new(subscriptions: impl IntoIterator<Item = Subscription>) -> Self {
         Self {
@@ -23,9 +23,9 @@ impl SubscribeV1 {
     }
 }
 
-impl JsonMessage for SubscribeV1 {}
+impl JsonMessage for Subscribe {}
 
-/// A subscription for a [`SubscribeV1`] message.
+/// A subscription for a [`Subscribe`] message.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Subscription {
@@ -44,12 +44,12 @@ impl Subscription {
 
 #[cfg(test)]
 mod tests {
-    use crate::protocol::v1::client::ClientMessageV1;
+    use crate::protocol::v1::client::ClientMessage;
 
     use super::*;
 
-    fn message() -> SubscribeV1 {
-        SubscribeV1::new([Subscription::new(1, 10), Subscription::new(2, 20)])
+    fn message() -> Subscribe {
+        Subscribe::new([Subscription::new(1, 10), Subscription::new(2, 20)])
     }
 
     #[test]
@@ -61,7 +61,7 @@ mod tests {
     fn test_roundtrip() {
         let orig = message();
         let buf = orig.to_string();
-        let msg = ClientMessageV1::parse_json(&buf).unwrap();
-        assert_eq!(msg, ClientMessageV1::Subscribe(orig));
+        let msg = ClientMessage::parse_json(&buf).unwrap();
+        assert_eq!(msg, ClientMessage::Subscribe(orig));
     }
 }

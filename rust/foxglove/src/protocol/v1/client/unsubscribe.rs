@@ -7,12 +7,12 @@ use crate::protocol::JsonMessage;
 /// Spec: <https://github.com/foxglove/ws-protocol/blob/main/docs/spec.md#unsubscribe>
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "op", rename = "unsubscribe", rename_all = "camelCase")]
-pub struct UnsubscribeV1 {
+pub struct Unsubscribe {
     /// Subscription IDs.
     pub subscription_ids: Vec<u32>,
 }
 
-impl UnsubscribeV1 {
+impl Unsubscribe {
     /// Creates a new unsubscribe message.
     pub fn new(subscription_ids: impl IntoIterator<Item = u32>) -> Self {
         Self {
@@ -21,16 +21,16 @@ impl UnsubscribeV1 {
     }
 }
 
-impl JsonMessage for UnsubscribeV1 {}
+impl JsonMessage for Unsubscribe {}
 
 #[cfg(test)]
 mod tests {
-    use crate::protocol::v1::client::ClientMessageV1;
+    use crate::protocol::v1::client::ClientMessage;
 
     use super::*;
 
-    fn message() -> UnsubscribeV1 {
-        UnsubscribeV1::new([1, 2, 3])
+    fn message() -> Unsubscribe {
+        Unsubscribe::new([1, 2, 3])
     }
 
     #[test]
@@ -42,7 +42,7 @@ mod tests {
     fn test_roundtrip() {
         let orig = message();
         let buf = orig.to_string();
-        let msg = ClientMessageV1::parse_json(&buf).unwrap();
-        assert_eq!(msg, ClientMessageV1::Unsubscribe(orig));
+        let msg = ClientMessage::parse_json(&buf).unwrap();
+        assert_eq!(msg, ClientMessage::Unsubscribe(orig));
     }
 }

@@ -71,7 +71,7 @@ impl<'a> BinaryMessage<'a> for ServiceCallRequest<'a> {
 mod tests {
     use assert_matches::assert_matches;
 
-    use crate::protocol::v1::client::ClientMessageV1;
+    use crate::protocol::v1::client::ClientMessage;
 
     use super::*;
 
@@ -113,7 +113,7 @@ mod tests {
     fn test_roundtrip() {
         let orig = message();
         let buf = orig.to_bytes();
-        let msg = ClientMessageV1::parse_binary(&buf).unwrap();
-        assert_eq!(msg, ClientMessageV1::ServiceCallRequest(orig));
+        let msg = ClientMessage::parse_binary(&buf).unwrap();
+        assert_eq!(msg, ClientMessage::ServiceCallRequest(orig));
     }
 }

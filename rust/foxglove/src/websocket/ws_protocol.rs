@@ -3,11 +3,10 @@ pub mod client {
     pub use crate::protocol::common::client::advertise;
     pub use crate::protocol::v1::client::subscribe;
     pub use crate::protocol::v1::client::{
-        Advertise, ClientMessageV1 as ClientMessage, FetchAsset, GetParameters,
-        MessageDataV1 as MessageData, PlaybackCommand, PlaybackControlRequest, ServiceCallRequest,
-        SetParameters, SubscribeConnectionGraph, SubscribeParameterUpdates,
-        SubscribeV1 as Subscribe, Subscription, Unadvertise, UnsubscribeConnectionGraph,
-        UnsubscribeParameterUpdates, UnsubscribeV1 as Unsubscribe,
+        Advertise, ClientMessage, FetchAsset, GetParameters, MessageDataV1 as MessageData,
+        PlaybackCommand, PlaybackControlRequest, ServiceCallRequest, SetParameters, Subscribe,
+        SubscribeConnectionGraph, SubscribeParameterUpdates, Subscription, Unadvertise,
+        Unsubscribe, UnsubscribeConnectionGraph, UnsubscribeParameterUpdates,
     };
 }
 

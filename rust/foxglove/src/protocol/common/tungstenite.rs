@@ -7,7 +7,7 @@ use crate::{
     protocol::{BinaryMessage, JsonMessage, ParseError},
 };
 
-impl<'a> TryFrom<&'a Message> for client::ClientMessageV1<'a> {
+impl<'a> TryFrom<&'a Message> for client::ClientMessage<'a> {
     type Error = ParseError;
 
     fn try_from(msg: &'a Message) -> Result<Self, Self::Error> {
@@ -73,8 +73,8 @@ impl From<&client::SetParameters> for Message {
     }
 }
 
-impl From<&client::SubscribeV1> for Message {
-    fn from(value: &client::SubscribeV1) -> Self {
+impl From<&client::Subscribe> for Message {
+    fn from(value: &client::Subscribe) -> Self {
         Message::Text(value.to_string().into())
     }
 }
@@ -97,8 +97,8 @@ impl From<&client::Unadvertise> for Message {
     }
 }
 
-impl From<&client::UnsubscribeV1> for Message {
-    fn from(value: &client::UnsubscribeV1) -> Self {
+impl From<&client::Unsubscribe> for Message {
+    fn from(value: &client::Unsubscribe) -> Self {
         Message::Text(value.to_string().into())
     }
 }
