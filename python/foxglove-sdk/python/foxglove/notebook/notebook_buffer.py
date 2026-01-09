@@ -8,8 +8,8 @@ from typing import Any, Literal
 from mcap.reader import make_reader
 
 from .._foxglove_py import Context, open_mcap
-from .foxglove_widget import FoxgloveWidget
 from ..layouts import Layout
+from .foxglove_widget import FoxgloveWidget
 
 
 class NotebookBuffer:
