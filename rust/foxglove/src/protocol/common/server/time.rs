@@ -40,7 +40,7 @@ impl<'a> BinaryMessage<'a> for Time {
 
 #[cfg(test)]
 mod tests {
-    use crate::protocol::v1::server::ServerMessageV1;
+    use crate::protocol::v1::server::ServerMessage;
 
     use super::*;
 
@@ -57,7 +57,7 @@ mod tests {
     fn test_roundtrip() {
         let orig = message();
         let buf = orig.to_bytes();
-        let msg = ServerMessageV1::parse_binary(&buf).unwrap();
-        assert_eq!(msg, ServerMessageV1::Time(orig));
+        let msg = ServerMessage::parse_binary(&buf).unwrap();
+        assert_eq!(msg, ServerMessage::Time(orig));
     }
 }

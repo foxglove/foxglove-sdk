@@ -25,7 +25,7 @@ impl JsonMessage for RemoveStatus {}
 
 #[cfg(test)]
 mod tests {
-    use crate::protocol::v1::server::ServerMessageV1;
+    use crate::protocol::v1::server::ServerMessage;
 
     use super::*;
 
@@ -42,7 +42,7 @@ mod tests {
     fn test_roundtrip() {
         let orig = message();
         let buf = orig.to_string();
-        let msg = ServerMessageV1::parse_json(&buf).unwrap();
-        assert_eq!(msg, ServerMessageV1::RemoveStatus(orig));
+        let msg = ServerMessage::parse_json(&buf).unwrap();
+        assert_eq!(msg, ServerMessage::RemoveStatus(orig));
     }
 }

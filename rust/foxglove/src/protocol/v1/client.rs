@@ -18,7 +18,7 @@ pub use crate::protocol::common::client::{
 };
 #[doc(hidden)]
 pub use crate::protocol::common::client::{PlaybackCommand, PlaybackControlRequest};
-pub use message_data::MessageDataV1;
+pub use message_data::MessageData;
 pub use subscribe::{Subscribe, Subscription};
 pub use unsubscribe::Unsubscribe;
 
@@ -30,7 +30,7 @@ pub enum ClientMessage<'a> {
     Unsubscribe(Unsubscribe),
     Advertise(Advertise<'a>),
     Unadvertise(Unadvertise),
-    MessageData(MessageDataV1<'a>),
+    MessageData(MessageData<'a>),
     GetParameters(GetParameters),
     SetParameters(SetParameters),
     SubscribeParameterUpdates(SubscribeParameterUpdates),
@@ -58,7 +58,7 @@ impl<'a> ClientMessage<'a> {
             let opcode = data.get_u8();
             match BinaryOpcode::from_repr(opcode) {
                 Some(BinaryOpcode::MessageData) => {
-                    MessageDataV1::parse_binary(data).map(ClientMessage::MessageData)
+                    MessageData::parse_binary(data).map(ClientMessage::MessageData)
                 }
                 Some(BinaryOpcode::ServiceCallRequest) => {
                     ServiceCallRequest::parse_binary(data).map(ClientMessage::ServiceCallRequest)

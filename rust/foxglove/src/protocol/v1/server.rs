@@ -25,18 +25,18 @@ pub use crate::protocol::common::server::{
     ParameterValues, RemoveStatus, ServerInfo, ServiceCallFailure, ServiceCallResponse, Status,
     Time, Unadvertise, UnadvertiseServices,
 };
-pub use message_data::MessageDataV1;
+pub use message_data::MessageData;
 
 /// A representation of a server message useful for deserializing.
 #[derive(Debug, Clone, PartialEq)]
 #[allow(missing_docs)]
-pub enum ServerMessageV1<'a> {
+pub enum ServerMessage<'a> {
     ServerInfo(ServerInfo),
     Status(Status),
     RemoveStatus(RemoveStatus),
     Advertise(Advertise<'a>),
     Unadvertise(Unadvertise),
-    MessageData(MessageDataV1<'a>),
+    MessageData(MessageData<'a>),
     Time(Time),
     ParameterValues(ParameterValues),
     AdvertiseServices(AdvertiseServices<'a>),
@@ -48,7 +48,7 @@ pub enum ServerMessageV1<'a> {
     PlaybackState(PlaybackState),
 }
 
-impl<'a> ServerMessageV1<'a> {
+impl<'a> ServerMessage<'a> {
     /// Parses a server message from JSON.
     pub fn parse_json(json: &'a str) -> Result<Self, ParseError> {
         let msg = serde_json::from_str::<JsonMessage>(json)?;
@@ -63,16 +63,17 @@ impl<'a> ServerMessageV1<'a> {
             let opcode = data.get_u8();
             match BinaryOpcode::from_repr(opcode) {
                 Some(BinaryOpcode::MessageData) => {
-                    MessageDataV1::parse_binary(data).map(ServerMessageV1::MessageData)
+                    MessageData::parse_binary(data).map(ServerMessage::MessageData)
                 }
-                Some(BinaryOpcode::Time) => Time::parse_binary(data).map(ServerMessageV1::Time),
-                Some(BinaryOpcode::ServiceCallResponse) => ServiceCallResponse::parse_binary(data)
-                    .map(ServerMessageV1::ServiceCallResponse),
+                Some(BinaryOpcode::Time) => Time::parse_binary(data).map(ServerMessage::Time),
+                Some(BinaryOpcode::ServiceCallResponse) => {
+                    ServiceCallResponse::parse_binary(data).map(ServerMessage::ServiceCallResponse)
+                }
                 Some(BinaryOpcode::FetchAssetResponse) => {
-                    FetchAssetResponse::parse_binary(data).map(ServerMessageV1::FetchAssetResponse)
+                    FetchAssetResponse::parse_binary(data).map(ServerMessage::FetchAssetResponse)
                 }
                 Some(BinaryOpcode::PlaybackState) => {
-                    PlaybackState::parse_binary(data).map(ServerMessageV1::PlaybackState)
+                    PlaybackState::parse_binary(data).map(ServerMessage::PlaybackState)
                 }
                 None => Err(ParseError::InvalidOpcode(opcode)),
             }
@@ -81,29 +82,27 @@ impl<'a> ServerMessageV1<'a> {
 
     /// Returns a server message with a static lifetime.
     #[allow(dead_code)]
-    pub fn into_owned(self) -> ServerMessageV1<'static> {
+    pub fn into_owned(self) -> ServerMessage<'static> {
         match self {
-            ServerMessageV1::ServerInfo(m) => ServerMessageV1::ServerInfo(m),
-            ServerMessageV1::Status(m) => ServerMessageV1::Status(m),
-            ServerMessageV1::RemoveStatus(m) => ServerMessageV1::RemoveStatus(m),
-            ServerMessageV1::Advertise(m) => ServerMessageV1::Advertise(m.into_owned()),
-            ServerMessageV1::Unadvertise(m) => ServerMessageV1::Unadvertise(m),
-            ServerMessageV1::MessageData(m) => ServerMessageV1::MessageData(m.into_owned()),
-            ServerMessageV1::Time(m) => ServerMessageV1::Time(m),
-            ServerMessageV1::ParameterValues(m) => ServerMessageV1::ParameterValues(m),
-            ServerMessageV1::AdvertiseServices(m) => {
-                ServerMessageV1::AdvertiseServices(m.into_owned())
+            ServerMessage::ServerInfo(m) => ServerMessage::ServerInfo(m),
+            ServerMessage::Status(m) => ServerMessage::Status(m),
+            ServerMessage::RemoveStatus(m) => ServerMessage::RemoveStatus(m),
+            ServerMessage::Advertise(m) => ServerMessage::Advertise(m.into_owned()),
+            ServerMessage::Unadvertise(m) => ServerMessage::Unadvertise(m),
+            ServerMessage::MessageData(m) => ServerMessage::MessageData(m.into_owned()),
+            ServerMessage::Time(m) => ServerMessage::Time(m),
+            ServerMessage::ParameterValues(m) => ServerMessage::ParameterValues(m),
+            ServerMessage::AdvertiseServices(m) => ServerMessage::AdvertiseServices(m.into_owned()),
+            ServerMessage::UnadvertiseServices(m) => ServerMessage::UnadvertiseServices(m),
+            ServerMessage::ServiceCallResponse(m) => {
+                ServerMessage::ServiceCallResponse(m.into_owned())
             }
-            ServerMessageV1::UnadvertiseServices(m) => ServerMessageV1::UnadvertiseServices(m),
-            ServerMessageV1::ServiceCallResponse(m) => {
-                ServerMessageV1::ServiceCallResponse(m.into_owned())
+            ServerMessage::ConnectionGraphUpdate(m) => ServerMessage::ConnectionGraphUpdate(m),
+            ServerMessage::FetchAssetResponse(m) => {
+                ServerMessage::FetchAssetResponse(m.into_owned())
             }
-            ServerMessageV1::ConnectionGraphUpdate(m) => ServerMessageV1::ConnectionGraphUpdate(m),
-            ServerMessageV1::FetchAssetResponse(m) => {
-                ServerMessageV1::FetchAssetResponse(m.into_owned())
-            }
-            ServerMessageV1::ServiceCallFailure(m) => ServerMessageV1::ServiceCallFailure(m),
-            ServerMessageV1::PlaybackState(m) => ServerMessageV1::PlaybackState(m),
+            ServerMessage::ServiceCallFailure(m) => ServerMessage::ServiceCallFailure(m),
+            ServerMessage::PlaybackState(m) => ServerMessage::PlaybackState(m),
         }
     }
 }
@@ -125,7 +124,7 @@ enum JsonMessage<'a> {
     ServiceCallFailure(ServiceCallFailure),
 }
 
-impl<'a> From<JsonMessage<'a>> for ServerMessageV1<'a> {
+impl<'a> From<JsonMessage<'a>> for ServerMessage<'a> {
     fn from(m: JsonMessage<'a>) -> Self {
         match m {
             JsonMessage::ServerInfo(m) => Self::ServerInfo(m),

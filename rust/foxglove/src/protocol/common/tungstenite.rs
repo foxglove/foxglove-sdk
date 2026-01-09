@@ -19,7 +19,7 @@ impl<'a> TryFrom<&'a Message> for client::ClientMessage<'a> {
     }
 }
 
-impl<'a> TryFrom<&'a Message> for server::ServerMessageV1<'a> {
+impl<'a> TryFrom<&'a Message> for server::ServerMessage<'a> {
     type Error = ParseError;
 
     fn try_from(msg: &'a Message) -> Result<Self, Self::Error> {
@@ -49,8 +49,8 @@ impl From<&client::GetParameters> for Message {
     }
 }
 
-impl From<&client::MessageDataV1<'_>> for Message {
-    fn from(value: &client::MessageDataV1<'_>) -> Self {
+impl From<&client::MessageData<'_>> for Message {
+    fn from(value: &client::MessageData<'_>) -> Self {
         Message::Binary(value.to_bytes().into())
     }
 }
@@ -139,8 +139,8 @@ impl From<&server::FetchAssetResponse<'_>> for Message {
     }
 }
 
-impl From<&server::MessageDataV1<'_>> for Message {
-    fn from(value: &server::MessageDataV1<'_>) -> Self {
+impl From<&server::MessageData<'_>> for Message {
+    fn from(value: &server::MessageData<'_>) -> Self {
         Message::Binary(value.to_bytes().into())
     }
 }

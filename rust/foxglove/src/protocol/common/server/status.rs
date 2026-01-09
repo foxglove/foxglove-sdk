@@ -66,7 +66,7 @@ pub enum Level {
 
 #[cfg(test)]
 mod tests {
-    use crate::protocol::v1::server::ServerMessageV1;
+    use crate::protocol::v1::server::ServerMessage;
 
     use super::*;
 
@@ -90,8 +90,8 @@ mod tests {
 
     fn test_roundtrip_inner(orig: Status) {
         let buf = orig.to_string();
-        let msg = ServerMessageV1::parse_json(&buf).unwrap();
-        assert_eq!(msg, ServerMessageV1::Status(orig));
+        let msg = ServerMessage::parse_json(&buf).unwrap();
+        assert_eq!(msg, ServerMessage::Status(orig));
     }
 
     #[test]

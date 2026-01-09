@@ -126,7 +126,7 @@ mod tests {
     use assert_matches::assert_matches;
 
     use super::*;
-    use crate::protocol::v1::server::ServerMessageV1;
+    use crate::protocol::v1::server::ServerMessage;
 
     #[test]
     fn test_encode_playing() {
@@ -175,8 +175,8 @@ mod tests {
         };
 
         let bytes = message.to_bytes();
-        let parse_result = ServerMessageV1::parse_binary(&bytes);
-        assert_matches!(parse_result, Ok(ServerMessageV1::PlaybackState(parse_result)) => {
+        let parse_result = ServerMessage::parse_binary(&bytes);
+        assert_matches!(parse_result, Ok(ServerMessage::PlaybackState(parse_result)) => {
             assert_eq!(parse_result, message);
         });
     }
@@ -192,8 +192,8 @@ mod tests {
         };
 
         let bytes = message.to_bytes();
-        let parse_result = ServerMessageV1::parse_binary(&bytes);
-        assert_matches!(parse_result, Ok(ServerMessageV1::PlaybackState(parse_result)) => {
+        let parse_result = ServerMessage::parse_binary(&bytes);
+        assert_matches!(parse_result, Ok(ServerMessage::PlaybackState(parse_result)) => {
             assert_eq!(parse_result, message);
         });
     }

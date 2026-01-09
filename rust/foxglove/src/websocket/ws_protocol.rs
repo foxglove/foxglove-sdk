@@ -3,8 +3,8 @@ pub mod client {
     pub use crate::protocol::v1::client::advertise;
     pub use crate::protocol::v1::client::subscribe;
     pub use crate::protocol::v1::client::{
-        Advertise, ClientMessage, FetchAsset, GetParameters, MessageDataV1 as MessageData,
-        PlaybackCommand, PlaybackControlRequest, ServiceCallRequest, SetParameters, Subscribe,
+        Advertise, ClientMessage, FetchAsset, GetParameters, MessageData, PlaybackCommand,
+        PlaybackControlRequest, ServiceCallRequest, SetParameters, Subscribe,
         SubscribeConnectionGraph, SubscribeParameterUpdates, Subscription, Unadvertise,
         Unsubscribe, UnsubscribeConnectionGraph, UnsubscribeParameterUpdates,
     };
@@ -28,9 +28,8 @@ pub mod server {
     pub use crate::protocol::v1::server::status;
     pub use crate::protocol::v1::server::{
         Advertise, AdvertiseServices, Channel, ConnectionGraphUpdate, FetchAssetResponse,
-        MessageDataV1 as MessageData, ParameterValues, PlaybackState, RemoveStatus, ServerInfo,
-        ServerMessageV1 as ServerMessage, ServiceCallFailure, ServiceCallResponse, Status, Time,
-        Unadvertise, UnadvertiseServices,
+        MessageData, ParameterValues, PlaybackState, RemoveStatus, ServerInfo, ServerMessage,
+        ServiceCallFailure, ServiceCallResponse, Status, Time, Unadvertise, UnadvertiseServices,
     };
 }
 

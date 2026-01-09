@@ -9,7 +9,7 @@ use crate::protocol::{BinaryMessage, ParseError};
 ///
 /// Spec: <https://github.com/foxglove/ws-protocol/blob/main/docs/spec.md#message-data>
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct MessageDataV1<'a> {
+pub struct MessageData<'a> {
     /// Subscription ID.
     pub subscription_id: u32,
     /// Log time.
@@ -18,7 +18,7 @@ pub struct MessageDataV1<'a> {
     pub data: Cow<'a, [u8]>,
 }
 
-impl<'a> MessageDataV1<'a> {
+impl<'a> MessageData<'a> {
     /// Creates a new message data message.
     pub fn new(subscription_id: u32, log_time: u64, data: impl Into<Cow<'a, [u8]>>) -> Self {
         Self {
@@ -29,8 +29,8 @@ impl<'a> MessageDataV1<'a> {
     }
 
     /// Returns an owned version of this message.
-    pub fn into_owned(self) -> MessageDataV1<'static> {
-        MessageDataV1 {
+    pub fn into_owned(self) -> MessageData<'static> {
+        MessageData {
             subscription_id: self.subscription_id,
             log_time: self.log_time,
             data: Cow::Owned(self.data.into_owned()),
@@ -38,7 +38,7 @@ impl<'a> MessageDataV1<'a> {
     }
 }
 
-impl<'a> BinaryMessage<'a> for MessageDataV1<'a> {
+impl<'a> BinaryMessage<'a> for MessageData<'a> {
     fn parse_binary(mut data: &'a [u8]) -> Result<Self, ParseError> {
         if data.len() < 4 + 8 {
             return Err(ParseError::BufferTooShort);
@@ -65,12 +65,12 @@ impl<'a> BinaryMessage<'a> for MessageDataV1<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::protocol::v1::server::ServerMessageV1;
+    use crate::protocol::v1::server::ServerMessage;
 
     use super::*;
 
-    fn message() -> MessageDataV1<'static> {
-        MessageDataV1 {
+    fn message() -> MessageData<'static> {
+        MessageData {
             subscription_id: 30,
             log_time: 1234,
             data: br#"{"key": "value"}"#.into(),
@@ -86,7 +86,7 @@ mod tests {
     fn test_roundtrip() {
         let orig = message();
         let buf = orig.to_bytes();
-        let msg = ServerMessageV1::parse_binary(&buf).unwrap();
-        assert_eq!(msg, ServerMessageV1::MessageData(orig));
+        let msg = ServerMessage::parse_binary(&buf).unwrap();
+        assert_eq!(msg, ServerMessage::MessageData(orig));
     }
 }
