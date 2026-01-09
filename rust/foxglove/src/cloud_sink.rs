@@ -218,7 +218,7 @@ impl CloudSink {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::protocol::common::server::server_info::Capability;
+    use crate::protocol::v1::server::server_info::Capability;
     use crate::websocket::ws_protocol::server::ServerMessage;
     use crate::websocket_client::WebSocketClient;
     use tracing_test::traced_test;

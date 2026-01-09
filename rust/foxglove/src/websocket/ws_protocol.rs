@@ -1,6 +1,6 @@
 //! Local re-exports of messages that now live in `crate::protocol` for backwards compatibility
 pub mod client {
-    pub use crate::protocol::common::client::advertise;
+    pub use crate::protocol::v1::client::advertise;
     pub use crate::protocol::v1::client::subscribe;
     pub use crate::protocol::v1::client::{
         Advertise, ClientMessage, FetchAsset, GetParameters, MessageDataV1 as MessageData,
@@ -11,21 +11,21 @@ pub mod client {
 }
 
 pub mod parameter {
-    pub use crate::protocol::common::parameter::*;
+    pub use crate::protocol::v1::parameter::*;
 }
 
 pub mod schema {
-    pub use crate::protocol::common::schema::*;
+    pub use crate::protocol::v1::schema::*;
 }
 
 pub mod server {
-    pub use crate::protocol::common::server::advertise;
-    pub use crate::protocol::common::server::advertise_services;
-    pub use crate::protocol::common::server::connection_graph_update;
-    pub use crate::protocol::common::server::fetch_asset_response;
-    pub use crate::protocol::common::server::playback_state;
-    pub use crate::protocol::common::server::server_info;
-    pub use crate::protocol::common::server::status;
+    pub use crate::protocol::v1::server::advertise;
+    pub use crate::protocol::v1::server::advertise_services;
+    pub use crate::protocol::v1::server::connection_graph_update;
+    pub use crate::protocol::v1::server::fetch_asset_response;
+    pub use crate::protocol::v1::server::playback_state;
+    pub use crate::protocol::v1::server::server_info;
+    pub use crate::protocol::v1::server::status;
     pub use crate::protocol::v1::server::{
         Advertise, AdvertiseServices, Channel, ConnectionGraphUpdate, FetchAssetResponse,
         MessageDataV1 as MessageData, ParameterValues, PlaybackState, RemoveStatus, ServerInfo,
@@ -34,6 +34,6 @@ pub mod server {
     };
 }
 
-pub use crate::protocol::common::tungstenite;
+pub use crate::protocol::v1::tungstenite;
 
-pub use crate::protocol::common::{BinaryMessage, JsonMessage, ParseError};
+pub use crate::protocol::v1::{BinaryMessage, JsonMessage, ParseError};

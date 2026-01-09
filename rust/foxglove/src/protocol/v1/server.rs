@@ -8,8 +8,18 @@ use crate::protocol::{BinaryMessage, ParseError};
 
 mod message_data;
 
+// Re-export common messages for consumers using v1
+pub use crate::protocol::common::server::advertise;
+pub use crate::protocol::common::server::advertise_services;
+pub use crate::protocol::common::server::connection_graph_update;
+pub use crate::protocol::common::server::fetch_asset_response;
 #[doc(hidden)]
-pub use crate::protocol::common::server::playback_state::PlaybackState;
+pub use crate::protocol::common::server::playback_state;
+pub use crate::protocol::common::server::server_info;
+pub use crate::protocol::common::server::status;
+
+#[doc(hidden)]
+pub use crate::protocol::common::server::PlaybackState;
 pub use crate::protocol::common::server::{
     Advertise, AdvertiseServices, Channel, ConnectionGraphUpdate, FetchAssetResponse,
     ParameterValues, RemoveStatus, ServerInfo, ServiceCallFailure, ServiceCallResponse, Status,
