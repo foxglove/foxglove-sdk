@@ -45,6 +45,32 @@ jobs:
           path: python/foxglove-sdk/python/docs/_build
           if-no-files-found: error
 
+  deploy-docs-cf-pages:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+    needs: [build-cpp-docs, build-python-docs]
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v7
+        with:
+          path: artifacts
+      - run: test -d artifacts/python
+      - run: test -d artifacts/cpp
+      - name: Deploy to CF Pages
+        uses: cloudflare/pages-action@v1.5.0
+        # Only run if not a fork, and not a dependabot PR, since we do not have
+        # access to secrets in these environments.
+        if: ${{ !github.event.pull_request.head.repo.fork && github.actor != 'dependabot[bot]' }}
+        with:
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.head_ref || github.ref_name }}
+          projectName: foxglove-sdk-api-docs
+          directory: artifacts
+
   deploy-docs:
     runs-on: ubuntu-latest
     permissions:
