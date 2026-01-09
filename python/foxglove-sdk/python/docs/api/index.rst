@@ -87,6 +87,14 @@ Channels
 
    ./channels
 
+Layouts
+^^^^^^^
+
+.. toctree::
+   :maxdepth: 1
+
+   ./layouts
+
 Parameters
 ^^^^^^^^^^
 
