@@ -48,9 +48,9 @@ jobs:
   deploy-docs:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
+      deployments: write
     needs: [build-cpp-docs, build-python-docs]
-    if: startsWith(github.ref, 'refs/tags/sdk/v')
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v7
@@ -58,10 +58,32 @@ jobs:
           path: artifacts
       - run: test -d artifacts/python
       - run: test -d artifacts/cpp
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
+      - name: Create basic index.html
+        run: |
+          cat <<EOF > artifacts/index.html
+            <ul>
+              <li><a href="/python">Python API docs</a></li>
+              <li><a href="/cpp">C++ API docs</a></li>
+            </ul>
+          EOF
+      - name: Deploy to CF Pages
+        uses: cloudflare/pages-action@v1.5.0
+        # Run preview deploys on PRs (but not for forks or dependabot PRs, since we do not have
+        # access to secrets in these environments). Only run production deploys on release tags, not
+        # the main branch.
+        if: |
+          (
+            github.event_name == 'pull_request' &&
+            !github.event.pull_request.head.repo.fork &&
+            github.actor != 'dependabot[bot]'
+          ) ||
+          startsWith(github.ref, 'refs/tags/sdk/v')
         with:
-          publish_branch: gh-pages
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: artifacts/
-          force_orphan: true
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+          # For PRs, use the PR head branch name. Otherwise we are running on a release tag, so use
+          # "main" to trigger a "production" deploy in CF pages.
+          branch: ${{ github.head_ref || 'main' }}
+          projectName: foxglove-sdk-api-docs
+          directory: artifacts
