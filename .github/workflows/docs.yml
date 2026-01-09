@@ -45,7 +45,7 @@ jobs:
           path: python/foxglove-sdk/python/docs/_build
           if-no-files-found: error
 
-  deploy-docs-cf-pages:
+  deploy-docs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -58,11 +58,26 @@ jobs:
           path: artifacts
       - run: test -d artifacts/python
       - run: test -d artifacts/cpp
+      - name: Create basic index.html
+        run: |
+          cat <<EOF > artifacts/index.html
+            <ul>
+              <li><a href="/python">Python API docs</a></li>
+              <li><a href="/cpp">C++ API docs</a></li>
+            </ul>
+          EOF
       - name: Deploy to CF Pages
         uses: cloudflare/pages-action@v1.5.0
-        # Only run if not a fork, and not a dependabot PR, since we do not have
-        # access to secrets in these environments.
-        if: ${{ !github.event.pull_request.head.repo.fork && github.actor != 'dependabot[bot]' }}
+        # Run preview deploys on PRs (but not for forks or dependabot PRs, since we do not have
+        # access to secrets in these environments). Only run production deploys on release tags, not
+        # the main branch.
+        if: |
+          (
+            github.event_name == 'pull_request' &&
+            !github.event.pull_request.head.repo.fork &&
+            github.actor != 'dependabot[bot]'
+          ) ||
+          startsWith(github.ref, 'refs/tags/sdk/v')
         with:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -70,24 +85,3 @@ jobs:
           branch: ${{ github.head_ref || github.ref_name }}
           projectName: foxglove-sdk-api-docs
           directory: artifacts
-
-  deploy-docs:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    needs: [build-cpp-docs, build-python-docs]
-    if: startsWith(github.ref, 'refs/tags/sdk/v')
-    steps:
-      - name: Download artifacts
-        uses: actions/download-artifact@v7
-        with:
-          path: artifacts
-      - run: test -d artifacts/python
-      - run: test -d artifacts/cpp
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          publish_branch: gh-pages
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: artifacts/
-          force_orphan: true
