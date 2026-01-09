@@ -1,5 +1,6 @@
 import type { RenderProps } from "@anywidget/types";
 import { FoxgloveViewer } from "@foxglove/embed";
+import type { Layout, SelectLayoutParams } from "@foxglove/embed/src/types";
 
 // Specifies attributes defined with traitlets in ../python/foxglove/notebook/widget.py
 interface WidgetModel {
@@ -9,6 +10,7 @@ interface WidgetModel {
   _layout_params?: {
     storage_key: string;
     opaque_layout?: object;
+    layout?: string;
     force: boolean;
   };
 }
@@ -16,6 +18,26 @@ interface WidgetModel {
 type Message = {
   type: "update-data";
 };
+
+function createSelectLayoutParams(
+  layoutParams: WidgetModel["_layout_params"],
+): SelectLayoutParams | undefined {
+  if (!layoutParams) {
+    return undefined;
+  }
+
+  return {
+    storageKey: layoutParams.storage_key,
+    force: layoutParams.force,
+    ...(layoutParams.layout
+      ? {
+          layout: JSON.parse(layoutParams.layout) as Layout,
+        }
+      : {
+          opaqueLayout: layoutParams.opaque_layout,
+        }),
+  };
+}
 
 function render({ model, el }: RenderProps<WidgetModel>): void {
   const parent = document.createElement("div");
@@ -27,13 +49,7 @@ function render({ model, el }: RenderProps<WidgetModel>): void {
     embeddedViewer: "Python",
     src: model.get("src"),
     orgSlug: undefined,
-    initialLayoutParams: initialLayoutParams
-      ? {
-          storageKey: initialLayoutParams.storage_key,
-          opaqueLayout: initialLayoutParams.opaque_layout,
-          force: initialLayoutParams.force,
-        }
-      : undefined,
+    initialLayoutParams: createSelectLayoutParams(initialLayoutParams),
   });
 
   viewer.addEventListener("ready", () => {
@@ -67,14 +83,10 @@ function render({ model, el }: RenderProps<WidgetModel>): void {
   });
 
   model.on("change:_layout_params", () => {
-    const layout = model.get("_layout_params");
-
-    if (layout) {
-      viewer.selectLayout({
-        storageKey: layout.storage_key,
-        opaqueLayout: layout.opaque_layout,
-        force: layout.force,
-      });
+    const layoutParams = model.get("_layout_params");
+    const selectParams = createSelectLayoutParams(layoutParams);
+    if (selectParams) {
+      viewer.selectLayout(selectParams);
     }
   });
 

@@ -7,6 +7,7 @@ import anywidget
 import traitlets
 
 if TYPE_CHECKING:
+    from ..layouts import Layout
     from .notebook_buffer import NotebookBuffer
 
 
@@ -31,6 +32,7 @@ class FoxgloveWidget(anywidget.AnyWidget):
         per_key_traits={
             "storage_key": traitlets.Unicode(),
             "opaque_layout": traitlets.Dict(allow_none=True, default_value=None),
+            "layout": traitlets.Unicode(allow_none=True, default_value=None),
             "force": traitlets.Bool(False),
         },
         allow_none=True,
@@ -44,6 +46,7 @@ class FoxgloveWidget(anywidget.AnyWidget):
         width: int | Literal["full"] | None = None,
         height: int | None = None,
         src: str | None = None,
+        layout: Layout | None = None,
         **kwargs: Any,
     ):
         super().__init__(**kwargs)
@@ -56,7 +59,7 @@ class FoxgloveWidget(anywidget.AnyWidget):
         if src is not None:
             self.src = src
 
-        self.select_layout(layout_storage_key, **kwargs)
+        self.select_layout(layout_storage_key, layout, **kwargs)
 
         # Callback to get the data to display in the widget
         self._buffer = buffer
@@ -67,7 +70,12 @@ class FoxgloveWidget(anywidget.AnyWidget):
         self.on_msg(self._handle_custom_msg)
         self.refresh()
 
-    def select_layout(self, storage_key: str, **kwargs: Any) -> None:
+    def select_layout(
+        self,
+        storage_key: str,
+        layout: Layout | None = None,
+        **kwargs: Any,
+    ) -> None:
         """
         Select a layout in the Foxglove viewer.
         """
@@ -77,6 +85,7 @@ class FoxgloveWidget(anywidget.AnyWidget):
         self._layout_params = {
             "storage_key": storage_key,
             "opaque_layout": opaque_layout if isinstance(opaque_layout, dict) else None,
+            "layout": layout.to_json() if layout is not None else None,
             "force": force_layout,
         }
 

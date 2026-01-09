@@ -9,6 +9,7 @@ from mcap.reader import make_reader
 
 from .._foxglove_py import Context, open_mcap
 from .foxglove_widget import FoxgloveWidget
+from ..layouts import Layout
 
 
 class NotebookBuffer:
@@ -41,6 +42,7 @@ class NotebookBuffer:
         width: int | Literal["full"] | None = None,
         height: int | None = None,
         src: str | None = None,
+        layout: Layout | None = None,
         **kwargs: Any,
     ) -> FoxgloveWidget:
         """
@@ -53,6 +55,7 @@ class NotebookBuffer:
             height=height,
             src=src,
             layout_storage_key=layout_storage_key,
+            layout=layout,
             **kwargs,
         )
         return widget
