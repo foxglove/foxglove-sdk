@@ -13,3 +13,4 @@ __pycache__
 *.ipynb
 example*.json
 SO100
+!minimal.ipynb
