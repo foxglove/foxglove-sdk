@@ -82,6 +82,8 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
-          branch: ${{ github.head_ref || github.ref_name }}
+          # For PRs, use the PR head branch name. Otherwise we are running on a release tag, so use
+          # "main" to trigger a "production" deploy in CF pages.
+          branch: ${{ github.head_ref || 'main' }}
           projectName: foxglove-sdk-api-docs
           directory: artifacts
