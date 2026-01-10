@@ -1,44 +1,53 @@
 //! Subscribe message types.
 
+use bytes::{Buf, BufMut};
 use serde::{Deserialize, Serialize};
 
-use crate::protocol::JsonMessage;
+use crate::protocol::common::client::BinaryOpcode;
+use crate::protocol::{BinaryMessage, ParseError};
 
-/// Subscribe message.
-///
-/// Spec: <https://github.com/foxglove/ws-protocol/blob/main/docs/spec.md#subscribe>
+/// Subscribe to a channel.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "op", rename = "subscribe", rename_all = "camelCase")]
 pub struct Subscribe {
-    /// Subscriptions.
-    pub subscriptions: Vec<Subscription>,
+    /// Channel IDs to subscribe to.
+    pub channel_ids: Vec<u32>,
 }
 
 impl Subscribe {
     /// Creates a new subscribe message.
-    pub fn new(subscriptions: impl IntoIterator<Item = Subscription>) -> Self {
+    pub fn new(channel_ids: impl IntoIterator<Item = u32>) -> Self {
         Self {
-            subscriptions: subscriptions.into_iter().collect(),
+            channel_ids: channel_ids.into_iter().collect(),
         }
     }
 }
 
-impl JsonMessage for Subscribe {}
+impl BinaryMessage<'_> for Subscribe {
+    fn parse_binary(mut data: &[u8]) -> Result<Self, ParseError> {
+        if data.len() < 4 {
+            return Err(ParseError::BufferTooShort);
+        }
+        let count = data.get_u32_le() as usize;
+        if data.len() < count * 4 {
+            return Err(ParseError::BufferTooShort);
+        }
+        let mut channel_ids = Vec::with_capacity(count);
+        for _ in 0..count {
+            channel_ids.push(data.get_u32_le());
+        }
+        Ok(Self { channel_ids })
+    }
 
-/// A subscription for a [`Subscribe`] message.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Subscription {
-    /// Subscription ID.
-    pub id: u32,
-    /// Channel ID.
-    pub channel_id: u64,
-}
-
-impl Subscription {
-    /// Creates a new subscription with the specified channel ID and subscription ID.
-    pub fn new(id: u32, channel_id: u64) -> Self {
-        Self { id, channel_id }
+    fn to_bytes(&self) -> Vec<u8> {
+        let size = 1 + 4 + self.channel_ids.len() * 4;
+        let mut buf = Vec::with_capacity(size);
+        buf.put_u8(BinaryOpcode::Subscribe as u8);
+        buf.put_u32_le(self.channel_ids.len() as u32);
+        for &channel_id in &self.channel_ids {
+            buf.put_u32_le(channel_id);
+        }
+        buf
     }
 }
 
@@ -49,19 +58,19 @@ mod tests {
     use super::*;
 
     fn message() -> Subscribe {
-        Subscribe::new([Subscription::new(1, 10), Subscription::new(2, 20)])
+        Subscribe::new([10, 20, 30])
     }
 
     #[test]
     fn test_encode() {
-        insta::assert_json_snapshot!(message());
+        insta::assert_snapshot!(format!("{:#04x?}", message().to_bytes()));
     }
 
     #[test]
     fn test_roundtrip() {
         let orig = message();
-        let buf = orig.to_string();
-        let msg = ClientMessage::parse_json(&buf).unwrap();
+        let buf = orig.to_bytes();
+        let msg = ClientMessage::parse_binary(&buf).unwrap();
         assert_eq!(msg, ClientMessage::Subscribe(orig));
     }
 }
