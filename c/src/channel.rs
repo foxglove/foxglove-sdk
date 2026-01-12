@@ -489,7 +489,7 @@ unsafe fn do_foxglove_mcap_attach(
     };
 
     let data = if attachment.data.is_null() || attachment.data_len == 0 {
-        if !attachment.data.is_null() {
+        if attachment.data_len != 0 {
             return Err(foxglove::FoxgloveError::ValueError(
                 "attachment data is null but data_len is not 0".to_string(),
             ));
