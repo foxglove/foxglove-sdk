@@ -8,15 +8,15 @@ use crate::websocket::ws_protocol::JsonMessage;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "op", rename = "unsubscribe", rename_all = "camelCase")]
 pub struct Unsubscribe {
-    /// Subscription IDs.
-    pub subscription_ids: Vec<u32>,
+    /// Channel IDs.
+    pub channel_ids: Vec<u32>,
 }
 
 impl Unsubscribe {
     /// Creates a new unsubscribe message.
-    pub fn new(subscription_ids: impl IntoIterator<Item = u32>) -> Self {
+    pub fn new(channel_ids: impl IntoIterator<Item = u32>) -> Self {
         Self {
-            subscription_ids: subscription_ids.into_iter().collect(),
+            channel_ids: channel_ids.into_iter().collect(),
         }
     }
 }
