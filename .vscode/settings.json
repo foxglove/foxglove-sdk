@@ -30,5 +30,6 @@
   // https://github.com/microsoft/vscode-cpptools/issues/722
   "C_Cpp.autoAddFileAssociations": false,
   "C_Cpp.default.cppStandard": "c++17",
-  "rust-analyzer.check.command": "clippy"
+  "rust-analyzer.check.command": "clippy",
+  "cursorpyright.analysis.typeCheckingMode": "strict"
 }
