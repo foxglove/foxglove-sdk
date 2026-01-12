@@ -1,0 +1,26 @@
+[package]
+name = "foxglove_remote_data_loader_upstream"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+license.workspace = true
+
+[dependencies]
+tokio.workspace = true
+serde.workspace = true
+chrono = { version = "0.4.42", features = ["serde"] }
+axum = "0.8.8"
+serde_with.workspace = true
+serde-constant = "0.1.0"
+url = { version = "2.5.8", features = ["serde"] }
+thiserror.workspace = true
+tracing.workspace = true
+futures = "0.3"
+
+[dev-dependencies]
+foxglove = { path = "../foxglove", features = ["stream"] }
+tracing-subscriber = "0.3"
+
+[lints]
+workspace = true
