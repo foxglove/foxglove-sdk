@@ -2,6 +2,12 @@
 Changelog for package foxglove_bridge
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+3.2.3 (2026-01-12)
+------------------
+* Fix build errors in ROS Rolling (`#805 <https://github.com/foxglove/foxglove-sdk/pull/805>`_)
+* Fix message format error when using cache (`#769 <https://github.com/foxglove/foxglove-sdk/pull/769>`_)
+* Contributors: Eric Lujan, chencaidy
+
 3.2.2 (2025-10-24)
 ------------------
 * Fix publishing from Foxglove 3D panel (`#716 <https://github.com/foxglove/foxglove-sdk/pull/716>`_)
