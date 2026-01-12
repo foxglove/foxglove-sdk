@@ -256,7 +256,7 @@ TEST_CASE("Channel can outlive Schema") {
     schema.name = "ExampleSchema";
     schema.encoding = "unknown";
     std::string data = "FAKESCHEMA";
-    schema.data = reinterpret_cast<const uint8_t*>(data.data());
+    schema.data = reinterpret_cast<const std::byte*>(data.data());
     schema.data_len = data.size();
     auto result = foxglove::RawChannel::create("example", "json", schema, context);
     REQUIRE(result.has_value());
@@ -474,7 +474,7 @@ TEST_CASE("MCAP Channel filtering") {
     topic2Schema.name = "Topic2Schema";
     topic2Schema.encoding = "fake-encoding";
     std::string schemaData = "FAKESCHEMA";
-    topic2Schema.data = reinterpret_cast<const uint8_t*>(schemaData.data());
+    topic2Schema.data = reinterpret_cast<const std::byte*>(schemaData.data());
     topic2Schema.data_len = schemaData.size();
 
     std::map<std::string, std::string> metadata = {{"key1", "value1"}, {"key2", "value2"}};
