@@ -2,8 +2,7 @@ use std::borrow::Cow;
 
 use bytes::{Buf, BufMut};
 
-use crate::protocol::common::server::BinaryOpcode;
-use crate::protocol::{BinaryMessage, ParseError};
+use crate::protocol::{BinaryPayload, ParseError};
 
 /// Message data message.
 ///
@@ -38,8 +37,8 @@ impl<'a> MessageData<'a> {
     }
 }
 
-impl<'a> BinaryMessage<'a> for MessageData<'a> {
-    fn parse_binary(mut data: &'a [u8]) -> Result<Self, ParseError> {
+impl<'a> BinaryPayload<'a> for MessageData<'a> {
+    fn parse_payload(mut data: &'a [u8]) -> Result<Self, ParseError> {
         if data.len() < 4 + 8 {
             return Err(ParseError::BufferTooShort);
         }
@@ -52,10 +51,9 @@ impl<'a> BinaryMessage<'a> for MessageData<'a> {
         })
     }
 
-    fn to_bytes(&self) -> Vec<u8> {
-        let size = 1 + 4 + 8 + self.data.len();
+    fn to_payload(&self) -> Vec<u8> {
+        let size = 4 + 8 + self.data.len();
         let mut buf = Vec::with_capacity(size);
-        buf.put_u8(BinaryOpcode::MessageData as u8);
         buf.put_u32_le(self.subscription_id);
         buf.put_u64_le(self.log_time);
         buf.put_slice(&self.data);
@@ -65,7 +63,7 @@ impl<'a> BinaryMessage<'a> for MessageData<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::protocol::v1::server::ServerMessage;
+    use crate::protocol::v1::{server::ServerMessage, BinaryMessage};
 
     use super::*;
 

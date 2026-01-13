@@ -2,9 +2,7 @@ use std::borrow::Cow;
 
 use bytes::{Buf, BufMut};
 
-use crate::protocol::{BinaryMessage, ParseError};
-
-use super::BinaryOpcode;
+use crate::protocol::{BinaryPayload, ParseError};
 
 /// Service call response message.
 ///
@@ -33,8 +31,8 @@ impl ServiceCallResponse<'_> {
     }
 }
 
-impl<'a> BinaryMessage<'a> for ServiceCallResponse<'a> {
-    fn parse_binary(mut data: &'a [u8]) -> Result<Self, ParseError> {
+impl<'a> BinaryPayload<'a> for ServiceCallResponse<'a> {
+    fn parse_payload(mut data: &'a [u8]) -> Result<Self, ParseError> {
         if data.len() < 4 + 4 + 4 {
             return Err(ParseError::BufferTooShort);
         }
@@ -54,10 +52,9 @@ impl<'a> BinaryMessage<'a> for ServiceCallResponse<'a> {
         })
     }
 
-    fn to_bytes(&self) -> Vec<u8> {
-        let size = 1 + 4 + 4 + 4 + self.encoding.len() + self.payload.len();
+    fn to_payload(&self) -> Vec<u8> {
+        let size = 4 + 4 + 4 + self.encoding.len() + self.payload.len();
         let mut buf = Vec::with_capacity(size);
-        buf.put_u8(BinaryOpcode::ServiceCallResponse as u8);
         buf.put_u32_le(self.service_id);
         buf.put_u32_le(self.call_id);
         buf.put_u32_le(self.encoding.len() as u32);
@@ -71,7 +68,7 @@ impl<'a> BinaryMessage<'a> for ServiceCallResponse<'a> {
 mod tests {
     use assert_matches::assert_matches;
 
-    use crate::protocol::v1::server::ServerMessage;
+    use crate::protocol::v1::{server::ServerMessage, BinaryMessage};
 
     use super::*;
 
@@ -92,11 +89,11 @@ mod tests {
     #[test]
     fn test_parse() {
         assert_matches!(
-            ServiceCallResponse::parse_binary(b""),
+            ServiceCallResponse::parse_payload(b""),
             Err(ParseError::BufferTooShort)
         );
         assert_matches!(
-            ServiceCallResponse::parse_binary(&[0; 11]),
+            ServiceCallResponse::parse_payload(&[0; 11]),
             Err(ParseError::BufferTooShort)
         );
         let mut buf = Vec::new();
@@ -104,7 +101,7 @@ mod tests {
         buf.put_u32_le(12);
         buf.put_u32_le(1);
         assert_matches!(
-            ServiceCallResponse::parse_binary(&buf),
+            ServiceCallResponse::parse_payload(&buf),
             Err(ParseError::BufferTooShort)
         );
     }

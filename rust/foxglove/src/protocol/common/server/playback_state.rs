@@ -1,7 +1,4 @@
-use crate::{
-    protocol::common::server::BinaryOpcode,
-    protocol::{BinaryMessage, ParseError},
-};
+use crate::protocol::{BinaryPayload, ParseError};
 use bytes::{Buf, BufMut};
 
 #[doc(hidden)]
@@ -57,16 +54,15 @@ pub struct PlaybackState {
     pub request_id: Option<String>,
 }
 
-impl<'a> BinaryMessage<'a> for PlaybackState {
+impl<'a> BinaryPayload<'a> for PlaybackState {
     // Message layout:
-    //   opcode (1 byte)
     // + status (1 byte)
     // + current_time (8 bytes)
     // + playback_speed (4 bytes)
     // + did_seek (1 byte)
     // + request_id_len (4 bytes)
     // + request_id
-    fn parse_binary(mut data: &'a [u8]) -> Result<Self, ParseError> {
+    fn parse_payload(mut data: &'a [u8]) -> Result<Self, ParseError> {
         const HEADER_LEN: usize = 1 + 8 + 4 + 1 + 4;
         if data.len() < HEADER_LEN {
             return Err(ParseError::BufferTooShort);
@@ -100,14 +96,13 @@ impl<'a> BinaryMessage<'a> for PlaybackState {
         })
     }
 
-    fn to_bytes(&self) -> Vec<u8> {
+    fn to_payload(&self) -> Vec<u8> {
         let request_id_len: u32 = match &self.request_id {
             Some(request_id) => request_id.len() as u32,
             None => 0,
         };
 
-        let mut buf = Vec::with_capacity(1 + 1 + 8 + 4 + 1 + 4 + (request_id_len as usize));
-        buf.put_u8(BinaryOpcode::PlaybackState as u8);
+        let mut buf = Vec::with_capacity(1 + 8 + 4 + 1 + 4 + (request_id_len as usize));
         buf.put_u8(self.status as u8);
         buf.put_u64_le(self.current_time);
         buf.put_f32_le(self.playback_speed);
@@ -126,7 +121,7 @@ mod tests {
     use assert_matches::assert_matches;
 
     use super::*;
-    use crate::protocol::v1::server::ServerMessage;
+    use crate::protocol::v1::{server::ServerMessage, BinaryMessage};
 
     #[test]
     fn test_encode_playing() {
@@ -207,7 +202,7 @@ mod tests {
         message_bytes.put_u32_le(10_000); // size of the request_id, way more bytes than we have
         message_bytes.put_slice(b"i-am-but-a-smol-id");
 
-        let parse_result = PlaybackState::parse_binary(&message_bytes);
+        let parse_result = PlaybackState::parse_payload(&message_bytes);
         assert_matches!(parse_result, Err(ParseError::BufferTooShort));
     }
 }

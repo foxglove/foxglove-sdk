@@ -1,8 +1,6 @@
 use bytes::{Buf, BufMut};
 
-use crate::protocol::{BinaryMessage, ParseError};
-
-use super::BinaryOpcode;
+use crate::protocol::{BinaryPayload, ParseError};
 
 #[doc(hidden)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -38,16 +36,15 @@ pub struct PlaybackControlRequest {
     pub request_id: String,
 }
 
-impl<'a> BinaryMessage<'a> for PlaybackControlRequest {
+impl<'a> BinaryPayload<'a> for PlaybackControlRequest {
     // Message layout:
-    //   opcode (1 byte, already stripped by ClientMessage::parse_binary())
     // + playback_command (1 byte)
     // + playback_speed (4 bytes)
     // + had_seek (1 byte)
     // + seek_time (8 bytes)
     // + request_id_len (4 bytes)
     // + request_id
-    fn parse_binary(mut data: &'a [u8]) -> Result<Self, ParseError> {
+    fn parse_payload(mut data: &'a [u8]) -> Result<Self, ParseError> {
         if data.len() < 1 + 4 + 1 + 8 + 4 {
             return Err(ParseError::BufferTooShort);
         }
@@ -81,10 +78,9 @@ impl<'a> BinaryMessage<'a> for PlaybackControlRequest {
         })
     }
 
-    fn to_bytes(&self) -> Vec<u8> {
-        let mut buf = Vec::with_capacity(1 + 1 + 4 + 1 + 8 + 4 + self.request_id.len());
+    fn to_payload(&self) -> Vec<u8> {
+        let mut buf = Vec::with_capacity(1 + 4 + 1 + 8 + 4 + self.request_id.len());
 
-        buf.put_u8(BinaryOpcode::PlaybackControlRequest as u8);
         buf.put_u8(self.playback_command as u8);
         buf.put_f32_le(self.playback_speed);
         buf.put_u8(if self.seek_time.is_some() { 1 } else { 0 });
@@ -97,7 +93,7 @@ impl<'a> BinaryMessage<'a> for PlaybackControlRequest {
 
 #[cfg(test)]
 mod tests {
-    use crate::protocol::v1::client::ClientMessage;
+    use crate::protocol::v1::{client::BinaryOpcode, client::ClientMessage, BinaryMessage};
 
     use super::*;
 
