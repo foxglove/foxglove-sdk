@@ -29,13 +29,11 @@
 //! mcap info data.mcap
 //! ```
 
-#![allow(refining_impl_trait)]
-
 use std::{convert::Infallible, net::SocketAddr};
 
 use axum::body::Bytes;
-use chrono::Utc;
-use foxglove::stream::create_mcap_stream;
+use chrono::{DateTime, Utc};
+use foxglove::{stream::create_mcap_stream, FoxgloveError};
 use futures::StreamExt;
 use serde::Deserialize;
 use url::Url;
@@ -43,13 +41,26 @@ use url::Url;
 use foxglove_remote_data_loader_upstream::{
     manifest::{Manifest, StreamedSource, Topic, UpstreamSource},
     serve, AuthenticationError, Authenticator, AuthorizationError, DataProvider, ManifestProvider,
+    DATA_ROUTE,
 };
 
-/// A simple message type that will be encoded in the MCAP stream.
-#[derive(foxglove::Encode)]
-struct DemoMessage {
-    msg: String,
-    count: u32,
+/// A simple remote data loader upstream that serves both manifest and data endpoints.
+struct ExampleUpstream {
+    base_url: Url,
+}
+
+// You always have to implement `Authenticator`. If you don't want authentication, you can use a
+// dummy implementation like this one.
+impl Authenticator for ExampleUpstream {
+    type Identity = ();
+
+    async fn authenticate(
+        &self,
+        _bearer_token: Option<&str>,
+    ) -> Result<Self::Identity, AuthenticationError> {
+        // This is just a no-auth example, so always succeed.
+        Ok(())
+    }
 }
 
 /// Query parameters for the manifest endpoint.
@@ -59,6 +70,41 @@ struct ManifestParams {
     flight_id: String,
 }
 
+impl ManifestProvider for ExampleUpstream {
+    type QueryParams = ManifestParams;
+    type Error = Infallible;
+
+    async fn get_manifest(
+        &self,
+        _identity: Self::Identity,
+        Self::QueryParams { flight_id }: Self::QueryParams,
+    ) -> Result<Manifest, Infallible> {
+        tracing::info!(%flight_id, "serving manifest");
+
+        // Build the data URL with proper query parameter escaping
+        let mut data_url = self.base_url.join(DATA_ROUTE).unwrap();
+        data_url
+            .query_pairs_mut()
+            .append_pair("sourceId", &flight_id);
+
+        Ok(Manifest {
+            name: Some(format!("Flight {}", flight_id)),
+            sources: vec![UpstreamSource::Streamed(StreamedSource {
+                url: data_url,
+                id: Some(format!("flight-{}", flight_id)),
+                topics: vec![Topic {
+                    name: "/demo".to_string(),
+                    message_encoding: "protobuf".to_string(),
+                    schema_id: None,
+                }],
+                schemas: vec![],
+                start_time: DateTime::<Utc>::MIN_UTC,
+                end_time: DateTime::<Utc>::MAX_UTC,
+            })],
+        })
+    }
+}
+
 /// Query parameters for the data endpoint.
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -66,111 +112,75 @@ struct DataParams {
     source_id: String,
 }
 
-/// A simple provider that serves both manifest and data endpoints.
-struct DemoProvider;
-
-// Implement authentication with no-auth (public access).
-// This is a conscious choice - the SDK requires you to think about auth.
-impl Authenticator for DemoProvider {
-    type Identity = ();
-
-    async fn authenticate(
-        &self,
-        _bearer_token: Option<&str>,
-    ) -> Result<Self::Identity, AuthenticationError> {
-        // No authentication required - always succeed
-        Ok(())
-    }
-}
-
-impl ManifestProvider for DemoProvider {
-    type QueryParams = ManifestParams;
-
-    async fn get_manifest(
-        &self,
-        _identity: Self::Identity,
-        params: Self::QueryParams,
-    ) -> Result<Manifest, Infallible> {
-        tracing::info!(flight_id = %params.flight_id, "serving manifest");
-
-        // Build the data URL with proper query parameter escaping
-        let mut data_url = Url::parse("http://localhost:8080/v1/data").unwrap();
-        data_url
-            .query_pairs_mut()
-            .append_pair("sourceId", &params.flight_id);
-
-        let now = Utc::now();
-        Ok(Manifest {
-            name: Some(format!("Flight {}", params.flight_id)),
-            sources: vec![UpstreamSource::Streamed(StreamedSource {
-                url: data_url,
-                id: Some(format!("flight-{}", params.flight_id)),
-                topics: vec![Topic {
-                    name: "/demo".to_string(),
-                    message_encoding: "protobuf".to_string(),
-                    schema_id: None,
-                }],
-                schemas: vec![],
-                start_time: now,
-                end_time: now,
-            })],
-        })
-    }
-}
-
-impl DataProvider for DemoProvider {
+impl DataProvider for ExampleUpstream {
     type QueryParams = DataParams;
+    type StreamInitError = Infallible;
+    type StreamDataError = FoxgloveError;
 
     async fn authorize_data(
         &self,
         _identity: Self::Identity,
         _query_params: &Self::QueryParams,
     ) -> Result<(), AuthorizationError> {
-        // Always allow access
+        // Always allow access.
         Ok(())
     }
 
     async fn stream_data(
         &self,
-        params: Self::QueryParams,
-    ) -> Result<impl futures::Stream<Item = Result<Bytes, Infallible>> + Send + 'static, Infallible>
-    {
-        tracing::info!(source_id = %params.source_id, "streaming data");
+        Self::QueryParams { source_id }: Self::QueryParams,
+    ) -> Result<
+        impl futures::Stream<Item = Result<Bytes, Self::StreamDataError>> + Send + 'static,
+        Self::StreamInitError,
+    > {
+        #[derive(foxglove::Encode)]
+        struct DemoMessage {
+            msg: String,
+            count: u32,
+        }
 
-        let (mut handle, stream) = create_mcap_stream();
+        tracing::info!(%source_id, "streaming data");
 
-        // Create a channel for our demo messages
+        // Create a single-channel MCAP and write some messages to it.
+        let (handle, stream) = create_mcap_stream();
         let channel = handle.channel_builder("/demo").build::<DemoMessage>();
-        let source_id = params.source_id;
 
-        // Spawn a task to write messages to the stream
-        tokio::spawn(async move {
+        // Send messages from a different task so we can return the stream without building up
+        // the whole MCAP in memory. If you use blocking I/O, use `spawn_blocking` instead.
+        let join_handle = tokio::spawn(async move {
             for i in 0..10 {
                 channel.log(&DemoMessage {
                     msg: format!("Data for source {source_id}"),
                     count: i,
                 });
-                // Flush after each message to push bytes to the stream
-                if let Err(e) = handle.flush().await {
-                    tracing::warn!(error = %e, "failed to flush mcap stream");
-                }
             }
-            // Close the handle to finalize the MCAP stream
-            if let Err(e) = handle.close().await {
-                tracing::warn!(error = %e, "failed to close mcap stream");
-            }
+            // Dropping `handle` will finalize the MCAP and flush buffers, but errors will be
+            // ignored. Call `close()` explicitly to check for errors.
+            handle.close().await.inspect_err(|error| {
+                tracing::warn!(%error, "failed to close mcap stream");
+            })?;
+
+            Ok::<(), Self::StreamDataError>(())
         });
 
-        // Map Stream<Item = Bytes> to Stream<Item = Result<Bytes, Infallible>>
-        Ok(stream.map(Ok))
+        // If the task finishes with an error, append it to the stream.
+        let error_stream = futures::stream::once(join_handle).filter_map(|result| async move {
+            match result.expect("task should not panic") {
+                Ok(()) => None,
+                Err(error) => Some(Err(error)),
+            }
+        });
+        // `stream` is a `Stream<Item = Bytes>`, but we need a `Stream<Item = Result<Bytes,
+        // Self::StreamDataError>>`, so just wrap each item with `Ok`.
+        Ok(stream.map(Ok).chain(error_stream))
     }
 }
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
     tracing_subscriber::fmt::init();
-
-    let addr: SocketAddr = "0.0.0.0:8080".parse().unwrap();
-    tracing::info!(%addr, "starting server");
-    serve(DemoProvider, addr).await
+    let base_url: Url = "http://localhost:8080".parse().unwrap();
+    let bind_address: SocketAddr = "0.0.0.0:8080".parse().unwrap();
+    tracing::info!(%bind_address, "starting server");
+    serve(ExampleUpstream { base_url }, bind_address).await
 }
