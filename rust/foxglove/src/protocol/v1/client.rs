@@ -6,19 +6,17 @@ use serde::Deserialize;
 use crate::protocol::common::client::BinaryOpcode;
 use crate::protocol::{BinaryMessage, ParseError};
 
-mod message_data;
 pub mod subscribe;
 mod unsubscribe;
 
 pub use crate::protocol::common::client::advertise;
 pub use crate::protocol::common::client::{
-    Advertise, FetchAsset, GetParameters, ServiceCallRequest, SetParameters,
+    Advertise, FetchAsset, GetParameters, MessageData, ServiceCallRequest, SetParameters,
     SubscribeConnectionGraph, SubscribeParameterUpdates, Unadvertise, UnsubscribeConnectionGraph,
     UnsubscribeParameterUpdates,
 };
 #[doc(hidden)]
 pub use crate::protocol::common::client::{PlaybackCommand, PlaybackControlRequest};
-pub use message_data::MessageData;
 pub use subscribe::{Subscribe, Subscription};
 pub use unsubscribe::Unsubscribe;
 
