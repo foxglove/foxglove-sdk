@@ -188,4 +188,4 @@ jobs:
       - run: yarn workspace @foxglove/schemas pack
       - name: Publish @foxglove/schemas to NPM
         if: startsWith(github.ref, 'refs/tags/typescript/schemas/v')
-        run: npx npm@latest publish typescript/schemas/package.tgz --provenance --access public
+        run: npx npm@11.7.0 publish typescript/schemas/package.tgz --provenance --access public

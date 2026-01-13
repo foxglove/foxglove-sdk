@@ -1,7 +1,7 @@
 {
   "name": "foxglove-sdk",
   "private": true,
-  "packageManager": "yarn@4.6.0",
+  "packageManager": "yarn@4.12.0",
   "workspaces": [
     "typescript/*",
     "playground",
