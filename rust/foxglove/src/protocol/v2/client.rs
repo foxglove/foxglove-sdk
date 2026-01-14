@@ -6,7 +6,6 @@ use serde::Deserialize;
 use crate::protocol::common::client::BinaryOpcode;
 use crate::protocol::{BinaryMessage, ParseError};
 
-mod message_data;
 pub mod subscribe;
 mod unsubscribe;
 
