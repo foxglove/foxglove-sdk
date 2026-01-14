@@ -14,11 +14,6 @@ if TYPE_CHECKING:
 class FoxgloveWidget(anywidget.AnyWidget):
     """
     A widget that displays a Foxglove viewer in a notebook.
-
-    :param buffer: The NotebookBuffer object that contains the data to display in the widget.
-    :param width: The width of the widget. Defaults to "full".
-    :param height: The height of the widget in pixels. Defaults to 500.
-    :param src: The source URL of the Foxglove viewer. Defaults to "https://embed.foxglove.dev/".
     """
 
     _esm = pathlib.Path(__file__).parent / "static" / "widget.js"
@@ -38,6 +33,12 @@ class FoxgloveWidget(anywidget.AnyWidget):
         src: str | None = None,
         layout: Layout | None = None,
     ):
+        """
+        :param buffer: The NotebookBuffer object that contains the data to display in the widget.
+        :param width: The width of the widget. Defaults to "full".
+        :param height: The height of the widget in pixels. Defaults to 500.
+        :param src: The source URL of the Foxglove viewer. Defaults to "https://embed.foxglove.dev/".
+        """
         super().__init__()
         if width is not None:
             self.width = width
@@ -65,7 +66,7 @@ class FoxgloveWidget(anywidget.AnyWidget):
         Refresh the widget by getting the data from the callback function and sending it
         to the widget.
         """
-        data = self._buffer.get_data()
+        data = self._buffer._get_data()
         if not self._ready:
             self._pending_data = data
         else:

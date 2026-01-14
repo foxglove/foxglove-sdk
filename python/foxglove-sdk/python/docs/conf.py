@@ -41,6 +41,9 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 # https://pypi.org/project/sphinx-autodoc-typehints/
 typehints_defaults = "braces"
 
+# Treat __init__ signatures as separate methods so we can exclude them using :exclude-members:
+autodoc_class_signature = "separated"
+
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output

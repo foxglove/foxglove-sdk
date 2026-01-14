@@ -180,26 +180,22 @@ def init_notebook_buffer(context: Context | None = None) -> NotebookBuffer:
     notebooks.
 
     The NotebookBuffer object will buffer all data logged to the provided context. When you
-    are ready to visualize the data, you can call the :meth:`show` method to display an embedded
+    are ready to visualize the data, you can call the :meth:`~notebook.notebook_buffer.NotebookBuffer.show` method to display an embedded
     Foxglove visualization widget. The widget provides a fully-featured Foxglove interface
     directly within your Jupyter notebook, allowing you to explore multi-modal robotics data
     including 3D scenes, plots, images, and more.
 
-    Args:
-        context: The Context used to log the messages. If no Context is provided, the global
-            context will be used. Logged messages will be buffered.
+    :param context: The Context used to log the messages. If no Context is provided, the global
+        context will be used. Logged messages will be buffered.
 
-    Returns:
-        NotebookBuffer: A NotebookBuffer object that can be used to manage the data buffering
-            and visualization.
+    :returns: A NotebookBuffer object that can be used to manage the data buffering
+        and visualization.
 
-    Raises:
-        Exception: If the notebook extra package is not installed. Install it
-            with `pip install foxglove-sdk[notebook]`.
+    :raises Exception: If the notebook extra package is not installed. Install it
+        with ``pip install foxglove-sdk[notebook]``.
 
-    Note:
-        This function is only available when the `notebook` extra package
-        is installed. Install it with `pip install foxglove-sdk[notebook]`.
+    :note: This function is only available when the `notebook` extra package
+        is installed. Install it with ``pip install foxglove-sdk[notebook]``.
 
     Example:
         >>> import foxglove
