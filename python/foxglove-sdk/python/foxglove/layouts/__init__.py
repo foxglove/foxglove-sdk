@@ -12,4 +12,6 @@ class Layout:
     """
 
     def to_json(self) -> str:
-        raise NotImplementedError()
+        raise NotImplementedError(
+            "This class is currently experimental and not ready for public use."
+        )
