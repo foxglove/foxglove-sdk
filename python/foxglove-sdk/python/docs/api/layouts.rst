@@ -1,2 +1,0 @@
-.. automodule:: foxglove.layouts
-   :members:
