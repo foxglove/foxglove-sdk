@@ -1,0 +1,18 @@
+
+O
+foxglove/Point2.protofoxglove"$
+Point2
+x (Rx
+y (Rybproto3
+ÿ
+google/protobuf/timestamp.protogoogle.protobuf";
+	Timestamp
+seconds (Rseconds
+nanos (RnanosB…
+com.google.protobufBTimestampProtoPZ2google.golang.org/protobuf/types/known/timestamppbø¢GPBªGoogle.Protobuf.WellKnownTypesbproto3
+÷
+foxglove/Point2InFrame.protofoxglovefoxglove/Point2.protogoogle/protobuf/timestamp.proto"Œ
+Point2InFrame8
+	timestamp (2.google.protobuf.TimestampR	timestamp
+frame_id (	RframeId&
+point (2.foxglove.Point2Rpointbproto3

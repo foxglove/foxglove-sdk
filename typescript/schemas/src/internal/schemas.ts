@@ -178,6 +178,29 @@ const Point2: FoxgloveMessageSchema = {
   ],
 };
 
+const Point2InFrame: FoxgloveMessageSchema = {
+  type: "message",
+  name: "Point2InFrame",
+  description: "A timestamped point for a position in 2D space",
+  fields: [
+    {
+      name: "timestamp",
+      type: { type: "nested", schema: Timestamp },
+      description: "Timestamp of point",
+    },
+    {
+      name: "frame_id",
+      type: { type: "primitive", name: "string" },
+      description: "Frame of reference for point position",
+    },
+    {
+      name: "point",
+      type: { type: "nested", schema: Point2 },
+      description: "Point in 2D space",
+    },
+  ],
+};
+
 const Point3: FoxgloveMessageSchema = {
   type: "message",
   name: "Point3",
@@ -1728,6 +1751,7 @@ export const foxgloveMessageSchemas = {
   ModelPrimitive,
   PackedElementField,
   Point2,
+  Point2InFrame,
   Point3,
   PointCloud,
   PointsAnnotation,
