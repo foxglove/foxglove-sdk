@@ -37,7 +37,8 @@ class FoxgloveWidget(anywidget.AnyWidget):
         :param buffer: The NotebookBuffer object that contains the data to display in the widget.
         :param width: The width of the widget. Defaults to "full".
         :param height: The height of the widget in pixels. Defaults to 500.
-        :param src: The source URL of the Foxglove viewer. Defaults to "https://embed.foxglove.dev/".
+        :param src: The source URL of the Foxglove viewer. Defaults to
+            "https://embed.foxglove.dev/".
         """
         super().__init__()
         if width is not None:
