@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import pathlib
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Literal
 
 import anywidget
 import traitlets
@@ -16,7 +16,7 @@ class FoxgloveWidget(anywidget.AnyWidget):
     A widget that displays a Foxglove viewer in a notebook.
 
     :param buffer: The NotebookBuffer object that contains the data to display in the widget.
-    :param layout_storage_key: The storage key of the layout to use for the widget.
+    :param layout: The storage key of the layout to use for the widget.
     :param width: The width of the widget. Defaults to "full".
     :param height: The height of the widget in pixels. Defaults to 500.
     :param src: The source URL of the Foxglove viewer. Defaults to "https://embed.foxglove.dev/".
@@ -28,28 +28,18 @@ class FoxgloveWidget(anywidget.AnyWidget):
     ).tag(sync=True)
     height = traitlets.Int(default_value=500).tag(sync=True)
     src = traitlets.Unicode(default_value=None, allow_none=True).tag(sync=True)
-    _layout_params = traitlets.Dict(
-        per_key_traits={
-            "storage_key": traitlets.Unicode(),
-            "opaque_layout": traitlets.Dict(allow_none=True, default_value=None),
-            "layout": traitlets.Unicode(allow_none=True, default_value=None),
-            "force": traitlets.Bool(False),
-        },
-        allow_none=True,
-        default_value=None,
-    ).tag(sync=True)
+    _layout = traitlets.Unicode(default_value=None, allow_none=True).tag(sync=True)
 
     def __init__(
         self,
+        *,
         buffer: NotebookBuffer,
-        layout_storage_key: str,
         width: int | Literal["full"] | None = None,
         height: int | None = None,
         src: str | None = None,
         layout: Layout | None = None,
-        **kwargs: Any,
     ):
-        super().__init__(**kwargs)
+        super().__init__()
         if width is not None:
             self.width = width
         else:
@@ -59,7 +49,8 @@ class FoxgloveWidget(anywidget.AnyWidget):
         if src is not None:
             self.src = src
 
-        self.select_layout(layout_storage_key, layout, **kwargs)
+        if layout is not None:
+            self._layout = layout.to_json()
 
         # Callback to get the data to display in the widget
         self._buffer = buffer
@@ -69,25 +60,6 @@ class FoxgloveWidget(anywidget.AnyWidget):
         self._pending_data: list[bytes] = []
         self.on_msg(self._handle_custom_msg)
         self.refresh()
-
-    def select_layout(
-        self,
-        storage_key: str,
-        layout: Layout | None = None,
-        **kwargs: Any,
-    ) -> None:
-        """
-        Select a layout in the Foxglove viewer.
-        """
-        opaque_layout = kwargs.get("opaque_layout", None)
-        force_layout = kwargs.get("force_layout", False)
-
-        self._layout_params = {
-            "storage_key": storage_key,
-            "opaque_layout": opaque_layout if isinstance(opaque_layout, dict) else None,
-            "layout": layout.to_json() if layout is not None else None,
-            "force": force_layout,
-        }
 
     def refresh(self) -> None:
         """

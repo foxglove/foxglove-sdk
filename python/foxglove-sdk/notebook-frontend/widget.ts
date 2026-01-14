@@ -7,49 +7,36 @@ interface WidgetModel {
   width: number | "full";
   height: number;
   src?: string;
-  _layout_params?: {
-    storage_key: string;
-    opaque_layout?: object;
-    layout?: string;
-    force: boolean;
-  };
+  _layout?: string;
 }
+
+const DEFAULT_NOTEBOOK_LAYOUT_STORAGE_KEY = "foxglove-notebook-default-layout";
 
 type Message = {
   type: "update-data";
 };
 
-function createSelectLayoutParams(
-  layoutParams: WidgetModel["_layout_params"],
-): SelectLayoutParams | undefined {
-  if (!layoutParams) {
-    return undefined;
-  }
-
+function createSelectLayoutParams(layoutJson: string | undefined): SelectLayoutParams | undefined {
+  // Even if no layout is provided, we want to always provide our storageKey and force=true so that
+  // the embed doesn't fall back to its default caching behavior.
   return {
-    storageKey: layoutParams.storage_key,
-    force: layoutParams.force,
-    ...(layoutParams.layout
-      ? {
-          layout: JSON.parse(layoutParams.layout) as Layout,
-        }
-      : {
-          opaqueLayout: layoutParams.opaque_layout,
-        }),
+    storageKey: DEFAULT_NOTEBOOK_LAYOUT_STORAGE_KEY,
+    force: true,
+    layout: layoutJson ? (JSON.parse(layoutJson) as Layout) : undefined,
   };
 }
 
 function render({ model, el }: RenderProps<WidgetModel>): void {
   const parent = document.createElement("div");
 
-  const initialLayoutParams = model.get("_layout_params");
+  const initialLayoutJson = model.get("_layout");
 
   const viewer = new FoxgloveViewer({
     parent,
     embeddedViewer: "Python",
     src: model.get("src"),
     orgSlug: undefined,
-    initialLayoutParams: createSelectLayoutParams(initialLayoutParams),
+    initialLayoutParams: createSelectLayoutParams(initialLayoutJson),
   });
 
   viewer.addEventListener("ready", () => {
@@ -82,9 +69,9 @@ function render({ model, el }: RenderProps<WidgetModel>): void {
     parent.style.height = `${model.get("height")}px`;
   });
 
-  model.on("change:_layout_params", () => {
-    const layoutParams = model.get("_layout_params");
-    const selectParams = createSelectLayoutParams(layoutParams);
+  model.on("change:_layout", () => {
+    const layoutJson = model.get("_layout");
+    const selectParams = createSelectLayoutParams(layoutJson);
     if (selectParams) {
       viewer.selectLayout(selectParams);
     }
