@@ -2,19 +2,19 @@
 
 syntax = "proto3";
 
-import "foxglove/Point2.proto";
+import "foxglove/Point3.proto";
 import "google/protobuf/timestamp.proto";
 
 package foxglove;
 
-// A timestamped point for a position in 2D space
-message Point2InFrame {
+// A timestamped point for a position in 3D space
+message PointInFrame {
   // Timestamp of point
   google.protobuf.Timestamp timestamp = 1;
 
   // Frame of reference for point position
   string frame_id = 2;
 
-  // Point in 2D space
-  foxglove.Point2 point = 3;
+  // Point in 3D space
+  foxglove.Point3 point = 3;
 }

@@ -4737,173 +4737,6 @@ pub unsafe extern "C" fn foxglove_point2_encode(
     }
 }
 
-/// A timestamped point for a position in 2D space
-#[repr(C)]
-pub struct Point2InFrame {
-    /// Timestamp of point
-    pub timestamp: *const FoxgloveTimestamp,
-
-    /// Frame of reference for point position
-    pub frame_id: FoxgloveString,
-
-    /// Point in 2D space
-    pub point: *const Point2,
-}
-
-#[cfg(not(target_family = "wasm"))]
-impl Point2InFrame {
-    /// Create a new typed channel, and return an owned raw channel pointer to it.
-    ///
-    /// # Safety
-    /// We're trusting the caller that the channel will only be used with this type T.
-    #[unsafe(no_mangle)]
-    pub unsafe extern "C" fn foxglove_channel_create_point2_in_frame(
-        topic: FoxgloveString,
-        context: *const FoxgloveContext,
-        channel: *mut *const FoxgloveChannel,
-    ) -> FoxgloveError {
-        if channel.is_null() {
-            tracing::error!("channel cannot be null");
-            return FoxgloveError::ValueError;
-        }
-        unsafe {
-            let result =
-                do_foxglove_channel_create::<foxglove::schemas::Point2InFrame>(topic, context);
-            result_to_c(result, channel)
-        }
-    }
-}
-
-impl BorrowToNative for Point2InFrame {
-    type NativeType = foxglove::schemas::Point2InFrame;
-
-    unsafe fn borrow_to_native(
-        &self,
-        #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
-    ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
-        let frame_id = unsafe {
-            string_from_raw(
-                self.frame_id.as_ptr() as *const _,
-                self.frame_id.len(),
-                "frame_id",
-            )?
-        };
-        let point = unsafe {
-            self.point
-                .as_ref()
-                .map(|m| m.borrow_to_native(arena.as_mut()))
-        }
-        .transpose()?;
-
-        Ok(ManuallyDrop::new(foxglove::schemas::Point2InFrame {
-            timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
-            frame_id: ManuallyDrop::into_inner(frame_id),
-            point: point.map(ManuallyDrop::into_inner),
-        }))
-    }
-}
-
-/// Log a Point2InFrame message to a channel.
-///
-/// # Safety
-/// The channel must have been created for this type with foxglove_channel_create_point2_in_frame.
-#[cfg(not(target_family = "wasm"))]
-#[unsafe(no_mangle)]
-pub extern "C" fn foxglove_channel_log_point2_in_frame(
-    channel: Option<&FoxgloveChannel>,
-    msg: Option<&Point2InFrame>,
-    log_time: Option<&u64>,
-    sink_id: FoxgloveSinkId,
-) -> FoxgloveError {
-    let mut arena = pin!(Arena::new());
-    let arena_pin = arena.as_mut();
-    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
-    match unsafe { Point2InFrame::borrow_option_to_native(msg, arena_pin) } {
-        Ok(msg) => {
-            // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
-            log_msg_to_channel(channel, &*msg, log_time, sink_id)
-        }
-        Err(e) => {
-            tracing::error!("Point2InFrame: {}", e);
-            e.into()
-        }
-    }
-}
-
-/// Get the Point2InFrame schema.
-///
-/// All buffers in the returned schema are statically allocated.
-#[allow(
-    clippy::missing_safety_doc,
-    reason = "no preconditions and returned lifetime is static"
-)]
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn foxglove_point2_in_frame_schema() -> FoxgloveSchema {
-    let native =
-        foxglove::schemas::Point2InFrame::get_schema().expect("Point2InFrame schema is Some");
-    let name: &'static str = "foxglove.Point2InFrame";
-    let encoding: &'static str = "protobuf";
-    assert_eq!(name, &native.name);
-    assert_eq!(encoding, &native.encoding);
-    let std::borrow::Cow::Borrowed(data) = native.data else {
-        unreachable!("Point2InFrame schema data is static");
-    };
-    FoxgloveSchema {
-        name: name.into(),
-        encoding: encoding.into(),
-        data: data.as_ptr(),
-        data_len: data.len(),
-    }
-}
-
-/// Encode a Point2InFrame message as protobuf to the buffer provided.
-///
-/// On success, writes the encoded length to *encoded_len.
-/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
-/// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
-/// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
-///
-/// # Safety
-/// ptr must be a valid pointer to a memory region at least len bytes long.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn foxglove_point2_in_frame_encode(
-    msg: Option<&Point2InFrame>,
-    ptr: *mut u8,
-    len: usize,
-    encoded_len: Option<&mut usize>,
-) -> FoxgloveError {
-    let mut arena = pin!(Arena::new());
-    let arena_pin = arena.as_mut();
-    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
-    match unsafe { Point2InFrame::borrow_option_to_native(msg, arena_pin) } {
-        Ok(msg) => {
-            if len == 0 || ptr.is_null() {
-                if let Some(encoded_len) = encoded_len {
-                    *encoded_len = msg
-                        .encoded_len()
-                        .expect("foxglove schemas return Some(len)");
-                }
-                return FoxgloveError::BufferTooShort;
-            }
-            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
-            if let Err(encode_error) = msg.encode(&mut buf) {
-                if let Some(encoded_len) = encoded_len {
-                    *encoded_len = encode_error.required_capacity();
-                }
-                return FoxgloveError::BufferTooShort;
-            }
-            if let Some(encoded_len) = encoded_len {
-                *encoded_len = len - buf.len();
-            }
-            FoxgloveError::Ok
-        }
-        Err(e) => {
-            tracing::error!("Point2InFrame: {}", e);
-            FoxgloveError::EncodeError
-        }
-    }
-}
-
 /// A point representing a position in 3D space
 #[repr(C)]
 pub struct Point3 {
@@ -5050,6 +4883,173 @@ pub unsafe extern "C" fn foxglove_point3_encode(
         }
         Err(e) => {
             tracing::error!("Point3: {}", e);
+            FoxgloveError::EncodeError
+        }
+    }
+}
+
+/// A timestamped point for a position in 3D space
+#[repr(C)]
+pub struct PointInFrame {
+    /// Timestamp of point
+    pub timestamp: *const FoxgloveTimestamp,
+
+    /// Frame of reference for point position
+    pub frame_id: FoxgloveString,
+
+    /// Point in 3D space
+    pub point: *const Point3,
+}
+
+#[cfg(not(target_family = "wasm"))]
+impl PointInFrame {
+    /// Create a new typed channel, and return an owned raw channel pointer to it.
+    ///
+    /// # Safety
+    /// We're trusting the caller that the channel will only be used with this type T.
+    #[unsafe(no_mangle)]
+    pub unsafe extern "C" fn foxglove_channel_create_point_in_frame(
+        topic: FoxgloveString,
+        context: *const FoxgloveContext,
+        channel: *mut *const FoxgloveChannel,
+    ) -> FoxgloveError {
+        if channel.is_null() {
+            tracing::error!("channel cannot be null");
+            return FoxgloveError::ValueError;
+        }
+        unsafe {
+            let result =
+                do_foxglove_channel_create::<foxglove::schemas::PointInFrame>(topic, context);
+            result_to_c(result, channel)
+        }
+    }
+}
+
+impl BorrowToNative for PointInFrame {
+    type NativeType = foxglove::schemas::PointInFrame;
+
+    unsafe fn borrow_to_native(
+        &self,
+        #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
+    ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
+        let frame_id = unsafe {
+            string_from_raw(
+                self.frame_id.as_ptr() as *const _,
+                self.frame_id.len(),
+                "frame_id",
+            )?
+        };
+        let point = unsafe {
+            self.point
+                .as_ref()
+                .map(|m| m.borrow_to_native(arena.as_mut()))
+        }
+        .transpose()?;
+
+        Ok(ManuallyDrop::new(foxglove::schemas::PointInFrame {
+            timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
+            frame_id: ManuallyDrop::into_inner(frame_id),
+            point: point.map(ManuallyDrop::into_inner),
+        }))
+    }
+}
+
+/// Log a PointInFrame message to a channel.
+///
+/// # Safety
+/// The channel must have been created for this type with foxglove_channel_create_point_in_frame.
+#[cfg(not(target_family = "wasm"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn foxglove_channel_log_point_in_frame(
+    channel: Option<&FoxgloveChannel>,
+    msg: Option<&PointInFrame>,
+    log_time: Option<&u64>,
+    sink_id: FoxgloveSinkId,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { PointInFrame::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
+            log_msg_to_channel(channel, &*msg, log_time, sink_id)
+        }
+        Err(e) => {
+            tracing::error!("PointInFrame: {}", e);
+            e.into()
+        }
+    }
+}
+
+/// Get the PointInFrame schema.
+///
+/// All buffers in the returned schema are statically allocated.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_point_in_frame_schema() -> FoxgloveSchema {
+    let native =
+        foxglove::schemas::PointInFrame::get_schema().expect("PointInFrame schema is Some");
+    let name: &'static str = "foxglove.PointInFrame";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("PointInFrame schema data is static");
+    };
+    FoxgloveSchema {
+        name: name.into(),
+        encoding: encoding.into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
+/// Encode a PointInFrame message as protobuf to the buffer provided.
+///
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+/// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+/// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+///
+/// # Safety
+/// ptr must be a valid pointer to a memory region at least len bytes long.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_point_in_frame_encode(
+    msg: Option<&PointInFrame>,
+    ptr: *mut u8,
+    len: usize,
+    encoded_len: Option<&mut usize>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { PointInFrame::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            if len == 0 || ptr.is_null() {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = msg
+                        .encoded_len()
+                        .expect("foxglove schemas return Some(len)");
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
+            if let Err(encode_error) = msg.encode(&mut buf) {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
+            }
+            FoxgloveError::Ok
+        }
+        Err(e) => {
+            tracing::error!("PointInFrame: {}", e);
             FoxgloveError::EncodeError
         }
     }

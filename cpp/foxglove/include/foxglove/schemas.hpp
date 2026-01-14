@@ -1594,18 +1594,18 @@ struct SceneUpdate {
   static Schema schema();
 };
 
-/// @brief A timestamped point for a position in 2D space
-struct Point2InFrame {
+/// @brief A timestamped point for a position in 3D space
+struct PointInFrame {
   /// @brief Timestamp of point
   std::optional<Timestamp> timestamp;
 
   /// @brief Frame of reference for point position
   std::string frame_id;
 
-  /// @brief Point in 2D space
-  std::optional<Point2> point;
+  /// @brief Point in 3D space
+  std::optional<Point3> point;
 
-  /// @brief Encoded the Point2InFrame as protobuf to the provided buffer.
+  /// @brief Encoded the PointInFrame as protobuf to the provided buffer.
   ///
   /// On success, writes the serialized length to *encoded_len.
   /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
@@ -1618,7 +1618,7 @@ struct Point2InFrame {
   /// @param encoded_len where the serialized length or required capacity will be written to.
   FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 
-  /// @brief Get the Point2InFrame schema.
+  /// @brief Get the PointInFrame schema.
   ///
   /// The schema data returned is statically allocated.
   static Schema schema();
@@ -3466,67 +3466,6 @@ private:
   ChannelUniquePtr impl_;
 };
 
-/// @brief A channel for logging Point2InFrame messages to a topic.
-///
-/// @note While channels are fully thread-safe, the Point2InFrame struct is not thread-safe.
-/// Avoid modifying it concurrently or during a log operation.
-class Point2InFrameChannel {
-public:
-  /// @brief Create a new channel.
-  ///
-  /// @param topic The topic name. You should choose a unique topic name per channel for
-  /// compatibility with the Foxglove app.
-  /// @param context The context which associates logs to a sink. If omitted, the default context is
-  /// used.
-  static FoxgloveResult<Point2InFrameChannel> create(
-    const std::string_view& topic, const Context& context = Context()
-  );
-
-  /// @brief Log a message to the channel.
-  ///
-  /// @param msg The Point2InFrame message to log.
-  /// @param log_time The timestamp of the message, as nanoseconds since epoch. If omitted, the
-  /// current time is used.
-  /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
-  FoxgloveError log(
-    const Point2InFrame& msg, std::optional<uint64_t> log_time = std::nullopt,
-    std::optional<uint64_t> sink_id = std::nullopt
-  ) noexcept;
-
-  /// @brief Close the channel.
-  ///
-  /// You can use this to explicitly unadvertise the channel to sinks that subscribe to channels
-  /// dynamically, such as the WebSocketServer.
-  ///
-  /// Attempts to log on a closed channel will elicit a throttled warning message.
-  void close() noexcept;
-
-  /// @brief Uniquely identifies a channel in the context of this program.
-  ///
-  /// @return The ID of the channel.
-  [[nodiscard]] uint64_t id() const noexcept;
-
-  /// @brief Find out if any sinks have been added to the channel.
-  ///
-  /// @return True if sinks have been added to the channel, false otherwise.
-  [[nodiscard]] bool has_sinks() const noexcept;
-
-  Point2InFrameChannel(const Point2InFrameChannel& other) noexcept = delete;
-  Point2InFrameChannel& operator=(const Point2InFrameChannel& other) noexcept = delete;
-  /// @brief Default move constructor.
-  Point2InFrameChannel(Point2InFrameChannel&& other) noexcept = default;
-  /// @brief Default move assignment.
-  Point2InFrameChannel& operator=(Point2InFrameChannel&& other) noexcept = default;
-  /// @brief Default destructor.
-  ~Point2InFrameChannel() = default;
-
-private:
-  explicit Point2InFrameChannel(ChannelUniquePtr&& channel)
-      : impl_(std::move(channel)) {}
-
-  ChannelUniquePtr impl_;
-};
-
 /// @brief A channel for logging Point3 messages to a topic.
 ///
 /// @note While channels are fully thread-safe, the Point3 struct is not thread-safe.
@@ -3583,6 +3522,67 @@ public:
 
 private:
   explicit Point3Channel(ChannelUniquePtr&& channel)
+      : impl_(std::move(channel)) {}
+
+  ChannelUniquePtr impl_;
+};
+
+/// @brief A channel for logging PointInFrame messages to a topic.
+///
+/// @note While channels are fully thread-safe, the PointInFrame struct is not thread-safe.
+/// Avoid modifying it concurrently or during a log operation.
+class PointInFrameChannel {
+public:
+  /// @brief Create a new channel.
+  ///
+  /// @param topic The topic name. You should choose a unique topic name per channel for
+  /// compatibility with the Foxglove app.
+  /// @param context The context which associates logs to a sink. If omitted, the default context is
+  /// used.
+  static FoxgloveResult<PointInFrameChannel> create(
+    const std::string_view& topic, const Context& context = Context()
+  );
+
+  /// @brief Log a message to the channel.
+  ///
+  /// @param msg The PointInFrame message to log.
+  /// @param log_time The timestamp of the message, as nanoseconds since epoch. If omitted, the
+  /// current time is used.
+  /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
+  FoxgloveError log(
+    const PointInFrame& msg, std::optional<uint64_t> log_time = std::nullopt,
+    std::optional<uint64_t> sink_id = std::nullopt
+  ) noexcept;
+
+  /// @brief Close the channel.
+  ///
+  /// You can use this to explicitly unadvertise the channel to sinks that subscribe to channels
+  /// dynamically, such as the WebSocketServer.
+  ///
+  /// Attempts to log on a closed channel will elicit a throttled warning message.
+  void close() noexcept;
+
+  /// @brief Uniquely identifies a channel in the context of this program.
+  ///
+  /// @return The ID of the channel.
+  [[nodiscard]] uint64_t id() const noexcept;
+
+  /// @brief Find out if any sinks have been added to the channel.
+  ///
+  /// @return True if sinks have been added to the channel, false otherwise.
+  [[nodiscard]] bool has_sinks() const noexcept;
+
+  PointInFrameChannel(const PointInFrameChannel& other) noexcept = delete;
+  PointInFrameChannel& operator=(const PointInFrameChannel& other) noexcept = delete;
+  /// @brief Default move constructor.
+  PointInFrameChannel(PointInFrameChannel&& other) noexcept = default;
+  /// @brief Default move assignment.
+  PointInFrameChannel& operator=(PointInFrameChannel&& other) noexcept = default;
+  /// @brief Default destructor.
+  ~PointInFrameChannel() = default;
+
+private:
+  explicit PointInFrameChannel(ChannelUniquePtr&& channel)
       : impl_(std::move(channel)) {}
 
   ChannelUniquePtr impl_;

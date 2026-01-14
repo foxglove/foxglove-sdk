@@ -44,8 +44,8 @@ void modelPrimitiveToC(foxglove_model_primitive& dest, const ModelPrimitive& src
 void packedElementFieldToC(
   foxglove_packed_element_field& dest, const PackedElementField& src, Arena& arena
 );
-void point2InFrameToC(foxglove_point2_in_frame& dest, const Point2InFrame& src, Arena& arena);
 void pointCloudToC(foxglove_point_cloud& dest, const PointCloud& src, Arena& arena);
+void pointInFrameToC(foxglove_point_in_frame& dest, const PointInFrame& src, Arena& arena);
 void pointsAnnotationToC(
   foxglove_points_annotation& dest, const PointsAnnotation& src, Arena& arena
 );
@@ -859,42 +859,6 @@ bool Point2Channel::has_sinks() const noexcept {
   return foxglove_channel_has_sinks(impl_.get());
 }
 
-FoxgloveResult<Point2InFrameChannel> Point2InFrameChannel::create(
-  const std::string_view& topic, const Context& context
-) {
-  const foxglove_channel* channel = nullptr;
-  foxglove_error error = foxglove_channel_create_point2_in_frame(
-    {topic.data(), topic.size()}, context.getInner(), &channel
-  );
-  if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
-    return tl::unexpected(FoxgloveError(error));
-  }
-  return Point2InFrameChannel(ChannelUniquePtr(channel));
-}
-
-FoxgloveError Point2InFrameChannel::log(
-  const Point2InFrame& msg, std::optional<uint64_t> log_time, std::optional<uint64_t> sink_id
-) noexcept {
-  Arena arena;
-  foxglove_point2_in_frame c_msg;
-  point2InFrameToC(c_msg, msg, arena);
-  return FoxgloveError(foxglove_channel_log_point2_in_frame(
-    impl_.get(), &c_msg, log_time ? &*log_time : nullptr, sink_id ? *sink_id : 0
-  ));
-}
-
-void Point2InFrameChannel::close() noexcept {
-  foxglove_channel_close(impl_.get());
-}
-
-uint64_t Point2InFrameChannel::id() const noexcept {
-  return foxglove_channel_get_id(impl_.get());
-}
-
-bool Point2InFrameChannel::has_sinks() const noexcept {
-  return foxglove_channel_has_sinks(impl_.get());
-}
-
 FoxgloveResult<Point3Channel> Point3Channel::create(
   const std::string_view& topic, const Context& context
 ) {
@@ -962,6 +926,42 @@ uint64_t PointCloudChannel::id() const noexcept {
 }
 
 bool PointCloudChannel::has_sinks() const noexcept {
+  return foxglove_channel_has_sinks(impl_.get());
+}
+
+FoxgloveResult<PointInFrameChannel> PointInFrameChannel::create(
+  const std::string_view& topic, const Context& context
+) {
+  const foxglove_channel* channel = nullptr;
+  foxglove_error error = foxglove_channel_create_point_in_frame(
+    {topic.data(), topic.size()}, context.getInner(), &channel
+  );
+  if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
+    return tl::unexpected(FoxgloveError(error));
+  }
+  return PointInFrameChannel(ChannelUniquePtr(channel));
+}
+
+FoxgloveError PointInFrameChannel::log(
+  const PointInFrame& msg, std::optional<uint64_t> log_time, std::optional<uint64_t> sink_id
+) noexcept {
+  Arena arena;
+  foxglove_point_in_frame c_msg;
+  pointInFrameToC(c_msg, msg, arena);
+  return FoxgloveError(foxglove_channel_log_point_in_frame(
+    impl_.get(), &c_msg, log_time ? &*log_time : nullptr, sink_id ? *sink_id : 0
+  ));
+}
+
+void PointInFrameChannel::close() noexcept {
+  foxglove_channel_close(impl_.get());
+}
+
+uint64_t PointInFrameChannel::id() const noexcept {
+  return foxglove_channel_get_id(impl_.get());
+}
+
+bool PointInFrameChannel::has_sinks() const noexcept {
   return foxglove_channel_has_sinks(impl_.get());
 }
 
@@ -1798,15 +1798,6 @@ void packedElementFieldToC(
   dest.type = static_cast<foxglove_numeric_type>(src.type);
 }
 
-void point2InFrameToC(
-  foxglove_point2_in_frame& dest, const Point2InFrame& src, [[maybe_unused]] Arena& arena
-) {
-  dest.timestamp =
-    src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
-  dest.frame_id = {src.frame_id.data(), src.frame_id.size()};
-  dest.point = src.point ? reinterpret_cast<const foxglove_point2*>(&*src.point) : nullptr;
-}
-
 void pointCloudToC(
   foxglove_point_cloud& dest, const PointCloud& src, [[maybe_unused]] Arena& arena
 ) {
@@ -1819,6 +1810,15 @@ void pointCloudToC(
   dest.fields_count = src.fields.size();
   dest.data = reinterpret_cast<const unsigned char*>(src.data.data());
   dest.data_len = src.data.size();
+}
+
+void pointInFrameToC(
+  foxglove_point_in_frame& dest, const PointInFrame& src, [[maybe_unused]] Arena& arena
+) {
+  dest.timestamp =
+    src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
+  dest.frame_id = {src.frame_id.data(), src.frame_id.size()};
+  dest.point = src.point ? reinterpret_cast<const foxglove_point3*>(&*src.point) : nullptr;
 }
 
 void pointsAnnotationToC(
@@ -2154,13 +2154,6 @@ FoxgloveError Point2::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   );
 }
 
-FoxgloveError Point2InFrame::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
-  Arena arena;
-  foxglove_point2_in_frame c_msg;
-  point2InFrameToC(c_msg, *this, arena);
-  return FoxgloveError(foxglove_point2_in_frame_encode(&c_msg, ptr, len, encoded_len));
-}
-
 FoxgloveError Point3::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   return FoxgloveError(
     foxglove_point3_encode(reinterpret_cast<const foxglove_point3*>(this), ptr, len, encoded_len)
@@ -2172,6 +2165,13 @@ FoxgloveError PointCloud::encode(uint8_t* ptr, size_t len, size_t* encoded_len) 
   foxglove_point_cloud c_msg;
   pointCloudToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_point_cloud_encode(&c_msg, ptr, len, encoded_len));
+}
+
+FoxgloveError PointInFrame::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
+  Arena arena;
+  foxglove_point_in_frame c_msg;
+  pointInFrameToC(c_msg, *this, arena);
+  return FoxgloveError(foxglove_point_in_frame_encode(&c_msg, ptr, len, encoded_len));
 }
 
 FoxgloveError PointsAnnotation::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
@@ -2510,16 +2510,6 @@ Schema Point2::schema() {
   return result;
 }
 
-Schema Point2InFrame::schema() {
-  struct foxglove_schema c_schema = foxglove_point2_in_frame_schema();
-  Schema result;
-  result.name = std::string(c_schema.name.data, c_schema.name.len);
-  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
-  result.data_len = c_schema.data_len;
-  return result;
-}
-
 Schema Point3::schema() {
   struct foxglove_schema c_schema = foxglove_point3_schema();
   Schema result;
@@ -2532,6 +2522,16 @@ Schema Point3::schema() {
 
 Schema PointCloud::schema() {
   struct foxglove_schema c_schema = foxglove_point_cloud_schema();
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data_len = c_schema.data_len;
+  return result;
+}
+
+Schema PointInFrame::schema() {
+  struct foxglove_schema c_schema = foxglove_point_in_frame_schema();
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);

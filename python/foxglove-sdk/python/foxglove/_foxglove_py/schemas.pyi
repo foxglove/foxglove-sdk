@@ -552,27 +552,6 @@ class Point2:
         """Encodes the Point2."""
         ...
 
-class Point2InFrame:
-    """
-    A timestamped point for a position in 2D space
-    """
-
-    def __init__(
-        self,
-        *,
-        timestamp: Timestamp | None = None,
-        frame_id: str = "",
-        point: Point2 | None = None,
-    ) -> None: ...
-    @staticmethod
-    def get_schema() -> Schema:
-        """Returns the Point2InFrame schema"""
-        ...
-
-    def encode(self) -> bytes:
-        """Encodes the Point2InFrame."""
-        ...
-
 class Point3:
     """
     A point representing a position in 3D space
@@ -610,6 +589,27 @@ class PointCloud:
 
     def encode(self) -> bytes:
         """Encodes the PointCloud."""
+        ...
+
+class PointInFrame:
+    """
+    A timestamped point for a position in 3D space
+    """
+
+    def __init__(
+        self,
+        *,
+        timestamp: Timestamp | None = None,
+        frame_id: str = "",
+        point: Point3 | None = None,
+    ) -> None: ...
+    @staticmethod
+    def get_schema() -> Schema:
+        """Returns the PointInFrame schema"""
+        ...
+
+    def encode(self) -> bytes:
+        """Encodes the PointInFrame."""
         ...
 
 class PointsAnnotation:
@@ -1012,8 +1012,8 @@ FoxgloveSchema = Union[
     ModelPrimitive,
     PackedElementField,
     Point2,
-    Point2InFrame,
     Point3,
+    PointInFrame,
     PointCloud,
     PointsAnnotation,
     Pose,

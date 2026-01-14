@@ -707,38 +707,6 @@ impl Decode for Point2 {
     }
 }
 
-impl Encode for Point2InFrame {
-    type Error = ::prost::EncodeError;
-
-    fn get_schema() -> Option<Schema> {
-        Some(Schema::new(
-            "foxglove.Point2InFrame",
-            "protobuf",
-            descriptors::POINT2_IN_FRAME,
-        ))
-    }
-
-    fn get_message_encoding() -> String {
-        "protobuf".to_string()
-    }
-
-    fn encode(&self, buf: &mut impl BufMut) -> Result<(), prost::EncodeError> {
-        ::prost::Message::encode(self, buf)
-    }
-
-    fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
-}
-
-#[doc(hidden)]
-impl Decode for Point2InFrame {
-    type Error = ::prost::DecodeError;
-
-    /// Decode a message from a serialized buffer.
-    fn decode(buf: impl bytes::Buf) -> Result<Self, ::prost::DecodeError> {
-        ::prost::Message::decode(buf)
-    }
-}
-
 impl Encode for Point3 {
     type Error = ::prost::EncodeError;
 
@@ -795,6 +763,38 @@ impl Encode for PointCloud {
 
 #[doc(hidden)]
 impl Decode for PointCloud {
+    type Error = ::prost::DecodeError;
+
+    /// Decode a message from a serialized buffer.
+    fn decode(buf: impl bytes::Buf) -> Result<Self, ::prost::DecodeError> {
+        ::prost::Message::decode(buf)
+    }
+}
+
+impl Encode for PointInFrame {
+    type Error = ::prost::EncodeError;
+
+    fn get_schema() -> Option<Schema> {
+        Some(Schema::new(
+            "foxglove.PointInFrame",
+            "protobuf",
+            descriptors::POINT_IN_FRAME,
+        ))
+    }
+
+    fn get_message_encoding() -> String {
+        "protobuf".to_string()
+    }
+
+    fn encode(&self, buf: &mut impl BufMut) -> Result<(), prost::EncodeError> {
+        ::prost::Message::encode(self, buf)
+    }
+
+    fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
+}
+
+#[doc(hidden)]
+impl Decode for PointInFrame {
     type Error = ::prost::DecodeError;
 
     /// Decode a message from a serialized buffer.

@@ -1521,9 +1521,9 @@ typedef struct foxglove_scene_update {
 } foxglove_scene_update;
 
 /**
- * A timestamped point for a position in 2D space
+ * A timestamped point for a position in 3D space
  */
-typedef struct foxglove_point2_in_frame {
+typedef struct foxglove_point_in_frame {
   /**
    * Timestamp of point
    */
@@ -1533,10 +1533,10 @@ typedef struct foxglove_point2_in_frame {
    */
   struct foxglove_string frame_id;
   /**
-   * Point in 2D space
+   * Point in 3D space
    */
-  const struct foxglove_point2 *point;
-} foxglove_point2_in_frame;
+  const struct foxglove_point3 *point;
+} foxglove_point_in_frame;
 
 /**
  * A collection of N-dimensional points, which may contain additional fields with information like normals, intensity, etc.
@@ -3619,52 +3619,6 @@ foxglove_error foxglove_point2_encode(const struct foxglove_point2 *msg,
  * # Safety
  * We're trusting the caller that the channel will only be used with this type T.
  */
-foxglove_error foxglove_channel_create_point2_in_frame(struct foxglove_string topic,
-                                                       const struct foxglove_context *context,
-                                                       const struct foxglove_channel **channel);
-
-#if !defined(__wasm__)
-/**
- * Log a Point2InFrame message to a channel.
- *
- * # Safety
- * The channel must have been created for this type with foxglove_channel_create_point2_in_frame.
- */
-foxglove_error foxglove_channel_log_point2_in_frame(const struct foxglove_channel *channel,
-                                                    const struct foxglove_point2_in_frame *msg,
-                                                    const uint64_t *log_time,
-                                                    FoxgloveSinkId sink_id);
-#endif
-
-/**
- * Get the Point2InFrame schema.
- *
- * All buffers in the returned schema are statically allocated.
- */
-struct foxglove_schema foxglove_point2_in_frame_schema(void);
-
-/**
- * Encode a Point2InFrame message as protobuf to the buffer provided.
- *
- * On success, writes the encoded length to *encoded_len.
- * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
- * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
- * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
- *
- * # Safety
- * ptr must be a valid pointer to a memory region at least len bytes long.
- */
-foxglove_error foxglove_point2_in_frame_encode(const struct foxglove_point2_in_frame *msg,
-                                               uint8_t *ptr,
-                                               size_t len,
-                                               size_t *encoded_len);
-
-/**
- * Create a new typed channel, and return an owned raw channel pointer to it.
- *
- * # Safety
- * We're trusting the caller that the channel will only be used with this type T.
- */
 foxglove_error foxglove_channel_create_point3(struct foxglove_string topic,
                                               const struct foxglove_context *context,
                                               const struct foxglove_channel **channel);
@@ -3704,6 +3658,52 @@ foxglove_error foxglove_point3_encode(const struct foxglove_point3 *msg,
                                       uint8_t *ptr,
                                       size_t len,
                                       size_t *encoded_len);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_point_in_frame(struct foxglove_string topic,
+                                                      const struct foxglove_context *context,
+                                                      const struct foxglove_channel **channel);
+
+#if !defined(__wasm__)
+/**
+ * Log a PointInFrame message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_point_in_frame.
+ */
+foxglove_error foxglove_channel_log_point_in_frame(const struct foxglove_channel *channel,
+                                                   const struct foxglove_point_in_frame *msg,
+                                                   const uint64_t *log_time,
+                                                   FoxgloveSinkId sink_id);
+#endif
+
+/**
+ * Get the PointInFrame schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_point_in_frame_schema(void);
+
+/**
+ * Encode a PointInFrame message as protobuf to the buffer provided.
+ *
+ * On success, writes the encoded length to *encoded_len.
+ * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+ * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+ * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+ *
+ * # Safety
+ * ptr must be a valid pointer to a memory region at least len bytes long.
+ */
+foxglove_error foxglove_point_in_frame_encode(const struct foxglove_point_in_frame *msg,
+                                              uint8_t *ptr,
+                                              size_t len,
+                                              size_t *encoded_len);
 
 /**
  * Create a new typed channel, and return an owned raw channel pointer to it.

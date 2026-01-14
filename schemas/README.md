@@ -35,9 +35,9 @@ All schemas are generated from [schemas.ts](/internal/schemas.ts).
 - [ModelPrimitive](#modelprimitive)
 - [PackedElementField](#packedelementfield)
 - [Point2](#point2)
-- [Point2InFrame](#point2inframe)
 - [Point3](#point3)
 - [PointCloud](#pointcloud)
+- [PointInFrame](#pointinframe)
 - [PointsAnnotation](#pointsannotation)
 - [Pose](#pose)
 - [PoseInFrame](#poseinframe)
@@ -1910,57 +1910,6 @@ y coordinate position
 </tr>
 </table>
 
-## Point2InFrame
-
-A timestamped point for a position in 2D space
-
-<table>
-  <tr>
-    <th>field</th>
-    <th>type</th>
-    <th>description</th>
-  </tr>
-<tr>
-<td><code>timestamp</code></td>
-<td>
-
-[Timestamp](#timestamp)
-
-</td>
-<td>
-
-Timestamp of point
-
-</td>
-</tr>
-<tr>
-<td><code>frame_id</code></td>
-<td>
-
-string
-
-</td>
-<td>
-
-Frame of reference for point position
-
-</td>
-</tr>
-<tr>
-<td><code>point</code></td>
-<td>
-
-[Point2](#point2)
-
-</td>
-<td>
-
-Point in 2D space
-
-</td>
-</tr>
-</table>
-
 ## Point3
 
 A point representing a position in 3D space
@@ -2097,6 +2046,57 @@ bytes
 <td>
 
 Point data, interpreted using `fields`
+
+</td>
+</tr>
+</table>
+
+## PointInFrame
+
+A timestamped point for a position in 3D space
+
+<table>
+  <tr>
+    <th>field</th>
+    <th>type</th>
+    <th>description</th>
+  </tr>
+<tr>
+<td><code>timestamp</code></td>
+<td>
+
+[Timestamp](#timestamp)
+
+</td>
+<td>
+
+Timestamp of point
+
+</td>
+</tr>
+<tr>
+<td><code>frame_id</code></td>
+<td>
+
+string
+
+</td>
+<td>
+
+Frame of reference for point position
+
+</td>
+</tr>
+<tr>
+<td><code>point</code></td>
+<td>
+
+[Point3](#point3)
+
+</td>
+<td>
+
+Point in 3D space
 
 </td>
 </tr>
