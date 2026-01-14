@@ -261,7 +261,7 @@ class CylinderPrimitive:
 
 class FrameTransform:
     """
-    A transform between two reference frames in 3D space
+    A transform between two reference frames in 3D space. The transform describes the position and orientation of the child frame relative to the parent frame.
     """
 
     def __init__(

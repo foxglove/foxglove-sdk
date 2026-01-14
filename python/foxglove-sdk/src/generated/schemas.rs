@@ -687,13 +687,15 @@ impl From<CubePrimitive> for foxglove::schemas::CubePrimitive {
     }
 }
 
-/// A transform between two reference frames in 3D space
+/// A transform between two reference frames in 3D space. The transform describes the position and orientation of the child frame relative to the parent frame.
 ///
 /// :param timestamp: Timestamp of transform
 /// :param parent_frame_id: Name of the parent frame
 /// :param child_frame_id: Name of the child frame
-/// :param translation: Translation component of the transform
-/// :param rotation: Rotation component of the transform
+/// :param translation: Translation component of the transform: the position of the child frame's origin within the parent frame.
+///     
+///     For example, a FrameTransform with a translation of (1, 0, 0) and an identity rotation means that a point at (0, 0, 0) in the child frame is at (1, 0, 0) in the parent frame.
+/// :param rotation: Rotation component of the transform: the orientation of the child frame's axes relative to the parent frame
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/frame-transform
 #[pyclass(module = "foxglove.schemas")]

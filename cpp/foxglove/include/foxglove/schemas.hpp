@@ -554,7 +554,8 @@ struct Duration {
   uint32_t nsec = 0;
 };
 
-/// @brief A transform between two reference frames in 3D space
+/// @brief A transform between two reference frames in 3D space. The transform describes the
+/// position and orientation of the child frame relative to the parent frame.
 struct FrameTransform {
   /// @brief Timestamp of transform
   std::optional<Timestamp> timestamp;
@@ -565,10 +566,15 @@ struct FrameTransform {
   /// @brief Name of the child frame
   std::string child_frame_id;
 
-  /// @brief Translation component of the transform
+  /// @brief Translation component of the transform: the position of the child frame's origin within
+  /// the parent frame.
+  /// @brief
+  /// @brief For example, a FrameTransform with a translation of (1, 0, 0) and an identity rotation
+  /// means that a point at (0, 0, 0) in the child frame is at (1, 0, 0) in the parent frame.
   std::optional<Vector3> translation;
 
-  /// @brief Rotation component of the transform
+  /// @brief Rotation component of the transform: the orientation of the child frame's axes relative
+  /// to the parent frame
   std::optional<Quaternion> rotation;
 
   /// @brief Encoded the FrameTransform as protobuf to the provided buffer.

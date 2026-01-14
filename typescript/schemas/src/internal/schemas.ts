@@ -1025,7 +1025,8 @@ For each \`encoding\` value, the \`data\` field contains image pixel data serial
 const FrameTransform: FoxgloveMessageSchema = {
   type: "message",
   name: "FrameTransform",
-  description: "A transform between two reference frames in 3D space",
+  description:
+    "A transform between two reference frames in 3D space. The transform describes the position and orientation of the child frame relative to the parent frame.",
   fields: [
     {
       name: "timestamp",
@@ -1045,12 +1046,14 @@ const FrameTransform: FoxgloveMessageSchema = {
     {
       name: "translation",
       type: { type: "nested", schema: Vector3 },
-      description: "Translation component of the transform",
+      description:
+        "Translation component of the transform: the position of the child frame's origin within the parent frame.\n\nFor example, a FrameTransform with a translation of (1, 0, 0) and an identity rotation means that a point at (0, 0, 0) in the child frame is at (1, 0, 0) in the parent frame.",
     },
     {
       name: "rotation",
       type: { type: "nested", schema: Quaternion },
-      description: "Rotation component of the transform",
+      description:
+        "Rotation component of the transform: the orientation of the child frame's axes relative to the parent frame",
     },
   ],
 };

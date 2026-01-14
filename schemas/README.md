@@ -881,7 +881,7 @@ The number of nanoseconds in the positive direction
 
 ## FrameTransform
 
-A transform between two reference frames in 3D space
+A transform between two reference frames in 3D space. The transform describes the position and orientation of the child frame relative to the parent frame.
 
 <table>
   <tr>
@@ -937,7 +937,9 @@ Name of the child frame
 </td>
 <td>
 
-Translation component of the transform
+Translation component of the transform: the position of the child frame's origin within the parent frame.
+
+For example, a FrameTransform with a translation of (1, 0, 0) and an identity rotation means that a point at (0, 0, 0) in the child frame is at (1, 0, 0) in the parent frame.
 
 </td>
 </tr>
@@ -950,7 +952,7 @@ Translation component of the transform
 </td>
 <td>
 
-Rotation component of the transform
+Rotation component of the transform: the orientation of the child frame's axes relative to the parent frame
 
 </td>
 </tr>
