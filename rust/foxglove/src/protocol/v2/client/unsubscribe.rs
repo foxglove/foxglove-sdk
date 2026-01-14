@@ -3,8 +3,7 @@
 use bytes::{Buf, BufMut};
 use serde::{Deserialize, Serialize};
 
-use crate::protocol::common::client::BinaryOpcode;
-use crate::protocol::{BinaryMessage, ParseError};
+use crate::protocol::{BinaryPayload, ParseError};
 
 /// Unsubscribe from a channel.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -23,8 +22,8 @@ impl Unsubscribe {
     }
 }
 
-impl BinaryMessage<'_> for Unsubscribe {
-    fn parse_binary(mut data: &[u8]) -> Result<Self, ParseError> {
+impl BinaryPayload<'_> for Unsubscribe {
+    fn parse_payload(mut data: &[u8]) -> Result<Self, ParseError> {
         if data.len() < 4 {
             return Err(ParseError::BufferTooShort);
         }
@@ -39,21 +38,22 @@ impl BinaryMessage<'_> for Unsubscribe {
         Ok(Self { channel_ids })
     }
 
-    fn to_bytes(&self) -> Vec<u8> {
-        let size = 1 + 4 + self.channel_ids.len() * 4;
-        let mut buf = Vec::with_capacity(size);
-        buf.put_u8(BinaryOpcode::Unsubscribe as u8);
+    fn payload_size(&self) -> usize {
+        4 + self.channel_ids.len() * 4
+    }
+
+    fn write_payload(&self, buf: &mut impl BufMut) {
         buf.put_u32_le(self.channel_ids.len() as u32);
         for &channel_id in &self.channel_ids {
             buf.put_u32_le(channel_id);
         }
-        buf
     }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::protocol::v2::client::ClientMessage;
+    use crate::protocol::v2::message::BinaryMessage;
 
     use super::*;
 
