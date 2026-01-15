@@ -13,7 +13,7 @@
 //! logging, and integration with tools that consume JSON or other serde-compatible formats.
 //!
 //! For human-readable formats like JSON:
-//! - Enums are serialized as their string names (e.g., `"FLOAT32"`)
+//! - Enums are serialized as their string names (e.g., `"LINE_STRIP"`)
 //! - Binary data is serialized as base64-encoded strings
 //!
 //! For binary formats:
@@ -75,7 +75,7 @@ pub(crate) mod serde_bytes {
 ///
 /// Uses string names for human-readable formats (JSON) and i32 for binary formats.
 #[cfg(feature = "serde")]
-macro_rules! enum_serde {
+macro_rules! serde_enum_mod {
     ($mod_name:ident, $enum_path:ty) => {
         pub mod $mod_name {
             use super::*;
@@ -111,7 +111,7 @@ macro_rules! enum_serde {
 }
 
 #[cfg(feature = "serde")]
-pub(crate) use enum_serde;
+pub(crate) use serde_enum_mod;
 
 #[cfg(test)]
 #[cfg(feature = "serde")]
