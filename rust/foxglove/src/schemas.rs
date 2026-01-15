@@ -40,8 +40,9 @@ pub use crate::schemas_wkt::{Duration, Timestamp};
 pub(crate) mod serde_bytes {
     use base64::Engine;
     use bytes::Bytes;
-    use serde::de::Error as _;
+    use serde::de::{Error as _, Visitor};
     use serde::{Deserialize, Deserializer, Serializer};
+    use std::fmt;
 
     pub fn serialize<S>(bytes: &Bytes, s: S) -> Result<S::Ok, S::Error>
     where
@@ -59,15 +60,39 @@ pub(crate) mod serde_bytes {
     where
         D: Deserializer<'de>,
     {
-        let data = if d.is_human_readable() {
+        if d.is_human_readable() {
             let s = String::deserialize(d)?;
-            base64::engine::general_purpose::STANDARD
+            let data = base64::engine::general_purpose::STANDARD
                 .decode(s)
-                .map_err(D::Error::custom)?
+                .map_err(D::Error::custom)?;
+            Ok(Bytes::from(data))
         } else {
-            <Vec<u8>>::deserialize(d)?
-        };
-        Ok(Bytes::from(data))
+            d.deserialize_byte_buf(BytesVisitor)
+        }
+    }
+
+    struct BytesVisitor;
+
+    impl<'de> Visitor<'de> for BytesVisitor {
+        type Value = Bytes;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+            formatter.write_str("a byte buffer")
+        }
+
+        fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(Bytes::copy_from_slice(v))
+        }
+
+        fn visit_byte_buf<E>(self, v: Vec<u8>) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(Bytes::from(v))
+        }
     }
 }
 
