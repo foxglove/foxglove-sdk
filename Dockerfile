@@ -28,4 +28,6 @@ RUN corepack enable yarn
 ENV PATH=/usr/lib/llvm-19/bin:/root/.local/bin:$PATH \
     COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 
+RUN git config --global --add safe.directory '*'
+
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
