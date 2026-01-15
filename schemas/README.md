@@ -36,6 +36,7 @@ All schemas are generated from [schemas.ts](/internal/schemas.ts).
 - [PackedElementField](#packedelementfield)
 - [Point2](#point2)
 - [Point3](#point3)
+- [Point3InFrame](#point3inframe)
 - [PointCloud](#pointcloud)
 - [PointsAnnotation](#pointsannotation)
 - [Pose](#pose)
@@ -1955,6 +1956,57 @@ float64
 <td>
 
 z coordinate position
+
+</td>
+</tr>
+</table>
+
+## Point3InFrame
+
+A timestamped point for a position in 3D space
+
+<table>
+  <tr>
+    <th>field</th>
+    <th>type</th>
+    <th>description</th>
+  </tr>
+<tr>
+<td><code>timestamp</code></td>
+<td>
+
+[Timestamp](#timestamp)
+
+</td>
+<td>
+
+Timestamp of point
+
+</td>
+</tr>
+<tr>
+<td><code>frame_id</code></td>
+<td>
+
+string
+
+</td>
+<td>
+
+Frame of reference for point position
+
+</td>
+</tr>
+<tr>
+<td><code>point</code></td>
+<td>
+
+[Point3](#point3)
+
+</td>
+<td>
+
+Point in 3D space
 
 </td>
 </tr>
