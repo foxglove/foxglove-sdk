@@ -785,7 +785,7 @@ typedef struct foxglove_cube_primitive {
 } foxglove_cube_primitive;
 
 /**
- * A transform between two reference frames in 3D space. This transform can be used to convert the coordinates of a point from the child frame to the parent frame.
+ * A transform between two reference frames in 3D space. This transform can be used to convert the coordinates of a point from the child frame to the parent frame. Foxglove applies the translation first and then the rotation: P_parent = rotation * (P_child + translation).
  */
 typedef struct foxglove_frame_transform {
   /**
@@ -801,17 +801,17 @@ typedef struct foxglove_frame_transform {
    */
   struct foxglove_string child_frame_id;
   /**
-   * Translation component of the transform: the position of the child frame's origin expressed in the parent frame.
+   * Translation component of the transform, representing the position of the child frame's origin in the parent frame.
    *
-   * To convert a point P from the child frame to the parent frame, first apply the rotation and then add the translation: P_parent = rotation * P_child + translation.
+   * Examples:
    *
-   * Example 1: With translation (1, 0, 0) and identity rotation, a point at (0, 0, 0) in the child frame maps to (1, 0, 0) in the parent frame.
+   * 1. With translation (x=1, y=0, z=0) and identity rotation (x=0, y=0, z=0, w=1), a point at (x=0, y=0, z=0) in the child frame maps to (x=1, y=0, z=0) in the parent frame.
    *
-   * Example 2: With translation (1, 2, 0) and a 90-degree rotation around the z-axis (quaternion x=0, y=0, z=0.707, w=0.707), a point at (1, 0, 0) in the child frame maps to (1, 3, 0) in the parent frame.
+   * 2. With translation (x=1, y=2, z=0) and a 90-degree rotation around the z-axis (x=0, y=0, z=0.707, w=0.707), a point at (x=1, y=0, z=0) in the child frame maps to (x=-1, y=3, z=0) in the parent frame.
    */
   const struct foxglove_vector3 *translation;
   /**
-   * Rotation component of the transform: the rotation to apply to convert a point from the child frame to the parent frame
+   * Rotation component of the transform, representing the orientation of the child frame in the parent frame
    */
   const struct foxglove_quaternion *rotation;
 } foxglove_frame_transform;

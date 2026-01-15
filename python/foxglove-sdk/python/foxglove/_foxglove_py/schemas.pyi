@@ -261,7 +261,7 @@ class CylinderPrimitive:
 
 class FrameTransform:
     """
-    A transform between two reference frames in 3D space. This transform can be used to convert the coordinates of a point from the child frame to the parent frame.
+    A transform between two reference frames in 3D space. This transform can be used to convert the coordinates of a point from the child frame to the parent frame. Foxglove applies the translation first and then the rotation: P_parent = rotation * (P_child + translation).
     """
 
     def __init__(
