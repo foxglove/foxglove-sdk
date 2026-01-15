@@ -282,6 +282,8 @@
 //! - `lz4`: enables support for the LZ4 compression algorithm for mcap files. Enabled by default.
 //! - `schemars`: provides a blanket implementation of the [`Encode`] trait for types that
 //!   implement [`Serialize`](serde::Serialize) and [`JsonSchema`][jsonschema-trait].
+//! - `serde`: derives [`Serialize`](serde::Serialize) and [`Deserialize`](serde::Deserialize) for
+//!   all [schema types](crate::schemas).
 //! - `unstable`: features which are under active development and likely to change in an upcoming
 //!   version.
 //! - `zstd`: enables support for the zstd compression algorithm for mcap files. Enabled by

@@ -223,6 +223,18 @@ pub fn generate_protos(proto_path: &Path, out_dir: &Path) -> anyhow::Result<()> 
 
     let mut config = prost_build::Config::new();
     config.message_attribute(".", format!("/// {DOC_REF}"));
+
+    // Add conditional serde derives for the "serde" feature.
+    // The bytes crate's serde feature is enabled to provide Serialize/Deserialize for Bytes.
+    config.message_attribute(
+        ".",
+        "#[cfg_attr(feature = \"serde\", derive(::serde::Serialize, ::serde::Deserialize))]",
+    );
+    config.enum_attribute(
+        ".",
+        "#[cfg_attr(feature = \"serde\", derive(::serde::Serialize, ::serde::Deserialize))]",
+    );
+
     config.extern_path(".google.protobuf.Duration", "crate::schemas::Duration");
     config.extern_path(".google.protobuf.Timestamp", "crate::schemas::Timestamp");
     config.out_dir(out_dir);

@@ -32,6 +32,7 @@ tls = [
 ]
 stream = ["dep:futures"]
 schemars = ["dep:schemars"]
+serde = ["bytes/serde"]
 unstable = []
 zstd = ["mcap/zstd"]
 

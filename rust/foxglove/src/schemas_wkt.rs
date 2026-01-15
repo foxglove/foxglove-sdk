@@ -108,6 +108,7 @@ impl NormalizeResult {
 /// assert_eq!(duration, Duration::MAX);
 /// ```
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub struct Duration {
     /// Seconds offset.
     sec: i32,
@@ -327,6 +328,7 @@ where
 /// assert_eq!(timestamp, Timestamp::MIN);
 /// ```
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub struct Timestamp {
     /// Seconds since epoch.
     sec: u32,
