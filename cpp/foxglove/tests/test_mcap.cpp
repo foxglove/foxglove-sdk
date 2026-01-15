@@ -650,7 +650,7 @@ TEST_CASE("Write single attachment to MCAP") {
   attachment.create_time = 900000000;
   attachment.name = "config.json";
   attachment.media_type = "application/json";
-  attachment.data = reinterpret_cast<const uint8_t*>(attachment_data.data());
+  attachment.data = reinterpret_cast<const std::byte*>(attachment_data.data());
   attachment.data_len = attachment_data.size();
 
   auto error = writer->attach(attachment);
@@ -684,7 +684,7 @@ TEST_CASE("Write multiple attachments to MCAP") {
   config_attachment.create_time = 900000000;
   config_attachment.name = "config.yaml";
   config_attachment.media_type = "application/yaml";
-  config_attachment.data = reinterpret_cast<const uint8_t*>(config_data.data());
+  config_attachment.data = reinterpret_cast<const std::byte*>(config_data.data());
   config_attachment.data_len = config_data.size();
 
   auto error1 = writer->attach(config_attachment);
@@ -697,7 +697,7 @@ TEST_CASE("Write multiple attachments to MCAP") {
   calibration_attachment.create_time = 1800000000;
   calibration_attachment.name = "calibration.bin";
   calibration_attachment.media_type = "application/octet-stream";
-  calibration_attachment.data = reinterpret_cast<const uint8_t*>(calibration_data.data());
+  calibration_attachment.data = reinterpret_cast<const std::byte*>(calibration_data.data());
   calibration_attachment.data_len = calibration_data.size();
 
   auto error2 = writer->attach(calibration_attachment);
