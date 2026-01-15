@@ -20,6 +20,9 @@
 //! - Enums are serialized as i32 values
 //! - Binary data are serialized as raw bytes
 //!
+//! Note: CDR (Common Data Representation) is not compatible with these schemas because
+//! CDR does not support optional fields, which are used for all nested message types.
+//!
 //! For efficient wire serialization, use the native protobuf encoding via the
 //! [`Encode`](crate::Encode) trait.
 
@@ -40,7 +43,7 @@ pub use crate::schemas_wkt::{Duration, Timestamp};
 pub(crate) mod serde_bytes {
     use base64::Engine;
     use bytes::Bytes;
-    use serde::de::Error as _;
+    use serde::de::{Error as _, Visitor};
     use serde::{Deserialize, Deserializer, Serializer};
 
     pub fn serialize<S>(bytes: &Bytes, s: S) -> Result<S::Ok, S::Error>
@@ -59,15 +62,39 @@ pub(crate) mod serde_bytes {
     where
         D: Deserializer<'de>,
     {
-        let data = if d.is_human_readable() {
+        if d.is_human_readable() {
             let s = String::deserialize(d)?;
-            base64::engine::general_purpose::STANDARD
+            let data = base64::engine::general_purpose::STANDARD
                 .decode(s)
-                .map_err(D::Error::custom)?
+                .map_err(D::Error::custom)?;
+            Ok(Bytes::from(data))
         } else {
-            <Vec<u8>>::deserialize(d)?
-        };
-        Ok(Bytes::from(data))
+            d.deserialize_byte_buf(BytesVisitor)
+        }
+    }
+
+    struct BytesVisitor;
+
+    impl<'de> Visitor<'de> for BytesVisitor {
+        type Value = Bytes;
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str("a byte array")
+        }
+
+        fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(Bytes::copy_from_slice(v))
+        }
+
+        fn visit_byte_buf<E>(self, v: Vec<u8>) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(Bytes::from(v))
+        }
     }
 }
 
@@ -169,6 +196,11 @@ mod tests {
         assert_eq!(grid, parsed);
     }
 
+    // bincode and cbor are both binary formats (is_human_readable() = false), but they
+    // handle byte arrays differently: bincode uses visit_byte_buf, while cbor has native
+    // byte string support and may use visit_bytes with borrowed data. Testing both ensures
+    // our BytesVisitor implementation works across different binary format strategies.
+
     #[test]
     fn test_grid_bincode_snapshot() {
         let grid = sample_grid();
@@ -181,6 +213,21 @@ mod tests {
         let grid = sample_grid();
         let bytes = bincode::serialize(&grid).expect("failed to serialize");
         let parsed: Grid = bincode::deserialize(&bytes).expect("failed to deserialize");
+        assert_eq!(grid, parsed);
+    }
+
+    #[test]
+    fn test_grid_cbor_snapshot() {
+        let grid = sample_grid();
+        let bytes = serde_cbor::to_vec(&grid).expect("failed to serialize");
+        insta::assert_snapshot!(format!("{bytes:#04x?}"));
+    }
+
+    #[test]
+    fn test_grid_cbor_roundtrip() {
+        let grid = sample_grid();
+        let bytes = serde_cbor::to_vec(&grid).expect("failed to serialize");
+        let parsed: Grid = serde_cbor::from_slice(&bytes).expect("failed to deserialize");
         assert_eq!(grid, parsed);
     }
 }
