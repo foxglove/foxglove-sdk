@@ -22,6 +22,7 @@ pub const MODEL_PRIMITIVE: &[u8] = include_bytes!("data/ModelPrimitive.bin");
 pub const PACKED_ELEMENT_FIELD: &[u8] = include_bytes!("data/PackedElementField.bin");
 pub const POINT2: &[u8] = include_bytes!("data/Point2.bin");
 pub const POINT3: &[u8] = include_bytes!("data/Point3.bin");
+pub const POINT3_IN_FRAME: &[u8] = include_bytes!("data/Point3InFrame.bin");
 pub const POINTS_ANNOTATION: &[u8] = include_bytes!("data/PointsAnnotation.bin");
 pub const POINT_CLOUD: &[u8] = include_bytes!("data/PointCloud.bin");
 pub const POSE: &[u8] = include_bytes!("data/Pose.bin");

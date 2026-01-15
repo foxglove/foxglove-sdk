@@ -203,6 +203,31 @@ const Point3: FoxgloveMessageSchema = {
   ],
 };
 
+const Point3InFrame: FoxgloveMessageSchema = {
+  type: "message",
+  name: "Point3InFrame",
+  description: "A timestamped point for a position in 3D space",
+  rosEquivalent: "geometry_msgs/PointStamped",
+  ros2Equivalent: "geometry_msgs/PointStamped",
+  fields: [
+    {
+      name: "timestamp",
+      type: { type: "nested", schema: Timestamp },
+      description: "Timestamp of point",
+    },
+    {
+      name: "frame_id",
+      type: { type: "primitive", name: "string" },
+      description: "Frame of reference for point position",
+    },
+    {
+      name: "point",
+      type: { type: "nested", schema: Point3 },
+      description: "Point in 3D space",
+    },
+  ],
+};
+
 const Quaternion: FoxgloveMessageSchema = {
   type: "message",
   name: "Quaternion",
@@ -1732,6 +1757,7 @@ export const foxgloveMessageSchemas = {
   PackedElementField,
   Point2,
   Point3,
+  Point3InFrame,
   PointCloud,
   PointsAnnotation,
   Pose,
