@@ -554,8 +554,8 @@ struct Duration {
   uint32_t nsec = 0;
 };
 
-/// @brief A transform between two reference frames in 3D space. The transform describes the
-/// position and orientation of the child frame relative to the parent frame.
+/// @brief A transform between two reference frames in 3D space. This transform can be used to
+/// convert the coordinates of a point from the child frame to the parent frame.
 struct FrameTransform {
   /// @brief Timestamp of transform
   std::optional<Timestamp> timestamp;
@@ -566,15 +566,22 @@ struct FrameTransform {
   /// @brief Name of the child frame
   std::string child_frame_id;
 
-  /// @brief Translation component of the transform: the position of the child frame's origin within
-  /// the parent frame.
+  /// @brief Translation component of the transform: the position of the child frame's origin
+  /// expressed in the parent frame.
   /// @brief
-  /// @brief For example, a FrameTransform with a translation of (1, 0, 0) and an identity rotation
-  /// means that a point at (0, 0, 0) in the child frame is at (1, 0, 0) in the parent frame.
+  /// @brief To convert a point P from the child frame to the parent frame, first apply the rotation
+  /// and then add the translation: P_parent = rotation * P_child + translation.
+  /// @brief
+  /// @brief Example 1: With translation (1, 0, 0) and identity rotation, a point at (0, 0, 0) in
+  /// the child frame maps to (1, 0, 0) in the parent frame.
+  /// @brief
+  /// @brief Example 2: With translation (1, 2, 0) and a 90-degree rotation around the z-axis
+  /// (quaternion x=0, y=0, z=0.707, w=0.707), a point at (1, 0, 0) in the child frame maps to (1,
+  /// 3, 0) in the parent frame.
   std::optional<Vector3> translation;
 
-  /// @brief Rotation component of the transform: the orientation of the child frame's axes relative
-  /// to the parent frame
+  /// @brief Rotation component of the transform: the rotation to apply to convert a point from the
+  /// child frame to the parent frame
   std::optional<Quaternion> rotation;
 
   /// @brief Encoded the FrameTransform as protobuf to the provided buffer.
