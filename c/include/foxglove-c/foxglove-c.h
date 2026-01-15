@@ -1815,6 +1815,43 @@ typedef struct foxglove_key_value {
   struct foxglove_string value;
 } foxglove_key_value;
 
+#if !defined(__wasm__)
+/**
+ * An MCAP attachment to store in an MCAP file.
+ *
+ * Attachments are arbitrary binary data that can be stored alongside messages.
+ * Common uses include storing configuration files, calibration data, or other
+ * reference material related to the recording.
+ */
+typedef struct foxglove_mcap_attachment {
+  /**
+   * Timestamp at which the attachment was recorded, in nanoseconds.
+   */
+  uint64_t log_time;
+  /**
+   * Timestamp at which the attachment was created, in nanoseconds.
+   * If not available, set to 0.
+   */
+  uint64_t create_time;
+  /**
+   * Name of the attachment, e.g. "config.json".
+   */
+  struct foxglove_string name;
+  /**
+   * Media type of the attachment, e.g. "application/json".
+   */
+  struct foxglove_string media_type;
+  /**
+   * Pointer to the attachment data.
+   */
+  const uint8_t *data;
+  /**
+   * Length of the attachment data in bytes.
+   */
+  size_t data_len;
+} foxglove_mcap_attachment;
+#endif
+
 /**
  * A collection of metadata items for a channel.
  */
@@ -4399,6 +4436,27 @@ foxglove_error foxglove_mcap_write_metadata(struct foxglove_mcap_writer *writer,
                                             const struct foxglove_string *FOXGLOVE_NONNULL name,
                                             const struct foxglove_key_value *metadata,
                                             size_t metadata_len);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Write an attachment to an MCAP file.
+ *
+ * Attachments are arbitrary binary data that can be stored alongside messages.
+ * Common uses include storing configuration files, calibration data, or other
+ * reference material related to the recording.
+ *
+ * Returns 0 on success, or returns a FoxgloveError code on error.
+ *
+ * # Safety
+ * `writer` must be a valid pointer to a `FoxgloveMcapWriter` created via `foxglove_mcap_open`.
+ * `attachment` must be a valid pointer to a `FoxgloveMcapAttachment`.
+ * The `name` and `media_type` fields of the attachment must be valid UTF-8 strings.
+ * The `data` field must be a valid pointer to an array of bytes with length `data_len`,
+ * or null if `data_len` is 0.
+ */
+foxglove_error foxglove_mcap_attach(struct foxglove_mcap_writer *writer,
+                                    const struct foxglove_mcap_attachment *FOXGLOVE_NONNULL attachment);
 #endif
 
 #if !defined(__wasm__)
