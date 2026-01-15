@@ -11,9 +11,9 @@
 seconds (Rseconds
 nanos (RnanosB…
 com.google.protobufBTimestampProtoPZ2google.golang.org/protobuf/types/known/timestamppbø¢GPBªGoogle.Protobuf.WellKnownTypesbproto3
-õ
-foxglove/PointInFrame.protofoxglovefoxglove/Point3.protogoogle/protobuf/timestamp.proto"‹
-PointInFrame8
+÷
+foxglove/Point3InFrame.protofoxglovefoxglove/Point3.protogoogle/protobuf/timestamp.proto"Œ
+Point3InFrame8
 	timestamp (2.google.protobuf.TimestampR	timestamp
 frame_id (	RframeId&
 point (2.foxglove.Point3Rpointbproto3

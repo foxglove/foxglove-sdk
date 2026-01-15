@@ -8,7 +8,7 @@ import "google/protobuf/timestamp.proto";
 package foxglove;
 
 // A timestamped point for a position in 3D space
-message PointInFrame {
+message Point3InFrame {
   // Timestamp of point
   google.protobuf.Timestamp timestamp = 1;
 

@@ -779,6 +779,20 @@ pub struct Point3 {
     #[prost(double, tag = "3")]
     pub z: f64,
 }
+/// A timestamped point for a position in 3D space
+/// <https://docs.foxglove.dev/docs/visualization/message-schemas/point3-in-frame>
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct Point3InFrame {
+    /// Timestamp of point
+    #[prost(message, optional, tag = "1")]
+    pub timestamp: ::core::option::Option<crate::schemas::Timestamp>,
+    /// Frame of reference for point position
+    #[prost(string, tag = "2")]
+    pub frame_id: ::prost::alloc::string::String,
+    /// Point in 3D space
+    #[prost(message, optional, tag = "3")]
+    pub point: ::core::option::Option<Point3>,
+}
 /// A collection of N-dimensional points, which may contain additional fields with information like normals, intensity, etc.
 /// <https://docs.foxglove.dev/docs/visualization/message-schemas/point-cloud>
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -801,20 +815,6 @@ pub struct PointCloud {
     /// Point data, interpreted using `fields`
     #[prost(bytes = "bytes", tag = "6")]
     pub data: ::prost::bytes::Bytes,
-}
-/// A timestamped point for a position in 3D space
-/// <https://docs.foxglove.dev/docs/visualization/message-schemas/point-in-frame>
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct PointInFrame {
-    /// Timestamp of point
-    #[prost(message, optional, tag = "1")]
-    pub timestamp: ::core::option::Option<crate::schemas::Timestamp>,
-    /// Frame of reference for point position
-    #[prost(string, tag = "2")]
-    pub frame_id: ::prost::alloc::string::String,
-    /// Point in 3D space
-    #[prost(message, optional, tag = "3")]
-    pub point: ::core::option::Option<Point3>,
 }
 /// An array of points on a 2D image
 /// <https://docs.foxglove.dev/docs/visualization/message-schemas/points-annotation>

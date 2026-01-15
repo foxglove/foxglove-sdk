@@ -2082,16 +2082,16 @@ impl From<Point3> for foxglove::schemas::Point3 {
 /// :param frame_id: Frame of reference for point position
 /// :param point: Point in 3D space
 ///
-/// See https://docs.foxglove.dev/docs/visualization/message-schemas/point-in-frame
+/// See https://docs.foxglove.dev/docs/visualization/message-schemas/point3-in-frame
 #[pyclass(module = "foxglove.schemas")]
 #[derive(Clone)]
-pub(crate) struct PointInFrame(pub(crate) foxglove::schemas::PointInFrame);
+pub(crate) struct Point3InFrame(pub(crate) foxglove::schemas::Point3InFrame);
 #[pymethods]
-impl PointInFrame {
+impl Point3InFrame {
     #[new]
     #[pyo3(signature = (*, timestamp=None, frame_id="", point=None) )]
     fn new(timestamp: Option<Timestamp>, frame_id: &str, point: Option<Point3>) -> Self {
-        Self(foxglove::schemas::PointInFrame {
+        Self(foxglove::schemas::Point3InFrame {
             timestamp: timestamp.map(Into::into),
             frame_id: frame_id.to_string(),
             point: point.map(Into::into),
@@ -2099,18 +2099,18 @@ impl PointInFrame {
     }
     fn __repr__(&self) -> String {
         format!(
-            "PointInFrame(timestamp={:?}, frame_id={:?}, point={:?})",
+            "Point3InFrame(timestamp={:?}, frame_id={:?}, point={:?})",
             self.0.timestamp, self.0.frame_id, self.0.point,
         )
     }
-    /// Returns the PointInFrame schema.
+    /// Returns the Point3InFrame schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
-        foxglove::schemas::PointInFrame::get_schema()
+        foxglove::schemas::Point3InFrame::get_schema()
             .unwrap()
             .into()
     }
-    /// Encodes the PointInFrame as protobuf.
+    /// Encodes the Point3InFrame as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
@@ -2126,8 +2126,8 @@ impl PointInFrame {
     }
 }
 
-impl From<PointInFrame> for foxglove::schemas::PointInFrame {
-    fn from(value: PointInFrame) -> Self {
+impl From<Point3InFrame> for foxglove::schemas::Point3InFrame {
+    fn from(value: Point3InFrame) -> Self {
         value.0
     }
 }
@@ -3129,7 +3129,7 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<PackedElementField>()?;
     module.add_class::<Point2>()?;
     module.add_class::<Point3>()?;
-    module.add_class::<PointInFrame>()?;
+    module.add_class::<Point3InFrame>()?;
     module.add_class::<PointCloud>()?;
     module.add_class::<PointsAnnotation>()?;
     module.add_class::<Pose>()?;

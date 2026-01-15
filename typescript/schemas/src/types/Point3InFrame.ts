@@ -5,7 +5,7 @@ import { Point3 } from "./Point3";
 import { Time } from "./Time";
 
 /** A timestamped point for a position in 3D space */
-export type PointInFrame = {
+export type Point3InFrame = {
   /** Timestamp of point */
   timestamp: Time;
 

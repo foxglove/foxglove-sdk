@@ -39,7 +39,7 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<PackedElementFieldChannel>()?;
     module.add_class::<Point2Channel>()?;
     module.add_class::<Point3Channel>()?;
-    module.add_class::<PointInFrameChannel>()?;
+    module.add_class::<Point3InFrameChannel>()?;
     module.add_class::<PointCloudChannel>()?;
     module.add_class::<PointsAnnotationChannel>()?;
     module.add_class::<PoseChannel>()?;
@@ -2978,12 +2978,12 @@ impl Point3Channel {
     }
 }
 
-/// A channel for logging :py:class:`foxglove.schemas.PointInFrame` messages.
+/// A channel for logging :py:class:`foxglove.schemas.Point3InFrame` messages.
 #[pyclass(module = "foxglove.channels")]
-struct PointInFrameChannel(Channel<foxglove::schemas::PointInFrame>);
+struct Point3InFrameChannel(Channel<foxglove::schemas::Point3InFrame>);
 
 #[pymethods]
-impl PointInFrameChannel {
+impl Point3InFrameChannel {
     /// Create a new channel.
     ///
     /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
@@ -3062,7 +3062,7 @@ impl PointInFrameChannel {
         self.0.close();
     }
 
-    /// Log a :py:class:`foxglove.schemas.PointInFrame` message to the channel.
+    /// Log a :py:class:`foxglove.schemas.Point3InFrame` message to the channel.
     ///
     /// :param msg: The message to log.
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
@@ -3070,7 +3070,7 @@ impl PointInFrameChannel {
     ///     current time is used.
     /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
-    fn log(&self, msg: &schemas::PointInFrame, log_time: Option<u64>, sink_id: Option<u64>) {
+    fn log(&self, msg: &schemas::Point3InFrame, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
         let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
@@ -3079,7 +3079,7 @@ impl PointInFrameChannel {
 
     fn __repr__(&self) -> String {
         format!(
-            "PointInFrameChannel(id={}, topic='{}')",
+            "Point3InFrameChannel(id={}, topic='{}')",
             self.id(),
             self.topic()
         )

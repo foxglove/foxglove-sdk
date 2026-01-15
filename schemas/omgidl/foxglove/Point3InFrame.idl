@@ -6,7 +6,7 @@
 module foxglove {
 
 // A timestamped point for a position in 3D space
-struct PointInFrame {
+struct Point3InFrame {
   // Timestamp of point
   Time timestamp;
 

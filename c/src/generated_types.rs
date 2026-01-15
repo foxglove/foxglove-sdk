@@ -4890,7 +4890,7 @@ pub unsafe extern "C" fn foxglove_point3_encode(
 
 /// A timestamped point for a position in 3D space
 #[repr(C)]
-pub struct PointInFrame {
+pub struct Point3InFrame {
     /// Timestamp of point
     pub timestamp: *const FoxgloveTimestamp,
 
@@ -4902,13 +4902,13 @@ pub struct PointInFrame {
 }
 
 #[cfg(not(target_family = "wasm"))]
-impl PointInFrame {
+impl Point3InFrame {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
     /// # Safety
     /// We're trusting the caller that the channel will only be used with this type T.
     #[unsafe(no_mangle)]
-    pub unsafe extern "C" fn foxglove_channel_create_point_in_frame(
+    pub unsafe extern "C" fn foxglove_channel_create_point3_in_frame(
         topic: FoxgloveString,
         context: *const FoxgloveContext,
         channel: *mut *const FoxgloveChannel,
@@ -4919,14 +4919,14 @@ impl PointInFrame {
         }
         unsafe {
             let result =
-                do_foxglove_channel_create::<foxglove::schemas::PointInFrame>(topic, context);
+                do_foxglove_channel_create::<foxglove::schemas::Point3InFrame>(topic, context);
             result_to_c(result, channel)
         }
     }
 }
 
-impl BorrowToNative for PointInFrame {
-    type NativeType = foxglove::schemas::PointInFrame;
+impl BorrowToNative for Point3InFrame {
+    type NativeType = foxglove::schemas::Point3InFrame;
 
     unsafe fn borrow_to_native(
         &self,
@@ -4946,7 +4946,7 @@ impl BorrowToNative for PointInFrame {
         }
         .transpose()?;
 
-        Ok(ManuallyDrop::new(foxglove::schemas::PointInFrame {
+        Ok(ManuallyDrop::new(foxglove::schemas::Point3InFrame {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
             frame_id: ManuallyDrop::into_inner(frame_id),
             point: point.map(ManuallyDrop::into_inner),
@@ -4954,34 +4954,34 @@ impl BorrowToNative for PointInFrame {
     }
 }
 
-/// Log a PointInFrame message to a channel.
+/// Log a Point3InFrame message to a channel.
 ///
 /// # Safety
-/// The channel must have been created for this type with foxglove_channel_create_point_in_frame.
+/// The channel must have been created for this type with foxglove_channel_create_point3_in_frame.
 #[cfg(not(target_family = "wasm"))]
 #[unsafe(no_mangle)]
-pub extern "C" fn foxglove_channel_log_point_in_frame(
+pub extern "C" fn foxglove_channel_log_point3_in_frame(
     channel: Option<&FoxgloveChannel>,
-    msg: Option<&PointInFrame>,
+    msg: Option<&Point3InFrame>,
     log_time: Option<&u64>,
     sink_id: FoxgloveSinkId,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
-    match unsafe { PointInFrame::borrow_option_to_native(msg, arena_pin) } {
+    match unsafe { Point3InFrame::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
             // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
             log_msg_to_channel(channel, &*msg, log_time, sink_id)
         }
         Err(e) => {
-            tracing::error!("PointInFrame: {}", e);
+            tracing::error!("Point3InFrame: {}", e);
             e.into()
         }
     }
 }
 
-/// Get the PointInFrame schema.
+/// Get the Point3InFrame schema.
 ///
 /// All buffers in the returned schema are statically allocated.
 #[allow(
@@ -4989,15 +4989,15 @@ pub extern "C" fn foxglove_channel_log_point_in_frame(
     reason = "no preconditions and returned lifetime is static"
 )]
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn foxglove_point_in_frame_schema() -> FoxgloveSchema {
+pub unsafe extern "C" fn foxglove_point3_in_frame_schema() -> FoxgloveSchema {
     let native =
-        foxglove::schemas::PointInFrame::get_schema().expect("PointInFrame schema is Some");
-    let name: &'static str = "foxglove.PointInFrame";
+        foxglove::schemas::Point3InFrame::get_schema().expect("Point3InFrame schema is Some");
+    let name: &'static str = "foxglove.Point3InFrame";
     let encoding: &'static str = "protobuf";
     assert_eq!(name, &native.name);
     assert_eq!(encoding, &native.encoding);
     let std::borrow::Cow::Borrowed(data) = native.data else {
-        unreachable!("PointInFrame schema data is static");
+        unreachable!("Point3InFrame schema data is static");
     };
     FoxgloveSchema {
         name: name.into(),
@@ -5007,7 +5007,7 @@ pub unsafe extern "C" fn foxglove_point_in_frame_schema() -> FoxgloveSchema {
     }
 }
 
-/// Encode a PointInFrame message as protobuf to the buffer provided.
+/// Encode a Point3InFrame message as protobuf to the buffer provided.
 ///
 /// On success, writes the encoded length to *encoded_len.
 /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -5017,8 +5017,8 @@ pub unsafe extern "C" fn foxglove_point_in_frame_schema() -> FoxgloveSchema {
 /// # Safety
 /// ptr must be a valid pointer to a memory region at least len bytes long.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn foxglove_point_in_frame_encode(
-    msg: Option<&PointInFrame>,
+pub unsafe extern "C" fn foxglove_point3_in_frame_encode(
+    msg: Option<&Point3InFrame>,
     ptr: *mut u8,
     len: usize,
     encoded_len: Option<&mut usize>,
@@ -5026,7 +5026,7 @@ pub unsafe extern "C" fn foxglove_point_in_frame_encode(
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
-    match unsafe { PointInFrame::borrow_option_to_native(msg, arena_pin) } {
+    match unsafe { Point3InFrame::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
             if len == 0 || ptr.is_null() {
                 if let Some(encoded_len) = encoded_len {
@@ -5049,7 +5049,7 @@ pub unsafe extern "C" fn foxglove_point_in_frame_encode(
             FoxgloveError::Ok
         }
         Err(e) => {
-            tracing::error!("PointInFrame: {}", e);
+            tracing::error!("Point3InFrame: {}", e);
             FoxgloveError::EncodeError
         }
     }

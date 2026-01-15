@@ -6,7 +6,7 @@ include "Time.fbs";
 namespace foxglove;
 
 /// A timestamped point for a position in 3D space
-table PointInFrame {
+table Point3InFrame {
   /// Timestamp of point
   timestamp:Time (id: 0);
 
@@ -17,4 +17,4 @@ table PointInFrame {
   point:foxglove.Point3 (id: 2);
 }
 
-root_type PointInFrame;
+root_type Point3InFrame;

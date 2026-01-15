@@ -36,8 +36,8 @@ All schemas are generated from [schemas.ts](/internal/schemas.ts).
 - [PackedElementField](#packedelementfield)
 - [Point2](#point2)
 - [Point3](#point3)
+- [Point3InFrame](#point3inframe)
 - [PointCloud](#pointcloud)
-- [PointInFrame](#pointinframe)
 - [PointsAnnotation](#pointsannotation)
 - [Pose](#pose)
 - [PoseInFrame](#poseinframe)
@@ -1961,6 +1961,57 @@ z coordinate position
 </tr>
 </table>
 
+## Point3InFrame
+
+A timestamped point for a position in 3D space
+
+<table>
+  <tr>
+    <th>field</th>
+    <th>type</th>
+    <th>description</th>
+  </tr>
+<tr>
+<td><code>timestamp</code></td>
+<td>
+
+[Timestamp](#timestamp)
+
+</td>
+<td>
+
+Timestamp of point
+
+</td>
+</tr>
+<tr>
+<td><code>frame_id</code></td>
+<td>
+
+string
+
+</td>
+<td>
+
+Frame of reference for point position
+
+</td>
+</tr>
+<tr>
+<td><code>point</code></td>
+<td>
+
+[Point3](#point3)
+
+</td>
+<td>
+
+Point in 3D space
+
+</td>
+</tr>
+</table>
+
 ## PointCloud
 
 A collection of N-dimensional points, which may contain additional fields with information like normals, intensity, etc.
@@ -2046,57 +2097,6 @@ bytes
 <td>
 
 Point data, interpreted using `fields`
-
-</td>
-</tr>
-</table>
-
-## PointInFrame
-
-A timestamped point for a position in 3D space
-
-<table>
-  <tr>
-    <th>field</th>
-    <th>type</th>
-    <th>description</th>
-  </tr>
-<tr>
-<td><code>timestamp</code></td>
-<td>
-
-[Timestamp](#timestamp)
-
-</td>
-<td>
-
-Timestamp of point
-
-</td>
-</tr>
-<tr>
-<td><code>frame_id</code></td>
-<td>
-
-string
-
-</td>
-<td>
-
-Frame of reference for point position
-
-</td>
-</tr>
-<tr>
-<td><code>point</code></td>
-<td>
-
-[Point3](#point3)
-
-</td>
-<td>
-
-Point in 3D space
 
 </td>
 </tr>

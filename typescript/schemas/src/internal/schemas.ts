@@ -203,9 +203,9 @@ const Point3: FoxgloveMessageSchema = {
   ],
 };
 
-const PointInFrame: FoxgloveMessageSchema = {
+const Point3InFrame: FoxgloveMessageSchema = {
   type: "message",
-  name: "PointInFrame",
+  name: "Point3InFrame",
   description: "A timestamped point for a position in 3D space",
   rosEquivalent: "geometry_msgs/PointStamped",
   ros2Equivalent: "geometry_msgs/PointStamped",
@@ -1754,7 +1754,7 @@ export const foxgloveMessageSchemas = {
   PackedElementField,
   Point2,
   Point3,
-  PointInFrame,
+  Point3InFrame,
   PointCloud,
   PointsAnnotation,
   Pose,
