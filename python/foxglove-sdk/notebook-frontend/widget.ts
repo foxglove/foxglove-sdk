@@ -16,7 +16,7 @@ type Message = {
   type: "update-data";
 };
 
-function createSelectLayoutParams(layoutJson: string | undefined): SelectLayoutParams | undefined {
+function createSelectLayoutParams(layoutJson: string | undefined): SelectLayoutParams {
   // Even if no layout is provided, we want to always provide our storageKey and force=true so that
   // the embed doesn't fall back to its default caching behavior.
   return {
@@ -72,9 +72,7 @@ function render({ model, el }: RenderProps<WidgetModel>): void {
   model.on("change:_layout", () => {
     const layoutJson = model.get("_layout");
     const selectParams = createSelectLayoutParams(layoutJson);
-    if (selectParams) {
-      viewer.selectLayout(selectParams);
-    }
+    viewer.selectLayout(selectParams);
   });
 
   el.appendChild(parent);
