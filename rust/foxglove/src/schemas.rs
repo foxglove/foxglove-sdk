@@ -14,11 +14,11 @@
 //!
 //! For human-readable formats like JSON:
 //! - Enums are serialized as their string names (e.g., `"LINE_STRIP"`)
-//! - Binary data is serialized as base64-encoded strings
+//! - Binary data are serialized as base64-encoded strings
 //!
 //! For binary formats:
 //! - Enums are serialized as i32 values
-//! - Binary data is serialized as raw bytes
+//! - Binary data are serialized as raw bytes
 //!
 //! For efficient wire serialization, use the native protobuf encoding via the
 //! [`Encode`](crate::Encode) trait.
