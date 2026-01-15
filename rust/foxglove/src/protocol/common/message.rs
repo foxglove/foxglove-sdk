@@ -1,5 +1,6 @@
 use std::any::type_name;
 
+use bytes::BufMut;
 use serde::Serialize;
 
 use crate::protocol::ParseError;
@@ -27,6 +28,11 @@ pub trait BinaryPayload<'a>: Sized + 'a {
     /// The caller is responsible for stripping off the opcode.
     fn parse_payload(data: &'a [u8]) -> Result<Self, ParseError>;
 
-    /// Encodes the payload to a new mutable buffer.
-    fn to_payload(&self) -> Vec<u8>;
+    /// Returns the size of the encoded payload in bytes.
+    fn payload_size(&self) -> usize;
+
+    /// Writes the payload into the provided buffer.
+    ///
+    /// The buffer must have enough capacity to hold the payload.
+    fn write_payload(&self, buf: &mut impl BufMut);
 }

@@ -73,18 +73,23 @@ impl<'a> BinaryPayload<'a> for FetchAssetResponse<'a> {
         })
     }
 
-    fn to_payload(&self) -> Vec<u8> {
-        let (status, error_message_len, payload_len, payload) = match &self.payload {
-            Payload::ErrorMessage(msg) => (Status::Error, msg.len(), msg.len(), msg.as_bytes()),
-            Payload::AssetData(data) => (Status::Success, 0, data.len(), data.as_ref()),
+    fn payload_size(&self) -> usize {
+        let payload_len = match &self.payload {
+            Payload::ErrorMessage(msg) => msg.len(),
+            Payload::AssetData(data) => data.len(),
         };
-        let size = 4 + 1 + 4 + payload_len;
-        let mut buf = Vec::with_capacity(size);
+        4 + 1 + 4 + payload_len
+    }
+
+    fn write_payload(&self, buf: &mut impl BufMut) {
+        let (status, error_message_len, payload) = match &self.payload {
+            Payload::ErrorMessage(msg) => (Status::Error, msg.len(), msg.as_bytes()),
+            Payload::AssetData(data) => (Status::Success, 0, data.as_ref()),
+        };
         buf.put_u32_le(self.request_id);
         buf.put_u8(status as u8);
         buf.put_u32_le(error_message_len as u32);
         buf.put_slice(payload);
-        buf
     }
 }
 

@@ -27,11 +27,12 @@ impl<'a> BinaryPayload<'a> for Time {
         Ok(Self { timestamp })
     }
 
-    fn to_payload(&self) -> Vec<u8> {
-        let size = 8;
-        let mut buf = Vec::with_capacity(size);
+    fn payload_size(&self) -> usize {
+        8
+    }
+
+    fn write_payload(&self, buf: &mut impl BufMut) {
         buf.put_u64_le(self.timestamp);
-        buf
     }
 }
 

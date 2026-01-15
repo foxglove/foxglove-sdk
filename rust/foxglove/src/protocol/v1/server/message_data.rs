@@ -51,13 +51,14 @@ impl<'a> BinaryPayload<'a> for MessageData<'a> {
         })
     }
 
-    fn to_payload(&self) -> Vec<u8> {
-        let size = 4 + 8 + self.data.len();
-        let mut buf = Vec::with_capacity(size);
+    fn payload_size(&self) -> usize {
+        4 + 8 + self.data.len()
+    }
+
+    fn write_payload(&self, buf: &mut impl BufMut) {
         buf.put_u32_le(self.subscription_id);
         buf.put_u64_le(self.log_time);
         buf.put_slice(&self.data);
-        buf
     }
 }
 

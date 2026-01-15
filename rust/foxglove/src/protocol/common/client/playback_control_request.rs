@@ -78,16 +78,17 @@ impl<'a> BinaryPayload<'a> for PlaybackControlRequest {
         })
     }
 
-    fn to_payload(&self) -> Vec<u8> {
-        let mut buf = Vec::with_capacity(1 + 4 + 1 + 8 + 4 + self.request_id.len());
+    fn payload_size(&self) -> usize {
+        1 + 4 + 1 + 8 + 4 + self.request_id.len()
+    }
 
+    fn write_payload(&self, buf: &mut impl BufMut) {
         buf.put_u8(self.playback_command as u8);
         buf.put_f32_le(self.playback_speed);
         buf.put_u8(if self.seek_time.is_some() { 1 } else { 0 });
         buf.put_u64_le(self.seek_time.unwrap_or(0));
         buf.put_u32_le(self.request_id.len() as u32);
         buf.put_slice(self.request_id.as_bytes());
-        buf
     }
 }
 

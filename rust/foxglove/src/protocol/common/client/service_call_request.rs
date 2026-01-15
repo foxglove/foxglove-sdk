@@ -52,15 +52,16 @@ impl<'a> BinaryPayload<'a> for ServiceCallRequest<'a> {
         })
     }
 
-    fn to_payload(&self) -> Vec<u8> {
-        let size = 4 + 4 + 4 + self.encoding.len() + self.payload.len();
-        let mut buf = Vec::with_capacity(size);
+    fn payload_size(&self) -> usize {
+        4 + 4 + 4 + self.encoding.len() + self.payload.len()
+    }
+
+    fn write_payload(&self, buf: &mut impl BufMut) {
         buf.put_u32_le(self.service_id);
         buf.put_u32_le(self.call_id);
         buf.put_u32_le(self.encoding.len() as u32);
         buf.put_slice(self.encoding.as_bytes());
         buf.put_slice(&self.payload);
-        buf
     }
 }
 

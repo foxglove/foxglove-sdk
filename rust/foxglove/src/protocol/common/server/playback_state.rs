@@ -96,13 +96,17 @@ impl<'a> BinaryPayload<'a> for PlaybackState {
         })
     }
 
-    fn to_payload(&self) -> Vec<u8> {
+    fn payload_size(&self) -> usize {
+        let request_id_len = self.request_id.as_ref().map_or(0, |id| id.len());
+        1 + 8 + 4 + 1 + 4 + request_id_len
+    }
+
+    fn write_payload(&self, buf: &mut impl BufMut) {
         let request_id_len: u32 = match &self.request_id {
             Some(request_id) => request_id.len() as u32,
             None => 0,
         };
 
-        let mut buf = Vec::with_capacity(1 + 8 + 4 + 1 + 4 + (request_id_len as usize));
         buf.put_u8(self.status as u8);
         buf.put_u64_le(self.current_time);
         buf.put_f32_le(self.playback_speed);
@@ -111,8 +115,6 @@ impl<'a> BinaryPayload<'a> for PlaybackState {
         if let Some(request_id) = &self.request_id {
             buf.put_slice(request_id.as_bytes());
         }
-
-        buf
     }
 }
 

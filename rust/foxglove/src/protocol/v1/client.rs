@@ -42,30 +42,27 @@ impl BinaryOpcode {
 
 impl BinaryMessage for MessageData<'_> {
     fn to_bytes(&self) -> Vec<u8> {
-        let payload = self.to_payload();
-        let mut buf = Vec::with_capacity(1 + payload.len());
+        let mut buf = Vec::with_capacity(1 + self.payload_size());
         buf.put_u8(BinaryOpcode::MessageData as u8);
-        buf.extend(payload);
+        self.write_payload(&mut buf);
         buf
     }
 }
 
 impl BinaryMessage for ServiceCallRequest<'_> {
     fn to_bytes(&self) -> Vec<u8> {
-        let payload = self.to_payload();
-        let mut buf = Vec::with_capacity(1 + payload.len());
+        let mut buf = Vec::with_capacity(1 + self.payload_size());
         buf.put_u8(BinaryOpcode::ServiceCallRequest as u8);
-        buf.extend(payload);
+        self.write_payload(&mut buf);
         buf
     }
 }
 
 impl BinaryMessage for PlaybackControlRequest {
     fn to_bytes(&self) -> Vec<u8> {
-        let payload = self.to_payload();
-        let mut buf = Vec::with_capacity(1 + payload.len());
+        let mut buf = Vec::with_capacity(1 + self.payload_size());
         buf.put_u8(BinaryOpcode::PlaybackControlRequest as u8);
-        buf.extend(payload);
+        self.write_payload(&mut buf);
         buf
     }
 }
