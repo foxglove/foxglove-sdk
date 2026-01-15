@@ -8,7 +8,8 @@ use std::{
 use anyhow::Context;
 use itertools::Itertools;
 use prost::Message;
-use prost_types::{FileDescriptorProto, FileDescriptorSet};
+use prost_types::field_descriptor_proto::Type;
+use prost_types::{DescriptorProto, FieldDescriptorProto, FileDescriptorProto, FileDescriptorSet};
 use regex::Regex;
 use tempfile::NamedTempFile;
 use walkdir::WalkDir;
@@ -76,6 +77,119 @@ fn camel_case_to_constant_case(camel: &str) -> String {
 fn camel_case_to_kebab_case(camel: &str) -> String {
     let const_case = camel_case_to_constant_case(camel);
     const_case.replace('_', "-").to_lowercase()
+}
+
+/// Helper function to convert `CamelCase` to `snake_case`.
+fn camel_case_to_snake_case(camel: &str) -> String {
+    camel_case_to_constant_case(camel).to_lowercase()
+}
+
+/// Information about an enum field for serde generation.
+#[derive(Debug)]
+struct EnumFieldInfo {
+    /// Full protobuf path to the field (e.g., ".foxglove.Log.level")
+    field_path: String,
+    /// Rust path to the enum type (e.g., "log::Level")
+    enum_rust_path: String,
+    /// Snake case name for the serde module (e.g., "log_level")
+    serde_module_name: String,
+}
+
+/// Collect bytes fields and enum fields from the file descriptor set.
+fn collect_serde_fields(fds: &FileDescriptorSet) -> (Vec<String>, Vec<EnumFieldInfo>) {
+    let mut bytes_fields = Vec::new();
+    let mut enum_fields = Vec::new();
+
+    for fd in &fds.file {
+        let package = fd.package.as_deref().unwrap_or("");
+        for msg in &fd.message_type {
+            collect_fields_from_message(package, "", msg, &mut bytes_fields, &mut enum_fields);
+        }
+    }
+
+    (bytes_fields, enum_fields)
+}
+
+fn collect_fields_from_message(
+    package: &str,
+    parent_path: &str,
+    msg: &DescriptorProto,
+    bytes_fields: &mut Vec<String>,
+    enum_fields: &mut Vec<EnumFieldInfo>,
+) {
+    let msg_name = msg.name.as_deref().unwrap_or("");
+    let msg_path = if parent_path.is_empty() {
+        format!(".{package}.{msg_name}")
+    } else {
+        format!("{parent_path}.{msg_name}")
+    };
+    let rust_msg_path = if parent_path.is_empty() {
+        camel_case_to_snake_case(msg_name)
+    } else {
+        // Nested message - parent is already snake_case
+        let parent_snake = parent_path
+            .rsplit('.')
+            .next()
+            .map(camel_case_to_snake_case)
+            .unwrap_or_default();
+        format!("{}::{}", parent_snake, msg_name)
+    };
+
+    for field in &msg.field {
+        collect_field_info(&msg_path, &rust_msg_path, msg, field, bytes_fields, enum_fields);
+    }
+
+    // Handle nested messages
+    for nested in &msg.nested_type {
+        collect_fields_from_message(package, &msg_path, nested, bytes_fields, enum_fields);
+    }
+}
+
+fn collect_field_info(
+    msg_path: &str,
+    _rust_msg_path: &str,
+    msg: &DescriptorProto,
+    field: &FieldDescriptorProto,
+    bytes_fields: &mut Vec<String>,
+    enum_fields: &mut Vec<EnumFieldInfo>,
+) {
+    let field_name = field.name.as_deref().unwrap_or("");
+    let field_path = format!("{msg_path}.{field_name}");
+
+    // Check for bytes type
+    if field.r#type == Some(Type::Bytes as i32) {
+        bytes_fields.push(field_path.clone());
+    }
+
+    // Check for enum type
+    if field.r#type == Some(Type::Enum as i32) {
+        if let Some(type_name) = &field.type_name {
+            // type_name is like ".foxglove.Log.Level" or ".foxglove.line_primitive.Type"
+            // We need to find the enum within the message's nested enums
+            let enum_name = type_name.rsplit('.').next().unwrap_or("");
+
+            // Check if this is a nested enum in the current message
+            let is_nested = msg.enum_type.iter().any(|e| e.name.as_deref() == Some(enum_name));
+
+            if is_nested {
+                // For nested enums, use the message's snake_case name as the module
+                let msg_snake = msg
+                    .name
+                    .as_deref()
+                    .map(camel_case_to_snake_case)
+                    .unwrap_or_default();
+                let enum_rust_path = format!("{msg_snake}::{enum_name}");
+                let serde_module_name =
+                    format!("{}_{}", msg_snake, camel_case_to_snake_case(enum_name));
+
+                enum_fields.push(EnumFieldInfo {
+                    field_path,
+                    enum_rust_path,
+                    serde_module_name,
+                });
+            }
+        }
+    }
 }
 
 /// Generates base64-encoded file descriptor sets for each foxglove message.
@@ -225,12 +339,7 @@ pub fn generate_protos(proto_path: &Path, out_dir: &Path) -> anyhow::Result<()> 
     config.message_attribute(".", format!("/// {DOC_REF}"));
 
     // Add conditional serde derives for the "serde" feature.
-    // The bytes crate's serde feature is enabled to provide Serialize/Deserialize for Bytes.
     config.message_attribute(
-        ".",
-        "#[cfg_attr(feature = \"serde\", derive(::serde::Serialize, ::serde::Deserialize))]",
-    );
-    config.enum_attribute(
         ".",
         "#[cfg_attr(feature = \"serde\", derive(::serde::Serialize, ::serde::Deserialize))]",
     );
@@ -240,20 +349,86 @@ pub fn generate_protos(proto_path: &Path, out_dir: &Path) -> anyhow::Result<()> 
     config.out_dir(out_dir);
     config.bytes(["."]);
 
+    // Load file descriptors for introspection
     let mut fds = config
         .load_fds(&proto_files, &[proto_path])
         .context("Failed to load protos")?;
     fds.file.sort_unstable_by(|a, b| a.name.cmp(&b.name));
+
+    // Collect bytes and enum fields via introspection
+    let (bytes_fields, enum_fields) = collect_serde_fields(&fds);
+
+    // Add serde attributes for bytes fields
+    for field_path in &bytes_fields {
+        config.field_attribute(
+            field_path,
+            "#[cfg_attr(feature = \"serde\", serde(with = \"crate::schemas::serde_bytes\"))]",
+        );
+    }
+
+    // Add serde attributes for enum fields (modules will be generated in foxglove.rs)
+    for info in &enum_fields {
+        config.field_attribute(
+            &info.field_path,
+            &format!(
+                "#[cfg_attr(feature = \"serde\", serde(with = \"serde_enums::{}\"))]",
+                info.serde_module_name
+            ),
+        );
+    }
 
     generate_descriptors(out_dir, &fds).context("Failed to generate descriptor files")?;
 
     generate_impls(out_dir, &fds).context("Failed to generate impls")?;
 
     config
-        .compile_fds(fds)
+        .compile_fds(fds.clone())
         .context("Failed to compile protos")?;
 
     fix_generated_comments(out_dir).context("Failed to fix docstrings")?;
+
+    // Generate enum serde modules in foxglove.rs
+    generate_enum_serde_modules(out_dir, &enum_fields).context("Failed to generate enum serde modules")?;
+
+    Ok(())
+}
+
+/// Appends enum serde modules to the generated foxglove.rs file.
+fn generate_enum_serde_modules(out_dir: &Path, enum_fields: &[EnumFieldInfo]) -> anyhow::Result<()> {
+    let schema_path = out_dir.join("foxglove.rs");
+    let mut file = fs::OpenOptions::new()
+        .append(true)
+        .open(&schema_path)
+        .context("Failed to open foxglove.rs for appending")?;
+
+    // Collect unique enums (multiple fields may use the same enum)
+    let mut seen = HashSet::new();
+    let unique_enums: Vec<_> = enum_fields
+        .iter()
+        .filter(|info| seen.insert(&info.serde_module_name))
+        .collect();
+
+    if unique_enums.is_empty() {
+        return Ok(());
+    }
+
+    writeln!(file, "\n// Serde modules for enum fields (generated by foxglove_proto_gen)")?;
+    writeln!(file, "#[cfg(feature = \"serde\")]")?;
+    writeln!(file, "pub(crate) mod serde_enums {{")?;
+    writeln!(file, "    use super::*;")?;
+    writeln!(file, "    use serde::de::Error as _;")?;
+    writeln!(file, "    use serde::{{Deserialize, Deserializer, Serializer}};")?;
+    writeln!(file)?;
+
+    for info in unique_enums {
+        writeln!(
+            file,
+            "    crate::schemas::enum_serde!({}, {});",
+            info.serde_module_name, info.enum_rust_path
+        )?;
+    }
+
+    writeln!(file, "}}")?;
 
     Ok(())
 }

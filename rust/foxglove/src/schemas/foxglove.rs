@@ -156,6 +156,7 @@ pub struct CompressedImage {
     pub frame_id: ::prost::alloc::string::String,
     /// Compressed image data
     #[prost(bytes = "bytes", tag = "2")]
+    #[cfg_attr(feature = "serde", serde(with = "crate::schemas::serde_bytes"))]
     pub data: ::prost::bytes::Bytes,
     /// Image format
     ///
@@ -200,6 +201,7 @@ pub struct CompressedVideo {
     ///    - Each CompressedVideo message should contain enough OBUs to decode exactly one video frame
     ///    - Each message containing a key frame must also include a Sequence Header OBU
     #[prost(bytes = "bytes", tag = "3")]
+    #[cfg_attr(feature = "serde", serde(with = "crate::schemas::serde_bytes"))]
     pub data: ::prost::bytes::Bytes,
     /// Video format.
     ///
@@ -356,6 +358,7 @@ pub struct Grid {
     /// - y = i / row_stride * cell_size.y
     /// - x = (i % row_stride) / cell_stride * cell_size.x
     #[prost(bytes = "bytes", tag = "9")]
+    #[cfg_attr(feature = "serde", serde(with = "crate::schemas::serde_bytes"))]
     pub data: ::prost::bytes::Bytes,
 }
 /// Array of annotations for a 2D image
@@ -419,6 +422,7 @@ pub struct LaserScan {
 pub struct LinePrimitive {
     /// Drawing primitive to use for lines
     #[prost(enumeration = "line_primitive::Type", tag = "1")]
+    #[cfg_attr(feature = "serde", serde(with = "serde_enums::line_primitive_type"))]
     pub r#type: i32,
     /// Origin of lines relative to reference frame
     #[prost(message, optional, tag = "2")]
@@ -447,7 +451,6 @@ pub struct LinePrimitive {
 /// Nested message and enum types in `LinePrimitive`.
 pub mod line_primitive {
     /// An enumeration indicating how input points should be interpreted to create lines
-    #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
     #[derive(
         Clone,
         Copy,
@@ -518,6 +521,10 @@ pub struct LocationFix {
     pub position_covariance: ::prost::alloc::vec::Vec<f64>,
     /// If `position_covariance` is available, `position_covariance_type` must be set to indicate the type of covariance.
     #[prost(enumeration = "location_fix::PositionCovarianceType", tag = "5")]
+    #[cfg_attr(
+        feature = "serde",
+        serde(with = "serde_enums::location_fix_position_covariance_type")
+    )]
     pub position_covariance_type: i32,
     /// Color used to visualize the location
     #[prost(message, optional, tag = "8")]
@@ -526,7 +533,6 @@ pub struct LocationFix {
 /// Nested message and enum types in `LocationFix`.
 pub mod location_fix {
     /// Type of position covariance
-    #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
     #[derive(
         Clone,
         Copy,
@@ -593,6 +599,7 @@ pub struct Log {
     pub timestamp: ::core::option::Option<crate::schemas::Timestamp>,
     /// Log level
     #[prost(enumeration = "log::Level", tag = "2")]
+    #[cfg_attr(feature = "serde", serde(with = "serde_enums::log_level"))]
     pub level: i32,
     /// Log message
     #[prost(string, tag = "3")]
@@ -610,7 +617,6 @@ pub struct Log {
 /// Nested message and enum types in `Log`.
 pub mod log {
     /// Log level
-    #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
     #[derive(
         Clone,
         Copy,
@@ -691,6 +697,7 @@ pub struct ModelPrimitive {
     pub media_type: ::prost::alloc::string::String,
     /// Embedded model. One of `url` or `data` should be non-empty. If `data` is non-empty, `media_type` must be set to indicate the type of the data.
     #[prost(bytes = "bytes", tag = "7")]
+    #[cfg_attr(feature = "serde", serde(with = "crate::schemas::serde_bytes"))]
     pub data: ::prost::bytes::Bytes,
 }
 /// A field present within each element in a byte array of packed elements.
@@ -706,12 +713,15 @@ pub struct PackedElementField {
     pub offset: u32,
     /// Type of data in the field. Integers are stored using little-endian byte order.
     #[prost(enumeration = "packed_element_field::NumericType", tag = "3")]
+    #[cfg_attr(
+        feature = "serde",
+        serde(with = "serde_enums::packed_element_field_numeric_type")
+    )]
     pub r#type: i32,
 }
 /// Nested message and enum types in `PackedElementField`.
 pub mod packed_element_field {
     /// Numeric type
-    #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
     #[derive(
         Clone,
         Copy,
@@ -843,6 +853,7 @@ pub struct PointCloud {
     pub fields: ::prost::alloc::vec::Vec<PackedElementField>,
     /// Point data, interpreted using `fields`
     #[prost(bytes = "bytes", tag = "6")]
+    #[cfg_attr(feature = "serde", serde(with = "crate::schemas::serde_bytes"))]
     pub data: ::prost::bytes::Bytes,
 }
 /// An array of points on a 2D image
@@ -855,6 +866,7 @@ pub struct PointsAnnotation {
     pub timestamp: ::core::option::Option<crate::schemas::Timestamp>,
     /// Type of points annotation to draw
     #[prost(enumeration = "points_annotation::Type", tag = "2")]
+    #[cfg_attr(feature = "serde", serde(with = "serde_enums::points_annotation_type"))]
     pub r#type: i32,
     /// Points in 2D image coordinates (pixels).
     /// These coordinates use the top-left corner of the top-left pixel of the image as the origin.
@@ -876,7 +888,6 @@ pub struct PointsAnnotation {
 /// Nested message and enum types in `PointsAnnotation`.
 pub mod points_annotation {
     /// Type of points annotation
-    #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
     #[derive(
         Clone,
         Copy,
@@ -998,6 +1009,7 @@ pub struct RawAudio {
     pub timestamp: ::core::option::Option<crate::schemas::Timestamp>,
     /// Audio data. The samples in the data must be interleaved and little-endian
     #[prost(bytes = "bytes", tag = "2")]
+    #[cfg_attr(feature = "serde", serde(with = "crate::schemas::serde_bytes"))]
     pub data: ::prost::bytes::Bytes,
     /// Audio format. Only 'pcm-s16' is currently supported
     #[prost(string, tag = "3")]
@@ -1086,6 +1098,7 @@ pub struct RawImage {
     ///    - Pixel brightness is represented as 16-bit unsigned little-endian integers. Rendering of these values is controlled in [Image panel color mode settings](<https://docs.foxglove.dev/docs/visualization/panels/image#general>).
     ///    - `step` must be greater than or equal to `width` * 2.
     #[prost(bytes = "bytes", tag = "6")]
+    #[cfg_attr(feature = "serde", serde(with = "crate::schemas::serde_bytes"))]
     pub data: ::prost::bytes::Bytes,
 }
 /// A visual element in a 3D scene. An entity may be composed of multiple primitives which all share the same frame of reference.
@@ -1146,6 +1159,10 @@ pub struct SceneEntityDeletion {
     pub timestamp: ::core::option::Option<crate::schemas::Timestamp>,
     /// Type of deletion action to perform
     #[prost(enumeration = "scene_entity_deletion::Type", tag = "2")]
+    #[cfg_attr(
+        feature = "serde",
+        serde(with = "serde_enums::scene_entity_deletion_type")
+    )]
     pub r#type: i32,
     /// Identifier which must match if `type` is `MATCHING_ID`.
     #[prost(string, tag = "3")]
@@ -1154,7 +1171,6 @@ pub struct SceneEntityDeletion {
 /// Nested message and enum types in `SceneEntityDeletion`.
 pub mod scene_entity_deletion {
     /// An enumeration indicating which entities should match a SceneEntityDeletion command
-    #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
     #[derive(
         Clone,
         Copy,
@@ -1362,5 +1378,21 @@ pub struct VoxelGrid {
     /// - y = (i % slice_stride) / row_stride * cell_size.y
     /// - x = (i % row_stride) / cell_stride * cell_size.x
     #[prost(bytes = "bytes", tag = "11")]
+    #[cfg_attr(feature = "serde", serde(with = "crate::schemas::serde_bytes"))]
     pub data: ::prost::bytes::Bytes,
+}
+
+// Serde modules for enum fields (generated by foxglove_proto_gen)
+#[cfg(feature = "serde")]
+pub(crate) mod serde_enums {
+    use super::*;
+    use serde::de::Error as _;
+    use serde::{Deserialize, Deserializer, Serializer};
+
+    crate::schemas::enum_serde!(line_primitive_type, line_primitive::Type);
+    crate::schemas::enum_serde!(location_fix_position_covariance_type, location_fix::PositionCovarianceType);
+    crate::schemas::enum_serde!(log_level, log::Level);
+    crate::schemas::enum_serde!(packed_element_field_numeric_type, packed_element_field::NumericType);
+    crate::schemas::enum_serde!(points_annotation_type, points_annotation::Type);
+    crate::schemas::enum_serde!(scene_entity_deletion_type, scene_entity_deletion::Type);
 }
