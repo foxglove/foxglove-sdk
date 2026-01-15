@@ -1,6 +1,6 @@
 import type { RenderProps } from "@anywidget/types";
 import { FoxgloveViewer } from "@foxglove/embed";
-import type { Layout, SelectLayoutParams } from "@foxglove/embed/src/types";
+import type { Layout, SelectLayoutParams } from "@foxglove/embed";
 
 // Specifies attributes defined with traitlets in ../python/foxglove/notebook/widget.py
 interface WidgetModel {
