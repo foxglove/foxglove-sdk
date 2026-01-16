@@ -52,15 +52,11 @@ impl FromStr for Compression {
 impl Compression {
     /// Parses a format string from a ROS `CompressedImage` message.
     ///
-    /// The format string is described at length in the ROS1 [sensor_msgs/CompressedImage][ros1]
+    /// The format string is described at length in the ROS 2 [sensor_msgs/CompressedImage][ros2]
     /// definition.
     ///
-    /// While the ROS2 [sensor_msgs/msg/CompressedImage][ros2] documentation suggests that the
-    /// format string can only be "jpeg" or "png", we've observed ROS2 compressed images in the
-    /// wild that use ROS1-style format specifications.
-    ///
     /// [ros1]: https://docs.ros.org/en/noetic/api/sensor_msgs/html/msg/CompressedImage.html
-    /// [ros2]: https://docs.ros2.org/foxy/api/sensor_msgs/msg/CompressedImage.html
+    /// [ros2]: https://docs.ros.org/en/rolling/p/sensor_msgs/msg/CompressedImage.html
     #[cfg(any(feature = "img2yuv-ros1", feature = "img2yuv-ros2"))]
     pub fn try_from_ros_format(format: &str) -> Result<Self, UnknownCompressionError> {
         use regex::Regex;
