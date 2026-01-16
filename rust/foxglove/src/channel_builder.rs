@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
-use crate::{Channel, Context, Encode, FoxgloveError, RawChannel, Schema};
+use crate::{Channel, Context, Encode, FoxgloveError, RawChannel, Schema, TransportKind};
 
 /// A builder for creating a [`Channel`] or [`RawChannel`].
 #[must_use]
@@ -12,6 +12,7 @@ pub struct ChannelBuilder {
     schema: Option<Schema>,
     metadata: BTreeMap<String, String>,
     context: Arc<Context>,
+    transport_kind: TransportKind,
 }
 
 impl ChannelBuilder {
@@ -25,6 +26,7 @@ impl ChannelBuilder {
             schema: None,
             metadata: BTreeMap::new(),
             context: Context::get_default(),
+            transport_kind: TransportKind::Lossy,
         }
     }
 
@@ -65,6 +67,13 @@ impl ChannelBuilder {
         self
     }
 
+    /// Sets the [`TransportKind`](crate::TransportKind) for the channel.
+    /// It controls how data for the channel is sent over the network with applicable sinks.
+    pub fn transport_kind(mut self, transport_kind: TransportKind) -> Self {
+        self.transport_kind = transport_kind;
+        self
+    }
+
     /// Builds a [`RawChannel`].
     ///
     /// Returns [`FoxgloveError::MessageEncodingRequired`] if no message encoding was specified.
@@ -76,6 +85,7 @@ impl ChannelBuilder {
                 .ok_or_else(|| FoxgloveError::MessageEncodingRequired)?,
             self.schema,
             self.metadata,
+            self.transport_kind,
         );
         channel = self.context.add_channel(channel);
         Ok(channel)
