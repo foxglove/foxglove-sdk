@@ -31,24 +31,3 @@ pub use status::Status;
 pub use time::Time;
 pub use unadvertise::Unadvertise;
 pub use unadvertise_services::UnadvertiseServices;
-
-#[repr(u8)]
-pub(crate) enum BinaryOpcode {
-    MessageData = 1,
-    Time = 2,
-    ServiceCallResponse = 3,
-    FetchAssetResponse = 4,
-    PlaybackState = 5,
-}
-impl BinaryOpcode {
-    pub(crate) fn from_repr(value: u8) -> Option<Self> {
-        match value {
-            1 => Some(Self::MessageData),
-            2 => Some(Self::Time),
-            3 => Some(Self::ServiceCallResponse),
-            4 => Some(Self::FetchAssetResponse),
-            5 => Some(Self::PlaybackState),
-            _ => None,
-        }
-    }
-}

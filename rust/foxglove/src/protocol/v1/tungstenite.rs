@@ -2,10 +2,7 @@
 
 use tokio_tungstenite::tungstenite::Message;
 
-use crate::{
-    protocol::v1::{client, server},
-    protocol::{BinaryMessage, JsonMessage, ParseError},
-};
+use crate::protocol::v1::{client, server, BinaryMessage, JsonMessage, ParseError};
 
 impl<'a> TryFrom<&'a Message> for client::ClientMessage<'a> {
     type Error = ParseError;

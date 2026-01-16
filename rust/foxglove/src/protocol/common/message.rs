@@ -1,5 +1,6 @@
 use std::any::type_name;
 
+use bytes::BufMut;
 use serde::Serialize;
 
 use crate::protocol::ParseError;
@@ -16,13 +17,22 @@ pub trait JsonMessage: Serialize {
     }
 }
 
-/// Trait for a binary message.
-pub trait BinaryMessage<'a>: Sized + 'a {
-    /// Parses a binary message from the provided buffer.
+/// Trait for binary message payload encoding/decoding.
+///
+/// This trait handles the raw payload without the opcode byte.
+/// Protocol-specific modules (e.g., v1) provide a `BinaryMessage` trait
+/// that adds the appropriate opcode framing.
+pub trait BinaryPayload<'a>: Sized + 'a {
+    /// Parses a binary payload from the provided buffer.
     ///
     /// The caller is responsible for stripping off the opcode.
-    fn parse_binary(data: &'a [u8]) -> Result<Self, ParseError>;
+    fn parse_payload(data: &'a [u8]) -> Result<Self, ParseError>;
 
-    /// Encodes a binary message to a new mutable buffer.
-    fn to_bytes(&self) -> Vec<u8>;
+    /// Returns the size of the encoded payload in bytes.
+    fn payload_size(&self) -> usize;
+
+    /// Writes the payload into the provided buffer.
+    ///
+    /// The buffer must have enough capacity to hold the payload.
+    fn write_payload(&self, buf: &mut impl BufMut);
 }
