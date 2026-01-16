@@ -554,7 +554,18 @@ struct Duration {
   uint32_t nsec = 0;
 };
 
-/// @brief A transform between two reference frames in 3D space
+/// @brief A transform between two reference frames in 3D space. The transform defines the position
+/// and orientation of a child frame within a parent frame. Foxglove applies the translation first
+/// and then the rotation.
+/// @brief
+/// @brief Examples:
+/// @brief
+/// @brief Example 1: With translation (x=1, y=0, z=0) and identity rotation (x=0, y=0, z=0, w=1), a
+/// point at (x=0, y=0, z=0) in the child frame maps to (x=1, y=0, z=0) in the parent frame.
+/// @brief
+/// @brief Example 2: With translation (x=1, y=2, z=0) and a 90-degree rotation around the z-axis
+/// (x=0, y=0, z=0.707, w=0.707), a point at (x=1, y=0, z=0) in the child frame maps to (x=-1, y=3,
+/// z=0) in the parent frame.
 struct FrameTransform {
   /// @brief Timestamp of transform
   std::optional<Timestamp> timestamp;
@@ -565,10 +576,12 @@ struct FrameTransform {
   /// @brief Name of the child frame
   std::string child_frame_id;
 
-  /// @brief Translation component of the transform
+  /// @brief Translation component of the transform, representing the position of the child frame's
+  /// origin in the parent frame.
   std::optional<Vector3> translation;
 
-  /// @brief Rotation component of the transform
+  /// @brief Rotation component of the transform, representing the orientation of the child frame in
+  /// the parent frame
   std::optional<Quaternion> rotation;
 
   /// @brief Encoded the FrameTransform as protobuf to the provided buffer.

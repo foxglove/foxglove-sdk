@@ -110,7 +110,12 @@ export function generateFlatbuffers(
       });
 
       // `///` comments required to show up in compiled flatbuffer schemas
-      definition = `/// ${schema.description}\nenum ${schema.name} : ubyte {\n  ${fields.join(
+      const enumDescriptionLines = schema.description
+        .trim()
+        .split("\n")
+        .map((line) => `/// ${line}`)
+        .join("\n");
+      definition = `${enumDescriptionLines}\nenum ${schema.name} : ubyte {\n  ${fields.join(
         "\n\n  ",
       )}\n}\n`;
       break;
@@ -182,7 +187,12 @@ export function generateFlatbuffers(
         } (id: ${fieldId});`;
       });
 
-      definition = `${enumDefinitions.join("\n\n")}/// ${schema.description}\ntable ${
+      const tableDescriptionLines = schema.description
+        .trim()
+        .split("\n")
+        .map((line) => `/// ${line}`)
+        .join("\n");
+      definition = `${enumDefinitions.join("\n\n")}${tableDescriptionLines}\ntable ${
         schema.name
       } {\n${fields.join("\n\n")}\n}\n\nroot_type ${schema.name};`;
       break;
