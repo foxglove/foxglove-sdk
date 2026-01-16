@@ -1,26 +1,71 @@
 //! Client messages for Foxglove protocol v1.
 
-use bytes::Buf;
+use bytes::{Buf, BufMut};
 use serde::Deserialize;
 
-use crate::protocol::common::client::BinaryOpcode;
-use crate::protocol::{BinaryMessage, ParseError};
+use super::message::BinaryMessage;
+use crate::protocol::{BinaryPayload, ParseError};
 
-mod message_data;
 pub mod subscribe;
 mod unsubscribe;
 
 pub use crate::protocol::common::client::advertise;
 pub use crate::protocol::common::client::{
-    Advertise, FetchAsset, GetParameters, ServiceCallRequest, SetParameters,
+    Advertise, FetchAsset, GetParameters, MessageData, ServiceCallRequest, SetParameters,
     SubscribeConnectionGraph, SubscribeParameterUpdates, Unadvertise, UnsubscribeConnectionGraph,
     UnsubscribeParameterUpdates,
 };
 #[doc(hidden)]
 pub use crate::protocol::common::client::{PlaybackCommand, PlaybackControlRequest};
-pub use message_data::MessageData;
 pub use subscribe::{Subscribe, Subscription};
 pub use unsubscribe::Unsubscribe;
+
+/// Binary opcodes for v1 client messages.
+#[repr(u8)]
+pub(crate) enum BinaryOpcode {
+    MessageData = 1,
+    ServiceCallRequest = 2,
+    #[doc(hidden)]
+    PlaybackControlRequest = 3,
+}
+
+impl BinaryOpcode {
+    pub(crate) fn from_repr(value: u8) -> Option<Self> {
+        match value {
+            1 => Some(Self::MessageData),
+            2 => Some(Self::ServiceCallRequest),
+            3 => Some(Self::PlaybackControlRequest),
+            _ => None,
+        }
+    }
+}
+
+impl BinaryMessage for MessageData<'_> {
+    fn to_bytes(&self) -> Vec<u8> {
+        let mut buf = Vec::with_capacity(1 + self.payload_size());
+        buf.put_u8(BinaryOpcode::MessageData as u8);
+        self.write_payload(&mut buf);
+        buf
+    }
+}
+
+impl BinaryMessage for ServiceCallRequest<'_> {
+    fn to_bytes(&self) -> Vec<u8> {
+        let mut buf = Vec::with_capacity(1 + self.payload_size());
+        buf.put_u8(BinaryOpcode::ServiceCallRequest as u8);
+        self.write_payload(&mut buf);
+        buf
+    }
+}
+
+impl BinaryMessage for PlaybackControlRequest {
+    fn to_bytes(&self) -> Vec<u8> {
+        let mut buf = Vec::with_capacity(1 + self.payload_size());
+        buf.put_u8(BinaryOpcode::PlaybackControlRequest as u8);
+        self.write_payload(&mut buf);
+        buf
+    }
+}
 
 /// A representation of a client message useful for deserializing.
 #[derive(Debug, Clone, PartialEq)]
@@ -58,13 +103,13 @@ impl<'a> ClientMessage<'a> {
             let opcode = data.get_u8();
             match BinaryOpcode::from_repr(opcode) {
                 Some(BinaryOpcode::MessageData) => {
-                    MessageData::parse_binary(data).map(ClientMessage::MessageData)
+                    MessageData::parse_payload(data).map(ClientMessage::MessageData)
                 }
                 Some(BinaryOpcode::ServiceCallRequest) => {
-                    ServiceCallRequest::parse_binary(data).map(ClientMessage::ServiceCallRequest)
+                    ServiceCallRequest::parse_payload(data).map(ClientMessage::ServiceCallRequest)
                 }
                 Some(BinaryOpcode::PlaybackControlRequest) => {
-                    PlaybackControlRequest::parse_binary(data)
+                    PlaybackControlRequest::parse_payload(data)
                         .map(ClientMessage::PlaybackControlRequest)
                 }
                 None => Err(ParseError::InvalidOpcode(opcode)),

@@ -1,8 +1,6 @@
 use bytes::{Buf, BufMut};
 
-use crate::protocol::{BinaryMessage, ParseError};
-
-use super::BinaryOpcode;
+use crate::protocol::{BinaryPayload, ParseError};
 
 /// Time message.
 ///
@@ -20,8 +18,8 @@ impl Time {
     }
 }
 
-impl<'a> BinaryMessage<'a> for Time {
-    fn parse_binary(mut data: &'a [u8]) -> Result<Self, ParseError> {
+impl<'a> BinaryPayload<'a> for Time {
+    fn parse_payload(mut data: &'a [u8]) -> Result<Self, ParseError> {
         if data.len() < 8 {
             return Err(ParseError::BufferTooShort);
         }
@@ -29,18 +27,18 @@ impl<'a> BinaryMessage<'a> for Time {
         Ok(Self { timestamp })
     }
 
-    fn to_bytes(&self) -> Vec<u8> {
-        let size = 1 + 8;
-        let mut buf = Vec::with_capacity(size);
-        buf.put_u8(BinaryOpcode::Time as u8);
+    fn payload_size(&self) -> usize {
+        8
+    }
+
+    fn write_payload(&self, buf: &mut impl BufMut) {
         buf.put_u64_le(self.timestamp);
-        buf
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::protocol::v1::server::ServerMessage;
+    use crate::protocol::v1::{server::ServerMessage, BinaryMessage};
 
     use super::*;
 

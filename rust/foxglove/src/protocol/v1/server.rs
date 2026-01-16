@@ -1,10 +1,10 @@
 //! Server messages for Foxglove protocol v1.
 
-use bytes::Buf;
+use bytes::{Buf, BufMut};
 use serde::Deserialize;
 
-use crate::protocol::common::server::BinaryOpcode;
-use crate::protocol::{BinaryMessage, ParseError};
+use super::message::BinaryMessage;
+use crate::protocol::{BinaryPayload, ParseError};
 
 mod message_data;
 
@@ -26,6 +26,75 @@ pub use crate::protocol::common::server::{
     Time, Unadvertise, UnadvertiseServices,
 };
 pub use message_data::MessageData;
+
+/// Binary opcodes for v1 server messages.
+#[repr(u8)]
+pub(crate) enum BinaryOpcode {
+    MessageData = 1,
+    Time = 2,
+    ServiceCallResponse = 3,
+    FetchAssetResponse = 4,
+    #[doc(hidden)]
+    PlaybackState = 5,
+}
+
+impl BinaryOpcode {
+    pub(crate) fn from_repr(value: u8) -> Option<Self> {
+        match value {
+            1 => Some(Self::MessageData),
+            2 => Some(Self::Time),
+            3 => Some(Self::ServiceCallResponse),
+            4 => Some(Self::FetchAssetResponse),
+            5 => Some(Self::PlaybackState),
+            _ => None,
+        }
+    }
+}
+
+impl BinaryMessage for MessageData<'_> {
+    fn to_bytes(&self) -> Vec<u8> {
+        let mut buf = Vec::with_capacity(1 + self.payload_size());
+        buf.put_u8(BinaryOpcode::MessageData as u8);
+        self.write_payload(&mut buf);
+        buf
+    }
+}
+
+impl BinaryMessage for Time {
+    fn to_bytes(&self) -> Vec<u8> {
+        let mut buf = Vec::with_capacity(1 + self.payload_size());
+        buf.put_u8(BinaryOpcode::Time as u8);
+        self.write_payload(&mut buf);
+        buf
+    }
+}
+
+impl BinaryMessage for ServiceCallResponse<'_> {
+    fn to_bytes(&self) -> Vec<u8> {
+        let mut buf = Vec::with_capacity(1 + self.payload_size());
+        buf.put_u8(BinaryOpcode::ServiceCallResponse as u8);
+        self.write_payload(&mut buf);
+        buf
+    }
+}
+
+impl BinaryMessage for FetchAssetResponse<'_> {
+    fn to_bytes(&self) -> Vec<u8> {
+        let mut buf = Vec::with_capacity(1 + self.payload_size());
+        buf.put_u8(BinaryOpcode::FetchAssetResponse as u8);
+        self.write_payload(&mut buf);
+        buf
+    }
+}
+
+impl BinaryMessage for PlaybackState {
+    fn to_bytes(&self) -> Vec<u8> {
+        let mut buf = Vec::with_capacity(1 + self.payload_size());
+        buf.put_u8(BinaryOpcode::PlaybackState as u8);
+        self.write_payload(&mut buf);
+        buf
+    }
+}
 
 /// A representation of a server message useful for deserializing.
 #[derive(Debug, Clone, PartialEq)]
@@ -63,17 +132,17 @@ impl<'a> ServerMessage<'a> {
             let opcode = data.get_u8();
             match BinaryOpcode::from_repr(opcode) {
                 Some(BinaryOpcode::MessageData) => {
-                    MessageData::parse_binary(data).map(ServerMessage::MessageData)
+                    MessageData::parse_payload(data).map(ServerMessage::MessageData)
                 }
-                Some(BinaryOpcode::Time) => Time::parse_binary(data).map(ServerMessage::Time),
+                Some(BinaryOpcode::Time) => Time::parse_payload(data).map(ServerMessage::Time),
                 Some(BinaryOpcode::ServiceCallResponse) => {
-                    ServiceCallResponse::parse_binary(data).map(ServerMessage::ServiceCallResponse)
+                    ServiceCallResponse::parse_payload(data).map(ServerMessage::ServiceCallResponse)
                 }
                 Some(BinaryOpcode::FetchAssetResponse) => {
-                    FetchAssetResponse::parse_binary(data).map(ServerMessage::FetchAssetResponse)
+                    FetchAssetResponse::parse_payload(data).map(ServerMessage::FetchAssetResponse)
                 }
                 Some(BinaryOpcode::PlaybackState) => {
-                    PlaybackState::parse_binary(data).map(ServerMessage::PlaybackState)
+                    PlaybackState::parse_payload(data).map(ServerMessage::PlaybackState)
                 }
                 None => Err(ParseError::InvalidOpcode(opcode)),
             }

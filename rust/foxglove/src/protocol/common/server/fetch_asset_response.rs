@@ -4,9 +4,7 @@ use std::borrow::Cow;
 
 use bytes::{Buf, BufMut};
 
-use crate::protocol::{BinaryMessage, ParseError};
-
-use super::BinaryOpcode;
+use crate::protocol::{BinaryPayload, ParseError};
 
 /// Fetch asset response message.
 ///
@@ -45,8 +43,8 @@ impl<'a> FetchAssetResponse<'a> {
     }
 }
 
-impl<'a> BinaryMessage<'a> for FetchAssetResponse<'a> {
-    fn parse_binary(mut data: &'a [u8]) -> Result<Self, ParseError> {
+impl<'a> BinaryPayload<'a> for FetchAssetResponse<'a> {
+    fn parse_payload(mut data: &'a [u8]) -> Result<Self, ParseError> {
         if data.len() < 4 + 1 + 4 {
             return Err(ParseError::BufferTooShort);
         }
@@ -75,19 +73,23 @@ impl<'a> BinaryMessage<'a> for FetchAssetResponse<'a> {
         })
     }
 
-    fn to_bytes(&self) -> Vec<u8> {
-        let (status, error_message_len, payload_len, payload) = match &self.payload {
-            Payload::ErrorMessage(msg) => (Status::Error, msg.len(), msg.len(), msg.as_bytes()),
-            Payload::AssetData(data) => (Status::Success, 0, data.len(), data.as_ref()),
+    fn payload_size(&self) -> usize {
+        let payload_len = match &self.payload {
+            Payload::ErrorMessage(msg) => msg.len(),
+            Payload::AssetData(data) => data.len(),
         };
-        let size = 1 + 4 + 1 + 4 + payload_len;
-        let mut buf = Vec::with_capacity(size);
-        buf.put_u8(BinaryOpcode::FetchAssetResponse as u8);
+        4 + 1 + 4 + payload_len
+    }
+
+    fn write_payload(&self, buf: &mut impl BufMut) {
+        let (status, error_message_len, payload) = match &self.payload {
+            Payload::ErrorMessage(msg) => (Status::Error, msg.len(), msg.as_bytes()),
+            Payload::AssetData(data) => (Status::Success, 0, data.as_ref()),
+        };
         buf.put_u32_le(self.request_id);
         buf.put_u8(status as u8);
         buf.put_u32_le(error_message_len as u32);
         buf.put_slice(payload);
-        buf
     }
 }
 
@@ -130,7 +132,7 @@ impl Payload<'_> {
 mod tests {
     use assert_matches::assert_matches;
 
-    use crate::protocol::v1::server::ServerMessage;
+    use crate::protocol::v1::{server::ServerMessage, BinaryMessage};
 
     use super::*;
 
@@ -155,11 +157,11 @@ mod tests {
     #[test]
     fn test_parse() {
         assert_matches!(
-            FetchAssetResponse::parse_binary(b""),
+            FetchAssetResponse::parse_payload(b""),
             Err(ParseError::BufferTooShort)
         );
         assert_matches!(
-            FetchAssetResponse::parse_binary(&[0; 8]),
+            FetchAssetResponse::parse_payload(&[0; 8]),
             Err(ParseError::BufferTooShort)
         );
 
@@ -168,7 +170,7 @@ mod tests {
         buf.put_u8(2);
         buf.put_u32_le(0);
         assert_matches!(
-            FetchAssetResponse::parse_binary(&buf),
+            FetchAssetResponse::parse_payload(&buf),
             Err(ParseError::InvalidFetchAssetStatus(2))
         );
 
@@ -177,7 +179,7 @@ mod tests {
         buf.put_u8(1);
         buf.put_u32_le(1);
         assert_matches!(
-            FetchAssetResponse::parse_binary(&buf),
+            FetchAssetResponse::parse_payload(&buf),
             Err(ParseError::BufferTooShort)
         );
     }
