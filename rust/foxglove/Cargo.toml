@@ -36,12 +36,13 @@ unstable = []
 zstd = ["mcap/zstd"]
 
 # img2yuv feature and sub-features
-img2yuv = ["dep:image", "dep:yuv", "img2yuv-png", "img2yuv-jpeg", "img2yuv-webp"]
-img2yuv-png = ["img2yuv", "image/png"]
-img2yuv-jpeg = ["img2yuv", "image/jpeg"]
-img2yuv-webp = ["img2yuv", "image/webp"]
-img2yuv-ros1 = ["img2yuv", "dep:regex"]
-img2yuv-ros2 = ["img2yuv", "dep:cdr", "dep:regex"]
+img2yuv-core = ["dep:image", "dep:yuv"]
+img2yuv-png = ["img2yuv-core", "image/png"]
+img2yuv-jpeg = ["img2yuv-core", "image/jpeg"]
+img2yuv-webp = ["img2yuv-core", "image/webp"]
+img2yuv = ["img2yuv-png", "img2yuv-jpeg", "img2yuv-webp"]
+img2yuv-ros1 = ["img2yuv-core", "dep:regex"]
+img2yuv-ros2 = ["img2yuv-core", "dep:cdr", "dep:regex"]
 
 [lints]
 workspace = true

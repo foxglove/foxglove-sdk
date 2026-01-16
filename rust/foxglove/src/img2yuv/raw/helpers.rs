@@ -59,8 +59,6 @@ pub(crate) fn yuv422_to_yuv420<T: Yuv420Buffer>(
     // For now, we choose not to handle odd-width images. If we want to do so in the future, we
     // could duplicate the last (Y, U) values in each row.
     let (width, height) = dst.dimensions();
-    // Redundant with RawImage::validate_dimensions, but kept as a defensive check since this
-    // function could be called from other paths in the future.
     if width % 2 != 0 {
         return Err(Error::Yuv422WidthMustBeEven { width });
     }

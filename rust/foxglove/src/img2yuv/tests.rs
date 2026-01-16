@@ -145,6 +145,7 @@ fn load_test_images() -> std::io::Result<Vec<TestImage>> {
         TestImage::raw_pad("test.bgr8.pad.raw", RawImageEncoding::Bgr8)?,
         TestImage::raw("test.bgra8.raw", RawImageEncoding::Bgra8)?,
         TestImage::raw_pad("test.bgra8.pad.raw", RawImageEncoding::Bgra8)?,
+        #[cfg(feature = "img2yuv-jpeg")]
         TestImage::compressed("test.jpg", Compression::Jpeg)?,
         TestImage::raw_pad(
             "test.mono16be.pad.raw",
@@ -174,6 +175,7 @@ fn load_test_images() -> std::io::Result<Vec<TestImage>> {
         )?,
         TestImage::raw_pad("test.mono8.pad.raw", RawImageEncoding::Mono8)?,
         TestImage::raw("test.mono8.raw", RawImageEncoding::Mono8)?,
+        #[cfg(feature = "img2yuv-png")]
         TestImage::compressed("test.png", Compression::Png)?,
         TestImage::raw_pad("test.rgb8.pad.raw", RawImageEncoding::Rgb8)?,
         TestImage::raw("test.rgb8.raw", RawImageEncoding::Rgb8)?,
@@ -183,6 +185,7 @@ fn load_test_images() -> std::io::Result<Vec<TestImage>> {
         TestImage::raw("test.uyvy.raw", RawImageEncoding::Uyvy)?,
         TestImage::raw_pad("test.yuyv.pad.raw", RawImageEncoding::Yuyv)?,
         TestImage::raw("test.yuyv.raw", RawImageEncoding::Yuyv)?,
+        #[cfg(feature = "img2yuv-webp")]
         TestImage::compressed("test.webp", Compression::WebP)?,
     ])
 }
@@ -436,8 +439,11 @@ test!(
 
 // Compressed formats. The low PSNR is entirely due to lossy compression algorithms that don't
 // handle our test image very well.
+#[cfg(feature = "img2yuv-png")]
 test!(test_png_yuv420, "test.png");
+#[cfg(feature = "img2yuv-jpeg")]
 test!(test_jpeg_yuv420, "test.jpg", y_psnr = 34., uv_psnr = 25.);
+#[cfg(feature = "img2yuv-webp")]
 test!(test_webp_yuv420, "test.webp", y_psnr = 33., uv_psnr = 25.);
 
 /// A discontiguous YUV 4:2:0 buffer with end-of-row padding in each plane.

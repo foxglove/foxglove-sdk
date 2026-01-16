@@ -122,31 +122,41 @@ impl CompressedImage<'_> {
 }
 
 #[cfg(test)]
+#[cfg(any(feature = "img2yuv-ros1", feature = "img2yuv-ros2"))]
 mod tests {
-    #[test]
-    #[cfg(all(
-        any(feature = "img2yuv-ros1", feature = "img2yuv-ros2"),
-        feature = "img2yuv-jpeg",
-        feature = "img2yuv-png",
-        feature = "img2yuv-webp"
-    ))]
-    fn test_compression_try_from_ros_format() {
-        use super::Compression;
+    use super::Compression;
 
-        for (input, expect) in [
-            ("jpeg", Some(Compression::Jpeg)),
-            ("png", Some(Compression::Png)),
-            ("webp", Some(Compression::WebP)),
-            ("gif", None),
-            ("bgr8; jpeg compressed bgr8", Some(Compression::Jpeg)),
-            ("rgba8; png compressed", Some(Compression::Png)),
-            ("rgb8; gif compressed", None),
-            ("16UC1; compressedDepth png", Some(Compression::Png)),
-            ("32FC1; compressedDepth rvl", None),
-        ] {
-            println!("{input:?} -> {expect:?}");
-            let compression = Compression::try_from_ros_format(input).ok();
-            assert_eq!(compression, expect);
-        }
+    fn check(input: &str, expect: Option<Compression>) {
+        println!("{input:?} -> {expect:?}");
+        let compression = Compression::try_from_ros_format(input).ok();
+        assert_eq!(compression, expect);
+    }
+
+    #[test]
+    #[cfg(feature = "img2yuv-jpeg")]
+    fn test_try_from_ros_format_jpeg() {
+        check("jpeg", Some(Compression::Jpeg));
+        check("bgr8; jpeg compressed bgr8", Some(Compression::Jpeg));
+    }
+
+    #[test]
+    #[cfg(feature = "img2yuv-png")]
+    fn test_try_from_ros_format_png() {
+        check("png", Some(Compression::Png));
+        check("rgba8; png compressed", Some(Compression::Png));
+        check("16UC1; compressedDepth png", Some(Compression::Png));
+    }
+
+    #[test]
+    #[cfg(feature = "img2yuv-webp")]
+    fn test_try_from_ros_format_webp() {
+        check("webp", Some(Compression::WebP));
+    }
+
+    #[test]
+    fn test_try_from_ros_format_unknown() {
+        check("gif", None);
+        check("rgb8; gif compressed", None);
+        check("32FC1; compressedDepth rvl", None);
     }
 }
