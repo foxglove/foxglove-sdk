@@ -13,8 +13,8 @@
 //! For human-readable formats (e.g., JSON), enums are serialized as string names, and binary data
 //! are serialized as base64. For binary formats, enums are serialized as i32 values.
 //!
-//! Note that CDR is not compatible with these schemas, because it does not support optional
-//! fields.
+//! Note that [CDR](https://docs.rs/cdr) is not compatible with these schemas, because it does
+//! not support optional fields.
 
 pub(crate) mod descriptors;
 #[allow(missing_docs)]
