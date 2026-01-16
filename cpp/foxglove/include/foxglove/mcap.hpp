@@ -17,10 +17,15 @@
 enum foxglove_error : uint8_t;
 struct foxglove_mcap_writer;
 struct FoxgloveCustomWriter;
+struct foxglove_mcap_attachment;
 
 foxglove_error foxglove_mcap_write_metadata(
   foxglove_mcap_writer* writer, const foxglove_string* name, const foxglove_key_value* metadata,
   size_t metadata_len
+);
+
+foxglove_error foxglove_mcap_attach(
+  foxglove_mcap_writer* writer, const foxglove_mcap_attachment* attachment
 );
 /// @endcond
 
@@ -62,6 +67,27 @@ enum class McapCompression : uint8_t {
   Zstd,
   /// LZ4 compression.
   Lz4,
+};
+
+/// @brief An attachment to store in an MCAP file.
+///
+/// Attachments are arbitrary binary data that can be stored alongside messages.
+/// Common uses include storing configuration files, calibration data, or other
+/// reference material related to the recording.
+struct Attachment {
+  /// @brief Timestamp at which the attachment was recorded, in nanoseconds since epoch.
+  uint64_t log_time = 0;
+  /// @brief Timestamp at which the attachment was created, in nanoseconds since epoch.
+  /// If not available, set to 0.
+  uint64_t create_time = 0;
+  /// @brief Name of the attachment, e.g. "config.json".
+  std::string_view name;
+  /// @brief Media type of the attachment, e.g. "application/json".
+  std::string_view media_type;
+  /// @brief Pointer to the attachment data.
+  const std::byte* data = nullptr;
+  /// @brief Length of the attachment data in bytes.
+  size_t data_len = 0;
 };
 
 /// @brief Options for an MCAP writer.
@@ -133,6 +159,16 @@ public:
   /// @return FoxgloveError::Ok on success, or an error code on failure
   template<typename Iterator>
   FoxgloveError writeMetadata(std::string_view name, Iterator begin, Iterator end);
+
+  /// @brief Write an attachment to the MCAP file.
+  ///
+  /// Attachments are arbitrary binary data that can be stored alongside messages.
+  /// Common uses include storing configuration files, calibration data, or other
+  /// reference material related to the recording.
+  ///
+  /// @param attachment The attachment to write
+  /// @return FoxgloveError::Ok on success, or an error code on failure
+  FoxgloveError attach(const Attachment& attachment);
 
   /// @brief Stops logging events and flushes buffered data.
   FoxgloveError close();

@@ -3,6 +3,7 @@
 pub mod advertise;
 mod fetch_asset;
 mod get_parameters;
+mod message_data;
 mod playback_control_request;
 mod service_call_request;
 mod set_parameters;
@@ -15,6 +16,7 @@ mod unsubscribe_parameter_updates;
 pub use advertise::Advertise;
 pub use fetch_asset::FetchAsset;
 pub use get_parameters::GetParameters;
+pub use message_data::MessageData;
 #[doc(hidden)]
 pub use playback_control_request::{PlaybackCommand, PlaybackControlRequest};
 pub use service_call_request::ServiceCallRequest;
@@ -24,21 +26,3 @@ pub use subscribe_parameter_updates::SubscribeParameterUpdates;
 pub use unadvertise::Unadvertise;
 pub use unsubscribe_connection_graph::UnsubscribeConnectionGraph;
 pub use unsubscribe_parameter_updates::UnsubscribeParameterUpdates;
-
-#[repr(u8)]
-pub(crate) enum BinaryOpcode {
-    MessageData = 1,
-    ServiceCallRequest = 2,
-    #[doc(hidden)]
-    PlaybackControlRequest = 3,
-}
-impl BinaryOpcode {
-    pub(crate) fn from_repr(value: u8) -> Option<Self> {
-        match value {
-            1 => Some(Self::MessageData),
-            2 => Some(Self::ServiceCallRequest),
-            3 => Some(Self::PlaybackControlRequest),
-            _ => None,
-        }
-    }
-}
