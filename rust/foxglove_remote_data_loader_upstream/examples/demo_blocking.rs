@@ -1,14 +1,11 @@
-//! Demo example showing how to use the upstream server SDK (async version).
+//! Demo example showing how to use the upstream server SDK (blocking version).
 //!
-//! This example demonstrates:
-//! - Implementing the [`UpstreamServer`] trait
-//! - The linear flow: declare channels → set manifest opts → stream data
-//! - Using [`generate_source_id`] for cache-safe IDs
+//! This example demonstrates the fully synchronous API - no async code required!
 //!
 //! # Running the example
 //!
 //! ```sh
-//! cargo run --example demo -p foxglove_remote_data_loader_upstream
+//! cargo run --example demo_blocking -p foxglove_remote_data_loader_upstream
 //! ```
 //!
 //! # Testing the endpoints
@@ -22,11 +19,6 @@
 //! ```sh
 //! curl "http://localhost:8080/v1/data?flightId=ABC123" --output data.mcap
 //! ```
-//!
-//! Verify the MCAP file (requires mcap CLI):
-//! ```sh
-//! mcap info data.mcap
-//! ```
 
 use std::{convert::Infallible, net::SocketAddr};
 
@@ -34,24 +26,25 @@ use chrono::{Duration, Utc};
 use serde::Deserialize;
 
 use foxglove_remote_data_loader_upstream::{
-    generate_source_id, serve, AuthError, ManifestOpts, SourceBuilder, UpstreamServer,
+    generate_source_id, serve_blocking, AuthError, ManifestOpts, SourceBuilderBlocking,
+    UpstreamServerBlocking,
 };
 
-/// A simple upstream server that serves both manifest and data endpoints.
-struct ExampleUpstream;
+/// A simple upstream server using blocking I/O.
+struct ExampleUpstreamBlocking;
 
 /// Query parameters for both manifest and data endpoints.
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 struct FlightParams {
     flight_id: String,
 }
 
-impl UpstreamServer for ExampleUpstream {
+impl UpstreamServerBlocking for ExampleUpstreamBlocking {
     type QueryParams = FlightParams;
     type Error = Infallible;
 
-    async fn auth(
+    fn auth(
         &self,
         _bearer_token: Option<&str>,
         _params: &FlightParams,
@@ -60,10 +53,10 @@ impl UpstreamServer for ExampleUpstream {
         Ok(())
     }
 
-    async fn build_source(
+    fn build_source(
         &self,
         params: FlightParams,
-        mut source: SourceBuilder<'_>,
+        mut source: SourceBuilderBlocking<'_>,
     ) -> Result<(), Infallible> {
         // Define our message type
         #[derive(foxglove::Encode)]
@@ -72,10 +65,10 @@ impl UpstreamServer for ExampleUpstream {
             count: u32,
         }
 
-        // 1. Declare channels (must be done before manifest/stream)
+        // 1. Declare channels
         let channel = source.channel::<DemoMessage>("/demo");
 
-        // 2. Set manifest metadata (only runs for manifest requests)
+        // 2. Set manifest metadata
         if let Some(opts) = source.manifest() {
             let now = Utc::now();
             *opts = ManifestOpts {
@@ -86,14 +79,13 @@ impl UpstreamServer for ExampleUpstream {
             };
         }
 
-        // 3. Stream data (only runs for data requests)
+        // 3. Stream data
         let Some(handle) = source.into_stream_handle() else {
-            // Manifest request - we're done
             return Ok(());
         };
 
-        // Log some demo data
-        tracing::info!(flight_id = %params.flight_id, "streaming data");
+        // Log some demo data - all sync!
+        println!("Streaming data for flight {}", params.flight_id);
         for i in 0..10 {
             channel.log(&DemoMessage {
                 msg: format!("Data for flight {}", params.flight_id),
@@ -101,17 +93,16 @@ impl UpstreamServer for ExampleUpstream {
             });
         }
 
-        // Finish the stream (flushes all data)
-        handle.finish().await.expect("finish stream");
+        // Finish the stream - sync!
+        handle.finish().expect("finish stream");
 
         Ok(())
     }
 }
 
-#[tokio::main]
-async fn main() -> std::io::Result<()> {
+fn main() -> std::io::Result<()> {
     tracing_subscriber::fmt::init();
     let bind_address: SocketAddr = "0.0.0.0:8080".parse().unwrap();
-    tracing::info!(%bind_address, "starting server");
-    serve(ExampleUpstream, bind_address).await
+    println!("Starting server on {bind_address}");
+    serve_blocking(ExampleUpstreamBlocking, bind_address)
 }

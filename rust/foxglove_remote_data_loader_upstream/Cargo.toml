@@ -17,9 +17,9 @@ url = { version = "2.5.8", features = ["serde"] }
 thiserror.workspace = true
 tracing.workspace = true
 futures = "0.3"
+foxglove = { path = "../foxglove", features = ["stream"] }
 
 [dev-dependencies]
-foxglove = { path = "../foxglove", features = ["stream"] }
 tracing-subscriber = "0.3"
 
 [lints]
