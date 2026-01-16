@@ -124,7 +124,12 @@ impl CompressedImage<'_> {
 #[cfg(test)]
 mod tests {
     #[test]
-    #[cfg(any(feature = "img2yuv-ros1", feature = "img2yuv-ros2"))]
+    #[cfg(all(
+        any(feature = "img2yuv-ros1", feature = "img2yuv-ros2"),
+        feature = "img2yuv-jpeg",
+        feature = "img2yuv-png",
+        feature = "img2yuv-webp"
+    ))]
     fn test_compression_try_from_ros_format() {
         use super::Compression;
 

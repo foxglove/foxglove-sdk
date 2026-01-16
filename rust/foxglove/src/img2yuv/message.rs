@@ -35,6 +35,7 @@ impl TryFrom<crate::schemas::RawImage> for ImageMessage<'static> {
     type Error = UnknownEncodingError;
 
     fn try_from(image: crate::schemas::RawImage) -> std::result::Result<Self, Self::Error> {
+        // Pixel values in Foxglove RawImage messages are always little-endian.
         let encoding = RawImageEncoding::parse_endian(&image.encoding, Endian::Little)?;
         Ok(Self {
             timestamp: image.timestamp,

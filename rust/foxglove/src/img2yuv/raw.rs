@@ -211,7 +211,9 @@ impl RawImage<'_> {
                     .checked_mul(3)
                     .ok_or(Error::DimensionsTooLargeForU32)?;
                 let width = self.width as usize;
-                let rgb_size = stride as usize * self.height as usize;
+                let rgb_size = (stride as usize)
+                    .checked_mul(self.height as usize)
+                    .ok_or(Error::DimensionsTooLargeForU32)?;
                 let mut data = vec![0; rgb_size];
                 let pixels = self.bayer8_pixels().expect("dimensions already validated");
                 for bp @ BayerPixel { r, g0, g1, b, .. } in pixels {
@@ -257,11 +259,7 @@ impl RawImage<'_> {
 
         // For Bayer and YUV 4:2:2 formats, some image dimensions must be even. We could handle odd
         // dimensions by synthesizing subpixels, but it's probably not worth the effort.
-        match (
-            self.encoding,
-            self.width.is_multiple_of(2),
-            self.height.is_multiple_of(2),
-        ) {
+        match (self.encoding, self.width % 2 == 0, self.height % 2 == 0) {
             (RawImageEncoding::Bayer8(_), w, h) if !(w && h) => {
                 return Err(Error::BayerDimensionsMustBeEven {
                     width: self.width,
@@ -284,8 +282,8 @@ impl<'a> RawImage<'a> {
     /// Panics if this is a subsampled encoding, or if N is not equal to the expected number of
     /// bytes per pixel for this encoding.
     fn pixels<const N: usize>(&'a self) -> Pixels<'a, N> {
-        assert!(!self.encoding.is_subsampled());
-        assert_eq!(self.encoding.bytes_per_pixel() as usize, N);
+        debug_assert!(!self.encoding.is_subsampled());
+        debug_assert_eq!(self.encoding.bytes_per_pixel() as usize, N);
         Pixels::new(self)
     }
 
@@ -293,7 +291,7 @@ impl<'a> RawImage<'a> {
     ///
     /// Panics if this is not a Bayer image.
     fn bayer8_pixels(&'a self) -> Result<Bayer8Pixels<'a>, Error> {
-        assert!(matches!(self.encoding, RawImageEncoding::Bayer8(_)));
+        debug_assert!(matches!(self.encoding, RawImageEncoding::Bayer8(_)));
         let RawImageEncoding::Bayer8(cfa) = self.encoding else {
             unreachable!();
         };
@@ -338,7 +336,13 @@ impl<'a, const N: usize> Iterator for Pixels<'a, N> {
         }
         Some(self.data[pos..pos + N].try_into().unwrap())
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let remaining = (self.height - self.row) * self.width - self.col;
+        (remaining, Some(remaining))
+    }
 }
+impl<const N: usize> ExactSizeIterator for Pixels<'_, N> {}
 
 /// A Bayer 2x2 composite pixel.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -370,7 +374,7 @@ impl<'a> Bayer8Pixels<'a> {
         // For now, we choose not to handle odd-dimensioned images. If we want to do so in the
         // future, we could synthesize remaining subpixel values from neighbors.
         let (width, height) = (image.width, image.height);
-        if !width.is_multiple_of(2) || !height.is_multiple_of(2) {
+        if width % 2 != 0 || height % 2 != 0 {
             return Err(Error::BayerDimensionsMustBeEven { width, height });
         }
         Ok(Self {

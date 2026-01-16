@@ -160,7 +160,16 @@ pub struct Yuv420Vec {
 }
 impl Yuv420Vec {
     /// Allocates a new YUV 4:2:0 buffer for an image of the provided dimensions.
+    ///
+    /// # Panics
+    ///
+    /// Panics if width or height is not even. YUV 4:2:0 requires even dimensions
+    /// for proper chroma subsampling.
     pub fn new(width: u32, height: u32) -> Self {
+        assert!(
+            width % 2 == 0 && height % 2 == 0,
+            "YUV 4:2:0 requires even dimensions, got {width}x{height}"
+        );
         let len = ((width as usize * height as usize) / 2) * 3;
         Self {
             data: vec![0; len],

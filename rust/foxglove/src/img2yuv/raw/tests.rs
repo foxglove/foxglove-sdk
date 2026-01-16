@@ -72,7 +72,7 @@ fn test_validate_dimensions_bayer_dimensions_even() {
         }
         .validate_dimensions()
         .unwrap_err();
-        assert_matches!(err, Error::BayerDimensionsMustBeEven{ width, height } if width == width && height == height);
+        assert_matches!(err, Error::BayerDimensionsMustBeEven{ width: w, height: h } if w == width && h == height);
     }
 }
 

@@ -59,7 +59,9 @@ pub(crate) fn yuv422_to_yuv420<T: Yuv420Buffer>(
     // For now, we choose not to handle odd-width images. If we want to do so in the future, we
     // could duplicate the last (Y, U) values in each row.
     let (width, height) = dst.dimensions();
-    if !width.is_multiple_of(2) {
+    // Redundant with RawImage::validate_dimensions, but kept as a defensive check since this
+    // function could be called from other paths in the future.
+    if width % 2 != 0 {
         return Err(Error::Yuv422WidthMustBeEven { width });
     }
 
@@ -96,17 +98,28 @@ pub(crate) fn yuv422_to_yuv420<T: Yuv420Buffer>(
 
 /// Converts a mono image, represented as floating point luma values on the range [0.0, 1.0], to a
 /// YUV 4:2:0 planar image.
+///
+/// The caller must ensure that the iterator yields exactly `width * height` items.
 pub(crate) fn mono_to_yuv420<T: Yuv420Buffer>(dst: &mut T, data: impl IntoIterator<Item = f32>) {
-    let (width, _) = dst.dimensions();
+    // The luma rescaling below assumes limited range.
+    const { assert!(matches!(RANGE, YuvRange::Limited)) }
+
+    let (width, height) = dst.dimensions();
     let (y_stride, _, _) = dst.yuv_strides();
     let (y, u, v) = dst.yuv_mut();
+    let mut count = 0;
     for (i, p) in data.into_iter().enumerate() {
-        assert_eq!(RANGE, YuvRange::Limited);
         let row = i / width as usize;
         let col = i % width as usize;
         let pos = col + row * y_stride as usize;
         y[pos] = (16.0 + p.clamp(0.0, 1.0) * 219.0).round() as u8;
+        count = i + 1;
     }
+    debug_assert_eq!(
+        count,
+        width as usize * height as usize,
+        "iterator yielded wrong number of pixels"
+    );
     u.fill(128);
     v.fill(128);
 }
