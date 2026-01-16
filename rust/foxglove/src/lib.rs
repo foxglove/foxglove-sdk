@@ -338,6 +338,10 @@ mod time;
 #[cfg(feature = "stream")]
 pub mod stream;
 
+#[cfg(feature = "img2yuv-core")]
+#[allow(unused)]
+mod img2yuv;
+
 pub use app_url::AppUrl;
 // Re-export bytes crate for convenience when implementing the `Encode` trait
 pub use bytes;

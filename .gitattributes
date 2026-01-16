@@ -1,4 +1,7 @@
+*.jpeg filter=lfs diff=lfs merge=lfs -text
+*.jpg filter=lfs diff=lfs merge=lfs -text
 *.png filter=lfs diff=lfs merge=lfs -text
+*.raw filter=lfs diff=lfs merge=lfs -text
 *.webp filter=lfs diff=lfs merge=lfs -text
 c/include/foxglove-c/foxglove-c.h linguist-generated
 c/src/generated_types.rs linguist-generated
