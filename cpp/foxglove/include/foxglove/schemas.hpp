@@ -560,12 +560,12 @@ struct Duration {
 /// @brief
 /// @brief Examples:
 /// @brief
-/// @brief 1. With translation (x=1, y=0, z=0) and identity rotation (x=0, y=0, z=0, w=1), a point
-/// at (x=0, y=0, z=0) in the child frame maps to (x=1, y=0, z=0) in the parent frame.
+/// @brief Example 1: With translation (x=1, y=0, z=0) and identity rotation (x=0, y=0, z=0, w=1), a
+/// point at (x=0, y=0, z=0) in the child frame maps to (x=1, y=0, z=0) in the parent frame.
 /// @brief
-/// @brief 2. With translation (x=1, y=2, z=0) and a 90-degree rotation around the z-axis (x=0, y=0,
-/// z=0.707, w=0.707), a point at (x=1, y=0, z=0) in the child frame maps to (x=-1, y=3, z=0) in the
-/// parent frame.
+/// @brief Example 2: With translation (x=1, y=2, z=0) and a 90-degree rotation around the z-axis
+/// (x=0, y=0, z=0.707, w=0.707), a point at (x=1, y=0, z=0) in the child frame maps to (x=-1, y=3,
+/// z=0) in the parent frame.
 struct FrameTransform {
   /// @brief Timestamp of transform
   std::optional<Timestamp> timestamp;
