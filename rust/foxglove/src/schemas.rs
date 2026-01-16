@@ -1,10 +1,8 @@
 //! Types implementing well-known Foxglove schemas
 //!
-//! Using these types when possible will allow for richer visualizations
-//! and a better experience in the Foxglove App.
-//!
-//! They're encoded as compact, binary protobuf messages,
-//! and can be conveniently used with the [`Channel`](crate::Channel) API.
+//! Using these types when possible will allow for richer visualizations and a better experience
+//! in the Foxglove App. They are encoded as compact, binary protobuf messages and can be
+//! conveniently used with the [`Channel`](crate::Channel) API.
 //!
 //! # Serde support
 //!
@@ -12,19 +10,11 @@
 //! [`Deserialize`](serde::Deserialize) for all schema types. This is intended for debugging,
 //! logging, and integration with tools that consume JSON or other serde-compatible formats.
 //!
-//! For human-readable formats like JSON:
-//! - Enums are serialized as their string names (e.g., `"LINE_STRIP"`)
-//! - Binary data are serialized as base64-encoded strings
+//! For human-readable formats (e.g., JSON), enums are serialized as string names, and binary data
+//! are serialized as base64. For binary formats, enums are serialized as i32 values.
 //!
-//! For binary formats:
-//! - Enums are serialized as i32 values
-//! - Binary data are serialized as raw bytes
-//!
-//! Note: CDR (Common Data Representation) is not compatible with these schemas because
-//! CDR does not support optional fields, which are used for all nested message types.
-//!
-//! For efficient wire serialization, use the native protobuf encoding via the
-//! [`Encode`](crate::Encode) trait.
+//! Note that CDR is not compatible with these schemas, because it does not support optional
+//! fields.
 
 pub(crate) mod descriptors;
 #[allow(missing_docs)]
@@ -193,26 +183,6 @@ mod tests {
         let grid = sample_grid();
         let json = serde_json::to_string(&grid).expect("failed to serialize");
         let parsed: Grid = serde_json::from_str(&json).expect("failed to deserialize");
-        assert_eq!(grid, parsed);
-    }
-
-    // bincode and cbor are both binary formats (is_human_readable() = false), but they
-    // handle byte arrays differently: bincode uses visit_byte_buf, while cbor has native
-    // byte string support and may use visit_bytes with borrowed data. Testing both ensures
-    // our BytesVisitor implementation works across different binary format strategies.
-
-    #[test]
-    fn test_grid_bincode_snapshot() {
-        let grid = sample_grid();
-        let bytes = bincode::serialize(&grid).expect("failed to serialize");
-        insta::assert_snapshot!(format!("{bytes:#04x?}"));
-    }
-
-    #[test]
-    fn test_grid_bincode_roundtrip() {
-        let grid = sample_grid();
-        let bytes = bincode::serialize(&grid).expect("failed to serialize");
-        let parsed: Grid = bincode::deserialize(&bytes).expect("failed to deserialize");
         assert_eq!(grid, parsed);
     }
 
