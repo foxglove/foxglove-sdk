@@ -144,6 +144,8 @@ The `capabilities` parameter can accept one or more of the following values.
 - `assets`: Allow clients to fetch assets
 - `time`: The server may publish time messages using `broadcastTime`. This can be used to sync frame state in panels like the 3D panel if the server's time disagrees with wall time.
 
+### Diagnostic topics
+If `publish_client_count` is set to `true`, foxglove_bridge publishes the number of currently connected clients to the topic `/foxglove_bridge/client_count`.
 ## For developers
 
 ### Building with local SDK changes

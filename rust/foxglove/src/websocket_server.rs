@@ -157,7 +157,6 @@ impl WebSocketServer {
             Some(Box::new(BlockingAssetHandlerFn(Arc::new(handler))));
         self
     }
-
     /// Configure an asynchronous function as a fetch asset handler.
     /// There can only be one asset handler, exclusive with the other fetch_asset_handler methods.
     pub fn fetch_asset_handler_async_fn<F, Fut, T, Err>(mut self, handler: F) -> Self
@@ -286,6 +285,11 @@ impl WebSocketServerHandle {
     /// Returns the local port that the server is listening on.
     pub fn port(&self) -> u16 {
         self.1.port()
+    }
+
+    /// Returns the number of currently connected clients.
+    pub fn client_count(&self) -> usize {
+        self.0.client_count()
     }
 
     /// Returns an app URL to open the websocket as a data source.
