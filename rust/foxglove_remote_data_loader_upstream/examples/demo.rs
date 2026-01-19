@@ -34,7 +34,7 @@ use chrono::{Duration, Utc};
 use serde::Deserialize;
 
 use foxglove_remote_data_loader_upstream::{
-    generate_source_id, serve, AuthError, ManifestOpts, SourceBuilder, UpstreamServer,
+    generate_source_id, serve, AuthError, ManifestOpts, SourceBuilder, UpstreamServer, Url,
 };
 
 /// A simple upstream server that serves both manifest and data endpoints.
@@ -105,6 +105,10 @@ impl UpstreamServer for ExampleUpstream {
         handle.finish().await.expect("finish stream");
 
         Ok(())
+    }
+
+    fn base_url(&self) -> Url {
+        "http://localhost:8080".parse().unwrap()
     }
 }
 

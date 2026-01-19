@@ -27,14 +27,14 @@ use serde::Deserialize;
 
 use foxglove_remote_data_loader_upstream::{
     generate_source_id, serve_blocking, AuthError, ManifestOpts, SourceBuilderBlocking,
-    UpstreamServerBlocking,
+    UpstreamServerBlocking, Url,
 };
 
 /// A simple upstream server using blocking I/O.
 struct ExampleUpstreamBlocking;
 
 /// Query parameters for both manifest and data endpoints.
-#[derive(Deserialize, Clone)]
+#[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct FlightParams {
     flight_id: String,
@@ -44,11 +44,7 @@ impl UpstreamServerBlocking for ExampleUpstreamBlocking {
     type QueryParams = FlightParams;
     type Error = Infallible;
 
-    fn auth(
-        &self,
-        _bearer_token: Option<&str>,
-        _params: &FlightParams,
-    ) -> Result<(), AuthError> {
+    fn auth(&self, _bearer_token: Option<&str>, _params: &FlightParams) -> Result<(), AuthError> {
         // No authentication required for this demo
         Ok(())
     }
@@ -97,6 +93,10 @@ impl UpstreamServerBlocking for ExampleUpstreamBlocking {
         handle.finish().expect("finish stream");
 
         Ok(())
+    }
+
+    fn base_url(&self) -> Url {
+        "http://localhost:8080".parse().unwrap()
     }
 }
 

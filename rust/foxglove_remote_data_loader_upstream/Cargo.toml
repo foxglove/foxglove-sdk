@@ -6,6 +6,14 @@ rust-version.workspace = true
 repository.workspace = true
 license.workspace = true
 
+[package.metadata.docs.rs]
+all-features = true
+
+[features]
+default = ["async"]
+async = []
+blocking = []
+
 [dependencies]
 tokio.workspace = true
 serde.workspace = true
@@ -22,6 +30,14 @@ blake3 = "1.8.3"
 
 [dev-dependencies]
 tracing-subscriber = "0.3"
+
+[[example]]
+name = "demo"
+required-features = ["async"]
+
+[[example]]
+name = "demo_blocking"
+required-features = ["blocking"]
 
 [lints]
 workspace = true
