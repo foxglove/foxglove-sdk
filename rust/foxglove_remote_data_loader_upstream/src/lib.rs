@@ -26,15 +26,10 @@
 //! | `GET /v1/manifest` | Returns manifest JSON with source metadata |
 //! | `GET /v1/data` | Streams MCAP data |
 
-pub mod manifest;
+mod manifest;
 
 use std::{
-    collections::hash_map::DefaultHasher,
-    error::Error as StdError,
-    future::Future,
-    hash::{Hash, Hasher},
-    net::SocketAddr,
-    num::NonZeroU16,
+    error::Error as StdError, future::Future, hash::Hash, net::SocketAddr, num::NonZeroU16,
     sync::Arc,
 };
 
@@ -48,11 +43,14 @@ use axum::{
 };
 use chrono::{DateTime, Utc};
 use foxglove::{stream::McapStreamHandle, Channel, Encode, FoxgloveError};
-use futures::StreamExt;
+use futures::{FutureExt, StreamExt};
 use manifest::{Schema, StreamedSource, Topic, UpstreamSource};
 use serde::de::DeserializeOwned;
 use tokio::runtime::Handle;
 use tracing::warn;
+pub use url::Url;
+
+pub use axum::BoxError;
 
 // ============================================================================
 // Auth types
@@ -61,13 +59,13 @@ use tracing::warn;
 /// Error type for authentication and authorization failures.
 #[derive(thiserror::Error, Debug)]
 pub enum AuthError {
-    /// Credentials invalid or missing (HTTP 401).
-    #[error("unauthenticated: {0}")]
-    Unauthenticated(String),
+    /// Credentials required but invalid or missing (HTTP 401).
+    #[error("unauthenticated")]
+    Unauthenticated,
 
     /// Credentials valid but access denied (HTTP 403).
-    #[error("forbidden: {0}")]
-    Forbidden(String),
+    #[error("forbidden")]
+    Forbidden,
 
     /// An unexpected error occurred.
     #[error(transparent)]
@@ -75,16 +73,6 @@ pub enum AuthError {
 }
 
 impl AuthError {
-    /// Create an unauthenticated error with a message.
-    pub fn unauthenticated(msg: impl Into<String>) -> Self {
-        Self::Unauthenticated(msg.into())
-    }
-
-    /// Create a forbidden error with a message.
-    pub fn forbidden(msg: impl Into<String>) -> Self {
-        Self::Forbidden(msg.into())
-    }
-
     /// Create an error from an arbitrary error payload.
     pub fn other(error: impl Into<Box<dyn StdError + Send>>) -> Self {
         Self::Other(error.into())
@@ -94,10 +82,10 @@ impl AuthError {
 impl IntoResponse for AuthError {
     fn into_response(self) -> Response {
         match self {
-            Self::Unauthenticated(_) => StatusCode::UNAUTHORIZED.into_response(),
-            Self::Forbidden(_) => StatusCode::FORBIDDEN.into_response(),
+            Self::Unauthenticated => StatusCode::UNAUTHORIZED.into_response(),
+            Self::Forbidden => StatusCode::FORBIDDEN.into_response(),
             Self::Other(error) => {
-                warn!(%error, "auth error");
+                warn!(%error, "error during auth");
                 StatusCode::INTERNAL_SERVER_ERROR.into_response()
             }
         }
@@ -115,7 +103,7 @@ impl IntoResponse for AuthError {
 pub struct ManifestOpts {
     /// Unique cache key for this data source.
     ///
-    /// Use [`generate_source_id`] to create a stable ID from your parameters.
+    /// You can set this manually, or use [`generate_source_id`] to create a stable ID from your parameters.
     ///
     /// **Important:** Data returned for the same `id` must always be identical.
     pub id: String,
@@ -158,15 +146,22 @@ impl Default for ManifestOpts {
 /// assert!(id.starts_with("flight-data-r1-"));
 /// ```
 pub fn generate_source_id(name: &str, revision: u64, params: &impl Hash) -> String {
-    let mut hasher = DefaultHasher::new();
-    name.hash(&mut hasher);
-    revision.hash(&mut hasher);
-    params.hash(&mut hasher);
+    struct Blake3Hasher(blake3::Hasher);
 
-    let slug = name
-        .to_lowercase()
-        .replace(|c: char| !c.is_alphanumeric(), "-");
-    format!("{}-r{}-{:016x}", slug, revision, hasher.finish())
+    impl std::hash::Hasher for Blake3Hasher {
+        fn write(&mut self, bytes: &[u8]) {
+            self.0.update(bytes);
+        }
+
+        fn finish(&self) -> u64 {
+            unimplemented!("should never be called")
+        }
+    }
+
+    let mut hasher = Blake3Hasher(blake3::Hasher::new());
+    params.hash(&mut hasher);
+    let params_hash = hasher.0.finalize();
+    format!("{}-r{}-{}", name, revision, params_hash.to_hex())
 }
 
 // ============================================================================
@@ -241,10 +236,7 @@ impl<T: Encode> MaybeChannel<T> {
     pub fn log(&self, msg: &T) {
         self.0
             .as_ref()
-            .expect(
-                "cannot log in manifest mode; \
-                 check source.manifest().is_none() before logging",
-            )
+            .expect("called `MaybeChannel::log()` while in manifest mode")
             .log(msg)
     }
 
@@ -256,10 +248,8 @@ impl<T: Encode> MaybeChannel<T> {
     ///
     /// Panics if called in manifest mode.
     pub fn into_inner(self) -> Channel<T> {
-        self.0.expect(
-            "cannot unwrap channel in manifest mode; \
-             check source.manifest().is_none() before unwrapping",
-        )
+        self.0
+            .expect("called `MaybeChannel::into_inner()` while in manifest mode")
     }
 }
 
@@ -267,63 +257,89 @@ impl<T: Encode> MaybeChannel<T> {
 // SourceBuilder (async)
 // ============================================================================
 
-enum SourceMode<'a> {
-    Manifest {
-        manifest_opts: &'a mut ManifestOpts,
-        topics: &'a mut Vec<Topic>,
-        schemas: &'a mut Vec<Schema>,
-        next_schema_id: NonZeroU16,
-    },
-    Stream {
-        handle: McapStreamHandle,
-    },
+struct ManifestBuilder {
+    manifest_opts: ManifestOpts,
+    topics: Vec<Topic>,
+    schemas: Vec<Schema>,
+    next_schema_id: NonZeroU16,
 }
 
-impl<'a> SourceMode<'a> {
+impl ManifestBuilder {
+    fn new() -> Self {
+        Self {
+            manifest_opts: ManifestOpts::default(),
+            topics: Vec::new(),
+            schemas: Vec::new(),
+            next_schema_id: NonZeroU16::MIN,
+        }
+    }
+
+    fn add_channel<T: Encode>(&mut self, topic: String) {
+        // Capture schema info for manifest
+        let schema = T::get_schema();
+        let schema_id = if let Some(s) = schema {
+            // Check if we already have this schema
+            let existing = self.schemas.iter().find(|existing| {
+                existing.name == s.name
+                    && existing.encoding == s.encoding
+                    && existing.data.as_ref() == s.data.as_ref()
+            });
+
+            if let Some(existing) = existing {
+                Some(existing.id)
+            } else {
+                let id = self.next_schema_id;
+                self.next_schema_id = self
+                    .next_schema_id
+                    .checked_add(1)
+                    .expect("should not add more than 65535 schemas");
+                self.schemas.push(Schema {
+                    id,
+                    name: s.name,
+                    encoding: s.encoding,
+                    data: s.data.into(),
+                });
+                Some(id)
+            }
+        } else {
+            None
+        };
+
+        self.topics.push(Topic {
+            name: topic,
+            message_encoding: T::get_message_encoding(),
+            schema_id,
+        });
+    }
+
+    fn build(self, base_url: Url) -> manifest::Manifest {
+        manifest::Manifest {
+            name: Some(self.manifest_opts.name),
+            sources: vec![UpstreamSource::Streamed(StreamedSource {
+                url: base_url.join(DATA_ROUTE).expect("valid url"),
+                id: Some(self.manifest_opts.id),
+                topics: self.topics,
+                schemas: self.schemas,
+                start_time: self.manifest_opts.start_time,
+                end_time: self.manifest_opts.end_time,
+            })],
+        }
+    }
+}
+
+enum BuilderMode<'a> {
+    Manifest { builder: &'a mut ManifestBuilder },
+    Stream { handle: McapStreamHandle },
+}
+
+impl<'a> BuilderMode<'a> {
     fn channel<T: Encode>(&mut self, topic: String) -> MaybeChannel<T> {
         match self {
-            SourceMode::Manifest {
-                topics,
-                schemas,
-                next_schema_id,
-                ..
-            } => {
-                // Capture schema info for manifest
-                let schema = T::get_schema();
-                let schema_id = if let Some(s) = schema {
-                    // Check if we already have this schema
-                    let existing = schemas.iter().find(|existing| {
-                        existing.name == s.name
-                            && existing.encoding == s.encoding
-                            && existing.data.as_ref() == s.data.as_ref()
-                    });
-
-                    if let Some(existing) = existing {
-                        Some(existing.id)
-                    } else {
-                        let id = *next_schema_id;
-                        *next_schema_id = next_schema_id.checked_add(1).unwrap();
-                        schemas.push(Schema {
-                            id,
-                            name: s.name,
-                            encoding: s.encoding,
-                            data: s.data.into(),
-                        });
-                        Some(id)
-                    }
-                } else {
-                    None
-                };
-
-                topics.push(Topic {
-                    name: topic,
-                    message_encoding: T::get_message_encoding(),
-                    schema_id,
-                });
-
+            BuilderMode::Manifest { builder } => {
+                builder.add_channel::<T>(topic);
                 MaybeChannel(None)
             }
-            SourceMode::Stream { handle } => {
+            BuilderMode::Stream { handle } => {
                 MaybeChannel(Some(handle.channel_builder(&topic).build::<T>()))
             }
         }
@@ -331,8 +347,8 @@ impl<'a> SourceMode<'a> {
 
     fn manifest(&mut self) -> Option<&mut ManifestOpts> {
         match self {
-            SourceMode::Manifest { manifest_opts, .. } => Some(manifest_opts),
-            SourceMode::Stream { .. } => None,
+            BuilderMode::Manifest { builder } => Some(&mut builder.manifest_opts),
+            BuilderMode::Stream { .. } => None,
         }
     }
 }
@@ -341,7 +357,7 @@ impl<'a> SourceMode<'a> {
 ///
 /// Passed to [`UpstreamServer::build_source`].
 pub struct SourceBuilder<'a> {
-    mode: SourceMode<'a>,
+    mode: BuilderMode<'a>,
 }
 
 impl<'a> SourceBuilder<'a> {
@@ -370,8 +386,8 @@ impl<'a> SourceBuilder<'a> {
     /// If `None`, this is a manifest request - return early.
     pub fn into_stream_handle(self) -> Option<StreamHandle> {
         match self.mode {
-            SourceMode::Manifest { .. } => None,
-            SourceMode::Stream { handle } => Some(StreamHandle { handle }),
+            BuilderMode::Manifest { .. } => None,
+            BuilderMode::Stream { handle } => Some(StreamHandle { handle }),
         }
     }
 }
@@ -384,7 +400,7 @@ impl<'a> SourceBuilder<'a> {
 ///
 /// Passed to [`UpstreamServerBlocking::build_source`].
 pub struct SourceBuilderBlocking<'a> {
-    mode: SourceMode<'a>,
+    mode: BuilderMode<'a>,
 }
 
 impl<'a> SourceBuilderBlocking<'a> {
@@ -407,8 +423,8 @@ impl<'a> SourceBuilderBlocking<'a> {
     /// Consume the builder and return the stream handle if this is a data request.
     pub fn into_stream_handle(self) -> Option<StreamHandleBlocking> {
         match self.mode {
-            SourceMode::Manifest { .. } => None,
-            SourceMode::Stream { handle } => Some(StreamHandleBlocking { handle }),
+            BuilderMode::Manifest { .. } => None,
+            BuilderMode::Stream { handle } => Some(StreamHandleBlocking { handle }),
         }
     }
 }
@@ -460,7 +476,7 @@ pub trait UpstreamServer: Send + Sync + 'static {
     type QueryParams: DeserializeOwned + Send;
 
     /// Error type returned from [`build_source`](UpstreamServer::build_source).
-    type Error: StdError + Send;
+    type Error: StdError + Send + Sync;
 
     /// Authenticate and authorize the request.
     ///
@@ -480,6 +496,8 @@ pub trait UpstreamServer: Send + Sync + 'static {
         params: Self::QueryParams,
         source: SourceBuilder<'_>,
     ) -> impl Future<Output = Result<(), Self::Error>> + Send;
+
+    fn base_url(&self) -> Url;
 }
 
 // ============================================================================
@@ -494,10 +512,10 @@ pub trait UpstreamServer: Send + Sync + 'static {
 /// Use [`serve_blocking`] to start the server.
 pub trait UpstreamServerBlocking: Send + Sync + 'static {
     /// Query parameters extracted from the request URL.
-    type QueryParams: DeserializeOwned + Send + Clone + 'static;
+    type QueryParams: DeserializeOwned + Send + 'static;
 
     /// Error type returned from [`build_source`](UpstreamServerBlocking::build_source).
-    type Error: StdError + Send + 'static;
+    type Error: StdError + Send + Sync + 'static;
 
     /// Authenticate and authorize the request.
     fn auth(&self, bearer_token: Option<&str>, params: &Self::QueryParams)
@@ -509,6 +527,8 @@ pub trait UpstreamServerBlocking: Send + Sync + 'static {
         params: Self::QueryParams,
         source: SourceBuilderBlocking<'_>,
     ) -> Result<(), Self::Error>;
+
+    fn base_url(&self) -> Url;
 }
 
 // ============================================================================
@@ -533,44 +553,19 @@ async fn manifest_handler<P: UpstreamServer>(
         return e.into_response();
     }
 
-    // Build source in manifest mode
-    let mut manifest_opts = ManifestOpts::default();
-    let mut topics = Vec::new();
-    let mut schemas = Vec::new();
-
+    // Build manifest
+    let mut builder = ManifestBuilder::new();
     let source = SourceBuilder {
-        mode: SourceMode::Manifest {
-            manifest_opts: &mut manifest_opts,
-            topics: &mut topics,
-            schemas: &mut schemas,
-            next_schema_id: NonZeroU16::MIN,
+        mode: BuilderMode::Manifest {
+            builder: &mut builder,
         },
     };
 
     if let Err(error) = provider.build_source(params, source).await {
-        warn!(%error, "build_source error");
+        warn!(%error, "error building manifest");
         return StatusCode::INTERNAL_SERVER_ERROR.into_response();
     }
-
-    // Validate opts
-    if manifest_opts.id.is_empty() {
-        warn!("manifest opts id is empty");
-        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-    }
-
-    // Build manifest
-    let manifest = manifest::Manifest {
-        name: Some(manifest_opts.name),
-        sources: vec![UpstreamSource::Streamed(StreamedSource {
-            url: DATA_ROUTE.parse().expect("valid url"),
-            id: Some(manifest_opts.id),
-            topics,
-            schemas,
-            start_time: manifest_opts.start_time,
-            end_time: manifest_opts.end_time,
-        })],
-    };
-
+    let manifest = builder.build(provider.base_url());
     Json(manifest).into_response()
 }
 
@@ -584,20 +579,26 @@ async fn data_handler<P: UpstreamServer>(
         return e.into_response();
     }
 
-    // Create the MCAP stream
-    let (handle, stream) = foxglove::stream::create_mcap_stream();
-
-    // Build source in stream mode
-    let source = SourceBuilder {
-        mode: SourceMode::Stream { handle },
+    // Build output stream
+    let (handle, mcap_stream) = foxglove::stream::create_mcap_stream();
+    let builder = SourceBuilder {
+        mode: BuilderMode::Stream { handle },
     };
+    let mcap_stream_task =
+        tokio::spawn(async move { provider.build_source(params, builder).await });
 
-    if let Err(error) = provider.build_source(params, source).await {
-        warn!(%error, "build_source error");
-        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-    }
+    // Catch any errors during streaming
+    let error_stream = mcap_stream_task
+        .into_stream()
+        .filter_map(|result| async move {
+            match result.expect("panicked while streaming data") {
+                Ok(()) => None,
+                Err(e) => Some(Err(e.into())),
+            }
+        });
 
-    Body::from_stream(stream.map(Ok::<_, std::convert::Infallible>)).into_response()
+    let combined = mcap_stream.map(Ok::<_, BoxError>).chain(error_stream);
+    Body::from_stream(combined).into_response()
 }
 
 /// Route for the manifest endpoint.
@@ -626,9 +627,9 @@ pub async fn serve(provider: impl UpstreamServer, addr: SocketAddr) -> std::io::
     axum::serve(listener, app).await
 }
 
-/// Serve both manifest and data endpoints (blocking).
+/// Serve both manifest and data endpoints using [`UpstreamServerBlocking`].
 ///
-/// Uses an internal tokio runtime. No async code required in your implementation.
+/// Use this if you cannot or do not want to use `async` in your implementation.
 ///
 /// # Example
 ///
@@ -642,20 +643,15 @@ pub fn serve_blocking(
     addr: SocketAddr,
 ) -> std::io::Result<()> {
     let runtime = tokio::runtime::Runtime::new()?;
-    runtime.block_on(serve_blocking_inner(provider, addr))
-}
-
-async fn serve_blocking_inner(
-    provider: impl UpstreamServerBlocking,
-    addr: SocketAddr,
-) -> std::io::Result<()> {
-    let provider = Arc::new(provider);
-    let app = Router::new()
-        .route(MANIFEST_ROUTE, get(manifest_handler_blocking))
-        .route(DATA_ROUTE, get(data_handler_blocking))
-        .with_state(provider);
-    let listener = tokio::net::TcpListener::bind(addr).await?;
-    axum::serve(listener, app).await
+    runtime.block_on(async move {
+        let provider = Arc::new(provider);
+        let app = Router::new()
+            .route(MANIFEST_ROUTE, get(manifest_handler_blocking))
+            .route(DATA_ROUTE, get(data_handler_blocking))
+            .with_state(provider);
+        let listener = tokio::net::TcpListener::bind(addr).await?;
+        axum::serve(listener, app).await
+    })
 }
 
 async fn manifest_handler_blocking<P: UpstreamServerBlocking>(
@@ -671,55 +667,26 @@ async fn manifest_handler_blocking<P: UpstreamServerBlocking>(
             return Err(e.into_response());
         }
 
-        // Build source in manifest mode
-        let mut manifest_opts = ManifestOpts::default();
-        let mut topics = Vec::new();
-        let mut schemas = Vec::new();
-
-        let source = SourceBuilderBlocking {
-            mode: SourceMode::Manifest {
-                manifest_opts: &mut manifest_opts,
-                topics: &mut topics,
-                schemas: &mut schemas,
-                next_schema_id: NonZeroU16::MIN,
+        let mut manifest_builder = ManifestBuilder::new();
+        let source_builder = SourceBuilderBlocking {
+            mode: BuilderMode::Manifest {
+                builder: &mut manifest_builder,
             },
         };
 
-        if let Err(error) = provider.build_source(params, source) {
-            warn!(%error, "build_source error");
-            return Err(StatusCode::INTERNAL_SERVER_ERROR.into_response());
-        }
-
-        // Validate opts
-        if manifest_opts.id.is_empty() {
-            warn!("manifest opts id is empty");
+        if let Err(error) = provider.build_source(params, source_builder) {
+            warn!(%error, "error building manifest");
             return Err(StatusCode::INTERNAL_SERVER_ERROR.into_response());
         }
 
         // Build manifest
-        let manifest = manifest::Manifest {
-            name: Some(manifest_opts.name),
-            sources: vec![UpstreamSource::Streamed(StreamedSource {
-                url: DATA_ROUTE.parse().expect("valid url"),
-                id: Some(manifest_opts.id),
-                topics,
-                schemas,
-                start_time: manifest_opts.start_time,
-                end_time: manifest_opts.end_time,
-            })],
-        };
-
-        Ok(manifest)
+        Ok(manifest_builder.build(provider.base_url()))
     })
     .await;
 
-    match result {
-        Ok(Ok(manifest)) => Json(manifest).into_response(),
-        Ok(Err(response)) => response,
-        Err(e) => {
-            warn!(%e, "spawn_blocking panicked");
-            StatusCode::INTERNAL_SERVER_ERROR.into_response()
-        }
+    match result.expect("panicked while building manifest") {
+        Ok(manifest) => Json(manifest).into_response(),
+        Err(response) => response,
     }
 }
 
@@ -728,39 +695,41 @@ async fn data_handler_blocking<P: UpstreamServerBlocking>(
     headers: HeaderMap,
     Query(params): Query<P::QueryParams>,
 ) -> Response {
-    let token = extract_bearer_token(&headers).map(|s| s.to_owned());
+    // Auth
+    let auth_result = {
+        let provider = Arc::clone(&provider);
+        tokio::task::spawn_blocking(move || {
+            provider
+                .auth(extract_bearer_token(&headers), &params)
+                .map(|()| params) // Move params back to the calling task.
+        })
+        .await
+        .expect("panicked during auth")
+    };
+    let params = match auth_result {
+        Ok(params) => params,
+        Err(e) => return e.into_response(),
+    };
 
-    // Create stream before spawning blocking task
-    let (handle, stream) = foxglove::stream::create_mcap_stream();
+    // Build MCAP data stream
+    let (handle, mcap_stream) = foxglove::stream::create_mcap_stream();
+    let mcap_stream_task = tokio::task::spawn_blocking(move || {
+        provider.build_source(
+            params,
+            SourceBuilderBlocking {
+                mode: BuilderMode::Stream { handle },
+            },
+        )
+    });
+    let error_stream = mcap_stream_task
+        .into_stream()
+        .filter_map(|result| async move {
+            match result.expect("panicked while streaming data") {
+                Ok(()) => None,
+                Err(e) => Some(Err(e.into())),
+            }
+        });
 
-    let build_result = tokio::task::spawn_blocking(move || {
-        // Auth
-        if let Err(e) = provider.auth(token.as_deref(), &params) {
-            return Err(e.into_response());
-        }
-
-        // Build source in stream mode
-        let source = SourceBuilderBlocking {
-            mode: SourceMode::Stream { handle },
-        };
-
-        if let Err(error) = provider.build_source(params, source) {
-            warn!(%error, "build_source error");
-            return Err(StatusCode::INTERNAL_SERVER_ERROR.into_response());
-        }
-
-        Ok(())
-    })
-    .await;
-
-    match build_result {
-        Ok(Ok(())) => {
-            Body::from_stream(stream.map(Ok::<_, std::convert::Infallible>)).into_response()
-        }
-        Ok(Err(response)) => response,
-        Err(e) => {
-            warn!(%e, "build_source spawn_blocking panicked");
-            StatusCode::INTERNAL_SERVER_ERROR.into_response()
-        }
-    }
+    let combined = mcap_stream.map(Ok::<_, BoxError>).chain(error_stream);
+    Body::from_stream(combined).into_response()
 }
