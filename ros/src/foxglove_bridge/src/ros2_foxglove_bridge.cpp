@@ -201,8 +201,8 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
     _clientCountPublisher = this->create_publisher<std_msgs::msg::UInt32>(
       CLIENT_COUNT_TOPIC, rclcpp::QoS{rclcpp::KeepLast(1)}.transient_local());
     auto init_msg = std_msgs::msg::UInt32();
-    init_msg.data = 0;
-    _clientCountPublisher->publish(init_msg);  // Initialize transient local topic to 0
+    init_msg.data = _server->clientCount();
+    _clientCountPublisher->publish(init_msg);  // Initialize transient local topic to current connection count
   }
 
   // Start the thread polling for rosgraph changes
