@@ -561,3 +561,186 @@ TEST_CASE("Write empty metadata") {
   std::string content = readFile("test.mcap");
   REQUIRE_THAT(content, !ContainsSubstring("empty_metadata"));
 }
+
+TEST_CASE("Custom writer basic functionality") {
+  auto context = foxglove::Context::create();
+
+  bool write_called = false;
+  bool flush_called = false;
+  bool seek_called = false;
+  size_t cursor = 0;
+  std::vector<uint8_t> buffer;
+  foxglove::CustomWriter custom_writer;
+  custom_writer.write =
+    [&buffer, &write_called, &cursor](const uint8_t* data, size_t len, int* error) -> size_t {
+    write_called = true;
+    *error = 0;
+    if (cursor != buffer.size()) {
+      REQUIRE(cursor + len < buffer.size());
+      std::memcpy(buffer.data() + cursor, data, len);
+      cursor += len;
+      return len;
+    }
+    buffer.insert(buffer.end(), data, data + len);
+    cursor += len;
+    return len;
+  };
+  custom_writer.flush = [&flush_called]() -> int {
+    flush_called = true;
+    return 0;
+  };
+  custom_writer.seek =
+    [&cursor, &buffer, &seek_called](int64_t pos, int whence, uint64_t* new_pos) -> int {
+    seek_called = true;
+    switch (whence) {
+      case SEEK_SET:
+        cursor = pos;
+        break;
+      case SEEK_CUR:
+        cursor += pos;
+        break;
+      case SEEK_END:
+        cursor = buffer.size() + pos;
+        break;
+      default:
+        assert(false);
+    }
+    *new_pos = cursor;
+    return 0;
+  };
+
+  foxglove::McapWriterOptions options;
+  options.custom_writer = custom_writer;
+  options.context = context;
+
+  auto custom_mcap = foxglove::McapWriter::create(options);
+  REQUIRE(custom_mcap.has_value());
+
+  auto channel_result = foxglove::schemas::Point2Channel::create("test_topic", context);
+  REQUIRE(channel_result.has_value());
+  auto channel = std::move(channel_result.value());
+  channel.log(foxglove::schemas::Point2{1.0, 2.0});
+  channel.log(foxglove::schemas::Point2{3.0, 4.0});
+  channel.close();
+  custom_mcap.value().close();
+
+  // Verify callbacks were called
+  REQUIRE(write_called);
+  REQUIRE(flush_called);
+  REQUIRE(seek_called);
+  // Verify MCAP data was written
+  std::string custom_content = std::string(buffer.begin(), buffer.end());
+  REQUIRE_THAT(custom_content, ContainsSubstring("Point2"));
+}
+
+TEST_CASE("Write single attachment to MCAP") {
+  FileCleanup cleanup("test.mcap");
+  auto context = foxglove::Context::create();
+
+  foxglove::McapWriterOptions options;
+  options.context = context;
+  options.path = "test.mcap";
+  auto writer = foxglove::McapWriter::create(options);
+  REQUIRE(writer.has_value());
+
+  // Write an attachment
+  std::string attachment_data = R"({"setting": true})";
+  foxglove::Attachment attachment;
+  attachment.log_time = 1000000000;
+  attachment.create_time = 900000000;
+  attachment.name = "config.json";
+  attachment.media_type = "application/json";
+  attachment.data = reinterpret_cast<const std::byte*>(attachment_data.data());
+  attachment.data_len = attachment_data.size();
+
+  auto error = writer->attach(attachment);
+  REQUIRE(error == foxglove::FoxgloveError::Ok);
+
+  writer->close();
+
+  REQUIRE(std::filesystem::exists("test.mcap"));
+
+  // Verify the attachment was written
+  std::string content = readFile("test.mcap");
+  REQUIRE_THAT(content, ContainsSubstring("config.json"));
+  REQUIRE_THAT(content, ContainsSubstring("application/json"));
+  REQUIRE_THAT(content, ContainsSubstring(R"({"setting": true})"));
+}
+
+TEST_CASE("Write multiple attachments to MCAP") {
+  FileCleanup cleanup("test.mcap");
+  auto context = foxglove::Context::create();
+
+  foxglove::McapWriterOptions options;
+  options.context = context;
+  options.path = "test.mcap";
+  auto writer = foxglove::McapWriter::create(options);
+  REQUIRE(writer.has_value());
+
+  // Write first attachment
+  std::string config_data = R"({"debug": false})";
+  foxglove::Attachment config_attachment;
+  config_attachment.log_time = 1000000000;
+  config_attachment.create_time = 900000000;
+  config_attachment.name = "config.yaml";
+  config_attachment.media_type = "application/yaml";
+  config_attachment.data = reinterpret_cast<const std::byte*>(config_data.data());
+  config_attachment.data_len = config_data.size();
+
+  auto error1 = writer->attach(config_attachment);
+  REQUIRE(error1 == foxglove::FoxgloveError::Ok);
+
+  // Write second attachment
+  std::string calibration_data = "calibration binary data here";
+  foxglove::Attachment calibration_attachment;
+  calibration_attachment.log_time = 2000000000;
+  calibration_attachment.create_time = 1800000000;
+  calibration_attachment.name = "calibration.bin";
+  calibration_attachment.media_type = "application/octet-stream";
+  calibration_attachment.data = reinterpret_cast<const std::byte*>(calibration_data.data());
+  calibration_attachment.data_len = calibration_data.size();
+
+  auto error2 = writer->attach(calibration_attachment);
+  REQUIRE(error2 == foxglove::FoxgloveError::Ok);
+
+  writer->close();
+
+  REQUIRE(std::filesystem::exists("test.mcap"));
+
+  // Verify both attachments were written
+  std::string content = readFile("test.mcap");
+  REQUIRE_THAT(content, ContainsSubstring("config.yaml"));
+  REQUIRE_THAT(content, ContainsSubstring("calibration.bin"));
+  REQUIRE_THAT(content, ContainsSubstring("calibration binary data here"));
+}
+
+TEST_CASE("Write empty attachment data") {
+  FileCleanup cleanup("test.mcap");
+  auto context = foxglove::Context::create();
+
+  foxglove::McapWriterOptions options;
+  options.context = context;
+  options.path = "test.mcap";
+  auto writer = foxglove::McapWriter::create(options);
+  REQUIRE(writer.has_value());
+
+  // Write an attachment with empty data
+  foxglove::Attachment attachment;
+  attachment.log_time = 1000000000;
+  attachment.create_time = 900000000;
+  attachment.name = "empty.txt";
+  attachment.media_type = "text/plain";
+  attachment.data = nullptr;
+  attachment.data_len = 0;
+
+  auto error = writer->attach(attachment);
+  REQUIRE(error == foxglove::FoxgloveError::Ok);
+
+  writer->close();
+
+  REQUIRE(std::filesystem::exists("test.mcap"));
+
+  // Verify the attachment name was written
+  std::string content = readFile("test.mcap");
+  REQUIRE_THAT(content, ContainsSubstring("empty.txt"));
+}

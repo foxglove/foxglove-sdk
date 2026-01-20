@@ -14,25 +14,20 @@ struct WriterState<W: Write + Seek> {
     writer: mcap::Writer<W>,
     // ChannelId -> mcap file channel id.
     //
-    // If the value is `None`, then we do not log to this channel; for example, if the channel is
-    // filtered out by the `SinkChannelFilter`.
-    //
     // Note that the underlying writer may re-use channel_ids based on the metadata of the channel,
     // so multiple `ChannelIds` may map to the same `McapChannelId`.
-    channel_map: HashMap<ChannelId, Option<McapChannelId>>,
+    channel_map: HashMap<ChannelId, McapChannelId>,
     // Current message sequence number for each channel.
     // Indexed by `McapChannelId` to ensure increasing sequence within each MCAP channel.
     channel_sequence: HashMap<McapChannelId, u32>,
-    channel_filter: Option<Arc<dyn SinkChannelFilter>>,
 }
 
 impl<W: Write + Seek> WriterState<W> {
-    fn new(writer: mcap::Writer<W>, channel_filter: Option<Arc<dyn SinkChannelFilter>>) -> Self {
+    fn new(writer: mcap::Writer<W>) -> Self {
         Self {
             writer,
             channel_map: HashMap::new(),
             channel_sequence: HashMap::new(),
-            channel_filter,
         }
     }
 
@@ -54,13 +49,6 @@ impl<W: Write + Seek> WriterState<W> {
         let mcap_channel_id = match self.channel_map.entry(channel_id) {
             Entry::Occupied(entry) => *entry.get(),
             Entry::Vacant(entry) => {
-                if let Some(filter) = self.channel_filter.as_ref() {
-                    if !filter.should_subscribe(channel.descriptor()) {
-                        entry.insert(None);
-                        return Ok(());
-                    }
-                }
-
                 let schema_id = if let Some(schema) = channel.schema() {
                     self.writer
                         .add_schema(&schema.name, &schema.encoding, &schema.data)
@@ -79,14 +67,9 @@ impl<W: Write + Seek> WriterState<W> {
                     )
                     .map_err(FoxgloveError::from)?;
 
-                entry.insert(Some(mcap_channel_id));
-                Some(mcap_channel_id)
+                entry.insert(mcap_channel_id);
+                mcap_channel_id
             }
-        };
-
-        // If there is no mcap_channel_id, then the channel is filtering this topic.
-        let Some(mcap_channel_id) = mcap_channel_id else {
-            return Ok(());
         };
 
         let sequence = self.next_sequence(mcap_channel_id);
@@ -109,6 +92,7 @@ impl<W: Write + Seek> WriterState<W> {
 pub struct McapSink<W: Write + Seek> {
     sink_id: SinkId,
     inner: Mutex<Option<WriterState<W>>>,
+    channel_filter: Option<Arc<dyn SinkChannelFilter>>,
 }
 impl<W: Write + Seek> Debug for McapSink<W> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -128,7 +112,8 @@ impl<W: Write + Seek> McapSink<W> {
         let mcap_writer = options.create(writer).map_err(FoxgloveError::from)?;
         let writer = Arc::new(Self {
             sink_id: SinkId::next(),
-            inner: Mutex::new(Some(WriterState::new(mcap_writer, channel_filter))),
+            inner: Mutex::new(Some(WriterState::new(mcap_writer))),
+            channel_filter,
         });
         Ok(writer)
     }
@@ -177,6 +162,29 @@ impl<W: Write + Seek> McapSink<W> {
             })
             .map_err(FoxgloveError::from)
     }
+
+    /// Writes an attachment to the MCAP file.
+    ///
+    /// Attachments are arbitrary binary data that can be stored alongside messages.
+    /// Common uses include storing configuration files, calibration data, or other
+    /// reference material related to the recording.
+    ///
+    /// # Arguments
+    /// * `attachment` - The attachment to write
+    ///
+    /// # Returns
+    /// * `Ok(())` if attachment was written successfully
+    /// * `Err(FoxgloveError::SinkClosed)` if the writer has been closed
+    /// * `Err(FoxgloveError)` if there was an error writing to the file
+    pub fn attach(&self, attachment: &mcap::Attachment<'_>) -> Result<(), FoxgloveError> {
+        let mut guard = self.inner.lock();
+        let writer = guard.as_mut().ok_or(FoxgloveError::SinkClosed)?;
+
+        writer
+            .writer
+            .attach(attachment)
+            .map_err(FoxgloveError::from)
+    }
 }
 
 impl<W: Write + Seek + Send> Sink for McapSink<W> {
@@ -195,15 +203,26 @@ impl<W: Write + Seek + Send> Sink for McapSink<W> {
         let writer = guard.as_mut().ok_or(FoxgloveError::SinkClosed)?;
         writer.log(channel, msg, metadata)
     }
+
+    fn auto_subscribe(&self) -> bool {
+        self.channel_filter.is_none()
+    }
+
+    fn add_channels(&self, channels: &[&Arc<RawChannel>]) -> Option<Vec<ChannelId>> {
+        let filter = self.channel_filter.as_ref()?;
+        let channel_ids = channels
+            .iter()
+            .filter(|channel| filter.should_subscribe(channel.descriptor()))
+            .map(|channel| channel.id())
+            .collect();
+        Some(channel_ids)
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        channel::ChannelDescriptor, testutil::read_summary, ChannelBuilder, Context, Metadata,
-        Schema,
-    };
+    use crate::{testutil::read_summary, ChannelBuilder, Context, Metadata, Schema};
     use mcap::McapError;
     use std::path::Path;
     use tempfile::NamedTempFile;
@@ -534,15 +553,24 @@ mod tests {
 
     #[test]
     fn test_channel_filter() {
-        // Write messages to two topics, but filter out the first.
-        struct Ch1Filter;
-        impl SinkChannelFilter for Ch1Filter {
-            fn should_subscribe(&self, channel: &ChannelDescriptor) -> bool {
-                channel.topic() == "/2"
-            }
-        }
+        use crate::McapWriter;
 
         let ctx = Context::new();
+
+        let temp_file1 = NamedTempFile::new().expect("failed to create tempfile");
+        let temp_path1 = temp_file1.path().to_owned();
+        let writer1 = McapWriter::new()
+            .context(&ctx)
+            .channel_filter_fn(|channel| channel.topic() == "/2")
+            .create(temp_file1)
+            .expect("failed to create writer");
+
+        let temp_file2 = NamedTempFile::new().expect("failed to create tempfile");
+        let temp_path2 = temp_file2.path().to_owned();
+        let writer2 = McapWriter::new()
+            .context(&ctx)
+            .create(temp_file2)
+            .expect("failed to create writer");
 
         let ch1 = ChannelBuilder::new("/1")
             .context(&ctx)
@@ -555,27 +583,11 @@ mod tests {
             .build_raw()
             .unwrap();
 
-        let temp_file1 = NamedTempFile::new().expect("failed to create tempfile");
-        let temp_path1 = temp_file1.path().to_owned();
-        let writer1 = McapSink::new(
-            &temp_file1,
-            WriteOptions::default(),
-            Some(Arc::new(Ch1Filter)),
-        )
-        .expect("failed to create writer");
+        ch1.log(b"{}");
+        ch2.log(b"{}");
 
-        let temp_file2 = NamedTempFile::new().expect("failed to create tempfile");
-        let temp_path2 = temp_file2.path().to_owned();
-        let writer2 = McapSink::new(&temp_file2, WriteOptions::default(), None)
-            .expect("failed to create writer");
-
-        writer1.log(&ch1, b"{}", &Metadata::default()).unwrap();
-        writer2.log(&ch1, b"{}", &Metadata::default()).unwrap();
-        writer1.log(&ch2, b"{}", &Metadata::default()).unwrap();
-        writer2.log(&ch2, b"{}", &Metadata::default()).unwrap();
-
-        writer1.finish().expect("failed to finish recording");
-        writer2.finish().expect("failed to finish recording");
+        let file1 = writer1.close().expect("failed to close writer1");
+        let file2 = writer2.close().expect("failed to close writer2");
 
         let summary = read_summary(&temp_path1);
         assert_eq!(summary.channels.len(), 1);
@@ -585,5 +597,131 @@ mod tests {
         let summary = read_summary(&temp_path2);
         assert_eq!(summary.channels.len(), 2);
         assert_eq!(summary.stats.unwrap().message_count, 2);
+
+        drop(file1);
+        drop(file2);
+    }
+
+    fn foreach_mcap_attachment<F>(path: &Path, mut f: F) -> Result<(), McapError>
+    where
+        F: FnMut(&mcap::records::AttachmentHeader, &[u8]),
+    {
+        use mcap::read::LinearReader;
+        let contents = std::fs::read(path).map_err(McapError::Io)?;
+        for record in LinearReader::new(&contents)? {
+            if let mcap::records::Record::Attachment { header, data, .. } = record? {
+                f(&header, &data);
+            }
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn test_attach_basic() {
+        let temp_file = NamedTempFile::new().expect("create tempfile");
+        let temp_path = temp_file.path().to_owned();
+
+        let writer = McapSink::new(&temp_file, WriteOptions::default(), None)
+            .expect("failed to create writer");
+
+        let attachment_data = b"hello, attachment!";
+        writer
+            .attach(&mcap::Attachment {
+                log_time: 100,
+                create_time: 200,
+                name: "test.txt".to_string(),
+                media_type: "text/plain".to_string(),
+                data: std::borrow::Cow::Borrowed(attachment_data),
+            })
+            .expect("failed to attach");
+
+        writer.finish().expect("failed to finish recording");
+
+        let mut found_attachments = Vec::new();
+        foreach_mcap_attachment(&temp_path, |header, data| {
+            found_attachments.push((header.clone(), data.to_vec()));
+        })
+        .expect("failed to read MCAP attachments");
+
+        assert_eq!(found_attachments.len(), 1);
+        let (header, data) = &found_attachments[0];
+        assert_eq!(header.log_time, 100);
+        assert_eq!(header.create_time, 200);
+        assert_eq!(header.name, "test.txt");
+        assert_eq!(header.media_type, "text/plain");
+        assert_eq!(data, attachment_data);
+    }
+
+    #[test]
+    fn test_attach_multiple() {
+        let temp_file = NamedTempFile::new().expect("create tempfile");
+        let temp_path = temp_file.path().to_owned();
+
+        let writer = McapSink::new(&temp_file, WriteOptions::default(), None)
+            .expect("failed to create writer");
+
+        writer
+            .attach(&mcap::Attachment {
+                log_time: 100,
+                create_time: 200,
+                name: "config.json".to_string(),
+                media_type: "application/json".to_string(),
+                data: std::borrow::Cow::Borrowed(br#"{"setting": true}"#),
+            })
+            .expect("failed to attach config");
+
+        writer
+            .attach(&mcap::Attachment {
+                log_time: 300,
+                create_time: 400,
+                name: "image.png".to_string(),
+                media_type: "image/png".to_string(),
+                data: std::borrow::Cow::Borrowed(&[0x89, 0x50, 0x4E, 0x47]), // PNG magic bytes
+            })
+            .expect("failed to attach image");
+
+        writer.finish().expect("failed to finish recording");
+
+        let mut found_attachments = Vec::new();
+        foreach_mcap_attachment(&temp_path, |header, data| {
+            found_attachments.push((header.name.clone(), data.to_vec()));
+        })
+        .expect("failed to read MCAP attachments");
+
+        assert_eq!(found_attachments.len(), 2);
+
+        let config = found_attachments
+            .iter()
+            .find(|(name, _)| name == "config.json")
+            .expect("config.json not found");
+        assert_eq!(config.1, br#"{"setting": true}"#);
+
+        let image = found_attachments
+            .iter()
+            .find(|(name, _)| name == "image.png")
+            .expect("image.png not found");
+        assert_eq!(image.1, &[0x89, 0x50, 0x4E, 0x47]);
+    }
+
+    #[test]
+    fn test_attach_after_close() {
+        let temp_file = NamedTempFile::new().expect("create tempfile");
+
+        let writer = McapSink::new(&temp_file, WriteOptions::default(), None)
+            .expect("failed to create writer");
+
+        // Close the writer
+        writer.finish().expect("failed to finish recording");
+
+        // This should fail because the writer is closed
+        let result = writer.attach(&mcap::Attachment {
+            log_time: 100,
+            create_time: 200,
+            name: "test.txt".to_string(),
+            media_type: "text/plain".to_string(),
+            data: std::borrow::Cow::Borrowed(b"test"),
+        });
+        assert!(result.is_err(), "Should fail to attach after close");
+        assert!(matches!(result.unwrap_err(), FoxgloveError::SinkClosed));
     }
 }

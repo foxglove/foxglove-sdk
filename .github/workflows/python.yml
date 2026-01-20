@@ -10,7 +10,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - uses: actions/setup-python@v6
         with:
@@ -22,7 +22,7 @@ jobs:
   lint-and-test-sdk:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions-rust-lang/setup-rust-toolchain@v1
 
       - name: Install common dependencies
@@ -41,7 +41,7 @@ jobs:
     needs: [sdist]
     steps:
       - name: Download sdist
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: wheels-sdist
       - name: Unpack sdist
@@ -74,7 +74,7 @@ jobs:
           MATURIN_NO_MISSING_BUILD_BACKEND_WARNING: 1
 
       - name: Upload wheel
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: playground-wasm
           path: dist
@@ -88,14 +88,14 @@ jobs:
     permissions:
       deployments: write
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - run: corepack enable
       - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: yarn
       - name: Download wheel
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: playground-wasm
           path: playground/public
@@ -119,7 +119,7 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - uses: actions/setup-python@v6
         with:
@@ -181,7 +181,7 @@ jobs:
         with:
           python-version: "3.10"
       - name: Download sdist
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: wheels-sdist
       - name: Unpack sdist
@@ -195,7 +195,7 @@ jobs:
           manylinux: auto
           docker-options: "--env MATURIN_NO_MISSING_BUILD_BACKEND_WARNING=1"
       - name: Upload wheels
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: wheels-linux-${{ matrix.platform.target }}
           path: dist
@@ -219,7 +219,7 @@ jobs:
         with:
           python-version: "3.10"
       - name: Download sdist
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: wheels-sdist
       - name: Unpack sdist
@@ -233,7 +233,7 @@ jobs:
           manylinux: musllinux_1_2
           docker-options: "--env MATURIN_NO_MISSING_BUILD_BACKEND_WARNING=1"
       - name: Upload wheels
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: wheels-musllinux-${{ matrix.platform.target }}
           path: dist
@@ -267,7 +267,7 @@ jobs:
             3.10
 
       - name: Download sdist
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: wheels-sdist
       - name: Unpack sdist
@@ -281,7 +281,7 @@ jobs:
           sccache: "false"
           docker-options: "--env MATURIN_NO_MISSING_BUILD_BACKEND_WARNING=1"
       - name: Upload wheels
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: wheels-windows-${{ matrix.platform.target }}
           path: dist
@@ -301,7 +301,7 @@ jobs:
         with:
           python-version: "3.10"
       - name: Download sdist
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: wheels-sdist
       - name: Unpack sdist
@@ -314,7 +314,7 @@ jobs:
           sccache: "false"
           docker-options: "--env MATURIN_NO_MISSING_BUILD_BACKEND_WARNING=1"
       - name: Upload wheels
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: wheels-macos-${{ matrix.platform.target }}
           path: dist
@@ -322,7 +322,7 @@ jobs:
   sdist:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - uses: astral-sh/setup-uv@v7
       - run: corepack enable
@@ -334,7 +334,7 @@ jobs:
         run: uv build --sdist
         working-directory: python/foxglove-sdk
       - name: Upload sdist
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: wheels-sdist
           path: python/foxglove-sdk/dist
@@ -351,7 +351,7 @@ jobs:
       contents: write
       attestations: write
     steps:
-      - uses: actions/download-artifact@v6
+      - uses: actions/download-artifact@v7
         with:
           path: python/foxglove-sdk
       - run: find python/foxglove-sdk/wheels-*
@@ -372,7 +372,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - uses: actions/setup-python@v6
         with:

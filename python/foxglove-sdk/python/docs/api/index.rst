@@ -19,55 +19,18 @@ Notebook Integration
 
 Functions and classes for integrating with Jupyter notebooks and creating interactive visualizations.
 
-.. py:function:: init_notebook_buffer(context: Context | None = None) -> NotebookBuffer
-
-   Create a NotebookBuffer object to manage data buffering and visualization in Jupyter
-   notebooks.
-
-   :param context: The Context used to log the messages. If no Context is provided, the global
-       context will be used. Logged messages will be buffered.
-   :return: A NotebookBuffer object that can be used to manage the data buffering
-       and visualization.
-   :raises Exception: If the notebook extra package is not installed. Install it
-       with `pip install "foxglove-sdk[notebook]""`.
-
-   .. note::
-      This function is only available when the `notebook` extra package
-      is installed. Install it with `pip install "foxglove-sdk[notebook]""`.
+.. autofunction:: init_notebook_buffer
 
 Notebook Classes
 ^^^^^^^^^^^^^^^^
 
-.. py:class:: NotebookBuffer
+.. autoclass:: foxglove.notebook.notebook_buffer.NotebookBuffer
+   :members:
+   :exclude-members: __init__
 
-   A NotebookBuffer object to manage data buffering and visualization in Jupyter notebooks.
-
-   Obtain an instance by calling :py:func:`foxglove.init_notebook_buffer`.
-
-   The NotebookBuffer object will buffer all data logged to the provided context. When you
-   are ready to visualize the data, you can call the :meth:`NotebookBuffer.show` method to display an embedded
-   Foxglove visualization widget. The widget provides a fully-featured Foxglove interface
-   directly within your Jupyter notebook, allowing you to explore multi-modal robotics data
-   including 3D scenes, plots, images, and more.
-
-   .. py:method:: show(layout_storage_key: str, width: int | Literal["full"] | None = None, height: int | None = None) -> FoxgloveWidget
-
-      Show the Foxglove viewer. Call this method as the last step of a notebook cell
-      to display the viewer.
-
-   .. py:method:: clear() -> None
-
-      Clear the buffered data.
-
-.. py:class:: FoxgloveWidget
-
-   A widget that displays a Foxglove viewer in a notebook.
-
-   Obtain an instance by calling :meth:`NotebookBuffer.show`.
-
-   .. py:method:: refresh() -> None
-
-      Refresh the widget by reading the latest data from the buffer used to created the widget and sending it to the widget.
+.. autoclass:: foxglove.notebook.foxglove_widget.FoxgloveWidget
+   :members:
+   :exclude-members: __init__
 
 
 Schemas
@@ -179,7 +142,7 @@ foxglove.websocket
 .. Parameter types and values are manually documented since nested classes (values) are not supported by automodule.
 .. automodule:: foxglove.websocket
    :members:
-   :exclude-members: Capability, ParameterType, ParameterValue, StatusLevel
+   :exclude-members: Capability, ParameterType, ParameterValue, StatusLevel, PlaybackCommand, PlaybackControlRequest, PlaybackState, PlaybackStatus
 
 
 Enums
@@ -211,6 +174,7 @@ Enums
       This allows accelerated, slowed, or stepped control over the progress of time. If the
       server publishes time data, then timestamps of published messages must originate from the
       same time source.
+
 
 .. py:enum:: StatusLevel
 

@@ -1,7 +1,25 @@
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, BinaryIO, Callable, Protocol
 
 from foxglove.websocket import AssetHandler
+
+class McapWritable(Protocol):
+    """A writable and seekable file-like object.
+
+    This protocol defines the minimal interface required for writing MCAP data.
+    """
+
+    def write(self, data: bytes | bytearray) -> int:
+        """Write data and return the number of bytes written."""
+        ...
+
+    def seek(self, offset: int, whence: int = 0) -> int:
+        """Seek to position and return the new absolute position."""
+        ...
+
+    def flush(self) -> None:
+        """Flush any buffered data."""
+        ...
 
 from .cloud import CloudSink
 from .mcap import MCAPWriteOptions, MCAPWriter
@@ -149,6 +167,7 @@ def start_server(
     context: Context | None = None,
     session_id: str | None = None,
     channel_filter: SinkChannelFilter | None = None,
+    playback_time_range: tuple[int, int] | None = None,
 ) -> WebSocketServer:
     """
     Start a websocket server for live visualization.
@@ -186,7 +205,7 @@ def shutdown() -> None:
     ...
 
 def open_mcap(
-    path: str | Path,
+    path: str | Path | BinaryIO | McapWritable,
     *,
     allow_overwrite: bool = False,
     context: Context | None = None,
@@ -194,7 +213,11 @@ def open_mcap(
     writer_options: MCAPWriteOptions | None = None,
 ) -> MCAPWriter:
     """
-    Creates a new MCAP file for recording.
+    Open an MCAP writer for recording.
+
+    If a path is provided, the file will be created and must not already exist (unless
+    allow_overwrite is True). If a file-like object is provided, it must support write(),
+    seek(), and flush() methods; the allow_overwrite parameter is ignored.
 
     If a context is provided, the MCAP file will be associated with that context. Otherwise, the
     global context will be used.

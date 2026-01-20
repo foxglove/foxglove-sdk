@@ -34,7 +34,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - run: corepack enable
 
@@ -67,7 +67,7 @@ jobs:
           git push -f origin "${{ env.SDK_BRANCH }}"
 
       - name: Download C/C++ artifacts
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           pattern: "*.zip"
           path: ci_artifacts/

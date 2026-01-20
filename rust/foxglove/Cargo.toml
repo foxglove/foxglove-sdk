@@ -30,7 +30,9 @@ tls = [
   "dep:tokio-rustls",
   "dep:rcgen",
 ]
+stream = ["dep:futures"]
 schemars = ["dep:schemars"]
+serde = ["dep:base64"]
 unstable = []
 zstd = ["mcap/zstd"]
 
@@ -46,7 +48,8 @@ bytes.workspace = true
 chrono = { version = "0.4.39", optional = true }
 delegate = "0.13.2"
 flume = { version = "0.11.1", optional = true }
-foxglove_derive = { version = "0.16.1", path = "../foxglove_derive", optional = true }
+foxglove_derive = { version = "0.16.3", path = "../foxglove_derive", optional = true }
+futures = { version = "0.3.31", optional = true }
 futures-util = { version = "0.3.31", features = ["sink", "std"], optional = true }
 mcap.workspace = true
 parking_lot = "0.12.4"
@@ -72,6 +75,8 @@ rcgen = { version = "0.14.3", features = ["crypto", "pem", "x509-parser"], optio
 assert_matches = "1.5.0"
 insta = { version = "1.42.2", features = ["json"] }
 maplit = "1.0.2"
+serde_cbor = "0.11.2"
+serde_json = "1.0"
 tempfile = "3.15.0"
 tracing-test.workspace = true
 

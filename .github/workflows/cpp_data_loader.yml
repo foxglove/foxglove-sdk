@@ -20,7 +20,7 @@ jobs:
     name: Build C++ Foxglove Data Loader SDK
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           target: wasm32-unknown-unknown
@@ -38,7 +38,7 @@ jobs:
         working-directory: cpp/foxglove_data_loader
         run: SDK_VERSION=${{inputs.sdk-version || github.sha}} make package
       - name: Upload static & shared library to artifacts
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: foxglove_data_loader-${{inputs.sdk-version || github.sha}}-cpp-wasm32-unknown-unknown.zip
           path: cpp/foxglove_data_loader/target/foxglove_data_loader-${{inputs.sdk-version || github.sha}}-cpp-wasm32-unknown-unknown.zip

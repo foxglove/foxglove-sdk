@@ -10,7 +10,7 @@ jobs:
   rust:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Install common dependencies
         uses: ./.github/actions/common-deps
@@ -62,7 +62,7 @@ jobs:
     needs: rust
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - id: detect-version
         name: Detect local Cargo version
         run: |
@@ -87,7 +87,7 @@ jobs:
     env:
       github_ref: ${{ github.ref }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - id: detect-version
         name: Detect local Cargo version
         run: |
@@ -112,11 +112,12 @@ jobs:
     runs-on: ubuntu-latest
 
     permissions:
+      contents: read
       # https://docs.npmjs.com/generating-provenance-statements#publishing-packages-with-provenance-via-github-actions
       id-token: write
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - run: corepack enable
 
@@ -187,7 +188,4 @@ jobs:
       - run: yarn workspace @foxglove/schemas pack
       - name: Publish @foxglove/schemas to NPM
         if: startsWith(github.ref, 'refs/tags/typescript/schemas/v')
-        # `yarn npm publish` does not currently support --provenance: https://github.com/yarnpkg/berry/issues/5430
-        run: npm publish typescript/schemas/package.tgz --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
+        run: npx npm@11.7.0 publish typescript/schemas/package.tgz --provenance --access public

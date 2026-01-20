@@ -69,7 +69,7 @@ pub trait ServerListener: Send + Sync {
     fn on_client_disconnect(&self) {}
 
     #[doc(hidden)]
-    /// Callback invoked when a client sends a player state message.
+    /// Callback invoked when a client sends a playback control request.
     /// Requires [`Capability::RangedPlayback`][super::Capability::RangedPlayback].
     fn on_playback_control_request(
         &self,
