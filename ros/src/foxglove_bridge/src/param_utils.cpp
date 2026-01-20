@@ -199,7 +199,7 @@ void declareParameters(rclcpp::Node* node) {
   publishClientCountDescription.type = rcl_interfaces::msg::ParameterType::PARAMETER_BOOL;
   publishClientCountDescription.description = "Publish the number of connected clients";
   publishClientCountDescription.read_only = true;
-  node->declare_parameter(PARAM_PUBLISH_CLIENT_COUNT, true, publishClientCountDescription);
+  node->declare_parameter(PARAM_PUBLISH_CLIENT_COUNT, false, publishClientCountDescription);
 }
 
 std::vector<std::regex> parseRegexStrings(rclcpp::Node* node,

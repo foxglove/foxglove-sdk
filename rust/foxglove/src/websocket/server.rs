@@ -628,6 +628,12 @@ impl Server {
 
         tracing::info!("Registered client {}", client.addr());
 
+        // Notify listener
+        if let Some(listener) = self.listener() {
+            tracing::debug!("Notifying listener of client connection");
+            listener.on_client_connect();
+        }
+
         // Add the client as a sink. This synchronously triggers advertisements for all channels
         // via the `Sink::add_channel` callback.
         if let Some(context) = self.context.upgrade() {
@@ -649,11 +655,6 @@ impl Server {
                     client.addr()
                 );
             }
-        }
-        // Notify listener
-        if let Some(listener) = self.listener() {
-            tracing::debug!("Notifying listener of client connection");
-            listener.on_client_connect();
         }
     }
 
