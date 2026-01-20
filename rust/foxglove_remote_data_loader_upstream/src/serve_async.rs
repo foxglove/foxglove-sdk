@@ -128,7 +128,7 @@ impl<'a> SourceBuilder<'a> {
 ///         };
 ///
 ///         channel.log(&MyMessage { value: 42 });
-///         handle.finish().await?;
+///         handle.close().await?;
 ///         Ok(())
 ///     }
 ///

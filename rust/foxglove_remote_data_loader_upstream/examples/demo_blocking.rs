@@ -3,19 +3,19 @@
 //! # Running the example
 //!
 //! ```sh
-//! cargo run --example demo_blocking
+//! cargo run --example demo_blocking -p foxglove_remote_data_loader_upstream
 //! ```
 //!
 //! # Testing the endpoints
 //!
 //! Get a manifest for a specific flight:
 //! ```sh
-//! curl "http://localhost:8080/v1/manifest?flightId=ABC123"
+//! curl "http://localhost:8080/v1/manifest?flightId=ABC123&startTime=2024-01-01T00:00:00Z&endTime=2024-01-02T00:00:00Z"
 //! ```
 //!
 //! Stream MCAP data:
 //! ```sh
-//! curl "http://localhost:8080/v1/data?flightId=ABC123" --output data.mcap
+//! curl "http://localhost:8080/v1/data?flightId=ABC123&startTime=2024-01-01T00:00:00Z&endTime=2024-01-02T00:00:00Z" --output data.mcap
 //! ```
 
 use std::net::SocketAddr;
@@ -33,7 +33,7 @@ use foxglove_remote_data_loader_upstream::{
 struct ExampleUpstreamBlocking;
 
 /// Query parameters for both manifest and data endpoints.
-#[derive(Deserialize)]
+#[derive(Deserialize, Hash)]
 #[serde(rename_all = "camelCase")]
 struct FlightParams {
     flight_id: String,
@@ -68,7 +68,7 @@ impl UpstreamServerBlocking for ExampleUpstreamBlocking {
         // 2. Set manifest metadata.
         if let Some(opts) = source.manifest() {
             *opts = ManifestOpts {
-                id: generate_source_id("flight-data", 1, &params.flight_id),
+                id: generate_source_id("flight-data", 1, &params),
                 name: format!("Flight {}", params.flight_id),
                 start_time: params.start_time,
                 end_time: params.end_time,
@@ -80,8 +80,9 @@ impl UpstreamServerBlocking for ExampleUpstreamBlocking {
             return Ok(());
         };
 
+        tracing::info!(flight_id = %params.flight_id, "streaming data");
+
         const MAX_BUFFER_SIZE: usize = 1024 * 1024; // 1MiB
-        println!("Streaming data for flight {}", params.flight_id);
         for i in 0..10 {
             channel.log(&DemoMessage {
                 msg: format!("Data for flight {}", params.flight_id),
@@ -106,6 +107,6 @@ impl UpstreamServerBlocking for ExampleUpstreamBlocking {
 fn main() -> std::io::Result<()> {
     tracing_subscriber::fmt::init();
     let bind_address: SocketAddr = "0.0.0.0:8080".parse().unwrap();
-    println!("Starting server on {bind_address}");
+    tracing::info!(%bind_address, "starting server");
     serve_blocking(ExampleUpstreamBlocking, bind_address)
 }

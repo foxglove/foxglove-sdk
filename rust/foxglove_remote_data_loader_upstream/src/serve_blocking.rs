@@ -133,7 +133,7 @@ impl<'a> SourceBuilderBlocking<'a> {
 ///         };
 ///
 ///         channel.log(&MyMessage { value: 42 });
-///         handle.finish()?;
+///         handle.close()?;
 ///         Ok(())
 ///     }
 ///

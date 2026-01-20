@@ -15,12 +15,12 @@
 //!
 //! Get a manifest for a specific flight:
 //! ```sh
-//! curl "http://localhost:8080/v1/manifest?flightId=ABC123"
+//! curl "http://localhost:8080/v1/manifest?flightId=ABC123&startTime=2024-01-01T00:00:00Z&endTime=2024-01-02T00:00:00Z"
 //! ```
 //!
 //! Stream MCAP data:
 //! ```sh
-//! curl "http://localhost:8080/v1/data?flightId=ABC123" --output data.mcap
+//! curl "http://localhost:8080/v1/data?flightId=ABC123&startTime=2024-01-01T00:00:00Z&endTime=2024-01-02T00:00:00Z" --output data.mcap
 //! ```
 //!
 //! Verify the MCAP file (requires mcap CLI):
@@ -42,7 +42,7 @@ use foxglove_remote_data_loader_upstream::{
 struct ExampleUpstream;
 
 /// Query parameters for both manifest and data endpoints.
-#[derive(Deserialize)]
+#[derive(Deserialize, Hash)]
 #[serde(rename_all = "camelCase")]
 struct FlightParams {
     flight_id: String,
@@ -81,7 +81,7 @@ impl UpstreamServer for ExampleUpstream {
         // 2. Set manifest metadata if this is a manifest request.
         if let Some(opts) = source.manifest() {
             *opts = ManifestOpts {
-                id: generate_source_id("flight-data", 1, &params.flight_id),
+                id: generate_source_id("flight-data", 1, &params),
                 name: format!("Flight {}", params.flight_id),
                 start_time: params.start_time,
                 end_time: params.end_time,
