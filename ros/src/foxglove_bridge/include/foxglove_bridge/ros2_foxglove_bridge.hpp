@@ -45,7 +45,7 @@ struct ClientAdvertisement {
 class ClientChannelError : public std::runtime_error {
 public:
   ClientChannelError(const std::string& msg)
-      : std::runtime_error(msg){};
+      : std::runtime_error(msg) {};
 };
 
 class FoxgloveBridge : public rclcpp::Node {
