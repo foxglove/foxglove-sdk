@@ -28,16 +28,24 @@ pub struct StreamHandle {
 }
 
 impl StreamHandle {
-    /// Flush buffered MCAP data to the stream.
+    /// Flush the MCAP writer's buffer.
     pub async fn flush(&mut self) -> Result<(), FoxgloveError> {
         self.inner.flush().await
     }
 
-    /// Finish writing and close the MCAP stream.
+    /// Stop logging events and flush any buffered data.
     ///
-    /// This must be called to ensure all data is written.
-    pub async fn finish(self) -> Result<(), FoxgloveError> {
+    /// This method will return an error if the MCAP writer fails to finish.
+    pub async fn close(self) -> Result<(), FoxgloveError> {
         self.inner.close().await
+    }
+
+    /// Get the current size of the buffer.
+    ///
+    /// This can be used in conjunction with [`Self::flush`] to ensure the buffer does
+    /// not grow unbounded.
+    pub fn buffer_size(&mut self) -> usize {
+        self.inner.buffer_size()
     }
 }
 

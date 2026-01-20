@@ -1,11 +1,9 @@
-//! Demo example showing how to use the upstream server SDK (blocking version).
-//!
-//! This example demonstrates the fully synchronous API - no async code required!
+//! Example of how to use the upstream server SDK (blocking version).
 //!
 //! # Running the example
 //!
 //! ```sh
-//! cargo run --example demo_blocking -p foxglove_remote_data_loader_upstream
+//! cargo run --example demo_blocking
 //! ```
 //!
 //! # Testing the endpoints
@@ -20,9 +18,10 @@
 //! curl "http://localhost:8080/v1/data?flightId=ABC123" --output data.mcap
 //! ```
 
-use std::{convert::Infallible, net::SocketAddr};
+use std::net::SocketAddr;
 
-use chrono::{Duration, Utc};
+use chrono::{DateTime, Utc};
+use foxglove::FoxgloveError;
 use serde::Deserialize;
 
 use foxglove_remote_data_loader_upstream::{
@@ -38,11 +37,13 @@ struct ExampleUpstreamBlocking;
 #[serde(rename_all = "camelCase")]
 struct FlightParams {
     flight_id: String,
+    start_time: DateTime<Utc>,
+    end_time: DateTime<Utc>,
 }
 
 impl UpstreamServerBlocking for ExampleUpstreamBlocking {
     type QueryParams = FlightParams;
-    type Error = Infallible;
+    type Error = FoxgloveError;
 
     fn auth(&self, _bearer_token: Option<&str>, _params: &FlightParams) -> Result<(), AuthError> {
         // No authentication required for this demo
@@ -53,45 +54,47 @@ impl UpstreamServerBlocking for ExampleUpstreamBlocking {
         &self,
         params: FlightParams,
         mut source: SourceBuilderBlocking<'_>,
-    ) -> Result<(), Infallible> {
-        // Define our message type
+    ) -> Result<(), FoxgloveError> {
+        // Define our message type.
         #[derive(foxglove::Encode)]
         struct DemoMessage {
             msg: String,
             count: u32,
         }
 
-        // 1. Declare channels
+        // 1. Declare channels.
         let channel = source.channel::<DemoMessage>("/demo");
 
-        // 2. Set manifest metadata
+        // 2. Set manifest metadata.
         if let Some(opts) = source.manifest() {
-            let now = Utc::now();
             *opts = ManifestOpts {
                 id: generate_source_id("flight-data", 1, &params.flight_id),
                 name: format!("Flight {}", params.flight_id),
-                start_time: now - Duration::hours(1),
-                end_time: now,
+                start_time: params.start_time,
+                end_time: params.end_time,
             };
         }
 
-        // 3. Stream data
-        let Some(handle) = source.into_stream_handle() else {
+        // 3. Stream messages.
+        let Some(mut handle) = source.into_stream_handle() else {
             return Ok(());
         };
 
-        // Log some demo data - all sync!
+        const MAX_BUFFER_SIZE: usize = 1024 * 1024; // 1MiB
         println!("Streaming data for flight {}", params.flight_id);
         for i in 0..10 {
             channel.log(&DemoMessage {
                 msg: format!("Data for flight {}", params.flight_id),
                 count: i,
             });
+
+            if handle.buffer_size() >= MAX_BUFFER_SIZE {
+                handle.flush()?;
+            }
         }
 
-        // Finish the stream - sync!
-        handle.finish().expect("finish stream");
-
+        // Close the handle to finish the MCAP.
+        handle.close()?;
         Ok(())
     }
 

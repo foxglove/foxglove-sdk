@@ -28,9 +28,10 @@
 //! mcap info data.mcap
 //! ```
 
-use std::{convert::Infallible, net::SocketAddr};
+use std::net::SocketAddr;
 
-use chrono::{Duration, Utc};
+use chrono::{DateTime, Utc};
+use foxglove::FoxgloveError;
 use serde::Deserialize;
 
 use foxglove_remote_data_loader_upstream::{
@@ -45,11 +46,13 @@ struct ExampleUpstream;
 #[serde(rename_all = "camelCase")]
 struct FlightParams {
     flight_id: String,
+    start_time: DateTime<Utc>,
+    end_time: DateTime<Utc>,
 }
 
 impl UpstreamServer for ExampleUpstream {
     type QueryParams = FlightParams;
-    type Error = Infallible;
+    type Error = FoxgloveError;
 
     async fn auth(
         &self,
@@ -64,7 +67,7 @@ impl UpstreamServer for ExampleUpstream {
         &self,
         params: FlightParams,
         mut source: SourceBuilder<'_>,
-    ) -> Result<(), Infallible> {
+    ) -> Result<(), FoxgloveError> {
         // Define our message type
         #[derive(foxglove::Encode)]
         struct DemoMessage {
@@ -72,37 +75,40 @@ impl UpstreamServer for ExampleUpstream {
             count: u32,
         }
 
-        // 1. Declare channels (must be done before manifest/stream)
+        // 1. Declare channels.
         let channel = source.channel::<DemoMessage>("/demo");
 
-        // 2. Set manifest metadata (only runs for manifest requests)
+        // 2. Set manifest metadata if this is a manifest request.
         if let Some(opts) = source.manifest() {
-            let now = Utc::now();
             *opts = ManifestOpts {
                 id: generate_source_id("flight-data", 1, &params.flight_id),
                 name: format!("Flight {}", params.flight_id),
-                start_time: now - Duration::hours(1),
-                end_time: now,
+                start_time: params.start_time,
+                end_time: params.end_time,
             };
         }
 
-        // 3. Stream data (only runs for data requests)
-        let Some(handle) = source.into_stream_handle() else {
-            // Manifest request - we're done
+        // 3. Stream messages if this is a data request.
+        let Some(mut handle) = source.into_stream_handle() else {
             return Ok(());
         };
 
-        // Log some demo data
         tracing::info!(flight_id = %params.flight_id, "streaming data");
+
+        const MAX_BUFFER_SIZE: usize = 1024 * 1024; // 1MiB
         for i in 0..10 {
             channel.log(&DemoMessage {
                 msg: format!("Data for flight {}", params.flight_id),
                 count: i,
             });
+
+            if handle.buffer_size() >= MAX_BUFFER_SIZE {
+                handle.flush().await?;
+            }
         }
 
-        // Finish the stream (flushes all data)
-        handle.finish().await.expect("finish stream");
+        // Close the handle to finish the MCAP.
+        handle.close().await?;
 
         Ok(())
     }

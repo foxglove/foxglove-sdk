@@ -29,16 +29,28 @@ pub struct StreamHandleBlocking {
 }
 
 impl StreamHandleBlocking {
-    /// Flush buffered MCAP data to the stream.
+    /// Flush the MCAP writer's buffer.
+    ///
+    /// This method will block until the buffer is flushed.
     pub fn flush(&mut self) -> Result<(), FoxgloveError> {
         Handle::current().block_on(self.inner.flush())
     }
 
-    /// Finish writing and close the MCAP stream.
+    /// Stop logging events and flush any buffered data.
     ///
-    /// This must be called to ensure all data is written.
-    pub fn finish(self) -> Result<(), FoxgloveError> {
+    /// Like [`Self::flush`], this method will block until the buffer is flushed.
+    ///
+    /// This method will return an error if the MCAP writer fails to finish.
+    pub fn close(self) -> Result<(), FoxgloveError> {
         Handle::current().block_on(self.inner.close())
+    }
+
+    /// Get the current size of the buffer.
+    ///
+    /// This can be used in conjunction with [`Self::flush`] to ensure the buffer does
+    /// not grow unbounded.
+    pub fn buffer_size(&mut self) -> usize {
+        self.inner.buffer_size()
     }
 }
 
