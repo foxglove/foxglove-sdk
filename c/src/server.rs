@@ -497,8 +497,9 @@ unsafe fn do_foxglove_server_start(
                 "session_id is null".to_string(),
             ));
         }
-        let session_id_str = unsafe { session_id.as_utf8_str() }
-            .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("session_id is invalid: {e}")))?;
+        let session_id_str = unsafe { session_id.as_utf8_str() }.map_err(|e| {
+            foxglove::FoxgloveError::Utf8Error(format!("session_id is invalid: {e}"))
+        })?;
         server = server.session_id(session_id_str.to_string());
     }
 
