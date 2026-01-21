@@ -362,6 +362,8 @@ pub use std::collections::BTreeMap;
 pub(crate) use time::nanoseconds_since_epoch;
 
 #[cfg(feature = "agent")]
+mod cloud;
+#[cfg(feature = "agent")]
 mod cloud_sink;
 #[cfg(feature = "live_visualization")]
 mod protocol;
@@ -447,6 +449,10 @@ pub enum FoxgloveError {
     /// An error related to configuration
     #[error("Configuration error: {0}")]
     ConfigurationError(String),
+    /// An error occurred while communicating with the cloud.
+    #[cfg(feature = "agent")]
+    #[error(transparent)]
+    CloudError(#[from] crate::cloud::CloudError),
 }
 
 impl From<convert::RangeError> for FoxgloveError {

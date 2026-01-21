@@ -1,9 +1,10 @@
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use crate::{
+    cloud::{CloudConnection, CloudConnectionOptions},
     get_runtime_handle,
     sink_channel_filter::{SinkChannelFilter, SinkChannelFilterFn},
-    websocket::{self, Server, ShutdownHandle},
+    websocket::{self, ShutdownHandle},
     ChannelDescriptor, Context, FoxgloveError, WebSocketServer, WebSocketServerHandle,
 };
 
@@ -29,50 +30,24 @@ pub trait CloudSinkListener: Send + Sync {
     fn on_client_unadvertise(&self, _client: Client, _channel: &ClientChannel) {}
 }
 
-struct CloudSinkListenerAdapter {
-    listener: Arc<dyn CloudSinkListener>,
-}
-
-impl websocket::ServerListener for CloudSinkListenerAdapter {
-    fn on_message_data(&self, client: Client, channel: &ClientChannel, payload: &[u8]) {
-        self.listener.on_message_data(client, channel, payload);
-    }
-
-    fn on_subscribe(&self, client: Client, channel: ChannelView) {
-        self.listener.on_subscribe(client, channel);
-    }
-
-    fn on_unsubscribe(&self, client: Client, channel: ChannelView) {
-        self.listener.on_unsubscribe(client, channel);
-    }
-
-    fn on_client_advertise(&self, client: Client, channel: &ClientChannel) {
-        self.listener.on_client_advertise(client, channel);
-    }
-
-    fn on_client_unadvertise(&self, client: Client, channel: &ClientChannel) {
-        self.listener.on_client_unadvertise(client, channel);
-    }
-}
-
 /// A handle to the CloudSink connection.
 ///
 /// This handle can safely be dropped and the connection will run forever.
 #[doc(hidden)]
 pub struct CloudSinkHandle {
-    server: WebSocketServerHandle,
+    connection: CloudConnection,
 }
 
 impl CloudSinkHandle {
-    fn new(server: WebSocketServerHandle) -> Self {
-        Self { server }
+    fn new(connection: CloudConnection) -> Self {
+        Self { connection }
     }
 
     /// Gracefully disconnect from the cloud, if connected. Otherwise returns None.
     ///
     /// Returns a handle that can be used to wait for the graceful shutdown to complete.
-    pub fn stop(self) -> Option<ShutdownHandle> {
-        Some(self.server.stop())
+    pub fn stop(self) -> () {
+        todo!("not implemented")
     }
 }
 
@@ -83,22 +58,14 @@ impl CloudSinkHandle {
 #[derive(Clone)]
 #[doc(hidden)]
 pub struct CloudSink {
-    session_id: String,
-    capabilities: Vec<websocket::Capability>,
-    listener: Option<Arc<dyn CloudSinkListener>>,
-    supported_encodings: Vec<String>,
+    options: CloudConnectionOptions,
     context: Arc<Context>,
-    channel_filter: Option<Arc<dyn SinkChannelFilter>>,
-    runtime: Option<tokio::runtime::Handle>,
 }
 
 impl std::fmt::Debug for CloudSink {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Agent")
-            .field("session_id", &self.session_id)
-            .field("capabilities", &self.capabilities)
-            .field("listener", &self.listener.as_ref().map(|_| "..."))
-            .field("supported_encodings", &self.supported_encodings)
+        f.debug_struct("CloudSink")
+            .field("options", &self.options)
             .field("context", &self.context)
             .finish()
     }
@@ -107,13 +74,8 @@ impl std::fmt::Debug for CloudSink {
 impl Default for CloudSink {
     fn default() -> Self {
         Self {
-            session_id: Server::generate_session_id(),
-            capabilities: Vec::new(),
-            listener: None,
-            supported_encodings: Vec::new(),
+            options: CloudConnectionOptions::default(),
             context: Context::get_default(),
-            channel_filter: None,
-            runtime: None,
         }
     }
 }
@@ -126,8 +88,8 @@ impl CloudSink {
 
     /// Configure an event listener to receive client message events.
     pub fn listener(mut self, listener: Arc<dyn CloudSinkListener>) -> Self {
-        self.capabilities = vec![websocket::Capability::ClientPublish];
-        self.listener = Some(listener);
+        self.options.capabilities = vec![websocket::Capability::ClientPublish];
+        self.options.listener = Some(listener);
         self
     }
 
@@ -138,7 +100,7 @@ impl CloudSink {
         mut self,
         encodings: impl IntoIterator<Item = impl Into<String>>,
     ) -> Self {
-        self.supported_encodings = encodings.into_iter().map(|e| e.into()).collect();
+        self.options.supported_encodings = Some(encodings.into_iter().map(|e| e.into()).collect());
         self
     }
 
@@ -149,7 +111,14 @@ impl CloudSink {
     ///
     /// By default, this is set to the number of milliseconds since the unix epoch.
     pub fn session_id(mut self, id: impl Into<String>) -> Self {
-        self.session_id = id.into();
+        self.options.session_id = id.into();
+        self
+    }
+
+    /// Sets metadata as reported via the ServerInfo message.
+    #[doc(hidden)]
+    pub fn server_info(mut self, info: HashMap<String, String>) -> Self {
+        self.options.server_info = Some(info);
         self
     }
 
@@ -162,11 +131,11 @@ impl CloudSink {
     /// Configure the tokio runtime for the server to use for async tasks.
     ///
     /// By default, the server will use either the current runtime (if started with
-    /// [`WebSocketServer::start`]), or spawn its own internal runtime (if started with
-    /// [`WebSocketServer::start_blocking`]).
+    /// [`CloudSink::start`]), or spawn its own internal runtime (if started with
+    /// [`CloudSink::start_blocking`]).
     #[doc(hidden)]
     pub fn tokio_runtime(mut self, handle: &tokio::runtime::Handle) -> Self {
-        self.runtime = Some(handle.clone());
+        self.options.runtime = Some(handle.clone());
         self
     }
 
@@ -175,7 +144,7 @@ impl CloudSink {
     /// The filter is a function that takes a channel and returns a boolean indicating whether the
     /// channel should be logged.
     pub fn channel_filter(mut self, filter: Arc<dyn SinkChannelFilter>) -> Self {
-        self.channel_filter = Some(filter);
+        self.options.channel_filter = Some(filter);
         self
     }
 
@@ -184,7 +153,7 @@ impl CloudSink {
         mut self,
         filter: impl Fn(&ChannelDescriptor) -> bool + Sync + Send + 'static,
     ) -> Self {
-        self.channel_filter = Some(Arc::new(SinkChannelFilterFn(filter)));
+        self.options.channel_filter = Some(Arc::new(SinkChannelFilterFn(filter)));
         self
     }
 
@@ -194,22 +163,18 @@ impl CloudSink {
     /// The caller can safely drop the handle and the connection will continue in the background.
     /// Use stop() on the returned handle to stop the connection.
     pub async fn start(self) -> Result<CloudSinkHandle, FoxgloveError> {
-        let mut server = WebSocketServer::new()
-            .session_id(self.session_id)
-            .capabilities(self.capabilities)
-            .supported_encodings(self.supported_encodings)
-            .context(&self.context)
-            .tokio_runtime(&self.runtime.unwrap_or_else(get_runtime_handle));
-        if let Some(listener) = self.listener {
-            server = server.listener(Arc::new(CloudSinkListenerAdapter { listener }));
-        }
-        let handle = server.start().await?;
-        Ok(CloudSinkHandle::new(handle))
+        let connection = CloudConnection::new(self.options);
+        
+        Ok(CloudSinkHandle::new(connection))
     }
 
     /// Blocking version of [`CloudSink::start`].
     pub fn start_blocking(mut self) -> Result<CloudSinkHandle, FoxgloveError> {
-        let runtime = self.runtime.get_or_insert_with(get_runtime_handle).clone();
+        let runtime = self
+            .options
+            .runtime
+            .get_or_insert_with(get_runtime_handle)
+            .clone();
         let handle = runtime.block_on(self.start())?;
         Ok(handle)
     }
