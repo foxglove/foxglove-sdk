@@ -332,6 +332,13 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
       }
     };
   }
+
+  std::optional<foxglove_string> session_id;
+  if (options.session_id) {
+    session_id = foxglove_string{options.session_id->data(), options.session_id->length()};
+    c_options.session_id = &*session_id;
+  }
+
   foxglove_websocket_server* server = nullptr;
   foxglove_error error = foxglove_server_start(&c_options, &server);
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || server == nullptr) {

@@ -176,6 +176,17 @@ pub struct FoxgloveServerOptions<'a> {
     /// If the server is sending data from a fixed time range, and has the RangedPlayback capability,
     /// the end time of the data range.
     pub playback_end_time: Option<&'a u64>,
+
+    /// Optional session ID for the server.
+    ///
+    /// This allows the client to understand if the connection is a re-connection or if it is
+    /// connecting to a new server instance. This can for example be a timestamp or a UUID.
+    ///
+    /// By default, the server will generate a session ID based on the current time.
+    ///
+    /// # Safety
+    /// - If provided, the `session_id` must be a valid pointer to a null-terminated UTF-8 string.
+    pub session_id: Option<&'a FoxgloveString>,
 }
 
 #[repr(C)]
@@ -478,6 +489,18 @@ unsafe fn do_foxglove_server_start(
         (options.playback_start_time, options.playback_end_time)
     {
         server = server.playback_time_range(playback_start_time, playback_end_time);
+    }
+
+    if let Some(session_id) = options.session_id {
+        if session_id.data.is_null() {
+            return Err(foxglove::FoxgloveError::ValueError(
+                "session_id is null".to_string(),
+            ));
+        }
+        let session_id_str = unsafe { session_id.as_utf8_str() }.map_err(|e| {
+            foxglove::FoxgloveError::Utf8Error(format!("session_id is invalid: {e}"))
+        })?;
+        server = server.session_id(session_id_str.to_string());
     }
 
     let server = server.start_blocking()?;
