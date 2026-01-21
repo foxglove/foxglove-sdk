@@ -21,7 +21,7 @@ impl Participant {
         Self { identity, writer }
     }
 
-    async fn send(&self, bytes: &[u8]) -> Result<(), CloudError> {
+    pub(crate) async fn send(&self, bytes: &[u8]) -> Result<(), CloudError> {
         self.writer.write(bytes).await
     }
 }

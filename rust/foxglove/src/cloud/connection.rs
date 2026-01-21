@@ -1,24 +1,42 @@
 use std::{
     collections::{HashMap, HashSet},
     sync::Arc,
+    time::Duration,
 };
 
 use arc_swap::ArcSwapOption;
 use bimap::BiHashMap;
-use livekit::{id::ParticipantIdentity, Room, RoomEvent, RoomOptions};
+use bytes::Bytes;
+use livekit::{id::ParticipantIdentity, Room, RoomEvent, RoomOptions, StreamByteOptions};
 use parking_lot::RwLock;
+use smallvec::SmallVec;
 use tokio::{runtime::Handle, sync::mpsc::UnboundedReceiver};
+use tokio_util::sync::CancellationToken;
+use tracing::{debug, error, info, warn};
 
 use crate::{
     cloud::{
         participant::{Participant, ParticipantWriter},
         CloudError,
     },
+    library_version::get_library_version,
     websocket::{self, Server},
+    ws_protocol::{server::ServerInfo, JsonMessage},
     CloudSinkListener, SinkChannelFilter,
 };
 
 type Result<T> = std::result::Result<T, CloudError>;
+
+const WS_PROTOCOL_TOPIC: &str = "ws-protocol";
+const MESSAGE_FRAME_SIZE: usize = 5;
+const AUTH_RETRY_PERIOD: Duration = Duration::from_secs(30);
+
+#[derive(Clone, Copy, Debug)]
+#[repr(u8)]
+enum OpCode {
+    Text = 1,
+    Binary = 2,
+}
 
 // TODO placeholder until auth is implemented, we'll import this from there instead
 /// Credentials to access the remote visualization server.
@@ -47,6 +65,7 @@ pub(crate) struct CloudConnectionOptions {
     pub runtime: Option<Handle>,
     pub channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     pub server_info: Option<HashMap<String, String>>,
+    pub cancellation_token: Option<CancellationToken>,
 }
 
 impl Default for CloudConnectionOptions {
@@ -59,6 +78,7 @@ impl Default for CloudConnectionOptions {
             runtime: None,
             channel_filter: None,
             server_info: None,
+            cancellation_token: None,
         }
     }
 }
@@ -73,19 +93,19 @@ impl std::fmt::Debug for CloudConnectionOptions {
             .field("has_runtime", &self.runtime.is_some())
             .field("has_channel_filter", &self.channel_filter.is_some())
             .field("server_info", &self.server_info)
+            .field("has_cancellation_token", &self.cancellation_token.is_some())
             .finish()
     }
 }
 
 struct CloudSession {
-    credentials: RtcCredentials,
     room: Room,
     room_events: UnboundedReceiver<RoomEvent>,
+    participants: RwLock<HashMap<ParticipantIdentity, Arc<Participant>>>,
 }
 
 pub(crate) struct CloudConnection {
     options: CloudConnectionOptions,
-    participants: RwLock<HashMap<ParticipantIdentity, Arc<Participant>>>,
     session: ArcSwapOption<CloudSession>,
 }
 
@@ -93,7 +113,6 @@ impl CloudConnection {
     pub fn new(options: CloudConnectionOptions) -> Self {
         Self {
             options,
-            participants: RwLock::new(HashMap::new()),
             session: ArcSwapOption::new(None),
         }
     }
@@ -105,11 +124,7 @@ impl CloudConnection {
         let session =
             match Room::connect(&credentials.url, &credentials.token, RoomOptions::default()).await
             {
-                Ok((room, room_events)) => Arc::new(CloudSession {
-                    credentials,
-                    room,
-                    room_events,
-                }),
+                Ok((room, room_events)) => Arc::new(CloudSession::new(room, room_events)),
                 Err(e) => {
                     return Err(e.into());
                 }
@@ -117,5 +132,263 @@ impl CloudConnection {
         self.session.store(Some(session));
 
         Ok(())
+    }
+
+    /// Returns the cancellation token for the [`CloudConnection`]`.
+    fn cancellation_token(&self) -> &CancellationToken {
+        &self.options.cancellation_token.as_ref().unwrap()
+    }
+
+    /// Run the server loop until cancelled.
+    ///
+    /// If disconnected from the room, reset all state and attempt to restart the run loop.
+    pub async fn run_until_cancelled(self: Arc<Self>) {
+        while !self.cancellation_token().is_cancelled() {
+            self.run().await;
+        }
+    }
+
+    /// Connect to the room, and handle all events until cancelled or disconnected from the room.
+    async fn run(&self) {
+        let Ok(session) = self.connect_session_until_ok().await else {
+            // Cancelled/shutting down
+            debug_assert!(self.cancellation_token().is_cancelled());
+            return;
+        };
+
+        let attributes = session.room.local_participant().attributes();
+        let identity = session.room.local_participant().identity();
+        info!(
+            "local participant {:?} attributes: {:?}",
+            identity, attributes
+        );
+
+        info!("running remote visualization server");
+        tokio::select! {
+            () = self.cancellation_token().cancelled() => (),
+            _ = self.listen_for_room_events(session.clone()) => {}
+        }
+
+        info!("disconnecting from room");
+        // Close the room (disconnect) on shutdown.
+        // If we don't do that, there's a 15s delay before the agent is removed from the participants
+        if let Err(e) = session.room.close().await {
+            error!("failed to close room: {e:?}");
+        }
+    }
+
+    /// Connect to the room, retrying indefinitely.
+    ///
+    /// Only returns an error if the connection has been permanently stopped/cancelled (shutting down).
+    ///
+    /// The retry interval is fairly long.
+    /// Note that livekit internally includes a few quick retries for each connect call as well.
+    async fn connect_session_until_ok(&self) -> Result<Arc<CloudSession>> {
+        let mut interval = tokio::time::interval(AUTH_RETRY_PERIOD);
+        loop {
+            interval.tick().await;
+
+            match self.connect_session().await {
+                Ok(_) => {
+                    return Ok(self
+                        .session
+                        .load()
+                        .as_ref()
+                        .expect("session not connected")
+                        .clone());
+                }
+                Err(CloudError::ConnectionStopped) => {
+                    return Err(CloudError::ConnectionStopped);
+                }
+                Err(CloudError::ConnectionError(e)) => {
+                    error!("{e:?}");
+
+                    // We can't inspect the inner types of Engine errors; this may be caused by
+                    // general connectivity issues, or be auth-related. Attempt to refresh the
+                    // credentials in case they've expired.
+                    // TODO refresh credentials
+                }
+                Err(e) => {
+                    error!(
+                        "failed to establish remote visualization connection: {e:?}, retrying in {AUTH_RETRY_PERIOD:?}"
+                    );
+                }
+            }
+        }
+    }
+
+    async fn listen_for_room_events(&self, session: Arc<CloudSession>) {
+        while let Some(event) = session.room_events.recv().await {
+            debug!("room event: {:?}", event);
+            match event {
+                RoomEvent::ParticipantConnected(participant) => {
+                    info!("entered the room: {:?}", participant.identity());
+                    let participant_id = match session.add_participant(participant.identity()).await
+                    {
+                        Ok(id) => id,
+                        Err(e) => {
+                            error!("failed to add participant: {e:?}");
+                            return;
+                        }
+                    };
+
+                    let server_info = self.create_server_info();
+                    session
+                        .send_info_and_advertisements(participant_id, server_info)
+                        .await;
+                }
+                RoomEvent::ParticipantDisconnected(participant) => {
+                    let mut participants = session.participants.write();
+                    let participant_id = participant.identity();
+                    if let Some(_) = participants.remove(&participant_id) {
+                        info!("removed participant {participant_id:?}");
+                    }
+                }
+                RoomEvent::DataReceived {
+                    payload: _,
+                    topic,
+                    kind: _,
+                    participant: _,
+                } => {
+                    info!("data received: {:?}", topic);
+                }
+                RoomEvent::ByteStreamOpened {
+                    reader,
+                    topic: _,
+                    participant_identity,
+                } => {
+                    // if let Some(reader) = reader.take() {
+                    //     let session2 = session.clone();
+                    //     tokio::spawn(async move {
+                    //         session2
+                    //             .handle_byte_stream_from_client(participant_identity, reader)
+                    //             .await;
+                    //     });
+                    // }
+                }
+                RoomEvent::Disconnected { reason } => {
+                    info!("disconnected: {:?}", reason.as_str_name());
+                }
+                _ => {}
+            }
+        }
+        warn!("stopped listening for room events");
+    }
+
+    /// Create and serialize ServerInfo message based on the CloudConnectionOptions.
+    ///
+    /// The metadata and supported_encodings are important for the ClientPublish capability,
+    /// as some app components will use this information to determine publish formats (ROS1 vs. JSON).
+    /// For example, a ros-foxglove-bridge source may advertise the "ros1" supported encoding
+    /// and "ROS_DISTRO": "melodic" metadata.
+    ///
+    /// We always add our own fg-library metadata.
+    pub fn create_server_info(&self) -> ServerInfo {
+        let mut metadata = self.options.server_info.clone().unwrap_or_default();
+        let supported_encodings = self.options.supported_encodings.clone();
+        metadata.insert("fg-library".into(), get_library_version());
+
+        let mut info = ServerInfo::new("agent")
+            .with_session_id(self.options.session_id.clone())
+            .with_capabilities(
+                self.options
+                    .capabilities
+                    .iter()
+                    .map(|c| c.as_protocol_capabilities())
+                    .flatten()
+                    .cloned(),
+            )
+            .with_metadata(metadata);
+
+        if let Some(supported_encodings) = supported_encodings {
+            info = info.with_supported_encodings(supported_encodings);
+        }
+
+        info
+    }
+}
+
+impl CloudSession {
+    fn new(room: Room, room_events: UnboundedReceiver<RoomEvent>) -> Self {
+        Self {
+            room,
+            room_events,
+            participants: RwLock::new(HashMap::new()),
+        }
+    }
+
+    /// Add a participant to the server, if it hasn't already been added.
+    /// In either case, return the new or existing participant.
+    async fn add_participant(
+        &self,
+        participant_id: ParticipantIdentity,
+    ) -> Result<Arc<Participant>> {
+        // First, check if we already have this participant by identity
+        {
+            if let Some(existing_participant) = self.participants.read().get(&participant_id) {
+                return Ok(existing_participant.clone());
+            }
+        }
+
+        // Since 0.7.18 it seems like we don't need this anymore
+        // We used to need the sleep here or the participant wouldn't see the stream.
+        // tokio::time::sleep(Duration::from_secs(1)).await;
+
+        let stream = match self
+            .room
+            .local_participant()
+            .stream_bytes(StreamByteOptions {
+                topic: WS_PROTOCOL_TOPIC.to_string(),
+                destination_identities: vec![participant_id.clone()],
+                ..StreamByteOptions::default()
+            })
+            .await
+        {
+            Ok(stream) => stream,
+            Err(e) => {
+                error!("failed to create stream for participant {participant_id}: {e:?}");
+                return Err(e.into());
+            }
+        };
+
+        let participant = Arc::new(Participant::new(
+            participant_id.clone(),
+            ParticipantWriter::Livekit(stream),
+        ));
+
+        self.participants
+            .write()
+            .insert(participant_id, participant.clone());
+        Ok(participant)
+    }
+
+    async fn send_info_and_advertisements(
+        &self,
+        participant: Arc<Participant>,
+        server_info: ServerInfo,
+    ) {
+        info!("sending server info and advertisements to participant {participant:?}");
+        self.send_to_participant(participant, server_info.to_string().into(), OpCode::Text)
+            .await;
+        // TODO send advertisements
+        //self.send_advertisements(participant_id).await;
+    }
+
+    // Send a message to one participant identified by the id
+    async fn send_to_participant(
+        &self,
+        participant: Arc<Participant>,
+        bytes: Bytes,
+        op_code: OpCode,
+    ) {
+        // Add the message framing, 1 byte op code + 4 byte little-endian length
+        let mut buf = SmallVec::<[u8; 4 * 1024]>::with_capacity(bytes.len() + 5);
+        buf.push(op_code as u8);
+        buf.extend_from_slice(&(bytes.len() as u32).to_le_bytes());
+        buf.extend_from_slice(&bytes);
+
+        if let Err(e) = participant.send(&buf).await {
+            error!("failed to send to participant {participant:?}: {e:?}");
+        }
     }
 }
