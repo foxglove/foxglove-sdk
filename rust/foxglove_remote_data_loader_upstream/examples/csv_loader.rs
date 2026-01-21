@@ -83,7 +83,11 @@ impl UpstreamServer for CsvUpstream {
     type QueryParams = CsvParams;
     type Error = BoxError;
 
-    async fn auth(&self, _bearer_token: Option<&str>, _params: &CsvParams) -> Result<(), AuthError> {
+    async fn auth(
+        &self,
+        _bearer_token: Option<&str>,
+        _params: &CsvParams,
+    ) -> Result<(), AuthError> {
         // No authentication required for this demo
         Ok(())
     }
@@ -140,7 +144,8 @@ async fn stream_csv(
 
     for (row_index, record) in reader.records().enumerate() {
         let record = record?;
-        let timestamp = parse_timestamp_from_record(&record, timestamp_index, params.timestamp_format)?;
+        let timestamp =
+            parse_timestamp_from_record(&record, timestamp_index, params.timestamp_format)?;
         let values = headers
             .iter()
             .enumerate()
@@ -176,7 +181,8 @@ fn scan_time_range(params: &CsvParams) -> Result<(DateTime<Utc>, DateTime<Utc>),
 
     for record in reader.records() {
         let record = record?;
-        let timestamp = parse_timestamp_from_record(&record, timestamp_index, params.timestamp_format)?;
+        let timestamp =
+            parse_timestamp_from_record(&record, timestamp_index, params.timestamp_format)?;
         start_time = Some(match start_time {
             Some(current) if timestamp < current => timestamp,
             Some(current) => current,
@@ -209,12 +215,15 @@ fn read_headers(reader: &mut csv::Reader<std::fs::File>) -> Result<Vec<String>, 
 }
 
 fn find_timestamp_column(headers: &[String], column: &str) -> Result<usize, BoxError> {
-    headers.iter().position(|header| header == column).ok_or_else(|| {
-        invalid_input(format!(
-            "timestamp column '{column}' not found (headers: {})",
-            headers.join(", ")
-        ))
-    })
+    headers
+        .iter()
+        .position(|header| header == column)
+        .ok_or_else(|| {
+            invalid_input(format!(
+                "timestamp column '{column}' not found (headers: {})",
+                headers.join(", ")
+            ))
+        })
 }
 
 fn parse_timestamp_from_record(
@@ -239,16 +248,17 @@ fn parse_timestamp(value: &str, format: TimestampFormat) -> Result<DateTime<Utc>
 }
 
 fn parse_unix_timestamp(value: &str, scale: i128) -> Result<DateTime<Utc>, BoxError> {
-    let raw: i128 = value.parse().map_err(|error| {
-        invalid_input(format!("invalid unix timestamp '{value}': {error}"))
-    })?;
+    let raw: i128 = value
+        .parse()
+        .map_err(|error| invalid_input(format!("invalid unix timestamp '{value}': {error}")))?;
     let nanos = raw
         .checked_mul(scale)
         .ok_or_else(|| invalid_input("timestamp out of range"))?;
     let secs = nanos.div_euclid(1_000_000_000);
     let sub_nanos = nanos.rem_euclid(1_000_000_000);
     let secs = i64::try_from(secs).map_err(|_| invalid_input("timestamp out of range"))?;
-    let sub_nanos = u32::try_from(sub_nanos).map_err(|_| invalid_input("timestamp out of range"))?;
+    let sub_nanos =
+        u32::try_from(sub_nanos).map_err(|_| invalid_input("timestamp out of range"))?;
     Utc.timestamp_opt(secs, sub_nanos)
         .single()
         .ok_or_else(|| invalid_input("timestamp out of range"))
