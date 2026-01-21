@@ -38,7 +38,19 @@ use foxglove_remote_data_loader_upstream::{
     UpstreamServer, Url,
 };
 
-type CsvError = anyhow::Error;
+#[derive(Debug, thiserror::Error)]
+enum CsvError {
+    #[error(transparent)]
+    Csv(#[from] csv::Error),
+    #[error(transparent)]
+    Io(#[from] std::io::Error),
+    #[error(transparent)]
+    Chrono(#[from] chrono::ParseError),
+    #[error(transparent)]
+    Foxglove(#[from] foxglove::FoxgloveError),
+    #[error("{0}")]
+    InvalidInput(String),
+}
 
 const MAX_BUFFER_SIZE: usize = 1024 * 1024; // 1MiB
 
@@ -287,5 +299,5 @@ fn default_timestamp_column() -> String {
 }
 
 fn invalid_input(message: impl Into<String>) -> CsvError {
-    std::io::Error::new(std::io::ErrorKind::InvalidInput, message.into()).into()
+    CsvError::InvalidInput(message.into())
 }

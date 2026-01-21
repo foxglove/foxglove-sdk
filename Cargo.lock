@@ -1240,7 +1240,6 @@ dependencies = [
 name = "foxglove_remote_data_loader_upstream"
 version = "0.16.4"
 dependencies = [
- "anyhow",
  "axum",
  "blake3",
  "chrono",
