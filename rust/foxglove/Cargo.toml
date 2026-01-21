@@ -11,7 +11,11 @@ license.workspace = true
 default = ["derive", "live_visualization", "lz4", "zstd"]
 chrono = ["dep:chrono"]
 derive = ["dep:foxglove_derive"]
-agent = ["live_visualization"]
+agent = [
+  "live_visualization",
+  "dep:reqwest",
+  "dep:percent-encoding",
+]
 live_visualization = [
   "dep:base64",
   "dep:flume",
@@ -64,6 +68,7 @@ futures = { version = "0.3.31", optional = true }
 futures-util = { version = "0.3.31", features = ["sink", "std"], optional = true }
 mcap.workspace = true
 parking_lot = "0.12.4"
+percent-encoding = { version = "2.3", optional = true }
 prost-types.workspace = true
 prost.workspace = true
 schemars = { version = "1.0.4", optional = true }
@@ -82,6 +87,7 @@ tokio = { workspace = true, optional = true }
 tracing.workspace = true
 urlencoding = "2.1.3"
 rcgen = { version = "0.14.3", features = ["crypto", "pem", "x509-parser"], optional = true }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"], optional = true }
 
 # img2yuv dependencies
 image = { version = "0.25.9", default-features = false, optional = true }

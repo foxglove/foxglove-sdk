@@ -365,6 +365,8 @@ pub use std::collections::BTreeMap;
 pub(crate) use time::nanoseconds_since_epoch;
 
 #[cfg(feature = "agent")]
+mod api_client;
+#[cfg(feature = "agent")]
 mod cloud_sink;
 #[cfg(feature = "live_visualization")]
 mod protocol;
