@@ -5,15 +5,38 @@ use std::{
 
 use arc_swap::ArcSwapOption;
 use bimap::BiHashMap;
-use livekit::{id::ParticipantIdentity, Room};
+use livekit::{id::ParticipantIdentity, Room, RoomEvent, RoomOptions};
 use parking_lot::RwLock;
-use tokio::runtime::Handle;
+use tokio::{runtime::Handle, sync::mpsc::UnboundedReceiver};
 
 use crate::{
-    cloud::participant::{Participant, ParticipantWriter},
+    cloud::{
+        participant::{Participant, ParticipantWriter},
+        CloudError,
+    },
     websocket::{self, Server},
     CloudSinkListener, SinkChannelFilter,
 };
+
+type Result<T> = std::result::Result<T, CloudError>;
+
+// TODO placeholder until auth is implemented, we'll import this from there instead
+/// Credentials to access the remote visualization server.
+pub struct RtcCredentials {
+    /// URL of the RTC server where these credentials are valid.
+    pub url: String,
+    /// Expiring access token (JWT)
+    pub token: String,
+}
+
+impl RtcCredentials {
+    pub fn new() -> Self {
+        Self {
+            url: std::env::var("LIVEKIT_HOST").expect("LIVEKIT_HOST must be set"),
+            token: std::env::var("LIVEKIT_TOKEN").expect("LIVEKIT_TOKEN must be set"),
+        }
+    }
+}
 
 #[derive(Clone)]
 pub(crate) struct CloudConnectionOptions {
@@ -54,10 +77,16 @@ impl std::fmt::Debug for CloudConnectionOptions {
     }
 }
 
+struct CloudSession {
+    credentials: RtcCredentials,
+    room: Room,
+    room_events: UnboundedReceiver<RoomEvent>,
+}
+
 pub(crate) struct CloudConnection {
     options: CloudConnectionOptions,
     participants: RwLock<HashMap<ParticipantIdentity, Arc<Participant>>>,
-    room: ArcSwapOption<Room>,
+    session: ArcSwapOption<CloudSession>,
 }
 
 impl CloudConnection {
@@ -65,7 +94,28 @@ impl CloudConnection {
         Self {
             options,
             participants: RwLock::new(HashMap::new()),
-            room: ArcSwapOption::new(None),
+            session: ArcSwapOption::new(None),
         }
+    }
+
+    pub(crate) async fn connect_session(&self) -> Result<()> {
+        // TODO get credentials from API
+        let credentials = RtcCredentials::new();
+
+        let session =
+            match Room::connect(&credentials.url, &credentials.token, RoomOptions::default()).await
+            {
+                Ok((room, room_events)) => Arc::new(CloudSession {
+                    credentials,
+                    room,
+                    room_events,
+                }),
+                Err(e) => {
+                    return Err(e.into());
+                }
+            };
+        self.session.store(Some(session));
+
+        Ok(())
     }
 }

@@ -9,7 +9,28 @@ pub(crate) use connection::{CloudConnection, CloudConnectionOptions};
 #[derive(Error, Debug)]
 #[non_exhaustive]
 pub enum CloudError {
+    // Note: don't expose livekit error types here, we don't want them to become part of the public API
     /// An error occurred while writing to the stream.
+    #[error("Stream error: {0:?}")]
+    StreamError(String),
+    #[error("Connection error: {0}")]
+    ConnectionError(String),
+    /// An I/O error.
     #[error(transparent)]
-    StreamError(#[from] livekit::StreamError),
+    IoError(#[from] std::io::Error),
+}
+
+impl From<livekit::StreamError> for CloudError {
+    fn from(error: livekit::StreamError) -> Self {
+        match error {
+            livekit::StreamError::Io(e) => CloudError::IoError(e),
+            _ => CloudError::StreamError(error.to_string()),
+        }
+    }
+}
+
+impl From<livekit::RoomError> for CloudError {
+    fn from(error: livekit::RoomError) -> Self {
+        CloudError::ConnectionError(error.to_string())
+    }
 }
