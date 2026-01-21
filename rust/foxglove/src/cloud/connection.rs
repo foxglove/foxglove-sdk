@@ -172,7 +172,7 @@ impl CloudConnection {
 
         info!("disconnecting from room");
         // Close the room (disconnect) on shutdown.
-        // If we don't do that, there's a 15s delay before the agent is removed from the participants
+        // If we don't do that, there's a 15s delay before this device is removed from the participants
         if let Err(e) = session.room.close().await {
             error!("failed to close room: {e:?}");
         }
@@ -290,7 +290,7 @@ impl CloudConnection {
         let supported_encodings = self.options.supported_encodings.clone();
         metadata.insert("fg-library".into(), get_library_version());
 
-        let mut info = ServerInfo::new("agent")
+        let mut info = ServerInfo::new("cloud")
             .with_session_id(self.options.session_id.clone())
             .with_capabilities(
                 self.options
@@ -307,6 +307,10 @@ impl CloudConnection {
         }
 
         info
+    }
+
+    pub(crate) fn shutdown(&self) {
+        self.cancellation_token().cancel();
     }
 }
 

@@ -89,7 +89,7 @@ pub fn start_cloud_sink(
     }
 
     let handle = py
-        .allow_threads(|| cloud.start_blocking())
+        .allow_threads(|| cloud.start())
         .map_err(PyFoxgloveError::from)?;
 
     Ok(PyCloudSink(Some(handle)))
@@ -103,14 +103,12 @@ pub struct PyCloudSink(pub Option<CloudSinkHandle>);
 
 #[pymethods]
 impl PyCloudSink {
-    /// Gracefully disconnect from the agent.
+    /// Gracefully disconnect from the cloud.
     ///
-    /// If the agent has already been disconnected, this has no effect.
-    pub fn stop(&mut self, py: Python<'_>) {
-        if let Some(agent) = self.0.take() {
-            if let Some(shutdown) = agent.stop() {
-                py.allow_threads(|| shutdown.wait_blocking());
-            }
+    /// If the cloud has already been disconnected, this has no effect.
+    pub fn stop(&mut self, _py: Python<'_>) {
+        if let Some(cloud) = self.0.take() {
+            cloud.stop();
         }
     }
 }

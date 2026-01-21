@@ -43,11 +43,11 @@ impl CloudSinkHandle {
         Self { connection }
     }
 
-    /// Gracefully disconnect from the cloud, if connected. Otherwise returns None.
-    ///
-    /// Returns a handle that can be used to wait for the graceful shutdown to complete.
-    pub fn stop(self) -> () {
-        todo!("not implemented")
+    /// Gracefully disconnect from the cloud, if connected.
+    pub fn stop(self) {
+        // Do we need to do something like the WebSocketServerHandle and return a ShutdownHandle
+        // that lets us block until the CloudConnection is completely shutdown?
+        self.connection.shutdown();
     }
 }
 
@@ -198,21 +198,18 @@ mod tests {
 
     #[traced_test]
     #[tokio::test]
-    async fn test_agent_with_client_publish() {
+    async fn test_cloud_with_client_publish() {
         let ctx = Context::new();
         let cloud_sink = CloudSink::new()
             .listener(Arc::new(TestListener {}))
             .context(&ctx);
 
-        let handle = cloud_sink
-            .start()
-            .await
-            .expect("Failed to start cloud sink");
+        let handle = cloud_sink.start().expect("Failed to create cloud sink");
         let addr = "127.0.0.1:8765";
 
         let mut client = WebSocketClient::connect(addr)
             .await
-            .expect("Failed to connect to agent");
+            .expect("Failed to connect to cloud");
 
         // Expect to receive ServerInfo message
         let msg = client.recv().await.expect("Failed to receive message");

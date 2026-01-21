@@ -182,12 +182,12 @@ target_compile_options(example_server PUBLIC ${SANITIZER_COMPILE_OPTIONS} ${STRI
 target_link_options(example_server PUBLIC ${SANITIZER_LINK_OPTIONS})
 target_link_libraries(example_server foxglove_cpp_static)
 
-add_executable(example_agent examples/agent/src/main.cpp)
-set_property(TARGET example_agent PROPERTY CXX_STANDARD 17)
-set_property(TARGET example_agent PROPERTY CXX_STANDARD_REQUIRED True)
-target_compile_options(example_agent PUBLIC ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
-target_link_options(example_agent PUBLIC ${SANITIZER_LINK_OPTIONS})
-target_link_libraries(example_agent foxglove_cpp_static)
+add_executable(example_cloud examples/agent/src/main.cpp)
+set_property(TARGET example_cloud PROPERTY CXX_STANDARD 17)
+set_property(TARGET example_cloud PROPERTY CXX_STANDARD_REQUIRED True)
+target_compile_options(example_cloud PUBLIC ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
+target_link_options(example_cloud PUBLIC ${SANITIZER_LINK_OPTIONS})
+target_link_libraries(example_cloud foxglove_cpp_static)
 
 add_executable(example_services examples/ws-services/src/main.cpp)
 set_property(TARGET example_services PROPERTY CXX_STANDARD 17)

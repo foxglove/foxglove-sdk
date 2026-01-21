@@ -155,7 +155,7 @@ unsafe fn do_foxglove_cloud_sink_start(
         sink = sink.context(&context);
     }
 
-    let server = sink.start_blocking()?;
+    let server = sink.start()?;
     Ok(Box::into_raw(Box::new(FoxgloveCloudSink(Some(server)))))
 }
 
@@ -173,9 +173,7 @@ pub extern "C" fn foxglove_cloud_sink_stop(sink: Option<&mut FoxgloveCloudSink>)
         tracing::error!("foxglove_sink_stop called with closed sink");
         return FoxgloveError::SinkClosed;
     };
-    if let Some(waiter) = sink.stop() {
-        waiter.wait_blocking();
-    }
+    sink.stop();
     FoxgloveError::Ok
 }
 
