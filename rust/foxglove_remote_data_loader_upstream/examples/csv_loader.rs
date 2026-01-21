@@ -31,13 +31,14 @@
 use std::net::SocketAddr;
 
 use chrono::{DateTime, TimeZone, Utc};
-use foxglove::schemas::KeyValuePair;
 use serde::Deserialize;
 
 use foxglove_remote_data_loader_upstream::{
-    generate_source_id, serve, AuthError, BoxError, ManifestOpts, MaybeChannel, SourceBuilder,
-    StreamHandle, UpstreamServer, Url,
+    generate_source_id, serve, AuthError, ManifestOpts, MaybeChannel, SourceBuilder, StreamHandle,
+    UpstreamServer, Url,
 };
+
+type CsvError = Box<dyn std::error::Error + Send + Sync>;
 
 const MAX_BUFFER_SIZE: usize = 1024 * 1024; // 1MiB
 
@@ -74,14 +75,20 @@ impl Default for TimestampFormat {
 }
 
 #[derive(foxglove::Encode)]
+struct CsvKeyValue {
+    key: String,
+    value: String,
+}
+
+#[derive(foxglove::Encode)]
 struct CsvRow {
     row_index: u64,
-    values: Vec<KeyValuePair>,
+    values: Vec<CsvKeyValue>,
 }
 
 impl UpstreamServer for CsvUpstream {
     type QueryParams = CsvParams;
-    type Error = BoxError;
+    type Error = CsvError;
 
     async fn auth(
         &self,
@@ -96,7 +103,7 @@ impl UpstreamServer for CsvUpstream {
         &self,
         params: CsvParams,
         mut source: SourceBuilder<'_>,
-    ) -> Result<(), BoxError> {
+    ) -> Result<(), CsvError> {
         let topic = normalize_topic(params.topic.as_deref());
         let channel = source.channel::<CsvRow>(topic);
 
@@ -137,7 +144,7 @@ async fn stream_csv(
     params: &CsvParams,
     channel: &MaybeChannel<CsvRow>,
     handle: &mut StreamHandle,
-) -> Result<(), BoxError> {
+) -> Result<(), CsvError> {
     let mut reader = open_csv_reader(&params.csv_path)?;
     let headers = read_headers(&mut reader)?;
     let timestamp_index = find_timestamp_column(&headers, &params.timestamp_column)?;
@@ -149,7 +156,7 @@ async fn stream_csv(
         let values = headers
             .iter()
             .enumerate()
-            .map(|(index, name)| KeyValuePair {
+            .map(|(index, name)| CsvKeyValue {
                 key: name.clone(),
                 value: record.get(index).unwrap_or_default().to_string(),
             })
@@ -171,7 +178,7 @@ async fn stream_csv(
     Ok(())
 }
 
-fn scan_time_range(params: &CsvParams) -> Result<(DateTime<Utc>, DateTime<Utc>), BoxError> {
+fn scan_time_range(params: &CsvParams) -> Result<(DateTime<Utc>, DateTime<Utc>), CsvError> {
     let mut reader = open_csv_reader(&params.csv_path)?;
     let headers = read_headers(&mut reader)?;
     let timestamp_index = find_timestamp_column(&headers, &params.timestamp_column)?;
@@ -202,19 +209,19 @@ fn scan_time_range(params: &CsvParams) -> Result<(DateTime<Utc>, DateTime<Utc>),
     Ok((start_time, end_time))
 }
 
-fn open_csv_reader(path: &str) -> Result<csv::Reader<std::fs::File>, BoxError> {
+fn open_csv_reader(path: &str) -> Result<csv::Reader<std::fs::File>, CsvError> {
     let file = std::fs::File::open(path)?;
     Ok(csv::ReaderBuilder::new()
         .trim(csv::Trim::All)
         .from_reader(file))
 }
 
-fn read_headers(reader: &mut csv::Reader<std::fs::File>) -> Result<Vec<String>, BoxError> {
+fn read_headers(reader: &mut csv::Reader<std::fs::File>) -> Result<Vec<String>, CsvError> {
     let headers = reader.headers()?.clone();
     Ok(headers.iter().map(|header| header.to_string()).collect())
 }
 
-fn find_timestamp_column(headers: &[String], column: &str) -> Result<usize, BoxError> {
+fn find_timestamp_column(headers: &[String], column: &str) -> Result<usize, CsvError> {
     headers
         .iter()
         .position(|header| header == column)
@@ -230,14 +237,14 @@ fn parse_timestamp_from_record(
     record: &csv::StringRecord,
     index: usize,
     format: TimestampFormat,
-) -> Result<DateTime<Utc>, BoxError> {
+) -> Result<DateTime<Utc>, CsvError> {
     let value = record
         .get(index)
         .ok_or_else(|| invalid_input("timestamp column missing in row"))?;
     parse_timestamp(value, format)
 }
 
-fn parse_timestamp(value: &str, format: TimestampFormat) -> Result<DateTime<Utc>, BoxError> {
+fn parse_timestamp(value: &str, format: TimestampFormat) -> Result<DateTime<Utc>, CsvError> {
     match format {
         TimestampFormat::Rfc3339 => Ok(DateTime::parse_from_rfc3339(value)?.with_timezone(&Utc)),
         TimestampFormat::UnixSeconds => parse_unix_timestamp(value, 1_000_000_000),
@@ -247,7 +254,7 @@ fn parse_timestamp(value: &str, format: TimestampFormat) -> Result<DateTime<Utc>
     }
 }
 
-fn parse_unix_timestamp(value: &str, scale: i128) -> Result<DateTime<Utc>, BoxError> {
+fn parse_unix_timestamp(value: &str, scale: i128) -> Result<DateTime<Utc>, CsvError> {
     let raw: i128 = value
         .parse()
         .map_err(|error| invalid_input(format!("invalid unix timestamp '{value}': {error}")))?;
@@ -279,6 +286,6 @@ fn default_timestamp_column() -> String {
     "timestamp".to_string()
 }
 
-fn invalid_input(message: impl Into<String>) -> BoxError {
+fn invalid_input(message: impl Into<String>) -> CsvError {
     std::io::Error::new(std::io::ErrorKind::InvalidInput, message.into()).into()
 }
