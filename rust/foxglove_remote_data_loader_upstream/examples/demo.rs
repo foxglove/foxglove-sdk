@@ -8,7 +8,7 @@
 //! # Running the example
 //!
 //! ```sh
-//! cargo run --example demo -p foxglove_remote_data_loader_upstream
+//! cargo run --example demo
 //! ```
 //!
 //! # Testing the endpoints
@@ -97,10 +97,14 @@ impl UpstreamServer for ExampleUpstream {
 
         const MAX_BUFFER_SIZE: usize = 1024 * 1024; // 1MiB
         for i in 0..10 {
-            channel.log(&DemoMessage {
-                msg: format!("Data for flight {}", params.flight_id),
-                count: i,
-            });
+            let timestamp = params.start_time + chrono::Duration::milliseconds(i as i64 * 100);
+            channel.log_with_time(
+                &DemoMessage {
+                    msg: format!("Data for flight {}", params.flight_id),
+                    count: i,
+                },
+                timestamp.min(params.end_time),
+            );
 
             if handle.buffer_size() >= MAX_BUFFER_SIZE {
                 handle.flush().await?;

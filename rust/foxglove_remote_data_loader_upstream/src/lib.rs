@@ -181,21 +181,21 @@ pub fn generate_source_id(name: &str, revision: u64, params: &impl Hash) -> Stri
 pub struct MaybeChannel<T: Encode>(Option<Channel<T>>);
 
 impl<T: Encode> MaybeChannel<T> {
-    /// Logs a message to the channel.
+    /// Logs a message to the channel with the given timestamp.
     ///
     /// # Panics
     ///
     /// Panics if called in manifest mode.
-    pub fn log(&self, msg: &T) {
+    pub fn log_with_time(&self, msg: &T, timestamp: impl foxglove::ToUnixNanos) {
         self.0
             .as_ref()
-            .expect("called `MaybeChannel::log()` while in manifest mode")
-            .log(msg)
+            .expect("called `MaybeChannel::log_with_time()` while in manifest mode")
+            .log_with_time(msg, timestamp)
     }
 
     /// Unwraps the inner channel.
     ///
-    /// Use this for advanced operations like `log_with_time()` or `log_with_meta()`.
+    /// Use this for advanced operations like `log_with_meta_to_sink()`.
     ///
     /// # Panics
     ///
