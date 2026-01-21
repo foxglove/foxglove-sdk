@@ -1,4 +1,9 @@
-//! Example of how to use the upstream server SDK (blocking version).
+//! Example showing how to use the upstream server SDK (blocking version).
+//!
+//! This example demonstrates:
+//! - Implementing the [`UpstreamServerBlocking`] trait.
+//! - The flow: declare channels, set manifest opts, stream data.
+//! - Using [`generate_source_id`] to create unique IDs for caching.
 //!
 //! # Running the example
 //!
@@ -17,6 +22,11 @@
 //! ```sh
 //! curl "http://localhost:8080/v1/data?flightId=ABC123&startTime=2024-01-01T00:00:00Z&endTime=2024-01-02T00:00:00Z" --output data.mcap
 //! ```
+//!
+//! Verify the MCAP file (requires mcap CLI):
+//! ```sh
+//! mcap info data.mcap
+//! ```
 
 use std::net::SocketAddr;
 
@@ -29,7 +39,7 @@ use foxglove_remote_data_loader_upstream::{
     UpstreamServerBlocking, Url,
 };
 
-/// A simple upstream server using blocking I/O.
+/// A simple upstream server.
 struct ExampleUpstreamBlocking;
 
 /// Query parameters for both manifest and data endpoints.
@@ -65,7 +75,7 @@ impl UpstreamServerBlocking for ExampleUpstreamBlocking {
         // 1. Declare channels.
         let channel = source.channel::<DemoMessage>("/demo");
 
-        // 2. Set manifest metadata.
+        // 2. Set manifest metadata if this is a manifest request.
         if let Some(opts) = source.manifest() {
             *opts = ManifestOpts {
                 id: generate_source_id("flight-data", 1, &params),
@@ -75,7 +85,7 @@ impl UpstreamServerBlocking for ExampleUpstreamBlocking {
             };
         }
 
-        // 3. Stream messages.
+        // 3. Stream messages if this is a data request.
         let Some(mut handle) = source.into_stream_handle() else {
             return Ok(());
         };

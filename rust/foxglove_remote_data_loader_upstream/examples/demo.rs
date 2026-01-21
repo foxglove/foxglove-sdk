@@ -1,9 +1,9 @@
-//! Demo example showing how to use the upstream server SDK (async version).
+//! Example showing how to use the upstream server SDK (async version).
 //!
 //! This example demonstrates:
-//! - Implementing the [`UpstreamServer`] trait
-//! - The linear flow: declare channels → set manifest opts → stream data
-//! - Using [`generate_source_id`] for cache-safe IDs
+//! - Implementing the [`UpstreamServer`] trait.
+//! - The flow: declare channels, set manifest opts, stream data.
+//! - Using [`generate_source_id`] to create unique IDs for caching.
 //!
 //! # Running the example
 //!
@@ -38,7 +38,7 @@ use foxglove_remote_data_loader_upstream::{
     generate_source_id, serve, AuthError, ManifestOpts, SourceBuilder, UpstreamServer, Url,
 };
 
-/// A simple upstream server that serves both manifest and data endpoints.
+/// A simple upstream server.
 struct ExampleUpstream;
 
 /// Query parameters for both manifest and data endpoints.
@@ -68,7 +68,7 @@ impl UpstreamServer for ExampleUpstream {
         params: FlightParams,
         mut source: SourceBuilder<'_>,
     ) -> Result<(), FoxgloveError> {
-        // Define our message type
+        // Define our message type.
         #[derive(foxglove::Encode)]
         struct DemoMessage {
             msg: String,
