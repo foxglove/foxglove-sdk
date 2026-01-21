@@ -35,12 +35,11 @@ use foxglove::FoxgloveError;
 use serde::Deserialize;
 
 use foxglove_remote_data_loader_upstream::{
-    generate_source_id, serve_blocking, AuthError, ManifestOpts, SourceBuilderBlocking,
-    UpstreamServerBlocking, Url,
+    blocking, generate_source_id, AuthError, ManifestOpts, Url,
 };
 
 /// A simple upstream server.
-struct ExampleUpstreamBlocking;
+struct BlockingExampleUpstream;
 
 /// Query parameters for both manifest and data endpoints.
 #[derive(Deserialize, Hash)]
@@ -51,7 +50,7 @@ struct FlightParams {
     end_time: DateTime<Utc>,
 }
 
-impl UpstreamServerBlocking for ExampleUpstreamBlocking {
+impl blocking::UpstreamServer for BlockingExampleUpstream {
     type QueryParams = FlightParams;
     type Error = FoxgloveError;
 
@@ -63,7 +62,7 @@ impl UpstreamServerBlocking for ExampleUpstreamBlocking {
     fn build_source(
         &self,
         params: FlightParams,
-        mut source: SourceBuilderBlocking<'_>,
+        mut source: blocking::SourceBuilder<'_>,
     ) -> Result<(), FoxgloveError> {
         // Define our message type.
         #[derive(foxglove::Encode)]
@@ -122,5 +121,5 @@ fn main() -> std::io::Result<()> {
     tracing_subscriber::fmt::init();
     let bind_address: SocketAddr = "0.0.0.0:8080".parse().unwrap();
     tracing::info!(%bind_address, "starting server");
-    serve_blocking(ExampleUpstreamBlocking, bind_address)
+    blocking::serve(BlockingExampleUpstream, bind_address)
 }

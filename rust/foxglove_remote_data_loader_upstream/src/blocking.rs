@@ -21,9 +21,9 @@ use crate::{
 };
 use foxglove::{stream::McapStreamHandle, Encode, FoxgloveError};
 
-/// Handle for streaming MCAP data with [`UpstreamServerBlocking`].
+/// Handle for streaming MCAP data with [`UpstreamServer`].
 ///
-/// Returned by [`SourceBuilderBlocking::into_stream_handle`] when processing a data request.
+/// Returned by [`SourceBuilder::into_stream_handle`] when processing a data request.
 pub struct StreamHandleBlocking {
     inner: McapStreamHandle,
 }
@@ -54,12 +54,12 @@ impl StreamHandleBlocking {
     }
 }
 
-/// Builder for constructing a data source, passed to [`UpstreamServerBlocking::build_source`].
-pub struct SourceBuilderBlocking<'a> {
+/// Builder for constructing a data source, passed to [`UpstreamServer::build_source`].
+pub struct SourceBuilder<'a> {
     mode: BuilderMode<'a>,
 }
 
-impl<'a> SourceBuilderBlocking<'a> {
+impl<'a> SourceBuilder<'a> {
     /// Declare a channel for logging messages.
     ///
     /// In manifest mode, adds the channel to the manifest but returns an empty [`MaybeChannel`].
@@ -91,12 +91,12 @@ impl<'a> SourceBuilderBlocking<'a> {
 ///
 /// Implement this trait to serve manifest and data endpoints without writing `async` code.
 ///
-/// Use [`serve_blocking`] to start the server.
+/// Use [`serve`] to start the server.
 ///
 /// # Example
 ///
 /// ```no_run
-/// # use foxglove_remote_data_loader_upstream::{UpstreamServerBlocking, SourceBuilderBlocking, AuthError, ManifestOpts, Url, generate_source_id};
+/// # use foxglove_remote_data_loader_upstream::{blocking, AuthError, ManifestOpts, Url, generate_source_id};
 /// # use foxglove::FoxgloveError;
 /// # use chrono::{DateTime, Utc};
 /// # #[derive(serde::Deserialize, Hash)]
@@ -104,7 +104,7 @@ impl<'a> SourceBuilderBlocking<'a> {
 /// # #[derive(foxglove::Encode)]
 /// # struct MyMessage { value: i32 }
 /// # struct MyServer;
-/// impl UpstreamServerBlocking for MyServer {
+/// impl blocking::UpstreamServer for MyServer {
 ///     type QueryParams = MyParams;
 ///     type Error = FoxgloveError;
 ///
@@ -115,7 +115,7 @@ impl<'a> SourceBuilderBlocking<'a> {
 ///     fn build_source(
 ///         &self,
 ///         params: MyParams,
-///         mut source: SourceBuilderBlocking<'_>,
+///         mut source: blocking::SourceBuilder<'_>,
 ///     ) -> Result<(), FoxgloveError> {
 ///         let channel = source.channel::<MyMessage>("/topic");
 ///
@@ -142,11 +142,11 @@ impl<'a> SourceBuilderBlocking<'a> {
 ///     }
 /// }
 /// ```
-pub trait UpstreamServerBlocking: Send + Sync + 'static {
+pub trait UpstreamServer: Send + Sync + 'static {
     /// Query parameters extracted from the request URL.
     type QueryParams: DeserializeOwned + Send;
 
-    /// Error type returned from [`build_source`](UpstreamServerBlocking::build_source).
+    /// Error type returned from [`build_source`](UpstreamServer::build_source).
     type Error: StdError + Send + Sync;
 
     /// Authenticate and authorize the request.
@@ -161,20 +161,20 @@ pub trait UpstreamServerBlocking: Send + Sync + 'static {
     ///
     /// An implementation should follow these steps:
     ///
-    /// 1. Declare channels using [`SourceBuilderBlocking::channel`].
-    /// 2. Describe the data stream in the manifest using [`SourceBuilderBlocking::manifest`].
-    /// 3. Stream data using [`SourceBuilderBlocking::into_stream_handle`].
+    /// 1. Declare channels using [`SourceBuilder::channel`].
+    /// 2. Describe the data stream in the manifest using [`SourceBuilder::manifest`].
+    /// 3. Stream data using [`SourceBuilder::into_stream_handle`].
     fn build_source(
         &self,
         params: Self::QueryParams,
-        source: SourceBuilderBlocking<'_>,
+        source: SourceBuilder<'_>,
     ) -> Result<(), Self::Error>;
 
     /// Returns the base URL for constructing data endpoint URLs in the manifest.
     fn base_url(&self) -> Url;
 }
 
-async fn manifest_handler_blocking<P: UpstreamServerBlocking>(
+async fn manifest_handler<P: UpstreamServer>(
     State(provider): State<Arc<P>>,
     headers: HeaderMap,
     Query(params): Query<P::QueryParams>,
@@ -188,7 +188,7 @@ async fn manifest_handler_blocking<P: UpstreamServerBlocking>(
         }
 
         let mut manifest_builder = ManifestBuilder::new();
-        let source_builder = SourceBuilderBlocking {
+        let source_builder = SourceBuilder {
             mode: BuilderMode::Manifest {
                 builder: &mut manifest_builder,
             },
@@ -210,7 +210,7 @@ async fn manifest_handler_blocking<P: UpstreamServerBlocking>(
     }
 }
 
-async fn data_handler_blocking<P: UpstreamServerBlocking>(
+async fn data_handler<P: UpstreamServer>(
     State(provider): State<Arc<P>>,
     headers: HeaderMap,
     Query(params): Query<P::QueryParams>,
@@ -236,7 +236,7 @@ async fn data_handler_blocking<P: UpstreamServerBlocking>(
     let mcap_stream_task = tokio::task::spawn_blocking(move || {
         provider.build_source(
             params,
-            SourceBuilderBlocking {
+            SourceBuilder {
                 mode: BuilderMode::Stream { handle },
             },
         )
@@ -254,40 +254,37 @@ async fn data_handler_blocking<P: UpstreamServerBlocking>(
     Body::from_stream(combined).into_response()
 }
 
-/// Serve both manifest and data endpoints using [`UpstreamServerBlocking`].
+/// Serve both manifest and data endpoints using [`UpstreamServer`].
 ///
 /// Use this if you cannot or do not want to use `async` in your implementation.
 ///
 /// # Example
 ///
 /// ```no_run
-/// # use foxglove_remote_data_loader_upstream::{serve_blocking, UpstreamServerBlocking, SourceBuilderBlocking, AuthError, Url};
+/// # use foxglove_remote_data_loader_upstream::{blocking, AuthError, Url};
 /// # use foxglove::FoxgloveError;
 /// # use chrono::{DateTime, Utc};
 /// # #[derive(serde::Deserialize, Hash)]
 /// # struct MyParams { flight_id: String, start_time: DateTime<Utc>, end_time: DateTime<Utc> }
 /// # struct MyServer;
-/// # impl UpstreamServerBlocking for MyServer {
+/// # impl blocking::UpstreamServer for MyServer {
 /// #     type QueryParams = MyParams;
 /// #     type Error = FoxgloveError;
 /// #     fn auth(&self, _: Option<&str>, _: &MyParams) -> Result<(), AuthError> { Ok(()) }
-/// #     fn build_source(&self, _: MyParams, _: SourceBuilderBlocking<'_>) -> Result<(), FoxgloveError> { Ok(()) }
+/// #     fn build_source(&self, _: MyParams, _: blocking::SourceBuilder<'_>) -> Result<(), FoxgloveError> { Ok(()) }
 /// #     fn base_url(&self) -> Url { "http://localhost:8080".parse().unwrap() }
 /// # }
 /// fn main() {
-///     serve_blocking(MyServer, "127.0.0.1:8080".parse().unwrap()).unwrap();
+///     blocking::serve(MyServer, "127.0.0.1:8080".parse().unwrap()).unwrap();
 /// }
 /// ```
-pub fn serve_blocking(
-    provider: impl UpstreamServerBlocking,
-    bind_addr: SocketAddr,
-) -> std::io::Result<()> {
+pub fn serve(provider: impl UpstreamServer, bind_addr: SocketAddr) -> std::io::Result<()> {
     let runtime = tokio::runtime::Runtime::new()?;
     runtime.block_on(async move {
         let provider = Arc::new(provider);
         let app = Router::new()
-            .route(MANIFEST_ROUTE, get(manifest_handler_blocking))
-            .route(DATA_ROUTE, get(data_handler_blocking))
+            .route(MANIFEST_ROUTE, get(manifest_handler))
+            .route(DATA_ROUTE, get(data_handler))
             .with_state(provider);
         let listener = tokio::net::TcpListener::bind(bind_addr).await?;
         axum::serve(listener, app).await

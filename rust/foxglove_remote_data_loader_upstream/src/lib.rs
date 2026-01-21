@@ -41,9 +41,7 @@ mod serve_async;
 pub use serve_async::*;
 
 #[cfg(feature = "blocking")]
-mod serve_blocking;
-#[cfg(feature = "blocking")]
-pub use serve_blocking::*;
+pub mod blocking;
 
 use std::{hash::Hash, num::NonZeroU16};
 
