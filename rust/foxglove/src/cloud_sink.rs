@@ -157,36 +157,14 @@ impl CloudSink {
         self
     }
 
-    /// Starts the CloudSink, which maintains a connection in the background.
+    /// Starts the CloudSink, which will establish a connection in the background.
     ///
     /// Returns a handle that can optionally be used to manage the sink.
     /// The caller can safely drop the handle and the connection will continue in the background.
     /// Use stop() on the returned handle to stop the connection.
-    pub async fn start(self) -> Result<CloudSinkHandle, FoxgloveError> {
+    pub fn start(self) -> Result<CloudSinkHandle, FoxgloveError> {
         let connection = CloudConnection::new(self.options);
-
-        // Try to connect the session.
-        // If this fails to connect, it will keep trying again, so we don't want to return an error.
-        // However, if we get another type of error we can surface it here.
-        match connection.connect_session().await {
-            Ok(_) | Err(CloudError::ConnectionError(_)) | Err(CloudError::IoError(_)) => (),
-            Err(e) => {
-                return Err(e.into());
-            }
-        }
-
         Ok(CloudSinkHandle::new(connection))
-    }
-
-    /// Blocking version of [`CloudSink::start`].
-    pub fn start_blocking(mut self) -> Result<CloudSinkHandle, FoxgloveError> {
-        let runtime = self
-            .options
-            .runtime
-            .get_or_insert_with(get_runtime_handle)
-            .clone();
-        let handle = runtime.block_on(self.start())?;
-        Ok(handle)
     }
 }
 
