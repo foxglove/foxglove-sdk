@@ -100,7 +100,6 @@ impl std::fmt::Debug for CloudConnectionOptions {
 
 struct CloudSession {
     room: Room,
-    room_events: UnboundedReceiver<RoomEvent>,
     participants: RwLock<HashMap<ParticipantIdentity, Arc<Participant>>>,
 }
 
@@ -117,21 +116,23 @@ impl CloudConnection {
         }
     }
 
-    pub(crate) async fn connect_session(&self) -> Result<()> {
+    pub(crate) async fn connect_session(
+        &self,
+    ) -> Result<(Arc<CloudSession>, UnboundedReceiver<RoomEvent>)> {
         // TODO get credentials from API
         let credentials = RtcCredentials::new();
 
-        let session =
+        let (session, room_events) =
             match Room::connect(&credentials.url, &credentials.token, RoomOptions::default()).await
             {
-                Ok((room, room_events)) => Arc::new(CloudSession::new(room, room_events)),
+                Ok((room, room_events)) => (Arc::new(CloudSession::new(room)), room_events),
                 Err(e) => {
                     return Err(e.into());
                 }
             };
-        self.session.store(Some(session));
+        self.session.store(Some(session.clone()));
 
-        Ok(())
+        Ok((session, room_events))
     }
 
     /// Returns the cancellation token for the [`CloudConnection`]`.
@@ -150,7 +151,7 @@ impl CloudConnection {
 
     /// Connect to the room, and handle all events until cancelled or disconnected from the room.
     async fn run(&self) {
-        let Ok(session) = self.connect_session_until_ok().await else {
+        let Ok((session, room_events)) = self.connect_session_until_ok().await else {
             // Cancelled/shutting down
             debug_assert!(self.cancellation_token().is_cancelled());
             return;
@@ -166,7 +167,7 @@ impl CloudConnection {
         info!("running remote visualization server");
         tokio::select! {
             () = self.cancellation_token().cancelled() => (),
-            _ = self.listen_for_room_events(session.clone()) => {}
+            _ = self.listen_for_room_events(session.clone(), room_events) => {}
         }
 
         info!("disconnecting from room");
@@ -183,19 +184,16 @@ impl CloudConnection {
     ///
     /// The retry interval is fairly long.
     /// Note that livekit internally includes a few quick retries for each connect call as well.
-    async fn connect_session_until_ok(&self) -> Result<Arc<CloudSession>> {
+    async fn connect_session_until_ok(
+        &self,
+    ) -> Result<(Arc<CloudSession>, UnboundedReceiver<RoomEvent>)> {
         let mut interval = tokio::time::interval(AUTH_RETRY_PERIOD);
         loop {
             interval.tick().await;
 
             match self.connect_session().await {
-                Ok(_) => {
-                    return Ok(self
-                        .session
-                        .load()
-                        .as_ref()
-                        .expect("session not connected")
-                        .clone());
+                Ok((session, room_events)) => {
+                    return Ok((session, room_events));
                 }
                 Err(CloudError::ConnectionStopped) => {
                     return Err(CloudError::ConnectionStopped);
@@ -217,8 +215,12 @@ impl CloudConnection {
         }
     }
 
-    async fn listen_for_room_events(&self, session: Arc<CloudSession>) {
-        while let Some(event) = session.room_events.recv().await {
+    async fn listen_for_room_events(
+        &self,
+        session: Arc<CloudSession>,
+        mut room_events: UnboundedReceiver<RoomEvent>,
+    ) {
+        while let Some(event) = room_events.recv().await {
             debug!("room event: {:?}", event);
             match event {
                 RoomEvent::ParticipantConnected(participant) => {
@@ -309,10 +311,9 @@ impl CloudConnection {
 }
 
 impl CloudSession {
-    fn new(room: Room, room_events: UnboundedReceiver<RoomEvent>) -> Self {
+    fn new(room: Room) -> Self {
         Self {
             room,
-            room_events,
             participants: RwLock::new(HashMap::new()),
         }
     }
