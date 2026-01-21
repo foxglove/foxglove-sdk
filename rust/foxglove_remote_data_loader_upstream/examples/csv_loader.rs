@@ -38,7 +38,7 @@ use foxglove_remote_data_loader_upstream::{
     UpstreamServer, Url,
 };
 
-type CsvError = Box<dyn std::error::Error + Send + Sync>;
+type CsvError = anyhow::Error;
 
 const MAX_BUFFER_SIZE: usize = 1024 * 1024; // 1MiB
 
