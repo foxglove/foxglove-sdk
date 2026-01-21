@@ -1,0 +1,39 @@
+---
+source: rust/foxglove/src/schemas.rs
+expression: json
+---
+{
+  "cell_size": {
+    "x": 0.1,
+    "y": 0.1
+  },
+  "cell_stride": 4,
+  "column_count": 10,
+  "data": "AACAPwAAAEA=",
+  "fields": [
+    {
+      "name": "elevation",
+      "offset": 0,
+      "type": "FLOAT32"
+    }
+  ],
+  "frame_id": "map",
+  "pose": {
+    "orientation": {
+      "w": 1.0,
+      "x": 0.0,
+      "y": 0.0,
+      "z": 0.0
+    },
+    "position": {
+      "x": 1.0,
+      "y": 2.0,
+      "z": 3.0
+    }
+  },
+  "row_stride": 40,
+  "timestamp": {
+    "nsec": 123456789,
+    "sec": 1234567890
+  }
+}

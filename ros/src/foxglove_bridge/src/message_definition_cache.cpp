@@ -223,10 +223,15 @@ const MessageSpec& MessageDefinitionCache::load_message_spec(
 #pragma GCC diagnostic pop
 
   // Get the rosidl_interfaces index contents for this package
+  // TODO: FLE-167: Remove warning once ament_index_cpp is updated and synced across all current
+  // ROS2 distributions.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
   std::string index_contents;
   if (!ament_index_cpp::get_resource("rosidl_interfaces", package, index_contents)) {
     throw DefinitionNotFoundError(definition_identifier.package_resource_name);
   }
+#pragma GCC diagnostic pop
 
   // Find the first line that ends with the filename we're looking for
   const auto lines = split_string(index_contents);

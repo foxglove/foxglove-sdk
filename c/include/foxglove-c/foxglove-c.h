@@ -1521,6 +1521,24 @@ typedef struct foxglove_scene_update {
 } foxglove_scene_update;
 
 /**
+ * A timestamped point for a position in 3D space
+ */
+typedef struct foxglove_point3_in_frame {
+  /**
+   * Timestamp of point
+   */
+  const struct foxglove_timestamp *timestamp;
+  /**
+   * Frame of reference for point position
+   */
+  struct foxglove_string frame_id;
+  /**
+   * Point in 3D space
+   */
+  const struct foxglove_point3 *point;
+} foxglove_point3_in_frame;
+
+/**
  * A collection of N-dimensional points, which may contain additional fields with information like normals, intensity, etc.
  */
 typedef struct foxglove_point_cloud {
@@ -1796,6 +1814,43 @@ typedef struct foxglove_key_value {
    */
   struct foxglove_string value;
 } foxglove_key_value;
+
+#if !defined(__wasm__)
+/**
+ * An MCAP attachment to store in an MCAP file.
+ *
+ * Attachments are arbitrary binary data that can be stored alongside messages.
+ * Common uses include storing configuration files, calibration data, or other
+ * reference material related to the recording.
+ */
+typedef struct foxglove_mcap_attachment {
+  /**
+   * Timestamp at which the attachment was recorded, in nanoseconds.
+   */
+  uint64_t log_time;
+  /**
+   * Timestamp at which the attachment was created, in nanoseconds.
+   * If not available, set to 0.
+   */
+  uint64_t create_time;
+  /**
+   * Name of the attachment, e.g. "config.json".
+   */
+  struct foxglove_string name;
+  /**
+   * Media type of the attachment, e.g. "application/json".
+   */
+  struct foxglove_string media_type;
+  /**
+   * Pointer to the attachment data.
+   */
+  const uint8_t *data;
+  /**
+   * Length of the attachment data in bytes.
+   */
+  size_t data_len;
+} foxglove_mcap_attachment;
+#endif
 
 /**
  * A collection of metadata items for a channel.
@@ -3647,6 +3702,52 @@ foxglove_error foxglove_point3_encode(const struct foxglove_point3 *msg,
  * # Safety
  * We're trusting the caller that the channel will only be used with this type T.
  */
+foxglove_error foxglove_channel_create_point3_in_frame(struct foxglove_string topic,
+                                                       const struct foxglove_context *context,
+                                                       const struct foxglove_channel **channel);
+
+#if !defined(__wasm__)
+/**
+ * Log a Point3InFrame message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_point3_in_frame.
+ */
+foxglove_error foxglove_channel_log_point3_in_frame(const struct foxglove_channel *channel,
+                                                    const struct foxglove_point3_in_frame *msg,
+                                                    const uint64_t *log_time,
+                                                    FoxgloveSinkId sink_id);
+#endif
+
+/**
+ * Get the Point3InFrame schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_point3_in_frame_schema(void);
+
+/**
+ * Encode a Point3InFrame message as protobuf to the buffer provided.
+ *
+ * On success, writes the encoded length to *encoded_len.
+ * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+ * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+ * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+ *
+ * # Safety
+ * ptr must be a valid pointer to a memory region at least len bytes long.
+ */
+foxglove_error foxglove_point3_in_frame_encode(const struct foxglove_point3_in_frame *msg,
+                                               uint8_t *ptr,
+                                               size_t len,
+                                               size_t *encoded_len);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
 foxglove_error foxglove_channel_create_point_cloud(struct foxglove_string topic,
                                                    const struct foxglove_context *context,
                                                    const struct foxglove_channel **channel);
@@ -4335,6 +4436,27 @@ foxglove_error foxglove_mcap_write_metadata(struct foxglove_mcap_writer *writer,
                                             const struct foxglove_string *FOXGLOVE_NONNULL name,
                                             const struct foxglove_key_value *metadata,
                                             size_t metadata_len);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Write an attachment to an MCAP file.
+ *
+ * Attachments are arbitrary binary data that can be stored alongside messages.
+ * Common uses include storing configuration files, calibration data, or other
+ * reference material related to the recording.
+ *
+ * Returns 0 on success, or returns a FoxgloveError code on error.
+ *
+ * # Safety
+ * `writer` must be a valid pointer to a `FoxgloveMcapWriter` created via `foxglove_mcap_open`.
+ * `attachment` must be a valid pointer to a `FoxgloveMcapAttachment`.
+ * The `name` and `media_type` fields of the attachment must be valid UTF-8 strings.
+ * The `data` field must be a valid pointer to an array of bytes with length `data_len`,
+ * or null if `data_len` is 0.
+ */
+foxglove_error foxglove_mcap_attach(struct foxglove_mcap_writer *writer,
+                                    const struct foxglove_mcap_attachment *FOXGLOVE_NONNULL attachment);
 #endif
 
 #if !defined(__wasm__)

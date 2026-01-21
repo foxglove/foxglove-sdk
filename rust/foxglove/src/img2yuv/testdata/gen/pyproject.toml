@@ -1,0 +1,10 @@
+[project]
+name = "gen"
+version = "0.1.0"
+description = "Generate testdata for img2yuv"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "numpy>=2.3.3",
+    "pillow>=11.3.0",
+]
