@@ -70,20 +70,15 @@ struct CsvParams {
     timestamp_format: TimestampFormat,
 }
 
-#[derive(Clone, Copy, Debug, Deserialize, Hash)]
+#[derive(Clone, Copy, Debug, Default, Deserialize, Hash)]
 #[serde(rename_all = "snake_case")]
 enum TimestampFormat {
+    #[default]
     Rfc3339,
     UnixSeconds,
     UnixMillis,
     UnixMicros,
     UnixNanos,
-}
-
-impl Default for TimestampFormat {
-    fn default() -> Self {
-        Self::Rfc3339
-    }
 }
 
 #[derive(foxglove::Encode)]
