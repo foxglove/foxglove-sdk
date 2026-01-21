@@ -1,0 +1,35 @@
+---
+source: rust/foxglove_remote_data_loader_upstream/src/lib.rs
+expression: manifest
+---
+{
+  "name": "Test Source",
+  "sources": [
+    {
+      "url": "http://example.com/v1/data",
+      "id": "test-id",
+      "topics": [
+        {
+          "name": "/topic1",
+          "messageEncoding": "protobuf",
+          "schemaId": 1
+        },
+        {
+          "name": "/topic2",
+          "messageEncoding": "protobuf",
+          "schemaId": 1
+        }
+      ],
+      "schemas": [
+        {
+          "id": 1,
+          "name": "testmessage.TestMessage",
+          "encoding": "protobuf",
+          "data": "CkYKEVRlc3RNZXNzYWdlLnByb3RvEgt0ZXN0bWVzc2FnZSIcCgtUZXN0TWVzc2FnZRINCgV2YWx1ZRgBIAIoEWIGcHJvdG8z"
+        }
+      ],
+      "startTime": "2024-01-01T00:00:00Z",
+      "endTime": "2024-01-02T00:00:00Z"
+    }
+  ]
+}

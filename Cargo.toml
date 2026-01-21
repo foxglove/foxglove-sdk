@@ -37,6 +37,7 @@ tokio-tungstenite = "0.28"
 tokio-util = { version = "0.7", features = ["rt"] }
 tracing = { version = "0.1", features = ["log"] }
 tracing-test = "0.2.5"
+insta = { version = "1.42.2", features = ["json"] }
 
 [workspace.lints.rust]
 # Group to warn about changes coming in Rust 2024 edition. Having this on will

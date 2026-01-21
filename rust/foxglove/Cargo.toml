@@ -74,7 +74,7 @@ rcgen = { version = "0.14.3", features = ["crypto", "pem", "x509-parser"], optio
 
 [dev-dependencies]
 assert_matches = "1.5.0"
-insta = { version = "1.42.2", features = ["json"] }
+insta.workspace = true
 maplit = "1.0.2"
 tempfile = "3.15.0"
 tracing-test.workspace = true

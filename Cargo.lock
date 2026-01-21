@@ -1177,6 +1177,7 @@ dependencies = [
  "chrono",
  "foxglove 0.16.2",
  "futures",
+ "insta",
  "serde",
  "serde-constant",
  "serde_with",

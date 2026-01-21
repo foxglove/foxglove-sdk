@@ -310,3 +310,36 @@ fn extract_bearer_token(headers: &HeaderMap) -> Option<&str> {
         .ok()?
         .strip_prefix("Bearer ")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::TimeZone;
+
+    #[test]
+    fn test_generate_source_id_snapshot() {
+        let id = generate_source_id("flight-data", 1, &"ABC123");
+        insta::assert_snapshot!(id);
+    }
+
+    #[test]
+    fn test_manifest_builder_snapshot() {
+        #[derive(foxglove::Encode)]
+        struct TestMessage {
+            value: i32,
+        }
+
+        let mut builder = ManifestBuilder::new();
+        builder.manifest_opts = ManifestOpts {
+            id: "test-id".into(),
+            name: "Test Source".into(),
+            start_time: Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap(),
+            end_time: Utc.with_ymd_and_hms(2024, 1, 2, 0, 0, 0).unwrap(),
+        };
+        builder.add_channel::<TestMessage>("/topic1".into());
+        builder.add_channel::<TestMessage>("/topic2".into()); // Same schema type - snapshot will show only 1 schema
+
+        let manifest = builder.build("http://example.com".parse().unwrap());
+        insta::assert_json_snapshot!(manifest);
+    }
+}
