@@ -28,6 +28,7 @@ build:
 .PHONY: test
 test:
 	GTEST_REPEAT=$(GTEST_REPEAT) colcon test
+	colcon test-result --all --verbose
 
 define generate_ros_targets
 .PHONY: docker-build-image-$(1)
