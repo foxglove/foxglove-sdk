@@ -5,7 +5,6 @@ use std::{
 };
 
 use arc_swap::ArcSwapOption;
-use bimap::BiHashMap;
 use bytes::Bytes;
 use livekit::{id::ParticipantIdentity, Room, RoomEvent, RoomOptions, StreamByteOptions};
 use parking_lot::RwLock;
@@ -28,6 +27,7 @@ use crate::{
 type Result<T> = std::result::Result<T, CloudError>;
 
 const WS_PROTOCOL_TOPIC: &str = "ws-protocol";
+#[allow(dead_code)]
 const MESSAGE_FRAME_SIZE: usize = 5;
 const AUTH_RETRY_PERIOD: Duration = Duration::from_secs(30);
 
@@ -35,6 +35,7 @@ const AUTH_RETRY_PERIOD: Duration = Duration::from_secs(30);
 #[repr(u8)]
 enum OpCode {
     Text = 1,
+    #[allow(dead_code)]
     Binary = 2,
 }
 
@@ -115,9 +116,7 @@ impl CloudConnection {
         }
     }
 
-    pub(crate) async fn connect_session(
-        &self,
-    ) -> Result<(Arc<CloudSession>, UnboundedReceiver<RoomEvent>)> {
+    async fn connect_session(&self) -> Result<(Arc<CloudSession>, UnboundedReceiver<RoomEvent>)> {
         // TODO get credentials from API
         let credentials = RtcCredentials::new();
 
@@ -253,20 +252,21 @@ impl CloudConnection {
                 } => {
                     info!("data received: {:?}", topic);
                 }
-                RoomEvent::ByteStreamOpened {
-                    reader,
-                    topic: _,
-                    participant_identity,
-                } => {
-                    // if let Some(reader) = reader.take() {
-                    //     let session2 = session.clone();
-                    //     tokio::spawn(async move {
-                    //         session2
-                    //             .handle_byte_stream_from_client(participant_identity, reader)
-                    //             .await;
-                    //     });
-                    // }
-                }
+                // TODO uncomment to receive byte stream data from participants
+                // RoomEvent::ByteStreamOpened {
+                //     reader,
+                //     topic: _,
+                //     participant_identity,
+                // } => {
+                //     if let Some(reader) = reader.take() {
+                //         let session2 = session.clone();
+                //         tokio::spawn(async move {
+                //             session2
+                //                 .handle_byte_stream_from_client(participant_identity, reader)
+                //                 .await;
+                //         });
+                //     }
+                // }
                 RoomEvent::Disconnected { reason } => {
                     info!("disconnected: {:?}", reason.as_str_name());
                 }
