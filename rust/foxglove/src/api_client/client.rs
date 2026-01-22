@@ -10,7 +10,7 @@ use thiserror::Error;
 
 use super::types::{AuthorizeRemoteVizResponse, DeviceResponse, ErrorResponse};
 
-pub const DEFAULT_API_URL: &str = "https://api.foxglove.dev";
+pub(super) const DEFAULT_API_URL: &str = "https://api.foxglove.dev";
 
 const PATH_ENCODING: AsciiSet = percent_encoding::NON_ALPHANUMERIC
     .remove(b'-')
@@ -18,12 +18,12 @@ const PATH_ENCODING: AsciiSet = percent_encoding::NON_ALPHANUMERIC
     .remove(b'_')
     .remove(b'~');
 
-pub(crate) fn encode_uri_component(component: &str) -> impl Display + '_ {
+pub(super) fn encode_uri_component(component: &str) -> impl Display + '_ {
     percent_encoding::percent_encode(component.as_bytes(), &PATH_ENCODING)
 }
 
 #[derive(Clone)]
-pub struct DeviceToken(String);
+pub(crate) struct DeviceToken(String);
 
 impl DeviceToken {
     pub fn new(token: impl Into<String>) -> Self {
@@ -37,7 +37,7 @@ impl DeviceToken {
 
 #[derive(Error, Debug)]
 #[non_exhaustive]
-pub enum RequestError {
+pub(crate) enum RequestError {
     #[error("failed to send request: {0}")]
     SendRequest(#[source] reqwest::Error),
 
@@ -64,7 +64,7 @@ pub enum RequestError {
 
 #[derive(Error, Debug)]
 #[non_exhaustive]
-pub enum FoxgloveApiClientError {
+pub(crate) enum FoxgloveApiClientError {
     #[error(transparent)]
     Request(#[from] RequestError),
 
@@ -88,7 +88,7 @@ impl FoxgloveApiClientError {
 }
 
 #[must_use]
-struct RequestBuilder(reqwest::RequestBuilder);
+pub(super) struct RequestBuilder(reqwest::RequestBuilder);
 
 impl RequestBuilder {
     fn new(client: &reqwest::Client, method: Method, url: &str, user_agent: &str) -> Self {
@@ -234,7 +234,7 @@ impl FoxgloveApiClient {
     }
 }
 
-pub struct FoxgloveApiClientBuilder {
+pub(super) struct FoxgloveApiClientBuilder {
     base_url: String,
     device_token: Option<DeviceToken>,
     user_agent: String,

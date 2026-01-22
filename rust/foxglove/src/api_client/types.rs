@@ -4,14 +4,14 @@ use serde::Deserialize;
 
 #[derive(Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct AuthorizeRemoteVizResponse {
+pub(crate) struct AuthorizeRemoteVizResponse {
     pub token: String,
     pub url: String,
 }
 
 #[derive(Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct DeviceResponse {
+pub(crate) struct DeviceResponse {
     pub id: String,
     pub name: String,
     pub project_id: String,
@@ -20,7 +20,7 @@ pub struct DeviceResponse {
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
-pub struct ErrorResponse {
+pub(crate) struct ErrorResponse {
     #[serde(rename = "error")]
     pub message: String,
     pub code: Option<String>,

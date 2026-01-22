@@ -1,11 +1,9 @@
 #![allow(dead_code)]
 
 use super::client::{
-    default_user_agent, encode_uri_component, DeviceToken, FoxgloveApiClient,
-    FoxgloveApiClientBuilder, FoxgloveApiClientError,
+    DeviceToken, FoxgloveApiClient, FoxgloveApiClientBuilder, FoxgloveApiClientError,
 };
 use super::types::{AuthorizeRemoteVizResponse, DeviceResponse};
-use std::time::Duration;
 
 #[derive(Clone)]
 pub(crate) struct Device {
