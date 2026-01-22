@@ -2,6 +2,12 @@
 Changelog for package foxglove_bridge
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+3.2.4 (2026-01-22)
+------------------
+* Add client count topic (`#692 <https://github.com/foxglove/foxglove-sdk/pull/692>`_)
+* Fix build warning on newer versions of CMake (`#828 <https://github.com/foxglove/foxglove-sdk/pull/828>`_)
+* Contributors: Andrew Madden, Chris Lalancette
+
 3.2.3 (2026-01-12)
 ------------------
 * Fix build errors in ROS Rolling (`#805 <https://github.com/foxglove/foxglove-sdk/pull/805>`_)
