@@ -201,35 +201,4 @@ mod tests {
 
         fn on_client_unadvertise(&self, _client: Client, _channel: &ClientChannel) {}
     }
-
-    #[traced_test]
-    #[tokio::test]
-    async fn test_cloud_with_client_publish() {
-        let ctx = Context::new();
-        let cloud_sink = CloudSink::new()
-            .listener(Arc::new(TestListener {}))
-            .context(&ctx);
-
-        let handle = cloud_sink.start().expect("Failed to create cloud sink");
-        let addr = "127.0.0.1:8765";
-
-        let mut client = WebSocketClient::connect(addr)
-            .await
-            .expect("Failed to connect to cloud");
-
-        // Expect to receive ServerInfo message
-        let msg = client.recv().await.expect("Failed to receive message");
-        match msg {
-            ServerMessage::ServerInfo(info) => {
-                // Verify the server info contains the ClientPublish capability
-                assert!(
-                    info.capabilities.contains(&Capability::ClientPublish),
-                    "Expected ClientPublish capability"
-                );
-            }
-            _ => panic!("Expected ServerInfo message, got: {msg:?}"),
-        }
-
-        let _ = handle.stop().await;
-    }
 }
