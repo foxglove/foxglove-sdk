@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
@@ -23,80 +23,55 @@ use mcap::sans_io::summary_reader::{SummaryReadEvent, SummaryReader, SummaryRead
 use mcap::Summary as McapSummary;
 use tracing::info;
 
+struct Inner {
+    status: PlaybackStatus,
+    current_time: u64,
+    pending_seek_time: Option<u64>,
+    playback_speed: f32,
+}
+
 struct StreamMcapListener {
-    status: Mutex<PlaybackStatus>,
-    current_time: AtomicU64,
-    pending_seek_time: AtomicU64,
-    has_pending_seek: AtomicBool,
-    playback_speed: AtomicU32,
+    inner: Mutex<Inner>,
 }
 
 impl StreamMcapListener {
     fn new() -> Self {
         Self {
-            status: Mutex::new(PlaybackStatus::Paused),
-            current_time: AtomicU64::new(0),
-            pending_seek_time: AtomicU64::new(0),
-            has_pending_seek: AtomicBool::new(false),
-            playback_speed: AtomicU32::new(1.0f32.to_bits()),
+            inner: Mutex::new(Inner {
+                status: PlaybackStatus::Paused,
+                current_time: 0,
+                pending_seek_time: None,
+                playback_speed: 1.0,
+            }),
         }
     }
 
     fn is_playing(&self) -> bool {
-        *self.status.lock().unwrap() == PlaybackStatus::Playing
+        self.inner.lock().unwrap().status == PlaybackStatus::Playing
     }
 
     fn update_current_time(&self, timestamp: u64) {
-        self.current_time.store(timestamp, Ordering::Relaxed);
-    }
-
-    fn request_seek(&self, timestamp: u64) {
-        info!("Requested seek to {}ns", timestamp);
-        self.pending_seek_time.store(timestamp, Ordering::Relaxed);
-        self.has_pending_seek.store(true, Ordering::Release);
+        self.inner.lock().unwrap().current_time = timestamp;
     }
 
     fn take_seek_request(&self) -> Option<u64> {
-        if self
-            .has_pending_seek
-            .compare_exchange(true, false, Ordering::AcqRel, Ordering::Relaxed)
-            .is_ok()
-        {
-            Some(self.pending_seek_time.load(Ordering::Relaxed))
-        } else {
-            None
-        }
+        self.inner.lock().unwrap().pending_seek_time.take()
     }
 
     fn playback_speed(&self) -> f32 {
-        f32::from_bits(self.playback_speed.load(Ordering::Relaxed))
-    }
-
-    fn update_playback_speed(&self, speed: f32) {
-        self.playback_speed
-            .store(speed.max(0.01).to_bits(), Ordering::Relaxed);
-    }
-
-    fn handle_command(&self, command: PlaybackCommand) {
-        match command {
-            PlaybackCommand::Play => self.update_status(PlaybackStatus::Playing),
-            PlaybackCommand::Pause => self.update_status(PlaybackStatus::Paused),
-        }
+        self.inner.lock().unwrap().playback_speed
     }
 
     fn update_status(&self, status: PlaybackStatus) {
-        *self.status.lock().unwrap() = status;
-    }
-
-    fn status(&self) -> PlaybackStatus {
-        *self.status.lock().unwrap()
+        self.inner.lock().unwrap().status = status;
     }
 
     fn current_state(&self) -> PlaybackState {
+        let inner = self.inner.lock().unwrap();
         PlaybackState {
-            status: self.status(),
-            current_time: self.current_time.load(Ordering::Relaxed),
-            playback_speed: self.playback_speed(),
+            status: inner.status,
+            current_time: inner.current_time,
+            playback_speed: inner.playback_speed,
             did_seek: false,
             request_id: None,
         }
@@ -108,23 +83,32 @@ impl ServerListener for StreamMcapListener {
         &self,
         request: PlaybackControlRequest,
     ) -> Option<PlaybackState> {
-        self.update_playback_speed(request.playback_speed);
-        self.handle_command(request.playback_command);
+        let mut inner = self.inner.lock().unwrap();
+
+        inner.playback_speed = request.playback_speed.max(0.01);
+        inner.status = match request.playback_command {
+            PlaybackCommand::Play => PlaybackStatus::Playing,
+            PlaybackCommand::Pause => PlaybackStatus::Paused,
+        };
 
         info!(
             "Handled requested playback command {:?}",
             request.playback_command
         );
 
+        let did_seek = request.seek_time.is_some();
         if let Some(seek_time) = request.seek_time {
-            self.request_seek(seek_time);
-            self.update_current_time(seek_time);
+            info!("Requested seek to {}ns", seek_time);
+            inner.pending_seek_time = Some(seek_time);
+            inner.current_time = seek_time;
         }
 
         Some(PlaybackState {
+            status: inner.status,
+            current_time: inner.current_time,
+            playback_speed: inner.playback_speed,
             request_id: Some(request.request_id),
-            did_seek: request.seek_time.is_some(),
-            ..self.current_state()
+            did_seek,
         })
     }
 }
