@@ -242,6 +242,13 @@ struct WebSocketServerOptions {
   WebSocketServerCapabilities capabilities = WebSocketServerCapabilities(0);
   /// @brief The supported encodings of the server.
   std::vector<std::string> supported_encodings;
+  /// @brief An optional session ID for the server.
+  ///
+  /// This allows the client to understand if the connection is a re-connection or if it is
+  /// connecting to a new server instance. This can for example be a timestamp or a UUID.
+  ///
+  /// By default, the server will generate a session ID based on the current time.
+  std::optional<std::string> session_id = std::nullopt;
   /// @brief A fetch asset handler callback.
   FetchAssetHandler fetch_asset;
   /// @brief A sink channel filter callback.

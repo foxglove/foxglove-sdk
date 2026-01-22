@@ -14,6 +14,11 @@ project(foxglove_bridge LANGUAGES CXX VERSION 3.2.3)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Avoid DOWNLOAD_EXTRACT_TIMESTAMP warning for CMake >= 3.24
+if (POLICY CMP0135)
+  cmake_policy(SET CMP0135 NEW)
+endif()
+
 option(USE_LOCAL_SDK "Use pre-built Foxglove SDK binaries from local source tree" OFF)
 
 macro(enable_strict_compiler_warnings target)

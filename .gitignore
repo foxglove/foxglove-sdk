@@ -1,4 +1,5 @@
 .cargo/
+.claude/
 .catkin_tools
 .DS_Store
 .idea/
