@@ -60,9 +60,14 @@ export function generateTypeScript(
           return `${name} = ${value},`;
         }
       });
-      definition = `/** ${schema.description} */\nexport enum ${schema.name} {\n  ${fields.join(
-        "\n\n  ",
-      )}\n}`;
+      const enumDescriptionLines = schema.description.trim().split("\n");
+      let enumComment: string;
+      if (enumDescriptionLines.length === 1) {
+        enumComment = `/** ${schema.description} */`;
+      } else {
+        enumComment = `/**\n ${enumDescriptionLines.map((line) => ` * ${line}`).join("\n ")}\n */`;
+      }
+      definition = `${enumComment}\nexport enum ${schema.name} {\n  ${fields.join("\n\n  ")}\n}`;
       break;
     }
 
@@ -109,9 +114,14 @@ export function generateTypeScript(
         return `${comment}\n  ${field.name}: ${fieldType};`;
       });
 
-      definition = `/** ${schema.description} */\nexport type ${schema.name} = {\n  ${fields.join(
-        "\n\n  ",
-      )}\n};`;
+      const typeDescriptionLines = schema.description.trim().split("\n");
+      let typeComment: string;
+      if (typeDescriptionLines.length === 1) {
+        typeComment = `/** ${schema.description} */`;
+      } else {
+        typeComment = `/**\n ${typeDescriptionLines.map((line) => ` * ${line}`).join("\n ")}\n */`;
+      }
+      definition = `${typeComment}\nexport type ${schema.name} = {\n  ${fields.join("\n\n  ")}\n};`;
       break;
     }
   }
