@@ -559,7 +559,7 @@ TEST_F(ParameterTest, testParameterSubscription) {
   _wsClient->setParameters(setParams2);
 
   future = _wsClient->waitForParameters();
-  ASSERT_EQ(std::future_status::timeout, future.wait_for(DEFAULT_TIMEOUT));
+  ASSERT_EQ(std::future_status::timeout, future.wait_for(std::chrono::seconds(1)));
 }
 
 TEST_F(ParameterTest, testGetParametersParallel) {
