@@ -14,6 +14,11 @@ project(foxglove_bridge LANGUAGES CXX VERSION 3.2.3)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Avoid DOWNLOAD_EXTRACT_TIMESTAMP warning for CMake >= 3.24
+if (POLICY CMP0135)
+  cmake_policy(SET CMP0135 NEW)
+endif()
+
 option(USE_LOCAL_SDK "Use pre-built Foxglove SDK binaries from local source tree" OFF)
 
 macro(enable_strict_compiler_warnings target)
@@ -117,6 +122,7 @@ find_package(rclcpp REQUIRED)
 find_package(rclcpp_components REQUIRED)
 find_package(resource_retriever REQUIRED)
 find_package(rosx_introspection REQUIRED)
+find_package(std_msgs REQUIRED)
 
 # Generate version.hpp
 configure_file(include/foxglove_bridge/version.hpp.in include/foxglove_bridge/version.hpp @ONLY)
@@ -169,6 +175,7 @@ target_compile_definitions(foxglove_bridge_component
 
 target_link_libraries(foxglove_bridge_component
   ${rosgraph_msgs_TARGETS}
+  ${std_msgs_TARGETS}
   ament_index_cpp::ament_index_cpp
   foxglove_cpp_static
   rclcpp::rclcpp

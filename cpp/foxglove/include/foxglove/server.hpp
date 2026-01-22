@@ -192,6 +192,11 @@ struct WebSocketServerCallbacks {
   /// Requires the capability WebSocketServerCapabilities::ConnectionGraph
   std::function<void()> onConnectionGraphUnsubscribe;
 
+  /// @brief Callback invoked when a client connects to the server.
+  std::function<void()> onClientConnect;
+
+  /// @brief Callback invoked when a client disconnects from the server.
+  std::function<void()> onClientDisconnect;
   /// @cond foxglove_internal
   /// @brief Callback invoked when a playback control request is sent from the client.
   ///
@@ -284,6 +289,9 @@ public:
 
   /// Get the port on which the server is listening.
   [[nodiscard]] uint16_t port() const;
+
+  /// @brief Get the current number of connected clients.
+  [[nodiscard]] size_t clientCount() const;
 
   /// @brief Gracefully shut down the websocket server.
   FoxgloveError stop();
