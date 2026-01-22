@@ -905,17 +905,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "example_agent"
-version = "0.0.0"
-dependencies = [
- "clap",
- "env_logger",
- "foxglove 0.16.4",
- "serde_json",
- "tokio",
-]
-
-[[package]]
 name = "example_channelless"
 version = "0.0.0"
 dependencies = [
@@ -936,6 +925,17 @@ dependencies = [
  "serde_json",
  "tokio",
  "tokio-util",
+]
+
+[[package]]
+name = "example_cloud"
+version = "0.0.0"
+dependencies = [
+ "clap",
+ "env_logger",
+ "foxglove 0.16.4",
+ "serde_json",
+ "tokio",
 ]
 
 [[package]]

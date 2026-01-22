@@ -65,7 +65,7 @@ pub(crate) struct CloudConnectionOptions {
     pub runtime: Option<Handle>,
     pub channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     pub server_info: Option<HashMap<String, String>>,
-    pub cancellation_token: Option<CancellationToken>,
+    pub cancellation_token: CancellationToken,
 }
 
 impl Default for CloudConnectionOptions {
@@ -78,7 +78,7 @@ impl Default for CloudConnectionOptions {
             runtime: None,
             channel_filter: None,
             server_info: None,
-            cancellation_token: None,
+            cancellation_token: CancellationToken::new(),
         }
     }
 }
@@ -93,7 +93,6 @@ impl std::fmt::Debug for CloudConnectionOptions {
             .field("has_runtime", &self.runtime.is_some())
             .field("has_channel_filter", &self.channel_filter.is_some())
             .field("server_info", &self.server_info)
-            .field("has_cancellation_token", &self.cancellation_token.is_some())
             .finish()
     }
 }
@@ -137,7 +136,7 @@ impl CloudConnection {
 
     /// Returns the cancellation token for the [`CloudConnection`]`.
     fn cancellation_token(&self) -> &CancellationToken {
-        &self.options.cancellation_token.as_ref().unwrap()
+        &self.options.cancellation_token
     }
 
     /// Run the server loop until cancelled.

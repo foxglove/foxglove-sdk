@@ -8,6 +8,7 @@ use crate::{
     ChannelDescriptor, Context, FoxgloveError, WebSocketServer, WebSocketServerHandle,
 };
 
+use tokio::task::JoinHandle;
 pub use websocket::{ChannelView, Client, ClientChannel};
 
 /// Provides a mechanism for registering callbacks for handling client message events.
@@ -35,19 +36,25 @@ pub trait CloudSinkListener: Send + Sync {
 /// This handle can safely be dropped and the connection will run forever.
 #[doc(hidden)]
 pub struct CloudSinkHandle {
-    connection: CloudConnection,
+    connection: Arc<CloudConnection>,
+    runner: JoinHandle<()>,
 }
 
 impl CloudSinkHandle {
-    fn new(connection: CloudConnection) -> Self {
-        Self { connection }
+    fn new(connection: Arc<CloudConnection>) -> Self {
+        let runner = tokio::spawn(connection.clone().run_until_cancelled());
+
+        Self { connection, runner }
     }
 
     /// Gracefully disconnect from the cloud, if connected.
-    pub fn stop(self) {
+    ///
+    /// Returns a JoinHandle that will allow waiting until the connection has been fully closed.
+    pub fn stop(self) -> JoinHandle<()> {
         // Do we need to do something like the WebSocketServerHandle and return a ShutdownHandle
         // that lets us block until the CloudConnection is completely shutdown?
         self.connection.shutdown();
+        self.runner
     }
 }
 
@@ -164,7 +171,7 @@ impl CloudSink {
     /// Use stop() on the returned handle to stop the connection.
     pub fn start(self) -> Result<CloudSinkHandle, FoxgloveError> {
         let connection = CloudConnection::new(self.options);
-        Ok(CloudSinkHandle::new(connection))
+        Ok(CloudSinkHandle::new(Arc::new(connection)))
     }
 }
 
