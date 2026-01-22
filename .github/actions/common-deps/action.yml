@@ -23,4 +23,5 @@ runs:
           protobuf-compiler \
           build-essential \
           pkg-config \
-          cmake
+          cmake \
+          libglib2.0-dev
