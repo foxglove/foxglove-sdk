@@ -108,6 +108,7 @@ impl NormalizeResult {
 /// assert_eq!(duration, Duration::MAX);
 /// ```
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub struct Duration {
     /// Seconds offset.
     sec: i32,
@@ -160,6 +161,15 @@ impl Duration {
     /// Returns the number of fractional seconds in the duration, as nanoseconds.
     pub fn nsec(&self) -> u32 {
         self.nsec
+    }
+
+    /// Normalizes a duration.
+    ///
+    /// This is useful for a duration obtained through deserialization.
+    ///
+    /// Returns `None` if the attempt to convert excess nanoseconds causes `sec` to overflow.
+    pub fn normalize(self) -> Option<Self> {
+        Self::new_checked(self.sec, self.nsec)
     }
 
     /// Creates a `Duration` from `f64` seconds, or fails if the value is unrepresentable.
@@ -327,6 +337,7 @@ where
 /// assert_eq!(timestamp, Timestamp::MIN);
 /// ```
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub struct Timestamp {
     /// Seconds since epoch.
     sec: u32,
@@ -387,6 +398,15 @@ impl Timestamp {
     /// Returns the Timestamp as the total number of nanoseconds (sec() * 1B + nsec()).
     pub fn total_nanos(&self) -> u64 {
         u64::from(self.sec) * 1_000_000_000 + u64::from(self.nsec)
+    }
+
+    /// Normalizes a timestamp.
+    ///
+    /// This is useful for a timestamp obtained through deserialization.
+    ///
+    /// Returns `None` if the attempt to convert excess nanoseconds causes `sec` to overflow.
+    pub fn normalize(self) -> Option<Self> {
+        Self::new_checked(self.sec, self.nsec)
     }
 
     /// Creates a `Timestamp` from seconds since epoch as an `f64`, or fails if the value is

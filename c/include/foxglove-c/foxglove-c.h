@@ -2377,6 +2377,18 @@ typedef struct foxglove_server_options {
    * the end time of the data range.
    */
   const uint64_t *playback_end_time;
+  /**
+   * Optional session ID for the server.
+   *
+   * This allows the client to understand if the connection is a re-connection or if it is
+   * connecting to a new server instance. This can for example be a timestamp or a UUID.
+   *
+   * By default, the server will generate a session ID based on the current time.
+   *
+   * # Safety
+   * - If provided, the `session_id` must be a valid pointer to a null-terminated UTF-8 string.
+   */
+  const struct foxglove_string *session_id;
 } foxglove_server_options;
 #endif
 

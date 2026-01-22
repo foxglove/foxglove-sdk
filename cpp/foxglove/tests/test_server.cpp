@@ -1213,6 +1213,31 @@ TEST_CASE("Clear session") {
   REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
 }
 
+TEST_CASE("Initial session id") {
+  auto context = foxglove::Context::create();
+
+  // Test with initial session_id set in options
+  foxglove::WebSocketServerOptions options;
+  options.context = context;
+  options.name = "unit-test";
+  options.session_id = "my-initial-session";
+  auto server = startServer(std::move(options));
+
+  WebSocketClient client;
+  client.start(server.port());
+  client.waitForConnection();
+
+  auto payload = client.recv();
+  auto parsed = Json::parse(payload);
+  REQUIRE(parsed.contains("op"));
+  REQUIRE(parsed["op"] == "serverInfo");
+  REQUIRE(parsed.contains("sessionId"));
+  std::string session_id = parsed["sessionId"].get<std::string>();
+  REQUIRE(session_id == "my-initial-session");
+
+  REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
+}
+
 TEST_CASE("Publish status") {
   auto context = foxglove::Context::create();
   auto server = startServer(context);
