@@ -21,6 +21,7 @@ extensions: list[str] = [
     "sphinx.ext.autodoc",
     "sphinx_autodoc_typehints",
     "enum_tools.autoenum",
+    "sphinx_toolbox.more_autodoc.no_docstring",
 ]
 
 nitpicky = True
