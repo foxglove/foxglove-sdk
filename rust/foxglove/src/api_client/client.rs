@@ -8,7 +8,7 @@ use reqwest::header::{HeaderMap, AUTHORIZATION, USER_AGENT};
 use reqwest::{Method, StatusCode};
 use thiserror::Error;
 
-use super::types::{DeviceResponse, ErrorResponse};
+use super::types::{AuthorizeRemoteVizResponse, DeviceResponse, ErrorResponse};
 
 pub const DEFAULT_API_URL: &str = "https://api.foxglove.dev";
 
@@ -205,15 +205,84 @@ impl FoxgloveApiClient {
             FoxgloveApiClientError::Request(super::client::RequestError::ParseResponse(e))
         })
     }
+
+    pub async fn authorize_remote_viz(
+        &self,
+        device_id: &str,
+    ) -> Result<AuthorizeRemoteVizResponse, FoxgloveApiClientError> {
+        let Some(device_token) = self.device_token() else {
+            return Err(FoxgloveApiClientError::NoToken());
+        };
+
+        let device_id = encode_uri_component(device_id);
+        let response = self
+            .post(&format!(
+                "/internal/platform/v1/devices/{device_id}/remote-sessions"
+            ))
+            .device_token(device_token)
+            .send()
+            .await?;
+
+        let bytes = response
+            .bytes()
+            .await
+            .map_err(super::client::RequestError::LoadResponseBytes)?;
+
+        serde_json::from_slice(&bytes).map_err(|e| {
+            FoxgloveApiClientError::Request(super::client::RequestError::ParseResponse(e))
+        })
+    }
 }
 
-impl Default for FoxgloveApiClient {
+pub struct FoxgloveApiClientBuilder {
+    base_url: String,
+    device_token: Option<DeviceToken>,
+    user_agent: String,
+    timeout: Duration,
+}
+
+impl Default for FoxgloveApiClientBuilder {
     fn default() -> Self {
-        Self.new(
-            DEFAULT_API_URL.to_string(),
-            None,
-            default_user_agent(),
-            Duration::from_secs(30),
+        Self {
+            base_url: DEFAULT_API_URL.to_string(),
+            device_token: None,
+            user_agent: default_user_agent(),
+            timeout: Duration::from_secs(30),
+        }
+    }
+}
+
+impl FoxgloveApiClientBuilder {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn base_url(mut self, url: impl Into<String>) -> Self {
+        self.base_url = url.into();
+        self
+    }
+
+    pub fn device_token(mut self, token: DeviceToken) -> Self {
+        self.device_token = Some(token);
+        self
+    }
+
+    pub fn user_agent(mut self, agent: impl Into<String>) -> Self {
+        self.user_agent = agent.into();
+        self
+    }
+
+    pub fn timeout(mut self, timeout: Duration) -> Self {
+        self.timeout = timeout;
+        self
+    }
+
+    pub fn build(self) -> Result<FoxgloveApiClient, FoxgloveApiClientError> {
+        FoxgloveApiClient::new(
+            self.base_url,
+            self.device_token,
+            self.user_agent,
+            self.timeout,
         )
     }
 }

@@ -2,7 +2,7 @@
 
 use super::client::{
     default_user_agent, encode_uri_component, DeviceToken, FoxgloveApiClient,
-    FoxgloveApiClientError,
+    FoxgloveApiClientBuilder, FoxgloveApiClientError,
 };
 use super::types::{AuthorizeRemoteVizResponse, DeviceResponse};
 use std::time::Duration;
@@ -15,8 +15,10 @@ pub(crate) struct Device {
 
 impl Device {
     pub async fn new(token: DeviceToken) -> Result<Self, FoxgloveApiClientError> {
-        let mut client = FoxgloveApiClient::default();
-        client.set_device_token(token);
+        let client = FoxgloveApiClientBuilder::default()
+            .device_token(token)
+            .build()?;
+
         let device_info = client.fetch_device_info().await?;
         Ok(Self {
             client,
@@ -43,27 +45,6 @@ impl Device {
     pub async fn authorize_remote_viz(
         &self,
     ) -> Result<AuthorizeRemoteVizResponse, FoxgloveApiClientError> {
-        let Some(device_token) = self.client.device_token() else {
-            return Err(FoxgloveApiClientError::NoToken());
-        };
-
-        let device_id = encode_uri_component(&self.info.id);
-        let response = self
-            .client
-            .post(&format!(
-                "/internal/platform/v1/devices/{device_id}/remote-sessions"
-            ))
-            .device_token(device_token)
-            .send()
-            .await?;
-
-        let bytes = response
-            .bytes()
-            .await
-            .map_err(super::client::RequestError::LoadResponseBytes)?;
-
-        serde_json::from_slice(&bytes).map_err(|e| {
-            FoxgloveApiClientError::Request(super::client::RequestError::ParseResponse(e))
-        })
+        self.client.authorize_remote_viz(self.id()).await
     }
 }

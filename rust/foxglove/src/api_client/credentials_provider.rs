@@ -5,7 +5,7 @@ use std::sync::Arc;
 use arc_swap::ArcSwapOption;
 use thiserror::Error;
 
-use super::client::FoxgloveClientError;
+use super::client::FoxgloveApiClientError;
 use super::device::Device;
 
 #[derive(Clone)]
@@ -18,7 +18,7 @@ pub(crate) struct RtcCredentials {
 #[non_exhaustive]
 pub(crate) enum CredentialsError {
     #[error("failed to fetch credentials: {0}")]
-    FetchFailed(#[from] FoxgloveClientError),
+    FetchFailed(#[from] FoxgloveApiClientError),
 }
 
 pub(crate) struct CredentialsProvider {
