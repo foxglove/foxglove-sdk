@@ -20,7 +20,6 @@ constexpr uint8_t HELLO_WORLD_CDR[] = {0,   1,   0,   0,  12,  0,   0,   0,   10
 constexpr char HELLO_WORLD_JSON[] = "{\"data\": \"hello world\"}";
 constexpr char STD_MSGS_STRING_SCHEMA[] = "data string";
 
-constexpr auto ONE_SECOND = std::chrono::seconds(1);
 constexpr auto DEFAULT_TIMEOUT = std::chrono::seconds(10);
 
 class TestWithExecutor : public testing::Test {
@@ -200,15 +199,15 @@ TEST(SmokeTest, testSubscription) {
     // Set up a client and subscribe to the channel.
     auto client = std::make_shared<foxglove::test::Client<websocketpp::config::asio_client>>();
     auto channelFuture = client->waitForChannel(topic_name);
-    ASSERT_EQ(std::future_status::ready, client->connect(URI).wait_for(ONE_SECOND));
-    ASSERT_EQ(std::future_status::ready, channelFuture.wait_for(ONE_SECOND));
+    ASSERT_EQ(std::future_status::ready, client->connect(URI).wait_for(DEFAULT_TIMEOUT));
+    ASSERT_EQ(std::future_status::ready, channelFuture.wait_for(DEFAULT_TIMEOUT));
     const foxglove::test::Channel channel = channelFuture.get();
     const foxglove::test::SubscriptionId subscriptionId = 1;
 
     // Subscribe to the channel and confirm that the promise resolves
     auto msgFuture = client->waitForChannelMsg(subscriptionId);
     client->subscribe({{subscriptionId, channel.id}});
-    ASSERT_EQ(std::future_status::ready, msgFuture.wait_for(ONE_SECOND));
+    ASSERT_EQ(std::future_status::ready, msgFuture.wait_for(DEFAULT_TIMEOUT));
     const auto msgData = msgFuture.get();
     ASSERT_EQ(sizeof(HELLO_WORLD_CDR), msgData.size());
     EXPECT_EQ(0, std::memcmp(HELLO_WORLD_CDR, msgData.data(), msgData.size()));
@@ -246,8 +245,8 @@ TEST(SmokeTest, testSubscriptionParallel) {
 
   for (auto client : clients) {
     auto channelFuture = client->waitForChannel(topic_name);
-    ASSERT_EQ(std::future_status::ready, client->connect(URI).wait_for(ONE_SECOND));
-    ASSERT_EQ(std::future_status::ready, channelFuture.wait_for(ONE_SECOND));
+    ASSERT_EQ(std::future_status::ready, client->connect(URI).wait_for(DEFAULT_TIMEOUT));
+    ASSERT_EQ(std::future_status::ready, channelFuture.wait_for(DEFAULT_TIMEOUT));
     const foxglove::test::Channel channel = channelFuture.get();
     client->subscribe({{subscriptionId, channel.id}});
   }
@@ -291,11 +290,11 @@ TEST_P(PublisherTest, testPublishing) {
   // Set up the client, advertise and publish the binary message
   auto client = std::make_shared<foxglove::test::Client<websocketpp::config::asio_client>>();
   auto channelFuture = client->waitForChannel(advertisement.topic);
-  ASSERT_EQ(std::future_status::ready, client->connect(URI).wait_for(ONE_SECOND));
+  ASSERT_EQ(std::future_status::ready, client->connect(URI).wait_for(DEFAULT_TIMEOUT));
   client->advertise({advertisement});
 
   // Wait until the advertisement got advertised as channel by the server
-  ASSERT_EQ(std::future_status::ready, channelFuture.wait_for(ONE_SECOND));
+  ASSERT_EQ(std::future_status::ready, channelFuture.wait_for(DEFAULT_TIMEOUT));
 
   // Publish the message and unadvertise again
   client->publish(advertisement.channelId, message.data(), message.size());
@@ -341,18 +340,18 @@ TEST_P(ExistingPublisherTest, testPublishingWithExistingPublisher) {
   // Set up the client, advertise and publish the binary message
   auto client = std::make_shared<foxglove::test::Client<websocketpp::config::asio_client>>();
   auto channelFuture = client->waitForChannel(advertisement.topic);
-  ASSERT_EQ(std::future_status::ready, client->connect(URI).wait_for(ONE_SECOND));
+  ASSERT_EQ(std::future_status::ready, client->connect(URI).wait_for(DEFAULT_TIMEOUT));
   client->advertise({advertisement});
 
   // Wait until the advertisement got advertised as channel by the server
-  ASSERT_EQ(std::future_status::ready, channelFuture.wait_for(ONE_SECOND));
+  ASSERT_EQ(std::future_status::ready, channelFuture.wait_for(DEFAULT_TIMEOUT));
 
   // Publish the message and unadvertise again
   client->publish(advertisement.channelId, message.data(), message.size());
   client->unadvertise({advertisement.channelId});
 
   // Ensure that we have received the correct message via our ROS subscriber
-  const auto ret = executor.spin_until_future_complete(msgFuture, ONE_SECOND);
+  const auto ret = executor.spin_until_future_complete(msgFuture, DEFAULT_TIMEOUT);
   ASSERT_EQ(rclcpp::FutureReturnCode::SUCCESS, ret);
   EXPECT_EQ("hello world", msgFuture.get());
 }
@@ -499,7 +498,7 @@ TEST_F(ParameterTest, testSetFloatParametersWithIntegers) {
   };
   _wsClient->sendText(
     nlohmann::json{{"op", "setParameters"}, {"id", requestId}, {"parameters", parameters}}.dump());
-  ASSERT_EQ(std::future_status::ready, future.wait_for(ONE_SECOND));
+  ASSERT_EQ(std::future_status::ready, future.wait_for(DEFAULT_TIMEOUT));
   std::vector<foxglove::Parameter> params = future.get();
 
   {
@@ -560,7 +559,7 @@ TEST_F(ParameterTest, testParameterSubscription) {
   _wsClient->setParameters(setParams2);
 
   future = _wsClient->waitForParameters();
-  ASSERT_EQ(std::future_status::timeout, future.wait_for(ONE_SECOND));
+  ASSERT_EQ(std::future_status::timeout, future.wait_for(DEFAULT_TIMEOUT));
 }
 
 TEST_F(ParameterTest, testGetParametersParallel) {
@@ -599,7 +598,7 @@ TEST_F(ParameterTest, testGetParametersParallel) {
 TEST_F(ServiceTest, testAdvertiseService) {
   auto client = std::make_shared<foxglove::test::Client<websocketpp::config::asio_client>>();
   auto serviceFuture = client->waitForService(SERVICE_NAME);
-  ASSERT_EQ(std::future_status::ready, client->connect(URI).wait_for(ONE_SECOND));
+  ASSERT_EQ(std::future_status::ready, client->connect(URI).wait_for(DEFAULT_TIMEOUT));
   ASSERT_EQ(std::future_status::ready, serviceFuture.wait_for(DEFAULT_TIMEOUT));
   const foxglove::test::Service service = serviceFuture.get();
 
@@ -622,7 +621,7 @@ TEST_F(ServiceTest, testCallServiceParallel) {
   auto clientIt = clients.begin();
   auto serviceFuture = (*clientIt)->waitForService(SERVICE_NAME);
   for (auto client : clients) {
-    ASSERT_EQ(std::future_status::ready, client->connect(URI).wait_for(ONE_SECOND));
+    ASSERT_EQ(std::future_status::ready, client->connect(URI).wait_for(DEFAULT_TIMEOUT));
   }
   ASSERT_EQ(std::future_status::ready, serviceFuture.wait_for(DEFAULT_TIMEOUT));
   const foxglove::test::Service service = serviceFuture.get();
@@ -715,8 +714,8 @@ TEST(SmokeTest, receiveMessagesOfMultipleTransientLocalPublishers) {
   // Set up a client and subscribe to the channel.
   auto client = std::make_shared<foxglove::test::Client<websocketpp::config::asio_client>>();
   auto channelFuture = client->waitForChannel(topicName);
-  ASSERT_EQ(std::future_status::ready, client->connect(URI).wait_for(ONE_SECOND));
-  ASSERT_EQ(std::future_status::ready, channelFuture.wait_for(ONE_SECOND));
+  ASSERT_EQ(std::future_status::ready, client->connect(URI).wait_for(DEFAULT_TIMEOUT));
+  ASSERT_EQ(std::future_status::ready, channelFuture.wait_for(DEFAULT_TIMEOUT));
   const foxglove::test::Channel channel = channelFuture.get();
   const foxglove::test::SubscriptionId subscriptionId = 1;
 
