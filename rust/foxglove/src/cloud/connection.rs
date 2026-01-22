@@ -240,7 +240,7 @@ impl CloudConnection {
                 RoomEvent::ParticipantDisconnected(participant) => {
                     let mut participants = session.participants.write();
                     let participant_id = participant.identity();
-                    if let Some(_) = participants.remove(&participant_id) {
+                    if participants.remove(&participant_id).is_some() {
                         info!("removed participant {participant_id:?}");
                     }
                 }
@@ -295,9 +295,8 @@ impl CloudConnection {
                 self.options
                     .capabilities
                     .iter()
-                    .map(|c| c.as_protocol_capabilities())
-                    .flatten()
-                    .cloned(),
+                    .flat_map(|c| c.as_protocol_capabilities())
+                    .copied(),
             )
             .with_metadata(metadata);
 

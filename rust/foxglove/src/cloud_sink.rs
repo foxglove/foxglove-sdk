@@ -230,6 +230,6 @@ mod tests {
             _ => panic!("Expected ServerInfo message, got: {msg:?}"),
         }
 
-        let _ = handle.stop();
+        let _ = handle.stop().await;
     }
 }
