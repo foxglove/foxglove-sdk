@@ -20,4 +20,7 @@ runs:
       run: |
         sudo apt-get install -y --no-install-recommends \
           libprotobuf-dev \
-          protobuf-compiler
+          protobuf-compiler \
+          build-essential \
+          pkg-config \
+          cmake
