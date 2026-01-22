@@ -2264,6 +2264,8 @@ typedef struct foxglove_server_callbacks {
                                     size_t param_names_len);
   void (*on_connection_graph_subscribe)(const void *context);
   void (*on_connection_graph_unsubscribe)(const void *context);
+  void (*on_client_connect)(const void *context);
+  void (*on_client_disconnect)(const void *context);
   /**
    * Callback invoked when a client sends a playback control request message.
    *
@@ -5420,6 +5422,13 @@ foxglove_error foxglove_server_remove_service(const struct foxglove_websocket_se
  * Get the port on which the server is listening.
  */
 uint16_t foxglove_server_get_port(struct foxglove_websocket_server *server);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Get the number of currently connected clients.
+ */
+size_t foxglove_server_get_client_count(struct foxglove_websocket_server *server);
 #endif
 
 #if !defined(__wasm__)

@@ -350,6 +350,11 @@ impl Server {
         Some(ShutdownHandle::new(self.runtime.clone(), tasks))
     }
 
+    /// Returns the number of currently connected clients.
+    pub fn client_count(&self) -> usize {
+        self.clients.get().len()
+    }
+
     /// Publish the current timestamp to all clients.
     pub fn broadcast_time(&self, timestamp: u64) {
         use super::ws_protocol::server::Time;
@@ -623,6 +628,12 @@ impl Server {
 
         tracing::info!("Registered client {}", client.addr());
 
+        // Notify listener
+        if let Some(listener) = self.listener() {
+            tracing::debug!("Notifying listener of client connection");
+            listener.on_client_connect();
+        }
+
         // Add the client as a sink. This synchronously triggers advertisements for all channels
         // via the `Sink::add_channel` callback.
         if let Some(context) = self.context.upgrade() {
@@ -655,6 +666,7 @@ impl Server {
         }
 
         self.clients.retain(|c| c.id() != client.id());
+
         if self.has_capability(Capability::Parameters) {
             self.unsubscribe_all_parameters(client.id());
         }
@@ -662,6 +674,12 @@ impl Server {
             self.unsubscribe_connection_graph(client.id());
         }
         client.on_disconnect();
+
+        // Notify listener
+        if let Some(listener) = self.listener() {
+            listener.on_client_disconnect();
+        }
+
         tracing::info!("Unregistered client {}", client.addr());
     }
 
