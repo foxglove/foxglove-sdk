@@ -173,32 +173,3 @@ impl CloudSink {
         Ok(CloudSinkHandle::new(Arc::new(connection)))
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::protocol::v1::server::server_info::Capability;
-    use crate::websocket::ws_protocol::server::ServerMessage;
-    use crate::websocket_client::WebSocketClient;
-    use tracing_test::traced_test;
-
-    struct TestListener {}
-
-    impl CloudSinkListener for TestListener {
-        fn on_message_data(
-            &self,
-            _client: Client,
-            _client_channel: &ClientChannel,
-            _payload: &[u8],
-        ) {
-        }
-
-        fn on_subscribe(&self, _client: Client, _channel: ChannelView) {}
-
-        fn on_unsubscribe(&self, _client: Client, _channel: ChannelView) {}
-
-        fn on_client_advertise(&self, _client: Client, _channel: &ClientChannel) {}
-
-        fn on_client_unadvertise(&self, _client: Client, _channel: &ClientChannel) {}
-    }
-}
