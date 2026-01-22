@@ -2946,17 +2946,17 @@ class RawMessagesConfig(_BaseModel):
     Configuration for the Raw Messages panel.
     """
 
-    diff_enabled: bool
+    diff_enabled: bool | None = None
     """
     Whether to enable diff mode
     """
 
-    diff_method: Literal["custom", "previous message"]
+    diff_method: Literal["custom", "previous message"] | None = None
     """
     Method to use for diffing
     """
 
-    diff_topic_path: str
+    diff_topic_path: str | None = None
     """
     Topic path to use for diffing
     """
@@ -2966,12 +2966,12 @@ class RawMessagesConfig(_BaseModel):
     Node expansion state. Can be 'all' (all nodes expanded), 'none' (all nodes collapsed), or a map of node paths to expansion states. In the map, keys are reversed node paths joined by '~', and values are 'c' (collapsed) or 'e' (expanded).
     """
 
-    show_full_message_for_diff: bool
+    show_full_message_for_diff: bool | None = None
     """
     Whether to show the full message for diffing
     """
 
-    topic_path: str
+    topic_path: str | None = None
     """
     Message path to display
     """
@@ -3001,7 +3001,7 @@ class RawMessagesPanel(BasePanel):
     For more information, see [the documentation](https://docs.foxglove.dev/docs/visualization/panels/raw-messages).
     """
 
-    config: RawMessagesConfig
+    config: RawMessagesConfig = field(default_factory=RawMessagesConfig)
 
     title: Any | None = None
 
