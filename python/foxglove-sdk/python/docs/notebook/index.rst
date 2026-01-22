@@ -21,7 +21,7 @@ Layouts
 ^^^^^^^
 
 .. automodule:: foxglove.layouts
-   :members: StackContainer, StackItem, SplitContainer, SplitItem, TabContainer, TabItem, Layout, UserScript
+   :members: Stack, StackItem, Split, SplitItem, Tabs, Tab, Layout, UserScript
 
 Panels
 ^^^^^^
@@ -30,4 +30,4 @@ Panels
 .. automodule:: foxglove.layouts
    :no-docstring:
    :members:
-   :exclude-members: StackContainer, StackItem, SplitContainer, SplitItem, TabContainer, TabItem, Layout, UserScript
+   :exclude-members: Stack, StackItem, Split, SplitItem, Tabs, Tab, Layout, UserScript
