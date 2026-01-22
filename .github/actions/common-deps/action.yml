@@ -24,4 +24,5 @@ runs:
           build-essential \
           pkg-config \
           cmake \
-          libglib2.0-dev
+          libglib2.0-dev \
+          libva-dev
