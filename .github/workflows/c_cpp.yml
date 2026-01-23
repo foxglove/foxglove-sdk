@@ -151,10 +151,14 @@ jobs:
         run: |
           # Enable multi-arch and install aarch64 glib for cross-compilation
           sudo dpkg --add-architecture arm64
+          # Restrict existing sources to amd64 only (security.ubuntu.com and archive.ubuntu.com don't have arm64)
           # Only add [arch=amd64] to lines that don't already have bracketed options
+          sudo sed -i 's/^deb \([^[]\)/deb [arch=amd64] \1/' /etc/apt/sources.list
           sudo sed -i 's/^deb \([^[]\)/deb [arch=amd64] \1/' /etc/apt/sources.list.d/*.list
+          # Add arm64 sources from ports.ubuntu.com (the official mirror for non-x86 architectures)
           echo "deb [arch=arm64] http://ports.ubuntu.com/ $(lsb_release -cs) main restricted universe multiverse" | sudo tee /etc/apt/sources.list.d/arm64.list
           echo "deb [arch=arm64] http://ports.ubuntu.com/ $(lsb_release -cs)-updates main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list.d/arm64.list
+          echo "deb [arch=arm64] http://ports.ubuntu.com/ $(lsb_release -cs)-security main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list.d/arm64.list
           sudo apt-get update
           sudo apt-get install -y libglib2.0-dev:arm64
 
