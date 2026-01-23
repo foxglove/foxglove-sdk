@@ -1,6 +1,10 @@
 ARG ROS_DISTRIBUTION=rolling
 FROM ros:$ROS_DISTRIBUTION-ros-base
 
+# Prevent errors from apt-get.
+# See: http://askubuntu.com/questions/506158/unable-to-initialize-frontend-dialog-when-using-ssh
+ENV DEBIAN_FRONTEND=noninteractive
+
 # Keep ROS rolling base packages in sync.
 RUN apt-get update && apt-get -y dist-upgrade
 
