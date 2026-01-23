@@ -140,11 +140,12 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
+      - uses: ./.github/actions/common-deps
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           target: ${{ matrix.target }}
 
-      - run: sudo apt-get update && sudo apt-get install gcc-aarch64-linux-gnu
+      - run: sudo apt-get install gcc-aarch64-linux-gnu
         if: matrix.target == 'aarch64-unknown-linux-gnu'
       - run: echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
         if: matrix.target == 'aarch64-unknown-linux-gnu'
@@ -237,10 +238,10 @@ jobs:
       CXX: clang++
     steps:
       - uses: actions/checkout@v6
+      - uses: ./.github/actions/common-deps
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: nightly
           components: rust-src
-
       - run: make SANITIZE=address,undefined test
         working-directory: cpp

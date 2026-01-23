@@ -7,7 +7,7 @@ runs:
       with:
         python-version: "3.13"
 
-    - uses: astral-sh/setup-uv@v6
+    - uses: astral-sh/setup-uv@v7
 
     # disable man-db to speed up apt install
     - shell: bash
