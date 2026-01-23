@@ -57,7 +57,7 @@ bytes.workspace = true
 chrono = { version = "0.4.39", optional = true }
 delegate = "0.13.2"
 flume = { version = "0.11.1", optional = true }
-foxglove_derive = { version = "0.16.5", path = "../foxglove_derive", optional = true }
+foxglove_derive = { version = "0.16.6", path = "../foxglove_derive", optional = true }
 futures = { version = "0.3.31", optional = true }
 futures-util = { version = "0.3.31", features = ["sink", "std"], optional = true }
 mcap.workspace = true
