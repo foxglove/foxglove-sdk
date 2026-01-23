@@ -192,7 +192,7 @@ impl<'a> From<JsonMessage<'a>> for ServerMessage<'a> {
             JsonMessage::Advertise(m) => Self::Advertise(m),
             JsonMessage::Unadvertise(m) => Self::Unadvertise(m),
             JsonMessage::ParameterValues(m) => Self::ParameterValues(m),
-            JsonMessage::AdvertiseServices(m) => Self::AdvertiseServices(m.into_owned()),
+            JsonMessage::AdvertiseServices(m) => Self::AdvertiseServices(m),
             JsonMessage::UnadvertiseServices(m) => Self::UnadvertiseServices(m),
             JsonMessage::ConnectionGraphUpdate(m) => Self::ConnectionGraphUpdate(m),
             JsonMessage::ServiceCallFailure(m) => Self::ServiceCallFailure(m),
