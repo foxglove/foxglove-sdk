@@ -174,7 +174,7 @@ jobs:
           - runner: ubuntu-22.04
             target: ppc64le
     steps:
-      - uses: ./.github/actions/common-deps
+      - uses: ../.github/actions/common-deps
       - name: Download sdist
         uses: actions/download-artifact@v7
         with:
