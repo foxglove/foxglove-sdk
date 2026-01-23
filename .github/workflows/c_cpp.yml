@@ -178,14 +178,6 @@ jobs:
       - if: matrix.target == 'aarch64-apple-ios-sim'
         run: which bindgen
 
-      - name: Build C library for ${{ matrix.target }}
-        env:
-          FOXGLOVE_SDK_LANGUAGE: c
-        run: cargo build --release
-        working-directory: c
-      - name: Ensure generated files are up to date
-        run: git diff --exit-code
-
       - name: Use Clang
         if: matrix.compiler == 'clang'
         run: |
@@ -197,6 +189,14 @@ jobs:
           echo "CC=gcc" >> $GITHUB_ENV
           echo "CXX=g++" >> $GITHUB_ENV
           echo "CXXFLAGS=-fpermissive" >> $GITHUB_ENV
+
+      - name: Build C library for ${{ matrix.target }}
+        env:
+          FOXGLOVE_SDK_LANGUAGE: c
+        run: cargo build --release
+        working-directory: c
+      - name: Ensure generated files are up to date
+        run: git diff --exit-code
 
       - if: contains(matrix.target, 'windows')
         uses: ilammy/setup-nasm@v1
