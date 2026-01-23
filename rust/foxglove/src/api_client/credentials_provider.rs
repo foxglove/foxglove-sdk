@@ -3,6 +3,7 @@
 use std::sync::Arc;
 
 use arc_swap::ArcSwapOption;
+use tokio::sync::Mutex;
 use thiserror::Error;
 
 use super::client::FoxgloveApiClientError;
@@ -19,6 +20,7 @@ pub(crate) enum CredentialsError {
 pub(crate) struct CredentialsProvider {
     device: Device,
     credentials: ArcSwapOption<RtcCredentials>,
+    refresh_lock: Mutex<()>,
 }
 
 impl CredentialsProvider {
@@ -26,6 +28,7 @@ impl CredentialsProvider {
         Self {
             device,
             credentials: ArcSwapOption::new(None),
+            refresh_lock: Mutex::new(()),
         }
     }
 
@@ -35,6 +38,11 @@ impl CredentialsProvider {
     }
 
     pub async fn load_credentials(&self) -> Result<Arc<RtcCredentials>, CredentialsError> {
+        if let Some(credentials) = self.current_credentials() {
+            return Ok(credentials);
+        }
+
+        let _refresh_guard = self.refresh_lock.lock().await;
         if let Some(credentials) = self.current_credentials() {
             return Ok(credentials);
         }
