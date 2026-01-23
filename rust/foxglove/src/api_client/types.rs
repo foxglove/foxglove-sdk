@@ -4,7 +4,7 @@ use serde::Deserialize;
 
 #[derive(Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct AuthorizeRemoteVizResponse {
+pub(crate) struct RtcCredentials {
     pub token: String,
     pub url: String,
 }

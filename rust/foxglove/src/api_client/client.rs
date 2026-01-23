@@ -8,7 +8,7 @@ use reqwest::header::{HeaderMap, AUTHORIZATION, USER_AGENT};
 use reqwest::{Method, StatusCode};
 use thiserror::Error;
 
-use super::types::{AuthorizeRemoteVizResponse, DeviceResponse, ErrorResponse};
+use super::types::{DeviceResponse, ErrorResponse, RtcCredentials};
 
 pub(super) const DEFAULT_API_URL: &str = "https://api.foxglove.dev";
 
@@ -147,12 +147,9 @@ impl FoxgloveApiClient {
         base_url: impl Into<String>,
         device_token: Option<DeviceToken>,
         user_agent: impl Into<String>,
-        timeout: Duration,
     ) -> Result<Self, FoxgloveApiClientError> {
         Ok(Self {
-            http: reqwest::ClientBuilder::new()
-                .pool_idle_timeout(timeout)
-                .build()?,
+            http: reqwest::ClientBuilder::new().build()?,
             device_token,
             base_url: base_url.into(),
             user_agent: user_agent.into(),
@@ -209,7 +206,7 @@ impl FoxgloveApiClient {
     pub async fn authorize_remote_viz(
         &self,
         device_id: &str,
-    ) -> Result<AuthorizeRemoteVizResponse, FoxgloveApiClientError> {
+    ) -> Result<RtcCredentials, FoxgloveApiClientError> {
         let Some(device_token) = self.device_token() else {
             return Err(FoxgloveApiClientError::NoToken());
         };
@@ -238,7 +235,6 @@ pub(super) struct FoxgloveApiClientBuilder {
     base_url: String,
     device_token: Option<DeviceToken>,
     user_agent: String,
-    timeout: Duration,
 }
 
 impl Default for FoxgloveApiClientBuilder {
@@ -247,7 +243,6 @@ impl Default for FoxgloveApiClientBuilder {
             base_url: DEFAULT_API_URL.to_string(),
             device_token: None,
             user_agent: default_user_agent(),
-            timeout: Duration::from_secs(30),
         }
     }
 }
@@ -272,17 +267,7 @@ impl FoxgloveApiClientBuilder {
         self
     }
 
-    pub fn timeout(mut self, timeout: Duration) -> Self {
-        self.timeout = timeout;
-        self
-    }
-
     pub fn build(self) -> Result<FoxgloveApiClient, FoxgloveApiClientError> {
-        FoxgloveApiClient::new(
-            self.base_url,
-            self.device_token,
-            self.user_agent,
-            self.timeout,
-        )
+        FoxgloveApiClient::new(self.base_url, self.device_token, self.user_agent)
     }
 }

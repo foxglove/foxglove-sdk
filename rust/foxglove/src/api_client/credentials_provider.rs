@@ -7,12 +7,7 @@ use thiserror::Error;
 
 use super::client::FoxgloveApiClientError;
 use super::device::Device;
-
-#[derive(Clone)]
-pub(crate) struct RtcCredentials {
-    pub url: String,
-    pub token: String,
-}
+use super::types::RtcCredentials;
 
 #[derive(Error, Debug)]
 #[non_exhaustive]
@@ -48,13 +43,7 @@ impl CredentialsProvider {
     }
 
     pub async fn refresh(&self) -> Result<Arc<RtcCredentials>, CredentialsError> {
-        let response = self.device.authorize_remote_viz().await?;
-
-        let credentials = Arc::new(RtcCredentials {
-            url: response.url,
-            token: response.token,
-        });
-
+        let credentials = Arc::new(self.device.authorize_remote_viz().await?);
         self.credentials.store(Some(credentials.clone()));
         Ok(credentials)
     }

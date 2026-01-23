@@ -3,7 +3,7 @@
 use super::client::{
     DeviceToken, FoxgloveApiClient, FoxgloveApiClientBuilder, FoxgloveApiClientError,
 };
-use super::types::{AuthorizeRemoteVizResponse, DeviceResponse};
+use super::types::{DeviceResponse, RtcCredentials};
 
 #[derive(Clone)]
 pub(crate) struct Device {
@@ -40,9 +40,7 @@ impl Device {
         &self.info
     }
 
-    pub async fn authorize_remote_viz(
-        &self,
-    ) -> Result<AuthorizeRemoteVizResponse, FoxgloveApiClientError> {
+    pub async fn authorize_remote_viz(&self) -> Result<RtcCredentials, FoxgloveApiClientError> {
         self.client.authorize_remote_viz(self.id()).await
     }
 }

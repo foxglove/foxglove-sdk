@@ -6,5 +6,6 @@ mod device;
 mod types;
 
 pub(crate) use client::{DeviceToken, FoxgloveApiClientError};
-pub(crate) use credentials_provider::{CredentialsError, CredentialsProvider, RtcCredentials};
+pub(crate) use credentials_provider::{CredentialsError, CredentialsProvider};
 pub(crate) use device::Device;
+pub(crate) use types::RtcCredentials;
