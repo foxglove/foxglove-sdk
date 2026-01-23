@@ -21,6 +21,5 @@ runs:
         sudo apt-get install -y --no-install-recommends \
           libprotobuf-dev \
           protobuf-compiler \
-          # For livekit \
           libglib2.0-dev \
           libva-dev
