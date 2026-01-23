@@ -135,9 +135,6 @@ jobs:
     name: build (${{ matrix.target }}, ${{ matrix.compiler || 'default compiler' }})
     runs-on: ${{ matrix.runner }}
 
-    env:
-      CARGO_BUILD_TARGET: ${{ matrix.target }}
-
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/common-deps
@@ -145,6 +142,13 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           target: ${{ matrix.target }}
+
+      # Only set CARGO_BUILD_TARGET for cross-compilation builds.
+      # For native builds, let Cargo auto-detect to avoid passing --target flags
+      # that can cause issues with CMake falling back to gcc for feature probes.
+      - name: Set cross-compilation target
+        if: matrix.cross
+        run: echo "CARGO_BUILD_TARGET=${{ matrix.target }}" >> $GITHUB_ENV
 
       - name: Setup aarch64 cross-compilation
         if: matrix.target == 'aarch64-unknown-linux-gnu'
@@ -223,8 +227,15 @@ jobs:
           mkdir -p artifacts/foxglove/lib
           mkdir -p artifacts/foxglove/include
           mkdir -p artifacts/foxglove/src
-          mv target/${{ matrix.target }}/release/${{ matrix.staticlib_name }} artifacts/foxglove/lib/
-          mv target/${{ matrix.target }}/release/${{ matrix.cdylib_name }} artifacts/foxglove/lib/
+          # For cross-compilation builds, output is in target/<target>/release/
+          # For native builds, output is in target/release/
+          if [ -n "$CARGO_BUILD_TARGET" ]; then
+            RELEASE_DIR="target/${{ matrix.target }}/release"
+          else
+            RELEASE_DIR="target/release"
+          fi
+          mv "$RELEASE_DIR/${{ matrix.staticlib_name }}" artifacts/foxglove/lib/
+          mv "$RELEASE_DIR/${{ matrix.cdylib_name }}" artifacts/foxglove/lib/
           cp -R c/include/foxglove-c artifacts/foxglove/include/
           cp -R cpp/foxglove/include/foxglove artifacts/foxglove/include/
           cp -R cpp/foxglove/src/* artifacts/foxglove/src/
