@@ -21,11 +21,16 @@ RUN apt-get update \
         nodejs=23.11.1-1nodesource1 \
         protobuf-compiler=3.21.12-3 \
         python3.11-dev=3.11.2-6+deb12u6 \
+        # For livekit
+        libglib2.0-dev \
+        libva-dev \
     && rm -rf /var/lib/apt/lists/*
 
 RUN corepack enable yarn
 
 ENV PATH=/usr/lib/llvm-19/bin:/root/.local/bin:$PATH \
-    COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+    COREPACK_ENABLE_DOWNLOAD_PROMPT=0 \
+    # Needed to get webrtc crate to build with GCC older than v14 which don't support -Wno-changes-meaning
+    CXXFLAGS="-fpermissive"
 
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
