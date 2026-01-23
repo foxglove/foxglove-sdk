@@ -180,7 +180,7 @@ export const CameraCalibration = {
       },
       "minItems": 9,
       "maxItems": 9,
-      "description": "Intrinsic camera matrix (3x3 row-major matrix)\n\nA 3x3 row-major matrix for the raw (distorted) image.\n\nProjects 3D points in the camera coordinate frame to 2D pixel coordinates using the focal lengths (fx, fy) and principal point (cx, cy).\n\n```\n    [fx  0 cx]\nK = [ 0 fy cy]\n    [ 0  0  1]\n```\n"
+      "description": "Intrinsic camera matrix (3x3 row-major matrix)\n\nA 3x3 row-major matrix for the raw (distorted) image.\n\nProjects 3D points in the camera coordinate frame to 2D pixel coordinates using the focal lengths (fx, fy) and principal point (cx, cy).\n\n```\n    [fx  0 cx]\nK = [ 0 fy cy]\n    [ 0  0  1]\n```\n\n**Uncalibrated cameras:** Following ROS conventions for [CameraInfo](https://docs.ros.org/en/noetic/api/sensor_msgs/html/msg/CameraInfo.html), Foxglove also treats K[0] == 0.0 as indicating an uncalibrated camera, and calibration data will be ignored.\n"
     },
     "R": {
       "type": "array",

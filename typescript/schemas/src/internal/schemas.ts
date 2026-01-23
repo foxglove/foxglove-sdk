@@ -821,6 +821,8 @@ Projects 3D points in the camera coordinate frame to 2D pixel coordinates using 
 K = [ 0 fy cy]
     [ 0  0  1]
 \`\`\`
+
+**Uncalibrated cameras:** Following ROS conventions for [CameraInfo](https://docs.ros.org/en/noetic/api/sensor_msgs/html/msg/CameraInfo.html), Foxglove also treats K[0] == 0.0 as indicating an uncalibrated camera, and calibration data will be ignored.
 `,
     },
     {
