@@ -146,10 +146,25 @@ jobs:
         with:
           target: ${{ matrix.target }}
 
-      - run: sudo apt-get install gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+      - name: Setup aarch64 cross-compilation
         if: matrix.target == 'aarch64-unknown-linux-gnu'
-      - run: echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
-        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          # Enable multi-arch and install aarch64 glib for cross-compilation
+          sudo dpkg --add-architecture arm64
+          sudo sed -i 's/^deb /deb [arch=amd64] /' /etc/apt/sources.list.d/*.list
+          echo "deb [arch=arm64] http://ports.ubuntu.com/ $(lsb_release -cs) main restricted universe multiverse" | sudo tee /etc/apt/sources.list.d/arm64.list
+          echo "deb [arch=arm64] http://ports.ubuntu.com/ $(lsb_release -cs)-updates main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list.d/arm64.list
+          sudo apt-get update
+          sudo apt-get install -y libglib2.0-dev:arm64
+
+          # Install cross-compiler toolchain
+          sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+
+          # Configure pkg-config for cross-compilation
+          echo "PKG_CONFIG_ALLOW_CROSS=1" >> $GITHUB_ENV
+          echo "PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig" >> $GITHUB_ENV
+          echo "PKG_CONFIG_SYSROOT_DIR=/" >> $GITHUB_ENV
+          echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
       - run: echo "IPHONEOS_DEPLOYMENT_TARGET=13.0.0" >> $GITHUB_ENV
         # Min version needed for libaws_lc_sys
         if: contains(matrix.target, 'apple-ios')
