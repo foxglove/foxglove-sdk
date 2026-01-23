@@ -333,6 +333,26 @@ jobs:
       - name: Build sdist
         run: uv build --sdist
         working-directory: python/foxglove-sdk
+      - name: Verify notebook widget asset in sdist
+        run: |
+          python - <<'PY'
+          import glob
+          import sys
+          import tarfile
+
+          paths = glob.glob("foxglove_sdk-*.tar.gz")
+          if not paths:
+              sys.exit("No sdist artifact found to validate")
+
+          tar_path = paths[0]
+          expected_suffix = "python/foxglove/notebook/static/widget.js"
+          with tarfile.open(tar_path, "r:gz") as tar:
+              names = tar.getnames()
+
+          if not any(name.endswith(expected_suffix) for name in names):
+              sys.exit(f"Missing {expected_suffix} in {tar_path}")
+          PY
+        working-directory: python/foxglove-sdk
       - name: Upload sdist
         uses: actions/upload-artifact@v6
         with:
