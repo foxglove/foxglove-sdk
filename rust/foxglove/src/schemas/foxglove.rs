@@ -62,6 +62,8 @@ pub struct CameraCalibration {
     ///     [ 0  0  1]
     /// ```
     ///
+    /// **Uncalibrated cameras:** Following ROS conventions for [CameraInfo](<https://docs.ros.org/en/noetic/api/sensor_msgs/html/msg/CameraInfo.html>), Foxglove also treats K\[0\] == 0.0 as indicating an uncalibrated camera, and calibration data will be ignored.
+    ///
     /// length 9
     #[prost(double, repeated, tag = "6")]
     pub k: ::prost::alloc::vec::Vec<f64>,
