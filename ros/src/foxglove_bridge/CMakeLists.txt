@@ -208,7 +208,6 @@ if(BUILD_TESTING)
 
   ament_lint_auto_find_test_dependencies()
 
-  # Repeat tests several times to catch nondeterministic issues
   ament_add_gtest(smoke_test tests/smoke_test.cpp TIMEOUT 600)
   target_link_libraries(smoke_test
     foxglove_bridge_component
