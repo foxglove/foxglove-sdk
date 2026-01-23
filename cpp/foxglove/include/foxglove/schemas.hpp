@@ -238,6 +238,11 @@ struct CameraCalibration {
   /// @brief     [ 0  0  1]
   /// @brief ```
   /// @brief
+  /// @brief **Uncalibrated cameras:** Following ROS conventions for
+  /// [CameraInfo](https://docs.ros.org/en/noetic/api/sensor_msgs/html/msg/CameraInfo.html),
+  /// Foxglove also treats K[0] == 0.0 as indicating an uncalibrated camera, and calibration data
+  /// will be ignored.
+  /// @brief
   std::array<double, 9> k;
 
   /// @brief Rectification matrix (stereo cameras only, 3x3 row-major matrix)
