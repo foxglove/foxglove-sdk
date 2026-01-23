@@ -181,6 +181,7 @@ jobs:
         run: |
           echo "CC=gcc" >> $GITHUB_ENV
           echo "CXX=g++" >> $GITHUB_ENV
+          echo "CXXFLAGS=-fpermissive" >> $GITHUB_ENV
 
       - if: contains(matrix.target, 'windows')
         uses: ilammy/setup-nasm@v1
