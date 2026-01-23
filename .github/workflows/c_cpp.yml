@@ -147,7 +147,7 @@ jobs:
       # For native builds, let Cargo auto-detect to avoid passing --target flags
       # that can cause issues with CMake falling back to gcc for feature probes.
       - name: Set cross-compilation target
-        if: matrix.cross
+        if: ${{ fromJson(matrix.cross) }}
         run: echo "CARGO_BUILD_TARGET=${{ matrix.target }}" >> $GITHUB_ENV
 
       - name: Setup aarch64 cross-compilation
