@@ -1,4 +1,4 @@
-#[cfg(not(target_family = "wasm"))]
+#[cfg(all(not(target_family = "wasm"), not(target_env = "musl")))]
 use cloud_sink::start_cloud_sink;
 use errors::PyFoxgloveError;
 use foxglove::McapWriteOptions;
