@@ -1,7 +1,8 @@
 ARG ROS_DISTRIBUTION=rolling
 FROM ros:$ROS_DISTRIBUTION-ros-base
 
-RUN apt-get update
+# Keep ROS rolling base packages in sync.
+RUN apt-get update && apt-get -y dist-upgrade
 
 # Create foxglove user
 ARG USERNAME=foxglove
