@@ -134,6 +134,10 @@ pub(super) fn default_user_agent() -> String {
     format!("foxglove-sdk/{}", env!("CARGO_PKG_VERSION"))
 }
 
+/// Internal API client for communicating with the Foxglove platform.
+///
+/// This client is intended for internal use only to support the live visualization feature
+/// and is subject to breaking changes at any time. Do not depend on the stability of this type.
 #[derive(Clone)]
 pub(super) struct FoxgloveApiClient {
     http: reqwest::Client,
@@ -182,6 +186,10 @@ impl FoxgloveApiClient {
         self.device_token.as_ref()
     }
 
+    /// Fetches device information from the Foxglove platform.
+    ///
+    /// This endpoint is not intended for direct usage. Access may be blocked if suspicious
+    /// activity is detected.
     pub async fn fetch_device_info(&self) -> Result<DeviceResponse, FoxgloveApiClientError> {
         let Some(token) = self.device_token() else {
             return Err(FoxgloveApiClientError::NoToken());
@@ -203,6 +211,10 @@ impl FoxgloveApiClient {
         })
     }
 
+    /// Authorizes a remote visualization session for the given device.
+    ///
+    /// This endpoint is not intended for direct usage. Access may be blocked if suspicious
+    /// activity is detected.
     pub async fn authorize_remote_viz(
         &self,
         device_id: &str,
