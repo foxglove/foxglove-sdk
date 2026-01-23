@@ -340,9 +340,9 @@ jobs:
           import sys
           import tarfile
 
-          paths = glob.glob("foxglove_sdk-*.tar.gz")
+          paths = glob.glob("dist/foxglove_sdk-*.tar.gz")
           if not paths:
-              sys.exit("No sdist artifact found to validate")
+              sys.exit("No sdist artifact found to validate in dist/")
 
           tar_path = paths[0]
           expected_suffix = "python/foxglove/notebook/static/widget.js"
