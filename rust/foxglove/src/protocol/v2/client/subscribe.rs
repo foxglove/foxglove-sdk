@@ -28,7 +28,8 @@ impl BinaryPayload<'_> for Subscribe {
             return Err(ParseError::BufferTooShort);
         }
         let count = data.get_u32_le() as usize;
-        if data.len() < count * 4 {
+        let required_len = count.checked_mul(4).ok_or(ParseError::BufferTooShort)?;
+        if data.len() < required_len {
             return Err(ParseError::BufferTooShort);
         }
         let mut channel_ids = Vec::with_capacity(count);
