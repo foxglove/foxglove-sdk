@@ -181,13 +181,13 @@ jobs:
       - name: Use Clang
         if: matrix.compiler == 'clang'
         run: |
-          echo "CC=clang" >> $GITHUB_ENV
-          echo "CXX=clang++" >> $GITHUB_ENV
+          echo "CC=$(command -v clang)" >> $GITHUB_ENV
+          echo "CXX=$(command -v clang++)" >> $GITHUB_ENV
       - name: Use GCC
         if: matrix.compiler == 'gcc'
         run: |
-          echo "CC=gcc" >> $GITHUB_ENV
-          echo "CXX=g++" >> $GITHUB_ENV
+          echo "CC=$(command -v gcc)" >> $GITHUB_ENV
+          echo "CXX=$(command -v g++)" >> $GITHUB_ENV
           echo "CXXFLAGS=-fpermissive" >> $GITHUB_ENV
 
       - name: Build C library for ${{ matrix.target }}
