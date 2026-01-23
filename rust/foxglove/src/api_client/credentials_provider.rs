@@ -3,8 +3,8 @@
 use std::sync::Arc;
 
 use arc_swap::ArcSwapOption;
-use tokio::sync::Mutex;
 use thiserror::Error;
+use tokio::sync::Mutex;
 
 use super::client::FoxgloveApiClientError;
 use super::device::Device;
