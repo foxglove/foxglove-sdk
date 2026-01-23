@@ -60,8 +60,6 @@ flume = { version = "0.11.1", optional = true }
 foxglove_derive = { version = "0.16.6", path = "../foxglove_derive", optional = true }
 futures = { version = "0.3.31", optional = true }
 futures-util = { version = "0.3.31", features = ["sink", "std"], optional = true }
-livekit = { version = "0.7.29", optional = true, features = ["rustls-tls-native-roots"] }
-libwebrtc = { version = "0.3.24", optional = true }
 #livekit = { version = "0.7.18", optional = true, features = ["rustls-tls-native-roots"] }
 #libwebrtc = { version = "0.3.14", optional = true }
 mcap.workspace = true
@@ -99,6 +97,11 @@ serde_cbor = "0.11.2"
 serde_json = "1.0"
 tempfile = "3.15.0"
 tracing-test.workspace = true
+
+# currently we don't support livekit/libwebrtc on musl targets, use a glibc build
+[target.'cfg(not(target_env = "musl"))'.dependencies]
+livekit = { version = "0.7.29", optional = true, features = ["rustls-tls-native-roots"] }
+libwebrtc = { version = "0.3.24", optional = true }
 
 [package.metadata.docs.rs]
 all-features = true
