@@ -98,11 +98,13 @@ cdr = { version = "0.2.4", optional = true }
 [dev-dependencies]
 assert_matches = "1.5.0"
 insta.workspace = true
+axum = "0.7"
 hexdump = "0.1.2"
 maplit = "1.0.2"
 serde_cbor = "0.11.2"
 serde_json = "1.0"
 tempfile = "3.15.0"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net"] }
 tracing-test.workspace = true
 
 [package.metadata.docs.rs]

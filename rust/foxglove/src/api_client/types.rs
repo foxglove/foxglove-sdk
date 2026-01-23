@@ -1,15 +1,15 @@
 #![allow(dead_code)]
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize, Clone)]
+#[derive(Deserialize, Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct RtcCredentials {
     pub token: String,
     pub url: String,
 }
 
-#[derive(Deserialize, Clone)]
+#[derive(Deserialize, Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct DeviceResponse {
     pub id: String,
