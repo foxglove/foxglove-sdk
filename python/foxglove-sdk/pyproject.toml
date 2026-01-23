@@ -48,7 +48,7 @@ include = [
   # Custom build backend, required for building from sdist.
   { path = "custom_build.py", format = ["sdist"] },
   # Include Jupyter widget static assets
-  "foxglove/notebook/static/*",
+  "python/foxglove/notebook/static/*",
 ]
 jupyterlab = "^4.4.7"
 
