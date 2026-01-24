@@ -18,6 +18,28 @@ use crate::{nanoseconds_since_epoch, Context, Metadata, PartialMetadata, Schema,
 /// Interval for throttled warnings.
 static WARN_THROTTLER_INTERVAL: Duration = Duration::from_secs(10);
 
+/// Options that control how data for the channel is sent over the network with applicable sinks.
+#[derive(Debug, Clone, Copy, Default)]
+#[repr(u8)]
+pub enum TransportKind {
+    /// Delivery of messages is best effort and may not be retried. This is the default.
+    /// This only affects [`CloudSink`](crate::CloudSink) which supports UDP,
+    /// not currently [`WebSocketServer`](crate::WebSocketServer) or [`McapWriter`](crate::McapWriter).
+    /// Messages are still delivered to the Foxglove in-order.
+    ///
+    /// Note: this only applies to messages under 15kb, larger messages will use Reliable transport.
+    #[default]
+    Lossy,
+    /// Delivery of messages is reliable, retrying if need need be.
+    /// This causes head-of-line blocking, and if there isn't enough bandwidth available
+    /// buffers and queues will grow longer. Be very sparing with this over poor quality networks.
+    ///
+    /// Doesn't affect [`McapWriter`](crate::McapWriter).
+    /// Note: delivery is still not guaranteed, because buffers and queues are not infinite.
+    /// Messages may still be dropped, or the OOM killer may reap the process.
+    Reliable,
+}
+
 /// A log channel that can be used to log binary messages.
 ///
 /// A "channel" is conceptually the same as a [MCAP channel]: it is a stream of messages which all
@@ -38,6 +60,8 @@ pub struct RawChannel {
     context: Weak<Context>,
     sinks: LogSinkSet,
     closed: AtomicBool,
+    #[allow(dead_code)]
+    transport_kind: TransportKind,
     warn_throttler: Mutex<Throttler>,
 }
 
@@ -48,6 +72,7 @@ impl RawChannel {
         message_encoding: String,
         schema: Option<Schema>,
         metadata: BTreeMap<String, String>,
+        transport_kind: TransportKind,
     ) -> Arc<Self> {
         Arc::new(Self {
             descriptor: ChannelDescriptor::new(
@@ -60,6 +85,7 @@ impl RawChannel {
             context: Arc::downgrade(context),
             sinks: LogSinkSet::new(),
             closed: AtomicBool::new(false),
+            transport_kind,
             warn_throttler: Mutex::new(Throttler::new(WARN_THROTTLER_INTERVAL)),
         })
     }
