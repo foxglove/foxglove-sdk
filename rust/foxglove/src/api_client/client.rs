@@ -418,7 +418,7 @@ mod tests {
     #[tokio::test]
     async fn authorize_remote_viz_requires_token() {
         let client = create_test_api_client(
-            "/internal/platform/v1/devices/:device_id/remote-sessions",
+            "/internal/platform/v1/devices/{device_id}/remote-sessions",
             authorize_remote_viz_handler,
         )
         .await;
@@ -429,7 +429,7 @@ mod tests {
     #[tokio::test]
     async fn authorize_remote_viz_success() {
         let mut client = create_test_api_client(
-            "/internal/platform/v1/devices/:device_id/remote-sessions",
+            "/internal/platform/v1/devices/{device_id}/remote-sessions",
             authorize_remote_viz_handler,
         )
         .await;
@@ -446,7 +446,7 @@ mod tests {
     #[tokio::test]
     async fn authorize_remote_viz_unauthorized() {
         let mut client = create_test_api_client(
-            "/internal/platform/v1/devices/:device_id/remote-sessions",
+            "/internal/platform/v1/devices/{device_id}/remote-sessions",
             authorize_remote_viz_handler,
         )
         .await;
