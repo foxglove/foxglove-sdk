@@ -11,7 +11,7 @@ license.workspace = true
 default = ["derive", "live_visualization", "lz4", "zstd"]
 chrono = ["dep:chrono"]
 derive = ["dep:foxglove_derive"]
-agent = ["live_visualization", "dep:reqwest", "dep:percent-encoding"]
+agent = ["live_visualization", "tls", "dep:reqwest", "dep:percent-encoding"]
 live_visualization = [
   "dep:base64",
   "dep:flume",
