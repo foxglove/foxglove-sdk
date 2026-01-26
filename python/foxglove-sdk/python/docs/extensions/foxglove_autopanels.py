@@ -30,7 +30,7 @@ class PanelGroup:
 
     panel: str
     config: str | None = None
-    related_types: list[str] = field(default_factory=list)
+    related_types: set[str] = field(default_factory=set)
 
 
 # Classes to exclude from panel documentation (either internal or documented elsewhere)
