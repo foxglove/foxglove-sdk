@@ -21,17 +21,11 @@ Layouts
 ^^^^^^^
 
 .. automodule:: foxglove.layouts
-   :members: StackContainer, StackItem, SplitContainer, SplitItem, TabContainer, TabItem, Layout, UserScript
+   :members: StackContainer, StackItem, SplitContainer, SplitItem, TabContainer, TabItem, Layout, UserScript, Panel, BasePanel
    :undoc-members:
    :exclude-members: __init__
 
 Panels
 ^^^^^^
 
-
-.. automodule:: foxglove.layouts
-   :no-docstring:
-   :members:
-   :undoc-members:
-   :inherited-members:
-   :exclude-members: __init__, to_json, StackContainer, StackItem, SplitContainer, SplitItem, TabContainer, TabItem, Layout, UserScript
+.. foxglove_autopanels::
