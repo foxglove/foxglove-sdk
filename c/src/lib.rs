@@ -17,8 +17,9 @@ mod bytes;
 mod channel;
 #[cfg(not(target_family = "wasm"))]
 mod channel_descriptor;
-#[cfg(not(target_family = "wasm"))]
-mod cloud_sink;
+// Disabled for C++ for now
+// #[cfg(not(target_family = "wasm"))]
+// mod cloud_sink;
 #[cfg(not(target_family = "wasm"))]
 mod connection_graph;
 #[cfg(not(target_family = "wasm"))]
@@ -38,8 +39,9 @@ mod service;
 #[cfg(not(target_family = "wasm"))]
 mod sink_channel_filter;
 
-#[cfg(not(target_family = "wasm"))]
-pub use cloud_sink::*;
+// Disabled for C++ for now
+// #[cfg(not(target_family = "wasm"))]
+// pub use cloud_sink::*;
 #[cfg(not(target_family = "wasm"))]
 pub use server::*;
 
