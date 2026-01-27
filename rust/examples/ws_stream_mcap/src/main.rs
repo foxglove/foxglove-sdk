@@ -28,6 +28,7 @@ struct Inner {
     current_time: u64,
     pending_seek_time: Option<u64>,
     playback_speed: f32,
+    time_tracker: Option<TimeTracker>,
 }
 
 struct StreamMcapListener {
@@ -35,13 +36,14 @@ struct StreamMcapListener {
 }
 
 impl StreamMcapListener {
-    fn new(start_time: u64) -> Self {
+    fn new(summary: &Summary) -> Self {
         Self {
             inner: Mutex::new(Inner {
                 status: PlaybackStatus::Paused,
-                current_time: start_time,
+                current_time: summary.start_time,
                 pending_seek_time: None,
                 playback_speed: 1.0,
+                time_tracker: None,
             }),
         }
     }
@@ -50,16 +52,8 @@ impl StreamMcapListener {
         self.inner.lock().unwrap().status == PlaybackStatus::Playing
     }
 
-    fn update_current_time(&self, timestamp: u64) {
-        self.inner.lock().unwrap().current_time = timestamp;
-    }
-
     fn take_seek_request(&self) -> Option<u64> {
         self.inner.lock().unwrap().pending_seek_time.take()
-    }
-
-    fn playback_speed(&self) -> f32 {
-        self.inner.lock().unwrap().playback_speed
     }
 
     fn update_status(&self, status: PlaybackStatus) {
@@ -76,6 +70,37 @@ impl StreamMcapListener {
             request_id: None,
         }
     }
+
+    fn reset_time_tracker(&self) {
+        self.inner.lock().unwrap().time_tracker = None;
+    }
+
+    /// Sleeps until the specified log time, pacing playback to match the playback speed.
+    fn sleep_until_log_time(&self, log_time: u64) {
+        let sleep_duration = {
+            let mut inner = self.inner.lock().unwrap();
+            let speed = inner.playback_speed;
+            let tt = inner
+                .time_tracker
+                .get_or_insert_with(|| TimeTracker::start(log_time));
+            tt.compute_sleep_duration(log_time, speed)
+        };
+
+        if sleep_duration >= Duration::from_micros(1) {
+            std::thread::sleep(sleep_duration);
+        }
+
+        let mut inner = self.inner.lock().unwrap();
+        inner.current_time = log_time;
+        if let Some(tt) = &mut inner.time_tracker {
+            tt.update_position(log_time);
+        }
+    }
+
+    /// Returns a timestamp if it's time to broadcast the current time to clients.
+    fn should_broadcast_time(&self) -> Option<u64> {
+        self.inner.lock().unwrap().time_tracker.as_mut()?.notify()
+    }
 }
 
 impl ServerListener for StreamMcapListener {
@@ -84,6 +109,12 @@ impl ServerListener for StreamMcapListener {
         request: PlaybackControlRequest,
     ) -> Option<PlaybackState> {
         let mut inner = self.inner.lock().unwrap();
+
+        // Reset time tracker if speed changed or seeking
+        let speed_changed = (request.playback_speed - inner.playback_speed).abs() > f32::EPSILON;
+        if speed_changed || request.seek_time.is_some() {
+            inner.time_tracker = None;
+        }
 
         inner.playback_speed = request.playback_speed.max(0.01);
         inner.status = match request.playback_command {
@@ -154,7 +185,7 @@ fn main() -> Result<()> {
         summary.start_time, summary.end_time
     );
 
-    let listener = Arc::new(StreamMcapListener::new(summary.start_time));
+    let listener = Arc::new(StreamMcapListener::new(&summary));
 
     let server = WebSocketServer::new()
         .name(file_name)
@@ -271,7 +302,6 @@ fn build_raw_channels(summary: &McapSummary) -> Result<HashMap<u16, Arc<RawChann
 struct FileStream<'a> {
     path: PathBuf,
     channels: &'a HashMap<u16, Arc<RawChannel>>,
-    time_tracker: Option<TimeTracker>,
     listener: Arc<StreamMcapListener>,
     summary: Arc<McapSummary>,
 }
@@ -287,7 +317,6 @@ impl<'a> FileStream<'a> {
         Self {
             path: path.to_owned(),
             channels,
-            time_tracker: None,
             listener,
             summary,
         }
@@ -295,7 +324,7 @@ impl<'a> FileStream<'a> {
 
     /// Streams the file content until `done` is set.
     fn stream_until(
-        mut self,
+        self,
         server: &WebSocketServerHandle,
         done: &Arc<AtomicBool>,
     ) -> Result<()> {
@@ -305,12 +334,11 @@ impl<'a> FileStream<'a> {
         while !done.load(Ordering::Relaxed) {
             if let Some(seek_time) = self.listener.take_seek_request() {
                 reader = self.build_reader(Some(seek_time))?;
-                self.time_tracker = None;
                 continue;
             }
 
             if !self.listener.is_playing() {
-                self.time_tracker = None;
+                self.listener.reset_time_tracker();
                 std::thread::sleep(Duration::from_millis(10));
                 continue;
             }
@@ -349,21 +377,10 @@ impl<'a> FileStream<'a> {
     }
 
     /// Streams the message data to the server.
-    fn handle_message(
-        &mut self,
-        server: &WebSocketServerHandle,
-        header: MessageHeader,
-        data: &[u8],
-    ) {
-        let speed = self.listener.playback_speed();
-        let tt = self
-            .time_tracker
-            .get_or_insert_with(|| TimeTracker::start(header.log_time, speed));
+    fn handle_message(&self, server: &WebSocketServerHandle, header: MessageHeader, data: &[u8]) {
+        self.listener.sleep_until_log_time(header.log_time);
 
-        tt.sleep_until(header.log_time, speed);
-        self.listener.update_current_time(header.log_time);
-
-        if let Some(timestamp) = tt.notify() {
+        if let Some(timestamp) = self.listener.should_broadcast_time() {
             server.broadcast_time(timestamp);
         }
 
@@ -378,45 +395,37 @@ impl<'a> FileStream<'a> {
     }
 }
 
-/// Helper for keep tracking of the relationship between a file timestamp and the wallclock.
+/// Helper for tracking the relationship between a file timestamp and the wallclock.
 struct TimeTracker {
     start: Instant,
     start_log_ns: u64,
-    playback_speed: f32,
     now_ns: u64,
     notify_interval_ns: u64,
     notify_last: u64,
 }
+
 impl TimeTracker {
-    /// Initializes a new time tracker, treating "now" as the specified offset from epoch.
-    fn start(offset_ns: u64, playback_speed: f32) -> Self {
+    /// Initializes a new time tracker, treating "now" as the specified log time.
+    fn start(log_time: u64) -> Self {
         Self {
             start: Instant::now(),
-            start_log_ns: offset_ns,
-            playback_speed,
-            now_ns: offset_ns,
+            start_log_ns: log_time,
+            now_ns: log_time,
             notify_interval_ns: 1_000_000_000 / 60,
             notify_last: 0,
         }
     }
 
-    /// Sleeps until the specified offset.
-    fn sleep_until(&mut self, offset_ns: u64, playback_speed: f32) {
-        if (playback_speed - self.playback_speed).abs() > f32::EPSILON {
-            self.start = Instant::now();
-            self.start_log_ns = offset_ns;
-            self.playback_speed = playback_speed;
-            self.now_ns = offset_ns;
-            return;
-        }
+    /// Computes how long to sleep to pace playback to the given log time.
+    fn compute_sleep_duration(&self, log_time: u64, playback_speed: f32) -> Duration {
+        let delta_log = log_time.saturating_sub(self.start_log_ns);
+        let scaled = Duration::from_nanos(delta_log).mul_f64(1.0 / (playback_speed as f64));
+        scaled.saturating_sub(self.start.elapsed())
+    }
 
-        let delta_log = offset_ns.saturating_sub(self.start_log_ns);
-        let scaled = Duration::from_nanos(delta_log).mul_f64(1.0 / (self.playback_speed as f64));
-        let delta = scaled.saturating_sub(self.start.elapsed());
-        if delta >= Duration::from_micros(1) {
-            std::thread::sleep(delta);
-        }
-        self.now_ns = offset_ns;
+    /// Updates the current position after sleeping.
+    fn update_position(&mut self, log_time: u64) {
+        self.now_ns = log_time;
     }
 
     /// Periodically returns a timestamp reference to broadcast to clients.
