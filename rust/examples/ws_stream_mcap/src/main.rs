@@ -35,11 +35,11 @@ struct StreamMcapListener {
 }
 
 impl StreamMcapListener {
-    fn new() -> Self {
+    fn new(start_time: u64) -> Self {
         Self {
             inner: Mutex::new(Inner {
                 status: PlaybackStatus::Paused,
-                current_time: 0,
+                current_time: start_time,
                 pending_seek_time: None,
                 playback_speed: 1.0,
             }),
@@ -154,7 +154,7 @@ fn main() -> Result<()> {
         summary.start_time, summary.end_time
     );
 
-    let listener = Arc::new(StreamMcapListener::new());
+    let listener = Arc::new(StreamMcapListener::new(summary.start_time));
 
     let server = WebSocketServer::new()
         .name(file_name)
