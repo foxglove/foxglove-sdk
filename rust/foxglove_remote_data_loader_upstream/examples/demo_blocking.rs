@@ -2,7 +2,7 @@
 //!
 //! This example demonstrates:
 //! - Implementing the [`UpstreamServerBlocking`] trait.
-//! - The flow: declare channels, set manifest opts, stream data.
+//! - The flow: auth, initialize, metadata, stream.
 //! - Using [`generate_source_id`] to create unique IDs for caching.
 //!
 //! # Running the example
@@ -31,12 +31,19 @@
 use std::net::SocketAddr;
 
 use chrono::{DateTime, Utc};
-use foxglove::FoxgloveError;
+use foxglove::Channel;
 use serde::Deserialize;
 
 use foxglove_remote_data_loader_upstream::{
-    blocking, generate_source_id, AuthError, ManifestOpts, Url,
+    blocking, generate_source_id, AuthError, BoxError, ChannelRegistry, Metadata,
 };
+
+/// Define our message type.
+#[derive(foxglove::Encode)]
+struct DemoMessage {
+    msg: String,
+    count: u32,
+}
 
 /// A simple upstream server.
 struct BlockingExampleUpstream;
@@ -50,56 +57,62 @@ struct FlightParams {
     end_time: DateTime<Utc>,
 }
 
+/// Context holding channels and shared state.
+struct FlightContext {
+    flight_id: String,
+    start_time: DateTime<Utc>,
+    end_time: DateTime<Utc>,
+    demo: Channel<DemoMessage>,
+}
+
 impl blocking::UpstreamServer for BlockingExampleUpstream {
     type QueryParams = FlightParams;
-    type Error = FoxgloveError;
+    type Context = FlightContext;
 
     fn auth(&self, _bearer_token: Option<&str>, _params: &FlightParams) -> Result<(), AuthError> {
         // No authentication required for this demo
         Ok(())
     }
 
-    fn build_source(
+    fn initialize(
         &self,
         params: FlightParams,
-        mut source: blocking::SourceBuilder<'_>,
-    ) -> Result<(), FoxgloveError> {
-        // Define our message type.
-        #[derive(foxglove::Encode)]
-        struct DemoMessage {
-            msg: String,
-            count: u32,
-        }
+        reg: &mut ChannelRegistry,
+    ) -> Result<FlightContext, BoxError> {
+        // Declare channels and build context
+        Ok(FlightContext {
+            flight_id: params.flight_id,
+            start_time: params.start_time,
+            end_time: params.end_time,
+            demo: reg.channel("/demo"),
+        })
+    }
 
-        // 1. Declare channels.
-        let channel = source.channel::<DemoMessage>("/demo");
+    fn metadata(&self, ctx: FlightContext) -> Result<Metadata, BoxError> {
+        Ok(Metadata {
+            id: generate_source_id("flight-data", 1, &ctx.flight_id),
+            name: format!("Flight {}", ctx.flight_id),
+            start_time: ctx.start_time,
+            end_time: ctx.end_time,
+        })
+    }
 
-        // 2. Set manifest metadata if this is a manifest request.
-        if let Some(opts) = source.manifest() {
-            *opts = ManifestOpts {
-                id: generate_source_id("flight-data", 1, &params),
-                name: format!("Flight {}", params.flight_id),
-                start_time: params.start_time,
-                end_time: params.end_time,
-            };
-        }
-
-        // 3. Stream messages if this is a data request.
-        let Some(mut handle) = source.into_stream_handle() else {
-            return Ok(());
-        };
-
-        tracing::info!(flight_id = %params.flight_id, "streaming data");
+    fn stream(
+        &self,
+        ctx: FlightContext,
+        mut handle: blocking::StreamHandle,
+    ) -> Result<(), BoxError> {
+        tracing::info!(flight_id = %ctx.flight_id, "streaming data");
 
         const MAX_BUFFER_SIZE: usize = 1024 * 1024; // 1MiB
         for i in 0..10 {
-            let timestamp = params.start_time + chrono::Duration::milliseconds(i as i64 * 100);
-            channel.log_with_time(
+            let timestamp = ctx.start_time + chrono::Duration::milliseconds(i as i64 * 100);
+            ctx.demo.log_with_time(
                 &DemoMessage {
-                    msg: format!("Data for flight {}", params.flight_id),
+                    msg: format!("Data for flight {}", ctx.flight_id),
                     count: i,
                 },
-                timestamp.min(params.end_time),
+                timestamp.min(ctx.end_time),
             );
 
             if handle.buffer_size() >= MAX_BUFFER_SIZE {
@@ -110,10 +123,6 @@ impl blocking::UpstreamServer for BlockingExampleUpstream {
         // Close the handle to finish the MCAP.
         handle.close()?;
         Ok(())
-    }
-
-    fn base_url(&self) -> Url {
-        "http://localhost:8080".parse().unwrap()
     }
 }
 

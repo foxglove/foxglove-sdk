@@ -1,30 +1,30 @@
 //! This crate provides utilities for quickly building a remote data loader upstream server.
 //!
 //! It handles server setup, routing, and provides a framework for implementing authentication,
-//! manifest generation, and MCAP data streaming with a simple, linear API.
+//! manifest generation, and MCAP data streaming with a simple API.
 //!
 //! # Features
 //!
-//! - **`async`** (default): Enables the async API ([`UpstreamServer`], [`SourceBuilder`], [`serve`])
-//! - **`blocking`**: Enables the blocking API ([`UpstreamServerBlocking`], [`SourceBuilderBlocking`], [`serve_blocking`])
+//! - **`async`** (default): Enables the async API ([`UpstreamServer`], [`serve`])
+//! - **`blocking`**: Enables the blocking API ([`UpstreamServerBlocking`], [`serve_blocking`])
 //!
 //! # Quick Start
 //!
 //! 1. Define a server type (e.g., `struct MyServer;`)
-//! 2. Implement [`UpstreamServer`] (async) or [`UpstreamServerBlocking`] (sync)
-//! 3. Call [`serve`] or [`serve_blocking`] to start the server
+//! 2. Define a context type to hold channels and any shared state
+//! 3. Implement [`UpstreamServer`] (async) or [`UpstreamServerBlocking`] (sync)
+//! 4. Call [`serve`] or [`serve_blocking`] to start the server
 //!
-//! See `examples/demo.rs` and `examples/demo_blocking.rs` for async and blocking examples, respectively.
+//! See `examples/demo.rs` and `examples/demo_blocking.rs` for async and blocking examples.
 //!
-//! # Building a data source
+//! # Implementing UpstreamServer
 //!
-//! [`UpstreamServer::build_source`] receives a [`SourceBuilder`]. Your implementation should:
+//! The trait has four methods:
 //!
-//! 1. **Declare channels** - Call [`SourceBuilder::channel`] to declare channels.
-//! 2. **Set manifest metadata** - If [`SourceBuilder::manifest`] returns `Some`, set the manifest options.
-//! 3. **Stream data** - If [`SourceBuilder::into_stream_handle`] returns `Some`, log messages to the declared channels.
-//!
-//! The blocking version works the same way, except it receives a [`SourceBuilderBlocking`] instead.
+//! 1. **`auth`** - Authenticate and authorize the request
+//! 2. **`initialize`** - Set up channels and prepare context
+//! 3. **`metadata`** - Return metadata about the data source (manifest requests only)
+//! 4. **`stream`** - Stream MCAP data (data requests only)
 //!
 //! # Endpoints
 //!
@@ -43,7 +43,7 @@ pub use serve_async::*;
 #[cfg(feature = "blocking")]
 pub mod blocking;
 
-use std::{hash::Hash, num::NonZeroU16};
+use std::{hash::Hash, num::NonZeroU16, sync::Arc};
 
 pub use axum::BoxError;
 use axum::{
@@ -52,9 +52,8 @@ use axum::{
 };
 pub use chrono::{DateTime, Utc};
 use tracing::warn;
-pub use url::Url;
 
-use foxglove::{stream::McapStreamHandle, Channel, Encode};
+use foxglove::{Channel, Context, Encode, RawChannel, Sink, SinkId};
 
 /// Route for the manifest endpoint.
 pub const MANIFEST_ROUTE: &str = "/v1/manifest";
@@ -63,6 +62,23 @@ pub const MANIFEST_ROUTE: &str = "/v1/manifest";
 pub const DATA_ROUTE: &str = "/v1/data";
 
 /// Error type for authentication and authorization failures.
+///
+/// Use `AuthError::Unauthenticated` for missing/invalid credentials (HTTP 401),
+/// `AuthError::Forbidden` for valid credentials but denied access (HTTP 403),
+/// or use `AuthError::other()` to wrap unexpected errors (HTTP 500).
+///
+/// # Example
+///
+/// ```rust
+/// # use foxglove_remote_data_loader_upstream::AuthError;
+/// async fn auth(token: Option<&str>) -> Result<(), AuthError> {
+///     let token = token.ok_or(AuthError::Unauthenticated)?;
+///     // Use .map_err(AuthError::other) to convert other errors
+///     let _claims = validate_token(token).map_err(AuthError::other)?;
+///     Ok(())
+/// }
+/// # fn validate_token(_: &str) -> Result<(), std::io::Error> { Ok(()) }
+/// ```
 #[derive(thiserror::Error, Debug)]
 pub enum AuthError {
     /// Credentials required but invalid or missing (HTTP 401).
@@ -73,7 +89,7 @@ pub enum AuthError {
     #[error("forbidden")]
     Forbidden,
 
-    /// An unexpected error occurred.
+    /// An unexpected error occurred (HTTP 500).
     #[error(transparent)]
     Other(BoxError),
 }
@@ -84,6 +100,10 @@ impl AuthError {
         Self::Other(error.into())
     }
 }
+
+// Note: We intentionally don't implement From<E> for AuthError because it would
+// conflict with the standard From<T> for T implementation. Instead, use the
+// AuthError::other() method or the ? operator with .map_err(AuthError::other).
 
 impl IntoResponse for AuthError {
     fn into_response(self) -> Response {
@@ -98,9 +118,11 @@ impl IntoResponse for AuthError {
     }
 }
 
-/// Metadata for a data source manifest.
+/// Metadata describing a data source.
+///
+/// Returned from [`UpstreamServer::metadata`] to describe the data source in the manifest.
 #[derive(Debug, Clone)]
-pub struct ManifestOpts {
+pub struct Metadata {
     /// Unique cache key for this data source.
     ///
     /// You can set this manually, or use [`generate_source_id`] to create a stable ID from your
@@ -123,7 +145,7 @@ pub struct ManifestOpts {
     pub end_time: DateTime<Utc>,
 }
 
-impl Default for ManifestOpts {
+impl Default for Metadata {
     fn default() -> Self {
         Self {
             id: String::new(),
@@ -170,42 +192,93 @@ pub fn generate_source_id(name: &str, revision: u64, params: &impl Hash) -> Stri
     format!("{}-r{}-{}", name, revision, params_hash.to_hex())
 }
 
-/// A convenience wrapper around a [`foxglove::Channel`] that may or may not exist.
+/// A sink that panics if any message is logged to it.
 ///
-/// Returned by [`SourceBuilder::channel`] or [`SourceBuilderBlocking::channel`], which only create
-/// a [`foxglove::Channel`] if they were called while in streaming mode.
-///
-/// This type's methods panic if the underlying channel does not exist.
-pub struct MaybeChannel<T: Encode>(Option<Channel<T>>);
+/// Used internally for channels created during manifest generation to catch
+/// bugs where code attempts to log messages during metadata generation.
+struct PanicSink {
+    id: SinkId,
+}
 
-impl<T: Encode> MaybeChannel<T> {
-    /// Logs a message to the channel with the given timestamp.
-    ///
-    /// # Panics
-    ///
-    /// Panics if called in manifest mode.
-    pub fn log_with_time(&self, msg: &T, timestamp: impl foxglove::ToUnixNanos) {
-        self.0
-            .as_ref()
-            .expect("called `MaybeChannel::log_with_time()` while in manifest mode")
-            .log_with_time(msg, timestamp)
-    }
-
-    /// Unwraps the inner channel.
-    ///
-    /// Use this for advanced operations like `log_with_meta_to_sink()`.
-    ///
-    /// # Panics
-    ///
-    /// Panics if called in manifest mode.
-    pub fn into_inner(self) -> Channel<T> {
-        self.0
-            .expect("called `MaybeChannel::into_inner()` while in manifest mode")
+impl PanicSink {
+    fn new() -> Self {
+        Self { id: SinkId::next() }
     }
 }
 
-struct ManifestBuilder {
-    manifest_opts: ManifestOpts,
+impl Sink for PanicSink {
+    fn id(&self) -> SinkId {
+        self.id
+    }
+
+    fn log(
+        &self,
+        _channel: &RawChannel,
+        _msg: &[u8],
+        _metadata: &foxglove::Metadata,
+    ) -> Result<(), foxglove::FoxgloveError> {
+        panic!("attempted to log message during manifest generation; logging is only allowed in stream()");
+    }
+}
+
+/// Registry for declaring channels during [`UpstreamServer::initialize`].
+///
+/// Channels created through this registry are real [`Channel<T>`] instances that can be used
+/// directly in [`UpstreamServer::stream`]. During manifest generation, channels are connected
+/// to a sink that panics if logged to, catching bugs where logging happens outside of `stream()`.
+pub struct ChannelRegistry {
+    mode: RegistryMode,
+    manifest_builder: ManifestBuilder,
+}
+
+enum RegistryMode {
+    Manifest { context: Arc<Context> },
+    Stream { handle: foxglove::stream::McapStreamHandle },
+}
+
+impl ChannelRegistry {
+    pub(crate) fn new_for_manifest() -> Self {
+        let context = Context::new();
+        context.add_sink(Arc::new(PanicSink::new()));
+        Self {
+            mode: RegistryMode::Manifest { context },
+            manifest_builder: ManifestBuilder::new(),
+        }
+    }
+
+    pub(crate) fn new_for_stream(handle: foxglove::stream::McapStreamHandle) -> Self {
+        Self {
+            mode: RegistryMode::Stream { handle },
+            manifest_builder: ManifestBuilder::new(),
+        }
+    }
+
+    /// Declare a channel for logging messages.
+    ///
+    /// Returns a real [`Channel<T>`] that can be stored in your context type and used in `stream()`.
+    pub fn channel<T: Encode>(&mut self, topic: impl Into<String>) -> Channel<T> {
+        let topic = topic.into();
+        self.manifest_builder.add_channel::<T>(topic.clone());
+        match &self.mode {
+            RegistryMode::Manifest { context } => context.channel_builder(&topic).build::<T>(),
+            RegistryMode::Stream { handle } => handle.channel_builder(&topic).build::<T>(),
+        }
+    }
+
+    pub(crate) fn into_parts(self) -> (ManifestBuilder, Option<foxglove::stream::McapStreamHandle>) {
+        let handle = match self.mode {
+            RegistryMode::Manifest { .. } => None,
+            RegistryMode::Stream { handle } => Some(handle),
+        };
+        (self.manifest_builder, handle)
+    }
+
+    pub(crate) fn into_manifest_builder(self) -> ManifestBuilder {
+        self.manifest_builder
+    }
+}
+
+pub(crate) struct ManifestBuilder {
     topics: Vec<manifest::Topic>,
     schemas: Vec<manifest::Schema>,
     next_schema_id: NonZeroU16,
@@ -214,7 +287,6 @@ struct ManifestBuilder {
 impl ManifestBuilder {
     fn new() -> Self {
         Self {
-            manifest_opts: ManifestOpts::default(),
             topics: Vec::new(),
             schemas: Vec::new(),
             next_schema_id: NonZeroU16::MIN,
@@ -256,47 +328,19 @@ impl ManifestBuilder {
         }
     }
 
-    fn build(self, base_url: Url) -> manifest::Manifest {
+    pub(crate) fn build(self, metadata: Metadata) -> manifest::Manifest {
         manifest::Manifest {
-            name: Some(self.manifest_opts.name),
+            name: Some(metadata.name),
             sources: vec![manifest::UpstreamSource::Streamed(
                 manifest::StreamedSource {
-                    url: base_url
-                        .join(DATA_ROUTE)
-                        .expect("should always succeed since DATA_ROUTE is valid"),
-                    id: Some(self.manifest_opts.id),
+                    url: DATA_ROUTE.to_string(),
+                    id: Some(metadata.id),
                     topics: self.topics,
                     schemas: self.schemas,
-                    start_time: self.manifest_opts.start_time,
-                    end_time: self.manifest_opts.end_time,
+                    start_time: metadata.start_time,
+                    end_time: metadata.end_time,
                 },
             )],
-        }
-    }
-}
-
-enum BuilderMode<'a> {
-    Manifest { builder: &'a mut ManifestBuilder },
-    Stream { handle: McapStreamHandle },
-}
-
-impl<'a> BuilderMode<'a> {
-    fn channel<T: Encode>(&mut self, topic: String) -> MaybeChannel<T> {
-        match self {
-            BuilderMode::Manifest { builder } => {
-                builder.add_channel::<T>(topic);
-                MaybeChannel(None)
-            }
-            BuilderMode::Stream { handle } => {
-                MaybeChannel(Some(handle.channel_builder(&topic).build::<T>()))
-            }
-        }
-    }
-
-    fn manifest(&mut self) -> Option<&mut ManifestOpts> {
-        match self {
-            BuilderMode::Manifest { builder } => Some(&mut builder.manifest_opts),
-            BuilderMode::Stream { .. } => None,
         }
     }
 }
@@ -328,16 +372,30 @@ mod tests {
         }
 
         let mut builder = ManifestBuilder::new();
-        builder.manifest_opts = ManifestOpts {
+        builder.add_channel::<TestMessage>("/topic1".into());
+        builder.add_channel::<TestMessage>("/topic2".into()); // Same schema type - snapshot will show only 1 schema
+
+        let metadata = Metadata {
             id: "test-id".into(),
             name: "Test Source".into(),
             start_time: Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap(),
             end_time: Utc.with_ymd_and_hms(2024, 1, 2, 0, 0, 0).unwrap(),
         };
-        builder.add_channel::<TestMessage>("/topic1".into());
-        builder.add_channel::<TestMessage>("/topic2".into()); // Same schema type - snapshot will show only 1 schema
-
-        let manifest = builder.build("http://example.com".parse().unwrap());
+        let manifest = builder.build(metadata);
         insta::assert_json_snapshot!(manifest);
+    }
+
+    #[test]
+    #[should_panic(expected = "attempted to log message during manifest generation")]
+    fn test_panic_sink_panics_on_log() {
+        #[derive(foxglove::Encode)]
+        struct TestMessage {
+            value: i32,
+        }
+
+        let mut registry = ChannelRegistry::new_for_manifest();
+        let channel = registry.channel::<TestMessage>("/test");
+        // This should panic because we're using a PanicSink
+        channel.log(&TestMessage { value: 42 });
     }
 }

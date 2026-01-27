@@ -3,7 +3,6 @@ use serde::{Deserialize, Serialize};
 use serde_constant::ConstBool;
 use serde_with::{base64::Base64, serde_as};
 use std::num::NonZeroU16;
-use url::Url;
 
 /// Manifest of upstream sources.
 #[derive(Debug, Deserialize, Serialize, Default)]
@@ -23,7 +22,7 @@ pub struct Manifest {
 pub enum UpstreamSource {
     /// A static file that supports HTTP range requests.
     StaticFile {
-        url: Url,
+        url: String,
         /// Marker indicating range request support (always true).
         #[allow(unused)]
         support_range_requests: ConstBool<true>,
@@ -36,8 +35,9 @@ pub enum UpstreamSource {
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StreamedSource {
-    /// URL to fetch the data from. If `id` is absent, this must uniquely identify the data.
-    pub url: Url,
+    /// URL to fetch the data from. Can be absolute or relative.
+    /// If `id` is absent, this must uniquely identify the data.
+    pub url: String,
     /// Identifier for the data source. If present, this must be unique.
     #[serde(default)]
     pub id: Option<String>,
