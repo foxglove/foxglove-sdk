@@ -122,7 +122,42 @@ impl StreamHandle {
 /// }
 /// ```
 pub trait UpstreamServer: Send + Sync + 'static {
-    /// Query parameters extracted from the request URL.
+    /// Parameters that identify the data to load.
+    ///
+    /// In the Foxglove app, remote data sources are opened using a URL like:
+    ///
+    /// ```text
+    /// https://app.foxglove.dev/view?ds=remote-data-loader&ds.dataLoaderUrl=https%3A%2F%2Fremote-data-loader.example.com&ds.flightId=ABC&ds.startTime=2024-01-01T00:00:00Z
+    /// ```
+    ///
+    /// The `ds.*` parameters (except `ds.dataLoaderUrl`) are forwarded to your upstream server with
+    /// the `ds.` prefix stripped:
+    ///
+    /// ```text
+    /// GET /v1/manifest?flightId=ABC&startTime=2024-01-01T00:00:00Z
+    /// GET /v1/data?flightId=ABC&startTime=2024-01-01T00:00:00Z
+    /// ```
+    ///
+    /// These parameters are deserialized into an instance of
+    /// [`QueryParams`](`UpstreamServer::QueryParams`) using [`serde::Deserialize`].
+    ///
+    /// If you want to pass these parameters to [`generate_source_id`](`crate::generate_source_id`)
+    /// to construct unique deterministic cache keys, you should also derive [`Hash`].
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use chrono::{DateTime, Utc};
+    /// # use serde::Deserialize;
+    /// # use std::hash::Hash;
+    /// #[derive(Deserialize, Hash)]
+    /// #[serde(rename_all = "camelCase")]
+    /// struct MyParams {
+    ///     flight_id: String,
+    ///     start_time: DateTime<Utc>,
+    ///     end_time: DateTime<Utc>,
+    /// }
+    /// ```
     type QueryParams: DeserializeOwned + Send;
 
     /// Context type that holds channels and any shared state between methods.
@@ -136,11 +171,8 @@ pub trait UpstreamServer: Send + Sync + 'static {
     /// Return `Ok(())` to allow access. Return `Err(AuthError::Unauthenticated)` for
     /// missing/invalid credentials (401), `Err(AuthError::Forbidden)` for valid credentials
     /// but denied access (403), or use `?` to convert any error to a 500 response.
-    fn auth(
-        &self,
-        bearer_token: Option<&str>,
-        params: &Self::QueryParams,
-    ) -> Result<(), AuthError>;
+    fn auth(&self, bearer_token: Option<&str>, params: &Self::QueryParams)
+        -> Result<(), AuthError>;
 
     /// Initialize the data source by declaring channels and preparing context.
     ///
@@ -217,9 +249,11 @@ async fn data_handler<P: UpstreamServer>(
     let auth_result = {
         let provider = Arc::clone(&provider);
         let token = extract_bearer_token(&headers).map(|s| s.to_owned());
-        tokio::task::spawn_blocking(move || provider.auth(token.as_deref(), &params).map(|()| params))
-            .await
-            .expect("panicked during auth")
+        tokio::task::spawn_blocking(move || {
+            provider.auth(token.as_deref(), &params).map(|()| params)
+        })
+        .await
+        .expect("panicked during auth")
     };
     let params = match auth_result {
         Ok(params) => params,
@@ -235,8 +269,7 @@ async fn data_handler<P: UpstreamServer>(
         let ctx = provider.initialize(params, &mut registry)?;
 
         // Extract the handle back from the registry
-        let (_, handle) = registry.into_parts();
-        let handle = handle.expect("stream mode registry should have handle");
+        let handle = registry.into_stream_handle();
 
         // Stream data
         provider.stream(ctx, StreamHandle { inner: handle })
@@ -263,6 +296,7 @@ async fn data_handler<P: UpstreamServer>(
 ///
 /// ```no_run
 /// # use foxglove_remote_data_loader_upstream::{blocking, ChannelRegistry, AuthError, Metadata, BoxError};
+/// # use chrono::{DateTime, Utc};
 ///
 /// struct MyServer;
 ///
@@ -279,7 +313,12 @@ async fn data_handler<P: UpstreamServer>(
 ///     }
 ///
 ///     fn metadata(&self, _: ()) -> Result<Metadata, BoxError> {
-///         Ok(Metadata::default())
+///         Ok(Metadata {
+///             id: "my-source".into(),
+///             name: "My Source".into(),
+///             start_time: DateTime::<Utc>::MIN_UTC,
+///             end_time: DateTime::<Utc>::MAX_UTC,
+///         })
 ///     }
 ///
 ///     fn stream(&self, _: (), handle: blocking::StreamHandle) -> Result<(), BoxError> {

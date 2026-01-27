@@ -102,11 +102,7 @@ impl UpstreamServer for ExampleUpstream {
         })
     }
 
-    async fn stream(
-        &self,
-        ctx: FlightContext,
-        mut handle: StreamHandle,
-    ) -> Result<(), BoxError> {
+    async fn stream(&self, ctx: FlightContext, mut handle: StreamHandle) -> Result<(), BoxError> {
         tracing::info!(flight_id = %ctx.flight_id, "streaming data");
 
         const MAX_BUFFER_SIZE: usize = 1024 * 1024; // 1MiB

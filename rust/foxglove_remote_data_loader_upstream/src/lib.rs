@@ -6,14 +6,14 @@
 //! # Features
 //!
 //! - **`async`** (default): Enables the async API ([`UpstreamServer`], [`serve`])
-//! - **`blocking`**: Enables the blocking API ([`UpstreamServerBlocking`], [`serve_blocking`])
+//! - **`blocking`**: Enables the blocking API ([`blocking::UpstreamServer`], [`blocking::serve`])
 //!
 //! # Quick Start
 //!
 //! 1. Define a server type (e.g., `struct MyServer;`)
 //! 2. Define a context type to hold channels and any shared state
-//! 3. Implement [`UpstreamServer`] (async) or [`UpstreamServerBlocking`] (sync)
-//! 4. Call [`serve`] or [`serve_blocking`] to start the server
+//! 3. Implement [`UpstreamServer`] (async) or [`blocking::UpstreamServer`] (sync)
+//! 4. Call [`serve`] or [`blocking::serve`] to start the server
 //!
 //! See `examples/demo.rs` and `examples/demo_blocking.rs` for async and blocking examples.
 //!
@@ -145,17 +145,6 @@ pub struct Metadata {
     pub end_time: DateTime<Utc>,
 }
 
-impl Default for Metadata {
-    fn default() -> Self {
-        Self {
-            id: String::new(),
-            name: String::new(),
-            start_time: DateTime::<Utc>::MIN_UTC,
-            end_time: DateTime::<Utc>::MAX_UTC,
-        }
-    }
-}
-
 /// Generate a unique source ID for caching.
 ///
 /// The ID is constructed by joining the name, revision, and a hash of the parameters with a hyphen.
@@ -222,18 +211,18 @@ impl Sink for PanicSink {
 }
 
 /// Registry for declaring channels during [`UpstreamServer::initialize`].
-///
-/// Channels created through this registry are real [`Channel<T>`] instances that can be used
-/// directly in [`UpstreamServer::stream`]. During manifest generation, channels are connected
-/// to a sink that panics if logged to, catching bugs where logging happens outside of `stream()`.
 pub struct ChannelRegistry {
     mode: RegistryMode,
-    manifest_builder: ManifestBuilder,
 }
 
 enum RegistryMode {
-    Manifest { context: Arc<Context> },
-    Stream { handle: foxglove::stream::McapStreamHandle },
+    Manifest {
+        context: Arc<Context>,
+        builder: ManifestBuilder,
+    },
+    Stream {
+        handle: foxglove::stream::McapStreamHandle,
+    },
 }
 
 impl ChannelRegistry {
@@ -241,40 +230,56 @@ impl ChannelRegistry {
         let context = Context::new();
         context.add_sink(Arc::new(PanicSink::new()));
         Self {
-            mode: RegistryMode::Manifest { context },
-            manifest_builder: ManifestBuilder::new(),
+            mode: RegistryMode::Manifest {
+                context,
+                builder: ManifestBuilder::new(),
+            },
         }
     }
 
     pub(crate) fn new_for_stream(handle: foxglove::stream::McapStreamHandle) -> Self {
         Self {
             mode: RegistryMode::Stream { handle },
-            manifest_builder: ManifestBuilder::new(),
         }
     }
 
     /// Declare a channel for logging messages.
     ///
-    /// Returns a real [`Channel<T>`] that can be stored in your context type and used in `stream()`.
+    /// The returned [`Channel<T>`] should be stored in your [`UpstreamServer::Context`], so you can
+    /// log messages to it in [`UpstreamServer::stream`] (or the blocking equivalent).
+    ///
+    /// # Notes
+    ///
+    /// You should only log messages in your `stream` implementation. If the
+    /// initiating HTTP request is not a data streaming request, attempting to log to the returned
+    /// channel will panic.
     pub fn channel<T: Encode>(&mut self, topic: impl Into<String>) -> Channel<T> {
         let topic = topic.into();
-        self.manifest_builder.add_channel::<T>(topic.clone());
-        match &self.mode {
-            RegistryMode::Manifest { context } => context.channel_builder(&topic).build::<T>(),
+        match &mut self.mode {
+            RegistryMode::Manifest { context, builder } => {
+                builder.add_channel::<T>(topic.clone());
+                context.channel_builder(&topic).build::<T>()
+            }
             RegistryMode::Stream { handle } => handle.channel_builder(&topic).build::<T>(),
         }
     }
 
-    pub(crate) fn into_parts(self) -> (ManifestBuilder, Option<foxglove::stream::McapStreamHandle>) {
-        let handle = match self.mode {
-            RegistryMode::Manifest { .. } => None,
-            RegistryMode::Stream { handle } => Some(handle),
-        };
-        (self.manifest_builder, handle)
+    pub(crate) fn into_stream_handle(self) -> foxglove::stream::McapStreamHandle {
+        match self.mode {
+            RegistryMode::Manifest { .. } => {
+                panic!("into_stream_handle called on manifest registry")
+            }
+            RegistryMode::Stream { handle } => handle,
+        }
     }
 
     pub(crate) fn into_manifest_builder(self) -> ManifestBuilder {
-        self.manifest_builder
+        match self.mode {
+            RegistryMode::Manifest { builder, .. } => builder,
+            RegistryMode::Stream { .. } => {
+                panic!("into_manifest_builder called on stream registry")
+            }
+        }
     }
 }
 
