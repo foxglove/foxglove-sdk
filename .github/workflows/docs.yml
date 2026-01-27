@@ -11,10 +11,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+
+      - uses: ./.github/actions/common-deps
+
       - uses: ssciwr/doxygen-install@v1
         with:
           version: "1.13.2"
-      - uses: astral-sh/setup-uv@v7
       - run: make docs
         working-directory: cpp
       - name: Upload artifact
@@ -28,9 +30,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
-        with:
-          python-version: "3.13"
+
+      - uses: ./.github/actions/common-deps
+
       - run: corepack enable
       - uses: actions/setup-node@v6
         with:

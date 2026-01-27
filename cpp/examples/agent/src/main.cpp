@@ -1,5 +1,6 @@
 #include <foxglove/channel.hpp>
-#include <foxglove/cloud_sink.hpp>
+// Disabled for C++ for now
+// #include <foxglove/cloud_sink.hpp>
 #include <foxglove/foxglove.hpp>
 
 #include <atomic>
