@@ -63,38 +63,43 @@ fn load_csv(path: &PathBuf) -> Result<Vec<DataPoint>, Box<dyn std::error::Error>
     Ok(data)
 }
 
-/// Shared playback state that can be accessed by both the listener and the playback loop.
+/// Simple controller for managing the playback of data. This is an example stand-in
+/// for your own custom data playback stack.
 struct PlaybackController {
-    /// Current playback status
+    inner: Inner,
+}
+
+/// Internal variables owned by PlaybackController required for tracking the current
+/// playback time, status, speed, etc. These will be copied over to an emitted PlaybackState message.
+#[derive(Clone, Copy)]
+struct Inner {
     status: PlaybackStatus,
-    /// Current playback position (nanoseconds)
-    current_time: u64,
-    /// Playback speed multiplier (1.0 = realtime)
     speed: f32,
-    /// Set to true when a seek operation occurs
+    current_time: u64,
     did_seek: bool,
-    /// Time range of the data (start, end) in nanoseconds
     time_range: (u64, u64),
 }
 
 impl PlaybackController {
     fn new(time_range: (u64, u64)) -> Self {
         Self {
-            status: PlaybackStatus::Paused,
-            current_time: time_range.0,
-            speed: 1.0,
-            did_seek: false,
-            time_range,
+            inner: Inner {
+                status: PlaybackStatus::Paused,
+                current_time: time_range.0,
+                speed: 1.0,
+                did_seek: false,
+                time_range,
+            },
         }
     }
 
     /// Create a PlaybackState message from the current state.
-    fn to_state(&self, request_id: Option<String>) -> PlaybackState {
+    fn to_playback_state(&self, request_id: Option<String>) -> PlaybackState {
         PlaybackState {
-            status: self.status,
-            current_time: self.current_time,
-            playback_speed: self.speed,
-            did_seek: self.did_seek,
+            status: self.inner.status,
+            current_time: self.inner.current_time,
+            playback_speed: self.inner.speed,
+            did_seek: self.inner.did_seek,
             request_id,
         }
     }
@@ -119,31 +124,108 @@ impl ServerListener for CsvPlayerListener {
         // Handle play/pause command
         match request.playback_command {
             PlaybackCommand::Play => {
-                controller.status = PlaybackStatus::Playing;
+                controller.inner.status = PlaybackStatus::Playing;
             }
             PlaybackCommand::Pause => {
-                controller.status = PlaybackStatus::Paused;
+                controller.inner.status = PlaybackStatus::Paused;
             }
         }
 
         // Update playback speed
-        controller.speed = request.playback_speed;
+        controller.inner.speed = request.playback_speed;
 
         // Handle seek if requested
-        controller.did_seek = false;
+        controller.inner.did_seek = false;
         if let Some(seek_time) = request.seek_time {
             // Clamp seek time to valid range
-            controller.current_time =
-                seek_time.clamp(controller.time_range.0, controller.time_range.1);
-            controller.did_seek = true;
+            controller.inner.current_time =
+                seek_time.clamp(controller.inner.time_range.0, controller.inner.time_range.1);
+            controller.inner.did_seek = true;
         }
 
         // Return the new playback state with the request_id for correlation
-        Some(controller.to_state(Some(request.request_id)))
+        Some(controller.to_playback_state(Some(request.request_id)))
     }
 }
 
 /// Main playback loop that publishes data and time updates.
+fn handle_seek(
+    data: &[DataPoint],
+    current_time: u64,
+    current_index: &mut usize,
+    last_wall_time: &mut Instant,
+    last_playback_time: &mut Option<u64>,
+) {
+    *current_index = data
+        .iter()
+        .position(|d| d.timestamp >= current_time)
+        .unwrap_or(data.len());
+    *last_wall_time = Instant::now();
+    *last_playback_time = Some(current_time);
+}
+
+fn publish_until(
+    server: &WebSocketServerHandle,
+    channel: &RawChannel,
+    data: &[DataPoint],
+    current_index: &mut usize,
+    new_playback_time: u64,
+) {
+    while *current_index < data.len() && data[*current_index].timestamp <= new_playback_time {
+        let point = &data[*current_index];
+
+        // Create JSON payload matching our simple schema
+        let json_payload = format!(
+            r#"{{"timestamp":{},"value":{}}}"#,
+            point.timestamp, point.value
+        );
+
+        // Log the data to the channel with the data's timestamp
+        channel.log_with_meta(
+            json_payload.as_bytes(),
+            PartialMetadata::with_log_time(point.timestamp),
+        );
+
+        // IMPORTANT: Broadcast time after each message so Foxglove knows the current time
+        server.broadcast_time(point.timestamp);
+
+        *current_index += 1;
+    }
+}
+
+fn update_current_time(
+    controller: &Arc<Mutex<PlaybackController>>,
+    new_playback_time: u64,
+    end_time: u64,
+) {
+    let mut ctrl = controller.lock().unwrap();
+    ctrl.inner.current_time = new_playback_time.min(end_time);
+}
+
+fn handle_end_state(
+    server: &WebSocketServerHandle,
+    controller: &Arc<Mutex<PlaybackController>>,
+    end_time: u64,
+) {
+    let mut ctrl = controller.lock().unwrap();
+    ctrl.inner.status = PlaybackStatus::Ended;
+    ctrl.inner.current_time = end_time;
+
+    // IMPORTANT: Broadcast PlaybackState after ending so Foxglove can stay in sync
+    server.broadcast_playback_state(ctrl.to_playback_state(None));
+    println!("Playback ended. Waiting for seek or restart...");
+
+    // Wait for user to seek or restart
+    drop(ctrl);
+    loop {
+        thread::sleep(Duration::from_millis(100));
+        let ctrl = controller.lock().unwrap();
+        if ctrl.inner.did_seek || ctrl.inner.status == PlaybackStatus::Playing {
+            break;
+        }
+    }
+}
+
 fn run_playback_loop(
     server: &WebSocketServerHandle,
     channel: &RawChannel,
@@ -157,92 +239,50 @@ fn run_playback_loop(
     loop {
         thread::sleep(Duration::from_millis(10)); // Small sleep to prevent busy-waiting
 
-        let (status, speed, current_time, did_seek, time_range) = {
+        let inner = {
             let mut ctrl = controller.lock().unwrap();
-            let result = (
-                ctrl.status,
-                ctrl.speed,
-                ctrl.current_time,
-                ctrl.did_seek,
-                ctrl.time_range,
-            );
+            let inner = ctrl.inner;
             // Clear the did_seek flag after reading
-            ctrl.did_seek = false;
-            result
+            ctrl.inner.did_seek = false;
+            inner
         };
 
         // If we seeked, find the new playback position in the data
-        if did_seek || last_playback_time.is_none() {
-            current_index = data
-                .iter()
-                .position(|d| d.timestamp >= current_time)
-                .unwrap_or(data.len());
-            last_wall_time = Instant::now();
-            last_playback_time = Some(current_time);
+        if inner.did_seek || last_playback_time.is_none() {
+            handle_seek(
+                data,
+                inner.current_time,
+                &mut current_index,
+                &mut last_wall_time,
+                &mut last_playback_time,
+            );
         }
 
         // Only advance time if playing
-        if status != PlaybackStatus::Playing {
+        if inner.status != PlaybackStatus::Playing {
             last_wall_time = Instant::now();
             continue;
         }
 
         // Calculate how much playback time has elapsed based on wall time and speed
         let wall_elapsed = last_wall_time.elapsed();
-        let playback_elapsed_ns = (wall_elapsed.as_nanos() as f64 * speed as f64) as u64;
-        let new_playback_time = last_playback_time.unwrap_or(current_time) + playback_elapsed_ns;
+        let playback_elapsed_ns = (wall_elapsed.as_nanos() as f64 * inner.speed as f64) as u64;
+        let new_playback_time =
+            last_playback_time.unwrap_or(inner.current_time) + playback_elapsed_ns;
 
         // Publish all data points up to the current playback time
-        while current_index < data.len() && data[current_index].timestamp <= new_playback_time {
-            let point = &data[current_index];
-
-            // Create JSON payload matching our simple schema
-            let json_payload = format!(
-                r#"{{"timestamp":{},"value":{}}}"#,
-                point.timestamp, point.value
-            );
-
-            // Log the data to the channel with the data's timestamp
-            channel.log_with_meta(
-                json_payload.as_bytes(),
-                PartialMetadata::with_log_time(point.timestamp),
-            );
-
-            // IMPORTANT: Broadcast time after each message so Foxglove knows the current time
-            server.broadcast_time(point.timestamp);
-
-            current_index += 1;
-        }
+        publish_until(server, channel, data, &mut current_index, new_playback_time);
 
         // Update controller with new current time
-        {
-            let mut ctrl = controller.lock().unwrap();
-            ctrl.current_time = new_playback_time.min(time_range.1);
-        }
+        update_current_time(&controller, new_playback_time, inner.time_range.1);
 
         // Reset timing references for next iteration
         last_wall_time = Instant::now();
         last_playback_time = Some(new_playback_time);
 
         // Check if we've reached the end of the data
-        if new_playback_time >= time_range.1 {
-            let mut ctrl = controller.lock().unwrap();
-            ctrl.status = PlaybackStatus::Ended;
-            ctrl.current_time = time_range.1;
-
-            // IMPORTANT: Broadcast the ended state so Foxglove updates its playback bar
-            server.broadcast_playback_state(ctrl.to_state(None));
-            println!("Playback ended. Waiting for seek or restart...");
-
-            // Wait for user to seek or restart
-            drop(ctrl);
-            loop {
-                thread::sleep(Duration::from_millis(100));
-                let ctrl = controller.lock().unwrap();
-                if ctrl.did_seek || ctrl.status == PlaybackStatus::Playing {
-                    break;
-                }
-            }
+        if new_playback_time >= inner.time_range.1 {
+            handle_end_state(server, &controller, inner.time_range.1);
         }
     }
 }
