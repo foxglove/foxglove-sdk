@@ -31,9 +31,14 @@ blake3 = "1.8.3"
 [dev-dependencies]
 tracing-subscriber = "0.3"
 insta.workspace = true
+csv = "1.4.0"
 
 [[example]]
 name = "demo"
+required-features = ["async"]
+
+[[example]]
+name = "csv_loader"
 required-features = ["async"]
 
 [[example]]

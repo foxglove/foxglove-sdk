@@ -187,6 +187,8 @@ add_executable(foxglove_bridge
 target_include_directories(foxglove_bridge SYSTEM PRIVATE ${rclcpp_INCLUDE_DIRS})
 target_link_libraries(foxglove_bridge
   foxglove_bridge_component
+  resource_retriever::resource_retriever
+  ament_index_cpp::ament_index_cpp
   rclcpp::rclcpp
   rclcpp_components::component
   rclcpp_components::component_manager
