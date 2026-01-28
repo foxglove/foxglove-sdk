@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import pathlib
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import anywidget
 import traitlets
@@ -23,6 +23,7 @@ class FoxgloveWidget(anywidget.AnyWidget):
     height = traitlets.Int(default_value=500).tag(sync=True)
     src = traitlets.Unicode(default_value=None, allow_none=True).tag(sync=True)
     _layout = traitlets.Unicode(default_value=None, allow_none=True).tag(sync=True)
+    _opaque_layout = traitlets.Dict(allow_none=True, default_value=None).tag(sync=True)
 
     def __init__(
         self,
@@ -32,6 +33,7 @@ class FoxgloveWidget(anywidget.AnyWidget):
         height: int | None = None,
         src: str | None = None,
         layout: Layout | None = None,
+        opaque_layout: dict[str, Any] | None = None,
     ):
         """
         :param buffer: The NotebookBuffer object that contains the data to display in the widget.
@@ -39,6 +41,9 @@ class FoxgloveWidget(anywidget.AnyWidget):
         :param height: The height of the widget in pixels. Defaults to 500.
         :param src: The source URL of the Foxglove viewer. Defaults to
             "https://embed.foxglove.dev/".
+        :param opaque_layout: The layout data to load. This is an opaque dict object, which should
+          be parsed from a JSON layout file that was exported from the Foxglove app. If not
+          provided, the default layout will be used.
         """
         super().__init__()
         if width is not None:
@@ -50,8 +55,12 @@ class FoxgloveWidget(anywidget.AnyWidget):
         if src is not None:
             self.src = src
 
+        if layout is not None and opaque_layout is not None:
+            raise ValueError("Cannot specify both layout and opaque_layout")
         if layout is not None:
             self._layout = layout.to_json()
+        elif opaque_layout is not None:
+            self._opaque_layout = opaque_layout
 
         # Callback to get the data to display in the widget
         self._buffer = buffer
