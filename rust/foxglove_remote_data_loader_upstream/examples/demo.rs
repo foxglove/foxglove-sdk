@@ -1,9 +1,5 @@
 //! Example showing how to use the upstream server SDK (async version).
 //!
-//! This example demonstrates:
-//! - Implementing the [`UpstreamServer`] trait.
-//! - The flow: auth, initialize, metadata, stream.
-//!
 //! # Running the example
 //!
 //! ```sh
@@ -37,7 +33,7 @@ use foxglove_remote_data_loader_upstream::{
     serve, AuthError, BoxError, ChannelRegistry, Metadata, StreamHandle, UpstreamServer,
 };
 
-/// Define our message type.
+/// A simple message type for this example.
 #[derive(foxglove::Encode)]
 struct DemoMessage {
     msg: String,
@@ -45,9 +41,14 @@ struct DemoMessage {
 }
 
 /// A simple upstream server.
+///
+/// This is empty in this simple example, but it could be used to hold a database connection or
+/// other state shared across all requests.
 struct ExampleUpstream;
 
-/// Query parameters for both manifest and data endpoints.
+/// Specification of what to load.
+///
+/// This is deserialized from the query parameters in the incoming HTTP request.
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct FlightParams {
@@ -62,22 +63,25 @@ impl FlightParams {
     }
 }
 
-/// Context holding channels and shared state.
-struct FlightContext {
+/// Context holding request-specific state.
+///
+/// This should always contain the requested channels. It may also contain query parameters or other
+/// information needed by both the `metadata` and `stream` methods.
+struct RequestContext {
     params: FlightParams,
     demo: Channel<DemoMessage>,
 }
 
 impl UpstreamServer for ExampleUpstream {
     type QueryParams = FlightParams;
-    type Context = FlightContext;
+    type Context = RequestContext;
 
     async fn auth(
         &self,
         _bearer_token: Option<&str>,
         _params: &FlightParams,
     ) -> Result<(), AuthError> {
-        // No authentication required for this demo
+        // No authentication in this demo.
         Ok(())
     }
 
@@ -85,15 +89,16 @@ impl UpstreamServer for ExampleUpstream {
         &self,
         params: FlightParams,
         reg: &mut impl ChannelRegistry,
-    ) -> Result<FlightContext, BoxError> {
-        // Declare channels and build context
-        Ok(FlightContext {
+    ) -> Result<RequestContext, BoxError> {
+        // Declare a channel for our demo messages and store the query parameters for later. This
+        // is passed verbatim to `Self::metadata()` and `Self::stream()`.
+        Ok(RequestContext {
             params,
             demo: reg.channel("/demo"),
         })
     }
 
-    async fn metadata(&self, ctx: FlightContext) -> Result<Metadata, BoxError> {
+    async fn metadata(&self, ctx: Self::Context) -> Result<Metadata, BoxError> {
         Ok(Metadata {
             // Stable identifier for caching - include all params that affect output
             id: format!("flight-v1-{}", ctx.params.slug()),
@@ -103,10 +108,9 @@ impl UpstreamServer for ExampleUpstream {
         })
     }
 
-    async fn stream(&self, ctx: FlightContext, mut handle: StreamHandle) -> Result<(), BoxError> {
+    async fn stream(&self, ctx: Self::Context, mut handle: StreamHandle) -> Result<(), BoxError> {
         tracing::info!(flight_id = %ctx.params.flight_id, "streaming data");
 
-        const MAX_BUFFER_SIZE: usize = 1024 * 1024; // 1MiB
         for i in 0..10 {
             let timestamp = ctx.params.start_time + chrono::Duration::milliseconds(i as i64 * 100);
             ctx.demo.log_with_time(
@@ -117,12 +121,16 @@ impl UpstreamServer for ExampleUpstream {
                 timestamp.min(ctx.params.end_time),
             );
 
+            // Regularly flush the buffer to ensure messages are not buffered indefinitely. You
+            // should adjust this based on your message size, network bandwidth and latency
+            // requirements.
+            const MAX_BUFFER_SIZE: usize = 1024 * 1024; // 1MiB
             if handle.buffer_size() >= MAX_BUFFER_SIZE {
                 handle.flush().await?;
             }
         }
 
-        // Close the handle to finish the MCAP.
+        // Close the handle to finish the MCAP and send the final buffer.
         handle.close().await?;
         Ok(())
     }

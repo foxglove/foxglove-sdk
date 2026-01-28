@@ -1,31 +1,38 @@
-//! This crate provides utilities for quickly building a remote data loader upstream server.
+//! Utilities for building a Foxglove remote data loader upstream server.
 //!
-//! It handles server setup, routing, and provides a framework for implementing authentication,
-//! manifest generation, and MCAP data streaming with a simple API.
+//! This crate handles server setup and the HTTP API, and provides a simple framework for
+//! dynamically loading data using the [`foxglove`] crate.
+//!
+//! **This crate is only for building the upstream component.** To use it in Foxglove, you need to
+//! deploy `remote-data-loader` pointed at the built upstream.
+//!
+//! # Overview
+//!
+//! To enable streaming data from your backend to Foxglove, implement [`UpstreamServer`] and call
+//! [`serve`].
+//!
+//! For example, to stream flight telemetry from a database, define a `FlightServer` implementing
+//! `UpstreamServer` where:
+//!
+//! 1. `FlightServer` holds the database connection.
+//! 2. [`QueryParams`](`UpstreamServer::QueryParams`) deserialized from each request specify the
+//!    data to load.
+//! 3. [`auth`](UpstreamServer::auth) checks credentials.
+//! 4. [`initialize`](UpstreamServer::initialize) creates a [`foxglove::Channel`] for your telemetry
+//!    messages and returns it in your [`Context`](UpstreamServer::Context).
+//! 5. [`metadata`](UpstreamServer::metadata) returns [`Metadata`] with the flight name and time
+//!    range.
+//! 6. [`stream`](UpstreamServer::stream) queries the database and logs to the channel.
+//!
+//! Call [`serve`] to start the server. For a blocking API, see [`blocking::UpstreamServer`] and
+//! [`blocking::serve`].
+//!
+//! See `examples/demo.rs` or `examples/demo_blocking.rs` for complete examples.
 //!
 //! # Features
 //!
 //! - **`async`** (default): Enables the async API ([`UpstreamServer`], [`serve`])
 //! - **`blocking`**: Enables the blocking API ([`blocking::UpstreamServer`], [`blocking::serve`])
-//!
-//! # Overview
-//!
-//! Implement [`UpstreamServer`] to stream data from your backend to Foxglove.
-//!
-//! For example, to stream flight telemetry, you could define a `FlightServer`
-//! implementing [`UpstreamServer`]:
-//!
-//! 1. **`FlightServer`** holds the database connection
-//! 2. **Request parameters** in [`QueryParams`](UpstreamServer::QueryParams) (`flight_id`, `start_time`) identify the data to load
-//! 3. **[`auth`](UpstreamServer::auth)** validates credentials
-//! 4. **[`initialize`](UpstreamServer::initialize)** creates a [`Channel`]`<Telemetry>` and returns it in a [`Context`](UpstreamServer::Context)
-//! 5. **[`metadata`](UpstreamServer::metadata)** returns [`Metadata`] with the flight name and time range
-//! 6. **[`stream`](UpstreamServer::stream)** queries rows and logs them to the channel
-//!
-//! See [`UpstreamServer`] for the trait methods, then call [`serve`] to start the server.
-//! For a blocking API, see [`blocking::UpstreamServer`] and [`blocking::serve`].
-//!
-//! See `examples/demo.rs` or `examples/demo_blocking.rs` for complete examples.
 
 mod manifest;
 
