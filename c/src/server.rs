@@ -176,6 +176,17 @@ pub struct FoxgloveServerOptions<'a> {
     /// If the server is sending data from a fixed time range, and has the RangedPlayback capability,
     /// the end time of the data range.
     pub playback_end_time: Option<&'a u64>,
+
+    /// Optional session ID for the server.
+    ///
+    /// This allows the client to understand if the connection is a re-connection or if it is
+    /// connecting to a new server instance. This can for example be a timestamp or a UUID.
+    ///
+    /// By default, the server will generate a session ID based on the current time.
+    ///
+    /// # Safety
+    /// - If provided, the `session_id` must be a valid pointer to a null-terminated UTF-8 string.
+    pub session_id: Option<&'a FoxgloveString>,
 }
 
 #[repr(C)]
@@ -310,6 +321,8 @@ pub struct FoxgloveServerCallbacks {
     >,
     pub on_connection_graph_subscribe: Option<unsafe extern "C" fn(context: *const c_void)>,
     pub on_connection_graph_unsubscribe: Option<unsafe extern "C" fn(context: *const c_void)>,
+    pub on_client_connect: Option<unsafe extern "C" fn(context: *const c_void)>,
+    pub on_client_disconnect: Option<unsafe extern "C" fn(context: *const c_void)>,
 
     /// Callback invoked when a client sends a playback control request message.
     ///
@@ -415,7 +428,7 @@ unsafe fn do_foxglove_server_start(
         );
     }
     if let Some(callbacks) = options.callbacks {
-        server = server.listener(Arc::new(callbacks.clone()))
+        server = server.listener(Arc::new(callbacks.clone()));
     }
     if let Some(fetch_asset) = options.fetch_asset {
         server = server.fetch_asset_handler(Box::new(FetchAssetHandler::new(
@@ -478,6 +491,18 @@ unsafe fn do_foxglove_server_start(
         (options.playback_start_time, options.playback_end_time)
     {
         server = server.playback_time_range(playback_start_time, playback_end_time);
+    }
+
+    if let Some(session_id) = options.session_id {
+        if session_id.data.is_null() {
+            return Err(foxglove::FoxgloveError::ValueError(
+                "session_id is null".to_string(),
+            ));
+        }
+        let session_id_str = unsafe { session_id.as_utf8_str() }.map_err(|e| {
+            foxglove::FoxgloveError::Utf8Error(format!("session_id is invalid: {e}"))
+        })?;
+        server = server.session_id(session_id_str.to_string());
     }
 
     let server = server.start_blocking()?;
@@ -626,6 +651,22 @@ pub extern "C" fn foxglove_server_get_port(server: Option<&mut FoxgloveWebSocket
         return 0;
     };
     server.port()
+}
+
+/// Get the number of currently connected clients.
+#[unsafe(no_mangle)]
+pub extern "C" fn foxglove_server_get_client_count(
+    server: Option<&mut FoxgloveWebSocketServer>,
+) -> usize {
+    let Some(server) = server else {
+        tracing::error!("foxglove_server_get_client_count called with null server");
+        return 0;
+    };
+    let Some(server) = server.as_ref() else {
+        tracing::error!("foxglove_server_get_client_count called with closed server");
+        return 0;
+    };
+    server.client_count()
 }
 
 /// Stop and shut down `server` and free the resources associated with it.
@@ -985,6 +1026,18 @@ impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
     fn on_connection_graph_unsubscribe(&self) {
         if let Some(on_connection_graph_unsubscribe) = self.on_connection_graph_unsubscribe {
             unsafe { on_connection_graph_unsubscribe(self.context) };
+        }
+    }
+
+    fn on_client_connect(&self) {
+        if let Some(on_client_connect) = self.on_client_connect {
+            unsafe { on_client_connect(self.context) };
+        }
+    }
+
+    fn on_client_disconnect(&self) {
+        if let Some(on_client_disconnect) = self.on_client_disconnect {
+            unsafe { on_client_disconnect(self.context) };
         }
     }
 

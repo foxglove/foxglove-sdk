@@ -580,6 +580,8 @@ typedef struct foxglove_camera_calibration {
    *     [ 0  0  1]
    * ```
    *
+   * **Uncalibrated cameras:** Following ROS conventions for [CameraInfo](https://docs.ros.org/en/noetic/api/sensor_msgs/html/msg/CameraInfo.html), Foxglove also treats K[0] == 0.0 as indicating an uncalibrated camera, and calibration data will be ignored.
+   *
    */
   double k[9];
   /**
@@ -785,7 +787,13 @@ typedef struct foxglove_cube_primitive {
 } foxglove_cube_primitive;
 
 /**
- * A transform between two reference frames in 3D space
+ * A transform between two reference frames in 3D space. The transform defines the position and orientation of a child frame within a parent frame. Translation moves the origin of the child frame relative to the parent origin. The rotation changes the orientiation of the child frame around its origin.
+ *
+ * Examples:
+ *
+ * - With translation (x=1, y=0, z=0) and identity rotation (x=0, y=0, z=0, w=1), a point at (x=0, y=0, z=0) in the child frame maps to (x=1, y=0, z=0) in the parent frame.
+ *
+ * - With translation (x=1, y=2, z=0) and a 90-degree rotation around the z-axis (x=0, y=0, z=0.707, w=0.707), a point at (x=1, y=0, z=0) in the child frame maps to (x=-1, y=3, z=0) in the parent frame.
  */
 typedef struct foxglove_frame_transform {
   /**
@@ -801,11 +809,11 @@ typedef struct foxglove_frame_transform {
    */
   struct foxglove_string child_frame_id;
   /**
-   * Translation component of the transform
+   * Translation component of the transform, representing the position of the child frame's origin in the parent frame.
    */
   const struct foxglove_vector3 *translation;
   /**
-   * Rotation component of the transform
+   * Rotation component of the transform, representing the orientation of the child frame in the parent frame
    */
   const struct foxglove_quaternion *rotation;
 } foxglove_frame_transform;
@@ -2258,6 +2266,8 @@ typedef struct foxglove_server_callbacks {
                                     size_t param_names_len);
   void (*on_connection_graph_subscribe)(const void *context);
   void (*on_connection_graph_unsubscribe)(const void *context);
+  void (*on_client_connect)(const void *context);
+  void (*on_client_disconnect)(const void *context);
   /**
    * Callback invoked when a client sends a playback control request message.
    *
@@ -2371,6 +2381,18 @@ typedef struct foxglove_server_options {
    * the end time of the data range.
    */
   const uint64_t *playback_end_time;
+  /**
+   * Optional session ID for the server.
+   *
+   * This allows the client to understand if the connection is a re-connection or if it is
+   * connecting to a new server instance. This can for example be a timestamp or a UUID.
+   *
+   * By default, the server will generate a session ID based on the current time.
+   *
+   * # Safety
+   * - If provided, the `session_id` must be a valid pointer to a null-terminated UTF-8 string.
+   */
+  const struct foxglove_string *session_id;
 } foxglove_server_options;
 #endif
 
@@ -5402,6 +5424,13 @@ foxglove_error foxglove_server_remove_service(const struct foxglove_websocket_se
  * Get the port on which the server is listening.
  */
 uint16_t foxglove_server_get_port(struct foxglove_websocket_server *server);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Get the number of currently connected clients.
+ */
+size_t foxglove_server_get_client_count(struct foxglove_websocket_server *server);
 #endif
 
 #if !defined(__wasm__)

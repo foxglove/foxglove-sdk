@@ -171,6 +171,8 @@ impl From<ArrowPrimitive> for foxglove::schemas::ArrowPrimitive {
 ///         K = [ 0 fy cy]
 ///             [ 0  0  1]
 ///     
+///     **Uncalibrated cameras:** Following ROS conventions for `CameraInfo <https://docs.ros.org/en/noetic/api/sensor_msgs/html/msg/CameraInfo.html>`__, Foxglove also treats K[0] == 0.0 as indicating an uncalibrated camera, and calibration data will be ignored.
+///     
 /// :param R: Rectification matrix (stereo cameras only, 3x3 row-major matrix)
 ///     
 ///     A rotation matrix aligning the camera coordinate system to the ideal stereo image plane so that epipolar lines in both stereo images are parallel.
@@ -687,13 +689,19 @@ impl From<CubePrimitive> for foxglove::schemas::CubePrimitive {
     }
 }
 
-/// A transform between two reference frames in 3D space
+/// A transform between two reference frames in 3D space. The transform defines the position and orientation of a child frame within a parent frame. Translation moves the origin of the child frame relative to the parent origin. The rotation changes the orientiation of the child frame around its origin.
+///
+/// Examples:
+///
+/// - With translation (x=1, y=0, z=0) and identity rotation (x=0, y=0, z=0, w=1), a point at (x=0, y=0, z=0) in the child frame maps to (x=1, y=0, z=0) in the parent frame.
+///
+/// - With translation (x=1, y=2, z=0) and a 90-degree rotation around the z-axis (x=0, y=0, z=0.707, w=0.707), a point at (x=1, y=0, z=0) in the child frame maps to (x=-1, y=3, z=0) in the parent frame.
 ///
 /// :param timestamp: Timestamp of transform
 /// :param parent_frame_id: Name of the parent frame
 /// :param child_frame_id: Name of the child frame
-/// :param translation: Translation component of the transform
-/// :param rotation: Rotation component of the transform
+/// :param translation: Translation component of the transform, representing the position of the child frame's origin in the parent frame.
+/// :param rotation: Rotation component of the transform, representing the orientation of the child frame in the parent frame
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/frame-transform
 #[pyclass(module = "foxglove.schemas")]

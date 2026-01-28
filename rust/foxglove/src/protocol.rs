@@ -10,3 +10,8 @@ use common::{BinaryPayload, JsonMessage, ParseError};
 // Protocol v1, used by the Foxglove WebSocket server/client
 #[doc(hidden)]
 pub mod v1;
+
+// Protocol v2
+#[doc(hidden)]
+#[allow(dead_code)]
+pub mod v2;

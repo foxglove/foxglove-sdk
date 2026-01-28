@@ -455,13 +455,19 @@ fn fix_generated_comments(out_dir: &Path) -> anyhow::Result<()> {
     let mut input = io::BufReader::new(input).lines().multipeek();
 
     let mut in_code_block = false;
+    let mut prev_line_was_doc = false;
     let struct_pattern = Regex::new(r"pub struct (?<struct>\w+)").unwrap();
 
     while let Some(line) = input.next() {
         let mut line = line.context("Failed to read line")?;
 
         // Replace the intro doc URL with one to specific schema docs.
+        // Also add a blank doc line before the URL if it follows other doc content
+        // to avoid clippy::doc_lazy_continuation lint errors.
         if line.contains(DOC_REF) {
+            if prev_line_was_doc {
+                writeln!(tmpfile, "///").context("Failed to write blank doc line")?;
+            }
             while let Some(Ok(next_line)) = input.peek() {
                 if let Some(captures) = struct_pattern.captures(next_line) {
                     let struct_name = captures.name("struct").context("Unexpected match")?;
@@ -476,6 +482,9 @@ fn fix_generated_comments(out_dir: &Path) -> anyhow::Result<()> {
                 }
             }
         }
+
+        // Track whether the current line is a doc comment (for detecting when URL follows content)
+        prev_line_was_doc = line.starts_with("///") && !line.contains(DOC_REF);
 
         if line.trim_start().eq("/// ```") {
             if !in_code_block {

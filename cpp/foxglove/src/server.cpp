@@ -19,7 +19,9 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
     options.callbacks.onClientUnadvertise || options.callbacks.onGetParameters ||
     options.callbacks.onSetParameters || options.callbacks.onParametersSubscribe ||
     options.callbacks.onParametersUnsubscribe || options.callbacks.onConnectionGraphSubscribe ||
-    options.callbacks.onConnectionGraphUnsubscribe || options.callbacks.onPlaybackControlRequest;
+    options.callbacks.onConnectionGraphUnsubscribe || options.callbacks.onClientConnect ||
+    options.callbacks.onClientDisconnect || options.callbacks.onConnectionGraphUnsubscribe ||
+    options.callbacks.onPlaybackControlRequest;
 
   std::unique_ptr<WebSocketServerCallbacks> callbacks;
   std::unique_ptr<FetchAssetHandler> fetch_asset;
@@ -223,6 +225,24 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
         }
       };
     }
+    if (callbacks->onClientConnect) {
+      c_callbacks.on_client_connect = [](const void* context) {
+        try {
+          (static_cast<const WebSocketServerCallbacks*>(context))->onClientConnect();
+        } catch (const std::exception& exc) {
+          warn() << "onClientConnect callback failed: " << exc.what();
+        }
+      };
+    }
+    if (callbacks->onClientDisconnect) {
+      c_callbacks.on_client_disconnect = [](const void* context) {
+        try {
+          (static_cast<const WebSocketServerCallbacks*>(context))->onClientDisconnect();
+        } catch (const std::exception& exc) {
+          warn() << "onClientDisconnect callback failed: " << exc.what();
+        }
+      };
+    }
     if (callbacks->onPlaybackControlRequest) {
       c_callbacks.on_playback_control_request =
         [](
@@ -332,6 +352,13 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
       }
     };
   }
+
+  std::optional<foxglove_string> session_id;
+  if (options.session_id) {
+    session_id = foxglove_string{options.session_id->data(), options.session_id->length()};
+    c_options.session_id = &*session_id;
+  }
+
   foxglove_websocket_server* server = nullptr;
   foxglove_error error = foxglove_server_start(&c_options, &server);
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || server == nullptr) {
@@ -360,6 +387,10 @@ FoxgloveError WebSocketServer::stop() {
 
 uint16_t WebSocketServer::port() const {
   return foxglove_server_get_port(impl_.get());
+}
+
+size_t WebSocketServer::clientCount() const {
+  return foxglove_server_get_client_count(impl_.get());
 }
 
 void WebSocketServer::broadcastTime(uint64_t timestamp_nanos) const noexcept {

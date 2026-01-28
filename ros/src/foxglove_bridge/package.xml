@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package format="3">
     <name>foxglove_bridge</name>
-    <version>3.2.3</version>
+    <version>3.2.4</version>
     <description>ROS Foxglove Bridge</description>
     <license>MIT</license>
     <url type="website">https://github.com/foxglove/foxglove-sdk</url>
@@ -31,6 +31,7 @@
 
     <depend>resource_retriever</depend>
     <depend>rosgraph_msgs</depend>
+    <depend>std_msgs</depend>
 
     <!-- The export tag contains other, unspecified, tags -->
     <export>
