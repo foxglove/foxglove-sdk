@@ -22,8 +22,14 @@ ENV DEBIAN_FRONTEND=noninteractive
 # by rosdep.
 RUN apt-get update && apt-get -y dist-upgrade
 
-# Install build dependencies for the C++ SDK (cmake is already available in ROS images)
-RUN apt-get install -y --no-install-recommends curl build-essential
+# Install build dependencies for the C++ SDK
+# Install newer CMake from Kitware repository (Ubuntu 22.04's CMake 3.22 is too old, we need 3.25+)
+RUN apt-get install -y --no-install-recommends curl build-essential ca-certificates gpg wget && \
+    wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | gpg --dearmor - | tee /usr/share/keyrings/kitware-archive-keyring.gpg >/dev/null && \
+    . /etc/os-release && \
+    echo "deb [signed-by=/usr/share/keyrings/kitware-archive-keyring.gpg] https://apt.kitware.com/ubuntu/ ${UBUNTU_CODENAME} main" | tee /etc/apt/sources.list.d/kitware.list >/dev/null && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends cmake
 
 # create foxglove user (or use existing user if UID matches)
 ARG USERNAME=foxglove
