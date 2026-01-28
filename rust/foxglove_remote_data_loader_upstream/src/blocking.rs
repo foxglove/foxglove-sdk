@@ -128,24 +128,7 @@ impl StreamHandle {
 /// }
 /// ```
 pub trait UpstreamServer: Send + Sync + 'static {
-    /// Parameters that identify the data to load.
-    ///
-    /// In the Foxglove app, remote data sources are opened using a URL like:
-    ///
-    /// ```text
-    /// https://app.foxglove.dev/view?ds=remote-data-loader&ds.dataLoaderUrl=https%3A%2F%2Fremote-data-loader.example.com&ds.flightId=ABC&ds.startTime=2024-01-01T00:00:00Z
-    /// ```
-    ///
-    /// The `ds.*` parameters (except `ds.dataLoaderUrl`) are forwarded to your upstream server with
-    /// the `ds.` prefix stripped:
-    ///
-    /// ```text
-    /// GET /v1/manifest?flightId=ABC&startTime=2024-01-01T00:00:00Z
-    /// GET /v1/data?flightId=ABC&startTime=2024-01-01T00:00:00Z
-    /// ```
-    ///
-    /// These parameters are deserialized into an instance of
-    /// [`QueryParams`](`UpstreamServer::QueryParams`) using [`serde::Deserialize`].
+    #[doc = include_str!("docs/query_params.md")]
     ///
     /// # Example
     ///
@@ -164,38 +147,25 @@ pub trait UpstreamServer: Send + Sync + 'static {
 
     /// Context type that holds channels and any shared state between methods.
     ///
-    /// Create this in [`initialize`](Self::initialize) and receive it in
-    /// [`metadata`](Self::metadata) or [`stream`](Self::stream).
+    /// Create this in [`initialize`](UpstreamServer::initialize) and receive it in
+    /// [`metadata`](UpstreamServer::metadata) or [`stream`](UpstreamServer::stream).
     type Context;
 
-    /// Authenticate and authorize the request.
-    ///
-    /// Return `Ok(())` to allow access. Return `Err(AuthError::Unauthenticated)` for
-    /// missing/invalid credentials (401), `Err(AuthError::Forbidden)` for valid credentials
-    /// but denied access (403), or use `?` to convert any error to a 500 response.
+    #[doc = include_str!("docs/auth.md")]
     fn auth(&self, bearer_token: Option<&str>, params: &Self::QueryParams)
         -> Result<(), AuthError>;
 
-    /// Initialize the data source by declaring channels and preparing context.
-    ///
-    /// Called for both manifest and data requests. Use the [`ChannelRegistry`] to declare
-    /// channels, and return a context containing the channels and any other state needed
-    /// by [`metadata`](Self::metadata) or [`stream`](Self::stream).
+    #[doc = include_str!("docs/initialize.md")]
     fn initialize(
         &self,
         params: Self::QueryParams,
         registry: &mut impl ChannelRegistry,
     ) -> Result<Self::Context, BoxError>;
 
-    /// Return metadata describing the data source.
-    ///
-    /// Called only for manifest requests (`/v1/manifest`).
+    #[doc = include_str!("docs/metadata.md")]
     fn metadata(&self, ctx: Self::Context) -> Result<Metadata, BoxError>;
 
-    /// Stream MCAP data.
-    ///
-    /// Called only for data requests (`/v1/data`). Use channels from the context
-    /// to log messages, then call [`StreamHandle::close`] when done.
+    #[doc = include_str!("docs/stream.md")]
     fn stream(&self, ctx: Self::Context, handle: StreamHandle) -> Result<(), BoxError>;
 }
 

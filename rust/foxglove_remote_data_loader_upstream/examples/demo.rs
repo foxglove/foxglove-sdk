@@ -108,8 +108,7 @@ impl UpstreamServer for ExampleUpstream {
 
         const MAX_BUFFER_SIZE: usize = 1024 * 1024; // 1MiB
         for i in 0..10 {
-            let timestamp =
-                ctx.params.start_time + chrono::Duration::milliseconds(i as i64 * 100);
+            let timestamp = ctx.params.start_time + chrono::Duration::milliseconds(i as i64 * 100);
             ctx.demo.log_with_time(
                 &DemoMessage {
                     msg: format!("Data for flight {}", ctx.params.flight_id),

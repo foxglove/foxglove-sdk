@@ -8,30 +8,24 @@
 //! - **`async`** (default): Enables the async API ([`UpstreamServer`], [`serve`])
 //! - **`blocking`**: Enables the blocking API ([`blocking::UpstreamServer`], [`blocking::serve`])
 //!
-//! # Quick Start
+//! # Overview
 //!
-//! 1. Define a server type (e.g., `struct MyServer;`)
-//! 2. Define a context type to hold channels and any shared state
-//! 3. Implement [`UpstreamServer`] (async) or [`blocking::UpstreamServer`] (sync)
-//! 4. Call [`serve`] or [`blocking::serve`] to start the server
+//! Implement [`UpstreamServer`] to stream data from your backend to Foxglove.
 //!
-//! See `examples/demo.rs` and `examples/demo_blocking.rs` for async and blocking examples.
+//! For example, to stream flight telemetry, you could define a `FlightServer`
+//! implementing [`UpstreamServer`]:
 //!
-//! # Implementing UpstreamServer
+//! 1. **`FlightServer`** holds the database connection
+//! 2. **Request parameters** in [`QueryParams`](UpstreamServer::QueryParams) (`flight_id`, `start_time`) identify the data to load
+//! 3. **[`auth`](UpstreamServer::auth)** validates credentials
+//! 4. **[`initialize`](UpstreamServer::initialize)** creates a [`Channel`]`<Telemetry>` and returns it in a [`Context`](UpstreamServer::Context)
+//! 5. **[`metadata`](UpstreamServer::metadata)** returns [`Metadata`] with the flight name and time range
+//! 6. **[`stream`](UpstreamServer::stream)** queries rows and logs them to the channel
 //!
-//! The trait has four methods:
+//! See [`UpstreamServer`] for the trait methods, then call [`serve`] to start the server.
+//! For a blocking API, see [`blocking::UpstreamServer`] and [`blocking::serve`].
 //!
-//! 1. **`auth`** - Authenticate and authorize the request
-//! 2. **`initialize`** - Set up channels and prepare context
-//! 3. **`metadata`** - Return metadata about the data source (manifest requests only)
-//! 4. **`stream`** - Stream MCAP data (data requests only)
-//!
-//! # Endpoints
-//!
-//! | Route | Purpose |
-//! |-------|---------|
-//! | `GET /v1/manifest` | Returns a JSON description of the data source |
-//! | `GET /v1/data` | Streams MCAP data |
+//! See `examples/demo.rs` or `examples/demo_blocking.rs` for complete examples.
 
 mod manifest;
 

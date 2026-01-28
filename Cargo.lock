@@ -1185,11 +1185,11 @@ dependencies = [
 
 [[package]]
 name = "foxglove_remote_data_loader_upstream"
-version = "0.16.4"
+version = "0.16.6"
 dependencies = [
  "axum",
  "chrono",
- "foxglove 0.16.4",
+ "foxglove 0.16.6",
  "futures",
  "insta",
  "serde",
