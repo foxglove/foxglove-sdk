@@ -223,9 +223,6 @@ impl prost::Message for Duration {
         self.into_prost().encode_raw(buf);
     }
 
-    // TODO: prost deprecated DecodeError::new without providing a public replacement.
-    // Remove this allow once prost exposes a proper way to construct custom decode errors.
-    #[allow(deprecated)]
     fn merge_field(
         &mut self,
         tag: u32,
@@ -240,24 +237,14 @@ impl prost::Message for Duration {
             1 => {
                 let mut seconds: i64 = i64::from(self.sec);
                 prost::encoding::int64::merge(wire_type, &mut seconds, buf, ctx)?;
-                self.sec = i32::try_from(seconds)
-                    .map_err(|_| prost::DecodeError::new("duration seconds overflow"))?;
+                self.sec = seconds.clamp(i32::MIN as i64, i32::MAX as i64) as i32;
                 Ok(())
             }
             2 => {
-                let mut nanos = i32::try_from(self.nsec)
-                    .map_err(|_| prost::DecodeError::new("duration nanos overflow"))?;
+                let mut nanos: i32 = self.nsec.min(i32::MAX as u32) as i32;
                 prost::encoding::int32::merge(wire_type, &mut nanos, buf, ctx)?;
-                let nanos = u32::try_from(nanos)
-                    .map_err(|_| prost::DecodeError::new("invalid duration nanos"))?;
-                match normalize_nsec(nanos).carry_i32(self.sec) {
-                    Some((sec, nsec)) => {
-                        self.sec = sec;
-                        self.nsec = nsec;
-                        Ok(())
-                    }
-                    None => Err(prost::DecodeError::new("duration overflow")),
-                }
+                self.nsec = nanos.max(0) as u32;
+                Ok(())
             }
             _ => prost::encoding::skip_field(wire_type, tag, buf, ctx),
         }
@@ -455,9 +442,6 @@ impl prost::Message for Timestamp {
         self.into_prost().encode_raw(buf);
     }
 
-    // TODO: prost deprecated DecodeError::new without providing a public replacement.
-    // Remove this allow once prost exposes a proper way to construct custom decode errors.
-    #[allow(deprecated)]
     fn merge_field(
         &mut self,
         tag: u32,
@@ -472,24 +456,14 @@ impl prost::Message for Timestamp {
             1 => {
                 let mut seconds: i64 = i64::from(self.sec);
                 prost::encoding::int64::merge(wire_type, &mut seconds, buf, ctx)?;
-                self.sec = u32::try_from(seconds)
-                    .map_err(|_| prost::DecodeError::new("timestamp seconds overflow"))?;
+                self.sec = seconds.clamp(0, u32::MAX as i64) as u32;
                 Ok(())
             }
             2 => {
-                let mut nanos: i32 = i32::try_from(self.nsec)
-                    .map_err(|_| prost::DecodeError::new("timestamp nanos overflow"))?;
+                let mut nanos: i32 = self.nsec.min(i32::MAX as u32) as i32;
                 prost::encoding::int32::merge(wire_type, &mut nanos, buf, ctx)?;
-                let nanos_u32 = u32::try_from(nanos)
-                    .map_err(|_| prost::DecodeError::new("invalid timestamp nanos"))?;
-                match normalize_nsec(nanos_u32).carry_u32(self.sec) {
-                    Some((sec, nsec)) => {
-                        self.sec = sec;
-                        self.nsec = nsec;
-                        Ok(())
-                    }
-                    None => Err(prost::DecodeError::new("timestamp normalization overflow")),
-                }
+                self.nsec = nanos.max(0) as u32;
+                Ok(())
             }
             _ => prost::encoding::skip_field(wire_type, tag, buf, ctx),
         }
