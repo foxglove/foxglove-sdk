@@ -21,7 +21,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - run: |
-          sudo apt install -y --no-install-recommends \
+          sudo apt-get update && sudo apt-get install -y --no-install-recommends \
             clang-format-19 \
             pkg-config \
             cmake \
