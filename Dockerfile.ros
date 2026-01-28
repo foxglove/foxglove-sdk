@@ -22,6 +22,9 @@ ENV DEBIAN_FRONTEND=noninteractive
 # by rosdep.
 RUN apt-get update && apt-get -y dist-upgrade
 
+# Install build dependencies for the C++ SDK (cmake is already available in ROS images)
+RUN apt-get install -y --no-install-recommends curl build-essential
+
 # create foxglove user (or use existing user if UID matches)
 ARG USERNAME=foxglove
 ARG USER_UID=1005
@@ -38,6 +41,13 @@ else
 fi
 EOF
 USER $USER_UID
+
+# Install Rust toolchain for building the C++ SDK (which depends on Rust/C library)
+ENV CARGO_HOME=/usr/local/cargo
+ENV RUSTUP_HOME=/usr/local/rustup
+ENV PATH="${CARGO_HOME}/bin:${PATH}"
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
+    sudo env CARGO_HOME=${CARGO_HOME} RUSTUP_HOME=${RUSTUP_HOME} sh -s -- -y --no-modify-path
 
 # rosdep update must run as user
 RUN rosdep update --include-eol-distros

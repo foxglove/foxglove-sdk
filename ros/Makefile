@@ -14,6 +14,9 @@ all: deps build
 .PHONY: clean
 clean:
 	rm -rf build install log
+ifeq ($(USE_LOCAL_SDK),ON)
+	$(MAKE) -C ../cpp clean
+endif
 
 .PHONY: deps
 deps:
@@ -21,8 +24,14 @@ deps:
 		--from-paths src \
 		--ignore-src
 
+.PHONY: build-sdk
+build-sdk:
+ifeq ($(USE_LOCAL_SDK),ON)
+	$(MAKE) -C ../cpp build
+endif
+
 .PHONY: build
-build:
+build: build-sdk
 	colcon build --cmake-args -DUSE_LOCAL_SDK=$(USE_LOCAL_SDK)
 
 .PHONY: test
