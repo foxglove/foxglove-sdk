@@ -111,7 +111,7 @@ endif()
 if(WIN32)
   target_link_libraries(foxglove-static INTERFACE Bcrypt SChannel Crypt32 Ncrypt)
 elseif(APPLE)
-  target_link_libraries(foxglove-static INTERFACE "-framework Security" "-framework CoreFoundation")
+  target_link_libraries(foxglove-static INTERFACE "-framework Security" "-framework CoreFoundation" "-framework SystemConfiguration")
 endif()
 
 
