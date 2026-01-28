@@ -3,7 +3,6 @@
 //! This example demonstrates:
 //! - Implementing the [`UpstreamServer`] trait.
 //! - The flow: auth, initialize, metadata, stream.
-//! - Using [`generate_source_id`] to create unique IDs for caching.
 //!
 //! # Running the example
 //!
@@ -35,8 +34,7 @@ use foxglove::Channel;
 use serde::Deserialize;
 
 use foxglove_remote_data_loader_upstream::{
-    generate_source_id, serve, AuthError, BoxError, ChannelRegistry, Metadata, StreamHandle,
-    UpstreamServer,
+    serve, AuthError, BoxError, ChannelRegistry, Metadata, StreamHandle, UpstreamServer,
 };
 
 /// Define our message type.
@@ -50,12 +48,18 @@ struct DemoMessage {
 struct ExampleUpstream;
 
 /// Query parameters for both manifest and data endpoints.
-#[derive(Deserialize, Hash)]
+#[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct FlightParams {
     flight_id: String,
     start_time: DateTime<Utc>,
     end_time: DateTime<Utc>,
+}
+
+impl FlightParams {
+    fn slug(&self) -> String {
+        format!("{}-{}-{}", self.flight_id, self.start_time, self.end_time)
+    }
 }
 
 /// Context holding channels and shared state.
@@ -91,7 +95,8 @@ impl UpstreamServer for ExampleUpstream {
 
     async fn metadata(&self, ctx: FlightContext) -> Result<Metadata, BoxError> {
         Ok(Metadata {
-            id: generate_source_id("flight-data", 1, &ctx.params),
+            // Stable identifier for caching - include all params that affect output
+            id: format!("flight-v1-{}", ctx.params.slug()),
             name: format!("Flight {}", ctx.params.flight_id),
             start_time: ctx.params.start_time,
             end_time: ctx.params.end_time,

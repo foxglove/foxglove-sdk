@@ -63,11 +63,16 @@ impl StreamHandle {
 /// # Example
 ///
 /// ```no_run
-/// # use foxglove_remote_data_loader_upstream::{blocking, ChannelRegistry, AuthError, Metadata, BoxError, generate_source_id};
+/// # use foxglove_remote_data_loader_upstream::{blocking, ChannelRegistry, AuthError, Metadata, BoxError};
 /// # use foxglove::Channel;
 /// # use chrono::{DateTime, Utc};
-/// # #[derive(serde::Deserialize, Hash)]
+/// # #[derive(serde::Deserialize)]
 /// # struct MyParams { flight_id: String, start_time: DateTime<Utc>, end_time: DateTime<Utc> }
+/// # impl MyParams {
+/// #     fn slug(&self) -> String {
+/// #         format!("{}-{}-{}", self.flight_id, self.start_time, self.end_time)
+/// #     }
+/// # }
 /// # #[derive(foxglove::Encode)]
 /// # struct MyMessage { value: i32 }
 /// # struct MyServer;
@@ -75,7 +80,7 @@ impl StreamHandle {
 /// # impl MyServer { fn get_flight(&self, _: &str) -> Result<FlightInfo, std::io::Error> { Ok(FlightInfo { name: "test".into() }) } }
 ///
 /// struct MyContext {
-///     flight_id: String,
+///     params: MyParams,
 ///     channel: Channel<MyMessage>,
 ///     flight_info: FlightInfo,
 /// }
@@ -95,7 +100,7 @@ impl StreamHandle {
 ///     ) -> Result<MyContext, BoxError> {
 ///         let flight_info = self.get_flight(&params.flight_id)?;
 ///         Ok(MyContext {
-///             flight_id: params.flight_id,
+///             params,
 ///             channel: reg.channel("/topic"),
 ///             flight_info,
 ///         })
@@ -103,7 +108,8 @@ impl StreamHandle {
 ///
 ///     fn metadata(&self, ctx: MyContext) -> Result<Metadata, BoxError> {
 ///         Ok(Metadata {
-///             id: generate_source_id("example", 1, &ctx.flight_id),
+///             // Stable identifier for caching - include all params that affect output
+///             id: format!("example-v1-{}", ctx.params.slug()),
 ///             name: ctx.flight_info.name,
 ///             start_time: DateTime::<Utc>::MIN_UTC,
 ///             end_time: DateTime::<Utc>::MAX_UTC,
@@ -141,16 +147,12 @@ pub trait UpstreamServer: Send + Sync + 'static {
     /// These parameters are deserialized into an instance of
     /// [`QueryParams`](`UpstreamServer::QueryParams`) using [`serde::Deserialize`].
     ///
-    /// If you want to pass these parameters to [`generate_source_id`](`crate::generate_source_id`)
-    /// to construct unique deterministic cache keys, you should also derive [`Hash`].
-    ///
     /// # Example
     ///
     /// ```rust
     /// # use chrono::{DateTime, Utc};
     /// # use serde::Deserialize;
-    /// # use std::hash::Hash;
-    /// #[derive(Deserialize, Hash)]
+    /// #[derive(Deserialize)]
     /// #[serde(rename_all = "camelCase")]
     /// struct MyParams {
     ///     flight_id: String,

@@ -44,7 +44,6 @@ pub use serve_async::*;
 pub mod blocking;
 
 use std::{
-    hash::Hash,
     num::NonZeroU16,
     sync::{Arc, LazyLock},
 };
@@ -125,10 +124,23 @@ impl IntoResponse for AuthError {
 pub struct Metadata {
     /// Unique cache key for this data source.
     ///
-    /// You can set this manually, or use [`generate_source_id`] to create a stable ID from your
-    /// parameters.
+    /// Must be deterministic - the same input parameters must always produce the same ID.
+    /// Include all parameters that affect the output data.
     ///
-    /// **Important:** Data returned for the same `id` must always be identical.
+    /// # Example
+    ///
+    /// ```ignore
+    /// id: format!("flight-v1-{}-{}-{}",
+    ///     params.flight_id,
+    ///     params.start_time,
+    ///     params.end_time),
+    /// ```
+    ///
+    /// **Tip:** Include a version prefix (e.g., `"v1-"`) and bump it when your
+    /// data generation logic changes to invalidate cached data.
+    ///
+    /// For automatic field inclusion, consider serializing your params with
+    /// [`Serialize`](serde::Serialize) or [`Debug`].
     pub id: String,
 
     /// Human-readable display name.
@@ -143,42 +155,6 @@ pub struct Metadata {
     ///
     /// An upper bound can be used if the exact value is not known.
     pub end_time: DateTime<Utc>,
-}
-
-/// Generate a unique source ID for caching.
-///
-/// The ID is constructed by joining the name, revision, and a hash of the parameters with a hyphen.
-///
-/// # Arguments
-///
-/// * `name` - Identifies this type of data source (e.g., "flight-data")
-/// * `revision` - Bump when your data generation logic changes
-/// * `params` - Parameters that affect the output data
-///
-/// # Example
-///
-/// ```rust
-/// # use foxglove_remote_data_loader_upstream::generate_source_id;
-/// let id = generate_source_id("flight-data", 1, &"flight-123");
-/// assert!(id.starts_with("flight-data-r1-"));
-/// ```
-pub fn generate_source_id(name: &str, revision: u64, params: &impl Hash) -> String {
-    struct Blake3Hasher(blake3::Hasher);
-
-    impl std::hash::Hasher for Blake3Hasher {
-        fn write(&mut self, bytes: &[u8]) {
-            self.0.update(bytes);
-        }
-
-        fn finish(&self) -> u64 {
-            unimplemented!("should never be called")
-        }
-    }
-
-    let mut hasher = Blake3Hasher(blake3::Hasher::new());
-    params.hash(&mut hasher);
-    let params_hash = hasher.0.finalize();
-    format!("{}-r{}-{}", name, revision, params_hash.to_hex())
 }
 
 /// A sink that panics if any message is logged to it.
@@ -331,12 +307,6 @@ fn extract_bearer_token(headers: &HeaderMap) -> Option<&str> {
 mod tests {
     use super::*;
     use chrono::TimeZone;
-
-    #[test]
-    fn test_generate_source_id_snapshot() {
-        let id = generate_source_id("flight-data", 1, &"ABC123");
-        insta::assert_snapshot!(id);
-    }
 
     #[test]
     fn test_manifest_builder_snapshot() {
