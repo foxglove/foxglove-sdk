@@ -18,8 +18,6 @@ mod channel;
 #[cfg(not(target_family = "wasm"))]
 mod channel_descriptor;
 #[cfg(not(target_family = "wasm"))]
-mod cloud_sink;
-#[cfg(not(target_family = "wasm"))]
 mod connection_graph;
 #[cfg(not(target_family = "wasm"))]
 mod fetch_asset;
@@ -38,8 +36,6 @@ mod service;
 #[cfg(not(target_family = "wasm"))]
 mod sink_channel_filter;
 
-#[cfg(not(target_family = "wasm"))]
-pub use cloud_sink::*;
 #[cfg(not(target_family = "wasm"))]
 pub use server::*;
 
