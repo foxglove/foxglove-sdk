@@ -360,7 +360,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "attempted to log message during manifest generation")]
+    #[should_panic(expected = "attempted to log message to channel not created for streaming")]
     fn test_panic_sink_panics_on_log() {
         #[derive(foxglove::Encode)]
         struct TestMessage {

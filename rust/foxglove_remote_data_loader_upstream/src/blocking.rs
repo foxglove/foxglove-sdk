@@ -13,7 +13,7 @@ use axum::{
 use futures::{FutureExt, StreamExt};
 use serde::de::DeserializeOwned;
 use tokio::runtime::Handle;
-use tracing::warn;
+use tracing::error;
 
 use crate::{
     extract_bearer_token, AuthError, BoxError, ChannelRegistry, ManifestBuilder, Metadata,
@@ -164,7 +164,7 @@ pub trait UpstreamServer: Send + Sync + 'static {
     ///
     /// Create this in [`initialize`](Self::initialize) and receive it in
     /// [`metadata`](Self::metadata) or [`stream`](Self::stream).
-    type Context: Send;
+    type Context;
 
     /// Authenticate and authorize the request.
     ///
@@ -215,7 +215,7 @@ async fn manifest_handler<P: UpstreamServer>(
         let ctx = match provider.initialize(params, &mut manifest_builder) {
             Ok(ctx) => ctx,
             Err(error) => {
-                warn!(%error, "error during initialization");
+                error!(%error, "error during initialization");
                 return Err(StatusCode::INTERNAL_SERVER_ERROR.into_response());
             }
         };
@@ -224,7 +224,7 @@ async fn manifest_handler<P: UpstreamServer>(
         let metadata = match provider.metadata(ctx) {
             Ok(m) => m,
             Err(error) => {
-                warn!(%error, "error getting metadata");
+                error!(%error, "error getting metadata");
                 return Err(StatusCode::INTERNAL_SERVER_ERROR.into_response());
             }
         };

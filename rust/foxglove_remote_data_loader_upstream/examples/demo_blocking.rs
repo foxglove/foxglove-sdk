@@ -1,7 +1,7 @@
 //! Example showing how to use the upstream server SDK (blocking version).
 //!
 //! This example demonstrates:
-//! - Implementing the [`UpstreamServerBlocking`] trait.
+//! - Implementing the [`blocking::UpstreamServer`] trait.
 //! - The flow: auth, initialize, metadata, stream.
 //! - Using [`generate_source_id`] to create unique IDs for caching.
 //!

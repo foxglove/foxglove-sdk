@@ -138,8 +138,9 @@ pub trait UpstreamServer: Send + Sync + 'static {
 
     /// Authenticate and authorize the request.
     ///
-    /// Return `Ok(())` to allow access, or an `Err` to deny access.
-    /// See [`AuthError`] for possible error values.
+    /// Return `Ok(())` to allow access. Return `Err(AuthError::Unauthenticated)` for
+    /// missing/invalid credentials (401), `Err(AuthError::Forbidden)` for valid credentials
+    /// but denied access (403), or use `?` to convert any error to a 500 response.
     fn auth(
         &self,
         bearer_token: Option<&str>,
