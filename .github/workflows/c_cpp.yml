@@ -147,9 +147,6 @@ jobs:
         with:
           target: ${{ matrix.target }}
 
-      - name: Install common dependencies
-        uses: ./.github/actions/common-deps
-
       - run: sudo apt-get update && sudo apt-get install gcc-aarch64-linux-gnu
         if: matrix.target == 'aarch64-unknown-linux-gnu'
       - run: echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
