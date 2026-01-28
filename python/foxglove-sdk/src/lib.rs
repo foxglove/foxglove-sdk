@@ -19,7 +19,6 @@ use std::sync::{Arc, OnceLock};
 #[cfg(not(target_family = "wasm"))]
 use websocket::start_server;
 
-#[cfg(not(target_family = "wasm"))]
 mod errors;
 mod generated;
 mod logging;
