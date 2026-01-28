@@ -47,9 +47,9 @@ impl StreamHandle {
 
     /// Get the current size of the buffer.
     ///
-    /// This can be used in conjunction with [`Self::flush`] to ensure the buffer does not grow
-    /// unbounded.
-    pub fn buffer_size(&self) -> usize {
+    /// This can be used in conjunction with [`Self::flush`] to ensure the buffer does
+    /// not grow unbounded.
+    pub fn buffer_size(&mut self) -> usize {
         self.inner.buffer_size()
     }
 }
