@@ -223,9 +223,6 @@ impl prost::Message for Duration {
         self.into_prost().encode_raw(buf);
     }
 
-    // TODO: prost deprecated DecodeError::new without providing a public replacement.
-    // Remove this allow once prost exposes a proper way to construct custom decode errors.
-    #[allow(deprecated)]
     fn merge_field(
         &mut self,
         tag: u32,
@@ -237,21 +234,8 @@ impl prost::Message for Duration {
         Self: Sized,
     {
         match tag {
-            1 => {
-                let mut seconds: i64 = i64::from(self.sec);
-                prost::encoding::int64::merge(wire_type, &mut seconds, buf, ctx)?;
-                self.sec = i32::try_from(seconds)
-                    .map_err(|_| prost::DecodeError::new("duration seconds overflow"))?;
-                Ok(())
-            }
-            2 => {
-                let mut nanos = i32::try_from(self.nsec)
-                    .map_err(|_| prost::DecodeError::new("duration nanos overflow"))?;
-                prost::encoding::int32::merge(wire_type, &mut nanos, buf, ctx)?;
-                self.nsec = u32::try_from(nanos)
-                    .map_err(|_| prost::DecodeError::new("invalid duration nanos"))?;
-                Ok(())
-            }
+            1 => prost::encoding::int32::merge(wire_type, &mut self.sec, buf, ctx),
+            2 => prost::encoding::uint32::merge(wire_type, &mut self.nsec, buf, ctx),
             _ => prost::encoding::skip_field(wire_type, tag, buf, ctx),
         }
     }
@@ -448,9 +432,6 @@ impl prost::Message for Timestamp {
         self.into_prost().encode_raw(buf);
     }
 
-    // TODO: prost deprecated DecodeError::new without providing a public replacement.
-    // Remove this allow once prost exposes a proper way to construct custom decode errors.
-    #[allow(deprecated)]
     fn merge_field(
         &mut self,
         tag: u32,
@@ -462,21 +443,8 @@ impl prost::Message for Timestamp {
         Self: Sized,
     {
         match tag {
-            1 => {
-                let mut seconds: i64 = i64::from(self.sec);
-                prost::encoding::int64::merge(wire_type, &mut seconds, buf, ctx)?;
-                self.sec = u32::try_from(seconds)
-                    .map_err(|_| prost::DecodeError::new("timestamp seconds overflow"))?;
-                Ok(())
-            }
-            2 => {
-                let mut nanos: i32 = i32::try_from(self.nsec)
-                    .map_err(|_| prost::DecodeError::new("timestamp nanos overflow"))?;
-                prost::encoding::int32::merge(wire_type, &mut nanos, buf, ctx)?;
-                self.nsec = u32::try_from(nanos)
-                    .map_err(|_| prost::DecodeError::new("invalid timestamp nanos"))?;
-                Ok(())
-            }
+            1 => prost::encoding::uint32::merge(wire_type, &mut self.sec, buf, ctx),
+            2 => prost::encoding::uint32::merge(wire_type, &mut self.nsec, buf, ctx),
             _ => prost::encoding::skip_field(wire_type, tag, buf, ctx),
         }
     }
