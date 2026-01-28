@@ -98,6 +98,7 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
   _disableLoanMessage = this->get_parameter(PARAM_DISABLE_LOAN_MESSAGE).as_bool();
   const auto ignoreUnresponsiveParamNodes =
     this->get_parameter(PARAM_IGN_UNRESPONSIVE_PARAM_NODES).as_bool();
+  const bool publishClientCount = this->get_parameter(PARAM_PUBLISH_CLIENT_COUNT).as_bool();
 
   const bool debug = this->get_parameter(PARAM_DEBUG).as_bool();
   if (debug) {
@@ -177,6 +178,12 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
     _paramInterface->setParamUpdateCallback(std::bind(&FoxgloveBridge::parameterUpdates, this, _1));
   }
 
+  if (publishClientCount) {
+    sdkServerOptions.callbacks.onClientConnect = std::bind(&FoxgloveBridge::onClientConnect, this);
+    sdkServerOptions.callbacks.onClientDisconnect =
+      std::bind(&FoxgloveBridge::onClientDisconnect, this);
+  }
+
   auto maybeSdkServer = foxglove::WebSocketServer::create(std::move(sdkServerOptions));
 
   if (!maybeSdkServer.has_value()) {
@@ -188,6 +195,16 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
   _server = std::make_unique<foxglove::WebSocketServer>(std::move(maybeSdkServer.value()));
   this->set_parameter(rclcpp::Parameter{PARAM_PORT, _server->port()});
   RCLCPP_INFO(this->get_logger(), "Server listening on port %d", _server->port());
+
+  if (publishClientCount) {
+    static const std::string CLIENT_COUNT_TOPIC = "/foxglove_bridge/client_count";
+    _clientCountPublisher = this->create_publisher<std_msgs::msg::UInt32>(
+      CLIENT_COUNT_TOPIC, rclcpp::QoS{rclcpp::KeepLast(1)}.transient_local());
+    auto init_msg = std_msgs::msg::UInt32();
+    init_msg.data = _server->clientCount();
+    _clientCountPublisher->publish(
+      init_msg);  // Initialize transient local topic to current connection count
+  }
 
   // Start the thread polling for rosgraph changes
   _rosgraphPollThread =
@@ -1076,6 +1093,24 @@ rclcpp::QoS FoxgloveBridge::determineQoS(const std::string& topic) {
   }
 
   return qos;
+}
+
+void FoxgloveBridge::onClientConnect() {
+  publishClientCount();
+}
+
+void FoxgloveBridge::onClientDisconnect() {
+  publishClientCount();
+}
+
+void FoxgloveBridge::publishClientCount() {
+  if (!_clientCountPublisher) {
+    return;
+  }
+  const auto currentCount = _server->clientCount();
+  auto msg = std_msgs::msg::UInt32{};
+  msg.data = currentCount;
+  _clientCountPublisher->publish(msg);
 }
 
 }  // namespace foxglove_bridge

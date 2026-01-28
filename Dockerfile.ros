@@ -1,7 +1,26 @@
 ARG ROS_DISTRIBUTION=rolling
 FROM ros:$ROS_DISTRIBUTION-ros-base
 
-RUN apt-get update
+# Prevent errors from apt-get.
+# See: http://askubuntu.com/questions/506158/unable-to-initialize-frontend-dialog-when-using-ssh
+ENV DEBIAN_FRONTEND=noninteractive
+
+# The ROS docker images are only updated when the underlying
+# Ubuntu layer changes; this is a limitation of being an
+# "official" docker image.  Additionally, ROS packages do
+# not have minimum dependency requirements.  That is,
+# ROS package "A" may have a dependency on "B", but it cannot
+# easily specify what version of "B" that it needs.
+# However, the latest versions of the ROS packages
+# are always expected to work together.
+#
+# This means that we *always* have to do an
+# "apt-get dist-upgrade" before we install dependencies
+# with "make deps" below (which calls "rosdep install").
+# That ensures that we have the latest versions of the
+# ROS packages in the underlay and for what is installed
+# by rosdep.
+RUN apt-get update && apt-get -y dist-upgrade
 
 # create foxglove user (or use existing user if UID matches)
 ARG USERNAME=foxglove

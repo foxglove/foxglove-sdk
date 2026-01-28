@@ -7,6 +7,7 @@ use rcgen::{CertificateParams, Issuer, KeyPair};
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
+use std::sync::Mutex;
 use std::time::Duration;
 use tokio_tungstenite::tungstenite::{self, http::HeaderValue, Message};
 use tracing_test::traced_test;
@@ -21,6 +22,9 @@ use super::ws_protocol::client::{
 use super::ws_protocol::server::connection_graph_update::{
     AdvertisedService, PublishedTopic, SubscribedTopic,
 };
+use super::ws_protocol::server::server_info::{
+    Capability as ServerInfoCapability, SerializedTimestamp,
+};
 use super::ws_protocol::server::{
     advertise_services, ConnectionGraphUpdate, FetchAssetResponse, ParameterValues, ServerInfo,
     ServerMessage, ServiceCallFailure, ServiceCallResponse, Status,
@@ -34,6 +38,9 @@ use crate::websocket::service::{CallId, Service, ServiceSchema};
 use crate::websocket::TlsIdentity;
 use crate::websocket::{
     BlockingAssetHandlerFn, Capability, ClientChannelId, ConnectionGraph, Parameter, Server,
+};
+use crate::websocket::{
+    PlaybackCommand, PlaybackControlRequest, PlaybackState, PlaybackStatus, ServerListener,
 };
 use crate::websocket_client::WebSocketClient;
 use crate::{
@@ -1591,6 +1598,116 @@ async fn test_broadcast_time() {
     assert_eq!(msg.timestamp, 42);
 }
 
+struct RecordingPlaybackControlListener {
+    playback_request: Mutex<Option<PlaybackControlRequest>>,
+}
+
+impl RecordingPlaybackControlListener {
+    fn new() -> Self {
+        Self {
+            playback_request: Mutex::new(None),
+        }
+    }
+
+    fn get_request(&self) -> Option<PlaybackControlRequest> {
+        if let Ok(request) = self.playback_request.lock() {
+            request.clone()
+        } else {
+            None
+        }
+    }
+
+    fn set_request(&self, updated: PlaybackControlRequest) {
+        if let Ok(mut request) = self.playback_request.lock() {
+            *request = Some(updated);
+        }
+    }
+}
+
+impl RecordingPlaybackControlListener {
+    fn handle_request(&self, request: &PlaybackControlRequest) -> PlaybackState {
+        let status = match request.playback_command {
+            PlaybackCommand::Play => PlaybackStatus::Playing,
+            PlaybackCommand::Pause => PlaybackStatus::Paused,
+        };
+
+        PlaybackState {
+            status,
+            current_time: request.seek_time.unwrap_or(0),
+            playback_speed: request.playback_speed,
+            did_seek: false,
+            request_id: Some(request.request_id.clone()),
+        }
+    }
+}
+
+impl ServerListener for RecordingPlaybackControlListener {
+    fn on_playback_control_request(
+        &self,
+        request: PlaybackControlRequest,
+    ) -> Option<PlaybackState> {
+        let response = self.handle_request(&request);
+        self.set_request(request);
+        Some(response)
+    }
+}
+
+#[traced_test]
+#[tokio::test]
+async fn test_on_playback_control_request() {
+    let listener = Arc::new(RecordingPlaybackControlListener::new());
+
+    let ctx = Context::new();
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            capabilities: Some(HashSet::from([Capability::RangedPlayback])),
+            playback_time_range: Some((123_456_789, 234_567_890)),
+            listener: Some(listener.clone()),
+            ..Default::default()
+        },
+    );
+    let addr = server
+        .start("127.0.0.1", 0)
+        .await
+        .expect("Failed to start server");
+
+    let mut client = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
+    expect_recv!(client, ServerMessage::ServerInfo);
+
+    let request_id = "some-id".to_string();
+
+    let playback_request = PlaybackControlRequest {
+        playback_command: PlaybackCommand::Play,
+        playback_speed: 1.5,
+        seek_time: Some(123_456_789),
+        request_id: request_id.clone(),
+    };
+
+    client
+        .send(&playback_request)
+        .await
+        .expect("Failed to send playback control request");
+
+    assert_eventually(|| listener.get_request().is_some()).await;
+
+    let stored_request = listener
+        .get_request()
+        .expect("Playback control request was not recorded");
+    assert_eq!(stored_request, playback_request);
+
+    // Assert that the client receives a message
+    let playback_state = expect_recv!(client, ServerMessage::PlaybackState);
+    assert_eq!(playback_state.status, PlaybackStatus::Playing);
+    assert_eq!(playback_state.playback_speed, 1.5);
+    assert_eq!(playback_state.current_time, 123_456_789);
+    assert_eq!(playback_state.request_id, Some(request_id));
+
+    let _ = server.stop();
+}
+
 #[tokio::test]
 async fn test_channel_filter() {
     struct Filter;
@@ -1693,4 +1810,92 @@ async fn test_server_info_metadata_sent_to_client() {
     );
 
     let _ = server.stop();
+}
+
+#[tokio::test]
+async fn test_server_info_with_ranged_playback() {
+    let ctx = Context::new();
+    let options = ServerOptions {
+        playback_time_range: Some((123, 456)),
+        ..Default::default()
+    };
+
+    let server = create_server(&ctx, options);
+    let addr = server
+        .start("127.0.0.1", 0)
+        .await
+        .expect("Failed to start server");
+
+    let mut client = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
+
+    let msg = expect_recv!(client, ServerMessage::ServerInfo);
+
+    assert_eq!(
+        msg.data_start_time,
+        Some(SerializedTimestamp { sec: 0, nsec: 123 })
+    );
+    assert_eq!(
+        msg.data_end_time,
+        Some(SerializedTimestamp { sec: 0, nsec: 456 })
+    );
+
+    // By starting the server with a set playback_time_range, it should enable the RangedPlayback
+    // capability
+    assert!(msg
+        .capabilities
+        .contains(&ServerInfoCapability::RangedPlayback));
+
+    let _ = server.stop();
+}
+
+#[tokio::test]
+async fn test_broadcast_playback_state() {
+    let ctx = Context::new();
+    let options = ServerOptions {
+        playback_time_range: Some((123, 456)),
+        ..Default::default()
+    };
+
+    let server = create_server(&ctx, options);
+    let addr = server
+        .start("127.0.0.1", 0)
+        .await
+        .expect("Failed to start server");
+
+    let mut client = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
+
+    expect_recv!(client, ServerMessage::ServerInfo);
+
+    let msg = PlaybackState {
+        status: PlaybackStatus::Playing,
+        current_time: 250,
+        playback_speed: 1.0,
+        did_seek: true,
+        request_id: None,
+    };
+
+    server.broadcast_playback_state(msg);
+
+    let received = expect_recv!(client, ServerMessage::PlaybackState);
+    assert_eq!(received.status, PlaybackStatus::Playing);
+    assert_eq!(received.current_time, 250);
+    assert_eq!(received.playback_speed, 1.0);
+    assert_eq!(received.request_id, None);
+}
+
+#[tokio::test]
+#[should_panic]
+async fn test_ranged_playback_without_time_range() {
+    let ctx = Context::new();
+    let options = ServerOptions {
+        capabilities: Some(HashSet::from([Capability::RangedPlayback])),
+        playback_time_range: None,
+        ..Default::default()
+    };
+
+    create_server(&ctx, options);
 }

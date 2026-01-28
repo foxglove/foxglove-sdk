@@ -23,6 +23,10 @@ class MCAPWriteOptions:
     :param emit_message_indexes: Specifies whether to write message index records after each chunk.
     :param emit_chunk_indexes: Specifies whether to write chunk index records in the summary
         section.
+    :param disable_seeking: Specifies whether to disable seeking backwards/forwards when writing.
+        Use this when writing to a non-seekable file-like object (e.g. a wrapped pipe or network
+        socket). The seek() implementation must still support `seek(0, SEEK_CUR)` and
+        `seek(current_position, SEEK_SET)`.
     :param repeat_channels: Specifies whether to repeat each channel record from the data section
         in the summary section.
     :param repeat_schemas: Specifies whether to repeat each schema record from the data section in
@@ -45,6 +49,7 @@ class MCAPWriteOptions:
         emit_summary_offsets: bool = True,
         emit_message_indexes: bool = True,
         emit_chunk_indexes: bool = True,
+        disable_seeking: bool = False,
         repeat_channels: bool = True,
         repeat_schemas: bool = True,
         calculate_chunk_crcs: bool = True,
@@ -92,5 +97,29 @@ class MCAPWriter:
 
         :param name: Name identifier for this metadata record
         :param metadata: Dictionary of key-value pairs to store
+        """
+        ...
+
+    def attach(
+        self,
+        *,
+        log_time: int,
+        create_time: int,
+        name: str,
+        media_type: str,
+        data: bytes,
+    ) -> None:
+        """
+        Write an attachment to the MCAP file.
+
+        Attachments are arbitrary binary data that can be stored alongside messages.
+        Common uses include storing configuration files, calibration data, or other
+        reference material related to the recording.
+
+        :param log_time: Time at which the attachment was logged, in nanoseconds since epoch.
+        :param create_time: Time at which the attachment data was created, in nanoseconds since epoch.
+        :param name: Name of the attachment (e.g., "config.json").
+        :param media_type: MIME type of the attachment (e.g., "application/json").
+        :param data: Binary content of the attachment.
         """
         ...

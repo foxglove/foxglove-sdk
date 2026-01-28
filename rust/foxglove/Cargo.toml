@@ -30,9 +30,20 @@ tls = [
   "dep:tokio-rustls",
   "dep:rcgen",
 ]
+stream = ["dep:futures"]
 schemars = ["dep:schemars"]
+serde = ["dep:base64"]
 unstable = []
 zstd = ["mcap/zstd"]
+
+# img2yuv feature and sub-features
+img2yuv-core = ["dep:image", "dep:yuv"]
+img2yuv-png = ["img2yuv-core", "image/png"]
+img2yuv-jpeg = ["img2yuv-core", "image/jpeg"]
+img2yuv-webp = ["img2yuv-core", "image/webp"]
+img2yuv = ["img2yuv-png", "img2yuv-jpeg", "img2yuv-webp"]
+img2yuv-ros1 = ["img2yuv-core", "dep:regex"]
+img2yuv-ros2 = ["img2yuv-core", "dep:cdr", "dep:regex"]
 
 [lints]
 workspace = true
@@ -46,7 +57,8 @@ bytes.workspace = true
 chrono = { version = "0.4.39", optional = true }
 delegate = "0.13.2"
 flume = { version = "0.11.1", optional = true }
-foxglove_derive = { version = "0.15.3", path = "../foxglove_derive", optional = true }
+foxglove_derive = { version = "0.16.6", path = "../foxglove_derive", optional = true }
+futures = { version = "0.3.31", optional = true }
 futures-util = { version = "0.3.31", features = ["sink", "std"], optional = true }
 mcap.workspace = true
 parking_lot = "0.12.4"
@@ -68,10 +80,19 @@ tracing.workspace = true
 urlencoding = "2.1.3"
 rcgen = { version = "0.14.3", features = ["crypto", "pem", "x509-parser"], optional = true }
 
+# img2yuv dependencies
+image = { version = "0.25.9", default-features = false, optional = true }
+yuv = { version = "0.8.9", optional = true }
+regex = { version = "1", optional = true }
+cdr = { version = "0.2.4", optional = true }
+
 [dev-dependencies]
 assert_matches = "1.5.0"
+hexdump = "0.1.2"
 insta = { version = "1.42.2", features = ["json"] }
 maplit = "1.0.2"
+serde_cbor = "0.11.2"
+serde_json = "1.0"
 tempfile = "3.15.0"
 tracing-test.workspace = true
 

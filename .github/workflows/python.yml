@@ -10,11 +10,11 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.9"
+          python-version: "3.10"
 
       - uses: astral-sh/setup-uv@v7
       - run: make -f Container.mk lint-python
@@ -22,7 +22,7 @@ jobs:
   lint-and-test-sdk:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions-rust-lang/setup-rust-toolchain@v1
 
       - name: Install common dependencies
@@ -41,7 +41,7 @@ jobs:
     needs: [sdist]
     steps:
       - name: Download sdist
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v7
         with:
           name: wheels-sdist
       - name: Unpack sdist
@@ -74,7 +74,7 @@ jobs:
           MATURIN_NO_MISSING_BUILD_BACKEND_WARNING: 1
 
       - name: Upload wheel
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: playground-wasm
           path: dist
@@ -88,14 +88,14 @@ jobs:
     permissions:
       deployments: write
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - run: corepack enable
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: yarn
       - name: Download wheel
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v7
         with:
           name: playground-wasm
           path: playground/public
@@ -119,11 +119,11 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.9"
+          python-version: "3.10"
 
       - uses: arduino/setup-protoc@v3
         with:
@@ -179,9 +179,9 @@ jobs:
     steps:
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.9"
+          python-version: "3.10"
       - name: Download sdist
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v7
         with:
           name: wheels-sdist
       - name: Unpack sdist
@@ -195,7 +195,7 @@ jobs:
           manylinux: auto
           docker-options: "--env MATURIN_NO_MISSING_BUILD_BACKEND_WARNING=1"
       - name: Upload wheels
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: wheels-linux-${{ matrix.platform.target }}
           path: dist
@@ -217,9 +217,9 @@ jobs:
     steps:
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.9"
+          python-version: "3.10"
       - name: Download sdist
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v7
         with:
           name: wheels-sdist
       - name: Unpack sdist
@@ -233,7 +233,7 @@ jobs:
           manylinux: musllinux_1_2
           docker-options: "--env MATURIN_NO_MISSING_BUILD_BACKEND_WARNING=1"
       - name: Upload wheels
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: wheels-musllinux-${{ matrix.platform.target }}
           path: dist
@@ -252,7 +252,7 @@ jobs:
       - uses: actions/setup-python@v6
         if: ${{ matrix.platform.target == 'x86_64' }}
         with:
-          python-version: "3.9"
+          python-version: "3.10"
 
       # The windows-latest image doesn't have 32-bit pythons.
       - uses: actions/setup-python@v6
@@ -265,10 +265,9 @@ jobs:
             3.12
             3.11
             3.10
-            3.9
 
       - name: Download sdist
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v7
         with:
           name: wheels-sdist
       - name: Unpack sdist
@@ -282,7 +281,7 @@ jobs:
           sccache: "false"
           docker-options: "--env MATURIN_NO_MISSING_BUILD_BACKEND_WARNING=1"
       - name: Upload wheels
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: wheels-windows-${{ matrix.platform.target }}
           path: dist
@@ -293,16 +292,16 @@ jobs:
     strategy:
       matrix:
         platform:
-          - runner: macos-13
-            target: x86_64
           - runner: macos-14
             target: aarch64
+          - runner: macos-15-intel
+            target: x86_64
     steps:
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.9"
+          python-version: "3.10"
       - name: Download sdist
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v7
         with:
           name: wheels-sdist
       - name: Unpack sdist
@@ -315,7 +314,7 @@ jobs:
           sccache: "false"
           docker-options: "--env MATURIN_NO_MISSING_BUILD_BACKEND_WARNING=1"
       - name: Upload wheels
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: wheels-macos-${{ matrix.platform.target }}
           path: dist
@@ -323,19 +322,39 @@ jobs:
   sdist:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - uses: astral-sh/setup-uv@v7
       - run: corepack enable
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: yarn
       - name: Build sdist
         run: uv build --sdist
         working-directory: python/foxglove-sdk
+      - name: Verify notebook widget asset in sdist
+        run: |
+          python - <<'PY'
+          import glob
+          import sys
+          import tarfile
+
+          paths = glob.glob("dist/foxglove_sdk-*.tar.gz")
+          if not paths:
+              sys.exit("No sdist artifact found to validate in dist/")
+
+          tar_path = paths[0]
+          expected_suffix = "python/foxglove/notebook/static/widget.js"
+          with tarfile.open(tar_path, "r:gz") as tar:
+              names = tar.getnames()
+
+          if not any(name.endswith(expected_suffix) for name in names):
+              sys.exit(f"Missing {expected_suffix} in {tar_path}")
+          PY
+        working-directory: python/foxglove-sdk
       - name: Upload sdist
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: wheels-sdist
           path: python/foxglove-sdk/dist
@@ -352,12 +371,12 @@ jobs:
       contents: write
       attestations: write
     steps:
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@v7
         with:
           path: python/foxglove-sdk
       - run: find python/foxglove-sdk/wheels-*
       - name: Generate artifact attestation
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@v3
         with:
           subject-path: "python/foxglove-sdk/wheels-*/*"
       - name: Publish to PyPI
@@ -373,11 +392,11 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.9"
+          python-version: "3.10"
       - uses: astral-sh/setup-uv@v7
       - run: corepack enable
       - uses: actions/setup-node@v6

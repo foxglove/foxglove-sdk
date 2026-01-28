@@ -288,6 +288,8 @@ pub struct CameraCalibration {
     ///     [ 0  0  1]
     /// ```
     ///
+    /// **Uncalibrated cameras:** Following ROS conventions for [CameraInfo](https://docs.ros.org/en/noetic/api/sensor_msgs/html/msg/CameraInfo.html), Foxglove also treats K[0] == 0.0 as indicating an uncalibrated camera, and calibration data will be ignored.
+    ///
     pub k: [f64; 9],
 
     /// Rectification matrix (stereo cameras only, 3x3 row-major matrix)
@@ -1559,7 +1561,13 @@ pub unsafe extern "C" fn foxglove_cube_primitive_encode(
     }
 }
 
-/// A transform between two reference frames in 3D space
+/// A transform between two reference frames in 3D space. The transform defines the position and orientation of a child frame within a parent frame. Translation moves the origin of the child frame relative to the parent origin. The rotation changes the orientiation of the child frame around its origin.
+///
+/// Examples:
+///
+/// - With translation (x=1, y=0, z=0) and identity rotation (x=0, y=0, z=0, w=1), a point at (x=0, y=0, z=0) in the child frame maps to (x=1, y=0, z=0) in the parent frame.
+///
+/// - With translation (x=1, y=2, z=0) and a 90-degree rotation around the z-axis (x=0, y=0, z=0.707, w=0.707), a point at (x=1, y=0, z=0) in the child frame maps to (x=-1, y=3, z=0) in the parent frame.
 #[repr(C)]
 pub struct FrameTransform {
     /// Timestamp of transform
@@ -1571,10 +1579,10 @@ pub struct FrameTransform {
     /// Name of the child frame
     pub child_frame_id: FoxgloveString,
 
-    /// Translation component of the transform
+    /// Translation component of the transform, representing the position of the child frame's origin in the parent frame.
     pub translation: *const Vector3,
 
-    /// Rotation component of the transform
+    /// Rotation component of the transform, representing the orientation of the child frame in the parent frame
     pub rotation: *const Quaternion,
 }
 
@@ -2070,7 +2078,7 @@ pub struct Grid {
     /// Number of bytes between cells within a row in `data`
     pub cell_stride: u32,
 
-    /// Fields in `data`. S`red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.
+    /// Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.
     /// To enable RGB color visualization in the [3D panel](https://docs.foxglove.dev/docs/visualization/panels/3d#rgba-separate-fields-color-mode), include **all four** of these fields in your `fields` array:
     ///
     /// - `red` - Red channel value
@@ -2294,7 +2302,7 @@ pub struct VoxelGrid {
     /// Frame of reference
     pub frame_id: FoxgloveString,
 
-    /// Origin of grid's corner relative to frame of reference
+    /// Origin of the grid’s lower-front-left corner in the reference frame. The grid’s pose is defined relative to this corner, so an untransformed grid with an identity orientation has this corner at the origin.
     pub pose: *const Pose,
 
     /// Number of grid rows
@@ -4883,6 +4891,173 @@ pub unsafe extern "C" fn foxglove_point3_encode(
         }
         Err(e) => {
             tracing::error!("Point3: {}", e);
+            FoxgloveError::EncodeError
+        }
+    }
+}
+
+/// A timestamped point for a position in 3D space
+#[repr(C)]
+pub struct Point3InFrame {
+    /// Timestamp of point
+    pub timestamp: *const FoxgloveTimestamp,
+
+    /// Frame of reference for point position
+    pub frame_id: FoxgloveString,
+
+    /// Point in 3D space
+    pub point: *const Point3,
+}
+
+#[cfg(not(target_family = "wasm"))]
+impl Point3InFrame {
+    /// Create a new typed channel, and return an owned raw channel pointer to it.
+    ///
+    /// # Safety
+    /// We're trusting the caller that the channel will only be used with this type T.
+    #[unsafe(no_mangle)]
+    pub unsafe extern "C" fn foxglove_channel_create_point3_in_frame(
+        topic: FoxgloveString,
+        context: *const FoxgloveContext,
+        channel: *mut *const FoxgloveChannel,
+    ) -> FoxgloveError {
+        if channel.is_null() {
+            tracing::error!("channel cannot be null");
+            return FoxgloveError::ValueError;
+        }
+        unsafe {
+            let result =
+                do_foxglove_channel_create::<foxglove::schemas::Point3InFrame>(topic, context);
+            result_to_c(result, channel)
+        }
+    }
+}
+
+impl BorrowToNative for Point3InFrame {
+    type NativeType = foxglove::schemas::Point3InFrame;
+
+    unsafe fn borrow_to_native(
+        &self,
+        #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
+    ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
+        let frame_id = unsafe {
+            string_from_raw(
+                self.frame_id.as_ptr() as *const _,
+                self.frame_id.len(),
+                "frame_id",
+            )?
+        };
+        let point = unsafe {
+            self.point
+                .as_ref()
+                .map(|m| m.borrow_to_native(arena.as_mut()))
+        }
+        .transpose()?;
+
+        Ok(ManuallyDrop::new(foxglove::schemas::Point3InFrame {
+            timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
+            frame_id: ManuallyDrop::into_inner(frame_id),
+            point: point.map(ManuallyDrop::into_inner),
+        }))
+    }
+}
+
+/// Log a Point3InFrame message to a channel.
+///
+/// # Safety
+/// The channel must have been created for this type with foxglove_channel_create_point3_in_frame.
+#[cfg(not(target_family = "wasm"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn foxglove_channel_log_point3_in_frame(
+    channel: Option<&FoxgloveChannel>,
+    msg: Option<&Point3InFrame>,
+    log_time: Option<&u64>,
+    sink_id: FoxgloveSinkId,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { Point3InFrame::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
+            log_msg_to_channel(channel, &*msg, log_time, sink_id)
+        }
+        Err(e) => {
+            tracing::error!("Point3InFrame: {}", e);
+            e.into()
+        }
+    }
+}
+
+/// Get the Point3InFrame schema.
+///
+/// All buffers in the returned schema are statically allocated.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_point3_in_frame_schema() -> FoxgloveSchema {
+    let native =
+        foxglove::schemas::Point3InFrame::get_schema().expect("Point3InFrame schema is Some");
+    let name: &'static str = "foxglove.Point3InFrame";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("Point3InFrame schema data is static");
+    };
+    FoxgloveSchema {
+        name: name.into(),
+        encoding: encoding.into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
+/// Encode a Point3InFrame message as protobuf to the buffer provided.
+///
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+/// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+/// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+///
+/// # Safety
+/// ptr must be a valid pointer to a memory region at least len bytes long.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_point3_in_frame_encode(
+    msg: Option<&Point3InFrame>,
+    ptr: *mut u8,
+    len: usize,
+    encoded_len: Option<&mut usize>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { Point3InFrame::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            if len == 0 || ptr.is_null() {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = msg
+                        .encoded_len()
+                        .expect("foxglove schemas return Some(len)");
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
+            if let Err(encode_error) = msg.encode(&mut buf) {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
+            }
+            FoxgloveError::Ok
+        }
+        Err(e) => {
+            tracing::error!("Point3InFrame: {}", e);
             FoxgloveError::EncodeError
         }
     }

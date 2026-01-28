@@ -8,6 +8,7 @@ use std::sync::Arc;
 
 use crate::sink_channel_filter::{SinkChannelFilter, SinkChannelFilterFn};
 use crate::websocket::service::Service;
+use crate::websocket::PlaybackState;
 #[cfg(feature = "tls")]
 use crate::websocket::TlsIdentity;
 use crate::websocket::{
@@ -124,6 +125,13 @@ impl WebSocketServer {
         self
     }
 
+    /// Declare the time range for playback, in absolute nanoseconds. This applies if the server is playing back a fixed time range of data.
+    /// This will add the RangedPlayback capability to the server.
+    pub fn playback_time_range(mut self, start_time: u64, end_time: u64) -> Self {
+        self.options.playback_time_range = Some((start_time, end_time));
+        self
+    }
+
     /// Configure an event listener to receive client message events.
     pub fn listener(mut self, listener: Arc<dyn crate::websocket::ServerListener>) -> Self {
         self.options.listener = Some(listener);
@@ -149,7 +157,6 @@ impl WebSocketServer {
             Some(Box::new(BlockingAssetHandlerFn(Arc::new(handler))));
         self
     }
-
     /// Configure an asynchronous function as a fetch asset handler.
     /// There can only be one asset handler, exclusive with the other fetch_asset_handler methods.
     pub fn fetch_asset_handler_async_fn<F, Fut, T, Err>(mut self, handler: F) -> Self
@@ -280,6 +287,11 @@ impl WebSocketServerHandle {
         self.1.port()
     }
 
+    /// Returns the number of currently connected clients.
+    pub fn client_count(&self) -> usize {
+        self.0.client_count()
+    }
+
     /// Returns an app URL to open the websocket as a data source.
     pub fn app_url(&self) -> AppUrl {
         let protocol = if self.0.is_tls_configured() {
@@ -313,6 +325,14 @@ impl WebSocketServerHandle {
     /// Requires the [`Time`](crate::websocket::Capability::Time) capability.
     pub fn broadcast_time(&self, timestamp_nanos: u64) {
         self.0.broadcast_time(timestamp_nanos);
+    }
+
+    /// Publish the current playback state to all clients.
+    ///
+    /// Requires the [`RangedPlayback`](crate::websocket::Capability::Time) capability.
+    #[doc(hidden)]
+    pub fn broadcast_playback_state(&self, playback_state: PlaybackState) {
+        self.0.broadcast_playback_state(playback_state);
     }
 
     /// Sets a new session ID and notifies all clients, causing them to reset their state.

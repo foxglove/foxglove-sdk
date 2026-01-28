@@ -1,8 +1,82 @@
 use crate::errors::PyFoxgloveError;
 use foxglove::{McapCompression, McapWriteOptions, McapWriterHandle};
 use pyo3::prelude::*;
+use pyo3::types::PyBytes;
 use std::fs::File;
-use std::io::BufWriter;
+use std::io::{BufWriter, SeekFrom, Write};
+
+/// Wraps a Python file-like object, implementing Write + Seek via Python calls.
+///
+/// The Python object must support `write(bytes)`, `seek(offset, whence)`, and `flush()` methods.
+pub(crate) struct PyFileLikeWriter(pub(crate) Py<PyAny>);
+
+impl Write for PyFileLikeWriter {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        Python::with_gil(|py| {
+            let bytes = PyBytes::new(py, buf);
+            self.0
+                .call_method1(py, "write", (bytes,))
+                .and_then(|result| result.extract::<usize>(py))
+                .map_err(std::io::Error::other)
+        })
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        Python::with_gil(|py| {
+            self.0
+                .call_method0(py, "flush")
+                .map(|_| ())
+                .map_err(std::io::Error::other)
+        })
+    }
+}
+
+impl std::io::Seek for PyFileLikeWriter {
+    fn seek(&mut self, pos: SeekFrom) -> std::io::Result<u64> {
+        Python::with_gil(|py| {
+            let (offset, whence): (i64, i32) = match pos {
+                SeekFrom::Start(n) => (n as i64, 0),
+                SeekFrom::Current(n) => (n, 1),
+                SeekFrom::End(n) => (n, 2),
+            };
+            self.0
+                .call_method1(py, "seek", (offset, whence))
+                .and_then(|result| result.extract::<u64>(py))
+                .map_err(std::io::Error::other)
+        })
+    }
+}
+
+/// Unified writer enum - dispatches to File or Python file-like object.
+pub(crate) enum WriterInner {
+    File(File),
+    FileLike(PyFileLikeWriter),
+}
+
+impl Write for WriterInner {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        match self {
+            Self::File(f) => f.write(buf),
+            Self::FileLike(f) => f.write(buf),
+        }
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        match self {
+            Self::File(f) => f.flush(),
+            Self::FileLike(f) => f.flush(),
+        }
+    }
+}
+
+impl std::io::Seek for WriterInner {
+    fn seek(&mut self, pos: SeekFrom) -> std::io::Result<u64> {
+        match self {
+            Self::File(f) => f.seek(pos),
+            Self::FileLike(f) => f.seek(pos),
+        }
+    }
+}
 
 /// Compression algorithm to use for MCAP writing.
 #[pyclass(eq, eq_int, name = "MCAPCompression", module = "foxglove.mcap")]
@@ -69,6 +143,7 @@ impl PyMcapWriteOptions {
         emit_summary_offsets = true,
         emit_message_indexes = true,
         emit_chunk_indexes = true,
+        disable_seeking = false,
         repeat_channels = true,
         repeat_schemas = true,
         calculate_chunk_crcs = true,
@@ -85,6 +160,7 @@ impl PyMcapWriteOptions {
         emit_summary_offsets: Option<bool>,
         emit_message_indexes: Option<bool>,
         emit_chunk_indexes: Option<bool>,
+        disable_seeking: Option<bool>,
         repeat_channels: Option<bool>,
         repeat_schemas: Option<bool>,
         calculate_chunk_crcs: Option<bool>,
@@ -104,7 +180,8 @@ impl PyMcapWriteOptions {
             .repeat_schemas(repeat_schemas.unwrap_or(true))
             .calculate_chunk_crcs(calculate_chunk_crcs.unwrap_or(true))
             .calculate_data_section_crc(calculate_data_section_crc.unwrap_or(true))
-            .calculate_summary_section_crc(calculate_summary_section_crc.unwrap_or(true));
+            .calculate_summary_section_crc(calculate_summary_section_crc.unwrap_or(true))
+            .disable_seeking(disable_seeking.unwrap_or(false));
 
         let opts = if let Some(profile) = profile {
             opts.profile(profile)
@@ -132,7 +209,7 @@ impl From<PyMcapWriteOptions> for McapWriteOptions {
 /// If the writer is not closed by the time it is garbage collected, it will be
 /// closed automatically, and any errors will be logged.
 #[pyclass(name = "MCAPWriter", module = "foxglove.mcap")]
-pub(crate) struct PyMcapWriter(pub(crate) Option<McapWriterHandle<BufWriter<File>>>);
+pub(crate) struct PyMcapWriter(pub(crate) Option<McapWriterHandle<BufWriter<WriterInner>>>);
 
 impl Drop for PyMcapWriter {
     fn drop(&mut self) {
@@ -180,6 +257,42 @@ impl PyMcapWriter {
         if let Some(writer) = &self.0 {
             writer
                 .write_metadata(name, metadata)
+                .map_err(PyFoxgloveError::from)?;
+        } else {
+            return Err(PyFoxgloveError::from(foxglove::FoxgloveError::SinkClosed).into());
+        }
+        Ok(())
+    }
+
+    /// Write an attachment to the MCAP file.
+    ///
+    /// Attachments are arbitrary binary data that can be stored alongside messages.
+    /// Common uses include storing configuration files, calibration data, or other
+    /// reference material related to the recording.
+    ///
+    /// :param log_time: Time at which the attachment was logged, in nanoseconds since epoch.
+    /// :param create_time: Time at which the attachment data was created, in nanoseconds since epoch.
+    /// :param name: Name of the attachment (e.g., "config.json").
+    /// :param media_type: MIME type of the attachment (e.g., "application/json").
+    /// :param data: Binary content of the attachment.
+    #[pyo3(signature = (*, log_time, create_time, name, media_type, data))]
+    fn attach(
+        &self,
+        log_time: u64,
+        create_time: u64,
+        name: String,
+        media_type: String,
+        data: Vec<u8>,
+    ) -> PyResult<()> {
+        if let Some(writer) = &self.0 {
+            writer
+                .attach(&foxglove::McapAttachment {
+                    log_time,
+                    create_time,
+                    name,
+                    media_type,
+                    data: std::borrow::Cow::Owned(data),
+                })
                 .map_err(PyFoxgloveError::from)?;
         } else {
             return Err(PyFoxgloveError::from(foxglove::FoxgloveError::SinkClosed).into());

@@ -107,7 +107,8 @@ impl NormalizeResult {
 /// let duration: Duration = std::time::Duration::from_secs(u64::MAX).saturating_into();
 /// assert_eq!(duration, Duration::MAX);
 /// ```
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub struct Duration {
     /// Seconds offset.
     sec: i32,
@@ -162,6 +163,15 @@ impl Duration {
         self.nsec
     }
 
+    /// Normalizes a duration.
+    ///
+    /// This is useful for a duration obtained through deserialization.
+    ///
+    /// Returns `None` if the attempt to convert excess nanoseconds causes `sec` to overflow.
+    pub fn normalize(self) -> Option<Self> {
+        Self::new_checked(self.sec, self.nsec)
+    }
+
     /// Creates a `Duration` from `f64` seconds, or fails if the value is unrepresentable.
     pub fn try_from_secs_f64(secs: f64) -> Result<Self, RangeError> {
         if secs < f64::from(i32::MIN) {
@@ -213,6 +223,9 @@ impl prost::Message for Duration {
         self.into_prost().encode_raw(buf);
     }
 
+    // TODO: prost deprecated DecodeError::new without providing a public replacement.
+    // Remove this allow once prost exposes a proper way to construct custom decode errors.
+    #[allow(deprecated)]
     fn merge_field(
         &mut self,
         tag: u32,
@@ -326,7 +339,8 @@ where
 ///     .saturating_into();
 /// assert_eq!(timestamp, Timestamp::MIN);
 /// ```
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub struct Timestamp {
     /// Seconds since epoch.
     sec: u32,
@@ -389,6 +403,15 @@ impl Timestamp {
         u64::from(self.sec) * 1_000_000_000 + u64::from(self.nsec)
     }
 
+    /// Normalizes a timestamp.
+    ///
+    /// This is useful for a timestamp obtained through deserialization.
+    ///
+    /// Returns `None` if the attempt to convert excess nanoseconds causes `sec` to overflow.
+    pub fn normalize(self) -> Option<Self> {
+        Self::new_checked(self.sec, self.nsec)
+    }
+
     /// Creates a `Timestamp` from seconds since epoch as an `f64`, or fails if the value is
     /// unrepresentable.
     pub fn try_from_epoch_secs_f64(secs: f64) -> Result<Self, RangeError> {
@@ -432,6 +455,9 @@ impl prost::Message for Timestamp {
         self.into_prost().encode_raw(buf);
     }
 
+    // TODO: prost deprecated DecodeError::new without providing a public replacement.
+    // Remove this allow once prost exposes a proper way to construct custom decode errors.
+    #[allow(deprecated)]
     fn merge_field(
         &mut self,
         tag: u32,

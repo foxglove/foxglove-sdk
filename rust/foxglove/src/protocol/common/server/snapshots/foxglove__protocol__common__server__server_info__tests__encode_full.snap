@@ -1,0 +1,28 @@
+---
+source: rust/foxglove/src/protocol/common/server/server_info.rs
+expression: message_full()
+---
+{
+  "op": "serverInfo",
+  "name": "example server",
+  "capabilities": [
+    "clientPublish",
+    "time",
+    "rangedPlayback"
+  ],
+  "supportedEncodings": [
+    "json"
+  ],
+  "metadata": {
+    "key": "value"
+  },
+  "sessionId": "1675789422160",
+  "dataStartTime": {
+    "sec": 0,
+    "nsec": 1000000
+  },
+  "dataEndTime": {
+    "sec": 0,
+    "nsec": 1000005
+  }
+}

@@ -1,13 +1,7 @@
 from __future__ import annotations
 
-import sys
 from collections.abc import Callable
-from typing import Protocol, Union
-
-if sys.version_info >= (3, 10):
-    from typing import TypeAlias
-else:
-    from typing import Any as TypeAlias
+from typing import Optional, Protocol, TypeAlias, Union
 
 from ._foxglove_py.websocket import (
     Capability,
@@ -19,6 +13,10 @@ from ._foxglove_py.websocket import (
     Parameter,
     ParameterType,
     ParameterValue,
+    PlaybackCommand,
+    PlaybackControlRequest,
+    PlaybackState,
+    PlaybackStatus,
     Service,
     ServiceRequest,
     ServiceSchema,
@@ -180,6 +178,19 @@ class ServerListener(Protocol):
         """
         return None
 
+    def on_playback_control_request(
+        self, playback_control_request: PlaybackControlRequest
+    ) -> Optional[PlaybackState]:
+        """
+        Called by the server when it receives an updated player state from the client.
+
+        Requires :py:data:`Capability.RangedPlayback`.
+
+        :meta private:
+        :param playback_control_request: The playback control request sent from the client
+        """
+        return None
+
 
 __all__ = [
     "AnyInnerParameterValue",
@@ -195,6 +206,10 @@ __all__ = [
     "Parameter",
     "ParameterType",
     "ParameterValue",
+    "PlaybackCommand",
+    "PlaybackControlRequest",
+    "PlaybackState",
+    "PlaybackStatus",
     "ServerListener",
     "Service",
     "ServiceHandler",

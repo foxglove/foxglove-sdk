@@ -36,6 +36,7 @@ All schemas are generated from [schemas.ts](/internal/schemas.ts).
 - [PackedElementField](#packedelementfield)
 - [Point2](#point2)
 - [Point3](#point3)
+- [Point3InFrame](#point3inframe)
 - [PointCloud](#pointcloud)
 - [PointsAnnotation](#pointsannotation)
 - [Pose](#pose)
@@ -341,6 +342,8 @@ Projects 3D points in the camera coordinate frame to 2D pixel coordinates using 
 K = [ 0 fy cy]
     [ 0  0  1]
 ```
+
+**Uncalibrated cameras:** Following ROS conventions for [CameraInfo](https://docs.ros.org/en/noetic/api/sensor_msgs/html/msg/CameraInfo.html), Foxglove also treats K[0] == 0.0 as indicating an uncalibrated camera, and calibration data will be ignored.
 
 
 </td>
@@ -881,7 +884,13 @@ The number of nanoseconds in the positive direction
 
 ## FrameTransform
 
-A transform between two reference frames in 3D space
+A transform between two reference frames in 3D space. The transform defines the position and orientation of a child frame within a parent frame. Translation moves the origin of the child frame relative to the parent origin. The rotation changes the orientiation of the child frame around its origin.
+
+Examples:
+
+- With translation (x=1, y=0, z=0) and identity rotation (x=0, y=0, z=0, w=1), a point at (x=0, y=0, z=0) in the child frame maps to (x=1, y=0, z=0) in the parent frame.
+
+- With translation (x=1, y=2, z=0) and a 90-degree rotation around the z-axis (x=0, y=0, z=0.707, w=0.707), a point at (x=1, y=0, z=0) in the child frame maps to (x=-1, y=3, z=0) in the parent frame.
 
 <table>
   <tr>
@@ -937,7 +946,7 @@ Name of the child frame
 </td>
 <td>
 
-Translation component of the transform
+Translation component of the transform, representing the position of the child frame's origin in the parent frame.
 
 </td>
 </tr>
@@ -950,7 +959,7 @@ Translation component of the transform
 </td>
 <td>
 
-Rotation component of the transform
+Rotation component of the transform, representing the orientation of the child frame in the parent frame
 
 </td>
 </tr>
@@ -1116,7 +1125,7 @@ Number of bytes between cells within a row in `data`
 </td>
 <td>
 
-Fields in `data`. S`red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.
+Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.
 To enable RGB color visualization in the [3D panel](https://docs.foxglove.dev/docs/visualization/panels/3d#rgba-separate-fields-color-mode), include **all four** of these fields in your `fields` array:
 
 - `red` - Red channel value
@@ -1955,6 +1964,57 @@ float64
 <td>
 
 z coordinate position
+
+</td>
+</tr>
+</table>
+
+## Point3InFrame
+
+A timestamped point for a position in 3D space
+
+<table>
+  <tr>
+    <th>field</th>
+    <th>type</th>
+    <th>description</th>
+  </tr>
+<tr>
+<td><code>timestamp</code></td>
+<td>
+
+[Timestamp](#timestamp)
+
+</td>
+<td>
+
+Timestamp of point
+
+</td>
+</tr>
+<tr>
+<td><code>frame_id</code></td>
+<td>
+
+string
+
+</td>
+<td>
+
+Frame of reference for point position
+
+</td>
+</tr>
+<tr>
+<td><code>point</code></td>
+<td>
+
+[Point3](#point3)
+
+</td>
+<td>
+
+Point in 3D space
 
 </td>
 </tr>
@@ -3357,7 +3417,7 @@ Frame of reference
 </td>
 <td>
 
-Origin of grid's corner relative to frame of reference
+Origin of the grid’s lower-front-left corner in the reference frame. The grid’s pose is defined relative to this corner, so an untransformed grid with an identity orientation has this corner at the origin.
 
 </td>
 </tr>

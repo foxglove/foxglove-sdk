@@ -215,13 +215,23 @@ const MessageSpec& MessageDefinitionCache::load_message_spec(
   }
 
   // Get the package share directory, or throw a PackageNotFoundError
+  // TODO: FLE-167: Remove warning once ament_index_cpp is updated and synced across all current
+  // ROS2 distributions.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
   const std::string share_dir = ament_index_cpp::get_package_share_directory(package);
+#pragma GCC diagnostic pop
 
   // Get the rosidl_interfaces index contents for this package
+  // TODO: FLE-167: Remove warning once ament_index_cpp is updated and synced across all current
+  // ROS2 distributions.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
   std::string index_contents;
   if (!ament_index_cpp::get_resource("rosidl_interfaces", package, index_contents)) {
     throw DefinitionNotFoundError(definition_identifier.package_resource_name);
   }
+#pragma GCC diagnostic pop
 
   // Find the first line that ends with the filename we're looking for
   const auto lines = split_string(index_contents);
@@ -341,8 +351,8 @@ const MessageSpec& MessageDefinitionCache::load_message_spec(
 
 std::pair<MessageDefinitionFormat, const std::string&> MessageDefinitionCache::get_full_text(
   const std::string& root_package_resource_name) {
-  if (full_text_cache_.find(root_package_resource_name) != full_text_cache_.end()) {
-    return {MessageDefinitionFormat::MSG, full_text_cache_[root_package_resource_name]};
+  if (auto it = full_text_cache_.find(root_package_resource_name); it != full_text_cache_.end()) {
+    return it->second;
   }
 
   std::unordered_set<DefinitionIdentifier, DefinitionIdentifierHash> seen_deps;
@@ -376,8 +386,9 @@ std::pair<MessageDefinitionFormat, const std::string&> MessageDefinitionCache::g
     result = delimiter(root_definition_identifier) + append_recursive(root_definition_identifier);
   }
 
-  auto [it, _] = full_text_cache_.emplace(root_package_resource_name, result);
-  return {format, it->second};
+  auto [it, _] =
+    full_text_cache_.emplace(root_package_resource_name, std::make_pair(format, result));
+  return it->second;
 }
 
 }  // namespace foxglove_bridge
