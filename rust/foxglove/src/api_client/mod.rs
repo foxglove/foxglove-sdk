@@ -3,7 +3,7 @@
 //! This module is intended for internal use only and is subject to breaking changes at any time.
 //! Do not depend on the stability of any types or functions in this module.
 
-#![allow(dead_code, unused_imports)]
+#![allow(unused)]
 
 mod client;
 mod credentials_provider;

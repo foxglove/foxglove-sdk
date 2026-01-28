@@ -50,7 +50,7 @@ impl CredentialsProvider {
         self.refresh().await
     }
 
-    pub async fn refresh(&self) -> Result<Arc<RtcCredentials>, CredentialsError> {
+    async fn refresh(&self) -> Result<Arc<RtcCredentials>, CredentialsError> {
         let credentials = Arc::new(self.device.authorize_remote_viz().await?);
         self.credentials.store(Some(credentials.clone()));
         Ok(credentials)

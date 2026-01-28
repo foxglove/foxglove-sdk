@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use std::fmt::Display;
 use std::time::Duration;
 
@@ -153,7 +151,7 @@ pub(super) struct FoxgloveApiClient {
 }
 
 impl FoxgloveApiClient {
-    pub fn new(
+    fn new(
         base_url: impl Into<String>,
         device_token: Option<DeviceToken>,
         user_agent: impl Into<String>,
@@ -188,16 +186,12 @@ impl FoxgloveApiClient {
         self.request(Method::POST, endpoint)
     }
 
-    pub fn device_token(&self) -> Option<&DeviceToken> {
-        self.device_token.as_ref()
-    }
-
     /// Fetches device information from the Foxglove platform.
     ///
     /// This endpoint is not intended for direct usage. Access may be blocked if suspicious
     /// activity is detected.
     pub async fn fetch_device_info(&self) -> Result<DeviceResponse, FoxgloveApiClientError> {
-        let Some(token) = self.device_token() else {
+        let Some(token) = &self.device_token else {
             return Err(FoxgloveApiClientError::NoToken());
         };
 
@@ -225,7 +219,7 @@ impl FoxgloveApiClient {
         &self,
         device_id: &str,
     ) -> Result<RtcCredentials, FoxgloveApiClientError> {
-        let Some(device_token) = self.device_token() else {
+        let Some(device_token) = &self.device_token else {
             return Err(FoxgloveApiClientError::NoToken());
         };
 
