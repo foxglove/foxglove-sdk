@@ -82,7 +82,7 @@ impl UpstreamServer for ExampleUpstream {
     async fn initialize(
         &self,
         params: FlightParams,
-        reg: &mut ChannelRegistry,
+        reg: &mut impl ChannelRegistry,
     ) -> Result<FlightContext, BoxError> {
         // Declare channels and build context
         Ok(FlightContext {

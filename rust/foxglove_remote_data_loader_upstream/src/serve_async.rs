@@ -12,11 +12,11 @@ use axum::{
 };
 use futures::{FutureExt, StreamExt};
 use serde::de::DeserializeOwned;
-use tracing::warn;
+use tracing::error;
 
 use crate::{
-    extract_bearer_token, AuthError, BoxError, ChannelRegistry, Metadata, DATA_ROUTE,
-    MANIFEST_ROUTE,
+    extract_bearer_token, AuthError, BoxError, ChannelRegistry, ManifestBuilder, Metadata,
+    DATA_ROUTE, MANIFEST_ROUTE,
 };
 pub use foxglove::stream::McapStreamHandle as StreamHandle;
 
@@ -32,13 +32,17 @@ pub use foxglove::stream::McapStreamHandle as StreamHandle;
 /// # use foxglove_remote_data_loader_upstream::{UpstreamServer, ChannelRegistry, AuthError, Metadata, StreamHandle, BoxError, generate_source_id};
 /// # use foxglove::Channel;
 /// # use chrono::{DateTime, Utc};
-/// # #[derive(serde::Deserialize, Hash)]
-/// # struct MyParams { flight_id: String, start_time: DateTime<Utc>, end_time: DateTime<Utc> }
-/// # #[derive(foxglove::Encode)]
-/// # struct MyMessage { value: i32 }
-/// # struct MyServer;
-/// # struct FlightInfo { name: String }
-/// # impl MyServer { async fn get_flight(&self, _: &str) -> Result<FlightInfo, std::io::Error> { Ok(FlightInfo { name: "test".into() }) } }
+/// #[derive(serde::Deserialize, Hash)]
+/// struct MyParams { flight_id: String, start_time: DateTime<Utc>, end_time: DateTime<Utc> }
+/// #[derive(foxglove::Encode)]
+/// struct MyMessage { value: i32 }
+/// struct MyServer;
+/// struct FlightInfo { name: String }
+/// impl MyServer {
+///     async fn get_flight(&self, _: &str) -> Result<FlightInfo, std::io::Error> {
+///         Ok(FlightInfo { name: "test".into() })
+///     }
+/// }
 ///
 /// struct MyContext {
 ///     flight_id: String,
@@ -57,7 +61,7 @@ pub use foxglove::stream::McapStreamHandle as StreamHandle;
 ///     async fn initialize(
 ///         &self,
 ///         params: MyParams,
-///         reg: &mut ChannelRegistry,
+///         reg: &mut impl ChannelRegistry,
 ///     ) -> Result<MyContext, BoxError> {
 ///         let flight_info = self.get_flight(&params.flight_id).await?;
 ///         Ok(MyContext {
@@ -128,15 +132,14 @@ pub trait UpstreamServer: Send + Sync + 'static {
 
     /// Context type that holds channels and any shared state between methods.
     ///
-    /// Create this in [`initialize`](Self::initialize) and receive it in
-    /// [`metadata`](Self::metadata) or [`stream`](Self::stream).
-    type Context: Send;
+    /// Create this in [`initialize`](UpstreamServer::initialize) and receive it in
+    /// [`metadata`](UpstreamServer::metadata) or [`stream`](UpstreamServer::stream).
+    type Context;
 
     /// Authenticate and authorize the request.
     ///
-    /// Return `Ok(())` to allow access. Return `Err(AuthError::Unauthenticated)` for
-    /// missing/invalid credentials (401), `Err(AuthError::Forbidden)` for valid credentials
-    /// but denied access (403), or use `?` to convert any error to a 500 response.
+    /// Return `Ok(())` to allow access, or an `Err` to deny access.
+    /// See [`AuthError`] for possible error values.
     fn auth(
         &self,
         bearer_token: Option<&str>,
@@ -145,13 +148,13 @@ pub trait UpstreamServer: Send + Sync + 'static {
 
     /// Initialize the data source by declaring channels and preparing context.
     ///
-    /// Called for both manifest and data requests. Use the [`ChannelRegistry`] to declare
-    /// channels, and return a context containing the channels and any other state needed
-    /// by [`metadata`](Self::metadata) or [`stream`](Self::stream).
+    /// Called for both manifest and data requests. Use the [`ChannelRegistry`] to declare channels,
+    /// and return a context containing the channels and any other state needed by
+    /// [`metadata`](UpstreamServer::metadata) or [`stream`](UpstreamServer::stream).
     fn initialize(
         &self,
         params: Self::QueryParams,
-        registry: &mut ChannelRegistry,
+        registry: &mut impl ChannelRegistry,
     ) -> impl Future<Output = Result<Self::Context, BoxError>> + Send;
 
     /// Return metadata describing the data source.
@@ -164,8 +167,8 @@ pub trait UpstreamServer: Send + Sync + 'static {
 
     /// Stream MCAP data.
     ///
-    /// Called only for data requests (`/v1/data`). Use channels from the context
-    /// to log messages, then call [`StreamHandle::close`] when done.
+    /// Called only for data requests (`/v1/data`). Use channels from the context to log messages,
+    /// then call [`StreamHandle::close`] when done.
     fn stream(
         &self,
         ctx: Self::Context,
@@ -184,11 +187,11 @@ async fn manifest_handler<P: UpstreamServer>(
     }
 
     // Initialize
-    let mut registry = ChannelRegistry::new_for_manifest();
-    let ctx = match provider.initialize(params, &mut registry).await {
+    let mut manifest_builder = ManifestBuilder::new();
+    let ctx = match provider.initialize(params, &mut manifest_builder).await {
         Ok(ctx) => ctx,
         Err(error) => {
-            warn!(%error, "error during initialization");
+            error!(%error, "error during initialization");
             return axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response();
         }
     };
@@ -197,13 +200,13 @@ async fn manifest_handler<P: UpstreamServer>(
     let metadata = match provider.metadata(ctx).await {
         Ok(m) => m,
         Err(error) => {
-            warn!(%error, "error getting metadata");
+            error!(%error, "error getting metadata");
             return axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response();
         }
     };
 
     // Build manifest
-    let manifest = registry.into_manifest_builder().build(metadata);
+    let manifest = manifest_builder.build(metadata);
     Json(manifest).into_response()
 }
 
@@ -217,22 +220,15 @@ async fn data_handler<P: UpstreamServer>(
         return e.into_response();
     }
 
-    // Build output stream
-    let (mcap_handle, mcap_stream) = foxglove::stream::create_mcap_stream();
-
+    // Run stream in its own task, since the response won't start until we return from this
+    // function.
+    let (mut stream_handle, mcap_stream) = foxglove::stream::create_mcap_stream();
     let mcap_stream_task = tokio::spawn(async move {
-        // Initialize with the stream handle
-        let mut registry = ChannelRegistry::new_for_stream(mcap_handle);
-        let ctx = provider.initialize(params, &mut registry).await?;
-
-        // Extract the handle back from the registry
-        let handle = registry.into_stream_handle();
-
-        // Stream data
-        provider.stream(ctx, handle).await
+        let ctx = provider.initialize(params, &mut stream_handle).await?;
+        provider.stream(ctx, stream_handle).await
     });
 
-    // Catch any errors during streaming
+    // Catch any errors during streaming.
     let error_stream = mcap_stream_task
         .into_stream()
         .filter_map(|result| async move {
@@ -264,7 +260,7 @@ async fn data_handler<P: UpstreamServer>(
 ///         Ok(())
 ///     }
 ///
-///     async fn initialize(&self, _: (), _: &mut ChannelRegistry) -> Result<(), BoxError> {
+///     async fn initialize(&self, _: (), _: &mut impl ChannelRegistry) -> Result<(), BoxError> {
 ///         Ok(())
 ///     }
 ///

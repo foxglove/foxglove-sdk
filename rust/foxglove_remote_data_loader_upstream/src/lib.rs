@@ -43,7 +43,11 @@ pub use serve_async::*;
 #[cfg(feature = "blocking")]
 pub mod blocking;
 
-use std::{hash::Hash, num::NonZeroU16, sync::Arc};
+use std::{
+    hash::Hash,
+    num::NonZeroU16,
+    sync::{Arc, LazyLock},
+};
 
 pub use axum::BoxError;
 use axum::{
@@ -81,11 +85,11 @@ pub const DATA_ROUTE: &str = "/v1/data";
 /// ```
 #[derive(thiserror::Error, Debug)]
 pub enum AuthError {
-    /// Credentials required but invalid or missing (HTTP 401).
+    /// Credentials are required, but are invalid or missing (HTTP 401).
     #[error("unauthenticated")]
     Unauthenticated,
 
-    /// Credentials valid but access denied (HTTP 403).
+    /// Credentials are recognized, but access is denied (HTTP 403).
     #[error("forbidden")]
     Forbidden,
 
@@ -101,17 +105,13 @@ impl AuthError {
     }
 }
 
-// Note: We intentionally don't implement From<E> for AuthError because it would
-// conflict with the standard From<T> for T implementation. Instead, use the
-// AuthError::other() method or the ? operator with .map_err(AuthError::other).
-
 impl IntoResponse for AuthError {
     fn into_response(self) -> Response {
         match self {
             Self::Unauthenticated => StatusCode::UNAUTHORIZED.into_response(),
             Self::Forbidden => StatusCode::FORBIDDEN.into_response(),
             Self::Other(error) => {
-                warn!(%error, "error during auth");
+                warn!(%error, "unexpected error during auth");
                 StatusCode::INTERNAL_SERVER_ERROR.into_response()
             }
         }
@@ -206,43 +206,12 @@ impl Sink for PanicSink {
         _msg: &[u8],
         _metadata: &foxglove::Metadata,
     ) -> Result<(), foxglove::FoxgloveError> {
-        panic!("attempted to log message during manifest generation; logging is only allowed in stream()");
+        panic!("attempted to log message to channel not created for streaming");
     }
 }
 
-/// Registry for declaring channels during [`UpstreamServer::initialize`].
-pub struct ChannelRegistry {
-    mode: RegistryMode,
-}
-
-enum RegistryMode {
-    Manifest {
-        context: Arc<Context>,
-        builder: ManifestBuilder,
-    },
-    Stream {
-        handle: foxglove::stream::McapStreamHandle,
-    },
-}
-
-impl ChannelRegistry {
-    pub(crate) fn new_for_manifest() -> Self {
-        let context = Context::new();
-        context.add_sink(Arc::new(PanicSink::new()));
-        Self {
-            mode: RegistryMode::Manifest {
-                context,
-                builder: ManifestBuilder::new(),
-            },
-        }
-    }
-
-    pub(crate) fn new_for_stream(handle: foxglove::stream::McapStreamHandle) -> Self {
-        Self {
-            mode: RegistryMode::Stream { handle },
-        }
-    }
-
+/// Trait for declaring channels during [`UpstreamServer::initialize`].
+pub trait ChannelRegistry: Send {
     /// Declare a channel for logging messages.
     ///
     /// The returned [`Channel<T>`] should be stored in your [`UpstreamServer::Context`], so you can
@@ -253,37 +222,37 @@ impl ChannelRegistry {
     /// You should only log messages in your `stream` implementation. If the
     /// initiating HTTP request is not a data streaming request, attempting to log to the returned
     /// channel will panic.
-    pub fn channel<T: Encode>(&mut self, topic: impl Into<String>) -> Channel<T> {
+    fn channel<T: Encode>(&mut self, topic: impl Into<String>) -> Channel<T>;
+}
+
+static PANIC_CONTEXT: LazyLock<Arc<Context>> = LazyLock::new(|| {
+    let context = Context::new();
+    context.add_sink(Arc::new(PanicSink::new()));
+    context
+});
+
+impl ChannelRegistry for ManifestBuilder {
+    /// Add a channel to the manifest.
+    ///
+    /// The returned [`Channel<T>`] is connected to a [`PanicSink`] to catch bugs where logging
+    /// happens outside of [`UpstreamServer::stream`].
+    fn channel<T: Encode>(&mut self, topic: impl Into<String>) -> Channel<T> {
         let topic = topic.into();
-        match &mut self.mode {
-            RegistryMode::Manifest { context, builder } => {
-                builder.add_channel::<T>(topic.clone());
-                context.channel_builder(&topic).build::<T>()
-            }
-            RegistryMode::Stream { handle } => handle.channel_builder(&topic).build::<T>(),
-        }
-    }
-
-    pub(crate) fn into_stream_handle(self) -> foxglove::stream::McapStreamHandle {
-        match self.mode {
-            RegistryMode::Manifest { .. } => {
-                panic!("into_stream_handle called on manifest registry")
-            }
-            RegistryMode::Stream { handle } => handle,
-        }
-    }
-
-    pub(crate) fn into_manifest_builder(self) -> ManifestBuilder {
-        match self.mode {
-            RegistryMode::Manifest { builder, .. } => builder,
-            RegistryMode::Stream { .. } => {
-                panic!("into_manifest_builder called on stream registry")
-            }
-        }
+        self.add_channel::<T>(topic.clone());
+        PANIC_CONTEXT.channel_builder(&topic).build::<T>()
     }
 }
 
-pub(crate) struct ManifestBuilder {
+impl ChannelRegistry for StreamHandle {
+    /// Add a channel to this handle's MCAP stream.
+    ///
+    /// The returned [`Channel<T>`] is connected to this handle's [`foxglove::stream::McapStream`].
+    fn channel<T: Encode>(&mut self, topic: impl Into<String>) -> Channel<T> {
+        self.channel_builder(topic).build::<T>()
+    }
+}
+
+struct ManifestBuilder {
     topics: Vec<manifest::Topic>,
     schemas: Vec<manifest::Schema>,
     next_schema_id: NonZeroU16,
@@ -333,7 +302,7 @@ impl ManifestBuilder {
         }
     }
 
-    pub(crate) fn build(self, metadata: Metadata) -> manifest::Manifest {
+    fn build(self, metadata: Metadata) -> manifest::Manifest {
         manifest::Manifest {
             name: Some(metadata.name),
             sources: vec![manifest::UpstreamSource::Streamed(
@@ -398,8 +367,8 @@ mod tests {
             value: i32,
         }
 
-        let mut registry = ChannelRegistry::new_for_manifest();
-        let channel = registry.channel::<TestMessage>("/test");
+        let mut manifest_builder = ManifestBuilder::new();
+        let channel = manifest_builder.channel::<TestMessage>("/test");
         // This should panic because we're using a PanicSink
         channel.log(&TestMessage { value: 42 });
     }

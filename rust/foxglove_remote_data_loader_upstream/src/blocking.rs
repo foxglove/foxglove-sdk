@@ -16,8 +16,8 @@ use tokio::runtime::Handle;
 use tracing::warn;
 
 use crate::{
-    extract_bearer_token, AuthError, BoxError, ChannelRegistry, Metadata, DATA_ROUTE,
-    MANIFEST_ROUTE,
+    extract_bearer_token, AuthError, BoxError, ChannelRegistry, ManifestBuilder, Metadata,
+    DATA_ROUTE, MANIFEST_ROUTE,
 };
 use foxglove::{stream::McapStreamHandle, FoxgloveError};
 
@@ -91,7 +91,7 @@ impl StreamHandle {
 ///     fn initialize(
 ///         &self,
 ///         params: MyParams,
-///         reg: &mut ChannelRegistry,
+///         reg: &mut impl ChannelRegistry,
 ///     ) -> Result<MyContext, BoxError> {
 ///         let flight_info = self.get_flight(&params.flight_id)?;
 ///         Ok(MyContext {
@@ -182,7 +182,7 @@ pub trait UpstreamServer: Send + Sync + 'static {
     fn initialize(
         &self,
         params: Self::QueryParams,
-        registry: &mut ChannelRegistry,
+        registry: &mut impl ChannelRegistry,
     ) -> Result<Self::Context, BoxError>;
 
     /// Return metadata describing the data source.
@@ -211,8 +211,8 @@ async fn manifest_handler<P: UpstreamServer>(
         }
 
         // Initialize
-        let mut registry = ChannelRegistry::new_for_manifest();
-        let ctx = match provider.initialize(params, &mut registry) {
+        let mut manifest_builder = ManifestBuilder::new();
+        let ctx = match provider.initialize(params, &mut manifest_builder) {
             Ok(ctx) => ctx,
             Err(error) => {
                 warn!(%error, "error during initialization");
@@ -230,7 +230,7 @@ async fn manifest_handler<P: UpstreamServer>(
         };
 
         // Build manifest
-        Ok(registry.into_manifest_builder().build(metadata))
+        Ok(manifest_builder.build(metadata))
     })
     .await;
 
@@ -261,18 +261,19 @@ async fn data_handler<P: UpstreamServer>(
     };
 
     // Build MCAP data stream
-    let (mcap_handle, mcap_stream) = foxglove::stream::create_mcap_stream();
+    let (mut stream_handle, mcap_stream) = foxglove::stream::create_mcap_stream();
 
     let mcap_stream_task = tokio::task::spawn_blocking(move || {
         // Initialize with the stream handle
-        let mut registry = ChannelRegistry::new_for_stream(mcap_handle);
-        let ctx = provider.initialize(params, &mut registry)?;
-
-        // Extract the handle back from the registry
-        let handle = registry.into_stream_handle();
+        let ctx = provider.initialize(params, &mut stream_handle)?;
 
         // Stream data
-        provider.stream(ctx, StreamHandle { inner: handle })
+        provider.stream(
+            ctx,
+            StreamHandle {
+                inner: stream_handle,
+            },
+        )
     });
 
     let error_stream = mcap_stream_task
@@ -308,7 +309,7 @@ async fn data_handler<P: UpstreamServer>(
 ///         Ok(())
 ///     }
 ///
-///     fn initialize(&self, _: (), _: &mut ChannelRegistry) -> Result<(), BoxError> {
+///     fn initialize(&self, _: (), _: &mut impl ChannelRegistry) -> Result<(), BoxError> {
 ///         Ok(())
 ///     }
 ///
