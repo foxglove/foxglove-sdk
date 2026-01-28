@@ -248,16 +248,9 @@ impl prost::Message for Duration {
                 let mut nanos = i32::try_from(self.nsec)
                     .map_err(|_| prost::DecodeError::new("duration nanos overflow"))?;
                 prost::encoding::int32::merge(wire_type, &mut nanos, buf, ctx)?;
-                let nanos = u32::try_from(nanos)
+                self.nsec = u32::try_from(nanos)
                     .map_err(|_| prost::DecodeError::new("invalid duration nanos"))?;
-                match normalize_nsec(nanos).carry_i32(self.sec) {
-                    Some((sec, nsec)) => {
-                        self.sec = sec;
-                        self.nsec = nsec;
-                        Ok(())
-                    }
-                    None => Err(prost::DecodeError::new("duration overflow")),
-                }
+                Ok(())
             }
             _ => prost::encoding::skip_field(wire_type, tag, buf, ctx),
         }
@@ -480,16 +473,9 @@ impl prost::Message for Timestamp {
                 let mut nanos: i32 = i32::try_from(self.nsec)
                     .map_err(|_| prost::DecodeError::new("timestamp nanos overflow"))?;
                 prost::encoding::int32::merge(wire_type, &mut nanos, buf, ctx)?;
-                let nanos_u32 = u32::try_from(nanos)
+                self.nsec = u32::try_from(nanos)
                     .map_err(|_| prost::DecodeError::new("invalid timestamp nanos"))?;
-                match normalize_nsec(nanos_u32).carry_u32(self.sec) {
-                    Some((sec, nsec)) => {
-                        self.sec = sec;
-                        self.nsec = nsec;
-                        Ok(())
-                    }
-                    None => Err(prost::DecodeError::new("timestamp normalization overflow")),
-                }
+                Ok(())
             }
             _ => prost::encoding::skip_field(wire_type, tag, buf, ctx),
         }
