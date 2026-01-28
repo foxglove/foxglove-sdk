@@ -220,7 +220,8 @@ impl ChannelRegistry for ManifestBuilder {
     }
 }
 
-impl ChannelRegistry for StreamHandle {
+// `StreamHandle` is conditional on the `async` feature, so implement for the underlying type.
+impl ChannelRegistry for foxglove::stream::McapStreamHandle {
     /// Add a channel to this handle's MCAP stream.
     ///
     /// The returned [`Channel<T>`] is connected to this handle's [`foxglove::stream::McapStream`].
