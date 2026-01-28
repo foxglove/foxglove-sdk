@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import uuid
 from tempfile import TemporaryDirectory
-from typing import Literal
+from typing import Any, Literal
 
 from mcap.reader import make_reader
 
@@ -43,6 +43,7 @@ class NotebookBuffer:
         height: int | None = None,
         src: str | None = None,
         layout: Layout | None = None,
+        opaque_layout: dict[str, Any] | None = None,
     ) -> FoxgloveWidget:
         """
         Show the Foxglove viewer. Call this method as the last step of a notebook cell
@@ -54,6 +55,7 @@ class NotebookBuffer:
             height=height,
             src=src,
             layout=layout,
+            opaque_layout=opaque_layout,
         )
         return widget
 
