@@ -21,12 +21,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - run: |
-          sudo apt-get update && sudo apt-get install -y --no-install-recommends \
-            clang-format-19 \
-            pkg-config \
-            cmake \
-            libglib2.0-dev \
-            libva-dev
+          sudo apt install -y --no-install-recommends clang-format-19
           echo "/usr/lib/llvm-19/bin" >> $GITHUB_PATH
       - run: clang-format --version
       - run: make lint

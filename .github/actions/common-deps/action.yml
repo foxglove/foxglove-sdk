@@ -5,7 +5,7 @@ runs:
   steps:
     - uses: actions/setup-python@v6
       with:
-        python-version: "3.13"
+        python-version: "3.10"
 
     - uses: astral-sh/setup-uv@v6
 
@@ -20,9 +20,4 @@ runs:
       run: |
         sudo apt-get install -y --no-install-recommends \
           libprotobuf-dev \
-          protobuf-compiler \
-          build-essential \
-          pkg-config \
-          cmake \
-          libglib2.0-dev \
-          libva-dev
+          protobuf-compiler

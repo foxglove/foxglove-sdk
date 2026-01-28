@@ -21,12 +21,13 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Build Foxglove C++ SDK
+        run: make build-cpp
+
       - name: Run make lint
         run: make lint
         working-directory: ros
 
-      # The C++ SDK is built inside the Docker container to ensure glibc compatibility.
-      # Each ROS distribution uses a different Ubuntu version with different glibc.
       - name: Run make docker-build
         run: make USE_LOCAL_SDK=ON docker-build-${{ matrix.ros_distribution }}
         working-directory: ros
@@ -34,3 +35,4 @@ jobs:
       - name: Run make docker-test
         run: make GTEST_REPEAT=50 docker-test-${{ matrix.ros_distribution }}
         working-directory: ros
+
