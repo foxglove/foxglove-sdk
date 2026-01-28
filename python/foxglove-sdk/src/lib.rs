@@ -304,7 +304,6 @@ fn _foxglove_py(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(open_mcap, m)?)?;
     #[cfg(not(target_family = "wasm"))]
     m.add_function(wrap_pyfunction!(start_server, m)?)?;
-    #[cfg(not(target_family = "wasm"))]
     m.add_function(wrap_pyfunction!(get_channel_for_topic, m)?)?;
     m.add_class::<BaseChannel>()?;
     m.add_class::<PySchema>()?;
