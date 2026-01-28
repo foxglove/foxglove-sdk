@@ -107,12 +107,14 @@ impl NormalizeResult {
 /// let duration: Duration = std::time::Duration::from_secs(u64::MAX).saturating_into();
 /// assert_eq!(duration, Duration::MAX);
 /// ```
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, prost::Message)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub struct Duration {
     /// Seconds offset.
+    #[prost(int32, tag = "1")]
     sec: i32,
     /// Nanoseconds offset in the positive direction.
+    #[prost(uint32, tag = "2")]
     nsec: u32,
 }
 
@@ -128,10 +130,6 @@ impl Duration {
         sec: i32::MIN,
         nsec: 0,
     };
-
-    fn into_prost(self) -> prost_types::Duration {
-        self.into()
-    }
 
     /// Creates a new normalized duration.
     ///
@@ -215,41 +213,6 @@ impl From<Duration> for prost_types::Duration {
     }
 }
 
-impl prost::Message for Duration {
-    fn encode_raw(&self, buf: &mut impl bytes::BufMut)
-    where
-        Self: Sized,
-    {
-        self.into_prost().encode_raw(buf);
-    }
-
-    fn merge_field(
-        &mut self,
-        tag: u32,
-        wire_type: prost::encoding::wire_type::WireType,
-        buf: &mut impl bytes::Buf,
-        ctx: prost::encoding::DecodeContext,
-    ) -> Result<(), prost::DecodeError>
-    where
-        Self: Sized,
-    {
-        match tag {
-            1 => prost::encoding::int32::merge(wire_type, &mut self.sec, buf, ctx),
-            2 => prost::encoding::uint32::merge(wire_type, &mut self.nsec, buf, ctx),
-            _ => prost::encoding::skip_field(wire_type, tag, buf, ctx),
-        }
-    }
-
-    fn encoded_len(&self) -> usize {
-        self.into_prost().encoded_len()
-    }
-
-    fn clear(&mut self) {
-        self.sec = 0;
-        self.nsec = 0;
-    }
-}
-
 impl TryFrom<std::time::Duration> for Duration {
     type Error = RangeError;
 
@@ -316,12 +279,14 @@ where
 ///     .saturating_into();
 /// assert_eq!(timestamp, Timestamp::MIN);
 /// ```
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, prost::Message)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub struct Timestamp {
     /// Seconds since epoch.
+    #[prost(uint32, tag = "1")]
     sec: u32,
     /// Additional nanoseconds since epoch.
+    #[prost(uint32, tag = "2")]
     nsec: u32,
 }
 
@@ -334,10 +299,6 @@ impl Timestamp {
 
     /// Minimum representable timestamp.
     pub const MIN: Self = Self { sec: 0, nsec: 0 };
-
-    fn into_prost(self) -> prost_types::Timestamp {
-        self.into()
-    }
 
     /// Creates a new normalized timestamp.
     ///
@@ -421,41 +382,6 @@ impl From<Timestamp> for prost_types::Timestamp {
                 unreachable!("expected {} to be within [0, 1_000_000_000): {e}", v.nsec)
             }),
         }
-    }
-}
-
-impl prost::Message for Timestamp {
-    fn encode_raw(&self, buf: &mut impl bytes::BufMut)
-    where
-        Self: Sized,
-    {
-        self.into_prost().encode_raw(buf);
-    }
-
-    fn merge_field(
-        &mut self,
-        tag: u32,
-        wire_type: prost::encoding::wire_type::WireType,
-        buf: &mut impl bytes::Buf,
-        ctx: prost::encoding::DecodeContext,
-    ) -> Result<(), prost::DecodeError>
-    where
-        Self: Sized,
-    {
-        match tag {
-            1 => prost::encoding::uint32::merge(wire_type, &mut self.sec, buf, ctx),
-            2 => prost::encoding::uint32::merge(wire_type, &mut self.nsec, buf, ctx),
-            _ => prost::encoding::skip_field(wire_type, tag, buf, ctx),
-        }
-    }
-
-    fn encoded_len(&self) -> usize {
-        self.into_prost().encoded_len()
-    }
-
-    fn clear(&mut self) {
-        self.sec = 0;
-        self.nsec = 0;
     }
 }
 
