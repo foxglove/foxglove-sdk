@@ -8,6 +8,8 @@ use reqwest::header::{HeaderMap, AUTHORIZATION, USER_AGENT};
 use reqwest::{Method, StatusCode};
 use thiserror::Error;
 
+use crate::library_version::{get_sdk_language, get_sdk_version};
+
 use super::types::{DeviceResponse, ErrorResponse, RtcCredentials};
 
 pub(super) const DEFAULT_API_URL: &str = "https://api.foxglove.dev";
@@ -131,7 +133,11 @@ impl RequestBuilder {
 }
 
 pub(super) fn default_user_agent() -> String {
-    format!("foxglove-sdk/{}", env!("CARGO_PKG_VERSION"))
+    format!(
+        "foxglove-sdk ({}/v{})",
+        get_sdk_language(),
+        get_sdk_version()
+    )
 }
 
 /// Internal API client for communicating with the Foxglove platform.
