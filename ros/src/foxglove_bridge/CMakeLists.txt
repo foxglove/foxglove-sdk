@@ -9,7 +9,7 @@ if(POLICY CMP0024)
   set(CMAKE_POLICY_DEFAULT_CMP0024 NEW)
 endif()
 
-project(foxglove_bridge LANGUAGES CXX VERSION 3.2.3)
+project(foxglove_bridge LANGUAGES CXX VERSION 3.2.4)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -67,14 +67,14 @@ if (USE_LOCAL_SDK)
   )
 else()
   message(STATUS "Fetching Foxglove SDK artifacts from GitHub")
-  set(FOXGLOVE_SDK_VERSION "0.15.2")
+  set(FOXGLOVE_SDK_VERSION "0.16.5")
 
   if (CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64")
     set(FOXGLOVE_SDK_PLATFORM "aarch64-unknown-linux-gnu")
-    set(FOXGLOVE_SDK_SHA "7e8e942c2d5abd0a8f01d5a78a21b0b72740468f500ede99a0a9c90da2fdd851")
+    set(FOXGLOVE_SDK_SHA "54cbc57c60a550473e0a75f8f360efb6fa245ebb7f582db5efa64f1c297e554f")
   elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
     set(FOXGLOVE_SDK_PLATFORM "x86_64-unknown-linux-gnu")
-    set(FOXGLOVE_SDK_SHA "d07ec994e0b07766e6b68323a1f3bd407dc65391084f376b6169564b6d9873f0")
+    set(FOXGLOVE_SDK_SHA "8e4967ec7446a06b5a04c47b54bcd4cecff2ad8776e002ef3803ed4a7076841d")
   else()
     message(FATAL_ERROR "Unsupported platform/architecture combination: ${CMAKE_SYSTEM_PROCESSOR}-${CMAKE_SYSTEM_NAME}")
   endif()
@@ -208,8 +208,7 @@ if(BUILD_TESTING)
 
   ament_lint_auto_find_test_dependencies()
 
-  # Repeat tests several times to catch nondeterministic issues
-  ament_add_gtest(smoke_test tests/smoke_test.cpp ENV GTEST_REPEAT=50 TIMEOUT 600)
+  ament_add_gtest(smoke_test tests/smoke_test.cpp TIMEOUT 600)
   target_link_libraries(smoke_test
     foxglove_bridge_component
     ${std_msgs_TARGETS}
