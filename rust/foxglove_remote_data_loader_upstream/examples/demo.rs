@@ -60,9 +60,7 @@ struct FlightParams {
 
 /// Context holding channels and shared state.
 struct FlightContext {
-    flight_id: String,
-    start_time: DateTime<Utc>,
-    end_time: DateTime<Utc>,
+    params: FlightParams,
     demo: Channel<DemoMessage>,
 }
 
@@ -86,34 +84,33 @@ impl UpstreamServer for ExampleUpstream {
     ) -> Result<FlightContext, BoxError> {
         // Declare channels and build context
         Ok(FlightContext {
-            flight_id: params.flight_id,
-            start_time: params.start_time,
-            end_time: params.end_time,
+            params,
             demo: reg.channel("/demo"),
         })
     }
 
     async fn metadata(&self, ctx: FlightContext) -> Result<Metadata, BoxError> {
         Ok(Metadata {
-            id: generate_source_id("flight-data", 1, &ctx.flight_id),
-            name: format!("Flight {}", ctx.flight_id),
-            start_time: ctx.start_time,
-            end_time: ctx.end_time,
+            id: generate_source_id("flight-data", 1, &ctx.params),
+            name: format!("Flight {}", ctx.params.flight_id),
+            start_time: ctx.params.start_time,
+            end_time: ctx.params.end_time,
         })
     }
 
     async fn stream(&self, ctx: FlightContext, mut handle: StreamHandle) -> Result<(), BoxError> {
-        tracing::info!(flight_id = %ctx.flight_id, "streaming data");
+        tracing::info!(flight_id = %ctx.params.flight_id, "streaming data");
 
         const MAX_BUFFER_SIZE: usize = 1024 * 1024; // 1MiB
         for i in 0..10 {
-            let timestamp = ctx.start_time + chrono::Duration::milliseconds(i as i64 * 100);
+            let timestamp =
+                ctx.params.start_time + chrono::Duration::milliseconds(i as i64 * 100);
             ctx.demo.log_with_time(
                 &DemoMessage {
-                    msg: format!("Data for flight {}", ctx.flight_id),
+                    msg: format!("Data for flight {}", ctx.params.flight_id),
                     count: i,
                 },
-                timestamp.min(ctx.end_time),
+                timestamp.min(ctx.params.end_time),
             );
 
             if handle.buffer_size() >= MAX_BUFFER_SIZE {
