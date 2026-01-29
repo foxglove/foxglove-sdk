@@ -361,12 +361,12 @@ pub use sink_channel_filter::SinkChannelFilter;
 pub use std::collections::BTreeMap;
 pub(crate) use time::nanoseconds_since_epoch;
 
+#[cfg(feature = "live_visualization")]
+mod protocol;
 #[cfg(feature = "remote_access")]
 mod remote_access;
 #[cfg(feature = "remote_access")]
 mod remote_access_server;
-#[cfg(feature = "live_visualization")]
-mod protocol;
 #[cfg(feature = "live_visualization")]
 mod runtime;
 #[cfg(feature = "live_visualization")]
