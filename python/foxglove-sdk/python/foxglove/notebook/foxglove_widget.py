@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any, Literal
 
 import anywidget
 import traitlets
+from ipywidgets import Layout as WidgetLayout  # type: ignore
 
 if TYPE_CHECKING:
     from ..layouts import Layout
@@ -45,7 +46,12 @@ class FoxgloveWidget(anywidget.AnyWidget):
           be parsed from a JSON layout file that was exported from the Foxglove app. If not
           provided, the default layout will be used.
         """
-        super().__init__()
+        super().__init__(
+            layout=WidgetLayout(
+                border="var(--jp-border-width, 1px) solid "
+                + "var(--jp-cell-editor-border-color, #d5d5d5)"
+            ),
+        )
         if width is not None:
             self.width = width
         else:
