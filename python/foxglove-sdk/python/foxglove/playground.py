@@ -4,8 +4,13 @@ Functions available in the Foxglove SDK Playground (https://playground.foxglove.
 
 from foxglove.layouts import Layout
 
+
 def set_layout(layout: Layout, /) -> None:
     """
     Update the layout used in the playground.
+
+    :param layout: The layout to use.
     """
-    ...
+    raise NotImplementedError(
+        "This function is only available in the Foxglove SDK Playground."
+    )

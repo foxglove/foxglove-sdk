@@ -95,6 +95,15 @@ Notebook integration
 
 See :doc:`../notebook/index` for details on using Foxglove with Python/Jupyter notebooks.
 
+Playground
+^^^^^^^^^^
+
+The `Foxglove SDK Playground <https://playground.foxglove.dev/>`__ allows you to run Python code
+using the Foxglove SDK, and visualize the resulting data in Foxglove.
+
+.. automodule:: foxglove.playground
+   :members:
+
 Table of contents
 ^^^^^^^^^^^^^^^^^
 
