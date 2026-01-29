@@ -3,8 +3,14 @@
 # For the full list of built-in configuration values, see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 from datetime import date
+from typing import Any
 
+from docs.extensions.foxglove_autopanels import (
+    AutoPanelsDirective,
+    generate_panel_pages,
+)
 from docs.version import SDK_VERSION
+from sphinx.application import Sphinx
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
@@ -21,6 +27,7 @@ extensions: list[str] = [
     "sphinx.ext.autodoc",
     "sphinx_autodoc_typehints",
     "enum_tools.autoenum",
+    "sphinx_toolbox.more_autodoc.no_docstring",
 ]
 
 nitpicky = True
@@ -44,8 +51,18 @@ typehints_defaults = "braces"
 # Treat __init__ signatures as separate methods so we can exclude them using :exclude-members:
 autodoc_class_signature = "separated"
 
-
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme = "alabaster"
+
+
+# Extension setup for adding custom directives
+def setup(app: Sphinx) -> dict[str, Any]:
+    app.add_directive("foxglove_autopanels", AutoPanelsDirective)
+    app.connect("config-inited", generate_panel_pages)
+
+    return {
+        "version": "0.1.0",
+        "parallel_read_safe": True,
+    }

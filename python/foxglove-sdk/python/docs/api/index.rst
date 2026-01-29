@@ -3,34 +3,12 @@ API Reference
 
 Version: |release|
 
-.. note::
-   The notebook integration classes and functions are only available when the `notebook` extra package is installed.
-   Install it with `pip install foxglove-sdk[notebook]`.
-
 foxglove
 --------
 
 .. automodule:: foxglove
    :members:
    :exclude-members: CloudSink, CloudSinkListener, MCAPWriter, init_notebook_buffer, start_cloud_sink
-
-Notebook Integration
-^^^^^^^^^^^^^^^^^^^^
-
-Functions and classes for integrating with Jupyter notebooks and creating interactive visualizations.
-
-.. autofunction:: init_notebook_buffer
-
-Notebook Classes
-^^^^^^^^^^^^^^^^
-
-.. autoclass:: foxglove.notebook.notebook_buffer.NotebookBuffer
-   :members:
-   :exclude-members: __init__
-
-.. autoclass:: foxglove.notebook.foxglove_widget.FoxgloveWidget
-   :members:
-   :exclude-members: __init__
 
 
 Schemas
