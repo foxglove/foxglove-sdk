@@ -238,6 +238,11 @@ struct CameraCalibration {
   /// @brief     [ 0  0  1]
   /// @brief ```
   /// @brief
+  /// @brief **Uncalibrated cameras:** Following ROS conventions for
+  /// [CameraInfo](https://docs.ros.org/en/noetic/api/sensor_msgs/html/msg/CameraInfo.html),
+  /// Foxglove also treats K[0] == 0.0 as indicating an uncalibrated camera, and calibration data
+  /// will be ignored.
+  /// @brief
   std::array<double, 9> k;
 
   /// @brief Rectification matrix (stereo cameras only, 3x3 row-major matrix)
@@ -554,7 +559,19 @@ struct Duration {
   uint32_t nsec = 0;
 };
 
-/// @brief A transform between two reference frames in 3D space
+/// @brief A transform between two reference frames in 3D space. The transform defines the position
+/// and orientation of a child frame within a parent frame. Translation moves the origin of the
+/// child frame relative to the parent origin. The rotation changes the orientiation of the child
+/// frame around its origin.
+/// @brief
+/// @brief Examples:
+/// @brief
+/// @brief - With translation (x=1, y=0, z=0) and identity rotation (x=0, y=0, z=0, w=1), a point at
+/// (x=0, y=0, z=0) in the child frame maps to (x=1, y=0, z=0) in the parent frame.
+/// @brief
+/// @brief - With translation (x=1, y=2, z=0) and a 90-degree rotation around the z-axis (x=0, y=0,
+/// z=0.707, w=0.707), a point at (x=1, y=0, z=0) in the child frame maps to (x=-1, y=3, z=0) in the
+/// parent frame.
 struct FrameTransform {
   /// @brief Timestamp of transform
   std::optional<Timestamp> timestamp;
@@ -565,10 +582,12 @@ struct FrameTransform {
   /// @brief Name of the child frame
   std::string child_frame_id;
 
-  /// @brief Translation component of the transform
+  /// @brief Translation component of the transform, representing the position of the child frame's
+  /// origin in the parent frame.
   std::optional<Vector3> translation;
 
-  /// @brief Rotation component of the transform
+  /// @brief Rotation component of the transform, representing the orientation of the child frame in
+  /// the parent frame
   std::optional<Quaternion> rotation;
 
   /// @brief Encoded the FrameTransform as protobuf to the provided buffer.
@@ -1589,6 +1608,36 @@ struct SceneUpdate {
   FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 
   /// @brief Get the SceneUpdate schema.
+  ///
+  /// The schema data returned is statically allocated.
+  static Schema schema();
+};
+
+/// @brief A timestamped point for a position in 3D space
+struct Point3InFrame {
+  /// @brief Timestamp of point
+  std::optional<Timestamp> timestamp;
+
+  /// @brief Frame of reference for point position
+  std::string frame_id;
+
+  /// @brief Point in 3D space
+  std::optional<Point3> point;
+
+  /// @brief Encoded the Point3InFrame as protobuf to the provided buffer.
+  ///
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
+  /// and returns FoxgloveError::BufferTooShort.
+  /// If the message cannot be encoded, writes the reason to stderr and returns
+  /// FoxgloveError::EncodeError.
+  ///
+  /// @param ptr the destination buffer. must point to at least len valid bytes.
+  /// @param len the length of the destination buffer.
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
+
+  /// @brief Get the Point3InFrame schema.
   ///
   /// The schema data returned is statically allocated.
   static Schema schema();
@@ -3492,6 +3541,67 @@ public:
 
 private:
   explicit Point3Channel(ChannelUniquePtr&& channel)
+      : impl_(std::move(channel)) {}
+
+  ChannelUniquePtr impl_;
+};
+
+/// @brief A channel for logging Point3InFrame messages to a topic.
+///
+/// @note While channels are fully thread-safe, the Point3InFrame struct is not thread-safe.
+/// Avoid modifying it concurrently or during a log operation.
+class Point3InFrameChannel {
+public:
+  /// @brief Create a new channel.
+  ///
+  /// @param topic The topic name. You should choose a unique topic name per channel for
+  /// compatibility with the Foxglove app.
+  /// @param context The context which associates logs to a sink. If omitted, the default context is
+  /// used.
+  static FoxgloveResult<Point3InFrameChannel> create(
+    const std::string_view& topic, const Context& context = Context()
+  );
+
+  /// @brief Log a message to the channel.
+  ///
+  /// @param msg The Point3InFrame message to log.
+  /// @param log_time The timestamp of the message, as nanoseconds since epoch. If omitted, the
+  /// current time is used.
+  /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
+  FoxgloveError log(
+    const Point3InFrame& msg, std::optional<uint64_t> log_time = std::nullopt,
+    std::optional<uint64_t> sink_id = std::nullopt
+  ) noexcept;
+
+  /// @brief Close the channel.
+  ///
+  /// You can use this to explicitly unadvertise the channel to sinks that subscribe to channels
+  /// dynamically, such as the WebSocketServer.
+  ///
+  /// Attempts to log on a closed channel will elicit a throttled warning message.
+  void close() noexcept;
+
+  /// @brief Uniquely identifies a channel in the context of this program.
+  ///
+  /// @return The ID of the channel.
+  [[nodiscard]] uint64_t id() const noexcept;
+
+  /// @brief Find out if any sinks have been added to the channel.
+  ///
+  /// @return True if sinks have been added to the channel, false otherwise.
+  [[nodiscard]] bool has_sinks() const noexcept;
+
+  Point3InFrameChannel(const Point3InFrameChannel& other) noexcept = delete;
+  Point3InFrameChannel& operator=(const Point3InFrameChannel& other) noexcept = delete;
+  /// @brief Default move constructor.
+  Point3InFrameChannel(Point3InFrameChannel&& other) noexcept = default;
+  /// @brief Default move assignment.
+  Point3InFrameChannel& operator=(Point3InFrameChannel&& other) noexcept = default;
+  /// @brief Default destructor.
+  ~Point3InFrameChannel() = default;
+
+private:
+  explicit Point3InFrameChannel(ChannelUniquePtr&& channel)
       : impl_(std::move(channel)) {}
 
   ChannelUniquePtr impl_;

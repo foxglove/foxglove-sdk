@@ -8,6 +8,7 @@ from typing import Any, Literal
 from mcap.reader import make_reader
 
 from .._foxglove_py import Context, open_mcap
+from ..layouts import Layout
 from .foxglove_widget import FoxgloveWidget
 
 
@@ -20,14 +21,14 @@ class NotebookBuffer:
     Foxglove visualization widget. The widget provides a fully-featured Foxglove interface
     directly within your Jupyter notebook, allowing you to explore multi-modal robotics data
     including 3D scenes, plots, images, and more.
-
-    :param context: The Context used to log the messages. If no Context is provided, the global
-        context will be used. Logged messages will be buffered.
     """
 
-    def __init__(self, context: Context | None = None):
+    def __init__(self, *, context: Context | None = None):
         """
         Initialize a new NotebookBuffer for collecting logged messages.
+
+        :param context: The Context used to log the messages. If no Context is provided, the global
+            context will be used. Logged messages will be buffered.
         """
         # We need to keep the temporary directory alive until the writer is closed
         self._temp_directory = TemporaryDirectory()
@@ -37,23 +38,26 @@ class NotebookBuffer:
 
     def show(
         self,
-        layout_storage_key: str,
+        *,
         width: int | Literal["full"] | None = None,
         height: int | None = None,
         src: str | None = None,
-        **kwargs: Any,
+        layout: Layout | None = None,
+        opaque_layout: dict[str, Any] | None = None,
     ) -> FoxgloveWidget:
         """
         Show the Foxglove viewer. Call this method as the last step of a notebook cell
         to display the viewer.
+
+        :param layout: An optional Layout to use as the initial layout for the viewer.
         """
         widget = FoxgloveWidget(
             buffer=self,
             width=width,
             height=height,
             src=src,
-            layout_storage_key=layout_storage_key,
-            **kwargs,
+            layout=layout,
+            opaque_layout=opaque_layout,
         )
         return widget
 
@@ -70,7 +74,7 @@ class NotebookBuffer:
         self._temp_directory = TemporaryDirectory()
         self._create_writer()
 
-    def get_data(self) -> list[bytes]:
+    def _get_data(self) -> list[bytes]:
         """
         Retrieve all collected data.
         """

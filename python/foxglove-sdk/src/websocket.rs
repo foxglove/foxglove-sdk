@@ -182,12 +182,6 @@ pub struct PyServerListener {
     listener: Py<PyAny>,
 }
 
-impl PyServerListener {
-    pub(crate) fn new(listener: Py<PyAny>) -> Self {
-        Self { listener }
-    }
-}
-
 impl ServerListener for PyServerListener {
     /// Callback invoked when a client subscribes to a channel.
     fn on_subscribe(&self, client: Client, channel: ChannelView) {

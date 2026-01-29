@@ -282,6 +282,8 @@
 //! - `lz4`: enables support for the LZ4 compression algorithm for mcap files. Enabled by default.
 //! - `schemars`: provides a blanket implementation of the [`Encode`] trait for types that
 //!   implement [`Serialize`](serde::Serialize) and [`JsonSchema`][jsonschema-trait].
+//! - `serde`: derives [`Serialize`](serde::Serialize) and [`Deserialize`](serde::Deserialize) for
+//!   all [schema types](crate::schemas).
 //! - `unstable`: features which are under active development and likely to change in an upcoming
 //!   version.
 //! - `zstd`: enables support for the zstd compression algorithm for mcap files. Enabled by
@@ -333,6 +335,13 @@ mod testutil;
 mod throttler;
 mod time;
 
+#[cfg(feature = "stream")]
+pub mod stream;
+
+#[cfg(feature = "img2yuv-core")]
+#[allow(unused)]
+mod img2yuv;
+
 pub use app_url::AppUrl;
 // Re-export bytes crate for convenience when implementing the `Encode` trait
 pub use bytes;
@@ -354,6 +363,8 @@ pub(crate) use time::nanoseconds_since_epoch;
 
 #[cfg(feature = "agent")]
 mod cloud_sink;
+#[cfg(feature = "live_visualization")]
+mod protocol;
 #[cfg(feature = "live_visualization")]
 mod runtime;
 #[cfg(feature = "live_visualization")]

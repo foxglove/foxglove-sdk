@@ -118,7 +118,13 @@ export function generateProto(
     }`;
   });
 
-  const definition = `// ${schema.description}\nmessage ${schema.name} {\n${enumDefinitions.join(
+  const schemaDescription = schema.description
+    .trim()
+    .split("\n")
+    .map((line) => `// ${line}`)
+    .join("\n");
+
+  const definition = `${schemaDescription}\nmessage ${schema.name} {\n${enumDefinitions.join(
     "\n\n",
   )}${fields.join("\n\n")}\n}`;
 

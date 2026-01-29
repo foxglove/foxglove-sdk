@@ -171,6 +171,8 @@ impl From<ArrowPrimitive> for foxglove::schemas::ArrowPrimitive {
 ///         K = [ 0 fy cy]
 ///             [ 0  0  1]
 ///     
+///     **Uncalibrated cameras:** Following ROS conventions for `CameraInfo <https://docs.ros.org/en/noetic/api/sensor_msgs/html/msg/CameraInfo.html>`__, Foxglove also treats K[0] == 0.0 as indicating an uncalibrated camera, and calibration data will be ignored.
+///     
 /// :param R: Rectification matrix (stereo cameras only, 3x3 row-major matrix)
 ///     
 ///     A rotation matrix aligning the camera coordinate system to the ideal stereo image plane so that epipolar lines in both stereo images are parallel.
@@ -687,13 +689,19 @@ impl From<CubePrimitive> for foxglove::schemas::CubePrimitive {
     }
 }
 
-/// A transform between two reference frames in 3D space
+/// A transform between two reference frames in 3D space. The transform defines the position and orientation of a child frame within a parent frame. Translation moves the origin of the child frame relative to the parent origin. The rotation changes the orientiation of the child frame around its origin.
+///
+/// Examples:
+///
+/// - With translation (x=1, y=0, z=0) and identity rotation (x=0, y=0, z=0, w=1), a point at (x=0, y=0, z=0) in the child frame maps to (x=1, y=0, z=0) in the parent frame.
+///
+/// - With translation (x=1, y=2, z=0) and a 90-degree rotation around the z-axis (x=0, y=0, z=0.707, w=0.707), a point at (x=1, y=0, z=0) in the child frame maps to (x=-1, y=3, z=0) in the parent frame.
 ///
 /// :param timestamp: Timestamp of transform
 /// :param parent_frame_id: Name of the parent frame
 /// :param child_frame_id: Name of the child frame
-/// :param translation: Translation component of the transform
-/// :param rotation: Rotation component of the transform
+/// :param translation: Translation component of the transform, representing the position of the child frame's origin in the parent frame.
+/// :param rotation: Rotation component of the transform, representing the orientation of the child frame in the parent frame
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/frame-transform
 #[pyclass(module = "foxglove.schemas")]
@@ -2076,6 +2084,62 @@ impl From<Point3> for foxglove::schemas::Point3 {
     }
 }
 
+/// A timestamped point for a position in 3D space
+///
+/// :param timestamp: Timestamp of point
+/// :param frame_id: Frame of reference for point position
+/// :param point: Point in 3D space
+///
+/// See https://docs.foxglove.dev/docs/visualization/message-schemas/point3-in-frame
+#[pyclass(module = "foxglove.schemas")]
+#[derive(Clone)]
+pub(crate) struct Point3InFrame(pub(crate) foxglove::schemas::Point3InFrame);
+#[pymethods]
+impl Point3InFrame {
+    #[new]
+    #[pyo3(signature = (*, timestamp=None, frame_id="", point=None) )]
+    fn new(timestamp: Option<Timestamp>, frame_id: &str, point: Option<Point3>) -> Self {
+        Self(foxglove::schemas::Point3InFrame {
+            timestamp: timestamp.map(Into::into),
+            frame_id: frame_id.to_string(),
+            point: point.map(Into::into),
+        })
+    }
+    fn __repr__(&self) -> String {
+        format!(
+            "Point3InFrame(timestamp={:?}, frame_id={:?}, point={:?})",
+            self.0.timestamp, self.0.frame_id, self.0.point,
+        )
+    }
+    /// Returns the Point3InFrame schema.
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::Point3InFrame::get_schema()
+            .unwrap()
+            .into()
+    }
+    /// Encodes the Point3InFrame as protobuf.
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("failed to allocate buffer for encoded message")
+    }
+}
+
+impl From<Point3InFrame> for foxglove::schemas::Point3InFrame {
+    fn from(value: Point3InFrame) -> Self {
+        value.0
+    }
+}
+
 /// A collection of N-dimensional points, which may contain additional fields with information like normals, intensity, etc.
 ///
 /// :param timestamp: Timestamp of point cloud
@@ -3073,6 +3137,7 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<PackedElementField>()?;
     module.add_class::<Point2>()?;
     module.add_class::<Point3>()?;
+    module.add_class::<Point3InFrame>()?;
     module.add_class::<PointCloud>()?;
     module.add_class::<PointsAnnotation>()?;
     module.add_class::<Pose>()?;

@@ -2,6 +2,7 @@ ROS_DISTRIBUTIONS := humble jazzy kilted rolling
 USE_LOCAL_SDK := OFF
 EXTRA_DOCKER_ARGS :=
 DOCKER_USER_ARGS :=
+GTEST_REPEAT := 1
 
 ifeq ($(shell uname -s), Linux)
 	DOCKER_USER_ARGS = --build-arg USER_UID=$(shell id -u) --build-arg USER_GID=$(shell id -g)
@@ -26,7 +27,7 @@ build:
 
 .PHONY: test
 test:
-	colcon test
+	GTEST_REPEAT=$(GTEST_REPEAT) colcon test
 	colcon test-result --all --verbose
 
 define generate_ros_targets
@@ -44,7 +45,7 @@ docker-build-$(1): docker-build-image-$(1)
 
 .PHONY: docker-test-$(1)
 docker-test-$(1):
-	docker run --rm -v $(PWD)/..:/sdk foxglove-sdk-ros-$(1) make test
+	docker run --rm -v $(PWD)/..:/sdk foxglove-sdk-ros-$(1) make GTEST_REPEAT=$(GTEST_REPEAT) test
 
 .PHONY: docker-sh-$(1)
 docker-sh-$(1):
@@ -70,7 +71,7 @@ lint:
 	find src/ -name '*.cpp' -o -name '*.hpp' -o -name '*.h' -o -name '*.cc' -o -name '*.inl' \
 		| xargs clang-format --dry-run -Werror
 
-.PHONY:fix 
+.PHONY: fix
 fix:
 	find src/ -name '*.cpp' -o -name '*.hpp' -o -name '*.h' -o -name '*.cc' -o -name '*.inl' \
 		| xargs clang-format -i

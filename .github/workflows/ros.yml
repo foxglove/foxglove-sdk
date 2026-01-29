@@ -33,6 +33,6 @@ jobs:
         working-directory: ros
 
       - name: Run make docker-test
-        run: make docker-test-${{ matrix.ros_distribution }}
+        run: make GTEST_REPEAT=50 docker-test-${{ matrix.ros_distribution }}
         working-directory: ros
 
