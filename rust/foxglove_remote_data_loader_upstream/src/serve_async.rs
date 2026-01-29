@@ -115,11 +115,12 @@ pub trait UpstreamServer: Send + Sync + 'static {
     /// ```
     type QueryParams: DeserializeOwned + Send;
 
-    /// Context type that holds channels and any shared state between methods.
+    /// Context type passed from [`initialize`](UpstreamServer::initialize) to
+    /// [`metadata`](UpstreamServer::metadata) and [`stream`](UpstreamServer::stream).
     ///
-    /// Create this in [`initialize`](UpstreamServer::initialize) and receive it in
-    /// [`metadata`](UpstreamServer::metadata) or [`stream`](UpstreamServer::stream).
-    type Context;
+    /// This can hold anything, but is typically used to store request-specific state (e.g.
+    /// [`Channel`](foxglove::Channel)s and query parameters)
+    type Context: Send;
 
     #[doc = include_str!("docs/auth.md")]
     fn auth(
@@ -197,10 +198,14 @@ async fn data_handler<P: UpstreamServer>(
     // Run stream in its own task, since the response won't start until we return from this
     // function.
     let (mut stream_handle, mcap_stream) = foxglove::stream::create_mcap_stream();
-    let mcap_stream_task = tokio::spawn(async move {
-        let ctx = provider.initialize(params, &mut stream_handle).await?;
-        provider.stream(ctx, stream_handle).await
-    });
+    let ctx = match provider.initialize(params, &mut stream_handle).await {
+        Ok(ctx) => ctx,
+        Err(error) => {
+            error!(%error, "error during initialization");
+            return axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    };
+    let mcap_stream_task = tokio::spawn(async move { provider.stream(ctx, stream_handle).await });
 
     // Catch any errors during streaming.
     let error_stream = mcap_stream_task
@@ -230,15 +235,15 @@ async fn data_handler<P: UpstreamServer>(
 ///     type QueryParams = ();
 ///     type Context = ();
 ///
-///     async fn auth(&self, _: Option<&str>, _: &()) -> Result<(), AuthError> {
+///     async fn auth(&self, _bearer_token: Option<&str>, _params: &()) -> Result<(), AuthError> {
 ///         Ok(())
 ///     }
 ///
-///     async fn initialize(&self, _: (), _: &mut impl ChannelRegistry) -> Result<(), BoxError> {
+///     async fn initialize(&self, _params: (), _registry: &mut impl ChannelRegistry) -> Result<(), BoxError> {
 ///         Ok(())
 ///     }
 ///
-///     async fn metadata(&self, _: ()) -> Result<Metadata, BoxError> {
+///     async fn metadata(&self, _ctx: ()) -> Result<Metadata, BoxError> {
 ///         Ok(Metadata {
 ///             id: "my-source".into(),
 ///             name: "My Source".into(),
@@ -247,7 +252,7 @@ async fn data_handler<P: UpstreamServer>(
 ///         })
 ///     }
 ///
-///     async fn stream(&self, _: (), handle: StreamHandle) -> Result<(), BoxError> {
+///     async fn stream(&self, _ctx: (), handle: StreamHandle) -> Result<(), BoxError> {
 ///         handle.close().await?;
 ///         Ok(())
 ///     }

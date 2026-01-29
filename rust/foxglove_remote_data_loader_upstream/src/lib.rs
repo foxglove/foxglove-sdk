@@ -33,11 +33,6 @@
 //!
 //! - **`async`** (default): Enables the async API ([`UpstreamServer`], [`serve`])
 //! - **`blocking`**: Enables the blocking API ([`blocking::UpstreamServer`], [`blocking::serve`])
-//!
-//! # Example
-//! ```no_run
-#![doc = include_str!("../examples/demo.rs")]
-//! ```
 
 mod manifest;
 

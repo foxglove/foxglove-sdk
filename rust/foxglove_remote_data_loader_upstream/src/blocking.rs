@@ -145,11 +145,12 @@ pub trait UpstreamServer: Send + Sync + 'static {
     /// ```
     type QueryParams: DeserializeOwned + Send;
 
-    /// Context type that holds channels and any shared state between methods.
+    /// Context type passed from [`initialize`](UpstreamServer::initialize) to
+    /// [`metadata`](UpstreamServer::metadata) and [`stream`](UpstreamServer::stream).
     ///
-    /// Create this in [`initialize`](UpstreamServer::initialize) and receive it in
-    /// [`metadata`](UpstreamServer::metadata) or [`stream`](UpstreamServer::stream).
-    type Context;
+    /// This can hold anything, but is typically used to store request-specific state (e.g.
+    /// [`Channel`](foxglove::Channel)s and query parameters)
+    type Context: Send;
 
     #[doc = include_str!("docs/auth.md")]
     fn auth(&self, bearer_token: Option<&str>, params: &Self::QueryParams)
@@ -236,11 +237,24 @@ async fn data_handler<P: UpstreamServer>(
     // Build MCAP data stream
     let (mut stream_handle, mcap_stream) = foxglove::stream::create_mcap_stream();
 
+    let (ctx, stream_handle) = {
+        let provider = Arc::clone(&provider);
+        match tokio::task::spawn_blocking(move || {
+            provider
+                .initialize(params, &mut stream_handle)
+                .map(move |ctx| (ctx, stream_handle))
+        })
+        .await
+        .expect("panicked during initialization")
+        {
+            Ok(res) => res,
+            Err(error) => {
+                error!(%error, "error during initialization");
+                return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+            }
+        }
+    };
     let mcap_stream_task = tokio::task::spawn_blocking(move || {
-        // Initialize with the stream handle
-        let ctx = provider.initialize(params, &mut stream_handle)?;
-
-        // Stream data
         provider.stream(
             ctx,
             StreamHandle {
@@ -278,15 +292,15 @@ async fn data_handler<P: UpstreamServer>(
 ///     type QueryParams = ();
 ///     type Context = ();
 ///
-///     fn auth(&self, _: Option<&str>, _: &()) -> Result<(), AuthError> {
+///     fn auth(&self, _bearer_token: Option<&str>, _params: &()) -> Result<(), AuthError> {
 ///         Ok(())
 ///     }
 ///
-///     fn initialize(&self, _: (), _: &mut impl ChannelRegistry) -> Result<(), BoxError> {
+///     fn initialize(&self, _params: (), _registry: &mut impl ChannelRegistry) -> Result<(), BoxError> {
 ///         Ok(())
 ///     }
 ///
-///     fn metadata(&self, _: ()) -> Result<Metadata, BoxError> {
+///     fn metadata(&self, _ctx: ()) -> Result<Metadata, BoxError> {
 ///         Ok(Metadata {
 ///             id: "my-source".into(),
 ///             name: "My Source".into(),
