@@ -47,6 +47,8 @@ use crate::{
     ChannelBuilder, ChannelDescriptor, Context, FoxgloveError, PartialMetadata, RawChannel, Schema,
     SinkChannelFilter, WebSocketClientError,
 };
+#[cfg(feature = "tls")]
+use tokio_rustls::rustls;
 
 macro_rules! expect_recv {
     ($client:expr, $variant:path) => {{
@@ -122,6 +124,8 @@ async fn test_client_connect() {
 #[tokio::test]
 #[cfg(feature = "tls")]
 async fn test_secure_client_connect() {
+    // Install CryptoProvider for rustls (ignore error if already installed by another test)
+    let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
     let ctx = Context::new();
     let ca_params = CertificateParams::default();
     let ca_key = KeyPair::generate().expect("default keygen will succeed");
@@ -165,6 +169,8 @@ async fn test_secure_client_connect() {
 #[traced_test]
 #[tokio::test]
 async fn test_invalid_tls_config() {
+    // Install CryptoProvider for rustls (ignore error if already installed by another test)
+    let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
     let ctx = Context::new();
     let cert = rcgen::generate_simple_self_signed(vec![])
         .expect("default certgen will succeed")
