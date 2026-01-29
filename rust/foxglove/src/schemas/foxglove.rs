@@ -153,7 +153,7 @@ pub struct Color {
 ///
 /// <https://docs.foxglove.dev/docs/visualization/message-schemas/compressed-image>
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct CompressedImage {
     /// Timestamp of image
     #[prost(message, optional, tag = "1")]
@@ -175,7 +175,7 @@ pub struct CompressedImage {
 ///
 /// <https://docs.foxglove.dev/docs/visualization/message-schemas/compressed-video>
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct CompressedVideo {
     /// Timestamp of video frame
     #[prost(message, optional, tag = "1")]
@@ -299,7 +299,7 @@ pub struct FrameTransforms {
 ///
 /// <https://docs.foxglove.dev/docs/visualization/message-schemas/geo-json>
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GeoJson {
     /// GeoJSON data encoded as a UTF-8 string
     #[prost(string, tag = "1")]
@@ -401,7 +401,7 @@ pub struct ImageAnnotations {
 ///
 /// <https://docs.foxglove.dev/docs/visualization/message-schemas/key-value-pair>
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct KeyValuePair {
     /// Key
     #[prost(string, tag = "1")]
@@ -619,7 +619,7 @@ pub struct LocationFixes {
 ///
 /// <https://docs.foxglove.dev/docs/visualization/message-schemas/log>
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct Log {
     /// Timestamp of log message
     #[prost(message, optional, tag = "1")]
@@ -732,7 +732,7 @@ pub struct ModelPrimitive {
 ///
 /// <https://docs.foxglove.dev/docs/visualization/message-schemas/packed-element-field>
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct PackedElementField {
     /// Name of the field
     #[prost(string, tag = "1")]
@@ -1041,7 +1041,7 @@ pub struct Quaternion {
 ///
 /// <https://docs.foxglove.dev/docs/visualization/message-schemas/raw-audio>
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct RawAudio {
     /// Timestamp of the start of the audio block
     #[prost(message, optional, tag = "1")]
@@ -1064,7 +1064,7 @@ pub struct RawAudio {
 ///
 /// <https://docs.foxglove.dev/docs/visualization/message-schemas/raw-image>
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct RawImage {
     /// Timestamp of image
     #[prost(message, optional, tag = "1")]
@@ -1194,7 +1194,7 @@ pub struct SceneEntity {
 ///
 /// <https://docs.foxglove.dev/docs/visualization/message-schemas/scene-entity-deletion>
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct SceneEntityDeletion {
     /// Timestamp of the deletion. Only matching entities earlier than this timestamp will be deleted.
     #[prost(message, optional, tag = "1")]
