@@ -375,6 +375,7 @@ pub mod websocket;
 mod websocket_client;
 #[cfg(feature = "live_visualization")]
 mod websocket_server;
+#[doc(hidden)]
 #[cfg(feature = "remote_access")]
 pub use remote_access_server::{
     RemoteAccessServer, RemoteAccessServerHandle, RemoteAccessServerListener,
@@ -452,6 +453,7 @@ pub enum FoxgloveError {
     #[error("Configuration error: {0}")]
     ConfigurationError(String),
     /// An error occurred while communicating with the remote access server.
+    #[doc(hidden)]
     #[cfg(feature = "remote_access")]
     #[error(transparent)]
     RemoteAccessError(#[from] crate::remote_access::RemoteAccessError),

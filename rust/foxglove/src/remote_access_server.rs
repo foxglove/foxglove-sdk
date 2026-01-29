@@ -15,6 +15,7 @@ pub use websocket::{ChannelView, Client, ClientChannel};
 /// These methods are invoked from the client's main poll loop and must not block. If blocking or
 /// long-running behavior is required, the implementation should use [`tokio::task::spawn`] (or
 /// [`tokio::task::spawn_blocking`]).
+#[doc(hidden)]
 pub trait RemoteAccessServerListener: Send + Sync {
     /// Callback invoked when a client message is received.
     fn on_message_data(&self, _client: Client, _client_channel: &ClientChannel, _payload: &[u8]) {}
