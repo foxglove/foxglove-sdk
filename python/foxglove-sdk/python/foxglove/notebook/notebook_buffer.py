@@ -48,6 +48,8 @@ class NotebookBuffer:
         """
         Show the Foxglove viewer. Call this method as the last step of a notebook cell
         to display the viewer.
+
+        :param layout: An optional Layout to use as the initial layout for the viewer.
         """
         widget = FoxgloveWidget(
             buffer=self,

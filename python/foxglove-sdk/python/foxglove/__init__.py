@@ -162,7 +162,7 @@ def init_notebook_buffer(context: Context | None = None) -> NotebookBuffer:
     :raises Exception: If the notebook extra package is not installed. Install it with ``pip install
         foxglove-sdk[notebook]``.
 
-    :note: This function is only available when the `notebook` extra package is installed. Install
+    :note: This function is only available when the ``notebook`` extra package is installed. Install
         it with ``pip install foxglove-sdk[notebook]``.
 
     Example:

@@ -90,9 +90,17 @@ listens on ``127.0.0.1:8765``. Each client that connects to the websocket server
 sink. The sink is dynamically added to the :py:class:`.Context` associated with the server when the client
 connects, and removed from the context when the client disconnects.
 
+Notebook integration
+^^^^^^^^^^^^^^^^^^^^
+
+See :doc:`../notebook/index` for details on using Foxglove with Python/Jupyter notebooks.
+
+Table of contents
+^^^^^^^^^^^^^^^^^
 
 .. toctree::
    :maxdepth: 3
 
    examples
    api/index
+   notebook/index
