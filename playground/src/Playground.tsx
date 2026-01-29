@@ -1,5 +1,5 @@
 import { PlayFilledAlt, DocumentDownload } from "@carbon/icons-react";
-import { DataSource, SelectLayoutParams } from "@foxglove/embed";
+import { DataSource, Layout, SelectLayoutParams } from "@foxglove/embed";
 import { FoxgloveViewer, FoxgloveViewerInterface } from "@foxglove/embed-react";
 import { Button, GlobalStyles, IconButton, Tooltip, Typography } from "@mui/material";
 import { Allotment } from "allotment";
@@ -116,9 +116,7 @@ export function Playground(): React.JSX.Element {
       try {
         setSelectedLayout({
           storageKey: LAYOUT_STORAGE_KEY,
-          // @ts-expect-error unreleased API
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-          layout: JSON.parse(layoutJson),
+          layout: JSON.parse(layoutJson) as Layout,
           force: true,
         });
       } catch (error) {
@@ -165,13 +163,13 @@ export function Playground(): React.JSX.Element {
       .then((layout) => {
         setAndCopyUrlState({
           code: editor.getValue(),
-          layout: layout ?? selectedLayout.opaqueLayout,
+          layout,
         });
       })
       .catch((err: unknown) => {
         toast.error(`Sharing failed: ${String(err)}`);
       });
-  }, [selectedLayout]);
+  }, []);
 
   const chooseLayout = useCallback(() => {
     layoutInputRef.current?.click();

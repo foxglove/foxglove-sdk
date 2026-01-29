@@ -139,11 +139,16 @@ export class RunnerWorker {
     const sys = pyodide.pyimport("sys");
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
     sys.modules.set("foxglove.playground", {
-      set_layout: (json: unknown) => {
-        if (typeof json !== "string") {
-          throw new Error(`Expected string, got: ${typeof json}`);
+      set_layout: (layout: unknown) => {
+        if (
+          layout == undefined ||
+          typeof layout !== "object" ||
+          !("to_json" in layout) ||
+          typeof layout.to_json !== "function"
+        ) {
+          throw new Error(`Layout parameter must be a Layout instance, got: ${typeof layout}`);
         }
-        this.#layoutCallback(json);
+        this.#layoutCallback((layout.to_json as () => string)());
       },
     });
     return pyodide;
