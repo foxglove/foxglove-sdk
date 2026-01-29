@@ -107,12 +107,14 @@ impl NormalizeResult {
 /// let duration: Duration = std::time::Duration::from_secs(u64::MAX).saturating_into();
 /// assert_eq!(duration, Duration::MAX);
 /// ```
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, prost::Message)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub struct Duration {
     /// Seconds offset.
+    #[prost(int32, tag = "1")]
     sec: i32,
     /// Nanoseconds offset in the positive direction.
+    #[prost(uint32, tag = "2")]
     nsec: u32,
 }
 
@@ -128,10 +130,6 @@ impl Duration {
         sec: i32::MIN,
         nsec: 0,
     };
-
-    fn into_prost(self) -> prost_types::Duration {
-        self.into()
-    }
 
     /// Creates a new normalized duration.
     ///
@@ -215,61 +213,6 @@ impl From<Duration> for prost_types::Duration {
     }
 }
 
-impl prost::Message for Duration {
-    fn encode_raw(&self, buf: &mut impl bytes::BufMut)
-    where
-        Self: Sized,
-    {
-        self.into_prost().encode_raw(buf);
-    }
-
-    fn merge_field(
-        &mut self,
-        tag: u32,
-        wire_type: prost::encoding::wire_type::WireType,
-        buf: &mut impl bytes::Buf,
-        ctx: prost::encoding::DecodeContext,
-    ) -> Result<(), prost::DecodeError>
-    where
-        Self: Sized,
-    {
-        match tag {
-            1 => {
-                let mut seconds: i64 = i64::from(self.sec);
-                prost::encoding::int64::merge(wire_type, &mut seconds, buf, ctx)?;
-                self.sec = i32::try_from(seconds)
-                    .map_err(|_| prost::DecodeError::new("duration seconds overflow"))?;
-                Ok(())
-            }
-            2 => {
-                let mut nanos = i32::try_from(self.nsec)
-                    .map_err(|_| prost::DecodeError::new("duration nanos overflow"))?;
-                prost::encoding::int32::merge(wire_type, &mut nanos, buf, ctx)?;
-                let nanos = u32::try_from(nanos)
-                    .map_err(|_| prost::DecodeError::new("invalid duration nanos"))?;
-                match normalize_nsec(nanos).carry_i32(self.sec) {
-                    Some((sec, nsec)) => {
-                        self.sec = sec;
-                        self.nsec = nsec;
-                        Ok(())
-                    }
-                    None => Err(prost::DecodeError::new("duration overflow")),
-                }
-            }
-            _ => prost::encoding::skip_field(wire_type, tag, buf, ctx),
-        }
-    }
-
-    fn encoded_len(&self) -> usize {
-        self.into_prost().encoded_len()
-    }
-
-    fn clear(&mut self) {
-        self.sec = 0;
-        self.nsec = 0;
-    }
-}
-
 impl TryFrom<std::time::Duration> for Duration {
     type Error = RangeError;
 
@@ -336,12 +279,14 @@ where
 ///     .saturating_into();
 /// assert_eq!(timestamp, Timestamp::MIN);
 /// ```
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, prost::Message)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub struct Timestamp {
     /// Seconds since epoch.
+    #[prost(uint32, tag = "1")]
     sec: u32,
     /// Additional nanoseconds since epoch.
+    #[prost(uint32, tag = "2")]
     nsec: u32,
 }
 
@@ -354,10 +299,6 @@ impl Timestamp {
 
     /// Minimum representable timestamp.
     pub const MIN: Self = Self { sec: 0, nsec: 0 };
-
-    fn into_prost(self) -> prost_types::Timestamp {
-        self.into()
-    }
 
     /// Creates a new normalized timestamp.
     ///
@@ -441,61 +382,6 @@ impl From<Timestamp> for prost_types::Timestamp {
                 unreachable!("expected {} to be within [0, 1_000_000_000): {e}", v.nsec)
             }),
         }
-    }
-}
-
-impl prost::Message for Timestamp {
-    fn encode_raw(&self, buf: &mut impl bytes::BufMut)
-    where
-        Self: Sized,
-    {
-        self.into_prost().encode_raw(buf);
-    }
-
-    fn merge_field(
-        &mut self,
-        tag: u32,
-        wire_type: prost::encoding::wire_type::WireType,
-        buf: &mut impl bytes::Buf,
-        ctx: prost::encoding::DecodeContext,
-    ) -> Result<(), prost::DecodeError>
-    where
-        Self: Sized,
-    {
-        match tag {
-            1 => {
-                let mut seconds: i64 = i64::from(self.sec);
-                prost::encoding::int64::merge(wire_type, &mut seconds, buf, ctx)?;
-                self.sec = u32::try_from(seconds)
-                    .map_err(|_| prost::DecodeError::new("timestamp seconds overflow"))?;
-                Ok(())
-            }
-            2 => {
-                let mut nanos: i32 = i32::try_from(self.nsec)
-                    .map_err(|_| prost::DecodeError::new("timestamp nanos overflow"))?;
-                prost::encoding::int32::merge(wire_type, &mut nanos, buf, ctx)?;
-                let nanos_u32 = u32::try_from(nanos)
-                    .map_err(|_| prost::DecodeError::new("invalid timestamp nanos"))?;
-                match normalize_nsec(nanos_u32).carry_u32(self.sec) {
-                    Some((sec, nsec)) => {
-                        self.sec = sec;
-                        self.nsec = nsec;
-                        Ok(())
-                    }
-                    None => Err(prost::DecodeError::new("timestamp normalization overflow")),
-                }
-            }
-            _ => prost::encoding::skip_field(wire_type, tag, buf, ctx),
-        }
-    }
-
-    fn encoded_len(&self) -> usize {
-        self.into_prost().encoded_len()
-    }
-
-    fn clear(&mut self) {
-        self.sec = 0;
-        self.nsec = 0;
     }
 }
 
