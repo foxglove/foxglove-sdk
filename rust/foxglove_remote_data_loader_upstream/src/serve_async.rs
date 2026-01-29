@@ -4,7 +4,7 @@ use std::{future::Future, net::SocketAddr, sync::Arc};
 
 use axum::{
     body::Body,
-    extract::{Query, State},
+    extract::{Query, RawQuery, State},
     http::HeaderMap,
     response::{IntoResponse, Response},
     routing::get,
@@ -152,6 +152,7 @@ pub trait UpstreamServer: Send + Sync + 'static {
 async fn manifest_handler<P: UpstreamServer>(
     State(provider): State<Arc<P>>,
     headers: HeaderMap,
+    RawQuery(query_string): RawQuery,
     Query(params): Query<P::QueryParams>,
 ) -> Response {
     // Auth
@@ -179,7 +180,7 @@ async fn manifest_handler<P: UpstreamServer>(
     };
 
     // Build manifest
-    let manifest = manifest_builder.build(metadata);
+    let manifest = manifest_builder.build(metadata, query_string.as_deref());
     Json(manifest).into_response()
 }
 

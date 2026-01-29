@@ -4,7 +4,7 @@ use std::{net::SocketAddr, sync::Arc};
 
 use axum::{
     body::Body,
-    extract::{Query, State},
+    extract::{Query, RawQuery, State},
     http::{HeaderMap, StatusCode},
     response::{IntoResponse, Response},
     routing::get,
@@ -172,6 +172,7 @@ pub trait UpstreamServer: Send + Sync + 'static {
 async fn manifest_handler<P: UpstreamServer>(
     State(provider): State<Arc<P>>,
     headers: HeaderMap,
+    RawQuery(query_string): RawQuery,
     Query(params): Query<P::QueryParams>,
 ) -> Response {
     let token = extract_bearer_token(&headers).map(|s| s.to_owned());
@@ -202,7 +203,7 @@ async fn manifest_handler<P: UpstreamServer>(
         };
 
         // Build manifest
-        Ok(manifest_builder.build(metadata))
+        Ok(manifest_builder.build(metadata, query_string.as_deref()))
     })
     .await;
 

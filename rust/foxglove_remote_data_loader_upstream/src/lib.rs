@@ -33,6 +33,11 @@
 //!
 //! - **`async`** (default): Enables the async API ([`UpstreamServer`], [`serve`])
 //! - **`blocking`**: Enables the blocking API ([`blocking::UpstreamServer`], [`blocking::serve`])
+//!
+//! # Example
+//! ```no_run
+#![doc = include_str!("../examples/demo.rs")]
+//! ```
 
 mod manifest;
 
@@ -280,12 +285,16 @@ impl ManifestBuilder {
         }
     }
 
-    fn build(self, metadata: Metadata) -> manifest::Manifest {
+    fn build(self, metadata: Metadata, query_string: Option<&str>) -> manifest::Manifest {
+        let url = match query_string {
+            Some(qs) => format!("{}?{}", DATA_ROUTE, qs),
+            None => DATA_ROUTE.to_string(),
+        };
         manifest::Manifest {
             name: Some(metadata.name),
             sources: vec![manifest::UpstreamSource::Streamed(
                 manifest::StreamedSource {
-                    url: DATA_ROUTE.to_string(),
+                    url,
                     id: Some(metadata.id),
                     topics: self.topics,
                     schemas: self.schemas,
@@ -327,7 +336,7 @@ mod tests {
             start_time: Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap(),
             end_time: Utc.with_ymd_and_hms(2024, 1, 2, 0, 0, 0).unwrap(),
         };
-        let manifest = builder.build(metadata);
+        let manifest = builder.build(metadata, None);
         insta::assert_json_snapshot!(manifest);
     }
 
