@@ -18,6 +18,7 @@ RUN apt-get update \
         clang-tidy-19=1:19.1.7-3~deb12u1 \
         cmake=3.25.1-1 \
         doxygen=1.9.4-4 \
+        golang \
         libglib2.0-dev \
         libva-dev \
         nodejs=23.11.1-1nodesource1 \

@@ -42,22 +42,27 @@ docs-python:
 clean-docs-python:
 	rm -rf python/foxglove-sdk/python/docs/_build
 
+# Use clang-19 for Rust builds that include livekit (anything with --all-targets
+# or --all-features). This is required because webrtc-sys uses compiler flags
+# like -Wno-changes-meaning that aren't available in gcc-12.
+CLANG_19 := CC=clang-19 CXX=clang++-19
+
 .PHONY: lint-rust
 lint-rust:
 	cargo fmt --all --check
-	cargo clippy --no-deps --all-targets --tests -- -D warnings
+	$(CLANG_19) cargo clippy --no-deps --all-targets --tests -- -D warnings
 
 .PHONY: build-rust
 build-rust:
-	cargo build --all-targets
+	$(CLANG_19) cargo build --all-targets
 
 .PHONY: build-rust-foxglove-msrv
 build-rust-foxglove-msrv:
-	cargo +$(MSRV_RUST_VERSION) build -p foxglove --all-features
+	$(CLANG_19) cargo +$(MSRV_RUST_VERSION) build -p foxglove --all-features
 
 .PHONY: test-rust
 test-rust:
-	cargo test --all-features
+	$(CLANG_19) cargo test --all-features
 
 .PHONY: test-rust-foxglove-no-default-features
 test-rust-foxglove-no-default-features:
@@ -65,7 +70,7 @@ test-rust-foxglove-no-default-features:
 
 .PHONY: docs-rust
 docs-rust:
-	cargo +nightly rustdoc -p foxglove --all-features -- -D warnings --cfg docsrs
+	$(CLANG_19) cargo +nightly rustdoc -p foxglove --all-features -- -D warnings --cfg docsrs
 
 .PHONY: clean-cpp
 clean-cpp:
