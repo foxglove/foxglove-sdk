@@ -9,7 +9,7 @@ use std::{
 use bytes::Bytes;
 use livekit::{id::ParticipantIdentity, ByteStreamWriter, StreamWriter};
 
-use crate::cloud::CloudError;
+use crate::remote_access::RemoteAccessError;
 
 pub(crate) struct Participant {
     identity: ParticipantIdentity,
@@ -21,7 +21,7 @@ impl Participant {
         Self { identity, writer }
     }
 
-    pub(crate) async fn send(&self, bytes: &[u8]) -> Result<(), CloudError> {
+    pub(crate) async fn send(&self, bytes: &[u8]) -> Result<(), RemoteAccessError> {
         self.writer.write(bytes).await
     }
 }
@@ -60,7 +60,7 @@ pub(crate) enum ParticipantWriter {
 }
 
 impl ParticipantWriter {
-    async fn write(&self, bytes: &[u8]) -> Result<(), CloudError> {
+    async fn write(&self, bytes: &[u8]) -> Result<(), RemoteAccessError> {
         match self {
             ParticipantWriter::Livekit(stream) => stream.write(bytes).await.map_err(|e| e.into()),
             #[cfg(test)]

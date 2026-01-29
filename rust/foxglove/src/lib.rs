@@ -361,10 +361,10 @@ pub use sink_channel_filter::SinkChannelFilter;
 pub use std::collections::BTreeMap;
 pub(crate) use time::nanoseconds_since_epoch;
 
-#[cfg(feature = "cloud")]
-mod cloud;
-#[cfg(feature = "cloud")]
-mod cloud_sink;
+#[cfg(feature = "remote_access")]
+mod remote_access;
+#[cfg(feature = "remote_access")]
+mod remote_access_server;
 #[cfg(feature = "live_visualization")]
 mod protocol;
 #[cfg(feature = "live_visualization")]
@@ -375,8 +375,10 @@ pub mod websocket;
 mod websocket_client;
 #[cfg(feature = "live_visualization")]
 mod websocket_server;
-#[cfg(feature = "cloud")]
-pub use cloud_sink::{CloudSink, CloudSinkHandle, CloudSinkListener};
+#[cfg(feature = "remote_access")]
+pub use remote_access_server::{
+    RemoteAccessServer, RemoteAccessServerHandle, RemoteAccessServerListener,
+};
 #[cfg(feature = "live_visualization")]
 pub(crate) use runtime::get_runtime_handle;
 #[cfg(feature = "live_visualization")]
@@ -449,10 +451,10 @@ pub enum FoxgloveError {
     /// An error related to configuration
     #[error("Configuration error: {0}")]
     ConfigurationError(String),
-    /// An error occurred while communicating with the cloud.
-    #[cfg(feature = "cloud")]
+    /// An error occurred while communicating with the remote access server.
+    #[cfg(feature = "remote_access")]
     #[error(transparent)]
-    CloudError(#[from] crate::cloud::CloudError),
+    RemoteAccessError(#[from] crate::remote_access::RemoteAccessError),
 }
 
 impl From<convert::RangeError> for FoxgloveError {

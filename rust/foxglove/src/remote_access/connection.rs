@@ -14,17 +14,17 @@ use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info, warn};
 
 use crate::{
-    cloud::{
-        participant::{Participant, ParticipantWriter},
-        CloudError,
-    },
     library_version::get_library_version,
+    remote_access::{
+        participant::{Participant, ParticipantWriter},
+        RemoteAccessError,
+    },
     websocket::{self, Server},
     ws_protocol::{server::ServerInfo, JsonMessage},
-    CloudSinkListener, SinkChannelFilter,
+    RemoteAccessServerListener, SinkChannelFilter,
 };
 
-type Result<T> = std::result::Result<T, CloudError>;
+type Result<T> = std::result::Result<T, RemoteAccessError>;
 
 const WS_PROTOCOL_TOPIC: &str = "ws-protocol";
 #[allow(dead_code)]
@@ -58,9 +58,9 @@ impl RtcCredentials {
 }
 
 #[derive(Clone)]
-pub(crate) struct CloudConnectionOptions {
+pub(crate) struct ConnectionOptions {
     pub session_id: String,
-    pub listener: Option<Arc<dyn CloudSinkListener>>,
+    pub listener: Option<Arc<dyn RemoteAccessServerListener>>,
     pub capabilities: Vec<websocket::Capability>,
     pub supported_encodings: Option<HashSet<String>>,
     pub runtime: Option<Handle>,
@@ -69,7 +69,7 @@ pub(crate) struct CloudConnectionOptions {
     pub cancellation_token: CancellationToken,
 }
 
-impl Default for CloudConnectionOptions {
+impl Default for ConnectionOptions {
     fn default() -> Self {
         Self {
             session_id: Server::generate_session_id(),
@@ -84,9 +84,9 @@ impl Default for CloudConnectionOptions {
     }
 }
 
-impl std::fmt::Debug for CloudConnectionOptions {
+impl std::fmt::Debug for ConnectionOptions {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("CloudConnectionOptions")
+        f.debug_struct("ConnectionOptions")
             .field("session_id", &self.session_id)
             .field("has_listener", &self.listener.is_some())
             .field("capabilities", &self.capabilities)
@@ -98,32 +98,32 @@ impl std::fmt::Debug for CloudConnectionOptions {
     }
 }
 
-struct CloudSession {
+struct Session {
     room: Room,
     participants: RwLock<HashMap<ParticipantIdentity, Arc<Participant>>>,
 }
 
-pub(crate) struct CloudConnection {
-    options: CloudConnectionOptions,
-    session: ArcSwapOption<CloudSession>,
+pub(crate) struct Connection {
+    options: ConnectionOptions,
+    session: ArcSwapOption<Session>,
 }
 
-impl CloudConnection {
-    pub fn new(options: CloudConnectionOptions) -> Self {
+impl Connection {
+    pub fn new(options: ConnectionOptions) -> Self {
         Self {
             options,
             session: ArcSwapOption::new(None),
         }
     }
 
-    async fn connect_session(&self) -> Result<(Arc<CloudSession>, UnboundedReceiver<RoomEvent>)> {
+    async fn connect_session(&self) -> Result<(Arc<Session>, UnboundedReceiver<RoomEvent>)> {
         // TODO get credentials from API
         let credentials = RtcCredentials::new();
 
         let (session, room_events) =
             match Room::connect(&credentials.url, &credentials.token, RoomOptions::default()).await
             {
-                Ok((room, room_events)) => (Arc::new(CloudSession::new(room)), room_events),
+                Ok((room, room_events)) => (Arc::new(Session::new(room)), room_events),
                 Err(e) => {
                     return Err(e.into());
                 }
@@ -133,7 +133,7 @@ impl CloudConnection {
         Ok((session, room_events))
     }
 
-    /// Returns the cancellation token for the [`CloudConnection`]`.
+    /// Returns the cancellation token for the [`Connection`].
     fn cancellation_token(&self) -> &CancellationToken {
         &self.options.cancellation_token
     }
@@ -184,7 +184,7 @@ impl CloudConnection {
     /// Note that livekit internally includes a few quick retries for each connect call as well.
     async fn connect_session_until_ok(
         &self,
-    ) -> Result<(Arc<CloudSession>, UnboundedReceiver<RoomEvent>)> {
+    ) -> Result<(Arc<Session>, UnboundedReceiver<RoomEvent>)> {
         let mut interval = tokio::time::interval(AUTH_RETRY_PERIOD);
         loop {
             interval.tick().await;
@@ -193,10 +193,10 @@ impl CloudConnection {
                 Ok((session, room_events)) => {
                     return Ok((session, room_events));
                 }
-                Err(CloudError::ConnectionStopped) => {
-                    return Err(CloudError::ConnectionStopped);
+                Err(RemoteAccessError::ConnectionStopped) => {
+                    return Err(RemoteAccessError::ConnectionStopped);
                 }
-                Err(CloudError::ConnectionError(e)) => {
+                Err(RemoteAccessError::ConnectionError(e)) => {
                     error!("{e:?}");
 
                     // We can't inspect the inner types of Engine errors; this may be caused by
@@ -215,7 +215,7 @@ impl CloudConnection {
 
     async fn listen_for_room_events(
         &self,
-        session: Arc<CloudSession>,
+        session: Arc<Session>,
         mut room_events: UnboundedReceiver<RoomEvent>,
     ) {
         while let Some(event) = room_events.recv().await {
@@ -276,7 +276,7 @@ impl CloudConnection {
         warn!("stopped listening for room events");
     }
 
-    /// Create and serialize ServerInfo message based on the CloudConnectionOptions.
+    /// Create and serialize ServerInfo message based on the ConnectionOptions.
     ///
     /// The metadata and supported_encodings are important for the ClientPublish capability,
     /// as some app components will use this information to determine publish formats (ROS1 vs. JSON).
@@ -289,7 +289,7 @@ impl CloudConnection {
         let supported_encodings = self.options.supported_encodings.clone();
         metadata.insert("fg-library".into(), get_library_version());
 
-        let mut info = ServerInfo::new("cloud")
+        let mut info = ServerInfo::new("remote-access")
             .with_session_id(self.options.session_id.clone())
             .with_capabilities(
                 self.options
@@ -312,7 +312,7 @@ impl CloudConnection {
     }
 }
 
-impl CloudSession {
+impl Session {
     fn new(room: Room) -> Self {
         Self {
             room,
