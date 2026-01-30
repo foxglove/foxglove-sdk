@@ -5,8 +5,35 @@ use quote::quote;
 use std::collections::HashMap;
 use syn::{
     parse_macro_input, parse_quote, Data, DataEnum, DataStruct, DeriveInput, Fields, GenericParam,
-    Generics,
+    GenericArgument, Generics, PathArguments, Type,
 };
+
+/// Check if a type is `Vec<Option<T>>`, which is not supported because protobuf
+/// repeated fields cannot represent null/missing elements.
+fn is_vec_of_option(ty: &Type) -> bool {
+    let Type::Path(type_path) = ty else {
+        return false;
+    };
+    let Some(segment) = type_path.path.segments.last() else {
+        return false;
+    };
+    if segment.ident != "Vec" {
+        return false;
+    }
+    let PathArguments::AngleBracketed(args) = &segment.arguments else {
+        return false;
+    };
+    let Some(GenericArgument::Type(inner_ty)) = args.args.first() else {
+        return false;
+    };
+    let Type::Path(inner_path) = inner_ty else {
+        return false;
+    };
+    let Some(inner_segment) = inner_path.path.segments.last() else {
+        return false;
+    };
+    inner_segment.ident == "Option"
+}
 
 /// Derive macro for enums and structs allowing them to be logged to a Foxglove channel.
 #[proc_macro_derive(Encode)]
@@ -141,6 +168,12 @@ fn derive_struct_impl(input: &DeriveInput, data: &DataStruct) -> TokenStream {
         if field_number > max_field_number {
             return TokenStream::from(quote! {
                 compile_error!("Too many fields to encode");
+            });
+        }
+
+        if is_vec_of_option(field_type) {
+            return TokenStream::from(quote! {
+                compile_error!("Vec<Option<T>> is not supported. Protobuf repeated fields cannot represent null/missing elements.");
             });
         }
 

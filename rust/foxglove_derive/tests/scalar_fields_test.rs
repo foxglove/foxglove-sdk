@@ -456,6 +456,27 @@ fn test_optional_vec_encoded_correctly() {
     assert_eq!(list[2].as_u32().unwrap(), 3);
 }
 
+#[test]
+fn test_vec_encoded_len() {
+    let test_struct = TestMessageVector {
+        numbers: vec![1, 2, 3],
+    };
+
+    let mut buf = BytesMut::new();
+    test_struct.encode(&mut buf).expect("Failed to encode");
+
+    let reported_len = test_struct
+        .encoded_len()
+        .expect("encoded_len should return Some");
+    let actual_len = buf.len();
+
+    assert_eq!(
+        reported_len, actual_len,
+        "encoded_len() reported {} but actual encoded size is {}",
+        reported_len, actual_len
+    );
+}
+
 fn get_message_descriptor(schema: &Schema) -> MessageDescriptor {
     let descriptor_set = prost_types::FileDescriptorSet::decode(schema.data.as_ref())
         .expect("Failed to decode descriptor set");

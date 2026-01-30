@@ -428,13 +428,10 @@ where
     }
 
     fn write_tagged(&self, field_number: u32, buf: &mut impl bytes::BufMut) {
-        // non-packed repeated fields are encoded as a record for each element
-        // https://protobuf.dev/programming-guides/encoding/#optional
+        // Non-packed repeated fields are encoded as a record for each element.
+        // https://protobuf.dev/programming-guides/encoding/#repeated
         for value in self {
-            let wire_type = T::wire_type();
-            let tag = (field_number << 3) | wire_type;
-            prost::encoding::encode_varint(tag as u64, buf);
-            value.write(buf);
+            value.write_tagged(field_number, buf);
         }
     }
 
@@ -462,10 +459,14 @@ where
     }
 
     fn encoded_len(&self) -> usize {
-        // non-packed repeated fields
-        let delim_len = prost::encoding::length_delimiter_len(self.len());
-        let data_len: usize = self.iter().map(|value| value.encoded_len()).sum();
-        delim_len + data_len
+        self.iter().map(|value| value.encoded_len()).sum()
+    }
+
+    fn encoded_len_tagged(&self, field_number: u32) -> usize {
+        // Each element is written with its own tag, so sum up the tagged lengths.
+        self.iter()
+            .map(|value| value.encoded_len_tagged(field_number))
+            .sum()
     }
 }
 
