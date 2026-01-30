@@ -1,10 +1,10 @@
-import {
+import type {
   FoxgloveEnumSchema,
   FoxgloveMessageField,
   FoxgloveMessageSchema,
   FoxglovePrimitive,
   FoxgloveSchema,
-} from "./types";
+} from "./types.ts";
 
 /**
  * Generate the module header for schema pyclass definitions.

@@ -1,26 +1,27 @@
 import { program } from "commander";
-import { SpawnOptions, spawn } from "node:child_process";
+import type { SpawnOptions } from "node:child_process";
+import { spawn } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { finished } from "node:stream/promises";
 import { rimraf } from "rimraf";
 
-import { generateRosMsg, generateRosMsgDefinition } from "../typescript/schemas/src/internal";
-import { exportTypeScriptSchemas } from "../typescript/schemas/src/internal/exportTypeScriptSchemas";
+import { generateRosMsg, generateRosMsgDefinition } from "../typescript/schemas/src/internal/index.ts";
+import { exportTypeScriptSchemas } from "../typescript/schemas/src/internal/exportTypeScriptSchemas.ts";
 import {
   BYTE_VECTOR_FB,
   DURATION_FB,
   TIME_FB,
   flatbufferMessageSchemaName,
   generateFlatbuffers,
-} from "../typescript/schemas/src/internal/generateFlatbufferSchema";
-import { generateJsonSchema } from "../typescript/schemas/src/internal/generateJsonSchema";
-import { generateMarkdown } from "../typescript/schemas/src/internal/generateMarkdown";
+} from "../typescript/schemas/src/internal/generateFlatbufferSchema.ts";
+import { generateJsonSchema } from "../typescript/schemas/src/internal/generateJsonSchema.ts";
+import { generateMarkdown } from "../typescript/schemas/src/internal/generateMarkdown.ts";
 import {
   generateOmgIdl,
   omgIdlMessageSchemaName,
-} from "../typescript/schemas/src/internal/generateOmgIdl";
-import { generateProto } from "../typescript/schemas/src/internal/generateProto";
+} from "../typescript/schemas/src/internal/generateOmgIdl.ts";
+import { generateProto } from "../typescript/schemas/src/internal/generateProto.ts";
 import {
   generateSchemaModuleRegistration,
   generateSchemaPrelude,
@@ -30,19 +31,19 @@ import {
   generatePyChannelStub,
   generatePySchemaModule,
   generatePyChannelModule,
-} from "../typescript/schemas/src/internal/generatePyclass";
+} from "../typescript/schemas/src/internal/generatePyclass.ts";
 import {
   generateCppSchemas,
   generateHppSchemas,
-} from "../typescript/schemas/src/internal/generateSdkCpp";
+} from "../typescript/schemas/src/internal/generateSdkCpp.ts";
 import {
   generateRustTypes,
   generateBindgenConfig,
-} from "../typescript/schemas/src/internal/generateSdkRustCTypes";
+} from "../typescript/schemas/src/internal/generateSdkRustCTypes.ts";
 import {
   foxgloveEnumSchemas,
   foxgloveMessageSchemas,
-} from "../typescript/schemas/src/internal/schemas";
+} from "../typescript/schemas/src/internal/schemas.ts";
 
 async function logProgress(message: string, body: () => Promise<void>) {
   process.stderr.write(`${message}... `);

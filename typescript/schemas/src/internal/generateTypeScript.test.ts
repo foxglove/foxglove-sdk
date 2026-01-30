@@ -1,5 +1,5 @@
-import { generateTypeScript } from "./generateTypeScript";
-import { exampleEnum, exampleMessage } from "./testFixtures";
+import { generateTypeScript } from "./generateTypeScript.ts";
+import { exampleEnum, exampleMessage } from "./testFixtures.ts";
 
 describe("generateTypeScript", () => {
   it("generates .d.ts files", () => {

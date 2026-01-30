@@ -1,9 +1,9 @@
-import {
+import type {
   FoxgloveEnumSchema,
   FoxgloveMessageField,
   FoxgloveMessageSchema,
   FoxglovePrimitive,
-} from "./types";
+} from "./types.ts";
 
 function primitiveToProto(type: FoxglovePrimitive) {
   switch (type) {

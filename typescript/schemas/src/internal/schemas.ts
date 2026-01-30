@@ -3,7 +3,7 @@
 ///
 /// Edit this file and run `make generate` to regenerate all the various schema files.
 
-import { FoxgloveEnumSchema, FoxgloveMessageSchema } from "./types";
+import type { FoxgloveEnumSchema, FoxgloveMessageSchema } from "./types.ts";
 
 const Duration: FoxgloveMessageSchema = {
   type: "message",

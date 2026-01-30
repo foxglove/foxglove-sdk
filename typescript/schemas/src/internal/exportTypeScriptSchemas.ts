@@ -1,8 +1,8 @@
-import { GenerateTypeScriptOptions, TIME_TS, generateTypeScript } from "./generateTypeScript";
+import { GenerateTypeScriptOptions, TIME_TS, generateTypeScript } from "./generateTypeScript.ts";
 import {
   foxgloveEnumSchemas,
   foxgloveMessageSchemas as unfilteredFoxgloveMessageSchemas,
-} from "./schemas";
+} from "./schemas.ts";
 
 /**
  * Export schemas as TypeScript source code, keyed by the file base name (without `.ts` suffix).

@@ -1,5 +1,5 @@
-import { generateFlatbuffers } from "./generateFlatbufferSchema";
-import { exampleEnum, exampleMessage } from "./testFixtures";
+import { generateFlatbuffers } from "./generateFlatbufferSchema.ts";
+import { exampleEnum, exampleMessage } from "./testFixtures.ts";
 
 describe("generateFlatbuffers", () => {
   it("generates Message .fbs files", () => {

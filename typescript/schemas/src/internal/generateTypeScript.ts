@@ -1,4 +1,4 @@
-import { FoxglovePrimitive, FoxgloveSchema } from "./types";
+import type { FoxglovePrimitive, FoxgloveSchema } from "./types.ts";
 
 function primitiveToTypeScript(type: FoxglovePrimitive) {
   switch (type) {

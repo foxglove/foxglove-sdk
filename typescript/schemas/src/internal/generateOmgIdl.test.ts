@@ -1,8 +1,8 @@
 import { parseIdl } from "@foxglove/omgidl-parser";
 
-import { generateOmgIdl, omgIdlMessageSchemaName } from "./generateOmgIdl";
-import { foxgloveEnumSchemas, foxgloveMessageSchemas } from "./schemas";
-import { exampleEnum, exampleMessage } from "./testFixtures";
+import { generateOmgIdl, omgIdlMessageSchemaName } from "./generateOmgIdl.ts";
+import { foxgloveEnumSchemas, foxgloveMessageSchemas } from "./schemas.ts";
+import { exampleEnum, exampleMessage } from "./testFixtures.ts";
 
 describe("generateOmgIdl", () => {
   it("generates .idl files", () => {

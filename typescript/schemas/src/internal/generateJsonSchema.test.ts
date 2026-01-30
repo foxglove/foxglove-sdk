@@ -1,8 +1,8 @@
 import Ajv from "ajv";
 
-import { generateJsonSchema } from "./generateJsonSchema";
-import { foxgloveMessageSchemas } from "./schemas";
-import { exampleMessage } from "./testFixtures";
+import { generateJsonSchema } from "./generateJsonSchema.ts";
+import { foxgloveMessageSchemas } from "./schemas.ts";
+import { exampleMessage } from "./testFixtures.ts";
 
 describe("generateJsonSchema", () => {
   it("generates expected JSON Schema", () => {

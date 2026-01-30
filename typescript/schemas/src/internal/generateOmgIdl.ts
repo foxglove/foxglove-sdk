@@ -1,4 +1,4 @@
-import { FoxgloveMessageSchema, FoxglovePrimitive, FoxgloveSchema } from "./types";
+import type { FoxgloveMessageSchema, FoxglovePrimitive, FoxgloveSchema } from "./types.ts";
 
 function primitiveToIdl(type: Exclude<FoxglovePrimitive, "time" | "duration">) {
   switch (type) {

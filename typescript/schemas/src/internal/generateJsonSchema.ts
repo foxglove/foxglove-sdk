@@ -1,4 +1,4 @@
-import { FoxgloveMessageSchema, FoxglovePrimitive } from "./types";
+import type { FoxgloveMessageSchema, FoxglovePrimitive } from "./types.ts";
 
 function primitiveToJsonSchema(type: FoxglovePrimitive) {
   switch (type) {

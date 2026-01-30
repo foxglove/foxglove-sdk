@@ -1,9 +1,9 @@
-import {
+import type {
   FoxgloveEnumSchema,
   FoxgloveMessageSchema,
   FoxglovePrimitive,
   FoxgloveSchema,
-} from "./types";
+} from "./types.ts";
 
 // Flatbuffers only supports nested vectors via table
 export const BYTE_VECTOR_FB = `
