@@ -9,13 +9,11 @@ import { version as pyodideVersion } from "pyodide";
 import reactRefreshTypescript from "react-refresh-typescript";
 import webpack, { type Compiler, type Configuration } from "webpack";
 
-const thisDirname = import.meta.dirname;
-
 type WebpackArgv = {
   mode?: string;
 };
 
-const wheelPath = fs.globSync("public/foxglove_sdk-*.whl", { cwd: thisDirname })[0];
+const wheelPath = fs.globSync("public/foxglove_sdk-*.whl", { cwd: import.meta.dirname })[0];
 if (!wheelPath) {
   throw new Error("Expected a foxglove_sdk .whl file in the public directory");
 }
@@ -27,7 +25,7 @@ export default (_env: unknown, argv: WebpackArgv): Configuration => {
     entry: "./src/index",
     output: {
       filename: "index.js",
-      path: path.resolve(thisDirname, "dist"),
+      path: path.resolve(import.meta.dirname, "dist"),
     },
     devtool: argv.mode === "production" ? false : "eval-source-map",
     module: {
@@ -78,7 +76,7 @@ export default (_env: unknown, argv: WebpackArgv): Configuration => {
         FOXGLOVE_SDK_WHEEL_FILENAME: JSON.stringify(path.basename(wheelPath)),
       }),
       new CopyWebpackPlugin({
-        patterns: [{ from: path.resolve(thisDirname, "public") }],
+        patterns: [{ from: path.resolve(import.meta.dirname, "public") }],
       }),
       new HtmlWebpackPlugin({
         templateContent: /* html */ `

@@ -48,8 +48,6 @@ import {
   foxgloveMessageSchemas,
 } from "../typescript/schemas/src/internal/schemas.ts";
 
-const currentDir = import.meta.dirname;
-
 async function logProgress(message: string, body: () => Promise<void>) {
   process.stderr.write(`${message}... `);
   await body();
@@ -84,7 +82,7 @@ async function exec(command: string, args: string[], { cwd }: Pick<SpawnOptions,
 }
 
 async function main({ clean }: { clean: boolean }) {
-  const repoRoot = path.resolve(currentDir, "..");
+  const repoRoot = path.resolve(import.meta.dirname, "..");
   const outDir = path.join(repoRoot, "schemas");
   const rosOutDir = path.join(repoRoot, "ros/src/foxglove_msgs");
   const typescriptTypesDir = path.join(repoRoot, "typescript/schemas/src/types");
