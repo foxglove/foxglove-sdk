@@ -4,7 +4,6 @@
   "exclude": ["target", "cpp/build", "cpp/build-*", "playground", "python/foxglove-sdk", "typescript", "schemas"],
   "compilerOptions": {
     "rootDir": ".",
-    "noEmit": true,
-    "isolatedDeclarations": false
+    "noEmit": true
   }
 }

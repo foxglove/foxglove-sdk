@@ -5,7 +5,6 @@
     "rootDir": "./src",
     "outDir": "./dist",
     "noEmit": false,
-    "erasableSyntaxOnly": false,
-    "isolatedDeclarations": false
+    "erasableSyntaxOnly": false
   }
 }

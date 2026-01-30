@@ -954,7 +954,7 @@ __metadata:
   dependencies:
     "@anywidget/types": "npm:0.2.0"
     "@foxglove/embed": "npm:0.2.3"
-    "@foxglove/tsconfig": "npm:3.1.0"
+    "@foxglove/tsconfig": "npm:3.2.0"
     esbuild: "npm:0.25.11"
     typescript: "npm:5.9.3"
   languageName: unknown
@@ -1000,10 +1000,10 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@foxglove/tsconfig@npm:3.1.0, @foxglove/tsconfig@npm:^3.1.0":
-  version: 3.1.0
-  resolution: "@foxglove/tsconfig@npm:3.1.0"
-  checksum: 10c0/e9442ac639d46f1934b0f78b63d1fcf2aaeb08113f0ad51f7ed36328b6b092b970027cd6bdc3e9f763949d8c1b43fed066627f0e0e8b609b1fcf2adc6a995577
+"@foxglove/tsconfig@npm:3.2.0, @foxglove/tsconfig@npm:^3.2.0":
+  version: 3.2.0
+  resolution: "@foxglove/tsconfig@npm:3.2.0"
+  checksum: 10c0/7df6e49fe8c2e0b891554370dbbfc1d4bf394939e7414cee35f5a68282239240878c4f6fbaaf7b65cc86834bc5420879505b631585f6737214e1a14109ed562e
   languageName: node
   linkType: hard
 
@@ -5422,7 +5422,7 @@ __metadata:
     "@foxglove/eslint-plugin": "npm:2.1.0"
     "@foxglove/omgidl-parser": "npm:^0.2.0"
     "@foxglove/rosmsg": "npm:^5.0.0"
-    "@foxglove/tsconfig": "npm:3.1.0"
+    "@foxglove/tsconfig": "npm:3.2.0"
     "@types/glob": "npm:^8.1.0"
     "@types/jest": "npm:30.0.0"
     "@types/node": "npm:22.13.0"
@@ -8208,7 +8208,7 @@ __metadata:
     "@emotion/styled": "npm:^11.14.1"
     "@foxglove/embed": "npm:^0.1.8"
     "@foxglove/embed-react": "npm:^0.1.8"
-    "@foxglove/tsconfig": "npm:^3.1.0"
+    "@foxglove/tsconfig": "npm:^3.2.0"
     "@foxglove/wasm-zstd": "npm:^1.0.1"
     "@mui/material": "npm:^7.3.4"
     "@pmmmwh/react-refresh-webpack-plugin": "npm:^0.6.1"

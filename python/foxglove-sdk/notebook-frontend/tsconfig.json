@@ -5,7 +5,6 @@
     "outDir": "../python/notebook/static",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "noEmit": true,
-    "isolatedDeclarations": false,
     "jsx": "react"
   }
 }
