@@ -33,6 +33,7 @@
     "glob": "^10.5.0",
     "globals": "^15.14.0",
     "jest": "30.2.0",
+    "jiti": "^2.6.1",
     "prettier": "^3.6.2",
     "prettier-plugin-toml": "^2.0.1",
     "protobufjs": "^7.2.5",

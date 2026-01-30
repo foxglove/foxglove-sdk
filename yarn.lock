@@ -5704,6 +5704,7 @@ __metadata:
     glob: "npm:^10.5.0"
     globals: "npm:^15.14.0"
     jest: "npm:30.2.0"
+    jiti: "npm:^2.6.1"
     prettier: "npm:^3.6.2"
     prettier-plugin-toml: "npm:^2.0.1"
     protobufjs: "npm:^7.2.5"
@@ -7315,6 +7316,15 @@ __metadata:
   bin:
     jest: ./bin/jest.js
   checksum: 10c0/af580c6e265d21870c2c98e31f17f2f5cb5c9e6cf9be26b95eaf4fad4140a01579f3b5844d4264cd8357eb24908e95f983ea84d20b8afef46e62aed3dd9452eb
+  languageName: node
+  linkType: hard
+
+"jiti@npm:^2.6.1":
+  version: 2.6.1
+  resolution: "jiti@npm:2.6.1"
+  bin:
+    jiti: lib/jiti-cli.mjs
+  checksum: 10c0/79b2e96a8e623f66c1b703b98ec1b8be4500e1d217e09b09e343471bbb9c105381b83edbb979d01cef18318cc45ce6e153571b6c83122170eefa531c64b6789b
   languageName: node
   linkType: hard
 
