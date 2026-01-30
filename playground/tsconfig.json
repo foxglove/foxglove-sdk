@@ -1,6 +1,5 @@
 {
   "extends": "@foxglove/tsconfig/bundler.json",
-  "include": ["src/**/*", "webpack.config.ts"],
   "compilerOptions": {
     "noEmit": true,
     "jsx": "react-jsx",
