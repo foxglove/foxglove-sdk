@@ -119,16 +119,13 @@ fn derive_struct_impl(input: &DeriveInput, data: &DataStruct) -> TokenStream {
 
     let mut field_defs = Vec::new();
     let mut field_encoders = Vec::new();
-    let mut field_message_lengths = Vec::new();
+    let mut field_tagged_lengths = Vec::new();
 
     // Field number + wire type must fit into a u32, but there is also a much lower reserved
     // range starting at 19,000. We should need to encode a much smaller space in practice; if
     // we limit to 2047, then each encoded tag will take at most two bytes.
-    // Fields 1-15 use a single byte for the tag; fields 16-2047 use two bytes.
     // https://protobuf.dev/programming-guides/proto3/#assigning
-    let max_one_byte_field_number = 15;
     let max_field_number = 2047;
-    let mut tags_encoded_len: usize = 0;
 
     // If a struct nests multiple values of the same enum or message type, we
     // only define them once, based on name.
@@ -147,15 +144,9 @@ fn derive_struct_impl(input: &DeriveInput, data: &DataStruct) -> TokenStream {
             });
         }
 
-        field_message_lengths.push(quote! {
-            ::foxglove::protobuf::ProtobufField::encoded_len(&self.#field_name)
+        field_tagged_lengths.push(quote! {
+            ::foxglove::protobuf::ProtobufField::encoded_len_tagged(&self.#field_name, #field_number)
         });
-
-        tags_encoded_len += if field_number <= max_one_byte_field_number {
-            1
-        } else {
-            2
-        };
 
         enum_defs.entry(field_type).or_insert_with(|| quote! {
             if let Some(enum_desc) = <#field_type as ::foxglove::protobuf::ProtobufField>::enum_descriptor() {
@@ -259,7 +250,7 @@ fn derive_struct_impl(input: &DeriveInput, data: &DataStruct) -> TokenStream {
             }
 
             fn encoded_len(&self) -> usize {
-                #tags_encoded_len #(+ #field_message_lengths)*
+                0 #(+ #field_tagged_lengths)*
             }
         }
 
@@ -315,7 +306,7 @@ fn derive_struct_impl(input: &DeriveInput, data: &DataStruct) -> TokenStream {
             }
 
             fn encoded_len(&self) -> Option<usize> {
-                Some(#tags_encoded_len #(+ #field_message_lengths)*)
+                Some(0 #(+ #field_tagged_lengths)*)
             }
         }
     };

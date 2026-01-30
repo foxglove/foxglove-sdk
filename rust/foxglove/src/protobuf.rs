@@ -117,8 +117,18 @@ pub trait ProtobufField {
         false
     }
 
-    /// The length of the field to be written, in bytes.
+    /// The length of the field to be written, in bytes (not including the tag).
     fn encoded_len(&self) -> usize;
+
+    /// The length of the field including the tag, in bytes.
+    ///
+    /// For optional fields that are None, this returns 0 since nothing is written.
+    fn encoded_len_tagged(&self, field_number: u32) -> usize {
+        // The tag is a varint encoding (field_number << 3) | wire_type.
+        // See: https://protobuf.dev/programming-guides/encoding/#structure
+        let tag = ((field_number << 3) | Self::wire_type()) as u64;
+        encoded_len_varint(tag) + self.encoded_len()
+    }
 }
 
 impl ProtobufField for u64 {
@@ -503,6 +513,13 @@ where
     fn encoded_len(&self) -> usize {
         match self {
             Some(value) => value.encoded_len(),
+            None => 0,
+        }
+    }
+
+    fn encoded_len_tagged(&self, field_number: u32) -> usize {
+        match self {
+            Some(value) => value.encoded_len_tagged(field_number),
             None => 0,
         }
     }

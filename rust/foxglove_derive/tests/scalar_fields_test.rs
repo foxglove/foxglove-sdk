@@ -359,6 +359,48 @@ fn test_optional_field_none() {
     assert_eq!(optional_value, 0); // Default value for u32 in proto3
 }
 
+#[test]
+fn test_optional_field_encoded_len_none() {
+    // When optional field is None, encoded_len should match actual encoded size
+    let test_struct = TestMessageOption {
+        required: 42,
+        optional: None,
+    };
+
+    let mut buf = BytesMut::new();
+    test_struct.encode(&mut buf).expect("Failed to encode");
+
+    let reported_len = test_struct.encoded_len().expect("encoded_len should return Some");
+    let actual_len = buf.len();
+
+    assert_eq!(
+        reported_len, actual_len,
+        "encoded_len() reported {} but actual encoded size is {}",
+        reported_len, actual_len
+    );
+}
+
+#[test]
+fn test_optional_field_encoded_len_some() {
+    // When optional field is Some, encoded_len should match actual encoded size
+    let test_struct = TestMessageOption {
+        required: 42,
+        optional: Some(123),
+    };
+
+    let mut buf = BytesMut::new();
+    test_struct.encode(&mut buf).expect("Failed to encode");
+
+    let reported_len = test_struct.encoded_len().expect("encoded_len should return Some");
+    let actual_len = buf.len();
+
+    assert_eq!(
+        reported_len, actual_len,
+        "encoded_len() reported {} but actual encoded size is {}",
+        reported_len, actual_len
+    );
+}
+
 fn get_message_descriptor(schema: &Schema) -> MessageDescriptor {
     let descriptor_set = prost_types::FileDescriptorSet::decode(schema.data.as_ref())
         .expect("Failed to decode descriptor set");
