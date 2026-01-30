@@ -32,6 +32,7 @@ tls = [
 ]
 stream = ["dep:futures"]
 schemars = ["dep:schemars"]
+schemars-chorono = ["schemars", "chrono", "dep:schamars/chrono04"]
 serde = ["dep:base64"]
 unstable = []
 zstd = ["mcap/zstd"]
