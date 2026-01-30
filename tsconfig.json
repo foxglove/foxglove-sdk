@@ -1,6 +1,7 @@
 {
   "extends": "@foxglove/tsconfig/node.json",
   "include": ["./**/*"],
+  // Ignore generated code and packages that have their own tsconfig
   "exclude": [
     "target",
     "cpp/build",
