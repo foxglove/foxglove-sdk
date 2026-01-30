@@ -115,7 +115,7 @@ describe("generateTypeScript", () => {
   });
 
   it("generates parseable .ts files", async () => {
-    await expect(import("../types")).resolves.not.toThrow();
+    await expect(import("../types/index.ts")).resolves.not.toThrow();
   });
 
   it("can include TypedArray types", () => {

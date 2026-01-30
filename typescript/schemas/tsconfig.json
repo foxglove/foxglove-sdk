@@ -1,9 +1,12 @@
 {
-  "extends": "@foxglove/tsconfig/node.json",
+  "extends": "@foxglove/tsconfig/bundler.json",
   "include": ["./**/*"],
   "compilerOptions": {
     "rootDir": "./src",
     "outDir": "./dist",
-    "noEmit": false
+    "noEmit": false,
+    "erasableSyntaxOnly": false,
+    "isolatedDeclarations": false,
+    "verbatimModuleSyntax": false
   }
 }
