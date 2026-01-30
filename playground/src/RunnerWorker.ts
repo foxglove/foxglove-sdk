@@ -29,11 +29,22 @@ type GetSignatures = (
   col: number,
 ) => { destroy(): void } & Array<GetSignaturesResultItem>;
 
+type GetHoverResultItem = {
+  sig: string | undefined;
+  doc: string | undefined;
+};
+type GetHover = (
+  code: string,
+  line: number,
+  col: number,
+) => { destroy(): void } & Array<GetHoverResultItem>;
+
 export class RunnerWorker {
   #abortController = new AbortController();
   #pyodide: Promise<PyodideInterface>;
   #getCompletionItems: Promise<GetCompletionItems>;
   #getSignatures: Promise<GetSignatures>;
+  #getHover: Promise<GetHover>;
   #stdoutCallback: (output: string) => void = (output) => {
     console.log("[stdout]", output);
   };
@@ -121,6 +132,37 @@ mod
           // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           { globals: pyodide.toPy({ playground_module: playgroundModule }) },
         ) as GetSignatures,
+    );
+    this.#getHover = Promise.all([this.#pyodide, playgroundModulePromise]).then(
+      ([pyodide, playgroundModule]) =>
+        pyodide.runPython(
+          `
+            import jedi
+            from pyodide.ffi import to_js
+            def get_hover(code, line, col):
+              def _get_hover_for_name(name):
+                if name.type in ("module", "class", "function", "property"):
+                  signatures = name.get_signatures()
+                  signature = signatures[0].to_string() if signatures else None
+                  return {
+                    "sig": signature,
+                    "doc": name.docstring(raw=True),
+                  }
+                elif name.type in ("keyword", "statement"):
+                  return {}
+                else:
+                  return {
+                    "sig": name.description,
+                    "doc": None,
+                  }
+              ns = {"playground": playground_module}
+              names = jedi.Interpreter(code, [ns]).help(line, col - 1)
+              return to_js([_get_hover_for_name(name) for name in names])
+            get_hover
+          `,
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+          { globals: pyodide.toPy({ playground_module: playgroundModule }) },
+        ) as GetHover,
     );
   }
 
@@ -251,6 +293,30 @@ mod
       activeParameter: 0,
       activeSignature: 0,
       signatures: getSignatures(code, line, col).map(normalizeSignatureHelp),
+    };
+  }
+
+  async getHover(
+    code: string,
+    line: number,
+    col: number,
+  ): Promise<monaco.languages.Hover | undefined> {
+    const getHover = await this.#getHover;
+    const contents = getHover(code, line, col).flatMap((item) => {
+      const strs: monaco.IMarkdownString[] = [];
+      if (item.sig) {
+        strs.push({ value: "```py\n" + item.sig + "\n```" });
+      }
+      if (item.doc) {
+        strs.push({ value: item.doc });
+      }
+      return strs;
+    });
+    if (contents.length === 0) {
+      return undefined;
+    }
+    return {
+      contents,
     };
   }
 }
