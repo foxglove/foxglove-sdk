@@ -510,6 +510,10 @@ where
         T::type_name()
     }
 
+    fn repeating() -> bool {
+        T::repeating()
+    }
+
     fn encoded_len(&self) -> usize {
         match self {
             Some(value) => value.encoded_len(),
