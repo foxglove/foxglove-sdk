@@ -1,7 +1,7 @@
+import { glob } from "glob";
 import { spawnSync } from "node:child_process";
 import { appendFile, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { glob } from "glob";
 import semver from "semver";
 
 const versionRegex = /^version\s*=\s*"([^"]*)"/m;

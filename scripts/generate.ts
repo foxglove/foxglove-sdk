@@ -7,9 +7,6 @@ import { finished } from "node:stream/promises";
 import { fileURLToPath } from "node:url";
 import { rimraf } from "rimraf";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
-import { generateRosMsg, generateRosMsgDefinition } from "../typescript/schemas/src/internal/index.ts";
 import { exportTypeScriptSchemas } from "../typescript/schemas/src/internal/exportTypeScriptSchemas.ts";
 import {
   BYTE_VECTOR_FB,
@@ -26,27 +23,33 @@ import {
 } from "../typescript/schemas/src/internal/generateOmgIdl.ts";
 import { generateProto } from "../typescript/schemas/src/internal/generateProto.ts";
 import {
+  generateChannelClasses,
+  generatePyChannelModule,
+  generatePyChannelStub,
+  generatePyclass,
+  generatePySchemaModule,
+  generatePySchemaStub,
   generateSchemaModuleRegistration,
   generateSchemaPrelude,
-  generatePyclass,
-  generatePySchemaStub,
-  generateChannelClasses,
-  generatePyChannelStub,
-  generatePySchemaModule,
-  generatePyChannelModule,
 } from "../typescript/schemas/src/internal/generatePyclass.ts";
 import {
   generateCppSchemas,
   generateHppSchemas,
 } from "../typescript/schemas/src/internal/generateSdkCpp.ts";
 import {
-  generateRustTypes,
   generateBindgenConfig,
+  generateRustTypes,
 } from "../typescript/schemas/src/internal/generateSdkRustCTypes.ts";
+import {
+  generateRosMsg,
+  generateRosMsgDefinition,
+} from "../typescript/schemas/src/internal/index.ts";
 import {
   foxgloveEnumSchemas,
   foxgloveMessageSchemas,
 } from "../typescript/schemas/src/internal/schemas.ts";
+
+const currentDir = path.dirname(fileURLToPath(import.meta.url));
 
 async function logProgress(message: string, body: () => Promise<void>) {
   process.stderr.write(`${message}... `);
@@ -82,7 +85,7 @@ async function exec(command: string, args: string[], { cwd }: Pick<SpawnOptions,
 }
 
 async function main({ clean }: { clean: boolean }) {
-  const repoRoot = path.resolve(__dirname, "..");
+  const repoRoot = path.resolve(currentDir, "..");
   const outDir = path.join(repoRoot, "schemas");
   const rosOutDir = path.join(repoRoot, "ros/src/foxglove_msgs");
   const typescriptTypesDir = path.join(repoRoot, "typescript/schemas/src/types");
