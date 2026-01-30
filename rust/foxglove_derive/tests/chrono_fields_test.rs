@@ -38,12 +38,20 @@ fn test_datetime_field_serialization() {
     assert_eq!(schema.encoding, "protobuf");
 
     let fds = prost_types::FileDescriptorSet::decode(schema.data.as_ref()).expect("decode schema");
-    let file = &fds.file[0];
+
+    // The main message file is the last one (well-known type files come first)
+    let file = fds.file.last().expect("at least one file");
     let message = &file.message_type[0];
     let field = &message.field[0];
 
     assert_eq!(field.name(), "timestamp");
     assert_eq!(field.type_name(), ".google.protobuf.Timestamp");
+
+    // Verify the google.protobuf.Timestamp file is included
+    assert!(fds
+        .file
+        .iter()
+        .any(|f| f.package() == "google.protobuf" && f.name() == "google/protobuf/timestamp.proto"));
 }
 
 #[test]
@@ -59,12 +67,20 @@ fn test_timedelta_field_serialization() {
     // Verify the schema references google.protobuf.Duration
     let schema = TestMessageWithDuration::get_schema().expect("schema");
     let fds = prost_types::FileDescriptorSet::decode(schema.data.as_ref()).expect("decode schema");
-    let file = &fds.file[0];
+
+    // The main message file is the last one (well-known type files come first)
+    let file = fds.file.last().expect("at least one file");
     let message = &file.message_type[0];
     let field = &message.field[0];
 
     assert_eq!(field.name(), "duration");
     assert_eq!(field.type_name(), ".google.protobuf.Duration");
+
+    // Verify the google.protobuf.Duration file is included
+    assert!(fds
+        .file
+        .iter()
+        .any(|f| f.package() == "google.protobuf" && f.name() == "google/protobuf/duration.proto"));
 }
 
 #[test]
@@ -85,7 +101,9 @@ fn test_mixed_chrono_fields_serialization() {
     // Verify the schema
     let schema = TestMessageWithBothTypes::get_schema().expect("schema");
     let fds = prost_types::FileDescriptorSet::decode(schema.data.as_ref()).expect("decode schema");
-    let file = &fds.file[0];
+
+    // The main message file is the last one (well-known type files come first)
+    let file = fds.file.last().expect("at least one file");
     let message = &file.message_type[0];
 
     assert_eq!(message.field.len(), 3);
@@ -102,4 +120,14 @@ fn test_mixed_chrono_fields_serialization() {
     assert_eq!(value_field.name(), "value");
     // u32 maps to uint32, which doesn't have a type_name (it's a primitive)
     assert!(value_field.type_name.is_none() || value_field.type_name().is_empty());
+
+    // Verify both well-known type files are included
+    assert!(fds
+        .file
+        .iter()
+        .any(|f| f.package() == "google.protobuf" && f.name() == "google/protobuf/timestamp.proto"));
+    assert!(fds
+        .file
+        .iter()
+        .any(|f| f.package() == "google.protobuf" && f.name() == "google/protobuf/duration.proto"));
 }

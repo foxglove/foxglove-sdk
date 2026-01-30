@@ -102,6 +102,14 @@ pub trait ProtobufField {
         None
     }
 
+    /// Returns the file descriptor for types that need to be in their own package.
+    ///
+    /// This is used for well-known types like `google.protobuf.Timestamp` that need to be
+    /// included as separate files in the FileDescriptorSet rather than as nested types.
+    fn file_descriptor() -> Option<prost_types::FileDescriptorProto> {
+        None
+    }
+
     /// Indicates the type represents a repeated field (like a Vec).
     ///
     /// By default, fields are not repeated.
@@ -435,6 +443,10 @@ where
         T::message_descriptor()
     }
 
+    fn file_descriptor() -> Option<prost_types::FileDescriptorProto> {
+        T::file_descriptor()
+    }
+
     fn type_name() -> Option<String> {
         T::type_name()
     }
@@ -478,6 +490,10 @@ where
 
     fn enum_descriptor() -> Option<prost_types::EnumDescriptorProto> {
         T::enum_descriptor()
+    }
+
+    fn file_descriptor() -> Option<prost_types::FileDescriptorProto> {
+        T::file_descriptor()
     }
 
     fn type_name() -> Option<String> {

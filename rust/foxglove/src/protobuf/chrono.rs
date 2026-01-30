@@ -23,6 +23,10 @@ impl ProtobufField for ::chrono::DateTime<::chrono::Utc> {
         <Timestamp as ProtobufField>::type_name()
     }
 
+    fn file_descriptor() -> Option<prost_types::FileDescriptorProto> {
+        <Timestamp as ProtobufField>::file_descriptor()
+    }
+
     fn encoded_len(&self) -> usize {
         let ts = Timestamp::saturating_from(*self);
         <Timestamp as ProtobufField>::encoded_len(&ts)
@@ -45,6 +49,10 @@ impl ProtobufField for ::chrono::TimeDelta {
 
     fn type_name() -> Option<String> {
         <Duration as ProtobufField>::type_name()
+    }
+
+    fn file_descriptor() -> Option<prost_types::FileDescriptorProto> {
+        <Duration as ProtobufField>::file_descriptor()
     }
 
     fn encoded_len(&self) -> usize {

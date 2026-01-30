@@ -134,6 +134,7 @@ fn derive_struct_impl(input: &DeriveInput, data: &DataStruct) -> TokenStream {
     // only define them once, based on name.
     let mut enum_defs: HashMap<&syn::Type, proc_macro2::TokenStream> = HashMap::new();
     let mut message_defs: HashMap<&syn::Type, proc_macro2::TokenStream> = HashMap::new();
+    let mut file_defs: HashMap<&syn::Type, proc_macro2::TokenStream> = HashMap::new();
 
     for (i, field) in fields.iter().enumerate() {
         let field_name = &field.ident.as_ref().unwrap();
@@ -168,6 +169,12 @@ fn derive_struct_impl(input: &DeriveInput, data: &DataStruct) -> TokenStream {
             }
         });
 
+        file_defs.entry(field_type).or_insert_with(|| quote! {
+            if let Some(file_descriptor) = <#field_type as ::foxglove::protobuf::ProtobufField>::file_descriptor() {
+                file_descriptor_set.file.push(file_descriptor);
+            }
+        });
+
         field_defs.push(quote! {
             let mut field = ::foxglove::prost_types::FieldDescriptorProto::default();
             field.name = Some(String::from(stringify!(#field_name)));
@@ -192,6 +199,7 @@ fn derive_struct_impl(input: &DeriveInput, data: &DataStruct) -> TokenStream {
 
     let enum_defs = enum_defs.into_values().collect::<Vec<_>>();
     let message_defs = message_defs.into_values().collect::<Vec<_>>();
+    let file_defs = file_defs.into_values().collect::<Vec<_>>();
 
     // Generate the output tokens
     let expanded = quote! {
@@ -263,6 +271,10 @@ fn derive_struct_impl(input: &DeriveInput, data: &DataStruct) -> TokenStream {
                 static SCHEMA: ::std::sync::OnceLock<Option<::foxglove::Schema>> = ::std::sync::OnceLock::new();
                 SCHEMA.get_or_init(|| {
                     let mut file_descriptor_set = ::foxglove::prost_types::FileDescriptorSet::default();
+
+                    // Add file descriptors for well-known types (e.g., google.protobuf.Timestamp)
+                    #(#file_defs)*
+
                     let mut file = ::foxglove::prost_types::FileDescriptorProto {
                         name: Some(String::from(concat!(stringify!(#name), ".proto"))),
                         package: Some(String::from(stringify!(#name).to_lowercase())),
