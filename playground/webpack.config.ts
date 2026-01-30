@@ -5,12 +5,11 @@ import HtmlWebpackPlugin from "html-webpack-plugin";
 import MonacoWebpackPlugin from "monaco-editor-webpack-plugin";
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { version as pyodideVersion } from "pyodide";
 import reactRefreshTypescript from "react-refresh-typescript";
 import webpack, { type Compiler, type Configuration } from "webpack";
 
-const thisDirname = path.dirname(fileURLToPath(import.meta.url));
+const thisDirname = import.meta.dirname;
 
 type WebpackArgv = {
   mode?: string;

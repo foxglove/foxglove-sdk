@@ -4,9 +4,8 @@ import { SIGTERM, F_OK } from "node:constants";
 import { mkdtemp, readdir, rm, access } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 
-const currentDir = path.dirname(fileURLToPath(import.meta.url));
+const currentDir = import.meta.dirname;
 
 /**
  * Run each example in the Python SDK, after installing dependencies.

@@ -4,7 +4,6 @@ import { spawn } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { finished } from "node:stream/promises";
-import { fileURLToPath } from "node:url";
 import { rimraf } from "rimraf";
 
 import { exportTypeScriptSchemas } from "../typescript/schemas/src/internal/exportTypeScriptSchemas.ts";
@@ -49,7 +48,7 @@ import {
   foxgloveMessageSchemas,
 } from "../typescript/schemas/src/internal/schemas.ts";
 
-const currentDir = path.dirname(fileURLToPath(import.meta.url));
+const currentDir = import.meta.dirname;
 
 async function logProgress(message: string, body: () => Promise<void>) {
   process.stderr.write(`${message}... `);
