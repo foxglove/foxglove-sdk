@@ -99,10 +99,12 @@ Playground
 ^^^^^^^^^^
 
 The `Foxglove SDK Playground <https://playground.foxglove.dev/>`__ allows you to run Python code
-using the Foxglove SDK, and visualize the resulting data in Foxglove.
+using the Foxglove SDK, and visualize the resulting data in Foxglove. Inside a playground, the
+following APIs are available:
 
-.. automodule:: foxglove.playground
-   :members:
+.. py:function:: playground.set_layout(layout: Layout, /) -> None
+
+   Update the layout used in the playground.
 
 Table of contents
 ^^^^^^^^^^^^^^^^^

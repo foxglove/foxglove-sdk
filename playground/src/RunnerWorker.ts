@@ -42,14 +42,39 @@ export class RunnerWorker {
   };
   constructor() {
     this.#pyodide = this.#setup();
-    this.#getCompletionItems = this.#pyodide.then(
-      (pyodide) =>
+
+    // Define type stubs for functions available in the playground so they can be shown in
+    // autocomplete
+    const playgroundModulePromise = this.#pyodide.then((pyodide): unknown =>
+      pyodide.runPython(
+        `
+from types import ModuleType
+
+def set_layout(layout: "foxglove.layouts.Layout", /) -> None:
+    """
+    Update the layout used in the playground.
+    """
+    ...
+
+mod = ModuleType("playground")
+mod.__doc__ = "Functions available in the SDK playground."
+mod.set_layout = set_layout
+mod
+    `,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        { globals: pyodide.toPy({}) },
+      ),
+    );
+
+    this.#getCompletionItems = Promise.all([this.#pyodide, playgroundModulePromise]).then(
+      ([pyodide, playgroundModule]) =>
         pyodide.runPython(
           `
             import jedi
             from pyodide.ffi import to_js
             def get_completion_items(code, line, col):
-              completions = jedi.Script(code).complete(line, col - 1)
+              ns = {"playground": playground_module}
+              completions = jedi.Interpreter(code, [ns]).complete(line, col - 1)
               return to_js([
                 {
                   "type": completion.type,
@@ -63,17 +88,19 @@ export class RunnerWorker {
             get_completion_items
           `,
           // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-          { globals: pyodide.toPy({}) },
+          { globals: pyodide.toPy({ playground_module: playgroundModule }) },
         ) as GetCompletionItems,
     );
-    this.#getSignatures = this.#pyodide.then(
-      (pyodide) =>
+
+    this.#getSignatures = Promise.all([this.#pyodide, playgroundModulePromise]).then(
+      ([pyodide, playgroundModule]) =>
         pyodide.runPython(
           `
             import jedi
             from pyodide.ffi import to_js
             def get_signatures(code, line, col):
-              signatures = jedi.Script(code).get_signatures(line, col - 1)
+              ns = {"playground": playground_module}
+              signatures = jedi.Interpreter(code, [ns]).get_signatures(line, col - 1)
               return to_js([
                 {
                   "index": signature.index,
@@ -92,7 +119,7 @@ export class RunnerWorker {
             get_signatures
           `,
           // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-          { globals: pyodide.toPy({}) },
+          { globals: pyodide.toPy({ playground_module: playgroundModule }) },
         ) as GetSignatures,
     );
   }
@@ -138,7 +165,7 @@ export class RunnerWorker {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const sys = pyodide.pyimport("sys");
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-    sys.modules.set("foxglove.playground", {
+    sys.modules.set("playground", {
       set_layout: (layout: unknown) => {
         if (
           layout == undefined ||
