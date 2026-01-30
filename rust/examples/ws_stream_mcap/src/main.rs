@@ -15,16 +15,11 @@ use foxglove::websocket::{
     ServerListener,
 };
 use foxglove::{ChannelBuilder, PartialMetadata, RawChannel, Schema, WebSocketServer};
+use mcap::records::MessageHeader;
 use mcap::sans_io::indexed_reader::{IndexedReadEvent, IndexedReader, IndexedReaderOptions};
 use mcap::sans_io::summary_reader::{SummaryReadEvent, SummaryReader, SummaryReaderOptions};
 use mcap::Summary as McapSummary;
 use tracing::{info, warn};
-
-struct PlaybackMessage {
-    channel_id: u16,
-    log_time: u64,
-    data: Vec<u8>,
-}
 
 trait PlaybackSource {
     fn time_bounds(&self) -> (u64, u64);
@@ -32,15 +27,12 @@ trait PlaybackSource {
     fn play(&mut self);
     fn pause(&mut self);
     fn status(&self) -> PlaybackStatus;
-    fn set_status(&mut self, status: PlaybackStatus);
     fn seek(&mut self, log_time: u64) -> Result<()>;
-    fn next_message(&mut self) -> Result<Option<PlaybackMessage>>;
-    fn reset_timebase(&mut self);
-    fn sleep_until_log_time(&mut self, log_time: u64);
+    fn next_wakeup(&mut self) -> Result<Option<Instant>>;
+    fn flush_since_last(&mut self) -> Result<()>;
     fn should_broadcast_time(&mut self) -> Option<u64>;
     fn current_time(&self) -> u64;
     fn playback_speed(&self) -> f32;
-    fn channels(&self) -> &HashMap<u16, Arc<RawChannel>>;
 }
 
 struct Listener {
@@ -87,14 +79,12 @@ impl ServerListener for Listener {
                 warn!("Failed to seek to {}ns: {err}", seek_time);
                 status = PlaybackStatus::Paused;
             } else {
-                playback.reset_timebase();
                 did_seek = true;
             }
         }
 
         if (request.playback_speed - playback.playback_speed()).abs() > f32::EPSILON {
             playback.set_playback_speed(request.playback_speed);
-            playback.reset_timebase();
         }
 
         match status {
@@ -114,6 +104,11 @@ impl ServerListener for Listener {
     }
 }
 
+struct PendingMessage {
+    header: MessageHeader,
+    data: Vec<u8>,
+}
+
 struct McapPlayer {
     file: File,
     channels: HashMap<u16, Arc<RawChannel>>,
@@ -124,6 +119,7 @@ struct McapPlayer {
     current_time: u64,
     status: PlaybackStatus,
     time_tracker: Option<TimeTracker>,
+    pending: Option<PendingMessage>,
 }
 
 impl McapPlayer {
@@ -147,6 +143,7 @@ impl McapPlayer {
             current_time: start_time,
             status: PlaybackStatus::Paused,
             time_tracker: None,
+            pending: None,
         })
     }
 
@@ -178,6 +175,76 @@ impl McapPlayer {
                 Ok((*id, raw_channel))
             })
             .collect()
+    }
+
+    fn read_next_message(&mut self) -> Result<Option<PendingMessage>> {
+        loop {
+            let event = match self.reader.next_event() {
+                Some(Ok(event)) => event,
+                Some(Err(err)) => return Err(err.into()),
+                None => return Ok(None),
+            };
+
+            match event {
+                IndexedReadEvent::ReadChunkRequest { offset, length } => {
+                    self.chunk_buf.resize(length, 0);
+                    self.file
+                        .seek(SeekFrom::Start(offset))
+                        .context("seek chunk data")?;
+                    self.file
+                        .read_exact(&mut self.chunk_buf)
+                        .context("read chunk data")?;
+                    self.reader
+                        .insert_chunk_record_data(offset, &self.chunk_buf)
+                        .context("insert chunk data")?;
+                }
+                IndexedReadEvent::Message { header, data } => {
+                    return Ok(Some(PendingMessage {
+                        header,
+                        data: data.to_vec(),
+                    }));
+                }
+            }
+        }
+    }
+
+    fn log_message(&self, header: MessageHeader, data: &[u8]) {
+        if let Some(channel) = self.channels.get(&header.channel_id) {
+            channel.log_with_meta(
+                data,
+                PartialMetadata {
+                    log_time: Some(header.log_time),
+                },
+            );
+        }
+    }
+
+    fn log_until(&mut self, log_time: u64) -> Result<()> {
+        if let Some(pending) = self.pending.take() {
+            if pending.header.log_time <= log_time {
+                self.log_message(pending.header, &pending.data);
+            } else {
+                self.pending = Some(pending);
+                return Ok(());
+            }
+        }
+
+        loop {
+            let Some(message) = self.read_next_message()? else {
+                return Ok(());
+            };
+
+            if message.header.log_time > log_time {
+                self.pending = Some(message);
+                return Ok(());
+            }
+
+            self.log_message(message.header, &message.data);
+        }
+    }
+
+    fn reset_timebase(&mut self) {
+        self.time_tracker = None;
     }
 
     fn load_mcap_summary(path: &Path) -> Result<McapSummary> {
@@ -220,6 +287,7 @@ impl PlaybackSource for McapPlayer {
 
     fn set_playback_speed(&mut self, speed: f32) {
         self.playback_speed = speed.max(0.01);
+        self.reset_timebase();
     }
 
     fn play(&mut self) {
@@ -235,70 +303,56 @@ impl PlaybackSource for McapPlayer {
         self.status
     }
 
-    fn set_status(&mut self, status: PlaybackStatus) {
-        self.status = status;
-    }
-
     fn seek(&mut self, log_time: u64) -> Result<()> {
         self.reader = Self::build_reader(self.summary.as_ref(), Some(log_time))?;
         self.current_time = log_time;
+        self.pending = None;
+        self.reset_timebase();
         Ok(())
     }
 
-    fn next_message(&mut self) -> Result<Option<PlaybackMessage>> {
-        loop {
-            let event = match self.reader.next_event() {
-                Some(Ok(event)) => event,
-                Some(Err(err)) => return Err(err.into()),
-                None => return Ok(None),
-            };
-
-            match event {
-                IndexedReadEvent::ReadChunkRequest { offset, length } => {
-                    self.chunk_buf.resize(length, 0);
-                    self.file
-                        .seek(SeekFrom::Start(offset))
-                        .context("seek chunk data")?;
-                    self.file
-                        .read_exact(&mut self.chunk_buf)
-                        .context("read chunk data")?;
-                    self.reader
-                        .insert_chunk_record_data(offset, &self.chunk_buf)
-                        .context("insert chunk data")?;
-                }
-                IndexedReadEvent::Message { header, data } => {
-                    return Ok(Some(PlaybackMessage {
-                        channel_id: header.channel_id,
-                        log_time: header.log_time,
-                        data: data.to_vec(),
-                    }));
-                }
-            }
+    fn next_wakeup(&mut self) -> Result<Option<Instant>> {
+        if self.pending.is_none() {
+            self.pending = self.read_next_message()?;
         }
-    }
 
-    fn reset_timebase(&mut self) {
-        self.time_tracker = None;
-    }
-
-    /// Sleeps until the specified log time, pacing playback to match the playback speed.
-    fn sleep_until_log_time(&mut self, log_time: u64) {
-        let sleep_duration = {
-            let tt = self
-                .time_tracker
-                .get_or_insert_with(|| TimeTracker::start(log_time));
-            tt.compute_sleep_duration(log_time, self.playback_speed)
+        let Some(pending) = &self.pending else {
+            self.status = PlaybackStatus::Ended;
+            return Ok(None);
         };
 
-        if sleep_duration >= Duration::from_micros(1) {
-            std::thread::sleep(sleep_duration);
-        }
+        let tt = self
+            .time_tracker
+            .get_or_insert_with(|| TimeTracker::start(pending.header.log_time));
+        let sleep_duration =
+            tt.compute_sleep_duration(pending.header.log_time, self.playback_speed);
+        let wakeup = if sleep_duration > Duration::from_micros(0) {
+            Instant::now() + sleep_duration
+        } else {
+            Instant::now()
+        };
 
+        Ok(Some(wakeup))
+    }
+
+    fn flush_since_last(&mut self) -> Result<()> {
+        let anchor_time = self
+            .pending
+            .as_ref()
+            .map(|pending| pending.header.log_time)
+            .unwrap_or(self.current_time);
+        let current_log_time = {
+            let tt = self
+                .time_tracker
+                .get_or_insert_with(|| TimeTracker::start(anchor_time));
+            tt.current_log_time(self.playback_speed)
+        };
+        self.log_until(current_log_time)?;
         if let Some(tt) = &mut self.time_tracker {
-            tt.update_position(log_time);
+            tt.update_position(current_log_time);
         }
-
-        self.current_time = log_time;
+        self.current_time = current_log_time;
+        Ok(())
     }
 
     /// Returns a timestamp if it's time to broadcast the current time to clients.
@@ -312,10 +366,6 @@ impl PlaybackSource for McapPlayer {
 
     fn playback_speed(&self) -> f32 {
         self.playback_speed
-    }
-
-    fn channels(&self) -> &HashMap<u16, Arc<RawChannel>> {
-        &self.channels
     }
 }
 
@@ -345,6 +395,13 @@ impl TimeTracker {
         let delta_log = log_time.saturating_sub(self.start_log_ns);
         let scaled = Duration::from_nanos(delta_log).mul_f64(1.0 / (playback_speed as f64));
         scaled.saturating_sub(self.start.elapsed())
+    }
+
+    /// Estimates the current log time based on wall clock and playback speed.
+    fn current_log_time(&self, playback_speed: f32) -> u64 {
+        let elapsed_ns = self.start.elapsed().as_nanos() as f64;
+        let scaled_ns = elapsed_ns * (playback_speed as f64);
+        self.start_log_ns.saturating_add(scaled_ns as u64)
     }
 
     /// Updates the current position after sleeping.
@@ -377,7 +434,7 @@ struct Cli {
 }
 
 fn main() -> Result<()> {
-    let env = env_logger::Env::default().default_filter_or("debug");
+    let env = env_logger::Env::default().default_filter_or("info");
     env_logger::init_from_env(env);
 
     let args = Cli::parse();
@@ -426,44 +483,35 @@ fn main() -> Result<()> {
             continue;
         }
 
-        let (message, timestamp, channel) = {
+        let next_wakeup = {
             let mut player = player.lock().unwrap();
-            let message = player.next_message()?;
-            let mut timestamp = None;
-            let mut channel = None;
-            if let Some(msg) = &message {
-                player.sleep_until_log_time(msg.log_time);
-                timestamp = player.should_broadcast_time();
-                channel = player.channels().get(&msg.channel_id).cloned();
-            }
-            (message, timestamp, channel)
+            player.next_wakeup()?
         };
 
-        match message {
-            Some(msg) => {
-                if let Some(timestamp) = timestamp {
-                    server.broadcast_time(timestamp);
-                }
-
-                if let Some(channel) = channel {
-                    channel.log_with_meta(
-                        &msg.data,
-                        PartialMetadata {
-                            log_time: Some(msg.log_time),
-                        },
-                    );
-                }
-            }
-            None => {
+        let Some(next_wakeup) = next_wakeup else {
+            let ended = { player.lock().unwrap().status() == PlaybackStatus::Ended };
+            if ended {
                 info!("Playback complete");
-                {
-                    let mut player = player.lock().unwrap();
-                    player.set_status(PlaybackStatus::Ended);
-                }
                 server.broadcast_playback_state(PlaybackState {
                     ..listener.current_state()
                 });
             }
+            continue;
+        };
+
+        let now = Instant::now();
+        if next_wakeup > now {
+            std::thread::sleep(next_wakeup - now);
+        }
+
+        let timestamp = {
+            let mut player = player.lock().unwrap();
+            player.flush_since_last()?;
+            player.should_broadcast_time()
+        };
+
+        if let Some(timestamp) = timestamp {
+            server.broadcast_time(timestamp);
         }
     }
 
