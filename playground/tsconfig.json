@@ -2,8 +2,7 @@
   "extends": "@foxglove/tsconfig/bundler.json",
   "include": ["src/**/*", "webpack.config.ts"],
   "compilerOptions": {
-    "declaration": false,
-    "declarationMap": false,
+    "noEmit": true,
     "isolatedDeclarations": false,
     "jsx": "react-jsx",
     "lib": ["ES2022", "DOM"]
