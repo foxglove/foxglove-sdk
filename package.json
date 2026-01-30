@@ -10,12 +10,12 @@
   ],
   "scripts": {
     "build": "tsc -b",
-    "bump-sdk-version": "ts-node ./scripts/bumpSdkVersion.ts",
-    "clean": "ts-node ./scripts/generate.ts --clean",
-    "generate": "ts-node ./scripts/generate.ts",
+    "bump-sdk-version": "tsx ./scripts/bumpSdkVersion.ts",
+    "clean": "tsx ./scripts/generate.ts --clean",
+    "generate": "tsx ./scripts/generate.ts",
     "lint:ci": "eslint .",
     "lint": "eslint --fix .",
-    "run-python-sdk-examples": "ts-node ./scripts/runPythonSdkExamples.ts --install-sdk-from-path",
+    "run-python-sdk-examples": "tsx ./scripts/runPythonSdkExamples.ts --install-sdk-from-path",
     "test": "NODE_OPTIONS='--experimental-vm-modules' jest"
   },
   "devDependencies": {
@@ -40,7 +40,7 @@
     "semver": "^7.7.1",
     "smol-toml": "^1.4.1",
     "ts-jest": "29.4.4",
-    "ts-node": "^10.9.2",
+    "tsx": "^4.19.2",
     "typescript": "5.9.2",
     "typescript-eslint": "^8.42.0"
   }
