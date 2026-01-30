@@ -14,7 +14,6 @@ struct Apple {
 struct Banana {
     length: f64,
     ripeness: f64,
-    /// The time the banana was picked (if known).
     picked_at: Option<DateTime<Utc>>,
 }
 
@@ -86,8 +85,6 @@ fn main() {
 
     // Or if we just want to serialize a struct without caring about the encoding,
     // we can use the foxglove_derive feature to serialize to binary protobuf automatically.
-    // Well-known types like Timestamp and Duration are supported, as well as Option<T>.
-    // Chrono's DateTime<Utc> and TimeDelta are also supported.
     BANANA_CHANNEL.log(&Banana {
         length: 10.0,
         ripeness: 0.5,
