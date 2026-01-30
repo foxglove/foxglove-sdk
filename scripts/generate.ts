@@ -4,7 +4,10 @@ import { spawn } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { finished } from "node:stream/promises";
+import { fileURLToPath } from "node:url";
 import { rimraf } from "rimraf";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 import { generateRosMsg, generateRosMsgDefinition } from "../typescript/schemas/src/internal/index.ts";
 import { exportTypeScriptSchemas } from "../typescript/schemas/src/internal/exportTypeScriptSchemas.ts";

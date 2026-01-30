@@ -1,6 +1,6 @@
 import * as Comlink from "comlink";
 import type * as monaco from "monaco-editor";
-import { loadPyodide, PyodideInterface } from "pyodide";
+import { loadPyodide, type PyodideInterface } from "pyodide";
 
 // defined via webpack.DefinePlugin
 declare let FOXGLOVE_SDK_WHEEL_FILENAME: string;

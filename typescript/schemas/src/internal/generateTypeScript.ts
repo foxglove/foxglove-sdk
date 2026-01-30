@@ -131,7 +131,7 @@ export function generateTypeScript(
 
     Array.from(imports)
       .sort()
-      .map((name) => `import { ${name} } from "./${name}.ts";`)
+      .map((name) => `import type { ${name} } from "./${name}.ts";`)
       .join("\n"),
 
     definition,

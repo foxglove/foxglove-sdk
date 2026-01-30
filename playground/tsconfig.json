@@ -1,11 +1,10 @@
 {
   "extends": "@foxglove/tsconfig/bundler.json",
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "webpack.config.ts"],
   "compilerOptions": {
     "declaration": false,
     "declarationMap": false,
     "isolatedDeclarations": false,
-    "verbatimModuleSyntax": false,
     "jsx": "react-jsx",
     "lib": ["ES2022", "DOM"]
   }

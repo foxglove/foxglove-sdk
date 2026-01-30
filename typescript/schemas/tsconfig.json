@@ -6,7 +6,6 @@
     "outDir": "./dist",
     "noEmit": false,
     "erasableSyntaxOnly": false,
-    "isolatedDeclarations": false,
-    "verbatimModuleSyntax": false
+    "isolatedDeclarations": false
   }
 }

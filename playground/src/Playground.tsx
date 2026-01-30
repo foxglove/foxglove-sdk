@@ -1,15 +1,15 @@
 import { PlayFilledAlt, DocumentDownload } from "@carbon/icons-react";
-import { DataSource, SelectLayoutParams } from "@foxglove/embed";
-import { FoxgloveViewer, FoxgloveViewerInterface } from "@foxglove/embed-react";
+import type { DataSource, SelectLayoutParams } from "@foxglove/embed";
+import { FoxgloveViewer, type FoxgloveViewerInterface } from "@foxglove/embed-react";
 import { Button, GlobalStyles, IconButton, Tooltip, Typography } from "@mui/material";
 import { Allotment } from "allotment";
 import { useCallback, useEffect, useRef, useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import { tss } from "tss-react/mui";
 
-import { Editor, EditorInterface } from "./Editor";
+import { Editor, type EditorInterface } from "./Editor";
 import { Runner } from "./Runner";
-import { getUrlState, setUrlState, UrlState } from "./urlState";
+import { getUrlState, setUrlState, type UrlState } from "./urlState";
 
 import "./Playground.css";
 import "allotment/dist/style.css";

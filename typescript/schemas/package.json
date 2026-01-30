@@ -14,8 +14,20 @@
     "url": "git+https://github.com/foxglove/foxglove-sdk.git",
     "directory": "typescript/schemas"
   },
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./internal": {
+      "types": "./internal.d.ts",
+      "import": "./internal.js"
+    },
+    "./jsonschema": {
+      "types": "./jsonschema.d.ts",
+      "import": "./jsonschema.js"
+    }
+  },
   "files": [
     "dist",
     "internal.d.ts",

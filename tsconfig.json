@@ -5,7 +5,6 @@
   "compilerOptions": {
     "rootDir": ".",
     "noEmit": true,
-    "isolatedDeclarations": false,
-    "verbatimModuleSyntax": false
+    "isolatedDeclarations": false
   }
 }

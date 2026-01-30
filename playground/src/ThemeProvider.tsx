@@ -1,4 +1,4 @@
-import { PaletteOptions, ThemeProvider as MuiThemeProvider, createTheme } from "@mui/material";
+import { type PaletteOptions, ThemeProvider as MuiThemeProvider, createTheme } from "@mui/material";
 import { useLayoutEffect, useMemo, useState } from "react";
 
 declare module "@mui/material/styles" {

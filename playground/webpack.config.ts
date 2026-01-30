@@ -8,7 +8,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { version as pyodideVersion } from "pyodide";
 import reactRefreshTypescript from "react-refresh-typescript";
-import webpack, { Compiler, Configuration } from "webpack";
+import webpack, { type Compiler, type Configuration } from "webpack";
 
 const thisDirname = path.dirname(fileURLToPath(import.meta.url));
 
