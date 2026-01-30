@@ -290,9 +290,7 @@ fn test_deeply_nested_wkt() {
 fn test_optional_wkt_field() {
     // Tests that Option<WKT> properly includes the WKT file descriptor
     let dt = Utc.with_ymd_and_hms(2024, 1, 15, 12, 30, 45).unwrap();
-    let test_struct = OptionalTimestamp {
-        maybe_ts: Some(dt),
-    };
+    let test_struct = OptionalTimestamp { maybe_ts: Some(dt) };
 
     let mut buf = BytesMut::new();
     test_struct.encode(&mut buf).expect("encode failed");

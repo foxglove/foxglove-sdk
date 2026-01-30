@@ -4,8 +4,8 @@ use proc_macro::TokenStream;
 use quote::quote;
 use std::collections::HashMap;
 use syn::{
-    parse_macro_input, parse_quote, Data, DataEnum, DataStruct, DeriveInput, Fields, GenericParam,
-    GenericArgument, Generics, PathArguments, Type,
+    parse_macro_input, parse_quote, Data, DataEnum, DataStruct, DeriveInput, Fields,
+    GenericArgument, GenericParam, Generics, PathArguments, Type,
 };
 
 /// Check if a type is `Vec<Option<T>>`, which is not supported because protobuf
@@ -193,9 +193,11 @@ fn derive_struct_impl(input: &DeriveInput, data: &DataStruct) -> TokenStream {
             }
         });
 
-        file_defs.entry(field_type).or_insert_with(|| quote! {
-            for fd in <#field_type as ::foxglove::protobuf::ProtobufField>::file_descriptors() {
-                result.push(fd);
+        file_defs.entry(field_type).or_insert_with(|| {
+            quote! {
+                for fd in <#field_type as ::foxglove::protobuf::ProtobufField>::file_descriptors() {
+                    result.push(fd);
+                }
             }
         });
 
