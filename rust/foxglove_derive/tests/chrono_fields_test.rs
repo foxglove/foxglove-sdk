@@ -1,5 +1,3 @@
-#![cfg(feature = "chrono")]
-
 use bytes::BytesMut;
 use chrono::{TimeZone, Utc};
 use foxglove::Encode;

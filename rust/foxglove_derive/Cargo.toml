@@ -10,9 +10,6 @@ license.workspace = true
 [lib]
 proc-macro = true
 
-[features]
-chrono = ["foxglove/chrono"]
-
 [dependencies]
 proc-macro2 = "1.0"
 quote = "1.0"
@@ -22,7 +19,7 @@ prost-types.workspace = true
 [dev-dependencies]
 bytes = "1.4"
 chrono = "0.4"
-foxglove = { path = "../foxglove" }
+foxglove = { path = "../foxglove", features = ["chrono"] }
 prost.workspace = true
 prost-reflect = "0.16.3"
 tracing.workspace = true
