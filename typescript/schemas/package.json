@@ -20,20 +20,16 @@
       "import": "./dist/index.js"
     },
     "./internal": {
-      "types": "./internal.d.ts",
-      "import": "./internal.js"
+      "types": "./dist/internal/index.d.ts",
+      "import": "./dist/internal/index.js"
     },
     "./jsonschema": {
-      "types": "./jsonschema.d.ts",
-      "import": "./jsonschema.js"
+      "types": "./dist/jsonschema/index.d.ts",
+      "import": "./dist/jsonschema/index.js"
     }
   },
   "files": [
-    "dist",
-    "internal.d.ts",
-    "internal.js",
-    "jsonschema.d.ts",
-    "jsonschema.js"
+    "dist"
   ],
   "packageManager": "yarn@4.6.0",
   "scripts": {
