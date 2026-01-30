@@ -9,19 +9,19 @@
   ],
   "scripts": {
     "build": "tsc -b",
-    "bump-sdk-version": "ts-node ./scripts/bumpSdkVersion.ts",
-    "clean": "ts-node ./scripts/generate.ts --clean",
-    "generate": "ts-node ./scripts/generate.ts",
+    "bump-sdk-version": "tsx ./scripts/bumpSdkVersion.ts",
+    "clean": "tsx ./scripts/generate.ts --clean",
+    "generate": "tsx ./scripts/generate.ts",
     "lint:ci": "eslint .",
     "lint": "eslint --fix .",
-    "run-python-sdk-examples": "ts-node ./scripts/runPythonSdkExamples.ts --install-sdk-from-path",
+    "run-python-sdk-examples": "tsx ./scripts/runPythonSdkExamples.ts --install-sdk-from-path",
     "test": "jest"
   },
   "devDependencies": {
     "@foxglove/eslint-plugin": "2.1.0",
     "@foxglove/omgidl-parser": "^0.2.0",
     "@foxglove/rosmsg": "^5.0.0",
-    "@foxglove/tsconfig": "2.0.0",
+    "@foxglove/tsconfig": "3.2.0",
     "@types/glob": "^8.1.0",
     "@types/jest": "30.0.0",
     "@types/node": "22.13.0",
@@ -32,6 +32,7 @@
     "glob": "^10.5.0",
     "globals": "^15.14.0",
     "jest": "30.2.0",
+    "jiti": "^2.6.1",
     "prettier": "^3.6.2",
     "prettier-plugin-toml": "^2.0.1",
     "protobufjs": "^7.2.5",
@@ -39,7 +40,7 @@
     "semver": "^7.7.1",
     "smol-toml": "^1.4.1",
     "ts-jest": "29.4.4",
-    "ts-node": "^10.9.2",
+    "tsx": "^4.19.2",
     "typescript": "5.9.2",
     "typescript-eslint": "^8.42.0"
   }

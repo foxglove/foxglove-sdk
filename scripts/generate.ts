@@ -1,11 +1,11 @@
 import { program } from "commander";
-import { SpawnOptions, spawn } from "node:child_process";
+import type { SpawnOptions } from "node:child_process";
+import { spawn } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { finished } from "node:stream/promises";
 import { rimraf } from "rimraf";
 
-import { generateRosMsg, generateRosMsgDefinition } from "../typescript/schemas/src/internal";
 import { exportTypeScriptSchemas } from "../typescript/schemas/src/internal/exportTypeScriptSchemas";
 import {
   BYTE_VECTOR_FB,
@@ -22,23 +22,24 @@ import {
 } from "../typescript/schemas/src/internal/generateOmgIdl";
 import { generateProto } from "../typescript/schemas/src/internal/generateProto";
 import {
+  generateChannelClasses,
+  generatePyChannelModule,
+  generatePyChannelStub,
+  generatePyclass,
+  generatePySchemaModule,
+  generatePySchemaStub,
   generateSchemaModuleRegistration,
   generateSchemaPrelude,
-  generatePyclass,
-  generatePySchemaStub,
-  generateChannelClasses,
-  generatePyChannelStub,
-  generatePySchemaModule,
-  generatePyChannelModule,
 } from "../typescript/schemas/src/internal/generatePyclass";
 import {
   generateCppSchemas,
   generateHppSchemas,
 } from "../typescript/schemas/src/internal/generateSdkCpp";
 import {
-  generateRustTypes,
   generateBindgenConfig,
+  generateRustTypes,
 } from "../typescript/schemas/src/internal/generateSdkRustCTypes";
+import { generateRosMsg, generateRosMsgDefinition } from "../typescript/schemas/src/internal/index";
 import {
   foxgloveEnumSchemas,
   foxgloveMessageSchemas,
@@ -201,7 +202,7 @@ async function main({ clean }: { clean: boolean }) {
   });
 
   // Build the schemas package for easier documentation previews
-  await exec("yarn", ["workspace", "@foxglove/schemas", "clean-build"], { cwd: repoRoot });
+  await exec("yarn", ["workspace", "@foxglove/schemas", "prepack"], { cwd: repoRoot });
 
   await logProgress("Generating OMG IDL definitions", async () => {
     await fs.mkdir(path.join(outDir, "omgidl", "foxglove"), { recursive: true });

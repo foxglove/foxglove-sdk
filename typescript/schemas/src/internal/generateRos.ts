@@ -1,7 +1,7 @@
 import type { MessageDefinition, MessageDefinitionField } from "@foxglove/message-definition";
 import { ros1 } from "@foxglove/rosmsg-msgs-common";
 
-import { FoxgloveMessageField, FoxgloveMessageSchema, FoxglovePrimitive } from "./types";
+import type { FoxgloveMessageField, FoxgloveMessageSchema, FoxglovePrimitive } from "./types";
 
 type RosMsgFieldWithDescription = MessageDefinitionField & {
   description?: string;

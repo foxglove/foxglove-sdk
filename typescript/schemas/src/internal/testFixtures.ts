@@ -1,5 +1,5 @@
 import { foxgloveMessageSchemas } from "./schemas";
-import { FoxgloveEnumSchema, FoxgloveMessageSchema, FoxglovePrimitive } from "./types";
+import type { FoxgloveEnumSchema, FoxgloveMessageSchema, FoxglovePrimitive } from "./types";
 
 const { Duration, Timestamp } = foxgloveMessageSchemas;
 

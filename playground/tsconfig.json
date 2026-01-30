@@ -1,9 +1,11 @@
 {
-  "extends": "@foxglove/tsconfig/base",
+  "extends": "@foxglove/tsconfig/bundler.json",
   "compilerOptions": {
     "declaration": false,
     "declarationMap": false,
+    "isolatedModules": false,
+    "verbatimModuleSyntax": false,
     "jsx": "react-jsx",
-    "lib": ["es2022", "DOM"]
+    "lib": ["ES2022", "DOM"]
   }
 }

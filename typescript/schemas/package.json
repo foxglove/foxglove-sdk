@@ -17,6 +17,7 @@
   "types": "./dist/index.d.ts",
   "files": [
     "dist",
+    "src",
     "internal.d.ts",
     "internal.js",
     "jsonschema.d.ts",
@@ -24,14 +25,12 @@
   ],
   "packageManager": "yarn@4.6.0",
   "scripts": {
-    "build": "cp -R ../../schemas/jsonschema ./src/jsonschema && tsc -b",
     "clean": "git clean -Xdf",
-    "clean-build": "yarn clean && yarn build",
-    "prepack": "yarn clean-build"
+    "build": "cp -R ../../schemas/jsonschema ./src/jsonschema && tsc -b",
+    "prepack": "yarn clean && yarn build"
   },
   "dependencies": {
-    "@foxglove/rosmsg-msgs-common": "^3.2.2",
-    "tslib": "^2"
+    "@foxglove/rosmsg-msgs-common": "^3.2.2"
   },
   "devDependencies": {
     "rimraf": "^6.0.1",
