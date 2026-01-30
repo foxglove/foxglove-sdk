@@ -1,28 +1,24 @@
-//! Utilities for building a Foxglove remote data loader upstream server.
+//! Simple framework for the data provider component of a Foxglove [remote data loader](https://docs.foxglove.dev/docs/visualization/connecting/remote-data-loader).
 //!
-//! This crate handles server setup and the HTTP API, and provides a simple framework for
-//! dynamically loading data using the [`foxglove`] crate.
-//!
-//! **This crate is only for building the upstream component.** To use it in Foxglove, you need to
-//! deploy `remote-data-loader` pointed at the built upstream.
+//! - For local development, see <REPLACE ME>.
+//! - For deployment, see <REPLACE ME>.
 //!
 //! # Overview
 //!
 //! To enable streaming data from your backend to Foxglove, implement [`UpstreamServer`] and call
 //! [`serve`].
 //!
-//! For example, to stream flight telemetry from a database, define a `FlightServer` implementing
-//! `UpstreamServer` where:
+//! For example, to stream flight telemetry from a database, define a `FlightServer`
+//! holding the database connection (and any other server-level state).
+//! Then, implement [`UpstreamServer`] on `FlightServer` so that:
 //!
-//! 1. `FlightServer` holds the database connection.
-//! 2. [`QueryParams`](`UpstreamServer::QueryParams`) deserialized from each request specify the
-//!    data to load.
-//! 3. [`auth`](UpstreamServer::auth) checks credentials.
-//! 4. [`initialize`](UpstreamServer::initialize) creates a [`foxglove::Channel`] for your telemetry
+//! 1. The [`QueryParams`](`UpstreamServer::QueryParams`) type specifies how users select the data to load.
+//! 2. [`auth`](UpstreamServer::auth) checks credentials.
+//! 3. [`initialize`](UpstreamServer::initialize) creates a [`foxglove::Channel`] for your telemetry
 //!    messages and returns it in your [`Context`](UpstreamServer::Context).
-//! 5. [`metadata`](UpstreamServer::metadata) returns [`Metadata`] with the flight name and time
+//! 4. [`metadata`](UpstreamServer::metadata) returns [`Metadata`] with the flight name and time
 //!    range.
-//! 6. [`stream`](UpstreamServer::stream) queries the database and logs to the channel.
+//! 5. [`stream`](UpstreamServer::stream) queries the database and logs to the channel.
 //!
 //! Call [`serve`] to start the server. For a blocking API, see [`blocking::UpstreamServer`] and
 //! [`blocking::serve`].
