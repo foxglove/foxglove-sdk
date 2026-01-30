@@ -48,10 +48,12 @@ fn test_datetime_field_serialization() {
     assert_eq!(field.type_name(), ".google.protobuf.Timestamp");
 
     // Verify the google.protobuf.Timestamp file is included
-    assert!(fds
-        .file
-        .iter()
-        .any(|f| f.package() == "google.protobuf" && f.name() == "google/protobuf/timestamp.proto"));
+    assert!(
+        fds.file
+            .iter()
+            .any(|f| f.package() == "google.protobuf"
+                && f.name() == "google/protobuf/timestamp.proto")
+    );
 }
 
 #[test]
@@ -122,10 +124,12 @@ fn test_mixed_chrono_fields_serialization() {
     assert!(value_field.type_name.is_none() || value_field.type_name().is_empty());
 
     // Verify both well-known type files are included
-    assert!(fds
-        .file
-        .iter()
-        .any(|f| f.package() == "google.protobuf" && f.name() == "google/protobuf/timestamp.proto"));
+    assert!(
+        fds.file
+            .iter()
+            .any(|f| f.package() == "google.protobuf"
+                && f.name() == "google/protobuf/timestamp.proto")
+    );
     assert!(fds
         .file
         .iter()

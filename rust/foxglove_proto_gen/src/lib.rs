@@ -202,7 +202,7 @@ fn collect_field_info(
     }
 }
 
-/// Generates binary file descriptor sets for each foxglove message.
+/// Generates binary file descriptor sets for each foxglove message and well-known types.
 fn generate_descriptors(out_dir: &Path, fds: &FileDescriptorSet) -> anyhow::Result<()> {
     let fd_map: HashMap<_, _> = fds
         .file
@@ -218,22 +218,39 @@ fn generate_descriptors(out_dir: &Path, fds: &FileDescriptorSet) -> anyhow::Resu
 
     let mut descr_map = BTreeMap::new();
     for fd in &fds.file {
-        if let Some(name) = fd
-            .name
-            .as_ref()
-            .and_then(|n| n.strip_prefix("foxglove/"))
+        let Some(name) = fd.name.as_ref() else {
+            continue;
+        };
+
+        // Handle foxglove/ and google/protobuf/ prefixes
+        let n = if let Some(n) = name
+            .strip_prefix("foxglove/")
             .and_then(|n| n.strip_suffix(".proto"))
         {
-            let file_name = format!("{name}.bin");
-            let var_name = camel_case_to_constant_case(name);
-            let path = descr_dir.join(&file_name);
-            let mut descr_file = File::create(&path).context("Failed to create descriptor file")?;
-            let bin = build_fds(fd, &fd_map).encode_to_vec();
-            descr_file
-                .write_all(&bin)
-                .context("Failed to write descriptor")?;
-            descr_map.insert(var_name, file_name);
-        }
+            n.to_string()
+        } else if let Some(n) = name
+            .strip_prefix("google/protobuf/")
+            .and_then(|n| n.strip_suffix(".proto"))
+        {
+            // Capitalize first letter to match PascalCase convention
+            let mut chars = n.chars();
+            match chars.next() {
+                Some(c) => c.to_uppercase().chain(chars).collect(),
+                None => continue,
+            }
+        } else {
+            continue;
+        };
+        let file_name = format!("{n}.bin");
+        let var_name = camel_case_to_constant_case(&n);
+
+        let path = descr_dir.join(&file_name);
+        let mut descr_file = File::create(&path).context("Failed to create descriptor file")?;
+        let bin = build_fds(fd, &fd_map).encode_to_vec();
+        descr_file
+            .write_all(&bin)
+            .context("Failed to write descriptor")?;
+        descr_map.insert(var_name, file_name);
     }
 
     let mut module =

@@ -1,73 +1,27 @@
 //! ProtobufField implementations for well-known types (Timestamp, Duration).
 
+use std::sync::LazyLock;
+
+use prost::Message;
 use prost_types::field_descriptor_proto::Type as ProstFieldType;
 
 use super::ProtobufField;
-use crate::schemas::{Duration, Timestamp};
+use crate::schemas::{descriptors, Duration, Timestamp};
 
-/// Creates a google.protobuf.Timestamp FileDescriptorProto.
-fn timestamp_file_descriptor() -> prost_types::FileDescriptorProto {
-    let mut message = prost_types::DescriptorProto::default();
-    message.name = Some("Timestamp".to_string());
-
-    // seconds field
-    let mut seconds_field = prost_types::FieldDescriptorProto::default();
-    seconds_field.name = Some("seconds".to_string());
-    seconds_field.number = Some(1);
-    seconds_field.r#type = Some(ProstFieldType::Int64 as i32);
-    seconds_field.label =
-        Some(prost_types::field_descriptor_proto::Label::Optional as i32);
-    message.field.push(seconds_field);
-
-    // nanos field
-    let mut nanos_field = prost_types::FieldDescriptorProto::default();
-    nanos_field.name = Some("nanos".to_string());
-    nanos_field.number = Some(2);
-    nanos_field.r#type = Some(ProstFieldType::Int32 as i32);
-    nanos_field.label =
-        Some(prost_types::field_descriptor_proto::Label::Optional as i32);
-    message.field.push(nanos_field);
-
-    prost_types::FileDescriptorProto {
-        name: Some("google/protobuf/timestamp.proto".to_string()),
-        package: Some("google.protobuf".to_string()),
-        message_type: vec![message],
-        syntax: Some("proto3".to_string()),
-        ..Default::default()
-    }
+/// Decodes a FileDescriptorSet from binary and returns the first FileDescriptorProto.
+fn decode_file_descriptor(bytes: &[u8]) -> prost_types::FileDescriptorProto {
+    let fds = prost_types::FileDescriptorSet::decode(bytes).expect("invalid file descriptor set");
+    fds.file
+        .into_iter()
+        .next()
+        .expect("empty file descriptor set")
 }
 
-/// Creates a google.protobuf.Duration FileDescriptorProto.
-fn duration_file_descriptor() -> prost_types::FileDescriptorProto {
-    let mut message = prost_types::DescriptorProto::default();
-    message.name = Some("Duration".to_string());
+static TIMESTAMP_FD: LazyLock<prost_types::FileDescriptorProto> =
+    LazyLock::new(|| decode_file_descriptor(descriptors::TIMESTAMP));
 
-    // seconds field
-    let mut seconds_field = prost_types::FieldDescriptorProto::default();
-    seconds_field.name = Some("seconds".to_string());
-    seconds_field.number = Some(1);
-    seconds_field.r#type = Some(ProstFieldType::Int64 as i32);
-    seconds_field.label =
-        Some(prost_types::field_descriptor_proto::Label::Optional as i32);
-    message.field.push(seconds_field);
-
-    // nanos field
-    let mut nanos_field = prost_types::FieldDescriptorProto::default();
-    nanos_field.name = Some("nanos".to_string());
-    nanos_field.number = Some(2);
-    nanos_field.r#type = Some(ProstFieldType::Int32 as i32);
-    nanos_field.label =
-        Some(prost_types::field_descriptor_proto::Label::Optional as i32);
-    message.field.push(nanos_field);
-
-    prost_types::FileDescriptorProto {
-        name: Some("google/protobuf/duration.proto".to_string()),
-        package: Some("google.protobuf".to_string()),
-        message_type: vec![message],
-        syntax: Some("proto3".to_string()),
-        ..Default::default()
-    }
-}
+static DURATION_FD: LazyLock<prost_types::FileDescriptorProto> =
+    LazyLock::new(|| decode_file_descriptor(descriptors::DURATION));
 
 impl ProtobufField for Timestamp {
     fn field_type() -> ProstFieldType {
@@ -91,7 +45,7 @@ impl ProtobufField for Timestamp {
     }
 
     fn file_descriptor() -> Option<prost_types::FileDescriptorProto> {
-        Some(timestamp_file_descriptor())
+        Some(TIMESTAMP_FD.clone())
     }
 
     fn encoded_len(&self) -> usize {
@@ -123,7 +77,7 @@ impl ProtobufField for Duration {
     }
 
     fn file_descriptor() -> Option<prost_types::FileDescriptorProto> {
-        Some(duration_file_descriptor())
+        Some(DURATION_FD.clone())
     }
 
     fn encoded_len(&self) -> usize {
