@@ -1177,7 +1177,6 @@ __metadata:
   dependencies:
     "@foxglove/rosmsg-msgs-common": "npm:^3.2.2"
     rimraf: "npm:^6.0.1"
-    tslib: "npm:^2"
     typescript: "npm:5.9.2"
   languageName: unknown
   linkType: soft
