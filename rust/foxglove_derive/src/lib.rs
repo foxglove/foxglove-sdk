@@ -194,8 +194,8 @@ fn derive_struct_impl(input: &DeriveInput, data: &DataStruct) -> TokenStream {
         });
 
         file_defs.entry(field_type).or_insert_with(|| quote! {
-            if let Some(file_descriptor) = <#field_type as ::foxglove::protobuf::ProtobufField>::file_descriptor() {
-                file_descriptor_set.file.push(file_descriptor);
+            for fd in <#field_type as ::foxglove::protobuf::ProtobufField>::file_descriptors() {
+                result.push(fd);
             }
         });
 
@@ -282,6 +282,12 @@ fn derive_struct_impl(input: &DeriveInput, data: &DataStruct) -> TokenStream {
                 Some(stringify!(#name).to_string())
             }
 
+            fn file_descriptors() -> Vec<::foxglove::prost_types::FileDescriptorProto> {
+                let mut result = Vec::new();
+                #(#file_defs)*
+                result
+            }
+
             fn encoded_len(&self) -> usize {
                 0 #(+ #field_tagged_lengths)*
             }
@@ -296,13 +302,25 @@ fn derive_struct_impl(input: &DeriveInput, data: &DataStruct) -> TokenStream {
                 SCHEMA.get_or_init(|| {
                     let mut file_descriptor_set = ::foxglove::prost_types::FileDescriptorSet::default();
 
-                    // Add file descriptors for well-known types (e.g., google.protobuf.Timestamp)
-                    #(#file_defs)*
+                    // Add file descriptors for well-known types and nested message dependencies.
+                    // Deduplicate by name since multiple fields may reference the same WKT.
+                    let dependency_fds = <#name #ty_generics as ::foxglove::protobuf::ProtobufField>::file_descriptors();
+                    let mut seen = ::std::collections::HashSet::new();
+                    let mut dependencies = Vec::new();
+                    for fd in dependency_fds {
+                        if let Some(name) = &fd.name {
+                            if seen.insert(name.clone()) {
+                                dependencies.push(name.clone());
+                                file_descriptor_set.file.push(fd);
+                            }
+                        }
+                    }
 
                     let mut file = ::foxglove::prost_types::FileDescriptorProto {
                         name: Some(String::from(concat!(stringify!(#name), ".proto"))),
                         package: Some(String::from(stringify!(#name).to_lowercase())),
                         syntax: Some(String::from("proto3")),
+                        dependency: dependencies,
                         ..Default::default()
                     };
 

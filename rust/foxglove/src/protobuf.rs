@@ -110,6 +110,15 @@ pub trait ProtobufField {
         None
     }
 
+    /// Returns all file descriptors needed by this type, including from nested fields.
+    ///
+    /// For primitive types, this returns an empty vec. For well-known types, this returns
+    /// a vec containing the single file descriptor. For derived structs, this aggregates
+    /// file descriptors from all fields.
+    fn file_descriptors() -> Vec<prost_types::FileDescriptorProto> {
+        Self::file_descriptor().into_iter().collect()
+    }
+
     /// Indicates the type represents a repeated field (like a Vec).
     ///
     /// By default, fields are not repeated.
@@ -454,6 +463,10 @@ where
         T::file_descriptor()
     }
 
+    fn file_descriptors() -> Vec<prost_types::FileDescriptorProto> {
+        T::file_descriptors()
+    }
+
     fn type_name() -> Option<String> {
         T::type_name()
     }
@@ -505,6 +518,10 @@ where
 
     fn file_descriptor() -> Option<prost_types::FileDescriptorProto> {
         T::file_descriptor()
+    }
+
+    fn file_descriptors() -> Vec<prost_types::FileDescriptorProto> {
+        T::file_descriptors()
     }
 
     fn type_name() -> Option<String> {
