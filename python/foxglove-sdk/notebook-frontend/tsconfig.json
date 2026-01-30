@@ -4,7 +4,6 @@
   "compilerOptions": {
     "outDir": "../python/notebook/static",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "allowImportingTsExtensions": true,
     "noEmit": true,
     "isolatedDeclarations": false,
     "jsx": "react"
