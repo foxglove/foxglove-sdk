@@ -4,6 +4,9 @@ import { SIGTERM, F_OK } from "node:constants";
 import { mkdtemp, readdir, rm, access } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const currentDir = path.dirname(fileURLToPath(import.meta.url));
 
 /**
  * Run each example in the Python SDK, after installing dependencies.
@@ -17,7 +20,7 @@ import path from "node:path";
  * number and, for simplicity, don't illustrate that configuration.
  */
 
-const pyExamplesDir = path.resolve(__dirname, "../python/foxglove-sdk-examples");
+const pyExamplesDir = path.resolve(currentDir, "../python/foxglove-sdk-examples");
 
 const tempFiles: string[] = [];
 
@@ -96,7 +99,7 @@ async function removeTempFiles() {
 async function getExampleArgs(example: string) {
   switch (example) {
     case "ws-stream-mcap":
-      return ["--file", path.resolve(__dirname, "fixtures/empty.mcap")];
+      return ["--file", path.resolve(currentDir, "fixtures/empty.mcap")];
     case "write-mcap-file":
       return ["--path", await newTempFile()];
     default:
