@@ -3,6 +3,8 @@
   "compilerOptions": {
     "declaration": false,
     "declarationMap": false,
+    "isolatedModules": false,
+    "verbatimModuleSyntax": false,
     "jsx": "react-jsx",
     "lib": ["ES2022", "DOM"]
   }

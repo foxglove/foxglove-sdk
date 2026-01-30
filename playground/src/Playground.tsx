@@ -52,7 +52,8 @@ const useStyles = tss.create(({ theme }) => ({
   },
   toastMonospace: {
     maxWidth: "none",
-    fontFamily: theme.typography.fontMonospace,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- module augmentation workaround for ts-loader
+    fontFamily: (theme.typography as any).fontMonospace as string,
     overflow: "hidden",
     div: {
       whiteSpace: "pre-wrap",
