@@ -1,4 +1,8 @@
-import { TIME_TS, generateTypeScript, type GenerateTypeScriptOptions } from "./generateTypeScript.ts";
+import {
+  TIME_TS,
+  generateTypeScript,
+  type GenerateTypeScriptOptions,
+} from "./generateTypeScript.ts";
 import {
   foxgloveEnumSchemas,
   foxgloveMessageSchemas as unfilteredFoxgloveMessageSchemas,
