@@ -1,7 +1,15 @@
 {
   "extends": "@foxglove/tsconfig/node.json",
   "include": ["./**/*"],
-  "exclude": ["target", "cpp/build", "cpp/build-*", "playground", "python/foxglove-sdk", "typescript", "schemas"],
+  "exclude": [
+    "target",
+    "cpp/build",
+    "cpp/build-*",
+    "playground",
+    "python/foxglove-sdk",
+    "typescript",
+    "schemas"
+  ],
   "compilerOptions": {
     "noEmit": true
   }
