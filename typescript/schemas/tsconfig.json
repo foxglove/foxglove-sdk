@@ -1,5 +1,5 @@
 {
-  "extends": "@foxglove/tsconfig/bundler.json",
+  "extends": "@foxglove/tsconfig/node.json",
   "include": ["./**/*"],
   "compilerOptions": {
     "rootDir": "./src",
