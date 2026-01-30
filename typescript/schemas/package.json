@@ -3,6 +3,7 @@
   "version": "1.9.0",
   "description": "Foxglove-defined message schemas for ROS, Protobuf, FlatBuffers, OMG IDL, and JSON",
   "license": "MIT",
+  "type": "module",
   "author": {
     "name": "Foxglove",
     "email": "support@foxglove.dev",

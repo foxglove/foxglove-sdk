@@ -1,11 +1,9 @@
 {
-  "extends": "@foxglove/tsconfig/base",
+  "extends": "@foxglove/tsconfig/node.json",
   "include": ["./**/*"],
   "exclude": ["target", "cpp/build", "cpp/build-*", "playground", "python/foxglove-sdk"],
   "compilerOptions": {
     "rootDir": ".",
-    "module": "commonjs",
-    "lib": ["es2020"],
     "noEmit": true
   }
 }
