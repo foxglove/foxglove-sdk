@@ -370,7 +370,9 @@ fn test_optional_field_encoded_len_none() {
     let mut buf = BytesMut::new();
     test_struct.encode(&mut buf).expect("Failed to encode");
 
-    let reported_len = test_struct.encoded_len().expect("encoded_len should return Some");
+    let reported_len = test_struct
+        .encoded_len()
+        .expect("encoded_len should return Some");
     let actual_len = buf.len();
 
     assert_eq!(
@@ -391,7 +393,9 @@ fn test_optional_field_encoded_len_some() {
     let mut buf = BytesMut::new();
     test_struct.encode(&mut buf).expect("Failed to encode");
 
-    let reported_len = test_struct.encoded_len().expect("encoded_len should return Some");
+    let reported_len = test_struct
+        .encoded_len()
+        .expect("encoded_len should return Some");
     let actual_len = buf.len();
 
     assert_eq!(
