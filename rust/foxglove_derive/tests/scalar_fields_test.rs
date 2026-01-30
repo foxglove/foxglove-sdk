@@ -405,57 +405,6 @@ fn test_optional_field_encoded_len_some() {
     );
 }
 
-#[derive(Encode)]
-struct TestMessageOptionalVec {
-    values: Option<Vec<u32>>,
-}
-
-#[test]
-fn test_optional_vec_field_is_repeated() {
-    // Option<Vec<T>> should be marked as repeated in the schema
-    let schema = TestMessageOptionalVec::get_schema().expect("Failed to get schema");
-
-    let descriptor_set = prost_types::FileDescriptorSet::decode(schema.data.as_ref())
-        .expect("Failed to decode descriptor set");
-    let file = &descriptor_set.file[0];
-    let message_type = &file.message_type[0];
-    let field = &message_type.field[0];
-
-    assert_eq!(field.name(), "values");
-    assert_eq!(
-        field.label(),
-        prost_types::field_descriptor_proto::Label::Repeated,
-        "Option<Vec<T>> field should be marked as repeated"
-    );
-}
-
-#[test]
-fn test_optional_vec_encoded_correctly() {
-    // Option<Vec<T>> with Some should encode all elements
-    let test_struct = TestMessageOptionalVec {
-        values: Some(vec![1, 2, 3]),
-    };
-
-    let mut buf = BytesMut::new();
-    test_struct.encode(&mut buf).expect("Failed to encode");
-
-    let schema = TestMessageOptionalVec::get_schema().expect("Failed to get schema");
-    let message_descriptor = get_message_descriptor(&schema);
-    let deserialized = DynamicMessage::decode(message_descriptor.clone(), buf.as_ref())
-        .expect("Failed to deserialize");
-
-    let field_descriptor = message_descriptor
-        .get_field_by_name("values")
-        .expect("Field 'values' not found");
-    let field_value = deserialized.get_field(&field_descriptor);
-    let list = field_value.as_list().expect("Field should be a list");
-
-    assert_eq!(list.len(), 3, "All elements should be preserved");
-    assert_eq!(list[0].as_u32().unwrap(), 1);
-    assert_eq!(list[1].as_u32().unwrap(), 2);
-    assert_eq!(list[2].as_u32().unwrap(), 3);
-}
-
 #[test]
 fn test_vec_encoded_len() {
     let test_struct = TestMessageVector {

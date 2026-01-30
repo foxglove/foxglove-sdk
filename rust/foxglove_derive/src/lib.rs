@@ -8,31 +8,51 @@ use syn::{
     GenericArgument, GenericParam, Generics, PathArguments, Type,
 };
 
+/// Extract the inner type from a wrapper type like `Vec<T>` or `Option<T>`.
+/// Returns the wrapper name and inner type if it matches the pattern.
+fn unwrap_generic_type<'a>(ty: &'a Type, wrapper: &str) -> Option<&'a Type> {
+    let Type::Path(type_path) = ty else {
+        return None;
+    };
+    let segment = type_path.path.segments.last()?;
+    if segment.ident != wrapper {
+        return None;
+    }
+    let PathArguments::AngleBracketed(args) = &segment.arguments else {
+        return None;
+    };
+    match args.args.first()? {
+        GenericArgument::Type(inner_ty) => Some(inner_ty),
+        _ => None,
+    }
+}
+
+/// Check if a type is `Vec<T>` for some T.
+fn is_vec(ty: &Type) -> bool {
+    unwrap_generic_type(ty, "Vec").is_some()
+}
+
+/// Check if a type is `Option<T>` for some T.
+fn is_option(ty: &Type) -> bool {
+    unwrap_generic_type(ty, "Option").is_some()
+}
+
 /// Check if a type is `Vec<Option<T>>`, which is not supported because protobuf
 /// repeated fields cannot represent null/missing elements.
 fn is_vec_of_option(ty: &Type) -> bool {
-    let Type::Path(type_path) = ty else {
-        return false;
-    };
-    let Some(segment) = type_path.path.segments.last() else {
-        return false;
-    };
-    if segment.ident != "Vec" {
-        return false;
-    }
-    let PathArguments::AngleBracketed(args) = &segment.arguments else {
-        return false;
-    };
-    let Some(GenericArgument::Type(inner_ty)) = args.args.first() else {
-        return false;
-    };
-    let Type::Path(inner_path) = inner_ty else {
-        return false;
-    };
-    let Some(inner_segment) = inner_path.path.segments.last() else {
-        return false;
-    };
-    inner_segment.ident == "Option"
+    unwrap_generic_type(ty, "Vec").is_some_and(is_option)
+}
+
+/// Check if a type is `Option<Vec<T>>`, which is not supported because protobuf
+/// cannot distinguish between "not present" and "empty list".
+fn is_option_of_vec(ty: &Type) -> bool {
+    unwrap_generic_type(ty, "Option").is_some_and(is_vec)
+}
+
+/// Check if a type is `Vec<Vec<T>>`, which is not supported because protobuf
+/// does not support nested repeated fields.
+fn is_vec_of_vec(ty: &Type) -> bool {
+    unwrap_generic_type(ty, "Vec").is_some_and(is_vec)
 }
 
 /// Derive macro for enums and structs allowing them to be logged to a Foxglove channel.
@@ -174,6 +194,18 @@ fn derive_struct_impl(input: &DeriveInput, data: &DataStruct) -> TokenStream {
         if is_vec_of_option(field_type) {
             return TokenStream::from(quote! {
                 compile_error!("Vec<Option<T>> is not supported. Protobuf repeated fields cannot represent null/missing elements.");
+            });
+        }
+
+        if is_option_of_vec(field_type) {
+            return TokenStream::from(quote! {
+                compile_error!("Option<Vec<T>> is not supported. Protobuf cannot distinguish between absent and empty repeated fields.");
+            });
+        }
+
+        if is_vec_of_vec(field_type) {
+            return TokenStream::from(quote! {
+                compile_error!("Vec<Vec<T>> is not supported. Protobuf does not support nested repeated fields.");
             });
         }
 
