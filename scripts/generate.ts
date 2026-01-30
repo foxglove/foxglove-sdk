@@ -205,7 +205,7 @@ async function main({ clean }: { clean: boolean }) {
   });
 
   // Build the schemas package for easier documentation previews
-  await exec("yarn", ["workspace", "@foxglove/schemas", "clean-build"], { cwd: repoRoot });
+  await exec("yarn", ["workspace", "@foxglove/schemas", "prepack"], { cwd: repoRoot });
 
   await logProgress("Generating OMG IDL definitions", async () => {
     await fs.mkdir(path.join(outDir, "omgidl", "foxglove"), { recursive: true });
