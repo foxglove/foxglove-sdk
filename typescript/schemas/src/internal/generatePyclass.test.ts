@@ -1,5 +1,5 @@
-import { generateSchemaPrelude, generatePyclass } from "./generatePyclass.ts";
-import { exampleEnum, exampleMessage } from "./testFixtures.ts";
+import { generateSchemaPrelude, generatePyclass } from "./generatePyclass";
+import { exampleEnum, exampleMessage } from "./testFixtures";
 
 describe("generatePyclass", () => {
   it("generates module header", () => {

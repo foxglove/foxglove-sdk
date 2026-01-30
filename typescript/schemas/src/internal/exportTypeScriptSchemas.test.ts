@@ -1,4 +1,4 @@
-import { exportTypeScriptSchemas } from "./exportTypeScriptSchemas.ts";
+import { exportTypeScriptSchemas } from "./exportTypeScriptSchemas";
 
 describe("exportTypeScriptSchemas", () => {
   it("exports schemas", () => {

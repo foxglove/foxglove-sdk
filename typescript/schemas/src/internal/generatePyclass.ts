@@ -4,7 +4,7 @@ import type {
   FoxgloveMessageSchema,
   FoxglovePrimitive,
   FoxgloveSchema,
-} from "./types.ts";
+} from "./types";
 
 /**
  * Generate the module header for schema pyclass definitions.

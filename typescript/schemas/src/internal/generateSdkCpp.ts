@@ -1,6 +1,6 @@
 import assert from "node:assert";
 
-import type { FoxgloveEnumSchema, FoxgloveMessageSchema, FoxglovePrimitive } from "./types.ts";
+import type { FoxgloveEnumSchema, FoxgloveMessageSchema, FoxglovePrimitive } from "./types";
 
 function primitiveToCpp(type: FoxglovePrimitive) {
   switch (type) {

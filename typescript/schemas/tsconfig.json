@@ -1,10 +1,14 @@
 {
-  "extends": "@foxglove/tsconfig/node.json",
+  "extends": "@foxglove/tsconfig/base.json",
   "include": ["src/**/*"],
   "compilerOptions": {
     "rootDir": "./src",
     "outDir": "./dist",
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "esModuleInterop": true,
     "noEmit": false,
-    "erasableSyntaxOnly": false
+    "erasableSyntaxOnly": false,
+    "verbatimModuleSyntax": false
   }
 }

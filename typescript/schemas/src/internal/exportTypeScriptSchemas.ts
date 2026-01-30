@@ -1,12 +1,8 @@
-import {
-  TIME_TS,
-  generateTypeScript,
-  type GenerateTypeScriptOptions,
-} from "./generateTypeScript.ts";
+import { TIME_TS, generateTypeScript, type GenerateTypeScriptOptions } from "./generateTypeScript";
 import {
   foxgloveEnumSchemas,
   foxgloveMessageSchemas as unfilteredFoxgloveMessageSchemas,
-} from "./schemas.ts";
+} from "./schemas";
 
 /**
  * Export schemas as TypeScript source code, keyed by the file base name (without `.ts` suffix).
@@ -40,7 +36,7 @@ export function exportTypeScriptSchemas(
     .sort((a, b) => a.localeCompare(b));
   let indexTS = "";
   for (const schemaName of allSchemaNames) {
-    indexTS += `export * from "./${schemaName}.ts";\n`;
+    indexTS += `export * from "./${schemaName}";\n`;
   }
   schemas.set("index", indexTS);
 

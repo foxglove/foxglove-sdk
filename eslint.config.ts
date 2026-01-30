@@ -15,6 +15,11 @@ export default defineConfig(
       "schemas/jsonschema",
       "target",
       "typescript/schemas/src/jsonschema",
+      // Stub files for subpath imports
+      "typescript/schemas/internal.d.ts",
+      "typescript/schemas/internal.js",
+      "typescript/schemas/jsonschema.d.ts",
+      "typescript/schemas/jsonschema.js",
     ],
   },
   ...foxglove.configs.base,

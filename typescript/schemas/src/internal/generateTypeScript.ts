@@ -1,4 +1,4 @@
-import type { FoxglovePrimitive, FoxgloveSchema } from "./types.ts";
+import type { FoxglovePrimitive, FoxgloveSchema } from "./types";
 
 function primitiveToTypeScript(type: FoxglovePrimitive) {
   switch (type) {
@@ -131,7 +131,7 @@ export function generateTypeScript(
 
     Array.from(imports)
       .sort()
-      .map((name) => `import type { ${name} } from "./${name}.ts";`)
+      .map((name) => `import type { ${name} } from "./${name}";`)
       .join("\n"),
 
     definition,

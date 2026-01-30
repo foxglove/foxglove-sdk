@@ -1,5 +1,5 @@
 {
-  "extends": "@foxglove/tsconfig/node.json",
+  "extends": "@foxglove/tsconfig/base.json",
   "include": ["./**/*"],
   // Ignore generated code and packages that have their own tsconfig
   "exclude": [
@@ -12,6 +12,10 @@
     "schemas"
   ],
   "compilerOptions": {
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "esModuleInterop": true,
+    "verbatimModuleSyntax": false,
     "noEmit": true
   }
 }

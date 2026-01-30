@@ -1,7 +1,6 @@
 {
   "name": "foxglove-sdk",
   "private": true,
-  "type": "module",
   "packageManager": "yarn@4.12.0",
   "workspaces": [
     "typescript/*",
@@ -16,7 +15,7 @@
     "lint:ci": "eslint .",
     "lint": "eslint --fix .",
     "run-python-sdk-examples": "tsx ./scripts/runPythonSdkExamples.ts --install-sdk-from-path",
-    "test": "NODE_OPTIONS='--experimental-vm-modules' jest"
+    "test": "jest"
   },
   "devDependencies": {
     "@foxglove/eslint-plugin": "2.1.0",

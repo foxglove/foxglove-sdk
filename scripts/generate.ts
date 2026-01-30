@@ -6,21 +6,21 @@ import path from "node:path";
 import { finished } from "node:stream/promises";
 import { rimraf } from "rimraf";
 
-import { exportTypeScriptSchemas } from "../typescript/schemas/src/internal/exportTypeScriptSchemas.ts";
+import { exportTypeScriptSchemas } from "../typescript/schemas/src/internal/exportTypeScriptSchemas";
 import {
   BYTE_VECTOR_FB,
   DURATION_FB,
   TIME_FB,
   flatbufferMessageSchemaName,
   generateFlatbuffers,
-} from "../typescript/schemas/src/internal/generateFlatbufferSchema.ts";
-import { generateJsonSchema } from "../typescript/schemas/src/internal/generateJsonSchema.ts";
-import { generateMarkdown } from "../typescript/schemas/src/internal/generateMarkdown.ts";
+} from "../typescript/schemas/src/internal/generateFlatbufferSchema";
+import { generateJsonSchema } from "../typescript/schemas/src/internal/generateJsonSchema";
+import { generateMarkdown } from "../typescript/schemas/src/internal/generateMarkdown";
 import {
   generateOmgIdl,
   omgIdlMessageSchemaName,
-} from "../typescript/schemas/src/internal/generateOmgIdl.ts";
-import { generateProto } from "../typescript/schemas/src/internal/generateProto.ts";
+} from "../typescript/schemas/src/internal/generateOmgIdl";
+import { generateProto } from "../typescript/schemas/src/internal/generateProto";
 import {
   generateChannelClasses,
   generatePyChannelModule,
@@ -30,23 +30,20 @@ import {
   generatePySchemaStub,
   generateSchemaModuleRegistration,
   generateSchemaPrelude,
-} from "../typescript/schemas/src/internal/generatePyclass.ts";
+} from "../typescript/schemas/src/internal/generatePyclass";
 import {
   generateCppSchemas,
   generateHppSchemas,
-} from "../typescript/schemas/src/internal/generateSdkCpp.ts";
+} from "../typescript/schemas/src/internal/generateSdkCpp";
 import {
   generateBindgenConfig,
   generateRustTypes,
-} from "../typescript/schemas/src/internal/generateSdkRustCTypes.ts";
-import {
-  generateRosMsg,
-  generateRosMsgDefinition,
-} from "../typescript/schemas/src/internal/index.ts";
+} from "../typescript/schemas/src/internal/generateSdkRustCTypes";
+import { generateRosMsg, generateRosMsgDefinition } from "../typescript/schemas/src/internal/index";
 import {
   foxgloveEnumSchemas,
   foxgloveMessageSchemas,
-} from "../typescript/schemas/src/internal/schemas.ts";
+} from "../typescript/schemas/src/internal/schemas";
 
 async function logProgress(message: string, body: () => Promise<void>) {
   process.stderr.write(`${message}... `);
@@ -82,7 +79,7 @@ async function exec(command: string, args: string[], { cwd }: Pick<SpawnOptions,
 }
 
 async function main({ clean }: { clean: boolean }) {
-  const repoRoot = path.resolve(import.meta.dirname, "..");
+  const repoRoot = path.resolve(__dirname, "..");
   const outDir = path.join(repoRoot, "schemas");
   const rosOutDir = path.join(repoRoot, "ros/src/foxglove_msgs");
   const typescriptTypesDir = path.join(repoRoot, "typescript/schemas/src/types");

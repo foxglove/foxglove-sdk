@@ -1,4 +1,4 @@
-import type { FoxgloveEnumSchema, FoxgloveMessageSchema } from "./types.ts";
+import type { FoxgloveEnumSchema, FoxgloveMessageSchema } from "./types";
 
 export function generateMarkdown(
   schemas: Iterable<FoxgloveMessageSchema>,

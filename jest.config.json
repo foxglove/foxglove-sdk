@@ -6,21 +6,16 @@
     "<rootDir>/.uv_cache",
     "<rootDir>/.venv"
   ],
-  "extensionsToTreatAsEsm": [".ts"],
   "transform": {
     "^.+\\.ts$": [
       "ts-jest",
       {
-        "useESM": true,
         "diagnostics": {
           "//": "add 6133 (unused variables) to default ignore codes",
           "ignoreCodes": [6059, 18002, 18003, 6133]
         }
       }
     ]
-  },
-  "moduleNameMapper": {
-    "^(\\.{1,2}/.*)\\.ts$": "$1"
   },
   "//": "Native find is slow because it does not exclude files: https://github.com/facebook/jest/pull/11264#issuecomment-825377579",
   "haste": { "forceNodeFilesystemAPI": true }

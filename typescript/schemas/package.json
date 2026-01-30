@@ -3,7 +3,6 @@
   "version": "2.0.0",
   "description": "Foxglove-defined message schemas for ROS, Protobuf, FlatBuffers, OMG IDL, and JSON",
   "license": "MIT",
-  "type": "module",
   "author": {
     "name": "Foxglove",
     "email": "support@foxglove.dev",
@@ -14,23 +13,15 @@
     "url": "git+https://github.com/foxglove/foxglove-sdk.git",
     "directory": "typescript/schemas"
   },
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
-    },
-    "./internal": {
-      "types": "./dist/internal/index.d.ts",
-      "import": "./dist/internal/index.js"
-    },
-    "./jsonschema": {
-      "types": "./dist/jsonschema/index.d.ts",
-      "import": "./dist/jsonschema/index.js"
-    }
-  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "files": [
     "dist",
-    "src"
+    "src",
+    "internal.d.ts",
+    "internal.js",
+    "jsonschema.d.ts",
+    "jsonschema.js"
   ],
   "packageManager": "yarn@4.6.0",
   "scripts": {

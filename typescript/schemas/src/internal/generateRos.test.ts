@@ -4,9 +4,9 @@ import {
   generateRosMsgMergedSchema,
   generateRosMsgDefinition,
   generateRosMsg,
-} from "./generateRos.ts";
-import { foxgloveMessageSchemas } from "./schemas.ts";
-import { exampleMessageWithoutArrayOfBytes } from "./testFixtures.ts";
+} from "./generateRos";
+import { foxgloveMessageSchemas } from "./schemas";
+import { exampleMessageWithoutArrayOfBytes } from "./testFixtures";
 
 describe("generateRosMsgDefinition", () => {
   it("generates msg definition description for ROS 1", () => {

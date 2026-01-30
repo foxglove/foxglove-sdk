@@ -2,7 +2,6 @@
   "name": "@foxglove/notebook-frontend",
   "version": "0.0.0",
   "license": "MIT",
-  "type": "module",
   "author": {
     "name": "Foxglove Technologies",
     "email": "support@foxglove.dev"

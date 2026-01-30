@@ -3,7 +3,7 @@ import type {
   FoxgloveMessageSchema,
   FoxglovePrimitive,
   FoxgloveSchema,
-} from "./types.ts";
+} from "./types";
 
 // Flatbuffers only supports nested vectors via table
 export const BYTE_VECTOR_FB = `

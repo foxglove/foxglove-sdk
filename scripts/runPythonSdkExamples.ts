@@ -17,7 +17,7 @@ import path from "node:path";
  * number and, for simplicity, don't illustrate that configuration.
  */
 
-const pyExamplesDir = path.resolve(import.meta.dirname, "../python/foxglove-sdk-examples");
+const pyExamplesDir = path.resolve(__dirname, "../python/foxglove-sdk-examples");
 
 const tempFiles: string[] = [];
 
@@ -96,7 +96,7 @@ async function removeTempFiles() {
 async function getExampleArgs(example: string) {
   switch (example) {
     case "ws-stream-mcap":
-      return ["--file", path.resolve(import.meta.dirname, "fixtures/empty.mcap")];
+      return ["--file", path.resolve(__dirname, "fixtures/empty.mcap")];
     case "write-mcap-file":
       return ["--path", await newTempFile()];
     default:

@@ -3,7 +3,7 @@ import type {
   FoxgloveMessageField,
   FoxgloveMessageSchema,
   FoxglovePrimitive,
-} from "./types.ts";
+} from "./types";
 
 function primitiveToProto(type: FoxglovePrimitive) {
   switch (type) {

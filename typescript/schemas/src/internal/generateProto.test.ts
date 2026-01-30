@@ -1,8 +1,8 @@
 import protobufjs from "protobufjs";
 
-import { generateProto } from "./generateProto.ts";
-import { foxgloveEnumSchemas, foxgloveMessageSchemas } from "./schemas.ts";
-import { exampleEnum, exampleMessage } from "./testFixtures.ts";
+import { generateProto } from "./generateProto";
+import { foxgloveEnumSchemas, foxgloveMessageSchemas } from "./schemas";
+import { exampleEnum, exampleMessage } from "./testFixtures";
 
 describe("generateProto", () => {
   it("generates .proto files", () => {

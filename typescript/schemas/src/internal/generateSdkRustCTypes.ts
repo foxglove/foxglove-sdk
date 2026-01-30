@@ -2,7 +2,7 @@ import assert from "node:assert";
 import fs from "node:fs/promises";
 import { parse as parseToml, stringify as stringifyToml, type TomlTable } from "smol-toml";
 
-import type { FoxgloveEnumSchema, FoxgloveMessageSchema, FoxglovePrimitive } from "./types.ts";
+import type { FoxgloveEnumSchema, FoxgloveMessageSchema, FoxglovePrimitive } from "./types";
 
 function primitiveToRust(type: FoxglovePrimitive) {
   switch (type) {

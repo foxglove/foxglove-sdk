@@ -1,5 +1,5 @@
-import { foxgloveMessageSchemas } from "./schemas.ts";
-import type { FoxgloveEnumSchema, FoxgloveMessageSchema, FoxglovePrimitive } from "./types.ts";
+import { foxgloveMessageSchemas } from "./schemas";
+import type { FoxgloveEnumSchema, FoxgloveMessageSchema, FoxglovePrimitive } from "./types";
 
 const { Duration, Timestamp } = foxgloveMessageSchemas;
 

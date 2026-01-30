@@ -1,5 +1,5 @@
-import { foxgloveEnumSchemas, foxgloveMessageSchemas } from "./schemas.ts";
-import type { FoxgloveMessageSchema } from "./types.ts";
+import { foxgloveEnumSchemas, foxgloveMessageSchemas } from "./schemas";
+import type { FoxgloveMessageSchema } from "./types";
 
 describe("schemas", () => {
   it("has matching names", () => {
