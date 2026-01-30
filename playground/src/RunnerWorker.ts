@@ -178,6 +178,7 @@ mod
         this.#layoutCallback((layout.to_json as () => string)());
       },
     });
+    pyodide.runPython("import playground"); // make module available to future scripts without explicit import
     return pyodide;
   }
 
