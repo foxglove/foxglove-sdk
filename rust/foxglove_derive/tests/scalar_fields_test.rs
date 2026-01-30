@@ -45,6 +45,12 @@ struct GenericMessage<T> {
     val: T,
 }
 
+#[derive(Encode)]
+struct TestMessageOption {
+    required: u32,
+    optional: Option<u32>,
+}
+
 #[test]
 fn test_primitive_serialization() {
     let test_struct = TestMessagePrimitives {
@@ -279,6 +285,78 @@ fn test_generics() {
     let number_value = field_value.as_u32().expect("Field value is not a u32");
     assert_eq!(field_descriptor.name(), "val");
     assert_eq!(number_value, 42);
+}
+
+#[test]
+fn test_optional_field_some() {
+    let test_struct = TestMessageOption {
+        required: 42,
+        optional: Some(123),
+    };
+
+    let mut buf = BytesMut::new();
+    test_struct.encode(&mut buf).expect("Failed to encode");
+
+    let schema = TestMessageOption::get_schema().expect("Failed to get schema");
+    let message_descriptor = get_message_descriptor(&schema);
+    let deserialized_message = DynamicMessage::decode(message_descriptor.clone(), buf.as_ref())
+        .expect("Failed to deserialize");
+
+    // Verify required field
+    let required_field = message_descriptor
+        .get_field_by_name("required")
+        .expect("Field 'required' not found");
+    let required_value = deserialized_message
+        .get_field(&required_field)
+        .as_u32()
+        .unwrap();
+    assert_eq!(required_value, 42);
+
+    // Verify optional field with Some value
+    let optional_field = message_descriptor
+        .get_field_by_name("optional")
+        .expect("Field 'optional' not found");
+    let optional_value = deserialized_message
+        .get_field(&optional_field)
+        .as_u32()
+        .unwrap();
+    assert_eq!(optional_value, 123);
+}
+
+#[test]
+fn test_optional_field_none() {
+    let test_struct = TestMessageOption {
+        required: 42,
+        optional: None,
+    };
+
+    let mut buf = BytesMut::new();
+    test_struct.encode(&mut buf).expect("Failed to encode");
+
+    let schema = TestMessageOption::get_schema().expect("Failed to get schema");
+    let message_descriptor = get_message_descriptor(&schema);
+    let deserialized_message = DynamicMessage::decode(message_descriptor.clone(), buf.as_ref())
+        .expect("Failed to deserialize");
+
+    // Verify required field
+    let required_field = message_descriptor
+        .get_field_by_name("required")
+        .expect("Field 'required' not found");
+    let required_value = deserialized_message
+        .get_field(&required_field)
+        .as_u32()
+        .unwrap();
+    assert_eq!(required_value, 42);
+
+    // Verify optional field with None value - should be default (0 for u32)
+    let optional_field = message_descriptor
+        .get_field_by_name("optional")
+        .expect("Field 'optional' not found");
+    let optional_value = deserialized_message
+        .get_field(&optional_field)
+        .as_u32()
+        .unwrap();
+    assert_eq!(optional_value, 0); // Default value for u32 in proto3
 }
 
 fn get_message_descriptor(schema: &Schema) -> MessageDescriptor {

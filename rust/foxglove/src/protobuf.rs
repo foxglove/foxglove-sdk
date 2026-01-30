@@ -1,4 +1,9 @@
 //! Interfaces for working with Protocol Buffers.
+
+#[cfg(feature = "chrono")]
+mod chrono;
+mod wkt;
+
 use prost_types::field_descriptor_proto::Type as ProstFieldType;
 
 /// Serializes a Protocol Buffers FileDescriptorSet to a byte vector.
@@ -439,6 +444,51 @@ where
         let delim_len = prost::encoding::length_delimiter_len(self.len());
         let data_len: usize = self.iter().map(|value| value.encoded_len()).sum();
         delim_len + data_len
+    }
+}
+
+// Implement ProtobufField for Option<T> where T implements ProtobufField.
+// In proto3, all fields are implicitly optional. None means the field is not written.
+impl<T> ProtobufField for Option<T>
+where
+    T: ProtobufField,
+{
+    fn field_type() -> ProstFieldType {
+        T::field_type()
+    }
+
+    fn wire_type() -> u32 {
+        T::wire_type()
+    }
+
+    fn write_tagged(&self, field_number: u32, buf: &mut impl bytes::BufMut) {
+        if let Some(value) = self {
+            value.write_tagged(field_number, buf);
+        }
+        // None means don't write anything - field will take default value when decoded
+    }
+
+    fn write(&self, _buf: &mut impl bytes::BufMut) {
+        panic!("Option<T> should always be written using write_tagged");
+    }
+
+    fn message_descriptor() -> Option<prost_types::DescriptorProto> {
+        T::message_descriptor()
+    }
+
+    fn enum_descriptor() -> Option<prost_types::EnumDescriptorProto> {
+        T::enum_descriptor()
+    }
+
+    fn type_name() -> Option<String> {
+        T::type_name()
+    }
+
+    fn encoded_len(&self) -> usize {
+        match self {
+            Some(value) => value.encoded_len(),
+            None => 0,
+        }
     }
 }
 
