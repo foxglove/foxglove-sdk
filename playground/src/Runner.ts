@@ -48,6 +48,14 @@ export class Runner extends EventEmitter<EventMap> {
     return await this.#remote.getSignatureHelp(code, line, col);
   }
 
+  async getHover(
+    code: string,
+    line: number,
+    col: number,
+  ): Promise<monaco.languages.Hover | undefined> {
+    return await this.#remote.getHover(code, line, col);
+  }
+
   dispose(): void {
     this.#remote[Comlink.releaseProxy]();
     this.#worker.terminate();
