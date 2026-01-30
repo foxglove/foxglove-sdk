@@ -7,7 +7,6 @@
     "module": "CommonJS",
     "moduleResolution": "Node",
     "esModuleInterop": true,
-    "noEmit": false,
     "erasableSyntaxOnly": false,
     "verbatimModuleSyntax": false
   }
