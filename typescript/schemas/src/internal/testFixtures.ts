@@ -1,9 +1,7 @@
 import { foxgloveMessageSchemas } from "./schemas.ts";
 import type { FoxgloveEnumSchema, FoxgloveMessageSchema, FoxglovePrimitive } from "./types.ts";
 
-// Non-null assertions are safe here because these schemas are known to exist
-const Duration = foxgloveMessageSchemas.Duration!;
-const Timestamp = foxgloveMessageSchemas.Timestamp!;
+const { Duration, Timestamp } = foxgloveMessageSchemas;
 
 const allPrimitives: FoxglovePrimitive[] = ["boolean", "bytes", "float64", "uint32", "string"];
 

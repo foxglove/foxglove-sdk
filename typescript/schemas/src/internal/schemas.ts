@@ -1730,7 +1730,7 @@ const LaserScan: FoxgloveMessageSchema = {
   ],
 };
 
-export const foxgloveMessageSchemas: Record<string, FoxgloveMessageSchema> = {
+export const foxgloveMessageSchemas = {
   ArrowPrimitive,
   CameraCalibration,
   CircleAnnotation,
@@ -1777,7 +1777,7 @@ export const foxgloveMessageSchemas: Record<string, FoxgloveMessageSchema> = {
   Vector3,
 };
 
-export const foxgloveEnumSchemas: Record<string, FoxgloveEnumSchema> = {
+export const foxgloveEnumSchemas = {
   LineType,
   LogLevel,
   SceneEntityDeletionType,
