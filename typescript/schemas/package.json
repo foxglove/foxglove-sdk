@@ -29,7 +29,8 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "src"
   ],
   "packageManager": "yarn@4.6.0",
   "scripts": {
