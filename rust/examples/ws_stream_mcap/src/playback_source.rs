@@ -12,7 +12,7 @@ pub trait PlaybackSource {
     /// Returns the (start, end) time bounds of the data in nanoseconds.
     ///
     /// Determining this is dependent on the format of data you are loading.
-    fn time_bounds(&self) -> (u64, u64);
+    fn time_range(&self) -> (u64, u64);
 
     /// Sets the playback speed multiplier (e.g., 1.0 for real-time, 2.0 for double speed).
     ///

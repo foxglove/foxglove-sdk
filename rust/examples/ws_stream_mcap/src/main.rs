@@ -97,7 +97,7 @@ fn main() -> Result<()> {
     info!("Loading mcap summary");
 
     let mcap_player = McapPlayer::new(&args.file)?;
-    let (start_time, end_time) = mcap_player.time_bounds();
+    let (start_time, end_time) = mcap_player.time_range();
 
     let mcap_player = Arc::new(Mutex::new(mcap_player));
     let listener = Arc::new(Listener::new(mcap_player.clone()));
