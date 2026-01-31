@@ -21,11 +21,11 @@ use foxglove::WebSocketServer;
 use tracing::info;
 
 struct Listener {
-    player: Arc<Mutex<dyn Send + Sync + PlaybackSource>>,
+    player: Arc<Mutex<dyn Send + PlaybackSource>>,
 }
 
 impl Listener {
-    fn new(player: Arc<Mutex<dyn Send + Sync + PlaybackSource>>) -> Self {
+    fn new(player: Arc<Mutex<dyn Send + PlaybackSource>>) -> Self {
         Self { player }
     }
 }
@@ -75,7 +75,7 @@ struct Cli {
 }
 
 fn main() -> Result<()> {
-    let env = env_logger::Env::default().default_filter_or("debug");
+    let env = env_logger::Env::default().default_filter_or("info");
     env_logger::init_from_env(env);
 
     let args = Cli::parse();
