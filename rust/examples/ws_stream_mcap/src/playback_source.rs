@@ -53,7 +53,7 @@ pub trait PlaybackSource {
     /// playback speed.
     ///
     /// Returns `None` when there are no more messages, indicating playback has ended.
-    fn next_wakeup(&mut self) -> Result<Option<Instant>>;
+    fn next_wakeup(&mut self) -> Option<Instant>;
 
     /// Logs pending messages up to the current playback time and broadcasts time updates.
     ///

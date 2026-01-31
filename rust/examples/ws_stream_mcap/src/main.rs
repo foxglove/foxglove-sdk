@@ -6,7 +6,7 @@ mod playback_source;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use mcap_player::McapPlayer;
 use playback_source::PlaybackSource;
@@ -14,7 +14,8 @@ use playback_source::PlaybackSource;
 use anyhow::Result;
 use clap::Parser;
 use foxglove::websocket::{
-    Capability, PlaybackCommand, PlaybackControlRequest, PlaybackState, ServerListener,
+    Capability, PlaybackCommand, PlaybackControlRequest, PlaybackState, PlaybackStatus,
+    ServerListener,
 };
 use foxglove::WebSocketServer;
 use tracing::info;
@@ -94,12 +95,18 @@ fn main() -> Result<()> {
     .expect("Failed to set SIGINT handler");
 
     info!("Loading mcap summary");
-    let mcap_player = Arc::new(Mutex::new(McapPlayer::new(args.path)));
-    let listener = Listener::new(mcap_player);
+
+    let mcap_player = McapPlayer::new(&args.file)?;
+    let (start_time, end_time) = mcap_player.time_bounds();
+
+    let mcap_player = Arc::new(Mutex::new(mcap_player));
+    let listener = Arc::new(Listener::new(mcap_player.clone()));
 
     let server = WebSocketServer::new()
         .name(file_name)
         .capabilities([Capability::Time])
+        .playback_time_range(start_time, end_time)
+        .listener(listener)
         .bind(&args.host, args.port)
         .start_blocking()
         .expect("Server failed to start");
@@ -109,12 +116,30 @@ fn main() -> Result<()> {
 
     info!("Starting stream");
     while !done.load(Ordering::Relaxed) {
-        summary.mcap_player().stream_until(&server, &done)?;
-        if !args.r#loop {
-            done.store(true, Ordering::Relaxed);
-        } else {
-            info!("Looping");
-            server.clear_session(None);
+        let status = { mcap_player.lock().unwrap().status() };
+        if status != PlaybackStatus::Playing {
+            std::thread::sleep(Duration::from_millis(10));
+            continue;
+        }
+
+        let next_wakeup = { mcap_player.lock().unwrap().next_wakeup() };
+        let Some(next_wakeup) = next_wakeup else {
+            let player = mcap_player.lock().unwrap();
+            server.broadcast_playback_state(PlaybackState {
+                current_time: player.current_time(),
+                playback_speed: player.playback_speed(),
+                status: player.status(),
+                did_seek: false,
+                request_id: None,
+            });
+            continue;
+        };
+
+        let now = Instant::now();
+        std::thread::sleep(next_wakeup - now);
+
+        {
+            mcap_player.lock().unwrap().log_messages(&server)?;
         }
     }
 

@@ -10,11 +10,16 @@ use std::time::{Duration, Instant};
 
 use anyhow::{anyhow, Context, Result};
 use bytes::Buf;
+use foxglove::websocket::PlaybackStatus;
 use foxglove::{ChannelBuilder, PartialMetadata, RawChannel, Schema, WebSocketServerHandle};
+use mcap::read::Summary;
 use mcap::records::{MessageHeader, Record, SchemaHeader};
 use mcap::sans_io::linear_reader::{LinearReadEvent, LinearReader, LinearReaderOptions};
 
+use crate::playback_source::PlaybackSource;
+
 pub struct McapPlayer {
+    contents: Vec<u8>,
     path: PathBuf,
     summary: Summary,
     time_tracker: Option<TimeTracker>,
@@ -23,8 +28,12 @@ pub struct McapPlayer {
 impl McapPlayer {
     /// Creates a new MCAP player.
     pub(crate) fn new(path: &Path) -> Result<Self> {
-        let summary = Summary::load_from_mcap(path)?;
+        let contents = std::fs::read(&path)?;
+        let summary = Summary::read(&contents)
+            .context("failed to read MCAP summary")?
+            .ok_or_else(|| anyhow!("MCAP file has no summary section"))?;
         Ok(Self {
+            contents,
             path: path.to_owned(),
             summary,
             time_tracker: None,
@@ -81,6 +90,48 @@ impl McapPlayer {
                 },
             );
         }
+    }
+}
+
+impl PlaybackSource for McapPlayer {
+    fn time_bounds(&self) -> (u64, u64) {
+        todo!()
+    }
+
+    fn set_playback_speed(&mut self, speed: f32) {
+        todo!()
+    }
+
+    fn play(&mut self) {
+        todo!()
+    }
+
+    fn pause(&mut self) {
+        todo!()
+    }
+
+    fn seek(&mut self, log_time: u64) -> Result<()> {
+        todo!()
+    }
+
+    fn status(&self) -> PlaybackStatus {
+        todo!()
+    }
+
+    fn current_time(&self) -> u64 {
+        todo!()
+    }
+
+    fn playback_speed(&self) -> f32 {
+        todo!()
+    }
+
+    fn next_wakeup(&mut self) -> Option<Instant> {
+        todo!()
+    }
+
+    fn log_messages(&mut self, server: &WebSocketServerHandle) -> Result<()> {
+        todo!()
     }
 }
 
@@ -149,89 +200,5 @@ where
         Ok(true)
     } else {
         Ok(false)
-    }
-}
-
-#[derive(Default)]
-pub struct Summary {
-    path: PathBuf,
-    schemas: HashMap<u16, Schema>,
-    channels: HashMap<u16, Arc<RawChannel>>,
-}
-
-impl Summary {
-    pub fn load_from_mcap(path: &Path) -> Result<Self> {
-        let mut file = BufReader::new(File::open(path)?);
-
-        // Read the last 28 bytes of the file to validate the trailing magic (8 bytes) and obtain
-        // the summary start value, which is the first u64 in the footer record (20 bytes).
-        let mut buf = Vec::with_capacity(28);
-        file.seek(SeekFrom::End(-28)).context("seek footer")?;
-        file.read_to_end(&mut buf).context("read footer")?;
-        if !buf.ends_with(mcap::MAGIC) {
-            return Err(anyhow!("bad footer magic"));
-        }
-
-        // Seek to summary section.
-        let summary_start = buf.as_slice().get_u64_le();
-        if summary_start == 0 {
-            return Err(anyhow!("missing summary section"));
-        }
-        file.seek(SeekFrom::Start(summary_start))
-            .context("seek summary")?;
-
-        let mut reader = LinearReader::new_with_options(LinearReaderOptions {
-            skip_start_magic: true,
-            ..Default::default()
-        });
-
-        let mut summary = Summary {
-            path: path.to_owned(),
-            schemas: HashMap::new(),
-            channels: HashMap::new(),
-        };
-        while advance_reader(&mut reader, &mut file, |rec| summary.handle_record(rec))
-            .context("read summary")?
-        {}
-
-        Ok(summary)
-    }
-
-    // Handles a record from the summary section.
-    fn handle_record(&mut self, record: Record<'_>) -> Result<()> {
-        match record {
-            Record::Schema { header, data } => self.handle_schema(&header, data),
-            Record::Channel(channel) => self.handle_channel(channel),
-            _ => Ok(()),
-        }
-    }
-
-    /// Caches schema information.
-    fn handle_schema(
-        &mut self,
-        header: &SchemaHeader,
-        data: Cow<'_, [u8]>,
-    ) -> Result<(), anyhow::Error> {
-        if header.id == 0 {
-            return Err(anyhow!("invalid schema id"))?;
-        }
-        if let Entry::Vacant(entry) = self.schemas.entry(header.id) {
-            let schema = Schema::new(&header.name, &header.encoding, data.into_owned());
-            entry.insert(schema);
-        }
-        Ok(())
-    }
-
-    /// Registers a new channel.
-    fn handle_channel(&mut self, record: mcap::records::Channel) -> Result<(), anyhow::Error> {
-        if let Entry::Vacant(entry) = self.channels.entry(record.id) {
-            let schema = self.schemas.get(&record.schema_id).cloned();
-            let channel = ChannelBuilder::new(record.topic)
-                .message_encoding(&record.message_encoding)
-                .schema(schema)
-                .build_raw()?;
-            entry.insert(channel);
-        }
-        Ok(())
     }
 }
