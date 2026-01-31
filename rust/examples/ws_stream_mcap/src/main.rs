@@ -152,18 +152,13 @@ fn main() -> Result<()> {
             continue;
         }
 
-        let next_wakeup = {
-            let mut player = player.lock().unwrap();
-            player.next_wakeup()?
-        };
+        let next_wakeup = { player.lock().unwrap().next_wakeup()? };
 
         let Some(next_wakeup) = next_wakeup else {
             let ended = { player.lock().unwrap().status() == PlaybackStatus::Ended };
             if ended {
                 info!("Playback complete");
-                server.broadcast_playback_state(PlaybackState {
-                    ..listener.current_state()
-                });
+                server.broadcast_playback_state(listener.current_state());
             }
             continue;
         };
@@ -173,14 +168,13 @@ fn main() -> Result<()> {
             std::thread::sleep(next_wakeup - now);
         }
 
-        let timestamp = {
+        {
             let mut player = player.lock().unwrap();
-            player.flush_since_last()?;
-            player.should_broadcast_time()
-        };
+            if let Some(timestamp) = player.should_broadcast_time() {
+                server.broadcast_time(timestamp);
+            }
 
-        if let Some(timestamp) = timestamp {
-            server.broadcast_time(timestamp);
+            player.flush_since_last()?;
         }
     }
 
