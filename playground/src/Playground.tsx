@@ -1,7 +1,15 @@
-import { PlayFilledAlt, DocumentDownload } from "@carbon/icons-react";
+import { PlayFilledAlt, DocumentDownload, Settings } from "@carbon/icons-react";
 import { DataSource, SelectLayoutParams } from "@foxglove/embed";
 import { FoxgloveViewer, FoxgloveViewerInterface } from "@foxglove/embed-react";
-import { Button, GlobalStyles, IconButton, Tooltip, Typography } from "@mui/material";
+import {
+  Badge,
+  Button,
+  GlobalStyles,
+  IconButton,
+  TextField,
+  Tooltip,
+  Typography,
+} from "@mui/material";
 import { Allotment } from "allotment";
 import { useCallback, useEffect, useRef, useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
@@ -24,7 +32,7 @@ const useStyles = tss.create(({ theme }) => ({
     display: "flex",
     // Match the height of the app bar in the Foxglove app
     height: "44px",
-    padding: "0 8px 0 16px",
+    padding: theme.spacing(0, 1, 0, 2),
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -32,6 +40,10 @@ const useStyles = tss.create(({ theme }) => ({
     backgroundColor: theme.palette.background.paper,
     color: theme.palette.text.primary,
     container: "topBar / inline-size",
+  },
+  settings: {
+    padding: theme.spacing(2),
+    borderBottom: `1px solid ${theme.palette.divider}`,
   },
   title: {
     "@container topBar (width < 480px)": {
@@ -72,6 +84,7 @@ export function Playground(): React.JSX.Element {
   const runnerRef = useRef<Runner>(undefined);
   const editorRef = useRef<EditorInterface>(null);
   const viewerRef = useRef<FoxgloveViewerInterface>(null);
+  const settingsButtonRef = useRef<HTMLButtonElement>(null);
   const { cx, classes } = useStyles();
 
   const [initialState] = useState(() => {
@@ -95,10 +108,19 @@ export function Playground(): React.JSX.Element {
           force: false,
         },
   );
+  const [embedURL, setEmbedURL] = useState<URL | undefined>(initialState?.embedURL);
+  const [embedURLError, setEmbedURLError] = useState<string | undefined>();
   const [ready, setReady] = useState(false);
   const [mcapFilename, setMcapFilename] = useState<string | undefined>();
   const [dataSource, setDataSource] = useState<DataSource | undefined>();
   const layoutInputRef = useRef<HTMLInputElement>(null);
+
+  const hasModifiedSettings = embedURL != undefined;
+
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const toggleSettings = useCallback(() => {
+    setSettingsOpen((open) => !open);
+  }, []);
 
   useEffect(() => {
     setReady(false);
@@ -150,39 +172,47 @@ export function Playground(): React.JSX.Element {
         setAndCopyUrlState({
           code: editor.getValue(),
           layout: layout ?? selectedLayout.opaqueLayout,
+          embedURL,
         });
       })
       .catch((err: unknown) => {
         toast.error(`Sharing failed: ${String(err)}`);
       });
-  }, [selectedLayout]);
+  }, [selectedLayout, embedURL]);
 
   const chooseLayout = useCallback(() => {
     layoutInputRef.current?.click();
   }, []);
 
-  const onLayoutSelected = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) {
-      return;
-    }
-    file
-      .text()
-      .then(JSON.parse)
-      .then(
-        (layout) => {
-          setSelectedLayout({
-            storageKey: LAYOUT_STORAGE_KEY,
-            opaqueLayout: layout,
-            force: true,
-          });
-          setAndCopyUrlState({ code: editorRef.current?.getValue() ?? "", layout });
-        },
-        (err: unknown) => {
-          toast.error(`Failed to load layout: ${String(err)}`);
-        },
-      );
-  }, []);
+  const onLayoutSelected = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) {
+        return;
+      }
+      file
+        .text()
+        .then(JSON.parse)
+        .then(
+          (layout) => {
+            setSelectedLayout({
+              storageKey: LAYOUT_STORAGE_KEY,
+              opaqueLayout: layout,
+              force: true,
+            });
+            setAndCopyUrlState({
+              code: editorRef.current?.getValue() ?? "",
+              layout,
+              embedURL,
+            });
+          },
+          (err: unknown) => {
+            toast.error(`Failed to load layout: ${String(err)}`);
+          },
+        );
+    },
+    [embedURL],
+  );
 
   const download = useCallback(async () => {
     const runner = runnerRef.current;
@@ -263,8 +293,50 @@ export function Playground(): React.JSX.Element {
             <Button variant="outlined" onClick={share}>
               Share
             </Button>
+            <IconButton
+              ref={settingsButtonRef}
+              onClick={toggleSettings}
+              color={settingsOpen ? "primary" : "default"}
+            >
+              <Badge color="primary" variant="dot" invisible={!hasModifiedSettings}>
+                <Settings />
+              </Badge>
+            </IconButton>
           </div>
         </div>
+        {settingsOpen && (
+          <div className={classes.settings}>
+            <TextField
+              label="Embed URL"
+              defaultValue={embedURL}
+              placeholder="https://embed.foxglove.dev"
+              onChange={(event) => {
+                try {
+                  if (event.target.value) {
+                    new URL(event.target.value);
+                  }
+                  setEmbedURLError(undefined);
+                } catch (_err) {
+                  setEmbedURLError("Invalid URL");
+                }
+              }}
+              onBlur={(event) => {
+                try {
+                  if (event.target.value) {
+                    setEmbedURL(new URL(event.target.value));
+                  } else {
+                    setEmbedURL(undefined);
+                  }
+                  setEmbedURLError(undefined);
+                } catch (_err) {
+                  setEmbedURLError("Invalid URL");
+                }
+              }}
+              error={!!embedURLError}
+              helperText={embedURLError}
+            />
+          </div>
+        )}
         <Editor
           ref={editorRef}
           initialValue={initialState?.code ?? DEFAULT_CODE}
@@ -275,6 +347,7 @@ export function Playground(): React.JSX.Element {
       <Allotment.Pane minSize={200}>
         <FoxgloveViewer
           ref={viewerRef}
+          src={embedURL?.href}
           style={{ width: "100%", height: "100%", overflow: "hidden" }}
           data={dataSource}
           layout={selectedLayout}

@@ -4,6 +4,7 @@ import zstd from "@foxglove/wasm-zstd";
 export type UrlState = {
   code: string;
   layout?: unknown;
+  embedURL?: URL;
 };
 
 // https://developer.mozilla.org/en-US/docs/Glossary/Base64#url_and_filename_safe_base64
@@ -52,6 +53,9 @@ function serializeState(state: UrlState): string {
   if (state.layout != undefined) {
     params.set("layout", compressEncode(JSON.stringify(state.layout)));
   }
+  if (state.embedURL != undefined) {
+    params.set("embed", state.embedURL.href);
+  }
   return params.toString();
 }
 
@@ -67,11 +71,23 @@ function deserializeState(serialized: string): UrlState | undefined {
     throw new Error(`Unable to decode URL state: missing version ${params.get("v") ?? ""}`);
   }
   const encodedCode = params.get("code") ?? "";
-  const encodedLayout = params.get("layout") ?? "";
   const code = uncompressDecode(encodedCode);
+
+  const encodedLayout = params.get("layout") ?? "";
   const layoutJson = uncompressDecode(encodedLayout);
   const layout = layoutJson ? (JSON.parse(layoutJson) as unknown) : undefined;
-  return { code, layout };
+
+  let embedURL: URL | undefined;
+  try {
+    const embedStr = params.get("embed");
+    if (embedStr) {
+      embedURL = new URL(embedStr);
+    }
+  } catch {
+    // ignore
+  }
+
+  return { code, layout, embedURL };
 }
 
 export function getUrlState(): UrlState | undefined {
