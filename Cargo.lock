@@ -802,6 +802,7 @@ name = "example_structured_logging"
 version = "0.17.0"
 dependencies = [
  "bytes",
+ "chrono",
  "env_logger",
  "foxglove 0.17.0",
  "schemars 1.0.4",
@@ -1064,6 +1065,7 @@ name = "foxglove_derive"
 version = "0.17.0"
 dependencies = [
  "bytes",
+ "chrono",
  "foxglove 0.17.0",
  "proc-macro2",
  "prost 0.14.3",
