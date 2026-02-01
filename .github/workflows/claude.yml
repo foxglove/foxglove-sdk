@@ -1,0 +1,66 @@
+# Automated PR review workflow using Claude Code.
+# Triggers on non-draft PRs to provide code review feedback via GitHub comments.
+name: Claude
+
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review, reopened]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref }}
+  cancel-in-progress: true
+
+jobs:
+  pr-review:
+    if: >-
+      github.event.pull_request.draft == false &&
+      github.actor != 'dependabot[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: write
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v6.0.1
+        with:
+          fetch-depth: 0
+
+      - run: corepack enable
+
+      - uses: actions/setup-node@v6.0.0
+        with:
+          node-version: 22
+          cache: yarn
+
+      - run: yarn install --immutable
+
+      - name: Read prompt
+        id: prompt
+        run: |
+          {
+            echo "content<<EOF"
+            cat .cursor/commands/review-pr.md
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+
+      - name: Run Claude review
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          track_progress: true
+          use_sticky_comment: true
+          allowed_bots: "cursor[bot]"
+
+          prompt: |
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ github.event.pull_request.number }}
+            BASE BRANCH: ${{ github.event.pull_request.base.ref }}
+
+            ${{ steps.prompt.outputs.content }}
+
+          claude_args: |
+            --model claude-opus-4-5
+            --allowedTools "Read,Glob,Grep,Bash(yarn:*),Bash(cargo:*),Bash(git diff:*),Bash(git fetch:*),Bash(git lfs:*),Bash(git log:*),Bash(git show:*),Bash(gh pr diff:*),Bash(gh pr view:*)"
