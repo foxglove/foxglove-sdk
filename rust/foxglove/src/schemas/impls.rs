@@ -3,6 +3,11 @@ use crate::schemas::{descriptors, foxglove::*};
 use crate::{Schema, Decode, Encode};
 use bytes::BufMut;
 
+#[cfg(feature = "derive")]
+use prost::Message as _;
+#[cfg(feature = "derive")]
+use crate::protobuf::ProtobufField;
+
 impl Encode for ArrowPrimitive {
     type Error = ::prost::EncodeError;
 
@@ -32,6 +37,38 @@ impl Decode for ArrowPrimitive {
     /// Decode a message from a serialized buffer.
     fn decode(buf: impl bytes::Buf) -> Result<Self, ::prost::DecodeError> {
         ::prost::Message::decode(buf)
+    }
+}
+
+#[cfg(feature = "derive")]
+impl ProtobufField for ArrowPrimitive {
+    fn field_type() -> ::prost_types::field_descriptor_proto::Type {
+        ::prost_types::field_descriptor_proto::Type::Message
+    }
+
+    fn wire_type() -> u32 {
+        ::prost::encoding::WireType::LengthDelimited as u32
+    }
+
+    fn write(&self, buf: &mut impl BufMut) {
+        let len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encode_varint(len as u64, buf);
+        ::prost::Message::encode_raw(self, buf);
+    }
+
+    fn type_name() -> Option<String> {
+        Some(".foxglove.ArrowPrimitive".to_string())
+    }
+
+    fn file_descriptors() -> Vec<::prost_types::FileDescriptorProto> {
+        let fds = ::prost_types::FileDescriptorSet::decode(descriptors::ARROW_PRIMITIVE)
+            .expect("invalid file descriptor set");
+        fds.file
+    }
+
+    fn encoded_len(&self) -> usize {
+        let inner_len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encoded_len_varint(inner_len as u64) + inner_len
     }
 }
 
@@ -67,6 +104,38 @@ impl Decode for CameraCalibration {
     }
 }
 
+#[cfg(feature = "derive")]
+impl ProtobufField for CameraCalibration {
+    fn field_type() -> ::prost_types::field_descriptor_proto::Type {
+        ::prost_types::field_descriptor_proto::Type::Message
+    }
+
+    fn wire_type() -> u32 {
+        ::prost::encoding::WireType::LengthDelimited as u32
+    }
+
+    fn write(&self, buf: &mut impl BufMut) {
+        let len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encode_varint(len as u64, buf);
+        ::prost::Message::encode_raw(self, buf);
+    }
+
+    fn type_name() -> Option<String> {
+        Some(".foxglove.CameraCalibration".to_string())
+    }
+
+    fn file_descriptors() -> Vec<::prost_types::FileDescriptorProto> {
+        let fds = ::prost_types::FileDescriptorSet::decode(descriptors::CAMERA_CALIBRATION)
+            .expect("invalid file descriptor set");
+        fds.file
+    }
+
+    fn encoded_len(&self) -> usize {
+        let inner_len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encoded_len_varint(inner_len as u64) + inner_len
+    }
+}
+
 impl Encode for CircleAnnotation {
     type Error = ::prost::EncodeError;
 
@@ -96,6 +165,38 @@ impl Decode for CircleAnnotation {
     /// Decode a message from a serialized buffer.
     fn decode(buf: impl bytes::Buf) -> Result<Self, ::prost::DecodeError> {
         ::prost::Message::decode(buf)
+    }
+}
+
+#[cfg(feature = "derive")]
+impl ProtobufField for CircleAnnotation {
+    fn field_type() -> ::prost_types::field_descriptor_proto::Type {
+        ::prost_types::field_descriptor_proto::Type::Message
+    }
+
+    fn wire_type() -> u32 {
+        ::prost::encoding::WireType::LengthDelimited as u32
+    }
+
+    fn write(&self, buf: &mut impl BufMut) {
+        let len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encode_varint(len as u64, buf);
+        ::prost::Message::encode_raw(self, buf);
+    }
+
+    fn type_name() -> Option<String> {
+        Some(".foxglove.CircleAnnotation".to_string())
+    }
+
+    fn file_descriptors() -> Vec<::prost_types::FileDescriptorProto> {
+        let fds = ::prost_types::FileDescriptorSet::decode(descriptors::CIRCLE_ANNOTATION)
+            .expect("invalid file descriptor set");
+        fds.file
+    }
+
+    fn encoded_len(&self) -> usize {
+        let inner_len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encoded_len_varint(inner_len as u64) + inner_len
     }
 }
 
@@ -131,6 +232,38 @@ impl Decode for Color {
     }
 }
 
+#[cfg(feature = "derive")]
+impl ProtobufField for Color {
+    fn field_type() -> ::prost_types::field_descriptor_proto::Type {
+        ::prost_types::field_descriptor_proto::Type::Message
+    }
+
+    fn wire_type() -> u32 {
+        ::prost::encoding::WireType::LengthDelimited as u32
+    }
+
+    fn write(&self, buf: &mut impl BufMut) {
+        let len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encode_varint(len as u64, buf);
+        ::prost::Message::encode_raw(self, buf);
+    }
+
+    fn type_name() -> Option<String> {
+        Some(".foxglove.Color".to_string())
+    }
+
+    fn file_descriptors() -> Vec<::prost_types::FileDescriptorProto> {
+        let fds = ::prost_types::FileDescriptorSet::decode(descriptors::COLOR)
+            .expect("invalid file descriptor set");
+        fds.file
+    }
+
+    fn encoded_len(&self) -> usize {
+        let inner_len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encoded_len_varint(inner_len as u64) + inner_len
+    }
+}
+
 impl Encode for CompressedImage {
     type Error = ::prost::EncodeError;
 
@@ -160,6 +293,38 @@ impl Decode for CompressedImage {
     /// Decode a message from a serialized buffer.
     fn decode(buf: impl bytes::Buf) -> Result<Self, ::prost::DecodeError> {
         ::prost::Message::decode(buf)
+    }
+}
+
+#[cfg(feature = "derive")]
+impl ProtobufField for CompressedImage {
+    fn field_type() -> ::prost_types::field_descriptor_proto::Type {
+        ::prost_types::field_descriptor_proto::Type::Message
+    }
+
+    fn wire_type() -> u32 {
+        ::prost::encoding::WireType::LengthDelimited as u32
+    }
+
+    fn write(&self, buf: &mut impl BufMut) {
+        let len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encode_varint(len as u64, buf);
+        ::prost::Message::encode_raw(self, buf);
+    }
+
+    fn type_name() -> Option<String> {
+        Some(".foxglove.CompressedImage".to_string())
+    }
+
+    fn file_descriptors() -> Vec<::prost_types::FileDescriptorProto> {
+        let fds = ::prost_types::FileDescriptorSet::decode(descriptors::COMPRESSED_IMAGE)
+            .expect("invalid file descriptor set");
+        fds.file
+    }
+
+    fn encoded_len(&self) -> usize {
+        let inner_len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encoded_len_varint(inner_len as u64) + inner_len
     }
 }
 
@@ -195,6 +360,38 @@ impl Decode for CompressedVideo {
     }
 }
 
+#[cfg(feature = "derive")]
+impl ProtobufField for CompressedVideo {
+    fn field_type() -> ::prost_types::field_descriptor_proto::Type {
+        ::prost_types::field_descriptor_proto::Type::Message
+    }
+
+    fn wire_type() -> u32 {
+        ::prost::encoding::WireType::LengthDelimited as u32
+    }
+
+    fn write(&self, buf: &mut impl BufMut) {
+        let len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encode_varint(len as u64, buf);
+        ::prost::Message::encode_raw(self, buf);
+    }
+
+    fn type_name() -> Option<String> {
+        Some(".foxglove.CompressedVideo".to_string())
+    }
+
+    fn file_descriptors() -> Vec<::prost_types::FileDescriptorProto> {
+        let fds = ::prost_types::FileDescriptorSet::decode(descriptors::COMPRESSED_VIDEO)
+            .expect("invalid file descriptor set");
+        fds.file
+    }
+
+    fn encoded_len(&self) -> usize {
+        let inner_len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encoded_len_varint(inner_len as u64) + inner_len
+    }
+}
+
 impl Encode for CubePrimitive {
     type Error = ::prost::EncodeError;
 
@@ -224,6 +421,38 @@ impl Decode for CubePrimitive {
     /// Decode a message from a serialized buffer.
     fn decode(buf: impl bytes::Buf) -> Result<Self, ::prost::DecodeError> {
         ::prost::Message::decode(buf)
+    }
+}
+
+#[cfg(feature = "derive")]
+impl ProtobufField for CubePrimitive {
+    fn field_type() -> ::prost_types::field_descriptor_proto::Type {
+        ::prost_types::field_descriptor_proto::Type::Message
+    }
+
+    fn wire_type() -> u32 {
+        ::prost::encoding::WireType::LengthDelimited as u32
+    }
+
+    fn write(&self, buf: &mut impl BufMut) {
+        let len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encode_varint(len as u64, buf);
+        ::prost::Message::encode_raw(self, buf);
+    }
+
+    fn type_name() -> Option<String> {
+        Some(".foxglove.CubePrimitive".to_string())
+    }
+
+    fn file_descriptors() -> Vec<::prost_types::FileDescriptorProto> {
+        let fds = ::prost_types::FileDescriptorSet::decode(descriptors::CUBE_PRIMITIVE)
+            .expect("invalid file descriptor set");
+        fds.file
+    }
+
+    fn encoded_len(&self) -> usize {
+        let inner_len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encoded_len_varint(inner_len as u64) + inner_len
     }
 }
 
@@ -259,6 +488,38 @@ impl Decode for CylinderPrimitive {
     }
 }
 
+#[cfg(feature = "derive")]
+impl ProtobufField for CylinderPrimitive {
+    fn field_type() -> ::prost_types::field_descriptor_proto::Type {
+        ::prost_types::field_descriptor_proto::Type::Message
+    }
+
+    fn wire_type() -> u32 {
+        ::prost::encoding::WireType::LengthDelimited as u32
+    }
+
+    fn write(&self, buf: &mut impl BufMut) {
+        let len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encode_varint(len as u64, buf);
+        ::prost::Message::encode_raw(self, buf);
+    }
+
+    fn type_name() -> Option<String> {
+        Some(".foxglove.CylinderPrimitive".to_string())
+    }
+
+    fn file_descriptors() -> Vec<::prost_types::FileDescriptorProto> {
+        let fds = ::prost_types::FileDescriptorSet::decode(descriptors::CYLINDER_PRIMITIVE)
+            .expect("invalid file descriptor set");
+        fds.file
+    }
+
+    fn encoded_len(&self) -> usize {
+        let inner_len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encoded_len_varint(inner_len as u64) + inner_len
+    }
+}
+
 impl Encode for FrameTransform {
     type Error = ::prost::EncodeError;
 
@@ -288,6 +549,38 @@ impl Decode for FrameTransform {
     /// Decode a message from a serialized buffer.
     fn decode(buf: impl bytes::Buf) -> Result<Self, ::prost::DecodeError> {
         ::prost::Message::decode(buf)
+    }
+}
+
+#[cfg(feature = "derive")]
+impl ProtobufField for FrameTransform {
+    fn field_type() -> ::prost_types::field_descriptor_proto::Type {
+        ::prost_types::field_descriptor_proto::Type::Message
+    }
+
+    fn wire_type() -> u32 {
+        ::prost::encoding::WireType::LengthDelimited as u32
+    }
+
+    fn write(&self, buf: &mut impl BufMut) {
+        let len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encode_varint(len as u64, buf);
+        ::prost::Message::encode_raw(self, buf);
+    }
+
+    fn type_name() -> Option<String> {
+        Some(".foxglove.FrameTransform".to_string())
+    }
+
+    fn file_descriptors() -> Vec<::prost_types::FileDescriptorProto> {
+        let fds = ::prost_types::FileDescriptorSet::decode(descriptors::FRAME_TRANSFORM)
+            .expect("invalid file descriptor set");
+        fds.file
+    }
+
+    fn encoded_len(&self) -> usize {
+        let inner_len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encoded_len_varint(inner_len as u64) + inner_len
     }
 }
 
@@ -323,6 +616,38 @@ impl Decode for FrameTransforms {
     }
 }
 
+#[cfg(feature = "derive")]
+impl ProtobufField for FrameTransforms {
+    fn field_type() -> ::prost_types::field_descriptor_proto::Type {
+        ::prost_types::field_descriptor_proto::Type::Message
+    }
+
+    fn wire_type() -> u32 {
+        ::prost::encoding::WireType::LengthDelimited as u32
+    }
+
+    fn write(&self, buf: &mut impl BufMut) {
+        let len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encode_varint(len as u64, buf);
+        ::prost::Message::encode_raw(self, buf);
+    }
+
+    fn type_name() -> Option<String> {
+        Some(".foxglove.FrameTransforms".to_string())
+    }
+
+    fn file_descriptors() -> Vec<::prost_types::FileDescriptorProto> {
+        let fds = ::prost_types::FileDescriptorSet::decode(descriptors::FRAME_TRANSFORMS)
+            .expect("invalid file descriptor set");
+        fds.file
+    }
+
+    fn encoded_len(&self) -> usize {
+        let inner_len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encoded_len_varint(inner_len as u64) + inner_len
+    }
+}
+
 impl Encode for GeoJson {
     type Error = ::prost::EncodeError;
 
@@ -352,6 +677,38 @@ impl Decode for GeoJson {
     /// Decode a message from a serialized buffer.
     fn decode(buf: impl bytes::Buf) -> Result<Self, ::prost::DecodeError> {
         ::prost::Message::decode(buf)
+    }
+}
+
+#[cfg(feature = "derive")]
+impl ProtobufField for GeoJson {
+    fn field_type() -> ::prost_types::field_descriptor_proto::Type {
+        ::prost_types::field_descriptor_proto::Type::Message
+    }
+
+    fn wire_type() -> u32 {
+        ::prost::encoding::WireType::LengthDelimited as u32
+    }
+
+    fn write(&self, buf: &mut impl BufMut) {
+        let len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encode_varint(len as u64, buf);
+        ::prost::Message::encode_raw(self, buf);
+    }
+
+    fn type_name() -> Option<String> {
+        Some(".foxglove.GeoJSON".to_string())
+    }
+
+    fn file_descriptors() -> Vec<::prost_types::FileDescriptorProto> {
+        let fds = ::prost_types::FileDescriptorSet::decode(descriptors::GEO_JSON)
+            .expect("invalid file descriptor set");
+        fds.file
+    }
+
+    fn encoded_len(&self) -> usize {
+        let inner_len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encoded_len_varint(inner_len as u64) + inner_len
     }
 }
 
@@ -387,6 +744,38 @@ impl Decode for Grid {
     }
 }
 
+#[cfg(feature = "derive")]
+impl ProtobufField for Grid {
+    fn field_type() -> ::prost_types::field_descriptor_proto::Type {
+        ::prost_types::field_descriptor_proto::Type::Message
+    }
+
+    fn wire_type() -> u32 {
+        ::prost::encoding::WireType::LengthDelimited as u32
+    }
+
+    fn write(&self, buf: &mut impl BufMut) {
+        let len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encode_varint(len as u64, buf);
+        ::prost::Message::encode_raw(self, buf);
+    }
+
+    fn type_name() -> Option<String> {
+        Some(".foxglove.Grid".to_string())
+    }
+
+    fn file_descriptors() -> Vec<::prost_types::FileDescriptorProto> {
+        let fds = ::prost_types::FileDescriptorSet::decode(descriptors::GRID)
+            .expect("invalid file descriptor set");
+        fds.file
+    }
+
+    fn encoded_len(&self) -> usize {
+        let inner_len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encoded_len_varint(inner_len as u64) + inner_len
+    }
+}
+
 impl Encode for ImageAnnotations {
     type Error = ::prost::EncodeError;
 
@@ -416,6 +805,38 @@ impl Decode for ImageAnnotations {
     /// Decode a message from a serialized buffer.
     fn decode(buf: impl bytes::Buf) -> Result<Self, ::prost::DecodeError> {
         ::prost::Message::decode(buf)
+    }
+}
+
+#[cfg(feature = "derive")]
+impl ProtobufField for ImageAnnotations {
+    fn field_type() -> ::prost_types::field_descriptor_proto::Type {
+        ::prost_types::field_descriptor_proto::Type::Message
+    }
+
+    fn wire_type() -> u32 {
+        ::prost::encoding::WireType::LengthDelimited as u32
+    }
+
+    fn write(&self, buf: &mut impl BufMut) {
+        let len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encode_varint(len as u64, buf);
+        ::prost::Message::encode_raw(self, buf);
+    }
+
+    fn type_name() -> Option<String> {
+        Some(".foxglove.ImageAnnotations".to_string())
+    }
+
+    fn file_descriptors() -> Vec<::prost_types::FileDescriptorProto> {
+        let fds = ::prost_types::FileDescriptorSet::decode(descriptors::IMAGE_ANNOTATIONS)
+            .expect("invalid file descriptor set");
+        fds.file
+    }
+
+    fn encoded_len(&self) -> usize {
+        let inner_len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encoded_len_varint(inner_len as u64) + inner_len
     }
 }
 
@@ -451,6 +872,38 @@ impl Decode for KeyValuePair {
     }
 }
 
+#[cfg(feature = "derive")]
+impl ProtobufField for KeyValuePair {
+    fn field_type() -> ::prost_types::field_descriptor_proto::Type {
+        ::prost_types::field_descriptor_proto::Type::Message
+    }
+
+    fn wire_type() -> u32 {
+        ::prost::encoding::WireType::LengthDelimited as u32
+    }
+
+    fn write(&self, buf: &mut impl BufMut) {
+        let len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encode_varint(len as u64, buf);
+        ::prost::Message::encode_raw(self, buf);
+    }
+
+    fn type_name() -> Option<String> {
+        Some(".foxglove.KeyValuePair".to_string())
+    }
+
+    fn file_descriptors() -> Vec<::prost_types::FileDescriptorProto> {
+        let fds = ::prost_types::FileDescriptorSet::decode(descriptors::KEY_VALUE_PAIR)
+            .expect("invalid file descriptor set");
+        fds.file
+    }
+
+    fn encoded_len(&self) -> usize {
+        let inner_len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encoded_len_varint(inner_len as u64) + inner_len
+    }
+}
+
 impl Encode for LaserScan {
     type Error = ::prost::EncodeError;
 
@@ -480,6 +933,38 @@ impl Decode for LaserScan {
     /// Decode a message from a serialized buffer.
     fn decode(buf: impl bytes::Buf) -> Result<Self, ::prost::DecodeError> {
         ::prost::Message::decode(buf)
+    }
+}
+
+#[cfg(feature = "derive")]
+impl ProtobufField for LaserScan {
+    fn field_type() -> ::prost_types::field_descriptor_proto::Type {
+        ::prost_types::field_descriptor_proto::Type::Message
+    }
+
+    fn wire_type() -> u32 {
+        ::prost::encoding::WireType::LengthDelimited as u32
+    }
+
+    fn write(&self, buf: &mut impl BufMut) {
+        let len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encode_varint(len as u64, buf);
+        ::prost::Message::encode_raw(self, buf);
+    }
+
+    fn type_name() -> Option<String> {
+        Some(".foxglove.LaserScan".to_string())
+    }
+
+    fn file_descriptors() -> Vec<::prost_types::FileDescriptorProto> {
+        let fds = ::prost_types::FileDescriptorSet::decode(descriptors::LASER_SCAN)
+            .expect("invalid file descriptor set");
+        fds.file
+    }
+
+    fn encoded_len(&self) -> usize {
+        let inner_len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encoded_len_varint(inner_len as u64) + inner_len
     }
 }
 
@@ -515,6 +1000,38 @@ impl Decode for LinePrimitive {
     }
 }
 
+#[cfg(feature = "derive")]
+impl ProtobufField for LinePrimitive {
+    fn field_type() -> ::prost_types::field_descriptor_proto::Type {
+        ::prost_types::field_descriptor_proto::Type::Message
+    }
+
+    fn wire_type() -> u32 {
+        ::prost::encoding::WireType::LengthDelimited as u32
+    }
+
+    fn write(&self, buf: &mut impl BufMut) {
+        let len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encode_varint(len as u64, buf);
+        ::prost::Message::encode_raw(self, buf);
+    }
+
+    fn type_name() -> Option<String> {
+        Some(".foxglove.LinePrimitive".to_string())
+    }
+
+    fn file_descriptors() -> Vec<::prost_types::FileDescriptorProto> {
+        let fds = ::prost_types::FileDescriptorSet::decode(descriptors::LINE_PRIMITIVE)
+            .expect("invalid file descriptor set");
+        fds.file
+    }
+
+    fn encoded_len(&self) -> usize {
+        let inner_len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encoded_len_varint(inner_len as u64) + inner_len
+    }
+}
+
 impl Encode for LocationFix {
     type Error = ::prost::EncodeError;
 
@@ -544,6 +1061,38 @@ impl Decode for LocationFix {
     /// Decode a message from a serialized buffer.
     fn decode(buf: impl bytes::Buf) -> Result<Self, ::prost::DecodeError> {
         ::prost::Message::decode(buf)
+    }
+}
+
+#[cfg(feature = "derive")]
+impl ProtobufField for LocationFix {
+    fn field_type() -> ::prost_types::field_descriptor_proto::Type {
+        ::prost_types::field_descriptor_proto::Type::Message
+    }
+
+    fn wire_type() -> u32 {
+        ::prost::encoding::WireType::LengthDelimited as u32
+    }
+
+    fn write(&self, buf: &mut impl BufMut) {
+        let len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encode_varint(len as u64, buf);
+        ::prost::Message::encode_raw(self, buf);
+    }
+
+    fn type_name() -> Option<String> {
+        Some(".foxglove.LocationFix".to_string())
+    }
+
+    fn file_descriptors() -> Vec<::prost_types::FileDescriptorProto> {
+        let fds = ::prost_types::FileDescriptorSet::decode(descriptors::LOCATION_FIX)
+            .expect("invalid file descriptor set");
+        fds.file
+    }
+
+    fn encoded_len(&self) -> usize {
+        let inner_len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encoded_len_varint(inner_len as u64) + inner_len
     }
 }
 
@@ -579,6 +1128,38 @@ impl Decode for LocationFixes {
     }
 }
 
+#[cfg(feature = "derive")]
+impl ProtobufField for LocationFixes {
+    fn field_type() -> ::prost_types::field_descriptor_proto::Type {
+        ::prost_types::field_descriptor_proto::Type::Message
+    }
+
+    fn wire_type() -> u32 {
+        ::prost::encoding::WireType::LengthDelimited as u32
+    }
+
+    fn write(&self, buf: &mut impl BufMut) {
+        let len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encode_varint(len as u64, buf);
+        ::prost::Message::encode_raw(self, buf);
+    }
+
+    fn type_name() -> Option<String> {
+        Some(".foxglove.LocationFixes".to_string())
+    }
+
+    fn file_descriptors() -> Vec<::prost_types::FileDescriptorProto> {
+        let fds = ::prost_types::FileDescriptorSet::decode(descriptors::LOCATION_FIXES)
+            .expect("invalid file descriptor set");
+        fds.file
+    }
+
+    fn encoded_len(&self) -> usize {
+        let inner_len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encoded_len_varint(inner_len as u64) + inner_len
+    }
+}
+
 impl Encode for Log {
     type Error = ::prost::EncodeError;
 
@@ -608,6 +1189,38 @@ impl Decode for Log {
     /// Decode a message from a serialized buffer.
     fn decode(buf: impl bytes::Buf) -> Result<Self, ::prost::DecodeError> {
         ::prost::Message::decode(buf)
+    }
+}
+
+#[cfg(feature = "derive")]
+impl ProtobufField for Log {
+    fn field_type() -> ::prost_types::field_descriptor_proto::Type {
+        ::prost_types::field_descriptor_proto::Type::Message
+    }
+
+    fn wire_type() -> u32 {
+        ::prost::encoding::WireType::LengthDelimited as u32
+    }
+
+    fn write(&self, buf: &mut impl BufMut) {
+        let len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encode_varint(len as u64, buf);
+        ::prost::Message::encode_raw(self, buf);
+    }
+
+    fn type_name() -> Option<String> {
+        Some(".foxglove.Log".to_string())
+    }
+
+    fn file_descriptors() -> Vec<::prost_types::FileDescriptorProto> {
+        let fds = ::prost_types::FileDescriptorSet::decode(descriptors::LOG)
+            .expect("invalid file descriptor set");
+        fds.file
+    }
+
+    fn encoded_len(&self) -> usize {
+        let inner_len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encoded_len_varint(inner_len as u64) + inner_len
     }
 }
 
@@ -643,6 +1256,38 @@ impl Decode for ModelPrimitive {
     }
 }
 
+#[cfg(feature = "derive")]
+impl ProtobufField for ModelPrimitive {
+    fn field_type() -> ::prost_types::field_descriptor_proto::Type {
+        ::prost_types::field_descriptor_proto::Type::Message
+    }
+
+    fn wire_type() -> u32 {
+        ::prost::encoding::WireType::LengthDelimited as u32
+    }
+
+    fn write(&self, buf: &mut impl BufMut) {
+        let len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encode_varint(len as u64, buf);
+        ::prost::Message::encode_raw(self, buf);
+    }
+
+    fn type_name() -> Option<String> {
+        Some(".foxglove.ModelPrimitive".to_string())
+    }
+
+    fn file_descriptors() -> Vec<::prost_types::FileDescriptorProto> {
+        let fds = ::prost_types::FileDescriptorSet::decode(descriptors::MODEL_PRIMITIVE)
+            .expect("invalid file descriptor set");
+        fds.file
+    }
+
+    fn encoded_len(&self) -> usize {
+        let inner_len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encoded_len_varint(inner_len as u64) + inner_len
+    }
+}
+
 impl Encode for PackedElementField {
     type Error = ::prost::EncodeError;
 
@@ -672,6 +1317,38 @@ impl Decode for PackedElementField {
     /// Decode a message from a serialized buffer.
     fn decode(buf: impl bytes::Buf) -> Result<Self, ::prost::DecodeError> {
         ::prost::Message::decode(buf)
+    }
+}
+
+#[cfg(feature = "derive")]
+impl ProtobufField for PackedElementField {
+    fn field_type() -> ::prost_types::field_descriptor_proto::Type {
+        ::prost_types::field_descriptor_proto::Type::Message
+    }
+
+    fn wire_type() -> u32 {
+        ::prost::encoding::WireType::LengthDelimited as u32
+    }
+
+    fn write(&self, buf: &mut impl BufMut) {
+        let len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encode_varint(len as u64, buf);
+        ::prost::Message::encode_raw(self, buf);
+    }
+
+    fn type_name() -> Option<String> {
+        Some(".foxglove.PackedElementField".to_string())
+    }
+
+    fn file_descriptors() -> Vec<::prost_types::FileDescriptorProto> {
+        let fds = ::prost_types::FileDescriptorSet::decode(descriptors::PACKED_ELEMENT_FIELD)
+            .expect("invalid file descriptor set");
+        fds.file
+    }
+
+    fn encoded_len(&self) -> usize {
+        let inner_len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encoded_len_varint(inner_len as u64) + inner_len
     }
 }
 
@@ -707,6 +1384,38 @@ impl Decode for Point2 {
     }
 }
 
+#[cfg(feature = "derive")]
+impl ProtobufField for Point2 {
+    fn field_type() -> ::prost_types::field_descriptor_proto::Type {
+        ::prost_types::field_descriptor_proto::Type::Message
+    }
+
+    fn wire_type() -> u32 {
+        ::prost::encoding::WireType::LengthDelimited as u32
+    }
+
+    fn write(&self, buf: &mut impl BufMut) {
+        let len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encode_varint(len as u64, buf);
+        ::prost::Message::encode_raw(self, buf);
+    }
+
+    fn type_name() -> Option<String> {
+        Some(".foxglove.Point2".to_string())
+    }
+
+    fn file_descriptors() -> Vec<::prost_types::FileDescriptorProto> {
+        let fds = ::prost_types::FileDescriptorSet::decode(descriptors::POINT2)
+            .expect("invalid file descriptor set");
+        fds.file
+    }
+
+    fn encoded_len(&self) -> usize {
+        let inner_len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encoded_len_varint(inner_len as u64) + inner_len
+    }
+}
+
 impl Encode for Point3 {
     type Error = ::prost::EncodeError;
 
@@ -736,6 +1445,38 @@ impl Decode for Point3 {
     /// Decode a message from a serialized buffer.
     fn decode(buf: impl bytes::Buf) -> Result<Self, ::prost::DecodeError> {
         ::prost::Message::decode(buf)
+    }
+}
+
+#[cfg(feature = "derive")]
+impl ProtobufField for Point3 {
+    fn field_type() -> ::prost_types::field_descriptor_proto::Type {
+        ::prost_types::field_descriptor_proto::Type::Message
+    }
+
+    fn wire_type() -> u32 {
+        ::prost::encoding::WireType::LengthDelimited as u32
+    }
+
+    fn write(&self, buf: &mut impl BufMut) {
+        let len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encode_varint(len as u64, buf);
+        ::prost::Message::encode_raw(self, buf);
+    }
+
+    fn type_name() -> Option<String> {
+        Some(".foxglove.Point3".to_string())
+    }
+
+    fn file_descriptors() -> Vec<::prost_types::FileDescriptorProto> {
+        let fds = ::prost_types::FileDescriptorSet::decode(descriptors::POINT3)
+            .expect("invalid file descriptor set");
+        fds.file
+    }
+
+    fn encoded_len(&self) -> usize {
+        let inner_len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encoded_len_varint(inner_len as u64) + inner_len
     }
 }
 
@@ -771,6 +1512,38 @@ impl Decode for Point3InFrame {
     }
 }
 
+#[cfg(feature = "derive")]
+impl ProtobufField for Point3InFrame {
+    fn field_type() -> ::prost_types::field_descriptor_proto::Type {
+        ::prost_types::field_descriptor_proto::Type::Message
+    }
+
+    fn wire_type() -> u32 {
+        ::prost::encoding::WireType::LengthDelimited as u32
+    }
+
+    fn write(&self, buf: &mut impl BufMut) {
+        let len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encode_varint(len as u64, buf);
+        ::prost::Message::encode_raw(self, buf);
+    }
+
+    fn type_name() -> Option<String> {
+        Some(".foxglove.Point3InFrame".to_string())
+    }
+
+    fn file_descriptors() -> Vec<::prost_types::FileDescriptorProto> {
+        let fds = ::prost_types::FileDescriptorSet::decode(descriptors::POINT3_IN_FRAME)
+            .expect("invalid file descriptor set");
+        fds.file
+    }
+
+    fn encoded_len(&self) -> usize {
+        let inner_len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encoded_len_varint(inner_len as u64) + inner_len
+    }
+}
+
 impl Encode for PointCloud {
     type Error = ::prost::EncodeError;
 
@@ -800,6 +1573,38 @@ impl Decode for PointCloud {
     /// Decode a message from a serialized buffer.
     fn decode(buf: impl bytes::Buf) -> Result<Self, ::prost::DecodeError> {
         ::prost::Message::decode(buf)
+    }
+}
+
+#[cfg(feature = "derive")]
+impl ProtobufField for PointCloud {
+    fn field_type() -> ::prost_types::field_descriptor_proto::Type {
+        ::prost_types::field_descriptor_proto::Type::Message
+    }
+
+    fn wire_type() -> u32 {
+        ::prost::encoding::WireType::LengthDelimited as u32
+    }
+
+    fn write(&self, buf: &mut impl BufMut) {
+        let len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encode_varint(len as u64, buf);
+        ::prost::Message::encode_raw(self, buf);
+    }
+
+    fn type_name() -> Option<String> {
+        Some(".foxglove.PointCloud".to_string())
+    }
+
+    fn file_descriptors() -> Vec<::prost_types::FileDescriptorProto> {
+        let fds = ::prost_types::FileDescriptorSet::decode(descriptors::POINT_CLOUD)
+            .expect("invalid file descriptor set");
+        fds.file
+    }
+
+    fn encoded_len(&self) -> usize {
+        let inner_len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encoded_len_varint(inner_len as u64) + inner_len
     }
 }
 
@@ -835,6 +1640,38 @@ impl Decode for PointsAnnotation {
     }
 }
 
+#[cfg(feature = "derive")]
+impl ProtobufField for PointsAnnotation {
+    fn field_type() -> ::prost_types::field_descriptor_proto::Type {
+        ::prost_types::field_descriptor_proto::Type::Message
+    }
+
+    fn wire_type() -> u32 {
+        ::prost::encoding::WireType::LengthDelimited as u32
+    }
+
+    fn write(&self, buf: &mut impl BufMut) {
+        let len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encode_varint(len as u64, buf);
+        ::prost::Message::encode_raw(self, buf);
+    }
+
+    fn type_name() -> Option<String> {
+        Some(".foxglove.PointsAnnotation".to_string())
+    }
+
+    fn file_descriptors() -> Vec<::prost_types::FileDescriptorProto> {
+        let fds = ::prost_types::FileDescriptorSet::decode(descriptors::POINTS_ANNOTATION)
+            .expect("invalid file descriptor set");
+        fds.file
+    }
+
+    fn encoded_len(&self) -> usize {
+        let inner_len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encoded_len_varint(inner_len as u64) + inner_len
+    }
+}
+
 impl Encode for Pose {
     type Error = ::prost::EncodeError;
 
@@ -864,6 +1701,38 @@ impl Decode for Pose {
     /// Decode a message from a serialized buffer.
     fn decode(buf: impl bytes::Buf) -> Result<Self, ::prost::DecodeError> {
         ::prost::Message::decode(buf)
+    }
+}
+
+#[cfg(feature = "derive")]
+impl ProtobufField for Pose {
+    fn field_type() -> ::prost_types::field_descriptor_proto::Type {
+        ::prost_types::field_descriptor_proto::Type::Message
+    }
+
+    fn wire_type() -> u32 {
+        ::prost::encoding::WireType::LengthDelimited as u32
+    }
+
+    fn write(&self, buf: &mut impl BufMut) {
+        let len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encode_varint(len as u64, buf);
+        ::prost::Message::encode_raw(self, buf);
+    }
+
+    fn type_name() -> Option<String> {
+        Some(".foxglove.Pose".to_string())
+    }
+
+    fn file_descriptors() -> Vec<::prost_types::FileDescriptorProto> {
+        let fds = ::prost_types::FileDescriptorSet::decode(descriptors::POSE)
+            .expect("invalid file descriptor set");
+        fds.file
+    }
+
+    fn encoded_len(&self) -> usize {
+        let inner_len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encoded_len_varint(inner_len as u64) + inner_len
     }
 }
 
@@ -899,6 +1768,38 @@ impl Decode for PoseInFrame {
     }
 }
 
+#[cfg(feature = "derive")]
+impl ProtobufField for PoseInFrame {
+    fn field_type() -> ::prost_types::field_descriptor_proto::Type {
+        ::prost_types::field_descriptor_proto::Type::Message
+    }
+
+    fn wire_type() -> u32 {
+        ::prost::encoding::WireType::LengthDelimited as u32
+    }
+
+    fn write(&self, buf: &mut impl BufMut) {
+        let len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encode_varint(len as u64, buf);
+        ::prost::Message::encode_raw(self, buf);
+    }
+
+    fn type_name() -> Option<String> {
+        Some(".foxglove.PoseInFrame".to_string())
+    }
+
+    fn file_descriptors() -> Vec<::prost_types::FileDescriptorProto> {
+        let fds = ::prost_types::FileDescriptorSet::decode(descriptors::POSE_IN_FRAME)
+            .expect("invalid file descriptor set");
+        fds.file
+    }
+
+    fn encoded_len(&self) -> usize {
+        let inner_len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encoded_len_varint(inner_len as u64) + inner_len
+    }
+}
+
 impl Encode for PosesInFrame {
     type Error = ::prost::EncodeError;
 
@@ -928,6 +1829,38 @@ impl Decode for PosesInFrame {
     /// Decode a message from a serialized buffer.
     fn decode(buf: impl bytes::Buf) -> Result<Self, ::prost::DecodeError> {
         ::prost::Message::decode(buf)
+    }
+}
+
+#[cfg(feature = "derive")]
+impl ProtobufField for PosesInFrame {
+    fn field_type() -> ::prost_types::field_descriptor_proto::Type {
+        ::prost_types::field_descriptor_proto::Type::Message
+    }
+
+    fn wire_type() -> u32 {
+        ::prost::encoding::WireType::LengthDelimited as u32
+    }
+
+    fn write(&self, buf: &mut impl BufMut) {
+        let len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encode_varint(len as u64, buf);
+        ::prost::Message::encode_raw(self, buf);
+    }
+
+    fn type_name() -> Option<String> {
+        Some(".foxglove.PosesInFrame".to_string())
+    }
+
+    fn file_descriptors() -> Vec<::prost_types::FileDescriptorProto> {
+        let fds = ::prost_types::FileDescriptorSet::decode(descriptors::POSES_IN_FRAME)
+            .expect("invalid file descriptor set");
+        fds.file
+    }
+
+    fn encoded_len(&self) -> usize {
+        let inner_len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encoded_len_varint(inner_len as u64) + inner_len
     }
 }
 
@@ -963,6 +1896,38 @@ impl Decode for Quaternion {
     }
 }
 
+#[cfg(feature = "derive")]
+impl ProtobufField for Quaternion {
+    fn field_type() -> ::prost_types::field_descriptor_proto::Type {
+        ::prost_types::field_descriptor_proto::Type::Message
+    }
+
+    fn wire_type() -> u32 {
+        ::prost::encoding::WireType::LengthDelimited as u32
+    }
+
+    fn write(&self, buf: &mut impl BufMut) {
+        let len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encode_varint(len as u64, buf);
+        ::prost::Message::encode_raw(self, buf);
+    }
+
+    fn type_name() -> Option<String> {
+        Some(".foxglove.Quaternion".to_string())
+    }
+
+    fn file_descriptors() -> Vec<::prost_types::FileDescriptorProto> {
+        let fds = ::prost_types::FileDescriptorSet::decode(descriptors::QUATERNION)
+            .expect("invalid file descriptor set");
+        fds.file
+    }
+
+    fn encoded_len(&self) -> usize {
+        let inner_len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encoded_len_varint(inner_len as u64) + inner_len
+    }
+}
+
 impl Encode for RawAudio {
     type Error = ::prost::EncodeError;
 
@@ -992,6 +1957,38 @@ impl Decode for RawAudio {
     /// Decode a message from a serialized buffer.
     fn decode(buf: impl bytes::Buf) -> Result<Self, ::prost::DecodeError> {
         ::prost::Message::decode(buf)
+    }
+}
+
+#[cfg(feature = "derive")]
+impl ProtobufField for RawAudio {
+    fn field_type() -> ::prost_types::field_descriptor_proto::Type {
+        ::prost_types::field_descriptor_proto::Type::Message
+    }
+
+    fn wire_type() -> u32 {
+        ::prost::encoding::WireType::LengthDelimited as u32
+    }
+
+    fn write(&self, buf: &mut impl BufMut) {
+        let len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encode_varint(len as u64, buf);
+        ::prost::Message::encode_raw(self, buf);
+    }
+
+    fn type_name() -> Option<String> {
+        Some(".foxglove.RawAudio".to_string())
+    }
+
+    fn file_descriptors() -> Vec<::prost_types::FileDescriptorProto> {
+        let fds = ::prost_types::FileDescriptorSet::decode(descriptors::RAW_AUDIO)
+            .expect("invalid file descriptor set");
+        fds.file
+    }
+
+    fn encoded_len(&self) -> usize {
+        let inner_len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encoded_len_varint(inner_len as u64) + inner_len
     }
 }
 
@@ -1027,6 +2024,38 @@ impl Decode for RawImage {
     }
 }
 
+#[cfg(feature = "derive")]
+impl ProtobufField for RawImage {
+    fn field_type() -> ::prost_types::field_descriptor_proto::Type {
+        ::prost_types::field_descriptor_proto::Type::Message
+    }
+
+    fn wire_type() -> u32 {
+        ::prost::encoding::WireType::LengthDelimited as u32
+    }
+
+    fn write(&self, buf: &mut impl BufMut) {
+        let len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encode_varint(len as u64, buf);
+        ::prost::Message::encode_raw(self, buf);
+    }
+
+    fn type_name() -> Option<String> {
+        Some(".foxglove.RawImage".to_string())
+    }
+
+    fn file_descriptors() -> Vec<::prost_types::FileDescriptorProto> {
+        let fds = ::prost_types::FileDescriptorSet::decode(descriptors::RAW_IMAGE)
+            .expect("invalid file descriptor set");
+        fds.file
+    }
+
+    fn encoded_len(&self) -> usize {
+        let inner_len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encoded_len_varint(inner_len as u64) + inner_len
+    }
+}
+
 impl Encode for SceneEntity {
     type Error = ::prost::EncodeError;
 
@@ -1056,6 +2085,38 @@ impl Decode for SceneEntity {
     /// Decode a message from a serialized buffer.
     fn decode(buf: impl bytes::Buf) -> Result<Self, ::prost::DecodeError> {
         ::prost::Message::decode(buf)
+    }
+}
+
+#[cfg(feature = "derive")]
+impl ProtobufField for SceneEntity {
+    fn field_type() -> ::prost_types::field_descriptor_proto::Type {
+        ::prost_types::field_descriptor_proto::Type::Message
+    }
+
+    fn wire_type() -> u32 {
+        ::prost::encoding::WireType::LengthDelimited as u32
+    }
+
+    fn write(&self, buf: &mut impl BufMut) {
+        let len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encode_varint(len as u64, buf);
+        ::prost::Message::encode_raw(self, buf);
+    }
+
+    fn type_name() -> Option<String> {
+        Some(".foxglove.SceneEntity".to_string())
+    }
+
+    fn file_descriptors() -> Vec<::prost_types::FileDescriptorProto> {
+        let fds = ::prost_types::FileDescriptorSet::decode(descriptors::SCENE_ENTITY)
+            .expect("invalid file descriptor set");
+        fds.file
+    }
+
+    fn encoded_len(&self) -> usize {
+        let inner_len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encoded_len_varint(inner_len as u64) + inner_len
     }
 }
 
@@ -1091,6 +2152,38 @@ impl Decode for SceneEntityDeletion {
     }
 }
 
+#[cfg(feature = "derive")]
+impl ProtobufField for SceneEntityDeletion {
+    fn field_type() -> ::prost_types::field_descriptor_proto::Type {
+        ::prost_types::field_descriptor_proto::Type::Message
+    }
+
+    fn wire_type() -> u32 {
+        ::prost::encoding::WireType::LengthDelimited as u32
+    }
+
+    fn write(&self, buf: &mut impl BufMut) {
+        let len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encode_varint(len as u64, buf);
+        ::prost::Message::encode_raw(self, buf);
+    }
+
+    fn type_name() -> Option<String> {
+        Some(".foxglove.SceneEntityDeletion".to_string())
+    }
+
+    fn file_descriptors() -> Vec<::prost_types::FileDescriptorProto> {
+        let fds = ::prost_types::FileDescriptorSet::decode(descriptors::SCENE_ENTITY_DELETION)
+            .expect("invalid file descriptor set");
+        fds.file
+    }
+
+    fn encoded_len(&self) -> usize {
+        let inner_len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encoded_len_varint(inner_len as u64) + inner_len
+    }
+}
+
 impl Encode for SceneUpdate {
     type Error = ::prost::EncodeError;
 
@@ -1120,6 +2213,38 @@ impl Decode for SceneUpdate {
     /// Decode a message from a serialized buffer.
     fn decode(buf: impl bytes::Buf) -> Result<Self, ::prost::DecodeError> {
         ::prost::Message::decode(buf)
+    }
+}
+
+#[cfg(feature = "derive")]
+impl ProtobufField for SceneUpdate {
+    fn field_type() -> ::prost_types::field_descriptor_proto::Type {
+        ::prost_types::field_descriptor_proto::Type::Message
+    }
+
+    fn wire_type() -> u32 {
+        ::prost::encoding::WireType::LengthDelimited as u32
+    }
+
+    fn write(&self, buf: &mut impl BufMut) {
+        let len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encode_varint(len as u64, buf);
+        ::prost::Message::encode_raw(self, buf);
+    }
+
+    fn type_name() -> Option<String> {
+        Some(".foxglove.SceneUpdate".to_string())
+    }
+
+    fn file_descriptors() -> Vec<::prost_types::FileDescriptorProto> {
+        let fds = ::prost_types::FileDescriptorSet::decode(descriptors::SCENE_UPDATE)
+            .expect("invalid file descriptor set");
+        fds.file
+    }
+
+    fn encoded_len(&self) -> usize {
+        let inner_len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encoded_len_varint(inner_len as u64) + inner_len
     }
 }
 
@@ -1155,6 +2280,38 @@ impl Decode for SpherePrimitive {
     }
 }
 
+#[cfg(feature = "derive")]
+impl ProtobufField for SpherePrimitive {
+    fn field_type() -> ::prost_types::field_descriptor_proto::Type {
+        ::prost_types::field_descriptor_proto::Type::Message
+    }
+
+    fn wire_type() -> u32 {
+        ::prost::encoding::WireType::LengthDelimited as u32
+    }
+
+    fn write(&self, buf: &mut impl BufMut) {
+        let len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encode_varint(len as u64, buf);
+        ::prost::Message::encode_raw(self, buf);
+    }
+
+    fn type_name() -> Option<String> {
+        Some(".foxglove.SpherePrimitive".to_string())
+    }
+
+    fn file_descriptors() -> Vec<::prost_types::FileDescriptorProto> {
+        let fds = ::prost_types::FileDescriptorSet::decode(descriptors::SPHERE_PRIMITIVE)
+            .expect("invalid file descriptor set");
+        fds.file
+    }
+
+    fn encoded_len(&self) -> usize {
+        let inner_len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encoded_len_varint(inner_len as u64) + inner_len
+    }
+}
+
 impl Encode for TextAnnotation {
     type Error = ::prost::EncodeError;
 
@@ -1184,6 +2341,38 @@ impl Decode for TextAnnotation {
     /// Decode a message from a serialized buffer.
     fn decode(buf: impl bytes::Buf) -> Result<Self, ::prost::DecodeError> {
         ::prost::Message::decode(buf)
+    }
+}
+
+#[cfg(feature = "derive")]
+impl ProtobufField for TextAnnotation {
+    fn field_type() -> ::prost_types::field_descriptor_proto::Type {
+        ::prost_types::field_descriptor_proto::Type::Message
+    }
+
+    fn wire_type() -> u32 {
+        ::prost::encoding::WireType::LengthDelimited as u32
+    }
+
+    fn write(&self, buf: &mut impl BufMut) {
+        let len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encode_varint(len as u64, buf);
+        ::prost::Message::encode_raw(self, buf);
+    }
+
+    fn type_name() -> Option<String> {
+        Some(".foxglove.TextAnnotation".to_string())
+    }
+
+    fn file_descriptors() -> Vec<::prost_types::FileDescriptorProto> {
+        let fds = ::prost_types::FileDescriptorSet::decode(descriptors::TEXT_ANNOTATION)
+            .expect("invalid file descriptor set");
+        fds.file
+    }
+
+    fn encoded_len(&self) -> usize {
+        let inner_len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encoded_len_varint(inner_len as u64) + inner_len
     }
 }
 
@@ -1219,6 +2408,38 @@ impl Decode for TextPrimitive {
     }
 }
 
+#[cfg(feature = "derive")]
+impl ProtobufField for TextPrimitive {
+    fn field_type() -> ::prost_types::field_descriptor_proto::Type {
+        ::prost_types::field_descriptor_proto::Type::Message
+    }
+
+    fn wire_type() -> u32 {
+        ::prost::encoding::WireType::LengthDelimited as u32
+    }
+
+    fn write(&self, buf: &mut impl BufMut) {
+        let len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encode_varint(len as u64, buf);
+        ::prost::Message::encode_raw(self, buf);
+    }
+
+    fn type_name() -> Option<String> {
+        Some(".foxglove.TextPrimitive".to_string())
+    }
+
+    fn file_descriptors() -> Vec<::prost_types::FileDescriptorProto> {
+        let fds = ::prost_types::FileDescriptorSet::decode(descriptors::TEXT_PRIMITIVE)
+            .expect("invalid file descriptor set");
+        fds.file
+    }
+
+    fn encoded_len(&self) -> usize {
+        let inner_len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encoded_len_varint(inner_len as u64) + inner_len
+    }
+}
+
 impl Encode for TriangleListPrimitive {
     type Error = ::prost::EncodeError;
 
@@ -1248,6 +2469,38 @@ impl Decode for TriangleListPrimitive {
     /// Decode a message from a serialized buffer.
     fn decode(buf: impl bytes::Buf) -> Result<Self, ::prost::DecodeError> {
         ::prost::Message::decode(buf)
+    }
+}
+
+#[cfg(feature = "derive")]
+impl ProtobufField for TriangleListPrimitive {
+    fn field_type() -> ::prost_types::field_descriptor_proto::Type {
+        ::prost_types::field_descriptor_proto::Type::Message
+    }
+
+    fn wire_type() -> u32 {
+        ::prost::encoding::WireType::LengthDelimited as u32
+    }
+
+    fn write(&self, buf: &mut impl BufMut) {
+        let len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encode_varint(len as u64, buf);
+        ::prost::Message::encode_raw(self, buf);
+    }
+
+    fn type_name() -> Option<String> {
+        Some(".foxglove.TriangleListPrimitive".to_string())
+    }
+
+    fn file_descriptors() -> Vec<::prost_types::FileDescriptorProto> {
+        let fds = ::prost_types::FileDescriptorSet::decode(descriptors::TRIANGLE_LIST_PRIMITIVE)
+            .expect("invalid file descriptor set");
+        fds.file
+    }
+
+    fn encoded_len(&self) -> usize {
+        let inner_len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encoded_len_varint(inner_len as u64) + inner_len
     }
 }
 
@@ -1283,6 +2536,38 @@ impl Decode for Vector2 {
     }
 }
 
+#[cfg(feature = "derive")]
+impl ProtobufField for Vector2 {
+    fn field_type() -> ::prost_types::field_descriptor_proto::Type {
+        ::prost_types::field_descriptor_proto::Type::Message
+    }
+
+    fn wire_type() -> u32 {
+        ::prost::encoding::WireType::LengthDelimited as u32
+    }
+
+    fn write(&self, buf: &mut impl BufMut) {
+        let len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encode_varint(len as u64, buf);
+        ::prost::Message::encode_raw(self, buf);
+    }
+
+    fn type_name() -> Option<String> {
+        Some(".foxglove.Vector2".to_string())
+    }
+
+    fn file_descriptors() -> Vec<::prost_types::FileDescriptorProto> {
+        let fds = ::prost_types::FileDescriptorSet::decode(descriptors::VECTOR2)
+            .expect("invalid file descriptor set");
+        fds.file
+    }
+
+    fn encoded_len(&self) -> usize {
+        let inner_len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encoded_len_varint(inner_len as u64) + inner_len
+    }
+}
+
 impl Encode for Vector3 {
     type Error = ::prost::EncodeError;
 
@@ -1315,6 +2600,38 @@ impl Decode for Vector3 {
     }
 }
 
+#[cfg(feature = "derive")]
+impl ProtobufField for Vector3 {
+    fn field_type() -> ::prost_types::field_descriptor_proto::Type {
+        ::prost_types::field_descriptor_proto::Type::Message
+    }
+
+    fn wire_type() -> u32 {
+        ::prost::encoding::WireType::LengthDelimited as u32
+    }
+
+    fn write(&self, buf: &mut impl BufMut) {
+        let len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encode_varint(len as u64, buf);
+        ::prost::Message::encode_raw(self, buf);
+    }
+
+    fn type_name() -> Option<String> {
+        Some(".foxglove.Vector3".to_string())
+    }
+
+    fn file_descriptors() -> Vec<::prost_types::FileDescriptorProto> {
+        let fds = ::prost_types::FileDescriptorSet::decode(descriptors::VECTOR3)
+            .expect("invalid file descriptor set");
+        fds.file
+    }
+
+    fn encoded_len(&self) -> usize {
+        let inner_len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encoded_len_varint(inner_len as u64) + inner_len
+    }
+}
+
 impl Encode for VoxelGrid {
     type Error = ::prost::EncodeError;
 
@@ -1344,5 +2661,37 @@ impl Decode for VoxelGrid {
     /// Decode a message from a serialized buffer.
     fn decode(buf: impl bytes::Buf) -> Result<Self, ::prost::DecodeError> {
         ::prost::Message::decode(buf)
+    }
+}
+
+#[cfg(feature = "derive")]
+impl ProtobufField for VoxelGrid {
+    fn field_type() -> ::prost_types::field_descriptor_proto::Type {
+        ::prost_types::field_descriptor_proto::Type::Message
+    }
+
+    fn wire_type() -> u32 {
+        ::prost::encoding::WireType::LengthDelimited as u32
+    }
+
+    fn write(&self, buf: &mut impl BufMut) {
+        let len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encode_varint(len as u64, buf);
+        ::prost::Message::encode_raw(self, buf);
+    }
+
+    fn type_name() -> Option<String> {
+        Some(".foxglove.VoxelGrid".to_string())
+    }
+
+    fn file_descriptors() -> Vec<::prost_types::FileDescriptorProto> {
+        let fds = ::prost_types::FileDescriptorSet::decode(descriptors::VOXEL_GRID)
+            .expect("invalid file descriptor set");
+        fds.file
+    }
+
+    fn encoded_len(&self) -> usize {
+        let inner_len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encoded_len_varint(inner_len as u64) + inner_len
     }
 }

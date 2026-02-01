@@ -286,6 +286,10 @@ fn generate_impls(out_dir: &Path, fds: &FileDescriptorSet) -> anyhow::Result<()>
     ));
     result = result.and(writeln!(module, "use crate::{{Schema, Decode, Encode}};"));
     result = result.and(writeln!(module, "use bytes::BufMut;"));
+    result = result.and(writeln!(module, "\n#[cfg(feature = \"derive\")]"));
+    result = result.and(writeln!(module, "use prost::Message as _;"));
+    result = result.and(writeln!(module, "#[cfg(feature = \"derive\")]"));
+    result = result.and(writeln!(module, "use crate::protobuf::ProtobufField;"));
     result.context("Failed to write impls.rs")?;
 
     for fd in &fds.file {
@@ -342,6 +346,43 @@ impl Decode for {name} {{
 }}"
         )
         .context("Failed to write impl in impls.rs")?;
+
+        // Generate ProtobufField impl (only with derive feature)
+        writeln!(
+            module,
+            "\n#[cfg(feature = \"derive\")]
+impl ProtobufField for {name} {{
+    fn field_type() -> ::prost_types::field_descriptor_proto::Type {{
+        ::prost_types::field_descriptor_proto::Type::Message
+    }}
+
+    fn wire_type() -> u32 {{
+        ::prost::encoding::WireType::LengthDelimited as u32
+    }}
+
+    fn write(&self, buf: &mut impl BufMut) {{
+        let len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encode_varint(len as u64, buf);
+        ::prost::Message::encode_raw(self, buf);
+    }}
+
+    fn type_name() -> Option<String> {{
+        Some(\".foxglove.{schema_name}\".to_string())
+    }}
+
+    fn file_descriptors() -> Vec<::prost_types::FileDescriptorProto> {{
+        let fds = ::prost_types::FileDescriptorSet::decode(descriptors::{descriptor_name})
+            .expect(\"invalid file descriptor set\");
+        fds.file
+    }}
+
+    fn encoded_len(&self) -> usize {{
+        let inner_len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encoded_len_varint(inner_len as u64) + inner_len
+    }}
+}}"
+        )
+        .context("Failed to write ProtobufField impl in impls.rs")?;
     }
 
     Ok(())
