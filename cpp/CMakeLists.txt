@@ -233,6 +233,14 @@ target_include_directories(example_auto_serialize SYSTEM PRIVATE ${json_SOURCE_D
 target_link_options(example_auto_serialize PUBLIC ${SANITIZER_LINK_OPTIONS})
 target_link_libraries(example_auto_serialize foxglove_cpp_static)
 
+add_executable(example_playback_ws_server examples/playback-ws-server/src/main.cpp)
+set_property(TARGET example_playback_ws_server PROPERTY CXX_STANDARD 17)
+set_property(TARGET example_playback_ws_server PROPERTY CXX_STANDARD_REQUIRED True)
+target_compile_options(example_playback_ws_server PUBLIC ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
+target_link_options(example_playback_ws_server PUBLIC ${SANITIZER_LINK_OPTIONS})
+target_link_libraries(example_playback_ws_server foxglove_cpp_static)
+
+
 option(BUILD_OPENCV_EXAMPLE "Build the RGB camera visualization example (requires OpenCV)" OFF)
 
 if(BUILD_OPENCV_EXAMPLE)
