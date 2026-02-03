@@ -37,10 +37,29 @@ fn is_option(ty: &Type) -> bool {
     unwrap_generic_type(ty, "Option").is_some()
 }
 
+/// Check if a type is `[T; N]` for some T and N.
+fn is_array(ty: &Type) -> bool {
+    matches!(ty, Type::Array(_))
+}
+
+/// Extract the element type from an array type `[T; N]`.
+fn unwrap_array_type(ty: &Type) -> Option<&Type> {
+    match ty {
+        Type::Array(arr) => Some(&arr.elem),
+        _ => None,
+    }
+}
+
 /// Check if a type is `Vec<Option<T>>`, which is not supported because protobuf
 /// repeated fields cannot represent null/missing elements.
 fn is_vec_of_option(ty: &Type) -> bool {
     unwrap_generic_type(ty, "Vec").is_some_and(is_option)
+}
+
+/// Check if a type is `[Option<T>; N]`, which is not supported because protobuf
+/// repeated fields cannot represent null/missing elements.
+fn is_array_of_option(ty: &Type) -> bool {
+    unwrap_array_type(ty).is_some_and(is_option)
 }
 
 /// Check if a type is `Option<Vec<T>>`, which is not supported because protobuf
@@ -49,10 +68,34 @@ fn is_option_of_vec(ty: &Type) -> bool {
     unwrap_generic_type(ty, "Option").is_some_and(is_vec)
 }
 
+/// Check if a type is `Option<[T; N]>`, which is not supported because protobuf
+/// cannot distinguish between "not present" and "empty array".
+fn is_option_of_array(ty: &Type) -> bool {
+    unwrap_generic_type(ty, "Option").is_some_and(is_array)
+}
+
 /// Check if a type is `Vec<Vec<T>>`, which is not supported because protobuf
 /// does not support nested repeated fields.
 fn is_vec_of_vec(ty: &Type) -> bool {
     unwrap_generic_type(ty, "Vec").is_some_and(is_vec)
+}
+
+/// Check if a type is `[Vec<T>; N]`, which is not supported because protobuf
+/// does not support nested repeated fields.
+fn is_array_of_vec(ty: &Type) -> bool {
+    unwrap_array_type(ty).is_some_and(is_vec)
+}
+
+/// Check if a type is `Vec<[T; N]>`, which is not supported because protobuf
+/// does not support nested repeated fields.
+fn is_vec_of_array(ty: &Type) -> bool {
+    unwrap_generic_type(ty, "Vec").is_some_and(is_array)
+}
+
+/// Check if a type is `[[T; M]; N]`, which is not supported because protobuf
+/// does not support nested repeated fields.
+fn is_array_of_array(ty: &Type) -> bool {
+    unwrap_array_type(ty).is_some_and(is_array)
 }
 
 /// Derive macro for enums and structs allowing them to be logged to a Foxglove channel.
@@ -206,6 +249,36 @@ fn derive_struct_impl(input: &DeriveInput, data: &DataStruct) -> TokenStream {
         if is_vec_of_vec(field_type) {
             return TokenStream::from(quote! {
                 compile_error!("Vec<Vec<T>> is not supported. Protobuf does not support nested repeated fields.");
+            });
+        }
+
+        if is_array_of_option(field_type) {
+            return TokenStream::from(quote! {
+                compile_error!("[Option<T>; N] is not supported. Protobuf repeated fields cannot represent null/missing elements.");
+            });
+        }
+
+        if is_option_of_array(field_type) {
+            return TokenStream::from(quote! {
+                compile_error!("Option<[T; N]> is not supported. Protobuf cannot distinguish between absent and empty repeated fields.");
+            });
+        }
+
+        if is_array_of_array(field_type) {
+            return TokenStream::from(quote! {
+                compile_error!("[[T; M]; N] is not supported. Protobuf does not support nested repeated fields.");
+            });
+        }
+
+        if is_array_of_vec(field_type) {
+            return TokenStream::from(quote! {
+                compile_error!("[Vec<T>; N] is not supported. Protobuf does not support nested repeated fields.");
+            });
+        }
+
+        if is_vec_of_array(field_type) {
+            return TokenStream::from(quote! {
+                compile_error!("Vec<[T; N]> is not supported. Protobuf does not support nested repeated fields.");
             });
         }
 

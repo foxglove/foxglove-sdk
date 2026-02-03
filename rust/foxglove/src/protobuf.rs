@@ -452,6 +452,10 @@ where
         true
     }
 
+    fn enum_descriptor() -> Option<prost_types::EnumDescriptorProto> {
+        T::enum_descriptor()
+    }
+
     fn message_descriptor() -> Option<prost_types::DescriptorProto> {
         // The message descriptor of a vector is the message descriptor of the element type
         // the "repeating" property is set on the field that is repeating rather than the message
@@ -510,6 +514,10 @@ where
 
     fn repeating() -> bool {
         true
+    }
+
+    fn enum_descriptor() -> Option<prost_types::EnumDescriptorProto> {
+        T::enum_descriptor()
     }
 
     fn message_descriptor() -> Option<prost_types::DescriptorProto> {
