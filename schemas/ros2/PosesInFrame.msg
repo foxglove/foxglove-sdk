@@ -11,3 +11,9 @@ string frame_id
 
 # Poses in 3D space
 geometry_msgs/Pose[] poses
+
+# Unique identifier for this message
+string uuid
+
+# Lineage information for tracking data provenance
+foxglove_msgs/LineageInfo lineage

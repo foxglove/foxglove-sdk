@@ -8,3 +8,9 @@ foxglove_msgs/SceneEntityDeletion[] deletions
 
 # Scene entities to add or replace
 foxglove_msgs/SceneEntity[] entities
+
+# Unique identifier for this message
+string uuid
+
+# Lineage information for tracking message provenance
+foxglove_msgs/LineageInfo lineage

@@ -2,6 +2,7 @@
 
 syntax = "proto3";
 
+import "foxglove/LineageInfo.proto";
 import "google/protobuf/timestamp.proto";
 
 package foxglove;
@@ -24,4 +25,10 @@ message SceneEntityDeletion {
 
   // Identifier which must match if `type` is `MATCHING_ID`.
   string id = 3;
+
+  // Unique identifier for this message
+  optional string uuid = 100;
+
+  // Lineage information for tracking data provenance
+  optional foxglove.LineageInfo lineage = 101;
 }

@@ -3,6 +3,7 @@
 syntax = "proto3";
 
 import "foxglove/Color.proto";
+import "foxglove/LineageInfo.proto";
 import "google/protobuf/timestamp.proto";
 
 package foxglove;
@@ -46,4 +47,10 @@ message LocationFix {
 
   // Color used to visualize the location
   foxglove.Color color = 8;
+
+  // Unique identifier for this message
+  optional string uuid = 100;
+
+  // Lineage information for tracking data provenance
+  optional foxglove.LineageInfo lineage = 101;
 }

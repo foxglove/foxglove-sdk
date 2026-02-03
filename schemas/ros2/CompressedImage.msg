@@ -13,6 +13,12 @@ string frame_id
 uint8[] data
 
 # Image format
-# 
+#
 # Supported values: `jpeg`, `png`, `webp`, `avif`
 string format
+
+# Unique identifier for this message
+string uuid
+
+# Lineage information for tracking data provenance
+foxglove_msgs/LineageInfo lineage

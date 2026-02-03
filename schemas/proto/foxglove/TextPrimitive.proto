@@ -3,6 +3,7 @@
 syntax = "proto3";
 
 import "foxglove/Color.proto";
+import "foxglove/LineageInfo.proto";
 import "foxglove/Pose.proto";
 
 package foxglove;
@@ -26,4 +27,10 @@ message TextPrimitive {
 
   // Text
   string text = 6;
+
+  // Unique identifier for this message
+  optional string uuid = 100;
+
+  // Lineage information for tracking data provenance
+  optional foxglove.LineageInfo lineage = 101;
 }

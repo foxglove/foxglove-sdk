@@ -17,3 +17,9 @@ float64 top_scale
 
 # Color of the cylinder
 foxglove_msgs/Color color
+
+# Unique identifier for this message
+string uuid
+
+# Lineage information for tracking message provenance
+foxglove_msgs/LineageInfo lineage

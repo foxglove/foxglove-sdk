@@ -2,6 +2,7 @@
 
 syntax = "proto3";
 
+import "foxglove/LineageInfo.proto";
 import "foxglove/PackedElementField.proto";
 import "foxglove/Pose.proto";
 import "foxglove/Vector2.proto";
@@ -74,8 +75,14 @@ message Grid {
 
   // Grid cell data, interpreted using `fields`, in row-major (y-major) order.
   // For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
-  // 
+  //
   // - y = i / row_stride * cell_size.y
   // - x = (i % row_stride) / cell_stride * cell_size.x
   bytes data = 9;
+
+  // Unique identifier for this message
+  optional string uuid = 100;
+
+  // Lineage information for tracking data provenance
+  optional foxglove.LineageInfo lineage = 101;
 }

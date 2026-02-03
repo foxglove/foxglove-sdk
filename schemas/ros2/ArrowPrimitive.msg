@@ -20,3 +20,9 @@ float64 head_diameter
 
 # Color of the arrow
 foxglove_msgs/Color color
+
+# Unique identifier for this message
+string uuid
+
+# Lineage information for tracking data provenance
+foxglove_msgs/LineageInfo lineage

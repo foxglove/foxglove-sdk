@@ -7,6 +7,14 @@
     "geojson": {
       "type": "string",
       "description": "GeoJSON data encoded as a UTF-8 string"
+    },
+    "uuid": {
+      "type": "string",
+      "description": "Unique identifier for this message"
+    },
+    "lineage": {
+      "$ref": "LineageInfo.json",
+      "description": "Lineage tracking information"
     }
   },
   "required": [

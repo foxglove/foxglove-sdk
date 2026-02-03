@@ -8,3 +8,9 @@ string key
 
 # Value
 string value
+
+# Unique identifier for this message
+string uuid
+
+# Lineage information for tracking message provenance
+foxglove_msgs/LineageInfo lineage

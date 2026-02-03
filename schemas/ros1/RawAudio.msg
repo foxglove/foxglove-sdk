@@ -17,3 +17,9 @@ uint32 sample_rate
 
 # Number of channels in the audio block
 uint32 number_of_channels
+
+# Unique identifier for this message
+string uuid
+
+# Lineage information for tracking message provenance
+foxglove_msgs/LineageInfo lineage

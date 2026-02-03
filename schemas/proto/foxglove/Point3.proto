@@ -2,6 +2,8 @@
 
 syntax = "proto3";
 
+import "foxglove/LineageInfo.proto";
+
 package foxglove;
 
 // A point representing a position in 3D space
@@ -14,4 +16,10 @@ message Point3 {
 
   // z coordinate position
   double z = 3;
+
+  // Unique identifier for this message
+  optional string uuid = 100;
+
+  // Lineage information for tracking data provenance
+  optional foxglove.LineageInfo lineage = 101;
 }

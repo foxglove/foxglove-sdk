@@ -2,6 +2,8 @@
 
 syntax = "proto3";
 
+import "foxglove/LineageInfo.proto";
+
 package foxglove;
 
 // A key with its associated value
@@ -11,4 +13,10 @@ message KeyValuePair {
 
   // Value
   string value = 2;
+
+  // Unique identifier for this message
+  optional string uuid = 100;
+
+  // Lineage information for tracking data provenance
+  optional foxglove.LineageInfo lineage = 101;
 }

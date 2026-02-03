@@ -5,6 +5,7 @@
 #include "foxglove/CylinderPrimitive.idl"
 #include "foxglove/Duration.idl"
 #include "foxglove/KeyValuePair.idl"
+#include "foxglove/LineageInfo.idl"
 #include "foxglove/LinePrimitive.idl"
 #include "foxglove/ModelPrimitive.idl"
 #include "foxglove/SpherePrimitive.idl"
@@ -57,6 +58,12 @@ struct SceneEntity {
 
   // Model primitives
   sequence<ModelPrimitive> models;
+
+  // Unique identifier for this message
+  string uuid;
+
+  // Lineage information for tracking data provenance
+  LineageInfo lineage;
 };
 
 };

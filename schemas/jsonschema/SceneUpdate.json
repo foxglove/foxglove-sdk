@@ -1359,6 +1359,14 @@
         ]
       },
       "description": "Scene entities to add or replace"
+    },
+    "uuid": {
+      "type": "string",
+      "description": "Unique identifier for this message"
+    },
+    "lineage": {
+      "$ref": "LineageInfo.json",
+      "description": "Lineage tracking information"
     }
   },
   "required": [

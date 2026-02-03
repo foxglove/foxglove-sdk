@@ -2,6 +2,7 @@
 
 syntax = "proto3";
 
+import "foxglove/LineageInfo.proto";
 import "foxglove/Quaternion.proto";
 import "foxglove/Vector3.proto";
 import "google/protobuf/timestamp.proto";
@@ -30,4 +31,10 @@ message FrameTransform {
 
   // Rotation component of the transform, representing the orientation of the child frame in the parent frame
   foxglove.Quaternion rotation = 5;
+
+  // Unique identifier for this message
+  optional string uuid = 100;
+
+  // Lineage information for tracking data provenance
+  optional foxglove.LineageInfo lineage = 101;
 }

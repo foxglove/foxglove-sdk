@@ -11,3 +11,9 @@ foxglove_msgs/PointsAnnotation[] points
 
 # Text annotations
 foxglove_msgs/TextAnnotation[] texts
+
+# Unique identifier for this message
+string uuid
+
+# Lineage information for tracking data provenance
+foxglove_msgs/LineageInfo lineage

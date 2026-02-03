@@ -20,3 +20,9 @@ foxglove_msgs/PackedElementField[] fields
 
 # Point data, interpreted using `fields`
 uint8[] data
+
+# Unique identifier for this message
+string uuid
+
+# Lineage information for tracking message provenance
+foxglove_msgs/LineageInfo lineage

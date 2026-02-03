@@ -2,6 +2,8 @@
 
 syntax = "proto3";
 
+import "foxglove/LineageInfo.proto";
+
 package foxglove;
 
 // A [quaternion](https://eater.net/quaternions) representing a rotation in 3D space
@@ -17,4 +19,10 @@ message Quaternion {
 
   // w value
   double w = 4;
+
+  // Unique identifier for this message
+  optional string uuid = 100;
+
+  // Lineage information for tracking data provenance
+  optional foxglove.LineageInfo lineage = 101;
 }

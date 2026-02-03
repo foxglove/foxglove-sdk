@@ -9,7 +9,7 @@ time timestamp
 # Frame of reference
 string frame_id
 
-# Origin of the grid’s lower-front-left corner in the reference frame. The grid’s pose is defined relative to this corner, so an untransformed grid with an identity orientation has this corner at the origin.
+# Origin of the grid's lower-front-left corner in the reference frame. The grid's pose is defined relative to this corner, so an untransformed grid with an identity orientation has this corner at the origin.
 geometry_msgs/Pose pose
 
 # Number of grid rows
@@ -35,8 +35,14 @@ foxglove_msgs/PackedElementField[] fields
 
 # Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.
 # For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
-# 
+#
 # - z = i / slice_stride * cell_size.z
 # - y = (i % slice_stride) / row_stride * cell_size.y
 # - x = (i % row_stride) / cell_stride * cell_size.x
 uint8[] data
+
+# Unique identifier for this message
+string uuid
+
+# Lineage information for tracking message provenance
+foxglove_msgs/LineageInfo lineage

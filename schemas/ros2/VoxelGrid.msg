@@ -40,3 +40,9 @@ foxglove_msgs/PackedElementField[] fields
 # - y = (i % slice_stride) / row_stride * cell_size.y
 # - x = (i % row_stride) / cell_stride * cell_size.x
 uint8[] data
+
+# Unique identifier for this message
+string uuid
+
+# Lineage information for tracking data provenance
+foxglove_msgs/LineageInfo lineage

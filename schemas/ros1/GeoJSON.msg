@@ -5,3 +5,9 @@
 
 # GeoJSON data encoded as a UTF-8 string
 string geojson
+
+# Unique identifier for this message
+string uuid
+
+# Lineage information for tracking message provenance
+foxglove_msgs/LineageInfo lineage

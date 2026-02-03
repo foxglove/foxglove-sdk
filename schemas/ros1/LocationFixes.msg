@@ -5,3 +5,9 @@
 
 # An array of location fixes
 foxglove_msgs/LocationFix[] fixes
+
+# Unique identifier for this message
+string uuid
+
+# Lineage information for tracking message provenance
+foxglove_msgs/LineageInfo lineage

@@ -11,3 +11,9 @@ geometry_msgs/Vector3 size
 
 # Color of the sphere
 foxglove_msgs/Color color
+
+# Unique identifier for this message
+string uuid
+
+# Lineage information for tracking message provenance
+foxglove_msgs/LineageInfo lineage

@@ -44,3 +44,9 @@ foxglove_msgs/TextPrimitive[] texts
 
 # Model primitives
 foxglove_msgs/ModelPrimitive[] models
+
+# Unique identifier for this message
+string uuid
+
+# Lineage information for tracking data provenance
+foxglove_msgs/LineageInfo lineage

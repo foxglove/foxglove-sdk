@@ -3,6 +3,7 @@
 syntax = "proto3";
 
 import "foxglove/Color.proto";
+import "foxglove/LineageInfo.proto";
 import "foxglove/Pose.proto";
 import "foxglove/Vector3.proto";
 
@@ -18,4 +19,10 @@ message CubePrimitive {
 
   // Color of the cube
   foxglove.Color color = 3;
+
+  // Unique identifier for this message
+  optional string uuid = 100;
+
+  // Lineage information for tracking data provenance
+  optional foxglove.LineageInfo lineage = 101;
 }

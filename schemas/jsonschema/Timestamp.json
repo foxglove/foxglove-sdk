@@ -13,6 +13,14 @@
       "type": "integer",
       "minimum": 0,
       "description": "The number of nanoseconds since the sec value"
+    },
+    "uuid": {
+      "type": "string",
+      "description": "Unique identifier for this message"
+    },
+    "lineage": {
+      "$ref": "LineageInfo.json",
+      "description": "Lineage tracking information"
     }
   },
   "required": [

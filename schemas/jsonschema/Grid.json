@@ -202,6 +202,14 @@
       "type": "string",
       "contentEncoding": "base64",
       "description": "Grid cell data, interpreted using `fields`, in row-major (y-major) order.\nFor the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:\n\n- y = i / row_stride * cell_size.y\n- x = (i % row_stride) / cell_stride * cell_size.x"
+    },
+    "uuid": {
+      "type": "string",
+      "description": "Unique identifier for this message"
+    },
+    "lineage": {
+      "$ref": "LineageInfo.json",
+      "description": "Lineage tracking information"
     }
   },
   "required": [

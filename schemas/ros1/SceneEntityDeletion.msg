@@ -17,3 +17,9 @@ uint8 type
 
 # Identifier which must match if `type` is `MATCHING_ID`.
 string id
+
+# Unique identifier for this message
+string uuid
+
+# Lineage information for tracking message provenance
+foxglove_msgs/LineageInfo lineage

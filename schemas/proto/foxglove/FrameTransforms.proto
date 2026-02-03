@@ -3,6 +3,7 @@
 syntax = "proto3";
 
 import "foxglove/FrameTransform.proto";
+import "foxglove/LineageInfo.proto";
 
 package foxglove;
 
@@ -10,4 +11,10 @@ package foxglove;
 message FrameTransforms {
   // Array of transforms
   repeated foxglove.FrameTransform transforms = 1;
+
+  // Unique identifier for this message
+  optional string uuid = 100;
+
+  // Lineage information for tracking data provenance
+  optional foxglove.LineageInfo lineage = 101;
 }

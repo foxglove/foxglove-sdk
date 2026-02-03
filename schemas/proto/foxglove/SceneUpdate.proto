@@ -2,6 +2,7 @@
 
 syntax = "proto3";
 
+import "foxglove/LineageInfo.proto";
 import "foxglove/SceneEntity.proto";
 import "foxglove/SceneEntityDeletion.proto";
 
@@ -14,4 +15,10 @@ message SceneUpdate {
 
   // Scene entities to add or replace
   repeated foxglove.SceneEntity entities = 2;
+
+  // Unique identifier for this message
+  optional string uuid = 100;
+
+  // Lineage information for tracking data provenance
+  optional foxglove.LineageInfo lineage = 101;
 }

@@ -2,6 +2,7 @@
 
 syntax = "proto3";
 
+import "foxglove/LineageInfo.proto";
 import "google/protobuf/timestamp.proto";
 
 package foxglove;
@@ -22,4 +23,10 @@ message RawAudio {
 
   // Number of channels in the audio block
   fixed32 number_of_channels = 5;
+
+  // Unique identifier for this message
+  optional string uuid = 100;
+
+  // Lineage information for tracking data provenance
+  optional foxglove.LineageInfo lineage = 101;
 }

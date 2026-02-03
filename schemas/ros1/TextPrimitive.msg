@@ -20,3 +20,9 @@ foxglove_msgs/Color color
 
 # Text
 string text
+
+# Unique identifier for this message
+string uuid
+
+# Lineage information for tracking message provenance
+foxglove_msgs/LineageInfo lineage

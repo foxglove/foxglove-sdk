@@ -38,3 +38,9 @@ uint8 FLOAT64=8
 
 # Type of data in the field. Integers are stored using little-endian byte order.
 uint8 type
+
+# Unique identifier for this message
+string uuid
+
+# Lineage information for tracking message provenance
+foxglove_msgs/LineageInfo lineage

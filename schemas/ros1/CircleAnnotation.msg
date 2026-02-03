@@ -21,3 +21,9 @@ foxglove_msgs/Color fill_color
 
 # Outline color
 foxglove_msgs/Color outline_color
+
+# Unique identifier for this message
+string uuid
+
+# Lineage information for tracking message provenance
+foxglove_msgs/LineageInfo lineage

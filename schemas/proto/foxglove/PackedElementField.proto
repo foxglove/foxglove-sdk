@@ -2,6 +2,8 @@
 
 syntax = "proto3";
 
+import "foxglove/LineageInfo.proto";
+
 package foxglove;
 
 // A field present within each element in a byte array of packed elements.
@@ -43,4 +45,10 @@ message PackedElementField {
 
   // Type of data in the field. Integers are stored using little-endian byte order.
   NumericType type = 3;
+
+  // Unique identifier for this message
+  optional string uuid = 100;
+
+  // Lineage information for tracking data provenance
+  optional foxglove.LineageInfo lineage = 101;
 }

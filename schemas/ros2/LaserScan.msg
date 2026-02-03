@@ -23,3 +23,9 @@ float64[] ranges
 
 # Intensity of detections
 float64[] intensities
+
+# Unique identifier for this message
+string uuid
+
+# Lineage information for tracking data provenance
+foxglove_msgs/LineageInfo lineage

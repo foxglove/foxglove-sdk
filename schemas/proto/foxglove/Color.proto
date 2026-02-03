@@ -2,6 +2,8 @@
 
 syntax = "proto3";
 
+import "foxglove/LineageInfo.proto";
+
 package foxglove;
 
 // A color in RGBA format
@@ -17,4 +19,10 @@ message Color {
 
   // Alpha value between 0 and 1
   double a = 4;
+
+  // Unique identifier for this message
+  optional string uuid = 100;
+
+  // Lineage information for tracking data provenance
+  optional foxglove.LineageInfo lineage = 101;
 }

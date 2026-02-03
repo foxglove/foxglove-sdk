@@ -173,6 +173,14 @@
       "type": "string",
       "contentEncoding": "base64",
       "description": "Point data, interpreted using `fields`"
+    },
+    "uuid": {
+      "type": "string",
+      "description": "Unique identifier for this message"
+    },
+    "lineage": {
+      "$ref": "LineageInfo.json",
+      "description": "Lineage tracking information"
     }
   },
   "required": [

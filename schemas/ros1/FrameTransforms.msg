@@ -5,3 +5,9 @@
 
 # Array of transforms
 foxglove_msgs/FrameTransform[] transforms
+
+# Unique identifier for this message
+string uuid
+
+# Lineage information for tracking message provenance
+foxglove_msgs/LineageInfo lineage
