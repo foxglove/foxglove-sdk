@@ -299,6 +299,30 @@ impl PyMcapWriter {
         }
         Ok(())
     }
+
+    /// Write a layout to the MCAP file.
+    ///
+    /// The layout is serialized to JSON and stored in the file's metadata
+    /// under the "foxglove.layout" key.
+    ///
+    /// :param layout: A Layout object from foxglove.layouts.
+    fn write_layout(&self, py: Python<'_>, layout: Py<PyAny>) -> PyResult<()> {
+        // Call to_json() on the layout object
+        let json_str: String = layout.call_method0(py, "to_json")?.extract(py)?;
+
+        // Store in metadata with name "foxglove.layout" and empty key
+        let mut metadata = std::collections::BTreeMap::new();
+        metadata.insert(String::new(), json_str);
+
+        if let Some(writer) = &self.0 {
+            writer
+                .write_metadata("foxglove.layout", metadata)
+                .map_err(PyFoxgloveError::from)?;
+        } else {
+            return Err(PyFoxgloveError::from(foxglove::FoxgloveError::SinkClosed).into());
+        }
+        Ok(())
+    }
 }
 
 pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {

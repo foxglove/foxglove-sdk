@@ -1,5 +1,8 @@
 from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from ..layouts import Layout
 
 class MCAPCompression(Enum):
     """
@@ -116,10 +119,23 @@ class MCAPWriter:
         Common uses include storing configuration files, calibration data, or other
         reference material related to the recording.
 
-        :param log_time: Time at which the attachment was logged, in nanoseconds since epoch.
-        :param create_time: Time at which the attachment data was created, in nanoseconds since epoch.
+        :param log_time: Time at which the attachment was logged, in nanoseconds since
+            epoch.
+        :param create_time: Time at which the attachment data was created, in nanoseconds
+            since epoch.
         :param name: Name of the attachment (e.g., "config.json").
         :param media_type: MIME type of the attachment (e.g., "application/json").
         :param data: Binary content of the attachment.
+        """
+        ...
+
+    def write_layout(self, layout: "Layout") -> None:
+        """
+        Write a layout to the MCAP file.
+
+        The layout is serialized to JSON and stored in the file's metadata
+        under the "foxglove.layout" key.
+
+        :param layout: A Layout object from foxglove.layouts.
         """
         ...
