@@ -133,8 +133,10 @@ class MCAPWriter:
         """
         Write a layout to the MCAP file.
 
-        The layout is serialized to JSON and stored in the file's metadata
-        under the "foxglove.layout" key.
+        The layout is serialized to JSON and accumulated internally. All layouts
+        will be written as a single metadata record under the "foxglove.layout"
+        key when the writer is closed. This allows multiple layouts to be stored
+        in the same metadata record with different names.
 
         :param layout: A Layout object from foxglove.layouts.
         :param layout_name: The name to use as the key in the metadata record.
