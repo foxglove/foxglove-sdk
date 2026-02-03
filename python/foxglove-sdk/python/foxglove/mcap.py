@@ -71,8 +71,10 @@ class MCAPWriter:
         Common uses include storing configuration files, calibration data, or other
         reference material related to the recording.
 
-        :param log_time: Time at which the attachment was logged, in nanoseconds since epoch.
-        :param create_time: Time at which the attachment data was created, in nanoseconds since epoch.
+        :param log_time: Time at which the attachment was logged, in nanoseconds since
+            epoch.
+        :param create_time: Time at which the attachment data was created, in nanoseconds
+            since epoch.
         :param name: Name of the attachment (e.g., "config.json").
         :param media_type: MIME type of the attachment (e.g., "application/json").
         :param data: Binary content of the attachment.
