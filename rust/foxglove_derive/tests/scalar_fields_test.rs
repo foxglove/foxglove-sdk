@@ -489,9 +489,7 @@ fn test_array_of_u64_field_serialization() {
 
 #[test]
 fn test_array_encoded_len() {
-    let test_struct = TestMessageArray {
-        numbers: [1, 2, 3],
-    };
+    let test_struct = TestMessageArray { numbers: [1, 2, 3] };
 
     let mut buf = BytesMut::new();
     test_struct.encode(&mut buf).expect("Failed to encode");

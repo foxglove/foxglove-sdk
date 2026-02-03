@@ -86,7 +86,10 @@ fn test_vec_of_enum_serialization() {
     let field_descriptor = message_descriptor
         .get_field_by_name("values")
         .expect("Field 'values' not found");
-    assert!(field_descriptor.is_list(), "Field should be a repeated list");
+    assert!(
+        field_descriptor.is_list(),
+        "Field should be a repeated list"
+    );
 
     let deserialized_message = DynamicMessage::decode(message_descriptor.clone(), buf.as_ref())
         .expect("Failed to deserialize");
@@ -123,7 +126,10 @@ fn test_array_of_enum_serialization() {
     let field_descriptor = message_descriptor
         .get_field_by_name("values")
         .expect("Field 'values' not found");
-    assert!(field_descriptor.is_list(), "Field should be a repeated list");
+    assert!(
+        field_descriptor.is_list(),
+        "Field should be a repeated list"
+    );
 
     let deserialized_message = DynamicMessage::decode(message_descriptor.clone(), buf.as_ref())
         .expect("Failed to deserialize");
