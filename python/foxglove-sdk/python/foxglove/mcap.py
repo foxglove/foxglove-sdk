@@ -15,7 +15,7 @@ class MCAPWriter:
     """
     A writer for logging messages to an MCAP file.
 
-    Obtain an instance by calling :py:func:`open_mcap`.
+    Obtain an instance by calling :py:func:`foxglove.open_mcap`.
 
     This class may be used as a context manager, in which case the writer will
     be closed when you exit the context.
