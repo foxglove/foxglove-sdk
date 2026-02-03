@@ -129,7 +129,7 @@ class MCAPWriter:
         """
         ...
 
-    def write_layout(self, layout: "Layout") -> None:
+    def write_layout(self, layout: "Layout", layout_name: str) -> None:
         """
         Write a layout to the MCAP file.
 
@@ -137,5 +137,6 @@ class MCAPWriter:
         under the "foxglove.layout" key.
 
         :param layout: A Layout object from foxglove.layouts.
+        :param layout_name: The name to use as the key in the metadata record.
         """
         ...

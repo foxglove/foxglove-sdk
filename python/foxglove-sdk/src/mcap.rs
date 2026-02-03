@@ -306,13 +306,14 @@ impl PyMcapWriter {
     /// under the "foxglove.layout" key.
     ///
     /// :param layout: A Layout object from foxglove.layouts.
-    fn write_layout(&self, py: Python<'_>, layout: Py<PyAny>) -> PyResult<()> {
+    /// :param layout_name: The name to use as the key in the metadata record.
+    fn write_layout(&self, py: Python<'_>, layout: Py<PyAny>, layout_name: String) -> PyResult<()> {
         // Call to_json() on the layout object
         let json_str: String = layout.call_method0(py, "to_json")?.extract(py)?;
 
-        // Store in metadata with name "foxglove.layout" and empty key
+        // Store in metadata with name "foxglove.layout" and layout_name as the key
         let mut metadata = std::collections::BTreeMap::new();
-        metadata.insert(String::new(), json_str);
+        metadata.insert(layout_name, json_str);
 
         if let Some(writer) = &self.0 {
             writer

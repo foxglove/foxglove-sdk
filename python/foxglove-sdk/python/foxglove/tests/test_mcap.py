@@ -235,8 +235,10 @@ def test_write_layout(tmp_mcap: Path) -> None:
         )
     )
 
+    layout_name = "my_test_layout"
+
     with open_mcap(tmp_mcap) as writer:
-        writer.write_layout(layout)
+        writer.write_layout(layout, layout_name)
 
         # Log some messages
         for ii in range(5):
@@ -252,9 +254,9 @@ def test_write_layout(tmp_mcap: Path) -> None:
         for record in reader.iter_metadata():
             if record.name == "foxglove.layout":
                 found_layout = True
-                # The layout should be stored with an empty key
-                assert "" in record.metadata
-                layout_json = record.metadata[""]
+                # The layout should be stored with the layout_name as the key
+                assert layout_name in record.metadata
+                layout_json = record.metadata[layout_name]
                 # Verify the JSON is valid and contains the expected structure
                 layout_data = json.loads(layout_json)
                 assert layout_data.get("version") == 1
