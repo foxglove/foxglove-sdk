@@ -4,6 +4,7 @@ from typing import Callable, Generator, Optional, Union
 
 import pytest
 from foxglove import Channel, ChannelDescriptor, Context, open_mcap
+from foxglove.layouts import Layout, MarkdownPanel
 from foxglove.mcap import MCAPWriteOptions
 
 chan = Channel("test", schema={"type": "object"})
@@ -221,6 +222,46 @@ def test_write_metadata(tmp_mcap: Path) -> None:
 
     # Verify metadata was written correctly
     _verify_metadata_in_file(tmp_mcap, expected_metadata)
+
+
+def test_write_layout(tmp_mcap: Path) -> None:
+    """Test writing a layout to MCAP file."""
+    import json
+
+    # Create a simple layout with a MarkdownPanel
+    layout = Layout(
+        content=MarkdownPanel(
+            title="Test Panel",
+        )
+    )
+
+    with open_mcap(tmp_mcap) as writer:
+        writer.write_layout(layout)
+
+        # Log some messages
+        for ii in range(5):
+            chan.log({"foo": ii})
+
+    # Verify layout was written correctly as metadata
+    import mcap.reader
+
+    with open(tmp_mcap, "rb") as f:
+        reader = mcap.reader.make_reader(f)
+
+        found_layout = False
+        for record in reader.iter_metadata():
+            if record.name == "foxglove.layout":
+                found_layout = True
+                # The layout should be stored with an empty key
+                assert "" in record.metadata
+                layout_json = record.metadata[""]
+                # Verify the JSON is valid and contains the expected structure
+                layout_data = json.loads(layout_json)
+                assert layout_data.get("version") == 1
+                assert "content" in layout_data
+                assert layout_data["content"]["panelType"] == "Markdown"
+
+        assert found_layout, "Layout metadata not found in MCAP file"
 
 
 def test_channel_filter(make_tmp_mcap: Callable[[], Path]) -> None:

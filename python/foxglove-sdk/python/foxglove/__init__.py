@@ -9,7 +9,8 @@ from __future__ import annotations
 
 import atexit
 import logging
-from typing import TYPE_CHECKING
+from pathlib import Path
+from typing import Any, BinaryIO, TYPE_CHECKING
 
 from . import _foxglove_py as _foxglove
 
@@ -19,17 +20,47 @@ from ._foxglove_py import (
     Context,
     Schema,
     SinkChannelFilter,
-    open_mcap,
 )
 from .channel import Channel, log
 
 # Deprecated. Use foxglove.mcap.MCAPWriter instead.
-from .mcap import MCAPWriter
+from .mcap import MCAPWriter, MCAPWriteOptions
 
 if TYPE_CHECKING:
     from .notebook.notebook_buffer import NotebookBuffer
 
 atexit.register(_foxglove.shutdown)
+
+
+def open_mcap(
+    path: str | Path | BinaryIO | Any,
+    *,
+    allow_overwrite: bool = False,
+    context: Context | None = None,
+    channel_filter: SinkChannelFilter | None = None,
+    writer_options: MCAPWriteOptions | None = None,
+) -> MCAPWriter:
+    """
+    Open an MCAP writer for recording.
+
+    If a path is provided, the file will be created and must not already exist (unless
+    allow_overwrite is True). If a file-like object is provided, it must support write(),
+    seek(), and flush() methods; the allow_overwrite parameter is ignored.
+
+    If a context is provided, the MCAP file will be associated with that context. Otherwise, the
+    global context will be used.
+
+    You must close the writer with close() or the with statement to ensure the file is correctly
+    finished.
+    """
+    inner = _foxglove.open_mcap(
+        path,
+        allow_overwrite=allow_overwrite,
+        context=context,
+        channel_filter=channel_filter,
+        writer_options=writer_options,
+    )
+    return MCAPWriter(inner)
 
 
 try:
