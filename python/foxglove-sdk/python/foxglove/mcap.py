@@ -1,11 +1,11 @@
 # Re-export these imports
+from typing import TYPE_CHECKING, Any
+
 from ._foxglove_py.mcap import (
     MCAPCompression,
     MCAPWriteOptions,
-    MCAPWriter as _MCAPWriter,
 )
-
-from typing import Any, TYPE_CHECKING
+from ._foxglove_py.mcap import MCAPWriter as _MCAPWriter
 
 if TYPE_CHECKING:
     from .layouts import Layout

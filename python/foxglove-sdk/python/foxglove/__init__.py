@@ -10,7 +10,7 @@ from __future__ import annotations
 import atexit
 import logging
 from pathlib import Path
-from typing import Any, BinaryIO, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, BinaryIO
 
 from . import _foxglove_py as _foxglove
 
@@ -24,7 +24,7 @@ from ._foxglove_py import (
 from .channel import Channel, log
 
 # Deprecated. Use foxglove.mcap.MCAPWriter instead.
-from .mcap import MCAPWriter, MCAPWriteOptions
+from .mcap import MCAPWriteOptions, MCAPWriter
 
 if TYPE_CHECKING:
     from .notebook.notebook_buffer import NotebookBuffer
