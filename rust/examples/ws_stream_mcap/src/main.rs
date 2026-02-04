@@ -114,19 +114,23 @@ fn main() -> Result<()> {
     info!("Starting stream");
     let mut last_status = PlaybackStatus::Paused;
     while !done.load(Ordering::Relaxed) {
-        let status = { mcap_player.lock().unwrap().status() };
-
-        // Broadcast state change when playback ends
-        if status == PlaybackStatus::Ended && last_status != PlaybackStatus::Ended {
+        let status = {
             let player = mcap_player.lock().unwrap();
-            server.broadcast_playback_state(PlaybackState {
-                current_time: player.current_time(),
-                playback_speed: player.playback_speed(),
-                status: player.status(),
-                did_seek: false,
-                request_id: None,
-            });
-        }
+            let status = player.status();
+
+            // Broadcast state change when playback ends
+            if status == PlaybackStatus::Ended && last_status != PlaybackStatus::Ended {
+                server.broadcast_playback_state(PlaybackState {
+                    current_time: player.current_time(),
+                    playback_speed: player.playback_speed(),
+                    status: player.status(),
+                    did_seek: false,
+                    request_id: None,
+                });
+            }
+
+            status
+        };
         last_status = status;
 
         if status != PlaybackStatus::Playing {
