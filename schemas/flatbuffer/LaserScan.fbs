@@ -29,8 +29,8 @@ table LaserScan {
   /// Intensity of detections
   intensities:[double] (id: 6);
 
-  /// Unique identifier for this message
-  uuid:string (id: 7);
+  /// Unique identifier for this message (e.g., UUID7, ULID, or custom format)
+  message_id:string (id: 7);
 
   /// Lineage information for tracking message provenance
   lineage:foxglove.LineageInfo (id: 8);

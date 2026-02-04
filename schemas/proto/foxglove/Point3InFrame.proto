@@ -19,8 +19,8 @@ message Point3InFrame {
   // Point in 3D space
   foxglove.Point3 point = 3;
 
-  // Unique identifier for this message
-  optional string uuid = 100;
+  // Unique identifier for this message (e.g., UUID7, ULID, or custom format)
+  optional string message_id = 100;
 
   // Lineage information for tracking data provenance
   optional foxglove.LineageInfo lineage = 101;

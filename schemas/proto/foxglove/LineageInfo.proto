@@ -21,8 +21,8 @@ message InputReference {
   // Topic name of the input message
   string topic = 1;
 
-  // UUID of the input message
-  string uuid = 2;
+  // Unique identifier of the input message (e.g., UUID7, ULID, or custom format)
+  string message_id = 2;
 }
 
 // Reference to a state message
@@ -30,6 +30,6 @@ message StateReference {
   // Topic name of the state message
   string topic = 1;
 
-  // UUID of the state message
-  string uuid = 2;
+  // Unique identifier of the state message (e.g., UUID7, ULID, or custom format)
+  string message_id = 2;
 }

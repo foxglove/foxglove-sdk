@@ -20,8 +20,8 @@ foxglove_msgs/Color[] colors
 # If omitted or empty, indexing will not be used. This default behavior is equivalent to specifying [0, 1, ..., N-1] for the indices (where N is the number of `points` provided).
 uint32[] indices
 
-# Unique identifier for this message
-string uuid
+# Unique identifier for this message (e.g., UUID7, ULID, or custom format)
+string message_id
 
 # Lineage information for tracking message provenance
 foxglove_msgs/LineageInfo lineage

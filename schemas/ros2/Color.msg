@@ -15,8 +15,8 @@ float64 b
 # Alpha value between 0 and 1
 float64 a
 
-# Unique identifier for this message
-string uuid
+# Unique identifier for this message (e.g., UUID7, ULID, or custom format)
+string message_id
 
 # Lineage information for tracking data provenance
 foxglove_msgs/LineageInfo lineage

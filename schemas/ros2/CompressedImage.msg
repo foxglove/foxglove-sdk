@@ -17,8 +17,8 @@ uint8[] data
 # Supported values: `jpeg`, `png`, `webp`, `avif`
 string format
 
-# Unique identifier for this message
-string uuid
+# Unique identifier for this message (e.g., UUID7, ULID, or custom format)
+string message_id
 
 # Lineage information for tracking data provenance
 foxglove_msgs/LineageInfo lineage

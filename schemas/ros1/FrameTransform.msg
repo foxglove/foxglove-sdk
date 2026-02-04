@@ -24,8 +24,8 @@ geometry_msgs/Vector3 translation
 # Rotation component of the transform, representing the orientation of the child frame in the parent frame
 geometry_msgs/Quaternion rotation
 
-# Unique identifier for this message
-string uuid
+# Unique identifier for this message (e.g., UUID7, ULID, or custom format)
+string message_id
 
 # Lineage information for tracking message provenance
 foxglove_msgs/LineageInfo lineage

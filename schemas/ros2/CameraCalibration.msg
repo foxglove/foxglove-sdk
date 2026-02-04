@@ -70,8 +70,8 @@ float64[9] r
 # This holds for both images of a stereo pair.
 float64[12] p
 
-# Unique identifier for this message
-string uuid
+# Unique identifier for this message (e.g., UUID7, ULID, or custom format)
+string message_id
 
 # Lineage information for tracking data provenance
 foxglove_msgs/LineageInfo lineage

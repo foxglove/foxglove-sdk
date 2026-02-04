@@ -138,9 +138,9 @@
       "contentEncoding": "base64",
       "description": "Embedded model. One of `url` or `data` should be non-empty. If `data` is non-empty, `media_type` must be set to indicate the type of the data."
     },
-    "uuid": {
+    "message_id": {
       "type": "string",
-      "description": "Unique identifier for this message"
+      "description": "Unique identifier for this message (e.g., UUID7, ULID, or custom format)"
     },
     "lineage": {
       "$ref": "LineageInfo.json",

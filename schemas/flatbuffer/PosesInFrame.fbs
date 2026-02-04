@@ -17,8 +17,8 @@ table PosesInFrame {
   /// Poses in 3D space
   poses:[foxglove.Pose] (id: 2);
 
-  /// Unique identifier for this message
-  uuid:string (id: 3);
+  /// Unique identifier for this message (e.g., UUID7, ULID, or custom format)
+  message_id:string (id: 3);
 
   /// Lineage information for tracking message provenance
   lineage:foxglove.LineageInfo (id: 4);

@@ -9,8 +9,8 @@ float64 x
 # y coordinate length
 float64 y
 
-# Unique identifier for this message
-string uuid
+# Unique identifier for this message (e.g., UUID7, ULID, or custom format)
+string message_id
 
 # Lineage information for tracking message provenance
 foxglove_msgs/LineageInfo lineage

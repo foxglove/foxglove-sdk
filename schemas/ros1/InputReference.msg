@@ -6,5 +6,5 @@
 # Topic name of the input message
 string topic
 
-# UUID of the input message
-string uuid
+# Unique identifier of the input message (e.g., UUID7, ULID, or custom format)
+string message_id

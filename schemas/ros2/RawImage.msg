@@ -76,8 +76,8 @@ uint32 step
 #   - `step` must be greater than or equal to `width` * 2.
 uint8[] data
 
-# Unique identifier for this message
-string uuid
+# Unique identifier for this message (e.g., UUID7, ULID, or custom format)
+string message_id
 
 # Lineage information for tracking data provenance
 foxglove_msgs/LineageInfo lineage

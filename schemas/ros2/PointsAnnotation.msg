@@ -40,8 +40,8 @@ foxglove_msgs/Color fill_color
 # Stroke thickness in pixels
 float64 thickness
 
-# Unique identifier for this message
-string uuid
+# Unique identifier for this message (e.g., UUID7, ULID, or custom format)
+string message_id
 
 # Lineage information for tracking data provenance
 foxglove_msgs/LineageInfo lineage

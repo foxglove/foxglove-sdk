@@ -1281,9 +1281,9 @@
       },
       "description": "Model primitives"
     },
-    "uuid": {
+    "message_id": {
       "type": "string",
-      "description": "Unique identifier for this message"
+      "description": "Unique identifier for this message (e.g., UUID7, ULID, or custom format)"
     },
     "lineage": {
       "$ref": "LineageInfo.json",

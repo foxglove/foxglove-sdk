@@ -10,8 +10,8 @@ table LocationFixes {
   /// An array of location fixes
   fixes:[foxglove.LocationFix] (id: 0);
 
-  /// Unique identifier for this message
-  uuid:string (id: 1);
+  /// Unique identifier for this message (e.g., UUID7, ULID, or custom format)
+  message_id:string (id: 1);
 
   /// Lineage information for tracking message provenance
   lineage:foxglove.LineageInfo (id: 2);

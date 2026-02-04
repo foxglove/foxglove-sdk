@@ -6,5 +6,5 @@
 # Topic name where the state message was published
 string topic
 
-# Unique identifier of the state message
-string uuid
+# Unique identifier of the state message (e.g., UUID7, ULID, or custom format)
+string message_id

@@ -59,8 +59,8 @@ table SceneEntity {
   /// Model primitives
   models:[foxglove.ModelPrimitive] (id: 13);
 
-  /// Unique identifier for this message
-  uuid:string (id: 14);
+  /// Unique identifier for this message (e.g., UUID7, ULID, or custom format)
+  message_id:string (id: 14);
 
   /// Lineage information for tracking message provenance
   lineage:foxglove.LineageInfo (id: 15);

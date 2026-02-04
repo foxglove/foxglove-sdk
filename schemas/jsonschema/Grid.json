@@ -203,9 +203,9 @@
       "contentEncoding": "base64",
       "description": "Grid cell data, interpreted using `fields`, in row-major (y-major) order.\nFor the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:\n\n- y = i / row_stride * cell_size.y\n- x = (i % row_stride) / cell_stride * cell_size.x"
     },
-    "uuid": {
+    "message_id": {
       "type": "string",
-      "description": "Unique identifier for this message"
+      "description": "Unique identifier for this message (e.g., UUID7, ULID, or custom format)"
     },
     "lineage": {
       "$ref": "LineageInfo.json",
