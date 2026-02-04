@@ -1,6 +1,7 @@
+use std::time::Duration;
+
 use anyhow::Result;
 use foxglove::{websocket::PlaybackStatus, WebSocketServerHandle};
-use std::time::Instant;
 
 /// A data source that supports ranged playback with play/pause, seek, and variable speed.
 ///
@@ -49,16 +50,12 @@ pub trait PlaybackSource {
     /// Used to send a PlaybackState to Foxglove
     fn playback_speed(&self) -> f32;
 
-    /// Returns the next wall-clock time at which messages should be logged, and should factor in
-    /// playback speed.
+    /// Logs the next message for playback if it's ready, or returns a duration to wait.
     ///
-    /// Returns `None` when there are no more messages, indicating playback has ended.
-    fn next_wakeup(&mut self) -> Option<Instant>;
-
-    /// Logs pending messages up to the current playback time and broadcasts time updates.
+    /// Returns `Ok(Some(duration))` if the caller should sleep before calling again.
+    /// Returns `Ok(None)` if a message was logged or playback is not active.
     ///
-    /// This should be called after sleeping until `next_wakeup()`. It logs all messages
-    /// whose timestamps fall within the elapsed playback time and should call
-    /// `server.broadcast_time()` to keep Foxglove's playback bar synchronized.
-    fn log_messages(&mut self, server: &WebSocketServerHandle) -> Result<()>;
+    /// The caller should sleep outside of any lock to allow control requests to be processed.
+    /// This method also broadcasts time updates via `server.broadcast_time()`.
+    fn log_next_message(&mut self, server: &WebSocketServerHandle) -> Result<Option<Duration>>;
 }

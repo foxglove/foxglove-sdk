@@ -25,6 +25,8 @@ pub struct McapPlayer {
     status: PlaybackStatus,
     current_time: u64,
     playback_speed: f32,
+    /// Buffered message that was read but not yet ready to emit.
+    pending_message: Option<(mcap::records::MessageHeader, Vec<u8>)>,
 }
 
 impl McapPlayer {
@@ -64,6 +66,7 @@ impl McapPlayer {
             file,
             chunk_buffer: Vec::new(),
             time_tracker: None,
+            pending_message: None,
         })
     }
 
@@ -75,12 +78,18 @@ impl McapPlayer {
         )
         .map_err(|e| anyhow!("failed to create indexed reader: {e}"))?;
         self.time_tracker = None;
+        self.pending_message = None;
         Ok(())
     }
 
     /// Processes reader events until a message is available or EOF.
     /// Returns the next message header and data, or None if no more messages.
     fn next_message(&mut self) -> Result<Option<(mcap::records::MessageHeader, Vec<u8>)>> {
+        // Return buffered message first if available
+        if let Some(msg) = self.pending_message.take() {
+            return Ok(Some(msg));
+        }
+
         loop {
             match self.reader.next_event() {
                 None => return Ok(None),
@@ -150,64 +159,50 @@ impl PlaybackSource for McapPlayer {
         Ok(())
     }
 
-    fn next_wakeup(&mut self) -> Option<Instant> {
+    fn log_next_message(&mut self, server: &WebSocketServerHandle) -> Result<Option<Duration>> {
         if self.status != PlaybackStatus::Playing {
-            return None;
+            return Ok(None);
         }
 
-        // Peek at the next message to determine when we should wake up
-        // We can't actually peek without consuming, so we return a short interval
-        // and let log_messages handle the actual timing
-        let tt = self.time_tracker.as_ref()?;
-        Some(tt.next_wakeup())
-    }
+        // Get the next message to log
+        let Some((header, data)) = self.next_message()? else {
+            // No more messages, playback has ended
+            self.status = PlaybackStatus::Ended;
+            self.current_time = self.time_range.1;
+            return Ok(None);
+        };
 
-    fn log_messages(&mut self, server: &WebSocketServerHandle) -> Result<()> {
-        if self.status != PlaybackStatus::Playing {
-            return Ok(());
+        let tt = self
+            .time_tracker
+            .get_or_insert_with(|| TimeTracker::start(header.log_time, self.playback_speed));
+
+        // Check if we need to wait before emitting this message
+        let wakeup = tt.wakeup_for(header.log_time);
+        if let Some(sleep_duration) = wakeup.checked_duration_since(Instant::now()) {
+            // Buffer the message and return the sleep duration
+            self.pending_message = Some((header, data));
+            return Ok(Some(sleep_duration));
         }
 
-        // Process messages that are ready to be logged based on elapsed time
-        loop {
-            let Some((header, data)) = self.next_message()? else {
-                // No more messages, playback has ended
-                self.status = PlaybackStatus::Paused;
-                self.current_time = self.time_range.1;
-                return Ok(());
-            };
+        // Update current time
+        self.current_time = header.log_time;
 
-            let tt = self.time_tracker.get_or_insert_with(|| {
-                TimeTracker::start(header.log_time, self.playback_speed)
-            });
-
-            // Check if we've reached a message that's in the future
-            if !tt.is_ready(header.log_time) {
-                // Put the message back by resetting the reader to the current position
-                // This is inefficient but simple - a production implementation would buffer
-                self.reset_reader(header.log_time)?;
-                break;
-            }
-
-            // Update current time
-            self.current_time = header.log_time;
-
-            // Broadcast time update periodically
-            if let Some(timestamp) = tt.notify(header.log_time) {
-                server.broadcast_time(timestamp);
-            }
-
-            // Log the message to the appropriate channel
-            if let Some(channel) = self.channels.get(&header.channel_id) {
-                channel.log_with_meta(
-                    &data,
-                    PartialMetadata {
-                        log_time: Some(header.log_time),
-                    },
-                );
-            }
+        // Broadcast time update periodically
+        if let Some(timestamp) = tt.notify(header.log_time) {
+            server.broadcast_time(timestamp);
         }
 
-        Ok(())
+        // Log the message to the appropriate channel
+        if let Some(channel) = self.channels.get(&header.channel_id) {
+            channel.log_with_meta(
+                &data,
+                PartialMetadata {
+                    log_time: Some(header.log_time),
+                },
+            );
+        }
+
+        Ok(None)
     }
 }
 
@@ -254,15 +249,20 @@ impl TimeTracker {
         }
     }
 
-    /// Returns true if the given log time is ready to be played.
-    fn is_ready(&self, log_time: u64) -> bool {
-        log_time <= self.current_log_time()
-    }
-
-    /// Returns the next wall-clock instant to wake up.
-    fn next_wakeup(&self) -> Instant {
-        // Wake up frequently to check for new messages
-        Instant::now() + Duration::from_millis(1)
+    /// Returns the wall-clock instant when the given log_time will be ready.
+    fn wakeup_for(&self, log_time: u64) -> Instant {
+        let current = self.current_log_time();
+        if log_time <= current {
+            return Instant::now();
+        }
+        let log_diff_ns = log_time - current;
+        let wall_diff_ns = if self.speed > 0.0 {
+            (log_diff_ns as f64 / self.speed as f64) as u64
+        } else {
+            // If speed is 0, we'll never reach the time; return a long delay
+            1_000_000_000 // 1 second
+        };
+        Instant::now() + Duration::from_nanos(wall_diff_ns)
     }
 
     /// Pauses playback, recording the current elapsed time.
@@ -328,9 +328,10 @@ fn load_summary<R: Read + Seek>(file: &mut R) -> Result<Option<Summary>> {
 fn create_channels(summary: &Summary) -> Result<HashMap<u16, Arc<RawChannel>>> {
     let mut channels = HashMap::new();
     for (&id, mcap_channel) in &summary.channels {
-        let schema = mcap_channel.schema.as_ref().map(|s| {
-            Schema::new(s.name.as_str(), s.encoding.as_str(), s.data.to_vec())
-        });
+        let schema = mcap_channel
+            .schema
+            .as_ref()
+            .map(|s| Schema::new(s.name.as_str(), s.encoding.as_str(), s.data.to_vec()));
         let channel = ChannelBuilder::new(&mcap_channel.topic)
             .message_encoding(&mcap_channel.message_encoding)
             .schema(schema)

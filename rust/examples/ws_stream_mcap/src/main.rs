@@ -6,7 +6,7 @@ mod playback_source;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use mcap_player::McapPlayer;
 use playback_source::PlaybackSource;
@@ -115,15 +115,12 @@ fn main() -> Result<()> {
     std::thread::sleep(Duration::from_secs(1));
 
     info!("Starting stream");
+    let mut last_status = PlaybackStatus::Paused;
     while !done.load(Ordering::Relaxed) {
         let status = { mcap_player.lock().unwrap().status() };
-        if status != PlaybackStatus::Playing {
-            std::thread::sleep(Duration::from_millis(10));
-            continue;
-        }
 
-        let next_wakeup = { mcap_player.lock().unwrap().next_wakeup() };
-        let Some(next_wakeup) = next_wakeup else {
+        // Broadcast state change when playback ends
+        if status == PlaybackStatus::Ended && last_status != PlaybackStatus::Ended {
             let player = mcap_player.lock().unwrap();
             server.broadcast_playback_state(PlaybackState {
                 current_time: player.current_time(),
@@ -132,14 +129,18 @@ fn main() -> Result<()> {
                 did_seek: false,
                 request_id: None,
             });
+        }
+        last_status = status;
+
+        if status != PlaybackStatus::Playing {
+            std::thread::sleep(Duration::from_millis(10));
             continue;
-        };
+        }
 
-        let now = Instant::now();
-        std::thread::sleep(next_wakeup - now);
-
-        {
-            mcap_player.lock().unwrap().log_messages(&server)?;
+        // Log next message, sleeping outside the lock if needed
+        let sleep_duration = mcap_player.lock().unwrap().log_next_message(&server)?;
+        if let Some(duration) = sleep_duration {
+            std::thread::sleep(duration);
         }
     }
 
