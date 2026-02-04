@@ -865,7 +865,6 @@ name = "example_ws_stream_mcap"
 version = "0.0.0"
 dependencies = [
  "anyhow",
- "bytes",
  "clap",
  "ctrlc",
  "env_logger",
