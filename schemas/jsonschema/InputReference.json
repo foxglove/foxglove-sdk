@@ -12,5 +12,9 @@
       "type": "string",
       "description": "Unique identifier of the input message (e.g., UUID7, ULID, or custom format)"
     }
-  }
+  },
+  "required": [
+    "topic",
+    "message_id"
+  ]
 }

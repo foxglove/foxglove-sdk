@@ -1,29 +1,0 @@
-
-s
-foxglove/Quaternion.protofoxglove"D
-
-Quaternion
-x (Rx
-y (Ry
-z (Rz
-w (Rwbproto3
-_
-foxglove/Vector3.protofoxglove"3
-Vector3
-x (Rx
-y (Ry
-z (Rzbproto3
-ÿ
-google/protobuf/timestamp.protogoogle.protobuf";
-	Timestamp
-seconds (Rseconds
-nanos (RnanosB…
-com.google.protobufBTimestampProtoPZ2google.golang.org/protobuf/types/known/timestamppbø¢GPBªGoogle.Protobuf.WellKnownTypesbproto3
-‡
-foxglove/FrameTransform.protofoxglovefoxglove/Quaternion.protofoxglove/Vector3.protogoogle/protobuf/timestamp.proto"ÿ
-FrameTransform8
-	timestamp (2.google.protobuf.TimestampR	timestamp&
-parent_frame_id (	RparentFrameId$
-child_frame_id (	RchildFrameId3
-translation (2.foxglove.Vector3Rtranslation0
-rotation (2.foxglove.QuaternionRrotationbproto3

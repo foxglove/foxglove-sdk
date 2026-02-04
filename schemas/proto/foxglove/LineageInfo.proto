@@ -2,34 +2,19 @@
 
 syntax = "proto3";
 
+import "foxglove/InputReference.proto";
+import "foxglove/StateReference.proto";
+
 package foxglove;
 
-// Lineage information for tracking data provenance
+// Lineage information for tracking data provenance through a processing pipeline
 message LineageInfo {
   // References to input messages that contributed to this message
-  repeated InputReference inputs = 1;
+  repeated foxglove.InputReference inputs = 1;
 
-  // Name of the processing node that generated this message
-  optional string processing_node = 2;
+  // Name of the processing node that produced this message
+  string processing_node = 2;
 
-  // Reference to state used in generating this message
-  optional StateReference state = 3;
-}
-
-// Reference to an input message
-message InputReference {
-  // Topic name of the input message
-  string topic = 1;
-
-  // Unique identifier of the input message (e.g., UUID7, ULID, or custom format)
-  string message_id = 2;
-}
-
-// Reference to a state message
-message StateReference {
-  // Topic name of the state message
-  string topic = 1;
-
-  // Unique identifier of the state message (e.g., UUID7, ULID, or custom format)
-  string message_id = 2;
+  // Optional reference to the state of the processing node
+  foxglove.StateReference state = 3;
 }

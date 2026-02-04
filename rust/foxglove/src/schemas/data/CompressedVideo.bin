@@ -1,14 +1,0 @@
-
-ÿ
-google/protobuf/timestamp.protogoogle.protobuf";
-	Timestamp
-seconds (Rseconds
-nanos (RnanosB…
-com.google.protobufBTimestampProtoPZ2google.golang.org/protobuf/types/known/timestamppbø¢GPBªGoogle.Protobuf.WellKnownTypesbproto3
-è
-foxglove/CompressedVideo.protofoxglovegoogle/protobuf/timestamp.proto"’
-CompressedVideo8
-	timestamp (2.google.protobuf.TimestampR	timestamp
-frame_id (	RframeId
-data (Rdata
-format (	Rformatbproto3

@@ -30,7 +30,7 @@ table PointCloud {
   /// Unique identifier for this message (e.g., UUID7, ULID, or custom format)
   message_id:string (id: 6);
 
-  /// Lineage information for tracking message provenance
+  /// Lineage information for tracking data provenance
   lineage:foxglove.LineageInfo (id: 7);
 }
 

@@ -1,19 +1,0 @@
-
-ÿ
-google/protobuf/timestamp.protogoogle.protobuf";
-	Timestamp
-seconds (Rseconds
-nanos (RnanosB…
-com.google.protobufBTimestampProtoPZ2google.golang.org/protobuf/types/known/timestamppbø¢GPBªGoogle.Protobuf.WellKnownTypesbproto3
-Ñ
- foxglove/CameraCalibration.protofoxglovegoogle/protobuf/timestamp.proto"ù
-CameraCalibration8
-	timestamp (2.google.protobuf.TimestampR	timestamp
-frame_id	 (	RframeId
-width (Rwidth
-height (Rheight)
-distortion_model (	RdistortionModel
-D (RD
-K (RK
-R (RR
-P (RPbproto3

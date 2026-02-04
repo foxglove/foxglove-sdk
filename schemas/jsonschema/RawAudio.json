@@ -38,14 +38,6 @@
       "type": "integer",
       "minimum": 0,
       "description": "Number of channels in the audio block"
-    },
-    "message_id": {
-      "type": "string",
-      "description": "Unique identifier for this message (e.g., UUID7, ULID, or custom format)"
-    },
-    "lineage": {
-      "$ref": "LineageInfo.json",
-      "description": "Lineage tracking information"
     }
   },
   "required": [

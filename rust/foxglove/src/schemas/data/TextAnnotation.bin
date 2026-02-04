@@ -1,29 +1,0 @@
-
-i
-foxglove/Color.protofoxglove"?
-Color
-r (Rr
-g (Rg
-b (Rb
-a (Rabproto3
-O
-foxglove/Point2.protofoxglove"$
-Point2
-x (Rx
-y (Rybproto3
-ÿ
-google/protobuf/timestamp.protogoogle.protobuf";
-	Timestamp
-seconds (Rseconds
-nanos (RnanosB…
-com.google.protobufBTimestampProtoPZ2google.golang.org/protobuf/types/known/timestamppbø¢GPBªGoogle.Protobuf.WellKnownTypesbproto3
-—
-foxglove/TextAnnotation.protofoxglovefoxglove/Color.protofoxglove/Point2.protogoogle/protobuf/timestamp.proto"•
-TextAnnotation8
-	timestamp (2.google.protobuf.TimestampR	timestamp,
-position (2.foxglove.Point2Rposition
-text (	Rtext
-	font_size (RfontSize.
-
-text_color (2.foxglove.ColorR	textColor:
-background_color (2.foxglove.ColorRbackgroundColorbproto3

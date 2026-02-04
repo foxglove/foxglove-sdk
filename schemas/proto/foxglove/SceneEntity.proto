@@ -6,7 +6,6 @@ import "foxglove/ArrowPrimitive.proto";
 import "foxglove/CubePrimitive.proto";
 import "foxglove/CylinderPrimitive.proto";
 import "foxglove/KeyValuePair.proto";
-import "foxglove/LineageInfo.proto";
 import "foxglove/LinePrimitive.proto";
 import "foxglove/ModelPrimitive.proto";
 import "foxglove/SpherePrimitive.proto";
@@ -60,10 +59,4 @@ message SceneEntity {
 
   // Model primitives
   repeated foxglove.ModelPrimitive models = 14;
-
-  // Unique identifier for this message (e.g., UUID7, ULID, or custom format)
-  optional string message_id = 100;
-
-  // Lineage information for tracking data provenance
-  optional foxglove.LineageInfo lineage = 101;
 }

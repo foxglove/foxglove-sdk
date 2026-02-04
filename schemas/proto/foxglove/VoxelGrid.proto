@@ -2,7 +2,6 @@
 
 syntax = "proto3";
 
-import "foxglove/LineageInfo.proto";
 import "foxglove/PackedElementField.proto";
 import "foxglove/Pose.proto";
 import "foxglove/Vector3.proto";
@@ -44,15 +43,9 @@ message VoxelGrid {
 
   // Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.
   // For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
-  //
+  // 
   // - z = i / slice_stride * cell_size.z
   // - y = (i % slice_stride) / row_stride * cell_size.y
   // - x = (i % row_stride) / cell_stride * cell_size.x
   bytes data = 11;
-
-  // Unique identifier for this message (e.g., UUID7, ULID, or custom format)
-  optional string message_id = 100;
-
-  // Lineage information for tracking data provenance
-  optional foxglove.LineageInfo lineage = 101;
 }

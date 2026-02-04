@@ -3,7 +3,6 @@
 syntax = "proto3";
 
 import "foxglove/Color.proto";
-import "foxglove/LineageInfo.proto";
 import "foxglove/Point2.proto";
 import "google/protobuf/timestamp.proto";
 
@@ -49,10 +48,4 @@ message PointsAnnotation {
 
   // Stroke thickness in pixels
   double thickness = 7;
-
-  // Unique identifier for this message (e.g., UUID7, ULID, or custom format)
-  optional string message_id = 100;
-
-  // Lineage information for tracking data provenance
-  optional foxglove.LineageInfo lineage = 101;
 }

@@ -16,7 +16,7 @@ uint32 width
 uint32 height
 
 # Name of distortion model
-#
+# 
 # Supported parameters: `plumb_bob` (k1, k2, p1, p2, k3), `rational_polynomial` (k1, k2, p1, p2, k3, k4, k5, k6), and `kannala_brandt` (k1, k2, k3, k4), and `fisheye62` (k0, k1, k2, k3, p0, p1, crit_theta [optional]). `plumb_bob` and `rational_polynomial` models are based on the pinhole model [OpenCV's](https://docs.opencv.org/4.11.0/d9/d0c/group__calib3d.html) [pinhole camera model](https://en.wikipedia.org/wiki/Distortion_%28optics%29#Software_correction). The `kannala_brandt` model matches the [OpenvCV fisheye](https://docs.opencv.org/4.11.0/db/d58/group__calib3d__fisheye.html) model. The `fisheye62` model matches the [Project Aria's Fisheye62 Model](https://facebookresearch.github.io/projectaria_tools/docs/tech_insights/camera_intrinsic_models).
 string distortion_model
 
@@ -24,54 +24,48 @@ string distortion_model
 float64[] D
 
 # Intrinsic camera matrix (3x3 row-major matrix)
-#
+# 
 # A 3x3 row-major matrix for the raw (distorted) image.
-#
+# 
 # Projects 3D points in the camera coordinate frame to 2D pixel coordinates using the focal lengths (fx, fy) and principal point (cx, cy).
-#
+# 
 # ```
 #     [fx  0 cx]
 # K = [ 0 fy cy]
 #     [ 0  0  1]
 # ```
-#
+# 
 # **Uncalibrated cameras:** Following ROS conventions for [CameraInfo](https://docs.ros.org/en/noetic/api/sensor_msgs/html/msg/CameraInfo.html), Foxglove also treats K[0] == 0.0 as indicating an uncalibrated camera, and calibration data will be ignored.
 float64[9] K
 
 # Rectification matrix (stereo cameras only, 3x3 row-major matrix)
-#
+# 
 # A rotation matrix aligning the camera coordinate system to the ideal stereo image plane so that epipolar lines in both stereo images are parallel.
 float64[9] R
 
 # Projection/camera matrix (3x4 row-major matrix)
-#
+# 
 # ```
 #     [fx'  0  cx' Tx]
 # P = [ 0  fy' cy' Ty]
 #     [ 0   0   1   0]
 # ```
-#
+# 
 # By convention, this matrix specifies the intrinsic (camera) matrix of the processed (rectified) image. That is, the left 3x3 portion is the normal camera intrinsic matrix for the rectified image.
-#
+# 
 # It projects 3D points in the camera coordinate frame to 2D pixel coordinates using the focal lengths (fx', fy') and principal point (cx', cy') - these may differ from the values in K.
-#
+# 
 # For monocular cameras, Tx = Ty = 0. Normally, monocular cameras will also have R = the identity and P[1:3,1:3] = K.
-#
+# 
 # Foxglove currently does not support displaying stereo images, so Tx and Ty are ignored.
-#
+# 
 # Given a 3D point [X Y Z]', the projection (x, y) of the point onto the rectified image is given by:
-#
+# 
 # ```
 # [u v w]' = P * [X Y Z 1]'
 #        x = u / w
 #        y = v / w
 # ```
-#
+# 
 # This holds for both images of a stereo pair.
 float64[12] P
-
-# Unique identifier for this message (e.g., UUID7, ULID, or custom format)
-string message_id
-
-# Lineage information for tracking message provenance
-foxglove_msgs/LineageInfo lineage

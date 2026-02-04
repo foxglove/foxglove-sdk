@@ -2,7 +2,6 @@
 
 syntax = "proto3";
 
-import "foxglove/LineageInfo.proto";
 import "google/protobuf/timestamp.proto";
 
 package foxglove;
@@ -46,10 +45,4 @@ message Log {
 
   // Line number in the file
   fixed32 line = 6;
-
-  // Unique identifier for this message (e.g., UUID7, ULID, or custom format)
-  optional string message_id = 100;
-
-  // Lineage information for tracking data provenance
-  optional foxglove.LineageInfo lineage = 101;
 }

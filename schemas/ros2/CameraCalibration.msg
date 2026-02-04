@@ -58,20 +58,14 @@ float64[9] r
 # For monocular cameras, Tx = Ty = 0. Normally, monocular cameras will also have R = the identity and P[1:3,1:3] = K.
 # 
 # Foxglove currently does not support displaying stereo images, so Tx and Ty are ignored.
-#
+# 
 # Given a 3D point [X Y Z]', the projection (x, y) of the point onto the rectified image is given by:
-#
+# 
 # ```
 # [u v w]' = P * [X Y Z 1]'
 #        x = u / w
 #        y = v / w
 # ```
-#
+# 
 # This holds for both images of a stereo pair.
 float64[12] p
-
-# Unique identifier for this message (e.g., UUID7, ULID, or custom format)
-string message_id
-
-# Lineage information for tracking data provenance
-foxglove_msgs/LineageInfo lineage

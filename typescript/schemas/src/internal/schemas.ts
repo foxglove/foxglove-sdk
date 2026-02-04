@@ -112,6 +112,68 @@ const Color: FoxgloveMessageSchema = {
   ],
 };
 
+// Lineage tracking types for data provenance
+const InputReference: FoxgloveMessageSchema = {
+  type: "message",
+  name: "InputReference",
+  description: "Reference to an input message used in lineage tracking",
+  fields: [
+    {
+      name: "topic",
+      type: { type: "primitive", name: "string" },
+      description: "Topic name of the input message",
+    },
+    {
+      name: "message_id",
+      type: { type: "primitive", name: "string" },
+      description: "Unique identifier of the input message (e.g., UUID7, ULID, or custom format)",
+    },
+  ],
+};
+
+const StateReference: FoxgloveMessageSchema = {
+  type: "message",
+  name: "StateReference",
+  description: "Reference to a state message used in lineage tracking",
+  fields: [
+    {
+      name: "topic",
+      type: { type: "primitive", name: "string" },
+      description: "Topic name of the state message",
+    },
+    {
+      name: "message_id",
+      type: { type: "primitive", name: "string" },
+      description: "Unique identifier of the state message (e.g., UUID7, ULID, or custom format)",
+    },
+  ],
+};
+
+const LineageInfo: FoxgloveMessageSchema = {
+  type: "message",
+  name: "LineageInfo",
+  description: "Lineage information for tracking data provenance through a processing pipeline",
+  fields: [
+    {
+      name: "inputs",
+      type: { type: "nested", schema: InputReference },
+      array: true,
+      description: "References to input messages that contributed to this message",
+    },
+    {
+      name: "processing_node",
+      type: { type: "primitive", name: "string" },
+      description: "Name of the processing node that produced this message",
+    },
+    {
+      name: "state",
+      type: { type: "nested", schema: StateReference },
+      optional: true,
+      description: "Optional reference to the state of the processing node",
+    },
+  ],
+};
+
 const Vector2: FoxgloveMessageSchema = {
   type: "message",
   name: "Vector2",
@@ -1046,6 +1108,20 @@ For each \`encoding\` value, the \`data\` field contains image pixel data serial
   - \`step\` must be greater than or equal to \`width\` * 2.
 `,
     },
+    {
+      name: "message_id",
+      type: { type: "primitive", name: "string" },
+      description: "Unique identifier for this message (e.g., UUID7, ULID, or custom format)",
+      optional: true,
+      protobufFieldNumber: 100,
+    },
+    {
+      name: "lineage",
+      type: { type: "nested", schema: LineageInfo },
+      description: "Lineage information for tracking data provenance",
+      optional: true,
+      protobufFieldNumber: 101,
+    },
   ],
 };
 
@@ -1680,6 +1756,20 @@ const PointCloud: FoxgloveMessageSchema = {
       type: { type: "primitive", name: "bytes" },
       description: "Point data, interpreted using `fields`",
     },
+    {
+      name: "message_id",
+      type: { type: "primitive", name: "string" },
+      description: "Unique identifier for this message (e.g., UUID7, ULID, or custom format)",
+      optional: true,
+      protobufFieldNumber: 100,
+    },
+    {
+      name: "lineage",
+      type: { type: "nested", schema: LineageInfo },
+      description: "Lineage information for tracking data provenance",
+      optional: true,
+      protobufFieldNumber: 101,
+    },
   ],
 };
 
@@ -1746,8 +1836,10 @@ export const foxgloveMessageSchemas = {
   Grid,
   VoxelGrid,
   ImageAnnotations,
+  InputReference,
   KeyValuePair,
   LaserScan,
+  LineageInfo,
   LinePrimitive,
   LocationFix,
   LocationFixes,
@@ -1769,6 +1861,7 @@ export const foxgloveMessageSchemas = {
   RawAudio,
   RawImage,
   SpherePrimitive,
+  StateReference,
   TextAnnotation,
   TextPrimitive,
   Timestamp,

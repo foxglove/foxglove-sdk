@@ -1,20 +1,0 @@
-
-s
-foxglove/Quaternion.protofoxglove"D
-
-Quaternion
-x (Rx
-y (Ry
-z (Rz
-w (Rwbproto3
-_
-foxglove/Vector3.protofoxglove"3
-Vector3
-x (Rx
-y (Ry
-z (Rzbproto3
-É
-foxglove/Pose.protofoxglovefoxglove/Quaternion.protofoxglove/Vector3.proto"m
-Pose-
-position (2.foxglove.Vector3Rposition6
-orientation (2.foxglove.QuaternionRorientationbproto3

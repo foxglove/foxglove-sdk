@@ -2,7 +2,6 @@
 
 syntax = "proto3";
 
-import "foxglove/LineageInfo.proto";
 import "foxglove/Quaternion.proto";
 import "foxglove/Vector3.proto";
 
@@ -15,10 +14,4 @@ message Pose {
 
   // Quaternion denoting orientation in 3D space
   foxglove.Quaternion orientation = 2;
-
-  // Unique identifier for this message (e.g., UUID7, ULID, or custom format)
-  optional string message_id = 100;
-
-  // Lineage information for tracking data provenance
-  optional foxglove.LineageInfo lineage = 101;
 }

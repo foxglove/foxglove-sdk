@@ -24,5 +24,5 @@ uint8[] data
 # Unique identifier for this message (e.g., UUID7, ULID, or custom format)
 string message_id
 
-# Lineage information for tracking message provenance
+# Lineage information for tracking data provenance
 foxglove_msgs/LineageInfo lineage

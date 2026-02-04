@@ -21,9 +21,3 @@ foxglove_msgs/Color fill_color
 
 # Outline color
 foxglove_msgs/Color outline_color
-
-# Unique identifier for this message (e.g., UUID7, ULID, or custom format)
-string message_id
-
-# Lineage information for tracking data provenance
-foxglove_msgs/LineageInfo lineage
