@@ -256,7 +256,7 @@ impl PyMcapWriter {
             if !self.layouts.is_empty() {
                 let layouts = std::mem::take(&mut self.layouts);
                 writer
-                    .write_metadata("foxglove.layout", layouts)
+                    .write_metadata("foxglove.layouts", layouts)
                     .map_err(PyFoxgloveError::from)?;
             }
             writer.close().map_err(PyFoxgloveError::from)?;
@@ -321,27 +321,19 @@ impl PyMcapWriter {
 
     /// Write a layout to the MCAP file.
     ///
-    /// The layout is serialized to JSON and accumulated internally. All layouts
-    /// will be written as a single metadata record under the "foxglove.layout"
-    /// key when the writer is closed.
+    /// Layouts are accumulated internally and written as a single metadata
+    /// record under the "foxglove.layouts" key when the writer is closed.
+    /// This allows multiple layouts to be stored with different names.
     ///
-    /// :param layout: A Layout object from foxglove.layouts.
     /// :param layout_name: The name to use as the key in the metadata record.
-    fn write_layout(
-        &mut self,
-        py: Python<'_>,
-        layout: Py<PyAny>,
-        layout_name: String,
-    ) -> PyResult<()> {
+    /// :param layout: The layout JSON string to store.
+    fn write_layout(&mut self, layout_name: String, layout: String) -> PyResult<()> {
         if self.writer.is_none() {
             return Err(PyFoxgloveError::from(foxglove::FoxgloveError::SinkClosed).into());
         }
 
-        // Call to_json() on the layout object
-        let json_str: String = layout.call_method0(py, "to_json")?.extract(py)?;
-
         // Add to the internal layouts map (will be written on close)
-        self.layouts.insert(layout_name, json_str);
+        self.layouts.insert(layout_name, layout);
 
         Ok(())
     }

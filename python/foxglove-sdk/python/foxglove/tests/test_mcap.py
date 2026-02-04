@@ -244,8 +244,9 @@ def test_write_layout(tmp_mcap: Path) -> None:
     layout_name2 = "my_second_layout"
 
     with open_mcap(tmp_mcap) as writer:
-        writer.write_layout(layout1, layout_name1)
-        writer.write_layout(layout2, layout_name2)
+        # Pass layout_name first, then layout JSON string
+        writer.write_layout(layout_name1, layout1.to_json())
+        writer.write_layout(layout_name2, layout2.to_json())
 
         # Log some messages
         for ii in range(5):
@@ -259,7 +260,7 @@ def test_write_layout(tmp_mcap: Path) -> None:
 
         found_layout = False
         for record in reader.iter_metadata():
-            if record.name == "foxglove.layout":
+            if record.name == "foxglove.layouts":
                 found_layout = True
                 # Both layouts should be in the same metadata record
                 assert layout_name1 in record.metadata

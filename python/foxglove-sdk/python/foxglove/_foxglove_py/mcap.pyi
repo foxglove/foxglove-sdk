@@ -1,8 +1,6 @@
 from enum import Enum
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
-if TYPE_CHECKING:
-    from ..layouts import Layout
 
 class MCAPCompression(Enum):
     """
@@ -11,6 +9,7 @@ class MCAPCompression(Enum):
 
     Zstd = 0
     Lz4 = 1
+
 
 class MCAPWriteOptions:
     """
@@ -60,6 +59,7 @@ class MCAPWriteOptions:
         calculate_summary_section_crc: bool = True,
     ) -> None: ...
 
+
 class MCAPWriter:
     """
     A writer for logging messages to an MCAP file.
@@ -81,6 +81,7 @@ class MCAPWriter:
     ) -> None: ...
     def __enter__(self) -> "MCAPWriter": ...
     def __exit__(self, exc_type: Any, exc_value: Any, traceback: Any) -> None: ...
+
     def close(self) -> None:
         """
         Close the writer explicitly.
@@ -129,16 +130,15 @@ class MCAPWriter:
         """
         ...
 
-    def write_layout(self, layout: "Layout", layout_name: str) -> None:
+    def write_layout(self, layout_name: str, layout: str) -> None:
         """
         Write a layout to the MCAP file.
 
-        The layout is serialized to JSON and accumulated internally. All layouts
-        will be written as a single metadata record under the "foxglove.layout"
-        key when the writer is closed. This allows multiple layouts to be stored
-        in the same metadata record with different names.
+        Layouts are accumulated internally and written as a single metadata
+        record under the "foxglove.layouts" key when the writer is closed.
+        This allows multiple layouts to be stored with different names.
 
-        :param layout: A Layout object from foxglove.layouts.
         :param layout_name: The name to use as the key in the metadata record.
+        :param layout: The layout JSON string to store.
         """
         ...
