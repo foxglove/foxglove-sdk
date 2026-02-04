@@ -14,6 +14,8 @@ use mcap::Summary;
 
 use crate::playback_source::PlaybackSource;
 
+const MIN_PLAYBACK_SPEED: f32 = 0.01;
+
 pub struct McapPlayer {
     summary: Summary,
     channels: HashMap<u16, Arc<RawChannel>>,
@@ -132,6 +134,7 @@ impl PlaybackSource for McapPlayer {
     }
 
     fn set_playback_speed(&mut self, speed: f32) {
+        let speed = TimeTracker::clamp_speed(speed);
         if let Some(tt) = &mut self.time_tracker {
             tt.set_speed(speed);
         }
@@ -227,6 +230,7 @@ struct TimeTracker {
 impl TimeTracker {
     /// Initializes a new time tracker, treating "now" as the specified log time.
     fn start(offset_ns: u64, speed: f32) -> Self {
+        let speed = Self::clamp_speed(speed);
         Self {
             start: Instant::now(),
             offset_ns,
@@ -285,6 +289,7 @@ impl TimeTracker {
 
     /// Updates the playback speed.
     fn set_speed(&mut self, speed: f32) {
+        let speed = Self::clamp_speed(speed);
         if !self.paused {
             // Accumulate elapsed time at the old speed before changing
             let elapsed_wall = self.start.elapsed();
@@ -293,6 +298,14 @@ impl TimeTracker {
             self.start = Instant::now();
         }
         self.speed = speed;
+    }
+
+    fn clamp_speed(speed: f32) -> f32 {
+        if speed.is_finite() && speed >= MIN_PLAYBACK_SPEED {
+            speed
+        } else {
+            MIN_PLAYBACK_SPEED
+        }
     }
 
     /// Periodically returns a timestamp reference to broadcast to clients.
