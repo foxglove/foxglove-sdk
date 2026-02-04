@@ -69,9 +69,6 @@ struct Cli {
     /// MCAP file to read.
     #[arg(short, long)]
     file: PathBuf,
-    /// Whether to loop.
-    #[arg(long)]
-    r#loop: bool,
 }
 
 fn main() -> Result<()> {
