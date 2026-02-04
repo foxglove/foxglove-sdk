@@ -1,7 +1,6 @@
 from enum import Enum
 from typing import Any
 
-
 class MCAPCompression(Enum):
     """
     Compression options for content in an MCAP file.
@@ -9,7 +8,6 @@ class MCAPCompression(Enum):
 
     Zstd = 0
     Lz4 = 1
-
 
 class MCAPWriteOptions:
     """
@@ -59,7 +57,6 @@ class MCAPWriteOptions:
         calculate_summary_section_crc: bool = True,
     ) -> None: ...
 
-
 class MCAPWriter:
     """
     A writer for logging messages to an MCAP file.
@@ -81,7 +78,6 @@ class MCAPWriter:
     ) -> None: ...
     def __enter__(self) -> "MCAPWriter": ...
     def __exit__(self, exc_type: Any, exc_value: Any, traceback: Any) -> None: ...
-
     def close(self) -> None:
         """
         Close the writer explicitly.
