@@ -306,8 +306,6 @@ fn derive_struct_impl(input: &DeriveInput, data: &DataStruct) -> TokenStream {
             }
         });
 
-        let is_option_field = is_option(field_type);
-
         field_defs.push(quote! {
             let mut field = ::foxglove::prost_types::FieldDescriptorProto::default();
             field.name = Some(String::from(stringify!(#field_name)));
@@ -315,7 +313,7 @@ fn derive_struct_impl(input: &DeriveInput, data: &DataStruct) -> TokenStream {
 
             if <#field_type as ::foxglove::protobuf::ProtobufField>::repeating() {
                 field.label = Some(::foxglove::prost_types::field_descriptor_proto::Label::Repeated as i32);
-            } else if #is_option_field {
+            } else if <#field_type as ::foxglove::protobuf::ProtobufField>::optional() {
                 field.label = Some(::foxglove::prost_types::field_descriptor_proto::Label::Optional as i32);
             } else {
                 field.label = Some(::foxglove::prost_types::field_descriptor_proto::Label::Required as i32);

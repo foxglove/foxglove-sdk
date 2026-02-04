@@ -126,6 +126,13 @@ pub trait ProtobufField {
         false
     }
 
+    /// Indicates the type represents an optional field (like an Option).
+    ///
+    /// By default, fields are not optional.
+    fn optional() -> bool {
+        false
+    }
+
     /// The length of the field to be written, in bytes (not including the tag).
     fn encoded_len(&self) -> usize;
 
@@ -598,6 +605,10 @@ where
 
     fn repeating() -> bool {
         T::repeating()
+    }
+
+    fn optional() -> bool {
+        true
     }
 
     fn encoded_len(&self) -> usize {
