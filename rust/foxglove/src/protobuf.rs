@@ -126,6 +126,13 @@ pub trait ProtobufField {
         false
     }
 
+    /// Indicates the type represents an optional field (like an Option).
+    ///
+    /// By default, fields are not optional.
+    fn optional() -> bool {
+        false
+    }
+
     /// The length of the field to be written, in bytes (not including the tag).
     fn encoded_len(&self) -> usize;
 
@@ -452,8 +459,76 @@ where
         true
     }
 
+    fn enum_descriptor() -> Option<prost_types::EnumDescriptorProto> {
+        T::enum_descriptor()
+    }
+
     fn message_descriptor() -> Option<prost_types::DescriptorProto> {
         // The message descriptor of a vector is the message descriptor of the element type
+        // the "repeating" property is set on the field that is repeating rather than the message
+        // descriptor
+        T::message_descriptor()
+    }
+
+    fn file_descriptor() -> Option<prost_types::FileDescriptorProto> {
+        T::file_descriptor()
+    }
+
+    fn file_descriptors() -> Vec<prost_types::FileDescriptorProto> {
+        T::file_descriptors()
+    }
+
+    fn type_name() -> Option<String> {
+        T::type_name()
+    }
+
+    fn encoded_len(&self) -> usize {
+        self.iter().map(|value| value.encoded_len()).sum()
+    }
+
+    fn encoded_len_tagged(&self, field_number: u32) -> usize {
+        // Each element is written with its own tag, so sum up the tagged lengths.
+        self.iter()
+            .map(|value| value.encoded_len_tagged(field_number))
+            .sum()
+    }
+}
+
+// implement a protobuf field for any array [T; N] where T implements ProtobufField
+impl<T, const N: usize> ProtobufField for [T; N]
+where
+    T: ProtobufField,
+{
+    fn field_type() -> ProstFieldType {
+        T::field_type()
+    }
+
+    fn wire_type() -> u32 {
+        prost::encoding::WireType::LengthDelimited as u32
+    }
+
+    fn write_tagged(&self, field_number: u32, buf: &mut impl bytes::BufMut) {
+        // Non-packed repeated fields are encoded as a record for each element.
+        // https://protobuf.dev/programming-guides/encoding/#repeated
+        for value in self {
+            value.write_tagged(field_number, buf);
+        }
+    }
+
+    fn write(&self, _buf: &mut impl bytes::BufMut) {
+        panic!("[T; N] should always be written using write_tagged");
+    }
+
+    fn repeating() -> bool {
+        true
+    }
+
+    fn enum_descriptor() -> Option<prost_types::EnumDescriptorProto> {
+        T::enum_descriptor()
+    }
+
+    fn message_descriptor() -> Option<prost_types::DescriptorProto> {
+        // The message descriptor of an array is the message descriptor of the element type
         // the "repeating" property is set on the field that is repeating rather than the message
         // descriptor
         T::message_descriptor()
@@ -530,6 +605,10 @@ where
 
     fn repeating() -> bool {
         T::repeating()
+    }
+
+    fn optional() -> bool {
+        true
     }
 
     fn encoded_len(&self) -> usize {
