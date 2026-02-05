@@ -1,9 +1,10 @@
 //! MCAP writer
 
+use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::{BufWriter, Seek};
 use std::path::Path;
-use std::sync::{Arc, Weak};
+use std::sync::{Arc, Mutex, Weak};
 use std::{fmt::Debug, io::Write};
 
 use crate::library_version::get_library_version;
@@ -112,6 +113,7 @@ impl McapWriter {
         Ok(McapWriterHandle {
             sink,
             context: Arc::downgrade(&self.context),
+            layouts: Mutex::new(BTreeMap::new()),
         })
     }
 
@@ -140,10 +142,19 @@ impl McapWriter {
 /// When this handle is dropped, the writer will unregister from the [`Context`], stop logging
 /// events, and flush any buffered data to the writer.
 #[must_use]
-#[derive(Debug)]
 pub struct McapWriterHandle<W: Write + Seek + Send + 'static> {
     sink: Arc<McapSink<W>>,
     context: Weak<Context>,
+    layouts: Mutex<BTreeMap<String, String>>,
+}
+
+impl<W: Write + Seek + Send + 'static> Debug for McapWriterHandle<W> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("McapWriterHandle")
+            .field("sink", &self.sink)
+            .field("context", &self.context)
+            .finish_non_exhaustive()
+    }
 }
 
 impl<W: Write + Seek + Send + 'static> McapWriterHandle<W> {
@@ -157,6 +168,11 @@ impl<W: Write + Seek + Send + 'static> McapWriterHandle<W> {
     fn finish(&self) -> Result<Option<W>, FoxgloveError> {
         if let Some(context) = self.context.upgrade() {
             context.remove_sink(self.sink.id());
+        }
+        // Write all accumulated layouts as a single metadata record
+        let layouts = std::mem::take(&mut *self.layouts.lock().unwrap());
+        if !layouts.is_empty() {
+            self.sink.write_metadata("foxglove.layouts", layouts)?;
         }
         self.sink.finish()
     }
@@ -208,8 +224,9 @@ impl<W: Write + Seek + Send + 'static> McapWriterHandle<W> {
 
     /// Writes a layout to the MCAP file.
     ///
-    /// The layout is stored as a metadata record with the name "foxglove.layouts".
-    /// The layout_name is used as the key within the metadata record.
+    /// Layouts are accumulated internally and written as a single metadata record
+    /// with the name "foxglove.layouts" when the writer is closed. This allows
+    /// multiple layouts to be stored with different names.
     ///
     /// # Arguments
     /// * `layout_name` - The name to use as the key in the metadata record
@@ -223,15 +240,16 @@ impl<W: Write + Seek + Send + 'static> McapWriterHandle<W> {
     ///     .create_new_buffered_file("test.mcap")
     ///     .expect("create failed");
     ///
-    /// mcap.write_layout("my_layout", r#"{"version":1,"content":{}}"#)
-    ///     .expect("write_layout failed");
+    /// mcap.write_layout("my_layout", r#"{"version":1,"content":{}}"#);
+    /// mcap.write_layout("another_layout", r#"{"version":1,"content":{}}"#);
     ///
     /// mcap.close().expect("close failed");
     /// ```
-    pub fn write_layout(&self, layout_name: &str, layout: &str) -> Result<(), FoxgloveError> {
-        let mut metadata = std::collections::BTreeMap::new();
-        metadata.insert(layout_name.to_string(), layout.to_string());
-        self.write_metadata("foxglove.layouts", metadata)
+    pub fn write_layout(&self, layout_name: &str, layout: &str) {
+        self.layouts
+            .lock()
+            .unwrap()
+            .insert(layout_name.to_string(), layout.to_string());
     }
 }
 
