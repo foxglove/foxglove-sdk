@@ -205,6 +205,34 @@ impl<W: Write + Seek + Send + 'static> McapWriterHandle<W> {
     pub fn attach(&self, attachment: &McapAttachment<'_>) -> Result<(), FoxgloveError> {
         self.sink.attach(attachment)
     }
+
+    /// Writes a layout to the MCAP file.
+    ///
+    /// The layout is stored as a metadata record with the name "foxglove.layouts".
+    /// The layout_name is used as the key within the metadata record.
+    ///
+    /// # Arguments
+    /// * `layout_name` - The name to use as the key in the metadata record
+    /// * `layout` - The layout JSON string to store
+    ///
+    /// # Example
+    /// ```no_run
+    /// use foxglove::McapWriter;
+    ///
+    /// let mcap = McapWriter::new()
+    ///     .create_new_buffered_file("test.mcap")
+    ///     .expect("create failed");
+    ///
+    /// mcap.write_layout("my_layout", r#"{"version":1,"content":{}}"#)
+    ///     .expect("write_layout failed");
+    ///
+    /// mcap.close().expect("close failed");
+    /// ```
+    pub fn write_layout(&self, layout_name: &str, layout: &str) -> Result<(), FoxgloveError> {
+        let mut metadata = std::collections::BTreeMap::new();
+        metadata.insert(layout_name.to_string(), layout.to_string());
+        self.write_metadata("foxglove.layouts", metadata)
+    }
 }
 
 impl<W: Write + Seek + Send + 'static> Drop for McapWriterHandle<W> {
