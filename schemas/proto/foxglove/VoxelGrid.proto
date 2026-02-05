@@ -2,6 +2,7 @@
 
 syntax = "proto3";
 
+import "foxglove/LineageInfo.proto";
 import "foxglove/PackedElementField.proto";
 import "foxglove/Pose.proto";
 import "foxglove/Vector3.proto";
@@ -17,7 +18,7 @@ message VoxelGrid {
   // Frame of reference
   string frame_id = 2;
 
-  // Origin of the grid’s lower-front-left corner in the reference frame. The grid’s pose is defined relative to this corner, so an untransformed grid with an identity orientation has this corner at the origin.
+  // Origin of the grid's lower-front-left corner in the reference frame. The grid's pose is defined relative to this corner, so an untransformed grid with an identity orientation has this corner at the origin.
   foxglove.Pose pose = 3;
 
   // Number of grid rows
@@ -48,4 +49,10 @@ message VoxelGrid {
   // - y = (i % slice_stride) / row_stride * cell_size.y
   // - x = (i % row_stride) / cell_stride * cell_size.x
   bytes data = 11;
+
+  // Unique identifier for this message (e.g., UUID7, ULID, or custom format)
+  string message_id = 100;
+
+  // Lineage information for tracking data provenance
+  foxglove.LineageInfo lineage = 101;
 }

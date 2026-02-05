@@ -38,6 +38,67 @@
       "type": "integer",
       "minimum": 0,
       "description": "Number of channels in the audio block"
+    },
+    "message_id": {
+      "type": "string",
+      "description": "Unique identifier for this message (e.g., UUID7, ULID, or custom format)"
+    },
+    "lineage": {
+      "title": "foxglove.LineageInfo",
+      "description": "Lineage information for tracking data provenance",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "array",
+          "items": {
+            "title": "foxglove.InputReference",
+            "description": "Reference to an input message used in lineage tracking",
+            "type": "object",
+            "properties": {
+              "topic": {
+                "type": "string",
+                "description": "Topic name of the input message"
+              },
+              "message_id": {
+                "type": "string",
+                "description": "Unique identifier of the input message (e.g., UUID7, ULID, or custom format)"
+              }
+            },
+            "required": [
+              "topic",
+              "message_id"
+            ]
+          },
+          "description": "References to input messages that contributed to this message"
+        },
+        "processing_node": {
+          "type": "string",
+          "description": "Name of the processing node that produced this message"
+        },
+        "state": {
+          "title": "foxglove.StateReference",
+          "description": "Optional reference to the state of the processing node",
+          "type": "object",
+          "properties": {
+            "topic": {
+              "type": "string",
+              "description": "Topic name of the state message"
+            },
+            "message_id": {
+              "type": "string",
+              "description": "Unique identifier of the state message (e.g., UUID7, ULID, or custom format)"
+            }
+          },
+          "required": [
+            "topic",
+            "message_id"
+          ]
+        }
+      },
+      "required": [
+        "inputs",
+        "processing_node"
+      ]
     }
   },
   "required": [

@@ -2,6 +2,7 @@
 
 syntax = "proto3";
 
+import "foxglove/LineageInfo.proto";
 import "foxglove/Pose.proto";
 import "google/protobuf/timestamp.proto";
 
@@ -29,4 +30,10 @@ message LaserScan {
 
   // Intensity of detections
   repeated double intensities = 7;
+
+  // Unique identifier for this message (e.g., UUID7, ULID, or custom format)
+  string message_id = 100;
+
+  // Lineage information for tracking data provenance
+  foxglove.LineageInfo lineage = 101;
 }

@@ -2,6 +2,7 @@
 // Options: {}
 
 import { Color } from "./Color";
+import { LineageInfo } from "./LineageInfo";
 import { Point2 } from "./Point2";
 import { PointsAnnotationType } from "./PointsAnnotationType";
 import { Time } from "./Time";
@@ -31,4 +32,10 @@ export type PointsAnnotation = {
 
   /** Stroke thickness in pixels */
   thickness: number;
+
+  /** Unique identifier for this message (e.g., UUID7, ULID, or custom format) */
+  message_id?: string;
+
+  /** Lineage information for tracking data provenance */
+  lineage?: LineageInfo;
 };

@@ -6,6 +6,7 @@ include "CylinderPrimitive.fbs";
 include "Duration.fbs";
 include "KeyValuePair.fbs";
 include "LinePrimitive.fbs";
+include "LineageInfo.fbs";
 include "ModelPrimitive.fbs";
 include "SpherePrimitive.fbs";
 include "TextPrimitive.fbs";
@@ -57,6 +58,12 @@ table SceneEntity {
 
   /// Model primitives
   models:[foxglove.ModelPrimitive] (id: 13);
+
+  /// Unique identifier for this message (e.g., UUID7, ULID, or custom format)
+  message_id:string (id: 14);
+
+  /// Lineage information for tracking data provenance
+  lineage:foxglove.LineageInfo (id: 15);
 }
 
 root_type SceneEntity;

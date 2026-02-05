@@ -38,3 +38,9 @@ string file
 
 # Line number in the file
 uint32 line
+
+# Unique identifier for this message (e.g., UUID7, ULID, or custom format)
+string message_id
+
+# Lineage information for tracking data provenance
+foxglove_msgs/LineageInfo lineage

@@ -2,6 +2,7 @@
 // Options: {}
 
 import { CircleAnnotation } from "./CircleAnnotation";
+import { LineageInfo } from "./LineageInfo";
 import { PointsAnnotation } from "./PointsAnnotation";
 import { TextAnnotation } from "./TextAnnotation";
 
@@ -15,4 +16,10 @@ export type ImageAnnotations = {
 
   /** Text annotations */
   texts: TextAnnotation[];
+
+  /** Unique identifier for this message (e.g., UUID7, ULID, or custom format) */
+  message_id?: string;
+
+  /** Lineage information for tracking data provenance */
+  lineage?: LineageInfo;
 };

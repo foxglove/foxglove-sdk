@@ -2,6 +2,7 @@
 // Options: {}
 
 import { Color } from "./Color";
+import { LineageInfo } from "./LineageInfo";
 import { PositionCovarianceType } from "./PositionCovarianceType";
 import { Time } from "./Time";
 
@@ -30,4 +31,10 @@ export type LocationFix = {
 
   /** Color used to visualize the location */
   color: Color;
+
+  /** Unique identifier for this message (e.g., UUID7, ULID, or custom format) */
+  message_id?: string;
+
+  /** Lineage information for tracking data provenance */
+  lineage?: LineageInfo;
 };

@@ -7,6 +7,7 @@ import { CylinderPrimitive } from "./CylinderPrimitive";
 import { Duration } from "./Duration";
 import { KeyValuePair } from "./KeyValuePair";
 import { LinePrimitive } from "./LinePrimitive";
+import { LineageInfo } from "./LineageInfo";
 import { ModelPrimitive } from "./ModelPrimitive";
 import { SpherePrimitive } from "./SpherePrimitive";
 import { TextPrimitive } from "./TextPrimitive";
@@ -56,4 +57,10 @@ export type SceneEntity = {
 
   /** Model primitives */
   models: ModelPrimitive[];
+
+  /** Unique identifier for this message (e.g., UUID7, ULID, or custom format) */
+  message_id?: string;
+
+  /** Lineage information for tracking data provenance */
+  lineage?: LineageInfo;
 };

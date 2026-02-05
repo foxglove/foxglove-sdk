@@ -2,6 +2,7 @@
 
 syntax = "proto3";
 
+import "foxglove/LineageInfo.proto";
 import "foxglove/Pose.proto";
 import "google/protobuf/timestamp.proto";
 
@@ -17,4 +18,10 @@ message PoseInFrame {
 
   // Pose in 3D space
   foxglove.Pose pose = 3;
+
+  // Unique identifier for this message (e.g., UUID7, ULID, or custom format)
+  string message_id = 100;
+
+  // Lineage information for tracking data provenance
+  foxglove.LineageInfo lineage = 101;
 }

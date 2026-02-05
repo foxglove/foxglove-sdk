@@ -199,6 +199,67 @@ export const CameraCalibration = {
       "minItems": 12,
       "maxItems": 12,
       "description": "Projection/camera matrix (3x4 row-major matrix)\n\n```\n    [fx'  0  cx' Tx]\nP = [ 0  fy' cy' Ty]\n    [ 0   0   1   0]\n```\n\nBy convention, this matrix specifies the intrinsic (camera) matrix of the processed (rectified) image. That is, the left 3x3 portion is the normal camera intrinsic matrix for the rectified image.\n\nIt projects 3D points in the camera coordinate frame to 2D pixel coordinates using the focal lengths (fx', fy') and principal point (cx', cy') - these may differ from the values in K.\n\nFor monocular cameras, Tx = Ty = 0. Normally, monocular cameras will also have R = the identity and P[1:3,1:3] = K.\n\nFoxglove currently does not support displaying stereo images, so Tx and Ty are ignored.\n\nGiven a 3D point [X Y Z]', the projection (x, y) of the point onto the rectified image is given by:\n\n```\n[u v w]' = P * [X Y Z 1]'\n       x = u / w\n       y = v / w\n```\n\nThis holds for both images of a stereo pair.\n"
+    },
+    "message_id": {
+      "type": "string",
+      "description": "Unique identifier for this message (e.g., UUID7, ULID, or custom format)"
+    },
+    "lineage": {
+      "title": "foxglove.LineageInfo",
+      "description": "Lineage information for tracking data provenance",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "array",
+          "items": {
+            "title": "foxglove.InputReference",
+            "description": "Reference to an input message used in lineage tracking",
+            "type": "object",
+            "properties": {
+              "topic": {
+                "type": "string",
+                "description": "Topic name of the input message"
+              },
+              "message_id": {
+                "type": "string",
+                "description": "Unique identifier of the input message (e.g., UUID7, ULID, or custom format)"
+              }
+            },
+            "required": [
+              "topic",
+              "message_id"
+            ]
+          },
+          "description": "References to input messages that contributed to this message"
+        },
+        "processing_node": {
+          "type": "string",
+          "description": "Name of the processing node that produced this message"
+        },
+        "state": {
+          "title": "foxglove.StateReference",
+          "description": "Optional reference to the state of the processing node",
+          "type": "object",
+          "properties": {
+            "topic": {
+              "type": "string",
+              "description": "Topic name of the state message"
+            },
+            "message_id": {
+              "type": "string",
+              "description": "Unique identifier of the state message (e.g., UUID7, ULID, or custom format)"
+            }
+          },
+          "required": [
+            "topic",
+            "message_id"
+          ]
+        }
+      },
+      "required": [
+        "inputs",
+        "processing_node"
+      ]
     }
   },
   "required": [
@@ -320,6 +381,67 @@ export const CircleAnnotation = {
         "b",
         "a"
       ]
+    },
+    "message_id": {
+      "type": "string",
+      "description": "Unique identifier for this message (e.g., UUID7, ULID, or custom format)"
+    },
+    "lineage": {
+      "title": "foxglove.LineageInfo",
+      "description": "Lineage information for tracking data provenance",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "array",
+          "items": {
+            "title": "foxglove.InputReference",
+            "description": "Reference to an input message used in lineage tracking",
+            "type": "object",
+            "properties": {
+              "topic": {
+                "type": "string",
+                "description": "Topic name of the input message"
+              },
+              "message_id": {
+                "type": "string",
+                "description": "Unique identifier of the input message (e.g., UUID7, ULID, or custom format)"
+              }
+            },
+            "required": [
+              "topic",
+              "message_id"
+            ]
+          },
+          "description": "References to input messages that contributed to this message"
+        },
+        "processing_node": {
+          "type": "string",
+          "description": "Name of the processing node that produced this message"
+        },
+        "state": {
+          "title": "foxglove.StateReference",
+          "description": "Optional reference to the state of the processing node",
+          "type": "object",
+          "properties": {
+            "topic": {
+              "type": "string",
+              "description": "Topic name of the state message"
+            },
+            "message_id": {
+              "type": "string",
+              "description": "Unique identifier of the state message (e.g., UUID7, ULID, or custom format)"
+            }
+          },
+          "required": [
+            "topic",
+            "message_id"
+          ]
+        }
+      },
+      "required": [
+        "inputs",
+        "processing_node"
+      ]
     }
   },
   "required": [
@@ -397,6 +519,67 @@ export const CompressedImage = {
     "format": {
       "type": "string",
       "description": "Image format\n\nSupported values: `jpeg`, `png`, `webp`, `avif`"
+    },
+    "message_id": {
+      "type": "string",
+      "description": "Unique identifier for this message (e.g., UUID7, ULID, or custom format)"
+    },
+    "lineage": {
+      "title": "foxglove.LineageInfo",
+      "description": "Lineage information for tracking data provenance",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "array",
+          "items": {
+            "title": "foxglove.InputReference",
+            "description": "Reference to an input message used in lineage tracking",
+            "type": "object",
+            "properties": {
+              "topic": {
+                "type": "string",
+                "description": "Topic name of the input message"
+              },
+              "message_id": {
+                "type": "string",
+                "description": "Unique identifier of the input message (e.g., UUID7, ULID, or custom format)"
+              }
+            },
+            "required": [
+              "topic",
+              "message_id"
+            ]
+          },
+          "description": "References to input messages that contributed to this message"
+        },
+        "processing_node": {
+          "type": "string",
+          "description": "Name of the processing node that produced this message"
+        },
+        "state": {
+          "title": "foxglove.StateReference",
+          "description": "Optional reference to the state of the processing node",
+          "type": "object",
+          "properties": {
+            "topic": {
+              "type": "string",
+              "description": "Topic name of the state message"
+            },
+            "message_id": {
+              "type": "string",
+              "description": "Unique identifier of the state message (e.g., UUID7, ULID, or custom format)"
+            }
+          },
+          "required": [
+            "topic",
+            "message_id"
+          ]
+        }
+      },
+      "required": [
+        "inputs",
+        "processing_node"
+      ]
     }
   },
   "required": [
@@ -441,6 +624,67 @@ export const CompressedVideo = {
     "format": {
       "type": "string",
       "description": "Video format.\n\nSupported values: `h264`, `h265`, `vp9`, `av1`.\n\nNote: compressed video support is subject to hardware limitations and patent licensing, so not all encodings may be supported on all platforms. See more about [H.265 support](https://caniuse.com/hevc), [VP9 support](https://caniuse.com/webm), and [AV1 support](https://caniuse.com/av1)."
+    },
+    "message_id": {
+      "type": "string",
+      "description": "Unique identifier for this message (e.g., UUID7, ULID, or custom format)"
+    },
+    "lineage": {
+      "title": "foxglove.LineageInfo",
+      "description": "Lineage information for tracking data provenance",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "array",
+          "items": {
+            "title": "foxglove.InputReference",
+            "description": "Reference to an input message used in lineage tracking",
+            "type": "object",
+            "properties": {
+              "topic": {
+                "type": "string",
+                "description": "Topic name of the input message"
+              },
+              "message_id": {
+                "type": "string",
+                "description": "Unique identifier of the input message (e.g., UUID7, ULID, or custom format)"
+              }
+            },
+            "required": [
+              "topic",
+              "message_id"
+            ]
+          },
+          "description": "References to input messages that contributed to this message"
+        },
+        "processing_node": {
+          "type": "string",
+          "description": "Name of the processing node that produced this message"
+        },
+        "state": {
+          "title": "foxglove.StateReference",
+          "description": "Optional reference to the state of the processing node",
+          "type": "object",
+          "properties": {
+            "topic": {
+              "type": "string",
+              "description": "Topic name of the state message"
+            },
+            "message_id": {
+              "type": "string",
+              "description": "Unique identifier of the state message (e.g., UUID7, ULID, or custom format)"
+            }
+          },
+          "required": [
+            "topic",
+            "message_id"
+          ]
+        }
+      },
+      "required": [
+        "inputs",
+        "processing_node"
+      ]
     }
   },
   "required": [
@@ -827,6 +1071,67 @@ export const FrameTransform = {
         "z",
         "w"
       ]
+    },
+    "message_id": {
+      "type": "string",
+      "description": "Unique identifier for this message (e.g., UUID7, ULID, or custom format)"
+    },
+    "lineage": {
+      "title": "foxglove.LineageInfo",
+      "description": "Lineage information for tracking data provenance",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "array",
+          "items": {
+            "title": "foxglove.InputReference",
+            "description": "Reference to an input message used in lineage tracking",
+            "type": "object",
+            "properties": {
+              "topic": {
+                "type": "string",
+                "description": "Topic name of the input message"
+              },
+              "message_id": {
+                "type": "string",
+                "description": "Unique identifier of the input message (e.g., UUID7, ULID, or custom format)"
+              }
+            },
+            "required": [
+              "topic",
+              "message_id"
+            ]
+          },
+          "description": "References to input messages that contributed to this message"
+        },
+        "processing_node": {
+          "type": "string",
+          "description": "Name of the processing node that produced this message"
+        },
+        "state": {
+          "title": "foxglove.StateReference",
+          "description": "Optional reference to the state of the processing node",
+          "type": "object",
+          "properties": {
+            "topic": {
+              "type": "string",
+              "description": "Topic name of the state message"
+            },
+            "message_id": {
+              "type": "string",
+              "description": "Unique identifier of the state message (e.g., UUID7, ULID, or custom format)"
+            }
+          },
+          "required": [
+            "topic",
+            "message_id"
+          ]
+        }
+      },
+      "required": [
+        "inputs",
+        "processing_node"
+      ]
     }
   },
   "required": [
@@ -927,6 +1232,67 @@ export const FrameTransforms = {
               "z",
               "w"
             ]
+          },
+          "message_id": {
+            "type": "string",
+            "description": "Unique identifier for this message (e.g., UUID7, ULID, or custom format)"
+          },
+          "lineage": {
+            "title": "foxglove.LineageInfo",
+            "description": "Lineage information for tracking data provenance",
+            "type": "object",
+            "properties": {
+              "inputs": {
+                "type": "array",
+                "items": {
+                  "title": "foxglove.InputReference",
+                  "description": "Reference to an input message used in lineage tracking",
+                  "type": "object",
+                  "properties": {
+                    "topic": {
+                      "type": "string",
+                      "description": "Topic name of the input message"
+                    },
+                    "message_id": {
+                      "type": "string",
+                      "description": "Unique identifier of the input message (e.g., UUID7, ULID, or custom format)"
+                    }
+                  },
+                  "required": [
+                    "topic",
+                    "message_id"
+                  ]
+                },
+                "description": "References to input messages that contributed to this message"
+              },
+              "processing_node": {
+                "type": "string",
+                "description": "Name of the processing node that produced this message"
+              },
+              "state": {
+                "title": "foxglove.StateReference",
+                "description": "Optional reference to the state of the processing node",
+                "type": "object",
+                "properties": {
+                  "topic": {
+                    "type": "string",
+                    "description": "Topic name of the state message"
+                  },
+                  "message_id": {
+                    "type": "string",
+                    "description": "Unique identifier of the state message (e.g., UUID7, ULID, or custom format)"
+                  }
+                },
+                "required": [
+                  "topic",
+                  "message_id"
+                ]
+              }
+            },
+            "required": [
+              "inputs",
+              "processing_node"
+            ]
           }
         },
         "required": [
@@ -938,6 +1304,67 @@ export const FrameTransforms = {
         ]
       },
       "description": "Array of transforms"
+    },
+    "message_id": {
+      "type": "string",
+      "description": "Unique identifier for this message (e.g., UUID7, ULID, or custom format)"
+    },
+    "lineage": {
+      "title": "foxglove.LineageInfo",
+      "description": "Lineage information for tracking data provenance",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "array",
+          "items": {
+            "title": "foxglove.InputReference",
+            "description": "Reference to an input message used in lineage tracking",
+            "type": "object",
+            "properties": {
+              "topic": {
+                "type": "string",
+                "description": "Topic name of the input message"
+              },
+              "message_id": {
+                "type": "string",
+                "description": "Unique identifier of the input message (e.g., UUID7, ULID, or custom format)"
+              }
+            },
+            "required": [
+              "topic",
+              "message_id"
+            ]
+          },
+          "description": "References to input messages that contributed to this message"
+        },
+        "processing_node": {
+          "type": "string",
+          "description": "Name of the processing node that produced this message"
+        },
+        "state": {
+          "title": "foxglove.StateReference",
+          "description": "Optional reference to the state of the processing node",
+          "type": "object",
+          "properties": {
+            "topic": {
+              "type": "string",
+              "description": "Topic name of the state message"
+            },
+            "message_id": {
+              "type": "string",
+              "description": "Unique identifier of the state message (e.g., UUID7, ULID, or custom format)"
+            }
+          },
+          "required": [
+            "topic",
+            "message_id"
+          ]
+        }
+      },
+      "required": [
+        "inputs",
+        "processing_node"
+      ]
     }
   },
   "required": [
@@ -954,6 +1381,67 @@ export const GeoJSON = {
     "geojson": {
       "type": "string",
       "description": "GeoJSON data encoded as a UTF-8 string"
+    },
+    "message_id": {
+      "type": "string",
+      "description": "Unique identifier for this message (e.g., UUID7, ULID, or custom format)"
+    },
+    "lineage": {
+      "title": "foxglove.LineageInfo",
+      "description": "Lineage information for tracking data provenance",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "array",
+          "items": {
+            "title": "foxglove.InputReference",
+            "description": "Reference to an input message used in lineage tracking",
+            "type": "object",
+            "properties": {
+              "topic": {
+                "type": "string",
+                "description": "Topic name of the input message"
+              },
+              "message_id": {
+                "type": "string",
+                "description": "Unique identifier of the input message (e.g., UUID7, ULID, or custom format)"
+              }
+            },
+            "required": [
+              "topic",
+              "message_id"
+            ]
+          },
+          "description": "References to input messages that contributed to this message"
+        },
+        "processing_node": {
+          "type": "string",
+          "description": "Name of the processing node that produced this message"
+        },
+        "state": {
+          "title": "foxglove.StateReference",
+          "description": "Optional reference to the state of the processing node",
+          "type": "object",
+          "properties": {
+            "topic": {
+              "type": "string",
+              "description": "Topic name of the state message"
+            },
+            "message_id": {
+              "type": "string",
+              "description": "Unique identifier of the state message (e.g., UUID7, ULID, or custom format)"
+            }
+          },
+          "required": [
+            "topic",
+            "message_id"
+          ]
+        }
+      },
+      "required": [
+        "inputs",
+        "processing_node"
+      ]
     }
   },
   "required": [
@@ -1165,6 +1653,67 @@ export const Grid = {
       "type": "string",
       "contentEncoding": "base64",
       "description": "Grid cell data, interpreted using `fields`, in row-major (y-major) order.\nFor the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:\n\n- y = i / row_stride * cell_size.y\n- x = (i % row_stride) / cell_stride * cell_size.x"
+    },
+    "message_id": {
+      "type": "string",
+      "description": "Unique identifier for this message (e.g., UUID7, ULID, or custom format)"
+    },
+    "lineage": {
+      "title": "foxglove.LineageInfo",
+      "description": "Lineage information for tracking data provenance",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "array",
+          "items": {
+            "title": "foxglove.InputReference",
+            "description": "Reference to an input message used in lineage tracking",
+            "type": "object",
+            "properties": {
+              "topic": {
+                "type": "string",
+                "description": "Topic name of the input message"
+              },
+              "message_id": {
+                "type": "string",
+                "description": "Unique identifier of the input message (e.g., UUID7, ULID, or custom format)"
+              }
+            },
+            "required": [
+              "topic",
+              "message_id"
+            ]
+          },
+          "description": "References to input messages that contributed to this message"
+        },
+        "processing_node": {
+          "type": "string",
+          "description": "Name of the processing node that produced this message"
+        },
+        "state": {
+          "title": "foxglove.StateReference",
+          "description": "Optional reference to the state of the processing node",
+          "type": "object",
+          "properties": {
+            "topic": {
+              "type": "string",
+              "description": "Topic name of the state message"
+            },
+            "message_id": {
+              "type": "string",
+              "description": "Unique identifier of the state message (e.g., UUID7, ULID, or custom format)"
+            }
+          },
+          "required": [
+            "topic",
+            "message_id"
+          ]
+        }
+      },
+      "required": [
+        "inputs",
+        "processing_node"
+      ]
     }
   },
   "required": [
@@ -1208,7 +1757,7 @@ export const VoxelGrid = {
     },
     "pose": {
       "title": "foxglove.Pose",
-      "description": "Origin of the grid’s lower-front-left corner in the reference frame. The grid’s pose is defined relative to this corner, so an untransformed grid with an identity orientation has this corner at the origin.",
+      "description": "Origin of the grid's lower-front-left corner in the reference frame. The grid's pose is defined relative to this corner, so an untransformed grid with an identity orientation has this corner at the origin.",
       "type": "object",
       "properties": {
         "position": {
@@ -1399,6 +1948,67 @@ export const VoxelGrid = {
       "type": "string",
       "contentEncoding": "base64",
       "description": "Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.\nFor the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:\n\n- z = i / slice_stride * cell_size.z\n- y = (i % slice_stride) / row_stride * cell_size.y\n- x = (i % row_stride) / cell_stride * cell_size.x"
+    },
+    "message_id": {
+      "type": "string",
+      "description": "Unique identifier for this message (e.g., UUID7, ULID, or custom format)"
+    },
+    "lineage": {
+      "title": "foxglove.LineageInfo",
+      "description": "Lineage information for tracking data provenance",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "array",
+          "items": {
+            "title": "foxglove.InputReference",
+            "description": "Reference to an input message used in lineage tracking",
+            "type": "object",
+            "properties": {
+              "topic": {
+                "type": "string",
+                "description": "Topic name of the input message"
+              },
+              "message_id": {
+                "type": "string",
+                "description": "Unique identifier of the input message (e.g., UUID7, ULID, or custom format)"
+              }
+            },
+            "required": [
+              "topic",
+              "message_id"
+            ]
+          },
+          "description": "References to input messages that contributed to this message"
+        },
+        "processing_node": {
+          "type": "string",
+          "description": "Name of the processing node that produced this message"
+        },
+        "state": {
+          "title": "foxglove.StateReference",
+          "description": "Optional reference to the state of the processing node",
+          "type": "object",
+          "properties": {
+            "topic": {
+              "type": "string",
+              "description": "Topic name of the state message"
+            },
+            "message_id": {
+              "type": "string",
+              "description": "Unique identifier of the state message (e.g., UUID7, ULID, or custom format)"
+            }
+          },
+          "required": [
+            "topic",
+            "message_id"
+          ]
+        }
+      },
+      "required": [
+        "inputs",
+        "processing_node"
+      ]
     }
   },
   "required": [
@@ -1528,6 +2138,67 @@ export const ImageAnnotations = {
               "g",
               "b",
               "a"
+            ]
+          },
+          "message_id": {
+            "type": "string",
+            "description": "Unique identifier for this message (e.g., UUID7, ULID, or custom format)"
+          },
+          "lineage": {
+            "title": "foxglove.LineageInfo",
+            "description": "Lineage information for tracking data provenance",
+            "type": "object",
+            "properties": {
+              "inputs": {
+                "type": "array",
+                "items": {
+                  "title": "foxglove.InputReference",
+                  "description": "Reference to an input message used in lineage tracking",
+                  "type": "object",
+                  "properties": {
+                    "topic": {
+                      "type": "string",
+                      "description": "Topic name of the input message"
+                    },
+                    "message_id": {
+                      "type": "string",
+                      "description": "Unique identifier of the input message (e.g., UUID7, ULID, or custom format)"
+                    }
+                  },
+                  "required": [
+                    "topic",
+                    "message_id"
+                  ]
+                },
+                "description": "References to input messages that contributed to this message"
+              },
+              "processing_node": {
+                "type": "string",
+                "description": "Name of the processing node that produced this message"
+              },
+              "state": {
+                "title": "foxglove.StateReference",
+                "description": "Optional reference to the state of the processing node",
+                "type": "object",
+                "properties": {
+                  "topic": {
+                    "type": "string",
+                    "description": "Topic name of the state message"
+                  },
+                  "message_id": {
+                    "type": "string",
+                    "description": "Unique identifier of the state message (e.g., UUID7, ULID, or custom format)"
+                  }
+                },
+                "required": [
+                  "topic",
+                  "message_id"
+                ]
+              }
+            },
+            "required": [
+              "inputs",
+              "processing_node"
             ]
           }
         },
@@ -1713,6 +2384,67 @@ export const ImageAnnotations = {
           "thickness": {
             "type": "number",
             "description": "Stroke thickness in pixels"
+          },
+          "message_id": {
+            "type": "string",
+            "description": "Unique identifier for this message (e.g., UUID7, ULID, or custom format)"
+          },
+          "lineage": {
+            "title": "foxglove.LineageInfo",
+            "description": "Lineage information for tracking data provenance",
+            "type": "object",
+            "properties": {
+              "inputs": {
+                "type": "array",
+                "items": {
+                  "title": "foxglove.InputReference",
+                  "description": "Reference to an input message used in lineage tracking",
+                  "type": "object",
+                  "properties": {
+                    "topic": {
+                      "type": "string",
+                      "description": "Topic name of the input message"
+                    },
+                    "message_id": {
+                      "type": "string",
+                      "description": "Unique identifier of the input message (e.g., UUID7, ULID, or custom format)"
+                    }
+                  },
+                  "required": [
+                    "topic",
+                    "message_id"
+                  ]
+                },
+                "description": "References to input messages that contributed to this message"
+              },
+              "processing_node": {
+                "type": "string",
+                "description": "Name of the processing node that produced this message"
+              },
+              "state": {
+                "title": "foxglove.StateReference",
+                "description": "Optional reference to the state of the processing node",
+                "type": "object",
+                "properties": {
+                  "topic": {
+                    "type": "string",
+                    "description": "Topic name of the state message"
+                  },
+                  "message_id": {
+                    "type": "string",
+                    "description": "Unique identifier of the state message (e.g., UUID7, ULID, or custom format)"
+                  }
+                },
+                "required": [
+                  "topic",
+                  "message_id"
+                ]
+              }
+            },
+            "required": [
+              "inputs",
+              "processing_node"
+            ]
           }
         },
         "required": [
@@ -1834,6 +2566,67 @@ export const ImageAnnotations = {
               "b",
               "a"
             ]
+          },
+          "message_id": {
+            "type": "string",
+            "description": "Unique identifier for this message (e.g., UUID7, ULID, or custom format)"
+          },
+          "lineage": {
+            "title": "foxglove.LineageInfo",
+            "description": "Lineage information for tracking data provenance",
+            "type": "object",
+            "properties": {
+              "inputs": {
+                "type": "array",
+                "items": {
+                  "title": "foxglove.InputReference",
+                  "description": "Reference to an input message used in lineage tracking",
+                  "type": "object",
+                  "properties": {
+                    "topic": {
+                      "type": "string",
+                      "description": "Topic name of the input message"
+                    },
+                    "message_id": {
+                      "type": "string",
+                      "description": "Unique identifier of the input message (e.g., UUID7, ULID, or custom format)"
+                    }
+                  },
+                  "required": [
+                    "topic",
+                    "message_id"
+                  ]
+                },
+                "description": "References to input messages that contributed to this message"
+              },
+              "processing_node": {
+                "type": "string",
+                "description": "Name of the processing node that produced this message"
+              },
+              "state": {
+                "title": "foxglove.StateReference",
+                "description": "Optional reference to the state of the processing node",
+                "type": "object",
+                "properties": {
+                  "topic": {
+                    "type": "string",
+                    "description": "Topic name of the state message"
+                  },
+                  "message_id": {
+                    "type": "string",
+                    "description": "Unique identifier of the state message (e.g., UUID7, ULID, or custom format)"
+                  }
+                },
+                "required": [
+                  "topic",
+                  "message_id"
+                ]
+              }
+            },
+            "required": [
+              "inputs",
+              "processing_node"
+            ]
           }
         },
         "required": [
@@ -1846,6 +2639,67 @@ export const ImageAnnotations = {
         ]
       },
       "description": "Text annotations"
+    },
+    "message_id": {
+      "type": "string",
+      "description": "Unique identifier for this message (e.g., UUID7, ULID, or custom format)"
+    },
+    "lineage": {
+      "title": "foxglove.LineageInfo",
+      "description": "Lineage information for tracking data provenance",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "array",
+          "items": {
+            "title": "foxglove.InputReference",
+            "description": "Reference to an input message used in lineage tracking",
+            "type": "object",
+            "properties": {
+              "topic": {
+                "type": "string",
+                "description": "Topic name of the input message"
+              },
+              "message_id": {
+                "type": "string",
+                "description": "Unique identifier of the input message (e.g., UUID7, ULID, or custom format)"
+              }
+            },
+            "required": [
+              "topic",
+              "message_id"
+            ]
+          },
+          "description": "References to input messages that contributed to this message"
+        },
+        "processing_node": {
+          "type": "string",
+          "description": "Name of the processing node that produced this message"
+        },
+        "state": {
+          "title": "foxglove.StateReference",
+          "description": "Optional reference to the state of the processing node",
+          "type": "object",
+          "properties": {
+            "topic": {
+              "type": "string",
+              "description": "Topic name of the state message"
+            },
+            "message_id": {
+              "type": "string",
+              "description": "Unique identifier of the state message (e.g., UUID7, ULID, or custom format)"
+            }
+          },
+          "required": [
+            "topic",
+            "message_id"
+          ]
+        }
+      },
+      "required": [
+        "inputs",
+        "processing_node"
+      ]
     }
   },
   "required": [
@@ -2008,6 +2862,67 @@ export const LaserScan = {
         "type": "number"
       },
       "description": "Intensity of detections"
+    },
+    "message_id": {
+      "type": "string",
+      "description": "Unique identifier for this message (e.g., UUID7, ULID, or custom format)"
+    },
+    "lineage": {
+      "title": "foxglove.LineageInfo",
+      "description": "Lineage information for tracking data provenance",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "array",
+          "items": {
+            "title": "foxglove.InputReference",
+            "description": "Reference to an input message used in lineage tracking",
+            "type": "object",
+            "properties": {
+              "topic": {
+                "type": "string",
+                "description": "Topic name of the input message"
+              },
+              "message_id": {
+                "type": "string",
+                "description": "Unique identifier of the input message (e.g., UUID7, ULID, or custom format)"
+              }
+            },
+            "required": [
+              "topic",
+              "message_id"
+            ]
+          },
+          "description": "References to input messages that contributed to this message"
+        },
+        "processing_node": {
+          "type": "string",
+          "description": "Name of the processing node that produced this message"
+        },
+        "state": {
+          "title": "foxglove.StateReference",
+          "description": "Optional reference to the state of the processing node",
+          "type": "object",
+          "properties": {
+            "topic": {
+              "type": "string",
+              "description": "Topic name of the state message"
+            },
+            "message_id": {
+              "type": "string",
+              "description": "Unique identifier of the state message (e.g., UUID7, ULID, or custom format)"
+            }
+          },
+          "required": [
+            "topic",
+            "message_id"
+          ]
+        }
+      },
+      "required": [
+        "inputs",
+        "processing_node"
+      ]
     }
   },
   "required": [
@@ -2391,6 +3306,67 @@ export const LocationFix = {
         "b",
         "a"
       ]
+    },
+    "message_id": {
+      "type": "string",
+      "description": "Unique identifier for this message (e.g., UUID7, ULID, or custom format)"
+    },
+    "lineage": {
+      "title": "foxglove.LineageInfo",
+      "description": "Lineage information for tracking data provenance",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "array",
+          "items": {
+            "title": "foxglove.InputReference",
+            "description": "Reference to an input message used in lineage tracking",
+            "type": "object",
+            "properties": {
+              "topic": {
+                "type": "string",
+                "description": "Topic name of the input message"
+              },
+              "message_id": {
+                "type": "string",
+                "description": "Unique identifier of the input message (e.g., UUID7, ULID, or custom format)"
+              }
+            },
+            "required": [
+              "topic",
+              "message_id"
+            ]
+          },
+          "description": "References to input messages that contributed to this message"
+        },
+        "processing_node": {
+          "type": "string",
+          "description": "Name of the processing node that produced this message"
+        },
+        "state": {
+          "title": "foxglove.StateReference",
+          "description": "Optional reference to the state of the processing node",
+          "type": "object",
+          "properties": {
+            "topic": {
+              "type": "string",
+              "description": "Topic name of the state message"
+            },
+            "message_id": {
+              "type": "string",
+              "description": "Unique identifier of the state message (e.g., UUID7, ULID, or custom format)"
+            }
+          },
+          "required": [
+            "topic",
+            "message_id"
+          ]
+        }
+      },
+      "required": [
+        "inputs",
+        "processing_node"
+      ]
     }
   },
   "required": [
@@ -2513,6 +3489,67 @@ export const LocationFixes = {
               "b",
               "a"
             ]
+          },
+          "message_id": {
+            "type": "string",
+            "description": "Unique identifier for this message (e.g., UUID7, ULID, or custom format)"
+          },
+          "lineage": {
+            "title": "foxglove.LineageInfo",
+            "description": "Lineage information for tracking data provenance",
+            "type": "object",
+            "properties": {
+              "inputs": {
+                "type": "array",
+                "items": {
+                  "title": "foxglove.InputReference",
+                  "description": "Reference to an input message used in lineage tracking",
+                  "type": "object",
+                  "properties": {
+                    "topic": {
+                      "type": "string",
+                      "description": "Topic name of the input message"
+                    },
+                    "message_id": {
+                      "type": "string",
+                      "description": "Unique identifier of the input message (e.g., UUID7, ULID, or custom format)"
+                    }
+                  },
+                  "required": [
+                    "topic",
+                    "message_id"
+                  ]
+                },
+                "description": "References to input messages that contributed to this message"
+              },
+              "processing_node": {
+                "type": "string",
+                "description": "Name of the processing node that produced this message"
+              },
+              "state": {
+                "title": "foxglove.StateReference",
+                "description": "Optional reference to the state of the processing node",
+                "type": "object",
+                "properties": {
+                  "topic": {
+                    "type": "string",
+                    "description": "Topic name of the state message"
+                  },
+                  "message_id": {
+                    "type": "string",
+                    "description": "Unique identifier of the state message (e.g., UUID7, ULID, or custom format)"
+                  }
+                },
+                "required": [
+                  "topic",
+                  "message_id"
+                ]
+              }
+            },
+            "required": [
+              "inputs",
+              "processing_node"
+            ]
           }
         },
         "required": [
@@ -2527,6 +3564,67 @@ export const LocationFixes = {
         ]
       },
       "description": "An array of location fixes"
+    },
+    "message_id": {
+      "type": "string",
+      "description": "Unique identifier for this message (e.g., UUID7, ULID, or custom format)"
+    },
+    "lineage": {
+      "title": "foxglove.LineageInfo",
+      "description": "Lineage information for tracking data provenance",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "array",
+          "items": {
+            "title": "foxglove.InputReference",
+            "description": "Reference to an input message used in lineage tracking",
+            "type": "object",
+            "properties": {
+              "topic": {
+                "type": "string",
+                "description": "Topic name of the input message"
+              },
+              "message_id": {
+                "type": "string",
+                "description": "Unique identifier of the input message (e.g., UUID7, ULID, or custom format)"
+              }
+            },
+            "required": [
+              "topic",
+              "message_id"
+            ]
+          },
+          "description": "References to input messages that contributed to this message"
+        },
+        "processing_node": {
+          "type": "string",
+          "description": "Name of the processing node that produced this message"
+        },
+        "state": {
+          "title": "foxglove.StateReference",
+          "description": "Optional reference to the state of the processing node",
+          "type": "object",
+          "properties": {
+            "topic": {
+              "type": "string",
+              "description": "Topic name of the state message"
+            },
+            "message_id": {
+              "type": "string",
+              "description": "Unique identifier of the state message (e.g., UUID7, ULID, or custom format)"
+            }
+          },
+          "required": [
+            "topic",
+            "message_id"
+          ]
+        }
+      },
+      "required": [
+        "inputs",
+        "processing_node"
+      ]
     }
   },
   "required": [
@@ -2608,6 +3706,67 @@ export const Log = {
       "type": "integer",
       "minimum": 0,
       "description": "Line number in the file"
+    },
+    "message_id": {
+      "type": "string",
+      "description": "Unique identifier for this message (e.g., UUID7, ULID, or custom format)"
+    },
+    "lineage": {
+      "title": "foxglove.LineageInfo",
+      "description": "Lineage information for tracking data provenance",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "array",
+          "items": {
+            "title": "foxglove.InputReference",
+            "description": "Reference to an input message used in lineage tracking",
+            "type": "object",
+            "properties": {
+              "topic": {
+                "type": "string",
+                "description": "Topic name of the input message"
+              },
+              "message_id": {
+                "type": "string",
+                "description": "Unique identifier of the input message (e.g., UUID7, ULID, or custom format)"
+              }
+            },
+            "required": [
+              "topic",
+              "message_id"
+            ]
+          },
+          "description": "References to input messages that contributed to this message"
+        },
+        "processing_node": {
+          "type": "string",
+          "description": "Name of the processing node that produced this message"
+        },
+        "state": {
+          "title": "foxglove.StateReference",
+          "description": "Optional reference to the state of the processing node",
+          "type": "object",
+          "properties": {
+            "topic": {
+              "type": "string",
+              "description": "Topic name of the state message"
+            },
+            "message_id": {
+              "type": "string",
+              "description": "Unique identifier of the state message (e.g., UUID7, ULID, or custom format)"
+            }
+          },
+          "required": [
+            "topic",
+            "message_id"
+          ]
+        }
+      },
+      "required": [
+        "inputs",
+        "processing_node"
+      ]
     }
   },
   "required": [
@@ -2661,6 +3820,67 @@ export const SceneEntityDeletion = {
     "id": {
       "type": "string",
       "description": "Identifier which must match if `type` is `MATCHING_ID`."
+    },
+    "message_id": {
+      "type": "string",
+      "description": "Unique identifier for this message (e.g., UUID7, ULID, or custom format)"
+    },
+    "lineage": {
+      "title": "foxglove.LineageInfo",
+      "description": "Lineage information for tracking data provenance",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "array",
+          "items": {
+            "title": "foxglove.InputReference",
+            "description": "Reference to an input message used in lineage tracking",
+            "type": "object",
+            "properties": {
+              "topic": {
+                "type": "string",
+                "description": "Topic name of the input message"
+              },
+              "message_id": {
+                "type": "string",
+                "description": "Unique identifier of the input message (e.g., UUID7, ULID, or custom format)"
+              }
+            },
+            "required": [
+              "topic",
+              "message_id"
+            ]
+          },
+          "description": "References to input messages that contributed to this message"
+        },
+        "processing_node": {
+          "type": "string",
+          "description": "Name of the processing node that produced this message"
+        },
+        "state": {
+          "title": "foxglove.StateReference",
+          "description": "Optional reference to the state of the processing node",
+          "type": "object",
+          "properties": {
+            "topic": {
+              "type": "string",
+              "description": "Topic name of the state message"
+            },
+            "message_id": {
+              "type": "string",
+              "description": "Unique identifier of the state message (e.g., UUID7, ULID, or custom format)"
+            }
+          },
+          "required": [
+            "topic",
+            "message_id"
+          ]
+        }
+      },
+      "required": [
+        "inputs",
+        "processing_node"
+      ]
     }
   },
   "required": [
@@ -3952,6 +5172,67 @@ export const SceneEntity = {
         ]
       },
       "description": "Model primitives"
+    },
+    "message_id": {
+      "type": "string",
+      "description": "Unique identifier for this message (e.g., UUID7, ULID, or custom format)"
+    },
+    "lineage": {
+      "title": "foxglove.LineageInfo",
+      "description": "Lineage information for tracking data provenance",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "array",
+          "items": {
+            "title": "foxglove.InputReference",
+            "description": "Reference to an input message used in lineage tracking",
+            "type": "object",
+            "properties": {
+              "topic": {
+                "type": "string",
+                "description": "Topic name of the input message"
+              },
+              "message_id": {
+                "type": "string",
+                "description": "Unique identifier of the input message (e.g., UUID7, ULID, or custom format)"
+              }
+            },
+            "required": [
+              "topic",
+              "message_id"
+            ]
+          },
+          "description": "References to input messages that contributed to this message"
+        },
+        "processing_node": {
+          "type": "string",
+          "description": "Name of the processing node that produced this message"
+        },
+        "state": {
+          "title": "foxglove.StateReference",
+          "description": "Optional reference to the state of the processing node",
+          "type": "object",
+          "properties": {
+            "topic": {
+              "type": "string",
+              "description": "Topic name of the state message"
+            },
+            "message_id": {
+              "type": "string",
+              "description": "Unique identifier of the state message (e.g., UUID7, ULID, or custom format)"
+            }
+          },
+          "required": [
+            "topic",
+            "message_id"
+          ]
+        }
+      },
+      "required": [
+        "inputs",
+        "processing_node"
+      ]
     }
   },
   "required": [
@@ -4020,6 +5301,67 @@ export const SceneUpdate = {
           "id": {
             "type": "string",
             "description": "Identifier which must match if `type` is `MATCHING_ID`."
+          },
+          "message_id": {
+            "type": "string",
+            "description": "Unique identifier for this message (e.g., UUID7, ULID, or custom format)"
+          },
+          "lineage": {
+            "title": "foxglove.LineageInfo",
+            "description": "Lineage information for tracking data provenance",
+            "type": "object",
+            "properties": {
+              "inputs": {
+                "type": "array",
+                "items": {
+                  "title": "foxglove.InputReference",
+                  "description": "Reference to an input message used in lineage tracking",
+                  "type": "object",
+                  "properties": {
+                    "topic": {
+                      "type": "string",
+                      "description": "Topic name of the input message"
+                    },
+                    "message_id": {
+                      "type": "string",
+                      "description": "Unique identifier of the input message (e.g., UUID7, ULID, or custom format)"
+                    }
+                  },
+                  "required": [
+                    "topic",
+                    "message_id"
+                  ]
+                },
+                "description": "References to input messages that contributed to this message"
+              },
+              "processing_node": {
+                "type": "string",
+                "description": "Name of the processing node that produced this message"
+              },
+              "state": {
+                "title": "foxglove.StateReference",
+                "description": "Optional reference to the state of the processing node",
+                "type": "object",
+                "properties": {
+                  "topic": {
+                    "type": "string",
+                    "description": "Topic name of the state message"
+                  },
+                  "message_id": {
+                    "type": "string",
+                    "description": "Unique identifier of the state message (e.g., UUID7, ULID, or custom format)"
+                  }
+                },
+                "required": [
+                  "topic",
+                  "message_id"
+                ]
+              }
+            },
+            "required": [
+              "inputs",
+              "processing_node"
+            ]
           }
         },
         "required": [
@@ -5313,6 +6655,67 @@ export const SceneUpdate = {
               ]
             },
             "description": "Model primitives"
+          },
+          "message_id": {
+            "type": "string",
+            "description": "Unique identifier for this message (e.g., UUID7, ULID, or custom format)"
+          },
+          "lineage": {
+            "title": "foxglove.LineageInfo",
+            "description": "Lineage information for tracking data provenance",
+            "type": "object",
+            "properties": {
+              "inputs": {
+                "type": "array",
+                "items": {
+                  "title": "foxglove.InputReference",
+                  "description": "Reference to an input message used in lineage tracking",
+                  "type": "object",
+                  "properties": {
+                    "topic": {
+                      "type": "string",
+                      "description": "Topic name of the input message"
+                    },
+                    "message_id": {
+                      "type": "string",
+                      "description": "Unique identifier of the input message (e.g., UUID7, ULID, or custom format)"
+                    }
+                  },
+                  "required": [
+                    "topic",
+                    "message_id"
+                  ]
+                },
+                "description": "References to input messages that contributed to this message"
+              },
+              "processing_node": {
+                "type": "string",
+                "description": "Name of the processing node that produced this message"
+              },
+              "state": {
+                "title": "foxglove.StateReference",
+                "description": "Optional reference to the state of the processing node",
+                "type": "object",
+                "properties": {
+                  "topic": {
+                    "type": "string",
+                    "description": "Topic name of the state message"
+                  },
+                  "message_id": {
+                    "type": "string",
+                    "description": "Unique identifier of the state message (e.g., UUID7, ULID, or custom format)"
+                  }
+                },
+                "required": [
+                  "topic",
+                  "message_id"
+                ]
+              }
+            },
+            "required": [
+              "inputs",
+              "processing_node"
+            ]
           }
         },
         "required": [
@@ -5333,6 +6736,67 @@ export const SceneUpdate = {
         ]
       },
       "description": "Scene entities to add or replace"
+    },
+    "message_id": {
+      "type": "string",
+      "description": "Unique identifier for this message (e.g., UUID7, ULID, or custom format)"
+    },
+    "lineage": {
+      "title": "foxglove.LineageInfo",
+      "description": "Lineage information for tracking data provenance",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "array",
+          "items": {
+            "title": "foxglove.InputReference",
+            "description": "Reference to an input message used in lineage tracking",
+            "type": "object",
+            "properties": {
+              "topic": {
+                "type": "string",
+                "description": "Topic name of the input message"
+              },
+              "message_id": {
+                "type": "string",
+                "description": "Unique identifier of the input message (e.g., UUID7, ULID, or custom format)"
+              }
+            },
+            "required": [
+              "topic",
+              "message_id"
+            ]
+          },
+          "description": "References to input messages that contributed to this message"
+        },
+        "processing_node": {
+          "type": "string",
+          "description": "Name of the processing node that produced this message"
+        },
+        "state": {
+          "title": "foxglove.StateReference",
+          "description": "Optional reference to the state of the processing node",
+          "type": "object",
+          "properties": {
+            "topic": {
+              "type": "string",
+              "description": "Topic name of the state message"
+            },
+            "message_id": {
+              "type": "string",
+              "description": "Unique identifier of the state message (e.g., UUID7, ULID, or custom format)"
+            }
+          },
+          "required": [
+            "topic",
+            "message_id"
+          ]
+        }
+      },
+      "required": [
+        "inputs",
+        "processing_node"
+      ]
     }
   },
   "required": [
@@ -5662,6 +7126,67 @@ export const Point3InFrame = {
         "x",
         "y",
         "z"
+      ]
+    },
+    "message_id": {
+      "type": "string",
+      "description": "Unique identifier for this message (e.g., UUID7, ULID, or custom format)"
+    },
+    "lineage": {
+      "title": "foxglove.LineageInfo",
+      "description": "Lineage information for tracking data provenance",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "array",
+          "items": {
+            "title": "foxglove.InputReference",
+            "description": "Reference to an input message used in lineage tracking",
+            "type": "object",
+            "properties": {
+              "topic": {
+                "type": "string",
+                "description": "Topic name of the input message"
+              },
+              "message_id": {
+                "type": "string",
+                "description": "Unique identifier of the input message (e.g., UUID7, ULID, or custom format)"
+              }
+            },
+            "required": [
+              "topic",
+              "message_id"
+            ]
+          },
+          "description": "References to input messages that contributed to this message"
+        },
+        "processing_node": {
+          "type": "string",
+          "description": "Name of the processing node that produced this message"
+        },
+        "state": {
+          "title": "foxglove.StateReference",
+          "description": "Optional reference to the state of the processing node",
+          "type": "object",
+          "properties": {
+            "topic": {
+              "type": "string",
+              "description": "Topic name of the state message"
+            },
+            "message_id": {
+              "type": "string",
+              "description": "Unique identifier of the state message (e.g., UUID7, ULID, or custom format)"
+            }
+          },
+          "required": [
+            "topic",
+            "message_id"
+          ]
+        }
+      },
+      "required": [
+        "inputs",
+        "processing_node"
       ]
     }
   },
@@ -6090,6 +7615,67 @@ export const PointsAnnotation = {
     "thickness": {
       "type": "number",
       "description": "Stroke thickness in pixels"
+    },
+    "message_id": {
+      "type": "string",
+      "description": "Unique identifier for this message (e.g., UUID7, ULID, or custom format)"
+    },
+    "lineage": {
+      "title": "foxglove.LineageInfo",
+      "description": "Lineage information for tracking data provenance",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "array",
+          "items": {
+            "title": "foxglove.InputReference",
+            "description": "Reference to an input message used in lineage tracking",
+            "type": "object",
+            "properties": {
+              "topic": {
+                "type": "string",
+                "description": "Topic name of the input message"
+              },
+              "message_id": {
+                "type": "string",
+                "description": "Unique identifier of the input message (e.g., UUID7, ULID, or custom format)"
+              }
+            },
+            "required": [
+              "topic",
+              "message_id"
+            ]
+          },
+          "description": "References to input messages that contributed to this message"
+        },
+        "processing_node": {
+          "type": "string",
+          "description": "Name of the processing node that produced this message"
+        },
+        "state": {
+          "title": "foxglove.StateReference",
+          "description": "Optional reference to the state of the processing node",
+          "type": "object",
+          "properties": {
+            "topic": {
+              "type": "string",
+              "description": "Topic name of the state message"
+            },
+            "message_id": {
+              "type": "string",
+              "description": "Unique identifier of the state message (e.g., UUID7, ULID, or custom format)"
+            }
+          },
+          "required": [
+            "topic",
+            "message_id"
+          ]
+        }
+      },
+      "required": [
+        "inputs",
+        "processing_node"
+      ]
     }
   },
   "required": [
@@ -6258,6 +7844,67 @@ export const PoseInFrame = {
         "position",
         "orientation"
       ]
+    },
+    "message_id": {
+      "type": "string",
+      "description": "Unique identifier for this message (e.g., UUID7, ULID, or custom format)"
+    },
+    "lineage": {
+      "title": "foxglove.LineageInfo",
+      "description": "Lineage information for tracking data provenance",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "array",
+          "items": {
+            "title": "foxglove.InputReference",
+            "description": "Reference to an input message used in lineage tracking",
+            "type": "object",
+            "properties": {
+              "topic": {
+                "type": "string",
+                "description": "Topic name of the input message"
+              },
+              "message_id": {
+                "type": "string",
+                "description": "Unique identifier of the input message (e.g., UUID7, ULID, or custom format)"
+              }
+            },
+            "required": [
+              "topic",
+              "message_id"
+            ]
+          },
+          "description": "References to input messages that contributed to this message"
+        },
+        "processing_node": {
+          "type": "string",
+          "description": "Name of the processing node that produced this message"
+        },
+        "state": {
+          "title": "foxglove.StateReference",
+          "description": "Optional reference to the state of the processing node",
+          "type": "object",
+          "properties": {
+            "topic": {
+              "type": "string",
+              "description": "Topic name of the state message"
+            },
+            "message_id": {
+              "type": "string",
+              "description": "Unique identifier of the state message (e.g., UUID7, ULID, or custom format)"
+            }
+          },
+          "required": [
+            "topic",
+            "message_id"
+          ]
+        }
+      },
+      "required": [
+        "inputs",
+        "processing_node"
+      ]
     }
   },
   "required": [
@@ -6360,6 +8007,67 @@ export const PosesInFrame = {
         ]
       },
       "description": "Poses in 3D space"
+    },
+    "message_id": {
+      "type": "string",
+      "description": "Unique identifier for this message (e.g., UUID7, ULID, or custom format)"
+    },
+    "lineage": {
+      "title": "foxglove.LineageInfo",
+      "description": "Lineage information for tracking data provenance",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "array",
+          "items": {
+            "title": "foxglove.InputReference",
+            "description": "Reference to an input message used in lineage tracking",
+            "type": "object",
+            "properties": {
+              "topic": {
+                "type": "string",
+                "description": "Topic name of the input message"
+              },
+              "message_id": {
+                "type": "string",
+                "description": "Unique identifier of the input message (e.g., UUID7, ULID, or custom format)"
+              }
+            },
+            "required": [
+              "topic",
+              "message_id"
+            ]
+          },
+          "description": "References to input messages that contributed to this message"
+        },
+        "processing_node": {
+          "type": "string",
+          "description": "Name of the processing node that produced this message"
+        },
+        "state": {
+          "title": "foxglove.StateReference",
+          "description": "Optional reference to the state of the processing node",
+          "type": "object",
+          "properties": {
+            "topic": {
+              "type": "string",
+              "description": "Topic name of the state message"
+            },
+            "message_id": {
+              "type": "string",
+              "description": "Unique identifier of the state message (e.g., UUID7, ULID, or custom format)"
+            }
+          },
+          "required": [
+            "topic",
+            "message_id"
+          ]
+        }
+      },
+      "required": [
+        "inputs",
+        "processing_node"
+      ]
     }
   },
   "required": [
@@ -6440,6 +8148,67 @@ export const RawAudio = {
       "type": "integer",
       "minimum": 0,
       "description": "Number of channels in the audio block"
+    },
+    "message_id": {
+      "type": "string",
+      "description": "Unique identifier for this message (e.g., UUID7, ULID, or custom format)"
+    },
+    "lineage": {
+      "title": "foxglove.LineageInfo",
+      "description": "Lineage information for tracking data provenance",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "array",
+          "items": {
+            "title": "foxglove.InputReference",
+            "description": "Reference to an input message used in lineage tracking",
+            "type": "object",
+            "properties": {
+              "topic": {
+                "type": "string",
+                "description": "Topic name of the input message"
+              },
+              "message_id": {
+                "type": "string",
+                "description": "Unique identifier of the input message (e.g., UUID7, ULID, or custom format)"
+              }
+            },
+            "required": [
+              "topic",
+              "message_id"
+            ]
+          },
+          "description": "References to input messages that contributed to this message"
+        },
+        "processing_node": {
+          "type": "string",
+          "description": "Name of the processing node that produced this message"
+        },
+        "state": {
+          "title": "foxglove.StateReference",
+          "description": "Optional reference to the state of the processing node",
+          "type": "object",
+          "properties": {
+            "topic": {
+              "type": "string",
+              "description": "Topic name of the state message"
+            },
+            "message_id": {
+              "type": "string",
+              "description": "Unique identifier of the state message (e.g., UUID7, ULID, or custom format)"
+            }
+          },
+          "required": [
+            "topic",
+            "message_id"
+          ]
+        }
+      },
+      "required": [
+        "inputs",
+        "processing_node"
+      ]
     }
   },
   "required": [
@@ -6831,6 +8600,67 @@ export const TextAnnotation = {
         "g",
         "b",
         "a"
+      ]
+    },
+    "message_id": {
+      "type": "string",
+      "description": "Unique identifier for this message (e.g., UUID7, ULID, or custom format)"
+    },
+    "lineage": {
+      "title": "foxglove.LineageInfo",
+      "description": "Lineage information for tracking data provenance",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "array",
+          "items": {
+            "title": "foxglove.InputReference",
+            "description": "Reference to an input message used in lineage tracking",
+            "type": "object",
+            "properties": {
+              "topic": {
+                "type": "string",
+                "description": "Topic name of the input message"
+              },
+              "message_id": {
+                "type": "string",
+                "description": "Unique identifier of the input message (e.g., UUID7, ULID, or custom format)"
+              }
+            },
+            "required": [
+              "topic",
+              "message_id"
+            ]
+          },
+          "description": "References to input messages that contributed to this message"
+        },
+        "processing_node": {
+          "type": "string",
+          "description": "Name of the processing node that produced this message"
+        },
+        "state": {
+          "title": "foxglove.StateReference",
+          "description": "Optional reference to the state of the processing node",
+          "type": "object",
+          "properties": {
+            "topic": {
+              "type": "string",
+              "description": "Topic name of the state message"
+            },
+            "message_id": {
+              "type": "string",
+              "description": "Unique identifier of the state message (e.g., UUID7, ULID, or custom format)"
+            }
+          },
+          "required": [
+            "topic",
+            "message_id"
+          ]
+        }
+      },
+      "required": [
+        "inputs",
+        "processing_node"
       ]
     }
   },

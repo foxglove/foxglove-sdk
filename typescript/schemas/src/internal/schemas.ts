@@ -47,71 +47,6 @@ const Timestamp: FoxgloveMessageSchema = {
   ],
 };
 
-const RawAudio: FoxgloveMessageSchema = {
-  type: "message",
-  name: "RawAudio",
-  description: "A single block of an audio bitstream",
-  fields: [
-    {
-      name: "timestamp",
-      type: { type: "nested", schema: Timestamp },
-      description: "Timestamp of the start of the audio block",
-    },
-    {
-      name: "data",
-      type: { type: "primitive", name: "bytes" },
-      description: `Audio data. The samples in the data must be interleaved and little-endian`,
-    },
-    {
-      name: "format",
-      type: { type: "primitive", name: "string" },
-      description: "Audio format. Only 'pcm-s16' is currently supported",
-    },
-    {
-      name: "sample_rate",
-      type: { type: "primitive", name: "uint32" },
-      description: "Sample rate in Hz",
-    },
-    {
-      name: "number_of_channels",
-      type: { type: "primitive", name: "uint32" },
-      description: "Number of channels in the audio block",
-    },
-  ],
-};
-
-const Color: FoxgloveMessageSchema = {
-  type: "message",
-  name: "Color",
-  description: "A color in RGBA format",
-  fields: [
-    {
-      name: "r",
-      type: { type: "primitive", name: "float64" },
-      description: "Red value between 0 and 1",
-      defaultValue: 1.0,
-    },
-    {
-      name: "g",
-      type: { type: "primitive", name: "float64" },
-      description: "Green value between 0 and 1",
-      defaultValue: 1.0,
-    },
-    {
-      name: "b",
-      type: { type: "primitive", name: "float64" },
-      description: "Blue value between 0 and 1",
-      defaultValue: 1.0,
-    },
-    {
-      name: "a",
-      type: { type: "primitive", name: "float64" },
-      description: "Alpha value between 0 and 1",
-      defaultValue: 1.0,
-    },
-  ],
-};
-
 // Lineage tracking types for data provenance
 const InputReference: FoxgloveMessageSchema = {
   type: "message",
@@ -170,6 +105,85 @@ const LineageInfo: FoxgloveMessageSchema = {
       type: { type: "nested", schema: StateReference },
       optional: true,
       description: "Optional reference to the state of the processing node",
+    },
+  ],
+};
+
+const RawAudio: FoxgloveMessageSchema = {
+  type: "message",
+  name: "RawAudio",
+  description: "A single block of an audio bitstream",
+  fields: [
+    {
+      name: "timestamp",
+      type: { type: "nested", schema: Timestamp },
+      description: "Timestamp of the start of the audio block",
+    },
+    {
+      name: "data",
+      type: { type: "primitive", name: "bytes" },
+      description: `Audio data. The samples in the data must be interleaved and little-endian`,
+    },
+    {
+      name: "format",
+      type: { type: "primitive", name: "string" },
+      description: "Audio format. Only 'pcm-s16' is currently supported",
+    },
+    {
+      name: "sample_rate",
+      type: { type: "primitive", name: "uint32" },
+      description: "Sample rate in Hz",
+    },
+    {
+      name: "number_of_channels",
+      type: { type: "primitive", name: "uint32" },
+      description: "Number of channels in the audio block",
+    },
+    {
+      name: "message_id",
+      type: { type: "primitive", name: "string" },
+      description: "Unique identifier for this message (e.g., UUID7, ULID, or custom format)",
+      optional: true,
+      protobufFieldNumber: 100,
+    },
+    {
+      name: "lineage",
+      type: { type: "nested", schema: LineageInfo },
+      description: "Lineage information for tracking data provenance",
+      optional: true,
+      protobufFieldNumber: 101,
+    },
+  ],
+};
+
+const Color: FoxgloveMessageSchema = {
+  type: "message",
+  name: "Color",
+  description: "A color in RGBA format",
+  fields: [
+    {
+      name: "r",
+      type: { type: "primitive", name: "float64" },
+      description: "Red value between 0 and 1",
+      defaultValue: 1.0,
+    },
+    {
+      name: "g",
+      type: { type: "primitive", name: "float64" },
+      description: "Green value between 0 and 1",
+      defaultValue: 1.0,
+    },
+    {
+      name: "b",
+      type: { type: "primitive", name: "float64" },
+      description: "Blue value between 0 and 1",
+      defaultValue: 1.0,
+    },
+    {
+      name: "a",
+      type: { type: "primitive", name: "float64" },
+      description: "Alpha value between 0 and 1",
+      defaultValue: 1.0,
     },
   ],
 };
@@ -287,6 +301,20 @@ const Point3InFrame: FoxgloveMessageSchema = {
       type: { type: "nested", schema: Point3 },
       description: "Point in 3D space",
     },
+    {
+      name: "message_id",
+      type: { type: "primitive", name: "string" },
+      description: "Unique identifier for this message (e.g., UUID7, ULID, or custom format)",
+      optional: true,
+      protobufFieldNumber: 100,
+    },
+    {
+      name: "lineage",
+      type: { type: "nested", schema: LineageInfo },
+      description: "Lineage information for tracking data provenance",
+      optional: true,
+      protobufFieldNumber: 101,
+    },
   ],
 };
 
@@ -396,6 +424,20 @@ const SceneEntityDeletion: FoxgloveMessageSchema = {
       name: "id",
       type: { type: "primitive", name: "string" },
       description: "Identifier which must match if `type` is `MATCHING_ID`.",
+    },
+    {
+      name: "message_id",
+      type: { type: "primitive", name: "string" },
+      description: "Unique identifier for this message (e.g., UUID7, ULID, or custom format)",
+      optional: true,
+      protobufFieldNumber: 100,
+    },
+    {
+      name: "lineage",
+      type: { type: "nested", schema: LineageInfo },
+      description: "Lineage information for tracking data provenance",
+      optional: true,
+      protobufFieldNumber: 101,
     },
   ],
 };
@@ -806,6 +848,20 @@ const SceneEntity: FoxgloveMessageSchema = {
       array: true,
       description: "Model primitives",
     },
+    {
+      name: "message_id",
+      type: { type: "primitive", name: "string" },
+      description: "Unique identifier for this message (e.g., UUID7, ULID, or custom format)",
+      optional: true,
+      protobufFieldNumber: 100,
+    },
+    {
+      name: "lineage",
+      type: { type: "nested", schema: LineageInfo },
+      description: "Lineage information for tracking data provenance",
+      optional: true,
+      protobufFieldNumber: 101,
+    },
   ],
 };
 
@@ -825,6 +881,20 @@ const SceneUpdate: FoxgloveMessageSchema = {
       type: { type: "nested", schema: SceneEntity },
       array: true,
       description: "Scene entities to add or replace",
+    },
+    {
+      name: "message_id",
+      type: { type: "primitive", name: "string" },
+      description: "Unique identifier for this message (e.g., UUID7, ULID, or custom format)",
+      optional: true,
+      protobufFieldNumber: 100,
+    },
+    {
+      name: "lineage",
+      type: { type: "nested", schema: LineageInfo },
+      description: "Lineage information for tracking data provenance",
+      optional: true,
+      protobufFieldNumber: 101,
     },
   ],
 };
@@ -926,6 +996,20 @@ Given a 3D point [X Y Z]', the projection (x, y) of the point onto the rectified
 This holds for both images of a stereo pair.
 `,
     },
+    {
+      name: "message_id",
+      type: { type: "primitive", name: "string" },
+      description: "Unique identifier for this message (e.g., UUID7, ULID, or custom format)",
+      optional: true,
+      protobufFieldNumber: 100,
+    },
+    {
+      name: "lineage",
+      type: { type: "nested", schema: LineageInfo },
+      description: "Lineage information for tracking data provenance",
+      optional: true,
+      protobufFieldNumber: 101,
+    },
   ],
 };
 
@@ -955,6 +1039,20 @@ const CompressedImage: FoxgloveMessageSchema = {
       name: "format",
       type: { type: "primitive", name: "string" },
       description: "Image format\n\nSupported values: `jpeg`, `png`, `webp`, `avif`",
+    },
+    {
+      name: "message_id",
+      type: { type: "primitive", name: "string" },
+      description: "Unique identifier for this message (e.g., UUID7, ULID, or custom format)",
+      optional: true,
+      protobufFieldNumber: 100,
+    },
+    {
+      name: "lineage",
+      type: { type: "nested", schema: LineageInfo },
+      description: "Lineage information for tracking data provenance",
+      optional: true,
+      protobufFieldNumber: 101,
     },
   ],
 };
@@ -1007,6 +1105,20 @@ Specifically, the requirements for different \`format\` values are:
       type: { type: "primitive", name: "string" },
       description:
         "Video format.\n\nSupported values: `h264`, `h265`, `vp9`, `av1`.\n\nNote: compressed video support is subject to hardware limitations and patent licensing, so not all encodings may be supported on all platforms. See more about [H.265 support](https://caniuse.com/hevc), [VP9 support](https://caniuse.com/webm), and [AV1 support](https://caniuse.com/av1).",
+    },
+    {
+      name: "message_id",
+      type: { type: "primitive", name: "string" },
+      description: "Unique identifier for this message (e.g., UUID7, ULID, or custom format)",
+      optional: true,
+      protobufFieldNumber: 100,
+    },
+    {
+      name: "lineage",
+      type: { type: "nested", schema: LineageInfo },
+      description: "Lineage information for tracking data provenance",
+      optional: true,
+      protobufFieldNumber: 101,
     },
   ],
 };
@@ -1158,6 +1270,20 @@ const FrameTransform: FoxgloveMessageSchema = {
       description:
         "Rotation component of the transform, representing the orientation of the child frame in the parent frame",
     },
+    {
+      name: "message_id",
+      type: { type: "primitive", name: "string" },
+      description: "Unique identifier for this message (e.g., UUID7, ULID, or custom format)",
+      optional: true,
+      protobufFieldNumber: 100,
+    },
+    {
+      name: "lineage",
+      type: { type: "nested", schema: LineageInfo },
+      description: "Lineage information for tracking data provenance",
+      optional: true,
+      protobufFieldNumber: 101,
+    },
   ],
 };
 
@@ -1171,6 +1297,20 @@ const FrameTransforms: FoxgloveMessageSchema = {
       type: { type: "nested", schema: FrameTransform },
       array: true,
       description: "Array of transforms",
+    },
+    {
+      name: "message_id",
+      type: { type: "primitive", name: "string" },
+      description: "Unique identifier for this message (e.g., UUID7, ULID, or custom format)",
+      optional: true,
+      protobufFieldNumber: 100,
+    },
+    {
+      name: "lineage",
+      type: { type: "nested", schema: LineageInfo },
+      description: "Lineage information for tracking data provenance",
+      optional: true,
+      protobufFieldNumber: 101,
     },
   ],
 };
@@ -1194,6 +1334,20 @@ const PoseInFrame: FoxgloveMessageSchema = {
       name: "pose",
       type: { type: "nested", schema: Pose },
       description: "Pose in 3D space",
+    },
+    {
+      name: "message_id",
+      type: { type: "primitive", name: "string" },
+      description: "Unique identifier for this message (e.g., UUID7, ULID, or custom format)",
+      optional: true,
+      protobufFieldNumber: 100,
+    },
+    {
+      name: "lineage",
+      type: { type: "nested", schema: LineageInfo },
+      description: "Lineage information for tracking data provenance",
+      optional: true,
+      protobufFieldNumber: 101,
     },
   ],
 };
@@ -1219,6 +1373,20 @@ const PosesInFrame: FoxgloveMessageSchema = {
       description: "Poses in 3D space",
       array: true,
     },
+    {
+      name: "message_id",
+      type: { type: "primitive", name: "string" },
+      description: "Unique identifier for this message (e.g., UUID7, ULID, or custom format)",
+      optional: true,
+      protobufFieldNumber: 100,
+    },
+    {
+      name: "lineage",
+      type: { type: "nested", schema: LineageInfo },
+      description: "Lineage information for tracking data provenance",
+      optional: true,
+      protobufFieldNumber: 101,
+    },
   ],
 };
 
@@ -1231,6 +1399,20 @@ const GeoJSON: FoxgloveMessageSchema = {
       name: "geojson",
       type: { type: "primitive", name: "string" },
       description: "GeoJSON data encoded as a UTF-8 string",
+    },
+    {
+      name: "message_id",
+      type: { type: "primitive", name: "string" },
+      description: "Unique identifier for this message (e.g., UUID7, ULID, or custom format)",
+      optional: true,
+      protobufFieldNumber: 100,
+    },
+    {
+      name: "lineage",
+      type: { type: "nested", schema: LineageInfo },
+      description: "Lineage information for tracking data provenance",
+      optional: true,
+      protobufFieldNumber: 101,
     },
   ],
 };
@@ -1331,6 +1513,20 @@ const Grid: FoxgloveMessageSchema = {
       description:
         "Grid cell data, interpreted using `fields`, in row-major (y-major) order.\nFor the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:\n\n- y = i / row_stride * cell_size.y\n- x = (i % row_stride) / cell_stride * cell_size.x",
     },
+    {
+      name: "message_id",
+      type: { type: "primitive", name: "string" },
+      description: "Unique identifier for this message (e.g., UUID7, ULID, or custom format)",
+      optional: true,
+      protobufFieldNumber: 100,
+    },
+    {
+      name: "lineage",
+      type: { type: "nested", schema: LineageInfo },
+      description: "Lineage information for tracking data provenance",
+      optional: true,
+      protobufFieldNumber: 101,
+    },
   ],
 };
 
@@ -1353,7 +1549,7 @@ const VoxelGrid: FoxgloveMessageSchema = {
       name: "pose",
       type: { type: "nested", schema: Pose },
       description:
-        "Origin of the grid’s lower-front-left corner in the reference frame. The grid’s pose is defined relative to this corner, so an untransformed grid with an identity orientation has this corner at the origin.",
+        "Origin of the grid's lower-front-left corner in the reference frame. The grid's pose is defined relative to this corner, so an untransformed grid with an identity orientation has this corner at the origin.",
     },
     {
       name: "row_count",
@@ -1398,6 +1594,20 @@ const VoxelGrid: FoxgloveMessageSchema = {
       description:
         "Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.\nFor the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:\n\n- z = i / slice_stride * cell_size.z\n- y = (i % slice_stride) / row_stride * cell_size.y\n- x = (i % row_stride) / cell_stride * cell_size.x",
     },
+    {
+      name: "message_id",
+      type: { type: "primitive", name: "string" },
+      description: "Unique identifier for this message (e.g., UUID7, ULID, or custom format)",
+      optional: true,
+      protobufFieldNumber: 100,
+    },
+    {
+      name: "lineage",
+      type: { type: "nested", schema: LineageInfo },
+      description: "Lineage information for tracking data provenance",
+      optional: true,
+      protobufFieldNumber: 101,
+    },
   ],
 };
 
@@ -1436,6 +1646,20 @@ const CircleAnnotation: FoxgloveMessageSchema = {
       name: "outline_color",
       type: { type: "nested", schema: Color },
       description: "Outline color",
+    },
+    {
+      name: "message_id",
+      type: { type: "primitive", name: "string" },
+      description: "Unique identifier for this message (e.g., UUID7, ULID, or custom format)",
+      optional: true,
+      protobufFieldNumber: 100,
+    },
+    {
+      name: "lineage",
+      type: { type: "nested", schema: LineageInfo },
+      description: "Lineage information for tracking data provenance",
+      optional: true,
+      protobufFieldNumber: 101,
     },
   ],
 };
@@ -1503,6 +1727,20 @@ const PointsAnnotation: FoxgloveMessageSchema = {
       type: { type: "primitive", name: "float64" },
       description: "Stroke thickness in pixels",
     },
+    {
+      name: "message_id",
+      type: { type: "primitive", name: "string" },
+      description: "Unique identifier for this message (e.g., UUID7, ULID, or custom format)",
+      optional: true,
+      protobufFieldNumber: 100,
+    },
+    {
+      name: "lineage",
+      type: { type: "nested", schema: LineageInfo },
+      description: "Lineage information for tracking data provenance",
+      optional: true,
+      protobufFieldNumber: 101,
+    },
   ],
 };
 
@@ -1543,6 +1781,20 @@ const TextAnnotation: FoxgloveMessageSchema = {
       type: { type: "nested", schema: Color },
       description: "Background fill color",
     },
+    {
+      name: "message_id",
+      type: { type: "primitive", name: "string" },
+      description: "Unique identifier for this message (e.g., UUID7, ULID, or custom format)",
+      optional: true,
+      protobufFieldNumber: 100,
+    },
+    {
+      name: "lineage",
+      type: { type: "nested", schema: LineageInfo },
+      description: "Lineage information for tracking data provenance",
+      optional: true,
+      protobufFieldNumber: 101,
+    },
   ],
 };
 
@@ -1568,6 +1820,20 @@ const ImageAnnotations: FoxgloveMessageSchema = {
       type: { type: "nested", schema: TextAnnotation },
       description: "Text annotations",
       array: true,
+    },
+    {
+      name: "message_id",
+      type: { type: "primitive", name: "string" },
+      description: "Unique identifier for this message (e.g., UUID7, ULID, or custom format)",
+      optional: true,
+      protobufFieldNumber: 100,
+    },
+    {
+      name: "lineage",
+      type: { type: "nested", schema: LineageInfo },
+      description: "Lineage information for tracking data provenance",
+      optional: true,
+      protobufFieldNumber: 101,
     },
   ],
 };
@@ -1647,6 +1913,20 @@ const LocationFix: FoxgloveMessageSchema = {
       description: "Color used to visualize the location",
       protobufFieldNumber: 8,
     },
+    {
+      name: "message_id",
+      type: { type: "primitive", name: "string" },
+      description: "Unique identifier for this message (e.g., UUID7, ULID, or custom format)",
+      optional: true,
+      protobufFieldNumber: 100,
+    },
+    {
+      name: "lineage",
+      type: { type: "nested", schema: LineageInfo },
+      description: "Lineage information for tracking data provenance",
+      optional: true,
+      protobufFieldNumber: 101,
+    },
   ],
 };
 
@@ -1660,6 +1940,20 @@ const LocationFixes: FoxgloveMessageSchema = {
       type: { type: "nested", schema: LocationFix },
       array: true,
       description: "An array of location fixes",
+    },
+    {
+      name: "message_id",
+      type: { type: "primitive", name: "string" },
+      description: "Unique identifier for this message (e.g., UUID7, ULID, or custom format)",
+      optional: true,
+      protobufFieldNumber: 100,
+    },
+    {
+      name: "lineage",
+      type: { type: "nested", schema: LineageInfo },
+      description: "Lineage information for tracking data provenance",
+      optional: true,
+      protobufFieldNumber: 101,
     },
   ],
 };
@@ -1714,6 +2008,20 @@ const Log: FoxgloveMessageSchema = {
       name: "line",
       type: { type: "primitive", name: "uint32" },
       description: "Line number in the file",
+    },
+    {
+      name: "message_id",
+      type: { type: "primitive", name: "string" },
+      description: "Unique identifier for this message (e.g., UUID7, ULID, or custom format)",
+      optional: true,
+      protobufFieldNumber: 100,
+    },
+    {
+      name: "lineage",
+      type: { type: "nested", schema: LineageInfo },
+      description: "Lineage information for tracking data provenance",
+      optional: true,
+      protobufFieldNumber: 101,
     },
   ],
 };
@@ -1816,6 +2124,20 @@ const LaserScan: FoxgloveMessageSchema = {
       type: { type: "primitive", name: "float64" },
       description: "Intensity of detections",
       array: true,
+    },
+    {
+      name: "message_id",
+      type: { type: "primitive", name: "string" },
+      description: "Unique identifier for this message (e.g., UUID7, ULID, or custom format)",
+      optional: true,
+      protobufFieldNumber: 100,
+    },
+    {
+      name: "lineage",
+      type: { type: "nested", schema: LineageInfo },
+      description: "Lineage information for tracking data provenance",
+      optional: true,
+      protobufFieldNumber: 101,
     },
   ],
 };

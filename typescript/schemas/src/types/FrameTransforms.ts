@@ -2,9 +2,16 @@
 // Options: {}
 
 import { FrameTransform } from "./FrameTransform";
+import { LineageInfo } from "./LineageInfo";
 
 /** An array of FrameTransform messages */
 export type FrameTransforms = {
   /** Array of transforms */
   transforms: FrameTransform[];
+
+  /** Unique identifier for this message (e.g., UUID7, ULID, or custom format) */
+  message_id?: string;
+
+  /** Lineage information for tracking data provenance */
+  lineage?: LineageInfo;
 };
