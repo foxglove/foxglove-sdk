@@ -209,7 +209,19 @@ impl From<PyMcapWriteOptions> for McapWriteOptions {
 /// If the writer is not closed by the time it is garbage collected, it will be
 /// closed automatically, and any errors will be logged.
 #[pyclass(name = "MCAPWriter", module = "foxglove.mcap")]
-pub(crate) struct PyMcapWriter(pub(crate) Option<McapWriterHandle<BufWriter<WriterInner>>>);
+pub(crate) struct PyMcapWriter {
+    pub(crate) writer: Option<McapWriterHandle<BufWriter<WriterInner>>>,
+    layouts: std::collections::BTreeMap<String, String>,
+}
+
+impl PyMcapWriter {
+    pub(crate) fn new(writer: McapWriterHandle<BufWriter<WriterInner>>) -> Self {
+        Self {
+            writer: Some(writer),
+            layouts: std::collections::BTreeMap::new(),
+        }
+    }
+}
 
 impl Drop for PyMcapWriter {
     fn drop(&mut self) {
@@ -239,7 +251,14 @@ impl PyMcapWriter {
     /// You may call this to explicitly close the writer. Note that the writer will be automatically
     /// closed for you when it is garbage collected, or when exiting the context manager.
     fn close(&mut self) -> PyResult<()> {
-        if let Some(writer) = self.0.take() {
+        if let Some(writer) = self.writer.take() {
+            // Write all accumulated layouts as a single metadata record
+            if !self.layouts.is_empty() {
+                let layouts = std::mem::take(&mut self.layouts);
+                writer
+                    .write_metadata("foxglove.layouts", layouts)
+                    .map_err(PyFoxgloveError::from)?;
+            }
             writer.close().map_err(PyFoxgloveError::from)?;
         }
         Ok(())
@@ -254,7 +273,7 @@ impl PyMcapWriter {
         name: &str,
         metadata: std::collections::BTreeMap<String, String>,
     ) -> PyResult<()> {
-        if let Some(writer) = &self.0 {
+        if let Some(writer) = &self.writer {
             writer
                 .write_metadata(name, metadata)
                 .map_err(PyFoxgloveError::from)?;
@@ -284,7 +303,7 @@ impl PyMcapWriter {
         media_type: String,
         data: Vec<u8>,
     ) -> PyResult<()> {
-        if let Some(writer) = &self.0 {
+        if let Some(writer) = &self.writer {
             writer
                 .attach(&foxglove::McapAttachment {
                     log_time,
@@ -297,6 +316,25 @@ impl PyMcapWriter {
         } else {
             return Err(PyFoxgloveError::from(foxglove::FoxgloveError::SinkClosed).into());
         }
+        Ok(())
+    }
+
+    /// Write a layout to the MCAP file.
+    ///
+    /// Layouts are accumulated internally and written as a single metadata
+    /// record under the "foxglove.layouts" key when the writer is closed.
+    /// This allows multiple layouts to be stored with different names.
+    ///
+    /// :param layout_name: The name to use as the key in the metadata record.
+    /// :param layout: The layout JSON string to store.
+    fn write_layout(&mut self, layout_name: String, layout: String) -> PyResult<()> {
+        if self.writer.is_none() {
+            return Err(PyFoxgloveError::from(foxglove::FoxgloveError::SinkClosed).into());
+        }
+
+        // Add to the internal layouts map (will be written on close)
+        self.layouts.insert(layout_name, layout);
+
         Ok(())
     }
 }

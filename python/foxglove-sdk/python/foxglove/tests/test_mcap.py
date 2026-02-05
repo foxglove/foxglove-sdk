@@ -4,6 +4,7 @@ from typing import Callable, Generator, Optional, Union
 
 import pytest
 from foxglove import Channel, ChannelDescriptor, Context, open_mcap
+from foxglove.layouts import Layout, MarkdownPanel
 from foxglove.mcap import MCAPWriteOptions
 
 chan = Channel("test", schema={"type": "object"})
@@ -221,6 +222,65 @@ def test_write_metadata(tmp_mcap: Path) -> None:
 
     # Verify metadata was written correctly
     _verify_metadata_in_file(tmp_mcap, expected_metadata)
+
+
+def test_write_layout(tmp_mcap: Path) -> None:
+    """Test writing multiple layouts to MCAP file."""
+    import json
+
+    # Create layouts with different panels
+    layout1 = Layout(
+        content=MarkdownPanel(
+            title="Test Panel 1",
+        )
+    )
+    layout2 = Layout(
+        content=MarkdownPanel(
+            title="Test Panel 2",
+        )
+    )
+
+    layout_name1 = "my_first_layout"
+    layout_name2 = "my_second_layout"
+
+    with open_mcap(tmp_mcap) as writer:
+        # Pass layout_name first, then layout JSON string
+        writer.write_layout(layout_name1, layout1.to_json())
+        writer.write_layout(layout_name2, layout2.to_json())
+
+        # Log some messages
+        for ii in range(5):
+            chan.log({"foo": ii})
+
+    # Verify layouts were written correctly as metadata
+    import mcap.reader
+
+    with open(tmp_mcap, "rb") as f:
+        reader = mcap.reader.make_reader(f)
+
+        found_layout = False
+        for record in reader.iter_metadata():
+            if record.name == "foxglove.layouts":
+                found_layout = True
+                # Both layouts should be in the same metadata record
+                assert layout_name1 in record.metadata
+                assert layout_name2 in record.metadata
+
+                # Verify the first layout
+                layout_json1 = record.metadata[layout_name1]
+                layout_data1 = json.loads(layout_json1)
+                assert layout_data1.get("version") == 1
+                assert "content" in layout_data1
+                assert layout_data1["content"]["panelType"] == "Markdown"
+
+                # Verify the second layout
+                layout_json2 = record.metadata[layout_name2]
+                layout_data2 = json.loads(layout_json2)
+                assert layout_data2.get("version") == 1
+                assert "content" in layout_data2
+                assert layout_data2["content"]["panelType"] == "Markdown"
+
+        assert found_layout, "Layout metadata not found in MCAP file"
 
 
 def test_channel_filter(make_tmp_mcap: Callable[[], Path]) -> None:

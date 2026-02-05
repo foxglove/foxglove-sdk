@@ -252,7 +252,7 @@ fn open_mcap(
     };
 
     let handle = handle.create(writer).map_err(PyFoxgloveError::from)?;
-    Ok(PyMcapWriter(Some(handle)))
+    Ok(PyMcapWriter::new(handle))
 }
 
 #[pyfunction]
