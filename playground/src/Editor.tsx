@@ -70,6 +70,19 @@ export const Editor = forwardRef<EditorInterface, EditorProps>(
           };
         },
       });
+      const hoverProvider = monaco.languages.registerHoverProvider("python", {
+        async provideHover(model, position, _token, _context) {
+          return (
+            (await runner.current?.getHover(
+              model.getValue(),
+              position.lineNumber,
+              position.column,
+            )) ?? {
+              contents: [],
+            }
+          );
+        },
+      });
       editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
         latestProps.current.onSave?.();
       });
@@ -77,6 +90,7 @@ export const Editor = forwardRef<EditorInterface, EditorProps>(
       return () => {
         signatureProvider.dispose();
         completionProvider.dispose();
+        hoverProvider.dispose();
         editor.dispose();
         editorRef.current = null;
       };

@@ -7,6 +7,7 @@ import type { RunnerWorker } from "./RunnerWorker";
 type EventMap = {
   ready: () => void;
   ["run-completed"]: (mcapFilename: string | undefined) => void;
+  ["set-layout"]: (layoutJson: string) => void;
 };
 
 export class Runner extends EventEmitter<EventMap> {
@@ -20,6 +21,11 @@ export class Runner extends EventEmitter<EventMap> {
     void this.#remote.onReady(
       Comlink.proxy(() => {
         this.emit("ready");
+      }),
+    );
+    void this.#remote.onSetLayout(
+      Comlink.proxy((layoutJson) => {
+        this.emit("set-layout", layoutJson);
       }),
     );
   }
@@ -46,6 +52,14 @@ export class Runner extends EventEmitter<EventMap> {
     col: number,
   ): Promise<monaco.languages.SignatureHelp> {
     return await this.#remote.getSignatureHelp(code, line, col);
+  }
+
+  async getHover(
+    code: string,
+    line: number,
+    col: number,
+  ): Promise<monaco.languages.Hover | undefined> {
+    return await this.#remote.getHover(code, line, col);
   }
 
   dispose(): void {

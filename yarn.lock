@@ -887,29 +887,20 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@foxglove/embed-react@npm:^0.1.8":
-  version: 0.1.8
-  resolution: "@foxglove/embed-react@npm:0.1.8"
+"@foxglove/embed-react@npm:^0.2.3":
+  version: 0.2.3
+  resolution: "@foxglove/embed-react@npm:0.2.3"
   dependencies:
-    "@foxglove/embed": "npm:0.1.8"
+    "@foxglove/embed": "npm:0.2.3"
     tslib: "npm:2.8.1"
   peerDependencies:
     react: ">=18"
     react-dom: ">=18"
-  checksum: 10c0/e947842c184730c84b59f76755e34abb16ff7c14511cc6fe39f5e788d29f346959a6591e94b9b7f4d75e564d03ee6214d3fbea84afd31dd4bff6ca557569bc0f
+  checksum: 10c0/40d9ff21933644389d062abacadf600f6302999593b22bc96d9d86be126d6c03b5e4d266b3daabedffc01167f9bf2efcb70ffe36b2992f8ca0454b7ef5b5b6bc
   languageName: node
   linkType: hard
 
-"@foxglove/embed@npm:0.1.8, @foxglove/embed@npm:^0.1.8":
-  version: 0.1.8
-  resolution: "@foxglove/embed@npm:0.1.8"
-  dependencies:
-    tslib: "npm:2.8.1"
-  checksum: 10c0/5353aaf1cea185c74d3dff82aad8393458f2a565e08d932e37aaf7b999e75ec3ed45b47c60e167825362a431e04e5e2ff957b522e944636b4b9d09ece56a6f7e
-  languageName: node
-  linkType: hard
-
-"@foxglove/embed@npm:0.2.3":
+"@foxglove/embed@npm:0.2.3, @foxglove/embed@npm:^0.2.3":
   version: 0.2.3
   resolution: "@foxglove/embed@npm:0.2.3"
   dependencies:
@@ -5617,7 +5608,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"glob@npm:^10.2.2, glob@npm:^10.3.10, glob@npm:^10.3.7, glob@npm:^10.5.0":
+"glob@npm:^10.2.2, glob@npm:^10.3.10, glob@npm:^10.5.0":
   version: 10.5.0
   resolution: "glob@npm:10.5.0"
   dependencies:
@@ -7621,22 +7612,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"minizlib@npm:^3.0.1":
-  version: 3.0.1
-  resolution: "minizlib@npm:3.0.1"
+"minizlib@npm:^3.0.1, minizlib@npm:^3.1.0":
+  version: 3.1.0
+  resolution: "minizlib@npm:3.1.0"
   dependencies:
-    minipass: "npm:^7.0.4"
-    rimraf: "npm:^5.0.5"
-  checksum: 10c0/82f8bf70da8af656909a8ee299d7ed3b3372636749d29e105f97f20e88971be31f5ed7642f2e898f00283b68b701cc01307401cdc209b0efc5dd3818220e5093
-  languageName: node
-  linkType: hard
-
-"mkdirp@npm:^3.0.1":
-  version: 3.0.1
-  resolution: "mkdirp@npm:3.0.1"
-  bin:
-    mkdirp: dist/cjs/src/bin.js
-  checksum: 10c0/9f2b975e9246351f5e3a40dcfac99fcd0baa31fbfab615fe059fb11e51f10e4803c63de1f384c54d656e4db31d000e4767e9ef076a22e12a641357602e31d57d
+    minipass: "npm:^7.1.2"
+  checksum: 10c0/5aad75ab0090b8266069c9aabe582c021ae53eb33c6c691054a13a45db3b4f91a7fb1bd79151e6b4e9e9a86727b522527c0a06ec7d45206b745d54cd3097bcec
   languageName: node
   linkType: hard
 
@@ -8206,8 +8187,8 @@ __metadata:
     "@carbon/icons-react": "npm:^11.70.0"
     "@emotion/react": "npm:^11.14.0"
     "@emotion/styled": "npm:^11.14.1"
-    "@foxglove/embed": "npm:^0.1.8"
-    "@foxglove/embed-react": "npm:^0.1.8"
+    "@foxglove/embed": "npm:^0.2.3"
+    "@foxglove/embed-react": "npm:^0.2.3"
     "@foxglove/tsconfig": "npm:^2.0.0"
     "@foxglove/wasm-zstd": "npm:^1.0.1"
     "@mui/material": "npm:^7.3.4"
@@ -8815,17 +8796,6 @@ __metadata:
   version: 1.0.4
   resolution: "reusify@npm:1.0.4"
   checksum: 10c0/c19ef26e4e188f408922c46f7ff480d38e8dfc55d448310dfb518736b23ed2c4f547fb64a6ed5bdba92cd7e7ddc889d36ff78f794816d5e71498d645ef476107
-  languageName: node
-  linkType: hard
-
-"rimraf@npm:^5.0.5":
-  version: 5.0.10
-  resolution: "rimraf@npm:5.0.10"
-  dependencies:
-    glob: "npm:^10.3.7"
-  bin:
-    rimraf: dist/esm/bin.mjs
-  checksum: 10c0/7da4fd0e15118ee05b918359462cfa1e7fe4b1228c7765195a45b55576e8c15b95db513b8466ec89129666f4af45ad978a3057a02139afba1a63512a2d9644cc
   languageName: node
   linkType: hard
 
@@ -9582,16 +9552,15 @@ __metadata:
   linkType: hard
 
 "tar@npm:^7.4.3":
-  version: 7.4.3
-  resolution: "tar@npm:7.4.3"
+  version: 7.5.7
+  resolution: "tar@npm:7.5.7"
   dependencies:
     "@isaacs/fs-minipass": "npm:^4.0.0"
     chownr: "npm:^3.0.0"
     minipass: "npm:^7.1.2"
-    minizlib: "npm:^3.0.1"
-    mkdirp: "npm:^3.0.1"
+    minizlib: "npm:^3.1.0"
     yallist: "npm:^5.0.0"
-  checksum: 10c0/d4679609bb2a9b48eeaf84632b6d844128d2412b95b6de07d53d8ee8baf4ca0857c9331dfa510390a0727b550fd543d4d1a10995ad86cdf078423fbb8d99831d
+  checksum: 10c0/51f261afc437e1112c3e7919478d6176ea83f7f7727864d8c2cce10f0b03a631d1911644a567348c3063c45abdae39718ba97abb073d22aa3538b9a53ae1e31c
   languageName: node
   linkType: hard
 

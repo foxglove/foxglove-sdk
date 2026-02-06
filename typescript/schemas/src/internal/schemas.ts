@@ -821,6 +821,8 @@ Projects 3D points in the camera coordinate frame to 2D pixel coordinates using 
 K = [ 0 fy cy]
     [ 0  0  1]
 \`\`\`
+
+**Uncalibrated cameras:** Following ROS conventions for [CameraInfo](https://docs.ros.org/en/noetic/api/sensor_msgs/html/msg/CameraInfo.html), Foxglove also treats K[0] == 0.0 as indicating an uncalibrated camera, and calibration data will be ignored.
 `,
     },
     {
@@ -1050,7 +1052,8 @@ For each \`encoding\` value, the \`data\` field contains image pixel data serial
 const FrameTransform: FoxgloveMessageSchema = {
   type: "message",
   name: "FrameTransform",
-  description: "A transform between two reference frames in 3D space",
+  description:
+    "A transform between two reference frames in 3D space. The transform defines the position and orientation of a child frame within a parent frame. Translation moves the origin of the child frame relative to the parent origin. The rotation changes the orientiation of the child frame around its origin.\n\nExamples:\n\n- With translation (x=1, y=0, z=0) and identity rotation (x=0, y=0, z=0, w=1), a point at (x=0, y=0, z=0) in the child frame maps to (x=1, y=0, z=0) in the parent frame.\n\n- With translation (x=1, y=2, z=0) and a 90-degree rotation around the z-axis (x=0, y=0, z=0.707, w=0.707), a point at (x=1, y=0, z=0) in the child frame maps to (x=-1, y=3, z=0) in the parent frame.",
   fields: [
     {
       name: "timestamp",
@@ -1070,12 +1073,14 @@ const FrameTransform: FoxgloveMessageSchema = {
     {
       name: "translation",
       type: { type: "nested", schema: Vector3 },
-      description: "Translation component of the transform",
+      description:
+        "Translation component of the transform, representing the position of the child frame's origin in the parent frame.",
     },
     {
       name: "rotation",
       type: { type: "nested", schema: Quaternion },
-      description: "Rotation component of the transform",
+      description:
+        "Rotation component of the transform, representing the orientation of the child frame in the parent frame",
     },
   ],
 };

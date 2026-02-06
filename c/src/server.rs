@@ -321,6 +321,8 @@ pub struct FoxgloveServerCallbacks {
     >,
     pub on_connection_graph_subscribe: Option<unsafe extern "C" fn(context: *const c_void)>,
     pub on_connection_graph_unsubscribe: Option<unsafe extern "C" fn(context: *const c_void)>,
+    pub on_client_connect: Option<unsafe extern "C" fn(context: *const c_void)>,
+    pub on_client_disconnect: Option<unsafe extern "C" fn(context: *const c_void)>,
 
     /// Callback invoked when a client sends a playback control request message.
     ///
@@ -426,7 +428,7 @@ unsafe fn do_foxglove_server_start(
         );
     }
     if let Some(callbacks) = options.callbacks {
-        server = server.listener(Arc::new(callbacks.clone()))
+        server = server.listener(Arc::new(callbacks.clone()));
     }
     if let Some(fetch_asset) = options.fetch_asset {
         server = server.fetch_asset_handler(Box::new(FetchAssetHandler::new(
@@ -649,6 +651,22 @@ pub extern "C" fn foxglove_server_get_port(server: Option<&mut FoxgloveWebSocket
         return 0;
     };
     server.port()
+}
+
+/// Get the number of currently connected clients.
+#[unsafe(no_mangle)]
+pub extern "C" fn foxglove_server_get_client_count(
+    server: Option<&mut FoxgloveWebSocketServer>,
+) -> usize {
+    let Some(server) = server else {
+        tracing::error!("foxglove_server_get_client_count called with null server");
+        return 0;
+    };
+    let Some(server) = server.as_ref() else {
+        tracing::error!("foxglove_server_get_client_count called with closed server");
+        return 0;
+    };
+    server.client_count()
 }
 
 /// Stop and shut down `server` and free the resources associated with it.
@@ -1008,6 +1026,18 @@ impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
     fn on_connection_graph_unsubscribe(&self) {
         if let Some(on_connection_graph_unsubscribe) = self.on_connection_graph_unsubscribe {
             unsafe { on_connection_graph_unsubscribe(self.context) };
+        }
+    }
+
+    fn on_client_connect(&self) {
+        if let Some(on_client_connect) = self.on_client_connect {
+            unsafe { on_client_connect(self.context) };
+        }
+    }
+
+    fn on_client_disconnect(&self) {
+        if let Some(on_client_disconnect) = self.on_client_disconnect {
+            unsafe { on_client_disconnect(self.context) };
         }
     }
 

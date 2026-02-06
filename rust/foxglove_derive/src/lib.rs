@@ -4,9 +4,99 @@ use proc_macro::TokenStream;
 use quote::quote;
 use std::collections::HashMap;
 use syn::{
-    parse_macro_input, parse_quote, Data, DataEnum, DataStruct, DeriveInput, Fields, GenericParam,
-    Generics,
+    parse_macro_input, parse_quote, Data, DataEnum, DataStruct, DeriveInput, Fields,
+    GenericArgument, GenericParam, Generics, PathArguments, Type,
 };
+
+/// Extract the inner type from a wrapper type like `Vec<T>` or `Option<T>`.
+/// Returns the wrapper name and inner type if it matches the pattern.
+fn unwrap_generic_type<'a>(ty: &'a Type, wrapper: &str) -> Option<&'a Type> {
+    let Type::Path(type_path) = ty else {
+        return None;
+    };
+    let segment = type_path.path.segments.last()?;
+    if segment.ident != wrapper {
+        return None;
+    }
+    let PathArguments::AngleBracketed(args) = &segment.arguments else {
+        return None;
+    };
+    match args.args.first()? {
+        GenericArgument::Type(inner_ty) => Some(inner_ty),
+        _ => None,
+    }
+}
+
+/// Check if a type is `Vec<T>` for some T.
+fn is_vec(ty: &Type) -> bool {
+    unwrap_generic_type(ty, "Vec").is_some()
+}
+
+/// Check if a type is `Option<T>` for some T.
+fn is_option(ty: &Type) -> bool {
+    unwrap_generic_type(ty, "Option").is_some()
+}
+
+/// Check if a type is `[T; N]` for some T and N.
+fn is_array(ty: &Type) -> bool {
+    matches!(ty, Type::Array(_))
+}
+
+/// Extract the element type from an array type `[T; N]`.
+fn unwrap_array_type(ty: &Type) -> Option<&Type> {
+    match ty {
+        Type::Array(arr) => Some(&arr.elem),
+        _ => None,
+    }
+}
+
+/// Check if a type is `Vec<Option<T>>`, which is not supported because protobuf
+/// repeated fields cannot represent null/missing elements.
+fn is_vec_of_option(ty: &Type) -> bool {
+    unwrap_generic_type(ty, "Vec").is_some_and(is_option)
+}
+
+/// Check if a type is `[Option<T>; N]`, which is not supported because protobuf
+/// repeated fields cannot represent null/missing elements.
+fn is_array_of_option(ty: &Type) -> bool {
+    unwrap_array_type(ty).is_some_and(is_option)
+}
+
+/// Check if a type is `Option<Vec<T>>`, which is not supported because protobuf
+/// cannot distinguish between "not present" and "empty list".
+fn is_option_of_vec(ty: &Type) -> bool {
+    unwrap_generic_type(ty, "Option").is_some_and(is_vec)
+}
+
+/// Check if a type is `Option<[T; N]>`, which is not supported because protobuf
+/// cannot distinguish between "not present" and "empty array".
+fn is_option_of_array(ty: &Type) -> bool {
+    unwrap_generic_type(ty, "Option").is_some_and(is_array)
+}
+
+/// Check if a type is `Vec<Vec<T>>`, which is not supported because protobuf
+/// does not support nested repeated fields.
+fn is_vec_of_vec(ty: &Type) -> bool {
+    unwrap_generic_type(ty, "Vec").is_some_and(is_vec)
+}
+
+/// Check if a type is `[Vec<T>; N]`, which is not supported because protobuf
+/// does not support nested repeated fields.
+fn is_array_of_vec(ty: &Type) -> bool {
+    unwrap_array_type(ty).is_some_and(is_vec)
+}
+
+/// Check if a type is `Vec<[T; N]>`, which is not supported because protobuf
+/// does not support nested repeated fields.
+fn is_vec_of_array(ty: &Type) -> bool {
+    unwrap_generic_type(ty, "Vec").is_some_and(is_array)
+}
+
+/// Check if a type is `[[T; M]; N]`, which is not supported because protobuf
+/// does not support nested repeated fields.
+fn is_array_of_array(ty: &Type) -> bool {
+    unwrap_array_type(ty).is_some_and(is_array)
+}
 
 /// Derive macro for enums and structs allowing them to be logged to a Foxglove channel.
 #[proc_macro_derive(Encode)]
@@ -119,21 +209,19 @@ fn derive_struct_impl(input: &DeriveInput, data: &DataStruct) -> TokenStream {
 
     let mut field_defs = Vec::new();
     let mut field_encoders = Vec::new();
-    let mut field_message_lengths = Vec::new();
+    let mut field_tagged_lengths = Vec::new();
 
     // Field number + wire type must fit into a u32, but there is also a much lower reserved
     // range starting at 19,000. We should need to encode a much smaller space in practice; if
     // we limit to 2047, then each encoded tag will take at most two bytes.
-    // Fields 1-15 use a single byte for the tag; fields 16-2047 use two bytes.
     // https://protobuf.dev/programming-guides/proto3/#assigning
-    let max_one_byte_field_number = 15;
     let max_field_number = 2047;
-    let mut tags_encoded_len: usize = 0;
 
     // If a struct nests multiple values of the same enum or message type, we
     // only define them once, based on name.
     let mut enum_defs: HashMap<&syn::Type, proc_macro2::TokenStream> = HashMap::new();
     let mut message_defs: HashMap<&syn::Type, proc_macro2::TokenStream> = HashMap::new();
+    let mut file_defs: HashMap<&syn::Type, proc_macro2::TokenStream> = HashMap::new();
 
     for (i, field) in fields.iter().enumerate() {
         let field_name = &field.ident.as_ref().unwrap();
@@ -146,15 +234,57 @@ fn derive_struct_impl(input: &DeriveInput, data: &DataStruct) -> TokenStream {
             });
         }
 
-        field_message_lengths.push(quote! {
-            ::foxglove::protobuf::ProtobufField::encoded_len(&self.#field_name)
-        });
+        if is_vec_of_option(field_type) {
+            return TokenStream::from(quote! {
+                compile_error!("Vec<Option<T>> is not supported. Protobuf repeated fields cannot represent null/missing elements.");
+            });
+        }
 
-        tags_encoded_len += if field_number <= max_one_byte_field_number {
-            1
-        } else {
-            2
-        };
+        if is_option_of_vec(field_type) {
+            return TokenStream::from(quote! {
+                compile_error!("Option<Vec<T>> is not supported. Protobuf cannot distinguish between absent and empty repeated fields.");
+            });
+        }
+
+        if is_vec_of_vec(field_type) {
+            return TokenStream::from(quote! {
+                compile_error!("Vec<Vec<T>> is not supported. Protobuf does not support nested repeated fields.");
+            });
+        }
+
+        if is_array_of_option(field_type) {
+            return TokenStream::from(quote! {
+                compile_error!("[Option<T>; N] is not supported. Protobuf repeated fields cannot represent null/missing elements.");
+            });
+        }
+
+        if is_option_of_array(field_type) {
+            return TokenStream::from(quote! {
+                compile_error!("Option<[T; N]> is not supported. Protobuf cannot distinguish between absent and empty repeated fields.");
+            });
+        }
+
+        if is_array_of_array(field_type) {
+            return TokenStream::from(quote! {
+                compile_error!("[[T; M]; N] is not supported. Protobuf does not support nested repeated fields.");
+            });
+        }
+
+        if is_array_of_vec(field_type) {
+            return TokenStream::from(quote! {
+                compile_error!("[Vec<T>; N] is not supported. Protobuf does not support nested repeated fields.");
+            });
+        }
+
+        if is_vec_of_array(field_type) {
+            return TokenStream::from(quote! {
+                compile_error!("Vec<[T; N]> is not supported. Protobuf does not support nested repeated fields.");
+            });
+        }
+
+        field_tagged_lengths.push(quote! {
+            ::foxglove::protobuf::ProtobufField::encoded_len_tagged(&self.#field_name, #field_number)
+        });
 
         enum_defs.entry(field_type).or_insert_with(|| quote! {
             if let Some(enum_desc) = <#field_type as ::foxglove::protobuf::ProtobufField>::enum_descriptor() {
@@ -168,6 +298,14 @@ fn derive_struct_impl(input: &DeriveInput, data: &DataStruct) -> TokenStream {
             }
         });
 
+        file_defs.entry(field_type).or_insert_with(|| {
+            quote! {
+                for fd in <#field_type as ::foxglove::protobuf::ProtobufField>::file_descriptors() {
+                    result.push(fd);
+                }
+            }
+        });
+
         field_defs.push(quote! {
             let mut field = ::foxglove::prost_types::FieldDescriptorProto::default();
             field.name = Some(String::from(stringify!(#field_name)));
@@ -175,6 +313,8 @@ fn derive_struct_impl(input: &DeriveInput, data: &DataStruct) -> TokenStream {
 
             if <#field_type as ::foxglove::protobuf::ProtobufField>::repeating() {
                 field.label = Some(::foxglove::prost_types::field_descriptor_proto::Label::Repeated as i32);
+            } else if <#field_type as ::foxglove::protobuf::ProtobufField>::optional() {
+                field.label = Some(::foxglove::prost_types::field_descriptor_proto::Label::Optional as i32);
             } else {
                 field.label = Some(::foxglove::prost_types::field_descriptor_proto::Label::Required as i32);
             }
@@ -192,6 +332,7 @@ fn derive_struct_impl(input: &DeriveInput, data: &DataStruct) -> TokenStream {
 
     let enum_defs = enum_defs.into_values().collect::<Vec<_>>();
     let message_defs = message_defs.into_values().collect::<Vec<_>>();
+    let file_defs = file_defs.into_values().collect::<Vec<_>>();
 
     // Generate the output tokens
     let expanded = quote! {
@@ -250,8 +391,14 @@ fn derive_struct_impl(input: &DeriveInput, data: &DataStruct) -> TokenStream {
                 Some(stringify!(#name).to_string())
             }
 
+            fn file_descriptors() -> Vec<::foxglove::prost_types::FileDescriptorProto> {
+                let mut result = Vec::new();
+                #(#file_defs)*
+                result
+            }
+
             fn encoded_len(&self) -> usize {
-                #tags_encoded_len #(+ #field_message_lengths)*
+                0 #(+ #field_tagged_lengths)*
             }
         }
 
@@ -263,10 +410,26 @@ fn derive_struct_impl(input: &DeriveInput, data: &DataStruct) -> TokenStream {
                 static SCHEMA: ::std::sync::OnceLock<Option<::foxglove::Schema>> = ::std::sync::OnceLock::new();
                 SCHEMA.get_or_init(|| {
                     let mut file_descriptor_set = ::foxglove::prost_types::FileDescriptorSet::default();
+
+                    // Add file descriptors for well-known types and nested message dependencies.
+                    // Deduplicate by name since multiple fields may reference the same WKT.
+                    let dependency_fds = <#name #ty_generics as ::foxglove::protobuf::ProtobufField>::file_descriptors();
+                    let mut seen = ::std::collections::HashSet::new();
+                    let mut dependencies = Vec::new();
+                    for fd in dependency_fds {
+                        if let Some(name) = &fd.name {
+                            if seen.insert(name.clone()) {
+                                dependencies.push(name.clone());
+                                file_descriptor_set.file.push(fd);
+                            }
+                        }
+                    }
+
                     let mut file = ::foxglove::prost_types::FileDescriptorProto {
                         name: Some(String::from(concat!(stringify!(#name), ".proto"))),
                         package: Some(String::from(stringify!(#name).to_lowercase())),
                         syntax: Some(String::from("proto3")),
+                        dependency: dependencies,
                         ..Default::default()
                     };
 
@@ -303,7 +466,7 @@ fn derive_struct_impl(input: &DeriveInput, data: &DataStruct) -> TokenStream {
             }
 
             fn encoded_len(&self) -> Option<usize> {
-                Some(#tags_encoded_len #(+ #field_message_lengths)*)
+                Some(0 #(+ #field_tagged_lengths)*)
             }
         }
     };

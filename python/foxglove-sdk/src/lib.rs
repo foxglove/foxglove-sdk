@@ -1,5 +1,3 @@
-#[cfg(not(target_family = "wasm"))]
-use cloud_sink::start_cloud_sink;
 use errors::PyFoxgloveError;
 use foxglove::McapWriteOptions;
 use foxglove::{ChannelBuilder, Context, McapWriter, PartialMetadata, RawChannel, Schema};
@@ -21,8 +19,6 @@ use std::sync::{Arc, OnceLock};
 #[cfg(not(target_family = "wasm"))]
 use websocket::start_server;
 
-#[cfg(not(target_family = "wasm"))]
-mod cloud_sink;
 mod errors;
 mod generated;
 mod logging;
@@ -308,8 +304,6 @@ fn _foxglove_py(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(open_mcap, m)?)?;
     #[cfg(not(target_family = "wasm"))]
     m.add_function(wrap_pyfunction!(start_server, m)?)?;
-    #[cfg(not(target_family = "wasm"))]
-    m.add_function(wrap_pyfunction!(start_cloud_sink, m)?)?;
     m.add_function(wrap_pyfunction!(get_channel_for_topic, m)?)?;
     m.add_class::<BaseChannel>()?;
     m.add_class::<PySchema>()?;
@@ -322,7 +316,5 @@ fn _foxglove_py(m: &Bound<'_, PyModule>) -> PyResult<()> {
     mcap::register_submodule(m)?;
     #[cfg(not(target_family = "wasm"))]
     websocket::register_submodule(m)?;
-    #[cfg(not(target_family = "wasm"))]
-    cloud_sink::register_submodule(m)?;
     Ok(())
 }
