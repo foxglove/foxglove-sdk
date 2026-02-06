@@ -361,7 +361,9 @@ pub use sink_channel_filter::SinkChannelFilter;
 pub use std::collections::BTreeMap;
 pub(crate) use time::nanoseconds_since_epoch;
 
-#[cfg(feature = "agent")]
+#[cfg(feature = "cloud")]
+mod cloud;
+#[cfg(feature = "cloud")]
 mod cloud_sink;
 #[cfg(feature = "live_visualization")]
 mod protocol;
@@ -373,7 +375,8 @@ pub mod websocket;
 mod websocket_client;
 #[cfg(feature = "live_visualization")]
 mod websocket_server;
-#[cfg(feature = "agent")]
+#[doc(hidden)]
+#[cfg(feature = "cloud")]
 pub use cloud_sink::{CloudSink, CloudSinkHandle, CloudSinkListener};
 #[cfg(feature = "live_visualization")]
 pub(crate) use runtime::get_runtime_handle;
@@ -447,6 +450,11 @@ pub enum FoxgloveError {
     /// An error related to configuration
     #[error("Configuration error: {0}")]
     ConfigurationError(String),
+    /// An error occurred while communicating with the cloud.
+    #[doc(hidden)]
+    #[cfg(feature = "cloud")]
+    #[error(transparent)]
+    CloudError(#[from] crate::cloud::CloudError),
 }
 
 impl From<convert::RangeError> for FoxgloveError {

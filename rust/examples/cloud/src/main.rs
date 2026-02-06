@@ -30,14 +30,11 @@ async fn main() {
     let handle = foxglove::CloudSink::new()
         .listener(Arc::new(MessageHandler))
         .start()
-        .await
         .expect("Failed to start cloud sink");
 
     tokio::task::spawn(camera_loop());
     _ = tokio::signal::ctrl_c().await;
-    if let Some(shutdown) = handle.stop() {
-        shutdown.wait().await;
-    }
+    handle.stop();
 }
 
 /// Log RawImage messages, which will be encoded as a video stream when sent to the Cloud Sink.
