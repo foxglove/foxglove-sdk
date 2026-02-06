@@ -31,10 +31,14 @@ const WS_PROTOCOL_TOPIC: &str = "ws-protocol";
 const MESSAGE_FRAME_SIZE: usize = 5;
 const AUTH_RETRY_PERIOD: Duration = Duration::from_secs(30);
 
+/// The operation code for the message framing for protocol v2.
+/// Distinguishes between frames containing JSON messages vs binary messages.
 #[derive(Clone, Copy, Debug)]
 #[repr(u8)]
 enum OpCode {
+    /// The frame contains a JSON message.
     Text = 1,
+    /// The frame contains a binary message.
     Binary = 2,
 }
 
@@ -56,6 +60,9 @@ impl RtcCredentials {
     }
 }
 
+/// Options for the cloud connection.
+///
+/// This should be constructed from the [`crate::CloudSink`] builder.
 #[derive(Clone)]
 pub(crate) struct CloudConnectionOptions {
     pub session_id: String,
@@ -97,13 +104,19 @@ impl std::fmt::Debug for CloudConnectionOptions {
     }
 }
 
+/// CloudSession tracks a connected LiveKit session (the Room)
+/// and any state that is specific to that session.
+/// We discard this state if we close or lose the connection.
 struct CloudSession {
     room: Room,
     participants: RwLock<HashMap<ParticipantIdentity, Arc<Participant>>>,
 }
 
+/// CloudConnection manages the connected session to the LiveKit server,
+/// and holds the options and other state that outlive a session.
 pub(crate) struct CloudConnection {
     options: CloudConnectionOptions,
+    /// The current session, if any.
     session: ArcSwapOption<CloudSession>,
 }
 
@@ -115,7 +128,7 @@ impl CloudConnection {
         }
     }
 
-    pub(crate) async fn connect_session(
+    async fn connect_session(
         &self,
     ) -> Result<(Arc<CloudSession>, UnboundedReceiver<RoomEvent>)> {
         // TODO get credentials from API
@@ -190,7 +203,14 @@ impl CloudConnection {
         loop {
             interval.tick().await;
 
-            match self.connect_session().await {
+            let result = tokio::select! {
+                () = self.cancellation_token().cancelled() => {
+                    return Err(CloudError::ConnectionStopped);
+                }
+                result = self.connect_session() => result,
+            };
+
+            match result {
                 Ok((session, room_events)) => {
                     return Ok((session, room_events));
                 }
@@ -333,10 +353,6 @@ impl CloudSession {
                 return Ok(existing_participant.clone());
             }
         }
-
-        // Since 0.7.18 it seems like we don't need this anymore
-        // We used to need the sleep here or the participant wouldn't see the stream.
-        // tokio::time::sleep(Duration::from_secs(1)).await;
 
         let stream = match self
             .room
