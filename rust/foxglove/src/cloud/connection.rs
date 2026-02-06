@@ -163,7 +163,7 @@ impl CloudConnection {
             identity, attributes
         );
 
-        info!("running remote visualization server");
+        info!("running cloud server");
         tokio::select! {
             () = self.cancellation_token().cancelled() => (),
             _ = self.listen_for_room_events(session.clone(), room_events) => {}
@@ -207,7 +207,7 @@ impl CloudConnection {
                 }
                 Err(e) => {
                     error!(
-                        "failed to establish remote visualization connection: {e:?}, retrying in {AUTH_RETRY_PERIOD:?}"
+                        "failed to establish cloud connection: {e:?}, retrying in {AUTH_RETRY_PERIOD:?}"
                     );
                 }
             }

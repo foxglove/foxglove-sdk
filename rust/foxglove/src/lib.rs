@@ -375,6 +375,7 @@ pub mod websocket;
 mod websocket_client;
 #[cfg(feature = "live_visualization")]
 mod websocket_server;
+#[doc(hidden)]
 #[cfg(feature = "cloud")]
 pub use cloud_sink::{CloudSink, CloudSinkHandle, CloudSinkListener};
 #[cfg(feature = "live_visualization")]
@@ -450,6 +451,7 @@ pub enum FoxgloveError {
     #[error("Configuration error: {0}")]
     ConfigurationError(String),
     /// An error occurred while communicating with the cloud.
+    #[doc(hidden)]
     #[cfg(feature = "cloud")]
     #[error(transparent)]
     CloudError(#[from] crate::cloud::CloudError),
