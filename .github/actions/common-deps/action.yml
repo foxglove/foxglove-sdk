@@ -20,4 +20,5 @@ runs:
       run: |
         sudo apt-get install -y --no-install-recommends \
           libprotobuf-dev \
-          protobuf-compiler
+          protobuf-compiler \
+          glib-2.0-dev
