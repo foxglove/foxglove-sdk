@@ -37,9 +37,7 @@ class Listener(ServerListener):
     data format, then reuse this Listener in your own player application.
     """
 
-    def __init__(
-        self, player: PlaybackSource, lock: threading.Lock
-    ) -> None:
+    def __init__(self, player: PlaybackSource, lock: threading.Lock) -> None:
         self._player = player
         self._lock = lock
 
