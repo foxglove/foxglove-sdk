@@ -21,7 +21,7 @@ class McapPlayer(PlaybackSource):
     def __init__(self, path: str):
         self._path = path
         self._channels: dict[str, Channel] = {}
-        self._time_tracker: Optional[_TimeTracker] = None
+        self._time_tracker: Optional[TimeTracker] = None
         self._status = PlaybackStatus.Paused
         self._playback_speed = 1.0
 
@@ -160,7 +160,7 @@ class McapPlayer(PlaybackSource):
 
         # Create TimeTracker on first message after starting playback
         if self._time_tracker is None:
-            self._time_tracker = _TimeTracker(
+            self._time_tracker = TimeTracker(
                 offset_ns=mcap_msg.log_time, speed=self._playback_speed
             )
 
@@ -192,7 +192,7 @@ def _clamp_speed(speed: float) -> float:
     return speed
 
 
-class _TimeTracker:
+class TimeTracker:
     """Tracks the relationship between wall-clock time and playback log time.
 
     Supports pause/resume and variable playback speed.
