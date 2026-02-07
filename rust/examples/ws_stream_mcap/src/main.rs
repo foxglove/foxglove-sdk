@@ -46,13 +46,8 @@ impl ServerListener for Listener {
     ) -> Option<PlaybackState> {
         let mut player = self.player.lock().unwrap();
 
-        player.set_playback_speed(request.playback_speed);
-
-        match request.playback_command {
-            PlaybackCommand::Play => player.play(),
-            PlaybackCommand::Pause => player.pause(),
-        };
-
+        // Handle seek first, before play/pause. This is important for looping behavior,
+        // where Foxglove sends a seek to the beginning followed by a Play command.
         // Setting this flag to true clears panels in the Foxglove player. For simplicity, we set this every time a seek is requested from Foxglove. In your application, consider implementing logic that determines whether a seek represents a significant jump in time for the data you're playing back.
         let mut did_seek = request.seek_time.is_some();
 
@@ -62,6 +57,13 @@ impl ServerListener for Listener {
                 tracing::warn!("failed to seek: {err:?}");
             }
         }
+
+        player.set_playback_speed(request.playback_speed);
+
+        match request.playback_command {
+            PlaybackCommand::Play => player.play(),
+            PlaybackCommand::Pause => player.pause(),
+        };
 
         Some(PlaybackState {
             current_time: player.current_time(),
