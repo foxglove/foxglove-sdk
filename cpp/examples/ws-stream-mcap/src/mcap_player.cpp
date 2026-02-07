@@ -130,6 +130,7 @@ void McapPlayer::pause() {
 bool McapPlayer::seek(uint64_t log_time) {
   log_time = std::max(time_range_.first, std::min(log_time, time_range_.second));
   resetMessageView(log_time);
+  current_time_ = log_time;
   if (status_ == foxglove::PlaybackStatus::Ended) {
     status_ = foxglove::PlaybackStatus::Paused;
   }
@@ -178,6 +179,8 @@ std::optional<std::chrono::nanoseconds> McapPlayer::logNextMessage(
   current_time_ = msg.message.logTime;
 
   if (auto timestamp = time_tracker_->notify(msg.message.logTime)) {
+    // Broadcast time with the current playback time (nanoseconds since epoch).
+    // Requires WebSocketServerCapabilities::Time to be advertised by the server.
     server.broadcastTime(*timestamp);
   }
 
