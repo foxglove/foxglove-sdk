@@ -30,16 +30,21 @@ impl Listener {
     }
 }
 
+/// Implement RangedPlayback-specific listener logic for responding to PlaybackControlRequests
 impl ServerListener for Listener {
+    /// Respond to a PlaybackControlRequest from Foxglove and send an updated PlaybackState.
+    /// First we process the fields in the request (seeking, updating the playback speed, and
+    /// handling play/pause PlaybackCommands by calling functions on our MCAP-specific PlaybackSource.
+    /// Then we query the PlaybackSource to fill out the PlaybackState message sent in response to
+    /// update Foxglove's UI.
+    ///
+    /// The intent of PlaybackSource is to let you implement the trait with your own data
+    /// format, then reuse the structure of this function in your own player application.
     fn on_playback_control_request(
         &self,
         request: PlaybackControlRequest,
     ) -> Option<PlaybackState> {
         let mut player = self.player.lock().unwrap();
-
-        if let Some(seek_time) = request.seek_time {
-            player.seek(seek_time).ok()?
-        }
 
         player.set_playback_speed(request.playback_speed);
 
@@ -48,11 +53,21 @@ impl ServerListener for Listener {
             PlaybackCommand::Pause => player.pause(),
         };
 
+        // Setting this flag to true clears panels in the Foxglove player. For simplicity, we set this every time a seek is requested from Foxglove. In your application, consider implementing logic that determines whether a seek represents a significant jump in time for the data you're playing back.
+        let mut did_seek = request.seek_time.is_some();
+
+        if let Some(seek_time) = request.seek_time {
+            if let Err(err) = player.seek(seek_time) {
+                did_seek = false;
+                tracing::warn!("failed to seek: {err:?}");
+            }
+        }
+
         Some(PlaybackState {
             current_time: player.current_time(),
             playback_speed: player.playback_speed(),
             status: player.status(),
-            did_seek: request.seek_time.is_some(),
+            did_seek,
             request_id: Some(request.request_id),
         })
     }
@@ -101,7 +116,7 @@ fn main() -> Result<()> {
 
     let server = WebSocketServer::new()
         .name(file_name)
-        .capabilities([Capability::Time])
+        .capabilities([Capability::RangedPlayback, Capability::Time])
         .playback_time_range(start_time, end_time)
         .listener(listener)
         .bind(&args.host, args.port)
@@ -123,7 +138,7 @@ fn main() -> Result<()> {
                 server.broadcast_playback_state(PlaybackState {
                     current_time: player.current_time(),
                     playback_speed: player.playback_speed(),
-                    status: player.status(),
+                    status,
                     did_seek: false,
                     request_id: None,
                 });
@@ -141,7 +156,8 @@ fn main() -> Result<()> {
         // Log next message, sleeping outside the lock if needed
         let sleep_duration = mcap_player.lock().unwrap().log_next_message(&server)?;
         if let Some(duration) = sleep_duration {
-            std::thread::sleep(duration);
+            // Upper-bound sleep time to avoid the player from becoming unresponsive for too long
+            std::thread::sleep(std::cmp::max(duration, Duration::from_secs(1)));
         }
     }
 
