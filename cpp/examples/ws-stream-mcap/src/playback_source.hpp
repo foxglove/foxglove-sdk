@@ -21,9 +21,9 @@ public:
   PlaybackSource& operator=(PlaybackSource&&) = default;
 
   PlaybackSource(const PlaybackSource&) = delete;
-  PlaybackSource operator=(const PlaybackSource&) = delete;
+  PlaybackSource& operator=(const PlaybackSource&) = delete;
 
-  /// Returns the (start, end) time bounds of the data in nanoseconds.
+  /// Returns the inclusive (start, end) time bounds in nanoseconds since epoch.
   [[nodiscard]] virtual std::pair<uint64_t, uint64_t> timeRange() const = 0;
 
   /// Sets the playback speed multiplier (e.g., 1.0 for real-time, 2.0 for double speed).
@@ -41,13 +41,17 @@ public:
   /// Returns the current playback status.
   [[nodiscard]] virtual foxglove::PlaybackStatus status() const = 0;
 
-  /// Returns the current playback position in nanoseconds.
+  /// Returns the current playback position in nanoseconds since epoch.
   [[nodiscard]] virtual uint64_t currentTime() const = 0;
 
   /// Returns the current playback speed multiplier.
   [[nodiscard]] virtual float playbackSpeed() const = 0;
 
-  /// Logs the next message for playback if it's ready, or returns a duration to wait.
+  /// Logs the next message for playback if it's ready and broadcasts time updates.
+  ///
+  /// Returns:
+  /// - std::nullopt if a message was logged or playback has ended
+  /// - a duration to wait before trying again if the next message isn't due yet
   virtual std::optional<std::chrono::nanoseconds> logNextMessage(
     const foxglove::WebSocketServer& server
   ) = 0;
