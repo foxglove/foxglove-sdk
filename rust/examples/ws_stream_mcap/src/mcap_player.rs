@@ -74,12 +74,12 @@ impl McapPlayer {
 
     /// Re-creates the indexed reader starting from the given time.
     fn reset_reader(&mut self, start_time: u64) -> Result<()> {
-        self.current_time = start_time;
         self.reader = IndexedReader::new_with_options(
             &self.summary,
             IndexedReaderOptions::new().log_time_on_or_after(start_time),
         )
         .map_err(|e| anyhow!("failed to create indexed reader: {e}"))?;
+        self.current_time = start_time;
         self.time_tracker = None;
         self.pending_message = None;
         Ok(())
