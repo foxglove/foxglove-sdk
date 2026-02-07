@@ -143,6 +143,11 @@ impl PlaybackSource for McapPlayer {
     }
 
     fn play(&mut self) {
+        // Don't transition to Playing if playback has ended.
+        // To restart playback, the caller must seek first.
+        if self.status == PlaybackStatus::Ended {
+            return;
+        }
         if let Some(tt) = &mut self.time_tracker {
             tt.resume();
         }
@@ -159,6 +164,10 @@ impl PlaybackSource for McapPlayer {
     fn seek(&mut self, log_time: u64) -> Result<()> {
         let log_time = log_time.clamp(self.time_range.0, self.time_range.1);
         self.reset_reader(log_time)?;
+        // If playback had ended, reset to Paused so play() can transition to Playing
+        if self.status == PlaybackStatus::Ended {
+            self.status = PlaybackStatus::Paused;
+        }
         Ok(())
     }
 
