@@ -11,7 +11,6 @@ import mcap.reader
 import mcap.records
 from foxglove import Channel, Schema
 from foxglove.websocket import PlaybackStatus, WebSocketServer
-
 from playback_source import PlaybackSource
 
 _MIN_PLAYBACK_SPEED = 0.01

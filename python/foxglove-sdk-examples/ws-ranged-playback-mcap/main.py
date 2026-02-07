@@ -19,7 +19,6 @@ from foxglove.websocket import (
     PlaybackStatus,
     ServerListener,
 )
-
 from mcap_player import McapPlayer
 from playback_source import PlaybackSource
 
