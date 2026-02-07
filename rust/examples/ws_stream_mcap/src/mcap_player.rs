@@ -155,6 +155,11 @@ impl PlaybackSource for McapPlayer {
     }
 
     fn pause(&mut self) {
+        // Don't transition from Ended state. Once playback has ended,
+        // the caller must seek to a new position to resume.
+        if self.status == PlaybackStatus::Ended {
+            return;
+        }
         if let Some(tt) = &mut self.time_tracker {
             tt.pause();
         }
