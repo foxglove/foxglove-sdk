@@ -28,9 +28,9 @@ public:
       return offset_ns_ + paused_elapsed_ns_;
     }
     auto elapsed_wall = std::chrono::steady_clock::now() - start_;
-    auto elapsed_nanos =
-      static_cast<uint64_t>(std::chrono::duration<double, std::nano>(elapsed_wall).count() *
-                            static_cast<double>(speed_));
+    auto elapsed_nanos = static_cast<uint64_t>(
+      std::chrono::duration<double, std::nano>(elapsed_wall).count() * static_cast<double>(speed_)
+    );
     return offset_ns_ + paused_elapsed_ns_ + elapsed_nanos;
   }
 
@@ -44,8 +44,8 @@ public:
     uint64_t log_diff_ns = log_time - current;
     uint64_t wall_diff_ns;
     if (speed_ > 0.0f) {
-      wall_diff_ns = static_cast<uint64_t>(static_cast<double>(log_diff_ns) /
-                                           static_cast<double>(speed_));
+      wall_diff_ns =
+        static_cast<uint64_t>(static_cast<double>(log_diff_ns) / static_cast<double>(speed_));
     } else {
       wall_diff_ns = 1'000'000'000;
     }
@@ -56,9 +56,9 @@ public:
   void pause() {
     if (!paused_) {
       auto elapsed_wall = std::chrono::steady_clock::now() - start_;
-      auto elapsed_nanos =
-        static_cast<uint64_t>(std::chrono::duration<double, std::nano>(elapsed_wall).count() *
-                              static_cast<double>(speed_));
+      auto elapsed_nanos = static_cast<uint64_t>(
+        std::chrono::duration<double, std::nano>(elapsed_wall).count() * static_cast<double>(speed_)
+      );
       paused_elapsed_ns_ += elapsed_nanos;
       paused_ = true;
     }
@@ -77,9 +77,9 @@ public:
     speed = clampSpeed(speed);
     if (!paused_) {
       auto elapsed_wall = std::chrono::steady_clock::now() - start_;
-      auto elapsed_nanos =
-        static_cast<uint64_t>(std::chrono::duration<double, std::nano>(elapsed_wall).count() *
-                              static_cast<double>(speed_));
+      auto elapsed_nanos = static_cast<uint64_t>(
+        std::chrono::duration<double, std::nano>(elapsed_wall).count() * static_cast<double>(speed_)
+      );
       paused_elapsed_ns_ += elapsed_nanos;
       start_ = std::chrono::steady_clock::now();
     }
