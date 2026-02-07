@@ -74,6 +74,7 @@ impl McapPlayer {
 
     /// Re-creates the indexed reader starting from the given time.
     fn reset_reader(&mut self, start_time: u64) -> Result<()> {
+        self.current_time = start_time;
         self.reader = IndexedReader::new_with_options(
             &self.summary,
             IndexedReaderOptions::new().log_time_on_or_after(start_time),
@@ -157,7 +158,6 @@ impl PlaybackSource for McapPlayer {
 
     fn seek(&mut self, log_time: u64) -> Result<()> {
         let log_time = log_time.clamp(self.time_range.0, self.time_range.1);
-        self.current_time = log_time;
         self.reset_reader(log_time)?;
         Ok(())
     }
