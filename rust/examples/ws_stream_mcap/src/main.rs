@@ -157,7 +157,7 @@ fn main() -> Result<()> {
         let sleep_duration = mcap_player.lock().unwrap().log_next_message(&server)?;
         if let Some(duration) = sleep_duration {
             // Upper-bound sleep time to avoid the player from becoming unresponsive for too long
-            std::thread::sleep(std::cmp::max(duration, Duration::from_secs(1)));
+            std::thread::sleep(std::cmp::min(duration, Duration::from_secs(1)));
         }
     }
 
