@@ -121,6 +121,9 @@ void McapPlayer::play() {
 }
 
 void McapPlayer::pause() {
+  if (status_ == foxglove::PlaybackStatus::Ended) {
+    return;
+  }
   if (time_tracker_.has_value()) {
     time_tracker_->pause();
   }
