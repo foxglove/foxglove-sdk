@@ -291,9 +291,7 @@ function generateMessageClass(schema: FoxgloveMessageSchema): string {
       ({ field }) =>
         field.required === false ||
         field.array != undefined ||
-        field.type.type === "primitive" ||
-        field.type.type === "enum" ||
-        field.type.type === "nested",
+        (["primitive", "enum", "nested"] as const).includes(field.type.type),
     )
     .map(({ argName, field }) => `${argName}=${rustDefaultValue(field)}`)
     .join(", ");
