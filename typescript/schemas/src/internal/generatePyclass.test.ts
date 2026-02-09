@@ -77,10 +77,10 @@ describe("generatePyclass", () => {
      #[pymethods]
      impl ExampleMessage {
          #[new]
-         #[pyo3(signature = (*, field_boolean=false, field_bytes=None, field_float64=0.0, field_uint32=0, field_string="", field_duration_array=None, field_time_array=None, field_boolean_array=None, field_bytes_array=None, field_float64_array=None, field_uint32_array=None, field_string_array=None, field_duration_fixed_array=None, field_time_fixed_array=None, field_boolean_fixed_array=None, field_bytes_fixed_array=None, field_float64_fixed_array=None, field_uint32_fixed_array=None, field_string_fixed_array=None, field_optional_string=None, field_enum=ExampleMessageExampleEnum::A, field_enum_array=None, field_nested_array=None) )]
+         #[pyo3(signature = (*, field_duration=None, field_time=None, field_boolean=false, field_bytes=None, field_float64=0.0, field_uint32=0, field_string="", field_duration_array=None, field_time_array=None, field_boolean_array=None, field_bytes_array=None, field_float64_array=None, field_uint32_array=None, field_string_array=None, field_duration_fixed_array=None, field_time_fixed_array=None, field_boolean_fixed_array=None, field_bytes_fixed_array=None, field_float64_fixed_array=None, field_uint32_fixed_array=None, field_string_fixed_array=None, field_optional_string=None, field_enum=ExampleMessageExampleEnum::A, field_enum_array=None, field_nested=None, field_nested_array=None) )]
          fn new(
-             field_duration: Duration,
-             field_time: Timestamp,
+             field_duration: Option<Duration>,
+             field_time: Option<Timestamp>,
              field_boolean: bool,
              field_bytes: Option<Bound<'_, PyBytes>>,
              field_float64: f64,
@@ -103,7 +103,7 @@ describe("generatePyclass", () => {
              field_optional_string: Option<&str>,
              field_enum: ExampleMessageExampleEnum,
              field_enum_array: Option<Vec<ExampleMessageExampleEnum>>,
-             field_nested: NestedMessage,
+             field_nested: Option<NestedMessage>,
              field_nested_array: Option<Vec<NestedMessage>>,
          ) -> Self {
              Self(foxglove::schemas::ExampleMessage {
