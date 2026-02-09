@@ -1188,10 +1188,12 @@ name = "foxglove_remote_data_loader_upstream"
 version = "0.16.6"
 dependencies = [
  "axum",
+ "bytes",
  "chrono",
  "foxglove 0.16.6",
  "futures",
  "insta",
+ "parking_lot",
  "serde",
  "serde-constant",
  "serde_with",

@@ -26,11 +26,10 @@
 use std::net::SocketAddr;
 
 use chrono::{DateTime, Utc};
-use foxglove::Channel;
 use serde::Deserialize;
 
 use foxglove_remote_data_loader_upstream::{
-    serve, AuthError, BoxError, ChannelRegistry, Metadata, StreamHandle, UpstreamServer,
+    serve, AuthError, BoxError, Channel, ChannelRegistry, Metadata, UpstreamServer,
 };
 
 /// A simple message type for this example.
@@ -108,30 +107,20 @@ impl UpstreamServer for ExampleUpstream {
         })
     }
 
-    async fn stream(&self, ctx: Self::Context, mut handle: StreamHandle) -> Result<(), BoxError> {
+    async fn stream(&self, ctx: Self::Context) -> Result<(), BoxError> {
         tracing::info!(flight_id = %ctx.params.flight_id, "streaming data");
 
         for i in 0..10 {
             let timestamp = ctx.params.start_time + chrono::Duration::milliseconds(i as i64 * 100);
-            ctx.demo.log_with_time(
+            ctx.demo.log(
                 &DemoMessage {
                     msg: format!("Data for flight {}", ctx.params.flight_id),
                     count: i,
                 },
                 timestamp.min(ctx.params.end_time),
             );
-
-            // Regularly flush the buffer to ensure messages are not buffered indefinitely. You
-            // should adjust this based on your message size, network bandwidth and latency
-            // requirements.
-            const MAX_BUFFER_SIZE: usize = 1024 * 1024; // 1MiB
-            if handle.buffer_size() >= MAX_BUFFER_SIZE {
-                handle.flush().await?;
-            }
         }
 
-        // Close the handle to finish the MCAP and send the final buffer.
-        handle.close().await?;
         Ok(())
     }
 }

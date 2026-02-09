@@ -14,7 +14,7 @@
 //!
 //! 1. The [`QueryParams`](`UpstreamServer::QueryParams`) type specifies how users select the data to load.
 //! 2. [`auth`](UpstreamServer::auth) checks credentials.
-//! 3. [`initialize`](UpstreamServer::initialize) creates a [`foxglove::Channel`] for your telemetry
+//! 3. [`initialize`](UpstreamServer::initialize) creates a [`Channel`] for your telemetry
 //!    messages and returns it in your [`Context`](UpstreamServer::Context).
 //! 4. [`metadata`](UpstreamServer::metadata) returns [`Metadata`] with the flight name and time
 //!    range.
@@ -25,12 +25,20 @@
 //!
 //! See `examples/demo.rs` or `examples/demo_blocking.rs` for complete examples.
 //!
+//! # Buffer management
+//!
+//! The MCAP stream buffer is flushed automatically whenever it exceeds a configurable threshold.
+//! Set the `FOXGLOVE_FLUSH_THRESHOLD` environment variable to control the threshold in bytes
+//! (default: 1048576 = 1 MiB). Use larger values for high-throughput streams or smaller values
+//! for lower latency.
+//!
 //! # Features
 //!
 //! - **`async`** (default): Enables the async API ([`UpstreamServer`], [`serve`])
 //! - **`blocking`**: Enables the blocking API ([`blocking::UpstreamServer`], [`blocking::serve`])
 
 mod manifest;
+mod stream;
 
 #[cfg(feature = "async")]
 mod serve_async;
@@ -40,10 +48,9 @@ pub use serve_async::*;
 #[cfg(feature = "blocking")]
 pub mod blocking;
 
-use std::{
-    num::NonZeroU16,
-    sync::{Arc, LazyLock},
-};
+pub use stream::Channel;
+
+use std::num::NonZeroU16;
 
 pub use axum::BoxError;
 use axum::{
@@ -53,7 +60,7 @@ use axum::{
 pub use chrono::{DateTime, Utc};
 use tracing::warn;
 
-use foxglove::{Channel, Context, Encode, RawChannel, Sink, SinkId};
+use foxglove::Encode;
 
 /// Route for the manifest endpoint.
 pub const MANIFEST_ROUTE: &str = "/v1/manifest";
@@ -154,35 +161,6 @@ pub struct Metadata {
     pub end_time: DateTime<Utc>,
 }
 
-/// A sink that panics if any message is logged to it.
-///
-/// Used internally for channels created during manifest generation to catch
-/// bugs where code attempts to log messages during metadata generation.
-struct PanicSink {
-    id: SinkId,
-}
-
-impl PanicSink {
-    fn new() -> Self {
-        Self { id: SinkId::next() }
-    }
-}
-
-impl Sink for PanicSink {
-    fn id(&self) -> SinkId {
-        self.id
-    }
-
-    fn log(
-        &self,
-        _channel: &RawChannel,
-        _msg: &[u8],
-        _metadata: &foxglove::Metadata,
-    ) -> Result<(), foxglove::FoxgloveError> {
-        panic!("attempted to log message to channel not created for streaming");
-    }
-}
-
 /// Trait for declaring channels during [`UpstreamServer::initialize`].
 pub trait ChannelRegistry: Send {
     /// Declare a channel for logging messages.
@@ -198,31 +176,14 @@ pub trait ChannelRegistry: Send {
     fn channel<T: Encode>(&mut self, topic: impl Into<String>) -> Channel<T>;
 }
 
-static PANIC_CONTEXT: LazyLock<Arc<Context>> = LazyLock::new(|| {
-    let context = Context::new();
-    context.add_sink(Arc::new(PanicSink::new()));
-    context
-});
-
 impl ChannelRegistry for ManifestBuilder {
     /// Add a channel to the manifest.
     ///
-    /// The returned [`Channel<T>`] is connected to a [`PanicSink`] to catch bugs where logging
-    /// happens outside of [`UpstreamServer::stream`].
+    /// The returned [`Channel`] will panic if you attempt to log to it, since no
+    /// actual MCAP stream exists during manifest generation.
     fn channel<T: Encode>(&mut self, topic: impl Into<String>) -> Channel<T> {
-        let topic = topic.into();
-        self.add_channel::<T>(topic.clone());
-        PANIC_CONTEXT.channel_builder(&topic).build::<T>()
-    }
-}
-
-// `StreamHandle` is conditional on the `async` feature, so implement for the underlying type.
-impl ChannelRegistry for foxglove::stream::McapStreamHandle {
-    /// Add a channel to this handle's MCAP stream.
-    ///
-    /// The returned [`Channel<T>`] is connected to this handle's [`foxglove::stream::McapStream`].
-    fn channel<T: Encode>(&mut self, topic: impl Into<String>) -> Channel<T> {
-        self.channel_builder(topic).build::<T>()
+        self.add_channel::<T>(topic.into());
+        Channel::for_manifest()
     }
 }
 
@@ -332,8 +293,8 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "attempted to log message to channel not created for streaming")]
-    fn test_panic_sink_panics_on_log() {
+    #[should_panic(expected = "attempted to log on a channel not created for streaming")]
+    fn test_manifest_channel_panics_on_log() {
         #[derive(foxglove::Encode)]
         struct TestMessage {
             value: i32,
@@ -341,7 +302,7 @@ mod tests {
 
         let mut manifest_builder = ManifestBuilder::new();
         let channel = manifest_builder.channel::<TestMessage>("/test");
-        // This should panic because we're using a PanicSink
-        channel.log(&TestMessage { value: 42 });
+        // This should panic because there is no stream in manifest mode
+        channel.log(&TestMessage { value: 42 }, 0u64);
     }
 }

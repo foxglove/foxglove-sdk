@@ -26,6 +26,8 @@ thiserror.workspace = true
 tracing.workspace = true
 futures = "0.3"
 foxglove = { path = "../foxglove", features = ["stream", "chrono"] }
+bytes.workspace = true
+parking_lot = "0.12.4"
 
 [dev-dependencies]
 tracing-subscriber = "0.3"

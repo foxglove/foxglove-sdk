@@ -6,6 +6,11 @@ Implementations must use the [`Channel`]s created in
 Receives the [`Context`](UpstreamServer::Context) returned by
 `initialize`.
 
+Buffer management is automatic: the MCAP buffer is flushed whenever it
+exceeds a configurable threshold (set via the `FOXGLOVE_FLUSH_THRESHOLD`
+environment variable, default 1 MiB). The stream is finalized when this
+method returns.
+
 # Ordering requirements
 
 The output **must be time-ordered.** Messages are sent in the order

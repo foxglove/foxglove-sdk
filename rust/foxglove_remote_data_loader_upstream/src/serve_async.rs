@@ -18,7 +18,6 @@ use crate::{
     extract_bearer_token, AuthError, BoxError, ChannelRegistry, ManifestBuilder, Metadata,
     DATA_ROUTE, MANIFEST_ROUTE,
 };
-pub use foxglove::stream::McapStreamHandle as StreamHandle;
 
 /// Async upstream server trait.
 ///
@@ -29,8 +28,7 @@ pub use foxglove::stream::McapStreamHandle as StreamHandle;
 /// # Example
 ///
 /// ```no_run
-/// # use foxglove_remote_data_loader_upstream::{UpstreamServer, ChannelRegistry, AuthError, Metadata, StreamHandle, BoxError};
-/// # use foxglove::Channel;
+/// # use foxglove_remote_data_loader_upstream::{UpstreamServer, ChannelRegistry, Channel, AuthError, Metadata, BoxError};
 /// # use chrono::{DateTime, Utc};
 /// #[derive(serde::Deserialize)]
 /// struct MyParams { flight_id: String, start_time: DateTime<Utc>, end_time: DateTime<Utc> }
@@ -86,13 +84,8 @@ pub use foxglove::stream::McapStreamHandle as StreamHandle;
 ///         })
 ///     }
 ///
-///     async fn stream(
-///         &self,
-///         ctx: MyContext,
-///         handle: StreamHandle,
-///     ) -> Result<(), BoxError> {
-///         ctx.channel.log_with_time(&MyMessage { value: 42 }, 123467890u64);
-///         handle.close().await?;
+///     async fn stream(&self, ctx: MyContext) -> Result<(), BoxError> {
+///         ctx.channel.log(&MyMessage { value: 42 }, 123467890u64);
 ///         Ok(())
 ///     }
 /// }
@@ -119,7 +112,7 @@ pub trait UpstreamServer: Send + Sync + 'static {
     /// [`metadata`](UpstreamServer::metadata) and [`stream`](UpstreamServer::stream).
     ///
     /// This can hold anything, but is typically used to store request-specific state (e.g.
-    /// [`Channel`](foxglove::Channel)s and query parameters)
+    /// [`Channel`]s and query parameters)
     type Context: Send;
 
     #[doc = include_str!("docs/auth.md")]
@@ -146,7 +139,6 @@ pub trait UpstreamServer: Send + Sync + 'static {
     fn stream(
         &self,
         ctx: Self::Context,
-        handle: StreamHandle,
     ) -> impl Future<Output = Result<(), BoxError>> + Send;
 }
 
@@ -197,7 +189,7 @@ async fn data_handler<P: UpstreamServer>(
 
     // Run stream in its own task, since the response won't start until we return from this
     // function.
-    let (mut stream_handle, mcap_stream) = foxglove::stream::create_mcap_stream();
+    let (mut stream_handle, mcap_stream) = crate::stream::create_stream();
     let ctx = match provider.initialize(params, &mut stream_handle).await {
         Ok(ctx) => ctx,
         Err(error) => {
@@ -205,7 +197,11 @@ async fn data_handler<P: UpstreamServer>(
             return axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response();
         }
     };
-    let mcap_stream_task = tokio::spawn(async move { provider.stream(ctx, stream_handle).await });
+    let mcap_stream_task = tokio::spawn(async move {
+        let result = provider.stream(ctx).await;
+        let close_result = stream_handle.close().await;
+        result.and(close_result)
+    });
 
     // Catch any errors during streaming.
     let error_stream = mcap_stream_task
@@ -226,7 +222,7 @@ async fn data_handler<P: UpstreamServer>(
 /// # Example
 ///
 /// ```no_run
-/// # use foxglove_remote_data_loader_upstream::{serve, UpstreamServer, ChannelRegistry, AuthError, Metadata, StreamHandle, BoxError};
+/// # use foxglove_remote_data_loader_upstream::{serve, UpstreamServer, ChannelRegistry, AuthError, Metadata, BoxError};
 /// # use chrono::{DateTime, Utc};
 ///
 /// struct MyServer;
@@ -252,8 +248,7 @@ async fn data_handler<P: UpstreamServer>(
 ///         })
 ///     }
 ///
-///     async fn stream(&self, _ctx: (), handle: StreamHandle) -> Result<(), BoxError> {
-///         handle.close().await?;
+///     async fn stream(&self, _ctx: ()) -> Result<(), BoxError> {
 ///         Ok(())
 ///     }
 /// }

@@ -12,47 +12,12 @@ use axum::{
 };
 use futures::{FutureExt, StreamExt};
 use serde::de::DeserializeOwned;
-use tokio::runtime::Handle;
 use tracing::error;
 
 use crate::{
     extract_bearer_token, AuthError, BoxError, ChannelRegistry, ManifestBuilder, Metadata,
     DATA_ROUTE, MANIFEST_ROUTE,
 };
-use foxglove::{stream::McapStreamHandle, FoxgloveError};
-
-/// Handle for streaming MCAP data with [`UpstreamServer`].
-///
-/// Returned by the framework when calling [`UpstreamServer::stream`].
-pub struct StreamHandle {
-    inner: McapStreamHandle,
-}
-
-impl StreamHandle {
-    /// Flush the MCAP writer's buffer.
-    ///
-    /// This method will block until the buffer is flushed.
-    pub fn flush(&mut self) -> Result<(), FoxgloveError> {
-        Handle::current().block_on(self.inner.flush())
-    }
-
-    /// Stop logging events and flush any buffered data.
-    ///
-    /// Like [`Self::flush`], this method will block until the buffer is flushed.
-    ///
-    /// This method will return an error if the MCAP writer fails to finish.
-    pub fn close(self) -> Result<(), FoxgloveError> {
-        Handle::current().block_on(self.inner.close())
-    }
-
-    /// Get the current size of the buffer.
-    ///
-    /// This can be used in conjunction with [`Self::flush`] to ensure the buffer does
-    /// not grow unbounded.
-    pub fn buffer_size(&mut self) -> usize {
-        self.inner.buffer_size()
-    }
-}
 
 /// Blocking upstream server trait.
 ///
@@ -63,8 +28,7 @@ impl StreamHandle {
 /// # Example
 ///
 /// ```no_run
-/// # use foxglove_remote_data_loader_upstream::{blocking, ChannelRegistry, AuthError, Metadata, BoxError};
-/// # use foxglove::Channel;
+/// # use foxglove_remote_data_loader_upstream::{blocking, ChannelRegistry, Channel, AuthError, Metadata, BoxError};
 /// # use chrono::{DateTime, Utc};
 /// # #[derive(serde::Deserialize)]
 /// # struct MyParams { flight_id: String, start_time: DateTime<Utc>, end_time: DateTime<Utc> }
@@ -116,13 +80,8 @@ impl StreamHandle {
 ///         })
 ///     }
 ///
-///     fn stream(
-///         &self,
-///         ctx: MyContext,
-///         handle: blocking::StreamHandle,
-///     ) -> Result<(), BoxError> {
-///         ctx.channel.log_with_time(&MyMessage { value: 42 }, 123467890u64);
-///         handle.close()?;
+///     fn stream(&self, ctx: MyContext) -> Result<(), BoxError> {
+///         ctx.channel.log(&MyMessage { value: 42 }, 123467890u64);
 ///         Ok(())
 ///     }
 /// }
@@ -149,7 +108,7 @@ pub trait UpstreamServer: Send + Sync + 'static {
     /// [`metadata`](UpstreamServer::metadata) and [`stream`](UpstreamServer::stream).
     ///
     /// This can hold anything, but is typically used to store request-specific state (e.g.
-    /// [`Channel`](foxglove::Channel)s and query parameters)
+    /// [`Channel`](crate::Channel)s and query parameters)
     type Context: Send;
 
     #[doc = include_str!("docs/auth.md")]
@@ -167,7 +126,7 @@ pub trait UpstreamServer: Send + Sync + 'static {
     fn metadata(&self, ctx: Self::Context) -> Result<Metadata, BoxError>;
 
     #[doc = include_str!("docs/stream.md")]
-    fn stream(&self, ctx: Self::Context, handle: StreamHandle) -> Result<(), BoxError>;
+    fn stream(&self, ctx: Self::Context) -> Result<(), BoxError>;
 }
 
 async fn manifest_handler<P: UpstreamServer>(
@@ -235,7 +194,7 @@ async fn data_handler<P: UpstreamServer>(
     };
 
     // Build MCAP data stream
-    let (mut stream_handle, mcap_stream) = foxglove::stream::create_mcap_stream();
+    let (mut stream_handle, mcap_stream) = crate::stream::create_stream();
 
     let (ctx, stream_handle) = {
         let provider = Arc::clone(&provider);
@@ -255,12 +214,9 @@ async fn data_handler<P: UpstreamServer>(
         }
     };
     let mcap_stream_task = tokio::task::spawn_blocking(move || {
-        provider.stream(
-            ctx,
-            StreamHandle {
-                inner: stream_handle,
-            },
-        )
+        let result = provider.stream(ctx);
+        let close_result = stream_handle.close_blocking();
+        result.and(close_result)
     });
 
     let error_stream = mcap_stream_task
@@ -309,8 +265,7 @@ async fn data_handler<P: UpstreamServer>(
 ///         })
 ///     }
 ///
-///     fn stream(&self, _: (), handle: blocking::StreamHandle) -> Result<(), BoxError> {
-///         handle.close()?;
+///     fn stream(&self, _: ()) -> Result<(), BoxError> {
 ///         Ok(())
 ///     }
 /// }
