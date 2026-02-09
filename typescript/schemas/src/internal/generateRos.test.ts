@@ -168,6 +168,14 @@ describe("generateRosMsgDefinition", () => {
             "type": "string",
           },
           {
+            "arrayLength": undefined,
+            "description": "An optional string field",
+            "isArray": false,
+            "isComplex": false,
+            "name": "field_optional_string",
+            "type": "string",
+          },
+          {
             "description": "Value A",
             "isConstant": true,
             "name": "A",
@@ -386,6 +394,14 @@ describe("generateRosMsgDefinition", () => {
             "type": "string",
           },
           {
+            "arrayLength": undefined,
+            "description": "An optional string field",
+            "isArray": false,
+            "isComplex": false,
+            "name": "field_optional_string",
+            "type": "string",
+          },
+          {
             "description": "Value A",
             "isConstant": true,
             "name": "A",
@@ -520,6 +536,9 @@ describe("generateRosMsg", () => {
       # string fixed-length array field
       string[3] field_string_fixed_array
 
+      # An optional string field
+      string field_optional_string
+
       # Value A
       uint8 A=0
 
@@ -618,6 +637,9 @@ describe("generateRosMsg", () => {
       # string fixed-length array field
       string[3] field_string_fixed_array
 
+      # An optional string field
+      string field_optional_string
+
       # Value A
       uint8 A=0
 
@@ -712,6 +734,9 @@ describe("generateRosMsgMergedSchema", () => {
 
       # string fixed-length array field
       string[3] field_string_fixed_array
+
+      # An optional string field
+      string field_optional_string
 
       # Value A
       uint8 A=0
@@ -871,6 +896,12 @@ describe("generateRosMsgMergedSchema", () => {
               "type": "string",
             },
             {
+              "isArray": false,
+              "isComplex": false,
+              "name": "field_optional_string",
+              "type": "string",
+            },
+            {
               "isConstant": true,
               "name": "A",
               "type": "uint8",
@@ -992,6 +1023,9 @@ describe("generateRosMsgMergedSchema", () => {
 
       # string fixed-length array field
       string[3] field_string_fixed_array
+
+      # An optional string field
+      string field_optional_string
 
       # Value A
       uint8 A=0
@@ -1272,6 +1306,19 @@ describe("generateRosMsgMergedSchema", () => {
               "isComplex": false,
               "isConstant": undefined,
               "name": "field_string_fixed_array",
+              "type": "string",
+              "upperBound": undefined,
+              "value": undefined,
+              "valueText": undefined,
+            },
+            {
+              "arrayLength": undefined,
+              "arrayUpperBound": undefined,
+              "defaultValue": undefined,
+              "isArray": false,
+              "isComplex": false,
+              "isConstant": undefined,
+              "name": "field_optional_string",
               "type": "string",
               "upperBound": undefined,
               "value": undefined,

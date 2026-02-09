@@ -90,14 +90,17 @@ describe("generateProto", () => {
         // string fixed-length array field
         repeated string field_string_fixed_array = 22; // length 3
 
+        // An optional string field
+        optional string field_optional_string = 23;
+
         // An enum field
-        ExampleProtoEnum field_enum = 23;
+        ExampleProtoEnum field_enum = 24;
 
         // An enum array field
-        repeated ExampleProtoEnum field_enum_array = 24;
+        repeated ExampleProtoEnum field_enum_array = 25;
 
         // A nested field
-        foxglove.NestedMessage field_nested = 25;
+        foxglove.NestedMessage field_nested = 26;
 
         // A nested array field
         // With
