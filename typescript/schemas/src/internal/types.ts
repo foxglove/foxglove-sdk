@@ -23,6 +23,8 @@ export type FoxgloveMessageField = {
   description: string;
   protobufFieldNumber?: number;
   defaultValue?: string | number | boolean;
+  /** when false, field may be omitted; IDLs without optional (e.g. ROS 1) require a value (see docs for sentinels) */
+  required?: false;
 };
 
 // Flatbuffers and OMG IDL use "Time" instead of "Timestamp" for backwards compatibility.

@@ -15,6 +15,14 @@ See [Foxglove Schemas documentation](https://docs.foxglove.dev/docs/visualizatio
 
 All schemas are generated from [schemas.ts](/internal/schemas.ts).`,
 
+    [
+      "## Optional fields",
+      "",
+      "Some message fields are **optional**: they may be omitted and the consumer (e.g. a Foxglove panel) will use a default. Optional fields are marked in the table below.",
+      "",
+      "**IDLs without optional** (e.g. ROS 1 .msg): all fields must still be present in the message. To get the same effect as omitting an optional field (e.g. use Foxglove's automatic color in the Map panel for LocationFix.color), use the documented sentinel for that field where applicable (e.g. empty string for string fields, or leave the nested message absent if the format allows).",
+    ].join("\n"),
+
     "## Contents",
 
     [
@@ -46,6 +54,7 @@ ${schema.description}
   <tr>
     <th>field</th>
     <th>type</th>
+    <th>optional</th>
     <th>description</th>
   </tr>
 ${schema.fields
@@ -64,6 +73,7 @@ ${schema.fields
         type = field.type.name;
         break;
     }
+    const optionalCell = field.required === false ? "yes" : "";
     return `\
 <tr>
 <td><code>${field.name}</code></td>
@@ -72,6 +82,7 @@ ${schema.fields
 ${type}${arraySuffix}
 
 </td>
+<td>${optionalCell}</td>
 <td>
 
 ${field.description}

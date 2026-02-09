@@ -202,6 +202,10 @@ describe("generateJsonSchema", () => {
            },
            "type": "array",
          },
+         "field_optional_string": {
+           "description": "An optional string field",
+           "type": "string",
+         },
          "field_string": {
            "description": "string field",
            "type": "string",

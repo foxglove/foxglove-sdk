@@ -98,6 +98,12 @@ export const exampleMessage: FoxgloveMessageSchema = {
       array: 3,
     })),
     {
+      name: "field_optional_string",
+      description: "An optional string field",
+      type: { type: "primitive", name: "string" },
+      required: false,
+    },
+    {
       name: "field_enum",
       description: "An enum field",
       type: { type: "enum", enum: exampleEnum },
