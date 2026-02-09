@@ -946,6 +946,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "example_ws_ranged_playback"
+version = "0.0.0"
+dependencies = [
+ "ctrlc",
+ "env_logger",
+ "foxglove 0.16.5",
+ "tracing",
+]
+
+[[package]]
 name = "example_ws_server"
 version = "0.0.0"
 dependencies = [
