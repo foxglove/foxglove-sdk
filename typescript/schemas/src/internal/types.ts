@@ -23,7 +23,7 @@ export type FoxgloveMessageField = {
   description: string;
   protobufFieldNumber?: number;
   defaultValue?: string | number | boolean;
-  /** when false, field may be omitted; IDLs without optional (e.g. ROS 1) require a value (see docs for sentinels) */
+  /** Required by default. Set to false for optional fields. IDLs without optional (e.g. ROS 1) still require a value. */
   required?: false;
 };
 
