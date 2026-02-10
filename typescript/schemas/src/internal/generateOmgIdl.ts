@@ -99,7 +99,8 @@ export function generateOmgIdl(schema: FoxgloveSchema): string {
           defaultAnnotation = `@default(${field.defaultValue ? "TRUE" : "FALSE"})\n  `;
         }
 
-        return `${comment}\n  ${defaultAnnotation}${fieldType} ${field.name}${arraySize};`;
+        const optionalAnnotation = field.optional ? `@optional\n  ` : "";
+        return `${comment}\n  ${defaultAnnotation}${optionalAnnotation}${fieldType} ${field.name}${arraySize};`;
       });
 
       const structDescriptionLines = schema.description

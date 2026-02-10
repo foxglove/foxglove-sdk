@@ -20,7 +20,7 @@ All schemas are generated from [schemas.ts](/internal/schemas.ts).`,
       "",
       "Optional message fields may be omitted. When omitted, the consumer (e.g. a Foxglove panel) determines the behavior.",
       "",
-      "If the IDL does not support optional fields (ROS 1 .msg, ROS 2 .msg, OMG IDL) you must specify a value for the field.",
+      "If the IDL does not support optional fields (e.g. ROS) you must specify a value for the field.",
     ].join("\n"),
 
     "## Contents",

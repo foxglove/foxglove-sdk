@@ -122,12 +122,15 @@ describe("generateOmgIdl", () => {
         sequence<NestedMessage> field_nested_array;
 
         // An optional string field
+        @optional
         string field_optional_string;
 
         // An optional bool field
+        @optional
         boolean field_optional_bool;
 
         // An optional float64 field
+        @optional
         double field_optional_float64;
       };
 
