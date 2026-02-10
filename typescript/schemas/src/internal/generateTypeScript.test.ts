@@ -91,9 +91,6 @@ describe("generateTypeScript", () => {
         /** string fixed-length array field */
         field_string_fixed_array: [string, string, string];
 
-        /** An optional string field */
-        field_optional_string?: string;
-
         /** An enum field */
         field_enum: ExampleEnum;
 
@@ -112,6 +109,9 @@ describe("generateTypeScript", () => {
          * description
          */
         field_nested_array: NestedMessage[];
+
+        /** An optional string field */
+        field_optional_string?: string;
       };
       "
     `);
@@ -196,9 +196,6 @@ describe("generateTypeScript", () => {
         /** string fixed-length array field */
         field_string_fixed_array: [string, string, string];
 
-        /** An optional string field */
-        field_optional_string?: string;
-
         /** An enum field */
         field_enum: ExampleEnum;
 
@@ -217,6 +214,9 @@ describe("generateTypeScript", () => {
          * description
          */
         field_nested_array: NestedMessage[];
+
+        /** An optional string field */
+        field_optional_string?: string;
       };
       "
     `);

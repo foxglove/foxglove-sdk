@@ -168,14 +168,6 @@ describe("generateRosMsgDefinition", () => {
             "type": "string",
           },
           {
-            "arrayLength": undefined,
-            "description": "An optional string field",
-            "isArray": false,
-            "isComplex": false,
-            "name": "field_optional_string",
-            "type": "string",
-          },
-          {
             "description": "Value A",
             "isConstant": true,
             "name": "A",
@@ -227,6 +219,14 @@ describe("generateRosMsgDefinition", () => {
             "isComplex": true,
             "name": "field_nested_array",
             "type": "foxglove_msgs/NestedMessage",
+          },
+          {
+            "arrayLength": undefined,
+            "description": "An optional string field",
+            "isArray": false,
+            "isComplex": false,
+            "name": "field_optional_string",
+            "type": "string",
           },
         ],
         "originalName": "ExampleMessage",
@@ -394,14 +394,6 @@ describe("generateRosMsgDefinition", () => {
             "type": "string",
           },
           {
-            "arrayLength": undefined,
-            "description": "An optional string field",
-            "isArray": false,
-            "isComplex": false,
-            "name": "field_optional_string",
-            "type": "string",
-          },
-          {
             "description": "Value A",
             "isConstant": true,
             "name": "A",
@@ -453,6 +445,14 @@ describe("generateRosMsgDefinition", () => {
             "isComplex": true,
             "name": "field_nested_array",
             "type": "foxglove_msgs/NestedMessage",
+          },
+          {
+            "arrayLength": undefined,
+            "description": "An optional string field",
+            "isArray": false,
+            "isComplex": false,
+            "name": "field_optional_string",
+            "type": "string",
           },
         ],
         "originalName": "ExampleMessage",
@@ -536,9 +536,6 @@ describe("generateRosMsg", () => {
       # string fixed-length array field
       string[3] field_string_fixed_array
 
-      # An optional string field
-      string field_optional_string
-
       # Value A
       uint8 A=0
 
@@ -561,6 +558,9 @@ describe("generateRosMsg", () => {
       # long
       # description
       foxglove_msgs/NestedMessage[] field_nested_array
+
+      # An optional string field
+      string field_optional_string
       "
     `);
   });
@@ -637,9 +637,6 @@ describe("generateRosMsg", () => {
       # string fixed-length array field
       string[3] field_string_fixed_array
 
-      # An optional string field
-      string field_optional_string
-
       # Value A
       uint8 A=0
 
@@ -662,6 +659,9 @@ describe("generateRosMsg", () => {
       # long
       # description
       foxglove_msgs/NestedMessage[] field_nested_array
+
+      # An optional string field
+      string field_optional_string
       "
     `);
   });
@@ -735,9 +735,6 @@ describe("generateRosMsgMergedSchema", () => {
       # string fixed-length array field
       string[3] field_string_fixed_array
 
-      # An optional string field
-      string field_optional_string
-
       # Value A
       uint8 A=0
 
@@ -760,6 +757,9 @@ describe("generateRosMsgMergedSchema", () => {
       # long
       # description
       foxglove_msgs/NestedMessage[] field_nested_array
+
+      # An optional string field
+      string field_optional_string
       ================================================================================
       MSG: foxglove_msgs/NestedMessage
       # foxglove_msgs/NestedMessage
@@ -896,12 +896,6 @@ describe("generateRosMsgMergedSchema", () => {
               "type": "string",
             },
             {
-              "isArray": false,
-              "isComplex": false,
-              "name": "field_optional_string",
-              "type": "string",
-            },
-            {
               "isConstant": true,
               "name": "A",
               "type": "uint8",
@@ -938,6 +932,12 @@ describe("generateRosMsgMergedSchema", () => {
               "isComplex": true,
               "name": "field_nested_array",
               "type": "foxglove_msgs/NestedMessage",
+            },
+            {
+              "isArray": false,
+              "isComplex": false,
+              "name": "field_optional_string",
+              "type": "string",
             },
           ],
           "name": undefined,
@@ -1024,9 +1024,6 @@ describe("generateRosMsgMergedSchema", () => {
       # string fixed-length array field
       string[3] field_string_fixed_array
 
-      # An optional string field
-      string field_optional_string
-
       # Value A
       uint8 A=0
 
@@ -1049,6 +1046,9 @@ describe("generateRosMsgMergedSchema", () => {
       # long
       # description
       foxglove_msgs/NestedMessage[] field_nested_array
+
+      # An optional string field
+      string field_optional_string
       ================================================================================
       MSG: foxglove_msgs/NestedMessage
       # foxglove_msgs/msg/NestedMessage
@@ -1315,19 +1315,6 @@ describe("generateRosMsgMergedSchema", () => {
               "arrayLength": undefined,
               "arrayUpperBound": undefined,
               "defaultValue": undefined,
-              "isArray": false,
-              "isComplex": false,
-              "isConstant": undefined,
-              "name": "field_optional_string",
-              "type": "string",
-              "upperBound": undefined,
-              "value": undefined,
-              "valueText": undefined,
-            },
-            {
-              "arrayLength": undefined,
-              "arrayUpperBound": undefined,
-              "defaultValue": undefined,
               "isArray": undefined,
               "isComplex": undefined,
               "isConstant": true,
@@ -1398,6 +1385,19 @@ describe("generateRosMsgMergedSchema", () => {
               "isConstant": undefined,
               "name": "field_nested_array",
               "type": "foxglove_msgs/NestedMessage",
+              "upperBound": undefined,
+              "value": undefined,
+              "valueText": undefined,
+            },
+            {
+              "arrayLength": undefined,
+              "arrayUpperBound": undefined,
+              "defaultValue": undefined,
+              "isArray": false,
+              "isComplex": false,
+              "isConstant": undefined,
+              "name": "field_optional_string",
+              "type": "string",
               "upperBound": undefined,
               "value": undefined,
               "valueText": undefined,

@@ -98,12 +98,6 @@ export const exampleMessage: FoxgloveMessageSchema = {
       array: 3,
     })),
     {
-      name: "field_optional_string",
-      description: "An optional string field",
-      type: { type: "primitive", name: "string" },
-      optional: true,
-    },
-    {
       name: "field_enum",
       description: "An enum field",
       type: { type: "enum", enum: exampleEnum },
@@ -125,6 +119,12 @@ export const exampleMessage: FoxgloveMessageSchema = {
       type: { type: "nested", schema: exampleNestedMessage },
       array: true,
       protobufFieldNumber: 4,
+    },
+    {
+      name: "field_optional_string",
+      description: "An optional string field",
+      type: { type: "primitive", name: "string" },
+      optional: true,
     },
   ],
 };

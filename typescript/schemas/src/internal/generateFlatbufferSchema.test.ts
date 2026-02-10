@@ -93,17 +93,14 @@ describe("generateFlatbuffers", () => {
         /// length 3
         field_string_fixed_array:[string] (id: 20);
 
-        /// An optional string field
-        field_optional_string:string (id: 21);
-
         /// An enum field
-        field_enum:ExampleEnum (id: 22);
+        field_enum:ExampleEnum (id: 21);
 
         /// An enum array field
-        field_enum_array:[ExampleEnum] (id: 23);
+        field_enum_array:[ExampleEnum] (id: 22);
 
         /// A nested field
-        field_nested:foxglove.NestedMessage (id: 24);
+        field_nested:foxglove.NestedMessage (id: 23);
 
         /// A nested array field
         /// With
@@ -111,7 +108,10 @@ describe("generateFlatbuffers", () => {
         /// very
         /// long
         /// description
-        field_nested_array:[foxglove.NestedMessage] (id: 25);
+        field_nested_array:[foxglove.NestedMessage] (id: 24);
+
+        /// An optional string field
+        field_optional_string:string (id: 25);
       }
 
       root_type ExampleMessage;

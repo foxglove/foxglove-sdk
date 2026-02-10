@@ -104,9 +104,6 @@ describe("generateOmgIdl", () => {
         // string fixed-length array field
         string field_string_fixed_array[3];
 
-        // An optional string field
-        string field_optional_string;
-
         // An enum field
         ExampleEnum field_enum;
 
@@ -123,6 +120,9 @@ describe("generateOmgIdl", () => {
         // long
         // description
         sequence<NestedMessage> field_nested_array;
+
+        // An optional string field
+        string field_optional_string;
       };
 
       };
