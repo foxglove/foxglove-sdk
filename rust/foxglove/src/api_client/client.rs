@@ -167,11 +167,6 @@ impl FoxgloveApiClient {
         })
     }
 
-    pub fn set_device_token(&mut self, token: DeviceToken) -> &mut Self {
-        self.device_token = Some(token);
-        self
-    }
-
     fn request(&self, method: Method, path: &str) -> RequestBuilder {
         let url = format!(
             "{}/{}",
@@ -301,7 +296,9 @@ impl FoxgloveApiClientBuilder {
 
 #[cfg(test)]
 mod test_utils {
-    use super::{DeviceResponse, FoxgloveApiClient, FoxgloveApiClientBuilder, RtcCredentials};
+    use super::{
+        DeviceResponse, DeviceToken, FoxgloveApiClient, FoxgloveApiClientBuilder, RtcCredentials,
+    };
     use axum::{extract::Path, http::HeaderMap, Json};
     use axum::{handler::Handler, Router};
     use reqwest::StatusCode;
@@ -333,12 +330,16 @@ mod test_utils {
     pub async fn create_test_api_client<T: 'static>(
         endpoint: &str,
         handler: impl Handler<T, ()>,
+        device_token: Option<DeviceToken>,
     ) -> FoxgloveApiClient {
         let url = create_test_endpoint(endpoint, handler).await;
-        FoxgloveApiClientBuilder::new()
-            .base_url(url)
-            .build()
-            .unwrap()
+        let mut builder = FoxgloveApiClientBuilder::new().base_url(url);
+
+        if let Some(device_token) = device_token {
+            builder = builder.device_token(device_token);
+        }
+
+        builder.build().unwrap()
     }
 
     pub async fn device_info_handler(
@@ -396,8 +397,12 @@ mod tests {
 
     #[tokio::test]
     async fn fetch_device_info_requires_token() {
-        let client =
-            create_test_api_client("/internal/platform/v1/device-info", device_info_handler).await;
+        let client = create_test_api_client(
+            "/internal/platform/v1/device-info",
+            device_info_handler,
+            None,
+        )
+        .await;
         let result = client.fetch_device_info().await;
         assert!(matches!(result, Err(FoxgloveApiClientError::NoToken())));
     }
@@ -406,9 +411,12 @@ mod tests {
     async fn fetch_device_info_success() {
         use crate::api_client::types::DeviceResponse;
 
-        let mut client =
-            create_test_api_client("/internal/platform/v1/device-info", device_info_handler).await;
-        client.set_device_token(DeviceToken::new(TEST_DEVICE_TOKEN));
+        let mut client = create_test_api_client(
+            "/internal/platform/v1/device-info",
+            device_info_handler,
+            Some(DeviceToken::new(TEST_DEVICE_TOKEN)),
+        )
+        .await;
         let result = client
             .fetch_device_info()
             .await
@@ -422,9 +430,12 @@ mod tests {
 
     #[tokio::test]
     async fn fetch_device_info_unauthorized() {
-        let mut client =
-            create_test_api_client("/internal/platform/v1/device-info", device_info_handler).await;
-        client.set_device_token(DeviceToken::new("some-bad-device-token"));
+        let mut client = create_test_api_client(
+            "/internal/platform/v1/device-info",
+            device_info_handler,
+            Some(DeviceToken::new("some-bad-device-token")),
+        )
+        .await;
         let result = client.fetch_device_info().await;
 
         assert!(result.is_err());
@@ -435,6 +446,7 @@ mod tests {
         let client = create_test_api_client(
             "/internal/platform/v1/devices/{device_id}/remote-sessions",
             authorize_remote_viz_handler,
+            None,
         )
         .await;
         let result = client.authorize_remote_viz(TEST_DEVICE_ID).await;
@@ -446,9 +458,9 @@ mod tests {
         let mut client = create_test_api_client(
             "/internal/platform/v1/devices/{device_id}/remote-sessions",
             authorize_remote_viz_handler,
+            Some(DeviceToken::new(TEST_DEVICE_TOKEN)),
         )
         .await;
-        client.set_device_token(DeviceToken::new(TEST_DEVICE_TOKEN));
 
         let result = client
             .authorize_remote_viz(TEST_DEVICE_ID)
@@ -463,9 +475,9 @@ mod tests {
         let mut client = create_test_api_client(
             "/internal/platform/v1/devices/{device_id}/remote-sessions",
             authorize_remote_viz_handler,
+            Some(DeviceToken::new("some-bad-device-token")),
         )
         .await;
-        client.set_device_token(DeviceToken::new("some-bad-device-token"));
 
         let result = client.authorize_remote_viz(TEST_DEVICE_ID).await;
         assert!(result.is_err());
