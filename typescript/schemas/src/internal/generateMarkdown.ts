@@ -54,7 +54,6 @@ ${schema.description}
   <tr>
     <th>field</th>
     <th>type</th>
-    <th>optional</th>
     <th>description</th>
   </tr>
 ${schema.fields
@@ -73,16 +72,15 @@ ${schema.fields
         type = field.type.name;
         break;
     }
-    const optionalCell = field.optional ? "yes" : "";
+    const optionalSuffix = field.optional ? " (optional)" : "";
     return `\
 <tr>
-<td><code>${field.name}</code></td>
+<td><code>${field.name}</code>${optionalSuffix}</td>
 <td>
 
 ${type}${arraySuffix}
 
 </td>
-<td>${optionalCell}</td>
 <td>
 
 ${field.description}
