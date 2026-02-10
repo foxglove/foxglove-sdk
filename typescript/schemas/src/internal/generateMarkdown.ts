@@ -20,7 +20,7 @@ All schemas are generated from [schemas.ts](/internal/schemas.ts).`,
       "",
       "Some message fields are **optional**: they may be omitted and the consumer (e.g. a Foxglove panel) will use a default. Optional fields are marked in the table below.",
       "",
-      "**IDLs without optional** (e.g. ROS 1 .msg): all fields must still be present in the message. To get the same effect as omitting an optional field (e.g. use Foxglove's automatic color in the Map panel for LocationFix.color), use the documented sentinel for that field where applicable (e.g. empty string for string fields, or leave the nested message absent if the format allows).",
+      "**IDLs without optional** (e.g. ROS 1 .msg): all fields must still be present in the message. To get the same effect as omitting an optional field, use an empty string or leave the nested message absent if the format allows.",
     ].join("\n"),
 
     "## Contents",
