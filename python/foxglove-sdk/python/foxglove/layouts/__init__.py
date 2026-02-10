@@ -2973,6 +2973,16 @@ class MapConfig(_BaseModel):
     Additional layers displayed on top of the base map layer
     """
 
+    center_latitude: float | None = None
+    """
+    Latitude of the map center in degrees. When set, the map will use this as its center position instead of inferring the center from data.
+    """
+
+    center_longitude: float | None = None
+    """
+    Longitude of the map center in degrees. When set, the map will use this as its center position instead of inferring the center from data.
+    """
+
     def _to_dict(self) -> dict[str, Any]:
         return {
             "customTileUrl": self.custom_tile_url,
@@ -2985,6 +2995,8 @@ class MapConfig(_BaseModel):
             "maxNativeZoom": self.max_native_zoom,
             "topicConfig": self.topic_config,
             "layers": self.layers,
+            "centerLatitude": self.center_latitude,
+            "centerLongitude": self.center_longitude,
         }
 
 
