@@ -155,9 +155,12 @@ impl FoxgloveApiClient {
         base_url: impl Into<String>,
         device_token: Option<DeviceToken>,
         user_agent: impl Into<String>,
+        timeout_duration: Duration,
     ) -> Result<Self, FoxgloveApiClientError> {
         Ok(Self {
-            http: reqwest::ClientBuilder::new().build()?,
+            http: reqwest::ClientBuilder::new()
+                .timeout(timeout_duration)
+                .build()?,
             device_token,
             base_url: base_url.into(),
             user_agent: user_agent.into(),
@@ -247,6 +250,7 @@ pub(super) struct FoxgloveApiClientBuilder {
     base_url: String,
     device_token: Option<DeviceToken>,
     user_agent: String,
+    timeout_duration: Duration,
 }
 
 impl Default for FoxgloveApiClientBuilder {
@@ -255,6 +259,7 @@ impl Default for FoxgloveApiClientBuilder {
             base_url: DEFAULT_API_URL.to_string(),
             device_token: None,
             user_agent: default_user_agent(),
+            timeout_duration: Duration::from_secs(30),
         }
     }
 }
@@ -279,8 +284,18 @@ impl FoxgloveApiClientBuilder {
         self
     }
 
+    pub fn timeout(mut self, duration: Duration) -> Self {
+        self.timeout_duration = duration;
+        self
+    }
+
     pub fn build(self) -> Result<FoxgloveApiClient, FoxgloveApiClientError> {
-        FoxgloveApiClient::new(self.base_url, self.device_token, self.user_agent)
+        FoxgloveApiClient::new(
+            self.base_url,
+            self.device_token,
+            self.user_agent,
+            self.timeout_duration,
+        )
     }
 }
 
