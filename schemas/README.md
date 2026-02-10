@@ -6,9 +6,9 @@ All schemas are generated from [schemas.ts](/internal/schemas.ts).
 
 ## Optional fields
 
-Some message fields are **optional**: they may be omitted and the consumer (e.g. a Foxglove panel) will use a default. Optional fields are marked in the table below.
+Optional message fields may be omitted. When omitted, the consumer (e.g. a Foxglove panel) determines the behavior.
 
-**IDLs without optional** (ROS 1 .msg, ROS 2 .msg, OMG IDL): all fields must still be present in the message. To get the same effect as omitting an optional field, use an empty string or leave the nested message absent if the format allows.
+If the IDL does not support optional fields (ROS 1 .msg, ROS 2 .msg, OMG IDL) you must specify a value for the field.
 
 ## Contents
 
