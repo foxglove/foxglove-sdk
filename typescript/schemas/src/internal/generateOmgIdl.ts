@@ -79,8 +79,6 @@ export function generateOmgIdl(schema: FoxgloveSchema): string {
         }
         const descriptionLines = field.description.trim().split("\n");
         const comment = descriptionLines.map((line) => `// ${line}`).join("\n  ");
-        // OMG IDL does not have a standard optional modifier; document schema-optional for consumers
-        const optionalComment = field.optional ? "// optional (schema)\n  " : "";
 
         let defaultAnnotation = "";
         if (typeof field.defaultValue === "string") {
@@ -101,7 +99,7 @@ export function generateOmgIdl(schema: FoxgloveSchema): string {
           defaultAnnotation = `@default(${field.defaultValue ? "TRUE" : "FALSE"})\n  `;
         }
 
-        return `${comment}\n  ${optionalComment}${defaultAnnotation}${fieldType} ${field.name}${arraySize};`;
+        return `${comment}\n  ${defaultAnnotation}${fieldType} ${field.name}${arraySize};`;
       });
 
       const structDescriptionLines = schema.description

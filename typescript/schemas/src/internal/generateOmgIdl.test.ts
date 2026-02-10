@@ -105,7 +105,6 @@ describe("generateOmgIdl", () => {
         string field_string_fixed_array[3];
 
         // An optional string field
-        // optional (schema)
         string field_optional_string;
 
         // An enum field
