@@ -133,7 +133,7 @@ impl McapPlayer {
     pub fn log_backfill(&mut self) -> Result<()> {
         self.needs_backfill = false;
 
-        for (_channel_id, mcap_channel) in &self.summary.channels {
+        for mcap_channel in self.summary.channels.values() {
             let mut reader = IndexedReader::new_with_options(
                 &self.summary,
                 IndexedReaderOptions::new()
@@ -162,7 +162,7 @@ impl McapPlayer {
                     Some(Ok(IndexedReadEvent::Message { header, data })) => {
                         if let Some(channel) = self.channels.get(&header.channel_id) {
                             channel.log_with_meta(
-                                &data,
+                                data,
                                 PartialMetadata {
                                     log_time: Some(header.log_time),
                                 },
