@@ -246,7 +246,10 @@ function generateMessageClass(schema: FoxgloveMessageSchema): string {
           return `${safeRustName(field.name)}.unwrap_or_default()`;
         }
         if (field.type.name === "string") {
-          return `${safeRustName(field.name)}.to_string()`;
+          // optional string is Option<&str>; convert to Option<String> for the schema struct
+          return field.optional
+            ? `${safeRustName(field.name)}.map(|s| s.to_string())`
+            : `${safeRustName(field.name)}.to_string()`;
         }
         return safeRustName(field.name);
       case "nested":

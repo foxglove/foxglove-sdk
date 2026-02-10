@@ -136,7 +136,7 @@ describe("generatePyclass", () => {
                  field_enum_array: field_enum_array.unwrap_or_default().into_iter().map(|x| x as i32).collect(),
                  field_nested: field_nested.map(Into::into),
                  field_nested_array: field_nested_array.unwrap_or_default().into_iter().map(|x| x.into()).collect(),
-                 field_optional_string: field_optional_string.to_string(),
+                 field_optional_string: field_optional_string.map(|s| s.to_string()),
                  field_optional_bool,
                  field_optional_float64,
              })
