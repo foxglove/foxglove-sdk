@@ -278,12 +278,6 @@ function generateMessageClass(schema: FoxgloveMessageSchema): string {
   }));
 
   const signature = schemaFields
-    .filter(
-      ({ field }) =>
-        (field.optional ?? false) ||
-        field.array != undefined ||
-        (["primitive", "enum", "nested"] as const).includes(field.type.type),
-    )
     .map(({ argName, field }) => `${argName}=${rustDefaultValue(field)}`)
     .join(", ");
 
