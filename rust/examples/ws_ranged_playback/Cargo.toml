@@ -7,7 +7,7 @@ publish = false
 workspace = true
 
 [dependencies]
-ctrlc = "3.4"
 env_logger = "0.11"
 foxglove = { path = "../../foxglove" }
+tokio = { version = "1.47", features = ["full"] }
 tracing = { version = "0.1", features = ["log"] }

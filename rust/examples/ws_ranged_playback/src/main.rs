@@ -1,269 +1,207 @@
-//! Minimal ranged playback example.
+//! Example using the Foxglove WebSocket server with the RangedPlayback capability.
 //!
-//! Serves 10 seconds of synthetic data at 10Hz on a `/data` channel,
-//! controlled by Foxglove's playback bar via the RangedPlayback capability.
+//! This example plays back simple dummy data points from an in-memory buffer, generated at 10Hz between epoch
+//! timestamps 0 and 10s.
+//!
+//! In a real implementation you would replace the in-memory buffer and playback logic with your own data source
+//! (e.g. reading from files or a database), implement your own time-tracking logic, and write
+//! a custom `ServerListener` to handle `PlaybackControlRequest`s appropriate to your use case.
 
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
 
 use foxglove::websocket::{
     Capability, PlaybackCommand, PlaybackControlRequest, PlaybackState, PlaybackStatus,
     ServerListener,
 };
-use foxglove::{ChannelBuilder, PartialMetadata, RawChannel, WebSocketServer, WebSocketServerHandle};
-use tracing::info;
+use foxglove::{ChannelBuilder, PartialMetadata};
 
-/// Number of messages in the dataset.
-const NUM_MESSAGES: usize = 100;
-/// Interval between messages in nanoseconds (100ms = 10Hz).
-const INTERVAL_NS: u64 = 100_000_000;
-/// Start timestamp in nanoseconds.
-const START_TIME_NS: u64 = 0;
-/// End timestamp in nanoseconds (inclusive).
-const END_TIME_NS: u64 = START_TIME_NS + (NUM_MESSAGES as u64 - 1) * INTERVAL_NS;
-/// Minimum playback speed.
-const MIN_PLAYBACK_SPEED: f32 = 0.01;
-
-/// Returns the log timestamp for a given message index.
-fn timestamp_for_index(index: usize) -> u64 {
-    START_TIME_NS + (index as u64) * INTERVAL_NS
+struct DataPoint {
+    timestamp: u64,
+    value: f64,
 }
 
-/// Returns the message index for a given log timestamp.
-fn index_for_timestamp(timestamp: u64) -> usize {
-    let offset = timestamp.saturating_sub(START_TIME_NS);
-    let index = (offset / INTERVAL_NS) as usize;
-    index.min(NUM_MESSAGES - 1)
-}
-
-fn clamp_speed(speed: f32) -> f32 {
-    if speed.is_finite() && speed >= MIN_PLAYBACK_SPEED {
-        speed
-    } else {
-        MIN_PLAYBACK_SPEED
-    }
-}
-
-// ---------------------------------------------------------------------------
-// Player
-// ---------------------------------------------------------------------------
-
-struct Player {
-    channel: Arc<RawChannel>,
+struct PlayerState {
     status: PlaybackStatus,
-    current_index: usize,
-    current_time: u64,
+    current_message_index: usize,
     playback_speed: f32,
-    /// Wall-clock deadline for the next message emission.
-    /// `None` means the current message should be emitted immediately.
-    next_emit_time: Option<Instant>,
 }
 
-impl Player {
-    fn new(channel: Arc<RawChannel>) -> Self {
-        Self {
-            channel,
-            status: PlaybackStatus::Paused,
-            current_index: 0,
-            current_time: START_TIME_NS,
-            playback_speed: 1.0,
-            next_emit_time: None,
-        }
-    }
+// Simple `ServerListener` that tracks variables required for playback and handles playback control
+// requests from Foxglove.
+struct DataPointPlayer {
+    state: Arc<Mutex<PlayerState>>,
+    data_len: usize,
+}
 
-    fn status(&self) -> PlaybackStatus {
-        self.status
-    }
-
-    fn current_time(&self) -> u64 {
-        self.current_time
-    }
-
-    fn playback_speed(&self) -> f32 {
-        self.playback_speed
-    }
-
-    fn play(&mut self) {
-        // Don't transition to Playing if playback has ended.
-        // To restart, the caller must seek first.
-        if self.status == PlaybackStatus::Ended {
-            return;
-        }
-        self.status = PlaybackStatus::Playing;
-    }
-
-    fn pause(&mut self) {
-        self.status = PlaybackStatus::Paused;
-        self.next_emit_time = None;
-    }
-
-    fn seek(&mut self, log_time: u64) {
-        let log_time = log_time.clamp(START_TIME_NS, END_TIME_NS);
-        self.current_index = index_for_timestamp(log_time);
-        self.current_time = timestamp_for_index(self.current_index);
-        self.next_emit_time = None;
-        if self.status == PlaybackStatus::Ended {
-            self.status = PlaybackStatus::Paused;
-        }
-    }
-
-    fn set_playback_speed(&mut self, speed: f32) {
-        self.playback_speed = clamp_speed(speed);
-    }
-
-    /// Logs the next message if it is ready, or returns a duration to sleep.
-    ///
-    /// Returns `Some(duration)` if the caller should sleep before calling again,
-    /// or `None` if a message was logged (or playback is not active).
-    fn log_next_message(&mut self, server: &WebSocketServerHandle) -> Option<Duration> {
-        if self.status != PlaybackStatus::Playing {
-            return None;
-        }
-
-        if self.current_index >= NUM_MESSAGES {
-            self.status = PlaybackStatus::Ended;
-            self.current_time = END_TIME_NS;
-            return None;
-        }
-
-        // Wait until it's time to emit the next message.
-        if let Some(deadline) = self.next_emit_time {
-            if let Some(remaining) = deadline.checked_duration_since(Instant::now()) {
-                return Some(remaining);
-            }
-        }
-
-        // Broadcast time before the data message. Both go through the data plane,
-        // so FIFO ordering is preserved.
-        let msg_time = timestamp_for_index(self.current_index);
-        self.current_time = msg_time;
-        server.broadcast_time(msg_time);
-
-        let value = self.current_index;
-        let json = format!(r#"{{"value": {value}}}"#);
-        self.channel.log_with_meta(
-            json.as_bytes(),
-            PartialMetadata {
-                log_time: Some(msg_time),
-            },
-        );
-
-        self.current_index += 1;
-        let interval = Duration::from_secs_f64(0.1 / self.playback_speed as f64);
-        self.next_emit_time = Some(Instant::now() + interval);
-        None
+impl DataPointPlayer {
+    fn seek(&self, seek_time: u64) -> usize {
+        let index = (seek_time / 100_000_000) as usize;
+        index.min(self.data_len.saturating_sub(1))
     }
 }
 
-// ---------------------------------------------------------------------------
-// Listener
-// ---------------------------------------------------------------------------
-
-struct Listener {
-    player: Arc<Mutex<Player>>,
-}
-
-impl ServerListener for Listener {
+impl ServerListener for DataPointPlayer {
+    // Handle a playback control request from Foxglove and return an updated playback state. In
+    // your application, you'd implement this function to handle the request as appropriate for
+    // your data source and playback logic.
     fn on_playback_control_request(
         &self,
         request: PlaybackControlRequest,
     ) -> Option<PlaybackState> {
-        let mut player = self.player.lock().unwrap();
+        tracing::info!("Received playback control request: {request:?}");
 
-        // Handle seek first, before play/pause. This is important for looping,
-        // where Foxglove sends a seek to the beginning followed by a Play command.
-        let did_seek = request.seek_time.is_some();
-        if let Some(seek_time) = request.seek_time {
-            player.seek(seek_time);
+        let mut state = self.state.lock().unwrap();
+
+        // Handle playback command
+        match request.playback_command {
+            PlaybackCommand::Play => {
+                state.status = PlaybackStatus::Playing;
+            }
+            PlaybackCommand::Pause => {
+                state.status = PlaybackStatus::Paused;
+            }
         }
 
-        player.set_playback_speed(request.playback_speed);
+        // Handle playback speed request, clamping to a reasonable lower bound
+        state.playback_speed = f32::max(0.001, request.playback_speed);
 
-        match request.playback_command {
-            PlaybackCommand::Play => player.play(),
-            PlaybackCommand::Pause => player.pause(),
-        };
+        // Handle seeking
+        let did_seek = request.seek_time.is_some();
+        if let Some(seek_time) = request.seek_time {
+            state.current_message_index = self.seek(seek_time);
+        }
 
-        Some(PlaybackState {
-            current_time: player.current_time(),
-            playback_speed: player.playback_speed(),
-            status: player.status(),
+        let current_time = state.current_message_index as u64 * 100_000_000;
+
+        // Return the updated playback state
+        let response = PlaybackState {
+            status: state.status,
+            current_time,
+            playback_speed: state.playback_speed,
             did_seek,
             request_id: Some(request.request_id),
-        })
+        };
+        tracing::info!("Sending playback state: {response:?}");
+        Some(response)
     }
 }
 
-// ---------------------------------------------------------------------------
-// Main
-// ---------------------------------------------------------------------------
+async fn playback_loop(
+    data: &[DataPoint],
+    state: &Mutex<PlayerState>,
+    channel: &foxglove::RawChannel,
+    server: &foxglove::WebSocketServerHandle,
+) {
+    loop {
+        let (status, current_message_index, speed) = {
+            let s = state.lock().unwrap();
+            (s.status, s.current_message_index, s.playback_speed)
+        };
 
-fn main() {
+        match status {
+            PlaybackStatus::Playing => {
+                // Out of data; broadcast a PlaybackState indicating that playback has ended
+                if current_message_index >= data.len() {
+                    {
+                        let mut s = state.lock().unwrap();
+                        s.status = PlaybackStatus::Ended;
+                    }
+                    server.broadcast_playback_state(PlaybackState {
+                        status: PlaybackStatus::Ended,
+                        current_time: data.last().map_or(0, |d| d.timestamp),
+                        playback_speed: speed,
+                        did_seek: false,
+                        request_id: None,
+                    });
+                    continue;
+                }
+
+                let point = &data[current_message_index];
+
+                // Broadcast the current log time...
+                server.broadcast_time(point.timestamp);
+
+                //... then log the data over the WebSocket
+                let payload = format!(r#"{{"value": {:.1}}}"#, point.value);
+                channel.log_with_meta(
+                    payload.as_bytes(),
+                    PartialMetadata::with_log_time(point.timestamp),
+                );
+
+                {
+                    let mut s = state.lock().unwrap();
+                    s.current_message_index += 1;
+                }
+
+                // Sleep, accounting for the current playback speed
+                let sleep_ms = (100.0 / speed as f64).max(1.0) as u64;
+                tokio::time::sleep(std::time::Duration::from_millis(sleep_ms)).await;
+            }
+            _ => {
+                // If not actively playing, sleep
+                tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+            }
+        }
+    }
+}
+
+// Generate dummy data for playback
+// In this example, we use a simple linear function ranging from t=0 to t=10s, generated at 10Hz
+fn generate_data() -> Vec<DataPoint> {
+    (0..=100)
+        .map(|i| {
+            let timestamp = i as u64 * 100_000_000; // 10Hz = 100ms intervals
+            let value = i as f64 * 0.1;
+            DataPoint { timestamp, value }
+        })
+        .collect()
+}
+
+#[tokio::main]
+async fn main() {
     let env = env_logger::Env::default().default_filter_or("info");
     env_logger::init_from_env(env);
 
-    let done = Arc::new(AtomicBool::default());
-    ctrlc::set_handler({
-        let done = done.clone();
-        move || {
-            done.store(true, Ordering::Relaxed);
-        }
-    })
-    .expect("Failed to set SIGINT handler");
+    let data = generate_data();
 
     let channel = ChannelBuilder::new("/data")
         .message_encoding("json")
         .build_raw()
         .expect("Failed to create channel");
 
-    let player = Arc::new(Mutex::new(Player::new(channel)));
-    let listener = Arc::new(Listener {
-        player: player.clone(),
+    let state = Arc::new(Mutex::new(PlayerState {
+        status: PlaybackStatus::Paused,
+        current_message_index: 0,
+        playback_speed: 1.0,
+    }));
+
+    let listener = Arc::new(DataPointPlayer {
+        state: Arc::clone(&state),
+        data_len: data.len(),
     });
 
-    let server = WebSocketServer::new()
-        .name("ranged-playback-example")
+    // Set up the server
+    //
+    // To implement the `RangedPlayback` capability, we:
+    // - advertise the `RangedPlayback` and `Time` capabilities
+    // - declare the playback time range in nanoseconds since epoch
+    // - register our `ServerListener` for handling `PlaybackControlRequest`s
+    let server = foxglove::WebSocketServer::new()
+        .name("ws_ranged_playback")
+        .bind("127.0.0.1", 8765)
         .capabilities([Capability::RangedPlayback, Capability::Time])
-        .playback_time_range(START_TIME_NS, END_TIME_NS)
+        .playback_time_range(0, 10_000_000_000)
         .listener(listener)
-        .start_blocking()
+        .start()
+        .await
         .expect("Server failed to start");
 
-    info!("Server started, waiting for client");
+    tracing::info!("View in browser: {}", server.app_url());
 
-    let mut last_status = PlaybackStatus::Paused;
-    while !done.load(Ordering::Relaxed) {
-        let status = {
-            let p = player.lock().unwrap();
-            let status = p.status();
-
-            // Broadcast state change when playback ends
-            if status == PlaybackStatus::Ended && last_status != PlaybackStatus::Ended {
-                server.broadcast_playback_state(PlaybackState {
-                    current_time: p.current_time(),
-                    playback_speed: p.playback_speed(),
-                    status,
-                    did_seek: false,
-                    request_id: None,
-                });
-            }
-
-            status
-        };
-        last_status = status;
-
-        if status != PlaybackStatus::Playing {
-            std::thread::sleep(Duration::from_millis(10));
-            continue;
-        }
-
-        // Log next message, sleeping outside the lock if needed
-        let sleep_duration = player.lock().unwrap().log_next_message(&server);
-        if let Some(duration) = sleep_duration {
-            std::thread::sleep(std::cmp::min(duration, Duration::from_secs(1)));
-        }
+    tokio::select! {
+        _ = playback_loop(&data, &state, &channel, &server) => {}
+        _ = tokio::signal::ctrl_c() => {}
     }
 
-    server.stop().wait_blocking();
+    server.stop().wait().await;
 }
