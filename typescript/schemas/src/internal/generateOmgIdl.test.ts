@@ -123,6 +123,12 @@ describe("generateOmgIdl", () => {
 
         // An optional string field
         string field_optional_string;
+
+        // An optional bool field
+        boolean field_optional_bool;
+
+        // An optional float64 field
+        double field_optional_float64;
       };
 
       };

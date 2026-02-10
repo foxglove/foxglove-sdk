@@ -112,6 +112,12 @@ describe("generateFlatbuffers", () => {
 
         /// An optional string field
         field_optional_string:string (id: 25);
+
+        /// An optional bool field
+        field_optional_bool:bool (id: 26);
+
+        /// An optional float64 field
+        field_optional_float64:double (id: 27);
       }
 
       root_type ExampleMessage;

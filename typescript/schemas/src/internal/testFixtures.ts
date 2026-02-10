@@ -126,6 +126,18 @@ export const exampleMessage: FoxgloveMessageSchema = {
       type: { type: "primitive", name: "string" },
       optional: true,
     },
+    {
+      name: "field_optional_bool",
+      description: "An optional bool field",
+      type: { type: "primitive", name: "boolean" },
+      optional: true,
+    },
+    {
+      name: "field_optional_float64",
+      description: "An optional float64 field",
+      type: { type: "primitive", name: "float64" },
+      optional: true,
+    },
   ],
 };
 

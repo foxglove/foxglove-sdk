@@ -69,6 +69,8 @@ describe("generatePyclass", () => {
      ///     long
      ///     description
      /// :param field_optional_string: An optional string field
+     /// :param field_optional_bool: An optional bool field
+     /// :param field_optional_float64: An optional float64 field
      ///
      /// See https://docs.foxglove.dev/docs/visualization/message-schemas/example-message
      #[pyclass(module = "foxglove.schemas")]
@@ -77,7 +79,7 @@ describe("generatePyclass", () => {
      #[pymethods]
      impl ExampleMessage {
          #[new]
-         #[pyo3(signature = (*, field_duration=None, field_time=None, field_boolean=false, field_bytes=None, field_float64=0.0, field_uint32=0, field_string="", field_duration_array=None, field_time_array=None, field_boolean_array=None, field_bytes_array=None, field_float64_array=None, field_uint32_array=None, field_string_array=None, field_duration_fixed_array=None, field_time_fixed_array=None, field_boolean_fixed_array=None, field_bytes_fixed_array=None, field_float64_fixed_array=None, field_uint32_fixed_array=None, field_string_fixed_array=None, field_enum=ExampleMessageExampleEnum::A, field_enum_array=None, field_nested=None, field_nested_array=None, field_optional_string=None) )]
+         #[pyo3(signature = (*, field_duration=None, field_time=None, field_boolean=false, field_bytes=None, field_float64=0.0, field_uint32=0, field_string="", field_duration_array=None, field_time_array=None, field_boolean_array=None, field_bytes_array=None, field_float64_array=None, field_uint32_array=None, field_string_array=None, field_duration_fixed_array=None, field_time_fixed_array=None, field_boolean_fixed_array=None, field_bytes_fixed_array=None, field_float64_fixed_array=None, field_uint32_fixed_array=None, field_string_fixed_array=None, field_enum=ExampleMessageExampleEnum::A, field_enum_array=None, field_nested=None, field_nested_array=None, field_optional_string=None, field_optional_bool=None, field_optional_float64=None) )]
          fn new(
              field_duration: Option<Duration>,
              field_time: Option<Timestamp>,
@@ -105,6 +107,8 @@ describe("generatePyclass", () => {
              field_nested: Option<NestedMessage>,
              field_nested_array: Option<Vec<NestedMessage>>,
              field_optional_string: Option<&str>,
+             field_optional_bool: Option<bool>,
+             field_optional_float64: Option<f64>,
          ) -> Self {
              Self(foxglove::schemas::ExampleMessage {
                  field_duration: field_duration.map(Into::into),
@@ -133,11 +137,13 @@ describe("generatePyclass", () => {
                  field_nested: field_nested.map(Into::into),
                  field_nested_array: field_nested_array.unwrap_or_default().into_iter().map(|x| x.into()).collect(),
                  field_optional_string: field_optional_string.to_string(),
+                 field_optional_bool,
+                 field_optional_float64,
              })
          }
          fn __repr__(&self) -> String {
              format!(
-                 "ExampleMessage(field_duration={:?}, field_time={:?}, field_boolean={:?}, field_bytes={:?}, field_float64={:?}, field_uint32={:?}, field_string={:?}, field_duration_array={:?}, field_time_array={:?}, field_boolean_array={:?}, field_bytes_array={:?}, field_float64_array={:?}, field_uint32_array={:?}, field_string_array={:?}, field_duration_fixed_array={:?}, field_time_fixed_array={:?}, field_boolean_fixed_array={:?}, field_bytes_fixed_array={:?}, field_float64_fixed_array={:?}, field_uint32_fixed_array={:?}, field_string_fixed_array={:?}, field_enum={:?}, field_enum_array={:?}, field_nested={:?}, field_nested_array={:?}, field_optional_string={:?})",
+                 "ExampleMessage(field_duration={:?}, field_time={:?}, field_boolean={:?}, field_bytes={:?}, field_float64={:?}, field_uint32={:?}, field_string={:?}, field_duration_array={:?}, field_time_array={:?}, field_boolean_array={:?}, field_bytes_array={:?}, field_float64_array={:?}, field_uint32_array={:?}, field_string_array={:?}, field_duration_fixed_array={:?}, field_time_fixed_array={:?}, field_boolean_fixed_array={:?}, field_bytes_fixed_array={:?}, field_float64_fixed_array={:?}, field_uint32_fixed_array={:?}, field_string_fixed_array={:?}, field_enum={:?}, field_enum_array={:?}, field_nested={:?}, field_nested_array={:?}, field_optional_string={:?}, field_optional_bool={:?}, field_optional_float64={:?})",
                  self.0.field_duration,
                  self.0.field_time,
                  self.0.field_boolean,
@@ -164,6 +170,8 @@ describe("generatePyclass", () => {
                  self.0.field_nested,
                  self.0.field_nested_array,
                  self.0.field_optional_string,
+                 self.0.field_optional_bool,
+                 self.0.field_optional_float64,
              )
          }
          /// Returns the ExampleMessage schema.

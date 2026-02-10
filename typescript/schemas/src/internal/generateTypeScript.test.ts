@@ -112,6 +112,12 @@ describe("generateTypeScript", () => {
 
         /** An optional string field */
         field_optional_string?: string;
+
+        /** An optional bool field */
+        field_optional_bool?: boolean;
+
+        /** An optional float64 field */
+        field_optional_float64?: number;
       };
       "
     `);
@@ -217,6 +223,12 @@ describe("generateTypeScript", () => {
 
         /** An optional string field */
         field_optional_string?: string;
+
+        /** An optional bool field */
+        field_optional_bool?: boolean;
+
+        /** An optional float64 field */
+        field_optional_float64?: number;
       };
       "
     `);

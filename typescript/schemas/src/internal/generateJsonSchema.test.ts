@@ -202,6 +202,14 @@ describe("generateJsonSchema", () => {
            },
            "type": "array",
          },
+         "field_optional_bool": {
+           "description": "An optional bool field",
+           "type": "boolean",
+         },
+         "field_optional_float64": {
+           "description": "An optional float64 field",
+           "type": "number",
+         },
          "field_optional_string": {
            "description": "An optional string field",
            "type": "string",

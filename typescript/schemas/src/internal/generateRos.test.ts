@@ -228,6 +228,22 @@ describe("generateRosMsgDefinition", () => {
             "name": "field_optional_string",
             "type": "string",
           },
+          {
+            "arrayLength": undefined,
+            "description": "An optional bool field",
+            "isArray": false,
+            "isComplex": false,
+            "name": "field_optional_bool",
+            "type": "bool",
+          },
+          {
+            "arrayLength": undefined,
+            "description": "An optional float64 field",
+            "isArray": false,
+            "isComplex": false,
+            "name": "field_optional_float64",
+            "type": "float64",
+          },
         ],
         "originalName": "ExampleMessage",
         "rosFullInterfaceName": "foxglove_msgs/ExampleMessage",
@@ -454,6 +470,22 @@ describe("generateRosMsgDefinition", () => {
             "name": "field_optional_string",
             "type": "string",
           },
+          {
+            "arrayLength": undefined,
+            "description": "An optional bool field",
+            "isArray": false,
+            "isComplex": false,
+            "name": "field_optional_bool",
+            "type": "bool",
+          },
+          {
+            "arrayLength": undefined,
+            "description": "An optional float64 field",
+            "isArray": false,
+            "isComplex": false,
+            "name": "field_optional_float64",
+            "type": "float64",
+          },
         ],
         "originalName": "ExampleMessage",
         "rosFullInterfaceName": "foxglove_msgs/msg/ExampleMessage",
@@ -561,6 +593,12 @@ describe("generateRosMsg", () => {
 
       # An optional string field
       string field_optional_string
+
+      # An optional bool field
+      bool field_optional_bool
+
+      # An optional float64 field
+      float64 field_optional_float64
       "
     `);
   });
@@ -662,6 +700,12 @@ describe("generateRosMsg", () => {
 
       # An optional string field
       string field_optional_string
+
+      # An optional bool field
+      bool field_optional_bool
+
+      # An optional float64 field
+      float64 field_optional_float64
       "
     `);
   });
@@ -760,6 +804,12 @@ describe("generateRosMsgMergedSchema", () => {
 
       # An optional string field
       string field_optional_string
+
+      # An optional bool field
+      bool field_optional_bool
+
+      # An optional float64 field
+      float64 field_optional_float64
       ================================================================================
       MSG: foxglove_msgs/NestedMessage
       # foxglove_msgs/NestedMessage
@@ -939,6 +989,18 @@ describe("generateRosMsgMergedSchema", () => {
               "name": "field_optional_string",
               "type": "string",
             },
+            {
+              "isArray": false,
+              "isComplex": false,
+              "name": "field_optional_bool",
+              "type": "bool",
+            },
+            {
+              "isArray": false,
+              "isComplex": false,
+              "name": "field_optional_float64",
+              "type": "float64",
+            },
           ],
           "name": undefined,
         },
@@ -1049,6 +1111,12 @@ describe("generateRosMsgMergedSchema", () => {
 
       # An optional string field
       string field_optional_string
+
+      # An optional bool field
+      bool field_optional_bool
+
+      # An optional float64 field
+      float64 field_optional_float64
       ================================================================================
       MSG: foxglove_msgs/NestedMessage
       # foxglove_msgs/msg/NestedMessage
@@ -1398,6 +1466,32 @@ describe("generateRosMsgMergedSchema", () => {
               "isConstant": undefined,
               "name": "field_optional_string",
               "type": "string",
+              "upperBound": undefined,
+              "value": undefined,
+              "valueText": undefined,
+            },
+            {
+              "arrayLength": undefined,
+              "arrayUpperBound": undefined,
+              "defaultValue": undefined,
+              "isArray": false,
+              "isComplex": false,
+              "isConstant": undefined,
+              "name": "field_optional_bool",
+              "type": "bool",
+              "upperBound": undefined,
+              "value": undefined,
+              "valueText": undefined,
+            },
+            {
+              "arrayLength": undefined,
+              "arrayUpperBound": undefined,
+              "defaultValue": undefined,
+              "isArray": false,
+              "isComplex": false,
+              "isConstant": undefined,
+              "name": "field_optional_float64",
+              "type": "float64",
               "upperBound": undefined,
               "value": undefined,
               "valueText": undefined,
