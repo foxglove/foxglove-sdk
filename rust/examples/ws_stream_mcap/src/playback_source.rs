@@ -50,7 +50,9 @@ pub trait PlaybackSource {
     /// Used to send a PlaybackState to Foxglove
     fn playback_speed(&self) -> f32;
 
-    /// Logs the next message for playback if it's ready, or returns a duration to wait.
+    /// Logs the next message for playback if it's ready, or returns a wall duration to wait
+    /// (accounting for the current playback speed). This should be called by your main playback
+    /// loop.
     ///
     /// Returns `Ok(Some(duration))` if the caller should sleep before calling again.
     /// Returns `Ok(None)` if a message was logged or playback is not active.

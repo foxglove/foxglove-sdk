@@ -31,6 +31,9 @@ pub struct McapPlayer {
     pending_message: Option<(mcap::records::MessageHeader, Vec<u8>)>,
 }
 
+/// An implementation of the `PlaybackSource` trait for the MCAP file format. Handles playback
+/// operations (play/pause, seeking, adjusting playback speed), time tracking, and logging messages
+/// when called from a playback loop.
 impl McapPlayer {
     /// Creates a new MCAP player.
     pub(crate) fn new(path: &Path) -> Result<Self> {
