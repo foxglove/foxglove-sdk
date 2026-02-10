@@ -260,9 +260,8 @@ function generateMessageClass(schema: FoxgloveMessageSchema): string {
         if (field.array != undefined) {
           return `${safeRustName(field.name)}.unwrap_or_default().into_iter().map(|x| x.into()).collect()`;
         }
-        return field.optional
-          ? `${safeRustName(field.name)}.map(Into::into)`
-          : `Some(${safeRustName(field.name)}.into())`;
+        // Python binding always passes Option<nested>; foxglove struct expects Option<foxglove::T>
+        return `${safeRustName(field.name)}.map(Into::into)`;
       case "enum":
         if (field.array != undefined) {
           return `${safeRustName(field.name)}.unwrap_or_default().into_iter().map(|x| x as i32).collect()`;

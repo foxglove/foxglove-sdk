@@ -107,8 +107,8 @@ describe("generatePyclass", () => {
              field_nested_array: Option<Vec<NestedMessage>>,
          ) -> Self {
              Self(foxglove::schemas::ExampleMessage {
-                 field_duration: Some(field_duration.into()),
-                 field_time: Some(field_time.into()),
+                 field_duration: field_duration.map(Into::into),
+                 field_time: field_time.map(Into::into),
                  field_boolean,
                  field_bytes: field_bytes.map(|x| Bytes::copy_from_slice(x.as_bytes())).unwrap_or_default(),
                  field_float64,
@@ -131,7 +131,7 @@ describe("generatePyclass", () => {
                  field_optional_string: field_optional_string.to_string(),
                  field_enum: field_enum as i32,
                  field_enum_array: field_enum_array.unwrap_or_default().into_iter().map(|x| x as i32).collect(),
-                 field_nested: Some(field_nested.into()),
+                 field_nested: field_nested.map(Into::into),
                  field_nested_array: field_nested_array.unwrap_or_default().into_iter().map(|x| x.into()).collect(),
              })
          }

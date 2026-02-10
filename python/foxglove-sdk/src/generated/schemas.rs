@@ -101,12 +101,12 @@ impl ArrowPrimitive {
         color: Option<Color>,
     ) -> Self {
         Self(foxglove::schemas::ArrowPrimitive {
-            pose: Some(pose.into()),
+            pose: pose.map(Into::into),
             shaft_length,
             shaft_diameter,
             head_length,
             head_diameter,
-            color: Some(color.into()),
+            color: color.map(Into::into),
         })
     }
     fn __repr__(&self) -> String {
@@ -223,7 +223,7 @@ impl CameraCalibration {
         P: Option<Vec<f64>>,
     ) -> Self {
         Self(foxglove::schemas::CameraCalibration {
-            timestamp: Some(timestamp.into()),
+            timestamp: timestamp.map(Into::into),
             frame_id: frame_id.to_string(),
             width,
             height,
@@ -304,12 +304,12 @@ impl CircleAnnotation {
         outline_color: Option<Color>,
     ) -> Self {
         Self(foxglove::schemas::CircleAnnotation {
-            timestamp: Some(timestamp.into()),
-            position: Some(position.into()),
+            timestamp: timestamp.map(Into::into),
+            position: position.map(Into::into),
             diameter,
             thickness,
-            fill_color: Some(fill_color.into()),
-            outline_color: Some(outline_color.into()),
+            fill_color: fill_color.map(Into::into),
+            outline_color: outline_color.map(Into::into),
         })
     }
     fn __repr__(&self) -> String {
@@ -427,7 +427,7 @@ impl CompressedImage {
         format: &str,
     ) -> Self {
         Self(foxglove::schemas::CompressedImage {
-            timestamp: Some(timestamp.into()),
+            timestamp: timestamp.map(Into::into),
             frame_id: frame_id.to_string(),
             data: data
                 .map(|x| Bytes::copy_from_slice(x.as_bytes()))
@@ -520,7 +520,7 @@ impl CompressedVideo {
         format: &str,
     ) -> Self {
         Self(foxglove::schemas::CompressedVideo {
-            timestamp: Some(timestamp.into()),
+            timestamp: timestamp.map(Into::into),
             frame_id: frame_id.to_string(),
             data: data
                 .map(|x| Bytes::copy_from_slice(x.as_bytes()))
@@ -587,11 +587,11 @@ impl CylinderPrimitive {
         color: Option<Color>,
     ) -> Self {
         Self(foxglove::schemas::CylinderPrimitive {
-            pose: Some(pose.into()),
-            size: Some(size.into()),
+            pose: pose.map(Into::into),
+            size: size.map(Into::into),
             bottom_scale,
             top_scale,
-            color: Some(color.into()),
+            color: color.map(Into::into),
         })
     }
     fn __repr__(&self) -> String {
@@ -649,9 +649,9 @@ impl CubePrimitive {
     #[pyo3(signature = (*, pose=None, size=None, color=None) )]
     fn new(pose: Option<Pose>, size: Option<Vector3>, color: Option<Color>) -> Self {
         Self(foxglove::schemas::CubePrimitive {
-            pose: Some(pose.into()),
-            size: Some(size.into()),
-            color: Some(color.into()),
+            pose: pose.map(Into::into),
+            size: size.map(Into::into),
+            color: color.map(Into::into),
         })
     }
     fn __repr__(&self) -> String {
@@ -719,11 +719,11 @@ impl FrameTransform {
         rotation: Option<Quaternion>,
     ) -> Self {
         Self(foxglove::schemas::FrameTransform {
-            timestamp: Some(timestamp.into()),
+            timestamp: timestamp.map(Into::into),
             parent_frame_id: parent_frame_id.to_string(),
             child_frame_id: child_frame_id.to_string(),
-            translation: Some(translation.into()),
-            rotation: Some(rotation.into()),
+            translation: translation.map(Into::into),
+            rotation: rotation.map(Into::into),
         })
     }
     fn __repr__(&self) -> String {
@@ -938,11 +938,11 @@ impl Grid {
         data: Option<Bound<'_, PyBytes>>,
     ) -> Self {
         Self(foxglove::schemas::Grid {
-            timestamp: Some(timestamp.into()),
+            timestamp: timestamp.map(Into::into),
             frame_id: frame_id.to_string(),
-            pose: Some(pose.into()),
+            pose: pose.map(Into::into),
             column_count,
-            cell_size: Some(cell_size.into()),
+            cell_size: cell_size.map(Into::into),
             row_stride,
             cell_stride,
             fields: fields
@@ -1037,12 +1037,12 @@ impl VoxelGrid {
         data: Option<Bound<'_, PyBytes>>,
     ) -> Self {
         Self(foxglove::schemas::VoxelGrid {
-            timestamp: Some(timestamp.into()),
+            timestamp: timestamp.map(Into::into),
             frame_id: frame_id.to_string(),
-            pose: Some(pose.into()),
+            pose: pose.map(Into::into),
             row_count,
             column_count,
-            cell_size: Some(cell_size.into()),
+            cell_size: cell_size.map(Into::into),
             slice_stride,
             row_stride,
             cell_stride,
@@ -1253,9 +1253,9 @@ impl LaserScan {
         intensities: Option<Vec<f64>>,
     ) -> Self {
         Self(foxglove::schemas::LaserScan {
-            timestamp: Some(timestamp.into()),
+            timestamp: timestamp.map(Into::into),
             frame_id: frame_id.to_string(),
-            pose: Some(pose.into()),
+            pose: pose.map(Into::into),
             start_angle,
             end_angle,
             ranges: ranges.unwrap_or_default(),
@@ -1334,7 +1334,7 @@ impl LinePrimitive {
     ) -> Self {
         Self(foxglove::schemas::LinePrimitive {
             r#type: r#type as i32,
-            pose: Some(pose.into()),
+            pose: pose.map(Into::into),
             thickness,
             scale_invariant,
             points: points
@@ -1342,7 +1342,7 @@ impl LinePrimitive {
                 .into_iter()
                 .map(|x| x.into())
                 .collect(),
-            color: Some(color.into()),
+            color: color.map(Into::into),
             colors: colors
                 .unwrap_or_default()
                 .into_iter()
@@ -1423,7 +1423,7 @@ impl LocationFix {
         color: Option<Color>,
     ) -> Self {
         Self(foxglove::schemas::LocationFix {
-            timestamp: Some(timestamp.into()),
+            timestamp: timestamp.map(Into::into),
             frame_id: frame_id.to_string(),
             latitude,
             longitude,
@@ -1552,7 +1552,7 @@ impl Log {
         line: u32,
     ) -> Self {
         Self(foxglove::schemas::Log {
-            timestamp: Some(timestamp.into()),
+            timestamp: timestamp.map(Into::into),
             level: level as i32,
             message: message.to_string(),
             name: name.to_string(),
@@ -1609,7 +1609,7 @@ impl SceneEntityDeletion {
     #[pyo3(signature = (*, timestamp=None, r#type=SceneEntityDeletionType::MatchingId, id="") )]
     fn new(timestamp: Option<Timestamp>, r#type: SceneEntityDeletionType, id: &str) -> Self {
         Self(foxglove::schemas::SceneEntityDeletion {
-            timestamp: Some(timestamp.into()),
+            timestamp: timestamp.map(Into::into),
             r#type: r#type as i32,
             id: id.to_string(),
         })
@@ -1691,10 +1691,10 @@ impl SceneEntity {
         models: Option<Vec<ModelPrimitive>>,
     ) -> Self {
         Self(foxglove::schemas::SceneEntity {
-            timestamp: Some(timestamp.into()),
+            timestamp: timestamp.map(Into::into),
             frame_id: frame_id.to_string(),
             id: id.to_string(),
-            lifetime: Some(lifetime.into()),
+            lifetime: lifetime.map(Into::into),
             frame_locked,
             metadata: metadata
                 .unwrap_or_default()
@@ -1880,9 +1880,9 @@ impl ModelPrimitive {
         data: Option<Bound<'_, PyBytes>>,
     ) -> Self {
         Self(foxglove::schemas::ModelPrimitive {
-            pose: Some(pose.into()),
-            scale: Some(scale.into()),
-            color: Some(color.into()),
+            pose: pose.map(Into::into),
+            scale: scale.map(Into::into),
+            color: color.map(Into::into),
             override_color,
             url: url.to_string(),
             media_type: media_type.to_string(),
@@ -2100,9 +2100,9 @@ impl Point3InFrame {
     #[pyo3(signature = (*, timestamp=None, frame_id="", point=None) )]
     fn new(timestamp: Option<Timestamp>, frame_id: &str, point: Option<Point3>) -> Self {
         Self(foxglove::schemas::Point3InFrame {
-            timestamp: Some(timestamp.into()),
+            timestamp: timestamp.map(Into::into),
             frame_id: frame_id.to_string(),
-            point: Some(point.into()),
+            point: point.map(Into::into),
         })
     }
     fn __repr__(&self) -> String {
@@ -2166,9 +2166,9 @@ impl PointCloud {
         data: Option<Bound<'_, PyBytes>>,
     ) -> Self {
         Self(foxglove::schemas::PointCloud {
-            timestamp: Some(timestamp.into()),
+            timestamp: timestamp.map(Into::into),
             frame_id: frame_id.to_string(),
-            pose: Some(pose.into()),
+            pose: pose.map(Into::into),
             point_stride,
             fields: fields
                 .unwrap_or_default()
@@ -2247,20 +2247,20 @@ impl PointsAnnotation {
         thickness: f64,
     ) -> Self {
         Self(foxglove::schemas::PointsAnnotation {
-            timestamp: Some(timestamp.into()),
+            timestamp: timestamp.map(Into::into),
             r#type: r#type as i32,
             points: points
                 .unwrap_or_default()
                 .into_iter()
                 .map(|x| x.into())
                 .collect(),
-            outline_color: Some(outline_color.into()),
+            outline_color: outline_color.map(Into::into),
             outline_colors: outline_colors
                 .unwrap_or_default()
                 .into_iter()
                 .map(|x| x.into())
                 .collect(),
-            fill_color: Some(fill_color.into()),
+            fill_color: fill_color.map(Into::into),
             thickness,
         })
     }
@@ -2320,8 +2320,8 @@ impl Pose {
     #[pyo3(signature = (*, position=None, orientation=None) )]
     fn new(position: Option<Vector3>, orientation: Option<Quaternion>) -> Self {
         Self(foxglove::schemas::Pose {
-            position: Some(position.into()),
-            orientation: Some(orientation.into()),
+            position: position.map(Into::into),
+            orientation: orientation.map(Into::into),
         })
     }
     fn __repr__(&self) -> String {
@@ -2373,9 +2373,9 @@ impl PoseInFrame {
     #[pyo3(signature = (*, timestamp=None, frame_id="", pose=None) )]
     fn new(timestamp: Option<Timestamp>, frame_id: &str, pose: Option<Pose>) -> Self {
         Self(foxglove::schemas::PoseInFrame {
-            timestamp: Some(timestamp.into()),
+            timestamp: timestamp.map(Into::into),
             frame_id: frame_id.to_string(),
-            pose: Some(pose.into()),
+            pose: pose.map(Into::into),
         })
     }
     fn __repr__(&self) -> String {
@@ -2427,7 +2427,7 @@ impl PosesInFrame {
     #[pyo3(signature = (*, timestamp=None, frame_id="", poses=None) )]
     fn new(timestamp: Option<Timestamp>, frame_id: &str, poses: Option<Vec<Pose>>) -> Self {
         Self(foxglove::schemas::PosesInFrame {
-            timestamp: Some(timestamp.into()),
+            timestamp: timestamp.map(Into::into),
             frame_id: frame_id.to_string(),
             poses: poses
                 .unwrap_or_default()
@@ -2546,7 +2546,7 @@ impl RawAudio {
         number_of_channels: u32,
     ) -> Self {
         Self(foxglove::schemas::RawAudio {
-            timestamp: Some(timestamp.into()),
+            timestamp: timestamp.map(Into::into),
             data: data
                 .map(|x| Bytes::copy_from_slice(x.as_bytes()))
                 .unwrap_or_default(),
@@ -2673,7 +2673,7 @@ impl RawImage {
         data: Option<Bound<'_, PyBytes>>,
     ) -> Self {
         Self(foxglove::schemas::RawImage {
-            timestamp: Some(timestamp.into()),
+            timestamp: timestamp.map(Into::into),
             frame_id: frame_id.to_string(),
             width,
             height,
@@ -2739,9 +2739,9 @@ impl SpherePrimitive {
     #[pyo3(signature = (*, pose=None, size=None, color=None) )]
     fn new(pose: Option<Pose>, size: Option<Vector3>, color: Option<Color>) -> Self {
         Self(foxglove::schemas::SpherePrimitive {
-            pose: Some(pose.into()),
-            size: Some(size.into()),
-            color: Some(color.into()),
+            pose: pose.map(Into::into),
+            size: size.map(Into::into),
+            color: color.map(Into::into),
         })
     }
     fn __repr__(&self) -> String {
@@ -2806,12 +2806,12 @@ impl TextAnnotation {
         background_color: Option<Color>,
     ) -> Self {
         Self(foxglove::schemas::TextAnnotation {
-            timestamp: Some(timestamp.into()),
-            position: Some(position.into()),
+            timestamp: timestamp.map(Into::into),
+            position: position.map(Into::into),
             text: text.to_string(),
             font_size,
-            text_color: Some(text_color.into()),
-            background_color: Some(background_color.into()),
+            text_color: text_color.map(Into::into),
+            background_color: background_color.map(Into::into),
         })
     }
     fn __repr__(&self) -> String {
@@ -2880,11 +2880,11 @@ impl TextPrimitive {
         text: &str,
     ) -> Self {
         Self(foxglove::schemas::TextPrimitive {
-            pose: Some(pose.into()),
+            pose: pose.map(Into::into),
             billboard,
             font_size,
             scale_invariant,
-            color: Some(color.into()),
+            color: color.map(Into::into),
             text: text.to_string(),
         })
     }
@@ -2954,13 +2954,13 @@ impl TriangleListPrimitive {
         indices: Option<Vec<u32>>,
     ) -> Self {
         Self(foxglove::schemas::TriangleListPrimitive {
-            pose: Some(pose.into()),
+            pose: pose.map(Into::into),
             points: points
                 .unwrap_or_default()
                 .into_iter()
                 .map(|x| x.into())
                 .collect(),
-            color: Some(color.into()),
+            color: color.map(Into::into),
             colors: colors
                 .unwrap_or_default()
                 .into_iter()

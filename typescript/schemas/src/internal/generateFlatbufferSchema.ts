@@ -182,7 +182,7 @@ export function generateFlatbuffers(
           // can't have inline comments, so the lengthComment needs to be above
           lengthComment ?? ""
           // convert field.name to lowercase for flatbuffer compilation compliance
-        }  ${field.name.toLowerCase()}:${field.optional && !isArray ? `optional ${type}` : isArray ? `[${type}]` : type}${
+        }  ${field.name.toLowerCase()}:${isArray ? `[${type}]` : type}${
           defaultValue ? ` = ${defaultValue}` : ""
         } (id: ${fieldId});`;
       });
