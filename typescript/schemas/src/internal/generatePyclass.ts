@@ -87,9 +87,7 @@ export function generatePySchemaStub(schemas: FoxgloveSchema[]): string {
       const doc = ['    """', `    ${schema.description}`, '    """'];
       const params = schema.fields
         .map((field) => {
-          const typeStr = pythonCtorType(field);
-          const defaultStr = ` = ${pythonDefaultValue(field)}`;
-          return `        ${field.name}: ${typeStr}${defaultStr}`;
+          return `        ${field.name}: ${pythonCtorType(field)} = ${pythonDefaultValue(field)}`;
         })
         .join(",\n");
 
@@ -255,7 +253,6 @@ function generateMessageClass(schema: FoxgloveMessageSchema): string {
         if (field.array != undefined) {
           return `${safeRustName(field.name)}.unwrap_or_default().into_iter().map(|x| x.into()).collect()`;
         }
-        // Python binding always passes Option<nested>; foxglove struct expects Option<foxglove::T>
         return `${safeRustName(field.name)}.map(Into::into)`;
       case "enum":
         if (field.array != undefined) {
