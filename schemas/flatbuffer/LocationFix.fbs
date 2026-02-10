@@ -44,7 +44,7 @@ table LocationFix {
   position_covariance_type:PositionCovarianceType (id: 6);
 
   /// Color used to visualize the location
-  color:foxglove.Color (id: 7);
+  color:optional foxglove.Color (id: 7);
 }
 
 root_type LocationFix;

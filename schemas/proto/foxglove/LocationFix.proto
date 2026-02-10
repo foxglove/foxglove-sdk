@@ -45,5 +45,5 @@ message LocationFix {
   PositionCovarianceType position_covariance_type = 5;
 
   // Color used to visualize the location
-  foxglove.Color color = 8;
+  optional foxglove.Color color = 8;
 }

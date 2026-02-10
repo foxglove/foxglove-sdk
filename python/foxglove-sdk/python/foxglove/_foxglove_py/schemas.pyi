@@ -87,12 +87,12 @@ class ArrowPrimitive:
     def __init__(
         self,
         *,
-        pose: Pose | None = None,
+        pose: Pose | None,
         shaft_length: float = 0.0,
         shaft_diameter: float = 0.0,
         head_length: float = 0.0,
         head_diameter: float = 0.0,
-        color: Color | None = None,
+        color: Color | None,
     ) -> None: ...
     @staticmethod
     def get_schema() -> Schema:
@@ -111,7 +111,7 @@ class CameraCalibration:
     def __init__(
         self,
         *,
-        timestamp: Timestamp | None = None,
+        timestamp: Timestamp | None,
         frame_id: str = "",
         width: int = 0,
         height: int = 0,
@@ -138,12 +138,12 @@ class CircleAnnotation:
     def __init__(
         self,
         *,
-        timestamp: Timestamp | None = None,
-        position: Point2 | None = None,
+        timestamp: Timestamp | None,
+        position: Point2 | None,
         diameter: float = 0.0,
         thickness: float = 0.0,
-        fill_color: Color | None = None,
-        outline_color: Color | None = None,
+        fill_color: Color | None,
+        outline_color: Color | None,
     ) -> None: ...
     @staticmethod
     def get_schema() -> Schema:
@@ -179,7 +179,7 @@ class CompressedImage:
     def __init__(
         self,
         *,
-        timestamp: Timestamp | None = None,
+        timestamp: Timestamp | None,
         frame_id: str = "",
         data: bytes = b"",
         format: str = "",
@@ -201,7 +201,7 @@ class CompressedVideo:
     def __init__(
         self,
         *,
-        timestamp: Timestamp | None = None,
+        timestamp: Timestamp | None,
         frame_id: str = "",
         data: bytes = b"",
         format: str = "",
@@ -221,11 +221,7 @@ class CubePrimitive:
     """
 
     def __init__(
-        self,
-        *,
-        pose: Pose | None = None,
-        size: Vector3 | None = None,
-        color: Color | None = None,
+        self, *, pose: Pose | None, size: Vector3 | None, color: Color | None
     ) -> None: ...
     @staticmethod
     def get_schema() -> Schema:
@@ -244,11 +240,11 @@ class CylinderPrimitive:
     def __init__(
         self,
         *,
-        pose: Pose | None = None,
-        size: Vector3 | None = None,
+        pose: Pose | None,
+        size: Vector3 | None,
         bottom_scale: float = 0.0,
         top_scale: float = 0.0,
-        color: Color | None = None,
+        color: Color | None,
     ) -> None: ...
     @staticmethod
     def get_schema() -> Schema:
@@ -273,11 +269,11 @@ class FrameTransform:
     def __init__(
         self,
         *,
-        timestamp: Timestamp | None = None,
+        timestamp: Timestamp | None,
         parent_frame_id: str = "",
         child_frame_id: str = "",
-        translation: Vector3 | None = None,
-        rotation: Quaternion | None = None,
+        translation: Vector3 | None,
+        rotation: Quaternion | None,
     ) -> None: ...
     @staticmethod
     def get_schema() -> Schema:
@@ -326,11 +322,11 @@ class Grid:
     def __init__(
         self,
         *,
-        timestamp: Timestamp | None = None,
+        timestamp: Timestamp | None,
         frame_id: str = "",
-        pose: Pose | None = None,
+        pose: Pose | None,
         column_count: int = 0,
-        cell_size: Vector2 | None = None,
+        cell_size: Vector2 | None,
         row_stride: int = 0,
         cell_stride: int = 0,
         fields: list[PackedElementField] | None = None,
@@ -389,9 +385,9 @@ class LaserScan:
     def __init__(
         self,
         *,
-        timestamp: Timestamp | None = None,
+        timestamp: Timestamp | None,
         frame_id: str = "",
-        pose: Pose | None = None,
+        pose: Pose | None,
         start_angle: float = 0.0,
         end_angle: float = 0.0,
         ranges: list[float] | None = None,
@@ -415,11 +411,11 @@ class LinePrimitive:
         self,
         *,
         type: LinePrimitiveLineType = LinePrimitiveLineType.LineStrip,
-        pose: Pose | None = None,
+        pose: Pose | None,
         thickness: float = 0.0,
         scale_invariant: bool = False,
         points: list[Point3] | None = None,
-        color: Color | None = None,
+        color: Color | None,
         colors: list[Color] | None = None,
         indices: list[int] | None = None,
     ) -> None: ...
@@ -440,7 +436,7 @@ class LocationFix:
     def __init__(
         self,
         *,
-        timestamp: Timestamp | None = None,
+        timestamp: Timestamp | None,
         frame_id: str = "",
         latitude: float = 0.0,
         longitude: float = 0.0,
@@ -481,7 +477,7 @@ class Log:
     def __init__(
         self,
         *,
-        timestamp: Timestamp | None = None,
+        timestamp: Timestamp | None,
         level: LogLevel = LogLevel.Unknown,
         message: str = "",
         name: str = "",
@@ -505,9 +501,9 @@ class ModelPrimitive:
     def __init__(
         self,
         *,
-        pose: Pose | None = None,
-        scale: Vector3 | None = None,
-        color: Color | None = None,
+        pose: Pose | None,
+        scale: Vector3 | None,
+        color: Color | None,
         override_color: bool = False,
         url: str = "",
         media_type: str = "",
@@ -579,11 +575,7 @@ class Point3InFrame:
     """
 
     def __init__(
-        self,
-        *,
-        timestamp: Timestamp | None = None,
-        frame_id: str = "",
-        point: Point3 | None = None,
+        self, *, timestamp: Timestamp | None, frame_id: str = "", point: Point3 | None
     ) -> None: ...
     @staticmethod
     def get_schema() -> Schema:
@@ -602,9 +594,9 @@ class PointCloud:
     def __init__(
         self,
         *,
-        timestamp: Timestamp | None = None,
+        timestamp: Timestamp | None,
         frame_id: str = "",
-        pose: Pose | None = None,
+        pose: Pose | None,
         point_stride: int = 0,
         fields: list[PackedElementField] | None = None,
         data: bytes = b"",
@@ -626,12 +618,12 @@ class PointsAnnotation:
     def __init__(
         self,
         *,
-        timestamp: Timestamp | None = None,
+        timestamp: Timestamp | None,
         type: PointsAnnotationType = PointsAnnotationType.Unknown,
         points: list[Point2] | None = None,
-        outline_color: Color | None = None,
+        outline_color: Color | None,
         outline_colors: list[Color] | None = None,
-        fill_color: Color | None = None,
+        fill_color: Color | None,
         thickness: float = 0.0,
     ) -> None: ...
     @staticmethod
@@ -649,7 +641,7 @@ class Pose:
     """
 
     def __init__(
-        self, *, position: Vector3 | None = None, orientation: Quaternion | None = None
+        self, *, position: Vector3 | None, orientation: Quaternion | None
     ) -> None: ...
     @staticmethod
     def get_schema() -> Schema:
@@ -666,11 +658,7 @@ class PoseInFrame:
     """
 
     def __init__(
-        self,
-        *,
-        timestamp: Timestamp | None = None,
-        frame_id: str = "",
-        pose: Pose | None = None,
+        self, *, timestamp: Timestamp | None, frame_id: str = "", pose: Pose | None
     ) -> None: ...
     @staticmethod
     def get_schema() -> Schema:
@@ -689,7 +677,7 @@ class PosesInFrame:
     def __init__(
         self,
         *,
-        timestamp: Timestamp | None = None,
+        timestamp: Timestamp | None,
         frame_id: str = "",
         poses: list[Pose] | None = None,
     ) -> None: ...
@@ -727,7 +715,7 @@ class RawAudio:
     def __init__(
         self,
         *,
-        timestamp: Timestamp | None = None,
+        timestamp: Timestamp | None,
         data: bytes = b"",
         format: str = "",
         sample_rate: int = 0,
@@ -750,7 +738,7 @@ class RawImage:
     def __init__(
         self,
         *,
-        timestamp: Timestamp | None = None,
+        timestamp: Timestamp | None,
         frame_id: str = "",
         width: int = 0,
         height: int = 0,
@@ -775,10 +763,10 @@ class SceneEntity:
     def __init__(
         self,
         *,
-        timestamp: Timestamp | None = None,
+        timestamp: Timestamp | None,
         frame_id: str = "",
         id: str = "",
-        lifetime: Duration | None = None,
+        lifetime: Duration | None,
         frame_locked: bool = False,
         metadata: list[KeyValuePair] | None = None,
         arrows: list[ArrowPrimitive] | None = None,
@@ -807,7 +795,7 @@ class SceneEntityDeletion:
     def __init__(
         self,
         *,
-        timestamp: Timestamp | None = None,
+        timestamp: Timestamp | None,
         type: SceneEntityDeletionType = SceneEntityDeletionType.MatchingId,
         id: str = "",
     ) -> None: ...
@@ -846,11 +834,7 @@ class SpherePrimitive:
     """
 
     def __init__(
-        self,
-        *,
-        pose: Pose | None = None,
-        size: Vector3 | None = None,
-        color: Color | None = None,
+        self, *, pose: Pose | None, size: Vector3 | None, color: Color | None
     ) -> None: ...
     @staticmethod
     def get_schema() -> Schema:
@@ -869,12 +853,12 @@ class TextAnnotation:
     def __init__(
         self,
         *,
-        timestamp: Timestamp | None = None,
-        position: Point2 | None = None,
+        timestamp: Timestamp | None,
+        position: Point2 | None,
         text: str = "",
         font_size: float = 0.0,
-        text_color: Color | None = None,
-        background_color: Color | None = None,
+        text_color: Color | None,
+        background_color: Color | None,
     ) -> None: ...
     @staticmethod
     def get_schema() -> Schema:
@@ -893,11 +877,11 @@ class TextPrimitive:
     def __init__(
         self,
         *,
-        pose: Pose | None = None,
+        pose: Pose | None,
         billboard: bool = False,
         font_size: float = 0.0,
         scale_invariant: bool = False,
-        color: Color | None = None,
+        color: Color | None,
         text: str = "",
     ) -> None: ...
     @staticmethod
@@ -917,9 +901,9 @@ class TriangleListPrimitive:
     def __init__(
         self,
         *,
-        pose: Pose | None = None,
+        pose: Pose | None,
         points: list[Point3] | None = None,
-        color: Color | None = None,
+        color: Color | None,
         colors: list[Color] | None = None,
         indices: list[int] | None = None,
     ) -> None: ...
@@ -970,12 +954,12 @@ class VoxelGrid:
     def __init__(
         self,
         *,
-        timestamp: Timestamp | None = None,
+        timestamp: Timestamp | None,
         frame_id: str = "",
-        pose: Pose | None = None,
+        pose: Pose | None,
         row_count: int = 0,
         column_count: int = 0,
-        cell_size: Vector3 | None = None,
+        cell_size: Vector3 | None,
         slice_stride: int = 0,
         row_stride: int = 0,
         cell_stride: int = 0,

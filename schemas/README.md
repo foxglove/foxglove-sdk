@@ -4,6 +4,12 @@ See [Foxglove Schemas documentation](https://docs.foxglove.dev/docs/visualizatio
 
 All schemas are generated from [schemas.ts](/internal/schemas.ts).
 
+## Optional fields
+
+Some message fields are **optional**: they may be omitted and the consumer (e.g. a Foxglove panel) will use a default. Optional fields are marked in the table below.
+
+**IDLs without optional** (e.g. ROS 1 .msg): all fields must still be present in the message. To get the same effect as omitting an optional field, use an empty string or leave the nested message absent if the format allows.
+
 ## Contents
 
 - [enum LineType](#enum-linetype)
@@ -150,6 +156,7 @@ A primitive representing an arrow
   <tr>
     <th>field</th>
     <th>type</th>
+    <th>optional</th>
     <th>description</th>
   </tr>
 <tr>
@@ -159,6 +166,7 @@ A primitive representing an arrow
 [Pose](#pose)
 
 </td>
+<td></td>
 <td>
 
 Position of the arrow's tail and orientation of the arrow. Identity orientation means the arrow points in the +x direction.
@@ -172,6 +180,7 @@ Position of the arrow's tail and orientation of the arrow. Identity orientation 
 float64
 
 </td>
+<td></td>
 <td>
 
 Length of the arrow shaft
@@ -185,6 +194,7 @@ Length of the arrow shaft
 float64
 
 </td>
+<td></td>
 <td>
 
 Diameter of the arrow shaft
@@ -198,6 +208,7 @@ Diameter of the arrow shaft
 float64
 
 </td>
+<td></td>
 <td>
 
 Length of the arrow head
@@ -211,6 +222,7 @@ Length of the arrow head
 float64
 
 </td>
+<td></td>
 <td>
 
 Diameter of the arrow head
@@ -224,6 +236,7 @@ Diameter of the arrow head
 [Color](#color)
 
 </td>
+<td></td>
 <td>
 
 Color of the arrow
@@ -240,6 +253,7 @@ Camera calibration parameters
   <tr>
     <th>field</th>
     <th>type</th>
+    <th>optional</th>
     <th>description</th>
   </tr>
 <tr>
@@ -249,6 +263,7 @@ Camera calibration parameters
 [Timestamp](#timestamp)
 
 </td>
+<td></td>
 <td>
 
 Timestamp of calibration data
@@ -262,6 +277,7 @@ Timestamp of calibration data
 string
 
 </td>
+<td></td>
 <td>
 
 Frame of reference for the camera. The origin of the frame is the optical center of the camera. +x points to the right in the image, +y points down, and +z points into the plane of the image.
@@ -275,6 +291,7 @@ Frame of reference for the camera. The origin of the frame is the optical center
 uint32
 
 </td>
+<td></td>
 <td>
 
 Image width
@@ -288,6 +305,7 @@ Image width
 uint32
 
 </td>
+<td></td>
 <td>
 
 Image height
@@ -301,6 +319,7 @@ Image height
 string
 
 </td>
+<td></td>
 <td>
 
 Name of distortion model
@@ -316,6 +335,7 @@ Supported parameters: `plumb_bob` (k1, k2, p1, p2, k3), `rational_polynomial` (k
 float64[]
 
 </td>
+<td></td>
 <td>
 
 Distortion parameters
@@ -329,6 +349,7 @@ Distortion parameters
 float64[9]
 
 </td>
+<td></td>
 <td>
 
 Intrinsic camera matrix (3x3 row-major matrix)
@@ -355,6 +376,7 @@ K = [ 0 fy cy]
 float64[9]
 
 </td>
+<td></td>
 <td>
 
 Rectification matrix (stereo cameras only, 3x3 row-major matrix)
@@ -370,6 +392,7 @@ A rotation matrix aligning the camera coordinate system to the ideal stereo imag
 float64[12]
 
 </td>
+<td></td>
 <td>
 
 Projection/camera matrix (3x4 row-major matrix)
@@ -411,6 +434,7 @@ A circle annotation on a 2D image
   <tr>
     <th>field</th>
     <th>type</th>
+    <th>optional</th>
     <th>description</th>
   </tr>
 <tr>
@@ -420,6 +444,7 @@ A circle annotation on a 2D image
 [Timestamp](#timestamp)
 
 </td>
+<td></td>
 <td>
 
 Timestamp of circle
@@ -433,6 +458,7 @@ Timestamp of circle
 [Point2](#point2)
 
 </td>
+<td></td>
 <td>
 
 Center of the circle in 2D image coordinates (pixels).
@@ -447,6 +473,7 @@ The coordinate uses the top-left corner of the top-left pixel of the image as th
 float64
 
 </td>
+<td></td>
 <td>
 
 Circle diameter in pixels
@@ -460,6 +487,7 @@ Circle diameter in pixels
 float64
 
 </td>
+<td></td>
 <td>
 
 Line thickness in pixels
@@ -473,6 +501,7 @@ Line thickness in pixels
 [Color](#color)
 
 </td>
+<td></td>
 <td>
 
 Fill color
@@ -486,6 +515,7 @@ Fill color
 [Color](#color)
 
 </td>
+<td></td>
 <td>
 
 Outline color
@@ -502,6 +532,7 @@ A color in RGBA format
   <tr>
     <th>field</th>
     <th>type</th>
+    <th>optional</th>
     <th>description</th>
   </tr>
 <tr>
@@ -511,6 +542,7 @@ A color in RGBA format
 float64
 
 </td>
+<td></td>
 <td>
 
 Red value between 0 and 1
@@ -524,6 +556,7 @@ Red value between 0 and 1
 float64
 
 </td>
+<td></td>
 <td>
 
 Green value between 0 and 1
@@ -537,6 +570,7 @@ Green value between 0 and 1
 float64
 
 </td>
+<td></td>
 <td>
 
 Blue value between 0 and 1
@@ -550,6 +584,7 @@ Blue value between 0 and 1
 float64
 
 </td>
+<td></td>
 <td>
 
 Alpha value between 0 and 1
@@ -566,6 +601,7 @@ A compressed image
   <tr>
     <th>field</th>
     <th>type</th>
+    <th>optional</th>
     <th>description</th>
   </tr>
 <tr>
@@ -575,6 +611,7 @@ A compressed image
 [Timestamp](#timestamp)
 
 </td>
+<td></td>
 <td>
 
 Timestamp of image
@@ -588,6 +625,7 @@ Timestamp of image
 string
 
 </td>
+<td></td>
 <td>
 
 Frame of reference for the image. The origin of the frame is the optical center of the camera. +x points to the right in the image, +y points down, and +z points into the plane of the image.
@@ -601,6 +639,7 @@ Frame of reference for the image. The origin of the frame is the optical center 
 bytes
 
 </td>
+<td></td>
 <td>
 
 Compressed image data
@@ -614,6 +653,7 @@ Compressed image data
 string
 
 </td>
+<td></td>
 <td>
 
 Image format
@@ -632,6 +672,7 @@ A single frame of a compressed video bitstream
   <tr>
     <th>field</th>
     <th>type</th>
+    <th>optional</th>
     <th>description</th>
   </tr>
 <tr>
@@ -641,6 +682,7 @@ A single frame of a compressed video bitstream
 [Timestamp](#timestamp)
 
 </td>
+<td></td>
 <td>
 
 Timestamp of video frame
@@ -654,6 +696,7 @@ Timestamp of video frame
 string
 
 </td>
+<td></td>
 <td>
 
 Frame of reference for the video.
@@ -669,6 +712,7 @@ The origin of the frame is the optical center of the camera. +x points to the ri
 bytes
 
 </td>
+<td></td>
 <td>
 
 Compressed video frame data.
@@ -704,6 +748,7 @@ Specifically, the requirements for different `format` values are:
 string
 
 </td>
+<td></td>
 <td>
 
 Video format.
@@ -724,6 +769,7 @@ A primitive representing a cube or rectangular prism
   <tr>
     <th>field</th>
     <th>type</th>
+    <th>optional</th>
     <th>description</th>
   </tr>
 <tr>
@@ -733,6 +779,7 @@ A primitive representing a cube or rectangular prism
 [Pose](#pose)
 
 </td>
+<td></td>
 <td>
 
 Position of the center of the cube and orientation of the cube
@@ -746,6 +793,7 @@ Position of the center of the cube and orientation of the cube
 [Vector3](#vector3)
 
 </td>
+<td></td>
 <td>
 
 Size of the cube along each axis
@@ -759,6 +807,7 @@ Size of the cube along each axis
 [Color](#color)
 
 </td>
+<td></td>
 <td>
 
 Color of the cube
@@ -775,6 +824,7 @@ A primitive representing a cylinder, elliptic cylinder, or truncated cone
   <tr>
     <th>field</th>
     <th>type</th>
+    <th>optional</th>
     <th>description</th>
   </tr>
 <tr>
@@ -784,6 +834,7 @@ A primitive representing a cylinder, elliptic cylinder, or truncated cone
 [Pose](#pose)
 
 </td>
+<td></td>
 <td>
 
 Position of the center of the cylinder and orientation of the cylinder. The flat face(s) are perpendicular to the z-axis.
@@ -797,6 +848,7 @@ Position of the center of the cylinder and orientation of the cylinder. The flat
 [Vector3](#vector3)
 
 </td>
+<td></td>
 <td>
 
 Size of the cylinder's bounding box
@@ -810,6 +862,7 @@ Size of the cylinder's bounding box
 float64
 
 </td>
+<td></td>
 <td>
 
 0-1, ratio of the diameter of the cylinder's bottom face (min z) to the bottom of the bounding box
@@ -823,6 +876,7 @@ float64
 float64
 
 </td>
+<td></td>
 <td>
 
 0-1, ratio of the diameter of the cylinder's top face (max z) to the top of the bounding box
@@ -836,6 +890,7 @@ float64
 [Color](#color)
 
 </td>
+<td></td>
 <td>
 
 Color of the cylinder
@@ -852,6 +907,7 @@ A duration of time, composed of seconds and nanoseconds
   <tr>
     <th>field</th>
     <th>type</th>
+    <th>optional</th>
     <th>description</th>
   </tr>
 <tr>
@@ -861,6 +917,7 @@ A duration of time, composed of seconds and nanoseconds
 int32
 
 </td>
+<td></td>
 <td>
 
 The number of seconds in the duration
@@ -874,6 +931,7 @@ The number of seconds in the duration
 uint32
 
 </td>
+<td></td>
 <td>
 
 The number of nanoseconds in the positive direction
@@ -896,6 +954,7 @@ Examples:
   <tr>
     <th>field</th>
     <th>type</th>
+    <th>optional</th>
     <th>description</th>
   </tr>
 <tr>
@@ -905,6 +964,7 @@ Examples:
 [Timestamp](#timestamp)
 
 </td>
+<td></td>
 <td>
 
 Timestamp of transform
@@ -918,6 +978,7 @@ Timestamp of transform
 string
 
 </td>
+<td></td>
 <td>
 
 Name of the parent frame
@@ -931,6 +992,7 @@ Name of the parent frame
 string
 
 </td>
+<td></td>
 <td>
 
 Name of the child frame
@@ -944,6 +1006,7 @@ Name of the child frame
 [Vector3](#vector3)
 
 </td>
+<td></td>
 <td>
 
 Translation component of the transform, representing the position of the child frame's origin in the parent frame.
@@ -957,6 +1020,7 @@ Translation component of the transform, representing the position of the child f
 [Quaternion](#quaternion)
 
 </td>
+<td></td>
 <td>
 
 Rotation component of the transform, representing the orientation of the child frame in the parent frame
@@ -973,6 +1037,7 @@ An array of FrameTransform messages
   <tr>
     <th>field</th>
     <th>type</th>
+    <th>optional</th>
     <th>description</th>
   </tr>
 <tr>
@@ -982,6 +1047,7 @@ An array of FrameTransform messages
 [FrameTransform](#frametransform)[]
 
 </td>
+<td></td>
 <td>
 
 Array of transforms
@@ -998,6 +1064,7 @@ GeoJSON data for annotating maps
   <tr>
     <th>field</th>
     <th>type</th>
+    <th>optional</th>
     <th>description</th>
   </tr>
 <tr>
@@ -1007,6 +1074,7 @@ GeoJSON data for annotating maps
 string
 
 </td>
+<td></td>
 <td>
 
 GeoJSON data encoded as a UTF-8 string
@@ -1023,6 +1091,7 @@ A 2D grid of data
   <tr>
     <th>field</th>
     <th>type</th>
+    <th>optional</th>
     <th>description</th>
   </tr>
 <tr>
@@ -1032,6 +1101,7 @@ A 2D grid of data
 [Timestamp](#timestamp)
 
 </td>
+<td></td>
 <td>
 
 Timestamp of grid
@@ -1045,6 +1115,7 @@ Timestamp of grid
 string
 
 </td>
+<td></td>
 <td>
 
 Frame of reference
@@ -1058,6 +1129,7 @@ Frame of reference
 [Pose](#pose)
 
 </td>
+<td></td>
 <td>
 
 Origin of grid's corner relative to frame of reference; grid is positioned in the x-y plane relative to this origin
@@ -1071,6 +1143,7 @@ Origin of grid's corner relative to frame of reference; grid is positioned in th
 uint32
 
 </td>
+<td></td>
 <td>
 
 Number of grid columns
@@ -1084,6 +1157,7 @@ Number of grid columns
 [Vector2](#vector2)
 
 </td>
+<td></td>
 <td>
 
 Size of single grid cell along x and y axes, relative to `pose`
@@ -1097,6 +1171,7 @@ Size of single grid cell along x and y axes, relative to `pose`
 uint32
 
 </td>
+<td></td>
 <td>
 
 Number of bytes between rows in `data`
@@ -1110,6 +1185,7 @@ Number of bytes between rows in `data`
 uint32
 
 </td>
+<td></td>
 <td>
 
 Number of bytes between cells within a row in `data`
@@ -1123,6 +1199,7 @@ Number of bytes between cells within a row in `data`
 [PackedElementField](#packedelementfield)[]
 
 </td>
+<td></td>
 <td>
 
 Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.
@@ -1173,6 +1250,7 @@ When these fields are present, the 3D panel will offer additional "Color Mode" o
 bytes
 
 </td>
+<td></td>
 <td>
 
 Grid cell data, interpreted using `fields`, in row-major (y-major) order.
@@ -1193,6 +1271,7 @@ Array of annotations for a 2D image
   <tr>
     <th>field</th>
     <th>type</th>
+    <th>optional</th>
     <th>description</th>
   </tr>
 <tr>
@@ -1202,6 +1281,7 @@ Array of annotations for a 2D image
 [CircleAnnotation](#circleannotation)[]
 
 </td>
+<td></td>
 <td>
 
 Circle annotations
@@ -1215,6 +1295,7 @@ Circle annotations
 [PointsAnnotation](#pointsannotation)[]
 
 </td>
+<td></td>
 <td>
 
 Points annotations
@@ -1228,6 +1309,7 @@ Points annotations
 [TextAnnotation](#textannotation)[]
 
 </td>
+<td></td>
 <td>
 
 Text annotations
@@ -1244,6 +1326,7 @@ A key with its associated value
   <tr>
     <th>field</th>
     <th>type</th>
+    <th>optional</th>
     <th>description</th>
   </tr>
 <tr>
@@ -1253,6 +1336,7 @@ A key with its associated value
 string
 
 </td>
+<td></td>
 <td>
 
 Key
@@ -1266,6 +1350,7 @@ Key
 string
 
 </td>
+<td></td>
 <td>
 
 Value
@@ -1282,6 +1367,7 @@ A single scan from a planar laser range-finder
   <tr>
     <th>field</th>
     <th>type</th>
+    <th>optional</th>
     <th>description</th>
   </tr>
 <tr>
@@ -1291,6 +1377,7 @@ A single scan from a planar laser range-finder
 [Timestamp](#timestamp)
 
 </td>
+<td></td>
 <td>
 
 Timestamp of scan
@@ -1304,6 +1391,7 @@ Timestamp of scan
 string
 
 </td>
+<td></td>
 <td>
 
 Frame of reference
@@ -1317,6 +1405,7 @@ Frame of reference
 [Pose](#pose)
 
 </td>
+<td></td>
 <td>
 
 Origin of scan relative to frame of reference; points are positioned in the x-y plane relative to this origin; angles are interpreted as counterclockwise rotations around the z axis with 0 rad being in the +x direction
@@ -1330,6 +1419,7 @@ Origin of scan relative to frame of reference; points are positioned in the x-y 
 float64
 
 </td>
+<td></td>
 <td>
 
 Bearing of first point, in radians
@@ -1343,6 +1433,7 @@ Bearing of first point, in radians
 float64
 
 </td>
+<td></td>
 <td>
 
 Bearing of last point, in radians
@@ -1356,6 +1447,7 @@ Bearing of last point, in radians
 float64[]
 
 </td>
+<td></td>
 <td>
 
 Distance of detections from origin; assumed to be at equally-spaced angles between `start_angle` and `end_angle`
@@ -1369,6 +1461,7 @@ Distance of detections from origin; assumed to be at equally-spaced angles betwe
 float64[]
 
 </td>
+<td></td>
 <td>
 
 Intensity of detections
@@ -1385,6 +1478,7 @@ A primitive representing a series of points connected by lines
   <tr>
     <th>field</th>
     <th>type</th>
+    <th>optional</th>
     <th>description</th>
   </tr>
 <tr>
@@ -1394,6 +1488,7 @@ A primitive representing a series of points connected by lines
 [enum LineType](#enum-linetype)
 
 </td>
+<td></td>
 <td>
 
 Drawing primitive to use for lines
@@ -1407,6 +1502,7 @@ Drawing primitive to use for lines
 [Pose](#pose)
 
 </td>
+<td></td>
 <td>
 
 Origin of lines relative to reference frame
@@ -1420,6 +1516,7 @@ Origin of lines relative to reference frame
 float64
 
 </td>
+<td></td>
 <td>
 
 Line thickness
@@ -1433,6 +1530,7 @@ Line thickness
 boolean
 
 </td>
+<td></td>
 <td>
 
 Indicates whether `thickness` is a fixed size in screen pixels (true), or specified in world coordinates and scales with distance from the camera (false)
@@ -1446,6 +1544,7 @@ Indicates whether `thickness` is a fixed size in screen pixels (true), or specif
 [Point3](#point3)[]
 
 </td>
+<td></td>
 <td>
 
 Points along the line
@@ -1459,6 +1558,7 @@ Points along the line
 [Color](#color)
 
 </td>
+<td></td>
 <td>
 
 Solid color to use for the whole line. Ignored if `colors` is non-empty.
@@ -1472,6 +1572,7 @@ Solid color to use for the whole line. Ignored if `colors` is non-empty.
 [Color](#color)[]
 
 </td>
+<td></td>
 <td>
 
 Per-point colors (if non-empty, must have the same length as `points`).
@@ -1485,6 +1586,7 @@ Per-point colors (if non-empty, must have the same length as `points`).
 uint32[]
 
 </td>
+<td></td>
 <td>
 
 Indices into the `points` and `colors` attribute arrays, which can be used to avoid duplicating attribute data.
@@ -1503,6 +1605,7 @@ A navigation satellite fix for any Global Navigation Satellite System
   <tr>
     <th>field</th>
     <th>type</th>
+    <th>optional</th>
     <th>description</th>
   </tr>
 <tr>
@@ -1512,6 +1615,7 @@ A navigation satellite fix for any Global Navigation Satellite System
 [Timestamp](#timestamp)
 
 </td>
+<td></td>
 <td>
 
 Timestamp of the message
@@ -1525,6 +1629,7 @@ Timestamp of the message
 string
 
 </td>
+<td></td>
 <td>
 
 Frame for the sensor. Latitude and longitude readings are at the origin of the frame.
@@ -1538,6 +1643,7 @@ Frame for the sensor. Latitude and longitude readings are at the origin of the f
 float64
 
 </td>
+<td></td>
 <td>
 
 Latitude in degrees
@@ -1551,6 +1657,7 @@ Latitude in degrees
 float64
 
 </td>
+<td></td>
 <td>
 
 Longitude in degrees
@@ -1564,6 +1671,7 @@ Longitude in degrees
 float64
 
 </td>
+<td></td>
 <td>
 
 Altitude in meters
@@ -1577,6 +1685,7 @@ Altitude in meters
 float64[9]
 
 </td>
+<td></td>
 <td>
 
 Position covariance (m^2) defined relative to a tangential plane through the reported position. The components are East, North, and Up (ENU), in row-major order.
@@ -1590,6 +1699,7 @@ Position covariance (m^2) defined relative to a tangential plane through the rep
 [enum PositionCovarianceType](#enum-positioncovariancetype)
 
 </td>
+<td></td>
 <td>
 
 If `position_covariance` is available, `position_covariance_type` must be set to indicate the type of covariance.
@@ -1603,6 +1713,7 @@ If `position_covariance` is available, `position_covariance_type` must be set to
 [Color](#color)
 
 </td>
+<td>yes</td>
 <td>
 
 Color used to visualize the location
@@ -1619,6 +1730,7 @@ A group of LocationFix messages
   <tr>
     <th>field</th>
     <th>type</th>
+    <th>optional</th>
     <th>description</th>
   </tr>
 <tr>
@@ -1628,6 +1740,7 @@ A group of LocationFix messages
 [LocationFix](#locationfix)[]
 
 </td>
+<td></td>
 <td>
 
 An array of location fixes
@@ -1644,6 +1757,7 @@ A log message
   <tr>
     <th>field</th>
     <th>type</th>
+    <th>optional</th>
     <th>description</th>
   </tr>
 <tr>
@@ -1653,6 +1767,7 @@ A log message
 [Timestamp](#timestamp)
 
 </td>
+<td></td>
 <td>
 
 Timestamp of log message
@@ -1666,6 +1781,7 @@ Timestamp of log message
 [enum LogLevel](#enum-loglevel)
 
 </td>
+<td></td>
 <td>
 
 Log level
@@ -1679,6 +1795,7 @@ Log level
 string
 
 </td>
+<td></td>
 <td>
 
 Log message
@@ -1692,6 +1809,7 @@ Log message
 string
 
 </td>
+<td></td>
 <td>
 
 Process or node name
@@ -1705,6 +1823,7 @@ Process or node name
 string
 
 </td>
+<td></td>
 <td>
 
 Filename
@@ -1718,6 +1837,7 @@ Filename
 uint32
 
 </td>
+<td></td>
 <td>
 
 Line number in the file
@@ -1734,6 +1854,7 @@ A primitive representing a 3D model file loaded from an external URL or embedded
   <tr>
     <th>field</th>
     <th>type</th>
+    <th>optional</th>
     <th>description</th>
   </tr>
 <tr>
@@ -1743,6 +1864,7 @@ A primitive representing a 3D model file loaded from an external URL or embedded
 [Pose](#pose)
 
 </td>
+<td></td>
 <td>
 
 Origin of model relative to reference frame
@@ -1756,6 +1878,7 @@ Origin of model relative to reference frame
 [Vector3](#vector3)
 
 </td>
+<td></td>
 <td>
 
 Scale factor to apply to the model along each axis
@@ -1769,6 +1892,7 @@ Scale factor to apply to the model along each axis
 [Color](#color)
 
 </td>
+<td></td>
 <td>
 
 Solid color to use for the whole model if `override_color` is true.
@@ -1782,6 +1906,7 @@ Solid color to use for the whole model if `override_color` is true.
 boolean
 
 </td>
+<td></td>
 <td>
 
 Whether to use the color specified in `color` instead of any materials embedded in the original model.
@@ -1795,6 +1920,7 @@ Whether to use the color specified in `color` instead of any materials embedded 
 string
 
 </td>
+<td></td>
 <td>
 
 URL pointing to model file. One of `url` or `data` should be non-empty.
@@ -1808,6 +1934,7 @@ URL pointing to model file. One of `url` or `data` should be non-empty.
 string
 
 </td>
+<td></td>
 <td>
 
 [Media type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types) of embedded model (e.g. `model/gltf-binary`). Required if `data` is provided instead of `url`. Overrides the inferred media type if `url` is provided.
@@ -1821,6 +1948,7 @@ string
 bytes
 
 </td>
+<td></td>
 <td>
 
 Embedded model. One of `url` or `data` should be non-empty. If `data` is non-empty, `media_type` must be set to indicate the type of the data.
@@ -1837,6 +1965,7 @@ A field present within each element in a byte array of packed elements.
   <tr>
     <th>field</th>
     <th>type</th>
+    <th>optional</th>
     <th>description</th>
   </tr>
 <tr>
@@ -1846,6 +1975,7 @@ A field present within each element in a byte array of packed elements.
 string
 
 </td>
+<td></td>
 <td>
 
 Name of the field
@@ -1859,6 +1989,7 @@ Name of the field
 uint32
 
 </td>
+<td></td>
 <td>
 
 Byte offset from start of data buffer
@@ -1872,6 +2003,7 @@ Byte offset from start of data buffer
 [enum NumericType](#enum-numerictype)
 
 </td>
+<td></td>
 <td>
 
 Type of data in the field. Integers are stored using little-endian byte order.
@@ -1888,6 +2020,7 @@ A point representing a position in 2D space
   <tr>
     <th>field</th>
     <th>type</th>
+    <th>optional</th>
     <th>description</th>
   </tr>
 <tr>
@@ -1897,6 +2030,7 @@ A point representing a position in 2D space
 float64
 
 </td>
+<td></td>
 <td>
 
 x coordinate position
@@ -1910,6 +2044,7 @@ x coordinate position
 float64
 
 </td>
+<td></td>
 <td>
 
 y coordinate position
@@ -1926,6 +2061,7 @@ A point representing a position in 3D space
   <tr>
     <th>field</th>
     <th>type</th>
+    <th>optional</th>
     <th>description</th>
   </tr>
 <tr>
@@ -1935,6 +2071,7 @@ A point representing a position in 3D space
 float64
 
 </td>
+<td></td>
 <td>
 
 x coordinate position
@@ -1948,6 +2085,7 @@ x coordinate position
 float64
 
 </td>
+<td></td>
 <td>
 
 y coordinate position
@@ -1961,6 +2099,7 @@ y coordinate position
 float64
 
 </td>
+<td></td>
 <td>
 
 z coordinate position
@@ -1977,6 +2116,7 @@ A timestamped point for a position in 3D space
   <tr>
     <th>field</th>
     <th>type</th>
+    <th>optional</th>
     <th>description</th>
   </tr>
 <tr>
@@ -1986,6 +2126,7 @@ A timestamped point for a position in 3D space
 [Timestamp](#timestamp)
 
 </td>
+<td></td>
 <td>
 
 Timestamp of point
@@ -1999,6 +2140,7 @@ Timestamp of point
 string
 
 </td>
+<td></td>
 <td>
 
 Frame of reference for point position
@@ -2012,6 +2154,7 @@ Frame of reference for point position
 [Point3](#point3)
 
 </td>
+<td></td>
 <td>
 
 Point in 3D space
@@ -2028,6 +2171,7 @@ A collection of N-dimensional points, which may contain additional fields with i
   <tr>
     <th>field</th>
     <th>type</th>
+    <th>optional</th>
     <th>description</th>
   </tr>
 <tr>
@@ -2037,6 +2181,7 @@ A collection of N-dimensional points, which may contain additional fields with i
 [Timestamp](#timestamp)
 
 </td>
+<td></td>
 <td>
 
 Timestamp of point cloud
@@ -2050,6 +2195,7 @@ Timestamp of point cloud
 string
 
 </td>
+<td></td>
 <td>
 
 Frame of reference
@@ -2063,6 +2209,7 @@ Frame of reference
 [Pose](#pose)
 
 </td>
+<td></td>
 <td>
 
 The origin of the point cloud relative to the frame of reference
@@ -2076,6 +2223,7 @@ The origin of the point cloud relative to the frame of reference
 uint32
 
 </td>
+<td></td>
 <td>
 
 Number of bytes between points in the `data`
@@ -2089,6 +2237,7 @@ Number of bytes between points in the `data`
 [PackedElementField](#packedelementfield)[]
 
 </td>
+<td></td>
 <td>
 
 Fields in `data`. At least 2 coordinate fields from `x`, `y`, and `z` are required for each point's position; `red`, `green`, `blue`, and `alpha` are optional for customizing each point's color.
@@ -2102,6 +2251,7 @@ Fields in `data`. At least 2 coordinate fields from `x`, `y`, and `z` are requir
 bytes
 
 </td>
+<td></td>
 <td>
 
 Point data, interpreted using `fields`
@@ -2118,6 +2268,7 @@ An array of points on a 2D image
   <tr>
     <th>field</th>
     <th>type</th>
+    <th>optional</th>
     <th>description</th>
   </tr>
 <tr>
@@ -2127,6 +2278,7 @@ An array of points on a 2D image
 [Timestamp](#timestamp)
 
 </td>
+<td></td>
 <td>
 
 Timestamp of annotation
@@ -2140,6 +2292,7 @@ Timestamp of annotation
 [enum PointsAnnotationType](#enum-pointsannotationtype)
 
 </td>
+<td></td>
 <td>
 
 Type of points annotation to draw
@@ -2153,6 +2306,7 @@ Type of points annotation to draw
 [Point2](#point2)[]
 
 </td>
+<td></td>
 <td>
 
 Points in 2D image coordinates (pixels).
@@ -2167,6 +2321,7 @@ These coordinates use the top-left corner of the top-left pixel of the image as 
 [Color](#color)
 
 </td>
+<td></td>
 <td>
 
 Outline color
@@ -2180,6 +2335,7 @@ Outline color
 [Color](#color)[]
 
 </td>
+<td></td>
 <td>
 
 Per-point colors, if `type` is `POINTS`, or per-segment stroke colors, if `type` is `LINE_LIST`, `LINE_STRIP` or `LINE_LOOP`.
@@ -2193,6 +2349,7 @@ Per-point colors, if `type` is `POINTS`, or per-segment stroke colors, if `type`
 [Color](#color)
 
 </td>
+<td></td>
 <td>
 
 Fill color
@@ -2206,6 +2363,7 @@ Fill color
 float64
 
 </td>
+<td></td>
 <td>
 
 Stroke thickness in pixels
@@ -2222,6 +2380,7 @@ A position and orientation for an object or reference frame in 3D space
   <tr>
     <th>field</th>
     <th>type</th>
+    <th>optional</th>
     <th>description</th>
   </tr>
 <tr>
@@ -2231,6 +2390,7 @@ A position and orientation for an object or reference frame in 3D space
 [Vector3](#vector3)
 
 </td>
+<td></td>
 <td>
 
 Point denoting position in 3D space
@@ -2244,6 +2404,7 @@ Point denoting position in 3D space
 [Quaternion](#quaternion)
 
 </td>
+<td></td>
 <td>
 
 Quaternion denoting orientation in 3D space
@@ -2260,6 +2421,7 @@ A timestamped pose for an object or reference frame in 3D space
   <tr>
     <th>field</th>
     <th>type</th>
+    <th>optional</th>
     <th>description</th>
   </tr>
 <tr>
@@ -2269,6 +2431,7 @@ A timestamped pose for an object or reference frame in 3D space
 [Timestamp](#timestamp)
 
 </td>
+<td></td>
 <td>
 
 Timestamp of pose
@@ -2282,6 +2445,7 @@ Timestamp of pose
 string
 
 </td>
+<td></td>
 <td>
 
 Frame of reference for pose position and orientation
@@ -2295,6 +2459,7 @@ Frame of reference for pose position and orientation
 [Pose](#pose)
 
 </td>
+<td></td>
 <td>
 
 Pose in 3D space
@@ -2311,6 +2476,7 @@ An array of timestamped poses for an object or reference frame in 3D space
   <tr>
     <th>field</th>
     <th>type</th>
+    <th>optional</th>
     <th>description</th>
   </tr>
 <tr>
@@ -2320,6 +2486,7 @@ An array of timestamped poses for an object or reference frame in 3D space
 [Timestamp](#timestamp)
 
 </td>
+<td></td>
 <td>
 
 Timestamp of pose
@@ -2333,6 +2500,7 @@ Timestamp of pose
 string
 
 </td>
+<td></td>
 <td>
 
 Frame of reference for pose position and orientation
@@ -2346,6 +2514,7 @@ Frame of reference for pose position and orientation
 [Pose](#pose)[]
 
 </td>
+<td></td>
 <td>
 
 Poses in 3D space
@@ -2362,6 +2531,7 @@ A [quaternion](https://eater.net/quaternions) representing a rotation in 3D spac
   <tr>
     <th>field</th>
     <th>type</th>
+    <th>optional</th>
     <th>description</th>
   </tr>
 <tr>
@@ -2371,6 +2541,7 @@ A [quaternion](https://eater.net/quaternions) representing a rotation in 3D spac
 float64
 
 </td>
+<td></td>
 <td>
 
 x value
@@ -2384,6 +2555,7 @@ x value
 float64
 
 </td>
+<td></td>
 <td>
 
 y value
@@ -2397,6 +2569,7 @@ y value
 float64
 
 </td>
+<td></td>
 <td>
 
 z value
@@ -2410,6 +2583,7 @@ z value
 float64
 
 </td>
+<td></td>
 <td>
 
 w value
@@ -2426,6 +2600,7 @@ A single block of an audio bitstream
   <tr>
     <th>field</th>
     <th>type</th>
+    <th>optional</th>
     <th>description</th>
   </tr>
 <tr>
@@ -2435,6 +2610,7 @@ A single block of an audio bitstream
 [Timestamp](#timestamp)
 
 </td>
+<td></td>
 <td>
 
 Timestamp of the start of the audio block
@@ -2448,6 +2624,7 @@ Timestamp of the start of the audio block
 bytes
 
 </td>
+<td></td>
 <td>
 
 Audio data. The samples in the data must be interleaved and little-endian
@@ -2461,6 +2638,7 @@ Audio data. The samples in the data must be interleaved and little-endian
 string
 
 </td>
+<td></td>
 <td>
 
 Audio format. Only 'pcm-s16' is currently supported
@@ -2474,6 +2652,7 @@ Audio format. Only 'pcm-s16' is currently supported
 uint32
 
 </td>
+<td></td>
 <td>
 
 Sample rate in Hz
@@ -2487,6 +2666,7 @@ Sample rate in Hz
 uint32
 
 </td>
+<td></td>
 <td>
 
 Number of channels in the audio block
@@ -2503,6 +2683,7 @@ A raw image
   <tr>
     <th>field</th>
     <th>type</th>
+    <th>optional</th>
     <th>description</th>
   </tr>
 <tr>
@@ -2512,6 +2693,7 @@ A raw image
 [Timestamp](#timestamp)
 
 </td>
+<td></td>
 <td>
 
 Timestamp of image
@@ -2525,6 +2707,7 @@ Timestamp of image
 string
 
 </td>
+<td></td>
 <td>
 
 Frame of reference for the image. The origin of the frame is the optical center of the camera. +x points to the right in the image, +y points down, and +z points into the plane of the image.
@@ -2538,6 +2721,7 @@ Frame of reference for the image. The origin of the frame is the optical center 
 uint32
 
 </td>
+<td></td>
 <td>
 
 Image width in pixels
@@ -2551,6 +2735,7 @@ Image width in pixels
 uint32
 
 </td>
+<td></td>
 <td>
 
 Image height in pixels
@@ -2564,6 +2749,7 @@ Image height in pixels
 string
 
 </td>
+<td></td>
 <td>
 
 Encoding of the raw image data. See the `data` field description for supported values.
@@ -2577,6 +2763,7 @@ Encoding of the raw image data. See the `data` field description for supported v
 uint32
 
 </td>
+<td></td>
 <td>
 
 Byte length of a single row. This is usually some multiple of `width` depending on the encoding, but can be greater to incorporate padding.
@@ -2590,6 +2777,7 @@ Byte length of a single row. This is usually some multiple of `width` depending 
 bytes
 
 </td>
+<td></td>
 <td>
 
 Raw image data.
@@ -2659,6 +2847,7 @@ A visual element in a 3D scene. An entity may be composed of multiple primitives
   <tr>
     <th>field</th>
     <th>type</th>
+    <th>optional</th>
     <th>description</th>
   </tr>
 <tr>
@@ -2668,6 +2857,7 @@ A visual element in a 3D scene. An entity may be composed of multiple primitives
 [Timestamp](#timestamp)
 
 </td>
+<td></td>
 <td>
 
 Timestamp of the entity
@@ -2681,6 +2871,7 @@ Timestamp of the entity
 string
 
 </td>
+<td></td>
 <td>
 
 Frame of reference
@@ -2694,6 +2885,7 @@ Frame of reference
 string
 
 </td>
+<td></td>
 <td>
 
 Identifier for the entity. A entity will replace any prior entity on the same topic with the same `id`.
@@ -2707,6 +2899,7 @@ Identifier for the entity. A entity will replace any prior entity on the same to
 [Duration](#duration)
 
 </td>
+<td></td>
 <td>
 
 Length of time (relative to `timestamp`) after which the entity should be automatically removed. Zero value indicates the entity should remain visible until it is replaced or deleted.
@@ -2720,6 +2913,7 @@ Length of time (relative to `timestamp`) after which the entity should be automa
 boolean
 
 </td>
+<td></td>
 <td>
 
 Whether the entity should keep its location in the fixed frame (false) or follow the frame specified in `frame_id` as it moves relative to the fixed frame (true)
@@ -2733,6 +2927,7 @@ Whether the entity should keep its location in the fixed frame (false) or follow
 [KeyValuePair](#keyvaluepair)[]
 
 </td>
+<td></td>
 <td>
 
 Additional user-provided metadata associated with the entity. Keys must be unique.
@@ -2746,6 +2941,7 @@ Additional user-provided metadata associated with the entity. Keys must be uniqu
 [ArrowPrimitive](#arrowprimitive)[]
 
 </td>
+<td></td>
 <td>
 
 Arrow primitives
@@ -2759,6 +2955,7 @@ Arrow primitives
 [CubePrimitive](#cubeprimitive)[]
 
 </td>
+<td></td>
 <td>
 
 Cube primitives
@@ -2772,6 +2969,7 @@ Cube primitives
 [SpherePrimitive](#sphereprimitive)[]
 
 </td>
+<td></td>
 <td>
 
 Sphere primitives
@@ -2785,6 +2983,7 @@ Sphere primitives
 [CylinderPrimitive](#cylinderprimitive)[]
 
 </td>
+<td></td>
 <td>
 
 Cylinder primitives
@@ -2798,6 +2997,7 @@ Cylinder primitives
 [LinePrimitive](#lineprimitive)[]
 
 </td>
+<td></td>
 <td>
 
 Line primitives
@@ -2811,6 +3011,7 @@ Line primitives
 [TriangleListPrimitive](#trianglelistprimitive)[]
 
 </td>
+<td></td>
 <td>
 
 Triangle list primitives
@@ -2824,6 +3025,7 @@ Triangle list primitives
 [TextPrimitive](#textprimitive)[]
 
 </td>
+<td></td>
 <td>
 
 Text primitives
@@ -2837,6 +3039,7 @@ Text primitives
 [ModelPrimitive](#modelprimitive)[]
 
 </td>
+<td></td>
 <td>
 
 Model primitives
@@ -2853,6 +3056,7 @@ Command to remove previously published entities
   <tr>
     <th>field</th>
     <th>type</th>
+    <th>optional</th>
     <th>description</th>
   </tr>
 <tr>
@@ -2862,6 +3066,7 @@ Command to remove previously published entities
 [Timestamp](#timestamp)
 
 </td>
+<td></td>
 <td>
 
 Timestamp of the deletion. Only matching entities earlier than this timestamp will be deleted.
@@ -2875,6 +3080,7 @@ Timestamp of the deletion. Only matching entities earlier than this timestamp wi
 [enum SceneEntityDeletionType](#enum-sceneentitydeletiontype)
 
 </td>
+<td></td>
 <td>
 
 Type of deletion action to perform
@@ -2888,6 +3094,7 @@ Type of deletion action to perform
 string
 
 </td>
+<td></td>
 <td>
 
 Identifier which must match if `type` is `MATCHING_ID`.
@@ -2904,6 +3111,7 @@ An update to the entities displayed in a 3D scene
   <tr>
     <th>field</th>
     <th>type</th>
+    <th>optional</th>
     <th>description</th>
   </tr>
 <tr>
@@ -2913,6 +3121,7 @@ An update to the entities displayed in a 3D scene
 [SceneEntityDeletion](#sceneentitydeletion)[]
 
 </td>
+<td></td>
 <td>
 
 Scene entities to delete
@@ -2926,6 +3135,7 @@ Scene entities to delete
 [SceneEntity](#sceneentity)[]
 
 </td>
+<td></td>
 <td>
 
 Scene entities to add or replace
@@ -2942,6 +3152,7 @@ A primitive representing a sphere or ellipsoid
   <tr>
     <th>field</th>
     <th>type</th>
+    <th>optional</th>
     <th>description</th>
   </tr>
 <tr>
@@ -2951,6 +3162,7 @@ A primitive representing a sphere or ellipsoid
 [Pose](#pose)
 
 </td>
+<td></td>
 <td>
 
 Position of the center of the sphere and orientation of the sphere
@@ -2964,6 +3176,7 @@ Position of the center of the sphere and orientation of the sphere
 [Vector3](#vector3)
 
 </td>
+<td></td>
 <td>
 
 Size (diameter) of the sphere along each axis
@@ -2977,6 +3190,7 @@ Size (diameter) of the sphere along each axis
 [Color](#color)
 
 </td>
+<td></td>
 <td>
 
 Color of the sphere
@@ -2993,6 +3207,7 @@ A text label on a 2D image
   <tr>
     <th>field</th>
     <th>type</th>
+    <th>optional</th>
     <th>description</th>
   </tr>
 <tr>
@@ -3002,6 +3217,7 @@ A text label on a 2D image
 [Timestamp](#timestamp)
 
 </td>
+<td></td>
 <td>
 
 Timestamp of annotation
@@ -3015,6 +3231,7 @@ Timestamp of annotation
 [Point2](#point2)
 
 </td>
+<td></td>
 <td>
 
 Bottom-left origin of the text label in 2D image coordinates (pixels).
@@ -3029,6 +3246,7 @@ The coordinate uses the top-left corner of the top-left pixel of the image as th
 string
 
 </td>
+<td></td>
 <td>
 
 Text to display
@@ -3042,6 +3260,7 @@ Text to display
 float64
 
 </td>
+<td></td>
 <td>
 
 Font size in pixels
@@ -3055,6 +3274,7 @@ Font size in pixels
 [Color](#color)
 
 </td>
+<td></td>
 <td>
 
 Text color
@@ -3068,6 +3288,7 @@ Text color
 [Color](#color)
 
 </td>
+<td></td>
 <td>
 
 Background fill color
@@ -3084,6 +3305,7 @@ A primitive representing a text label
   <tr>
     <th>field</th>
     <th>type</th>
+    <th>optional</th>
     <th>description</th>
   </tr>
 <tr>
@@ -3093,6 +3315,7 @@ A primitive representing a text label
 [Pose](#pose)
 
 </td>
+<td></td>
 <td>
 
 Position of the center of the text box and orientation of the text. Identity orientation means the text is oriented in the xy-plane and flows from -x to +x.
@@ -3106,6 +3329,7 @@ Position of the center of the text box and orientation of the text. Identity ori
 boolean
 
 </td>
+<td></td>
 <td>
 
 Whether the text should respect `pose.orientation` (false) or always face the camera (true)
@@ -3119,6 +3343,7 @@ Whether the text should respect `pose.orientation` (false) or always face the ca
 float64
 
 </td>
+<td></td>
 <td>
 
 Font size (height of one line of text)
@@ -3132,6 +3357,7 @@ Font size (height of one line of text)
 boolean
 
 </td>
+<td></td>
 <td>
 
 Indicates whether `font_size` is a fixed size in screen pixels (true), or specified in world coordinates and scales with distance from the camera (false)
@@ -3145,6 +3371,7 @@ Indicates whether `font_size` is a fixed size in screen pixels (true), or specif
 [Color](#color)
 
 </td>
+<td></td>
 <td>
 
 Color of the text
@@ -3158,6 +3385,7 @@ Color of the text
 string
 
 </td>
+<td></td>
 <td>
 
 Text
@@ -3174,6 +3402,7 @@ A timestamp composed of seconds and nanoseconds
   <tr>
     <th>field</th>
     <th>type</th>
+    <th>optional</th>
     <th>description</th>
   </tr>
 <tr>
@@ -3183,6 +3412,7 @@ A timestamp composed of seconds and nanoseconds
 uint32
 
 </td>
+<td></td>
 <td>
 
 The number of seconds since a user-defined epoch
@@ -3196,6 +3426,7 @@ The number of seconds since a user-defined epoch
 uint32
 
 </td>
+<td></td>
 <td>
 
 The number of nanoseconds since the sec value
@@ -3212,6 +3443,7 @@ A primitive representing a set of triangles or a surface tiled by triangles
   <tr>
     <th>field</th>
     <th>type</th>
+    <th>optional</th>
     <th>description</th>
   </tr>
 <tr>
@@ -3221,6 +3453,7 @@ A primitive representing a set of triangles or a surface tiled by triangles
 [Pose](#pose)
 
 </td>
+<td></td>
 <td>
 
 Origin of triangles relative to reference frame
@@ -3234,6 +3467,7 @@ Origin of triangles relative to reference frame
 [Point3](#point3)[]
 
 </td>
+<td></td>
 <td>
 
 Vertices to use for triangles, interpreted as a list of triples (0-1-2, 3-4-5, ...)
@@ -3247,6 +3481,7 @@ Vertices to use for triangles, interpreted as a list of triples (0-1-2, 3-4-5, .
 [Color](#color)
 
 </td>
+<td></td>
 <td>
 
 Solid color to use for the whole shape. Ignored if `colors` is non-empty.
@@ -3260,6 +3495,7 @@ Solid color to use for the whole shape. Ignored if `colors` is non-empty.
 [Color](#color)[]
 
 </td>
+<td></td>
 <td>
 
 Per-vertex colors (if specified, must have the same length as `points`).
@@ -3273,6 +3509,7 @@ Per-vertex colors (if specified, must have the same length as `points`).
 uint32[]
 
 </td>
+<td></td>
 <td>
 
 Indices into the `points` and `colors` attribute arrays, which can be used to avoid duplicating attribute data.
@@ -3291,6 +3528,7 @@ A vector in 2D space that represents a direction only
   <tr>
     <th>field</th>
     <th>type</th>
+    <th>optional</th>
     <th>description</th>
   </tr>
 <tr>
@@ -3300,6 +3538,7 @@ A vector in 2D space that represents a direction only
 float64
 
 </td>
+<td></td>
 <td>
 
 x coordinate length
@@ -3313,6 +3552,7 @@ x coordinate length
 float64
 
 </td>
+<td></td>
 <td>
 
 y coordinate length
@@ -3329,6 +3569,7 @@ A vector in 3D space that represents a direction only
   <tr>
     <th>field</th>
     <th>type</th>
+    <th>optional</th>
     <th>description</th>
   </tr>
 <tr>
@@ -3338,6 +3579,7 @@ A vector in 3D space that represents a direction only
 float64
 
 </td>
+<td></td>
 <td>
 
 x coordinate length
@@ -3351,6 +3593,7 @@ x coordinate length
 float64
 
 </td>
+<td></td>
 <td>
 
 y coordinate length
@@ -3364,6 +3607,7 @@ y coordinate length
 float64
 
 </td>
+<td></td>
 <td>
 
 z coordinate length
@@ -3380,6 +3624,7 @@ A 3D grid of data
   <tr>
     <th>field</th>
     <th>type</th>
+    <th>optional</th>
     <th>description</th>
   </tr>
 <tr>
@@ -3389,6 +3634,7 @@ A 3D grid of data
 [Timestamp](#timestamp)
 
 </td>
+<td></td>
 <td>
 
 Timestamp of grid
@@ -3402,6 +3648,7 @@ Timestamp of grid
 string
 
 </td>
+<td></td>
 <td>
 
 Frame of reference
@@ -3415,6 +3662,7 @@ Frame of reference
 [Pose](#pose)
 
 </td>
+<td></td>
 <td>
 
 Origin of the grid’s lower-front-left corner in the reference frame. The grid’s pose is defined relative to this corner, so an untransformed grid with an identity orientation has this corner at the origin.
@@ -3428,6 +3676,7 @@ Origin of the grid’s lower-front-left corner in the reference frame. The grid�
 uint32
 
 </td>
+<td></td>
 <td>
 
 Number of grid rows
@@ -3441,6 +3690,7 @@ Number of grid rows
 uint32
 
 </td>
+<td></td>
 <td>
 
 Number of grid columns
@@ -3454,6 +3704,7 @@ Number of grid columns
 [Vector3](#vector3)
 
 </td>
+<td></td>
 <td>
 
 Size of single grid cell along x, y, and z axes, relative to `pose`
@@ -3467,6 +3718,7 @@ Size of single grid cell along x, y, and z axes, relative to `pose`
 uint32
 
 </td>
+<td></td>
 <td>
 
 Number of bytes between depth slices in `data`
@@ -3480,6 +3732,7 @@ Number of bytes between depth slices in `data`
 uint32
 
 </td>
+<td></td>
 <td>
 
 Number of bytes between rows in `data`
@@ -3493,6 +3746,7 @@ Number of bytes between rows in `data`
 uint32
 
 </td>
+<td></td>
 <td>
 
 Number of bytes between cells within a row in `data`
@@ -3506,6 +3760,7 @@ Number of bytes between cells within a row in `data`
 [PackedElementField](#packedelementfield)[]
 
 </td>
+<td></td>
 <td>
 
 Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.
@@ -3519,6 +3774,7 @@ Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizi
 bytes
 
 </td>
+<td></td>
 <td>
 
 Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.
