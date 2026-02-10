@@ -12,7 +12,7 @@ use mcap::sans_io::indexed_reader::{IndexedReadEvent, IndexedReader, IndexedRead
 use mcap::sans_io::summary_reader::{SummaryReadEvent, SummaryReader};
 use mcap::Summary;
 
-use crate::playback_source::PlaybackSource;
+use crate::playback_source::{Nanoseconds, PlaybackSource};
 
 const MIN_PLAYBACK_SPEED: f32 = 0.01;
 
@@ -23,9 +23,9 @@ pub struct McapPlayer {
     file: BufReader<File>,
     chunk_buffer: Vec<u8>,
     time_tracker: Option<TimeTracker>,
-    time_range: (u64, u64),
+    time_range: (Nanoseconds, Nanoseconds),
     status: PlaybackStatus,
-    current_time: u64,
+    current_time: Nanoseconds,
     playback_speed: f32,
     /// Buffered message that was read but not yet ready to emit.
     pending_message: Option<(mcap::records::MessageHeader, Vec<u8>)>,
@@ -76,7 +76,7 @@ impl McapPlayer {
     }
 
     /// Re-creates the indexed reader starting from the given time.
-    fn reset_reader(&mut self, start_time: u64) -> Result<()> {
+    fn reset_reader(&mut self, start_time: Nanoseconds) -> Result<()> {
         self.reader = IndexedReader::new_with_options(
             &self.summary,
             IndexedReaderOptions::new().log_time_on_or_after(start_time),
@@ -121,7 +121,7 @@ impl McapPlayer {
 }
 
 impl PlaybackSource for McapPlayer {
-    fn time_range(&self) -> (u64, u64) {
+    fn time_range(&self) -> (Nanoseconds, Nanoseconds) {
         self.time_range
     }
 
@@ -129,7 +129,7 @@ impl PlaybackSource for McapPlayer {
         self.status
     }
 
-    fn current_time(&self) -> u64 {
+    fn current_time(&self) -> Nanoseconds {
         self.current_time
     }
 
@@ -169,7 +169,7 @@ impl PlaybackSource for McapPlayer {
         self.status = PlaybackStatus::Paused;
     }
 
-    fn seek(&mut self, log_time: u64) -> Result<()> {
+    fn seek(&mut self, log_time: Nanoseconds) -> Result<()> {
         let log_time = log_time.clamp(self.time_range.0, self.time_range.1);
         self.reset_reader(log_time)?;
         // If playback had ended, reset to Paused so play() can transition to Playing
@@ -231,22 +231,22 @@ struct TimeTracker {
     /// Wall-clock time when playback started/resumed
     start: Instant,
     /// Log time corresponding to the start instant
-    offset_ns: u64,
+    offset_ns: Nanoseconds,
     /// Current playback speed multiplier
     speed: f32,
     /// Whether playback is paused
     paused: bool,
     /// Elapsed log time when paused
-    paused_elapsed_ns: u64,
+    paused_elapsed_ns: Nanoseconds,
     /// Interval for time broadcast notifications
-    notify_interval_ns: u64,
+    notify_interval_ns: Nanoseconds,
     /// Last log time that was broadcast
-    notify_last: u64,
+    notify_last: Nanoseconds,
 }
 
 impl TimeTracker {
     /// Initializes a new time tracker, treating "now" as the specified log time.
-    fn start(offset_ns: u64, speed: f32) -> Self {
+    fn start(offset_ns: Nanoseconds, speed: f32) -> Self {
         let speed = Self::clamp_speed(speed);
         Self {
             start: Instant::now(),
@@ -260,7 +260,7 @@ impl TimeTracker {
     }
 
     /// Returns the current playback log time based on elapsed wall time and speed.
-    fn current_log_time(&self) -> u64 {
+    fn current_log_time(&self) -> Nanoseconds {
         if self.paused {
             self.offset_ns + self.paused_elapsed_ns
         } else {
@@ -271,7 +271,7 @@ impl TimeTracker {
     }
 
     /// Returns the wall-clock instant when the given log_time will be ready.
-    fn wakeup_for(&self, log_time: u64) -> Instant {
+    fn wakeup_for(&self, log_time: Nanoseconds) -> Instant {
         let current = self.current_log_time();
         if log_time <= current {
             return Instant::now();
@@ -326,7 +326,7 @@ impl TimeTracker {
     }
 
     /// Periodically returns a timestamp reference to broadcast to clients.
-    fn notify(&mut self, current_ns: u64) -> Option<u64> {
+    fn notify(&mut self, current_ns: Nanoseconds) -> Option<Nanoseconds> {
         if current_ns.saturating_sub(self.notify_last) >= self.notify_interval_ns {
             self.notify_last = current_ns;
             Some(current_ns)

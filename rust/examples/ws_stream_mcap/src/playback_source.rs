@@ -3,6 +3,9 @@ use std::time::Duration;
 use anyhow::Result;
 use foxglove::{websocket::PlaybackStatus, WebSocketServerHandle};
 
+/// A timestamp in nanoseconds since epoch.
+pub type Nanoseconds = u64;
+
 /// A data source that supports ranged playback with play/pause, seek, and variable speed.
 ///
 /// Implementations are responsible for:
@@ -10,10 +13,10 @@ use foxglove::{websocket::PlaybackStatus, WebSocketServerHandle};
 /// - Pacing message delivery according to timestamps and playback speed
 /// - Logging messages to channels and broadcasting time updates to the server
 pub trait PlaybackSource {
-    /// Returns the (start, end) time bounds of the data in nanoseconds.
+    /// Returns the (start, end) time bounds of the data.
     ///
     /// Determining this is dependent on the format of data you are loading.
-    fn time_range(&self) -> (u64, u64);
+    fn time_range(&self) -> (Nanoseconds, Nanoseconds);
 
     /// Sets the playback speed multiplier (e.g., 1.0 for real-time, 2.0 for double speed).
     ///
@@ -30,20 +33,20 @@ pub trait PlaybackSource {
     /// Called by a ServerListener when it receives a PlaybackControlRequest from Foxglove
     fn pause(&mut self);
 
-    /// Seeks to the specified timestamp in nanoseconds.
+    /// Seeks to the specified timestamp.
     ///
     /// Called by a ServerListener when it receives a PlaybackControlRequest from Foxglove
-    fn seek(&mut self, log_time: u64) -> Result<()>;
+    fn seek(&mut self, log_time: Nanoseconds) -> Result<()>;
 
     /// Returns the current playback status.
     ///
     /// Used to send a PlaybackState to Foxglove
     fn status(&self) -> PlaybackStatus;
 
-    /// Returns the current playback position in nanoseconds.
+    /// Returns the current playback position.
     ///
     /// Used to send a PlaybackState to Foxglove
-    fn current_time(&self) -> u64;
+    fn current_time(&self) -> Nanoseconds;
 
     /// Returns the current playback speed multiplier.
     ///
