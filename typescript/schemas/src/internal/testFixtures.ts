@@ -101,7 +101,7 @@ export const exampleMessage: FoxgloveMessageSchema = {
       name: "field_optional_string",
       description: "An optional string field",
       type: { type: "primitive", name: "string" },
-      required: false,
+      optional: true,
     },
     {
       name: "field_enum",

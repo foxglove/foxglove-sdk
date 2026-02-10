@@ -111,7 +111,7 @@ export function generateTypeScript(
         } else {
           comment = `/**\n  ${descriptionLines.map((line) => ` * ${line}`).join("\n  ")}\n   */`;
         }
-        const optionalSuffix = field.required === false ? "?" : "";
+        const optionalSuffix = field.optional ? "?" : "";
         return `${comment}\n  ${field.name}${optionalSuffix}: ${fieldType};`;
       });
 

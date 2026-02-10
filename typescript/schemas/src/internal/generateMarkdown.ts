@@ -73,7 +73,7 @@ ${schema.fields
         type = field.type.name;
         break;
     }
-    const optionalCell = field.required === false ? "yes" : "";
+    const optionalCell = field.optional ? "yes" : "";
     return `\
 <tr>
 <td><code>${field.name}</code></td>

@@ -80,7 +80,7 @@ export function generateOmgIdl(schema: FoxgloveSchema): string {
         const descriptionLines = field.description.trim().split("\n");
         const comment = descriptionLines.map((line) => `// ${line}`).join("\n  ");
         // OMG IDL does not have a standard optional modifier; document schema-optional for consumers
-        const optionalComment = field.required === false ? "  // optional (schema)\n  " : "";
+        const optionalComment = field.optional ? "  // optional (schema)\n  " : "";
 
         let defaultAnnotation = "";
         if (typeof field.defaultValue === "string") {

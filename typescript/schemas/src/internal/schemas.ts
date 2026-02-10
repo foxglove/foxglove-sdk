@@ -1570,7 +1570,7 @@ const LocationFix: FoxgloveMessageSchema = {
       type: { type: "nested", schema: Color },
       description: "Color used to visualize the location",
       protobufFieldNumber: 8,
-      required: false,
+      optional: true,
     },
   ],
 };

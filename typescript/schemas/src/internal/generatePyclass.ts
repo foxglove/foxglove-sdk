@@ -89,7 +89,7 @@ export function generatePySchemaStub(schemas: FoxgloveSchema[]): string {
         .map((field) => {
           const typeStr = pythonCtorType(field);
           const defaultStr =
-            field.required === false || field.array != undefined
+            field.optional || field.array != undefined
               ? ` = ${pythonDefaultValue(field)}`
               : field.type.type === "nested"
                 ? ""
@@ -260,7 +260,7 @@ function generateMessageClass(schema: FoxgloveMessageSchema): string {
         if (field.array != undefined) {
           return `${safeRustName(field.name)}.unwrap_or_default().into_iter().map(|x| x.into()).collect()`;
         }
-        return field.required === false
+        return field.optional
           ? `${safeRustName(field.name)}.map(Into::into)`
           : `Some(${safeRustName(field.name)}.into())`;
       case "enum":
@@ -289,7 +289,7 @@ function generateMessageClass(schema: FoxgloveMessageSchema): string {
   const signature = schemaFields
     .filter(
       ({ field }) =>
-        field.required === false ||
+        (field.optional ?? false) ||
         field.array != undefined ||
         (["primitive", "enum", "nested"] as const).includes(field.type.type),
     )
@@ -386,7 +386,7 @@ function isMessageSchema(schema: FoxgloveSchema): schema is FoxgloveMessageSchem
  */
 function rustOutputType(field: FoxgloveMessageField): string {
   const isVec = field.array != undefined;
-  const isOpt = field.required === false || field.type.type === "nested";
+  const isOpt = (field.optional ?? false) || field.type.type === "nested";
   let type: string;
   switch (field.type.type) {
     case "primitive":
@@ -433,7 +433,7 @@ function rustOutputType(field: FoxgloveMessageField): string {
  */
 function pythonCtorType(field: FoxgloveMessageField): string {
   const isVec = field.array != undefined;
-  const isOpt = field.required === false || field.type.type === "nested";
+  const isOpt = (field.optional ?? false) || field.type.type === "nested";
   let type: string;
   switch (field.type.type) {
     case "primitive":
@@ -458,7 +458,7 @@ function pythonCtorType(field: FoxgloveMessageField): string {
  * Get the Python default for a constructor parameter
  */
 function pythonDefaultValue(field: FoxgloveMessageField): string {
-  if (field.required === false || field.array != undefined) {
+  if (field.optional || field.array != undefined) {
     return "None";
   }
   switch (field.type.type) {
@@ -495,7 +495,7 @@ function rustDefaultValue(field: FoxgloveMessageField): string {
     // Special case — this is an `Option<Bound<'_, PyBytes>>`; see `rustOutputType`
     return "None";
   }
-  if (field.required === false || field.array != undefined) {
+  if (field.optional || field.array != undefined) {
     return "None";
   }
   switch (field.type.type) {
