@@ -159,6 +159,9 @@ export function generateHppSchemas(
             fieldType = `std::vector<${fieldType}>`;
           } else if (field.optional || field.type.type === "nested") {
             fieldType = `std::optional<${fieldType}>`;
+            if (field.optional && defaultStr !== "") {
+              defaultStr = " = std::nullopt";
+            }
           }
           return `${formatComment(field.description, 2)}\n  ${fieldType} ${toSnakeCase(field.name)}${defaultStr};`;
         })
