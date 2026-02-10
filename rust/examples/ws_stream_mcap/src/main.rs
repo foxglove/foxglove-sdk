@@ -131,6 +131,15 @@ fn main() -> Result<()> {
     info!("Starting stream");
     let mut last_status = PlaybackStatus::Paused;
     while !done.load(Ordering::Relaxed) {
+        {
+            let mut player = mcap_player.lock().unwrap();
+            if player.needs_backfill() {
+                if let Err(err) = player.log_backfill() {
+                    tracing::warn!("backfill failed: {err:?}");
+                }
+            }
+        }
+
         let status = {
             let player = mcap_player.lock().unwrap();
             let status = player.status();
