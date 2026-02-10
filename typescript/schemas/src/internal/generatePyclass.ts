@@ -88,12 +88,7 @@ export function generatePySchemaStub(schemas: FoxgloveSchema[]): string {
       const params = schema.fields
         .map((field) => {
           const typeStr = pythonCtorType(field);
-          const defaultStr =
-            field.optional || field.array != undefined
-              ? ` = ${pythonDefaultValue(field)}`
-              : field.type.type === "nested"
-                ? ""
-                : ` = ${pythonDefaultValue(field)}`;
+          const defaultStr = ` = ${pythonDefaultValue(field)}`;
           return `        ${field.name}: ${typeStr}${defaultStr}`;
         })
         .join(",\n");
