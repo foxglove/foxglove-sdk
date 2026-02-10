@@ -950,7 +950,7 @@ name = "example_ws_ranged_playback"
 version = "0.0.0"
 dependencies = [
  "env_logger",
- "foxglove 0.16.5",
+ "foxglove 0.17.2",
  "tokio",
  "tracing",
 ]
