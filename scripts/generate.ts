@@ -5,22 +5,22 @@ import path from "node:path";
 import { finished } from "node:stream/promises";
 import { rimraf } from "rimraf";
 
-import { generateRosMsg, generateRosMsgDefinition } from "../typescript/schemas/src/internal";
-import { exportTypeScriptSchemas } from "../typescript/schemas/src/internal/exportTypeScriptSchemas";
+import { generateRosMsg, generateRosMsgDefinition } from "../typescript/messages/src/internal";
+import { exportTypeScriptSchemas } from "../typescript/messages/src/internal/exportTypeScriptSchemas";
 import {
   BYTE_VECTOR_FB,
   DURATION_FB,
   TIME_FB,
   flatbufferMessageSchemaName,
   generateFlatbuffers,
-} from "../typescript/schemas/src/internal/generateFlatbufferSchema";
-import { generateJsonSchema } from "../typescript/schemas/src/internal/generateJsonSchema";
-import { generateMarkdown } from "../typescript/schemas/src/internal/generateMarkdown";
+} from "../typescript/messages/src/internal/generateFlatbufferSchema";
+import { generateJsonSchema } from "../typescript/messages/src/internal/generateJsonSchema";
+import { generateMarkdown } from "../typescript/messages/src/internal/generateMarkdown";
 import {
   generateOmgIdl,
   omgIdlMessageSchemaName,
-} from "../typescript/schemas/src/internal/generateOmgIdl";
-import { generateProto } from "../typescript/schemas/src/internal/generateProto";
+} from "../typescript/messages/src/internal/generateOmgIdl";
+import { generateProto } from "../typescript/messages/src/internal/generateProto";
 import {
   generateSchemaModuleRegistration,
   generateSchemaPrelude,
@@ -30,19 +30,19 @@ import {
   generatePyChannelStub,
   generatePySchemaModule,
   generatePyChannelModule,
-} from "../typescript/schemas/src/internal/generatePyclass";
+} from "../typescript/messages/src/internal/generatePyclass";
 import {
   generateCppSchemas,
   generateHppSchemas,
-} from "../typescript/schemas/src/internal/generateSdkCpp";
+} from "../typescript/messages/src/internal/generateSdkCpp";
 import {
   generateRustTypes,
   generateBindgenConfig,
-} from "../typescript/schemas/src/internal/generateSdkRustCTypes";
+} from "../typescript/messages/src/internal/generateSdkRustCTypes";
 import {
   foxgloveEnumSchemas,
   foxgloveMessageSchemas,
-} from "../typescript/schemas/src/internal/schemas";
+} from "../typescript/messages/src/internal/schemas";
 
 async function logProgress(message: string, body: () => Promise<void>) {
   process.stderr.write(`${message}... `);
@@ -81,7 +81,7 @@ async function main({ clean }: { clean: boolean }) {
   const repoRoot = path.resolve(__dirname, "..");
   const outDir = path.join(repoRoot, "schemas");
   const rosOutDir = path.join(repoRoot, "ros/src/foxglove_msgs");
-  const typescriptTypesDir = path.join(repoRoot, "typescript/schemas/src/types");
+  const typescriptTypesDir = path.join(repoRoot, "typescript/messages/src/types");
 
   const pythonSdkRoot = path.resolve(repoRoot, "python", "foxglove-sdk");
   const pythonSdkGeneratedRoot = path.join(pythonSdkRoot, "src", "generated");
@@ -92,10 +92,10 @@ async function main({ clean }: { clean: boolean }) {
     await rimraf(path.join(rosOutDir, "ros1"));
     await rimraf(path.join(rosOutDir, "ros2"));
     await rimraf(typescriptTypesDir);
-    await rimraf(path.join(repoRoot, "rust/foxglove/src/schemas"));
+    await rimraf(path.join(repoRoot, "rust/foxglove/src/messages"));
     await rimraf(pythonSdkGeneratedRoot);
-    await rimraf(path.join(pythonSdkPyRoot, "_foxglove_py/schemas.pyi"));
-    await rimraf(path.join(pythonSdkPyRoot, "schemas/__init__.py"));
+    await rimraf(path.join(pythonSdkPyRoot, "_foxglove_py/messages.pyi"));
+    await rimraf(path.join(pythonSdkPyRoot, "messages/__init__.py"));
     await rimraf(path.join(pythonSdkPyRoot, "_foxglove_py/channels.pyi"));
     await rimraf(path.join(pythonSdkPyRoot, "channels/__init__.py"));
   });
@@ -201,7 +201,7 @@ async function main({ clean }: { clean: boolean }) {
   });
 
   // Build the schemas package for easier documentation previews
-  await exec("yarn", ["workspace", "@foxglove/schemas", "clean-build"], { cwd: repoRoot });
+  await exec("yarn", ["workspace", "@foxglove/messages", "clean-build"], { cwd: repoRoot });
 
   await logProgress("Generating OMG IDL definitions", async () => {
     await fs.mkdir(path.join(outDir, "omgidl", "foxglove"), { recursive: true });
@@ -242,7 +242,7 @@ async function main({ clean }: { clean: boolean }) {
     // Stub file is placed into the existing hierarchy.
     const schemasFile = path.join(pythonSdkGeneratedRoot, "schemas.rs");
     await fs.mkdir(pythonSdkGeneratedRoot, { recursive: true });
-    await fs.mkdir(path.join(pythonSdkPyRoot, "schemas"), { recursive: true });
+    await fs.mkdir(path.join(pythonSdkPyRoot, "messages"), { recursive: true });
     await fs.mkdir(path.join(pythonSdkPyRoot, "channels"), { recursive: true });
 
     // Schemas file
@@ -270,8 +270,8 @@ async function main({ clean }: { clean: boolean }) {
 
     // Stubs are written to the location of the pyo3-generated module
     // Python module indexes are added for the public API.
-    const schemasStubFile = path.join(pythonSdkPyRoot, "_foxglove_py/schemas.pyi");
-    const schemasStubModule = path.join(pythonSdkPyRoot, "schemas/__init__.py");
+    const schemasStubFile = path.join(pythonSdkPyRoot, "_foxglove_py/messages.pyi");
+    const schemasStubModule = path.join(pythonSdkPyRoot, "messages/__init__.py");
     const channelStubFile = path.join(pythonSdkPyRoot, "_foxglove_py/channels.pyi");
     const channelStubModule = path.join(pythonSdkPyRoot, "channels/__init__.py");
 

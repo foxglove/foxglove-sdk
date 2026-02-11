@@ -5,7 +5,7 @@ import cv2
 import foxglove
 import numpy as np
 from foxglove.channels import RawImageChannel
-from foxglove.schemas import RawImage
+from foxglove.messages import RawImage
 
 
 def parse_args() -> argparse.Namespace:

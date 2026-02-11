@@ -6,7 +6,7 @@ import foxglove
 import fruit_pb2
 from foxglove import Channel, Schema
 from foxglove.channels import CompressedImageChannel
-from foxglove.schemas import CompressedImage
+from foxglove.messages import CompressedImage
 from google.protobuf import descriptor_pb2
 
 parser = argparse.ArgumentParser()

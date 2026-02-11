@@ -1,6 +1,6 @@
 import time
 
-import foxglove.schemas
+import foxglove.messages
 from foxglove import Channel, Context, open_mcap
 from foxglove.channels import SceneUpdateChannel
 
@@ -16,7 +16,7 @@ baz = Channel("/baz", context=ctx2)
 
 for _ in range(10):
     # Log /foo and /bar to mcap1, and /baz to mcap2
-    foo.log(foxglove.schemas.SceneUpdate())
+    foo.log(foxglove.messages.SceneUpdate())
     bar.log({"hello": "world"})
     baz.log({"hello": "world"})
     time.sleep(0.1)

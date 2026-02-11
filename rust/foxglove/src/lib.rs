@@ -23,11 +23,11 @@
 //!
 //! To record messages, you need to initialize either an MCAP file writer or a WebSocket server for
 //! live visualization. In this example, we create an MCAP writer, and record a
-//! [`Log`](`crate::schemas::Log`) message on a topic called `/log`. We write one log message and
+//! [`Log`](`crate::messages::Log`) message on a topic called `/log`. We write one log message and
 //! close the file.
 //!
 //! ```no_run
-//! use foxglove::schemas::Log;
+//! use foxglove::messages::Log;
 //! use foxglove::{log, McapWriter};
 //!
 //! // Create a new MCAP file named 'test.mcap'.
@@ -64,7 +64,7 @@
 //! If we wanted to use an explicit context instead, we'd write:
 //!
 //! ```no_run
-//! use foxglove::schemas::Log;
+//! use foxglove::messages::Log;
 //! use foxglove::Context;
 //!
 //! // Create a new context.
@@ -104,7 +104,7 @@
 //! the first call. The example could be equivalently written as:
 //!
 //! ```no_run
-//! use foxglove::schemas::Log;
+//! use foxglove::messages::Log;
 //! use foxglove::{Channel, McapWriter};
 //!
 //! // Create a new MCAP file named 'test.mcap'.
@@ -176,7 +176,7 @@
 //! In this example, we create two lazy channels on the default context:
 //!
 //! ```
-//! use foxglove::schemas::SceneUpdate;
+//! use foxglove::messages::SceneUpdate;
 //! use foxglove::{LazyChannel, LazyRawChannel};
 //!
 //! static BOXES: LazyChannel<SceneUpdate> = LazyChannel::new("/boxes");
@@ -186,7 +186,7 @@
 //! It is also possible to bind lazy channels to an explicit [`LazyContext`]:
 //!
 //! ```
-//! use foxglove::schemas::SceneUpdate;
+//! use foxglove::messages::SceneUpdate;
 //! use foxglove::{LazyChannel, LazyContext, LazyRawChannel};
 //!
 //! static CTX: LazyContext = LazyContext::new();
@@ -273,8 +273,8 @@
 //!
 //! The Foxglove SDK defines the following feature flags:
 //!
-//! - `chrono`: enables [chrono] conversions for [`Duration`][crate::schemas::Duration] and
-//!   [`Timestamp`][crate::schemas::Timestamp].
+//! - `chrono`: enables [chrono] conversions for [`Duration`][crate::messages::Duration] and
+//!   [`Timestamp`][crate::messages::Timestamp].
 //! - `derive`: enables the use of `#[derive(Encode)]` to derive the [`Encode`] trait for logging
 //!   custom structs. Enabled by default.
 //! - `live_visualization`: enables the live visualization server and client, and adds dependencies
@@ -283,7 +283,7 @@
 //! - `schemars`: provides a blanket implementation of the [`Encode`] trait for types that
 //!   implement [`Serialize`](serde::Serialize) and [`JsonSchema`][jsonschema-trait].
 //! - `serde`: derives [`Serialize`](serde::Serialize) and [`Deserialize`](serde::Deserialize) for
-//!   all [schema types](crate::schemas).
+//!   all [schema types](crate::messages).
 //! - `unstable`: features which are under active development and likely to change in an upcoming
 //!   version.
 //! - `zstd`: enables support for the zstd compression algorithm for mcap files. Enabled by
@@ -323,8 +323,17 @@ mod metadata;
 #[cfg(feature = "derive")]
 pub mod protobuf;
 mod schema;
-pub mod schemas;
-mod schemas_wkt;
+pub mod messages;
+mod messages_wkt;
+
+/// Deprecated module alias. Use [`messages`] instead.
+#[deprecated(since = "0.2.0", note = "Use `foxglove::messages` instead")]
+pub mod schemas {
+    //! Types implementing well-known Foxglove message schemas.
+    //!
+    //! **Deprecated**: Use [`crate::messages`] instead.
+    pub use crate::messages::*;
+}
 mod sink;
 mod sink_channel_filter;
 

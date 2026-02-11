@@ -1,6 +1,6 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::schemas::Timestamp;
+use crate::messages::Timestamp;
 
 /// A trait for converting a time value to a u64 nanoseconds since epoch.
 pub trait ToUnixNanos {
@@ -46,7 +46,7 @@ pub struct PartialMetadata {
 impl PartialMetadata {
     /// Returns a new PartialMetadata with the given log time.
     ///
-    /// `log_time` can be a u64 (nanoseconds since epoch), a foxglove [`Timestamp`][crate::schemas::Timestamp],
+    /// `log_time` can be a u64 (nanoseconds since epoch), a foxglove [`Timestamp`][crate::messages::Timestamp],
     /// a [`SystemTime`][std::time::SystemTime], or anything else that implements [`ToUnixNanos`][crate::ToUnixNanos].
     pub fn with_log_time(log_time: impl ToUnixNanos) -> Self {
         Self {
