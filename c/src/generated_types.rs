@@ -613,8 +613,8 @@ pub extern "C" fn foxglove_channel_log_circle_annotation(
 )]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_circle_annotation_schema() -> FoxgloveSchema {
-    let native =
-        foxglove::messages::CircleAnnotation::get_schema().expect("CircleAnnotation schema is Some");
+    let native = foxglove::messages::CircleAnnotation::get_schema()
+        .expect("CircleAnnotation schema is Some");
     let name: &'static str = "foxglove.CircleAnnotation";
     let encoding: &'static str = "protobuf";
     assert_eq!(name, &native.name);
@@ -2354,7 +2354,8 @@ impl VoxelGrid {
             return FoxgloveError::ValueError;
         }
         unsafe {
-            let result = do_foxglove_channel_create::<foxglove::messages::VoxelGrid>(topic, context);
+            let result =
+                do_foxglove_channel_create::<foxglove::messages::VoxelGrid>(topic, context);
             result_to_c(result, channel)
         }
     }
@@ -2599,8 +2600,8 @@ pub extern "C" fn foxglove_channel_log_image_annotations(
 )]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_image_annotations_schema() -> FoxgloveSchema {
-    let native =
-        foxglove::messages::ImageAnnotations::get_schema().expect("ImageAnnotations schema is Some");
+    let native = foxglove::messages::ImageAnnotations::get_schema()
+        .expect("ImageAnnotations schema is Some");
     let name: &'static str = "foxglove.ImageAnnotations";
     let encoding: &'static str = "protobuf";
     assert_eq!(name, &native.name);
@@ -2861,7 +2862,8 @@ impl LaserScan {
             return FoxgloveError::ValueError;
         }
         unsafe {
-            let result = do_foxglove_channel_create::<foxglove::messages::LaserScan>(topic, context);
+            let result =
+                do_foxglove_channel_create::<foxglove::messages::LaserScan>(topic, context);
             result_to_c(result, channel)
         }
     }
@@ -4472,8 +4474,9 @@ impl PackedElementField {
             return FoxgloveError::ValueError;
         }
         unsafe {
-            let result =
-                do_foxglove_channel_create::<foxglove::messages::PackedElementField>(topic, context);
+            let result = do_foxglove_channel_create::<foxglove::messages::PackedElementField>(
+                topic, context,
+            );
             result_to_c(result, channel)
         }
     }
@@ -5370,8 +5373,8 @@ pub extern "C" fn foxglove_channel_log_points_annotation(
 )]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_points_annotation_schema() -> FoxgloveSchema {
-    let native =
-        foxglove::messages::PointsAnnotation::get_schema().expect("PointsAnnotation schema is Some");
+    let native = foxglove::messages::PointsAnnotation::get_schema()
+        .expect("PointsAnnotation schema is Some");
     let name: &'static str = "foxglove.PointsAnnotation";
     let encoding: &'static str = "protobuf";
     assert_eq!(name, &native.name);

@@ -104,8 +104,8 @@ mod tests {
     use bytes::BufMut;
     use tracing_test::traced_test;
 
-    use crate::nanoseconds_since_epoch;
     use crate::messages::{Color, LaserScan, Log, Timestamp};
+    use crate::nanoseconds_since_epoch;
     use crate::{testutil::RecordingSink, Context};
     use crate::{FoxgloveError, Schema};
 

@@ -318,13 +318,13 @@ pub mod library_version;
 pub mod log_macro;
 mod log_sink_set;
 mod mcap_writer;
+pub mod messages;
+mod messages_wkt;
 mod metadata;
 #[doc(hidden)]
 #[cfg(feature = "derive")]
 pub mod protobuf;
 mod schema;
-pub mod messages;
-mod messages_wkt;
 
 /// Deprecated module alias. Use [`messages`] instead.
 #[deprecated(since = "0.2.0", note = "Use `foxglove::messages` instead")]

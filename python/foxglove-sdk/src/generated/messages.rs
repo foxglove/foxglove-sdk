@@ -1449,7 +1449,9 @@ impl LocationFix {
     /// Returns the LocationFix schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
-        foxglove::messages::LocationFix::get_schema().unwrap().into()
+        foxglove::messages::LocationFix::get_schema()
+            .unwrap()
+            .into()
     }
     /// Encodes the LocationFix as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
@@ -1765,7 +1767,9 @@ impl SceneEntity {
     /// Returns the SceneEntity schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
-        foxglove::messages::SceneEntity::get_schema().unwrap().into()
+        foxglove::messages::SceneEntity::get_schema()
+            .unwrap()
+            .into()
     }
     /// Encodes the SceneEntity as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
@@ -1828,7 +1832,9 @@ impl SceneUpdate {
     /// Returns the SceneUpdate schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
-        foxglove::messages::SceneUpdate::get_schema().unwrap().into()
+        foxglove::messages::SceneUpdate::get_schema()
+            .unwrap()
+            .into()
     }
     /// Encodes the SceneUpdate as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
@@ -2387,7 +2393,9 @@ impl PoseInFrame {
     /// Returns the PoseInFrame schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
-        foxglove::messages::PoseInFrame::get_schema().unwrap().into()
+        foxglove::messages::PoseInFrame::get_schema()
+            .unwrap()
+            .into()
     }
     /// Encodes the PoseInFrame as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
