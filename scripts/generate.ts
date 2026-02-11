@@ -315,13 +315,13 @@ async function main({ clean }: { clean: boolean }) {
     });
   });
 
-  await logProgress("Generating C++ schemas", async () => {
-    const hppFile = path.join(repoRoot, "cpp", "foxglove", "include", "foxglove", "schemas.hpp");
+  await logProgress("Generating C++ messages", async () => {
+    const hppFile = path.join(repoRoot, "cpp", "foxglove", "include", "foxglove", "messages.hpp");
     await fs.writeFile(
       hppFile,
       generateHppSchemas(Object.values(foxgloveMessageSchemas), Object.values(foxgloveEnumSchemas)),
     );
-    const cppFile = path.join(repoRoot, "cpp", "foxglove", "src", "schemas.cpp");
+    const cppFile = path.join(repoRoot, "cpp", "foxglove", "src", "messages.cpp");
     await fs.writeFile(cppFile, generateCppSchemas(Object.values(foxgloveMessageSchemas)));
 
     await exec("clang-format", [hppFile, "-i", "-Werror"], { cwd: repoRoot });

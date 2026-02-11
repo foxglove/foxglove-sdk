@@ -27,7 +27,7 @@ packagefiles:=\
   target/sdk/include/foxglove_data_loader/data_loader.inl \
   target/sdk/include/foxglove_data_loader/host_internal.h \
   target/sdk/include/foxglove_data_loader/host_internal.inl \
-  target/sdk/src/foxglove/schemas.cpp \
+  target/sdk/src/foxglove/messages.cpp \
   target/sdk/src/foxglove/error.cpp \
   target/sdk/lib/libfoxglove.a \
   target/sdk/README.md
@@ -65,7 +65,7 @@ target/foxglove_data_loader-$(SDK_VERSION)-cpp-wasm32-unknown-unknown.zip: $(pac
 target/data_loader_example.wasm: examples/data_loader.cpp $(packagefiles)
 	$(WASI_SDK)/bin/clang++ \
 		$< \
-		target/sdk/src/foxglove/schemas.cpp \
+		target/sdk/src/foxglove/messages.cpp \
 		target/sdk/src/foxglove/error.cpp \
 		-Itarget/sdk/include \
 		-Ltarget/sdk/lib \
