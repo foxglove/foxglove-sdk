@@ -44,10 +44,12 @@ use foxglove::stream::create_mcap_stream;
 use futures::StreamExt;
 use serde::{Deserialize, Serialize};
 
-/// A simple message type for this example.
+/// A simple message type for this example. In a real implementation, you should probably use one of
+/// the built-in message types from the [`foxglove`] crate for out-of-the-box visualization support.
 #[derive(foxglove::Encode)]
 struct DemoMessage {
     msg: String,
+    value: f64,
 }
 
 /// Specification of what to load.
@@ -143,9 +145,15 @@ async fn data_handler(headers: HeaderMap, Query(params): Query<FlightParams>) ->
         while let Some(inner) = ts
             && inner <= params.end_time
         {
+            // Messages in the output MUST appear in ascending timestamp order. Otherwise, playback
+            // will be incorrect.
+            //
+            // `log_with_time()` immediately writes messages to the output MCAP, so you MUST NOT
+            // call it with out-of-order timestamps, even across different channels.
             channel.log_with_time(
                 &DemoMessage {
                     msg: format!("Data for flight {} at time {}", params.flight_id, inner),
+                    value: inner.timestamp() as f64,
                 },
                 inner,
             );
