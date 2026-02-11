@@ -1,2 +1,2 @@
-// allows importing @foxglove/schemas/internal
+// allows importing @foxglove/messages/internal
 module.exports = require("./dist/internal/index.js");

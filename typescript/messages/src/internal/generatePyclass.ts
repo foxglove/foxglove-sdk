@@ -748,7 +748,7 @@ impl ${channelClass} {
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
     fn log(
         &self,
-        msg: &schemas::${schemaClass},
+        msg: &messages::${schemaClass},
         log_time: Option<u64>,
         sink_id: Option<u64>,
     ) {

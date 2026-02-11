@@ -157,7 +157,7 @@ impl ArrowPrimitiveChannel {
     ///     current time is used.
     /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
-    fn log(&self, msg: &schemas::ArrowPrimitive, log_time: Option<u64>, sink_id: Option<u64>) {
+    fn log(&self, msg: &messages::ArrowPrimitive, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
         let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
@@ -266,7 +266,7 @@ impl CameraCalibrationChannel {
     ///     current time is used.
     /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
-    fn log(&self, msg: &schemas::CameraCalibration, log_time: Option<u64>, sink_id: Option<u64>) {
+    fn log(&self, msg: &messages::CameraCalibration, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
         let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
@@ -375,7 +375,7 @@ impl CircleAnnotationChannel {
     ///     current time is used.
     /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
-    fn log(&self, msg: &schemas::CircleAnnotation, log_time: Option<u64>, sink_id: Option<u64>) {
+    fn log(&self, msg: &messages::CircleAnnotation, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
         let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
@@ -484,7 +484,7 @@ impl ColorChannel {
     ///     current time is used.
     /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
-    fn log(&self, msg: &schemas::Color, log_time: Option<u64>, sink_id: Option<u64>) {
+    fn log(&self, msg: &messages::Color, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
         let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
@@ -588,7 +588,7 @@ impl CompressedImageChannel {
     ///     current time is used.
     /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
-    fn log(&self, msg: &schemas::CompressedImage, log_time: Option<u64>, sink_id: Option<u64>) {
+    fn log(&self, msg: &messages::CompressedImage, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
         let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
@@ -697,7 +697,7 @@ impl CompressedVideoChannel {
     ///     current time is used.
     /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
-    fn log(&self, msg: &schemas::CompressedVideo, log_time: Option<u64>, sink_id: Option<u64>) {
+    fn log(&self, msg: &messages::CompressedVideo, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
         let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
@@ -806,7 +806,7 @@ impl CylinderPrimitiveChannel {
     ///     current time is used.
     /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
-    fn log(&self, msg: &schemas::CylinderPrimitive, log_time: Option<u64>, sink_id: Option<u64>) {
+    fn log(&self, msg: &messages::CylinderPrimitive, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
         let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
@@ -915,7 +915,7 @@ impl CubePrimitiveChannel {
     ///     current time is used.
     /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
-    fn log(&self, msg: &schemas::CubePrimitive, log_time: Option<u64>, sink_id: Option<u64>) {
+    fn log(&self, msg: &messages::CubePrimitive, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
         let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
@@ -1024,7 +1024,7 @@ impl FrameTransformChannel {
     ///     current time is used.
     /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
-    fn log(&self, msg: &schemas::FrameTransform, log_time: Option<u64>, sink_id: Option<u64>) {
+    fn log(&self, msg: &messages::FrameTransform, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
         let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
@@ -1133,7 +1133,7 @@ impl FrameTransformsChannel {
     ///     current time is used.
     /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
-    fn log(&self, msg: &schemas::FrameTransforms, log_time: Option<u64>, sink_id: Option<u64>) {
+    fn log(&self, msg: &messages::FrameTransforms, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
         let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
@@ -1242,7 +1242,7 @@ impl GeoJsonChannel {
     ///     current time is used.
     /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
-    fn log(&self, msg: &schemas::GeoJson, log_time: Option<u64>, sink_id: Option<u64>) {
+    fn log(&self, msg: &messages::GeoJson, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
         let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
@@ -1346,7 +1346,7 @@ impl GridChannel {
     ///     current time is used.
     /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
-    fn log(&self, msg: &schemas::Grid, log_time: Option<u64>, sink_id: Option<u64>) {
+    fn log(&self, msg: &messages::Grid, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
         let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
@@ -1450,7 +1450,7 @@ impl VoxelGridChannel {
     ///     current time is used.
     /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
-    fn log(&self, msg: &schemas::VoxelGrid, log_time: Option<u64>, sink_id: Option<u64>) {
+    fn log(&self, msg: &messages::VoxelGrid, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
         let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
@@ -1559,7 +1559,7 @@ impl ImageAnnotationsChannel {
     ///     current time is used.
     /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
-    fn log(&self, msg: &schemas::ImageAnnotations, log_time: Option<u64>, sink_id: Option<u64>) {
+    fn log(&self, msg: &messages::ImageAnnotations, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
         let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
@@ -1668,7 +1668,7 @@ impl KeyValuePairChannel {
     ///     current time is used.
     /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
-    fn log(&self, msg: &schemas::KeyValuePair, log_time: Option<u64>, sink_id: Option<u64>) {
+    fn log(&self, msg: &messages::KeyValuePair, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
         let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
@@ -1777,7 +1777,7 @@ impl LaserScanChannel {
     ///     current time is used.
     /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
-    fn log(&self, msg: &schemas::LaserScan, log_time: Option<u64>, sink_id: Option<u64>) {
+    fn log(&self, msg: &messages::LaserScan, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
         let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
@@ -1886,7 +1886,7 @@ impl LinePrimitiveChannel {
     ///     current time is used.
     /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
-    fn log(&self, msg: &schemas::LinePrimitive, log_time: Option<u64>, sink_id: Option<u64>) {
+    fn log(&self, msg: &messages::LinePrimitive, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
         let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
@@ -1995,7 +1995,7 @@ impl LocationFixChannel {
     ///     current time is used.
     /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
-    fn log(&self, msg: &schemas::LocationFix, log_time: Option<u64>, sink_id: Option<u64>) {
+    fn log(&self, msg: &messages::LocationFix, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
         let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
@@ -2104,7 +2104,7 @@ impl LocationFixesChannel {
     ///     current time is used.
     /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
-    fn log(&self, msg: &schemas::LocationFixes, log_time: Option<u64>, sink_id: Option<u64>) {
+    fn log(&self, msg: &messages::LocationFixes, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
         let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
@@ -2213,7 +2213,7 @@ impl LogChannel {
     ///     current time is used.
     /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
-    fn log(&self, msg: &schemas::Log, log_time: Option<u64>, sink_id: Option<u64>) {
+    fn log(&self, msg: &messages::Log, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
         let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
@@ -2317,7 +2317,7 @@ impl SceneEntityDeletionChannel {
     ///     current time is used.
     /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
-    fn log(&self, msg: &schemas::SceneEntityDeletion, log_time: Option<u64>, sink_id: Option<u64>) {
+    fn log(&self, msg: &messages::SceneEntityDeletion, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
         let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
@@ -2426,7 +2426,7 @@ impl SceneEntityChannel {
     ///     current time is used.
     /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
-    fn log(&self, msg: &schemas::SceneEntity, log_time: Option<u64>, sink_id: Option<u64>) {
+    fn log(&self, msg: &messages::SceneEntity, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
         let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
@@ -2535,7 +2535,7 @@ impl SceneUpdateChannel {
     ///     current time is used.
     /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
-    fn log(&self, msg: &schemas::SceneUpdate, log_time: Option<u64>, sink_id: Option<u64>) {
+    fn log(&self, msg: &messages::SceneUpdate, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
         let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
@@ -2644,7 +2644,7 @@ impl ModelPrimitiveChannel {
     ///     current time is used.
     /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
-    fn log(&self, msg: &schemas::ModelPrimitive, log_time: Option<u64>, sink_id: Option<u64>) {
+    fn log(&self, msg: &messages::ModelPrimitive, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
         let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
@@ -2753,7 +2753,7 @@ impl PackedElementFieldChannel {
     ///     current time is used.
     /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
-    fn log(&self, msg: &schemas::PackedElementField, log_time: Option<u64>, sink_id: Option<u64>) {
+    fn log(&self, msg: &messages::PackedElementField, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
         let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
@@ -2862,7 +2862,7 @@ impl Point2Channel {
     ///     current time is used.
     /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
-    fn log(&self, msg: &schemas::Point2, log_time: Option<u64>, sink_id: Option<u64>) {
+    fn log(&self, msg: &messages::Point2, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
         let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
@@ -2966,7 +2966,7 @@ impl Point3Channel {
     ///     current time is used.
     /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
-    fn log(&self, msg: &schemas::Point3, log_time: Option<u64>, sink_id: Option<u64>) {
+    fn log(&self, msg: &messages::Point3, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
         let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
@@ -3070,7 +3070,7 @@ impl Point3InFrameChannel {
     ///     current time is used.
     /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
-    fn log(&self, msg: &schemas::Point3InFrame, log_time: Option<u64>, sink_id: Option<u64>) {
+    fn log(&self, msg: &messages::Point3InFrame, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
         let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
@@ -3179,7 +3179,7 @@ impl PointCloudChannel {
     ///     current time is used.
     /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
-    fn log(&self, msg: &schemas::PointCloud, log_time: Option<u64>, sink_id: Option<u64>) {
+    fn log(&self, msg: &messages::PointCloud, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
         let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
@@ -3288,7 +3288,7 @@ impl PointsAnnotationChannel {
     ///     current time is used.
     /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
-    fn log(&self, msg: &schemas::PointsAnnotation, log_time: Option<u64>, sink_id: Option<u64>) {
+    fn log(&self, msg: &messages::PointsAnnotation, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
         let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
@@ -3397,7 +3397,7 @@ impl PoseChannel {
     ///     current time is used.
     /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
-    fn log(&self, msg: &schemas::Pose, log_time: Option<u64>, sink_id: Option<u64>) {
+    fn log(&self, msg: &messages::Pose, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
         let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
@@ -3501,7 +3501,7 @@ impl PoseInFrameChannel {
     ///     current time is used.
     /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
-    fn log(&self, msg: &schemas::PoseInFrame, log_time: Option<u64>, sink_id: Option<u64>) {
+    fn log(&self, msg: &messages::PoseInFrame, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
         let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
@@ -3610,7 +3610,7 @@ impl PosesInFrameChannel {
     ///     current time is used.
     /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
-    fn log(&self, msg: &schemas::PosesInFrame, log_time: Option<u64>, sink_id: Option<u64>) {
+    fn log(&self, msg: &messages::PosesInFrame, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
         let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
@@ -3719,7 +3719,7 @@ impl QuaternionChannel {
     ///     current time is used.
     /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
-    fn log(&self, msg: &schemas::Quaternion, log_time: Option<u64>, sink_id: Option<u64>) {
+    fn log(&self, msg: &messages::Quaternion, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
         let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
@@ -3828,7 +3828,7 @@ impl RawAudioChannel {
     ///     current time is used.
     /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
-    fn log(&self, msg: &schemas::RawAudio, log_time: Option<u64>, sink_id: Option<u64>) {
+    fn log(&self, msg: &messages::RawAudio, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
         let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
@@ -3937,7 +3937,7 @@ impl RawImageChannel {
     ///     current time is used.
     /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
-    fn log(&self, msg: &schemas::RawImage, log_time: Option<u64>, sink_id: Option<u64>) {
+    fn log(&self, msg: &messages::RawImage, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
         let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
@@ -4046,7 +4046,7 @@ impl SpherePrimitiveChannel {
     ///     current time is used.
     /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
-    fn log(&self, msg: &schemas::SpherePrimitive, log_time: Option<u64>, sink_id: Option<u64>) {
+    fn log(&self, msg: &messages::SpherePrimitive, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
         let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
@@ -4155,7 +4155,7 @@ impl TextAnnotationChannel {
     ///     current time is used.
     /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
-    fn log(&self, msg: &schemas::TextAnnotation, log_time: Option<u64>, sink_id: Option<u64>) {
+    fn log(&self, msg: &messages::TextAnnotation, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
         let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
@@ -4264,7 +4264,7 @@ impl TextPrimitiveChannel {
     ///     current time is used.
     /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
-    fn log(&self, msg: &schemas::TextPrimitive, log_time: Option<u64>, sink_id: Option<u64>) {
+    fn log(&self, msg: &messages::TextPrimitive, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
         let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
@@ -4375,7 +4375,7 @@ impl TriangleListPrimitiveChannel {
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
     fn log(
         &self,
-        msg: &schemas::TriangleListPrimitive,
+        msg: &messages::TriangleListPrimitive,
         log_time: Option<u64>,
         sink_id: Option<u64>,
     ) {
@@ -4487,7 +4487,7 @@ impl Vector2Channel {
     ///     current time is used.
     /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
-    fn log(&self, msg: &schemas::Vector2, log_time: Option<u64>, sink_id: Option<u64>) {
+    fn log(&self, msg: &messages::Vector2, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
         let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
@@ -4591,7 +4591,7 @@ impl Vector3Channel {
     ///     current time is used.
     /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
-    fn log(&self, msg: &schemas::Vector3, log_time: Option<u64>, sink_id: Option<u64>) {
+    fn log(&self, msg: &messages::Vector3, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
         let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 

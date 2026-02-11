@@ -1,6 +1,6 @@
 use foxglove::{
     bytes::Bytes,
-    schemas::RawImage,
+    messages::RawImage,
     websocket::{Client, ClientChannel},
     CloudSinkListener,
 };

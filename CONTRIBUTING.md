@@ -41,9 +41,20 @@ All SDK languages are versioned and released together.
 
 ### TypeScript
 
-1. Create and merge a PR bumping the version number in `package.json` file(s).
+**@foxglove/messages** (primary package):
+1. Create and merge a PR bumping the version number in `typescript/messages/package.json`.
+2. Manually create a new Release in the GitHub UI. Ensure the tag uses the form `typescript/messages/vX.Y.Z`.
+3. GitHub Actions will take care of the rest.
+
+**@foxglove/schemas** (deprecated, for backward compatibility):
+1. Bump the version in `typescript/schemas/package.json` and update the `@foxglove/messages` dependency version.
 2. Manually create a new Release in the GitHub UI. Ensure the tag uses the form `typescript/schemas/vX.Y.Z`.
 3. GitHub Actions will take care of the rest.
+
+> **Note:** When releasing, publish both packages together to maintain backward compatibility.
+> The `@foxglove/schemas` package is a thin wrapper that re-exports from `@foxglove/messages`,
+> so users with the old package name continue to receive updates. Both packages should use
+> the same version number.
 
 ### ROS
 
