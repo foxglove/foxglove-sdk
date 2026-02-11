@@ -62,11 +62,7 @@ export class Runner extends EventEmitter<EventMap> {
     return await this.#remote.getHover(code, line, col);
   }
 
-  async getReferenceRanges(
-    code: string,
-    line: number,
-    col: number,
-  ): Promise<monaco.IRange[] | undefined> {
+  async getReferenceRanges(code: string, line: number, col: number): Promise<monaco.IRange[]> {
     return await this.#remote.getReferenceRanges(code, line, col);
   }
 

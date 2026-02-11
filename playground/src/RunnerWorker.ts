@@ -162,14 +162,16 @@ export class RunnerWorker {
             import jedi
             from pyodide.ffi import to_js
             def get_reference_ranges(code, line, col):
-              names = jedi.Script(prelude + code).get_references(line + prelude.count("\\n"), col - 1, scope="file")
+              prelude_lines = prelude.count("\\n")
+              names = jedi.Script(prelude + code).get_references(line + prelude_lines, col - 1, scope="file")
               return to_js([
                 {
-                  "line": name.line - prelude.count("\\n"),
+                  "line": name.line - prelude_lines,
                   "col": name.column + 1,
                   "len": len(name.name),
                 }
                 for name in names
+                if name.line > prelude_lines
               ])
             get_reference_ranges
           `,
@@ -354,11 +356,7 @@ def set_layout(layout: "foxglove.layouts.Layout", /) -> None:
     };
   }
 
-  async getReferenceRanges(
-    code: string,
-    line: number,
-    col: number,
-  ): Promise<monaco.IRange[] | undefined> {
+  async getReferenceRanges(code: string, line: number, col: number): Promise<monaco.IRange[]> {
     const getReferenceRanges = await this.#getReferenceRanges;
     return getReferenceRanges(code, line, col).map((item) => ({
       startLineNumber: item.line,
