@@ -106,6 +106,15 @@ describe("generateProto", () => {
         // long
         // description
         repeated foxglove.NestedMessage field_nested_array = 4;
+
+        // An optional string field
+        optional string field_optional_string = 26;
+
+        // An optional bool field
+        optional bool field_optional_bool = 27;
+
+        // An optional float64 field
+        optional double field_optional_float64 = 28;
       }
       "
     `);

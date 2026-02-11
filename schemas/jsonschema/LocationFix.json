@@ -108,7 +108,6 @@
     "longitude",
     "altitude",
     "position_covariance",
-    "position_covariance_type",
-    "color"
+    "position_covariance_type"
   ]
 }

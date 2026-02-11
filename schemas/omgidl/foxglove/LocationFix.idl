@@ -30,6 +30,7 @@ struct LocationFix {
   PositionCovarianceType position_covariance_type;
 
   // Color used to visualize the location
+  @optional
   Color color;
 };
 
