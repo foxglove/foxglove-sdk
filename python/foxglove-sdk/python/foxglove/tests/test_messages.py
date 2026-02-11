@@ -7,8 +7,6 @@ module is deprecated and re-exports from messages for backward compatibility.
 
 import warnings
 
-import pytest
-
 from foxglove.messages import Log, LogLevel, Timestamp
 
 
