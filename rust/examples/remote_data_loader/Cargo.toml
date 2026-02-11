@@ -1,0 +1,18 @@
+[package]
+name = "example_remote_data_loader"
+edition = "2024"
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+axum = "0.8"
+chrono = { version = "0.4", features = ["serde"] }
+foxglove = { path = "../../foxglove", features = ["data_provider", "stream", "derive", "chrono"] }
+futures = "0.3"
+serde = { version = "1.0", features = ["derive"] }
+serde_urlencoded = "0.7"
+tokio.workspace = true
+tracing = { version = "0.1", features = ["log"] }
+tracing-subscriber = "0.3"

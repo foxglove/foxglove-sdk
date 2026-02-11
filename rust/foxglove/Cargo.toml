@@ -30,7 +30,8 @@ tls = [
   "dep:tokio-rustls",
   "dep:rcgen",
 ]
-stream = ["dep:futures"]
+stream = ["dep:futures", "dep:tokio"]
+data_provider = ["dep:chrono", "chrono/serde", "dep:serde_with", "dep:serde-constant"]
 schemars = ["dep:schemars"]
 serde = ["dep:base64"]
 unstable = []
@@ -54,8 +55,7 @@ aws-lc-rs = { version = "1.13.3", optional = true, features = ["bindgen"] }
 base64 = { version = "0.22", optional = true }
 bimap = "0.6.3"
 bytes.workspace = true
-chrono.workspace = true
-chrono.optional = true
+chrono = { workspace = true, optional = true }
 delegate = "0.13.2"
 flume = { version = "0.11.1", optional = true }
 foxglove_derive = { version = "0.16.6", path = "../foxglove_derive", optional = true }
@@ -68,8 +68,8 @@ prost.workspace = true
 schemars = { version = "1.0.4", optional = true }
 serde_json = "1.0"
 serde_repr = { version = "0.1.19", optional = true }
-serde_with.workspace = true
-serde_with.optional = true
+serde-constant = { version = "0.1.0", optional = true }
+serde_with = { workspace = true, optional = true }
 serde.workspace = true
 smallvec = "1.15.1"
 smallbytes = "0.1.0"

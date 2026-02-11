@@ -1,5 +1,5 @@
 ---
-source: rust/foxglove_remote_data_loader_upstream/src/lib.rs
+source: rust/foxglove/src/data_provider/mod.rs
 expression: manifest
 ---
 {
@@ -23,9 +23,9 @@ expression: manifest
       "schemas": [
         {
           "id": 1,
-          "name": "testmessage.TestMessage",
+          "name": "TestMessage",
           "encoding": "protobuf",
-          "data": "CkYKEVRlc3RNZXNzYWdlLnByb3RvEgt0ZXN0bWVzc2FnZSIcCgtUZXN0TWVzc2FnZRINCgV2YWx1ZRgBIAIoEWIGcHJvdG8z"
+          "data": "dGVzdC1zY2hlbWEtZGF0YQ=="
         }
       ],
       "startTime": "2024-01-01T00:00:00Z",
