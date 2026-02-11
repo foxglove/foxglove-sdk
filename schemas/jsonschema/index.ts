@@ -2320,8 +2320,7 @@ export const LocationFix = {
     "longitude",
     "altitude",
     "position_covariance",
-    "position_covariance_type",
-    "color"
+    "position_covariance_type"
   ]
 };
 
@@ -2442,8 +2441,7 @@ export const LocationFixes = {
           "longitude",
           "altitude",
           "position_covariance",
-          "position_covariance_type",
-          "color"
+          "position_covariance_type"
         ]
       },
       "description": "An array of location fixes"
