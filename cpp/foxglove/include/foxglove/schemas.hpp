@@ -1187,6 +1187,21 @@ struct LinePrimitive {
 
 /// @brief A navigation satellite fix for any Global Navigation Satellite System
 struct LocationFix {
+  /// @brief Shape of the marker used for map visualization
+  enum class MarkerShape : uint8_t {
+    /// @brief Diamond-shaped marker
+    DIAMOND = 0,
+    /// @brief Square marker
+    SQUARE = 1,
+    /// @brief Cross-shaped marker
+    CROSS = 2,
+    /// @brief X-shaped marker
+    X = 3,
+    /// @brief Dot marker
+    DOT = 4,
+    /// @brief Pin marker
+    PIN = 5,
+  };
   /// @brief Type of position covariance
   enum class PositionCovarianceType : uint8_t {
     /// @brief Unknown position covariance type
@@ -1223,6 +1238,9 @@ struct LocationFix {
 
   /// @brief Color used to visualize the location
   std::optional<Color> color;
+
+  /// @brief Shape of the marker used to visualize the location on the map
+  std::optional<MarkerShape> marker_shape;
 
   /// @brief Encoded the LocationFix as protobuf to the provided buffer.
   ///

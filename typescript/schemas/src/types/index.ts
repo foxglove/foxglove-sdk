@@ -20,6 +20,7 @@ export * from "./LocationFix";
 export * from "./LocationFixes";
 export * from "./Log";
 export * from "./LogLevel";
+export * from "./MarkerShape";
 export * from "./ModelPrimitive";
 export * from "./NumericType";
 export * from "./PackedElementField";

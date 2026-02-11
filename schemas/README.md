@@ -14,6 +14,7 @@ If the IDL does not support optional fields (e.g. ROS) you must specify a value 
 
 - [enum LineType](#enum-linetype)
 - [enum LogLevel](#enum-loglevel)
+- [enum MarkerShape](#enum-markershape)
 - [enum NumericType](#enum-numerictype)
 - [enum PointsAnnotationType](#enum-pointsannotationtype)
 - [enum PositionCovarianceType](#enum-positioncovariancetype)
@@ -89,6 +90,21 @@ name | value | description
 `WARNING` | 3 | Warning log level
 `ERROR` | 4 | Error log level
 `FATAL` | 5 | Fatal log level
+
+
+
+## enum MarkerShape
+
+Shape of the marker used for map visualization
+
+name | value | description
+---- | ----- | -----------
+`DIAMOND` | 0 | Diamond-shaped marker
+`SQUARE` | 1 | Square marker
+`CROSS` | 2 | Cross-shaped marker
+`X` | 3 | X-shaped marker
+`DOT` | 4 | Dot marker
+`PIN` | 5 | Pin marker
 
 
 
@@ -1612,6 +1628,19 @@ If `position_covariance` is available, `position_covariance_type` must be set to
 <td>
 
 Color used to visualize the location
+
+</td>
+</tr>
+<tr>
+<td><code>marker_shape</code> (optional)</td>
+<td>
+
+[enum MarkerShape](#enum-markershape)
+
+</td>
+<td>
+
+Shape of the marker used to visualize the location on the map
 
 </td>
 </tr>

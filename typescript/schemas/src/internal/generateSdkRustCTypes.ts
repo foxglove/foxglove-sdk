@@ -213,6 +213,9 @@ impl BorrowToNative for ${name} {
             }
             return `${fieldName}: self.${fieldName}`;
           case "enum":
+            if (field.optional) {
+              return `${fieldName}: Some(self.${fieldName} as i32)`;
+            }
             return `${fieldName}: self.${fieldName} as i32`;
           case "nested":
             if (field.type.schema.name === "Timestamp" || field.type.schema.name === "Duration") {

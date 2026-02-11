@@ -2311,6 +2311,42 @@ export const LocationFix = {
         "b",
         "a"
       ]
+    },
+    "marker_shape": {
+      "title": "foxglove.MarkerShape",
+      "description": "Shape of the marker used to visualize the location on the map",
+      "oneOf": [
+        {
+          "title": "DIAMOND",
+          "const": 0,
+          "description": "Diamond-shaped marker"
+        },
+        {
+          "title": "SQUARE",
+          "const": 1,
+          "description": "Square marker"
+        },
+        {
+          "title": "CROSS",
+          "const": 2,
+          "description": "Cross-shaped marker"
+        },
+        {
+          "title": "X",
+          "const": 3,
+          "description": "X-shaped marker"
+        },
+        {
+          "title": "DOT",
+          "const": 4,
+          "description": "Dot marker"
+        },
+        {
+          "title": "PIN",
+          "const": 5,
+          "description": "Pin marker"
+        }
+      ]
     }
   },
   "required": [
@@ -2431,6 +2467,42 @@ export const LocationFixes = {
               "g",
               "b",
               "a"
+            ]
+          },
+          "marker_shape": {
+            "title": "foxglove.MarkerShape",
+            "description": "Shape of the marker used to visualize the location on the map",
+            "oneOf": [
+              {
+                "title": "DIAMOND",
+                "const": 0,
+                "description": "Diamond-shaped marker"
+              },
+              {
+                "title": "SQUARE",
+                "const": 1,
+                "description": "Square marker"
+              },
+              {
+                "title": "CROSS",
+                "const": 2,
+                "description": "Cross-shaped marker"
+              },
+              {
+                "title": "X",
+                "const": 3,
+                "description": "X-shaped marker"
+              },
+              {
+                "title": "DOT",
+                "const": 4,
+                "description": "Dot marker"
+              },
+              {
+                "title": "PIN",
+                "const": 5,
+                "description": "Pin marker"
+              }
             ]
           }
         },
