@@ -3,8 +3,8 @@
 #include <foxglove-c/foxglove-c.h>
 #include <foxglove/arena.hpp>
 #include <foxglove/error.hpp>
-#include <foxglove/schema.hpp>
 #include <foxglove/messages.hpp>
+#include <foxglove/schema.hpp>
 #ifndef __wasm32__
 #include <foxglove/context.hpp>
 #endif

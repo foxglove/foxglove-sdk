@@ -69,7 +69,9 @@ TEST_CASE("messages namespace encode() method works") {
 
   size_t capacity = 0;
   std::vector<uint8_t> buf(10);
-  REQUIRE(point.encode(buf.data(), buf.size(), &capacity) == foxglove::FoxgloveError::BufferTooShort);
+  REQUIRE(
+    point.encode(buf.data(), buf.size(), &capacity) == foxglove::FoxgloveError::BufferTooShort
+  );
   buf.resize(capacity);
   REQUIRE(point.encode(buf.data(), buf.size(), &capacity) == foxglove::FoxgloveError::Ok);
   REQUIRE(capacity > 0);
