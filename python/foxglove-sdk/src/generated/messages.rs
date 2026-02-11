@@ -11,7 +11,7 @@ use pyo3::prelude::*;
 use pyo3::types::PyBytes;
 
 /// An enumeration indicating how input points should be interpreted to create lines
-#[pyclass(eq, eq_int, module = "foxglove.schemas")]
+#[pyclass(eq, eq_int, module = "foxglove.messages")]
 #[derive(PartialEq, Clone)]
 pub(crate) enum LinePrimitiveLineType {
     LineStrip = 0,
@@ -20,7 +20,7 @@ pub(crate) enum LinePrimitiveLineType {
 }
 
 /// Log level
-#[pyclass(eq, eq_int, module = "foxglove.schemas")]
+#[pyclass(eq, eq_int, module = "foxglove.messages")]
 #[derive(PartialEq, Clone)]
 pub(crate) enum LogLevel {
     Unknown = 0,
@@ -32,7 +32,7 @@ pub(crate) enum LogLevel {
 }
 
 /// An enumeration indicating which entities should match a SceneEntityDeletion command
-#[pyclass(eq, eq_int, module = "foxglove.schemas")]
+#[pyclass(eq, eq_int, module = "foxglove.messages")]
 #[derive(PartialEq, Clone)]
 pub(crate) enum SceneEntityDeletionType {
     MatchingId = 0,
@@ -40,7 +40,7 @@ pub(crate) enum SceneEntityDeletionType {
 }
 
 /// Numeric type
-#[pyclass(eq, eq_int, module = "foxglove.schemas")]
+#[pyclass(eq, eq_int, module = "foxglove.messages")]
 #[derive(PartialEq, Clone)]
 pub(crate) enum PackedElementFieldNumericType {
     Unknown = 0,
@@ -55,7 +55,7 @@ pub(crate) enum PackedElementFieldNumericType {
 }
 
 /// Type of points annotation
-#[pyclass(eq, eq_int, module = "foxglove.schemas")]
+#[pyclass(eq, eq_int, module = "foxglove.messages")]
 #[derive(PartialEq, Clone)]
 pub(crate) enum PointsAnnotationType {
     Unknown = 0,
@@ -66,7 +66,7 @@ pub(crate) enum PointsAnnotationType {
 }
 
 /// Type of position covariance
-#[pyclass(eq, eq_int, module = "foxglove.schemas")]
+#[pyclass(eq, eq_int, module = "foxglove.messages")]
 #[derive(PartialEq, Clone)]
 pub(crate) enum LocationFixPositionCovarianceType {
     Unknown = 0,
@@ -85,7 +85,7 @@ pub(crate) enum LocationFixPositionCovarianceType {
 /// :param color: Color of the arrow
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/arrow-primitive
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
 pub(crate) struct ArrowPrimitive(pub(crate) foxglove::messages::ArrowPrimitive);
 #[pymethods]
@@ -204,7 +204,7 @@ impl From<ArrowPrimitive> for foxglove::messages::ArrowPrimitive {
 ///     
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/camera-calibration
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
 pub(crate) struct CameraCalibration(pub(crate) foxglove::messages::CameraCalibration);
 #[pymethods]
@@ -288,7 +288,7 @@ impl From<CameraCalibration> for foxglove::messages::CameraCalibration {
 /// :param outline_color: Outline color
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/circle-annotation
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
 pub(crate) struct CircleAnnotation(pub(crate) foxglove::messages::CircleAnnotation);
 #[pymethods]
@@ -360,7 +360,7 @@ impl From<CircleAnnotation> for foxglove::messages::CircleAnnotation {
 /// :param a: Alpha value between 0 and 1
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/color
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
 pub(crate) struct Color(pub(crate) foxglove::messages::Color);
 #[pymethods]
@@ -413,7 +413,7 @@ impl From<Color> for foxglove::messages::Color {
 ///     Supported values: `jpeg`, `png`, `webp`, `avif`
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/compressed-image
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
 pub(crate) struct CompressedImage(pub(crate) foxglove::messages::CompressedImage);
 #[pymethods]
@@ -506,7 +506,7 @@ impl From<CompressedImage> for foxglove::messages::CompressedImage {
 ///     Note: compressed video support is subject to hardware limitations and patent licensing, so not all encodings may be supported on all platforms. See more about `H.265 support <https://caniuse.com/hevc>`__, `VP9 support <https://caniuse.com/webm>`__, and `AV1 support <https://caniuse.com/av1>`__.
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/compressed-video
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
 pub(crate) struct CompressedVideo(pub(crate) foxglove::messages::CompressedVideo);
 #[pymethods]
@@ -572,7 +572,7 @@ impl From<CompressedVideo> for foxglove::messages::CompressedVideo {
 /// :param color: Color of the cylinder
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/cylinder-primitive
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
 pub(crate) struct CylinderPrimitive(pub(crate) foxglove::messages::CylinderPrimitive);
 #[pymethods]
@@ -640,7 +640,7 @@ impl From<CylinderPrimitive> for foxglove::messages::CylinderPrimitive {
 /// :param color: Color of the cube
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/cube-primitive
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
 pub(crate) struct CubePrimitive(pub(crate) foxglove::messages::CubePrimitive);
 #[pymethods]
@@ -704,7 +704,7 @@ impl From<CubePrimitive> for foxglove::messages::CubePrimitive {
 /// :param rotation: Rotation component of the transform, representing the orientation of the child frame in the parent frame
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/frame-transform
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
 pub(crate) struct FrameTransform(pub(crate) foxglove::messages::FrameTransform);
 #[pymethods]
@@ -770,7 +770,7 @@ impl From<FrameTransform> for foxglove::messages::FrameTransform {
 /// :param transforms: Array of transforms
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/frame-transforms
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
 pub(crate) struct FrameTransforms(pub(crate) foxglove::messages::FrameTransforms);
 #[pymethods]
@@ -823,7 +823,7 @@ impl From<FrameTransforms> for foxglove::messages::FrameTransforms {
 /// :param geojson: GeoJSON data encoded as a UTF-8 string
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/geo-json
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
 pub(crate) struct GeoJson(pub(crate) foxglove::messages::GeoJson);
 #[pymethods]
@@ -919,7 +919,7 @@ impl From<GeoJson> for foxglove::messages::GeoJson {
 ///     - x = (i % row_stride) / cell_stride * cell_size.x
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/grid
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
 pub(crate) struct Grid(pub(crate) foxglove::messages::Grid);
 #[pymethods]
@@ -1016,7 +1016,7 @@ impl From<Grid> for foxglove::messages::Grid {
 ///     - x = (i % row_stride) / cell_stride * cell_size.x
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/voxel-grid
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
 pub(crate) struct VoxelGrid(pub(crate) foxglove::messages::VoxelGrid);
 #[pymethods]
@@ -1106,7 +1106,7 @@ impl From<VoxelGrid> for foxglove::messages::VoxelGrid {
 /// :param texts: Text annotations
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/image-annotations
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
 pub(crate) struct ImageAnnotations(pub(crate) foxglove::messages::ImageAnnotations);
 #[pymethods]
@@ -1177,7 +1177,7 @@ impl From<ImageAnnotations> for foxglove::messages::ImageAnnotations {
 /// :param value: Value
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/key-value-pair
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
 pub(crate) struct KeyValuePair(pub(crate) foxglove::messages::KeyValuePair);
 #[pymethods]
@@ -1236,7 +1236,7 @@ impl From<KeyValuePair> for foxglove::messages::KeyValuePair {
 /// :param intensities: Intensity of detections
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/laser-scan
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
 pub(crate) struct LaserScan(pub(crate) foxglove::messages::LaserScan);
 #[pymethods]
@@ -1315,7 +1315,7 @@ impl From<LaserScan> for foxglove::messages::LaserScan {
 ///     If omitted or empty, indexing will not be used. This default behavior is equivalent to specifying [0, 1, ..., N-1] for the indices (where N is the number of `points` provided).
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/line-primitive
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
 pub(crate) struct LinePrimitive(pub(crate) foxglove::messages::LinePrimitive);
 #[pymethods]
@@ -1405,7 +1405,7 @@ impl From<LinePrimitive> for foxglove::messages::LinePrimitive {
 /// :param color: Color used to visualize the location
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/location-fix
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
 pub(crate) struct LocationFix(pub(crate) foxglove::messages::LocationFix);
 #[pymethods]
@@ -1480,7 +1480,7 @@ impl From<LocationFix> for foxglove::messages::LocationFix {
 /// :param fixes: An array of location fixes
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/location-fixes
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
 pub(crate) struct LocationFixes(pub(crate) foxglove::messages::LocationFixes);
 #[pymethods]
@@ -1538,7 +1538,7 @@ impl From<LocationFixes> for foxglove::messages::LocationFixes {
 /// :param line: Line number in the file
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/log
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
 pub(crate) struct Log(pub(crate) foxglove::messages::Log);
 #[pymethods]
@@ -1602,7 +1602,7 @@ impl From<Log> for foxglove::messages::Log {
 /// :param id: Identifier which must match if `type` is `MATCHING_ID`.
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/scene-entity-deletion
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
 pub(crate) struct SceneEntityDeletion(pub(crate) foxglove::messages::SceneEntityDeletion);
 #[pymethods]
@@ -1669,7 +1669,7 @@ impl From<SceneEntityDeletion> for foxglove::messages::SceneEntityDeletion {
 /// :param models: Model primitives
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/scene-entity
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
 pub(crate) struct SceneEntity(pub(crate) foxglove::messages::SceneEntity);
 #[pymethods]
@@ -1799,7 +1799,7 @@ impl From<SceneEntity> for foxglove::messages::SceneEntity {
 /// :param entities: Scene entities to add or replace
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/scene-update
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
 pub(crate) struct SceneUpdate(pub(crate) foxglove::messages::SceneUpdate);
 #[pymethods]
@@ -1869,7 +1869,7 @@ impl From<SceneUpdate> for foxglove::messages::SceneUpdate {
 /// :param data: Embedded model. One of `url` or `data` should be non-empty. If `data` is non-empty, `media_type` must be set to indicate the type of the data.
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/model-primitive
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
 pub(crate) struct ModelPrimitive(pub(crate) foxglove::messages::ModelPrimitive);
 #[pymethods]
@@ -1945,7 +1945,7 @@ impl From<ModelPrimitive> for foxglove::messages::ModelPrimitive {
 /// :param type: Type of data in the field. Integers are stored using little-endian byte order.
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/packed-element-field
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
 pub(crate) struct PackedElementField(pub(crate) foxglove::messages::PackedElementField);
 #[pymethods]
@@ -2000,7 +2000,7 @@ impl From<PackedElementField> for foxglove::messages::PackedElementField {
 /// :param y: y coordinate position
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/point2
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
 pub(crate) struct Point2(pub(crate) foxglove::messages::Point2);
 #[pymethods]
@@ -2047,7 +2047,7 @@ impl From<Point2> for foxglove::messages::Point2 {
 /// :param z: z coordinate position
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/point3
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
 pub(crate) struct Point3(pub(crate) foxglove::messages::Point3);
 #[pymethods]
@@ -2097,7 +2097,7 @@ impl From<Point3> for foxglove::messages::Point3 {
 /// :param point: Point in 3D space
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/point3-in-frame
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
 pub(crate) struct Point3InFrame(pub(crate) foxglove::messages::Point3InFrame);
 #[pymethods]
@@ -2156,7 +2156,7 @@ impl From<Point3InFrame> for foxglove::messages::Point3InFrame {
 /// :param data: Point data, interpreted using `fields`
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/point-cloud
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
 pub(crate) struct PointCloud(pub(crate) foxglove::messages::PointCloud);
 #[pymethods]
@@ -2236,7 +2236,7 @@ impl From<PointCloud> for foxglove::messages::PointCloud {
 /// :param thickness: Stroke thickness in pixels
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/points-annotation
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
 pub(crate) struct PointsAnnotation(pub(crate) foxglove::messages::PointsAnnotation);
 #[pymethods]
@@ -2317,7 +2317,7 @@ impl From<PointsAnnotation> for foxglove::messages::PointsAnnotation {
 /// :param orientation: Quaternion denoting orientation in 3D space
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/pose
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
 pub(crate) struct Pose(pub(crate) foxglove::messages::Pose);
 #[pymethods]
@@ -2370,7 +2370,7 @@ impl From<Pose> for foxglove::messages::Pose {
 /// :param pose: Pose in 3D space
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/pose-in-frame
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
 pub(crate) struct PoseInFrame(pub(crate) foxglove::messages::PoseInFrame);
 #[pymethods]
@@ -2426,7 +2426,7 @@ impl From<PoseInFrame> for foxglove::messages::PoseInFrame {
 /// :param poses: Poses in 3D space
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/poses-in-frame
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
 pub(crate) struct PosesInFrame(pub(crate) foxglove::messages::PosesInFrame);
 #[pymethods]
@@ -2487,7 +2487,7 @@ impl From<PosesInFrame> for foxglove::messages::PosesInFrame {
 /// :param w: w value
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/quaternion
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
 pub(crate) struct Quaternion(pub(crate) foxglove::messages::Quaternion);
 #[pymethods]
@@ -2539,7 +2539,7 @@ impl From<Quaternion> for foxglove::messages::Quaternion {
 /// :param number_of_channels: Number of channels in the audio block
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/raw-audio
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
 pub(crate) struct RawAudio(pub(crate) foxglove::messages::RawAudio);
 #[pymethods]
@@ -2664,7 +2664,7 @@ impl From<RawAudio> for foxglove::messages::RawAudio {
 ///     
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/raw-image
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
 pub(crate) struct RawImage(pub(crate) foxglove::messages::RawImage);
 #[pymethods]
@@ -2738,7 +2738,7 @@ impl From<RawImage> for foxglove::messages::RawImage {
 /// :param color: Color of the sphere
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/sphere-primitive
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
 pub(crate) struct SpherePrimitive(pub(crate) foxglove::messages::SpherePrimitive);
 #[pymethods]
@@ -2798,7 +2798,7 @@ impl From<SpherePrimitive> for foxglove::messages::SpherePrimitive {
 /// :param background_color: Background fill color
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/text-annotation
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
 pub(crate) struct TextAnnotation(pub(crate) foxglove::messages::TextAnnotation);
 #[pymethods]
@@ -2872,7 +2872,7 @@ impl From<TextAnnotation> for foxglove::messages::TextAnnotation {
 /// :param text: Text
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/text-primitive
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
 pub(crate) struct TextPrimitive(pub(crate) foxglove::messages::TextPrimitive);
 #[pymethods]
@@ -2947,7 +2947,7 @@ impl From<TextPrimitive> for foxglove::messages::TextPrimitive {
 ///     If omitted or empty, indexing will not be used. This default behavior is equivalent to specifying [0, 1, ..., N-1] for the indices (where N is the number of `points` provided).
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/triangle-list-primitive
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
 pub(crate) struct TriangleListPrimitive(pub(crate) foxglove::messages::TriangleListPrimitive);
 #[pymethods]
@@ -3018,7 +3018,7 @@ impl From<TriangleListPrimitive> for foxglove::messages::TriangleListPrimitive {
 /// :param y: y coordinate length
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/vector2
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
 pub(crate) struct Vector2(pub(crate) foxglove::messages::Vector2);
 #[pymethods]
@@ -3065,7 +3065,7 @@ impl From<Vector2> for foxglove::messages::Vector2 {
 /// :param z: z coordinate length
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/vector3
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
 pub(crate) struct Vector3(pub(crate) foxglove::messages::Vector3);
 #[pymethods]

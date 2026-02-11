@@ -23,7 +23,7 @@ describe("generatePyclass", () => {
   it("generates an enum", () => {
     expect(generatePyclass(exampleEnum)).toMatchInlineSnapshot(`
         "/// An example enum
-        #[pyclass(eq, eq_int, module = "foxglove.schemas")]
+        #[pyclass(eq, eq_int, module = "foxglove.messages")]
         #[derive(PartialEq, Clone)]
         pub(crate) enum ExampleMessageExampleEnum {
             A = 0,
@@ -73,7 +73,7 @@ describe("generatePyclass", () => {
      /// :param field_optional_float64: An optional float64 field
      ///
      /// See https://docs.foxglove.dev/docs/visualization/message-schemas/example-message
-     #[pyclass(module = "foxglove.schemas")]
+     #[pyclass(module = "foxglove.messages")]
      #[derive(Clone)]
      pub(crate) struct ExampleMessage(pub(crate) foxglove::messages::ExampleMessage);
      #[pymethods]
