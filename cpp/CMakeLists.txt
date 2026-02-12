@@ -70,6 +70,23 @@ FetchContent_Declare(json
 )
 FetchContent_MakeAvailable(json)
 
+FetchContent_Declare(
+  mcap
+  GIT_REPOSITORY https://github.com/foxglove/mcap.git
+  GIT_TAG releases/cpp/v2.1.2
+)
+FetchContent_MakeAvailable(mcap)
+
+set(LZ4_BUILD_CLI OFF CACHE BOOL "" FORCE)
+set(LZ4_BUILD_LEGACY_LZ4C OFF CACHE BOOL "" FORCE)
+FetchContent_Declare(
+  lz4
+  GIT_REPOSITORY https://github.com/lz4/lz4.git
+  GIT_TAG v1.10.0
+  SOURCE_SUBDIR build/cmake
+)
+FetchContent_MakeAvailable(lz4)
+
 if(DEFINED SANITIZE)
   if(NOT CMAKE_CXX_COMPILER_ID MATCHES ".*Clang")
     message(FATAL_ERROR "Sanitizers are only supported with Clang, not ${CMAKE_CXX_COMPILER_ID}")
@@ -261,3 +278,15 @@ set_property(TARGET example_message_filtering PROPERTY CXX_STANDARD_REQUIRED Tru
 target_compile_options(example_message_filtering PUBLIC ${SANITIZER_COMPILE_OPTIONS})
 target_link_options(example_message_filtering PUBLIC ${SANITIZER_LINK_OPTIONS})
 target_link_libraries(example_message_filtering foxglove_cpp_static)
+
+add_executable(example_ws_stream_mcap
+  examples/ws-stream-mcap/src/main.cpp
+  examples/ws-stream-mcap/src/mcap_player.cpp
+)
+set_property(TARGET example_ws_stream_mcap PROPERTY CXX_STANDARD 17)
+set_property(TARGET example_ws_stream_mcap PROPERTY CXX_STANDARD_REQUIRED True)
+target_compile_options(example_ws_stream_mcap PUBLIC ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
+target_link_options(example_ws_stream_mcap PUBLIC ${SANITIZER_LINK_OPTIONS})
+target_compile_definitions(example_ws_stream_mcap PRIVATE MCAP_COMPRESSION_NO_ZSTD)
+target_include_directories(example_ws_stream_mcap SYSTEM PRIVATE ${mcap_SOURCE_DIR}/cpp/mcap/include)
+target_link_libraries(example_ws_stream_mcap foxglove_cpp_static lz4_static)
