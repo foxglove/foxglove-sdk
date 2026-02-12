@@ -1,9 +1,5 @@
 #[cfg(test)]
 use std::sync::Arc;
-use std::{
-    borrow::Borrow,
-    hash::{Hash, Hasher},
-};
 
 #[cfg(test)]
 use bytes::Bytes;
@@ -11,38 +7,28 @@ use livekit::{id::ParticipantIdentity, ByteStreamWriter, StreamWriter};
 
 use crate::cloud::CloudError;
 
+/// A participant in the cloud session.
+///
+/// A participant has an identity and a dedicated TCP-like binary stream for sending messages.
+///
+/// This is a place to store state specific to the participant.
 pub(crate) struct Participant {
     identity: ParticipantIdentity,
+    /// A reliable, ordered stream to send messages to just this participant
     writer: ParticipantWriter,
 }
 
 impl Participant {
+    /// Creates a new participant.
     pub fn new(identity: ParticipantIdentity, writer: ParticipantWriter) -> Self {
         Self { identity, writer }
     }
 
+    /// Sends a message to the participant.
+    ///
+    /// The message is serialized and framed already and provided as a slice of bytes.
     pub(crate) async fn send(&self, bytes: &[u8]) -> Result<(), CloudError> {
         self.writer.write(bytes).await
-    }
-}
-
-impl PartialEq for Participant {
-    fn eq(&self, other: &Self) -> bool {
-        self.identity == other.identity
-    }
-}
-
-impl Eq for Participant {}
-
-impl Borrow<ParticipantIdentity> for Participant {
-    fn borrow(&self) -> &ParticipantIdentity {
-        &self.identity
-    }
-}
-
-impl Hash for Participant {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.identity.hash(state);
     }
 }
 
@@ -52,6 +38,11 @@ impl std::fmt::Debug for Participant {
     }
 }
 
+/// A writer for a participant.
+///
+/// Wraps an ordered, reliable byte stream to one specific participant.
+///
+/// Mocked with a TestByteStreamWriter for tests.
 #[allow(dead_code)]
 pub(crate) enum ParticipantWriter {
     Livekit(ByteStreamWriter),
