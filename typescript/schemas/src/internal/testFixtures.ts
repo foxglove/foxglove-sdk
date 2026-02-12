@@ -138,6 +138,12 @@ export const exampleMessage: FoxgloveMessageSchema = {
       type: { type: "primitive", name: "float64" },
       optional: true,
     },
+    {
+      name: "field_optional_enum",
+      description: "An optional enum field",
+      type: { type: "enum", enum: exampleEnum },
+      optional: true,
+    },
   ],
 };
 

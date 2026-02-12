@@ -1524,8 +1524,8 @@ const MarkerShape: FoxgloveEnumSchema = {
     { name: "DOT", value: 0, description: "Dot marker" },
     { name: "DIAMOND", value: 1, description: "Diamond-shaped marker" },
     { name: "SQUARE", value: 2, description: "Square marker" },
-    { name: "CROSS", value: 3, description: "Cross-shaped marker" },
-    { name: "X", value: 4, description: "X-shaped marker" },
+    { name: "PLUS", value: 3, description: "Plus-shaped marker (+)" },
+    { name: "CROSS", value: 4, description: "Cross-shaped marker (x)" },
     { name: "PIN", value: 5, description: "Pin marker" },
   ],
 };
