@@ -283,14 +283,7 @@ impl CloudConnection {
                         "byte stream opened from participant: {:?}",
                         participant_identity
                     );
-                    // if let Some(reader) = reader.take() {
-                    //     let session2 = session.clone();
-                    //     tokio::spawn(async move {
-                    //         session2
-                    //             .handle_byte_stream_from_client(participant_identity, reader)
-                    //             .await;
-                    //     });
-                    // }
+                    // TODO handle byte stream from client
                 }
                 RoomEvent::Disconnected { reason } => {
                     info!("disconnected: {:?}", reason.as_str_name());
