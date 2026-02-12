@@ -338,6 +338,9 @@ mod time;
 #[cfg(feature = "stream")]
 pub mod stream;
 
+#[cfg(feature = "data_provider")]
+pub mod data_provider;
+
 #[cfg(feature = "img2yuv-core")]
 #[allow(unused)]
 mod img2yuv;
