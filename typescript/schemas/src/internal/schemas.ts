@@ -1514,12 +1514,12 @@ const PositionCovarianceType: FoxgloveEnumSchema = {
   ],
 };
 
-const MarkerShape: FoxgloveEnumSchema = {
+const PointStyle: FoxgloveEnumSchema = {
   type: "enum",
-  name: "MarkerShape",
-  description: "Shape of the marker used for map visualization",
+  name: "PointStyle",
+  description: "Style of point used for map visualization",
   parentSchemaName: "LocationFix",
-  protobufEnumName: "MarkerShape",
+  protobufEnumName: "PointStyle",
   values: [
     { name: "DOT", value: 0, description: "Dot marker" },
     { name: "DIAMOND", value: 1, description: "Diamond-shaped marker" },
@@ -1589,9 +1589,9 @@ const LocationFix: FoxgloveMessageSchema = {
       optional: true,
     },
     {
-      name: "marker_shape",
-      type: { type: "enum", enum: MarkerShape },
-      description: "Shape of the marker used to visualize the location on the map",
+      name: "point_style",
+      type: { type: "enum", enum: PointStyle },
+      description: "Style of the point used to visualize the location on the map",
       protobufFieldNumber: 9,
       optional: true,
     },
@@ -1807,6 +1807,6 @@ export const foxgloveEnumSchemas = {
   SceneEntityDeletionType,
   NumericType,
   PointsAnnotationType,
-  MarkerShape,
+  PointStyle,
   PositionCovarianceType,
 };
