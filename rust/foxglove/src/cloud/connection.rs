@@ -128,9 +128,7 @@ impl CloudConnection {
         }
     }
 
-    async fn connect_session(
-        &self,
-    ) -> Result<(Arc<CloudSession>, UnboundedReceiver<RoomEvent>)> {
+    async fn connect_session(&self) -> Result<(Arc<CloudSession>, UnboundedReceiver<RoomEvent>)> {
         // TODO get credentials from API
         let credentials = RtcCredentials::new();
 
