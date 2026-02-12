@@ -52,7 +52,7 @@ use crate::Encode;
 pub struct ChannelSet {
     topics: Vec<Topic>,
     schemas: Vec<Schema>,
-    next_schema_id: NonZeroU16,
+    next_schema_id: Option<NonZeroU16>,
 }
 
 impl ChannelSet {
@@ -61,7 +61,7 @@ impl ChannelSet {
         Self {
             topics: Vec::new(),
             schemas: Vec::new(),
-            next_schema_id: NonZeroU16::MIN,
+            next_schema_id: Some(NonZeroU16::MIN),
         }
     }
 
@@ -97,11 +97,10 @@ impl ChannelSet {
         if let Some(existing) = existing {
             existing.id
         } else {
-            let id = self.next_schema_id;
-            self.next_schema_id = self
+            let id = self
                 .next_schema_id
-                .checked_add(1)
                 .expect("should not add more than 65535 schemas");
+            self.next_schema_id = id.checked_add(1);
             self.schemas.push(Schema {
                 id,
                 name: schema.name,
@@ -121,46 +120,19 @@ impl Default for ChannelSet {
 
 #[cfg(test)]
 mod tests {
-    use std::convert::Infallible;
-
     use super::*;
     use chrono::{TimeZone, Utc};
-
-    use crate::Encode;
-
-    /// A test message type with a schema, used to verify schema extraction and deduplication.
-    struct TestMessage {
-        #[allow(unused)]
-        value: i32,
-    }
-
-    impl Encode for TestMessage {
-        type Error = Infallible;
-
-        fn get_schema() -> Option<crate::Schema> {
-            Some(crate::Schema::new(
-                "TestMessage",
-                "protobuf",
-                b"test-schema-data",
-            ))
-        }
-
-        fn get_message_encoding() -> String {
-            "protobuf".into()
-        }
-
-        fn encode(&self, _buf: &mut impl bytes::BufMut) -> Result<(), Self::Error> {
-            Ok(())
-        }
-    }
 
     #[test]
     fn test_streamed_source_builder_snapshot() {
         let mut channels = ChannelSet::new();
-        channels.insert::<TestMessage>("/topic1");
-        channels.insert::<TestMessage>("/topic2"); // Same schema type - only 1 schema in output
+        channels.insert::<crate::schemas::Vector3>("/topic1");
+        channels.insert::<crate::schemas::Vector3>("/topic2");
 
         let (topics, schemas) = channels.into_topics_and_schemas();
+        assert_eq!(topics.len(), 2);
+        assert_eq!(schemas.len(), 1);
+
         let source = StreamedSource {
             url: "/v1/data".into(),
             id: Some("test-id".into()),

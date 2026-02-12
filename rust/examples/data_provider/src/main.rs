@@ -4,12 +4,16 @@
 //! - `GET /v1/manifest` - returns a JSON manifest describing the available data
 //! - `GET /v1/data` - streams MCAP data
 //!
-//! # Testing the example using curl
+//! # Running the example
 //!
-//! Run the example:
+//! See the remote data loader local development guide to test this properly in the Foxglove app.
+//!
+//! You can also test basic functionality with curl:
+//!
+//! To run the example server:
 //!
 //! ```sh
-//! cargo run -p example_remote_data_loader
+//! cargo run -p example_data_provider
 //! ```
 //!
 //! Get a manifest for a specific flight:
@@ -39,23 +43,18 @@ use axum::{
     routing::get,
 };
 use chrono::{DateTime, DurationRound, Utc};
-use foxglove::data_provider::{ChannelSet, Manifest, StreamedSource, UpstreamSource};
 use foxglove::stream::create_mcap_stream;
+use foxglove::{
+    data_provider::{ChannelSet, Manifest, StreamedSource, UpstreamSource},
+    schemas::Vector3,
+};
 use futures::StreamExt;
 use serde::{Deserialize, Serialize};
-
-/// A simple message type for this example. In a real implementation, you should probably use one of
-/// the built-in message types from the [`foxglove`] crate for out-of-the-box visualization support.
-#[derive(foxglove::Encode)]
-struct DemoMessage {
-    msg: String,
-    value: f64,
-}
 
 /// Specification of what to load.
 ///
 /// Deserialized from the query parameters in the incoming HTTP request.
-#[derive(Deserialize, Serialize)]
+#[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct FlightParams {
     flight_id: String,
@@ -83,9 +82,9 @@ async fn manifest_handler(headers: HeaderMap, Query(params): Query<FlightParams>
         return status.into_response();
     }
 
-    // Collect channel declarations and extract topics/schemas.
+    // Declare a single channel of Foxglove `Vector3` messages on topic "/demo".
     let mut channels = ChannelSet::new();
-    channels.insert::<DemoMessage>("/demo");
+    channels.insert::<Vector3>("/demo");
     let (topics, schemas) = channels.into_topics_and_schemas();
 
     let query = serde_urlencoded::to_string(&params).unwrap();
@@ -123,7 +122,7 @@ async fn data_handler(headers: HeaderMap, Query(params): Query<FlightParams>) ->
     let (mut handle, mcap_stream) = create_mcap_stream();
 
     // Declare channels.
-    let channel = handle.channel_builder("/demo").build::<DemoMessage>();
+    let channel = handle.channel_builder("/demo").build::<Vector3>();
 
     // Spawn a task to stream data asynchronously rather than buffering it all up front.
     tokio::spawn(async move {
@@ -151,9 +150,10 @@ async fn data_handler(headers: HeaderMap, Query(params): Query<FlightParams>) ->
             // `log_with_time()` immediately writes messages to the output MCAP, so you MUST NOT
             // call it with out-of-order timestamps, even across different channels.
             channel.log_with_time(
-                &DemoMessage {
-                    msg: format!("Data for flight {} at time {}", params.flight_id, inner),
-                    value: inner.timestamp() as f64,
+                &Vector3 {
+                    x: inner.timestamp() as f64,
+                    y: 0.0,
+                    z: 0.0,
                 },
                 inner,
             );

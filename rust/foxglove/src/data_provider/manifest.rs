@@ -50,7 +50,9 @@ pub struct StreamedSource {
     pub topics: Vec<Topic>,
     /// Schemas present in the data.
     pub schemas: Vec<Schema>,
-    /// Earliest timestamp of any message in the data.
+    /// Earliest timestamp of any message in the data source.
+    ///
+    /// You can provide a lower bound if this is not known exactly. This determines the start time of the seek bar in the Foxglove app.
     pub start_time: DateTime<Utc>,
     /// Latest timestamp of any message in the data.
     pub end_time: DateTime<Utc>,
