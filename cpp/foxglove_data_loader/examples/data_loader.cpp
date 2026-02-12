@@ -61,7 +61,8 @@ public:
 
   Result<Initialization> initialize() override;
 
-  Result<std::unique_ptr<AbstractMessageIterator>> create_iterator(const MessageIteratorArgs& args
+  Result<std::unique_ptr<AbstractMessageIterator>> create_iterator(
+    const MessageIteratorArgs& args
   ) override;
 };
 
@@ -117,35 +118,35 @@ Result<Initialization> TextDataLoader::initialize() {
     }
     this->files.emplace_back(buf);
     uint16_t channel_id = file_index;
-    channels.push_back(Channel{
-      .id = channel_id,
-      .schema_id = 1,
-      .topic_name = "/log",
-      .message_encoding = "protobuf",
-      .message_count = line_count,
-    });
+    channels.push_back(
+      Channel{
+        .id = channel_id,
+        .schema_id = 1,
+        .topic_name = "/log",
+        .message_encoding = "protobuf",
+        .message_count = line_count,
+      }
+    );
   }
   foxglove::Schema log_schema = foxglove::schemas::Log::schema();
   return Result<Initialization>{
-    .value =
-      Initialization{
-        .channels = channels,
-        .schemas = {Schema{
-          .id = 1,
-          .name = log_schema.name,
-          .encoding = log_schema.encoding,
-          .data =
-            BytesView{
-              .ptr = reinterpret_cast<const uint8_t*>(log_schema.data),
-              .len = log_schema.data_len,
-            }
-        }},
-        .time_range =
-          TimeRange{
-            .start_time = 0,
-            .end_time = this->line_indexes.size(),
+    .value = Initialization{
+      .channels = channels,
+      .schemas = {Schema{
+        .id = 1,
+        .name = log_schema.name,
+        .encoding = log_schema.encoding,
+        .data =
+          BytesView{
+            .ptr = reinterpret_cast<const uint8_t*>(log_schema.data),
+            .len = log_schema.data_len,
           }
+      }},
+      .time_range = TimeRange{
+        .start_time = 0,
+        .end_time = this->line_indexes.size(),
       }
+    }
   };
 }
 /** returns an AbstractMessageIterator for the set of requested args.
@@ -209,17 +210,15 @@ std::optional<Result<Message>> TextMessageIterator::next() {
         }
         index++;
         return Result<Message>{
-          .value =
-            Message{
-              .channel_id = channel_id,
-              .log_time = time,
-              .publish_time = time,
-              .data =
-                BytesView{
-                  .ptr = last_encoded_message.data(),
-                  .len = encoded_len,
-                }
+          .value = Message{
+            .channel_id = channel_id,
+            .log_time = time,
+            .publish_time = time,
+            .data = BytesView{
+              .ptr = last_encoded_message.data(),
+              .len = encoded_len,
             }
+          }
         };
       }
     }

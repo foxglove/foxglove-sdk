@@ -257,9 +257,9 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
           std::optional<PlaybackState> maybe_playback_state = std::nullopt;
           try {
             const auto* ctx = (static_cast<const WebSocketServerCallbacks*>(context));
-            maybe_playback_state =
-              ctx->onPlaybackControlRequest(PlaybackControlRequest::from(*c_playback_control_request
-              ));
+            maybe_playback_state = ctx->onPlaybackControlRequest(
+              PlaybackControlRequest::from(*c_playback_control_request)
+            );
           } catch (const std::exception& exc) {
             warn() << "onPlaybackControlRequest callback failed: " << exc.what();
           }
@@ -415,7 +415,8 @@ void WebSocketServer::broadcastPlaybackState(const PlaybackState& playback_state
 }
 /// @endcond
 
-FoxgloveError WebSocketServer::clearSession(std::optional<std::string_view> session_id
+FoxgloveError WebSocketServer::clearSession(
+  std::optional<std::string_view> session_id
 ) const noexcept {
   auto c_session_id = session_id
                         ? std::optional<foxglove_string>{{session_id->data(), session_id->size()}}
