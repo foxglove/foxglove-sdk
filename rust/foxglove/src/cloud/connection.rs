@@ -20,9 +20,11 @@ use crate::{
     },
     library_version::get_library_version,
     websocket::{self, Server},
-    ws_protocol::{server::ServerInfo, JsonMessage},
     CloudSinkListener, SinkChannelFilter,
 };
+
+use crate::protocol::v1::JsonMessage;
+use crate::protocol::v2::server::ServerInfo;
 
 type Result<T> = std::result::Result<T, CloudError>;
 
