@@ -1264,7 +1264,7 @@ typedef struct foxglove_location_fix {
   /**
    * Style of the point used to visualize the location on the map
    */
-  foxglove_point_style point_style;
+  const foxglove_point_style *point_style;
 } foxglove_location_fix;
 
 /**

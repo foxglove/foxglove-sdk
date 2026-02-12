@@ -3238,7 +3238,7 @@ pub struct LocationFix {
     pub color: *const Color,
 
     /// Style of the point used to visualize the location on the map
-    pub point_style: FoxglovePointStyle,
+    pub point_style: *const FoxglovePointStyle,
 }
 
 #[cfg(not(target_family = "wasm"))]
@@ -3300,7 +3300,7 @@ impl BorrowToNative for LocationFix {
             }),
             position_covariance_type: self.position_covariance_type as i32,
             color: color.map(ManuallyDrop::into_inner),
-            point_style: Some(self.point_style as i32),
+            point_style: unsafe { self.point_style.as_ref() }.map(|&v| v as i32),
         }))
     }
 }
