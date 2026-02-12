@@ -45,6 +45,7 @@ impl std::fmt::Debug for Participant {
 /// Mocked with a TestByteStreamWriter for tests.
 pub(crate) enum ParticipantWriter {
     Livekit(ByteStreamWriter),
+    #[allow(dead_code)]
     #[cfg(test)]
     Test(Arc<TestByteStreamWriter>),
 }
