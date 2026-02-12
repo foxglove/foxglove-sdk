@@ -23,9 +23,9 @@ expression: manifest
       "schemas": [
         {
           "id": 1,
-          "name": "TestMessage",
+          "name": "foxglove.Vector3",
           "encoding": "protobuf",
-          "data": "dGVzdC1zY2hlbWEtZGF0YQ=="
+          "data": "Cl8KFmZveGdsb3ZlL1ZlY3RvcjMucHJvdG8SCGZveGdsb3ZlIjMKB1ZlY3RvcjMSDAoBeBgBIAEoAVIBeBIMCgF5GAIgASgBUgF5EgwKAXoYAyABKAFSAXpiBnByb3RvMw=="
         }
       ],
       "startTime": "2024-01-01T00:00:00Z",
