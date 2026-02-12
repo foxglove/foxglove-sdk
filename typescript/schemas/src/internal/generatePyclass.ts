@@ -261,7 +261,9 @@ function generateMessageClass(schema: FoxgloveMessageSchema): string {
         if (field.array != undefined) {
           return `${safeRustName(field.name)}.unwrap_or_default().into_iter().map(|x| x as i32).collect()`;
         }
-        return `${safeRustName(field.name)} as i32`;
+        return field.optional
+          ? `${safeRustName(field.name)}.map(|s| s as i32)`
+          : `${safeRustName(field.name)} as i32`;
     }
   }
 
