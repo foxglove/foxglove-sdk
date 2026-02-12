@@ -94,6 +94,9 @@ pub struct ${name} {
           break;
         case "enum":
           fieldType = rustEnumName(field.type.enum.name);
+          if (field.optional) {
+            fieldType = `*const ${fieldType}`;
+          }
           break;
         case "nested":
           fieldType = rustMessageSchemaName(field.type.schema);
@@ -214,7 +217,7 @@ impl BorrowToNative for ${name} {
             return `${fieldName}: self.${fieldName}`;
           case "enum":
             if (field.optional) {
-              return `${fieldName}: Some(self.${fieldName} as i32)`;
+              return `${fieldName}: unsafe { self.${fieldName}.as_ref() }.map(|&v| v as i32)`;
             }
             return `${fieldName}: self.${fieldName} as i32`;
           case "nested":

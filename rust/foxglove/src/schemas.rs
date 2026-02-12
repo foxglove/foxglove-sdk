@@ -252,4 +252,46 @@ mod tests {
         let parsed: Grid = serde_cbor::from_slice(&bytes).expect("failed to deserialize");
         assert_eq!(grid, parsed);
     }
+
+    #[test]
+    fn test_location_fix_json_roundtrip_with_point_style() {
+        use super::{location_fix::PointStyle, LocationFix};
+
+        let fix = LocationFix {
+            latitude: 37.7749,
+            longitude: -122.4194,
+            altitude: 10.0,
+            point_style: Some(PointStyle::Pin as i32),
+            ..Default::default()
+        };
+        let json = serde_json::to_string(&fix).expect("failed to serialize");
+        assert!(json.contains("\"point_style\":\"PIN\""));
+        let parsed: LocationFix = serde_json::from_str(&json).expect("failed to deserialize");
+        assert_eq!(fix, parsed);
+    }
+
+    #[test]
+    fn test_location_fix_json_roundtrip_with_none_point_style() {
+        use super::LocationFix;
+
+        let fix = LocationFix {
+            latitude: 37.7749,
+            longitude: -122.4194,
+            point_style: None,
+            ..Default::default()
+        };
+        let json = serde_json::to_string(&fix).expect("failed to serialize");
+        assert!(json.contains("\"point_style\":null"));
+        let parsed: LocationFix = serde_json::from_str(&json).expect("failed to deserialize");
+        assert_eq!(fix, parsed);
+    }
+
+    #[test]
+    fn test_location_fix_json_invalid_point_style() {
+        use super::LocationFix;
+
+        let json = r#"{"point_style":"INVALID_VALUE","latitude":0.0,"longitude":0.0,"altitude":0.0,"position_covariance":[],"position_covariance_type":"UNKNOWN"}"#;
+        let result: Result<LocationFix, _> = serde_json::from_str(json);
+        assert!(result.is_err());
+    }
 }
