@@ -4,6 +4,12 @@ See [Foxglove Schemas documentation](https://docs.foxglove.dev/docs/visualizatio
 
 All schemas are generated from [schemas.ts](/internal/schemas.ts).
 
+## Optional fields
+
+Optional message fields may be omitted. When omitted, the consumer (e.g. a Foxglove panel) determines the behavior.
+
+If the IDL does not support optional fields (e.g. ROS) you must specify a value for the field.
+
 ## Contents
 
 - [enum LineType](#enum-linetype)
@@ -1597,7 +1603,7 @@ If `position_covariance` is available, `position_covariance_type` must be set to
 </td>
 </tr>
 <tr>
-<td><code>color</code></td>
+<td><code>color</code> (optional)</td>
 <td>
 
 [Color](#color)

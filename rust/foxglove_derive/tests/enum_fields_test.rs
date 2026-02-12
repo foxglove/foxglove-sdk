@@ -20,6 +20,16 @@ struct TestMessage {
     c: TestEnum,
 }
 
+#[derive(Encode)]
+struct TestMessageVecEnum {
+    values: Vec<TestEnum>,
+}
+
+#[derive(Encode)]
+struct TestMessageArrayEnum {
+    values: [TestEnum; 3],
+}
+
 #[test]
 fn test_single_enum_field_serialization() {
     let test_struct = TestMessage {
@@ -55,6 +65,86 @@ fn test_single_enum_field_serialization() {
         } else {
             panic!("Couldn't access field value as enum number");
         }
+    }
+}
+
+#[test]
+fn test_vec_of_enum_serialization() {
+    let test_struct = TestMessageVecEnum {
+        values: vec![TestEnum::ValueNeg, TestEnum::Value2, TestEnum::ValueOne],
+    };
+
+    let mut buf = BytesMut::new();
+    test_struct.encode(&mut buf).expect("Failed to encode");
+
+    let schema = TestMessageVecEnum::get_schema().expect("Failed to get schema");
+    assert_eq!(schema.encoding, "protobuf");
+
+    let message_descriptor = get_message_descriptor(&schema);
+
+    // Verify the field is marked as repeated
+    let field_descriptor = message_descriptor
+        .get_field_by_name("values")
+        .expect("Field 'values' not found");
+    assert!(
+        field_descriptor.is_list(),
+        "Field should be a repeated list"
+    );
+
+    let deserialized_message = DynamicMessage::decode(message_descriptor.clone(), buf.as_ref())
+        .expect("Failed to deserialize");
+
+    let field_value = deserialized_message.get_field(&field_descriptor);
+    let list_value = field_value.as_list().expect("Field value is not a list");
+
+    assert_eq!(list_value.len(), 3, "Vec should have 3 elements");
+
+    let expected_values = [-10, 2, 1];
+    for (i, expected) in expected_values.iter().enumerate() {
+        let value = list_value[i]
+            .as_enum_number()
+            .expect("List item should be an enum");
+        assert_eq!(value, *expected, "Enum value at index {} is wrong", i);
+    }
+}
+
+#[test]
+fn test_array_of_enum_serialization() {
+    let test_struct = TestMessageArrayEnum {
+        values: [TestEnum::ValueOne, TestEnum::ValueNeg, TestEnum::Value2],
+    };
+
+    let mut buf = BytesMut::new();
+    test_struct.encode(&mut buf).expect("Failed to encode");
+
+    let schema = TestMessageArrayEnum::get_schema().expect("Failed to get schema");
+    assert_eq!(schema.encoding, "protobuf");
+
+    let message_descriptor = get_message_descriptor(&schema);
+
+    // Verify the field is marked as repeated
+    let field_descriptor = message_descriptor
+        .get_field_by_name("values")
+        .expect("Field 'values' not found");
+    assert!(
+        field_descriptor.is_list(),
+        "Field should be a repeated list"
+    );
+
+    let deserialized_message = DynamicMessage::decode(message_descriptor.clone(), buf.as_ref())
+        .expect("Failed to deserialize");
+
+    let field_value = deserialized_message.get_field(&field_descriptor);
+    let list_value = field_value.as_list().expect("Field value is not a list");
+
+    assert_eq!(list_value.len(), 3, "Array should have 3 elements");
+
+    let expected_values = [1, -10, 2];
+    for (i, expected) in expected_values.iter().enumerate() {
+        let value = list_value[i]
+            .as_enum_number()
+            .expect("List item should be an enum");
+        assert_eq!(value, *expected, "Enum value at index {} is wrong", i);
     }
 }
 

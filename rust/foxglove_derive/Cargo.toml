@@ -18,8 +18,9 @@ prost-types.workspace = true
 
 [dev-dependencies]
 bytes = "1.4"
-foxglove = { path = "../foxglove" }
+chrono = "0.4"
+foxglove = { path = "../foxglove", features = ["chrono"] }
 prost.workspace = true
-prost-reflect = "0.15.3"
+prost-reflect = "0.16.3"
 tracing.workspace = true
 tracing-test = { workspace = true, features = ["no-env-filter"] }

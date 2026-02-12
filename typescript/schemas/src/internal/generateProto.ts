@@ -91,8 +91,14 @@ export function generateProto(
   const fields = numberedFields.map((field) => {
     const lineComments: string[] = [];
     const qualifiers: string[] = [];
+    if (field.array != undefined && field.optional) {
+      throw new Error(`Field "${field.name}" cannot be both repeated (array) and optional`);
+    }
     if (field.array != undefined) {
       qualifiers.push("repeated");
+    }
+    if (field.optional) {
+      qualifiers.push("optional");
     }
     if (typeof field.array === "number") {
       lineComments.push(`length ${field.array}`);

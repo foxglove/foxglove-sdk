@@ -1,4 +1,9 @@
 //! Interfaces for working with Protocol Buffers.
+
+#[cfg(feature = "chrono")]
+mod chrono;
+mod wkt;
+
 use prost_types::field_descriptor_proto::Type as ProstFieldType;
 
 /// Serializes a Protocol Buffers FileDescriptorSet to a byte vector.
@@ -97,6 +102,23 @@ pub trait ProtobufField {
         None
     }
 
+    /// Returns the file descriptor for types that need to be in their own package.
+    ///
+    /// This is used for well-known types like `google.protobuf.Timestamp` that need to be
+    /// included as separate files in the FileDescriptorSet rather than as nested types.
+    fn file_descriptor() -> Option<prost_types::FileDescriptorProto> {
+        None
+    }
+
+    /// Returns all file descriptors needed by this type, including from nested fields.
+    ///
+    /// For primitive types, this returns an empty vec. For well-known types, this returns
+    /// a vec containing the single file descriptor. For derived structs, this aggregates
+    /// file descriptors from all fields.
+    fn file_descriptors() -> Vec<prost_types::FileDescriptorProto> {
+        Self::file_descriptor().into_iter().collect()
+    }
+
     /// Indicates the type represents a repeated field (like a Vec).
     ///
     /// By default, fields are not repeated.
@@ -104,8 +126,25 @@ pub trait ProtobufField {
         false
     }
 
-    /// The length of the field to be written, in bytes.
+    /// Indicates the type represents an optional field (like an Option).
+    ///
+    /// By default, fields are not optional.
+    fn optional() -> bool {
+        false
+    }
+
+    /// The length of the field to be written, in bytes (not including the tag).
     fn encoded_len(&self) -> usize;
+
+    /// The length of the field including the tag, in bytes.
+    ///
+    /// For optional fields that are None, this returns 0 since nothing is written.
+    fn encoded_len_tagged(&self, field_number: u32) -> usize {
+        // The tag is a varint encoding (field_number << 3) | wire_type.
+        // See: https://protobuf.dev/programming-guides/encoding/#structure
+        let tag = ((field_number << 3) | Self::wire_type()) as u64;
+        encoded_len_varint(tag) + self.encoded_len()
+    }
 }
 
 impl ProtobufField for u64 {
@@ -405,13 +444,10 @@ where
     }
 
     fn write_tagged(&self, field_number: u32, buf: &mut impl bytes::BufMut) {
-        // non-packed repeated fields are encoded as a record for each element
-        // https://protobuf.dev/programming-guides/encoding/#optional
+        // Non-packed repeated fields are encoded as a record for each element.
+        // https://protobuf.dev/programming-guides/encoding/#repeated
         for value in self {
-            let wire_type = T::wire_type();
-            let tag = (field_number << 3) | wire_type;
-            prost::encoding::encode_varint(tag as u64, buf);
-            value.write(buf);
+            value.write_tagged(field_number, buf);
         }
     }
 
@@ -423,6 +459,10 @@ where
         true
     }
 
+    fn enum_descriptor() -> Option<prost_types::EnumDescriptorProto> {
+        T::enum_descriptor()
+    }
+
     fn message_descriptor() -> Option<prost_types::DescriptorProto> {
         // The message descriptor of a vector is the message descriptor of the element type
         // the "repeating" property is set on the field that is repeating rather than the message
@@ -430,15 +470,159 @@ where
         T::message_descriptor()
     }
 
+    fn file_descriptor() -> Option<prost_types::FileDescriptorProto> {
+        T::file_descriptor()
+    }
+
+    fn file_descriptors() -> Vec<prost_types::FileDescriptorProto> {
+        T::file_descriptors()
+    }
+
     fn type_name() -> Option<String> {
         T::type_name()
     }
 
     fn encoded_len(&self) -> usize {
-        // non-packed repeated fields
-        let delim_len = prost::encoding::length_delimiter_len(self.len());
-        let data_len: usize = self.iter().map(|value| value.encoded_len()).sum();
-        delim_len + data_len
+        self.iter().map(|value| value.encoded_len()).sum()
+    }
+
+    fn encoded_len_tagged(&self, field_number: u32) -> usize {
+        // Each element is written with its own tag, so sum up the tagged lengths.
+        self.iter()
+            .map(|value| value.encoded_len_tagged(field_number))
+            .sum()
+    }
+}
+
+// implement a protobuf field for any array [T; N] where T implements ProtobufField
+impl<T, const N: usize> ProtobufField for [T; N]
+where
+    T: ProtobufField,
+{
+    fn field_type() -> ProstFieldType {
+        T::field_type()
+    }
+
+    fn wire_type() -> u32 {
+        prost::encoding::WireType::LengthDelimited as u32
+    }
+
+    fn write_tagged(&self, field_number: u32, buf: &mut impl bytes::BufMut) {
+        // Non-packed repeated fields are encoded as a record for each element.
+        // https://protobuf.dev/programming-guides/encoding/#repeated
+        for value in self {
+            value.write_tagged(field_number, buf);
+        }
+    }
+
+    fn write(&self, _buf: &mut impl bytes::BufMut) {
+        panic!("[T; N] should always be written using write_tagged");
+    }
+
+    fn repeating() -> bool {
+        true
+    }
+
+    fn enum_descriptor() -> Option<prost_types::EnumDescriptorProto> {
+        T::enum_descriptor()
+    }
+
+    fn message_descriptor() -> Option<prost_types::DescriptorProto> {
+        // The message descriptor of an array is the message descriptor of the element type
+        // the "repeating" property is set on the field that is repeating rather than the message
+        // descriptor
+        T::message_descriptor()
+    }
+
+    fn file_descriptor() -> Option<prost_types::FileDescriptorProto> {
+        T::file_descriptor()
+    }
+
+    fn file_descriptors() -> Vec<prost_types::FileDescriptorProto> {
+        T::file_descriptors()
+    }
+
+    fn type_name() -> Option<String> {
+        T::type_name()
+    }
+
+    fn encoded_len(&self) -> usize {
+        self.iter().map(|value| value.encoded_len()).sum()
+    }
+
+    fn encoded_len_tagged(&self, field_number: u32) -> usize {
+        // Each element is written with its own tag, so sum up the tagged lengths.
+        self.iter()
+            .map(|value| value.encoded_len_tagged(field_number))
+            .sum()
+    }
+}
+
+// Implement ProtobufField for Option<T> where T implements ProtobufField.
+// In proto3, all fields are implicitly optional. None means the field is not written.
+impl<T> ProtobufField for Option<T>
+where
+    T: ProtobufField,
+{
+    fn field_type() -> ProstFieldType {
+        T::field_type()
+    }
+
+    fn wire_type() -> u32 {
+        T::wire_type()
+    }
+
+    fn write_tagged(&self, field_number: u32, buf: &mut impl bytes::BufMut) {
+        if let Some(value) = self {
+            value.write_tagged(field_number, buf);
+        }
+        // None means don't write anything - field will take default value when decoded
+    }
+
+    fn write(&self, _buf: &mut impl bytes::BufMut) {
+        panic!("Option<T> should always be written using write_tagged");
+    }
+
+    fn message_descriptor() -> Option<prost_types::DescriptorProto> {
+        T::message_descriptor()
+    }
+
+    fn enum_descriptor() -> Option<prost_types::EnumDescriptorProto> {
+        T::enum_descriptor()
+    }
+
+    fn file_descriptor() -> Option<prost_types::FileDescriptorProto> {
+        T::file_descriptor()
+    }
+
+    fn file_descriptors() -> Vec<prost_types::FileDescriptorProto> {
+        T::file_descriptors()
+    }
+
+    fn type_name() -> Option<String> {
+        T::type_name()
+    }
+
+    fn repeating() -> bool {
+        T::repeating()
+    }
+
+    fn optional() -> bool {
+        true
+    }
+
+    fn encoded_len(&self) -> usize {
+        match self {
+            Some(value) => value.encoded_len(),
+            None => 0,
+        }
+    }
+
+    fn encoded_len_tagged(&self, field_number: u32) -> usize {
+        match self {
+            Some(value) => value.encoded_len_tagged(field_number),
+            None => 0,
+        }
     }
 }
 

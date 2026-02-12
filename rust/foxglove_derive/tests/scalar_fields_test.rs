@@ -41,8 +41,19 @@ struct TestMessageVector {
 }
 
 #[derive(Encode)]
+struct TestMessageArray {
+    numbers: [u64; 3],
+}
+
+#[derive(Encode)]
 struct GenericMessage<T> {
     val: T,
+}
+
+#[derive(Encode)]
+struct TestMessageOption {
+    required: u32,
+    optional: Option<u32>,
 }
 
 #[test]
@@ -279,6 +290,254 @@ fn test_generics() {
     let number_value = field_value.as_u32().expect("Field value is not a u32");
     assert_eq!(field_descriptor.name(), "val");
     assert_eq!(number_value, 42);
+}
+
+#[test]
+fn test_optional_field_some() {
+    let test_struct = TestMessageOption {
+        required: 42,
+        optional: Some(123),
+    };
+
+    let mut buf = BytesMut::new();
+    test_struct.encode(&mut buf).expect("Failed to encode");
+
+    let schema = TestMessageOption::get_schema().expect("Failed to get schema");
+    let message_descriptor = get_message_descriptor(&schema);
+    let deserialized_message = DynamicMessage::decode(message_descriptor.clone(), buf.as_ref())
+        .expect("Failed to deserialize");
+
+    // Verify required field
+    let required_field = message_descriptor
+        .get_field_by_name("required")
+        .expect("Field 'required' not found");
+    let required_value = deserialized_message
+        .get_field(&required_field)
+        .as_u32()
+        .unwrap();
+    assert_eq!(required_value, 42);
+
+    // Verify optional field with Some value
+    let optional_field = message_descriptor
+        .get_field_by_name("optional")
+        .expect("Field 'optional' not found");
+    let optional_value = deserialized_message
+        .get_field(&optional_field)
+        .as_u32()
+        .unwrap();
+    assert_eq!(optional_value, 123);
+}
+
+#[test]
+fn test_optional_field_none() {
+    let test_struct = TestMessageOption {
+        required: 42,
+        optional: None,
+    };
+
+    let mut buf = BytesMut::new();
+    test_struct.encode(&mut buf).expect("Failed to encode");
+
+    let schema = TestMessageOption::get_schema().expect("Failed to get schema");
+    let message_descriptor = get_message_descriptor(&schema);
+    let deserialized_message = DynamicMessage::decode(message_descriptor.clone(), buf.as_ref())
+        .expect("Failed to deserialize");
+
+    // Verify required field
+    let required_field = message_descriptor
+        .get_field_by_name("required")
+        .expect("Field 'required' not found");
+    let required_value = deserialized_message
+        .get_field(&required_field)
+        .as_u32()
+        .unwrap();
+    assert_eq!(required_value, 42);
+
+    // Verify optional field with None value - should be default (0 for u32)
+    let optional_field = message_descriptor
+        .get_field_by_name("optional")
+        .expect("Field 'optional' not found");
+    let optional_value = deserialized_message
+        .get_field(&optional_field)
+        .as_u32()
+        .unwrap();
+    assert_eq!(optional_value, 0); // Default value for u32 in proto3
+}
+
+#[test]
+fn test_optional_field_encoded_len_none() {
+    // When optional field is None, encoded_len should match actual encoded size
+    let test_struct = TestMessageOption {
+        required: 42,
+        optional: None,
+    };
+
+    let mut buf = BytesMut::new();
+    test_struct.encode(&mut buf).expect("Failed to encode");
+
+    let reported_len = test_struct
+        .encoded_len()
+        .expect("encoded_len should return Some");
+    let actual_len = buf.len();
+
+    assert_eq!(
+        reported_len, actual_len,
+        "encoded_len() reported {} but actual encoded size is {}",
+        reported_len, actual_len
+    );
+}
+
+#[test]
+fn test_optional_field_encoded_len_some() {
+    // When optional field is Some, encoded_len should match actual encoded size
+    let test_struct = TestMessageOption {
+        required: 42,
+        optional: Some(123),
+    };
+
+    let mut buf = BytesMut::new();
+    test_struct.encode(&mut buf).expect("Failed to encode");
+
+    let reported_len = test_struct
+        .encoded_len()
+        .expect("encoded_len should return Some");
+    let actual_len = buf.len();
+
+    assert_eq!(
+        reported_len, actual_len,
+        "encoded_len() reported {} but actual encoded size is {}",
+        reported_len, actual_len
+    );
+}
+
+#[test]
+fn test_vec_encoded_len() {
+    let test_struct = TestMessageVector {
+        numbers: vec![1, 2, 3],
+    };
+
+    let mut buf = BytesMut::new();
+    test_struct.encode(&mut buf).expect("Failed to encode");
+
+    let reported_len = test_struct
+        .encoded_len()
+        .expect("encoded_len should return Some");
+    let actual_len = buf.len();
+
+    assert_eq!(
+        reported_len, actual_len,
+        "encoded_len() reported {} but actual encoded size is {}",
+        reported_len, actual_len
+    );
+}
+
+#[test]
+fn test_array_of_u64_field_serialization() {
+    let test_struct = TestMessageArray {
+        numbers: [42, 84, 126],
+    };
+
+    let mut buf = BytesMut::new();
+    test_struct.encode(&mut buf).expect("Failed to encode");
+
+    let schema = TestMessageArray::get_schema().expect("Failed to get schema");
+    assert_eq!(schema.encoding, "protobuf");
+    assert_eq!(schema.name, "testmessagearray.TestMessageArray");
+
+    let descriptor_set = prost_types::FileDescriptorSet::decode(schema.data.as_ref())
+        .expect("Failed to decode descriptor set");
+    let file = &descriptor_set.file[0];
+
+    // Verify the message has a repeated field
+    let message_type = &file.message_type[0];
+    assert_eq!(message_type.name.as_ref().unwrap(), "TestMessageArray");
+
+    let field = &message_type.field[0];
+    assert_eq!(field.name.as_ref().unwrap(), "numbers");
+    assert_eq!(
+        field.label.unwrap(),
+        prost_types::field_descriptor_proto::Label::Repeated as i32
+    );
+    assert_eq!(
+        field.r#type.unwrap(),
+        prost_types::field_descriptor_proto::Type::Uint64 as i32
+    );
+
+    // Deserialize and verify
+    let message_descriptor = get_message_descriptor(&schema);
+    let deserialized_message = DynamicMessage::decode(message_descriptor.clone(), buf.as_ref())
+        .expect("Failed to deserialize array message");
+
+    let field_descriptor = message_descriptor
+        .get_field_by_name("numbers")
+        .expect("Field 'numbers' not found");
+    assert_eq!(field_descriptor.name(), "numbers");
+    assert!(
+        field_descriptor.is_list(),
+        "Field should be a repeated list"
+    );
+
+    // Get the list value and verify each element
+    let field_value = deserialized_message.get_field(&field_descriptor);
+    let list_value = field_value.as_list().expect("Field value is not a list");
+
+    assert_eq!(list_value.len(), 3, "Array should have 3 elements");
+    assert_eq!(list_value[0].as_u64().unwrap(), 42);
+    assert_eq!(list_value[1].as_u64().unwrap(), 84);
+    assert_eq!(list_value[2].as_u64().unwrap(), 126);
+}
+
+#[test]
+fn test_array_encoded_len() {
+    let test_struct = TestMessageArray { numbers: [1, 2, 3] };
+
+    let mut buf = BytesMut::new();
+    test_struct.encode(&mut buf).expect("Failed to encode");
+
+    let reported_len = test_struct
+        .encoded_len()
+        .expect("encoded_len should return Some");
+    let actual_len = buf.len();
+
+    assert_eq!(
+        reported_len, actual_len,
+        "encoded_len() reported {} but actual encoded size is {}",
+        reported_len, actual_len
+    );
+}
+
+#[test]
+fn test_optional_field_label() {
+    let schema = TestMessageOption::get_schema().expect("Failed to get schema");
+
+    let descriptor_set = prost_types::FileDescriptorSet::decode(schema.data.as_ref())
+        .expect("Failed to decode descriptor set");
+    let file = &descriptor_set.file[0];
+    let message_type = &file.message_type[0];
+
+    // Find the required field and verify it has Required label
+    let required_field = message_type
+        .field
+        .iter()
+        .find(|f| f.name.as_ref().unwrap() == "required")
+        .expect("Field 'required' not found");
+    assert_eq!(
+        required_field.label.unwrap(),
+        prost_types::field_descriptor_proto::Label::Required as i32,
+        "Non-optional field should have Required label"
+    );
+
+    // Find the optional field and verify it has Optional label
+    let optional_field = message_type
+        .field
+        .iter()
+        .find(|f| f.name.as_ref().unwrap() == "optional")
+        .expect("Field 'optional' not found");
+    assert_eq!(
+        optional_field.label.unwrap(),
+        prost_types::field_descriptor_proto::Label::Optional as i32,
+        "Option<T> field should have Optional label"
+    );
 }
 
 fn get_message_descriptor(schema: &Schema) -> MessageDescriptor {
