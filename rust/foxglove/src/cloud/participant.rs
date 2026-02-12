@@ -43,7 +43,6 @@ impl std::fmt::Debug for Participant {
 /// Wraps an ordered, reliable byte stream to one specific participant.
 ///
 /// Mocked with a TestByteStreamWriter for tests.
-#[allow(dead_code)]
 pub(crate) enum ParticipantWriter {
     Livekit(ByteStreamWriter),
     #[cfg(test)]

@@ -29,6 +29,7 @@ use crate::protocol::v2::server::ServerInfo;
 type Result<T> = std::result::Result<T, CloudError>;
 
 const WS_PROTOCOL_TOPIC: &str = "ws-protocol";
+// TODO future use
 #[allow(dead_code)]
 const MESSAGE_FRAME_SIZE: usize = 5;
 const AUTH_RETRY_PERIOD: Duration = Duration::from_secs(30);
@@ -41,6 +42,7 @@ enum OpCode {
     /// The frame contains a JSON message.
     Text = 1,
     /// The frame contains a binary message.
+    // TODO future use
     #[allow(dead_code)]
     Binary = 2,
 }
@@ -110,12 +112,13 @@ impl std::fmt::Debug for CloudConnectionOptions {
 /// CloudSession tracks a connected LiveKit session (the Room)
 /// and any state that is specific to that session.
 /// We discard this state if we close or lose the connection.
+/// [`CloudConnection`] manages the current connected session (if any)
 struct CloudSession {
     room: Room,
     participants: RwLock<HashMap<ParticipantIdentity, Arc<Participant>>>,
 }
 
-/// CloudConnection manages the connected session to the LiveKit server,
+/// CloudConnection manages the connected [`CloudSession`] to the LiveKit server,
 /// and holds the options and other state that outlive a session.
 pub(crate) struct CloudConnection {
     options: CloudConnectionOptions,
@@ -251,7 +254,7 @@ impl CloudConnection {
                         Ok(id) => id,
                         Err(e) => {
                             error!("failed to add participant: {e:?}");
-                            return;
+                            continue;
                         }
                     };
 
