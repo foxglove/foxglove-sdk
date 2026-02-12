@@ -289,8 +289,7 @@ mod tests {
     #[tokio::test]
     async fn fetch_device_info_success() {
         let server = create_test_server().await;
-        let client =
-            create_test_api_client(server.url(), DeviceToken::new(TEST_DEVICE_TOKEN));
+        let client = create_test_api_client(server.url(), DeviceToken::new(TEST_DEVICE_TOKEN));
         let result = client
             .fetch_device_info()
             .await
@@ -305,10 +304,8 @@ mod tests {
     #[tokio::test]
     async fn fetch_device_info_unauthorized() {
         let server = create_test_server().await;
-        let client = create_test_api_client(
-            server.url(),
-            DeviceToken::new("some-bad-device-token"),
-        );
+        let client =
+            create_test_api_client(server.url(), DeviceToken::new("some-bad-device-token"));
         let result = client.fetch_device_info().await;
 
         assert!(result.is_err());
@@ -317,8 +314,7 @@ mod tests {
     #[tokio::test]
     async fn authorize_remote_viz_success() {
         let server = create_test_server().await;
-        let client =
-            create_test_api_client(server.url(), DeviceToken::new(TEST_DEVICE_TOKEN));
+        let client = create_test_api_client(server.url(), DeviceToken::new(TEST_DEVICE_TOKEN));
 
         let result = client
             .authorize_remote_viz(TEST_DEVICE_ID)
@@ -331,10 +327,8 @@ mod tests {
     #[tokio::test]
     async fn authorize_remote_viz_unauthorized() {
         let server = create_test_server().await;
-        let client = create_test_api_client(
-            server.url(),
-            DeviceToken::new("some-bad-device-token"),
-        );
+        let client =
+            create_test_api_client(server.url(), DeviceToken::new("some-bad-device-token"));
         let result = client.authorize_remote_viz(TEST_DEVICE_ID).await;
         assert!(result.is_err());
     }

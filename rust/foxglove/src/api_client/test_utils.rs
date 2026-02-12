@@ -69,9 +69,7 @@ pub fn create_test_builder(
     FoxgloveApiClientBuilder::new(device_token).base_url(url)
 }
 
-async fn device_info_handler(
-    headers: HeaderMap,
-) -> Result<Json<DeviceResponse>, StatusCode> {
+async fn device_info_handler(headers: HeaderMap) -> Result<Json<DeviceResponse>, StatusCode> {
     let auth = headers
         .get("Authorization")
         .and_then(|v| v.to_str().ok())
