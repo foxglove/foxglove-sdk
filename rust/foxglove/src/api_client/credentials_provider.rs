@@ -6,7 +6,9 @@ use arc_swap::ArcSwapOption;
 use thiserror::Error;
 use tokio::sync::Mutex;
 
-use super::client::{FoxgloveApiClient, FoxgloveApiClientBuilder, FoxgloveApiClientError};
+use super::client::{
+    DeviceToken, FoxgloveApiClient, FoxgloveApiClientBuilder, FoxgloveApiClientError,
+};
 use super::types::{DeviceResponse, RtcCredentials};
 
 #[derive(Error, Debug)]
@@ -18,14 +20,14 @@ pub(crate) enum CredentialsError {
 
 pub(crate) struct CredentialsProvider {
     device: DeviceResponse,
-    client: FoxgloveApiClient,
+    client: FoxgloveApiClient<DeviceToken>,
     credentials: ArcSwapOption<RtcCredentials>,
     refresh_lock: Mutex<()>,
 }
 
 impl CredentialsProvider {
     pub async fn new(
-        client_builder: FoxgloveApiClientBuilder,
+        client_builder: FoxgloveApiClientBuilder<DeviceToken>,
     ) -> Result<Self, FoxgloveApiClientError> {
         let client = client_builder.build()?;
         let device = client.fetch_device_info().await?;

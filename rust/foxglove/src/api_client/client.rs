@@ -70,9 +70,6 @@ pub(crate) enum FoxgloveApiClientError {
 
     #[error("failed to build client: {0}")]
     BuildClient(#[from] reqwest::Error),
-
-    #[error("no token provided")]
-    NoToken(),
 }
 
 impl FoxgloveApiClientError {
@@ -143,17 +140,17 @@ pub(crate) fn default_user_agent() -> String {
 /// This client is intended for internal use only to support the live visualization feature
 /// and is subject to breaking changes at any time. Do not depend on the stability of this type.
 #[derive(Clone)]
-pub(crate) struct FoxgloveApiClient {
+pub(crate) struct FoxgloveApiClient<A: Clone> {
     http: reqwest::Client,
-    device_token: Option<DeviceToken>,
+    auth: A,
     base_url: String,
     user_agent: String,
 }
 
-impl FoxgloveApiClient {
+impl<A: Clone> FoxgloveApiClient<A> {
     fn new(
         base_url: impl Into<String>,
-        device_token: Option<DeviceToken>,
+        auth: A,
         user_agent: impl Into<String>,
         timeout_duration: Duration,
     ) -> Result<Self, FoxgloveApiClientError> {
@@ -161,7 +158,7 @@ impl FoxgloveApiClient {
             http: reqwest::ClientBuilder::new()
                 .timeout(timeout_duration)
                 .build()?,
-            device_token,
+            auth,
             base_url: base_url.into(),
             user_agent: user_agent.into(),
         })
@@ -183,19 +180,17 @@ impl FoxgloveApiClient {
     pub fn post(&self, endpoint: &str) -> RequestBuilder {
         self.request(Method::POST, endpoint)
     }
+}
 
+impl FoxgloveApiClient<DeviceToken> {
     /// Fetches device information from the Foxglove platform.
     ///
     /// This endpoint is not intended for direct usage. Access may be blocked if suspicious
     /// activity is detected.
     pub async fn fetch_device_info(&self) -> Result<DeviceResponse, FoxgloveApiClientError> {
-        let Some(token) = &self.device_token else {
-            return Err(FoxgloveApiClientError::NoToken());
-        };
-
         let response = self
             .get("/internal/platform/v1/device-info")
-            .device_token(token)
+            .device_token(&self.auth)
             .send()
             .await?;
 
@@ -217,16 +212,12 @@ impl FoxgloveApiClient {
         &self,
         device_id: &str,
     ) -> Result<RtcCredentials, FoxgloveApiClientError> {
-        let Some(device_token) = &self.device_token else {
-            return Err(FoxgloveApiClientError::NoToken());
-        };
-
         let device_id = encode_uri_component(device_id);
         let response = self
             .post(&format!(
                 "/internal/platform/v1/devices/{device_id}/remote-sessions"
             ))
-            .device_token(device_token)
+            .device_token(&self.auth)
             .send()
             .await?;
 
@@ -241,36 +232,25 @@ impl FoxgloveApiClient {
     }
 }
 
-pub(crate) struct FoxgloveApiClientBuilder {
+pub(crate) struct FoxgloveApiClientBuilder<A> {
+    auth: A,
     base_url: String,
-    device_token: Option<DeviceToken>,
     user_agent: String,
     timeout_duration: Duration,
 }
 
-impl Default for FoxgloveApiClientBuilder {
-    fn default() -> Self {
+impl<A> FoxgloveApiClientBuilder<A> {
+    pub fn new(auth: A) -> Self {
         Self {
+            auth,
             base_url: DEFAULT_API_URL.to_string(),
-            device_token: None,
             user_agent: default_user_agent(),
             timeout_duration: Duration::from_secs(30),
         }
     }
-}
-
-impl FoxgloveApiClientBuilder {
-    pub fn new() -> Self {
-        Self::default()
-    }
 
     pub fn base_url(mut self, url: impl Into<String>) -> Self {
         self.base_url = url.into();
-        self
-    }
-
-    pub fn device_token(mut self, token: DeviceToken) -> Self {
-        self.device_token = Some(token);
         self
     }
 
@@ -284,10 +264,13 @@ impl FoxgloveApiClientBuilder {
         self
     }
 
-    pub fn build(self) -> Result<FoxgloveApiClient, FoxgloveApiClientError> {
+    pub fn build(self) -> Result<FoxgloveApiClient<A>, FoxgloveApiClientError>
+    where
+        A: Clone,
+    {
         FoxgloveApiClient::new(
             self.base_url,
-            self.device_token,
+            self.auth,
             self.user_agent,
             self.timeout_duration,
         )
@@ -348,15 +331,12 @@ mod test_utils {
     /// Creates a test API client with the handler mounted at the endpoint.
     pub async fn create_test_api_client(
         url: &str,
-        device_token: Option<DeviceToken>,
-    ) -> FoxgloveApiClient {
-        let mut builder = FoxgloveApiClientBuilder::new().base_url(url);
-
-        if let Some(device_token) = device_token {
-            builder = builder.device_token(device_token);
-        }
-
-        builder.build().unwrap()
+        device_token: DeviceToken,
+    ) -> FoxgloveApiClient<DeviceToken> {
+        FoxgloveApiClientBuilder::new(device_token)
+            .base_url(url)
+            .build()
+            .unwrap()
     }
 
     pub async fn device_info_handler(
@@ -413,25 +393,13 @@ mod tests {
     use reqwest::StatusCode;
 
     #[tokio::test]
-    async fn fetch_device_info_requires_token() {
-        let server_handle =
-            create_test_endpoint("/internal/platform/v1/device-info", device_info_handler).await;
-        let client = create_test_api_client(server_handle.url(), None).await;
-        let result = client.fetch_device_info().await;
-        assert!(matches!(result, Err(FoxgloveApiClientError::NoToken())));
-    }
-
-    #[tokio::test]
     async fn fetch_device_info_success() {
         use crate::api_client::types::DeviceResponse;
 
         let server_handle =
             create_test_endpoint("/internal/platform/v1/device-info", device_info_handler).await;
-        let client = create_test_api_client(
-            server_handle.url(),
-            Some(DeviceToken::new(TEST_DEVICE_TOKEN)),
-        )
-        .await;
+        let client =
+            create_test_api_client(server_handle.url(), DeviceToken::new(TEST_DEVICE_TOKEN)).await;
         let result = client
             .fetch_device_info()
             .await
@@ -449,24 +417,12 @@ mod tests {
             create_test_endpoint("/internal/platform/v1/device-info", device_info_handler).await;
         let client = create_test_api_client(
             server_handle.url(),
-            Some(DeviceToken::new("some-bad-device-token")),
+            DeviceToken::new("some-bad-device-token"),
         )
         .await;
         let result = client.fetch_device_info().await;
 
         assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn authorize_remote_viz_requires_token() {
-        let server_handle = create_test_endpoint(
-            "/internal/platform/v1/devices/{device_id}/remote-sessions",
-            authorize_remote_viz_handler,
-        )
-        .await;
-        let client = create_test_api_client(server_handle.url(), None).await;
-        let result = client.authorize_remote_viz(TEST_DEVICE_ID).await;
-        assert!(matches!(result, Err(FoxgloveApiClientError::NoToken())));
     }
 
     #[tokio::test]
@@ -476,11 +432,8 @@ mod tests {
             authorize_remote_viz_handler,
         )
         .await;
-        let client = create_test_api_client(
-            server_handle.url(),
-            Some(DeviceToken::new(TEST_DEVICE_TOKEN)),
-        )
-        .await;
+        let client =
+            create_test_api_client(server_handle.url(), DeviceToken::new(TEST_DEVICE_TOKEN)).await;
 
         let result = client
             .authorize_remote_viz(TEST_DEVICE_ID)
@@ -499,7 +452,7 @@ mod tests {
         .await;
         let client = create_test_api_client(
             server_handle.url(),
-            Some(DeviceToken::new("some-bad-device-token")),
+            DeviceToken::new("some-bad-device-token"),
         )
         .await;
 
