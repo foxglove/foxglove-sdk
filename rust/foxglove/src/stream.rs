@@ -36,7 +36,7 @@ impl Debug for SharedBuffer {
 
 impl Write for SharedBuffer {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        let mut inner = self.0.lock();
+        let inner = &mut *self.0.lock();
         inner.buffer.extend_from_slice(buf);
         inner.position += buf.len() as u64;
         Ok(buf.len())
@@ -62,9 +62,10 @@ impl Seek for SharedBuffer {
 /// messages as a [`futures::Stream`] of MCAP bytes.
 ///
 /// The returned [`McapStreamHandle`] can be used to create channels which will log messages to the
-/// [`McapStream`]. The handle must routinely called [`McapStreamHandle::flush`] to push bytes from
-/// the writer to the [`McapStream`]. When the recording is finished [`McapStreamHandle::close`]
-/// must be called to ensure that all bytes have been flushed to the [`McapStream`].
+/// [`McapStream`]. [`McapStreamHandle::flush`] must be routinely called on the handle to push bytes
+/// from the writer to the [`McapStream`]. When the recording is finished
+/// [`McapStreamHandle::close`] must be called to ensure that all bytes have been flushed to the
+/// [`McapStream`].
 pub fn create_mcap_stream() -> (McapStreamHandle, McapStream) {
     let buffer = SharedBuffer::default();
     let context = Context::new();
