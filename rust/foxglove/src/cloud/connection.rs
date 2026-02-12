@@ -205,10 +205,14 @@ impl CloudConnection {
     ) -> Result<(Arc<CloudSession>, UnboundedReceiver<RoomEvent>)> {
         let mut interval = tokio::time::interval(AUTH_RETRY_PERIOD);
         loop {
-            let result = tokio::select! {
-                _ = interval.tick() => {
-                    continue;
+            tokio::select! {
+                _ = interval.tick() => {}
+                () = self.cancellation_token().cancelled() => {
+                    return Err(CloudError::ConnectionStopped);
                 }
+            };
+
+            let result = tokio::select! {
                 () = self.cancellation_token().cancelled() => {
                     return Err(CloudError::ConnectionStopped);
                 }
