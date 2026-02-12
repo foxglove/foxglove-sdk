@@ -3,8 +3,7 @@ use std::{collections::HashMap, sync::Arc};
 use crate::{
     cloud::{CloudConnection, CloudConnectionOptions},
     sink_channel_filter::{SinkChannelFilter, SinkChannelFilterFn},
-    websocket,
-    ChannelDescriptor, Context, FoxgloveError,
+    websocket, ChannelDescriptor, Context, FoxgloveError,
 };
 
 use tokio::task::JoinHandle;
