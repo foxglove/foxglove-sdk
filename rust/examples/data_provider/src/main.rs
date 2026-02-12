@@ -51,6 +51,10 @@ use foxglove::{
 use futures::StreamExt;
 use serde::{Deserialize, Serialize};
 
+// Routes for the endpoints. You can change these to anything you want.
+const MANIFEST_ROUTE: &str = "/v1/manifest";
+const DATA_ROUTE: &str = "/v1/data";
+
 /// Specification of what to load.
 ///
 /// Deserialized from the query parameters in the incoming HTTP request.
@@ -91,7 +95,7 @@ async fn manifest_handler(headers: HeaderMap, Query(params): Query<FlightParams>
     let source = StreamedSource {
         // We're providing the data from this service in this example, but in principle this could
         // be any URL.
-        url: format!("/v1/data?{query}"),
+        url: format!("{DATA_ROUTE}?{query}"),
         // `id` must unique to this data source. Otherwise, incorrect data may be served from cache.
         //
         // Here we reuse the query string to make sure we don't forget any parameters. We also
@@ -184,8 +188,8 @@ async fn main() -> std::io::Result<()> {
     tracing_subscriber::fmt::init();
 
     let app = Router::new()
-        .route("/v1/manifest", get(manifest_handler))
-        .route("/v1/data", get(data_handler));
+        .route(MANIFEST_ROUTE, get(manifest_handler))
+        .route(DATA_ROUTE, get(data_handler));
 
     let bind_address: SocketAddr = "0.0.0.0:8080".parse().unwrap();
     tracing::info!(%bind_address, "starting server");
