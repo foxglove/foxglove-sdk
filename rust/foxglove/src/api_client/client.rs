@@ -10,7 +10,7 @@ use crate::library_version::{get_sdk_language, get_sdk_version};
 
 use super::types::{DeviceResponse, ErrorResponse, RtcCredentials};
 
-pub(super) const DEFAULT_API_URL: &str = "https://api.foxglove.dev";
+const DEFAULT_API_URL: &str = "https://api.foxglove.dev";
 
 const PATH_ENCODING: AsciiSet = percent_encoding::NON_ALPHANUMERIC
     .remove(b'-')
@@ -18,7 +18,7 @@ const PATH_ENCODING: AsciiSet = percent_encoding::NON_ALPHANUMERIC
     .remove(b'_')
     .remove(b'~');
 
-pub(super) fn encode_uri_component(component: &str) -> impl Display + '_ {
+fn encode_uri_component(component: &str) -> impl Display + '_ {
     percent_encoding::percent_encode(component.as_bytes(), &PATH_ENCODING)
 }
 
@@ -88,7 +88,7 @@ impl FoxgloveApiClientError {
 }
 
 #[must_use]
-pub(super) struct RequestBuilder(reqwest::RequestBuilder);
+pub(crate) struct RequestBuilder(reqwest::RequestBuilder);
 
 impl RequestBuilder {
     fn new(client: &reqwest::Client, method: Method, url: &str, user_agent: &str) -> Self {
@@ -130,7 +130,7 @@ impl RequestBuilder {
     }
 }
 
-pub(super) fn default_user_agent() -> String {
+pub(crate) fn default_user_agent() -> String {
     format!(
         "foxglove-sdk ({}/v{})",
         get_sdk_language(),
@@ -143,7 +143,7 @@ pub(super) fn default_user_agent() -> String {
 /// This client is intended for internal use only to support the live visualization feature
 /// and is subject to breaking changes at any time. Do not depend on the stability of this type.
 #[derive(Clone)]
-pub(super) struct FoxgloveApiClient {
+pub(crate) struct FoxgloveApiClient {
     http: reqwest::Client,
     device_token: Option<DeviceToken>,
     base_url: String,
@@ -241,7 +241,7 @@ impl FoxgloveApiClient {
     }
 }
 
-pub(super) struct FoxgloveApiClientBuilder {
+pub(crate) struct FoxgloveApiClientBuilder {
     base_url: String,
     device_token: Option<DeviceToken>,
     user_agent: String,

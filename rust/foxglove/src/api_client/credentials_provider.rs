@@ -6,9 +6,8 @@ use arc_swap::ArcSwapOption;
 use thiserror::Error;
 use tokio::sync::Mutex;
 
-use super::client::FoxgloveApiClientError;
-use super::device::Device;
-use super::types::RtcCredentials;
+use super::client::{FoxgloveApiClient, FoxgloveApiClientBuilder, FoxgloveApiClientError};
+use super::types::{DeviceResponse, RtcCredentials};
 
 #[derive(Error, Debug)]
 #[non_exhaustive]
@@ -18,18 +17,24 @@ pub(crate) enum CredentialsError {
 }
 
 pub(crate) struct CredentialsProvider {
-    device: Device,
+    device: DeviceResponse,
+    client: FoxgloveApiClient,
     credentials: ArcSwapOption<RtcCredentials>,
     refresh_lock: Mutex<()>,
 }
 
 impl CredentialsProvider {
-    pub fn new(device: Device) -> Self {
-        Self {
+    pub async fn new(
+        client_builder: FoxgloveApiClientBuilder,
+    ) -> Result<Self, FoxgloveApiClientError> {
+        let client = client_builder.build()?;
+        let device = client.fetch_device_info().await?;
+        Ok(Self {
             device,
+            client,
             credentials: ArcSwapOption::new(None),
             refresh_lock: Mutex::new(()),
-        }
+        })
     }
 
     #[must_use]
@@ -51,7 +56,7 @@ impl CredentialsProvider {
     }
 
     async fn refresh(&self) -> Result<Arc<RtcCredentials>, CredentialsError> {
-        let credentials = Arc::new(self.device.authorize_remote_viz().await?);
+        let credentials = Arc::new(self.client.authorize_remote_viz(&self.device.id).await?);
         self.credentials.store(Some(credentials.clone()));
         Ok(credentials)
     }
