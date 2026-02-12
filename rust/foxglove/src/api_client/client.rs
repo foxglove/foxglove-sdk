@@ -329,7 +329,7 @@ mod test_utils {
     }
 
     /// Creates a test API client with the handler mounted at the endpoint.
-    pub async fn create_test_api_client(
+    pub fn create_test_api_client(
         url: &str,
         device_token: DeviceToken,
     ) -> FoxgloveApiClient<DeviceToken> {
@@ -399,7 +399,7 @@ mod tests {
         let server_handle =
             create_test_endpoint("/internal/platform/v1/device-info", device_info_handler).await;
         let client =
-            create_test_api_client(server_handle.url(), DeviceToken::new(TEST_DEVICE_TOKEN)).await;
+            create_test_api_client(server_handle.url(), DeviceToken::new(TEST_DEVICE_TOKEN));
         let result = client
             .fetch_device_info()
             .await
@@ -418,8 +418,7 @@ mod tests {
         let client = create_test_api_client(
             server_handle.url(),
             DeviceToken::new("some-bad-device-token"),
-        )
-        .await;
+        );
         let result = client.fetch_device_info().await;
 
         assert!(result.is_err());
@@ -433,7 +432,7 @@ mod tests {
         )
         .await;
         let client =
-            create_test_api_client(server_handle.url(), DeviceToken::new(TEST_DEVICE_TOKEN)).await;
+            create_test_api_client(server_handle.url(), DeviceToken::new(TEST_DEVICE_TOKEN));
 
         let result = client
             .authorize_remote_viz(TEST_DEVICE_ID)
@@ -453,8 +452,7 @@ mod tests {
         let client = create_test_api_client(
             server_handle.url(),
             DeviceToken::new("some-bad-device-token"),
-        )
-        .await;
+        );
 
         let result = client.authorize_remote_viz(TEST_DEVICE_ID).await;
         assert!(result.is_err());
