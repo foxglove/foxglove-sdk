@@ -294,4 +294,15 @@ mod tests {
         let result: Result<LocationFix, _> = serde_json::from_str(json);
         assert!(result.is_err());
     }
+
+    #[test]
+    fn test_location_fix_json_missing_point_style() {
+        use super::LocationFix;
+
+        // JSON without point_style field at all — must deserialize with point_style: None
+        let json = r#"{"latitude":37.7749,"longitude":-122.4194,"altitude":0.0,"frame_id":"","position_covariance":[],"position_covariance_type":"UNKNOWN"}"#;
+        let parsed: LocationFix = serde_json::from_str(json).expect("failed to deserialize");
+        assert_eq!(parsed.point_style, None);
+        assert_eq!(parsed.latitude, 37.7749);
+    }
 }

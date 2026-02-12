@@ -448,12 +448,13 @@ pub fn generate_protos(proto_path: &Path, out_dir: &Path) -> anyhow::Result<()> 
     // Add serde attributes for enum fields. The serde implementations referenced here are appended
     // to the foxglove.rs by generate_serde_enum_module() below.
     for info in &enum_fields {
+        let mut serde_attrs = format!("with = \"serde_enum::{}\"", info.serde_module_name);
+        if info.optional {
+            serde_attrs.push_str(", default");
+        }
         config.field_attribute(
             &info.field_path,
-            format!(
-                "#[cfg_attr(feature = \"serde\", serde(with = \"serde_enum::{}\"))]",
-                info.serde_module_name
-            ),
+            format!("#[cfg_attr(feature = \"serde\", serde({serde_attrs}))]",),
         );
     }
 
