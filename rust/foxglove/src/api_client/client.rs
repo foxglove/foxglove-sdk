@@ -129,7 +129,7 @@ impl RequestBuilder {
 
 pub(crate) fn default_user_agent() -> String {
     format!(
-        "foxglove-sdk ({}/v{})",
+        "foxglove-sdk/{} ({})",
         get_sdk_language(),
         get_sdk_version()
     )
@@ -286,7 +286,6 @@ mod test_utils {
     use axum::{handler::Handler, Router};
     use reqwest::StatusCode;
     use tokio::net::TcpListener;
-    use tokio_util::sync::CancellationToken;
 
     pub const TEST_DEVICE_TOKEN: &str = "fox_dt_testtoken";
     pub const TEST_DEVICE_ID: &str = "dev_testdevice";
@@ -453,7 +452,6 @@ mod tests {
             server_handle.url(),
             DeviceToken::new("some-bad-device-token"),
         );
-
         let result = client.authorize_remote_viz(TEST_DEVICE_ID).await;
         assert!(result.is_err());
     }
