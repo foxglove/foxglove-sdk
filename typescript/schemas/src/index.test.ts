@@ -4,6 +4,11 @@
  * This package re-exports everything from @foxglove/messages for backward compatibility.
  */
 
+import * as messages from "@foxglove/messages";
+
+import * as schemas from "./index";
+
+// Compile-time type tests
 import type {
   CompressedImage as MessagesCompressedImage,
   Log as MessagesLog,
@@ -33,3 +38,19 @@ export type SceneUpdateTypeIsReexported = AssertType<
   IsEqual<SchemasSceneUpdate, MessagesSceneUpdate>
 >;
 export type PointCloudTypeIsReexported = AssertType<IsEqual<SchemasPointCloud, MessagesPointCloud>>;
+
+// Runtime tests
+describe("@foxglove/schemas backward compatibility", () => {
+  it("re-exports all named exports from @foxglove/messages", () => {
+    const messageKeys = Object.keys(messages);
+    const schemaKeys = Object.keys(schemas);
+
+    // Every export from messages should be in schemas
+    for (const key of messageKeys) {
+      expect(schemaKeys).toContain(key);
+      expect((schemas as Record<string, unknown>)[key]).toBe(
+        (messages as Record<string, unknown>)[key],
+      );
+    }
+  });
+});
