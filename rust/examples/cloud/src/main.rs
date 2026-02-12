@@ -34,7 +34,7 @@ async fn main() {
 
     tokio::task::spawn(camera_loop());
     _ = tokio::signal::ctrl_c().await;
-    handle.stop();
+    _ = handle.stop().await;
 }
 
 /// Log RawImage messages, which will be encoded as a video stream when sent to the Cloud Sink.
