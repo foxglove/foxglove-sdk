@@ -4,24 +4,32 @@
  * This package re-exports everything from @foxglove/messages for backward compatibility.
  */
 
-import { CompressedImage, Log, PointCloud, SceneUpdate } from "@foxglove/messages";
+import type {
+  CompressedImage as MessagesCompressedImage,
+  Log as MessagesLog,
+  PointCloud as MessagesPointCloud,
+  SceneUpdate as MessagesSceneUpdate,
+} from "@foxglove/messages";
 
-import * as schemas from "./index";
+import type {
+  CompressedImage as SchemasCompressedImage,
+  Log as SchemasLog,
+  PointCloud as SchemasPointCloud,
+  SceneUpdate as SchemasSceneUpdate,
+} from "./index";
 
-describe("@foxglove/schemas backward compatibility", () => {
-  it("re-exports all types from @foxglove/messages", () => {
-    // Verify key types are exported
-    expect(schemas.CompressedImage).toBeDefined();
-    expect(schemas.Log).toBeDefined();
-    expect(schemas.SceneUpdate).toBeDefined();
-    expect(schemas.PointCloud).toBeDefined();
-  });
+type IsEqual<LeftType, RightType> = [LeftType] extends [RightType]
+  ? [RightType] extends [LeftType]
+    ? true
+    : false
+  : false;
+type AssertType<Condition extends true> = Condition;
 
-  it("exports the same types as @foxglove/messages", () => {
-    // Verify type identity
-    expect(schemas.CompressedImage).toBe(CompressedImage);
-    expect(schemas.Log).toBe(Log);
-    expect(schemas.SceneUpdate).toBe(SceneUpdate);
-    expect(schemas.PointCloud).toBe(PointCloud);
-  });
-});
+export type CompressedImageTypeIsReexported = AssertType<
+  IsEqual<SchemasCompressedImage, MessagesCompressedImage>
+>;
+export type LogTypeIsReexported = AssertType<IsEqual<SchemasLog, MessagesLog>>;
+export type SceneUpdateTypeIsReexported = AssertType<
+  IsEqual<SchemasSceneUpdate, MessagesSceneUpdate>
+>;
+export type PointCloudTypeIsReexported = AssertType<IsEqual<SchemasPointCloud, MessagesPointCloud>>;
