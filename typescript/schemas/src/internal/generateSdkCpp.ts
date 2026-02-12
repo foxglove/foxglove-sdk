@@ -327,7 +327,8 @@ function cppToC(schema: FoxgloveMessageSchema, copyTypes: Set<string>): string[]
         return `dest.${dstName} = src.${srcName};`;
       case "enum":
         if (field.optional) {
-          return `dest.${dstName} = src.${srcName} ? reinterpret_cast<const foxglove_${toSnakeCase(field.type.enum.name)}*>(&*src.${srcName}) : nullptr;`;
+          const cEnumType = `foxglove_${toSnakeCase(field.type.enum.name)}`;
+          return `if (src.${srcName}) { auto* ptr = arena.alloc<${cEnumType}>(1); *ptr = static_cast<${cEnumType}>(*src.${srcName}); dest.${dstName} = ptr; } else { dest.${dstName} = nullptr; }`;
         }
         return `dest.${dstName} = static_cast<foxglove_${toSnakeCase(field.type.enum.name)}>(src.${srcName});`;
       case "nested":
