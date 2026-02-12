@@ -21,6 +21,7 @@ packagefiles:=\
   target/sdk/include/foxglove/arena.hpp \
   target/sdk/include/foxglove/schema.hpp \
   target/sdk/include/foxglove/schemas.hpp \
+  target/sdk/include/foxglove/messages.hpp \
   target/sdk/include/foxglove/expected.hpp \
   target/sdk/include/foxglove/error.hpp \
   target/sdk/include/foxglove_data_loader/data_loader.hpp \

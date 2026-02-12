@@ -939,7 +939,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@foxglove/messages@workspace:typescript/messages":
+"@foxglove/messages@workspace:^, @foxglove/messages@workspace:typescript/messages":
   version: 0.0.0-use.local
   resolution: "@foxglove/messages@workspace:typescript/messages"
   dependencies:
@@ -990,6 +990,15 @@ __metadata:
   checksum: 10c0/27651394a2471a88b5d8668ccc8e72592548a49afe0b4a19aa617019a37d7bf5dd49018e2b510e4e8aa778c21e25ca4873e7900613be8d6994a771fab439d929
   languageName: node
   linkType: hard
+
+"@foxglove/schemas@workspace:typescript/schemas":
+  version: 0.0.0-use.local
+  resolution: "@foxglove/schemas@workspace:typescript/schemas"
+  dependencies:
+    "@foxglove/messages": "workspace:^"
+    typescript: "npm:5.9.2"
+  languageName: unknown
+  linkType: soft
 
 "@foxglove/tsconfig@npm:2.0.0, @foxglove/tsconfig@npm:^2.0.0":
   version: 2.0.0
