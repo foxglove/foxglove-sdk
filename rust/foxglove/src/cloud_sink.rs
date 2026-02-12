@@ -59,9 +59,8 @@ impl CloudSinkHandle {
 
 /// An CloudSink for live visualization and teleop in Foxglove.
 ///
-/// Must run Foxglove Agent on the same host for this to work.
+/// You may only create one CloudSink at a time for the device.
 #[must_use]
-#[derive(Clone)]
 #[doc(hidden)]
 pub struct CloudSink {
     options: CloudConnectionOptions,
