@@ -67,6 +67,7 @@ pub struct Topic {
     /// Message encoding (e.g. `"protobuf"`).
     pub message_encoding: String,
     /// Schema ID, if this topic has an associated schema.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub schema_id: Option<NonZeroU16>,
 }
 
