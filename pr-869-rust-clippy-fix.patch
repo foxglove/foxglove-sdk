@@ -1,0 +1,21 @@
+diff --git a/rust/foxglove/src/lib.rs b/rust/foxglove/src/lib.rs
+index 69ce5072..b322eded 100644
+--- a/rust/foxglove/src/lib.rs
++++ b/rust/foxglove/src/lib.rs
+@@ -327,11 +327,12 @@ pub mod protobuf;
+ mod schema;
+ 
+ /// Deprecated module alias. Use [`messages`] instead.
++///
++/// Types implementing well-known Foxglove message schemas.
++///
++/// **Deprecated**: Use [`crate::messages`] instead.
+ #[deprecated(since = "0.2.0", note = "Use `foxglove::messages` instead")]
+ pub mod schemas {
+-    //! Types implementing well-known Foxglove message schemas.
+-    //!
+-    //! **Deprecated**: Use [`crate::messages`] instead.
+     pub use crate::messages::*;
+ }
+ mod sink;
+ 

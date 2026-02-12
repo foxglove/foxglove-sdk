@@ -327,11 +327,12 @@ pub mod protobuf;
 mod schema;
 
 /// Deprecated module alias. Use [`messages`] instead.
+///
+/// Types implementing well-known Foxglove message schemas.
+///
+/// **Deprecated**: Use [`crate::messages`] instead.
 #[deprecated(since = "0.2.0", note = "Use `foxglove::messages` instead")]
 pub mod schemas {
-    //! Types implementing well-known Foxglove message schemas.
-    //!
-    //! **Deprecated**: Use [`crate::messages`] instead.
     pub use crate::messages::*;
 }
 mod sink;
