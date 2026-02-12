@@ -67,12 +67,12 @@ pub enum FoxglovePointsAnnotationType {
 
 #[derive(Clone, Copy, Debug)]
 #[repr(i32)]
-pub enum FoxgloveMarkerShape {
-    Diamond = 0,
-    Square = 1,
-    Cross = 2,
-    X = 3,
-    Dot = 4,
+pub enum FoxglovePointStyle {
+    Dot = 0,
+    Diamond = 1,
+    Square = 2,
+    Plus = 3,
+    Cross = 4,
     Pin = 5,
 }
 
@@ -3237,8 +3237,8 @@ pub struct LocationFix {
     /// Color used to visualize the location
     pub color: *const Color,
 
-    /// Shape of the marker used to visualize the location on the map
-    pub marker_shape: FoxgloveMarkerShape,
+    /// Style of the point used to visualize the location on the map
+    pub point_style: FoxglovePointStyle,
 }
 
 #[cfg(not(target_family = "wasm"))]
@@ -3300,7 +3300,7 @@ impl BorrowToNative for LocationFix {
             }),
             position_covariance_type: self.position_covariance_type as i32,
             color: color.map(ManuallyDrop::into_inner),
-            marker_shape: Some(self.marker_shape as i32),
+            point_style: Some(self.point_style as i32),
         }))
     }
 }

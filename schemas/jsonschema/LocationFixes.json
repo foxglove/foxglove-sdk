@@ -107,34 +107,34 @@
               "a"
             ]
           },
-          "marker_shape": {
-            "title": "foxglove.MarkerShape",
-            "description": "Shape of the marker used to visualize the location on the map",
+          "point_style": {
+            "title": "foxglove.PointStyle",
+            "description": "Style of the point used to visualize the location on the map",
             "oneOf": [
               {
-                "title": "DIAMOND",
+                "title": "DOT",
                 "const": 0,
+                "description": "Dot marker"
+              },
+              {
+                "title": "DIAMOND",
+                "const": 1,
                 "description": "Diamond-shaped marker"
               },
               {
                 "title": "SQUARE",
-                "const": 1,
+                "const": 2,
                 "description": "Square marker"
               },
               {
-                "title": "CROSS",
-                "const": 2,
-                "description": "Cross-shaped marker"
-              },
-              {
-                "title": "X",
+                "title": "PLUS",
                 "const": 3,
-                "description": "X-shaped marker"
+                "description": "Plus-shaped marker (+)"
               },
               {
-                "title": "DOT",
+                "title": "CROSS",
                 "const": 4,
-                "description": "Dot marker"
+                "description": "Cross-shaped marker (x)"
               },
               {
                 "title": "PIN",

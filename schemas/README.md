@@ -14,9 +14,9 @@ If the IDL does not support optional fields (e.g. ROS) you must specify a value 
 
 - [enum LineType](#enum-linetype)
 - [enum LogLevel](#enum-loglevel)
-- [enum MarkerShape](#enum-markershape)
 - [enum NumericType](#enum-numerictype)
 - [enum PointsAnnotationType](#enum-pointsannotationtype)
+- [enum PointStyle](#enum-pointstyle)
 - [enum PositionCovarianceType](#enum-positioncovariancetype)
 - [enum SceneEntityDeletionType](#enum-sceneentitydeletiontype)
 - [ArrowPrimitive](#arrowprimitive)
@@ -93,21 +93,6 @@ name | value | description
 
 
 
-## enum MarkerShape
-
-Shape of the marker used for map visualization
-
-name | value | description
----- | ----- | -----------
-`DIAMOND` | 0 | Diamond-shaped marker
-`SQUARE` | 1 | Square marker
-`CROSS` | 2 | Cross-shaped marker
-`X` | 3 | X-shaped marker
-`DOT` | 4 | Dot marker
-`PIN` | 5 | Pin marker
-
-
-
 ## enum NumericType
 
 Numeric type
@@ -137,6 +122,21 @@ name | value | description
 `LINE_LOOP` | 2 | Closed polygon: 0-1, 1-2, ..., (n-1)-n, n-0
 `LINE_STRIP` | 3 | Connected line segments: 0-1, 1-2, ..., (n-1)-n
 `LINE_LIST` | 4 | Individual line segments: 0-1, 2-3, 4-5, ...
+
+
+
+## enum PointStyle
+
+Style of point used for map visualization
+
+name | value | description
+---- | ----- | -----------
+`DOT` | 0 | Dot marker
+`DIAMOND` | 1 | Diamond-shaped marker
+`SQUARE` | 2 | Square marker
+`PLUS` | 3 | Plus-shaped marker (+)
+`CROSS` | 4 | Cross-shaped marker (x)
+`PIN` | 5 | Pin marker
 
 
 
@@ -1632,15 +1632,15 @@ Color used to visualize the location
 </td>
 </tr>
 <tr>
-<td><code>marker_shape</code> (optional)</td>
+<td><code>point_style</code> (optional)</td>
 <td>
 
-[enum MarkerShape](#enum-markershape)
+[enum PointStyle](#enum-pointstyle)
 
 </td>
 <td>
 
-Shape of the marker used to visualize the location on the map
+Style of the point used to visualize the location on the map
 
 </td>
 </tr>

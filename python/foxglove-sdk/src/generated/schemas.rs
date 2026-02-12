@@ -65,15 +65,15 @@ pub(crate) enum PointsAnnotationType {
     LineList = 4,
 }
 
-/// Shape of the marker used for map visualization
+/// Style of point used for map visualization
 #[pyclass(eq, eq_int, module = "foxglove.schemas")]
 #[derive(PartialEq, Clone)]
-pub(crate) enum LocationFixMarkerShape {
-    Diamond = 0,
-    Square = 1,
-    Cross = 2,
-    X = 3,
-    Dot = 4,
+pub(crate) enum LocationFixPointStyle {
+    Dot = 0,
+    Diamond = 1,
+    Square = 2,
+    Plus = 3,
+    Cross = 4,
     Pin = 5,
 }
 
@@ -1415,7 +1415,7 @@ impl From<LinePrimitive> for foxglove::schemas::LinePrimitive {
 /// :param position_covariance: Position covariance (m^2) defined relative to a tangential plane through the reported position. The components are East, North, and Up (ENU), in row-major order.
 /// :param position_covariance_type: If `position_covariance` is available, `position_covariance_type` must be set to indicate the type of covariance.
 /// :param color: Color used to visualize the location
-/// :param marker_shape: Shape of the marker used to visualize the location on the map
+/// :param point_style: Style of the point used to visualize the location on the map
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/location-fix
 #[pyclass(module = "foxglove.schemas")]
@@ -1424,7 +1424,7 @@ pub(crate) struct LocationFix(pub(crate) foxglove::schemas::LocationFix);
 #[pymethods]
 impl LocationFix {
     #[new]
-    #[pyo3(signature = (*, timestamp=None, frame_id="", latitude=0.0, longitude=0.0, altitude=0.0, position_covariance=None, position_covariance_type=LocationFixPositionCovarianceType::Unknown, color=None, marker_shape=None) )]
+    #[pyo3(signature = (*, timestamp=None, frame_id="", latitude=0.0, longitude=0.0, altitude=0.0, position_covariance=None, position_covariance_type=LocationFixPositionCovarianceType::Unknown, color=None, point_style=None) )]
     fn new(
         timestamp: Option<Timestamp>,
         frame_id: &str,
@@ -1434,7 +1434,7 @@ impl LocationFix {
         position_covariance: Option<Vec<f64>>,
         position_covariance_type: LocationFixPositionCovarianceType,
         color: Option<Color>,
-        marker_shape: Option<LocationFixMarkerShape>,
+        point_style: Option<LocationFixPointStyle>,
     ) -> Self {
         Self(foxglove::schemas::LocationFix {
             timestamp: timestamp.map(Into::into),
@@ -1445,12 +1445,12 @@ impl LocationFix {
             position_covariance: position_covariance.unwrap_or_default(),
             position_covariance_type: position_covariance_type as i32,
             color: color.map(Into::into),
-            marker_shape: marker_shape as i32,
+            point_style: point_style.map(|s| s as i32),
         })
     }
     fn __repr__(&self) -> String {
         format!(
-            "LocationFix(timestamp={:?}, frame_id={:?}, latitude={:?}, longitude={:?}, altitude={:?}, position_covariance={:?}, position_covariance_type={:?}, color={:?}, marker_shape={:?})",
+            "LocationFix(timestamp={:?}, frame_id={:?}, latitude={:?}, longitude={:?}, altitude={:?}, position_covariance={:?}, position_covariance_type={:?}, color={:?}, point_style={:?})",
             self.0.timestamp,
             self.0.frame_id,
             self.0.latitude,
@@ -1459,7 +1459,7 @@ impl LocationFix {
             self.0.position_covariance,
             self.0.position_covariance_type,
             self.0.color,
-            self.0.marker_shape,
+            self.0.point_style,
         )
     }
     /// Returns the LocationFix schema.
@@ -3124,7 +3124,7 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<SceneEntityDeletionType>()?;
     module.add_class::<PackedElementFieldNumericType>()?;
     module.add_class::<PointsAnnotationType>()?;
-    module.add_class::<LocationFixMarkerShape>()?;
+    module.add_class::<LocationFixPointStyle>()?;
     module.add_class::<LocationFixPositionCovarianceType>()?;
     module.add_class::<ArrowPrimitive>()?;
     module.add_class::<CameraCalibration>()?;

@@ -1187,18 +1187,18 @@ struct LinePrimitive {
 
 /// @brief A navigation satellite fix for any Global Navigation Satellite System
 struct LocationFix {
-  /// @brief Shape of the marker used for map visualization
-  enum class MarkerShape : uint8_t {
-    /// @brief Diamond-shaped marker
-    DIAMOND = 0,
-    /// @brief Square marker
-    SQUARE = 1,
-    /// @brief Cross-shaped marker
-    CROSS = 2,
-    /// @brief X-shaped marker
-    X = 3,
+  /// @brief Style of point used for map visualization
+  enum class PointStyle : uint8_t {
     /// @brief Dot marker
-    DOT = 4,
+    DOT = 0,
+    /// @brief Diamond-shaped marker
+    DIAMOND = 1,
+    /// @brief Square marker
+    SQUARE = 2,
+    /// @brief Plus-shaped marker (+)
+    PLUS = 3,
+    /// @brief Cross-shaped marker (x)
+    CROSS = 4,
     /// @brief Pin marker
     PIN = 5,
   };
@@ -1239,8 +1239,8 @@ struct LocationFix {
   /// @brief Color used to visualize the location
   std::optional<Color> color;
 
-  /// @brief Shape of the marker used to visualize the location on the map
-  std::optional<MarkerShape> marker_shape;
+  /// @brief Style of the point used to visualize the location on the map
+  std::optional<PointStyle> point_style;
 
   /// @brief Encoded the LocationFix as protobuf to the provided buffer.
   ///
@@ -4342,8 +4342,8 @@ public:
   [[nodiscard]] bool has_sinks() const noexcept;
 
   TriangleListPrimitiveChannel(const TriangleListPrimitiveChannel& other) noexcept = delete;
-  TriangleListPrimitiveChannel& operator=(const TriangleListPrimitiveChannel& other
-  ) noexcept = delete;
+  TriangleListPrimitiveChannel& operator=(const TriangleListPrimitiveChannel& other) noexcept =
+    delete;
   /// @brief Default move constructor.
   TriangleListPrimitiveChannel(TriangleListPrimitiveChannel&& other) noexcept = default;
   /// @brief Default move assignment.

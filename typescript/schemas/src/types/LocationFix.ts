@@ -2,7 +2,7 @@
 // Options: {}
 
 import { Color } from "./Color";
-import { MarkerShape } from "./MarkerShape";
+import { PointStyle } from "./PointStyle";
 import { PositionCovarianceType } from "./PositionCovarianceType";
 import { Time } from "./Time";
 
@@ -32,6 +32,6 @@ export type LocationFix = {
   /** Color used to visualize the location */
   color?: Color;
 
-  /** Shape of the marker used to visualize the location on the map */
-  marker_shape?: MarkerShape;
+  /** Style of the point used to visualize the location on the map */
+  point_style?: PointStyle;
 };

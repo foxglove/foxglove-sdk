@@ -206,6 +206,22 @@ describe("generateJsonSchema", () => {
            "description": "An optional bool field",
            "type": "boolean",
          },
+         "field_optional_enum": {
+           "description": "An optional enum field",
+           "oneOf": [
+             {
+               "const": 0,
+               "description": "Value A",
+               "title": "A",
+             },
+             {
+               "const": 1,
+               "description": "Value B",
+               "title": "B",
+             },
+           ],
+           "title": "foxglove.ExampleEnum",
+         },
          "field_optional_float64": {
            "description": "An optional float64 field",
            "type": "number",

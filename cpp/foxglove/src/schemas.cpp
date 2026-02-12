@@ -1758,8 +1758,8 @@ void locationFixToC(
   dest.position_covariance_type =
     static_cast<foxglove_position_covariance_type>(src.position_covariance_type);
   dest.color = src.color ? reinterpret_cast<const foxglove_color*>(&*src.color) : nullptr;
-  dest.marker_shape = src.marker_shape ? static_cast<foxglove_marker_shape>(*src.marker_shape)
-                                       : static_cast<foxglove_marker_shape>(0);
+  dest.point_style = src.point_style ? static_cast<foxglove_point_style>(*src.point_style)
+                                     : static_cast<foxglove_point_style>(0);
 }
 
 void locationFixesToC(

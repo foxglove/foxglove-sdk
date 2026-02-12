@@ -5,22 +5,22 @@ include "Time.fbs";
 
 namespace foxglove;
 
-/// Shape of the marker used for map visualization
-enum MarkerShape : ubyte {
+/// Style of point used for map visualization
+enum PointStyle : ubyte {
+  /// Dot marker
+  DOT = 0,
+
   /// Diamond-shaped marker
-  DIAMOND = 0,
+  DIAMOND = 1,
 
   /// Square marker
-  SQUARE = 1,
+  SQUARE = 2,
 
-  /// Cross-shaped marker
-  CROSS = 2,
+  /// Plus-shaped marker (+)
+  PLUS = 3,
 
-  /// X-shaped marker
-  X = 3,
-
-  /// Dot marker
-  DOT = 4,
+  /// Cross-shaped marker (x)
+  CROSS = 4,
 
   /// Pin marker
   PIN = 5,
@@ -68,8 +68,8 @@ table LocationFix {
   /// Color used to visualize the location
   color:foxglove.Color (id: 7);
 
-  /// Shape of the marker used to visualize the location on the map
-  marker_shape:MarkerShape (id: 8);
+  /// Style of the point used to visualize the location on the map
+  point_style:PointStyle (id: 8);
 }
 
 root_type LocationFix;
