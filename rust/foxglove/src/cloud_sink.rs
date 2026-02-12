@@ -1,11 +1,10 @@
 use std::{collections::HashMap, sync::Arc};
 
 use crate::{
-    cloud::{CloudConnection, CloudConnectionOptions, CloudError},
-    get_runtime_handle,
+    cloud::{CloudConnection, CloudConnectionOptions},
     sink_channel_filter::{SinkChannelFilter, SinkChannelFilterFn},
-    websocket::{self, ShutdownHandle},
-    ChannelDescriptor, Context, FoxgloveError, WebSocketServer, WebSocketServerHandle,
+    websocket,
+    ChannelDescriptor, Context, FoxgloveError,
 };
 
 use tokio::task::JoinHandle;

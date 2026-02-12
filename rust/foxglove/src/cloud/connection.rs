@@ -5,7 +5,6 @@ use std::{
 };
 
 use arc_swap::ArcSwapOption;
-use bimap::BiHashMap;
 use bytes::Bytes;
 use livekit::{id::ParticipantIdentity, Room, RoomEvent, RoomOptions, StreamByteOptions};
 use parking_lot::RwLock;
@@ -28,6 +27,7 @@ use crate::{
 type Result<T> = std::result::Result<T, CloudError>;
 
 const WS_PROTOCOL_TOPIC: &str = "ws-protocol";
+#[allow(dead_code)]
 const MESSAGE_FRAME_SIZE: usize = 5;
 const AUTH_RETRY_PERIOD: Duration = Duration::from_secs(30);
 
@@ -39,6 +39,7 @@ enum OpCode {
     /// The frame contains a JSON message.
     Text = 1,
     /// The frame contains a binary message.
+    #[allow(dead_code)]
     Binary = 2,
 }
 
@@ -272,9 +273,9 @@ impl CloudConnection {
                     info!("data received: {:?}", topic);
                 }
                 RoomEvent::ByteStreamOpened {
-                    reader,
+                    reader: _,
                     topic: _,
-                    participant_identity,
+                    participant_identity: _,
                 } => {
                     // if let Some(reader) = reader.take() {
                     //     let session2 = session.clone();
