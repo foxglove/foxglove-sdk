@@ -29,5 +29,5 @@ export type LocationFix = {
   position_covariance_type: PositionCovarianceType;
 
   /** Color used to visualize the location */
-  color: Color;
+  color?: Color;
 };
