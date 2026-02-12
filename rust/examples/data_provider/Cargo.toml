@@ -1,5 +1,5 @@
 [package]
-name = "example_remote_data_loader"
+name = "example_data_provider"
 edition = "2024"
 publish = false
 

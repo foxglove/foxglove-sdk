@@ -833,6 +833,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "example_data_provider"
+version = "0.0.0"
+dependencies = [
+ "axum",
+ "chrono",
+ "foxglove 0.17.2",
+ "futures",
+ "serde",
+ "serde_urlencoded",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "example_mcap"
 version = "0.0.0"
 dependencies = [
@@ -880,21 +895,6 @@ dependencies = [
  "ctrlc",
  "env_logger",
  "foxglove 0.17.2",
-]
-
-[[package]]
-name = "example_remote_data_loader"
-version = "0.0.0"
-dependencies = [
- "axum",
- "chrono",
- "foxglove 0.17.2",
- "futures",
- "serde",
- "serde_urlencoded",
- "tokio",
- "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]
