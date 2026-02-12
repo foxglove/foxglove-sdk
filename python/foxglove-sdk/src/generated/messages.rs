@@ -3109,7 +3109,7 @@ impl From<Vector3> for foxglove::messages::Vector3 {
 }
 
 pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
-    let module = PyModule::new(parent_module.py(), "schemas")?;
+    let module = PyModule::new(parent_module.py(), "messages")?;
 
     module.add_class::<LinePrimitiveLineType>()?;
     module.add_class::<LogLevel>()?;
@@ -3167,7 +3167,7 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = parent_module.py();
     py.import("sys")?
         .getattr("modules")?
-        .set_item("foxglove._foxglove_py.schemas", &module)?;
+        .set_item("foxglove._foxglove_py.messages", &module)?;
 
     parent_module.add_submodule(&module)
 }

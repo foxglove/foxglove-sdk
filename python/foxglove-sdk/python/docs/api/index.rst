@@ -11,12 +11,13 @@ foxglove
    :exclude-members: CloudSink, CloudSinkListener, MCAPWriter, init_notebook_buffer, start_cloud_sink
 
 
-Schemas
-^^^^^^^
+Messages
+^^^^^^^^
 
 .. toctree::
    :maxdepth: 1
 
+   ./messages
    ./schemas
 
 

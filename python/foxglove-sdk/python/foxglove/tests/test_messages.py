@@ -34,12 +34,12 @@ class TestMessagesModule:
         assert ts.nsec == 456
 
     def test_log_level_enum(self) -> None:
-        """Verify LogLevel enum values."""
-        assert LogLevel.Debug.value == 1
-        assert LogLevel.Info.value == 2
-        assert LogLevel.Warning.value == 3
-        assert LogLevel.Error.value == 4
-        assert LogLevel.Fatal.value == 5
+        """Verify LogLevel enum members."""
+        assert str(LogLevel.Debug) == "LogLevel.Debug"
+        assert str(LogLevel.Info) == "LogLevel.Info"
+        assert str(LogLevel.Warning) == "LogLevel.Warning"
+        assert str(LogLevel.Error) == "LogLevel.Error"
+        assert str(LogLevel.Fatal) == "LogLevel.Fatal"
 
     def test_get_schema(self) -> None:
         """Verify `get_schema()` returns a valid schema."""

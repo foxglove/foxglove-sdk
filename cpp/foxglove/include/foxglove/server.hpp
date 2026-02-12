@@ -208,8 +208,8 @@ struct WebSocketServerCallbacks {
   /// @note Since this playback state is in response to a specific request from the client, the
   /// `request_id` field in the returned `PlaybackState` will be overwritten to match the request_id
   /// in `playback_control_request`.
-  std::function<
-    std::optional<PlaybackState>(const PlaybackControlRequest& playback_control_request)>
+  std::function<std::optional<PlaybackState>(const PlaybackControlRequest& playback_control_request
+  )>
     onPlaybackControlRequest;
   /// @endcond
 };

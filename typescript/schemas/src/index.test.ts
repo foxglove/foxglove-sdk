@@ -4,8 +4,9 @@
  * This package re-exports everything from @foxglove/messages for backward compatibility.
  */
 
+import { CompressedImage, Log, PointCloud, SceneUpdate } from "@foxglove/messages";
+
 import * as schemas from "./index";
-import * as messages from "@foxglove/messages";
 
 describe("@foxglove/schemas backward compatibility", () => {
   it("re-exports all types from @foxglove/messages", () => {
@@ -18,9 +19,9 @@ describe("@foxglove/schemas backward compatibility", () => {
 
   it("exports the same types as @foxglove/messages", () => {
     // Verify type identity
-    expect(schemas.CompressedImage).toBe(messages.CompressedImage);
-    expect(schemas.Log).toBe(messages.Log);
-    expect(schemas.SceneUpdate).toBe(messages.SceneUpdate);
-    expect(schemas.PointCloud).toBe(messages.PointCloud);
+    expect(schemas.CompressedImage).toBe(CompressedImage);
+    expect(schemas.Log).toBe(Log);
+    expect(schemas.SceneUpdate).toBe(SceneUpdate);
+    expect(schemas.PointCloud).toBe(PointCloud);
   });
 });
