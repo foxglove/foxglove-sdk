@@ -7,6 +7,8 @@
 
 mod client;
 mod credentials_provider;
+#[cfg(test)]
+mod test_utils;
 mod types;
 
 pub(crate) use client::{DeviceToken, FoxgloveApiClientError};

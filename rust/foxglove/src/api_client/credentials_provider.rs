@@ -68,3 +68,66 @@ impl CredentialsProvider {
         self.credentials.store(None);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use crate::api_client::test_utils::{
+        create_test_builder, create_test_server, TEST_DEVICE_TOKEN,
+    };
+
+    use crate::api_client::client::DeviceToken;
+
+    use super::CredentialsProvider;
+
+    #[tokio::test]
+    async fn new_succeeds_with_no_cached_credentials() {
+        let server = create_test_server().await;
+        let builder = create_test_builder(server.url(), DeviceToken::new(TEST_DEVICE_TOKEN));
+
+        let provider = CredentialsProvider::new(builder)
+            .await
+            .expect("should construct successfully");
+
+        assert!(provider.current_credentials().is_none());
+    }
+
+    #[tokio::test]
+    async fn new_fails_with_bad_token() {
+        let server = create_test_server().await;
+        let builder = create_test_builder(server.url(), DeviceToken::new("bad-token"));
+
+        let result = CredentialsProvider::new(builder).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn load_credentials_fetches_and_caches() {
+        let server = create_test_server().await;
+        let builder = create_test_builder(server.url(), DeviceToken::new(TEST_DEVICE_TOKEN));
+        let provider = CredentialsProvider::new(builder).await.unwrap();
+
+        let credentials = provider
+            .load_credentials()
+            .await
+            .expect("should fetch credentials");
+
+        assert_eq!(credentials.token, "rtc-token-abc123");
+        assert_eq!(credentials.url, "wss://rtc.foxglove.dev");
+        assert!(provider.current_credentials().is_some());
+    }
+
+    #[tokio::test]
+    async fn clear_removes_cached_credentials() {
+        let server = create_test_server().await;
+        let builder = create_test_builder(server.url(), DeviceToken::new(TEST_DEVICE_TOKEN));
+        let provider = CredentialsProvider::new(builder).await.unwrap();
+
+        provider.load_credentials().await.unwrap();
+        assert!(provider.current_credentials().is_some());
+
+        provider.clear().await;
+        assert!(provider.current_credentials().is_none());
+    }
+}

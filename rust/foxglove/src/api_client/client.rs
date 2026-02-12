@@ -278,127 +278,19 @@ impl<A> FoxgloveApiClientBuilder<A> {
 }
 
 #[cfg(test)]
-mod test_utils {
-    use super::{
-        DeviceResponse, DeviceToken, FoxgloveApiClient, FoxgloveApiClientBuilder, RtcCredentials,
-    };
-    use axum::{extract::Path, http::HeaderMap, Json};
-    use axum::{handler::Handler, Router};
-    use reqwest::StatusCode;
-    use tokio::net::TcpListener;
-
-    pub const TEST_DEVICE_TOKEN: &str = "fox_dt_testtoken";
-    pub const TEST_DEVICE_ID: &str = "dev_testdevice";
-    pub const TEST_PROJECT_ID: &str = "prj_testproj";
-
-    pub struct ServerHandle {
-        url: String,
-        join_handle: tokio::task::JoinHandle<()>,
-    }
-
-    impl ServerHandle {
-        pub fn new(url: String, join_handle: tokio::task::JoinHandle<()>) -> Self {
-            Self { url, join_handle }
-        }
-
-        pub fn url(&self) -> &str {
-            &self.url
-        }
-    }
-
-    impl Drop for ServerHandle {
-        fn drop(&mut self) {
-            self.join_handle.abort()
-        }
-    }
-
-    /// Starts a test server with the given handler mounted at the endpoint.
-    /// Returns the base URL (e.g., "http://0.0.0.0:12345").
-    pub async fn create_test_endpoint<T: 'static>(
-        endpoint: &str,
-        handler: impl Handler<T, ()>,
-    ) -> ServerHandle {
-        let app = Router::new().route(endpoint, axum::routing::any(handler));
-
-        let listener = TcpListener::bind("0.0.0.0:0").await.unwrap();
-        let addr = listener.local_addr().unwrap();
-        let join_handle = tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
-
-        ServerHandle::new(format!("http://{addr}"), join_handle)
-    }
-
-    /// Creates a test API client with the handler mounted at the endpoint.
-    pub fn create_test_api_client(
-        url: &str,
-        device_token: DeviceToken,
-    ) -> FoxgloveApiClient<DeviceToken> {
-        FoxgloveApiClientBuilder::new(device_token)
-            .base_url(url)
-            .build()
-            .unwrap()
-    }
-
-    pub async fn device_info_handler(
-        headers: HeaderMap,
-    ) -> Result<Json<DeviceResponse>, StatusCode> {
-        let auth = headers
-            .get("Authorization")
-            .and_then(|v| v.to_str().ok())
-            .ok_or(StatusCode::UNAUTHORIZED)?;
-
-        if auth != format!("DeviceToken {TEST_DEVICE_TOKEN}") {
-            return Err(StatusCode::UNAUTHORIZED);
-        }
-
-        Ok(Json(DeviceResponse {
-            id: TEST_DEVICE_ID.into(),
-            name: "Test Device".into(),
-            project_id: TEST_PROJECT_ID.into(),
-            retain_recordings_seconds: Some(3600),
-        }))
-    }
-
-    pub async fn authorize_remote_viz_handler(
-        Path(device_id): Path<String>,
-        headers: HeaderMap,
-    ) -> Result<Json<RtcCredentials>, StatusCode> {
-        let auth = headers
-            .get("Authorization")
-            .and_then(|v| v.to_str().ok())
-            .ok_or(StatusCode::UNAUTHORIZED)?;
-
-        if auth != format!("DeviceToken {TEST_DEVICE_TOKEN}") {
-            return Err(StatusCode::UNAUTHORIZED);
-        }
-
-        if device_id != TEST_DEVICE_ID {
-            return Err(StatusCode::UNAUTHORIZED);
-        }
-
-        Ok(Json(RtcCredentials {
-            token: "rtc-token-abc123".into(),
-            url: "wss://rtc.foxglove.dev".into(),
-        }))
-    }
-}
-
-#[cfg(test)]
 mod tests {
-    use super::test_utils::*;
-    use super::*;
-    use axum::extract::Path;
-    use axum::http::HeaderMap;
-    use axum::Json;
-    use reqwest::StatusCode;
+    use crate::api_client::test_utils::{
+        create_test_api_client, create_test_server, TEST_DEVICE_ID, TEST_DEVICE_TOKEN,
+        TEST_PROJECT_ID,
+    };
+
+    use super::DeviceToken;
 
     #[tokio::test]
     async fn fetch_device_info_success() {
-        use crate::api_client::types::DeviceResponse;
-
-        let server_handle =
-            create_test_endpoint("/internal/platform/v1/device-info", device_info_handler).await;
+        let server = create_test_server().await;
         let client =
-            create_test_api_client(server_handle.url(), DeviceToken::new(TEST_DEVICE_TOKEN));
+            create_test_api_client(server.url(), DeviceToken::new(TEST_DEVICE_TOKEN));
         let result = client
             .fetch_device_info()
             .await
@@ -412,10 +304,9 @@ mod tests {
 
     #[tokio::test]
     async fn fetch_device_info_unauthorized() {
-        let server_handle =
-            create_test_endpoint("/internal/platform/v1/device-info", device_info_handler).await;
+        let server = create_test_server().await;
         let client = create_test_api_client(
-            server_handle.url(),
+            server.url(),
             DeviceToken::new("some-bad-device-token"),
         );
         let result = client.fetch_device_info().await;
@@ -425,13 +316,9 @@ mod tests {
 
     #[tokio::test]
     async fn authorize_remote_viz_success() {
-        let server_handle = create_test_endpoint(
-            "/internal/platform/v1/devices/{device_id}/remote-sessions",
-            authorize_remote_viz_handler,
-        )
-        .await;
+        let server = create_test_server().await;
         let client =
-            create_test_api_client(server_handle.url(), DeviceToken::new(TEST_DEVICE_TOKEN));
+            create_test_api_client(server.url(), DeviceToken::new(TEST_DEVICE_TOKEN));
 
         let result = client
             .authorize_remote_viz(TEST_DEVICE_ID)
@@ -443,13 +330,9 @@ mod tests {
 
     #[tokio::test]
     async fn authorize_remote_viz_unauthorized() {
-        let server_handle = create_test_endpoint(
-            "/internal/platform/v1/devices/{device_id}/remote-sessions",
-            authorize_remote_viz_handler,
-        )
-        .await;
+        let server = create_test_server().await;
         let client = create_test_api_client(
-            server_handle.url(),
+            server.url(),
             DeviceToken::new("some-bad-device-token"),
         );
         let result = client.authorize_remote_viz(TEST_DEVICE_ID).await;
