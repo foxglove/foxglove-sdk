@@ -1,6 +1,6 @@
 [package]
 name = "example_data_provider"
-edition = "2024"
+edition = "2021"
 publish = false
 
 [lints]
