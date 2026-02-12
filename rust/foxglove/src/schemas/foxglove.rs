@@ -1498,7 +1498,7 @@ pub(crate) mod serde_enum {
 
     crate::schemas::serde_enum_mod!(line_primitive_type, line_primitive::Type);
     crate::schemas::serde_enum_mod!(location_fix_position_covariance_type, location_fix::PositionCovarianceType);
-    crate::schemas::serde_enum_mod!(location_fix_point_style, location_fix::PointStyle);
+    crate::schemas::serde_enum_mod_optional!(location_fix_point_style, location_fix::PointStyle);
     crate::schemas::serde_enum_mod!(log_level, log::Level);
     crate::schemas::serde_enum_mod!(packed_element_field_numeric_type, packed_element_field::NumericType);
     crate::schemas::serde_enum_mod!(points_annotation_type, points_annotation::Type);

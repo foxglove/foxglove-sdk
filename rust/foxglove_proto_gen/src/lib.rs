@@ -93,6 +93,8 @@ struct EnumFieldInfo {
     enum_rust_path: String,
     /// Snake case name for the serde module (e.g., "log_level")
     serde_module_name: String,
+    /// Whether the field is optional in the protobuf definition
+    optional: bool,
 }
 
 /// Collect bytes fields and enum fields from the file descriptor set.
@@ -192,10 +194,13 @@ fn collect_field_info(
                 let serde_module_name =
                     format!("{}_{}", msg_snake, camel_case_to_snake_case(enum_name));
 
+                let optional = field.proto3_optional.unwrap_or(false);
+
                 enum_fields.push(EnumFieldInfo {
                     field_path,
                     enum_rust_path,
                     serde_module_name,
+                    optional,
                 });
             }
         }
@@ -498,10 +503,15 @@ fn generate_serde_enum_module(out_dir: &Path, enum_fields: &[EnumFieldInfo]) -> 
     writeln!(file)?;
 
     for info in unique_enums {
+        let macro_name = if info.optional {
+            "serde_enum_mod_optional"
+        } else {
+            "serde_enum_mod"
+        };
         writeln!(
             file,
-            "    crate::schemas::serde_enum_mod!({}, {});",
-            info.serde_module_name, info.enum_rust_path
+            "    crate::schemas::{}!({}, {});",
+            macro_name, info.serde_module_name, info.enum_rust_path
         )?;
     }
 

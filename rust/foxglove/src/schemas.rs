@@ -130,6 +130,58 @@ macro_rules! serde_enum_mod {
 #[cfg(feature = "serde")]
 pub(crate) use serde_enum_mod;
 
+/// Generates a serde module for an optional protobuf enum field.
+///
+/// Uses string names for human-readable formats (JSON) and i32 for binary formats.
+#[cfg(feature = "serde")]
+macro_rules! serde_enum_mod_optional {
+    ($mod_name:ident, $enum_path:ty) => {
+        pub mod $mod_name {
+            use super::*;
+
+            pub fn serialize<S>(v: &Option<i32>, s: S) -> Result<S::Ok, S::Error>
+            where
+                S: Serializer,
+            {
+                match v {
+                    Some(v) => {
+                        if s.is_human_readable() {
+                            let e = <$enum_path>::try_from(*v)
+                                .map_err(|_| serde::ser::Error::custom("invalid enum value"))?;
+                            s.serialize_some(e.as_str_name())
+                        } else {
+                            s.serialize_some(v)
+                        }
+                    }
+                    None => s.serialize_none(),
+                }
+            }
+
+            pub fn deserialize<'de, D>(d: D) -> Result<Option<i32>, D::Error>
+            where
+                D: Deserializer<'de>,
+            {
+                if d.is_human_readable() {
+                    let opt: Option<String> = Option::deserialize(d)?;
+                    match opt {
+                        Some(s) => {
+                            let e = <$enum_path>::from_str_name(&s)
+                                .ok_or_else(|| D::Error::custom("invalid enum string"))?;
+                            Ok(Some(e as i32))
+                        }
+                        None => Ok(None),
+                    }
+                } else {
+                    Option::<i32>::deserialize(d)
+                }
+            }
+        }
+    };
+}
+
+#[cfg(feature = "serde")]
+pub(crate) use serde_enum_mod_optional;
+
 #[cfg(test)]
 #[cfg(feature = "serde")]
 mod tests {
