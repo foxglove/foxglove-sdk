@@ -51,7 +51,8 @@ use foxglove::{
 use futures::StreamExt;
 use serde::{Deserialize, Serialize};
 
-// Routes for the endpoints. You can change these to anything you want.
+// Routes for the endpoints. The specific values are not part of the API; you can change them to
+// whatever you want.
 const MANIFEST_ROUTE: &str = "/v1/manifest";
 const DATA_ROUTE: &str = "/v1/data";
 
