@@ -2317,7 +2317,12 @@ impl SceneEntityDeletionChannel {
     ///     current time is used.
     /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
-    fn log(&self, msg: &messages::SceneEntityDeletion, log_time: Option<u64>, sink_id: Option<u64>) {
+    fn log(
+        &self,
+        msg: &messages::SceneEntityDeletion,
+        log_time: Option<u64>,
+        sink_id: Option<u64>,
+    ) {
         let metadata = PartialMetadata { log_time };
         let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
