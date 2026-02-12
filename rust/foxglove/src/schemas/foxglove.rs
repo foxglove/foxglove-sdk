@@ -556,7 +556,10 @@ pub struct LocationFix {
     pub color: ::core::option::Option<Color>,
     /// Style of the point used to visualize the location on the map
     #[prost(enumeration = "location_fix::PointStyle", optional, tag = "9")]
-    #[cfg_attr(feature = "serde", serde(with = "serde_enum::location_fix_point_style"))]
+    #[cfg_attr(
+        feature = "serde",
+        serde(with = "serde_enum::location_fix_point_style", default)
+    )]
     pub point_style: ::core::option::Option<i32>,
 }
 /// Nested message and enum types in `LocationFix`.
