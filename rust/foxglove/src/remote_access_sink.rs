@@ -1,7 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
 use crate::{
-    cloud::{CloudConnection, CloudConnectionOptions},
+    remote_access::{RemoteAccessConnection, RemoteAccessConnectionOptions},
     sink_channel_filter::{SinkChannelFilter, SinkChannelFilterFn},
     websocket, ChannelDescriptor, Context, FoxgloveError,
 };
@@ -15,7 +15,7 @@ pub use websocket::{ChannelView, Client, ClientChannel};
 /// long-running behavior is required, the implementation should use [`tokio::task::spawn`] (or
 /// [`tokio::task::spawn_blocking`]).
 #[doc(hidden)]
-pub trait CloudSinkListener: Send + Sync {
+pub trait RemoteAccessSinkListener: Send + Sync {
     /// Callback invoked when a client message is received.
     fn on_message_data(&self, _client: Client, _client_channel: &ClientChannel, _payload: &[u8]) {}
     /// Callback invoked when a client subscribes to a channel.
@@ -30,69 +30,69 @@ pub trait CloudSinkListener: Send + Sync {
     fn on_client_unadvertise(&self, _client: Client, _channel: &ClientChannel) {}
 }
 
-/// A handle to the CloudSink connection.
+/// A handle to the RemoteAccessSink connection.
 ///
 /// This handle can safely be dropped and the connection will run forever.
 #[doc(hidden)]
-pub struct CloudSinkHandle {
-    connection: Arc<CloudConnection>,
+pub struct RemoteAccessSinkHandle {
+    connection: Arc<RemoteAccessConnection>,
     runner: JoinHandle<()>,
 }
 
-impl CloudSinkHandle {
-    fn new(connection: Arc<CloudConnection>) -> Self {
+impl RemoteAccessSinkHandle {
+    fn new(connection: Arc<RemoteAccessConnection>) -> Self {
         let runner = tokio::spawn(connection.clone().run_until_cancelled());
 
         Self { connection, runner }
     }
 
-    /// Gracefully disconnect from the cloud, if connected.
+    /// Gracefully disconnect from the remote access connection, if connected.
     ///
     /// Returns a JoinHandle that will allow waiting until the connection has been fully closed.
     pub fn stop(self) -> JoinHandle<()> {
         // Do we need to do something like the WebSocketServerHandle and return a ShutdownHandle
-        // that lets us block until the CloudConnection is completely shutdown?
+        // that lets us block until the RemoteAccessConnection is completely shutdown?
         self.connection.shutdown();
         self.runner
     }
 }
 
-/// An CloudSink for live visualization and teleop in Foxglove.
+/// A RemoteAccessSink for live visualization and teleop in Foxglove.
 ///
-/// You may only create one CloudSink at a time for the device.
+/// You may only create one RemoteAccessSink at a time for the device.
 #[must_use]
 #[doc(hidden)]
-pub struct CloudSink {
-    options: CloudConnectionOptions,
+pub struct RemoteAccessSink {
+    options: RemoteAccessConnectionOptions,
     context: Arc<Context>,
 }
 
-impl std::fmt::Debug for CloudSink {
+impl std::fmt::Debug for RemoteAccessSink {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("CloudSink")
+        f.debug_struct("RemoteAccessSink")
             .field("options", &self.options)
             .field("context", &self.context)
             .finish()
     }
 }
 
-impl Default for CloudSink {
+impl Default for RemoteAccessSink {
     fn default() -> Self {
         Self {
-            options: CloudConnectionOptions::default(),
+            options: RemoteAccessConnectionOptions::default(),
             context: Context::get_default(),
         }
     }
 }
 
-impl CloudSink {
+impl RemoteAccessSink {
     /// Creates a new websocket server with default options.
     pub fn new() -> Self {
         Self::default()
     }
 
     /// Configure an event listener to receive client message events.
-    pub fn listener(mut self, listener: Arc<dyn CloudSinkListener>) -> Self {
+    pub fn listener(mut self, listener: Arc<dyn RemoteAccessSinkListener>) -> Self {
         self.options.capabilities = vec![websocket::Capability::ClientPublish];
         self.options.listener = Some(listener);
         self
@@ -136,8 +136,8 @@ impl CloudSink {
     /// Configure the tokio runtime for the server to use for async tasks.
     ///
     /// By default, the server will use either the current runtime (if started with
-    /// [`CloudSink::start`]), or spawn its own internal runtime (if started with
-    /// [`CloudSink::start_blocking`]).
+    /// [`RemoteAccessSink::start`]), or spawn its own internal runtime (if started with
+    /// [`RemoteAccessSink::start_blocking`]).
     #[doc(hidden)]
     pub fn tokio_runtime(mut self, handle: &tokio::runtime::Handle) -> Self {
         self.options.runtime = Some(handle.clone());
@@ -162,13 +162,13 @@ impl CloudSink {
         self
     }
 
-    /// Starts the CloudSink, which will establish a connection in the background.
+    /// Starts the RemoteAccessSink, which will establish a connection in the background.
     ///
     /// Returns a handle that can optionally be used to manage the sink.
     /// The caller can safely drop the handle and the connection will continue in the background.
     /// Use stop() on the returned handle to stop the connection.
-    pub fn start(self) -> Result<CloudSinkHandle, FoxgloveError> {
-        let connection = CloudConnection::new(self.options);
-        Ok(CloudSinkHandle::new(Arc::new(connection)))
+    pub fn start(self) -> Result<RemoteAccessSinkHandle, FoxgloveError> {
+        let connection = RemoteAccessConnection::new(self.options);
+        Ok(RemoteAccessSinkHandle::new(Arc::new(connection)))
     }
 }

@@ -14,19 +14,19 @@ use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info, warn};
 
 use crate::{
-    cloud::{
-        participant::{Participant, ParticipantWriter},
-        CloudError,
-    },
     library_version::get_library_version,
+    remote_access::{
+        participant::{Participant, ParticipantWriter},
+        RemoteAccessError,
+    },
     websocket::{self, Server},
-    CloudSinkListener, SinkChannelFilter,
+    RemoteAccessSinkListener, SinkChannelFilter,
 };
 
 use crate::protocol::v1::JsonMessage;
 use crate::protocol::v2::server::ServerInfo;
 
-type Result<T> = std::result::Result<T, CloudError>;
+type Result<T> = std::result::Result<T, RemoteAccessError>;
 
 const WS_PROTOCOL_TOPIC: &str = "ws-protocol";
 // TODO future use
@@ -65,13 +65,13 @@ impl RtcCredentials {
     }
 }
 
-/// Options for the cloud connection.
+/// Options for the remote access connection.
 ///
-/// This should be constructed from the [`crate::CloudSink`] builder.
+/// This should be constructed from the [`crate::RemoteAccessSink`] builder.
 #[derive(Clone)]
-pub(crate) struct CloudConnectionOptions {
+pub(crate) struct RemoteAccessConnectionOptions {
     pub session_id: String,
-    pub listener: Option<Arc<dyn CloudSinkListener>>,
+    pub listener: Option<Arc<dyn RemoteAccessSinkListener>>,
     pub capabilities: Vec<websocket::Capability>,
     pub supported_encodings: Option<HashSet<String>>,
     pub runtime: Option<Handle>,
@@ -80,7 +80,7 @@ pub(crate) struct CloudConnectionOptions {
     pub cancellation_token: CancellationToken,
 }
 
-impl Default for CloudConnectionOptions {
+impl Default for RemoteAccessConnectionOptions {
     fn default() -> Self {
         Self {
             session_id: Server::generate_session_id(),
@@ -95,9 +95,9 @@ impl Default for CloudConnectionOptions {
     }
 }
 
-impl std::fmt::Debug for CloudConnectionOptions {
+impl std::fmt::Debug for RemoteAccessConnectionOptions {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("CloudConnectionOptions")
+        f.debug_struct("RemoteAccessConnectionOptions")
             .field("session_id", &self.session_id)
             .field("has_listener", &self.listener.is_some())
             .field("capabilities", &self.capabilities)
@@ -109,39 +109,41 @@ impl std::fmt::Debug for CloudConnectionOptions {
     }
 }
 
-/// CloudSession tracks a connected LiveKit session (the Room)
+/// RemoteAccessSession tracks a connected LiveKit session (the Room)
 /// and any state that is specific to that session.
 /// We discard this state if we close or lose the connection.
-/// [`CloudConnection`] manages the current connected session (if any)
-struct CloudSession {
+/// [`RemoteAccessConnection`] manages the current connected session (if any)
+struct RemoteAccessSession {
     room: Room,
     participants: RwLock<HashMap<ParticipantIdentity, Arc<Participant>>>,
 }
 
-/// CloudConnection manages the connected [`CloudSession`] to the LiveKit server,
+/// RemoteAccessConnection manages the connected [`RemoteAccessSession`] to the LiveKit server,
 /// and holds the options and other state that outlive a session.
-pub(crate) struct CloudConnection {
-    options: CloudConnectionOptions,
+pub(crate) struct RemoteAccessConnection {
+    options: RemoteAccessConnectionOptions,
     /// The current session, if any.
-    session: ArcSwapOption<CloudSession>,
+    session: ArcSwapOption<RemoteAccessSession>,
 }
 
-impl CloudConnection {
-    pub fn new(options: CloudConnectionOptions) -> Self {
+impl RemoteAccessConnection {
+    pub fn new(options: RemoteAccessConnectionOptions) -> Self {
         Self {
             options,
             session: ArcSwapOption::new(None),
         }
     }
 
-    async fn connect_session(&self) -> Result<(Arc<CloudSession>, UnboundedReceiver<RoomEvent>)> {
+    async fn connect_session(
+        &self,
+    ) -> Result<(Arc<RemoteAccessSession>, UnboundedReceiver<RoomEvent>)> {
         // TODO get credentials from API
         let credentials = RtcCredentials::new();
 
         let (session, room_events) =
             match Room::connect(&credentials.url, &credentials.token, RoomOptions::default()).await
             {
-                Ok((room, room_events)) => (Arc::new(CloudSession::new(room)), room_events),
+                Ok((room, room_events)) => (Arc::new(RemoteAccessSession::new(room)), room_events),
                 Err(e) => {
                     return Err(e.into());
                 }
@@ -151,7 +153,7 @@ impl CloudConnection {
         Ok((session, room_events))
     }
 
-    /// Returns the cancellation token for the [`CloudConnection`]`.
+    /// Returns the cancellation token for the [`RemoteAccessConnection`]`.
     fn cancellation_token(&self) -> &CancellationToken {
         &self.options.cancellation_token
     }
@@ -180,7 +182,7 @@ impl CloudConnection {
             identity, attributes
         );
 
-        info!("running cloud server");
+        info!("running remote access server");
         tokio::select! {
             () = self.cancellation_token().cancelled() => (),
             _ = self.listen_for_room_events(session.clone(), room_events) => {}
@@ -202,19 +204,19 @@ impl CloudConnection {
     /// Note that livekit internally includes a few quick retries for each connect call as well.
     async fn connect_session_until_ok(
         &self,
-    ) -> Result<(Arc<CloudSession>, UnboundedReceiver<RoomEvent>)> {
+    ) -> Result<(Arc<RemoteAccessSession>, UnboundedReceiver<RoomEvent>)> {
         let mut interval = tokio::time::interval(AUTH_RETRY_PERIOD);
         loop {
             tokio::select! {
                 _ = interval.tick() => {}
                 () = self.cancellation_token().cancelled() => {
-                    return Err(CloudError::ConnectionStopped);
+                    return Err(RemoteAccessError::ConnectionStopped);
                 }
             };
 
             let result = tokio::select! {
                 () = self.cancellation_token().cancelled() => {
-                    return Err(CloudError::ConnectionStopped);
+                    return Err(RemoteAccessError::ConnectionStopped);
                 }
                 result = self.connect_session() => result,
             };
@@ -223,10 +225,10 @@ impl CloudConnection {
                 Ok((session, room_events)) => {
                     return Ok((session, room_events));
                 }
-                Err(CloudError::ConnectionStopped) => {
-                    return Err(CloudError::ConnectionStopped);
+                Err(RemoteAccessError::ConnectionStopped) => {
+                    return Err(RemoteAccessError::ConnectionStopped);
                 }
-                Err(CloudError::ConnectionError(e)) => {
+                Err(RemoteAccessError::ConnectionError(e)) => {
                     error!("{e:?}");
 
                     // We can't inspect the inner types of Engine errors; this may be caused by
@@ -236,7 +238,7 @@ impl CloudConnection {
                 }
                 Err(e) => {
                     error!(
-                        "failed to establish cloud connection: {e:?}, retrying in {AUTH_RETRY_PERIOD:?}"
+                        "failed to establish remote access connection: {e:?}, retrying in {AUTH_RETRY_PERIOD:?}"
                     );
                 }
             }
@@ -245,7 +247,7 @@ impl CloudConnection {
 
     async fn listen_for_room_events(
         &self,
-        session: Arc<CloudSession>,
+        session: Arc<RemoteAccessSession>,
         mut room_events: UnboundedReceiver<RoomEvent>,
     ) {
         while let Some(event) = room_events.recv().await {
@@ -302,7 +304,7 @@ impl CloudConnection {
         warn!("stopped listening for room events");
     }
 
-    /// Create and serialize ServerInfo message based on the CloudConnectionOptions.
+    /// Create and serialize ServerInfo message based on the RemoteAccessConnectionOptions.
     ///
     /// The metadata and supported_encodings are important for the ClientPublish capability,
     /// as some app components will use this information to determine publish formats (ROS1 vs. JSON).
@@ -315,7 +317,7 @@ impl CloudConnection {
         let supported_encodings = self.options.supported_encodings.clone();
         metadata.insert("fg-library".into(), get_library_version());
 
-        let mut info = ServerInfo::new("cloud")
+        let mut info = ServerInfo::new("remote_access")
             .with_session_id(self.options.session_id.clone())
             .with_capabilities(
                 self.options
@@ -338,7 +340,7 @@ impl CloudConnection {
     }
 }
 
-impl CloudSession {
+impl RemoteAccessSession {
     fn new(room: Room) -> Self {
         Self {
             room,
