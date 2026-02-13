@@ -11,7 +11,14 @@ license.workspace = true
 default = ["derive", "live_visualization", "lz4", "zstd"]
 chrono = ["dep:chrono"]
 derive = ["dep:foxglove_derive"]
-remote_access = ["live_visualization", "dep:livekit", "dep:libwebrtc"]
+agent = [
+  "live_visualization",
+  "tls",
+  "dep:livekit",
+  "dep:libwebrtc",
+  "dep:reqwest",
+  "dep:percent-encoding",
+]
 live_visualization = [
   "dep:base64",
   "dep:flume",
@@ -90,10 +97,13 @@ image = { version = "0.25.9", default-features = false, optional = true }
 yuv = { version = "0.8.9", optional = true }
 regex = { version = "1", optional = true }
 cdr = { version = "0.2.4", optional = true }
+reqwest = { version = "0.13.1", features = ["json", "rustls"], optional = true }
+percent-encoding = { version = "2.3.2", optional = true }
 
 [dev-dependencies]
 assert_matches = "1.5.0"
 insta.workspace = true
+axum = "0.8.8"
 hexdump = "0.1.2"
 maplit = "1.0.2"
 serde_cbor = "0.11.2"
