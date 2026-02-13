@@ -39,15 +39,15 @@ export type PointCloudTypeIsReexported = AssertType<IsEqual<SchemasPointCloud, M
 // Runtime tests
 describe("@foxglove/schemas backward compatibility", () => {
   it("re-exports all named exports from @foxglove/messages", () => {
-    const messageKeys = Object.keys(messages);
-    const schemaKeys = Object.keys(schemas);
+    const messageExports = messages as Record<string, unknown>;
+    const schemaExports = schemas as Record<string, unknown>;
+    const messageKeys = Object.keys(messageExports);
+    const schemaKeys = Object.keys(schemaExports);
 
     // Every export from messages should be in schemas
     for (const key of messageKeys) {
       expect(schemaKeys).toContain(key);
-      expect((schemas as Record<string, unknown>)[key]).toBe(
-        (messages as Record<string, unknown>)[key],
-      );
+      expect(schemaExports[key]).toBe(messageExports[key]);
     }
   });
 });
