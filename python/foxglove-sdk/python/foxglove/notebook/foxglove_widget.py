@@ -4,8 +4,8 @@ import pathlib
 from typing import TYPE_CHECKING, Any, Callable, Literal
 
 import anywidget
-import traitlets
 import ipywidgets  # type: ignore
+import traitlets
 
 if TYPE_CHECKING:
     from ..layouts import Layout
