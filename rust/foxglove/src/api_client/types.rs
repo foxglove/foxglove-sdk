@@ -5,7 +5,9 @@ use serde::{Deserialize, Serialize};
 #[derive(Deserialize, Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct RtcCredentials {
+    /// Expiring access token (JWT)
     pub token: String,
+    /// URL of the RTC server where these credentials are valid.
     pub url: String,
 }
 
