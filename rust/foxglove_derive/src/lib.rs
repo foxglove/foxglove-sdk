@@ -98,6 +98,27 @@ fn is_array_of_array(ty: &Type) -> bool {
     unwrap_array_type(ty).is_some_and(is_array)
 }
 
+/// Validate that a type does not use unsupported nesting patterns.
+/// Returns `Some(compile_error!(...))` if the type is invalid, `None` if valid.
+fn validate_field_type(ty: &Type) -> Option<TokenStream> {
+    let checks: &[(fn(&Type) -> bool, &str)] = &[
+        (is_vec_of_option, "Vec<Option<T>> is not supported. Protobuf repeated fields cannot represent null/missing elements."),
+        (is_option_of_vec, "Option<Vec<T>> is not supported. Protobuf cannot distinguish between absent and empty repeated fields."),
+        (is_vec_of_vec, "Vec<Vec<T>> is not supported. Protobuf does not support nested repeated fields."),
+        (is_array_of_option, "[Option<T>; N] is not supported. Protobuf repeated fields cannot represent null/missing elements."),
+        (is_option_of_array, "Option<[T; N]> is not supported. Protobuf cannot distinguish between absent and empty repeated fields."),
+        (is_array_of_array, "[[T; M]; N] is not supported. Protobuf does not support nested repeated fields."),
+        (is_array_of_vec, "[Vec<T>; N] is not supported. Protobuf does not support nested repeated fields."),
+        (is_vec_of_array, "Vec<[T; N]> is not supported. Protobuf does not support nested repeated fields."),
+    ];
+    for &(check, msg) in checks {
+        if check(ty) {
+            return Some(TokenStream::from(quote! { compile_error!(#msg); }));
+        }
+    }
+    None
+}
+
 /// Derive macro for enums and structs allowing them to be logged to a Foxglove channel.
 #[proc_macro_derive(Encode)]
 pub fn derive_loggable(input: TokenStream) -> TokenStream {
@@ -189,6 +210,200 @@ fn add_protobuf_bound(mut generics: Generics) -> Generics {
 }
 
 fn derive_struct_impl(input: &DeriveInput, data: &DataStruct) -> TokenStream {
+    match &data.fields {
+        Fields::Named(fields) => derive_named_struct_impl(input, &fields.named),
+        Fields::Unnamed(fields) if fields.unnamed.len() == 1 => {
+            derive_newtype_impl(input, &fields.unnamed[0])
+        }
+        _ => TokenStream::from(quote! {
+            compile_error!("Only named struct fields and single-element tuple structs are supported");
+        }),
+    }
+}
+
+/// Generate a transparent `ProtobufField` implementation and a standalone `Encode`
+/// implementation for a newtype wrapper.
+///
+/// For `struct Foo(T)` where `T: ProtobufField`, the `ProtobufField` impl delegates
+/// all trait methods to `T`, making the newtype transparent when used as a field in
+/// other structs. The `Encode` impl treats `Foo` as a single-field protobuf message
+/// with the field named `"value"` at field number 1, allowing it to be used as a
+/// standalone top-level message.
+fn derive_newtype_impl(input: &DeriveInput, field: &syn::Field) -> TokenStream {
+    let name = &input.ident;
+    let inner_type = &field.ty;
+
+    let name_str = name.to_string();
+    let package_name = name_str.to_lowercase();
+    let full_name = format!("{package_name}.{name_str}");
+
+    if let Some(err) = validate_field_type(inner_type) {
+        return err;
+    }
+
+    let generics = add_protobuf_bound(input.generics.clone());
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+
+    let expanded = quote! {
+        #[automatically_derived]
+        impl #impl_generics ::foxglove::protobuf::ProtobufField for #name #ty_generics #where_clause {
+            fn field_type() -> ::foxglove::prost_types::field_descriptor_proto::Type {
+                <#inner_type as ::foxglove::protobuf::ProtobufField>::field_type()
+            }
+
+            fn wire_type() -> u32 {
+                <#inner_type as ::foxglove::protobuf::ProtobufField>::wire_type()
+            }
+
+            fn write_tagged(&self, field_number: u32, buf: &mut impl ::foxglove::bytes::BufMut) {
+                ::foxglove::protobuf::ProtobufField::write_tagged(&self.0, field_number, buf)
+            }
+
+            fn write(&self, buf: &mut impl ::foxglove::bytes::BufMut) {
+                ::foxglove::protobuf::ProtobufField::write(&self.0, buf)
+            }
+
+            fn type_name() -> Option<String> {
+                <#inner_type as ::foxglove::protobuf::ProtobufField>::type_name()
+            }
+
+            fn enum_descriptor() -> Option<::foxglove::prost_types::EnumDescriptorProto> {
+                <#inner_type as ::foxglove::protobuf::ProtobufField>::enum_descriptor()
+            }
+
+            fn message_descriptor() -> Option<::foxglove::prost_types::DescriptorProto> {
+                <#inner_type as ::foxglove::protobuf::ProtobufField>::message_descriptor()
+            }
+
+            fn file_descriptor() -> Option<::foxglove::prost_types::FileDescriptorProto> {
+                <#inner_type as ::foxglove::protobuf::ProtobufField>::file_descriptor()
+            }
+
+            fn file_descriptors() -> Vec<::foxglove::prost_types::FileDescriptorProto> {
+                <#inner_type as ::foxglove::protobuf::ProtobufField>::file_descriptors()
+            }
+
+            fn repeating() -> bool {
+                <#inner_type as ::foxglove::protobuf::ProtobufField>::repeating()
+            }
+
+            fn optional() -> bool {
+                <#inner_type as ::foxglove::protobuf::ProtobufField>::optional()
+            }
+
+            fn encoded_len(&self) -> usize {
+                ::foxglove::protobuf::ProtobufField::encoded_len(&self.0)
+            }
+
+            fn encoded_len_tagged(&self, field_number: u32) -> usize {
+                ::foxglove::protobuf::ProtobufField::encoded_len_tagged(&self.0, field_number)
+            }
+        }
+
+        #[automatically_derived]
+        impl #impl_generics ::foxglove::Encode for #name #ty_generics #where_clause {
+            type Error = ::foxglove::FoxgloveError;
+
+            fn get_schema() -> Option<::foxglove::Schema> {
+                static SCHEMA: ::std::sync::OnceLock<Option<::foxglove::Schema>> = ::std::sync::OnceLock::new();
+                SCHEMA.get_or_init(|| {
+                    let mut file_descriptor_set = ::foxglove::prost_types::FileDescriptorSet::default();
+
+                    // Add file descriptors for well-known types and nested message dependencies.
+                    // Deduplicate by name since multiple fields may reference the same WKT.
+                    let dependency_fds = <#inner_type as ::foxglove::protobuf::ProtobufField>::file_descriptors();
+                    let mut seen = ::std::collections::HashSet::new();
+                    let mut dependencies = Vec::new();
+                    for fd in dependency_fds {
+                        if let Some(name) = &fd.name {
+                            if seen.insert(name.clone()) {
+                                dependencies.push(name.clone());
+                                file_descriptor_set.file.push(fd);
+                            }
+                        }
+                    }
+
+                    let mut file = ::foxglove::prost_types::FileDescriptorProto {
+                        name: Some(String::from(concat!(stringify!(#name), ".proto"))),
+                        package: Some(String::from(#package_name)),
+                        syntax: Some(String::from("proto3")),
+                        dependency: dependencies,
+                        ..Default::default()
+                    };
+
+                    // Build the message descriptor inline rather than delegating to
+                    // Self::message_descriptor(), which is transparent and returns the
+                    // inner type's descriptor.
+                    let mut message = ::foxglove::prost_types::DescriptorProto::default();
+                    message.name = Some(String::from(stringify!(#name)));
+
+                    // Single field: "value" at field number 1
+                    let mut field_desc = ::foxglove::prost_types::FieldDescriptorProto::default();
+                    field_desc.name = Some(String::from("value"));
+                    field_desc.number = Some(1);
+
+                    if <#inner_type as ::foxglove::protobuf::ProtobufField>::repeating() {
+                        field_desc.label = Some(::foxglove::prost_types::field_descriptor_proto::Label::Repeated as i32);
+                    } else if <#inner_type as ::foxglove::protobuf::ProtobufField>::optional() {
+                        field_desc.label = Some(::foxglove::prost_types::field_descriptor_proto::Label::Optional as i32);
+                    } else {
+                        field_desc.label = Some(::foxglove::prost_types::field_descriptor_proto::Label::Required as i32);
+                    }
+                    field_desc.r#type = Some(<#inner_type as ::foxglove::protobuf::ProtobufField>::field_type() as i32);
+                    field_desc.type_name = <#inner_type as ::foxglove::protobuf::ProtobufField>::type_name();
+
+                    message.field.push(field_desc);
+
+                    if let Some(enum_desc) = <#inner_type as ::foxglove::protobuf::ProtobufField>::enum_descriptor() {
+                        message.enum_type.push(enum_desc);
+                    }
+
+                    if let Some(message_desc) = <#inner_type as ::foxglove::protobuf::ProtobufField>::message_descriptor() {
+                        message.nested_type.push(message_desc);
+                    }
+
+                    file.message_type.push(message);
+                    file_descriptor_set.file.push(file);
+
+                    let bytes = ::foxglove::protobuf::prost_file_descriptor_set_to_vec(&file_descriptor_set);
+
+                    Some(::foxglove::Schema {
+                        name: String::from(#full_name),
+                        encoding: String::from("protobuf"),
+                        data: std::borrow::Cow::Owned(bytes),
+                    })
+                }).clone()
+            }
+
+            fn get_message_encoding() -> String {
+                String::from("protobuf")
+            }
+
+            fn encode(&self, buf: &mut impl ::foxglove::bytes::BufMut) -> Result<(), Self::Error> {
+                if self.encoded_len().is_some_and(|len| len > buf.remaining_mut()) {
+                    return Err(::foxglove::FoxgloveError::EncodeError(
+                        "insufficient buffer".to_string(),
+                    ));
+                }
+
+                // The top level message is encoded without a length prefix
+                ::foxglove::protobuf::ProtobufField::write_tagged(&self.0, 1u32, buf);
+                Ok(())
+            }
+
+            fn encoded_len(&self) -> Option<usize> {
+                Some(::foxglove::protobuf::ProtobufField::encoded_len_tagged(&self.0, 1u32))
+            }
+        }
+    };
+
+    TokenStream::from(expanded)
+}
+
+fn derive_named_struct_impl(
+    input: &DeriveInput,
+    fields: &syn::punctuated::Punctuated<syn::Field, syn::token::Comma>,
+) -> TokenStream {
     let name = &input.ident;
     let name_str = name.to_string();
     let package_name = name_str.to_lowercase();
@@ -196,16 +411,6 @@ fn derive_struct_impl(input: &DeriveInput, data: &DataStruct) -> TokenStream {
 
     let generics = add_protobuf_bound(input.generics.clone());
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
-
-    // Extract fields from the struct
-    let fields = match &data.fields {
-        Fields::Named(fields) => &fields.named,
-        _ => {
-            return TokenStream::from(quote! {
-                compile_error!("Only named struct fields are supported");
-            })
-        }
-    };
 
     let mut field_defs = Vec::new();
     let mut field_encoders = Vec::new();
@@ -234,52 +439,8 @@ fn derive_struct_impl(input: &DeriveInput, data: &DataStruct) -> TokenStream {
             });
         }
 
-        if is_vec_of_option(field_type) {
-            return TokenStream::from(quote! {
-                compile_error!("Vec<Option<T>> is not supported. Protobuf repeated fields cannot represent null/missing elements.");
-            });
-        }
-
-        if is_option_of_vec(field_type) {
-            return TokenStream::from(quote! {
-                compile_error!("Option<Vec<T>> is not supported. Protobuf cannot distinguish between absent and empty repeated fields.");
-            });
-        }
-
-        if is_vec_of_vec(field_type) {
-            return TokenStream::from(quote! {
-                compile_error!("Vec<Vec<T>> is not supported. Protobuf does not support nested repeated fields.");
-            });
-        }
-
-        if is_array_of_option(field_type) {
-            return TokenStream::from(quote! {
-                compile_error!("[Option<T>; N] is not supported. Protobuf repeated fields cannot represent null/missing elements.");
-            });
-        }
-
-        if is_option_of_array(field_type) {
-            return TokenStream::from(quote! {
-                compile_error!("Option<[T; N]> is not supported. Protobuf cannot distinguish between absent and empty repeated fields.");
-            });
-        }
-
-        if is_array_of_array(field_type) {
-            return TokenStream::from(quote! {
-                compile_error!("[[T; M]; N] is not supported. Protobuf does not support nested repeated fields.");
-            });
-        }
-
-        if is_array_of_vec(field_type) {
-            return TokenStream::from(quote! {
-                compile_error!("[Vec<T>; N] is not supported. Protobuf does not support nested repeated fields.");
-            });
-        }
-
-        if is_vec_of_array(field_type) {
-            return TokenStream::from(quote! {
-                compile_error!("Vec<[T; N]> is not supported. Protobuf does not support nested repeated fields.");
-            });
+        if let Some(err) = validate_field_type(field_type) {
+            return err;
         }
 
         field_tagged_lengths.push(quote! {
