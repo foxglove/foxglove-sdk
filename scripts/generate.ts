@@ -240,13 +240,13 @@ async function main({ clean }: { clean: boolean }) {
   await logProgressLn("Generating Pyclass definitions", async () => {
     // Source files (.rs) are re-generated.
     // Stub file is placed into the existing hierarchy.
-    const schemasFile = path.join(pythonSdkGeneratedRoot, "schemas.rs");
+    const messagesFile = path.join(pythonSdkGeneratedRoot, "messages.rs");
     await fs.mkdir(pythonSdkGeneratedRoot, { recursive: true });
     await fs.mkdir(path.join(pythonSdkPyRoot, "messages"), { recursive: true });
     await fs.mkdir(path.join(pythonSdkPyRoot, "channels"), { recursive: true });
 
     // Schemas file
-    const writer = (await fs.open(schemasFile, "wx")).createWriteStream();
+    const writer = (await fs.open(messagesFile, "wx")).createWriteStream();
     writer.write(generateSchemaPrelude());
 
     const enumSchemas = Object.values(foxgloveEnumSchemas);
@@ -268,27 +268,29 @@ async function main({ clean }: { clean: boolean }) {
     const channelClassesFile = path.join(pythonSdkGeneratedRoot, "channels.rs");
     await fs.writeFile(channelClassesFile, generateChannelClasses(messageSchemas));
 
-    // Stubs are written to the location of the pyo3-generated module
+    // Stubs are written to the location of the pyo3-generated module.
     // Python module indexes are added for the public API.
-    const schemasStubFile = path.join(pythonSdkPyRoot, "_foxglove_py/messages.pyi");
-    const schemasStubModule = path.join(pythonSdkPyRoot, "messages/__init__.py");
+    // Stubs are written to the location of the pyo3-generated module.
+    // Python module indexes are added for the public API.
+    const messagesStubFile = path.join(pythonSdkPyRoot, "_foxglove_py/messages.pyi");
+    const messagesModule = path.join(pythonSdkPyRoot, "messages/__init__.py");
     const channelStubFile = path.join(pythonSdkPyRoot, "_foxglove_py/channels.pyi");
-    const channelStubModule = path.join(pythonSdkPyRoot, "channels/__init__.py");
+    const channelModule = path.join(pythonSdkPyRoot, "channels/__init__.py");
 
-    await fs.writeFile(schemasStubFile, generatePySchemaStub(allSchemas));
-    await fs.writeFile(schemasStubModule, generatePySchemaModule(allSchemas));
+    await fs.writeFile(messagesStubFile, generatePySchemaStub(allSchemas));
+    await fs.writeFile(messagesModule, generatePySchemaModule(allSchemas));
     await fs.writeFile(channelStubFile, generatePyChannelStub(messageSchemas));
-    await fs.writeFile(channelStubModule, generatePyChannelModule(messageSchemas));
+    await fs.writeFile(channelModule, generatePyChannelModule(messageSchemas));
 
-    await exec("cargo", ["fmt", "--", path.resolve(channelClassesFile, schemasFile)], {
+    await exec("cargo", ["fmt", "--", path.resolve(channelClassesFile, messagesFile)], {
       cwd: repoRoot,
     });
 
     const pythonFiles = [
-      path.resolve(schemasStubFile),
+      path.resolve(messagesStubFile),
       path.resolve(channelStubFile),
-      path.resolve(schemasStubModule),
-      path.resolve(channelStubModule),
+      path.resolve(messagesModule),
+      path.resolve(channelModule),
     ];
     await exec("uv", ["run", "black", ...pythonFiles], { cwd: repoRoot });
     await exec("uv", ["run", "isort", ...pythonFiles], { cwd: repoRoot });

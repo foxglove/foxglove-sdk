@@ -57,8 +57,8 @@ export function generatePySchemaStub(schemas: FoxgloveSchema[]): string {
       "",
       "from . import Schema",
       // Use "from mod import X as X" syntax to explicitly re-export.
-      "from .schemas_wkt import Duration as Duration",
-      "from .schemas_wkt import Timestamp as Timestamp",
+      "from .messages_wkt import Duration as Duration",
+      "from .messages_wkt import Timestamp as Timestamp",
     ].join("\n") + "\n";
 
   const enums = schemas
@@ -589,7 +589,7 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
 }
 
 /**
- * Python SDK uses custom implementations for Time and Duration via schemas_wkt, so we don't
+ * Python SDK uses custom implementations for Time and Duration via messages_wkt, so we don't
  * auto-generate implementations or stubs. These match the `{ sec, nsec }` schema definition but
  * provide additional conversions and factory methods.
  */
@@ -647,7 +647,7 @@ export function generateChannelClasses(messageSchemas: FoxgloveMessageSchema[]):
     `use foxglove::{Channel, ChannelBuilder, PartialMetadata, SinkId};`,
     `use pyo3::prelude::*;`,
     `use pyo3::types::PyDict;`,
-    `use super::schemas;`,
+    `use super::messages;`,
     `use std::collections::BTreeMap;`,
     `use std::num::NonZero;`,
   ].join("\n");
@@ -777,7 +777,7 @@ export function generatePyChannelStub(messageSchemas: FoxgloveMessageSchema[]): 
 
   const imports = [
     "from . import Context, Schema",
-    ...schemas.map((schema) => `from .schemas import ${structName(schema.name)}`),
+    ...schemas.map((schema) => `from .messages import ${structName(schema.name)}`),
   ];
 
   const classes = schemas.map((schema) => {
