@@ -7,36 +7,47 @@
 ///
 /// # Running the example
 ///
-/// See the remote data loader local development guide to test this properly in the Foxglove app.
+/// See the remote data loader local development guide to test this properly
+/// in the Foxglove app.
 ///
 /// You can also test basic functionality with curl:
 ///
 /// To run the example server (from the cpp build directory):
+/// @code{.sh}
 ///   ./example_data_provider
+/// @endcode
 ///
 /// Get a manifest for a specific flight:
-///   curl "http://localhost:8080/v1/manifest?flightId=ABC123&startTime=2024-01-01T00:00:00Z&endTime=2024-01-02T00:00:00Z" \
-///        -H "Authorization: Bearer test"
+/// @code{.sh}
+///   curl -H "Authorization: Bearer test" \
+///     "http://localhost:8080/v1/manifest?flightId=ABC123\
+///     &startTime=2024-01-01T00:00:00Z&endTime=2024-01-02T00:00:00Z"
+/// @endcode
 ///
 /// Stream MCAP data:
-///   curl "http://localhost:8080/v1/data?flightId=ABC123&startTime=2024-01-01T00:00:00Z&endTime=2024-01-02T00:00:00Z" \
-///        -H "Authorization: Bearer test" --output data.mcap
+/// @code{.sh}
+///   curl -H "Authorization: Bearer test" --output data.mcap \
+///     "http://localhost:8080/v1/data?flightId=ABC123\
+///     &startTime=2024-01-01T00:00:00Z&endTime=2024-01-02T00:00:00Z"
+/// @endcode
 ///
 /// Verify the MCAP file (requires mcap CLI):
+/// @code{.sh}
 ///   mcap info data.mcap
+/// @endcode
 
 #include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
 #include <foxglove/mcap.hpp>
 #include <foxglove/schemas.hpp>
 
-#include <httplib.h>
 #include <nlohmann/json.hpp>
 
 #include <cerrno>
 #include <chrono>
 #include <cstdint>
 #include <ctime>
+#include <httplib.h>
 #include <iomanip>
 #include <iostream>
 #include <optional>
@@ -136,9 +147,8 @@ std::string format_iso8601(TimePoint tp) {
 /// Convert time_point to nanoseconds since epoch.
 uint64_t to_nanos(TimePoint tp) {
   auto duration = tp.time_since_epoch();
-  return static_cast<uint64_t>(
-    std::chrono::duration_cast<std::chrono::nanoseconds>(duration).count()
-  );
+  return static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::nanoseconds>(duration).count(
+  ));
 }
 
 /// Round a time_point up to the next second boundary.
@@ -253,8 +263,8 @@ struct FlightParams {
   /// Build a query string for these parameters.
   std::string to_query_string() const {
     return "flightId=" + url_encode(flight_id) +
-      "&startTime=" + url_encode(format_iso8601(start_time)) +
-      "&endTime=" + url_encode(format_iso8601(end_time));
+           "&startTime=" + url_encode(format_iso8601(start_time)) +
+           "&endTime=" + url_encode(format_iso8601(end_time));
   }
 };
 
@@ -457,9 +467,8 @@ void data_handler(const httplib::Request& req, httplib::Response& res) {
       while (ts <= flight_params.end_time) {
         // Messages in the output MUST appear in ascending timestamp order. Otherwise, playback
         // will be incorrect.
-        auto secs_since_epoch = std::chrono::duration_cast<std::chrono::seconds>(
-          ts.time_since_epoch()
-        );
+        auto secs_since_epoch =
+          std::chrono::duration_cast<std::chrono::seconds>(ts.time_since_epoch());
 
         foxglove::schemas::Vector3 msg;
         msg.x = static_cast<double>(secs_since_epoch.count());
