@@ -43,7 +43,7 @@ pub const FOXGLOVE_SERVER_CAPABILITY_ASSETS: u8 = 1 << 5;
 /// Indicates that the server is sending data within a fixed time range. This requires the
 /// server to specify the `data_start_time` and `data_end_time` fields in
 /// `foxglove_server_options`.
-pub const FOXGLOVE_SERVER_CAPABILITY_RANGED_PLAYBACK: u8 = 1 << 6;
+pub const FOXGLOVE_SERVER_CAPABILITY_PLAYBACK_CONTROL: u8 = 1 << 6;
 
 bitflags! {
     #[derive(Clone, Copy, PartialEq, Eq)]
@@ -54,7 +54,7 @@ bitflags! {
         const Time = FOXGLOVE_SERVER_CAPABILITY_TIME;
         const Services = FOXGLOVE_SERVER_CAPABILITY_SERVICES;
         const Assets = FOXGLOVE_SERVER_CAPABILITY_ASSETS;
-        const RangedPlayback = FOXGLOVE_SERVER_CAPABILITY_RANGED_PLAYBACK;
+        const PlaybackControl = FOXGLOVE_SERVER_CAPABILITY_PLAYBACK_CONTROL;
     }
 }
 
@@ -77,8 +77,8 @@ impl FoxgloveServerCapabilityBitFlags {
             FoxgloveServerCapabilityBitFlags::Assets => {
                 Some(foxglove::websocket::Capability::Assets)
             }
-            FoxgloveServerCapabilityBitFlags::RangedPlayback => {
-                Some(foxglove::websocket::Capability::RangedPlayback)
+            FoxgloveServerCapabilityBitFlags::PlaybackControl => {
+                Some(foxglove::websocket::Capability::PlaybackControl)
             }
             _ => None,
         })
@@ -170,10 +170,10 @@ pub struct FoxgloveServerOptions<'a> {
         ) -> bool,
     >,
 
-    /// If the server is sending data from a fixed time range, and has the RangedPlayback capability,
+    /// If the server is sending data from a fixed time range, and has the PlaybackControl capability,
     /// the start time of the data range.
     pub playback_start_time: Option<&'a u64>,
-    /// If the server is sending data from a fixed time range, and has the RangedPlayback capability,
+    /// If the server is sending data from a fixed time range, and has the PlaybackControl capability,
     /// the end time of the data range.
     pub playback_end_time: Option<&'a u64>,
 
@@ -326,7 +326,7 @@ pub struct FoxgloveServerCallbacks {
 
     /// Callback invoked when a client sends a playback control request message.
     ///
-    /// Requires `FOXGLOVE_CAPABILITY_RANGED_PLAYBACK`.
+    /// Requires `FOXGLOVE_CAPABILITY_PLAYBACK_CONTROL`.
     ///
     /// `playback_control_request` is an input parameter and guaranteed to be non-NULL.
     /// `playback_state` is a non-NULL output pointer to a struct that has already been allocated.
@@ -531,7 +531,7 @@ pub extern "C" fn foxglove_server_broadcast_time(
 
 /// Publishes the current playback state to all clients.
 ///
-/// Requires the `FOXGLOVE_CAPABILITY_RANGED_PLAYBACK` capability.
+/// Requires the `FOXGLOVE_CAPABILITY_PLAYBACK_CONTROL` capability.
 ///
 /// # Safety
 /// - `playback_state` must be a valid pointer to a playback state that lives for the duration of the call.

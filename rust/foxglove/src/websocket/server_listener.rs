@@ -70,7 +70,7 @@ pub trait ServerListener: Send + Sync {
 
     #[doc(hidden)]
     /// Callback invoked when a client sends a playback control request.
-    /// Requires [`Capability::RangedPlayback`][super::Capability::RangedPlayback].
+    /// Requires [`Capability::PlaybackControl`][super::Capability::PlaybackControl].
     fn on_playback_control_request(
         &self,
         _request: PlaybackControlRequest,

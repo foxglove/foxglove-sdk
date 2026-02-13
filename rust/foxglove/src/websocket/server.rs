@@ -167,7 +167,7 @@ pub(crate) struct Server {
     /// Keys prefixed with "fg-" are reserved for internal use.
     server_info: HashMap<String, String>,
     /// Time range of data being played back, in absolute nanoseconds.
-    /// Implies the [`RangedPlayback`](crate::websocket::Capability::RangedPlayback) capability if set.
+    /// Implies the [`PlaybackControl`](crate::websocket::Capability::PlaybackControl) capability if set.
     playback_time_range: Option<(u64, u64)>,
 }
 
@@ -202,11 +202,11 @@ impl Server {
         }
 
         if opts.playback_time_range.is_some() {
-            capabilities.insert(Capability::RangedPlayback);
-        } else if capabilities.contains(&Capability::RangedPlayback) {
-            // The RangedPlayback capability requires a time range to be set using
+            capabilities.insert(Capability::PlaybackControl);
+        } else if capabilities.contains(&Capability::PlaybackControl) {
+            // The PlaybackControl capability requires a time range to be set using
             // ServerOptions::playback_time_range
-            panic!("Server declared the RangedPlayback capability but did not provide a playback time range");
+            panic!("Server declared the PlaybackControl capability but did not provide a playback time range");
         }
 
         // If the server was declared with fetch asset handler, automatically add the "assets" capability
@@ -374,8 +374,8 @@ impl Server {
     /// Publish the current playback state to all clients.
     #[doc(hidden)]
     pub fn broadcast_playback_state(&self, playback_state: PlaybackState) {
-        if !self.has_capability(Capability::RangedPlayback) {
-            tracing::error!("Server does not support the RangedPlayback capability");
+        if !self.has_capability(Capability::PlaybackControl) {
+            tracing::error!("Server does not support the PlaybackControl capability");
             return;
         }
 
