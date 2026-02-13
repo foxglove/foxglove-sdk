@@ -389,6 +389,84 @@ fn test_standalone_newtype_encoded_len() {
     );
 }
 
+/// Regression test: generic newtype schemas must differ per type parameter.
+///
+/// Before the fix, `static SCHEMA: OnceLock` inside the generic `get_schema()`
+/// was shared across all monomorphizations. Whichever type was resolved first
+/// would cache its schema, and all other instantiations silently returned the
+/// wrong schema.
+#[test]
+fn test_generic_newtype_schemas_differ_per_type_param() {
+    let u32_schema = Wrapper::<u32>::get_schema().expect("Failed to get u32 schema");
+    let string_schema = Wrapper::<String>::get_schema().expect("Failed to get String schema");
+
+    // The schemas must have distinct protobuf descriptors because the inner
+    // field types differ (uint32 vs string).
+    assert_ne!(
+        u32_schema.data, string_schema.data,
+        "Wrapper<u32> and Wrapper<String> should have different schema data"
+    );
+
+    // Also verify each schema actually works for its type
+    let u32_desc = get_message_descriptor(&u32_schema);
+    let u32_field = u32_desc
+        .get_field_by_name("value")
+        .expect("u32 schema: field 'value' not found");
+    assert_eq!(
+        u32_field.kind(),
+        prost_reflect::Kind::Uint32,
+        "Wrapper<u32> schema field should be uint32"
+    );
+
+    let string_desc = get_message_descriptor(&string_schema);
+    let string_field = string_desc
+        .get_field_by_name("value")
+        .expect("String schema: field 'value' not found");
+    assert_eq!(
+        string_field.kind(),
+        prost_reflect::Kind::String,
+        "Wrapper<String> schema field should be string"
+    );
+}
+
+/// Regression test: generic newtype encode + decode must round-trip correctly
+/// for multiple different type instantiations.
+#[test]
+fn test_generic_newtype_roundtrip_multiple_types() {
+    // Encode Wrapper<u32>
+    let u32_msg = Wrapper(42u32);
+    let mut u32_buf = BytesMut::new();
+    u32_msg.encode(&mut u32_buf).expect("Failed to encode u32");
+
+    let u32_schema = Wrapper::<u32>::get_schema().expect("Failed to get u32 schema");
+    let u32_desc = get_message_descriptor(&u32_schema);
+    let u32_decoded =
+        DynamicMessage::decode(u32_desc.clone(), u32_buf.as_ref()).expect("Failed to decode u32");
+    let u32_field = u32_desc
+        .get_field_by_name("value")
+        .expect("Field 'value' not found");
+    assert_eq!(u32_decoded.get_field(&u32_field).as_u32().unwrap(), 42);
+
+    // Encode Wrapper<String>
+    let string_msg = Wrapper("hello".to_string());
+    let mut string_buf = BytesMut::new();
+    string_msg
+        .encode(&mut string_buf)
+        .expect("Failed to encode String");
+
+    let string_schema = Wrapper::<String>::get_schema().expect("Failed to get String schema");
+    let string_desc = get_message_descriptor(&string_schema);
+    let string_decoded = DynamicMessage::decode(string_desc.clone(), string_buf.as_ref())
+        .expect("Failed to decode String");
+    let string_field = string_desc
+        .get_field_by_name("value")
+        .expect("Field 'value' not found");
+    assert_eq!(
+        string_decoded.get_field(&string_field).as_str().unwrap(),
+        "hello"
+    );
+}
+
 #[test]
 fn test_standalone_newtype_buffer_overflow() {
     let msg = MyU64(42);

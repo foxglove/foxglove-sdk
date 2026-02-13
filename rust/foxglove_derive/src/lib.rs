@@ -245,6 +245,95 @@ fn derive_newtype_impl(input: &DeriveInput, field: &syn::Field) -> TokenStream {
 
     let generics = add_protobuf_bound(input.generics.clone());
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+    let has_generics = !input.generics.params.is_empty();
+
+    // Extract the schema computation body so we can conditionally wrap it
+    // with OnceLock caching. For generic types, static items inside generic
+    // functions are shared across all monomorphizations, so we must not cache.
+    let newtype_schema_body = quote! {
+        let mut file_descriptor_set = ::foxglove::prost_types::FileDescriptorSet::default();
+
+        // Add file descriptors for well-known types and nested message dependencies.
+        // Deduplicate by name since multiple fields may reference the same WKT.
+        let dependency_fds = <#inner_type as ::foxglove::protobuf::ProtobufField>::file_descriptors();
+        let mut seen = ::std::collections::HashSet::new();
+        let mut dependencies = Vec::new();
+        for fd in dependency_fds {
+            if let Some(name) = &fd.name {
+                if seen.insert(name.clone()) {
+                    dependencies.push(name.clone());
+                    file_descriptor_set.file.push(fd);
+                }
+            }
+        }
+
+        let mut file = ::foxglove::prost_types::FileDescriptorProto {
+            name: Some(String::from(concat!(stringify!(#name), ".proto"))),
+            package: Some(String::from(#package_name)),
+            syntax: Some(String::from("proto3")),
+            dependency: dependencies,
+            ..Default::default()
+        };
+
+        // Build the message descriptor inline rather than delegating to
+        // Self::message_descriptor(), which is transparent and returns the
+        // inner type's descriptor.
+        let mut message = ::foxglove::prost_types::DescriptorProto::default();
+        message.name = Some(String::from(stringify!(#name)));
+
+        // Single field: "value" at field number 1
+        let mut field_desc = ::foxglove::prost_types::FieldDescriptorProto::default();
+        field_desc.name = Some(String::from("value"));
+        field_desc.number = Some(1);
+
+        if <#inner_type as ::foxglove::protobuf::ProtobufField>::repeating() {
+            field_desc.label = Some(::foxglove::prost_types::field_descriptor_proto::Label::Repeated as i32);
+        } else if <#inner_type as ::foxglove::protobuf::ProtobufField>::optional() {
+            field_desc.label = Some(::foxglove::prost_types::field_descriptor_proto::Label::Optional as i32);
+        } else {
+            field_desc.label = Some(::foxglove::prost_types::field_descriptor_proto::Label::Required as i32);
+        }
+        field_desc.r#type = Some(<#inner_type as ::foxglove::protobuf::ProtobufField>::field_type() as i32);
+        field_desc.type_name = <#inner_type as ::foxglove::protobuf::ProtobufField>::type_name();
+
+        message.field.push(field_desc);
+
+        if let Some(enum_desc) = <#inner_type as ::foxglove::protobuf::ProtobufField>::enum_descriptor() {
+            message.enum_type.push(enum_desc);
+        }
+
+        if let Some(message_desc) = <#inner_type as ::foxglove::protobuf::ProtobufField>::message_descriptor() {
+            message.nested_type.push(message_desc);
+        }
+
+        file.message_type.push(message);
+        file_descriptor_set.file.push(file);
+
+        let bytes = ::foxglove::protobuf::prost_file_descriptor_set_to_vec(&file_descriptor_set);
+
+        Some(::foxglove::Schema {
+            name: String::from(#full_name),
+            encoding: String::from("protobuf"),
+            data: std::borrow::Cow::Owned(bytes),
+        })
+    };
+
+    let newtype_get_schema = if has_generics {
+        quote! {
+            fn get_schema() -> Option<::foxglove::Schema> {
+                #newtype_schema_body
+            }
+        }
+    } else {
+        quote! {
+            fn get_schema() -> Option<::foxglove::Schema> {
+                static SCHEMA: ::std::sync::OnceLock<Option<::foxglove::Schema>> = ::std::sync::OnceLock::new();
+                SCHEMA.get_or_init(|| {
+                    #newtype_schema_body
+                }).clone()
+            }
+        }
+    };
 
     let expanded = quote! {
         #[automatically_derived]
@@ -306,76 +395,7 @@ fn derive_newtype_impl(input: &DeriveInput, field: &syn::Field) -> TokenStream {
         impl #impl_generics ::foxglove::Encode for #name #ty_generics #where_clause {
             type Error = ::foxglove::FoxgloveError;
 
-            fn get_schema() -> Option<::foxglove::Schema> {
-                static SCHEMA: ::std::sync::OnceLock<Option<::foxglove::Schema>> = ::std::sync::OnceLock::new();
-                SCHEMA.get_or_init(|| {
-                    let mut file_descriptor_set = ::foxglove::prost_types::FileDescriptorSet::default();
-
-                    // Add file descriptors for well-known types and nested message dependencies.
-                    // Deduplicate by name since multiple fields may reference the same WKT.
-                    let dependency_fds = <#inner_type as ::foxglove::protobuf::ProtobufField>::file_descriptors();
-                    let mut seen = ::std::collections::HashSet::new();
-                    let mut dependencies = Vec::new();
-                    for fd in dependency_fds {
-                        if let Some(name) = &fd.name {
-                            if seen.insert(name.clone()) {
-                                dependencies.push(name.clone());
-                                file_descriptor_set.file.push(fd);
-                            }
-                        }
-                    }
-
-                    let mut file = ::foxglove::prost_types::FileDescriptorProto {
-                        name: Some(String::from(concat!(stringify!(#name), ".proto"))),
-                        package: Some(String::from(#package_name)),
-                        syntax: Some(String::from("proto3")),
-                        dependency: dependencies,
-                        ..Default::default()
-                    };
-
-                    // Build the message descriptor inline rather than delegating to
-                    // Self::message_descriptor(), which is transparent and returns the
-                    // inner type's descriptor.
-                    let mut message = ::foxglove::prost_types::DescriptorProto::default();
-                    message.name = Some(String::from(stringify!(#name)));
-
-                    // Single field: "value" at field number 1
-                    let mut field_desc = ::foxglove::prost_types::FieldDescriptorProto::default();
-                    field_desc.name = Some(String::from("value"));
-                    field_desc.number = Some(1);
-
-                    if <#inner_type as ::foxglove::protobuf::ProtobufField>::repeating() {
-                        field_desc.label = Some(::foxglove::prost_types::field_descriptor_proto::Label::Repeated as i32);
-                    } else if <#inner_type as ::foxglove::protobuf::ProtobufField>::optional() {
-                        field_desc.label = Some(::foxglove::prost_types::field_descriptor_proto::Label::Optional as i32);
-                    } else {
-                        field_desc.label = Some(::foxglove::prost_types::field_descriptor_proto::Label::Required as i32);
-                    }
-                    field_desc.r#type = Some(<#inner_type as ::foxglove::protobuf::ProtobufField>::field_type() as i32);
-                    field_desc.type_name = <#inner_type as ::foxglove::protobuf::ProtobufField>::type_name();
-
-                    message.field.push(field_desc);
-
-                    if let Some(enum_desc) = <#inner_type as ::foxglove::protobuf::ProtobufField>::enum_descriptor() {
-                        message.enum_type.push(enum_desc);
-                    }
-
-                    if let Some(message_desc) = <#inner_type as ::foxglove::protobuf::ProtobufField>::message_descriptor() {
-                        message.nested_type.push(message_desc);
-                    }
-
-                    file.message_type.push(message);
-                    file_descriptor_set.file.push(file);
-
-                    let bytes = ::foxglove::protobuf::prost_file_descriptor_set_to_vec(&file_descriptor_set);
-
-                    Some(::foxglove::Schema {
-                        name: String::from(#full_name),
-                        encoding: String::from("protobuf"),
-                        data: std::borrow::Cow::Owned(bytes),
-                    })
-                }).clone()
-            }
+            #newtype_get_schema
 
             fn get_message_encoding() -> String {
                 String::from("protobuf")
@@ -496,6 +516,103 @@ fn derive_named_struct_impl(
     let enum_defs = enum_defs.into_values().collect::<Vec<_>>();
     let message_defs = message_defs.into_values().collect::<Vec<_>>();
     let file_defs = file_defs.into_values().collect::<Vec<_>>();
+    let has_generics = !input.generics.params.is_empty();
+
+    // Extract computation bodies so we can conditionally wrap with OnceLock
+    // caching. For generic types, static items inside generic functions are
+    // shared across all monomorphizations, so we must not cache.
+    let message_descriptor_body = quote! {
+        let mut message = ::foxglove::prost_types::DescriptorProto::default();
+        message.name = Some(String::from(stringify!(#name)));
+
+        #(#field_defs)*
+
+        {
+            let mut enum_type = &mut message.enum_type;
+            #(#enum_defs)*
+        }
+
+        {
+            let mut nested_type = &mut message.nested_type;
+            #(#message_defs)*
+        }
+
+        Some(message)
+    };
+
+    let message_descriptor_method = if has_generics {
+        quote! {
+            fn message_descriptor() -> Option<::foxglove::prost_types::DescriptorProto> {
+                #message_descriptor_body
+            }
+        }
+    } else {
+        quote! {
+            fn message_descriptor() -> Option<::foxglove::prost_types::DescriptorProto> {
+                static DESCRIPTOR: ::std::sync::OnceLock<Option<::foxglove::prost_types::DescriptorProto>> = ::std::sync::OnceLock::new();
+                DESCRIPTOR.get_or_init(|| {
+                    #message_descriptor_body
+                }).clone()
+            }
+        }
+    };
+
+    let named_schema_body = quote! {
+        let mut file_descriptor_set = ::foxglove::prost_types::FileDescriptorSet::default();
+
+        // Add file descriptors for well-known types and nested message dependencies.
+        // Deduplicate by name since multiple fields may reference the same WKT.
+        let dependency_fds = <#name #ty_generics as ::foxglove::protobuf::ProtobufField>::file_descriptors();
+        let mut seen = ::std::collections::HashSet::new();
+        let mut dependencies = Vec::new();
+        for fd in dependency_fds {
+            if let Some(name) = &fd.name {
+                if seen.insert(name.clone()) {
+                    dependencies.push(name.clone());
+                    file_descriptor_set.file.push(fd);
+                }
+            }
+        }
+
+        let mut file = ::foxglove::prost_types::FileDescriptorProto {
+            name: Some(String::from(concat!(stringify!(#name), ".proto"))),
+            package: Some(String::from(#package_name)),
+            syntax: Some(String::from("proto3")),
+            dependency: dependencies,
+            ..Default::default()
+        };
+
+        if let Some(message_descriptor) = <#name #ty_generics as ::foxglove::protobuf::ProtobufField>::message_descriptor() {
+            file.message_type.push(message_descriptor);
+        }
+
+        file_descriptor_set.file.push(file);
+
+        let bytes = ::foxglove::protobuf::prost_file_descriptor_set_to_vec(&file_descriptor_set);
+
+        Some(::foxglove::Schema {
+            name: String::from(#full_name),
+            encoding: String::from("protobuf"),
+            data: std::borrow::Cow::Owned(bytes),
+        })
+    };
+
+    let named_get_schema = if has_generics {
+        quote! {
+            fn get_schema() -> Option<::foxglove::Schema> {
+                #named_schema_body
+            }
+        }
+    } else {
+        quote! {
+            fn get_schema() -> Option<::foxglove::Schema> {
+                static SCHEMA: ::std::sync::OnceLock<Option<::foxglove::Schema>> = ::std::sync::OnceLock::new();
+                SCHEMA.get_or_init(|| {
+                    #named_schema_body
+                }).clone()
+            }
+        }
+    };
 
     // Generate the output tokens
     let expanded = quote! {
@@ -528,27 +645,7 @@ fn derive_named_struct_impl(
                 out.put_slice(&buf);
             }
 
-            fn message_descriptor() -> Option<::foxglove::prost_types::DescriptorProto> {
-                static DESCRIPTOR: ::std::sync::OnceLock<Option<::foxglove::prost_types::DescriptorProto>> = ::std::sync::OnceLock::new();
-                DESCRIPTOR.get_or_init(|| {
-                    let mut message = ::foxglove::prost_types::DescriptorProto::default();
-                    message.name = Some(String::from(stringify!(#name)));
-
-                    #(#field_defs)*
-
-                    {
-                        let mut enum_type = &mut message.enum_type;
-                        #(#enum_defs)*
-                    }
-
-                    {
-                        let mut nested_type = &mut message.nested_type;
-                        #(#message_defs)*
-                    }
-
-                    Some(message)
-                }).clone()
-            }
+            #message_descriptor_method
 
             fn type_name() -> Option<String> {
                 Some(stringify!(#name).to_string())
@@ -569,48 +666,7 @@ fn derive_named_struct_impl(
         impl #impl_generics ::foxglove::Encode for #name #ty_generics #where_clause {
             type Error = ::foxglove::FoxgloveError;
 
-            fn get_schema() -> Option<::foxglove::Schema> {
-                static SCHEMA: ::std::sync::OnceLock<Option<::foxglove::Schema>> = ::std::sync::OnceLock::new();
-                SCHEMA.get_or_init(|| {
-                    let mut file_descriptor_set = ::foxglove::prost_types::FileDescriptorSet::default();
-
-                    // Add file descriptors for well-known types and nested message dependencies.
-                    // Deduplicate by name since multiple fields may reference the same WKT.
-                    let dependency_fds = <#name #ty_generics as ::foxglove::protobuf::ProtobufField>::file_descriptors();
-                    let mut seen = ::std::collections::HashSet::new();
-                    let mut dependencies = Vec::new();
-                    for fd in dependency_fds {
-                        if let Some(name) = &fd.name {
-                            if seen.insert(name.clone()) {
-                                dependencies.push(name.clone());
-                                file_descriptor_set.file.push(fd);
-                            }
-                        }
-                    }
-
-                    let mut file = ::foxglove::prost_types::FileDescriptorProto {
-                        name: Some(String::from(concat!(stringify!(#name), ".proto"))),
-                        package: Some(String::from(#package_name)),
-                        syntax: Some(String::from("proto3")),
-                        dependency: dependencies,
-                        ..Default::default()
-                    };
-
-                    if let Some(message_descriptor) = <#name #ty_generics as ::foxglove::protobuf::ProtobufField>::message_descriptor() {
-                        file.message_type.push(message_descriptor);
-                    }
-
-                    file_descriptor_set.file.push(file);
-
-                    let bytes = ::foxglove::protobuf::prost_file_descriptor_set_to_vec(&file_descriptor_set);
-
-                    Some(::foxglove::Schema {
-                        name: String::from(#full_name),
-                        encoding: String::from("protobuf"),
-                        data: std::borrow::Cow::Owned(bytes),
-                    })
-                }).clone()
-            }
+            #named_get_schema
 
             fn get_message_encoding() -> String {
                 String::from("protobuf")
