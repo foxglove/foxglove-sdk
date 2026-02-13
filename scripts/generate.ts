@@ -245,7 +245,7 @@ async function main({ clean }: { clean: boolean }) {
     await fs.mkdir(path.join(pythonSdkPyRoot, "messages"), { recursive: true });
     await fs.mkdir(path.join(pythonSdkPyRoot, "channels"), { recursive: true });
 
-    // Schemas file
+    // Messages file
     const writer = (await fs.open(messagesFile, "wx")).createWriteStream();
     writer.write(generateSchemaPrelude());
 
@@ -268,8 +268,6 @@ async function main({ clean }: { clean: boolean }) {
     const channelClassesFile = path.join(pythonSdkGeneratedRoot, "channels.rs");
     await fs.writeFile(channelClassesFile, generateChannelClasses(messageSchemas));
 
-    // Stubs are written to the location of the pyo3-generated module.
-    // Python module indexes are added for the public API.
     // Stubs are written to the location of the pyo3-generated module.
     // Python module indexes are added for the public API.
     const messagesStubFile = path.join(pythonSdkPyRoot, "_foxglove_py/messages.pyi");

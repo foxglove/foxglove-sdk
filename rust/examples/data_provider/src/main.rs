@@ -46,7 +46,7 @@ use chrono::{DateTime, DurationRound, Utc};
 use foxglove::stream::create_mcap_stream;
 use foxglove::{
     data_provider::{ChannelSet, Manifest, StreamedSource, UpstreamSource},
-    schemas::Vector3,
+    messages::Vector3,
 };
 use futures::StreamExt;
 use serde::{Deserialize, Serialize};
