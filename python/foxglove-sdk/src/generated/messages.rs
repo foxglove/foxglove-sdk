@@ -131,7 +131,7 @@ impl ArrowPrimitive {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -259,7 +259,7 @@ impl CameraCalibration {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -334,7 +334,7 @@ impl CircleAnnotation {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -385,7 +385,7 @@ impl Color {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -452,7 +452,7 @@ impl CompressedImage {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -545,7 +545,7 @@ impl CompressedVideo {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -615,7 +615,7 @@ impl CylinderPrimitive {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -671,7 +671,7 @@ impl CubePrimitive {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -747,7 +747,7 @@ impl FrameTransform {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -800,7 +800,7 @@ impl FrameTransforms {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -847,7 +847,7 @@ impl GeoJson {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -978,7 +978,7 @@ impl Grid {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -1081,7 +1081,7 @@ impl VoxelGrid {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -1153,7 +1153,7 @@ impl ImageAnnotations {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -1207,7 +1207,7 @@ impl KeyValuePair {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -1283,7 +1283,7 @@ impl LaserScan {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -1375,7 +1375,7 @@ impl LinePrimitive {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -1457,7 +1457,7 @@ impl LocationFix {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -1510,7 +1510,7 @@ impl LocationFixes {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -1577,7 +1577,7 @@ impl Log {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -1633,7 +1633,7 @@ impl SceneEntityDeletion {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -1775,7 +1775,7 @@ impl SceneEntity {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -1840,7 +1840,7 @@ impl SceneUpdate {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -1920,7 +1920,7 @@ impl ModelPrimitive {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -1976,7 +1976,7 @@ impl PackedElementField {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -2022,7 +2022,7 @@ impl Point2 {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -2072,7 +2072,7 @@ impl Point3 {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -2128,7 +2128,7 @@ impl Point3InFrame {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -2206,7 +2206,7 @@ impl PointCloud {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -2293,7 +2293,7 @@ impl PointsAnnotation {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -2345,7 +2345,7 @@ impl Pose {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -2401,7 +2401,7 @@ impl PoseInFrame {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -2461,7 +2461,7 @@ impl PosesInFrame {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -2512,7 +2512,7 @@ impl Quaternion {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -2582,7 +2582,7 @@ impl RawAudio {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -2713,7 +2713,7 @@ impl RawImage {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -2769,7 +2769,7 @@ impl SpherePrimitive {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -2844,7 +2844,7 @@ impl TextAnnotation {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -2918,7 +2918,7 @@ impl TextPrimitive {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -2994,7 +2994,7 @@ impl TriangleListPrimitive {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -3040,7 +3040,7 @@ impl Vector2 {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -3090,7 +3090,7 @@ impl Vector3 {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
