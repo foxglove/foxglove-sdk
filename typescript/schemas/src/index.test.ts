@@ -5,10 +5,6 @@
  */
 
 import * as messages from "@foxglove/messages";
-
-import * as schemas from "./index";
-
-// Compile-time type tests
 import type {
   CompressedImage as MessagesCompressedImage,
   Log as MessagesLog,
@@ -16,6 +12,7 @@ import type {
   SceneUpdate as MessagesSceneUpdate,
 } from "@foxglove/messages";
 
+import * as schemas from "./index";
 import type {
   CompressedImage as SchemasCompressedImage,
   Log as SchemasLog,
