@@ -1,4 +1,4 @@
-//! Example using the Foxglove WebSocket server with the RangedPlayback capability.
+//! Example using the Foxglove WebSocket server with the PlaybackControl capability.
 //!
 //! This example plays back simple dummy data points from an in-memory buffer, generated at 10Hz between epoch
 //! timestamps 0 and 10s.
@@ -182,14 +182,14 @@ async fn main() {
 
     // Set up the server
     //
-    // To implement the `RangedPlayback` capability, we:
-    // - advertise the `RangedPlayback` and `Time` capabilities
+    // To implement the `PlaybackControl` capability, we:
+    // - advertise the `PlaybackControl` and `Time` capabilities
     // - declare the playback time range in nanoseconds since epoch
     // - register our `ServerListener` for handling `PlaybackControlRequest`s
     let server = foxglove::WebSocketServer::new()
-        .name("ws_ranged_playback")
+        .name("ws_playback_control")
         .bind("127.0.0.1", 8765)
-        .capabilities([Capability::RangedPlayback, Capability::Time])
+        .capabilities([Capability::PlaybackControl, Capability::Time])
         .playback_time_range(0, 10_000_000_000)
         .listener(listener)
         .start()
