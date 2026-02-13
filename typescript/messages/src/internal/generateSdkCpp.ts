@@ -463,7 +463,7 @@ export function generateCppSchemas(schemas: FoxgloveMessageSchema[]): string {
 
   const includes = [
     "#include <foxglove/error.hpp>",
-    "#include <foxglove/schemas.hpp>",
+    "#include <foxglove/messages.hpp>",
     "#include <foxglove/arena.hpp>",
     "#include <foxglove/schema.hpp>",
     "#ifndef __wasm32__",
