@@ -588,7 +588,7 @@ fn derive_named_struct_impl(
 
                     let mut file = ::foxglove::prost_types::FileDescriptorProto {
                         name: Some(String::from(concat!(stringify!(#name), ".proto"))),
-                        package: Some(String::from(stringify!(#name).to_lowercase())),
+                        package: Some(String::from(#package_name)),
                         syntax: Some(String::from("proto3")),
                         dependency: dependencies,
                         ..Default::default()
