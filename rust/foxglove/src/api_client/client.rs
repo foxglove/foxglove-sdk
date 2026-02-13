@@ -103,7 +103,10 @@ impl RequestBuilder {
         let status = response.status();
         if status.is_client_error() || status.is_server_error() {
             let headers = Box::new(response.headers().clone());
-            let body = response.bytes().await.unwrap_or_default();
+            let body = response
+                .bytes()
+                .await
+                .map_err(|e| RequestError::LoadResponseBytes(e))?;
             match serde_json::from_slice::<ErrorResponse>(&body) {
                 Ok(error) => {
                     return Err(RequestError::ErrorResponse {
