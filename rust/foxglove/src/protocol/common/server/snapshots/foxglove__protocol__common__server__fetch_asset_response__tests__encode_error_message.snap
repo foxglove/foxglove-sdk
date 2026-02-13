@@ -1,9 +1,8 @@
 ---
 source: rust/foxglove/src/protocol/common/server/fetch_asset_response.rs
-expression: "format!(\"{:#04x?}\", error_message().to_bytes())"
+expression: "format!(\"{:#04x?}\", buf)"
 ---
 [
-    0x04,
     0x0a,
     0x00,
     0x00,

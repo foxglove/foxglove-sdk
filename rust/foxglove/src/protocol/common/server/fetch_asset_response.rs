@@ -132,8 +132,6 @@ impl Payload<'_> {
 mod tests {
     use assert_matches::assert_matches;
 
-    use crate::protocol::v1::{server::ServerMessage, BinaryMessage};
-
     use super::*;
 
     fn asset_data() -> FetchAssetResponse<'static> {
@@ -146,12 +144,16 @@ mod tests {
 
     #[test]
     fn test_encode_asset_data() {
-        insta::assert_snapshot!(format!("{:#04x?}", asset_data().to_bytes()));
+        let mut buf = Vec::new();
+        asset_data().write_payload(&mut buf);
+        insta::assert_snapshot!(format!("{:#04x?}", buf));
     }
 
     #[test]
     fn test_encode_error_message() {
-        insta::assert_snapshot!(format!("{:#04x?}", error_message().to_bytes()));
+        let mut buf = Vec::new();
+        error_message().write_payload(&mut buf);
+        insta::assert_snapshot!(format!("{:#04x?}", buf));
     }
 
     #[test]
@@ -187,16 +189,18 @@ mod tests {
     #[test]
     fn test_roundtrip_asset_data() {
         let orig = asset_data();
-        let buf = orig.to_bytes();
-        let msg = ServerMessage::parse_binary(&buf).unwrap();
-        assert_eq!(msg, ServerMessage::FetchAssetResponse(orig));
+        let mut buf = Vec::new();
+        orig.write_payload(&mut buf);
+        let parsed = FetchAssetResponse::parse_payload(&buf).unwrap();
+        assert_eq!(parsed, orig);
     }
 
     #[test]
     fn test_roundtrip_error_message() {
         let orig = error_message();
-        let buf = orig.to_bytes();
-        let msg = ServerMessage::parse_binary(&buf).unwrap();
-        assert_eq!(msg, ServerMessage::FetchAssetResponse(orig));
+        let mut buf = Vec::new();
+        orig.write_payload(&mut buf);
+        let parsed = FetchAssetResponse::parse_payload(&buf).unwrap();
+        assert_eq!(parsed, orig);
     }
 }

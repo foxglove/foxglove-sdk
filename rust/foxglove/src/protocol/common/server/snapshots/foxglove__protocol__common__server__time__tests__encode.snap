@@ -1,9 +1,8 @@
 ---
 source: rust/foxglove/src/protocol/common/server/time.rs
-expression: "format!(\"{:#04x?}\", message().to_bytes())"
+expression: "format!(\"{:#04x?}\", buf)"
 ---
 [
-    0x02,
     0xd2,
     0x02,
     0x96,
