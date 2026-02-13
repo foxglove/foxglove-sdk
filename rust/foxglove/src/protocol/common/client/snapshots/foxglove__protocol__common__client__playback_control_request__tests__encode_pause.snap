@@ -1,9 +1,8 @@
 ---
 source: rust/foxglove/src/protocol/common/client/playback_control_request.rs
-expression: "format!(\"{:#04x?}\", message.to_bytes())"
+expression: "format!(\"{:#04x?}\", buf)"
 ---
 [
-    0x03,
     0x01,
     0x00,
     0x00,
