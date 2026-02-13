@@ -98,10 +98,12 @@ fn is_array_of_array(ty: &Type) -> bool {
     unwrap_array_type(ty).is_some_and(is_array)
 }
 
+type TypeCheck = (fn(&Type) -> bool, &'static str);
+
 /// Validate that a type does not use unsupported nesting patterns.
 /// Returns `Some(compile_error!(...))` if the type is invalid, `None` if valid.
 fn validate_field_type(ty: &Type) -> Option<TokenStream> {
-    let checks: &[(fn(&Type) -> bool, &str)] = &[
+    let checks: &[TypeCheck] = &[
         (is_vec_of_option, "Vec<Option<T>> is not supported. Protobuf repeated fields cannot represent null/missing elements."),
         (is_option_of_vec, "Option<Vec<T>> is not supported. Protobuf cannot distinguish between absent and empty repeated fields."),
         (is_vec_of_vec, "Vec<Vec<T>> is not supported. Protobuf does not support nested repeated fields."),
