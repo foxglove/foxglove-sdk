@@ -11,6 +11,6 @@ mod credentials_provider;
 mod test_utils;
 mod types;
 
-pub(crate) use client::{DeviceToken, FoxgloveApiClientError};
+pub(crate) use client::{DeviceToken, FoxgloveApiClientBuilder, FoxgloveApiClientError};
 pub(crate) use credentials_provider::{CredentialsError, CredentialsProvider};
 pub(crate) use types::RtcCredentials;
