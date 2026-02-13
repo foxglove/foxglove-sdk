@@ -106,7 +106,7 @@ impl RequestBuilder {
             let body = response
                 .bytes()
                 .await
-                .map_err(|e| RequestError::LoadResponseBytes(e))?;
+                .map_err(RequestError::LoadResponseBytes)?;
             match serde_json::from_slice::<ErrorResponse>(&body) {
                 Ok(error) => {
                     return Err(RequestError::ErrorResponse {
