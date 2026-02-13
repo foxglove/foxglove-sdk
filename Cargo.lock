@@ -1007,17 +1007,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "example_cloud"
-version = "0.0.0"
-dependencies = [
- "clap",
- "env_logger",
- "foxglove 0.17.2",
- "serde_json",
- "tokio",
-]
-
-[[package]]
 name = "example_data_provider"
 version = "0.0.0"
 dependencies = [
@@ -1080,6 +1069,17 @@ dependencies = [
  "ctrlc",
  "env_logger",
  "foxglove 0.17.2",
+]
+
+[[package]]
+name = "example_remote_access"
+version = "0.0.0"
+dependencies = [
+ "clap",
+ "env_logger",
+ "foxglove 0.17.2",
+ "serde_json",
+ "tokio",
 ]
 
 [[package]]

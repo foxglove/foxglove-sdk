@@ -2,13 +2,13 @@ use foxglove::{
     bytes::Bytes,
     schemas::RawImage,
     websocket::{Client, ClientChannel},
-    CloudSinkListener,
+    RemoteAccessSinkListener,
 };
 use serde_json::Value;
 use std::{sync::Arc, time::Duration};
 
 struct MessageHandler;
-impl CloudSinkListener for MessageHandler {
+impl RemoteAccessSinkListener for MessageHandler {
     /// Called when a connected app publishes a message, such as from the Teleop panel.
     fn on_message_data(&self, client: Client, channel: &ClientChannel, message: &[u8]) {
         let json = serde_json::from_slice::<Value>(message).expect("Failed to parse message");
@@ -27,17 +27,17 @@ async fn main() {
 
     // Open a connection for remote visualization and teleop.
     // This requires Foxglove Agent to be running on the same machine.
-    let handle = foxglove::CloudSink::new()
+    let handle = foxglove::RemoteAccessSink::new()
         .listener(Arc::new(MessageHandler))
         .start()
-        .expect("Failed to start cloud sink");
+        .expect("Failed to start remote access sink");
 
     tokio::task::spawn(camera_loop());
     _ = tokio::signal::ctrl_c().await;
     _ = handle.stop().await;
 }
 
-/// Log RawImage messages, which will be encoded as a video stream when sent to the Cloud Sink.
+/// Log RawImage messages, which will be encoded as a video stream when sent to the Remote Access Sink.
 async fn camera_loop() {
     let mut interval = tokio::time::interval(Duration::from_millis(1000 / 30));
     let mut offset = 0u32;

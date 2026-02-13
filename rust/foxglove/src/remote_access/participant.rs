@@ -5,9 +5,9 @@ use std::sync::Arc;
 use bytes::Bytes;
 use livekit::{id::ParticipantIdentity, ByteStreamWriter, StreamWriter};
 
-use crate::cloud::CloudError;
+use crate::remote_access::RemoteAccessError;
 
-/// A participant in the cloud session.
+/// A participant in the remote access session.
 ///
 /// A participant has an identity and a dedicated TCP-like binary stream for sending messages.
 ///
@@ -27,7 +27,7 @@ impl Participant {
     /// Sends a message to the participant.
     ///
     /// The message is serialized and framed already and provided as a slice of bytes.
-    pub(crate) async fn send(&self, bytes: &[u8]) -> Result<(), CloudError> {
+    pub(crate) async fn send(&self, bytes: &[u8]) -> Result<(), RemoteAccessError> {
         self.writer.write(bytes).await
     }
 }
@@ -51,7 +51,7 @@ pub(crate) enum ParticipantWriter {
 }
 
 impl ParticipantWriter {
-    async fn write(&self, bytes: &[u8]) -> Result<(), CloudError> {
+    async fn write(&self, bytes: &[u8]) -> Result<(), RemoteAccessError> {
         match self {
             ParticipantWriter::Livekit(stream) => stream.write(bytes).await.map_err(|e| e.into()),
             #[cfg(test)]
