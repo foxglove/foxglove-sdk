@@ -1,0 +1,86 @@
+# Smoke test for rust/examples/data_provider with a remote-data-loader and MinIO cache.
+#
+# This workflow builds the example data-provider, starts it alongside MinIO and
+# a remote-data-loader, then runs curl + mcap CLI checks to verify that data is
+# served correctly (fresh and from cache).
+#
+# The remote-data-loader image is public on Google Artifact Registry; no
+# credentials are needed to pull it.
+
+name: Data Provider Smoke Test
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "rust/foxglove/**"
+      - "rust/foxglove_derive/**"
+      - "rust/examples/data_provider/**"
+      - ".github/workflows/data_provider_smoke_test.yml"
+  pull_request:
+    paths:
+      - "rust/foxglove/**"
+      - "rust/foxglove_derive/**"
+      - "rust/examples/data_provider/**"
+      - ".github/workflows/data_provider_smoke_test.yml"
+
+env:
+  COMPOSE_FILE: rust/examples/data_provider/smoke-test/docker-compose.yml
+  MCAP_CLI_VERSION: "0.0.61"
+
+jobs:
+  smoke-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          lfs: true
+
+      # -- Install the mcap CLI --------------------------------------------------------------------
+      - name: Install mcap CLI
+        run: |
+          curl -sfL \
+            "https://github.com/foxglove/mcap/releases/download/releases/mcap-cli/v${MCAP_CLI_VERSION}/mcap-linux-amd64" \
+            -o /usr/local/bin/mcap
+          chmod +x /usr/local/bin/mcap
+          mcap version
+
+      # -- Build and start all services ------------------------------------------------------------
+      - name: Build and start services
+        run: docker compose up --build -d
+
+      - name: Wait for data-provider to be healthy
+        run: |
+          # The data-provider has a Docker healthcheck (it has curl inside).
+          # The remote-data-loader image is minimal and has no in-container
+          # health tooling; its readiness is checked by run.sh from the host.
+          echo "Waiting for data-provider ..."
+          timeout 300 bash -c '
+            while true; do
+              health=$(docker compose ps data-provider --format json | jq -r ".Health" 2>/dev/null)
+              if [ "$health" = "healthy" ]; then
+                echo "data-provider is healthy."
+                break
+              fi
+              echo "  data-provider: $health"
+              sleep 5
+            done
+          '
+          docker compose ps
+
+      # -- Run the smoke test ----------------------------------------------------------------------
+      - name: Run smoke test
+        env:
+          REMOTE_DATA_LOADER_URL: "http://localhost:8080"
+          DATA_PROVIDER_URL: "http://localhost:8081"
+        run: rust/examples/data_provider/smoke-test/run.sh
+
+      # -- Cleanup (always) ------------------------------------------------------------------------
+      - name: Dump service logs
+        if: always()
+        run: docker compose logs
+
+      - name: Tear down services
+        if: always()
+        run: docker compose down -v

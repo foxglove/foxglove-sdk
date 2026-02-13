@@ -1,0 +1,16 @@
+# Dockerfile for the example data provider server.
+# Build from the workspace root:
+#   docker build -f rust/examples/data_provider/smoke-test/Dockerfile.data-provider .
+
+FROM rust:1-bookworm AS builder
+
+WORKDIR /app
+COPY . .
+
+RUN cargo build --release -p example_data_provider
+
+FROM debian:bookworm-slim
+RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
+COPY --from=builder /app/target/release/example_data_provider /usr/local/bin/
+EXPOSE 8080
+CMD ["example_data_provider"]

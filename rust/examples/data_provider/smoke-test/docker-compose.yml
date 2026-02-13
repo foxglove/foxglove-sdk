@@ -1,0 +1,85 @@
+# Docker Compose for smoke-testing the example data provider with remote-data-loader.
+#
+# Usage (from the repo root):
+#   docker compose -f rust/examples/data_provider/smoke-test/docker-compose.yml up --build -d
+#
+# Services:
+#   data-provider       – The example data provider server (built from this repo).
+#   minio               – S3-compatible object store used as the remote-data-loader cache.
+#   minio-init          – One-shot container that creates the cache bucket in MinIO.
+#   remote-data-loader  – Foxglove remote-data-loader, pointed at the data provider.
+
+services:
+  data-provider:
+    build:
+      context: ../../../..
+      dockerfile: rust/examples/data_provider/smoke-test/Dockerfile.data-provider
+    ports:
+      - "8081:8080"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "curl",
+          "-sf",
+          "-H",
+          "Authorization: Bearer test",
+          "http://localhost:8080/v1/manifest?flightId=test&startTime=2024-01-01T00:00:00Z&endTime=2024-01-01T00:00:01Z",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 5s
+
+  minio:
+    image: minio/minio:latest
+    command: ["server", "--console-address", ":9001", "/data"]
+    environment:
+      MINIO_ROOT_USER: root
+      MINIO_ROOT_PASSWORD: password
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    restart: on-failure
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc alias set minio http://minio:9000 root password;
+      /usr/bin/mc mb --ignore-existing minio/foxglove-cache;
+      exit 0;
+      "
+
+  remote-data-loader:
+    # This image is public; no registry credentials are needed.
+    # Tags are commit hashes from the foxglove/data-platform repo.
+    # The tag below matches the appVersion in the foxglove/helm-charts
+    # remote-data-loader chart.
+    image: ${REMOTE_DATA_LOADER_IMAGE:-us-central1-docker.pkg.dev/foxglove-images/images/remote-data-loader:24e79cafd7f2fbe44e6e5b14b7c96590e2491a74}
+    depends_on:
+      data-provider:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    ports:
+      - "8080:8080"
+    environment:
+      MANIFEST_ENDPOINT: http://data-provider:8080/v1/manifest
+      ADDRESS: "0.0.0.0:8080"
+      REQUEST_CACHE_STORAGE_PROVIDER: s3_compatible
+      REQUEST_CACHE_BUCKET_NAME: foxglove-cache
+      S3_COMPATIBLE_ACCESS_KEY_ID: root
+      S3_COMPATIBLE_SECRET_ACCESS_KEY: password
+      S3_COMPATIBLE_SERVICE_REGION: us-east-1
+      S3_COMPATIBLE_SERVICE_URL: http://minio:9000
+      # Token the remote-data-loader sends to the upstream data provider.
+      BEARER_TOKEN: test-token
+      RUST_LOG: info
+    # No Docker healthcheck: the image is minimal (no curl/wget inside).
+    # The smoke-test script checks /liveness from the host instead.
