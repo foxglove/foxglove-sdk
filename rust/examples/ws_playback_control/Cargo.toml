@@ -1,5 +1,5 @@
 [package]
-name = "example_ws_ranged_playback"
+name = "example_ws_playback_control"
 edition = "2021"
 publish = false
 

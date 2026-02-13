@@ -946,7 +946,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "example_ws_ranged_playback"
+name = "example_ws_playback_control"
 version = "0.0.0"
 dependencies = [
  "env_logger",
