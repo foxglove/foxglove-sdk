@@ -73,9 +73,9 @@ struct FlightParams {
 
   /// Build a query string for these parameters.
   std::string to_query_string() const {
-    return "flightId=" + time_utils::url_encode(flight_id) +
-           "&startTime=" + time_utils::url_encode(time_utils::format_iso8601(start_time)) +
-           "&endTime=" + time_utils::url_encode(time_utils::format_iso8601(end_time));
+    return "flightId=" + httplib::encode_uri_component(flight_id) +
+           "&startTime=" + httplib::encode_uri_component(time_utils::format_iso8601(start_time)) +
+           "&endTime=" + httplib::encode_uri_component(time_utils::format_iso8601(end_time));
   }
 };
 

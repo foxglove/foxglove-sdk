@@ -1,7 +1,7 @@
 #pragma once
 
 /// @file
-/// Timestamp and URL utilities for the data_provider example.
+/// Timestamp utilities for the data_provider example.
 
 #include <chrono>
 #include <cstdint>
@@ -79,27 +79,6 @@ inline TimePoint round_up_to_second(TimePoint tp) {
     rounded += std::chrono::seconds(1);
   }
   return rounded;
-}
-
-// ============================================================================
-// URL encoding
-// ============================================================================
-
-/// Percent-encode a string for use in URLs.
-inline std::string url_encode(const std::string& s) {
-  std::ostringstream escaped;
-  escaped.fill('0');
-  escaped << std::hex;
-  for (char c : s) {
-    if (std::isalnum(static_cast<unsigned char>(c)) || c == '-' || c == '_' || c == '.' ||
-        c == '~') {
-      escaped << c;
-    } else {
-      escaped << std::uppercase << '%' << std::setw(2)
-              << static_cast<int>(static_cast<unsigned char>(c)) << std::nouppercase;
-    }
-  }
-  return escaped.str();
 }
 
 }  // namespace time_utils

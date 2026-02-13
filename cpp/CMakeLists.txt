@@ -72,7 +72,7 @@ FetchContent_MakeAvailable(json)
 
 FetchContent_Declare(httplib
   GIT_REPOSITORY https://github.com/yhirose/cpp-httplib.git
-  GIT_TAG v0.18.3
+  GIT_TAG v0.24.0
 )
 set(HTTPLIB_COMPILE OFF CACHE BOOL "" FORCE)
 set(HTTPLIB_REQUIRE_OPENSSL OFF CACHE BOOL "" FORCE)
