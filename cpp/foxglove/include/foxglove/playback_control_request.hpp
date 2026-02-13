@@ -17,7 +17,7 @@ enum class PlaybackCommand : uint8_t {
 
 /// @brief A request to control playback from the Foxglove app
 ///
-/// Only relevant if the `RangedPlayback` capability is enabled.
+/// Only relevant if the `PlaybackControl` capability is enabled.
 struct PlaybackControlRequest {
 public:
   /// @brief The playback command.

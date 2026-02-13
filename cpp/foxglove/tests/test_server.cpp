@@ -1600,7 +1600,7 @@ TEST_CASE("Playback control request callback") {
 
   foxglove::WebSocketServerOptions ws_options;
   ws_options.context = context;
-  ws_options.capabilities = foxglove::WebSocketServerCapabilities::RangedPlayback;
+  ws_options.capabilities = foxglove::WebSocketServerCapabilities::PlaybackControl;
   ws_options.playback_time_range = std::make_pair(0, 1000);
   ws_options.callbacks.onPlaybackControlRequest =
     [&]([[maybe_unused]] const foxglove::PlaybackControlRequest& playback_control_request
@@ -1673,7 +1673,7 @@ TEST_CASE("Broadcast playback state") {
   auto context = foxglove::Context::create();
   foxglove::WebSocketServerOptions ws_options;
   ws_options.context = context;
-  ws_options.capabilities = foxglove::WebSocketServerCapabilities::RangedPlayback;
+  ws_options.capabilities = foxglove::WebSocketServerCapabilities::PlaybackControl;
   ws_options.playback_time_range = std::make_pair(0, 1000);
   auto server = startServer(std::move(ws_options));
 
@@ -1708,7 +1708,7 @@ TEST_CASE("Broadcast playback state") {
   REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
 }
 
-TEST_CASE("RangedPlayback capability") {
+TEST_CASE("PlaybackControl capability") {
   auto context = foxglove::Context::create();
 
   const uint64_t start_time = 100000000000ULL;
@@ -1728,12 +1728,12 @@ TEST_CASE("RangedPlayback capability") {
   REQUIRE(parsed.contains("op"));
   REQUIRE(parsed["op"] == "serverInfo");
 
-  // Ensure that the rangedPlayback capability is enabled, since opt.playback_time_range is
+  // Ensure that the playbackControl capability is enabled, since opt.playback_time_range is
   // specified
   REQUIRE(parsed.contains("capabilities"));
   const auto& capabilities = parsed["capabilities"];
   REQUIRE(std::count_if(capabilities.begin(), capabilities.end(), [](const auto& capability) {
-            return capability == "rangedPlayback";
+            return capability == "playbackControl";
           }) == 1);
 
   REQUIRE(parsed.contains("dataStartTime"));
