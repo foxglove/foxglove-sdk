@@ -21,8 +21,8 @@ const std::string_view ChannelDescriptor::message_encoding() const noexcept {
   return std::string_view(message_encoding.data, message_encoding.len);
 }
 
-const std::optional<std::map<std::string, std::string>>
-ChannelDescriptor::metadata() const noexcept {
+const std::optional<std::map<std::string, std::string>> ChannelDescriptor::metadata(
+) const noexcept {
   std::map<std::string, std::string> metadata;
   auto iter = foxglove_channel_descriptor_metadata_iter_create(channel_descriptor_);
   if (!iter) {

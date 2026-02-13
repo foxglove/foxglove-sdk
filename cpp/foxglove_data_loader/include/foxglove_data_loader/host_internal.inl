@@ -6,19 +6,16 @@
 
 // Imported Functions from `foxglove:loader/console@0.1.0`
 
-__attribute__((
-  __import_module__("foxglove:loader/console@0.1.0"), __import_name__("log")
-)) extern void
+__attribute__((__import_module__("foxglove:loader/console@0.1.0"), __import_name__("log"))
+) extern void
 __wasm_import_foxglove_loader_console_log(uint8_t*, size_t);
 
-__attribute__((
-  __import_module__("foxglove:loader/console@0.1.0"), __import_name__("error")
-)) extern void
+__attribute__((__import_module__("foxglove:loader/console@0.1.0"), __import_name__("error"))
+) extern void
 __wasm_import_foxglove_loader_console_error(uint8_t*, size_t);
 
-__attribute__((
-  __import_module__("foxglove:loader/console@0.1.0"), __import_name__("warn")
-)) extern void
+__attribute__((__import_module__("foxglove:loader/console@0.1.0"), __import_name__("warn"))
+) extern void
 __wasm_import_foxglove_loader_console_warn(uint8_t*, size_t);
 
 // Imported Functions from `foxglove:loader/reader@0.1.0`
@@ -43,9 +40,8 @@ __attribute__((
 )) extern int64_t
 __wasm_import_foxglove_loader_reader_method_reader_size(int32_t);
 
-__attribute__((
-  __import_module__("foxglove:loader/reader@0.1.0"), __import_name__("open")
-)) extern int32_t
+__attribute__((__import_module__("foxglove:loader/reader@0.1.0"), __import_name__("open"))
+) extern int32_t
 __wasm_import_foxglove_loader_reader_open(uint8_t*, size_t);
 
 // Exported Functions from `foxglove:loader/loader@0.1.0`
@@ -53,8 +49,7 @@ __wasm_import_foxglove_loader_reader_open(uint8_t*, size_t);
 __attribute__((
   __weak__, __export_name__("cabi_post_foxglove:loader/loader@0.1.0#[method]message-iterator.next")
 )) void
-__wasm_export_exports_foxglove_loader_loader_method_message_iterator_next_post_return(
-  uint8_t* arg0
+__wasm_export_exports_foxglove_loader_loader_method_message_iterator_next_post_return(uint8_t* arg0
 ) {
   switch ((int32_t)(int32_t)*((uint8_t*)(arg0 + 0))) {
     case 0: {
@@ -95,8 +90,7 @@ __wasm_export_exports_foxglove_loader_loader_method_message_iterator_next_post_r
 __attribute__((
   __weak__, __export_name__("cabi_post_foxglove:loader/loader@0.1.0#[method]data-loader.initialize")
 )) void
-__wasm_export_exports_foxglove_loader_loader_method_data_loader_initialize_post_return(
-  uint8_t* arg0
+__wasm_export_exports_foxglove_loader_loader_method_data_loader_initialize_post_return(uint8_t* arg0
 ) {
   switch ((int32_t)(int32_t)*((uint8_t*)(arg0 + 0))) {
     case 0: {
@@ -440,18 +434,16 @@ exports_foxglove_loader_loader_own_message_iterator_t
 exports_foxglove_loader_loader_message_iterator_new(
   exports_foxglove_loader_loader_message_iterator_t* rep
 ) {
-  return (exports_foxglove_loader_loader_own_message_iterator_t){
-    __wasm_import_exports_foxglove_loader_loader_message_iterator_new((int32_t)rep)
-  };
+  return (exports_foxglove_loader_loader_own_message_iterator_t
+  ){__wasm_import_exports_foxglove_loader_loader_message_iterator_new((int32_t)rep)};
 }
 
 exports_foxglove_loader_loader_message_iterator_t*
 exports_foxglove_loader_loader_message_iterator_rep(
   exports_foxglove_loader_loader_own_message_iterator_t handle
 ) {
-  return (
-    exports_foxglove_loader_loader_message_iterator_t*
-  )__wasm_import_exports_foxglove_loader_loader_message_iterator_rep(handle.__handle);
+  return (exports_foxglove_loader_loader_message_iterator_t*)
+    __wasm_import_exports_foxglove_loader_loader_message_iterator_rep(handle.__handle);
 }
 
 // NOTE: wit-bindgen v0.43.0 has a bug that uses snake_case for the exported destructor name,
@@ -490,17 +482,15 @@ __wasm_import_exports_foxglove_loader_loader_data_loader_rep(int32_t);
 exports_foxglove_loader_loader_own_data_loader_t exports_foxglove_loader_loader_data_loader_new(
   exports_foxglove_loader_loader_data_loader_t* rep
 ) {
-  return (exports_foxglove_loader_loader_own_data_loader_t){
-    __wasm_import_exports_foxglove_loader_loader_data_loader_new((int32_t)rep)
-  };
+  return (exports_foxglove_loader_loader_own_data_loader_t
+  ){__wasm_import_exports_foxglove_loader_loader_data_loader_new((int32_t)rep)};
 }
 
 exports_foxglove_loader_loader_data_loader_t* exports_foxglove_loader_loader_data_loader_rep(
   exports_foxglove_loader_loader_own_data_loader_t handle
 ) {
-  return (
-    exports_foxglove_loader_loader_data_loader_t*
-  )__wasm_import_exports_foxglove_loader_loader_data_loader_rep(handle.__handle);
+  return (exports_foxglove_loader_loader_data_loader_t*)
+    __wasm_import_exports_foxglove_loader_loader_data_loader_rep(handle.__handle);
 }
 
 // NOTE: wit-bindgen v0.43.0 has a bug that uses snake_case for the exported destructor name,
@@ -617,8 +607,7 @@ uint64_t foxglove_loader_reader_method_reader_seek(
   return (uint64_t)(ret);
 }
 
-uint64_t foxglove_loader_reader_method_reader_position(
-  foxglove_loader_reader_borrow_reader_t self
+uint64_t foxglove_loader_reader_method_reader_position(foxglove_loader_reader_borrow_reader_t self
 ) {
   int64_t ret = __wasm_import_foxglove_loader_reader_method_reader_position((self).__handle);
   return (uint64_t)(ret);
@@ -758,9 +747,8 @@ __wasm_export_exports_foxglove_loader_loader_method_data_loader_create_iterator(
     (exports_foxglove_loader_loader_message_iterator_args_t){
       (host_option_time_nanos_t)option,
       (host_option_time_nanos_t)option6,
-      (host_list_channel_id_t)(host_list_channel_id_t){
-        (exports_foxglove_loader_loader_channel_id_t*)(arg4), (arg5)
-      },
+      (host_list_channel_id_t)(host_list_channel_id_t
+      ){(exports_foxglove_loader_loader_channel_id_t*)(arg4), (arg5)},
     };
   exports_foxglove_loader_loader_result_own_message_iterator_error_t ret;
   exports_foxglove_loader_loader_own_message_iterator_t ok;
@@ -796,9 +784,8 @@ __wasm_export_exports_foxglove_loader_loader_method_data_loader_get_backfill(
   exports_foxglove_loader_loader_backfill_args_t arg3 =
     (exports_foxglove_loader_loader_backfill_args_t){
       (exports_foxglove_loader_loader_time_nanos_t)(uint64_t)(arg0),
-      (host_list_channel_id_t)(host_list_channel_id_t){
-        (exports_foxglove_loader_loader_channel_id_t*)(arg1), (arg2)
-      },
+      (host_list_channel_id_t)(host_list_channel_id_t
+      ){(exports_foxglove_loader_loader_channel_id_t*)(arg1), (arg2)},
     };
   exports_foxglove_loader_loader_result_list_message_error_t ret;
   exports_foxglove_loader_loader_list_message_t ok;
