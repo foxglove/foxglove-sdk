@@ -118,7 +118,7 @@ fn main() -> Result<()> {
 
     let server = WebSocketServer::new()
         .name(file_name)
-        .capabilities([Capability::RangedPlayback, Capability::Time])
+        .capabilities([Capability::PlaybackControl, Capability::Time])
         .playback_time_range(start_time, end_time)
         .listener(listener)
         .bind(&args.host, args.port)
