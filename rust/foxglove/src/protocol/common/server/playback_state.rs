@@ -38,7 +38,7 @@ impl TryFrom<u8> for PlaybackStatus {
 /// state of playback has changed; for example, reaching the end of data, or an external mechanism
 /// causes playback to pause.
 ///
-/// Only relevant if the `RangedPlayback` capability is enabled.
+/// Only relevant if the `PlaybackControl` capability is enabled.
 pub struct PlaybackState {
     /// The status of server data playback
     pub status: PlaybackStatus,

@@ -26,7 +26,7 @@ enum class PlaybackStatus : uint8_t {
 /// state of playback has changed; for example, reaching the end of data, or an external mechanism
 /// causes playback to pause.
 ///
-/// Only relevant if the `RangedPlayback` capability is enabled.
+/// Only relevant if the `PlaybackControl` capability is enabled.
 struct PlaybackState {
 public:
   /// @brief The status of server data playback
