@@ -6,7 +6,9 @@
 
 Robotics experiments often involve a wide variety of data -- 3D scenes, camera feeds, sensor plots, state transitions, and more. Foxglove's [layouts](https://docs.foxglove.dev/docs/visualization/layouts) let you arrange panels to visualize all of this data at once, but until now, creating those layouts required manual configuration in the app or loading opaque JSON files exported from a previous session.
 
-Foxglove's new programmatic layout API lets you define layouts entirely in Python. Build layouts that adapt to your data, compose reusable layout fragments, and pass them directly to the embedded Foxglove viewer in your Jupyter notebooks -- all without ever leaving your code.
+Foxglove's new programmatic layout API lets you define layouts entirely in Python. Build layouts that adapt to your data, compose reusable layout fragments, and pass them directly to the embedded Foxglove viewer in your Jupyter notebooks or the [SDK Playground](https://playground.foxglove.dev) -- all without ever leaving your code.
+
+> **Note:** Programmatic layouts currently work with Foxglove's embedded viewer -- that is, the Jupyter notebook integration and the SDK Playground. They are not yet supported for direct use with the standalone Foxglove app or live WebSocket connections. The WebSocket server's `app_url()` method accepts a `layout_id` to reference an existing saved layout, but does not yet accept inline layout definitions. We're actively exploring ways to bring programmatic layouts to more workflows.
 
 ## The problem
 
