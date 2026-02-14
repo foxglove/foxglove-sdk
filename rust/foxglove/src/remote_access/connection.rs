@@ -23,15 +23,11 @@ use crate::{
     RemoteAccessSinkListener, SinkChannelFilter,
 };
 
-use crate::protocol::v1::JsonMessage;
-use crate::protocol::v2::server::ServerInfo;
+use crate::protocol::v2::{server::ServerInfo, JsonMessage};
 
 type Result<T> = std::result::Result<T, RemoteAccessError>;
 
 const WS_PROTOCOL_TOPIC: &str = "ws-protocol";
-// TODO future use
-#[allow(dead_code)]
-const MESSAGE_FRAME_SIZE: usize = 5;
 const AUTH_RETRY_PERIOD: Duration = Duration::from_secs(30);
 
 /// The operation code for the message framing for protocol v2.
@@ -169,7 +165,7 @@ impl RemoteAccessConnection {
 
     /// Connect to the room, and handle all events until cancelled or disconnected from the room.
     async fn run(&self) {
-        let Ok((session, room_events)) = self.connect_session_until_ok().await else {
+        let Some((session, room_events)) = self.connect_session_until_ok().await else {
             // Cancelled/shutting down
             debug_assert!(self.cancellation_token().is_cancelled());
             return;
@@ -194,6 +190,7 @@ impl RemoteAccessConnection {
         if let Err(e) = session.room.close().await {
             error!("failed to close room: {e:?}");
         }
+        self.session.store(None);
     }
 
     /// Connect to the room, retrying indefinitely.
@@ -204,29 +201,29 @@ impl RemoteAccessConnection {
     /// Note that livekit internally includes a few quick retries for each connect call as well.
     async fn connect_session_until_ok(
         &self,
-    ) -> Result<(Arc<RemoteAccessSession>, UnboundedReceiver<RoomEvent>)> {
+    ) -> Option<(Arc<RemoteAccessSession>, UnboundedReceiver<RoomEvent>)> {
         let mut interval = tokio::time::interval(AUTH_RETRY_PERIOD);
         loop {
             tokio::select! {
                 _ = interval.tick() => {}
                 () = self.cancellation_token().cancelled() => {
-                    return Err(RemoteAccessError::ConnectionStopped);
+                    return None;
                 }
             };
 
             let result = tokio::select! {
                 () = self.cancellation_token().cancelled() => {
-                    return Err(RemoteAccessError::ConnectionStopped);
+                    return None;
                 }
                 result = self.connect_session() => result,
             };
 
             match result {
                 Ok((session, room_events)) => {
-                    return Ok((session, room_events));
+                    return Some((session, room_events));
                 }
                 Err(RemoteAccessError::ConnectionStopped) => {
-                    return Err(RemoteAccessError::ConnectionStopped);
+                    return None;
                 }
                 Err(RemoteAccessError::ConnectionError(e)) => {
                     error!("{e:?}");

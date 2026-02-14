@@ -11,7 +11,7 @@ pub(crate) use connection::{RemoteAccessConnection, RemoteAccessConnectionOption
 pub enum RemoteAccessError {
     // Note: don't expose livekit error types here, we don't want them to become part of the public API
     /// An error occurred while writing to the stream.
-    #[error("Stream error: {0:?}")]
+    #[error("Stream error: {0}")]
     StreamError(String),
     #[error("Connection error: {0}")]
     ConnectionError(String),
