@@ -74,7 +74,10 @@ mod tests {
     #[test]
     fn test_message_data_encode() {
         let message = MessageData::new(30, br#"{"key": "value"}"#);
-        insta::assert_snapshot!(format!("{:#04x?}", message.to_bytes()));
+        let buf = message.to_bytes();
+        insta::assert_snapshot!(format!("{:#04x?}", buf));
+        let parsed = ClientMessage::parse_binary(&buf).unwrap();
+        assert_eq!(parsed, ClientMessage::MessageData(message));
     }
 
     #[test]
@@ -85,7 +88,10 @@ mod tests {
             seek_time: None,
             request_id: "some-id".to_string(),
         };
-        insta::assert_snapshot!(format!("{:#04x?}", message.to_bytes()));
+        let buf = message.to_bytes();
+        insta::assert_snapshot!(format!("{:#04x?}", buf));
+        let parsed = ClientMessage::parse_binary(&buf).unwrap();
+        assert_eq!(parsed, ClientMessage::PlaybackControlRequest(message));
     }
 
     #[test]
@@ -96,7 +102,10 @@ mod tests {
             seek_time: Some(123_456_789),
             request_id: "some-id".to_string(),
         };
-        insta::assert_snapshot!(format!("{:#04x?}", message.to_bytes()));
+        let buf = message.to_bytes();
+        insta::assert_snapshot!(format!("{:#04x?}", buf));
+        let parsed = ClientMessage::parse_binary(&buf).unwrap();
+        assert_eq!(parsed, ClientMessage::PlaybackControlRequest(message));
     }
 
     #[test]
@@ -107,7 +116,10 @@ mod tests {
             seek_time: None,
             request_id: "some-id".to_string(),
         };
-        insta::assert_snapshot!(format!("{:#04x?}", message.to_bytes()));
+        let buf = message.to_bytes();
+        insta::assert_snapshot!(format!("{:#04x?}", buf));
+        let parsed = ClientMessage::parse_binary(&buf).unwrap();
+        assert_eq!(parsed, ClientMessage::PlaybackControlRequest(message));
     }
 
     #[test]
@@ -118,7 +130,10 @@ mod tests {
             encoding: "json".into(),
             payload: br#"{"key": "value"}"#.into(),
         };
-        insta::assert_snapshot!(format!("{:#04x?}", message.to_bytes()));
+        let buf = message.to_bytes();
+        insta::assert_snapshot!(format!("{:#04x?}", buf));
+        let parsed = ClientMessage::parse_binary(&buf).unwrap();
+        assert_eq!(parsed, ClientMessage::ServiceCallRequest(message));
     }
 }
 
