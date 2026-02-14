@@ -18,8 +18,6 @@ pub enum RemoteAccessError {
     /// An I/O error.
     #[error(transparent)]
     IoError(#[from] std::io::Error),
-    #[error("Connection stopped")]
-    ConnectionStopped,
 }
 
 impl From<livekit::StreamError> for RemoteAccessError {

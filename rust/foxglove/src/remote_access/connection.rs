@@ -38,12 +38,11 @@ enum OpCode {
     Text = 1,
     /// The frame contains a binary message.
     // TODO future use
-    #[allow(dead_code)]
+    #[expect(dead_code)]
     Binary = 2,
 }
 
-// TODO placeholder until auth is implemented, we'll import this from there instead
-/// Credentials to access the remote visualization server.
+#[expect(dead_code)]
 pub struct RtcCredentials {
     /// URL of the RTC server where these credentials are valid.
     pub url: String,
@@ -213,9 +212,6 @@ impl RemoteAccessConnection {
             match result {
                 Ok((session, room_events)) => {
                     return Some((session, room_events));
-                }
-                Err(RemoteAccessError::ConnectionStopped) => {
-                    return None;
                 }
                 Err(RemoteAccessError::ConnectionError(e)) => {
                     error!("{e:?}");
