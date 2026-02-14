@@ -164,6 +164,7 @@ fn derive_enum_impl(input: &DeriveInput, data: &DataEnum) -> TokenStream {
 
     // Generate implementation
     let expanded = quote! {
+        #[automatically_derived]
         impl ::foxglove::protobuf::ProtobufField for #name {
             fn field_type() -> ::foxglove::prost_types::field_descriptor_proto::Type {
                 ::foxglove::prost_types::field_descriptor_proto::Type::Enum
