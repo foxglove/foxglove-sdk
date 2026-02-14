@@ -59,6 +59,10 @@ impl CredentialsProvider {
         Ok(credentials)
     }
 
+    pub fn device_name(&self) -> &str {
+        &self.device.name
+    }
+
     pub async fn clear(&self) {
         let _refresh_guard = self.refresh_lock.lock().await;
         self.credentials.store(None);

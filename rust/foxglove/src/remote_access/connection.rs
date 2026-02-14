@@ -49,6 +49,7 @@ enum OpCode {
 /// This should be constructed from the [`crate::RemoteAccessSink`] builder.
 #[derive(Clone)]
 pub(crate) struct RemoteAccessConnectionOptions {
+    pub name: Option<String>,
     pub device_token: String,
     pub foxglove_api_url: Option<String>,
     pub foxglove_api_timeout: Option<Duration>,
@@ -66,6 +67,7 @@ pub(crate) struct RemoteAccessConnectionOptions {
 impl Default for RemoteAccessConnectionOptions {
     fn default() -> Self {
         Self {
+            name: None,
             device_token: String::new(),
             foxglove_api_url: None,
             foxglove_api_timeout: None,
@@ -85,6 +87,7 @@ impl Default for RemoteAccessConnectionOptions {
 impl std::fmt::Debug for RemoteAccessConnectionOptions {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("RemoteAccessConnectionOptions")
+            .field("name", &self.name)
             .field("has_device_token", &!self.device_token.is_empty())
             .field("foxglove_api_url", &self.foxglove_api_url)
             .field("foxglove_api_timeout", &self.foxglove_api_timeout)
@@ -354,7 +357,14 @@ impl RemoteAccessConnection {
         let supported_encodings = self.options.supported_encodings.clone();
         metadata.insert("fg-library".into(), get_library_version());
 
-        let mut info = ServerInfo::new("remote_access")
+        let name = self.options.name.clone().unwrap_or_else(|| {
+            self.credentials_provider
+                .get()
+                .map(|p| p.device_name().to_string())
+                .unwrap_or_default()
+        });
+
+        let mut info = ServerInfo::new(name)
             .with_session_id(self.options.session_id.clone())
             .with_capabilities(
                 self.options

@@ -88,6 +88,14 @@ impl RemoteAccessSink {
         Self::default()
     }
 
+    /// Sets the server name reported in the ServerInfo message.
+    ///
+    /// If not set, the device name from the Foxglove platform is used.
+    pub fn name(mut self, name: impl Into<String>) -> Self {
+        self.options.name = Some(name.into());
+        self
+    }
+
     /// Configure an event listener to receive client message events.
     pub fn listener(mut self, listener: Arc<dyn RemoteAccessSinkListener>) -> Self {
         self.options.capabilities = vec![websocket::Capability::ClientPublish];
