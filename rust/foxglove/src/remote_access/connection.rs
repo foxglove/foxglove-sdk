@@ -280,7 +280,10 @@ impl RemoteAccessConnection {
                     // TODO handle byte stream from client
                 }
                 RoomEvent::Disconnected { reason } => {
-                    info!("disconnected: {:?}, will attempt to reconnect", reason.as_str_name());
+                    info!(
+                        "disconnected: {:?}, will attempt to reconnect",
+                        reason.as_str_name()
+                    );
                     // Return from this function to trigger reconnection in run_until_cancelled
                     return;
                 }
