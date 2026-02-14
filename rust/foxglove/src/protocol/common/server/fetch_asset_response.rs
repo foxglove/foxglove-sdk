@@ -143,20 +143,6 @@ mod tests {
     }
 
     #[test]
-    fn test_encode_asset_data() {
-        let mut buf = Vec::new();
-        asset_data().write_payload(&mut buf);
-        insta::assert_snapshot!(format!("{:#04x?}", buf));
-    }
-
-    #[test]
-    fn test_encode_error_message() {
-        let mut buf = Vec::new();
-        error_message().write_payload(&mut buf);
-        insta::assert_snapshot!(format!("{:#04x?}", buf));
-    }
-
-    #[test]
     fn test_parse() {
         assert_matches!(
             FetchAssetResponse::parse_payload(b""),

@@ -97,45 +97,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_encode_play() {
-        let message = PlaybackControlRequest {
-            playback_command: PlaybackCommand::Play,
-            playback_speed: 1.0,
-            seek_time: None,
-            request_id: "some-id".to_string(),
-        };
-        let mut buf = Vec::new();
-        message.write_payload(&mut buf);
-        insta::assert_snapshot!(format!("{:#04x?}", buf));
-    }
-
-    #[test]
-    fn test_encode_play_with_seek() {
-        let message = PlaybackControlRequest {
-            playback_command: PlaybackCommand::Play,
-            playback_speed: 1.0,
-            seek_time: Some(123_456_789),
-            request_id: "some-id".to_string(),
-        };
-        let mut buf = Vec::new();
-        message.write_payload(&mut buf);
-        insta::assert_snapshot!(format!("{:#04x?}", buf));
-    }
-
-    #[test]
-    fn test_encode_pause() {
-        let message = PlaybackControlRequest {
-            playback_command: PlaybackCommand::Pause,
-            playback_speed: 1.0,
-            seek_time: None,
-            request_id: "some-id".to_string(),
-        };
-        let mut buf = Vec::new();
-        message.write_payload(&mut buf);
-        insta::assert_snapshot!(format!("{:#04x?}", buf));
-    }
-
-    #[test]
     fn test_roundtrip_play_with_seek_time() {
         let orig = PlaybackControlRequest {
             playback_command: PlaybackCommand::Play,

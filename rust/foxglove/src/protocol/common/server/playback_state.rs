@@ -125,48 +125,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_encode_playing() {
-        let message = PlaybackState {
-            status: PlaybackStatus::Playing,
-            playback_speed: 1.0,
-            did_seek: false,
-            current_time: 12345,
-            request_id: None,
-        };
-        let mut buf = Vec::new();
-        message.write_payload(&mut buf);
-        insta::assert_snapshot!(format!("{:#04x?}", buf));
-    }
-
-    #[test]
-    fn test_encode_did_seek() {
-        let message = PlaybackState {
-            status: PlaybackStatus::Playing,
-            playback_speed: 1.0,
-            did_seek: true,
-            current_time: 12345,
-            request_id: None,
-        };
-        let mut buf = Vec::new();
-        message.write_payload(&mut buf);
-        insta::assert_snapshot!(format!("{:#04x?}", buf));
-    }
-
-    #[test]
-    fn test_encode_playing_with_request_id() {
-        let message = PlaybackState {
-            status: PlaybackStatus::Playing,
-            playback_speed: 1.0,
-            did_seek: false,
-            current_time: 12345,
-            request_id: Some("i-am-a-request".to_string()),
-        };
-        let mut buf = Vec::new();
-        message.write_payload(&mut buf);
-        insta::assert_snapshot!(format!("{:#04x?}", buf));
-    }
-
-    #[test]
     fn test_roundtrip_with_request_id() {
         let orig = PlaybackState {
             status: PlaybackStatus::Playing,

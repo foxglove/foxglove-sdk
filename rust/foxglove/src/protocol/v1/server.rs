@@ -96,6 +96,77 @@ impl BinaryMessage for PlaybackState {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::protocol::common::server::playback_state::PlaybackStatus;
+
+    #[test]
+    fn test_time_encode() {
+        let message = Time::new(1234567890);
+        insta::assert_snapshot!(format!("{:#04x?}", message.to_bytes()));
+    }
+
+    #[test]
+    fn test_service_call_response_encode() {
+        let message = ServiceCallResponse {
+            service_id: 10,
+            call_id: 12,
+            encoding: "json".into(),
+            payload: br#"{"key": "value"}"#.into(),
+        };
+        insta::assert_snapshot!(format!("{:#04x?}", message.to_bytes()));
+    }
+
+    #[test]
+    fn test_fetch_asset_response_encode_asset_data() {
+        let message = FetchAssetResponse::asset_data(10, b"data");
+        insta::assert_snapshot!(format!("{:#04x?}", message.to_bytes()));
+    }
+
+    #[test]
+    fn test_fetch_asset_response_encode_error_message() {
+        let message = FetchAssetResponse::error_message(10, "oh no");
+        insta::assert_snapshot!(format!("{:#04x?}", message.to_bytes()));
+    }
+
+    #[test]
+    fn test_playback_state_encode_playing() {
+        let message = PlaybackState {
+            status: PlaybackStatus::Playing,
+            playback_speed: 1.0,
+            did_seek: false,
+            current_time: 12345,
+            request_id: None,
+        };
+        insta::assert_snapshot!(format!("{:#04x?}", message.to_bytes()));
+    }
+
+    #[test]
+    fn test_playback_state_encode_did_seek() {
+        let message = PlaybackState {
+            status: PlaybackStatus::Playing,
+            playback_speed: 1.0,
+            did_seek: true,
+            current_time: 12345,
+            request_id: None,
+        };
+        insta::assert_snapshot!(format!("{:#04x?}", message.to_bytes()));
+    }
+
+    #[test]
+    fn test_playback_state_encode_playing_with_request_id() {
+        let message = PlaybackState {
+            status: PlaybackStatus::Playing,
+            playback_speed: 1.0,
+            did_seek: false,
+            current_time: 12345,
+            request_id: Some("i-am-a-request".to_string()),
+        };
+        insta::assert_snapshot!(format!("{:#04x?}", message.to_bytes()));
+    }
+}
+
 /// A representation of a server message useful for deserializing.
 #[derive(Debug, Clone, PartialEq)]
 #[allow(missing_docs)]

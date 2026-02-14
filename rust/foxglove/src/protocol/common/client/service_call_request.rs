@@ -81,13 +81,6 @@ mod tests {
     }
 
     #[test]
-    fn test_encode() {
-        let mut buf = Vec::new();
-        message().write_payload(&mut buf);
-        insta::assert_snapshot!(format!("{:#04x?}", buf));
-    }
-
-    #[test]
     fn test_parse() {
         assert_matches!(
             ServiceCallRequest::parse_payload(b""),

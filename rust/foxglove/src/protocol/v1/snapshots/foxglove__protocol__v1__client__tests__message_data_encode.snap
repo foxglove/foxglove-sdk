@@ -1,8 +1,9 @@
 ---
-source: rust/foxglove/src/protocol/common/client/message_data.rs
-expression: "format!(\"{:#04x?}\", buf)"
+source: rust/foxglove/src/protocol/v1/client.rs
+expression: "format!(\"{:#04x?}\", message.to_bytes())"
 ---
 [
+    0x01,
     0x1e,
     0x00,
     0x00,
