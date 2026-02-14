@@ -42,7 +42,6 @@ enum OpCode {
     Binary = 2,
 }
 
-#[expect(dead_code)]
 pub struct RtcCredentials {
     /// URL of the RTC server where these credentials are valid.
     pub url: String,
