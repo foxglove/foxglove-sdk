@@ -63,6 +63,12 @@ struct MessageWithGenericNewtype {
     value: Wrapper<u32>,
 }
 
+/// A struct using a nested generic newtype.
+#[derive(Encode)]
+struct MessageWithNestedGenericNewtype {
+    count: Wrapper<Wrapper<u32>>,
+}
+
 #[test]
 fn test_primitive_newtype_field() {
     let msg = MessageWithNewtypes {
@@ -253,6 +259,27 @@ fn test_generic_newtype() {
     assert_eq!(deserialized.get_field(&field).as_u32().unwrap(), 123);
 }
 
+#[test]
+fn test_nested_generic_newtype_as_field() {
+    let msg = MessageWithNestedGenericNewtype {
+        count: Wrapper(Wrapper(42u32)),
+    };
+
+    let mut buf = BytesMut::new();
+    msg.encode(&mut buf).expect("Failed to encode");
+
+    let schema = MessageWithNestedGenericNewtype::get_schema().expect("Failed to get schema");
+    let message_descriptor = get_message_descriptor(&schema);
+    let deserialized =
+        DynamicMessage::decode(message_descriptor.clone(), buf.as_ref()).expect("Failed to decode");
+
+    // Nested newtypes are transparent, so the count field should be a plain u32
+    let field = message_descriptor
+        .get_field_by_name("count")
+        .expect("Field 'count' not found");
+    assert_eq!(deserialized.get_field(&field).as_u32().unwrap(), 42);
+}
+
 // ── Standalone newtype encode tests ──
 
 #[test]
@@ -350,6 +377,26 @@ fn test_standalone_generic_newtype() {
         .get_field_by_name("value")
         .expect("Field 'value' not found");
     assert_eq!(deserialized.get_field(&field).as_u32().unwrap(), 123);
+}
+
+#[test]
+fn test_standalone_nested_generic_newtype() {
+    let msg = Wrapper(Wrapper(99u32));
+
+    let mut buf = BytesMut::new();
+    msg.encode(&mut buf).expect("Failed to encode");
+
+    let schema = Wrapper::<Wrapper<u32>>::get_schema().expect("Failed to get schema");
+    let message_descriptor = get_message_descriptor(&schema);
+    let deserialized =
+        DynamicMessage::decode(message_descriptor.clone(), buf.as_ref()).expect("Failed to decode");
+
+    // Standalone encoding wraps in a single-field message; the inner Wrapper
+    // is transparent so the value field should be a plain u32.
+    let field = message_descriptor
+        .get_field_by_name("value")
+        .expect("Field 'value' not found");
+    assert_eq!(deserialized.get_field(&field).as_u32().unwrap(), 99);
 }
 
 #[test]
