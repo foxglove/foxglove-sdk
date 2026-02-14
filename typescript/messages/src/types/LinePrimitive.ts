@@ -31,7 +31,7 @@ export type LinePrimitive = {
 
   /**
    * Indices into the `points` and `colors` attribute arrays, which can be used to avoid duplicating attribute data.
-   *
+   * 
    * If omitted or empty, indexing will not be used. This default behavior is equivalent to specifying [0, 1, ..., N-1] for the indices (where N is the number of `points` provided).
    */
   indices: number[];

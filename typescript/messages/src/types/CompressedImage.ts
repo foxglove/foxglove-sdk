@@ -16,7 +16,7 @@ export type CompressedImage = {
 
   /**
    * Image format
-   *
+   * 
    * Supported values: `jpeg`, `png`, `webp`, `avif`
    */
   format: string;
