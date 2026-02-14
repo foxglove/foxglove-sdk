@@ -260,9 +260,9 @@ fn derive_newtype_impl(input: &DeriveInput, field: &syn::Field) -> TokenStream {
         let mut seen = ::std::collections::HashSet::new();
         let mut dependencies = Vec::new();
         for fd in dependency_fds {
-            if let Some(name) = &fd.name {
-                if seen.insert(name.clone()) {
-                    dependencies.push(name.clone());
+            if let Some(fd_name) = &fd.name {
+                if seen.insert(fd_name.clone()) {
+                    dependencies.push(fd_name.clone());
                     file_descriptor_set.file.push(fd);
                 }
             }
@@ -567,9 +567,9 @@ fn derive_named_struct_impl(
         let mut seen = ::std::collections::HashSet::new();
         let mut dependencies = Vec::new();
         for fd in dependency_fds {
-            if let Some(name) = &fd.name {
-                if seen.insert(name.clone()) {
-                    dependencies.push(name.clone());
+            if let Some(fd_name) = &fd.name {
+                if seen.insert(fd_name.clone()) {
+                    dependencies.push(fd_name.clone());
                     file_descriptor_set.file.push(fd);
                 }
             }
