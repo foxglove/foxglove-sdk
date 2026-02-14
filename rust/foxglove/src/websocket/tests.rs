@@ -1661,7 +1661,7 @@ async fn test_on_playback_control_request() {
     let server = create_server(
         &ctx,
         ServerOptions {
-            capabilities: Some(HashSet::from([Capability::RangedPlayback])),
+            capabilities: Some(HashSet::from([Capability::PlaybackControl])),
             playback_time_range: Some((123_456_789, 234_567_890)),
             listener: Some(listener.clone()),
             ..Default::default()
@@ -1813,7 +1813,7 @@ async fn test_server_info_metadata_sent_to_client() {
 }
 
 #[tokio::test]
-async fn test_server_info_with_ranged_playback() {
+async fn test_server_info_with_playback_control() {
     let ctx = Context::new();
     let options = ServerOptions {
         playback_time_range: Some((123, 456)),
@@ -1841,11 +1841,11 @@ async fn test_server_info_with_ranged_playback() {
         Some(SerializedTimestamp { sec: 0, nsec: 456 })
     );
 
-    // By starting the server with a set playback_time_range, it should enable the RangedPlayback
+    // By starting the server with a set playback_time_range, it should enable the PlaybackControl
     // capability
     assert!(msg
         .capabilities
-        .contains(&ServerInfoCapability::RangedPlayback));
+        .contains(&ServerInfoCapability::PlaybackControl));
 
     let _ = server.stop();
 }
@@ -1889,10 +1889,10 @@ async fn test_broadcast_playback_state() {
 
 #[tokio::test]
 #[should_panic]
-async fn test_ranged_playback_without_time_range() {
+async fn test_playback_control_without_time_range() {
     let ctx = Context::new();
     let options = ServerOptions {
-        capabilities: Some(HashSet::from([Capability::RangedPlayback])),
+        capabilities: Some(HashSet::from([Capability::PlaybackControl])),
         playback_time_range: None,
         ..Default::default()
     };

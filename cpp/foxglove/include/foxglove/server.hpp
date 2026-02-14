@@ -74,7 +74,7 @@ enum class WebSocketServerCapabilities : uint8_t {
   /// @cond foxglove_internal
   /// Indicates that the server is sending data within a fixed time range. This requires the
   /// server to specify the `playback_time_range` field in its `WebSocketServerOptions`.
-  RangedPlayback = 1 << 6,
+  PlaybackControl = 1 << 6,
   /// @endcond
 };
 
@@ -200,7 +200,7 @@ struct WebSocketServerCallbacks {
   /// @cond foxglove_internal
   /// @brief Callback invoked when a playback control request is sent from the client.
   ///
-  /// Requires the capability WebSocketServerCapabilities::RangedPlayback
+  /// Requires the capability WebSocketServerCapabilities::PlaybackControl
   ///
   /// @param playback_control_request The playback control request.
   /// @return The playback state to send back to the client.
@@ -268,7 +268,7 @@ struct WebSocketServerOptions {
   /// @brief The time range for playback. This applies if the server is playing back a fixed time
   /// range of data.
   ///
-  /// @note Setting this option imples the RangedPlayback capability
+  /// @note Setting this option imples the PlaybackControl capability
   std::optional<std::pair<uint64_t, uint64_t>> playback_time_range = std::nullopt;
   /// @endcond
 };
@@ -306,7 +306,7 @@ public:
   /// @cond foxglove_internal
   /// @brief Publishes the current playback state to all clients.
   ///
-  /// Requires the capability WebSocketServerCapabilities::RangedPlayback.
+  /// Requires the capability WebSocketServerCapabilities::PlaybackControl.
   ///
   /// @param playback_state The playback state to publish.
   void broadcastPlaybackState(const PlaybackState& playback_state) const noexcept;

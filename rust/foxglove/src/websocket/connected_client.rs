@@ -676,8 +676,8 @@ impl ConnectedClient {
     }
 
     fn on_playback_control_request(&self, server: Arc<Server>, msg: PlaybackControlRequest) {
-        if !server.has_capability(Capability::RangedPlayback) {
-            self.send_error("Server does not support ranged playback capability".to_string());
+        if !server.has_capability(Capability::PlaybackControl) {
+            self.send_error("Server does not support playback control capability".to_string());
             return;
         }
 
@@ -703,7 +703,7 @@ impl ConnectedClient {
             server.broadcast_playback_state(playback_state);
         } else {
             self.send_error(
-                "Server advertised ranged playback capability but didn't provide a listener"
+                "Server advertised playback control capability but didn't provide a listener"
                     .to_string(),
             );
         }
