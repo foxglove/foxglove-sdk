@@ -4,7 +4,6 @@ use std::{
     time::Duration,
 };
 
-use arc_swap::ArcSwapOption;
 use bytes::Bytes;
 use livekit::{id::ParticipantIdentity, Room, RoomEvent, RoomOptions, StreamByteOptions};
 use parking_lot::RwLock;
@@ -118,16 +117,11 @@ struct RemoteAccessSession {
 /// and holds the options and other state that outlive a session.
 pub(crate) struct RemoteAccessConnection {
     options: RemoteAccessConnectionOptions,
-    /// The current session, if any.
-    session: ArcSwapOption<RemoteAccessSession>,
 }
 
 impl RemoteAccessConnection {
     pub fn new(options: RemoteAccessConnectionOptions) -> Self {
-        Self {
-            options,
-            session: ArcSwapOption::new(None),
-        }
+        Self { options }
     }
 
     async fn connect_session(
@@ -144,7 +138,6 @@ impl RemoteAccessConnection {
                     return Err(e.into());
                 }
             };
-        self.session.store(Some(session.clone()));
 
         Ok((session, room_events))
     }
@@ -190,7 +183,6 @@ impl RemoteAccessConnection {
         if let Err(e) = session.room.close().await {
             error!("failed to close room: {e:?}");
         }
-        self.session.store(None);
     }
 
     /// Connect to the room, retrying indefinitely.
