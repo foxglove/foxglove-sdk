@@ -86,7 +86,7 @@ impl Default for RemoteAccessSink {
 }
 
 impl RemoteAccessSink {
-    /// Creates a new websocket server with default options.
+    /// Creates a new RemoteAccessSink with default options.
     pub fn new() -> Self {
         Self::default()
     }
