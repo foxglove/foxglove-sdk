@@ -72,7 +72,9 @@ impl ServerListener for DataPointPlayer {
         }
 
         // Clamp the index to the valid range to ensure current_time stays within playback_time_range
-        let clamped_index = state.current_message_index.min(self.data_len.saturating_sub(1));
+        let clamped_index = state
+            .current_message_index
+            .min(self.data_len.saturating_sub(1));
         let current_time = clamped_index as u64 * 100_000_000;
 
         // Return the updated playback state
