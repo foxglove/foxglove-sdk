@@ -1,4 +1,5 @@
 mod connection;
+mod credentials_provider;
 mod participant;
 
 use thiserror::Error;
@@ -16,6 +17,9 @@ pub enum RemoteAccessError {
     StreamError(String),
     #[error("Connection error: {0}")]
     ConnectionError(String),
+    /// An authentication or credential error.
+    #[error("Authentication error: {0}")]
+    AuthError(String),
     /// An I/O error.
     #[error(transparent)]
     IoError(#[from] std::io::Error),

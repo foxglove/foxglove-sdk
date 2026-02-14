@@ -6,10 +6,10 @@ use arc_swap::ArcSwapOption;
 use thiserror::Error;
 use tokio::sync::Mutex;
 
-use super::client::{
-    DeviceToken, FoxgloveApiClient, FoxgloveApiClientBuilder, FoxgloveApiClientError,
+use crate::api_client::{
+    DeviceResponse, DeviceToken, FoxgloveApiClient, FoxgloveApiClientBuilder,
+    FoxgloveApiClientError, RtcCredentials,
 };
-use super::types::{DeviceResponse, RtcCredentials};
 
 #[derive(Error, Debug)]
 #[non_exhaustive]
@@ -67,13 +67,11 @@ impl CredentialsProvider {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
-
     use crate::api_client::test_utils::{
         create_test_builder, create_test_server, TEST_DEVICE_TOKEN,
     };
 
-    use crate::api_client::client::DeviceToken;
+    use crate::api_client::DeviceToken;
 
     use super::CredentialsProvider;
 

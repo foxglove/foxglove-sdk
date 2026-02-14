@@ -8,13 +8,15 @@ use bytes::Bytes;
 use livekit::{id::ParticipantIdentity, Room, RoomEvent, RoomOptions, StreamByteOptions};
 use parking_lot::RwLock;
 use smallvec::SmallVec;
-use tokio::{runtime::Handle, sync::mpsc::UnboundedReceiver, task::JoinHandle};
+use tokio::{runtime::Handle, sync::mpsc::UnboundedReceiver, sync::OnceCell, task::JoinHandle};
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info, warn};
 
 use crate::{
+    api_client::{DeviceToken, FoxgloveApiClientBuilder},
     library_version::get_library_version,
     remote_access::{
+        credentials_provider::CredentialsProvider,
         participant::{Participant, ParticipantWriter},
         RemoteAccessError,
     },
@@ -42,27 +44,14 @@ enum OpCode {
     Binary = 2,
 }
 
-pub struct RtcCredentials {
-    /// URL of the RTC server where these credentials are valid.
-    pub url: String,
-    /// Expiring access token (JWT)
-    pub token: String,
-}
-
-impl RtcCredentials {
-    pub fn new() -> Self {
-        Self {
-            url: std::env::var("LIVEKIT_HOST").expect("LIVEKIT_HOST must be set"),
-            token: std::env::var("LIVEKIT_TOKEN").expect("LIVEKIT_TOKEN must be set"),
-        }
-    }
-}
-
 /// Options for the remote access connection.
 ///
 /// This should be constructed from the [`crate::RemoteAccessSink`] builder.
 #[derive(Clone)]
 pub(crate) struct RemoteAccessConnectionOptions {
+    pub device_token: String,
+    pub foxglove_api_url: Option<String>,
+    pub foxglove_api_timeout: Option<Duration>,
     pub session_id: String,
     pub listener: Option<Arc<dyn RemoteAccessSinkListener>>,
     pub capabilities: Vec<websocket::Capability>,
@@ -77,6 +66,9 @@ pub(crate) struct RemoteAccessConnectionOptions {
 impl Default for RemoteAccessConnectionOptions {
     fn default() -> Self {
         Self {
+            device_token: String::new(),
+            foxglove_api_url: None,
+            foxglove_api_timeout: None,
             session_id: Server::generate_session_id(),
             listener: None,
             capabilities: Vec::new(),
@@ -93,6 +85,9 @@ impl Default for RemoteAccessConnectionOptions {
 impl std::fmt::Debug for RemoteAccessConnectionOptions {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("RemoteAccessConnectionOptions")
+            .field("has_device_token", &!self.device_token.is_empty())
+            .field("foxglove_api_url", &self.foxglove_api_url)
+            .field("foxglove_api_timeout", &self.foxglove_api_timeout)
             .field("session_id", &self.session_id)
             .field("has_listener", &self.listener.is_some())
             .field("capabilities", &self.capabilities)
@@ -118,18 +113,48 @@ struct RemoteAccessSession {
 /// and holds the options and other state that outlive a session.
 pub(crate) struct RemoteAccessConnection {
     options: RemoteAccessConnectionOptions,
+    credentials_provider: OnceCell<CredentialsProvider>,
 }
 
 impl RemoteAccessConnection {
     pub fn new(options: RemoteAccessConnectionOptions) -> Self {
-        Self { options }
+        Self {
+            options,
+            credentials_provider: OnceCell::new(),
+        }
+    }
+
+    /// Returns the credentials provider, initializing it on first call.
+    ///
+    /// This fetches device info from the Foxglove API using the device token.
+    /// If the call fails, the OnceCell remains empty and will retry on the next call.
+    async fn get_or_init_provider(&self) -> Result<&CredentialsProvider> {
+        self.credentials_provider
+            .get_or_try_init(|| async {
+                let mut builder = FoxgloveApiClientBuilder::new(DeviceToken::new(
+                    self.options.device_token.clone(),
+                ));
+                if let Some(url) = &self.options.foxglove_api_url {
+                    builder = builder.base_url(url);
+                }
+                if let Some(timeout) = self.options.foxglove_api_timeout {
+                    builder = builder.timeout(timeout);
+                }
+                CredentialsProvider::new(builder)
+                    .await
+                    .map_err(|e| RemoteAccessError::AuthError(e.to_string()))
+            })
+            .await
     }
 
     async fn connect_session(
         &self,
     ) -> Result<(Arc<RemoteAccessSession>, UnboundedReceiver<RoomEvent>)> {
-        // TODO get credentials from API
-        let credentials = RtcCredentials::new();
+        let provider = self.get_or_init_provider().await?;
+        let credentials = provider
+            .load_credentials()
+            .await
+            .map_err(|e| RemoteAccessError::AuthError(e.to_string()))?;
 
         let (session, room_events) =
             match Room::connect(&credentials.url, &credentials.token, RoomOptions::default()).await
@@ -232,7 +257,16 @@ impl RemoteAccessConnection {
                     // We can't inspect the inner types of Engine errors; this may be caused by
                     // general connectivity issues, or be auth-related. Attempt to refresh the
                     // credentials in case they've expired.
-                    // TODO refresh credentials
+                    if let Some(provider) = self.credentials_provider.get() {
+                        provider.clear().await;
+                    }
+                }
+                Err(RemoteAccessError::AuthError(e)) => {
+                    error!("authentication error: {e}, retrying in {AUTH_RETRY_PERIOD:?}");
+
+                    if let Some(provider) = self.credentials_provider.get() {
+                        provider.clear().await;
+                    }
                 }
                 Err(e) => {
                     error!(
