@@ -235,6 +235,7 @@ impl RemoteAccessConnection {
         &self,
     ) -> Option<(Arc<RemoteAccessSession>, UnboundedReceiver<RoomEvent>)> {
         let mut interval = tokio::time::interval(AUTH_RETRY_PERIOD);
+        interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
         loop {
             tokio::select! {
                 _ = interval.tick() => {}
