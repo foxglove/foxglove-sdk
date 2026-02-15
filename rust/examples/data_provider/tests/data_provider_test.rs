@@ -123,54 +123,6 @@ async fn manifest_matches_json_schema() {
 }
 
 #[tokio::test]
-async fn manifest_has_required_fields() {
-    ensure_server();
-    let body = fetch_manifest_json().await;
-
-    let sources = body["sources"]
-        .as_array()
-        .expect("sources should be an array");
-    assert!(!sources.is_empty(), "sources should not be empty");
-
-    for source in sources {
-        assert!(source["url"].is_string(), "source should have a url");
-        assert!(source["topics"].is_array(), "source should have topics");
-        assert!(source["schemas"].is_array(), "source should have schemas");
-        assert!(
-            source["startTime"].is_string(),
-            "source should have startTime"
-        );
-        assert!(
-            source["endTime"].is_string(),
-            "source should have endTime"
-        );
-
-        for topic in source["topics"].as_array().unwrap() {
-            assert!(topic["name"].is_string(), "topic must have a name");
-            assert!(
-                topic["messageEncoding"].is_string(),
-                "topic must have messageEncoding"
-            );
-        }
-
-        for schema in source["schemas"].as_array().unwrap() {
-            assert!(schema["id"].is_number(), "schema must have an id");
-            assert!(schema["name"].is_string(), "schema must have a name");
-            assert!(
-                schema["encoding"].is_string(),
-                "schema must have an encoding"
-            );
-            assert!(schema["data"].is_string(), "schema must have data");
-
-            let data_str = schema["data"].as_str().unwrap();
-            base64::engine::general_purpose::STANDARD
-                .decode(data_str)
-                .expect("schema data should be valid base64");
-        }
-    }
-}
-
-#[tokio::test]
 async fn manifest_schema_ids_are_consistent() {
     ensure_server();
     let body = fetch_manifest_json().await;
