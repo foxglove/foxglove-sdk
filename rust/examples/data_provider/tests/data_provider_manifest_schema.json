@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema",
+  "type": "object",
+  "properties": {
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "supportsRangeRequests": {
+            "const": true,
+            "description": "If provided, indicates that the dataUrl supports byte-range requests via the HTTP Range header."
+          },
+          "url": {
+            "type": "string",
+            "description": "The URL to load message data from. This URL should respond to a GET request with MCAP-formatted data for the described topics."
+          },
+          "topics": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["name", "messageEncoding"],
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "messageEncoding": {
+                  "type": "string"
+                },
+                "schemaId": {
+                  "type": "integer",
+                  "description": "ID of the schema of messages on this topic, matching the `id` of an element of the `schemas` array. `null` means the messages on this topic are schemaless.",
+                  "minimum": 1,
+                  "maximum": 65535
+                }
+              }
+            }
+          },
+          "schemas": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "MCAP Schema record. See spec at https://mcap.dev/spec#schema-op0x03 for field meanings.",
+              "required": ["id", "name", "encoding", "data"],
+              "properties": {
+                "id": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 65535
+                },
+                "name": {
+                  "type": "string"
+                },
+                "encoding": {
+                  "type": "string"
+                },
+                "data": {
+                  "type": "string",
+                  "description": "base64-encoded content of the `data` field",
+                  "contentEncoding": "base64"
+                }
+              }
+            }
+          },
+          "startTime": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp of the first expected message"
+          },
+          "endTime": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp of the last expected message"
+          }
+        },
+        "oneOf": [
+          { "required": ["url", "supportsRangeRequests"] },
+          { "required": ["url", "topics", "schemas", "startTime", "endTime"] }
+        ]
+      }
+    },
+    "name": {
+      "type": "string",
+      "description": "A human-readable name to associate with this recording."
+    }
+  },
+  "required": ["sources"],
+  "description": "A set of data sources to visualize."
+}
