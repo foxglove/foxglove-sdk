@@ -265,16 +265,14 @@ impl RemoteAccessConnection {
                     }
                 }
                 Err(RemoteAccessError::AuthError(e)) => {
-                    error!("authentication error: {e}, retrying in {AUTH_RETRY_PERIOD:?}");
+                    error!("authentication error: {e}");
 
                     if let Some(provider) = self.credentials_provider.get() {
                         provider.clear().await;
                     }
                 }
                 Err(e) => {
-                    error!(
-                        "failed to establish remote access connection: {e:?}, retrying in {AUTH_RETRY_PERIOD:?}"
-                    );
+                    error!("failed to establish remote access connection: {e:?}");
                 }
             }
         }
