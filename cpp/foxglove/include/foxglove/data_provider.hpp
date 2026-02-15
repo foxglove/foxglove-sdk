@@ -6,8 +6,9 @@
 /// Use @ref foxglove::data_provider::ChannelSet to declare channels, then construct a
 /// @ref foxglove::data_provider::StreamedSource with the resulting topics and schemas.
 ///
-/// @note This header requires [nlohmann/json](https://github.com/nlohmann/json) to be available
-/// on the include path.
+/// @note This header requires [nlohmann/json](https://github.com/nlohmann/json) and
+/// [tobiaslocker/base64](https://github.com/tobiaslocker/base64) to be available on the include
+/// path.
 ///
 /// ## Example
 ///
@@ -40,47 +41,16 @@
 
 #include <nlohmann/json.hpp>
 
+#include <base64.hpp>
 #include <cstdint>
 #include <optional>
+#include <stdexcept>
 #include <string>
+#include <string_view>
 #include <vector>
 
 /// The foxglove namespace.
 namespace foxglove::data_provider {
-
-// ============================================================================
-// Base64 encoding
-// ============================================================================
-
-/// @brief Base64-encode binary data.
-///
-/// This is provided for encoding schema data in manifest responses. The returned
-/// string uses the standard base64 alphabet with '=' padding.
-///
-/// @param data Pointer to the data to encode.
-/// @param len Number of bytes to encode.
-/// @return The base64-encoded string.
-inline std::string base64_encode(const std::byte* data, size_t len) {
-  static constexpr const char CHARS[] =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-  const auto* bytes = reinterpret_cast<const uint8_t*>(data);
-  std::string result;
-  result.reserve((len + 2) / 3 * 4);
-  for (size_t i = 0; i < len; i += 3) {
-    uint32_t n = static_cast<uint32_t>(bytes[i]) << 16;
-    if (i + 1 < len) {
-      n |= static_cast<uint32_t>(bytes[i + 1]) << 8;
-    }
-    if (i + 2 < len) {
-      n |= static_cast<uint32_t>(bytes[i + 2]);
-    }
-    result += CHARS[(n >> 18) & 0x3F];
-    result += CHARS[(n >> 12) & 0x3F];
-    result += (i + 1 < len) ? CHARS[(n >> 6) & 0x3F] : '=';
-    result += (i + 2 < len) ? CHARS[n & 0x3F] : '=';
-  }
-  return result;
-}
 
 // ============================================================================
 // Manifest types
@@ -218,6 +188,7 @@ public:
   ///
   /// @tparam T A Foxglove schema type (e.g. `foxglove::schemas::Vector3`).
   /// @param topic The topic name for this channel.
+  /// @throws std::overflow_error if more than 65535 distinct schemas are added.
   template<typename T>
   void insert(const std::string& topic) {
     auto schema = T::schema();
@@ -231,22 +202,38 @@ public:
   std::vector<Schema> schemas;
 
 private:
+  // Next schema ID to assign. 0 means we have exhausted all IDs.
+  // Schema ID 0 is reserved by MCAP, so valid IDs are 1..65535.
   uint16_t next_schema_id_ = 1;
 
+  static std::string encode_schema_data(const foxglove::Schema& schema) {
+    std::string_view sv(reinterpret_cast<const char*>(schema.data), schema.data_len);
+    return base64::to_base64(sv);
+  }
+
   uint16_t add_schema(const foxglove::Schema& schema) {
-    // Check for an existing schema with the same name, encoding, and data.
+    auto encoded_data = encode_schema_data(schema);
+
+    // Deduplicate: return existing ID if an identical schema was already added.
     for (const auto& existing : schemas) {
       if (existing.name == schema.name && existing.encoding == schema.encoding &&
-          existing.data == base64_encode(schema.data, schema.data_len)) {
+          existing.data == encoded_data) {
         return existing.id;
       }
     }
-    uint16_t id = next_schema_id_++;
+
+    if (next_schema_id_ == 0) {
+      throw std::overflow_error("ChannelSet: cannot add more than 65535 schemas");
+    }
+    uint16_t id = next_schema_id_;
+    // Advance to the next ID; if we just used 65535, set to 0 to mark exhaustion.
+    next_schema_id_ = (id == UINT16_MAX) ? 0 : static_cast<uint16_t>(id + 1);
+
     schemas.push_back(Schema{
       id,
       schema.name,
       schema.encoding,
-      base64_encode(schema.data, schema.data_len),
+      std::move(encoded_data),
     });
     return id;
   }
