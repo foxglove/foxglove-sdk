@@ -16,7 +16,7 @@ pub enum RemoteAccessError {
     #[error("Stream error: {0}")]
     StreamError(String),
     #[error("Connection error: {0}")]
-    ConnectionError(String),
+    RoomError(String),
     /// An authentication or credential error.
     #[error("Authentication error: {0}")]
     AuthError(String),
@@ -36,6 +36,6 @@ impl From<livekit::StreamError> for RemoteAccessError {
 
 impl From<livekit::RoomError> for RemoteAccessError {
     fn from(error: livekit::RoomError) -> Self {
-        RemoteAccessError::ConnectionError(error.to_string())
+        RemoteAccessError::RoomError(error.to_string())
     }
 }

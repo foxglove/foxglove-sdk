@@ -54,6 +54,7 @@ impl CredentialsProvider {
             return Ok(credentials);
         }
 
+        tracing::info!("refreshing credentials");
         let credentials = Arc::new(self.client.authorize_remote_viz(&self.device.id).await?);
         self.credentials.store(Some(credentials.clone()));
         Ok(credentials)

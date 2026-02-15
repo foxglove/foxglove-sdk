@@ -255,25 +255,20 @@ impl RemoteAccessConnection {
                 Ok((session, room_events)) => {
                     return Some((session, room_events));
                 }
-                Err(RemoteAccessError::ConnectionError(e)) => {
-                    error!("{e:?}");
-
-                    // We can't inspect the inner types of Engine errors; this may be caused by
-                    // general connectivity issues, or be auth-related. Attempt to refresh the
-                    // credentials in case they've expired.
-                    if let Some(provider) = self.credentials_provider.get() {
-                        provider.clear().await;
-                    }
-                }
-                Err(RemoteAccessError::AuthError(e)) => {
-                    error!("authentication error: {e}");
-
-                    if let Some(provider) = self.credentials_provider.get() {
-                        provider.clear().await;
-                    }
-                }
                 Err(e) => {
-                    error!("failed to establish remote access connection: {e:?}");
+                    error!("{e}");
+                    // Refresh credentials if we experience an AuthError. We also do this for
+                    // RoomErrors, which may be auth-related, and for which we do not have any
+                    // distinguishing type information at this point.
+                    if matches!(
+                        e,
+                        RemoteAccessError::AuthError(_) | RemoteAccessError::RoomError(_)
+                    ) {
+                        if let Some(provider) = self.credentials_provider.get() {
+                            debug!("clearing credentials");
+                            provider.clear().await;
+                        }
+                    }
                 }
             }
         }
@@ -356,6 +351,9 @@ impl RemoteAccessConnection {
         let supported_encodings = self.options.supported_encodings.clone();
         metadata.insert("fg-library".into(), get_library_version());
 
+        // The credentials provider is always initialized before this method is called,
+        // since we must successfully connect (which initializes the provider) before we
+        // can receive room events that trigger server info creation.
         let name = self.options.name.clone().unwrap_or_else(|| {
             self.credentials_provider
                 .get()
