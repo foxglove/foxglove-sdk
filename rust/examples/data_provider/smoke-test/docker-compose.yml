@@ -80,6 +80,8 @@ services:
       S3_COMPATIBLE_SERVICE_URL: http://minio:9000
       # Token the remote-data-loader sends to the upstream data provider.
       BEARER_TOKEN: test-token
+      # Disable client-facing OAuth so the smoke test can call POST /v1/stream directly.
+      DISABLE_AUTH: "true"
       RUST_LOG: info
     # No Docker healthcheck: the image is minimal (no curl/wget inside).
     # The smoke-test script checks /liveness from the host instead.
