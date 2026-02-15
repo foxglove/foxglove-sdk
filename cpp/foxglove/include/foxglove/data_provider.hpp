@@ -70,8 +70,8 @@ struct Topic {
 ///
 /// Schema data is stored as a base64-encoded string, matching the JSON wire format.
 struct Schema {
-  /// @brief Unique schema ID within this source.
-  uint16_t id = 0;
+  /// @brief Unique schema ID within this source. Must be nonzero.
+  uint16_t id;
   /// @brief Schema name.
   std::string name;
   /// @brief Schema encoding (e.g. "protobuf").
@@ -225,9 +225,7 @@ private:
     if (next_schema_id_ == 0) {
       throw std::overflow_error("ChannelSet: cannot add more than 65535 schemas");
     }
-    uint16_t id = next_schema_id_;
-    // Advance to the next ID; if we just used 65535, set to 0 to mark exhaustion.
-    next_schema_id_ = (id == UINT16_MAX) ? 0 : static_cast<uint16_t>(id + 1);
+    uint16_t id = next_schema_id_++;  // wraps to 0 after 65535
 
     schemas.push_back(Schema{
       id,
