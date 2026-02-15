@@ -59,9 +59,7 @@ services:
   remote-data-loader:
     # This image is public; no registry credentials are needed.
     # Tags are commit hashes from the foxglove/data-platform repo.
-    # The tag below matches the appVersion in the foxglove/helm-charts
-    # remote-data-loader chart.
-    image: ${REMOTE_DATA_LOADER_IMAGE:-us-central1-docker.pkg.dev/foxglove-images/images/remote-data-loader:24e79cafd7f2fbe44e6e5b14b7c96590e2491a74}
+    image: ${REMOTE_DATA_LOADER_IMAGE:-us-central1-docker.pkg.dev/foxglove-images/images/remote-data-loader:3e1b72e1dac3b92cf72646cbf7ce5c582c6db556}
     depends_on:
       data-provider:
         condition: service_healthy
