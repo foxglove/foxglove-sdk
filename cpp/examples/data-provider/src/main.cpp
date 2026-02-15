@@ -42,16 +42,50 @@
 #include <foxglove/mcap.hpp>
 #include <foxglove/schemas.hpp>
 
+#include <date/date.h>
+
 #include <cerrno>
 #include <chrono>
+#include <cstdint>
 #include <httplib.h>
 #include <iostream>
+#include <optional>
+#include <sstream>
 #include <string>
 
-#include "time_utils.hpp"
-
 namespace dp = foxglove::data_provider;
-using time_utils::TimePoint;
+
+// We convert time_points to nanoseconds-since-epoch for MCAP timestamps. This assumes
+// system_clock's epoch is the Unix epoch, which is guaranteed by C++20 but not by C++17.
+// In practice all major implementations use the Unix epoch.
+using TimePoint = std::chrono::system_clock::time_point;
+
+// ============================================================================
+// Timestamp helpers (using Howard Hinnant's date library)
+// ============================================================================
+
+/// Parse an ISO 8601 timestamp like "2024-01-01T00:00:00Z".
+std::optional<TimePoint> parse_iso8601(const std::string& s) {
+  std::istringstream ss(s);
+  TimePoint tp;
+  ss >> date::parse("%FT%TZ", tp);
+  if (ss.fail()) {
+    return std::nullopt;
+  }
+  return tp;
+}
+
+/// Format a time_point as ISO 8601.
+std::string format_iso8601(TimePoint tp) {
+  return date::format("%FT%TZ", date::floor<std::chrono::seconds>(tp));
+}
+
+/// Convert time_point to nanoseconds since epoch.
+uint64_t to_nanos(TimePoint tp) {
+  return static_cast<uint64_t>(
+    std::chrono::duration_cast<std::chrono::nanoseconds>(tp.time_since_epoch()).count()
+  );
+}
 
 // ============================================================================
 // Routes
@@ -74,8 +108,8 @@ struct FlightParams {
   /// Build a query string for these parameters.
   std::string to_query_string() const {
     return "flightId=" + httplib::encode_uri_component(flight_id) +
-           "&startTime=" + httplib::encode_uri_component(time_utils::format_iso8601(start_time)) +
-           "&endTime=" + httplib::encode_uri_component(time_utils::format_iso8601(end_time));
+           "&startTime=" + httplib::encode_uri_component(format_iso8601(start_time)) +
+           "&endTime=" + httplib::encode_uri_component(format_iso8601(end_time));
   }
 };
 
@@ -86,8 +120,8 @@ std::optional<FlightParams> parse_flight_params(const httplib::Request& req) {
   }
   FlightParams params;
   params.flight_id = req.get_param_value("flightId");
-  auto start = time_utils::parse_iso8601(req.get_param_value("startTime"));
-  auto end = time_utils::parse_iso8601(req.get_param_value("endTime"));
+  auto start = parse_iso8601(req.get_param_value("startTime"));
+  auto end = parse_iso8601(req.get_param_value("endTime"));
   if (!start || !end) {
     return std::nullopt;
   }
@@ -150,8 +184,8 @@ void manifest_handler(const httplib::Request& req, httplib::Response& res) {
   source.id = "flight-v1-" + query;
   source.topics = std::move(channels.topics);
   source.schemas = std::move(channels.schemas);
-  source.start_time = time_utils::format_iso8601(params->start_time);
-  source.end_time = time_utils::format_iso8601(params->end_time);
+  source.start_time = format_iso8601(params->start_time);
+  source.end_time = format_iso8601(params->end_time);
 
   dp::Manifest manifest;
   manifest.name = "Flight " + params->flight_id;
@@ -260,7 +294,7 @@ void data_handler(const httplib::Request& req, httplib::Response& res) {
       }
 
       // Compute timestamp of first message by rounding the start time up to the second.
-      auto ts = time_utils::round_up_to_second(start);
+      auto ts = date::ceil<std::chrono::seconds>(start);
 
       while (ts <= flight_params.end_time) {
         // Messages in the output MUST appear in ascending timestamp order. Otherwise, playback
@@ -273,7 +307,7 @@ void data_handler(const httplib::Request& req, httplib::Response& res) {
         msg.y = 0.0;
         msg.z = 0.0;
 
-        channel.log(msg, time_utils::to_nanos(ts));
+        channel.log(msg, to_nanos(ts));
 
         // Periodically flush buffered data to the response stream. This serves two purposes:
         // the client receives data incrementally instead of all at once, and memory usage stays
