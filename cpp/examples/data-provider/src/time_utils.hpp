@@ -3,65 +3,32 @@
 /// @file
 /// Timestamp utilities for the data_provider example.
 
+#include <date/date.h>
+
 #include <chrono>
 #include <cstdint>
-#include <ctime>
-#include <iomanip>
 #include <optional>
 #include <sstream>
 #include <string>
 
 namespace time_utils {
 
-// ============================================================================
-// Platform helpers
-// ============================================================================
-
-#ifdef _WIN32
-inline std::time_t make_utc_time(std::tm* tm) {
-  return _mkgmtime(tm);
-}
-inline std::tm to_utc_tm(std::time_t time) {
-  std::tm tm{};
-  gmtime_s(&tm, &time);
-  return tm;
-}
-#else
-inline std::time_t make_utc_time(std::tm* tm) {
-  return timegm(tm);
-}
-inline std::tm to_utc_tm(std::time_t time) {
-  std::tm tm{};
-  gmtime_r(&time, &tm);
-  return tm;
-}
-#endif
-
-// ============================================================================
-// ISO 8601 timestamp utilities
-// ============================================================================
-
 using TimePoint = std::chrono::system_clock::time_point;
 
 /// Parse an ISO 8601 timestamp like "2024-01-01T00:00:00Z".
 inline std::optional<TimePoint> parse_iso8601(const std::string& s) {
-  std::tm tm = {};
   std::istringstream ss(s);
-  ss >> std::get_time(&tm, "%Y-%m-%dT%H:%M:%S");
+  TimePoint tp;
+  ss >> date::parse("%FT%TZ", tp);
   if (ss.fail()) {
     return std::nullopt;
   }
-  auto time = make_utc_time(&tm);
-  return std::chrono::system_clock::from_time_t(time);
+  return tp;
 }
 
 /// Format a time_point as ISO 8601.
 inline std::string format_iso8601(TimePoint tp) {
-  auto tt = std::chrono::system_clock::to_time_t(tp);
-  std::tm tm = to_utc_tm(tt);
-  std::ostringstream ss;
-  ss << std::put_time(&tm, "%Y-%m-%dT%H:%M:%SZ");
-  return ss.str();
+  return date::format("%FT%TZ", date::floor<std::chrono::seconds>(tp));
 }
 
 /// Convert time_point to nanoseconds since epoch.

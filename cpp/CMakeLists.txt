@@ -77,6 +77,13 @@ FetchContent_Declare(base64
 set(BASE64_ENABLE_TESTING OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(base64)
 
+FetchContent_Declare(date
+  GIT_REPOSITORY https://github.com/HowardHinnant/date.git
+  GIT_TAG v3.0.4
+)
+set(ENABLE_DATE_TESTING OFF CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(date)
+
 FetchContent_Declare(httplib
   GIT_REPOSITORY https://github.com/yhirose/cpp-httplib.git
   GIT_TAG v0.32.0
@@ -282,4 +289,4 @@ set_property(TARGET example_data_provider PROPERTY CXX_STANDARD_REQUIRED True)
 target_compile_options(example_data_provider PUBLIC ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
 target_include_directories(example_data_provider SYSTEM PRIVATE ${json_SOURCE_DIR}/include)
 target_link_options(example_data_provider PUBLIC ${SANITIZER_LINK_OPTIONS})
-target_link_libraries(example_data_provider foxglove_cpp_static httplib::httplib base64)
+target_link_libraries(example_data_provider foxglove_cpp_static httplib::httplib base64 date::date)
