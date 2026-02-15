@@ -80,6 +80,8 @@ services:
       BEARER_TOKEN: test-token
       # Disable client-facing OAuth so the smoke test can call POST /v1/stream directly.
       DISABLE_AUTH: "true"
+      # Required by the binary even when auth is disabled.
+      OAUTH_CLIENT_ID: "unused"
       RUST_LOG: info
     # No Docker healthcheck: the image is minimal (no curl/wget inside).
     # The smoke-test script checks /liveness from the host instead.
