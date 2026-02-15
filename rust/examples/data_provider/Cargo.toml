@@ -19,9 +19,8 @@ tracing-subscriber = "0.3"
 
 [dev-dependencies]
 base64 = "0.22"
-http-body-util = "0.1"
 jsonschema = "0.28"
 mcap.workspace = true
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 serde_json = "1.0"
-tower = { version = "0.5", features = ["util"] }
+tokio = { workspace = true, features = ["process"] }

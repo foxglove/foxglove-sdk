@@ -926,7 +926,6 @@ dependencies = [
  "chrono",
  "foxglove 0.17.2",
  "futures",
- "http-body-util",
  "jsonschema",
  "mcap 0.24.0",
  "reqwest 0.12.28",
@@ -934,7 +933,6 @@ dependencies = [
  "serde_json",
  "serde_urlencoded",
  "tokio",
- "tower",
  "tracing",
  "tracing-subscriber",
 ]
