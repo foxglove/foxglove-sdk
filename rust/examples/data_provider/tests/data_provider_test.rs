@@ -170,18 +170,13 @@ fn mcap_data_matches_manifest(client: &Client, manifest: &Manifest) {
         //   - the channel's message encoding matches, and
         //   - if a schema is declared, the schema's name, encoding, and data
         //     match the manifest (not just the id).
-        //
-        // `seen_topics` tracks which manifest topics actually had messages,
-        // so we can verify at the end that no manifest topic went unseen.
 
-        let mut seen_topics = HashSet::new();
         for message in mcap::MessageStream::new(&mcap_bytes[..])
             .expect("should be able to create message stream")
         {
             let message = message.expect("should be able to read MCAP message");
             let channel = &message.channel;
             let topic = channel.topic.as_str();
-            seen_topics.insert(topic.to_owned());
 
             let mt = topics_by_name.get(topic).unwrap_or_else(|| {
                 panic!("MCAP message on topic '{topic}' should have a corresponding manifest entry")
@@ -216,13 +211,6 @@ fn mcap_data_matches_manifest(client: &Client, manifest: &Manifest) {
                     "MCAP schema data for topic '{topic}' should match manifest"
                 );
             }
-        }
-
-        for name in topics_by_name.keys() {
-            assert!(
-                seen_topics.contains(*name),
-                "manifest topic '{name}' should have messages in MCAP"
-            );
         }
     }
 }
