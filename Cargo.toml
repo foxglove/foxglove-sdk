@@ -7,6 +7,7 @@ members = [
   "rust/foxglove_proto_gen",
   "rust/foxglove_data_loader",
   "rust/examples/*",
+  "rust/examples/data_provider/test_harness",
   "python/foxglove-sdk",
 ]
 

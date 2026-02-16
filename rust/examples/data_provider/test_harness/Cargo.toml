@@ -7,7 +7,7 @@ publish = false
 workspace = true
 
 [dependencies]
-foxglove = { path = "../../foxglove", features = ["data_provider"] }
+foxglove = { path = "../../../foxglove", features = ["data_provider"] }
 jsonschema = "0.28"
 libtest-mimic = "0.8"
 mcap.workspace = true

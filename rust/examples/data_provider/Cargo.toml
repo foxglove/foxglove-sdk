@@ -18,7 +18,7 @@ tracing = { version = "0.1", features = ["log"] }
 tracing-subscriber = "0.3"
 
 [dev-dependencies]
-data_provider_tests = { path = "../data_provider_tests" }
+data_provider_tests = { path = "test_harness" }
 tokio = { workspace = true, features = ["process", "rt"] }
 
 [[test]]
