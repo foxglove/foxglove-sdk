@@ -139,16 +139,21 @@ std::optional<FlightParams> parse_flight_params(const httplib::Request& req) {
 // ============================================================================
 
 /// Validate the bearer token from the Authorization header.
+/// Returns true if the request is authorized; sets a 401 response and returns false otherwise.
 ///
 /// Replace this with real token validation (e.g. JWT verification).
-bool check_auth(const httplib::Request& req) {
+bool require_auth(const httplib::Request& req, httplib::Response& res) {
   auto it = req.headers.find("Authorization");
-  if (it == req.headers.end()) {
-    return false;
+  if (it != req.headers.end()) {
+    const auto& value = it->second;
+    // Accept any non-empty bearer token.
+    if (value.size() > 7 && value.compare(0, 7, "Bearer ") == 0) {
+      return true;
+    }
   }
-  const auto& value = it->second;
-  // Accept any non-empty bearer token.
-  return value.size() > 7 && value.compare(0, 7, "Bearer ") == 0;
+  res.status = 401;
+  res.set_content("Unauthorized", "text/plain");
+  return false;
 }
 
 // ============================================================================
@@ -159,9 +164,7 @@ bool check_auth(const httplib::Request& req) {
 ///
 /// Builds a manifest describing the channels and schemas available for the requested flight.
 void manifest_handler(const httplib::Request& req, httplib::Response& res) {
-  if (!check_auth(req)) {
-    res.status = 401;
-    res.set_content("Unauthorized", "text/plain");
+  if (!require_auth(req, res)) {
     return;
   }
   auto params = parse_flight_params(req);
@@ -203,9 +206,7 @@ void manifest_handler(const httplib::Request& req, httplib::Response& res) {
 ///
 /// Streams MCAP data for the requested flight. The response body is a stream of MCAP bytes.
 void data_handler(const httplib::Request& req, httplib::Response& res) {
-  if (!check_auth(req)) {
-    res.status = 401;
-    res.set_content("Unauthorized", "text/plain");
+  if (!require_auth(req, res)) {
     return;
   }
   auto params = parse_flight_params(req);
