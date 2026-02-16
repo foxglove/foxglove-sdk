@@ -117,12 +117,10 @@ pub fn build_tests(config: &DataProviderTestConfig) -> Vec<Trial> {
 // Helpers
 // ---------------------------------------------------------------------------
 
-fn resolve_data_url(base_url: &str, url: &str) -> String {
-    if url.starts_with("http://") || url.starts_with("https://") {
-        url.to_string()
-    } else {
-        format!("{base_url}{url}")
-    }
+fn resolve_data_url(base_url: &str, data_url: &str) -> url::Url {
+    let base = url::Url::parse(base_url).expect("base_url should be a valid URL");
+    base.join(data_url)
+        .expect("data URL from manifest should be resolvable against base_url")
 }
 
 fn streamed(source: &UpstreamSource) -> &StreamedSource {
@@ -185,10 +183,10 @@ fn check_mcap_data_matches_manifest(
 ) {
     for source in &manifest.sources {
         let s = streamed(source);
-        let full_url = resolve_data_url(base_url, &s.url);
+        let data_url = resolve_data_url(base_url, &s.url);
 
         let resp = client
-            .get(&full_url)
+            .get(data_url)
             .bearer_auth(bearer_token)
             .send()
             .expect("data request should succeed");
