@@ -31,7 +31,7 @@ fn ensure_server() {
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .spawn()
-            .expect("failed to start example_data_provider binary");
+            .expect("should be able to start example_data_provider binary");
 
         *SERVER_CHILD.lock().unwrap() = Some(child);
 
@@ -41,7 +41,7 @@ fn ensure_server() {
             }
             std::thread::sleep(Duration::from_millis(50));
         }
-        panic!("example_data_provider did not become ready within 5 s");
+        panic!("example_data_provider should become ready within 5 s");
     });
 }
 
@@ -67,7 +67,7 @@ fn get_manifest(client: &Client) -> Manifest {
         .get(manifest_url())
         .bearer_auth("test-token")
         .send()
-        .expect("manifest request failed");
+        .expect("manifest request should succeed");
     assert_eq!(resp.status(), 200, "manifest endpoint should return 200");
     resp.json()
         .expect("response should deserialize as Manifest")
@@ -78,7 +78,7 @@ fn get_manifest(client: &Client) -> Manifest {
 fn streamed(source: &UpstreamSource) -> &StreamedSource {
     match source {
         UpstreamSource::Streamed(s) => s,
-        other => panic!("expected Streamed source, got {other:?}"),
+        other => panic!("source should be Streamed, got {other:?}"),
     }
 }
 
@@ -95,12 +95,13 @@ fn manifest_conforms_to_api() {
         .get(manifest_url())
         .bearer_auth("test-token")
         .send()
-        .unwrap();
-    assert_eq!(resp.status(), 200);
-    let body: serde_json::Value = resp.json().unwrap();
+        .expect("manifest request should succeed");
+    assert_eq!(resp.status(), 200, "manifest endpoint should return 200");
+    let body: serde_json::Value = resp.json().expect("manifest response should be valid JSON");
 
     let schema: serde_json::Value =
-        serde_json::from_str(include_str!("data_provider_manifest_schema.json")).unwrap();
+        serde_json::from_str(include_str!("data_provider_manifest_schema.json"))
+            .expect("schema file should be valid JSON");
     let validator = jsonschema::options()
         .with_draft(jsonschema::Draft::Draft7)
         .build(&schema)
@@ -112,25 +113,26 @@ fn manifest_conforms_to_api() {
         .collect();
     assert!(
         errors.is_empty(),
-        "Manifest does not conform to the JSON schema:\n{}",
+        "manifest should conform to the JSON schema:\n{}",
         errors.join("\n")
     );
 
     // Deserialize into typed manifest and check internal consistency.
-    let manifest: Manifest = serde_json::from_value(body).unwrap();
+    let manifest: Manifest =
+        serde_json::from_value(body).expect("manifest should deserialize into typed Manifest");
     for source in &manifest.sources {
         let s = streamed(source);
         let schema_ids: HashSet<_> = s.schemas.iter().map(|s| s.id).collect();
         assert_eq!(
             schema_ids.len(),
             s.schemas.len(),
-            "schema IDs must be unique within a source"
+            "schema IDs should be unique within a source"
         );
         for topic in &s.topics {
             if let Some(sid) = topic.schema_id {
                 assert!(
                     schema_ids.contains(&sid),
-                    "topic '{}' references schemaId {sid} which is not in schemas",
+                    "topic '{}' references schemaId {sid} which should exist in schemas",
                     topic.name,
                 );
             }
@@ -156,10 +158,10 @@ fn mcap_data_matches_manifest() {
             .get(&full_url)
             .bearer_auth("test-token")
             .send()
-            .expect("data request failed");
+            .expect("data request should succeed");
         assert_eq!(resp.status(), 200, "data endpoint should return 200");
 
-        let mcap_bytes = resp.bytes().expect("failed to read body");
+        let mcap_bytes = resp.bytes().expect("should be able to read response body");
         assert!(!mcap_bytes.is_empty(), "MCAP response should not be empty");
 
         // --- MCAP is structurally valid ----------------------------------
@@ -177,16 +179,19 @@ fn mcap_data_matches_manifest() {
             let mcap_schema = summary
                 .schemas
                 .get(&ms.id.get())
-                .unwrap_or_else(|| panic!("manifest schema {} not in MCAP", ms.id));
-            assert_eq!(mcap_schema.name, ms.name, "schema name mismatch");
+                .unwrap_or_else(|| panic!("manifest schema {} should exist in MCAP", ms.id));
+            assert_eq!(
+                mcap_schema.name, ms.name,
+                "MCAP schema name should match manifest"
+            );
             assert_eq!(
                 mcap_schema.encoding, ms.encoding,
-                "schema encoding mismatch"
+                "MCAP schema encoding should match manifest"
             );
             assert_eq!(
                 mcap_schema.data.as_ref(),
                 ms.data.as_ref(),
-                "schema data mismatch"
+                "MCAP schema data should match manifest"
             );
         }
 
@@ -198,17 +203,19 @@ fn mcap_data_matches_manifest() {
                 .iter()
                 .find(|t| t.name == channel.topic)
                 .unwrap_or_else(|| {
-                    panic!("MCAP channel '{}' not found in manifest", channel.topic)
+                    panic!(
+                        "MCAP channel '{}' should have a corresponding manifest topic",
+                        channel.topic
+                    )
                 });
             if let Some(expected_sid) = mt.schema_id {
-                let schema = channel
-                    .schema
-                    .as_ref()
-                    .unwrap_or_else(|| panic!("MCAP channel '{}' missing schema", channel.topic));
+                let schema = channel.schema.as_ref().unwrap_or_else(|| {
+                    panic!("MCAP channel '{}' should have a schema", channel.topic)
+                });
                 assert_eq!(
                     schema.id,
                     expected_sid.get(),
-                    "channel '{}' schema id mismatch",
+                    "MCAP channel '{}' schema id should match manifest",
                     channel.topic
                 );
             }
@@ -217,8 +224,10 @@ fn mcap_data_matches_manifest() {
         // --- Every message is on a known topic with matching encoding ----
 
         let mut seen_topics = HashSet::new();
-        for message in mcap::MessageStream::new(&mcap_bytes[..]).unwrap() {
-            let message = message.expect("failed to read MCAP message");
+        for message in mcap::MessageStream::new(&mcap_bytes[..])
+            .expect("should be able to create message stream")
+        {
+            let message = message.expect("should be able to read MCAP message");
             let topic = &message.channel.topic;
             seen_topics.insert(topic.clone());
 
@@ -226,17 +235,19 @@ fn mcap_data_matches_manifest() {
                 .topics
                 .iter()
                 .find(|t| t.name == *topic)
-                .unwrap_or_else(|| panic!("MCAP topic '{topic}' not in manifest"));
+                .unwrap_or_else(|| {
+                    panic!("MCAP topic '{topic}' should have a corresponding manifest topic")
+                });
             assert_eq!(
                 message.channel.message_encoding, mt.message_encoding,
-                "encoding mismatch for topic '{topic}'"
+                "MCAP message encoding for topic '{topic}' should match manifest"
             );
         }
 
         for mt in &s.topics {
             assert!(
                 seen_topics.contains(&mt.name),
-                "manifest topic '{}' has no messages in MCAP",
+                "manifest topic '{}' should have messages in MCAP",
                 mt.name
             );
         }
