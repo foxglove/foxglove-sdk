@@ -173,19 +173,19 @@ void manifest_handler(const httplib::Request& req, httplib::Response& res) {
   dp::StreamedSource source;
   // We're providing the data from this service in this example, but in principle this could
   // be any URL.
-  source.url = std::string(DATA_ROUTE).append("?").append(query);
+  source.url = DATA_ROUTE + std::string("?") + query;
   // `id` must be unique to this data source. Otherwise, incorrect data may be served from cache.
   //
   // Here we reuse the query string to make sure we don't forget any parameters. We also
   // include a version number we increment whenever we change the data handler.
-  source.id = std::string("flight-v1-").append(query);
+  source.id = "flight-v1-" + query;
   source.topics = std::move(channels.topics);
   source.schemas = std::move(channels.schemas);
   source.start_time = format_iso8601(params->start_time);
   source.end_time = format_iso8601(params->end_time);
 
   dp::Manifest manifest;
-  manifest.name = std::string("Flight ").append(params->flight_id);
+  manifest.name = "Flight " + params->flight_id;
   manifest.sources = {std::move(source)};
 
   nlohmann::json j = manifest;
