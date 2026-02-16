@@ -157,33 +157,22 @@ fn mcap_data_matches_manifest(client: &Client, manifest: &Manifest) {
         let stats = summary.stats.as_ref().expect("MCAP should have stats");
         assert!(stats.message_count > 0, "MCAP should contain messages");
 
-        // --- Schemas in MCAP match the manifest --------------------------
-
-        for ms in &s.schemas {
-            let mcap_schema = summary
-                .schemas
-                .get(&ms.id.get())
-                .unwrap_or_else(|| panic!("manifest schema {} should exist in MCAP", ms.id));
-            assert_eq!(
-                mcap_schema.name, ms.name,
-                "MCAP schema name should match manifest"
-            );
-            assert_eq!(
-                mcap_schema.encoding, ms.encoding,
-                "MCAP schema encoding should match manifest"
-            );
-            assert_eq!(
-                mcap_schema.data.as_ref(),
-                ms.data.as_ref(),
-                "MCAP schema data should match manifest"
-            );
-        }
-
-        // Index manifest topics by name for O(1) lookups below.
+        // Index manifest entries by name / id for O(1) lookups.
         let topics_by_name: HashMap<&str, &foxglove::data_provider::Topic> =
             s.topics.iter().map(|t| (t.name.as_str(), t)).collect();
+        let schemas_by_id: HashMap<u16, &foxglove::data_provider::Schema> =
+            s.schemas.iter().map(|s| (s.id.get(), s)).collect();
 
         // --- Every message's channel should match a manifest topic --------
+        //
+        // For each message we check that:
+        //   - the topic is declared in the manifest,
+        //   - the channel's message encoding matches, and
+        //   - if a schema is declared, the schema's name, encoding, and data
+        //     match the manifest (not just the id).
+        //
+        // `seen_topics` tracks which manifest topics actually had messages,
+        // so we can verify at the end that no manifest topic went unseen.
 
         let mut seen_topics = HashSet::new();
         for message in mcap::MessageStream::new(&mcap_bytes[..])
@@ -204,13 +193,27 @@ fn mcap_data_matches_manifest(client: &Client, manifest: &Manifest) {
             );
 
             if let Some(expected_sid) = mt.schema_id {
-                let schema = channel.schema.as_ref().unwrap_or_else(|| {
+                let mcap_schema = channel.schema.as_ref().unwrap_or_else(|| {
                     panic!("MCAP channel for topic '{topic}' should have a schema")
                 });
+                let manifest_schema = schemas_by_id.get(&expected_sid.get()).unwrap_or_else(|| {
+                    panic!(
+                        "manifest schemaId {} for topic '{topic}' should exist in schemas",
+                        expected_sid
+                    )
+                });
                 assert_eq!(
-                    schema.id,
-                    expected_sid.get(),
-                    "MCAP schema id for topic '{topic}' should match manifest"
+                    mcap_schema.name, manifest_schema.name,
+                    "MCAP schema name for topic '{topic}' should match manifest"
+                );
+                assert_eq!(
+                    mcap_schema.encoding, manifest_schema.encoding,
+                    "MCAP schema encoding for topic '{topic}' should match manifest"
+                );
+                assert_eq!(
+                    mcap_schema.data.as_ref(),
+                    manifest_schema.data.as_ref(),
+                    "MCAP schema data for topic '{topic}' should match manifest"
                 );
             }
         }
