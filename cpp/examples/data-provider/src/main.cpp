@@ -265,7 +265,6 @@ void data_handler(const httplib::Request& req, httplib::Response& res) {
       options.context = context;
       options.custom_writer = custom_writer;
       options.disable_seeking = true;
-      options.compression = foxglove::McapCompression::None;
       options.chunk_size = 64 * 1024;
 
       auto writer_result = foxglove::McapWriter::create(options);
