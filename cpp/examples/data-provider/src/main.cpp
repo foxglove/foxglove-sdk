@@ -44,9 +44,11 @@
 
 #include <date/date.h>
 
+#include <algorithm>
 #include <cerrno>
 #include <chrono>
 #include <cstdint>
+#include <cstdio>
 #include <httplib.h>
 #include <iostream>
 #include <optional>
@@ -206,12 +208,9 @@ void data_handler(const httplib::Request& req, httplib::Response& res) {
     return;
   }
 
-  // Capture parameters for the content provider lambda (which may outlive this handler).
-  auto flight_params = std::move(*params);
-
   res.set_chunked_content_provider(
     "application/octet-stream",
-    [flight_params = std::move(flight_params)](size_t /*offset*/, httplib::DataSink& sink) {
+    [params = std::move(*params)](size_t /*offset*/, httplib::DataSink& sink) {
       // Create a dedicated context for this request's MCAP output.
       auto context = foxglove::Context::create();
 
@@ -230,16 +229,16 @@ void data_handler(const httplib::Request& req, httplib::Response& res) {
       custom_writer.flush = []() -> int {
         return 0;
       };
-      // Support position queries (SEEK_CUR with offset 0) but reject actual seeking.
-      // The MCAP writer may query the current position even with disable_seeking = true.
+      // Support position queries but reject actual seeking. The MCAP writer may query
+      // the current position even with disable_seeking = true.
       custom_writer.seek = [&write_position](int64_t pos, int whence, uint64_t* new_pos) -> int {
-        if (whence == 1 && pos == 0) {
+        if (whence == SEEK_CUR && pos == 0) {
           if (new_pos != nullptr) {
             *new_pos = write_position;
           }
           return 0;
         }
-        if (whence == 0 && static_cast<uint64_t>(pos) == write_position) {
+        if (whence == SEEK_SET && static_cast<uint64_t>(pos) == write_position) {
           if (new_pos != nullptr) {
             *new_pos = write_position;
           }
@@ -279,35 +278,32 @@ void data_handler(const httplib::Request& req, httplib::Response& res) {
       // probably query a database or other storage.
       //
       // This simulated dataset consists of messages emitted every second from the Unix epoch.
-      std::cerr << "[data_provider] streaming data for flight " << flight_params.flight_id << "\n";
+      std::cerr << "[data_provider] streaming data for flight " << params.flight_id << "\n";
 
       // Clamp start time to epoch (ignore negative start times).
-      auto start = flight_params.start_time;
-      auto epoch = system_clock::time_point{};
-      if (start < epoch) {
-        start = epoch;
-      }
+      auto start = std::max(params.start_time, system_clock::time_point{});
 
       // Compute timestamp of first message by rounding the start time up to the second.
       auto ts = date::ceil<std::chrono::seconds>(start);
 
-      while (ts <= flight_params.end_time) {
+      while (ts <= params.end_time) {
         // Messages in the output MUST appear in ascending timestamp order. Otherwise, playback
         // will be incorrect.
-        auto secs_since_epoch =
-          std::chrono::duration_cast<std::chrono::seconds>(ts.time_since_epoch());
-
         foxglove::schemas::Vector3 msg;
-        msg.x = static_cast<double>(secs_since_epoch.count());
+        msg.x = static_cast<double>(
+          std::chrono::duration_cast<std::chrono::seconds>(ts.time_since_epoch()).count()
+        );
         msg.y = 0.0;
         msg.z = 0.0;
 
-        // Convert to nanoseconds since the Unix epoch. system_clock's epoch is the Unix
-        // epoch in C++20; not guaranteed by C++17 but true on all major implementations.
-        auto log_time = static_cast<uint64_t>(
-          std::chrono::duration_cast<std::chrono::nanoseconds>(ts.time_since_epoch()).count()
+        // Log with an explicit nanosecond timestamp. This assumes system_clock uses the
+        // Unix epoch, which is guaranteed by C++20 but not C++17 (true in practice on all
+        // major implementations).
+        channel.log(
+          msg,
+          static_cast<uint64_t>(date::floor<std::chrono::nanoseconds>(ts).time_since_epoch().count()
+          )
         );
-        channel.log(msg, log_time);
 
         // Periodically flush buffered data to the response stream. This serves two purposes:
         // the client receives data incrementally instead of all at once, and memory usage stays
