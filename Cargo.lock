@@ -922,7 +922,6 @@ name = "example_data_provider"
 version = "0.0.0"
 dependencies = [
  "axum",
- "base64",
  "chrono",
  "foxglove 0.17.2",
  "futures",

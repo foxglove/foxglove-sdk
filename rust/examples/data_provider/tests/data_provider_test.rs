@@ -8,15 +8,14 @@
 //! The tests launch the example binary as a subprocess and make real HTTP
 //! requests against it, so no changes to the example code are needed.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::net::TcpStream;
 use std::process::{Child, Stdio};
 use std::sync::{Mutex, Once};
 use std::time::Duration;
 
-use base64::Engine;
+use foxglove::data_provider::{Manifest, StreamedSource, UpstreamSource};
 use reqwest::blocking::Client;
-use serde_json::Value;
 
 const BASE_URL: &str = "http://127.0.0.1:8080";
 const BIND_ADDR: &str = "127.0.0.1:8080";
@@ -62,16 +61,25 @@ fn resolve_data_url(url: &str) -> String {
     }
 }
 
-/// Fetch the manifest, asserting a 200 response.
-fn get_manifest(client: &Client) -> Value {
+/// Fetch and deserialize the manifest, asserting a 200 response.
+fn get_manifest(client: &Client) -> Manifest {
     let resp = client
         .get(manifest_url())
         .bearer_auth("test-token")
         .send()
         .expect("manifest request failed");
-
     assert_eq!(resp.status(), 200, "manifest endpoint should return 200");
-    resp.json().expect("response should be valid JSON")
+    resp.json()
+        .expect("response should deserialize as Manifest")
+}
+
+/// Extract the [`StreamedSource`] from an [`UpstreamSource`], panicking on
+/// static-file sources (which this example does not produce).
+fn streamed(source: &UpstreamSource) -> &StreamedSource {
+    match source {
+        UpstreamSource::Streamed(s) => s,
+        other => panic!("expected Streamed source, got {other:?}"),
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -81,51 +89,49 @@ fn get_manifest(client: &Client) -> Value {
 #[test]
 fn manifest_conforms_to_api() {
     ensure_server();
-    let manifest = get_manifest(&Client::new());
 
-    // --- JSON schema validation ------------------------------------------
+    // Fetch as raw JSON for schema validation.
+    let resp = Client::new()
+        .get(manifest_url())
+        .bearer_auth("test-token")
+        .send()
+        .unwrap();
+    assert_eq!(resp.status(), 200);
+    let body: serde_json::Value = resp.json().unwrap();
 
-    let schema: Value =
+    let schema: serde_json::Value =
         serde_json::from_str(include_str!("data_provider_manifest_schema.json")).unwrap();
-
     let validator = jsonschema::options()
         .with_draft(jsonschema::Draft::Draft7)
         .build(&schema)
         .expect("schema should compile");
 
     let errors: Vec<String> = validator
-        .iter_errors(&manifest)
+        .iter_errors(&body)
         .map(|e| format!("  - {e}"))
         .collect();
-
     assert!(
         errors.is_empty(),
         "Manifest does not conform to the JSON schema:\n{}",
         errors.join("\n")
     );
 
-    // --- Internal consistency --------------------------------------------
-
-    for source in manifest["sources"].as_array().unwrap() {
-        let schema_ids: HashSet<u64> = source["schemas"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .map(|s| s["id"].as_u64().unwrap())
-            .collect();
-
+    // Deserialize into typed manifest and check internal consistency.
+    let manifest: Manifest = serde_json::from_value(body).unwrap();
+    for source in &manifest.sources {
+        let s = streamed(source);
+        let schema_ids: HashSet<_> = s.schemas.iter().map(|s| s.id).collect();
         assert_eq!(
             schema_ids.len(),
-            source["schemas"].as_array().unwrap().len(),
+            s.schemas.len(),
             "schema IDs must be unique within a source"
         );
-
-        for topic in source["topics"].as_array().unwrap() {
-            if let Some(sid) = topic.get("schemaId").and_then(|v| v.as_u64()) {
+        for topic in &s.topics {
+            if let Some(sid) = topic.schema_id {
                 assert!(
                     schema_ids.contains(&sid),
                     "topic '{}' references schemaId {sid} which is not in schemas",
-                    topic["name"].as_str().unwrap_or("<unknown>"),
+                    topic.name,
                 );
             }
         }
@@ -142,15 +148,15 @@ fn mcap_data_matches_manifest() {
     let client = Client::new();
     let manifest = get_manifest(&client);
 
-    for source in manifest["sources"].as_array().unwrap() {
-        let full_url = resolve_data_url(source["url"].as_str().unwrap());
+    for source in &manifest.sources {
+        let s = streamed(source);
+        let full_url = resolve_data_url(&s.url);
 
         let resp = client
             .get(&full_url)
             .bearer_auth("test-token")
             .send()
             .expect("data request failed");
-
         assert_eq!(resp.status(), 200, "data endpoint should return 200");
 
         let mcap_bytes = resp.bytes().expect("failed to read body");
@@ -165,110 +171,73 @@ fn mcap_data_matches_manifest() {
         let stats = summary.stats.as_ref().expect("MCAP should have stats");
         assert!(stats.message_count > 0, "MCAP should contain messages");
 
-        // --- Build manifest lookups --------------------------------------
+        // --- Schemas in MCAP match the manifest --------------------------
 
-        // topic name -> (messageEncoding, schemaId)
-        let manifest_topics: HashMap<&str, (&str, Option<u64>)> = source["topics"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .map(|t| {
-                (
-                    t["name"].as_str().unwrap(),
-                    (
-                        t["messageEncoding"].as_str().unwrap(),
-                        t.get("schemaId").and_then(|v| v.as_u64()),
-                    ),
-                )
-            })
-            .collect();
-
-        // schema id -> (name, encoding, decoded data)
-        let manifest_schemas: HashMap<u64, (&str, &str, Vec<u8>)> = source["schemas"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .map(|s| {
-                (
-                    s["id"].as_u64().unwrap(),
-                    (
-                        s["name"].as_str().unwrap(),
-                        s["encoding"].as_str().unwrap(),
-                        base64::engine::general_purpose::STANDARD
-                            .decode(s["data"].as_str().unwrap())
-                            .expect("schema data should be valid base64"),
-                    ),
-                )
-            })
-            .collect();
-
-        // --- Schemas in MCAP match the manifest -------------------------
-
-        for (&mid, (m_name, m_enc, m_data)) in &manifest_schemas {
+        for ms in &s.schemas {
             let mcap_schema = summary
                 .schemas
-                .get(&(mid as u16))
-                .unwrap_or_else(|| panic!("manifest schema id {mid} not in MCAP"));
-
-            assert_eq!(mcap_schema.name, *m_name, "schema name mismatch (id {mid})");
+                .get(&ms.id.get())
+                .unwrap_or_else(|| panic!("manifest schema {} not in MCAP", ms.id));
+            assert_eq!(mcap_schema.name, ms.name, "schema name mismatch");
             assert_eq!(
-                mcap_schema.encoding, *m_enc,
-                "schema encoding mismatch (id {mid})"
+                mcap_schema.encoding, ms.encoding,
+                "schema encoding mismatch"
             );
             assert_eq!(
                 mcap_schema.data.as_ref(),
-                m_data.as_slice(),
-                "schema data mismatch (id {mid})"
+                ms.data.as_ref(),
+                "schema data mismatch"
             );
         }
 
-        // --- Channels in MCAP match the manifest topics -----------------
+        // --- Channels in MCAP match the manifest topics ------------------
 
         for channel in summary.channels.values() {
-            let &(_, manifest_sid) =
-                manifest_topics
-                    .get(channel.topic.as_str())
-                    .unwrap_or_else(|| {
-                        panic!("MCAP channel '{}' not found in manifest", channel.topic)
-                    });
-
-            if let Some(expected_sid) = manifest_sid {
-                let schema = channel.schema.as_ref().unwrap_or_else(|| {
-                    panic!(
-                        "MCAP channel '{}' has no schema but manifest declares schemaId {expected_sid}",
-                        channel.topic
-                    )
+            let mt = s
+                .topics
+                .iter()
+                .find(|t| t.name == channel.topic)
+                .unwrap_or_else(|| {
+                    panic!("MCAP channel '{}' not found in manifest", channel.topic)
                 });
+            if let Some(expected_sid) = mt.schema_id {
+                let schema = channel
+                    .schema
+                    .as_ref()
+                    .unwrap_or_else(|| panic!("MCAP channel '{}' missing schema", channel.topic));
                 assert_eq!(
-                    schema.id as u64, expected_sid,
+                    schema.id,
+                    expected_sid.get(),
                     "channel '{}' schema id mismatch",
                     channel.topic
                 );
             }
         }
 
-        // --- Every message is on a known topic with matching encoding ---
+        // --- Every message is on a known topic with matching encoding ----
 
         let mut seen_topics = HashSet::new();
         for message in mcap::MessageStream::new(&mcap_bytes[..]).unwrap() {
             let message = message.expect("failed to read MCAP message");
-            let topic = message.channel.topic.as_str();
-            seen_topics.insert(topic.to_string());
+            let topic = &message.channel.topic;
+            seen_topics.insert(topic.clone());
 
-            let &(expected_enc, _) = manifest_topics
-                .get(topic)
+            let mt = s
+                .topics
+                .iter()
+                .find(|t| t.name == *topic)
                 .unwrap_or_else(|| panic!("MCAP topic '{topic}' not in manifest"));
-
             assert_eq!(
-                message.channel.message_encoding, expected_enc,
+                message.channel.message_encoding, mt.message_encoding,
                 "encoding mismatch for topic '{topic}'"
             );
         }
 
-        for &topic in manifest_topics.keys() {
+        for mt in &s.topics {
             assert!(
-                seen_topics.contains(topic),
-                "manifest topic '{topic}' has no messages in MCAP"
+                seen_topics.contains(&mt.name),
+                "manifest topic '{}' has no messages in MCAP",
+                mt.name
             );
         }
     }
