@@ -36,9 +36,7 @@
 ///   mcap info data.mcap
 /// @endcode
 
-#include <foxglove/context.hpp>
 #include <foxglove/data_provider.hpp>
-#include <foxglove/error.hpp>
 #include <foxglove/mcap.hpp>
 #include <foxglove/schemas.hpp>
 
