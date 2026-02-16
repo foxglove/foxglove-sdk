@@ -1,6 +1,7 @@
 //! Reusable test suite for data provider HTTP API implementations.
 //!
-//! This module checks that a running data provider:
+//! Enabled by the `test-harness` feature. This module checks that a running
+//! data provider:
 //! 1. Returns a manifest that conforms to the JSON schema.
 //! 2. Serves MCAP data whose channels and schemas match the manifest.
 //! 3. Requires authentication.
@@ -21,6 +22,8 @@
 //! };
 //! example_data_provider::run_tests(&config);
 //! ```
+
+#![cfg(feature = "test-harness")]
 
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
