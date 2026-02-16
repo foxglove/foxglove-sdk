@@ -266,9 +266,8 @@ async fn mcap_channels_match_manifest_topics() {
                     )
                 });
 
-                let (exp_name, exp_enc, exp_data) = manifest_schemas
-                    .get(manifest_sid)
-                    .unwrap_or_else(|| {
+                let (exp_name, exp_enc, exp_data) =
+                    manifest_schemas.get(manifest_sid).unwrap_or_else(|| {
                         panic!("manifest schemaId {manifest_sid} not found in schemas array")
                     });
 
@@ -338,13 +337,10 @@ async fn mcap_schemas_match_manifest_schemas() {
             .collect();
 
         for (mid, (m_name, m_enc, m_data)) in &manifest_schemas {
-            let mcap_schema =
-                summary
-                    .schemas
-                    .get(&(*mid as u16))
-                    .unwrap_or_else(|| {
-                        panic!("manifest schema id {mid} not found in MCAP schemas")
-                    });
+            let mcap_schema = summary
+                .schemas
+                .get(&(*mid as u16))
+                .unwrap_or_else(|| panic!("manifest schema id {mid} not found in MCAP schemas"));
 
             assert_eq!(
                 mcap_schema.name, *m_name,
@@ -375,15 +371,14 @@ async fn mcap_schemas_match_manifest_schemas() {
             .collect();
 
         for channel in summary.channels.values() {
-            let manifest_sid =
-                manifest_topics
-                    .get(channel.topic.as_str())
-                    .unwrap_or_else(|| {
-                        panic!(
-                            "MCAP channel topic '{}' not found in manifest topics",
-                            channel.topic
-                        )
-                    });
+            let manifest_sid = manifest_topics
+                .get(channel.topic.as_str())
+                .unwrap_or_else(|| {
+                    panic!(
+                        "MCAP channel topic '{}' not found in manifest topics",
+                        channel.topic
+                    )
+                });
 
             if let Some(expected_sid) = manifest_sid {
                 let schema = channel.schema.as_ref().unwrap_or_else(|| {
@@ -411,11 +406,7 @@ async fn manifest_requires_auth() {
     ensure_server();
     let client = reqwest::Client::new();
 
-    let resp = client
-        .get(manifest_url())
-        .send()
-        .await
-        .unwrap();
+    let resp = client.get(manifest_url()).send().await.unwrap();
 
     assert_eq!(
         resp.status(),
