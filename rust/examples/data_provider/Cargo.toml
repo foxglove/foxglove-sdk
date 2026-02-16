@@ -18,11 +18,7 @@ tracing = { version = "0.1", features = ["log"] }
 tracing-subscriber = "0.3"
 
 [dev-dependencies]
-jsonschema = "0.28"
-libtest-mimic = "0.8"
-mcap.workspace = true
-reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls"] }
-serde_json = "1.0"
+data_provider_tests = { path = "../data_provider_tests" }
 tokio = { workspace = true, features = ["process", "rt"] }
 
 [[test]]
