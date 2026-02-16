@@ -11,7 +11,7 @@
 use std::collections::HashSet;
 use std::net::TcpStream;
 use std::process::{Child, Stdio};
-use std::sync::{Mutex, Once, OnceLock};
+use std::sync::{LazyLock, Mutex, Once};
 use std::time::Duration;
 
 use foxglove::data_provider::{Manifest, StreamedSource, UpstreamSource};
@@ -49,31 +49,21 @@ fn ensure_server() {
     });
 }
 
-/// The manifest response, cached as both raw JSON (for schema validation) and
-/// as a deserialized [`Manifest`] (for typed assertions).
-struct CachedManifest {
-    json: serde_json::Value,
-    typed: Manifest,
-}
-
-static MANIFEST: OnceLock<CachedManifest> = OnceLock::new();
-
-/// Return the cached manifest, fetching it on first call.
-fn manifest() -> &'static CachedManifest {
-    MANIFEST.get_or_init(|| {
-        ensure_server();
-        let resp = Client::new()
-            .get(manifest_url())
-            .bearer_auth("test-token")
-            .send()
-            .expect("manifest request should succeed");
-        assert_eq!(resp.status(), 200, "manifest endpoint should return 200");
-        let json: serde_json::Value = resp.json().expect("manifest response should be valid JSON");
-        let typed: Manifest = serde_json::from_value(json.clone())
-            .expect("manifest should deserialize into typed Manifest");
-        CachedManifest { json, typed }
-    })
-}
+/// The manifest response, fetched once and cached as both raw JSON (for schema
+/// validation) and as a deserialized [`Manifest`] (for typed assertions).
+static MANIFEST: LazyLock<(serde_json::Value, Manifest)> = LazyLock::new(|| {
+    ensure_server();
+    let resp = Client::new()
+        .get(manifest_url())
+        .bearer_auth("test-token")
+        .send()
+        .expect("manifest request should succeed");
+    assert_eq!(resp.status(), 200, "manifest endpoint should return 200");
+    let json: serde_json::Value = resp.json().expect("manifest response should be valid JSON");
+    let typed: Manifest = serde_json::from_value(json.clone())
+        .expect("manifest should deserialize into typed Manifest");
+    (json, typed)
+});
 
 fn manifest_url() -> String {
     format!(
@@ -106,7 +96,7 @@ fn streamed(source: &UpstreamSource) -> &StreamedSource {
 
 #[test]
 fn manifest_matches_json_schema() {
-    let m = manifest();
+    let (ref json, _) = *MANIFEST;
 
     let schema: serde_json::Value =
         serde_json::from_str(include_str!("data_provider_manifest_schema.json"))
@@ -117,7 +107,7 @@ fn manifest_matches_json_schema() {
         .expect("schema should compile");
 
     let errors: Vec<String> = validator
-        .iter_errors(&m.json)
+        .iter_errors(json)
         .map(|e| format!("  - {e}"))
         .collect();
     assert!(
@@ -129,9 +119,9 @@ fn manifest_matches_json_schema() {
 
 #[test]
 fn manifest_schema_ids_are_consistent() {
-    let m = manifest();
+    let (_, ref manifest) = *MANIFEST;
 
-    for source in &m.typed.sources {
+    for source in &manifest.sources {
         let s = streamed(source);
         let schema_ids: HashSet<_> = s.schemas.iter().map(|s| s.id).collect();
         assert_eq!(
@@ -157,10 +147,10 @@ fn manifest_schema_ids_are_consistent() {
 
 #[test]
 fn mcap_data_matches_manifest() {
-    let m = manifest();
+    let (_, ref manifest) = *MANIFEST;
     let client = Client::new();
 
-    for source in &m.typed.sources {
+    for source in &manifest.sources {
         let s = streamed(source);
         let full_url = resolve_data_url(&s.url);
 
