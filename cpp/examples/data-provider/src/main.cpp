@@ -106,9 +106,14 @@ struct FlightParams {
 
   /// Build a query string for these parameters.
   std::string to_query_string() const {
-    return "flightId=" + httplib::encode_uri_component(flight_id) +
-           "&startTime=" + httplib::encode_uri_component(format_iso8601(start_time)) +
-           "&endTime=" + httplib::encode_uri_component(format_iso8601(end_time));
+    std::string q;
+    q += "flightId=";
+    q += httplib::encode_uri_component(flight_id);
+    q += "&startTime=";
+    q += httplib::encode_uri_component(format_iso8601(start_time));
+    q += "&endTime=";
+    q += httplib::encode_uri_component(format_iso8601(end_time));
+    return q;
   }
 };
 
@@ -143,7 +148,7 @@ bool check_auth(const httplib::Request& req) {
   }
   const auto& value = it->second;
   // Accept any non-empty bearer token.
-  return value.size() > 7 && value.substr(0, 7) == "Bearer ";
+  return value.size() > 7 && value.compare(0, 7, "Bearer ") == 0;
 }
 
 // ============================================================================
@@ -175,19 +180,19 @@ void manifest_handler(const httplib::Request& req, httplib::Response& res) {
   dp::StreamedSource source;
   // We're providing the data from this service in this example, but in principle this could
   // be any URL.
-  source.url = std::string(DATA_ROUTE) + "?" + query;
+  source.url = std::string(DATA_ROUTE).append("?").append(query);
   // `id` must be unique to this data source. Otherwise, incorrect data may be served from cache.
   //
   // Here we reuse the query string to make sure we don't forget any parameters. We also
   // include a version number we increment whenever we change the data handler.
-  source.id = "flight-v1-" + query;
+  source.id = std::string("flight-v1-").append(query);
   source.topics = std::move(channels.topics);
   source.schemas = std::move(channels.schemas);
   source.start_time = format_iso8601(params->start_time);
   source.end_time = format_iso8601(params->end_time);
 
   dp::Manifest manifest;
-  manifest.name = "Flight " + params->flight_id;
+  manifest.name = std::string("Flight ").append(params->flight_id);
   manifest.sources = {std::move(source)};
 
   nlohmann::json j = manifest;
