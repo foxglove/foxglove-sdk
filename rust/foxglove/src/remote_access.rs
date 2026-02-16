@@ -1,6 +1,13 @@
+mod capability;
+pub(crate) mod client;
 mod connection;
 mod credentials_provider;
+mod listener;
 mod participant;
+
+pub use capability::Capability;
+pub use client::Client;
+pub use listener::RemoteAccessListener;
 
 use thiserror::Error;
 

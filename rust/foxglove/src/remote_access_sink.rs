@@ -1,34 +1,14 @@
 use std::{collections::HashMap, sync::Arc, time::Duration};
 
 use crate::{
-    remote_access::{RemoteAccessConnection, RemoteAccessConnectionOptions},
+    remote_access::{
+        Capability, RemoteAccessConnection, RemoteAccessConnectionOptions, RemoteAccessListener,
+    },
     sink_channel_filter::{SinkChannelFilter, SinkChannelFilterFn},
-    websocket, ChannelDescriptor, Context, FoxgloveError,
+    ChannelDescriptor, Context, FoxgloveError,
 };
 
 use tokio::task::JoinHandle;
-pub use websocket::{ChannelView, Client, ClientChannel};
-
-/// Provides a mechanism for registering callbacks for handling client message events.
-///
-/// These methods are invoked from the client's main poll loop and must not block. If blocking or
-/// long-running behavior is required, the implementation should use [`tokio::task::spawn`] (or
-/// [`tokio::task::spawn_blocking`]).
-#[doc(hidden)]
-pub trait RemoteAccessSinkListener: Send + Sync {
-    /// Callback invoked when a client message is received.
-    fn on_message_data(&self, _client: Client, _client_channel: &ClientChannel, _payload: &[u8]) {}
-    /// Callback invoked when a client subscribes to a channel.
-    /// Only invoked if the channel is associated with the sink and isn't already subscribed to by the client.
-    fn on_subscribe(&self, _client: Client, _channel: ChannelView) {}
-    /// Callback invoked when a client unsubscribes from a channel or disconnects.
-    /// Only invoked for channels that had an active subscription from the client.
-    fn on_unsubscribe(&self, _client: Client, _channel: ChannelView) {}
-    /// Callback invoked when a client advertises a client channel.
-    fn on_client_advertise(&self, _client: Client, _channel: &ClientChannel) {}
-    /// Callback invoked when a client unadvertises a client channel.
-    fn on_client_unadvertise(&self, _client: Client, _channel: &ClientChannel) {}
-}
 
 /// A handle to the RemoteAccessSink connection.
 ///
@@ -97,9 +77,14 @@ impl RemoteAccessSink {
     }
 
     /// Configure an event listener to receive client message events.
-    pub fn listener(mut self, listener: Arc<dyn RemoteAccessSinkListener>) -> Self {
-        self.options.capabilities = vec![websocket::Capability::ClientPublish];
+    pub fn listener(mut self, listener: Arc<dyn RemoteAccessListener>) -> Self {
         self.options.listener = Some(listener);
+        self
+    }
+
+    /// Sets capabilities to advertise in the server info message.
+    pub fn capabilities(mut self, capabilities: impl IntoIterator<Item = Capability>) -> Self {
+        self.options.capabilities = capabilities.into_iter().collect();
         self
     }
 

@@ -1,7 +1,7 @@
 use std::{
     collections::{HashMap, HashSet},
     sync::Arc,
-    time::Duration,
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
 use bytes::Bytes;
@@ -18,10 +18,9 @@ use crate::{
     remote_access::{
         credentials_provider::CredentialsProvider,
         participant::{Participant, ParticipantWriter},
-        RemoteAccessError,
+        Capability, RemoteAccessError,
     },
-    websocket::{self, Server},
-    Context, RemoteAccessSinkListener, SinkChannelFilter,
+    Context, SinkChannelFilter,
 };
 
 use crate::protocol::v2::{server::ServerInfo, JsonMessage};
@@ -30,6 +29,15 @@ type Result<T> = std::result::Result<T, RemoteAccessError>;
 
 const WS_PROTOCOL_TOPIC: &str = "ws-protocol";
 const AUTH_RETRY_PERIOD: Duration = Duration::from_secs(30);
+
+/// Generate a session ID from the current timestamp.
+fn generate_session_id() -> String {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .ok()
+        .map(|d| d.as_millis().to_string())
+        .unwrap_or_default()
+}
 
 /// The operation code for the message framing for protocol v2.
 /// Distinguishes between frames containing JSON messages vs binary messages.
@@ -54,8 +62,8 @@ pub(crate) struct RemoteAccessConnectionOptions {
     pub foxglove_api_url: Option<String>,
     pub foxglove_api_timeout: Option<Duration>,
     pub session_id: String,
-    pub listener: Option<Arc<dyn RemoteAccessSinkListener>>,
-    pub capabilities: Vec<websocket::Capability>,
+    pub listener: Option<Arc<dyn crate::remote_access::RemoteAccessListener>>,
+    pub capabilities: Vec<Capability>,
     pub supported_encodings: Option<HashSet<String>>,
     pub runtime: Option<Handle>,
     pub channel_filter: Option<Arc<dyn SinkChannelFilter>>,
@@ -71,7 +79,7 @@ impl Default for RemoteAccessConnectionOptions {
             device_token: String::new(),
             foxglove_api_url: None,
             foxglove_api_timeout: None,
-            session_id: Server::generate_session_id(),
+            session_id: generate_session_id(),
             listener: None,
             capabilities: Vec::new(),
             supported_encodings: None,

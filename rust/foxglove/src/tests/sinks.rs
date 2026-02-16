@@ -1,9 +1,9 @@
-#[cfg(feature = "live_visualization")]
+#[cfg(feature = "websocket")]
 use std::io::BufWriter;
-#[cfg(feature = "live_visualization")]
+#[cfg(feature = "websocket")]
 use tempfile::NamedTempFile;
 
-#[cfg(feature = "live_visualization")]
+#[cfg(feature = "websocket")]
 use crate::{
     schemas::Log,
     testutil::{assert_eventually, read_summary},
@@ -14,7 +14,7 @@ use crate::{
     Channel, ChannelBuilder, Context, McapWriter, WebSocketServer,
 };
 
-#[cfg(feature = "live_visualization")]
+#[cfg(feature = "websocket")]
 macro_rules! expect_recv {
     ($client:expr, $variant:path) => {{
         let msg = $client.recv().await.expect("Failed to recv");
@@ -25,7 +25,7 @@ macro_rules! expect_recv {
     }};
 }
 
-#[cfg(feature = "live_visualization")]
+#[cfg(feature = "websocket")]
 #[tokio::test(flavor = "multi_thread")]
 async fn test_sink_channel_filtering_on_mcap_and_ws() {
     use crate::WebSocketClient;

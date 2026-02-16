@@ -1,5 +1,5 @@
 use std::{error::Error, fmt::Display};
-#[cfg(feature = "live_visualization")]
+#[cfg(feature = "websocket")]
 mod logging;
 mod schemas;
 mod sinks;
