@@ -183,50 +183,36 @@ fn mcap_data_matches_manifest(client: &Client, manifest: &Manifest) {
         let topics_by_name: HashMap<&str, &foxglove::data_provider::Topic> =
             s.topics.iter().map(|t| (t.name.as_str(), t)).collect();
 
-        // --- MCAP channels are on topics declared in the manifest --------
-
-        for channel in summary.channels.values() {
-            let mt = topics_by_name
-                .get(channel.topic.as_str())
-                .unwrap_or_else(|| {
-                    panic!(
-                        "MCAP topic '{}' should be declared in the manifest",
-                        channel.topic
-                    )
-                });
-            if let Some(expected_sid) = mt.schema_id {
-                let schema = channel.schema.as_ref().unwrap_or_else(|| {
-                    panic!(
-                        "MCAP topic '{}' should have an associated schema",
-                        channel.topic
-                    )
-                });
-                assert_eq!(
-                    schema.id,
-                    expected_sid.get(),
-                    "MCAP schema id for topic '{}' should match manifest",
-                    channel.topic
-                );
-            }
-        }
-
-        // --- Every message is on a known topic with matching encoding ----
+        // --- Every message's channel should match a manifest topic --------
 
         let mut seen_topics = HashSet::new();
         for message in mcap::MessageStream::new(&mcap_bytes[..])
             .expect("should be able to create message stream")
         {
             let message = message.expect("should be able to read MCAP message");
-            let topic = message.channel.topic.as_str();
+            let channel = &message.channel;
+            let topic = channel.topic.as_str();
             seen_topics.insert(topic.to_owned());
 
             let mt = topics_by_name.get(topic).unwrap_or_else(|| {
-                panic!("MCAP topic '{topic}' should be declared in the manifest")
+                panic!("MCAP message on topic '{topic}' should have a corresponding manifest entry")
             });
+
             assert_eq!(
-                message.channel.message_encoding, mt.message_encoding,
-                "MCAP message encoding for topic '{topic}' should match manifest"
+                channel.message_encoding, mt.message_encoding,
+                "MCAP channel encoding for topic '{topic}' should match manifest"
             );
+
+            if let Some(expected_sid) = mt.schema_id {
+                let schema = channel.schema.as_ref().unwrap_or_else(|| {
+                    panic!("MCAP channel for topic '{topic}' should have a schema")
+                });
+                assert_eq!(
+                    schema.id,
+                    expected_sid.get(),
+                    "MCAP schema id for topic '{topic}' should match manifest"
+                );
+            }
         }
 
         for name in topics_by_name.keys() {
