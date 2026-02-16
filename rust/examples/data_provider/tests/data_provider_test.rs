@@ -10,8 +10,8 @@
 
 use std::collections::HashSet;
 use std::net::TcpStream;
-use std::process::Stdio;
-use std::sync::{LazyLock, Once};
+use std::process::{Child, Stdio};
+use std::sync::{LazyLock, Mutex, Once};
 use std::time::Duration;
 
 use foxglove::data_provider::{Manifest, StreamedSource, UpstreamSource};
@@ -24,20 +24,37 @@ const BIND_ADDR: &str = "127.0.0.1:8080";
 // Shared fixtures
 // ---------------------------------------------------------------------------
 
+/// Holds the server child process so it can be killed at exit.
+static SERVER_CHILD: Mutex<Option<Child>> = Mutex::new(None);
+
+/// Kill the server child when the test process exits.
+extern "C" fn kill_server() {
+    if let Ok(mut guard) = SERVER_CHILD.lock() {
+        if let Some(ref mut child) = *guard {
+            let _ = child.kill();
+            let _ = child.wait();
+        }
+    }
+}
+
 /// Spawn the example binary exactly once and wait until it accepts connections.
 fn ensure_server() {
     static START: Once = Once::new();
     START.call_once(|| {
         let bin = env!("CARGO_BIN_EXE_example_data_provider");
-
-        // The child process intentionally outlives this scope — it runs until
-        // the test process exits, at which point the OS reaps it.
-        #[allow(clippy::zombie_processes)]
-        let _child = std::process::Command::new(bin)
+        let child = std::process::Command::new(bin)
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .spawn()
             .expect("should be able to start example_data_provider binary");
+        *SERVER_CHILD.lock().unwrap() = Some(child);
+
+        unsafe extern "C" {
+            fn atexit(f: extern "C" fn()) -> std::ffi::c_int;
+        }
+        // SAFETY: kill_server is a valid extern "C" function that accesses
+        // only a Mutex-protected global.
+        unsafe { atexit(kill_server) };
 
         for _ in 0..100 {
             if TcpStream::connect(BIND_ADDR).is_ok() {
