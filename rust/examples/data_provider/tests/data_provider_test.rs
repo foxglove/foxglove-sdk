@@ -11,7 +11,7 @@
 use std::collections::HashSet;
 use std::net::TcpStream;
 use std::process::{Child, Stdio};
-use std::sync::{Mutex, Once};
+use std::sync::{Mutex, Once, OnceLock};
 use std::time::Duration;
 
 use foxglove::data_provider::{Manifest, StreamedSource, UpstreamSource};
@@ -19,6 +19,10 @@ use reqwest::blocking::Client;
 
 const BASE_URL: &str = "http://127.0.0.1:8080";
 const BIND_ADDR: &str = "127.0.0.1:8080";
+
+// ---------------------------------------------------------------------------
+// Shared fixtures
+// ---------------------------------------------------------------------------
 
 static START_SERVER: Once = Once::new();
 static SERVER_CHILD: Mutex<Option<Child>> = Mutex::new(None);
@@ -45,6 +49,32 @@ fn ensure_server() {
     });
 }
 
+/// The manifest response, cached as both raw JSON (for schema validation) and
+/// as a deserialized [`Manifest`] (for typed assertions).
+struct CachedManifest {
+    json: serde_json::Value,
+    typed: Manifest,
+}
+
+static MANIFEST: OnceLock<CachedManifest> = OnceLock::new();
+
+/// Return the cached manifest, fetching it on first call.
+fn manifest() -> &'static CachedManifest {
+    MANIFEST.get_or_init(|| {
+        ensure_server();
+        let resp = Client::new()
+            .get(manifest_url())
+            .bearer_auth("test-token")
+            .send()
+            .expect("manifest request should succeed");
+        assert_eq!(resp.status(), 200, "manifest endpoint should return 200");
+        let json: serde_json::Value = resp.json().expect("manifest response should be valid JSON");
+        let typed: Manifest = serde_json::from_value(json.clone())
+            .expect("manifest should deserialize into typed Manifest");
+        CachedManifest { json, typed }
+    })
+}
+
 fn manifest_url() -> String {
     format!(
         "{BASE_URL}/v1/manifest?flightId=TEST123\
@@ -61,18 +91,6 @@ fn resolve_data_url(url: &str) -> String {
     }
 }
 
-/// Fetch and deserialize the manifest, asserting a 200 response.
-fn get_manifest(client: &Client) -> Manifest {
-    let resp = client
-        .get(manifest_url())
-        .bearer_auth("test-token")
-        .send()
-        .expect("manifest request should succeed");
-    assert_eq!(resp.status(), 200, "manifest endpoint should return 200");
-    resp.json()
-        .expect("response should deserialize as Manifest")
-}
-
 /// Extract the [`StreamedSource`] from an [`UpstreamSource`], panicking on
 /// static-file sources (which this example does not produce).
 fn streamed(source: &UpstreamSource) -> &StreamedSource {
@@ -87,17 +105,8 @@ fn streamed(source: &UpstreamSource) -> &StreamedSource {
 // ---------------------------------------------------------------------------
 
 #[test]
-fn manifest_conforms_to_api() {
-    ensure_server();
-
-    // Fetch as raw JSON for schema validation.
-    let resp = Client::new()
-        .get(manifest_url())
-        .bearer_auth("test-token")
-        .send()
-        .expect("manifest request should succeed");
-    assert_eq!(resp.status(), 200, "manifest endpoint should return 200");
-    let body: serde_json::Value = resp.json().expect("manifest response should be valid JSON");
+fn manifest_matches_json_schema() {
+    let m = manifest();
 
     let schema: serde_json::Value =
         serde_json::from_str(include_str!("data_provider_manifest_schema.json"))
@@ -108,7 +117,7 @@ fn manifest_conforms_to_api() {
         .expect("schema should compile");
 
     let errors: Vec<String> = validator
-        .iter_errors(&body)
+        .iter_errors(&m.json)
         .map(|e| format!("  - {e}"))
         .collect();
     assert!(
@@ -116,11 +125,13 @@ fn manifest_conforms_to_api() {
         "manifest should conform to the JSON schema:\n{}",
         errors.join("\n")
     );
+}
 
-    // Deserialize into typed manifest and check internal consistency.
-    let manifest: Manifest =
-        serde_json::from_value(body).expect("manifest should deserialize into typed Manifest");
-    for source in &manifest.sources {
+#[test]
+fn manifest_schema_ids_are_consistent() {
+    let m = manifest();
+
+    for source in &m.typed.sources {
         let s = streamed(source);
         let schema_ids: HashSet<_> = s.schemas.iter().map(|s| s.id).collect();
         assert_eq!(
@@ -146,11 +157,10 @@ fn manifest_conforms_to_api() {
 
 #[test]
 fn mcap_data_matches_manifest() {
-    ensure_server();
+    let m = manifest();
     let client = Client::new();
-    let manifest = get_manifest(&client);
 
-    for source in &manifest.sources {
+    for source in &m.typed.sources {
         let s = streamed(source);
         let full_url = resolve_data_url(&s.url);
 
