@@ -51,10 +51,10 @@
 #include <cstdio>
 #include <httplib.h>
 #include <iostream>
-#include <memory>
 #include <optional>
 #include <sstream>
 #include <string>
+#include <vector>
 
 namespace dp = foxglove::data_provider;
 using std::chrono::system_clock;
@@ -150,12 +150,11 @@ bool require_auth(const httplib::Request& req, httplib::Response& res) {
 }
 
 // ============================================================================
-// MCAP streaming state
+// MCAP streaming helpers
 // ============================================================================
 
-/// Holds the MCAP writer infrastructure and an intermediate buffer for streaming MCAP data
-/// to an HTTP response. This is allocated once per request and shared into the chunked content
-/// provider lambda via shared_ptr.
+/// Holds the buffer that sits between the MCAP writer and the HTTP response. MCAP data is
+/// written here by the CustomWriter, then flushed to the client via the DataSink.
 struct McapStreamState {
   std::vector<uint8_t> buffer;
   uint64_t write_position = 0;
@@ -252,8 +251,11 @@ void manifest_handler(const httplib::Request& req, httplib::Response& res) {
 /// Handler for `GET /v1/data`.
 ///
 /// Streams MCAP data for the requested flight. The response body is a stream of MCAP bytes.
-/// The chunked content provider lambda is called repeatedly by httplib; each invocation
-/// produces a batch of messages and flushes them to the client, keeping memory usage bounded.
+///
+/// httplib calls sink.write() synchronously to the socket, so data is sent to the client
+/// incrementally as it is produced -- there is no internal buffering beyond our MCAP chunk buffer.
+/// The content provider runs in httplib's thread pool, so it is safe to block here (e.g. on
+/// database I/O).
 void data_handler(const httplib::Request& req, httplib::Response& res) {
   if (!require_auth(req, res)) {
     return;
@@ -265,69 +267,51 @@ void data_handler(const httplib::Request& req, httplib::Response& res) {
     return;
   }
 
-  // Set up MCAP streaming state once, shared into the content provider lambda.
-  auto state = std::make_shared<McapStreamState>();
-
-  auto context = foxglove::Context::create();
-
-  foxglove::McapWriterOptions options;
-  options.context = context;
-  options.custom_writer = state->make_custom_writer();
-  options.disable_seeking = true;
-  options.compression = foxglove::McapCompression::None;
-  options.chunk_size = 64 * 1024;
-
-  auto writer_result = foxglove::McapWriter::create(options);
-  if (!writer_result.has_value()) {
-    std::cerr << "[data_provider] failed to create MCAP writer: "
-              << foxglove::strerror(writer_result.error()) << "\n";
-    res.status = 500;
-    res.set_content("Internal error", "text/plain");
-    return;
-  }
-
-  auto channel_result = foxglove::schemas::Vector3Channel::create("/demo", context);
-  if (!channel_result.has_value()) {
-    std::cerr << "[data_provider] failed to create channel: "
-              << foxglove::strerror(channel_result.error()) << "\n";
-    res.status = 500;
-    res.set_content("Internal error", "text/plain");
-    return;
-  }
-
-  // In this example, we query a simulated dataset, but in a real implementation you would
-  // probably query a database or other storage.
-  //
-  // This simulated dataset consists of messages emitted every second from the Unix epoch.
-  std::cerr << "[data_provider] streaming data for flight " << params->flight_id << "\n";
-
-  auto start = std::max(params->start_time, system_clock::time_point{});
-  auto first_ts = date::ceil<std::chrono::seconds>(start);
-
-  // The content provider lambda is called repeatedly by httplib. Each call produces a batch
-  // of messages and streams them to the client.
-  //
-  // McapWriter and Vector3Channel are move-only, so we wrap them in shared_ptr to satisfy
-  // std::function's copy requirement.
-  //
-  // To adapt this for a real data source, replace the timestamp loop with e.g. a database
-  // cursor, producing a batch of rows per invocation.
-  constexpr size_t BATCH_SIZE = 1024;
-  auto writer = std::make_shared<foxglove::McapWriter>(std::move(writer_result.value()));
-  auto channel =
-    std::make_shared<foxglove::schemas::Vector3Channel>(std::move(channel_result.value()));
-
   res.set_chunked_content_provider(
     "application/octet-stream",
-    [state,
-     context = std::move(context),
-     writer,
-     channel,
-     end_time = params->end_time,
-     ts = first_ts,
-     batch_size = BATCH_SIZE](size_t /*offset*/, httplib::DataSink& sink) mutable -> bool {
-      // Generate a batch of messages.
-      for (size_t i = 0; i < batch_size && ts <= end_time; ++i, ts += std::chrono::seconds(1)) {
+    [params = std::move(*params)](size_t /*offset*/, httplib::DataSink& sink) {
+      // Create a dedicated context for this request's MCAP output.
+      auto context = foxglove::Context::create();
+
+      McapStreamState stream_state;
+
+      foxglove::McapWriterOptions options;
+      options.context = context;
+      options.custom_writer = stream_state.make_custom_writer();
+      options.disable_seeking = true;
+      options.compression = foxglove::McapCompression::None;
+      options.chunk_size = 64 * 1024;
+
+      auto writer_result = foxglove::McapWriter::create(options);
+      if (!writer_result.has_value()) {
+        std::cerr << "[data_provider] failed to create MCAP writer: "
+                  << foxglove::strerror(writer_result.error()) << "\n";
+        sink.done();
+        return false;
+      }
+      auto writer = std::move(writer_result.value());
+
+      auto channel_result = foxglove::schemas::Vector3Channel::create("/demo", context);
+      if (!channel_result.has_value()) {
+        std::cerr << "[data_provider] failed to create channel: "
+                  << foxglove::strerror(channel_result.error()) << "\n";
+        sink.done();
+        return false;
+      }
+      auto channel = std::move(channel_result.value());
+
+      // In this example, we query a simulated dataset, but in a real implementation you would
+      // probably query a database or other storage. Because sink.write() sends data to the
+      // client immediately, you can iterate over a database cursor here and the client will
+      // receive data incrementally.
+      //
+      // This simulated dataset consists of messages emitted every second from the Unix epoch.
+      std::cerr << "[data_provider] streaming data for flight " << params.flight_id << "\n";
+
+      auto start = std::max(params.start_time, system_clock::time_point{});
+      auto ts = date::ceil<std::chrono::seconds>(start);
+
+      while (ts <= params.end_time) {
         // Messages in the output MUST appear in ascending timestamp order. Otherwise, playback
         // will be incorrect.
         foxglove::schemas::Vector3 msg;
@@ -340,32 +324,36 @@ void data_handler(const httplib::Request& req, httplib::Response& res) {
         // Log with an explicit nanosecond timestamp. This assumes system_clock uses the
         // Unix epoch, which is guaranteed by C++20 but not C++17 (true in practice on all
         // major implementations).
-        channel->log(
+        channel.log(
           msg,
           static_cast<uint64_t>(date::floor<std::chrono::nanoseconds>(ts).time_since_epoch().count()
           )
         );
-      }
 
-      // Flush buffered MCAP data to the HTTP response.
-      if (!state->flush_to(sink)) {
-        std::cerr << "[data_provider] client disconnected\n";
-        return false;
-      }
-
-      // If we've sent all messages, finalize the MCAP and close the stream.
-      if (ts > end_time) {
-        auto err = writer->close();
-        if (err != foxglove::FoxgloveError::Ok) {
-          std::cerr << "[data_provider] error closing MCAP writer: " << foxglove::strerror(err)
-                    << "\n";
+        // Periodically flush buffered MCAP data to the client. This keeps memory usage
+        // bounded and delivers data incrementally.
+        constexpr size_t FLUSH_THRESHOLD = 1024 * 1024;
+        if (stream_state.buffer.size() >= FLUSH_THRESHOLD) {
+          if (!stream_state.flush_to(sink)) {
+            std::cerr << "[data_provider] client disconnected\n";
+            return false;
+          }
         }
-        state->flush_to(sink);
-        sink.done();
-        return false;
+
+        ts += std::chrono::seconds(1);
       }
 
-      return true;
+      // Finalize the MCAP file (writes footer to the buffer).
+      auto err = writer.close();
+      if (err != foxglove::FoxgloveError::Ok) {
+        std::cerr << "[data_provider] error closing MCAP writer: " << foxglove::strerror(err)
+                  << "\n";
+      }
+
+      // Send any remaining buffered data and signal end of stream.
+      stream_state.flush_to(sink);
+      sink.done();
+      return false;
     }
   );
 }
