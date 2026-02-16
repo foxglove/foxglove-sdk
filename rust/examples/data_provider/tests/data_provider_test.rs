@@ -15,6 +15,7 @@ use std::sync::{Mutex, Once};
 use std::time::Duration;
 
 use base64::Engine;
+use reqwest::blocking::Client;
 use serde_json::Value;
 
 const BASE_URL: &str = "http://127.0.0.1:8080";
@@ -24,10 +25,6 @@ static START_SERVER: Once = Once::new();
 static SERVER_CHILD: Mutex<Option<Child>> = Mutex::new(None);
 
 /// Spawn the example binary exactly once and wait until it accepts connections.
-///
-/// The child process is stored in a global so the OS can reap it when the test
-/// process exits. This keeps every test in the file cheap (no per-test
-/// startup/shutdown) while requiring zero changes to the example itself.
 fn ensure_server() {
     START_SERVER.call_once(|| {
         let bin = env!("CARGO_BIN_EXE_example_data_provider");
@@ -39,7 +36,6 @@ fn ensure_server() {
 
         *SERVER_CHILD.lock().unwrap() = Some(child);
 
-        // Poll until the server accepts TCP connections.
         for _ in 0..100 {
             if TcpStream::connect(BIND_ADDR).is_ok() {
                 return;
@@ -50,7 +46,6 @@ fn ensure_server() {
     });
 }
 
-/// Build a manifest request URL with test parameters.
 fn manifest_url() -> String {
     format!(
         "{BASE_URL}/v1/manifest?flightId=TEST123\
@@ -59,13 +54,6 @@ fn manifest_url() -> String {
     )
 }
 
-/// Load the JSON schema from the co-located file.
-fn load_manifest_schema() -> Value {
-    serde_json::from_str(include_str!("data_provider_manifest_schema.json"))
-        .expect("schema file should be valid JSON")
-}
-
-/// Resolve a (possibly relative) URL from a manifest source against the base.
 fn resolve_data_url(url: &str) -> String {
     if url.starts_with("http://") || url.starts_with("https://") {
         url.to_string()
@@ -74,48 +62,41 @@ fn resolve_data_url(url: &str) -> String {
     }
 }
 
+/// Fetch the manifest, asserting a 200 response.
+fn get_manifest(client: &Client) -> Value {
+    let resp = client
+        .get(manifest_url())
+        .bearer_auth("test-token")
+        .send()
+        .expect("manifest request failed");
+
+    assert_eq!(resp.status(), 200, "manifest endpoint should return 200");
+    resp.json().expect("response should be valid JSON")
+}
+
 // ---------------------------------------------------------------------------
 // 1. Manifest conforms to the data provider HTTP API
 // ---------------------------------------------------------------------------
 
-/// Fetch the manifest once and validate it against the JSON schema and for
-/// internal consistency (unique schema IDs, referential integrity between
-/// topics and schemas).
-#[tokio::test(flavor = "multi_thread")]
-async fn manifest_conforms_to_api() {
+#[test]
+fn manifest_conforms_to_api() {
     ensure_server();
-
-    let client = reqwest::Client::new();
-    let resp = client
-        .get(manifest_url())
-        .header("Authorization", "Bearer test-token")
-        .send()
-        .await
-        .expect("manifest request failed");
-
-    assert_eq!(resp.status(), 200, "manifest endpoint should return 200");
-    let body: Value = resp.json().await.expect("response should be valid JSON");
+    let manifest = get_manifest(&Client::new());
 
     // --- JSON schema validation ------------------------------------------
 
-    let schema_value = load_manifest_schema();
-    let body_clone = body.clone();
+    let schema: Value =
+        serde_json::from_str(include_str!("data_provider_manifest_schema.json")).unwrap();
 
-    let errors = tokio::task::spawn_blocking(move || {
-        // The jsonschema crate may internally spawn a blocking tokio runtime
-        // when resolving meta-schemas, which conflicts with the test runtime.
-        let validator = jsonschema::options()
-            .with_draft(jsonschema::Draft::Draft7)
-            .build(&schema_value)
-            .expect("schema should compile successfully");
+    let validator = jsonschema::options()
+        .with_draft(jsonschema::Draft::Draft7)
+        .build(&schema)
+        .expect("schema should compile");
 
-        validator
-            .iter_errors(&body_clone)
-            .map(|e| format!("  - {e}"))
-            .collect::<Vec<String>>()
-    })
-    .await
-    .expect("spawn_blocking failed");
+    let errors: Vec<String> = validator
+        .iter_errors(&manifest)
+        .map(|e| format!("  - {e}"))
+        .collect();
 
     assert!(
         errors.is_empty(),
@@ -125,25 +106,24 @@ async fn manifest_conforms_to_api() {
 
     // --- Internal consistency --------------------------------------------
 
-    for source in body["sources"].as_array().unwrap() {
-        let schema_ids: Vec<u64> = source["schemas"]
+    for source in manifest["sources"].as_array().unwrap() {
+        let schema_ids: HashSet<u64> = source["schemas"]
             .as_array()
             .unwrap()
             .iter()
             .map(|s| s["id"].as_u64().unwrap())
             .collect();
 
-        let unique: HashSet<u64> = schema_ids.iter().copied().collect();
         assert_eq!(
-            unique.len(),
             schema_ids.len(),
+            source["schemas"].as_array().unwrap().len(),
             "schema IDs must be unique within a source"
         );
 
         for topic in source["topics"].as_array().unwrap() {
             if let Some(sid) = topic.get("schemaId").and_then(|v| v.as_u64()) {
                 assert!(
-                    unique.contains(&sid),
+                    schema_ids.contains(&sid),
                     "topic '{}' references schemaId {sid} which is not in schemas",
                     topic["name"].as_str().unwrap_or("<unknown>"),
                 );
@@ -156,48 +136,31 @@ async fn manifest_conforms_to_api() {
 // 2. MCAP data is valid and matches the manifest
 // ---------------------------------------------------------------------------
 
-/// Fetch the manifest once, then for each source follow the data URL and
-/// verify the MCAP is structurally valid and that its channels and schemas
-/// match the manifest declarations.
-#[tokio::test]
-async fn mcap_data_matches_manifest() {
+#[test]
+fn mcap_data_matches_manifest() {
     ensure_server();
-
-    let client = reqwest::Client::new();
-    let manifest: Value = client
-        .get(manifest_url())
-        .header("Authorization", "Bearer test-token")
-        .send()
-        .await
-        .unwrap()
-        .json()
-        .await
-        .unwrap();
+    let client = Client::new();
+    let manifest = get_manifest(&client);
 
     for source in manifest["sources"].as_array().unwrap() {
         let full_url = resolve_data_url(source["url"].as_str().unwrap());
 
         let resp = client
             .get(&full_url)
-            .header("Authorization", "Bearer test-token")
+            .bearer_auth("test-token")
             .send()
-            .await
             .expect("data request failed");
 
-        assert_eq!(
-            resp.status(),
-            200,
-            "data endpoint should return 200 for {full_url}"
-        );
+        assert_eq!(resp.status(), 200, "data endpoint should return 200");
 
-        let mcap_bytes = resp.bytes().await.expect("failed to read data body");
+        let mcap_bytes = resp.bytes().expect("failed to read body");
         assert!(!mcap_bytes.is_empty(), "MCAP response should not be empty");
 
         // --- MCAP is structurally valid ----------------------------------
 
         let summary = mcap::Summary::read(&mcap_bytes[..])
-            .expect("MCAP data should be readable")
-            .expect("MCAP should contain a summary section");
+            .expect("MCAP should be readable")
+            .expect("MCAP should contain a summary");
 
         let stats = summary.stats.as_ref().expect("MCAP should have stats");
         assert!(stats.message_count > 0, "MCAP should contain messages");
@@ -205,68 +168,68 @@ async fn mcap_data_matches_manifest() {
         // --- Build manifest lookups --------------------------------------
 
         // topic name -> (messageEncoding, schemaId)
-        let manifest_topics: HashMap<String, (String, Option<u64>)> = source["topics"]
+        let manifest_topics: HashMap<&str, (&str, Option<u64>)> = source["topics"]
             .as_array()
             .unwrap()
             .iter()
             .map(|t| {
-                let name = t["name"].as_str().unwrap().to_string();
-                let enc = t["messageEncoding"].as_str().unwrap().to_string();
-                let sid = t.get("schemaId").and_then(|v| v.as_u64());
-                (name, (enc, sid))
+                (
+                    t["name"].as_str().unwrap(),
+                    (
+                        t["messageEncoding"].as_str().unwrap(),
+                        t.get("schemaId").and_then(|v| v.as_u64()),
+                    ),
+                )
             })
             .collect();
 
         // schema id -> (name, encoding, decoded data)
-        let manifest_schemas: HashMap<u64, (String, String, Vec<u8>)> = source["schemas"]
+        let manifest_schemas: HashMap<u64, (&str, &str, Vec<u8>)> = source["schemas"]
             .as_array()
             .unwrap()
             .iter()
             .map(|s| {
-                let id = s["id"].as_u64().unwrap();
-                let name = s["name"].as_str().unwrap().to_string();
-                let enc = s["encoding"].as_str().unwrap().to_string();
-                let data = base64::engine::general_purpose::STANDARD
-                    .decode(s["data"].as_str().unwrap())
-                    .unwrap();
-                (id, (name, enc, data))
+                (
+                    s["id"].as_u64().unwrap(),
+                    (
+                        s["name"].as_str().unwrap(),
+                        s["encoding"].as_str().unwrap(),
+                        base64::engine::general_purpose::STANDARD
+                            .decode(s["data"].as_str().unwrap())
+                            .expect("schema data should be valid base64"),
+                    ),
+                )
             })
             .collect();
 
         // --- Schemas in MCAP match the manifest -------------------------
 
-        for (mid, (m_name, m_enc, m_data)) in &manifest_schemas {
+        for (&mid, (m_name, m_enc, m_data)) in &manifest_schemas {
             let mcap_schema = summary
                 .schemas
-                .get(&(*mid as u16))
-                .unwrap_or_else(|| panic!("manifest schema id {mid} not found in MCAP schemas"));
+                .get(&(mid as u16))
+                .unwrap_or_else(|| panic!("manifest schema id {mid} not in MCAP"));
 
-            assert_eq!(
-                mcap_schema.name, *m_name,
-                "schema name mismatch for id {mid}"
-            );
+            assert_eq!(mcap_schema.name, *m_name, "schema name mismatch (id {mid})");
             assert_eq!(
                 mcap_schema.encoding, *m_enc,
-                "schema encoding mismatch for id {mid}"
+                "schema encoding mismatch (id {mid})"
             );
             assert_eq!(
                 mcap_schema.data.as_ref(),
                 m_data.as_slice(),
-                "schema data mismatch for id {mid}"
+                "schema data mismatch (id {mid})"
             );
         }
 
         // --- Channels in MCAP match the manifest topics -----------------
 
         for channel in summary.channels.values() {
-            let (_, manifest_sid) =
+            let &(_, manifest_sid) =
                 manifest_topics
                     .get(channel.topic.as_str())
                     .unwrap_or_else(|| {
-                        panic!(
-                            "MCAP channel topic '{}' not found in manifest topics",
-                            channel.topic
-                        )
+                        panic!("MCAP channel '{}' not found in manifest", channel.topic)
                     });
 
             if let Some(expected_sid) = manifest_sid {
@@ -277,7 +240,7 @@ async fn mcap_data_matches_manifest() {
                     )
                 });
                 assert_eq!(
-                    schema.id as u64, *expected_sid,
+                    schema.id as u64, expected_sid,
                     "channel '{}' schema id mismatch",
                     channel.topic
                 );
@@ -286,31 +249,26 @@ async fn mcap_data_matches_manifest() {
 
         // --- Every message is on a known topic with matching encoding ---
 
-        let stream =
-            mcap::MessageStream::new(&mcap_bytes[..]).expect("failed to create message stream");
-
-        let mut seen_topics: HashSet<String> = HashSet::new();
-
-        for message in stream {
+        let mut seen_topics = HashSet::new();
+        for message in mcap::MessageStream::new(&mcap_bytes[..]).unwrap() {
             let message = message.expect("failed to read MCAP message");
             let topic = message.channel.topic.as_str();
             seen_topics.insert(topic.to_string());
 
-            let (expected_enc, _) = manifest_topics
+            let &(expected_enc, _) = manifest_topics
                 .get(topic)
-                .unwrap_or_else(|| panic!("MCAP topic '{topic}' not found in manifest"));
+                .unwrap_or_else(|| panic!("MCAP topic '{topic}' not in manifest"));
 
             assert_eq!(
-                &message.channel.message_encoding, expected_enc,
-                "message encoding mismatch for topic '{topic}'"
+                message.channel.message_encoding, expected_enc,
+                "encoding mismatch for topic '{topic}'"
             );
         }
 
-        // Every topic declared in the manifest should appear in the MCAP.
-        for topic_name in manifest_topics.keys() {
+        for &topic in manifest_topics.keys() {
             assert!(
-                seen_topics.contains(topic_name),
-                "manifest topic '{topic_name}' not found in MCAP messages"
+                seen_topics.contains(topic),
+                "manifest topic '{topic}' has no messages in MCAP"
             );
         }
     }
@@ -320,34 +278,24 @@ async fn mcap_data_matches_manifest() {
 // 3. Auth enforcement
 // ---------------------------------------------------------------------------
 
-#[tokio::test]
-async fn manifest_requires_auth() {
+#[test]
+fn manifest_requires_auth() {
     ensure_server();
-    let resp = reqwest::Client::new()
-        .get(manifest_url())
-        .send()
-        .await
-        .unwrap();
-
-    assert_eq!(
-        resp.status(),
-        401,
-        "manifest without auth should return 401"
-    );
+    let status = Client::new().get(manifest_url()).send().unwrap().status();
+    assert_eq!(status, 401, "manifest without auth should return 401");
 }
 
-#[tokio::test]
-async fn data_requires_auth() {
+#[test]
+fn data_requires_auth() {
     ensure_server();
-    let resp = reqwest::Client::new()
+    let status = Client::new()
         .get(format!(
             "{BASE_URL}/v1/data?flightId=TEST123\
              &startTime=2024-01-01T00:00:00Z\
              &endTime=2024-01-01T00:00:05Z"
         ))
         .send()
-        .await
-        .unwrap();
-
-    assert_eq!(resp.status(), 401, "data without auth should return 401");
+        .unwrap()
+        .status();
+    assert_eq!(status, 401, "data without auth should return 401");
 }
