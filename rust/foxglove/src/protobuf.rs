@@ -742,8 +742,17 @@ mod tests {
         assert_eq!(1, usize::encoded_len(&127));
         assert_eq!(2, usize::encoded_len(&128));
 
-        // Large values
-        assert_eq!(10, usize::encoded_len(&(u64::MAX as usize)));
+        // Test with usize::MAX which is platform-specific
+        #[cfg(target_pointer_width = "64")]
+        {
+            // On 64-bit platforms, usize::MAX == u64::MAX
+            assert_eq!(10, usize::encoded_len(&usize::MAX));
+        }
+        #[cfg(target_pointer_width = "32")]
+        {
+            // On 32-bit platforms, usize::MAX == u32::MAX
+            assert_eq!(5, usize::encoded_len(&usize::MAX));
+        }
     }
 
     #[test]
@@ -753,13 +762,24 @@ mod tests {
         usize::write(&42, &mut buf);
         assert_eq!(&buf[..], &[42]);
 
-        // Test large value
-        let mut buf = bytes::BytesMut::new();
-        usize::write(&(u64::MAX as usize), &mut buf);
-        assert_eq!(
-            &buf[..],
-            &[0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01]
-        );
+        // Test usize::MAX which is platform-specific
+        #[cfg(target_pointer_width = "64")]
+        {
+            // On 64-bit platforms, usize::MAX == u64::MAX
+            let mut buf = bytes::BytesMut::new();
+            usize::write(&usize::MAX, &mut buf);
+            assert_eq!(
+                &buf[..],
+                &[0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01]
+            );
+        }
+        #[cfg(target_pointer_width = "32")]
+        {
+            // On 32-bit platforms, usize::MAX == u32::MAX
+            let mut buf = bytes::BytesMut::new();
+            usize::write(&usize::MAX, &mut buf);
+            assert_eq!(&buf[..], &[0xff, 0xff, 0xff, 0xff, 0x0f]);
+        }
     }
 
     #[test]

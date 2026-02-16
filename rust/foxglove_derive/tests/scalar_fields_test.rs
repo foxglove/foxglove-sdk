@@ -549,7 +549,7 @@ fn test_optional_field_label() {
 #[test]
 fn test_usize_field_serialization() {
     let test_struct = TestMessageUsize {
-        size_value: u64::MAX as usize,
+        size_value: usize::MAX,
         small_size: 42,
     };
 
@@ -594,10 +594,20 @@ fn test_usize_field_serialization() {
         .get_field(&size_value_field)
         .as_u64()
         .expect("Field value is not a u64");
+
+    // On 64-bit platforms, usize::MAX == u64::MAX
+    // On 32-bit platforms, usize::MAX == u32::MAX
+    #[cfg(target_pointer_width = "64")]
     assert_eq!(
         size_value,
         u64::MAX,
-        "usize::MAX should be encoded as u64::MAX"
+        "On 64-bit platforms, usize::MAX should be encoded as u64::MAX"
+    );
+    #[cfg(target_pointer_width = "32")]
+    assert_eq!(
+        size_value,
+        u32::MAX as u64,
+        "On 32-bit platforms, usize::MAX should be encoded as u32::MAX"
     );
 
     let small_size_field = message_descriptor
