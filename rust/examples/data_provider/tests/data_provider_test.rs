@@ -1,15 +1,16 @@
 //! End-to-end tests for the data_provider example.
 //!
 //! This is a thin wrapper that starts the example binary and delegates all
-//! checks to the reusable [`data_provider_tests`] crate. The child process is
-//! spawned with [`tokio::process::Command::kill_on_drop`] so it is killed
-//! reliably on both normal return and panic unwinding.
+//! checks to the reusable test suite in [`example_data_provider`]'s library
+//! target. The child process is spawned with
+//! [`tokio::process::Command::kill_on_drop`] so it is killed reliably on both
+//! normal return and panic unwinding.
 
 use std::net::TcpStream;
 use std::process::Stdio;
 use std::time::Duration;
 
-use data_provider_tests::DataProviderTestConfig;
+use example_data_provider::DataProviderTestConfig;
 
 const BASE_URL: &str = "http://127.0.0.1:8080";
 const BIND_ADDR: &str = "127.0.0.1:8080";
@@ -51,7 +52,7 @@ fn start_server() -> Server {
 fn main() {
     let _server = start_server();
 
-    data_provider_tests::run(&DataProviderTestConfig {
+    example_data_provider::run_tests(&DataProviderTestConfig {
         base_url: BASE_URL.into(),
         manifest_url: format!(
             "{BASE_URL}/v1/manifest?flightId=TEST123\

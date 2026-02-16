@@ -1,6 +1,6 @@
 //! Reusable test suite for data provider HTTP API implementations.
 //!
-//! This crate checks that a running data provider:
+//! This module checks that a running data provider:
 //! 1. Returns a manifest that conforms to the JSON schema.
 //! 2. Serves MCAP data whose channels and schemas match the manifest.
 //! 3. Requires authentication.
@@ -11,23 +11,23 @@
 //! # Usage
 //!
 //! ```ignore
-//! use data_provider_tests::DataProviderTestConfig;
+//! use example_data_provider::DataProviderTestConfig;
 //!
 //! let _server = start_my_server();
 //! let config = DataProviderTestConfig {
 //!     base_url: "http://127.0.0.1:8080".into(),
-//!     manifest_url: "http://127.0.0.1:8080/v1/manifest?flightId=X&startTime=...&endTime=...".into(),
+//!     manifest_url: "http://127.0.0.1:8080/v1/manifest?...".into(),
 //!     bearer_token: "my-token".into(),
 //! };
-//! data_provider_tests::run(&config);
+//! example_data_provider::run_tests(&config);
 //! ```
 
 use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 
 use foxglove::data_provider::{Manifest, StreamedSource, UpstreamSource};
 use libtest_mimic::{Arguments, Trial};
 use reqwest::blocking::Client;
-use std::sync::Arc;
 
 /// Configuration for running the data provider test suite.
 pub struct DataProviderTestConfig {
@@ -45,16 +45,16 @@ pub struct DataProviderTestConfig {
 ///
 /// This parses `std::env::args()` for the standard test flags (`--filter`,
 /// `--list`, etc.) and calls [`std::process::exit`] with the appropriate code.
-pub fn run(config: &DataProviderTestConfig) {
+pub fn run_tests(config: &DataProviderTestConfig) {
     let args = Arguments::from_args();
-    let trials = tests(config);
+    let trials = build_tests(config);
     libtest_mimic::run(&args, trials).exit();
 }
 
 /// Build the test suite as a list of [`Trial`] values.
 ///
 /// Fetches the manifest once up front; each trial closes over the shared data.
-pub fn tests(config: &DataProviderTestConfig) -> Vec<Trial> {
+pub fn build_tests(config: &DataProviderTestConfig) -> Vec<Trial> {
     let client = Client::new();
 
     let resp = client
@@ -102,7 +102,6 @@ pub fn tests(config: &DataProviderTestConfig) -> Vec<Trial> {
         },
         {
             let client = client.clone();
-            let manifest_url = manifest_url.clone();
             Trial::test("auth_required", move || {
                 check_auth_required(&client, &manifest_url);
                 Ok(())
@@ -195,8 +194,6 @@ fn check_mcap_data_matches_manifest(
         let mcap_bytes = resp.bytes().expect("should be able to read response body");
         assert!(!mcap_bytes.is_empty(), "MCAP response should not be empty");
 
-        // --- MCAP is structurally valid ----------------------------------
-
         let summary = mcap::Summary::read(&mcap_bytes[..])
             .expect("MCAP should be readable")
             .expect("MCAP should contain a summary");
@@ -204,20 +201,13 @@ fn check_mcap_data_matches_manifest(
         let stats = summary.stats.as_ref().expect("MCAP should have stats");
         assert!(stats.message_count > 0, "MCAP should contain messages");
 
-        // Index manifest entries by name / id for O(1) lookups.
         let topics_by_name: HashMap<&str, &foxglove::data_provider::Topic> =
             s.topics.iter().map(|t| (t.name.as_str(), t)).collect();
         let schemas_by_id: HashMap<u16, &foxglove::data_provider::Schema> =
             s.schemas.iter().map(|s| (s.id.get(), s)).collect();
 
-        // --- Every message's channel should match a manifest topic --------
-        //
-        // For each message we check that:
-        //   - the topic is declared in the manifest,
-        //   - the channel's message encoding matches, and
-        //   - if a schema is declared, the schema's name, encoding, and data
-        //     match the manifest (not just the id).
-
+        // For each message, check that its channel is represented in the
+        // manifest: topic, encoding, and full schema content must match.
         for message in mcap::MessageStream::new(&mcap_bytes[..])
             .expect("should be able to create message stream")
         {
