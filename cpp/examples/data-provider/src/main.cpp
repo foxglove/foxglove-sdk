@@ -76,16 +76,6 @@ std::string format_iso8601(system_clock::time_point tp) {
   return date::format("%FT%TZ", date::floor<std::chrono::seconds>(tp));
 }
 
-/// Convert a system_clock time_point to nanoseconds since epoch.
-///
-/// This assumes system_clock's epoch is the Unix epoch, which is guaranteed by C++20
-/// but not by C++17. In practice all major implementations use the Unix epoch.
-uint64_t to_nanos(system_clock::time_point tp) {
-  return static_cast<uint64_t>(
-    std::chrono::duration_cast<std::chrono::nanoseconds>(tp.time_since_epoch()).count()
-  );
-}
-
 // ============================================================================
 // Routes
 // ============================================================================
@@ -312,7 +302,12 @@ void data_handler(const httplib::Request& req, httplib::Response& res) {
         msg.y = 0.0;
         msg.z = 0.0;
 
-        channel.log(msg, to_nanos(ts));
+        // Convert to nanoseconds since the Unix epoch. system_clock's epoch is the Unix
+        // epoch in C++20; not guaranteed by C++17 but true on all major implementations.
+        auto log_time = static_cast<uint64_t>(
+          std::chrono::duration_cast<std::chrono::nanoseconds>(ts.time_since_epoch()).count()
+        );
+        channel.log(msg, log_time);
 
         // Periodically flush buffered data to the response stream. This serves two purposes:
         // the client receives data incrementally instead of all at once, and memory usage stays
