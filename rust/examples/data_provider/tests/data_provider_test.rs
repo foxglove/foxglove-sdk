@@ -262,9 +262,10 @@ fn main() {
     let args = Arguments::from_args();
 
     let _server = start_server();
+    let client = Client::new();
 
     // Fetch the manifest once.
-    let resp = Client::new()
+    let resp = client
         .get(manifest_url())
         .bearer_auth("test-token")
         .send()
@@ -293,16 +294,20 @@ fn main() {
             })
         },
         {
+            let client = client.clone();
             let manifest = Arc::clone(&manifest);
             Trial::test("mcap_data_matches_manifest", move || {
-                mcap_data_matches_manifest(&Client::new(), &manifest);
+                mcap_data_matches_manifest(&client, &manifest);
                 Ok(())
             })
         },
-        Trial::test("auth_required", || {
-            auth_required(&Client::new());
-            Ok(())
-        }),
+        {
+            let client = client.clone();
+            Trial::test("auth_required", move || {
+                auth_required(&client);
+                Ok(())
+            })
+        },
     ];
 
     libtest_mimic::run(&args, tests).exit();
