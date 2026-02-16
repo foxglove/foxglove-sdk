@@ -252,10 +252,10 @@ void manifest_handler(const httplib::Request& req, httplib::Response& res) {
 ///
 /// Streams MCAP data for the requested flight. The response body is a stream of MCAP bytes.
 ///
-/// httplib calls sink.write() synchronously to the socket, so data is sent to the client
-/// incrementally as it is produced -- there is no internal buffering beyond our MCAP chunk buffer.
-/// The content provider runs in httplib's thread pool, so it is safe to block here (e.g. on
-/// database I/O).
+/// Uses chunked transfer encoding, which is the standard HTTP/1.1 mechanism for streaming
+/// responses of unknown length. Each sink.write() sends an HTTP chunk directly to the socket, so
+/// data is delivered to the client incrementally as it is produced. The content provider runs in
+/// httplib's thread pool, so it is safe to block here (e.g. on database I/O).
 void data_handler(const httplib::Request& req, httplib::Response& res) {
   if (!require_auth(req, res)) {
     return;
