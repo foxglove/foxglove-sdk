@@ -5,17 +5,19 @@
 //! 2. Following the data URLs in the manifest returns valid MCAP whose schemas
 //!    and channels match what is declared in the manifest.
 //!
-//! This file uses `harness = false` (custom test harness) so that a single
-//! `main` owns the server child process. The child is spawned with
+//! This file uses `harness = false` with [`libtest_mimic`] so that `main` owns
+//! the server child process. The child is spawned with
 //! [`tokio::process::Command::kill_on_drop`], so it is killed reliably on
 //! both normal return and panic unwinding.
 
 use std::collections::HashSet;
 use std::net::TcpStream;
 use std::process::Stdio;
+use std::sync::Arc;
 use std::time::Duration;
 
 use foxglove::data_provider::{Manifest, StreamedSource, UpstreamSource};
+use libtest_mimic::{Arguments, Trial};
 use reqwest::blocking::Client;
 
 const BASE_URL: &str = "http://127.0.0.1:8080";
@@ -84,13 +86,6 @@ fn streamed(source: &UpstreamSource) -> &StreamedSource {
         UpstreamSource::Streamed(s) => s,
         other => panic!("source should be Streamed, got {other:?}"),
     }
-}
-
-/// Run a named check, printing its result in the standard `cargo test` style.
-fn run(name: &str, f: impl FnOnce()) {
-    print!("test {name} ... ");
-    f();
-    println!("ok");
 }
 
 // ---------------------------------------------------------------------------
@@ -264,30 +259,52 @@ fn auth_required(client: &Client) {
 // ---------------------------------------------------------------------------
 
 fn main() {
+    let args = Arguments::from_args();
+
     let _server = start_server();
-    let client = Client::new();
 
     // Fetch the manifest once.
-    let resp = client
+    let resp = Client::new()
         .get(manifest_url())
         .bearer_auth("test-token")
         .send()
         .expect("manifest request should succeed");
     assert_eq!(resp.status(), 200, "manifest endpoint should return 200");
-    let json: serde_json::Value = resp.json().expect("manifest response should be valid JSON");
-    let manifest: Manifest = serde_json::from_value(json.clone())
-        .expect("manifest should deserialize into typed Manifest");
+    let json: Arc<serde_json::Value> =
+        Arc::new(resp.json().expect("manifest response should be valid JSON"));
+    let manifest: Arc<Manifest> = Arc::new(
+        serde_json::from_value((*json).clone())
+            .expect("manifest should deserialize into typed Manifest"),
+    );
 
-    run("manifest_matches_json_schema", || {
-        manifest_matches_json_schema(&json)
-    });
-    run("manifest_schema_ids_are_consistent", || {
-        manifest_schema_ids_are_consistent(&manifest)
-    });
-    run("mcap_data_matches_manifest", || {
-        mcap_data_matches_manifest(&client, &manifest)
-    });
-    run("auth_required", || auth_required(&client));
+    let tests = vec![
+        {
+            let json = Arc::clone(&json);
+            Trial::test("manifest_matches_json_schema", move || {
+                manifest_matches_json_schema(&json);
+                Ok(())
+            })
+        },
+        {
+            let manifest = Arc::clone(&manifest);
+            Trial::test("manifest_schema_ids_are_consistent", move || {
+                manifest_schema_ids_are_consistent(&manifest);
+                Ok(())
+            })
+        },
+        {
+            let manifest = Arc::clone(&manifest);
+            Trial::test("mcap_data_matches_manifest", move || {
+                mcap_data_matches_manifest(&Client::new(), &manifest);
+                Ok(())
+            })
+        },
+        Trial::test("auth_required", || {
+            auth_required(&Client::new());
+            Ok(())
+        }),
+    ];
 
-    // _server dropped here — kill_on_drop kills the child process.
+    libtest_mimic::run(&args, tests).exit();
+    // _server is dropped after run() returns — kill_on_drop kills the child.
 }
