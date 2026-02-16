@@ -10,7 +10,7 @@
 //! [`tokio::process::Command::kill_on_drop`], so it is killed reliably on
 //! both normal return and panic unwinding.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::net::TcpStream;
 use std::process::Stdio;
 use std::sync::Arc;
@@ -179,27 +179,32 @@ fn mcap_data_matches_manifest(client: &Client, manifest: &Manifest) {
             );
         }
 
-        // --- Channels in MCAP match the manifest topics ------------------
+        // Index manifest topics by name for O(1) lookups below.
+        let topics_by_name: HashMap<&str, &foxglove::data_provider::Topic> =
+            s.topics.iter().map(|t| (t.name.as_str(), t)).collect();
+
+        // --- MCAP channels are on topics declared in the manifest --------
 
         for channel in summary.channels.values() {
-            let mt = s
-                .topics
-                .iter()
-                .find(|t| t.name == channel.topic)
+            let mt = topics_by_name
+                .get(channel.topic.as_str())
                 .unwrap_or_else(|| {
                     panic!(
-                        "MCAP channel '{}' should have a corresponding manifest topic",
+                        "MCAP topic '{}' should be declared in the manifest",
                         channel.topic
                     )
                 });
             if let Some(expected_sid) = mt.schema_id {
                 let schema = channel.schema.as_ref().unwrap_or_else(|| {
-                    panic!("MCAP channel '{}' should have a schema", channel.topic)
+                    panic!(
+                        "MCAP topic '{}' should have an associated schema",
+                        channel.topic
+                    )
                 });
                 assert_eq!(
                     schema.id,
                     expected_sid.get(),
-                    "MCAP channel '{}' schema id should match manifest",
+                    "MCAP schema id for topic '{}' should match manifest",
                     channel.topic
                 );
             }
@@ -212,27 +217,22 @@ fn mcap_data_matches_manifest(client: &Client, manifest: &Manifest) {
             .expect("should be able to create message stream")
         {
             let message = message.expect("should be able to read MCAP message");
-            let topic = &message.channel.topic;
-            seen_topics.insert(topic.clone());
+            let topic = message.channel.topic.as_str();
+            seen_topics.insert(topic.to_owned());
 
-            let mt = s
-                .topics
-                .iter()
-                .find(|t| t.name == *topic)
-                .unwrap_or_else(|| {
-                    panic!("MCAP topic '{topic}' should have a corresponding manifest topic")
-                });
+            let mt = topics_by_name.get(topic).unwrap_or_else(|| {
+                panic!("MCAP topic '{topic}' should be declared in the manifest")
+            });
             assert_eq!(
                 message.channel.message_encoding, mt.message_encoding,
                 "MCAP message encoding for topic '{topic}' should match manifest"
             );
         }
 
-        for mt in &s.topics {
+        for name in topics_by_name.keys() {
             assert!(
-                seen_topics.contains(&mt.name),
-                "manifest topic '{}' should have messages in MCAP",
-                mt.name
+                seen_topics.contains(*name),
+                "manifest topic '{name}' should have messages in MCAP"
             );
         }
     }
