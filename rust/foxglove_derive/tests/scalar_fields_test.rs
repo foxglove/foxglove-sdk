@@ -594,7 +594,11 @@ fn test_usize_field_serialization() {
         .get_field(&size_value_field)
         .as_u64()
         .expect("Field value is not a u64");
-    assert_eq!(size_value, u64::MAX, "usize::MAX should be encoded as u64::MAX");
+    assert_eq!(
+        size_value,
+        u64::MAX,
+        "usize::MAX should be encoded as u64::MAX"
+    );
 
     let small_size_field = message_descriptor
         .get_field_by_name("small_size")

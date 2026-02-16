@@ -741,7 +741,7 @@ mod tests {
         assert_eq!(1, usize::encoded_len(&0));
         assert_eq!(1, usize::encoded_len(&127));
         assert_eq!(2, usize::encoded_len(&128));
-        
+
         // Large values
         assert_eq!(10, usize::encoded_len(&(u64::MAX as usize)));
     }
@@ -765,16 +765,31 @@ mod tests {
     #[test]
     fn test_usize_matches_u64() {
         // usize should behave identically to u64 for values within u64 range
-        let test_values = vec![0usize, 1, 127, 128, 255, 256, 65535, 65536, u32::MAX as usize];
-        
+        let test_values = vec![
+            0usize,
+            1,
+            127,
+            128,
+            255,
+            256,
+            65535,
+            65536,
+            u32::MAX as usize,
+        ];
+
         for val in test_values {
             let mut buf_usize = bytes::BytesMut::new();
             usize::write(&val, &mut buf_usize);
-            
+
             let mut buf_u64 = bytes::BytesMut::new();
             u64::write(&(val as u64), &mut buf_u64);
-            
-            assert_eq!(&buf_usize[..], &buf_u64[..], "usize and u64 should encode identically for value {}", val);
+
+            assert_eq!(
+                &buf_usize[..],
+                &buf_u64[..],
+                "usize and u64 should encode identically for value {}",
+                val
+            );
             assert_eq!(usize::encoded_len(&val), u64::encoded_len(&(val as u64)));
         }
     }
