@@ -7,11 +7,14 @@
 //!
 //! The tests launch the example binary as a subprocess and make real HTTP
 //! requests against it, so no changes to the example code are needed.
+//!
+//! Everything runs inside a single `#[test]` so that the server child process,
+//! spawned with [`tokio::process::Command::kill_on_drop`], is reliably killed
+//! when the test returns.
 
 use std::collections::HashSet;
 use std::net::TcpStream;
-use std::process::{Child, Stdio};
-use std::sync::{LazyLock, Mutex, Once};
+use std::process::Stdio;
 use std::time::Duration;
 
 use foxglove::data_provider::{Manifest, StreamedSource, UpstreamSource};
@@ -21,66 +24,48 @@ const BASE_URL: &str = "http://127.0.0.1:8080";
 const BIND_ADDR: &str = "127.0.0.1:8080";
 
 // ---------------------------------------------------------------------------
-// Shared fixtures
+// Server lifecycle
 // ---------------------------------------------------------------------------
 
-/// Holds the server child process so it can be killed at exit.
-static SERVER_CHILD: Mutex<Option<Child>> = Mutex::new(None);
-
-/// Kill the server child when the test process exits.
-extern "C" fn kill_server() {
-    if let Ok(mut guard) = SERVER_CHILD.lock() {
-        if let Some(ref mut child) = *guard {
-            let _ = child.kill();
-            let _ = child.wait();
-        }
-    }
+/// A running server whose child process is killed on drop.
+struct Server {
+    _child: tokio::process::Child,
+    _runtime: tokio::runtime::Runtime,
 }
 
-/// Spawn the example binary exactly once and wait until it accepts connections.
-fn ensure_server() {
-    static START: Once = Once::new();
-    START.call_once(|| {
-        let bin = env!("CARGO_BIN_EXE_example_data_provider");
-        let child = std::process::Command::new(bin)
+/// Spawn the example binary and wait until it accepts connections.
+///
+/// The returned [`Server`] kills the child process when dropped.
+fn start_server() -> Server {
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .expect("should be able to build tokio runtime");
+
+    let child = runtime.block_on(async {
+        tokio::process::Command::new(env!("CARGO_BIN_EXE_example_data_provider"))
             .stdout(Stdio::null())
             .stderr(Stdio::null())
+            .kill_on_drop(true)
             .spawn()
-            .expect("should be able to start example_data_provider binary");
-        *SERVER_CHILD.lock().unwrap() = Some(child);
-
-        unsafe extern "C" {
-            fn atexit(f: extern "C" fn()) -> std::ffi::c_int;
-        }
-        // SAFETY: kill_server is a valid extern "C" function that accesses
-        // only a Mutex-protected global.
-        unsafe { atexit(kill_server) };
-
-        for _ in 0..100 {
-            if TcpStream::connect(BIND_ADDR).is_ok() {
-                return;
-            }
-            std::thread::sleep(Duration::from_millis(50));
-        }
-        panic!("example_data_provider should become ready within 5 s");
+            .expect("should be able to start example_data_provider binary")
     });
+
+    for _ in 0..100 {
+        if TcpStream::connect(BIND_ADDR).is_ok() {
+            return Server {
+                _child: child,
+                _runtime: runtime,
+            };
+        }
+        std::thread::sleep(Duration::from_millis(50));
+    }
+    panic!("example_data_provider should become ready within 5 s");
 }
 
-/// The manifest response, fetched once and cached as both raw JSON (for schema
-/// validation) and as a deserialized [`Manifest`] (for typed assertions).
-static MANIFEST: LazyLock<(serde_json::Value, Manifest)> = LazyLock::new(|| {
-    ensure_server();
-    let resp = Client::new()
-        .get(manifest_url())
-        .bearer_auth("test-token")
-        .send()
-        .expect("manifest request should succeed");
-    assert_eq!(resp.status(), 200, "manifest endpoint should return 200");
-    let json: serde_json::Value = resp.json().expect("manifest response should be valid JSON");
-    let typed: Manifest = serde_json::from_value(json.clone())
-        .expect("manifest should deserialize into typed Manifest");
-    (json, typed)
-});
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
 fn manifest_url() -> String {
     format!(
@@ -98,8 +83,6 @@ fn resolve_data_url(url: &str) -> String {
     }
 }
 
-/// Extract the [`StreamedSource`] from an [`UpstreamSource`], panicking on
-/// static-file sources (which this example does not produce).
 fn streamed(source: &UpstreamSource) -> &StreamedSource {
     match source {
         UpstreamSource::Streamed(s) => s,
@@ -108,13 +91,10 @@ fn streamed(source: &UpstreamSource) -> &StreamedSource {
 }
 
 // ---------------------------------------------------------------------------
-// 1. Manifest conforms to the data provider HTTP API
+// Assertions
 // ---------------------------------------------------------------------------
 
-#[test]
-fn manifest_matches_json_schema() {
-    let (ref json, _) = *MANIFEST;
-
+fn check_manifest_matches_json_schema(json: &serde_json::Value) {
     let schema: serde_json::Value =
         serde_json::from_str(include_str!("data_provider_manifest_schema.json"))
             .expect("schema file should be valid JSON");
@@ -134,10 +114,7 @@ fn manifest_matches_json_schema() {
     );
 }
 
-#[test]
-fn manifest_schema_ids_are_consistent() {
-    let (_, ref manifest) = *MANIFEST;
-
+fn check_manifest_schema_ids_are_consistent(manifest: &Manifest) {
     for source in &manifest.sources {
         let s = streamed(source);
         let schema_ids: HashSet<_> = s.schemas.iter().map(|s| s.id).collect();
@@ -158,15 +135,7 @@ fn manifest_schema_ids_are_consistent() {
     }
 }
 
-// ---------------------------------------------------------------------------
-// 2. MCAP data is valid and matches the manifest
-// ---------------------------------------------------------------------------
-
-#[test]
-fn mcap_data_matches_manifest() {
-    let (_, ref manifest) = *MANIFEST;
-    let client = Client::new();
-
+fn check_mcap_data_matches_manifest(client: &Client, manifest: &Manifest) {
     for source in &manifest.sources {
         let s = streamed(source);
         let full_url = resolve_data_url(&s.url);
@@ -271,21 +240,11 @@ fn mcap_data_matches_manifest() {
     }
 }
 
-// ---------------------------------------------------------------------------
-// 3. Auth enforcement
-// ---------------------------------------------------------------------------
-
-#[test]
-fn manifest_requires_auth() {
-    ensure_server();
-    let status = Client::new().get(manifest_url()).send().unwrap().status();
+fn check_auth_required(client: &Client) {
+    let status = client.get(manifest_url()).send().unwrap().status();
     assert_eq!(status, 401, "manifest without auth should return 401");
-}
 
-#[test]
-fn data_requires_auth() {
-    ensure_server();
-    let status = Client::new()
+    let status = client
         .get(format!(
             "{BASE_URL}/v1/data?flightId=TEST123\
              &startTime=2024-01-01T00:00:00Z\
@@ -295,4 +254,30 @@ fn data_requires_auth() {
         .unwrap()
         .status();
     assert_eq!(status, 401, "data without auth should return 401");
+}
+
+// ---------------------------------------------------------------------------
+// Test entry point
+// ---------------------------------------------------------------------------
+
+#[test]
+fn data_provider() {
+    let _server = start_server();
+    let client = Client::new();
+
+    // Fetch the manifest once.
+    let resp = client
+        .get(manifest_url())
+        .bearer_auth("test-token")
+        .send()
+        .expect("manifest request should succeed");
+    assert_eq!(resp.status(), 200, "manifest endpoint should return 200");
+    let json: serde_json::Value = resp.json().expect("manifest response should be valid JSON");
+    let manifest: Manifest = serde_json::from_value(json.clone())
+        .expect("manifest should deserialize into typed Manifest");
+
+    check_manifest_matches_json_schema(&json);
+    check_manifest_schema_ids_are_consistent(&manifest);
+    check_mcap_data_matches_manifest(&client, &manifest);
+    check_auth_required(&client);
 }
