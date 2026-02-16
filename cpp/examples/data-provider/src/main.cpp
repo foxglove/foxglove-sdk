@@ -54,16 +54,16 @@
 #include <string>
 
 namespace dp = foxglove::data_provider;
-using SysTimePoint = std::chrono::system_clock::time_point;
+using std::chrono::system_clock;
 
 // ============================================================================
 // Timestamp helpers (using Howard Hinnant's date library)
 // ============================================================================
 
 /// Parse an ISO 8601 timestamp like "2024-01-01T00:00:00Z".
-std::optional<SysTimePoint> parse_iso8601(const std::string& s) {
+std::optional<system_clock::time_point> parse_iso8601(const std::string& s) {
   std::istringstream ss(s);
-  SysTimePoint tp;
+  system_clock::time_point tp;
   ss >> date::parse("%FT%TZ", tp);
   if (ss.fail()) {
     return std::nullopt;
@@ -72,7 +72,7 @@ std::optional<SysTimePoint> parse_iso8601(const std::string& s) {
 }
 
 /// Format a time_point as ISO 8601.
-std::string format_iso8601(SysTimePoint tp) {
+std::string format_iso8601(system_clock::time_point tp) {
   return date::format("%FT%TZ", date::floor<std::chrono::seconds>(tp));
 }
 
@@ -80,7 +80,7 @@ std::string format_iso8601(SysTimePoint tp) {
 ///
 /// This assumes system_clock's epoch is the Unix epoch, which is guaranteed by C++20
 /// but not by C++17. In practice all major implementations use the Unix epoch.
-uint64_t to_nanos(SysTimePoint tp) {
+uint64_t to_nanos(system_clock::time_point tp) {
   return static_cast<uint64_t>(
     std::chrono::duration_cast<std::chrono::nanoseconds>(tp.time_since_epoch()).count()
   );
@@ -101,8 +101,8 @@ static constexpr int PORT = 8080;
 
 struct FlightParams {
   std::string flight_id;
-  SysTimePoint start_time;
-  SysTimePoint end_time;
+  system_clock::time_point start_time;
+  system_clock::time_point end_time;
 
   /// Build a query string for these parameters.
   std::string to_query_string() const {
@@ -287,7 +287,7 @@ void data_handler(const httplib::Request& req, httplib::Response& res) {
 
       // Clamp start time to epoch (ignore negative start times).
       auto start = flight_params.start_time;
-      auto epoch = SysTimePoint{};
+      auto epoch = system_clock::time_point{};
       if (start < epoch) {
         start = epoch;
       }
