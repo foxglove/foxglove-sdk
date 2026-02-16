@@ -29,6 +29,7 @@ async fn main() {
     // This requires Foxglove Agent to be running on the same machine.
     let handle = Server::new()
         .capabilities([Capability::ClientPublish])
+        .supported_encodings(["json"])
         .listener(Arc::new(MessageHandler))
         .start()
         .expect("Failed to start remote access server");
