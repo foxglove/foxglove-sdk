@@ -6,7 +6,7 @@
 //!    and channels match what is declared in the manifest.
 //!
 //! The tests launch the example binary as a subprocess and make real HTTP
-//! requests against it, so no restructuring of the example code is needed.
+//! requests against it, so no changes to the example code are needed.
 
 use std::collections::{HashMap, HashSet};
 use std::net::TcpStream;
@@ -59,20 +59,6 @@ fn manifest_url() -> String {
     )
 }
 
-/// Fetch the manifest as raw JSON.
-async fn fetch_manifest_json() -> Value {
-    let client = reqwest::Client::new();
-    let resp = client
-        .get(manifest_url())
-        .header("Authorization", "Bearer test-token")
-        .send()
-        .await
-        .expect("manifest request failed");
-
-    assert_eq!(resp.status(), 200, "manifest endpoint should return 200");
-    resp.json().await.expect("response should be valid JSON")
-}
-
 /// Load the JSON schema from the co-located file.
 fn load_manifest_schema() -> Value {
     serde_json::from_str(include_str!("data_provider_manifest_schema.json"))
@@ -89,26 +75,42 @@ fn resolve_data_url(url: &str) -> String {
 }
 
 // ---------------------------------------------------------------------------
-// 1. Manifest conforms to the data provider HTTP API JSON schema
+// 1. Manifest conforms to the data provider HTTP API
 // ---------------------------------------------------------------------------
 
+/// Fetch the manifest once and validate it against the JSON schema and for
+/// internal consistency (unique schema IDs, referential integrity between
+/// topics and schemas).
 #[tokio::test(flavor = "multi_thread")]
-async fn manifest_matches_json_schema() {
+async fn manifest_conforms_to_api() {
     ensure_server();
-    let body = fetch_manifest_json().await;
-    let schema_value = load_manifest_schema();
 
-    // The jsonschema crate may internally spawn a blocking tokio runtime when
-    // resolving meta-schemas, which conflicts with the test runtime. Run the
-    // validation on a blocking thread to avoid the conflict.
+    let client = reqwest::Client::new();
+    let resp = client
+        .get(manifest_url())
+        .header("Authorization", "Bearer test-token")
+        .send()
+        .await
+        .expect("manifest request failed");
+
+    assert_eq!(resp.status(), 200, "manifest endpoint should return 200");
+    let body: Value = resp.json().await.expect("response should be valid JSON");
+
+    // --- JSON schema validation ------------------------------------------
+
+    let schema_value = load_manifest_schema();
+    let body_clone = body.clone();
+
     let errors = tokio::task::spawn_blocking(move || {
+        // The jsonschema crate may internally spawn a blocking tokio runtime
+        // when resolving meta-schemas, which conflicts with the test runtime.
         let validator = jsonschema::options()
             .with_draft(jsonschema::Draft::Draft7)
             .build(&schema_value)
             .expect("schema should compile successfully");
 
         validator
-            .iter_errors(&body)
+            .iter_errors(&body_clone)
             .map(|e| format!("  - {e}"))
             .collect::<Vec<String>>()
     })
@@ -120,12 +122,8 @@ async fn manifest_matches_json_schema() {
         "Manifest does not conform to the JSON schema:\n{}",
         errors.join("\n")
     );
-}
 
-#[tokio::test]
-async fn manifest_schema_ids_are_consistent() {
-    ensure_server();
-    let body = fetch_manifest_json().await;
+    // --- Internal consistency --------------------------------------------
 
     for source in body["sources"].as_array().unwrap() {
         let schema_ids: Vec<u64> = source["schemas"]
@@ -158,11 +156,23 @@ async fn manifest_schema_ids_are_consistent() {
 // 2. MCAP data is valid and matches the manifest
 // ---------------------------------------------------------------------------
 
+/// Fetch the manifest once, then for each source follow the data URL and
+/// verify the MCAP is structurally valid and that its channels and schemas
+/// match the manifest declarations.
 #[tokio::test]
-async fn data_url_returns_valid_mcap() {
+async fn mcap_data_matches_manifest() {
     ensure_server();
-    let manifest = fetch_manifest_json().await;
+
     let client = reqwest::Client::new();
+    let manifest: Value = client
+        .get(manifest_url())
+        .header("Authorization", "Bearer test-token")
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
 
     for source in manifest["sources"].as_array().unwrap() {
         let full_url = resolve_data_url(source["url"].as_str().unwrap());
@@ -183,35 +193,18 @@ async fn data_url_returns_valid_mcap() {
         let mcap_bytes = resp.bytes().await.expect("failed to read data body");
         assert!(!mcap_bytes.is_empty(), "MCAP response should not be empty");
 
+        // --- MCAP is structurally valid ----------------------------------
+
         let summary = mcap::Summary::read(&mcap_bytes[..])
             .expect("MCAP data should be readable")
             .expect("MCAP should contain a summary section");
 
-        let stats = summary.stats.expect("MCAP should have stats");
+        let stats = summary.stats.as_ref().expect("MCAP should have stats");
         assert!(stats.message_count > 0, "MCAP should contain messages");
-    }
-}
 
-#[tokio::test]
-async fn mcap_channels_match_manifest_topics() {
-    ensure_server();
-    let manifest = fetch_manifest_json().await;
-    let client = reqwest::Client::new();
+        // --- Build manifest lookups --------------------------------------
 
-    for source in manifest["sources"].as_array().unwrap() {
-        let full_url = resolve_data_url(source["url"].as_str().unwrap());
-
-        let mcap_bytes = client
-            .get(&full_url)
-            .header("Authorization", "Bearer test-token")
-            .send()
-            .await
-            .unwrap()
-            .bytes()
-            .await
-            .unwrap();
-
-        // Manifest topic name -> (messageEncoding, schemaId).
+        // topic name -> (messageEncoding, schemaId)
         let manifest_topics: HashMap<String, (String, Option<u64>)> = source["topics"]
             .as_array()
             .unwrap()
@@ -224,7 +217,7 @@ async fn mcap_channels_match_manifest_topics() {
             })
             .collect();
 
-        // Manifest schema id -> (name, encoding, decoded data).
+        // schema id -> (name, encoding, decoded data)
         let manifest_schemas: HashMap<u64, (String, String, Vec<u8>)> = source["schemas"]
             .as_array()
             .unwrap()
@@ -240,101 +233,7 @@ async fn mcap_channels_match_manifest_topics() {
             })
             .collect();
 
-        let stream =
-            mcap::MessageStream::new(&mcap_bytes[..]).expect("failed to create message stream");
-
-        let mut seen_topics: HashSet<String> = HashSet::new();
-
-        for message in stream {
-            let message = message.expect("failed to read MCAP message");
-            let topic = message.channel.topic.as_str();
-            seen_topics.insert(topic.to_string());
-
-            let (expected_enc, expected_sid) = manifest_topics
-                .get(topic)
-                .unwrap_or_else(|| panic!("MCAP topic '{topic}' not found in manifest"));
-
-            assert_eq!(
-                &message.channel.message_encoding, expected_enc,
-                "message encoding mismatch for topic '{topic}'"
-            );
-
-            if let Some(manifest_sid) = expected_sid {
-                let schema = message.channel.schema.as_ref().unwrap_or_else(|| {
-                    panic!(
-                        "MCAP channel '{topic}' has no schema but manifest declares schemaId {manifest_sid}"
-                    )
-                });
-
-                let (exp_name, exp_enc, exp_data) =
-                    manifest_schemas.get(manifest_sid).unwrap_or_else(|| {
-                        panic!("manifest schemaId {manifest_sid} not found in schemas array")
-                    });
-
-                assert_eq!(
-                    &schema.name, exp_name,
-                    "schema name mismatch for topic '{topic}'"
-                );
-                assert_eq!(
-                    &schema.encoding, exp_enc,
-                    "schema encoding mismatch for topic '{topic}'"
-                );
-                assert_eq!(
-                    schema.data.as_ref(),
-                    exp_data.as_slice(),
-                    "schema data mismatch for topic '{topic}'"
-                );
-            }
-        }
-
-        // Every topic declared in the manifest should appear in the MCAP data.
-        for topic_name in manifest_topics.keys() {
-            assert!(
-                seen_topics.contains(topic_name),
-                "manifest topic '{topic_name}' not found in MCAP messages"
-            );
-        }
-    }
-}
-
-#[tokio::test]
-async fn mcap_schemas_match_manifest_schemas() {
-    ensure_server();
-    let manifest = fetch_manifest_json().await;
-    let client = reqwest::Client::new();
-
-    for source in manifest["sources"].as_array().unwrap() {
-        let full_url = resolve_data_url(source["url"].as_str().unwrap());
-
-        let mcap_bytes = client
-            .get(&full_url)
-            .header("Authorization", "Bearer test-token")
-            .send()
-            .await
-            .unwrap()
-            .bytes()
-            .await
-            .unwrap();
-
-        let summary = mcap::Summary::read(&mcap_bytes[..])
-            .unwrap()
-            .expect("should have summary");
-
-        // Manifest schemas: id -> (name, encoding, decoded data).
-        let manifest_schemas: HashMap<u64, (&str, &str, Vec<u8>)> = source["schemas"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .map(|s| {
-                let id = s["id"].as_u64().unwrap();
-                let name = s["name"].as_str().unwrap();
-                let enc = s["encoding"].as_str().unwrap();
-                let data = base64::engine::general_purpose::STANDARD
-                    .decode(s["data"].as_str().unwrap())
-                    .unwrap();
-                (id, (name, enc, data))
-            })
-            .collect();
+        // --- Schemas in MCAP match the manifest -------------------------
 
         for (mid, (m_name, m_enc, m_data)) in &manifest_schemas {
             let mcap_schema = summary
@@ -357,28 +256,18 @@ async fn mcap_schemas_match_manifest_schemas() {
             );
         }
 
-        // Manifest topic name -> schemaId.
-        let manifest_topics: HashMap<&str, Option<u64>> = source["topics"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .map(|t| {
-                (
-                    t["name"].as_str().unwrap(),
-                    t.get("schemaId").and_then(|v| v.as_u64()),
-                )
-            })
-            .collect();
+        // --- Channels in MCAP match the manifest topics -----------------
 
         for channel in summary.channels.values() {
-            let manifest_sid = manifest_topics
-                .get(channel.topic.as_str())
-                .unwrap_or_else(|| {
-                    panic!(
-                        "MCAP channel topic '{}' not found in manifest topics",
-                        channel.topic
-                    )
-                });
+            let (_, manifest_sid) =
+                manifest_topics
+                    .get(channel.topic.as_str())
+                    .unwrap_or_else(|| {
+                        panic!(
+                            "MCAP channel topic '{}' not found in manifest topics",
+                            channel.topic
+                        )
+                    });
 
             if let Some(expected_sid) = manifest_sid {
                 let schema = channel.schema.as_ref().unwrap_or_else(|| {
@@ -394,6 +283,36 @@ async fn mcap_schemas_match_manifest_schemas() {
                 );
             }
         }
+
+        // --- Every message is on a known topic with matching encoding ---
+
+        let stream =
+            mcap::MessageStream::new(&mcap_bytes[..]).expect("failed to create message stream");
+
+        let mut seen_topics: HashSet<String> = HashSet::new();
+
+        for message in stream {
+            let message = message.expect("failed to read MCAP message");
+            let topic = message.channel.topic.as_str();
+            seen_topics.insert(topic.to_string());
+
+            let (expected_enc, _) = manifest_topics
+                .get(topic)
+                .unwrap_or_else(|| panic!("MCAP topic '{topic}' not found in manifest"));
+
+            assert_eq!(
+                &message.channel.message_encoding, expected_enc,
+                "message encoding mismatch for topic '{topic}'"
+            );
+        }
+
+        // Every topic declared in the manifest should appear in the MCAP.
+        for topic_name in manifest_topics.keys() {
+            assert!(
+                seen_topics.contains(topic_name),
+                "manifest topic '{topic_name}' not found in MCAP messages"
+            );
+        }
     }
 }
 
@@ -404,9 +323,11 @@ async fn mcap_schemas_match_manifest_schemas() {
 #[tokio::test]
 async fn manifest_requires_auth() {
     ensure_server();
-    let client = reqwest::Client::new();
-
-    let resp = client.get(manifest_url()).send().await.unwrap();
+    let resp = reqwest::Client::new()
+        .get(manifest_url())
+        .send()
+        .await
+        .unwrap();
 
     assert_eq!(
         resp.status(),
@@ -418,9 +339,7 @@ async fn manifest_requires_auth() {
 #[tokio::test]
 async fn data_requires_auth() {
     ensure_server();
-    let client = reqwest::Client::new();
-
-    let resp = client
+    let resp = reqwest::Client::new()
         .get(format!(
             "{BASE_URL}/v1/data?flightId=TEST123\
              &startTime=2024-01-01T00:00:00Z\
