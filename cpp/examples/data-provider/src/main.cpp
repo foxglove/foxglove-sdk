@@ -54,20 +54,16 @@
 #include <string>
 
 namespace dp = foxglove::data_provider;
-
-// We convert time_points to nanoseconds-since-epoch for MCAP timestamps. This assumes
-// system_clock's epoch is the Unix epoch, which is guaranteed by C++20 but not by C++17.
-// In practice all major implementations use the Unix epoch.
-using TimePoint = std::chrono::system_clock::time_point;
+using SysTimePoint = std::chrono::system_clock::time_point;
 
 // ============================================================================
 // Timestamp helpers (using Howard Hinnant's date library)
 // ============================================================================
 
 /// Parse an ISO 8601 timestamp like "2024-01-01T00:00:00Z".
-std::optional<TimePoint> parse_iso8601(const std::string& s) {
+std::optional<SysTimePoint> parse_iso8601(const std::string& s) {
   std::istringstream ss(s);
-  TimePoint tp;
+  SysTimePoint tp;
   ss >> date::parse("%FT%TZ", tp);
   if (ss.fail()) {
     return std::nullopt;
@@ -76,12 +72,15 @@ std::optional<TimePoint> parse_iso8601(const std::string& s) {
 }
 
 /// Format a time_point as ISO 8601.
-std::string format_iso8601(TimePoint tp) {
+std::string format_iso8601(SysTimePoint tp) {
   return date::format("%FT%TZ", date::floor<std::chrono::seconds>(tp));
 }
 
-/// Convert time_point to nanoseconds since epoch.
-uint64_t to_nanos(TimePoint tp) {
+/// Convert a system_clock time_point to nanoseconds since epoch.
+///
+/// This assumes system_clock's epoch is the Unix epoch, which is guaranteed by C++20
+/// but not by C++17. In practice all major implementations use the Unix epoch.
+uint64_t to_nanos(SysTimePoint tp) {
   return static_cast<uint64_t>(
     std::chrono::duration_cast<std::chrono::nanoseconds>(tp.time_since_epoch()).count()
   );
@@ -102,8 +101,8 @@ static constexpr int PORT = 8080;
 
 struct FlightParams {
   std::string flight_id;
-  TimePoint start_time;
-  TimePoint end_time;
+  SysTimePoint start_time;
+  SysTimePoint end_time;
 
   /// Build a query string for these parameters.
   std::string to_query_string() const {
@@ -288,7 +287,7 @@ void data_handler(const httplib::Request& req, httplib::Response& res) {
 
       // Clamp start time to epoch (ignore negative start times).
       auto start = flight_params.start_time;
-      auto epoch = TimePoint{};
+      auto epoch = SysTimePoint{};
       if (start < epoch) {
         start = epoch;
       }
