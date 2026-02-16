@@ -10,8 +10,8 @@
 
 use std::collections::HashSet;
 use std::net::TcpStream;
-use std::process::{Child, Stdio};
-use std::sync::{LazyLock, Mutex, Once};
+use std::process::Stdio;
+use std::sync::{LazyLock, Once};
 use std::time::Duration;
 
 use foxglove::data_provider::{Manifest, StreamedSource, UpstreamSource};
@@ -24,20 +24,20 @@ const BIND_ADDR: &str = "127.0.0.1:8080";
 // Shared fixtures
 // ---------------------------------------------------------------------------
 
-static START_SERVER: Once = Once::new();
-static SERVER_CHILD: Mutex<Option<Child>> = Mutex::new(None);
-
 /// Spawn the example binary exactly once and wait until it accepts connections.
 fn ensure_server() {
-    START_SERVER.call_once(|| {
+    static START: Once = Once::new();
+    START.call_once(|| {
         let bin = env!("CARGO_BIN_EXE_example_data_provider");
-        let child = std::process::Command::new(bin)
+
+        // The child process intentionally outlives this scope — it runs until
+        // the test process exits, at which point the OS reaps it.
+        #[allow(clippy::zombie_processes)]
+        let _child = std::process::Command::new(bin)
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .spawn()
             .expect("should be able to start example_data_provider binary");
-
-        *SERVER_CHILD.lock().unwrap() = Some(child);
 
         for _ in 0..100 {
             if TcpStream::connect(BIND_ADDR).is_ok() {
