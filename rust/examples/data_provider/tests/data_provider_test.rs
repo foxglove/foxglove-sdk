@@ -7,14 +7,11 @@
 //!
 //! The tests launch the example binary as a subprocess and make real HTTP
 //! requests against it, so no changes to the example code are needed.
-//!
-//! Everything runs inside a single `#[test]` so that the server child process,
-//! spawned with [`tokio::process::Command::kill_on_drop`], is reliably killed
-//! when the test returns.
 
 use std::collections::HashSet;
 use std::net::TcpStream;
 use std::process::Stdio;
+use std::sync::LazyLock;
 use std::time::Duration;
 
 use foxglove::data_provider::{Manifest, StreamedSource, UpstreamSource};
@@ -24,44 +21,76 @@ const BASE_URL: &str = "http://127.0.0.1:8080";
 const BIND_ADDR: &str = "127.0.0.1:8080";
 
 // ---------------------------------------------------------------------------
-// Server lifecycle
+// Shared fixtures
 // ---------------------------------------------------------------------------
 
-/// A running server whose child process is killed on drop.
+/// Holds a running server process, if we spawned one. The child is created
+/// with [`tokio::process::Command::kill_on_drop`] so it is killed if this
+/// value is dropped (e.g. during panic unwinding).
+///
+/// On normal process exit the `LazyLock` is never dropped, so the child may
+/// outlive the test process. The next run detects the occupied port and reuses
+/// the existing server rather than failing.
 struct Server {
-    _child: tokio::process::Child,
-    _runtime: tokio::runtime::Runtime,
+    _child: Option<tokio::process::Child>,
+    _runtime: Option<tokio::runtime::Runtime>,
 }
 
-/// Spawn the example binary and wait until it accepts connections.
-///
-/// The returned [`Server`] kills the child process when dropped.
-fn start_server() -> Server {
-    let runtime = tokio::runtime::Builder::new_current_thread()
-        .enable_all()
-        .build()
-        .expect("should be able to build tokio runtime");
-
-    let child = runtime.block_on(async {
-        tokio::process::Command::new(env!("CARGO_BIN_EXE_example_data_provider"))
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .kill_on_drop(true)
-            .spawn()
-            .expect("should be able to start example_data_provider binary")
-    });
-
-    for _ in 0..100 {
+/// Ensure a server is listening on [`BIND_ADDR`]. If the port is already
+/// occupied (e.g. from a previous test run), the existing server is reused.
+fn ensure_server() -> &'static Server {
+    static SERVER: LazyLock<Server> = LazyLock::new(|| {
+        // If something is already listening, reuse it.
         if TcpStream::connect(BIND_ADDR).is_ok() {
             return Server {
-                _child: child,
-                _runtime: runtime,
+                _child: None,
+                _runtime: None,
             };
         }
-        std::thread::sleep(Duration::from_millis(50));
-    }
-    panic!("example_data_provider should become ready within 5 s");
+
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("should be able to build tokio runtime");
+
+        let child = runtime.block_on(async {
+            tokio::process::Command::new(env!("CARGO_BIN_EXE_example_data_provider"))
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
+                .kill_on_drop(true)
+                .spawn()
+                .expect("should be able to start example_data_provider binary")
+        });
+
+        for _ in 0..100 {
+            if TcpStream::connect(BIND_ADDR).is_ok() {
+                return Server {
+                    _child: Some(child),
+                    _runtime: Some(runtime),
+                };
+            }
+            std::thread::sleep(Duration::from_millis(50));
+        }
+        panic!("example_data_provider should become ready within 5 s");
+    });
+    &SERVER
 }
+
+/// The manifest response, fetched once and cached as both raw JSON (for schema
+/// validation) and as a deserialized [`Manifest`] (for typed assertions).
+static MANIFEST: LazyLock<(serde_json::Value, Manifest)> = LazyLock::new(|| {
+    ensure_server();
+    let resp = Client::new()
+        .get(manifest_url())
+        .bearer_auth("test-token")
+        .send()
+        .expect("manifest request should succeed");
+    assert_eq!(resp.status(), 200, "manifest endpoint should return 200");
+    let json: serde_json::Value = resp.json().expect("manifest response should be valid JSON");
+    let typed: Manifest = serde_json::from_value(json.clone())
+        .expect("manifest should deserialize into typed Manifest");
+    (json, typed)
+});
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -91,10 +120,13 @@ fn streamed(source: &UpstreamSource) -> &StreamedSource {
 }
 
 // ---------------------------------------------------------------------------
-// Assertions
+// 1. Manifest conforms to the data provider HTTP API
 // ---------------------------------------------------------------------------
 
-fn check_manifest_matches_json_schema(json: &serde_json::Value) {
+#[test]
+fn manifest_matches_json_schema() {
+    let (ref json, _) = *MANIFEST;
+
     let schema: serde_json::Value =
         serde_json::from_str(include_str!("data_provider_manifest_schema.json"))
             .expect("schema file should be valid JSON");
@@ -114,7 +146,10 @@ fn check_manifest_matches_json_schema(json: &serde_json::Value) {
     );
 }
 
-fn check_manifest_schema_ids_are_consistent(manifest: &Manifest) {
+#[test]
+fn manifest_schema_ids_are_consistent() {
+    let (_, ref manifest) = *MANIFEST;
+
     for source in &manifest.sources {
         let s = streamed(source);
         let schema_ids: HashSet<_> = s.schemas.iter().map(|s| s.id).collect();
@@ -135,7 +170,15 @@ fn check_manifest_schema_ids_are_consistent(manifest: &Manifest) {
     }
 }
 
-fn check_mcap_data_matches_manifest(client: &Client, manifest: &Manifest) {
+// ---------------------------------------------------------------------------
+// 2. MCAP data is valid and matches the manifest
+// ---------------------------------------------------------------------------
+
+#[test]
+fn mcap_data_matches_manifest() {
+    let (_, ref manifest) = *MANIFEST;
+    let client = Client::new();
+
     for source in &manifest.sources {
         let s = streamed(source);
         let full_url = resolve_data_url(&s.url);
@@ -240,11 +283,21 @@ fn check_mcap_data_matches_manifest(client: &Client, manifest: &Manifest) {
     }
 }
 
-fn check_auth_required(client: &Client) {
-    let status = client.get(manifest_url()).send().unwrap().status();
-    assert_eq!(status, 401, "manifest without auth should return 401");
+// ---------------------------------------------------------------------------
+// 3. Auth enforcement
+// ---------------------------------------------------------------------------
 
-    let status = client
+#[test]
+fn manifest_requires_auth() {
+    ensure_server();
+    let status = Client::new().get(manifest_url()).send().unwrap().status();
+    assert_eq!(status, 401, "manifest without auth should return 401");
+}
+
+#[test]
+fn data_requires_auth() {
+    ensure_server();
+    let status = Client::new()
         .get(format!(
             "{BASE_URL}/v1/data?flightId=TEST123\
              &startTime=2024-01-01T00:00:00Z\
@@ -254,30 +307,4 @@ fn check_auth_required(client: &Client) {
         .unwrap()
         .status();
     assert_eq!(status, 401, "data without auth should return 401");
-}
-
-// ---------------------------------------------------------------------------
-// Test entry point
-// ---------------------------------------------------------------------------
-
-#[test]
-fn data_provider() {
-    let _server = start_server();
-    let client = Client::new();
-
-    // Fetch the manifest once.
-    let resp = client
-        .get(manifest_url())
-        .bearer_auth("test-token")
-        .send()
-        .expect("manifest request should succeed");
-    assert_eq!(resp.status(), 200, "manifest endpoint should return 200");
-    let json: serde_json::Value = resp.json().expect("manifest response should be valid JSON");
-    let manifest: Manifest = serde_json::from_value(json.clone())
-        .expect("manifest should deserialize into typed Manifest");
-
-    check_manifest_matches_json_schema(&json);
-    check_manifest_schema_ids_are_consistent(&manifest);
-    check_mcap_data_matches_manifest(&client, &manifest);
-    check_auth_required(&client);
 }
