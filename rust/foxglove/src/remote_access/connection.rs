@@ -54,7 +54,7 @@ enum OpCode {
 
 /// Options for the remote access connection.
 ///
-/// This should be constructed from the [`crate::RemoteAccessSink`] builder.
+/// This should be constructed from the [`crate::remote_access::Server`] builder.
 #[derive(Clone)]
 pub(crate) struct RemoteAccessConnectionOptions {
     pub name: Option<String>,
@@ -62,7 +62,7 @@ pub(crate) struct RemoteAccessConnectionOptions {
     pub foxglove_api_url: Option<String>,
     pub foxglove_api_timeout: Option<Duration>,
     pub session_id: String,
-    pub listener: Option<Arc<dyn crate::remote_access::RemoteAccessListener>>,
+    pub listener: Option<Arc<dyn super::ServerListener>>,
     pub capabilities: Vec<Capability>,
     pub supported_encodings: Option<HashSet<String>>,
     pub runtime: Option<Handle>,

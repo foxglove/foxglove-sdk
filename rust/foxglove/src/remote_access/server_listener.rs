@@ -7,7 +7,7 @@ use super::client::Client;
 /// These methods are invoked from the client's main poll loop and must not block. If blocking or
 /// long-running behavior is required, the implementation should use [`tokio::task::spawn`] (or
 /// [`tokio::task::spawn_blocking`]).
-pub trait RemoteAccessListener: Send + Sync {
+pub trait ServerListener: Send + Sync {
     /// Callback invoked when a client message is received.
     fn on_message_data(&self, _client: Client, _channel: &ChannelDescriptor, _payload: &[u8]) {}
     /// Callback invoked when a client subscribes to a channel.

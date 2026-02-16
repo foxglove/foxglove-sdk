@@ -1,21 +1,21 @@
 use foxglove::{
     bytes::Bytes,
+    remote_access::{Capability, Client, Server, ServerListener},
     schemas::RawImage,
-    websocket::{Client, ClientChannel},
-    RemoteAccessSinkListener,
+    ChannelDescriptor,
 };
 use serde_json::Value;
 use std::{sync::Arc, time::Duration};
 
 struct MessageHandler;
-impl RemoteAccessSinkListener for MessageHandler {
+impl ServerListener for MessageHandler {
     /// Called when a connected app publishes a message, such as from the Teleop panel.
-    fn on_message_data(&self, client: Client, channel: &ClientChannel, message: &[u8]) {
+    fn on_message_data(&self, client: Client, channel: &ChannelDescriptor, message: &[u8]) {
         let json = serde_json::from_slice::<Value>(message).expect("Failed to parse message");
         println!(
             "Teleop message from {} on topic {}: {json}",
             client.id(),
-            channel.topic
+            channel.topic()
         );
     }
 }
@@ -27,17 +27,18 @@ async fn main() {
 
     // Open a connection for remote visualization and teleop.
     // This requires Foxglove Agent to be running on the same machine.
-    let handle = foxglove::RemoteAccessSink::new()
+    let handle = Server::new()
+        .capabilities([Capability::ClientPublish])
         .listener(Arc::new(MessageHandler))
         .start()
-        .expect("Failed to start remote access sink");
+        .expect("Failed to start remote access server");
 
     tokio::task::spawn(camera_loop());
     _ = tokio::signal::ctrl_c().await;
     _ = handle.stop().await;
 }
 
-/// Log RawImage messages, which will be encoded as a video stream when sent to the Remote Access Sink.
+/// Log RawImage messages, which will be encoded as a video stream when sent to the remote access server.
 async fn camera_loop() {
     let mut interval = tokio::time::interval(Duration::from_millis(1000 / 30));
     let mut offset = 0u32;

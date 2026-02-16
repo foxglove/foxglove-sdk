@@ -369,10 +369,9 @@ pub(crate) use time::nanoseconds_since_epoch;
 mod api_client;
 #[cfg(feature = "_remote_common")]
 mod protocol;
+#[doc(hidden)]
 #[cfg(feature = "remote_access")]
-mod remote_access;
-#[cfg(feature = "remote_access")]
-mod remote_access_sink;
+pub mod remote_access;
 #[cfg(feature = "websocket")]
 mod runtime;
 #[cfg(feature = "websocket")]
@@ -381,14 +380,6 @@ pub mod websocket;
 mod websocket_client;
 #[cfg(feature = "websocket")]
 mod websocket_server;
-#[doc(hidden)]
-#[cfg(feature = "remote_access")]
-pub use remote_access::{
-    Capability as RemoteAccessCapability, Client as RemoteAccessClient, RemoteAccessListener,
-};
-#[doc(hidden)]
-#[cfg(feature = "remote_access")]
-pub use remote_access_sink::{RemoteAccessSink, RemoteAccessSinkHandle};
 #[cfg(feature = "websocket")]
 pub(crate) use runtime::get_runtime_handle;
 #[cfg(feature = "websocket")]

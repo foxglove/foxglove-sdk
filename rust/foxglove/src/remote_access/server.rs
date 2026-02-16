@@ -1,25 +1,25 @@
 use std::{collections::HashMap, sync::Arc, time::Duration};
 
 use crate::{
-    remote_access::{
-        Capability, RemoteAccessConnection, RemoteAccessConnectionOptions, RemoteAccessListener,
-    },
     sink_channel_filter::{SinkChannelFilter, SinkChannelFilterFn},
     ChannelDescriptor, Context, FoxgloveError,
 };
 
 use tokio::task::JoinHandle;
 
-/// A handle to the RemoteAccessSink connection.
+use super::connection::{RemoteAccessConnection, RemoteAccessConnectionOptions};
+use super::{Capability, ServerListener};
+
+/// A handle to the remote access server connection.
 ///
 /// This handle can safely be dropped and the connection will run forever.
 #[doc(hidden)]
-pub struct RemoteAccessSinkHandle {
+pub struct ServerHandle {
     connection: Arc<RemoteAccessConnection>,
     runner: JoinHandle<()>,
 }
 
-impl RemoteAccessSinkHandle {
+impl ServerHandle {
     fn new(connection: Arc<RemoteAccessConnection>) -> Self {
         let runner = connection.clone().spawn_run_until_cancelled();
 
@@ -30,8 +30,6 @@ impl RemoteAccessSinkHandle {
     ///
     /// Returns a JoinHandle that will allow waiting until the connection has been fully closed.
     pub fn stop(self) -> JoinHandle<()> {
-        // Do we need to do something like the WebSocketServerHandle and return a ShutdownHandle
-        // that lets us block until the RemoteAccessConnection is completely shutdown?
         self.connection.shutdown();
         self.runner
     }
@@ -41,29 +39,29 @@ const FOXGLOVE_DEVICE_TOKEN_ENV: &str = "FOXGLOVE_DEVICE_TOKEN";
 const FOXGLOVE_API_URL_ENV: &str = "FOXGLOVE_API_URL";
 const FOXGLOVE_API_TIMEOUT_ENV: &str = "FOXGLOVE_API_TIMEOUT";
 
-/// A RemoteAccessSink for live visualization and teleop in Foxglove.
+/// A remote access server for live visualization and teleop in Foxglove.
 ///
-/// You may only create one RemoteAccessSink at a time for the device.
+/// You may only create one server at a time for the device.
 #[must_use]
 #[doc(hidden)]
 #[derive(Default)]
-pub struct RemoteAccessSink {
+pub struct Server {
     options: RemoteAccessConnectionOptions,
     device_token: Option<String>,
     foxglove_api_url: Option<String>,
     foxglove_api_timeout: Option<Duration>,
 }
 
-impl std::fmt::Debug for RemoteAccessSink {
+impl std::fmt::Debug for Server {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("RemoteAccessSink")
+        f.debug_struct("Server")
             .field("options", &self.options)
             .finish()
     }
 }
 
-impl RemoteAccessSink {
-    /// Creates a new RemoteAccessSink with default options.
+impl Server {
+    /// Creates a new Server with default options.
     pub fn new() -> Self {
         Self::default()
     }
@@ -77,7 +75,7 @@ impl RemoteAccessSink {
     }
 
     /// Configure an event listener to receive client message events.
-    pub fn listener(mut self, listener: Arc<dyn RemoteAccessListener>) -> Self {
+    pub fn listener(mut self, listener: Arc<dyn ServerListener>) -> Self {
         self.options.listener = Some(listener);
         self
     }
@@ -126,8 +124,8 @@ impl RemoteAccessSink {
     /// Configure the tokio runtime for the server to use for async tasks.
     ///
     /// By default, the server will use either the current runtime (if started with
-    /// [`RemoteAccessSink::start`]), or spawn its own internal runtime (if started with
-    /// [`RemoteAccessSink::start_blocking`]).
+    /// [`Server::start`]), or spawn its own internal runtime (if started with
+    /// [`Server::start_blocking`]).
     #[doc(hidden)]
     pub fn tokio_runtime(mut self, handle: &tokio::runtime::Handle) -> Self {
         self.options.runtime = Some(handle.clone());
@@ -178,15 +176,15 @@ impl RemoteAccessSink {
         self
     }
 
-    /// Starts the RemoteAccessSink, which will establish a connection in the background.
+    /// Starts the remote access server, which will establish a connection in the background.
     ///
-    /// Returns a handle that can optionally be used to manage the sink.
+    /// Returns a handle that can optionally be used to manage the server.
     /// The caller can safely drop the handle and the connection will continue in the background.
     /// Use stop() on the returned handle to stop the connection.
     ///
     /// Returns an error if no device token is provided and the `FOXGLOVE_DEVICE_TOKEN`
     /// environment variable is not set.
-    pub fn start(mut self) -> Result<RemoteAccessSinkHandle, FoxgloveError> {
+    pub fn start(mut self) -> Result<ServerHandle, FoxgloveError> {
         self.options.device_token = self
             .device_token
             .or_else(|| std::env::var(FOXGLOVE_DEVICE_TOKEN_ENV).ok())
@@ -205,6 +203,6 @@ impl RemoteAccessSink {
                 .map(Duration::from_secs)
         });
         let connection = RemoteAccessConnection::new(self.options);
-        Ok(RemoteAccessSinkHandle::new(Arc::new(connection)))
+        Ok(ServerHandle::new(Arc::new(connection)))
     }
 }
