@@ -41,7 +41,7 @@ pub struct RemoteAccessSinkHandle {
 
 impl RemoteAccessSinkHandle {
     fn new(connection: Arc<RemoteAccessConnection>) -> Self {
-        let runner = tokio::spawn(connection.clone().run_until_cancelled());
+        let runner = connection.clone().spawn_run_until_cancelled();
 
         Self { connection, runner }
     }

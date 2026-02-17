@@ -8,7 +8,7 @@ use bytes::Bytes;
 use livekit::{id::ParticipantIdentity, Room, RoomEvent, RoomOptions, StreamByteOptions};
 use parking_lot::RwLock;
 use smallvec::SmallVec;
-use tokio::{runtime::Handle, sync::mpsc::UnboundedReceiver};
+use tokio::{runtime::Handle, sync::mpsc::UnboundedReceiver, task::JoinHandle};
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info, warn};
 
@@ -148,10 +148,21 @@ impl RemoteAccessConnection {
         &self.options.cancellation_token
     }
 
+    /// Run the server loop until cancelled in a new tokio task.
+    ///
+    /// If disconnected from the room, reset all state and attempt to restart the run loop.
+    pub fn spawn_run_until_cancelled(self: Arc<Self>) -> JoinHandle<()> {
+        if let Some(runtime) = self.options.runtime.as_ref() {
+            runtime.spawn(self.clone().run_until_cancelled())
+        } else {
+            tokio::spawn(self.run_until_cancelled())
+        }
+    }
+
     /// Run the server loop until cancelled.
     ///
     /// If disconnected from the room, reset all state and attempt to restart the run loop.
-    pub async fn run_until_cancelled(self: Arc<Self>) {
+    async fn run_until_cancelled(self: Arc<Self>) {
         while !self.cancellation_token().is_cancelled() {
             self.run().await;
         }
