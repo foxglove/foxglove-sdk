@@ -19,7 +19,7 @@ use crate::{
         RemoteAccessError,
     },
     websocket::{self, Server},
-    RemoteAccessSinkListener, SinkChannelFilter,
+    Context, RemoteAccessSinkListener, SinkChannelFilter,
 };
 
 use crate::protocol::v2::{server::ServerInfo, JsonMessage};
@@ -71,6 +71,7 @@ pub(crate) struct RemoteAccessConnectionOptions {
     pub channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     pub server_info: Option<HashMap<String, String>>,
     pub cancellation_token: CancellationToken,
+    pub context: Arc<Context>,
 }
 
 impl Default for RemoteAccessConnectionOptions {
@@ -84,6 +85,7 @@ impl Default for RemoteAccessConnectionOptions {
             channel_filter: None,
             server_info: None,
             cancellation_token: CancellationToken::new(),
+            context: Context::get_default(),
         }
     }
 }
@@ -98,6 +100,7 @@ impl std::fmt::Debug for RemoteAccessConnectionOptions {
             .field("has_runtime", &self.runtime.is_some())
             .field("has_channel_filter", &self.channel_filter.is_some())
             .field("server_info", &self.server_info)
+            .field("context", &self.context)
             .finish()
     }
 }

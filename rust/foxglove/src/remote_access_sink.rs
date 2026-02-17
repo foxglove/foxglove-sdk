@@ -64,14 +64,12 @@ impl RemoteAccessSinkHandle {
 #[doc(hidden)]
 pub struct RemoteAccessSink {
     options: RemoteAccessConnectionOptions,
-    context: Arc<Context>,
 }
 
 impl std::fmt::Debug for RemoteAccessSink {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("RemoteAccessSink")
             .field("options", &self.options)
-            .field("context", &self.context)
             .finish()
     }
 }
@@ -80,7 +78,6 @@ impl Default for RemoteAccessSink {
     fn default() -> Self {
         Self {
             options: RemoteAccessConnectionOptions::default(),
-            context: Context::get_default(),
         }
     }
 }
@@ -129,7 +126,7 @@ impl RemoteAccessSink {
 
     /// Sets the context for this sink.
     pub fn context(mut self, ctx: &Arc<Context>) -> Self {
-        self.context = ctx.clone();
+        self.options.context = ctx.clone();
         self
     }
 
