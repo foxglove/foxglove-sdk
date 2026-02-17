@@ -367,7 +367,8 @@ pub(crate) use time::nanoseconds_since_epoch;
 #[cfg(feature = "remote_access")]
 mod api_client;
 #[cfg(feature = "live_visualization")]
-mod protocol;
+#[doc(hidden)]
+pub mod protocol;
 #[cfg(feature = "remote_access")]
 mod remote_access;
 #[cfg(feature = "remote_access")]

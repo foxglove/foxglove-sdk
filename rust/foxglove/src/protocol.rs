@@ -2,7 +2,6 @@
 
 // Common is kept internal to the protocol module; common messages are re-exported from specific protocol version modules as-needed.
 // End users should only use a specific protocol version module.
-#[doc(hidden)]
 mod common;
 use common::{parameter, schema};
 use common::{BinaryPayload, JsonMessage, ParseError};
