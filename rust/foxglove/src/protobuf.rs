@@ -175,17 +175,19 @@ impl ProtobufField for usize {
     }
 
     fn write(&self, buf: &mut impl bytes::BufMut) {
-        // Clamp to u64::MAX for platforms where usize might be larger
-        let value = (*self).min(u64::MAX as usize) as u64;
-        encode_varint(value, buf);
+        encode_varint(*self as u64, buf);
     }
 
     fn encoded_len(&self) -> usize {
-        // Clamp to u64::MAX for platforms where usize might be larger
-        let value = (*self).min(u64::MAX as usize) as u64;
-        prost::encoding::encoded_len_varint(value)
+        prost::encoding::encoded_len_varint(*self as u64)
     }
 }
+
+// Compile-time assertion that usize fits in u64
+const _: () = assert!(
+    usize::BITS <= u64::BITS,
+    "Target architecture has a usize larger than u64"
+);
 
 impl ProtobufField for u32 {
     fn field_type() -> ProstFieldType {
