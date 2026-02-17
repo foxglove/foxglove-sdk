@@ -62,6 +62,7 @@ impl RemoteAccessSinkHandle {
 /// You may only create one RemoteAccessSink at a time for the device.
 #[must_use]
 #[doc(hidden)]
+#[derive(Default)]
 pub struct RemoteAccessSink {
     options: RemoteAccessConnectionOptions,
 }
@@ -71,14 +72,6 @@ impl std::fmt::Debug for RemoteAccessSink {
         f.debug_struct("RemoteAccessSink")
             .field("options", &self.options)
             .finish()
-    }
-}
-
-impl Default for RemoteAccessSink {
-    fn default() -> Self {
-        Self {
-            options: RemoteAccessConnectionOptions::default(),
-        }
     }
 }
 
