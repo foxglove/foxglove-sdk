@@ -28,6 +28,7 @@
 #![cfg(feature = "test-harness")]
 
 use std::collections::{HashMap, HashSet};
+use std::process::ExitCode;
 
 use foxglove::data_provider::{Manifest, UpstreamSource};
 use libtest_mimic::{Arguments, Trial};
@@ -41,9 +42,9 @@ pub struct DataProviderTestConfig {
     pub manifest_url: Url,
     /// Bearer token for authenticated requests.
     pub bearer_token: String,
-    // Expected number of streamed sources in the manifest.
+    /// Expected number of streamed sources in the manifest.
     pub expected_streamed_source_count: usize,
-    // Expected number of static file sources in the manifest.
+    /// Expected number of static file sources in the manifest.
     pub expected_static_file_source_count: usize,
 }
 
@@ -52,10 +53,10 @@ pub struct DataProviderTestConfig {
 ///
 /// This parses `std::env::args()` for the standard test flags (`--filter`,
 /// `--list`, etc.) and calls [`std::process::exit`] with the appropriate code.
-pub fn run_tests(config: DataProviderTestConfig) {
+pub fn run_tests(config: DataProviderTestConfig) -> ExitCode {
     let args = Arguments::from_args();
     let trials = build_tests(config);
-    libtest_mimic::run(&args, trials).exit();
+    libtest_mimic::run(&args, trials).exit_code()
 }
 
 /// Build the test suite as a list of [`Trial`] values.
@@ -90,18 +91,21 @@ pub fn build_tests(
             UpstreamSource::StaticFile { .. } => static_file_source_count += 1,
         }
     }
-    assert_eq!(
-        streamed_source_count, expected_streamed_source_count,
-        "streamed source count should match expected"
-    );
-    assert_eq!(
-        static_file_source_count, expected_static_file_source_count,
-        "static file source count should match expected"
-    );
 
     vec![
         Trial::test("test_manifest_matches_json_schema", move || {
             test_manifest_matches_json_schema(&json);
+            Ok(())
+        }),
+        Trial::test("test_source_count", move || {
+            assert_eq!(
+                streamed_source_count, expected_streamed_source_count,
+                "streamed source count should match expected"
+            );
+            assert_eq!(
+                static_file_source_count, expected_static_file_source_count,
+                "static file source count should match expected"
+            );
             Ok(())
         }),
         Trial::test("test_manifest_and_mcap_agree", {
