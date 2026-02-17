@@ -1,48 +1,38 @@
 //! End-to-end tests for the data_provider example.
 //!
-//! This is a thin wrapper that starts the example binary and delegates all
-//! checks to the reusable test suite in [`example_data_provider`]'s library
-//! target. The child process is spawned with
-//! [`tokio::process::Command::kill_on_drop`] so it is killed reliably on both
-//! normal return and panic unwinding.
+//! This is a thin wrapper that starts the example binary as a subprocess, and delegates all checks
+//! to the reusable test suite in [`example_data_provider`]'s library target.
 
-use std::net::TcpStream;
 use std::process::Stdio;
 use std::time::Duration;
 
 use example_data_provider::DataProviderTestConfig;
 
-const BASE_URL: &str = "http://127.0.0.1:8080";
 const BIND_ADDR: &str = "127.0.0.1:8080";
 
-/// A running server whose child process is killed on drop.
-struct Server {
-    _child: tokio::process::Child,
-    _runtime: tokio::runtime::Runtime,
+struct KillOnDrop(std::process::Child);
+
+impl Drop for KillOnDrop {
+    fn drop(&mut self) {
+        self.0
+            .kill()
+            .expect("should be able to kill example_data_provider binary");
+    }
 }
 
 /// Spawn the example binary and wait until it accepts connections.
-fn start_server() -> Server {
-    let runtime = tokio::runtime::Builder::new_current_thread()
-        .enable_all()
-        .build()
-        .expect("should be able to build tokio runtime");
-
-    let child = runtime.block_on(async {
-        tokio::process::Command::new(env!("CARGO_BIN_EXE_example_data_provider"))
+fn start_server() -> KillOnDrop {
+    let child = KillOnDrop(
+        std::process::Command::new(env!("CARGO_BIN_EXE_example_data_provider"))
             .stdout(Stdio::null())
             .stderr(Stdio::null())
-            .kill_on_drop(true)
             .spawn()
-            .expect("should be able to start example_data_provider binary")
-    });
+            .expect("should be able to start example_data_provider binary"),
+    );
 
     for _ in 0..100 {
-        if TcpStream::connect(BIND_ADDR).is_ok() {
-            return Server {
-                _child: child,
-                _runtime: runtime,
-            };
+        if std::net::TcpStream::connect(BIND_ADDR).is_ok() {
+            return child;
         }
         std::thread::sleep(Duration::from_millis(50));
     }
@@ -50,15 +40,13 @@ fn start_server() -> Server {
 }
 
 fn main() {
-    let _server = start_server();
+    let manifest_url =
+        "http://{BIND_ADDR}/v1/manifest?flightId=TEST123&startTime=2024-01-01T00:00:00Z&endTime=2024-01-01T00:00:05Z"
+    .parse().unwrap();
+    let _guard = start_server();
 
-    example_data_provider::run_tests(&DataProviderTestConfig {
-        base_url: BASE_URL.into(),
-        manifest_url: format!(
-            "{BASE_URL}/v1/manifest?flightId=TEST123\
-             &startTime=2024-01-01T00:00:00Z\
-             &endTime=2024-01-01T00:00:05Z"
-        ),
+    example_data_provider::run_tests(DataProviderTestConfig {
+        manifest_url,
         bearer_token: "test-token".into(),
     });
 }

@@ -44,6 +44,7 @@ pub struct StreamedSource {
     /// If `id` is absent, this must uniquely identify the data.
     pub url: String,
     /// Identifier for the data source. If present, this must be unique.
+    #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]
     pub id: Option<String>,
     /// Topics present in the data.
@@ -55,6 +56,8 @@ pub struct StreamedSource {
     /// You can provide a lower bound if this is not known exactly. This determines the start time of the seek bar in the Foxglove app.
     pub start_time: DateTime<Utc>,
     /// Latest timestamp of any message in the data.
+    ///
+    /// You can provide an upper bound if this is not known exactly. This determines the end time of the seek bar in the Foxglove app.
     pub end_time: DateTime<Utc>,
 }
 
