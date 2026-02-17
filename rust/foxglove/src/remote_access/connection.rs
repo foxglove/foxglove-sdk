@@ -414,7 +414,11 @@ impl RemoteAccessSession {
         // Add the message framing, 1 byte op code + 4 byte little-endian length
         let mut buf = SmallVec::<[u8; 4 * 1024]>::with_capacity(bytes.len() + 5);
         buf.push(op_code as u8);
-        buf.extend_from_slice(&(bytes.len() as u32).to_le_bytes());
+        buf.extend_from_slice(
+            &u32::try_from(bytes.len())
+                .expect("message too large")
+                .to_le_bytes(),
+        );
         buf.extend_from_slice(&bytes);
 
         if let Err(e) = participant.send(&buf).await {
