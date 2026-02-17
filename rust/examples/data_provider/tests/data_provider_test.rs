@@ -41,12 +41,14 @@ fn start_server() -> KillOnDrop {
 
 fn main() {
     let manifest_url =
-        "http://{BIND_ADDR}/v1/manifest?flightId=TEST123&startTime=2024-01-01T00:00:00Z&endTime=2024-01-01T00:00:05Z"
+        format!("http://{BIND_ADDR}/v1/manifest?flightId=TEST123&startTime=2024-01-01T00:00:00Z&endTime=2024-01-01T00:00:05Z")
     .parse().unwrap();
     let _guard = start_server();
 
     example_data_provider::run_tests(DataProviderTestConfig {
         manifest_url,
         bearer_token: "test-token".into(),
+        expected_streamed_source_count: 1,
+        expected_static_file_source_count: 0,
     });
 }

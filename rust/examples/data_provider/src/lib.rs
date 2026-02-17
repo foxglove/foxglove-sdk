@@ -17,9 +17,10 @@
 //!
 //! let _server = start_my_server();
 //! let config = DataProviderTestConfig {
-//!     base_url: "http://127.0.0.1:8080".parse().unwrap(),
 //!     manifest_url: "http://127.0.0.1:8080/v1/manifest?...".parse().unwrap(),
 //!     bearer_token: "my-token".into(),
+//!     expected_streamed_source_count: 1,
+//!     expected_static_file_source_count: 0,
 //! };
 //! example_data_provider::run_tests(config);
 //! ```
@@ -40,6 +41,10 @@ pub struct DataProviderTestConfig {
     pub manifest_url: Url,
     /// Bearer token for authenticated requests.
     pub bearer_token: String,
+    // Expected number of streamed sources in the manifest.
+    pub expected_streamed_source_count: usize,
+    // Expected number of static file sources in the manifest.
+    pub expected_static_file_source_count: usize,
 }
 
 /// Run the full test suite against a running data provider, using
@@ -60,6 +65,8 @@ pub fn build_tests(
     DataProviderTestConfig {
         manifest_url,
         bearer_token,
+        expected_streamed_source_count,
+        expected_static_file_source_count,
     }: DataProviderTestConfig,
 ) -> Vec<Trial> {
     let client = Client::new();
@@ -74,6 +81,23 @@ pub fn build_tests(
     let json: serde_json::Value = resp.json().expect("manifest response should be valid JSON");
     let manifest: Manifest = serde_json::from_value(json.clone())
         .expect("manifest should deserialize into typed Manifest");
+
+    let mut streamed_source_count = 0;
+    let mut static_file_source_count = 0;
+    for source in &manifest.sources {
+        match source {
+            UpstreamSource::Streamed(_) => streamed_source_count += 1,
+            UpstreamSource::StaticFile { .. } => static_file_source_count += 1,
+        }
+    }
+    assert_eq!(
+        streamed_source_count, expected_streamed_source_count,
+        "streamed source count should match expected"
+    );
+    assert_eq!(
+        static_file_source_count, expected_static_file_source_count,
+        "static file source count should match expected"
+    );
 
     vec![
         Trial::test("test_manifest_matches_json_schema", move || {
