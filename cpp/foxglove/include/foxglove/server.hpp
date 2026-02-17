@@ -71,8 +71,9 @@ enum class WebSocketServerCapabilities : uint8_t {
   /// Allow clients to request assets. If you supply an asset handler to the
   /// server, this capability will be advertised automatically.
   Assets = 1 << 5,
-  /// Indicates that the server is sending data within a fixed time range. This requires the
-  /// server to specify the `playback_time_range` field in its `WebSocketServerOptions`.
+  /// Indicates that the server is capable of responding to playback control requests from
+  /// controls in the Foxglove app. This requires the server to specify the `playback_time_range`
+  /// field in its `WebSocketServerOptions`.
   PlaybackControl = 1 << 6,
 };
 

@@ -155,7 +155,8 @@ Enums
 
    .. py:data:: PlaybackControl
 
-      Indicates that the server is sending data within a fixed time range.
+      Indicates that the server is capable of responding to playback control requests from
+      controls in the Foxglove app.
 
 
 .. py:enum:: StatusLevel
