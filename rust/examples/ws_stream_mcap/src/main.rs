@@ -30,7 +30,7 @@ impl Listener {
     }
 }
 
-/// Implement RangedPlayback-specific listener logic for responding to PlaybackControlRequests
+/// Implement PlaybackControl-specific listener logic for responding to PlaybackControlRequests
 impl ServerListener for Listener {
     /// Respond to a PlaybackControlRequest from Foxglove and send an updated PlaybackState.
     /// First we process the fields in the request (seeking, updating the playback speed, and

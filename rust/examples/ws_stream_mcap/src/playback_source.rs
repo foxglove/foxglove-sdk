@@ -6,7 +6,7 @@ use foxglove::{websocket::PlaybackStatus, WebSocketServerHandle};
 /// A timestamp in nanoseconds since epoch.
 pub type Nanoseconds = u64;
 
-/// A data source that supports ranged playback with play/pause, seek, and variable speed.
+/// A data source that supports playback control with play/pause, seek, and variable speed.
 ///
 /// Implementations are responsible for:
 /// - Tracking playback state (playing/paused/ended) and current position
