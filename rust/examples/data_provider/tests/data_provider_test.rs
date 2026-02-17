@@ -28,8 +28,8 @@ fn start_server() -> KillOnDrop {
 
     let child = KillOnDrop(
         std::process::Command::new(env!("CARGO_BIN_EXE_example_data_provider"))
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit())
             .spawn()
             .expect("should be able to start example_data_provider binary"),
     );
