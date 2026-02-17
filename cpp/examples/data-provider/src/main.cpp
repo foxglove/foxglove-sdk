@@ -20,14 +20,14 @@
 /// Get a manifest for a specific flight:
 /// @code{.sh}
 ///   curl -H "Authorization: Bearer test" \
-///     "http://localhost:8080/v1/manifest?flightId=ABC123\
+///     "http://localhost:8081/v1/manifest?flightId=ABC123\
 ///     &startTime=2024-01-01T00:00:00Z&endTime=2024-01-02T00:00:00Z"
 /// @endcode
 ///
 /// Stream MCAP data:
 /// @code{.sh}
 ///   curl -H "Authorization: Bearer test" --output data.mcap \
-///     "http://localhost:8080/v1/data?flightId=ABC123\
+///     "http://localhost:8081/v1/data?flightId=ABC123\
 ///     &startTime=2024-01-01T00:00:00Z&endTime=2024-01-02T00:00:00Z"
 /// @endcode
 ///
@@ -85,7 +85,7 @@ std::string format_iso8601(system_clock::time_point tp) {
 // The specific route values are not part of the API; you can change them to whatever you want.
 static constexpr const char* MANIFEST_ROUTE = "/v1/manifest";
 static constexpr const char* DATA_ROUTE = "/v1/data";
-static constexpr int PORT = 8080;
+static constexpr int PORT = 8081;
 
 // ============================================================================
 // Flight parameters (parsed from query parameters)
