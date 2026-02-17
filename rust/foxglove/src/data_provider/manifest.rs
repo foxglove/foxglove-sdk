@@ -30,7 +30,7 @@ pub enum UpstreamSource {
         url: String,
         /// Marker indicating range request support (always true).
         #[allow(unused)]
-        support_range_requests: ConstBool<true>,
+        supports_range_requests: ConstBool<true>,
     },
     /// A streamed source that must be read sequentially.
     Streamed(StreamedSource),
