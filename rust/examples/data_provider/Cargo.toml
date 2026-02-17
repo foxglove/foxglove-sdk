@@ -6,35 +6,21 @@ publish = false
 [lints]
 workspace = true
 
-[features]
-test-harness = [
-    "dep:jsonschema",
-    "dep:libtest-mimic",
-    "dep:mcap",
-    "dep:reqwest",
-    "dep:serde_json",
-]
-
 [dependencies]
 axum = "0.8"
 chrono.workspace = true
 foxglove = { path = "../../foxglove", features = ["data_provider", "stream", "derive", "chrono"] }
 futures = "0.3"
-jsonschema = { version = "0.42", optional = true, default-features = false }
-libtest-mimic = { version = "0.8", optional = true }
-mcap = { workspace = true, optional = true }
-reqwest = { version = "0.13.1", default-features = false, features = ["blocking", "json"], optional = true }
 serde.workspace = true
-serde_json = { version = "1.0", optional = true }
 serde_urlencoded = "0.7"
 tokio.workspace = true
 tracing.workspace = true
 tracing-subscriber = "0.3"
 
 [dev-dependencies]
+data_provider_conformance = { path = "../../data_provider_conformance" }
 tokio.workspace = true
 
 [[test]]
 name = "data_provider_test"
 harness = false
-required-features = ["test-harness"]

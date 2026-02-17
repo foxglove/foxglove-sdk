@@ -1,12 +1,12 @@
 //! End-to-end tests for the data_provider example.
 //!
 //! This is a thin wrapper that starts the example binary as a subprocess, and delegates all checks
-//! to the reusable test suite in [`example_data_provider`]'s library target.
+//! to the reusable test suite in [`data_provider_conformance`].
 
 use std::process::{ExitCode, Stdio};
 use std::time::Duration;
 
-use example_data_provider::DataProviderTestConfig;
+use data_provider_conformance::DataProviderTestConfig;
 
 const BIND_ADDR: &str = "127.0.0.1:8080";
 
@@ -49,7 +49,7 @@ fn main() -> ExitCode {
     .parse().unwrap();
     let _guard = start_server();
 
-    example_data_provider::run_tests(DataProviderTestConfig {
+    data_provider_conformance::run_tests(DataProviderTestConfig {
         manifest_url,
         bearer_token: "test-token".into(),
         expected_streamed_source_count: 1,

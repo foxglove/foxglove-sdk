@@ -732,6 +732,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2a2330da5de22e8a3cb63252ce2abb30116bf5265e89c0e01bc17015ce30a476"
 
 [[package]]
+name = "data_provider_conformance"
+version = "0.0.0"
+dependencies = [
+ "foxglove 0.17.2",
+ "jsonschema",
+ "libtest-mimic",
+ "mcap 0.24.0",
+ "reqwest",
+ "serde_json",
+]
+
+[[package]]
 name = "delegate"
 version = "0.13.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -935,14 +947,10 @@ version = "0.0.0"
 dependencies = [
  "axum",
  "chrono",
+ "data_provider_conformance",
  "foxglove 0.17.2",
  "futures",
- "jsonschema",
- "libtest-mimic",
- "mcap 0.24.0",
- "reqwest",
  "serde",
- "serde_json",
  "serde_urlencoded",
  "tokio",
  "tracing",
