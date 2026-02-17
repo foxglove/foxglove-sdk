@@ -1,0 +1,38 @@
+{
+  "name": "@foxglove/messages",
+  "version": "1.9.0",
+  "description": "Foxglove message type definitions for TypeScript",
+  "license": "MIT",
+  "author": {
+    "name": "Foxglove",
+    "email": "support@foxglove.dev",
+    "url": "https://foxglove.dev/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/foxglove/foxglove-sdk.git",
+    "directory": "typescript/messages"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "internal.d.ts",
+    "internal.js",
+    "jsonschema.d.ts",
+    "jsonschema.js"
+  ],
+  "packageManager": "yarn@4.6.0",
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "git clean -Xdf",
+    "clean-build": "yarn clean && yarn build",
+    "prepack": "yarn clean-build"
+  },
+  "dependencies": {
+    "@foxglove/schemas": "workspace:^"
+  },
+  "devDependencies": {
+    "typescript": "5.9.2"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "extends": "@foxglove/tsconfig/base",
+  "include": ["./src/index.ts", "./internal.d.ts", "./jsonschema.d.ts"],
+  "compilerOptions": {
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "module": "commonjs",
+    "lib": ["es2020"],
+    "noEmit": false
+  }
+}
