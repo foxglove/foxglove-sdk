@@ -52,7 +52,9 @@ pub struct DataProviderTestConfig {
 /// [`libtest_mimic`] for output and argument handling.
 ///
 /// This parses `std::env::args()` for the standard test flags (`--filter`,
-/// `--list`, etc.) and calls [`std::process::exit`] with the appropriate code.
+/// `--list`, etc.)
+///
+/// Returns the exit code of the test run.
 pub fn run_tests(config: DataProviderTestConfig) -> ExitCode {
     let args = Arguments::from_args();
     let trials = build_tests(config);
