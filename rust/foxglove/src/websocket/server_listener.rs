@@ -68,7 +68,6 @@ pub trait ServerListener: Send + Sync {
     /// Callback invoked when a client disconnects from the server.
     fn on_client_disconnect(&self) {}
 
-    #[doc(hidden)]
     /// Callback invoked when a client sends a playback control request.
     /// Requires [`Capability::PlaybackControl`][super::Capability::PlaybackControl].
     fn on_playback_control_request(

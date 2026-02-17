@@ -40,9 +40,9 @@ pub const FOXGLOVE_SERVER_CAPABILITY_SERVICES: u8 = 1 << 4;
 /// Allow clients to request assets. If you supply an asset handler to the server, this capability
 /// will be advertised automatically.
 pub const FOXGLOVE_SERVER_CAPABILITY_ASSETS: u8 = 1 << 5;
-/// Indicates that the server is sending data within a fixed time range. This requires the
-/// server to specify the `data_start_time` and `data_end_time` fields in
-/// `foxglove_server_options`.
+/// Indicates that the server is capable of responding to playback control requests from controls
+/// in the Foxglove app. This requires the server to specify the `data_start_time` and
+/// `data_end_time` fields in `foxglove_server_options`.
 pub const FOXGLOVE_SERVER_CAPABILITY_PLAYBACK_CONTROL: u8 = 1 << 6;
 
 bitflags! {
