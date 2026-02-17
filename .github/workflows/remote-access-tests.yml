@@ -22,21 +22,7 @@ jobs:
           toolchain: stable
 
       - name: Start LiveKit server
-        run: docker compose up -d
-
-      - name: Wait for LiveKit to be ready
-        run: |
-          for i in $(seq 1 30); do
-            if curl -sf http://localhost:7880 > /dev/null 2>&1; then
-              echo "LiveKit is ready"
-              exit 0
-            fi
-            echo "Waiting for LiveKit... ($i/30)"
-            sleep 1
-          done
-          echo "LiveKit failed to start"
-          docker compose logs
-          exit 1
+        run: docker compose up -d --wait
 
       - name: Run LiveKit integration tests
         run: cargo test -p remote-access-tests -- --ignored livekit_
