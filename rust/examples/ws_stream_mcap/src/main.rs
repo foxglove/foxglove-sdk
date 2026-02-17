@@ -48,7 +48,10 @@ impl ServerListener for Listener {
 
         // Handle seek first, before play/pause. This is important for looping behavior,
         // where Foxglove sends a seek to the beginning followed by a Play command.
-        // Setting this flag to true clears panels in the Foxglove player. For simplicity, we set this every time a seek is requested from Foxglove. In your application, consider implementing logic that determines whether a seek represents a significant jump in time for the data you're playing back.
+        // Setting this flag to true clears panels in the Foxglove player. For simplicity, we set
+        // this every time a seek is requested from Foxglove. In your application, consider
+        // implementing logic that determines whether a seek represents a significant jump in time
+        // for the data you're playing back.
         let mut did_seek = request.seek_time.is_some();
 
         if let Some(seek_time) = request.seek_time {
