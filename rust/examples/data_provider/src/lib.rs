@@ -40,7 +40,7 @@ pub use reqwest::Url;
 pub struct DataProviderTestConfig {
     /// Full URL of the manifest endpoint, including query parameters.
     pub manifest_url: Url,
-    /// Bearer token for authenticated requests.
+    /// Bearer token to use for authenticated requests.
     pub bearer_token: String,
     /// Expected number of streamed sources in the manifest.
     pub expected_streamed_source_count: usize,
@@ -48,11 +48,8 @@ pub struct DataProviderTestConfig {
     pub expected_static_file_source_count: usize,
 }
 
-/// Run the full test suite against a running data provider, using
-/// [`libtest_mimic`] for output and argument handling.
-///
-/// This parses `std::env::args()` for the standard test flags (`--filter`,
-/// `--list`, etc.)
+/// Run the full test suite against a running data provider, using [`libtest_mimic`] for output and
+/// command line argument handling.
 ///
 /// Returns the exit code of the test run.
 pub fn run_tests(config: DataProviderTestConfig) -> ExitCode {
