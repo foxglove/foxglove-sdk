@@ -11,7 +11,7 @@ license.workspace = true
 default = ["derive", "live_visualization", "lz4", "zstd"]
 chrono = ["dep:chrono"]
 derive = ["dep:foxglove_derive"]
-agent = ["live_visualization"]
+agent = ["live_visualization", "tls", "dep:reqwest", "dep:percent-encoding"]
 live_visualization = [
   "dep:base64",
   "dep:flume",
@@ -30,7 +30,8 @@ tls = [
   "dep:tokio-rustls",
   "dep:rcgen",
 ]
-stream = ["dep:futures"]
+stream = ["dep:futures", "dep:tokio"]
+data_provider = ["dep:chrono", "chrono/serde", "dep:serde_with", "dep:serde-constant"]
 schemars = ["dep:schemars"]
 schemars-chrono = ["schemars", "chrono", "schemars/chrono04"]
 serde = ["dep:base64"]
@@ -55,7 +56,7 @@ aws-lc-rs = { version = "1.13.3", optional = true, features = ["bindgen"] }
 base64 = { version = "0.22", optional = true }
 bimap = "0.6.3"
 bytes.workspace = true
-chrono = { version = "0.4.39", optional = true }
+chrono = { workspace = true, optional = true }
 delegate = "0.13.2"
 flume = { version = "0.11.1", optional = true }
 foxglove_derive = { version = "0.17.2", path = "../foxglove_derive", optional = true }
@@ -68,7 +69,8 @@ prost.workspace = true
 schemars = { version = "1.0.4", optional = true }
 serde_json = "1.0"
 serde_repr = { version = "0.1.19", optional = true }
-serde_with = { version = "3.14.0", features = ["macros", "base64"], optional = true }
+serde-constant = { version = "0.1.0", optional = true }
+serde_with = { workspace = true, optional = true }
 serde.workspace = true
 smallvec = "1.15.1"
 smallbytes = "0.1.0"
@@ -86,11 +88,14 @@ image = { version = "0.25.9", default-features = false, optional = true }
 yuv = { version = "0.8.9", optional = true }
 regex = { version = "1", optional = true }
 cdr = { version = "0.2.4", optional = true }
+reqwest = { version = "0.13.1", features = ["json", "rustls"], optional = true }
+percent-encoding = { version = "2.3.2", optional = true }
 
 [dev-dependencies]
 assert_matches = "1.5.0"
+insta.workspace = true
+axum = "0.8.8"
 hexdump = "0.1.2"
-insta = { version = "1.42.2", features = ["json"] }
 maplit = "1.0.2"
 serde_cbor = "0.11.2"
 serde_json = "1.0"

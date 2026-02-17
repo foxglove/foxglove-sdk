@@ -22,7 +22,7 @@ pub enum Capability {
     ConnectionGraph,
     /// Indicates that the server is sending data within a fixed time range. This requires the
     /// server to specify the `data_start_time` and `data_end_time` fields in its `ServerInfo` message.
-    RangedPlayback,
+    PlaybackControl,
 }
 
 impl Capability {
@@ -37,7 +37,7 @@ impl Capability {
             Self::Services => &[server_info::Capability::Services],
             Self::Assets => &[server_info::Capability::Assets],
             Self::ConnectionGraph => &[server_info::Capability::ConnectionGraph],
-            Self::RangedPlayback => &[server_info::Capability::RangedPlayback],
+            Self::PlaybackControl => &[server_info::Capability::PlaybackControl],
         }
     }
 }

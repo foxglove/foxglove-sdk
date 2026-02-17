@@ -126,7 +126,7 @@ impl WebSocketServer {
     }
 
     /// Declare the time range for playback, in absolute nanoseconds. This applies if the server is playing back a fixed time range of data.
-    /// This will add the RangedPlayback capability to the server.
+    /// This will add the PlaybackControl capability to the server.
     pub fn playback_time_range(mut self, start_time: u64, end_time: u64) -> Self {
         self.options.playback_time_range = Some((start_time, end_time));
         self
@@ -329,7 +329,7 @@ impl WebSocketServerHandle {
 
     /// Publish the current playback state to all clients.
     ///
-    /// Requires the [`RangedPlayback`](crate::websocket::Capability::Time) capability.
+    /// Requires the [`PlaybackControl`](crate::websocket::Capability::PlaybackControl) capability.
     #[doc(hidden)]
     pub fn broadcast_playback_state(&self, playback_state: PlaybackState) {
         self.0.broadcast_playback_state(playback_state);

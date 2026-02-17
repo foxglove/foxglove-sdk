@@ -77,7 +77,7 @@ try:
             Return `True` to log the channel, or `False` to skip it. By default, all channels
             will be logged.
         :param playback_time_range: Time range of data being played back, in absolute nanoseconds.
-            Implies `Capability.RangedPlayback` if set.
+            Implies `Capability.PlaybackControl` if set.
         """
         return _foxglove.start_server(
             name=name,
