@@ -44,10 +44,13 @@ async fn livekit_viewer_receives_server_info() -> Result<()> {
 
     // Connect as a viewer participant.
     let viewer_token = livekit_token::generate_token(&room_name, "viewer-1")?;
-    let (viewer_room, mut viewer_events) =
-        Room::connect(livekit_token::LIVEKIT_URL, &viewer_token, RoomOptions::default())
-            .await
-            .context("viewer failed to connect to LiveKit")?;
+    let (viewer_room, mut viewer_events) = Room::connect(
+        livekit_token::LIVEKIT_URL,
+        &viewer_token,
+        RoomOptions::default(),
+    )
+    .await
+    .context("viewer failed to connect to LiveKit")?;
     info!("viewer connected to room");
 
     // Wait for a ByteStreamOpened event on the "ws-protocol" topic.
@@ -64,9 +67,7 @@ async fn livekit_viewer_receives_server_info() -> Result<()> {
             participant_identity,
         } = event
         {
-            info!(
-                "ByteStreamOpened: topic={topic:?}, from={participant_identity:?}"
-            );
+            info!("ByteStreamOpened: topic={topic:?}, from={participant_identity:?}");
             if topic == "ws-protocol" {
                 break stream_reader.take().context("reader already taken")?;
             }
@@ -119,7 +120,9 @@ async fn livekit_viewer_receives_server_info() -> Result<()> {
         "metadata should contain fg-library"
     );
     assert!(
-        server_info.supported_encodings.contains(&"json".to_string()),
+        server_info
+            .supported_encodings
+            .contains(&"json".to_string()),
         "supported_encodings should contain 'json'"
     );
 
