@@ -15,6 +15,10 @@
             "type": "string",
             "description": "The URL to load message data from. This URL should respond to a GET request with MCAP-formatted data for the described topics."
           },
+          "id": {
+            "type": "string",
+            "description": "An optional identifier for the data source. If provided, it must be globally unique across all data sources from this data provider (not just this manifest)."
+          },
           "topics": {
             "type": "array",
             "items": {
