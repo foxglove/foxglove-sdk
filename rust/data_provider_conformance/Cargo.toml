@@ -1,0 +1,15 @@
+[package]
+name = "data_provider_conformance"
+edition = "2021"
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+foxglove = { path = "../foxglove", features = ["data_provider"] }
+jsonschema = { version = "0.42", default-features = false }
+libtest-mimic = "0.8"
+mcap.workspace = true
+reqwest = { version = "0.13.1", default-features = false, features = ["blocking", "json"] }
+serde_json = "1.0"
