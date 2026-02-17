@@ -120,7 +120,7 @@ foxglove.websocket
 .. Parameter types and values are manually documented since nested classes (values) are not supported by automodule.
 .. automodule:: foxglove.websocket
    :members:
-   :exclude-members: Capability, ParameterType, ParameterValue, StatusLevel, PlaybackCommand, PlaybackControlRequest, PlaybackState, PlaybackStatus
+   :exclude-members: Capability, ParameterType, ParameterValue, StatusLevel, PlaybackCommand, PlaybackStatus
 
 
 Enums
@@ -153,6 +153,11 @@ Enums
       server publishes time data, then timestamps of published messages must originate from the
       same time source.
 
+   .. py:data:: PlaybackControl
+
+      Indicates that the server is capable of responding to playback control requests from
+      controls in the Foxglove app.
+
 
 .. py:enum:: StatusLevel
 
@@ -161,3 +166,41 @@ Enums
    .. py:data:: Info
    .. py:data:: Warning
    .. py:data:: Error
+
+Playback control
+^^^^^^^^^^^^^^^^
+
+Used with the playback control feature during live visualization. Requires the
+:py:data:`Capability.PlaybackControl` capability.
+
+.. py:enum:: PlaybackCommand
+
+   The command for playback requested by the client player.
+
+   .. py:data:: Play
+
+      Start or continue playback.
+
+   .. py:data:: Pause
+
+      Pause playback.
+
+.. py:enum:: PlaybackStatus
+
+   The status of server data playback.
+
+   .. py:data:: Playing
+
+      Playing at the requested playback speed.
+
+   .. py:data:: Paused
+
+      Playback paused.
+
+   .. py:data:: Buffering
+
+      Server is not yet playing back data because it is performing a prerequisite required operation.
+
+   .. py:data:: Ended
+
+      The end of the available data has been reached.

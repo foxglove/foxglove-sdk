@@ -2,7 +2,7 @@ use bytes::{Buf, BufMut};
 
 use crate::protocol::{BinaryPayload, ParseError};
 
-#[doc(hidden)]
+/// A playback command from the client.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum PlaybackCommand {
@@ -21,7 +21,6 @@ impl TryFrom<u8> for PlaybackCommand {
     }
 }
 
-#[doc(hidden)]
 /// A request to control playback from the client
 #[derive(Debug, Clone, PartialEq)]
 pub struct PlaybackControlRequest {

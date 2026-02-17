@@ -372,7 +372,6 @@ impl Server {
     }
 
     /// Publish the current playback state to all clients.
-    #[doc(hidden)]
     pub fn broadcast_playback_state(&self, playback_state: PlaybackState) {
         if !self.has_capability(Capability::PlaybackControl) {
             tracing::error!("Server does not support the PlaybackControl capability");
