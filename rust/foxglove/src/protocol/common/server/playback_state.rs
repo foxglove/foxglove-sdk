@@ -1,7 +1,6 @@
 use crate::protocol::{BinaryPayload, ParseError};
 use bytes::{Buf, BufMut};
 
-#[doc(hidden)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 /// The status playback of data that the server is providing
@@ -30,7 +29,6 @@ impl TryFrom<u8> for PlaybackStatus {
     }
 }
 
-#[doc(hidden)]
 #[derive(Debug, Clone, PartialEq)]
 /// The state of the server playing back data.
 ///
@@ -38,7 +36,7 @@ impl TryFrom<u8> for PlaybackStatus {
 /// state of playback has changed; for example, reaching the end of data, or an external mechanism
 /// causes playback to pause.
 ///
-/// Only relevant if the `RangedPlayback` capability is enabled.
+/// Only relevant if the `PlaybackControl` capability is enabled.
 pub struct PlaybackState {
     /// The status of server data playback
     pub status: PlaybackStatus,
