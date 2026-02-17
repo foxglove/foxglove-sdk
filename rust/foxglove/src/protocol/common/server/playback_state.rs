@@ -1,7 +1,6 @@
 use crate::protocol::{BinaryPayload, ParseError};
 use bytes::{Buf, BufMut};
 
-#[doc(hidden)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 /// The status playback of data that the server is providing
@@ -30,7 +29,6 @@ impl TryFrom<u8> for PlaybackStatus {
     }
 }
 
-#[doc(hidden)]
 #[derive(Debug, Clone, PartialEq)]
 /// The state of the server playing back data.
 ///
