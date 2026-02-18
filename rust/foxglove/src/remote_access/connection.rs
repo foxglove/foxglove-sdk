@@ -391,6 +391,8 @@ impl Sink for RemoteAccessSession {
     ) -> std::result::Result<(), FoxgloveError> {
         let channel_id = channel.id();
 
+        // TODO FLE-32 check if channel is "lossy" and use a different queue and mechanism for sending multi-cast messages
+
         // Collect the subscribed participants
         // Use a SmallVec to avoid alloc+free on each message logged
         let participants: SmallVec<[Arc<Participant>; 8]> = {
