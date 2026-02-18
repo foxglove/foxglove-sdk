@@ -137,8 +137,8 @@
 //! You can also define your own custom data types by implementing the [`Encode`] trait.
 //!
 //! The easiest way to do this is to enable the `derive` feature and derive the [`Encode`] trait,
-//! which will generate a schema and allow you to log your struct to a channel. This currently uses
-//! protobuf encoding.
+//! which will generate a schema and allow you to log your struct to a channel. The underlying
+//! serialization format is an implementation detail and may change across SDK versions.
 //!
 //! ```no_run
 //! # #[cfg(feature = "derive")]
@@ -156,6 +156,14 @@
 //! });
 //! # }
 //! ```
+//!
+//! **Note:** The `Encode` derive macro is a convenience for getting data into Foxglove with
+//! minimal friction. The generated schema is not designed for evolution — reordering, inserting,
+//! or removing fields will silently break compatibility with previously recorded data. If you need
+//! backwards-compatible schema evolution, maintain an explicit `.proto` file and implement
+//! [`Encode`] manually for your generated types. See
+//! [logging with protobuf schemas](https://docs.foxglove.dev/docs/sdk/logging-messages#logging-with-protobuf-schemas)
+//! for an example.
 //!
 //! If you'd like to use JSON encoding for integration with particular tooling, you can enable the
 //! `schemars` feature, which will provide a blanket [`Encode`] implementation for types that
