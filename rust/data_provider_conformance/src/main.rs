@@ -53,7 +53,10 @@ fn main() -> ExitCode {
         });
 
     let bearer_token = std::env::var_os("DATA_PROVIDER_BEARER_TOKEN")
-        .map(|v| v.into_string().expect("DATA_PROVIDER_BEARER_TOKEN must be valid Unicode"))
+        .map(|v| {
+            v.into_string()
+                .expect("DATA_PROVIDER_BEARER_TOKEN must be valid Unicode")
+        })
         .unwrap_or_else(|| "test-token".into());
 
     // If DATA_PROVIDER_CMD is set, spawn the server binary and keep it alive for the test run.

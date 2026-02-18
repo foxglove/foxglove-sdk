@@ -41,8 +41,12 @@ pub struct ServerGuard(Child);
 
 impl Drop for ServerGuard {
     fn drop(&mut self) {
-        self.0.kill().expect("should be able to kill server process");
-        self.0.wait().expect("should be able to wait on server process");
+        self.0
+            .kill()
+            .expect("should be able to kill server process");
+        self.0
+            .wait()
+            .expect("should be able to wait on server process");
     }
 }
 
