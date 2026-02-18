@@ -138,10 +138,44 @@ async fn auth_remote_access_connection() -> Result<()> {
     .context("create device token")?;
     info!("created device token: {}", device_token.id);
 
-    // Start a RemoteAccessSink pointed at the platform.
+    // Run the test, capturing the result so cleanup always executes.
+    let test_result = run_auth_test(config, &device_token.token).await;
+
+    // Always clean up platform resources regardless of test outcome.
+    let cleanup_result = async {
+        delete_device_token(
+            &client,
+            &config.foxglove_api_url,
+            &config.foxglove_api_key,
+            &device_token.id,
+        )
+        .await
+        .context("delete device token")?;
+
+        delete_device(
+            &client,
+            &config.foxglove_api_url,
+            &config.foxglove_api_key,
+            &device.id,
+        )
+        .await
+        .context("delete device")?;
+
+        Ok(())
+    }
+    .await;
+
+    // Return the test result first; if it passed, return the cleanup result.
+    test_result?;
+    cleanup_result?;
+    info!("auth test completed successfully");
+    Ok(())
+}
+
+async fn run_auth_test(config: &Config, token: &str) -> Result<()> {
     let handle = foxglove::RemoteAccessSink::new()
         .name("auth-integration-test")
-        .device_token(&device_token.token)
+        .device_token(token)
         .foxglove_api_url(&config.foxglove_api_url)
         .start()
         .context("start RemoteAccessSink")?;
@@ -152,32 +186,11 @@ async fn auth_remote_access_connection() -> Result<()> {
     tokio::time::sleep(Duration::from_secs(10)).await;
     info!("stopping remote access sink after auth test window");
 
-    // Stop the sink.
     let runner = handle.stop();
     tokio::time::timeout(Duration::from_secs(10), runner)
         .await
         .context("timeout waiting for sink to stop")?
         .context("sink runner panicked")?;
 
-    // Cleanup: delete the device token and device.
-    delete_device_token(
-        &client,
-        &config.foxglove_api_url,
-        &config.foxglove_api_key,
-        &device_token.id,
-    )
-    .await
-    .context("delete device token")?;
-
-    delete_device(
-        &client,
-        &config.foxglove_api_url,
-        &config.foxglove_api_key,
-        &device.id,
-    )
-    .await
-    .context("delete device")?;
-
-    info!("auth test completed successfully");
     Ok(())
 }

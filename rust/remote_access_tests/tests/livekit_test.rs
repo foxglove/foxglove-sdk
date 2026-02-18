@@ -24,7 +24,7 @@ async fn livekit_viewer_receives_server_info() -> Result<()> {
     let _ = tracing_subscriber::fmt::try_init();
 
     // Use a unique room name to avoid collisions.
-    let room_name = format!("test-room-{}", uuid_v4());
+    let room_name = format!("test-room-{}", unique_id());
 
     // Start mock API server that returns LiveKit tokens for the local dev server.
     let mock = mock_server::start_mock_server(&room_name).await;
@@ -143,8 +143,8 @@ async fn livekit_viewer_receives_server_info() -> Result<()> {
     Ok(())
 }
 
-/// Generate a simple UUID v4-like string for unique room names.
-fn uuid_v4() -> String {
+/// Generate a unique identifier for use in room names, based on timestamp and PID.
+fn unique_id() -> String {
     use std::time::{SystemTime, UNIX_EPOCH};
     let nanos = SystemTime::now()
         .duration_since(UNIX_EPOCH)
