@@ -6,10 +6,10 @@ use arc_swap::ArcSwapOption;
 use thiserror::Error;
 use tokio::sync::Mutex;
 
-use super::client::{
-    DeviceToken, FoxgloveApiClient, FoxgloveApiClientBuilder, FoxgloveApiClientError,
+use crate::api_client::{
+    DeviceResponse, DeviceToken, FoxgloveApiClient, FoxgloveApiClientBuilder,
+    FoxgloveApiClientError, RtcCredentials,
 };
-use super::types::{DeviceResponse, RtcCredentials};
 
 #[derive(Error, Debug)]
 #[non_exhaustive]
@@ -54,9 +54,14 @@ impl CredentialsProvider {
             return Ok(credentials);
         }
 
+        tracing::info!("refreshing credentials");
         let credentials = Arc::new(self.client.authorize_remote_viz(&self.device.id).await?);
         self.credentials.store(Some(credentials.clone()));
         Ok(credentials)
+    }
+
+    pub fn device_name(&self) -> &str {
+        &self.device.name
     }
 
     pub async fn clear(&self) {
@@ -67,13 +72,11 @@ impl CredentialsProvider {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
-
     use crate::api_client::test_utils::{
         create_test_builder, create_test_server, TEST_DEVICE_TOKEN,
     };
 
-    use crate::api_client::client::DeviceToken;
+    use crate::api_client::DeviceToken;
 
     use super::CredentialsProvider;
 
