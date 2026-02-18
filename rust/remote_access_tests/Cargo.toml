@@ -6,7 +6,7 @@ rust-version.workspace = true
 publish = false
 
 [dependencies]
-foxglove = { path = "../foxglove", features = ["remote_access"] }
+foxglove = { path = "../foxglove", features = ["remote_access", "_protocol"] }
 livekit = { version = "0.7.29", features = ["rustls-tls-native-roots"] }
 livekit-api = { version = "0.4", default-features = false, features = ["access-token"] }
 axum = "0.8"
