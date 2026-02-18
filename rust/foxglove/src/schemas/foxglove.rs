@@ -554,9 +554,71 @@ pub struct LocationFix {
     /// Color used to visualize the location
     #[prost(message, optional, tag = "8")]
     pub color: ::core::option::Option<Color>,
+    /// Style of the point used to visualize the location on the map
+    #[prost(enumeration = "location_fix::PointStyle", optional, tag = "9")]
+    #[cfg_attr(
+        feature = "serde",
+        serde(with = "serde_enum::location_fix_point_style", default)
+    )]
+    pub point_style: ::core::option::Option<i32>,
 }
 /// Nested message and enum types in `LocationFix`.
 pub mod location_fix {
+    /// Style of point used for map visualization
+    #[derive(
+        Clone,
+        Copy,
+        Debug,
+        PartialEq,
+        Eq,
+        Hash,
+        PartialOrd,
+        Ord,
+        ::prost::Enumeration
+    )]
+    #[repr(i32)]
+    pub enum PointStyle {
+        /// Dot marker
+        Dot = 0,
+        /// Diamond-shaped marker
+        Diamond = 1,
+        /// Square marker
+        Square = 2,
+        /// Plus-shaped marker (+)
+        Plus = 3,
+        /// Cross-shaped marker (x)
+        Cross = 4,
+        /// Pin marker
+        Pin = 5,
+    }
+    impl PointStyle {
+        /// String value of the enum field names used in the ProtoBuf definition.
+        ///
+        /// The values are not transformed in any way and thus are considered stable
+        /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+        pub fn as_str_name(&self) -> &'static str {
+            match self {
+                Self::Dot => "DOT",
+                Self::Diamond => "DIAMOND",
+                Self::Square => "SQUARE",
+                Self::Plus => "PLUS",
+                Self::Cross => "CROSS",
+                Self::Pin => "PIN",
+            }
+        }
+        /// Creates an enum from field names used in the ProtoBuf definition.
+        pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+            match value {
+                "DOT" => Some(Self::Dot),
+                "DIAMOND" => Some(Self::Diamond),
+                "SQUARE" => Some(Self::Square),
+                "PLUS" => Some(Self::Plus),
+                "CROSS" => Some(Self::Cross),
+                "PIN" => Some(Self::Pin),
+                _ => None,
+            }
+        }
+    }
     /// Type of position covariance
     #[derive(
         Clone,
@@ -1439,6 +1501,7 @@ pub(crate) mod serde_enum {
 
     crate::schemas::serde_enum_mod!(line_primitive_type, line_primitive::Type);
     crate::schemas::serde_enum_mod!(location_fix_position_covariance_type, location_fix::PositionCovarianceType);
+    crate::schemas::serde_enum_mod_optional!(location_fix_point_style, location_fix::PointStyle);
     crate::schemas::serde_enum_mod!(log_level, log::Level);
     crate::schemas::serde_enum_mod!(packed_element_field_numeric_type, packed_element_field::NumericType);
     crate::schemas::serde_enum_mod!(points_annotation_type, points_annotation::Type);

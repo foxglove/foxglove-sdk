@@ -2311,6 +2311,42 @@ export const LocationFix = {
         "b",
         "a"
       ]
+    },
+    "point_style": {
+      "title": "foxglove.PointStyle",
+      "description": "Style of the point used to visualize the location on the map",
+      "oneOf": [
+        {
+          "title": "DOT",
+          "const": 0,
+          "description": "Dot marker"
+        },
+        {
+          "title": "DIAMOND",
+          "const": 1,
+          "description": "Diamond-shaped marker"
+        },
+        {
+          "title": "SQUARE",
+          "const": 2,
+          "description": "Square marker"
+        },
+        {
+          "title": "PLUS",
+          "const": 3,
+          "description": "Plus-shaped marker (+)"
+        },
+        {
+          "title": "CROSS",
+          "const": 4,
+          "description": "Cross-shaped marker (x)"
+        },
+        {
+          "title": "PIN",
+          "const": 5,
+          "description": "Pin marker"
+        }
+      ]
     }
   },
   "required": [
@@ -2431,6 +2467,42 @@ export const LocationFixes = {
               "g",
               "b",
               "a"
+            ]
+          },
+          "point_style": {
+            "title": "foxglove.PointStyle",
+            "description": "Style of the point used to visualize the location on the map",
+            "oneOf": [
+              {
+                "title": "DOT",
+                "const": 0,
+                "description": "Dot marker"
+              },
+              {
+                "title": "DIAMOND",
+                "const": 1,
+                "description": "Diamond-shaped marker"
+              },
+              {
+                "title": "SQUARE",
+                "const": 2,
+                "description": "Square marker"
+              },
+              {
+                "title": "PLUS",
+                "const": 3,
+                "description": "Plus-shaped marker (+)"
+              },
+              {
+                "title": "CROSS",
+                "const": 4,
+                "description": "Cross-shaped marker (x)"
+              },
+              {
+                "title": "PIN",
+                "const": 5,
+                "description": "Pin marker"
+              }
             ]
           }
         },

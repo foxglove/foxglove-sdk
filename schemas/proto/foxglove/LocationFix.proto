@@ -9,6 +9,28 @@ package foxglove;
 
 // A navigation satellite fix for any Global Navigation Satellite System
 message LocationFix {
+  // Style of point used for map visualization
+  enum PointStyle {
+    // Dot marker
+    DOT = 0;
+
+    // Diamond-shaped marker
+    DIAMOND = 1;
+
+    // Square marker
+    SQUARE = 2;
+
+    // Plus-shaped marker (+)
+    PLUS = 3;
+
+    // Cross-shaped marker (x)
+    CROSS = 4;
+
+    // Pin marker
+    PIN = 5;
+  }
+
+
   // Type of position covariance
   enum PositionCovarianceType {
     // Unknown position covariance type
@@ -46,4 +68,7 @@ message LocationFix {
 
   // Color used to visualize the location
   optional foxglove.Color color = 8;
+
+  // Style of the point used to visualize the location on the map
+  optional PointStyle point_style = 9;
 }

@@ -19,6 +19,18 @@ class LinePrimitiveLineType(Enum):
     LineLoop = 1
     LineList = 2
 
+class LocationFixPointStyle(Enum):
+    """
+    Style of point used for map visualization
+    """
+
+    Dot = 0
+    Diamond = 1
+    Square = 2
+    Plus = 3
+    Cross = 4
+    Pin = 5
+
 class LocationFixPositionCovarianceType(Enum):
     """
     Type of position covariance
@@ -448,6 +460,7 @@ class LocationFix:
         position_covariance: list[float] | None = None,
         position_covariance_type: LocationFixPositionCovarianceType = LocationFixPositionCovarianceType.Unknown,
         color: Color | None = None,
+        point_style: LocationFixPointStyle | None = None,
     ) -> None: ...
     @staticmethod
     def get_schema() -> Schema:

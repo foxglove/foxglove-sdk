@@ -97,14 +97,11 @@ export function generateHppSchemas(
   schemas: readonly FoxgloveMessageSchema[],
   enums: readonly FoxgloveEnumSchema[],
 ): string {
-  const enumsByParentSchema = new Map<string, FoxgloveEnumSchema>();
+  const enumsByParentSchema = new Map<string, FoxgloveEnumSchema[]>();
   for (const enumSchema of enums) {
-    if (enumsByParentSchema.has(enumSchema.parentSchemaName)) {
-      throw new Error(
-        `Multiple enums with the same parent schema not currently supported ${enumSchema.parentSchemaName}`,
-      );
-    }
-    enumsByParentSchema.set(enumSchema.parentSchemaName, enumSchema);
+    const existing = enumsByParentSchema.get(enumSchema.parentSchemaName) ?? [];
+    existing.push(enumSchema);
+    enumsByParentSchema.set(enumSchema.parentSchemaName, existing);
   }
 
   const orderedSchemas = Array.from(topologicalOrder(schemas));
@@ -115,9 +112,9 @@ export function generateHppSchemas(
   }
   const structDefs = orderedSchemas.map((schema) => {
     let enumDef: string[] = [];
-    const enumSchema = enumsByParentSchema.get(schema.name);
-    if (enumSchema) {
-      enumDef = [
+    const enumSchemas = enumsByParentSchema.get(schema.name);
+    if (enumSchemas) {
+      enumDef = enumSchemas.flatMap((enumSchema) => [
         formatComment(enumSchema.description, 2),
         `  enum class ${enumSchema.name} : uint8_t {`,
         enumSchema.values
@@ -128,7 +125,7 @@ export function generateHppSchemas(
           })
           .join("\n"),
         `  };`,
-      ];
+      ]);
     }
     return [
       formatComment(schema.description, 0),
@@ -329,6 +326,10 @@ function cppToC(schema: FoxgloveMessageSchema, copyTypes: Set<string>): string[]
         }
         return `dest.${dstName} = src.${srcName};`;
       case "enum":
+        if (field.optional) {
+          const cEnumType = `foxglove_${toSnakeCase(field.type.enum.name)}`;
+          return `if (src.${srcName}) { auto* ptr = arena.alloc<${cEnumType}>(1); *ptr = static_cast<${cEnumType}>(*src.${srcName}); dest.${dstName} = ptr; } else { dest.${dstName} = nullptr; }`;
+        }
         return `dest.${dstName} = static_cast<foxglove_${toSnakeCase(field.type.enum.name)}>(src.${srcName});`;
       case "nested":
         if (field.type.schema.name === "Timestamp") {

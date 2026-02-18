@@ -29,6 +29,7 @@ export * from "./Point3InFrame";
 export * from "./PointCloud";
 export * from "./PointsAnnotation";
 export * from "./PointsAnnotationType";
+export * from "./PointStyle";
 export * from "./Pose";
 export * from "./PoseInFrame";
 export * from "./PosesInFrame";

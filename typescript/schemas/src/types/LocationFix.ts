@@ -2,6 +2,7 @@
 // Options: {}
 
 import { Color } from "./Color";
+import { PointStyle } from "./PointStyle";
 import { PositionCovarianceType } from "./PositionCovarianceType";
 import { Time } from "./Time";
 
@@ -30,4 +31,7 @@ export type LocationFix = {
 
   /** Color used to visualize the location */
   color?: Color;
+
+  /** Style of the point used to visualize the location on the map */
+  point_style?: PointStyle;
 };

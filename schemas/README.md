@@ -16,6 +16,7 @@ If the IDL does not support optional fields (e.g. ROS) you must specify a value 
 - [enum LogLevel](#enum-loglevel)
 - [enum NumericType](#enum-numerictype)
 - [enum PointsAnnotationType](#enum-pointsannotationtype)
+- [enum PointStyle](#enum-pointstyle)
 - [enum PositionCovarianceType](#enum-positioncovariancetype)
 - [enum SceneEntityDeletionType](#enum-sceneentitydeletiontype)
 - [ArrowPrimitive](#arrowprimitive)
@@ -121,6 +122,21 @@ name | value | description
 `LINE_LOOP` | 2 | Closed polygon: 0-1, 1-2, ..., (n-1)-n, n-0
 `LINE_STRIP` | 3 | Connected line segments: 0-1, 1-2, ..., (n-1)-n
 `LINE_LIST` | 4 | Individual line segments: 0-1, 2-3, 4-5, ...
+
+
+
+## enum PointStyle
+
+Style of point used for map visualization
+
+name | value | description
+---- | ----- | -----------
+`DOT` | 0 | Dot marker
+`DIAMOND` | 1 | Diamond-shaped marker
+`SQUARE` | 2 | Square marker
+`PLUS` | 3 | Plus-shaped marker (+)
+`CROSS` | 4 | Cross-shaped marker (x)
+`PIN` | 5 | Pin marker
 
 
 
@@ -1612,6 +1628,19 @@ If `position_covariance` is available, `position_covariance_type` must be set to
 <td>
 
 Color used to visualize the location
+
+</td>
+</tr>
+<tr>
+<td><code>point_style</code> (optional)</td>
+<td>
+
+[enum PointStyle](#enum-pointstyle)
+
+</td>
+<td>
+
+Style of the point used to visualize the location on the map
 
 </td>
 </tr>

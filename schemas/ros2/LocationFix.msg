@@ -38,3 +38,24 @@ uint8 position_covariance_type
 
 # Color used to visualize the location
 foxglove_msgs/Color color
+
+# Dot marker
+uint8 DOT=0
+
+# Diamond-shaped marker
+uint8 DIAMOND=1
+
+# Square marker
+uint8 SQUARE=2
+
+# Plus-shaped marker (+)
+uint8 PLUS=3
+
+# Cross-shaped marker (x)
+uint8 CROSS=4
+
+# Pin marker
+uint8 PIN=5
+
+# Style of the point used to visualize the location on the map
+uint8 point_style

@@ -280,6 +280,22 @@ typedef uint8_t foxglove_parameter_value_tag;
 #endif // __cplusplus
 #endif
 
+enum foxglove_point_style
+#ifdef __cplusplus
+  : int32_t
+#endif // __cplusplus
+ {
+  FOXGLOVE_POINT_STYLE_DOT = 0,
+  FOXGLOVE_POINT_STYLE_DIAMOND = 1,
+  FOXGLOVE_POINT_STYLE_SQUARE = 2,
+  FOXGLOVE_POINT_STYLE_PLUS = 3,
+  FOXGLOVE_POINT_STYLE_CROSS = 4,
+  FOXGLOVE_POINT_STYLE_PIN = 5,
+};
+#ifndef __cplusplus
+typedef int32_t foxglove_point_style;
+#endif // __cplusplus
+
 enum foxglove_points_annotation_type
 #ifdef __cplusplus
   : int32_t
@@ -1245,6 +1261,10 @@ typedef struct foxglove_location_fix {
    * Color used to visualize the location
    */
   const struct foxglove_color *color;
+  /**
+   * Style of the point used to visualize the location on the map
+   */
+  const foxglove_point_style *point_style;
 } foxglove_location_fix;
 
 /**

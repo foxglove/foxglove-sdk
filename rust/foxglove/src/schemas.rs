@@ -130,6 +130,58 @@ macro_rules! serde_enum_mod {
 #[cfg(feature = "serde")]
 pub(crate) use serde_enum_mod;
 
+/// Generates a serde module for an optional protobuf enum field.
+///
+/// Uses string names for human-readable formats (JSON) and i32 for binary formats.
+#[cfg(feature = "serde")]
+macro_rules! serde_enum_mod_optional {
+    ($mod_name:ident, $enum_path:ty) => {
+        pub mod $mod_name {
+            use super::*;
+
+            pub fn serialize<S>(v: &Option<i32>, s: S) -> Result<S::Ok, S::Error>
+            where
+                S: Serializer,
+            {
+                match v {
+                    Some(v) => {
+                        if s.is_human_readable() {
+                            let e = <$enum_path>::try_from(*v)
+                                .map_err(|_| serde::ser::Error::custom("invalid enum value"))?;
+                            s.serialize_some(e.as_str_name())
+                        } else {
+                            s.serialize_some(v)
+                        }
+                    }
+                    None => s.serialize_none(),
+                }
+            }
+
+            pub fn deserialize<'de, D>(d: D) -> Result<Option<i32>, D::Error>
+            where
+                D: Deserializer<'de>,
+            {
+                if d.is_human_readable() {
+                    let opt: Option<String> = Option::deserialize(d)?;
+                    match opt {
+                        Some(s) => {
+                            let e = <$enum_path>::from_str_name(&s)
+                                .ok_or_else(|| D::Error::custom("invalid enum string"))?;
+                            Ok(Some(e as i32))
+                        }
+                        None => Ok(None),
+                    }
+                } else {
+                    Option::<i32>::deserialize(d)
+                }
+            }
+        }
+    };
+}
+
+#[cfg(feature = "serde")]
+pub(crate) use serde_enum_mod_optional;
+
 #[cfg(test)]
 #[cfg(feature = "serde")]
 mod tests {
@@ -199,5 +251,58 @@ mod tests {
         let bytes = serde_cbor::to_vec(&grid).expect("failed to serialize");
         let parsed: Grid = serde_cbor::from_slice(&bytes).expect("failed to deserialize");
         assert_eq!(grid, parsed);
+    }
+
+    #[test]
+    fn test_location_fix_json_roundtrip_with_point_style() {
+        use super::{location_fix::PointStyle, LocationFix};
+
+        let fix = LocationFix {
+            latitude: 37.7749,
+            longitude: -122.4194,
+            altitude: 10.0,
+            point_style: Some(PointStyle::Pin as i32),
+            ..Default::default()
+        };
+        let json = serde_json::to_string(&fix).expect("failed to serialize");
+        assert!(json.contains("\"point_style\":\"PIN\""));
+        let parsed: LocationFix = serde_json::from_str(&json).expect("failed to deserialize");
+        assert_eq!(fix, parsed);
+    }
+
+    #[test]
+    fn test_location_fix_json_roundtrip_with_none_point_style() {
+        use super::LocationFix;
+
+        let fix = LocationFix {
+            latitude: 37.7749,
+            longitude: -122.4194,
+            point_style: None,
+            ..Default::default()
+        };
+        let json = serde_json::to_string(&fix).expect("failed to serialize");
+        assert!(json.contains("\"point_style\":null"));
+        let parsed: LocationFix = serde_json::from_str(&json).expect("failed to deserialize");
+        assert_eq!(fix, parsed);
+    }
+
+    #[test]
+    fn test_location_fix_json_invalid_point_style() {
+        use super::LocationFix;
+
+        let json = r#"{"point_style":"INVALID_VALUE","latitude":0.0,"longitude":0.0,"altitude":0.0,"position_covariance":[],"position_covariance_type":"UNKNOWN"}"#;
+        let result: Result<LocationFix, _> = serde_json::from_str(json);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_location_fix_json_missing_point_style() {
+        use super::LocationFix;
+
+        // JSON without point_style field at all — must deserialize with point_style: None
+        let json = r#"{"latitude":37.7749,"longitude":-122.4194,"altitude":0.0,"frame_id":"","position_covariance":[],"position_covariance_type":"UNKNOWN"}"#;
+        let parsed: LocationFix = serde_json::from_str(json).expect("failed to deserialize");
+        assert_eq!(parsed.point_style, None);
+        assert_eq!(parsed.latitude, 37.7749);
     }
 }
