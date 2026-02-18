@@ -283,15 +283,24 @@ impl RemoteAccessConnection {
                     info!("data received: {:?}", topic);
                 }
                 RoomEvent::ByteStreamOpened {
-                    reader: _,
+                    reader,
                     topic: _,
                     participant_identity,
                 } => {
+                    // This is how we handle incoming reliable messages from the client
+                    // They open a byte stream to the device participant (us).
                     info!(
                         "byte stream opened from participant: {:?}",
                         participant_identity
                     );
-                    // TODO handle byte stream from client
+                    if let Some(reader) = reader.take() {
+                        let session2 = session.clone();
+                        tokio::spawn(async move {
+                            session2
+                                .handle_byte_stream_from_client(participant_identity, reader)
+                                .await;
+                        });
+                    }
                 }
                 RoomEvent::Disconnected { reason } => {
                     info!(
