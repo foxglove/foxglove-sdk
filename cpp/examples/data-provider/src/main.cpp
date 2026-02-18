@@ -144,7 +144,6 @@ bool require_auth(const httplib::Request& req, httplib::Response& res) {
     }
   }
   res.status = 401;
-  res.set_content("Unauthorized", "text/plain");
   return false;
 }
 
