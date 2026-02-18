@@ -142,7 +142,7 @@ async fn auth_remote_access_connection() -> Result<()> {
     let test_result = run_auth_test(config, &device_token.token).await;
 
     // Always clean up platform resources regardless of test outcome.
-    let cleanup_result = async {
+    let cleanup_result: anyhow::Result<()> = async {
         delete_device_token(
             &client,
             &config.foxglove_api_url,
