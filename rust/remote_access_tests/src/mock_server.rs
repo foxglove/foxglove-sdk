@@ -1,18 +1,17 @@
 use std::sync::Arc;
 
 use axum::extract::{Path, State};
-use axum::http::HeaderMap;
+use axum::http::{HeaderMap, StatusCode};
 use axum::{Json, Router};
-use reqwest::StatusCode;
 use serde::Serialize;
 use tokio::net::TcpListener;
 
 use crate::livekit_token;
 
 pub const TEST_DEVICE_TOKEN: &str = "fox_dt_testtoken";
-pub const TEST_DEVICE_ID: &str = "dev_testdevice";
-pub const TEST_DEVICE_NAME: &str = "test-device";
-pub const TEST_PROJECT_ID: &str = "prj_testproj";
+const TEST_DEVICE_ID: &str = "dev_testdevice";
+const TEST_DEVICE_NAME: &str = "test-device";
+const TEST_PROJECT_ID: &str = "prj_testproj";
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]

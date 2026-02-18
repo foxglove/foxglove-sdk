@@ -25,12 +25,17 @@ struct DeviceToken {
 }
 
 /// Creates a device via the Foxglove platform API.
-async fn create_device(client: &reqwest::Client, api_url: &str, api_key: &str) -> Result<Device> {
+async fn create_device(
+    client: &reqwest::Client,
+    api_url: &str,
+    api_key: &str,
+    name: &str,
+) -> Result<Device> {
     let resp = client
         .post(format!("{api_url}/v1/devices"))
         .header(AUTHORIZATION, format!("Bearer {api_key}"))
         .header(CONTENT_TYPE, "application/json")
-        .body(r#"{"name":"ra-integration-test"}"#)
+        .body(serde_json::to_string(&serde_json::json!({ "name": name }))?)
         .send()
         .await
         .context("POST /v1/devices")?;
@@ -123,9 +128,15 @@ async fn auth_remote_access_connection() -> Result<()> {
     let client = reqwest::Client::new();
 
     // Create a device and device token via the Foxglove platform API.
-    let device = create_device(&client, &config.foxglove_api_url, &config.foxglove_api_key)
-        .await
-        .context("create device")?;
+    let device_name = format!("ra-integration-test-{}", unique_id());
+    let device = create_device(
+        &client,
+        &config.foxglove_api_url,
+        &config.foxglove_api_key,
+        &device_name,
+    )
+    .await
+    .context("create device")?;
     info!("created device: {}", device.id);
 
     let device_token = create_device_token(
@@ -142,32 +153,29 @@ async fn auth_remote_access_connection() -> Result<()> {
     let test_result = run_auth_test(config, &device_token.token).await;
 
     // Always clean up platform resources regardless of test outcome.
-    let cleanup_result: anyhow::Result<()> = async {
-        delete_device_token(
-            &client,
-            &config.foxglove_api_url,
-            &config.foxglove_api_key,
-            &device_token.id,
-        )
-        .await
-        .context("delete device token")?;
+    // Run both deletions unconditionally so a token deletion failure doesn't leak the device.
+    let token_result = delete_device_token(
+        &client,
+        &config.foxglove_api_url,
+        &config.foxglove_api_key,
+        &device_token.id,
+    )
+    .await
+    .context("delete device token");
 
-        delete_device(
-            &client,
-            &config.foxglove_api_url,
-            &config.foxglove_api_key,
-            &device.id,
-        )
-        .await
-        .context("delete device")?;
+    let device_result = delete_device(
+        &client,
+        &config.foxglove_api_url,
+        &config.foxglove_api_key,
+        &device.id,
+    )
+    .await
+    .context("delete device");
 
-        Ok(())
-    }
-    .await;
-
-    // Return the test result first; if it passed, return the cleanup result.
+    // Return the test result first; if it passed, return cleanup errors.
     test_result?;
-    cleanup_result?;
+    token_result?;
+    device_result?;
     info!("auth test completed successfully");
     Ok(())
 }
@@ -193,4 +201,14 @@ async fn run_auth_test(config: &Config, token: &str) -> Result<()> {
         .context("sink runner panicked")?;
 
     Ok(())
+}
+
+fn unique_id() -> String {
+    use std::time::{SystemTime, UNIX_EPOCH};
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let pid = std::process::id();
+    format!("{nanos:x}-{pid:x}")
 }

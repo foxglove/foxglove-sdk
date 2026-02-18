@@ -31,8 +31,9 @@ async fn livekit_viewer_receives_server_info() -> Result<()> {
     info!("mock server started at {}", mock.url());
 
     // Start RemoteAccessSink pointed at mock API.
+    let sink_name = format!("test-device-{}", unique_id());
     let handle = foxglove::RemoteAccessSink::new()
-        .name("test-device")
+        .name(&sink_name)
         .device_token(mock_server::TEST_DEVICE_TOKEN)
         .foxglove_api_url(mock.url())
         .supported_encodings(["json"])
@@ -110,7 +111,7 @@ async fn livekit_viewer_receives_server_info() -> Result<()> {
     };
 
     // Validate ServerInfo fields.
-    assert_eq!(server_info.name, "test-device", "unexpected server name");
+    assert_eq!(server_info.name, sink_name, "unexpected server name");
     assert!(
         server_info.session_id.is_some(),
         "session_id should be present"

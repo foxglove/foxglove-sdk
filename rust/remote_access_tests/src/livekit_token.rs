@@ -1,5 +1,5 @@
 use anyhow::Result;
-use livekit_api::access_token::{AccessToken, TokenVerifier, VideoGrants};
+use livekit_api::access_token::{AccessToken, VideoGrants};
 
 /// Default LiveKit dev server credentials.
 const DEV_API_KEY: &str = "devkey";
@@ -22,9 +22,4 @@ pub fn generate_token(room_name: &str, identity: &str) -> Result<String> {
         .with_grants(grants)
         .to_jwt()?;
     Ok(token)
-}
-
-/// Verifier for validating tokens from the dev server.
-pub fn dev_token_verifier() -> TokenVerifier {
-    TokenVerifier::with_api_key(DEV_API_KEY, DEV_API_SECRET)
 }
