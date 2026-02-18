@@ -17,13 +17,13 @@ use tracing::{debug, error, info, warn};
 
 use crate::{
     library_version::get_library_version,
-    protocol::v2::client::ClientMessage,
+    protocol::v2::client::{self, ClientMessage},
     remote_access::{
         participant::{Participant, ParticipantWriter},
         RemoteAccessError,
     },
     websocket::{self, Server},
-    RemoteAccessSinkListener, SinkChannelFilter,
+    ChannelId, RemoteAccessSinkListener, SinkChannelFilter,
 };
 
 use crate::protocol::v2::{server::ServerInfo, JsonMessage};
@@ -452,17 +452,62 @@ impl RemoteAccessSession {
         };
 
         match client_msg {
-            // Subscriptions to server channels
-            ClientMessage::Subscribe(subscribe_msg) => {
-                self.handle_client_subscribe(participant, subscribe_msg)
-                    .await;
+            ClientMessage::Subscribe(msg) => {
+                self.handle_client_subscribe(&participant, msg);
             }
-            ClientMessage::Unsubscribe(unsubscribe_msg) => {
-                self.handle_client_unsubscribe(participant, unsubscribe_msg)
-                    .await;
+            ClientMessage::Unsubscribe(msg) => {
+                self.handle_client_unsubscribe(&participant, msg);
             }
             // TODO: Implement other message handling branches
             _ => {}
+        }
+    }
+
+    fn handle_client_subscribe(&self, participant: &Participant, msg: client::Subscribe) {
+        let channel_ids: Vec<ChannelId> = msg
+            .channel_ids
+            .iter()
+            .map(|&id| ChannelId::new(id as u64))
+            .collect();
+
+        let newly_subscribed = participant.subscribe(&channel_ids);
+
+        for &channel_id in &channel_ids {
+            if newly_subscribed.contains(&channel_id) {
+                debug!(
+                    "Participant {:?} subscribed to channel {channel_id:?}",
+                    participant
+                );
+            } else {
+                warn!(
+                    "Participant {:?} is already subscribed to channel {channel_id:?}; ignoring",
+                    participant
+                );
+            }
+        }
+    }
+
+    fn handle_client_unsubscribe(&self, participant: &Participant, msg: client::Unsubscribe) {
+        let channel_ids: Vec<ChannelId> = msg
+            .channel_ids
+            .iter()
+            .map(|&id| ChannelId::new(id as u64))
+            .collect();
+
+        let unsubscribed = participant.unsubscribe(&channel_ids);
+
+        for &channel_id in &channel_ids {
+            if unsubscribed.contains(&channel_id) {
+                debug!(
+                    "Participant {:?} unsubscribed from channel {channel_id:?}",
+                    participant
+                );
+            } else {
+                warn!(
+                    "Participant {:?} is not subscribed to channel {channel_id:?}; ignoring",
+                    participant
+                );
+            }
         }
     }
 
