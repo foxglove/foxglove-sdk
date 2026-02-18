@@ -17,16 +17,19 @@ use tracing::{debug, error, info, warn};
 
 use crate::{
     library_version::get_library_version,
-    protocol::v2::client::{self, ClientMessage},
+    protocol::v2::{
+        client::{self, ClientMessage},
+        server::{MessageData as ServerMessageData, ServerInfo, Unadvertise},
+        BinaryMessage, JsonMessage,
+    },
     remote_access::{
         participant::{Participant, ParticipantWriter},
         RemoteAccessError,
     },
-    websocket::{self, Server},
-    ChannelId, RemoteAccessSinkListener, SinkChannelFilter,
+    websocket::{self, advertise, Server},
+    ChannelId, Context, FoxgloveError, Metadata, RawChannel, RemoteAccessSinkListener, Sink,
+    SinkChannelFilter, SinkId,
 };
-
-use crate::protocol::v2::{server::ServerInfo, JsonMessage};
 
 type Result<T> = std::result::Result<T, RemoteAccessError>;
 
@@ -42,8 +45,6 @@ enum OpCode {
     /// The frame contains a JSON message.
     Text = 1,
     /// The frame contains a binary message.
-    // TODO future use
-    #[expect(dead_code)]
     Binary = 2,
 }
 
@@ -76,6 +77,7 @@ pub(crate) struct RemoteAccessConnectionOptions {
     pub channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     pub server_info: Option<HashMap<String, String>>,
     pub cancellation_token: CancellationToken,
+    pub context: Arc<Context>,
 }
 
 impl Default for RemoteAccessConnectionOptions {
@@ -89,6 +91,7 @@ impl Default for RemoteAccessConnectionOptions {
             channel_filter: None,
             server_info: None,
             cancellation_token: CancellationToken::new(),
+            context: Context::get_default(),
         }
     }
 }
@@ -105,24 +108,6 @@ impl std::fmt::Debug for RemoteAccessConnectionOptions {
             .field("server_info", &self.server_info)
             .finish()
     }
-}
-
-/// RemoteAccessSession tracks a connected LiveKit session (the Room)
-/// and any state that is specific to that session.
-/// We discard this state if we close or lose the connection.
-/// [`RemoteAccessConnection`] manages the current connected session (if any)
-///
-/// The Sink impl should be at the RemoteAccessSession level.
-/// It is tempting to make it at the participant session level,
-/// similarly to how we do with the WebSocketServer connection,
-/// but that make it very difficult to support sending multi-cast messages.
-///
-/// The session level receives the sink messages and can then
-/// choose to deliver them via multi-cast to multiple participants
-/// when that is desirable.
-struct RemoteAccessSession {
-    room: Room,
-    participants: RwLock<HashMap<ParticipantIdentity, Arc<Participant>>>,
 }
 
 /// RemoteAccessConnection manages the connected [`RemoteAccessSession`] to the LiveKit server,
@@ -145,7 +130,13 @@ impl RemoteAccessConnection {
         let (session, room_events) =
             match Room::connect(&credentials.url, &credentials.token, RoomOptions::default()).await
             {
-                Ok((room, room_events)) => (Arc::new(RemoteAccessSession::new(room)), room_events),
+                Ok((room, room_events)) => (
+                    Arc::new(RemoteAccessSession::new(
+                        room,
+                        self.options.channel_filter.clone(),
+                    )),
+                    room_events,
+                ),
                 Err(e) => {
                     return Err(e.into());
                 }
@@ -176,6 +167,10 @@ impl RemoteAccessConnection {
             return;
         };
 
+        // Register the session as a sink so it receives channel notifications.
+        // This synchronously triggers add_channels for all existing channels.
+        self.options.context.add_sink(session.clone());
+
         let attributes = session.room.local_participant().attributes();
         let identity = session.room.local_participant().identity();
         info!(
@@ -188,6 +183,9 @@ impl RemoteAccessConnection {
             () = self.cancellation_token().cancelled() => (),
             _ = self.listen_for_room_events(session.clone(), room_events) => {}
         }
+
+        // Remove the sink before closing the room.
+        self.options.context.remove_sink(session.sink_id);
 
         info!("disconnecting from room");
         // Close the room (disconnect) on shutdown.
@@ -264,7 +262,7 @@ impl RemoteAccessConnection {
 
                     let server_info = self.create_server_info();
                     session
-                        .send_info_and_advertisements(participant_id, server_info)
+                        .send_info_and_advertisements(&participant_id, server_info)
                         .await;
                 }
                 RoomEvent::ParticipantDisconnected(participant) => {
@@ -352,11 +350,160 @@ impl RemoteAccessConnection {
     }
 }
 
+/// Frames a payload with the v2 message framing (1 byte opcode + 4 byte LE length + payload).
+fn frame_message(payload: &[u8], op_code: OpCode) -> Vec<u8> {
+    let mut buf = Vec::with_capacity(payload.len() + MESSAGE_FRAME_SIZE);
+    buf.push(op_code as u8);
+    let len = u32::try_from(payload.len()).expect("message too large");
+    buf.extend_from_slice(&len.to_le_bytes());
+    buf.extend_from_slice(payload);
+    buf
+}
+
+/// RemoteAccessSession tracks a connected LiveKit session (the Room)
+/// and any state that is specific to that session.
+/// We discard this state if we close or lose the connection.
+/// [`RemoteAccessConnection`] manages the current connected session (if any)
+///
+/// The Sink impl is at the RemoteAccessSession level (not per-participant)
+/// so that it can deliver messages via multi-cast to multiple participants.
+struct RemoteAccessSession {
+    sink_id: SinkId,
+    room: Room,
+    participants: RwLock<HashMap<ParticipantIdentity, Arc<Participant>>>,
+    /// Channels that have been advertised to participants.
+    channels: RwLock<HashMap<ChannelId, Arc<RawChannel>>>,
+    channel_filter: Option<Arc<dyn SinkChannelFilter>>,
+    /// Handle to the tokio runtime, used to spawn async sends from sync Sink callbacks.
+    runtime: Handle,
+}
+
+impl Sink for RemoteAccessSession {
+    fn id(&self) -> SinkId {
+        self.sink_id
+    }
+
+    fn log(
+        &self,
+        channel: &RawChannel,
+        msg: &[u8],
+        metadata: &Metadata,
+    ) -> std::result::Result<(), FoxgloveError> {
+        let channel_id = channel.id();
+
+        // Collect the subscribed participants
+        // Use a SmallVec to avoid alloc+free on each message logged
+        let participants: SmallVec<[Arc<Participant>; 8]> = {
+            let participants = self.participants.read();
+            participants
+                .values()
+                .filter(|p| p.is_subscribed(channel_id))
+                .cloned()
+                .collect()
+        };
+
+        if participants.is_empty() {
+            return Ok(());
+        }
+
+        let channel_id = u32::try_from(channel_id).expect("channel ID too large");
+        let message = ServerMessageData::new(channel_id, metadata.log_time, msg);
+        let framed = frame_message(&message.to_bytes(), OpCode::Binary);
+
+        self.runtime.spawn(async move {
+            for participant in participants {
+                if let Err(e) = participant.send(&framed).await {
+                    error!("failed to send message data to {participant:?}: {e:?}");
+                }
+            }
+        });
+
+        Ok(())
+    }
+
+    fn add_channels(&self, channels: &[&Arc<RawChannel>]) -> Option<Vec<ChannelId>> {
+        let filtered: Vec<_> = channels
+            .iter()
+            .filter(|ch| {
+                let Some(filter) = self.channel_filter.as_ref() else {
+                    return true;
+                };
+                filter.should_subscribe(ch.descriptor())
+            })
+            .copied()
+            .collect();
+
+        if filtered.is_empty() {
+            return None;
+        }
+
+        let advertise_msg = advertise::advertise_channels(filtered.iter().copied());
+
+        // Cache channels
+        {
+            let mut cached = self.channels.write();
+            for &ch in &filtered {
+                cached.insert(ch.id(), ch.clone());
+            }
+        }
+
+        if advertise_msg.channels.is_empty() {
+            return None;
+        }
+
+        let framed = frame_message(advertise_msg.to_string().as_bytes(), OpCode::Text);
+
+        let participants: Vec<Arc<Participant>> =
+            self.participants.read().values().cloned().collect();
+        if !participants.is_empty() {
+            self.runtime.spawn(async move {
+                for participant in participants {
+                    if let Err(e) = participant.send(&framed).await {
+                        error!("failed to send channel advertisement to {participant:?}: {e:?}");
+                    }
+                }
+            });
+        }
+
+        None
+    }
+
+    fn remove_channel(&self, channel: &RawChannel) {
+        let channel_id = channel.id();
+        if self.channels.write().remove(&channel_id).is_none() {
+            return;
+        }
+
+        let unadvertise = Unadvertise::new([u64::from(channel_id)]);
+        let framed = frame_message(unadvertise.to_string().as_bytes(), OpCode::Text);
+
+        let participants: Vec<Arc<Participant>> =
+            self.participants.read().values().cloned().collect();
+        if !participants.is_empty() {
+            self.runtime.spawn(async move {
+                for participant in participants {
+                    if let Err(e) = participant.send(&framed).await {
+                        error!("failed to send channel unadvertisement to {participant:?}: {e:?}");
+                    }
+                }
+            });
+        }
+    }
+
+    fn auto_subscribe(&self) -> bool {
+        false
+    }
+}
+
 impl RemoteAccessSession {
-    fn new(room: Room) -> Self {
+    fn new(room: Room, channel_filter: Option<Arc<dyn SinkChannelFilter>>) -> Self {
         Self {
+            sink_id: SinkId::next(),
             room,
             participants: RwLock::new(HashMap::new()),
+            channels: RwLock::new(HashMap::new()),
+            channel_filter,
+            runtime: Handle::current(),
         }
     }
 
@@ -405,13 +552,12 @@ impl RemoteAccessSession {
                 // Create a simple message structure with OpCode and payload
                 // Since we don't know the exact structure of ClientMessage,
                 // we'll pass the raw data to handle_client_message
-                self.handle_client_message(&participant_identity, opcode, payload)
-                    .await;
+                self.handle_client_message(&participant_identity, opcode, payload);
             }
         }
     }
 
-    async fn handle_client_message(
+    fn handle_client_message(
         self: &Arc<Self>,
         participant_identity: &ParticipantIdentity,
         opcode: u8,
@@ -554,30 +700,44 @@ impl RemoteAccessSession {
 
     async fn send_info_and_advertisements(
         &self,
-        participant: Arc<Participant>,
+        participant: &Participant,
         server_info: ServerInfo,
     ) {
         info!("sending server info and advertisements to participant {participant:?}");
-        self.send_to_participant(participant, server_info.to_string().into(), OpCode::Text)
-            .await;
-        // TODO send advertisements
-        //self.send_advertisements(participant_id).await;
+        Self::send_to_participant(
+            participant,
+            server_info.to_string().as_bytes(),
+            OpCode::Text,
+        )
+        .await;
+        self.send_channel_advertisements(participant).await;
     }
 
-    // Send a message to one participant identified by the id
-    async fn send_to_participant(
-        &self,
-        participant: Arc<Participant>,
-        bytes: Bytes,
-        op_code: OpCode,
-    ) {
-        // Add the message framing, 1 byte op code + 4 byte little-endian length
-        let mut buf = SmallVec::<[u8; 4 * 1024]>::with_capacity(bytes.len() + 5);
-        buf.push(op_code as u8);
-        buf.extend_from_slice(&(bytes.len() as u32).to_le_bytes());
-        buf.extend_from_slice(&bytes);
+    /// Send all currently cached channel advertisements to a single participant.
+    async fn send_channel_advertisements(&self, participant: &Participant) {
+        let channels = self.channels.read();
+        if channels.is_empty() {
+            return;
+        }
+        let advertise_msg = advertise::advertise_channels(channels.values());
+        drop(channels);
 
-        if let Err(e) = participant.send(&buf).await {
+        if advertise_msg.channels.is_empty() {
+            return;
+        }
+
+        Self::send_to_participant(
+            participant,
+            advertise_msg.to_string().as_bytes(),
+            OpCode::Text,
+        )
+        .await;
+    }
+
+    /// Send a framed message to one participant.
+    async fn send_to_participant(participant: &Participant, payload: &[u8], op_code: OpCode) {
+        let framed = frame_message(payload, op_code);
+        if let Err(e) = participant.send(&framed).await {
             error!("failed to send to participant {participant:?}: {e:?}");
         }
     }

@@ -61,6 +61,11 @@ impl Participant {
             .collect()
     }
 
+    /// Returns true if this participant is subscribed to the given channel.
+    pub fn is_subscribed(&self, channel_id: ChannelId) -> bool {
+        self.subscribed_channels.lock().contains(&channel_id)
+    }
+
     /// Removes all subscriptions for this participant and returns the previously subscribed channel IDs.
     #[expect(dead_code)]
     pub fn unsubscribe_all(&self) -> Vec<ChannelId> {

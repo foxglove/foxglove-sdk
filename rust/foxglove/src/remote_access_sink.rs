@@ -168,7 +168,9 @@ impl RemoteAccessSink {
     /// The caller can safely drop the handle and the connection will continue in the background.
     /// Use stop() on the returned handle to stop the connection.
     pub fn start(self) -> Result<RemoteAccessSinkHandle, FoxgloveError> {
-        let connection = RemoteAccessConnection::new(self.options);
+        let mut options = self.options;
+        options.context = self.context;
+        let connection = RemoteAccessConnection::new(options);
         Ok(RemoteAccessSinkHandle::new(Arc::new(connection)))
     }
 }

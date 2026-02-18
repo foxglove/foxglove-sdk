@@ -6,3 +6,5 @@ pub mod server;
 
 #[allow(unused_imports)]
 pub use crate::protocol::common::JsonMessage;
+#[allow(unused_imports)]
+pub use crate::protocol::v2::message::BinaryMessage;
