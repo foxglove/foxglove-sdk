@@ -406,8 +406,7 @@ impl Sink for RemoteAccessSession {
             return Ok(());
         }
 
-        let channel_id = u32::try_from(channel_id).expect("channel ID too large");
-        let message = ServerMessageData::new(channel_id, metadata.log_time, msg);
+        let message = ServerMessageData::new(u32::from(channel_id), metadata.log_time, msg);
         let framed = frame_message(&message.to_bytes(), OpCode::Binary);
 
         self.runtime.spawn(async move {
@@ -613,7 +612,7 @@ impl RemoteAccessSession {
         let channel_ids: Vec<ChannelId> = msg
             .channel_ids
             .iter()
-            .map(|&id| ChannelId::new(id as u64))
+            .map(|&id| ChannelId::new(id))
             .collect();
 
         let newly_subscribed = participant.subscribe(&channel_ids);
@@ -637,7 +636,7 @@ impl RemoteAccessSession {
         let channel_ids: Vec<ChannelId> = msg
             .channel_ids
             .iter()
-            .map(|&id| ChannelId::new(id as u64))
+            .map(|&id| ChannelId::new(id))
             .collect();
 
         let unsubscribed = participant.unsubscribe(&channel_ids);
@@ -715,23 +714,19 @@ impl RemoteAccessSession {
 
     /// Send all currently cached channel advertisements to a single participant.
     async fn send_channel_advertisements(&self, participant: &Participant) {
-        let channels = self.channels.read();
-        if channels.is_empty() {
-            return;
-        }
-        let advertise_msg = advertise::advertise_channels(channels.values());
-        drop(channels);
+        let advertise_bytes = {
+            let channels = self.channels.read();
+            if channels.is_empty() {
+                return;
+            }
+            let advertise_msg = advertise::advertise_channels(channels.values());
+            if advertise_msg.channels.is_empty() {
+                return;
+            }
+            advertise_msg.to_string()
+        };
 
-        if advertise_msg.channels.is_empty() {
-            return;
-        }
-
-        Self::send_to_participant(
-            participant,
-            advertise_msg.to_string().as_bytes(),
-            OpCode::Text,
-        )
-        .await;
+        Self::send_to_participant(participant, advertise_bytes.as_bytes(), OpCode::Text).await;
     }
 
     /// Send a framed message to one participant.

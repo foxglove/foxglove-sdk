@@ -33,6 +33,7 @@ impl Participant {
     }
 
     /// Returns the participant's identity.
+    #[expect(dead_code)]
     pub fn identity(&self) -> &ParticipantIdentity {
         &self.identity
     }
