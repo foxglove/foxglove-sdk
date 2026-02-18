@@ -37,8 +37,6 @@ impl JsonMessage for ParameterValues {}
 
 #[cfg(test)]
 mod tests {
-    use crate::protocol::v1::server::ServerMessage;
-
     use super::*;
 
     fn message() -> ParameterValues {
@@ -68,8 +66,8 @@ mod tests {
 
     fn test_roundtrip_inner(orig: ParameterValues) {
         let buf = orig.to_string();
-        let msg = ServerMessage::parse_json(&buf).unwrap();
-        assert_eq!(msg, ServerMessage::ParameterValues(orig));
+        let parsed: ParameterValues = serde_json::from_str(&buf).unwrap();
+        assert_eq!(parsed, orig);
     }
 
     #[test]
