@@ -70,6 +70,7 @@ impl BinaryMessage for PlaybackControlRequest {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use assert_matches::assert_matches;
 
     #[test]
     fn test_message_data_encode() {
@@ -134,6 +135,93 @@ mod tests {
         insta::assert_snapshot!(format!("{:#04x?}", buf));
         let parsed = ClientMessage::parse_binary(&buf).unwrap();
         assert_eq!(parsed, ClientMessage::ServiceCallRequest(message));
+    }
+
+    #[test]
+    fn test_parse_binary_empty() {
+        assert_matches!(
+            ClientMessage::parse_binary(b""),
+            Err(ParseError::EmptyBinaryMessage)
+        );
+    }
+
+    #[test]
+    fn test_parse_binary_invalid_opcode() {
+        assert_matches!(
+            ClientMessage::parse_binary(&[0xff]),
+            Err(ParseError::InvalidOpcode(0xff))
+        );
+    }
+
+    #[test]
+    fn test_parse_json_advertise() {
+        let msg = Advertise::new([]);
+        let json = serde_json::to_string(&msg).unwrap();
+        let parsed = ClientMessage::parse_json(&json).unwrap();
+        assert_eq!(parsed, ClientMessage::Advertise(msg));
+    }
+
+    #[test]
+    fn test_parse_json_unadvertise() {
+        let msg = Unadvertise::new([1, 2]);
+        let json = serde_json::to_string(&msg).unwrap();
+        let parsed = ClientMessage::parse_json(&json).unwrap();
+        assert_eq!(parsed, ClientMessage::Unadvertise(msg));
+    }
+
+    #[test]
+    fn test_parse_json_get_parameters() {
+        let msg = GetParameters::new(["p1", "p2"]);
+        let json = serde_json::to_string(&msg).unwrap();
+        let parsed = ClientMessage::parse_json(&json).unwrap();
+        assert_eq!(parsed, ClientMessage::GetParameters(msg));
+    }
+
+    #[test]
+    fn test_parse_json_set_parameters() {
+        use crate::protocol::parameter::Parameter;
+        let msg = SetParameters::new([Parameter::integer("p", 1)]);
+        let json = serde_json::to_string(&msg).unwrap();
+        let parsed = ClientMessage::parse_json(&json).unwrap();
+        assert_eq!(parsed, ClientMessage::SetParameters(msg));
+    }
+
+    #[test]
+    fn test_parse_json_subscribe_parameter_updates() {
+        let msg = SubscribeParameterUpdates::new(["p1"]);
+        let json = serde_json::to_string(&msg).unwrap();
+        let parsed = ClientMessage::parse_json(&json).unwrap();
+        assert_eq!(parsed, ClientMessage::SubscribeParameterUpdates(msg));
+    }
+
+    #[test]
+    fn test_parse_json_unsubscribe_parameter_updates() {
+        let msg = UnsubscribeParameterUpdates::new(["p1"]);
+        let json = serde_json::to_string(&msg).unwrap();
+        let parsed = ClientMessage::parse_json(&json).unwrap();
+        assert_eq!(parsed, ClientMessage::UnsubscribeParameterUpdates(msg));
+    }
+
+    #[test]
+    fn test_parse_json_subscribe_connection_graph() {
+        let json = serde_json::to_string(&SubscribeConnectionGraph {}).unwrap();
+        let parsed = ClientMessage::parse_json(&json).unwrap();
+        assert_eq!(parsed, ClientMessage::SubscribeConnectionGraph);
+    }
+
+    #[test]
+    fn test_parse_json_unsubscribe_connection_graph() {
+        let json = serde_json::to_string(&UnsubscribeConnectionGraph {}).unwrap();
+        let parsed = ClientMessage::parse_json(&json).unwrap();
+        assert_eq!(parsed, ClientMessage::UnsubscribeConnectionGraph);
+    }
+
+    #[test]
+    fn test_parse_json_fetch_asset() {
+        let msg = FetchAsset::new(42, "package://example.urdf");
+        let json = serde_json::to_string(&msg).unwrap();
+        let parsed = ClientMessage::parse_json(&json).unwrap();
+        assert_eq!(parsed, ClientMessage::FetchAsset(msg));
     }
 }
 

@@ -100,6 +100,7 @@ impl BinaryMessage for PlaybackState {
 mod tests {
     use super::*;
     use crate::protocol::common::server::playback_state::PlaybackStatus;
+    use assert_matches::assert_matches;
 
     #[test]
     fn test_time_encode() {
@@ -185,6 +186,148 @@ mod tests {
         insta::assert_snapshot!(format!("{:#04x?}", buf));
         let parsed = ServerMessage::parse_binary(&buf).unwrap();
         assert_eq!(parsed, ServerMessage::PlaybackState(message));
+    }
+
+    #[test]
+    fn test_playback_state_encode_paused() {
+        let message = PlaybackState {
+            status: PlaybackStatus::Paused,
+            playback_speed: 1.0,
+            did_seek: false,
+            current_time: 12345,
+            request_id: None,
+        };
+        let buf = message.to_bytes();
+        insta::assert_snapshot!(format!("{:#04x?}", buf));
+        let parsed = ServerMessage::parse_binary(&buf).unwrap();
+        assert_eq!(parsed, ServerMessage::PlaybackState(message));
+    }
+
+    #[test]
+    fn test_playback_state_encode_buffering() {
+        let message = PlaybackState {
+            status: PlaybackStatus::Buffering,
+            playback_speed: 1.0,
+            did_seek: false,
+            current_time: 12345,
+            request_id: None,
+        };
+        let buf = message.to_bytes();
+        insta::assert_snapshot!(format!("{:#04x?}", buf));
+        let parsed = ServerMessage::parse_binary(&buf).unwrap();
+        assert_eq!(parsed, ServerMessage::PlaybackState(message));
+    }
+
+    #[test]
+    fn test_playback_state_encode_ended() {
+        let message = PlaybackState {
+            status: PlaybackStatus::Ended,
+            playback_speed: 1.0,
+            did_seek: false,
+            current_time: 12345,
+            request_id: None,
+        };
+        let buf = message.to_bytes();
+        insta::assert_snapshot!(format!("{:#04x?}", buf));
+        let parsed = ServerMessage::parse_binary(&buf).unwrap();
+        assert_eq!(parsed, ServerMessage::PlaybackState(message));
+    }
+
+    #[test]
+    fn test_parse_binary_empty() {
+        assert_matches!(
+            ServerMessage::parse_binary(b""),
+            Err(ParseError::EmptyBinaryMessage)
+        );
+    }
+
+    #[test]
+    fn test_parse_binary_invalid_opcode() {
+        assert_matches!(
+            ServerMessage::parse_binary(&[0xff]),
+            Err(ParseError::InvalidOpcode(0xff))
+        );
+    }
+
+    #[test]
+    fn test_parse_json_server_info() {
+        let msg = ServerInfo::new("test server");
+        let json = serde_json::to_string(&msg).unwrap();
+        let parsed = ServerMessage::parse_json(&json).unwrap();
+        assert_eq!(parsed, ServerMessage::ServerInfo(msg));
+    }
+
+    #[test]
+    fn test_parse_json_status() {
+        let msg = Status::warning("oh no");
+        let json = serde_json::to_string(&msg).unwrap();
+        let parsed = ServerMessage::parse_json(&json).unwrap();
+        assert_eq!(parsed, ServerMessage::Status(msg));
+    }
+
+    #[test]
+    fn test_parse_json_remove_status() {
+        let msg = RemoveStatus::new(["id-1"]);
+        let json = serde_json::to_string(&msg).unwrap();
+        let parsed = ServerMessage::parse_json(&json).unwrap();
+        assert_eq!(parsed, ServerMessage::RemoveStatus(msg));
+    }
+
+    #[test]
+    fn test_parse_json_advertise() {
+        let msg = Advertise::new([]);
+        let json = serde_json::to_string(&msg).unwrap();
+        let parsed = ServerMessage::parse_json(&json).unwrap();
+        assert_eq!(parsed, ServerMessage::Advertise(msg));
+    }
+
+    #[test]
+    fn test_parse_json_unadvertise() {
+        let msg = Unadvertise::new([1u64, 2u64]);
+        let json = serde_json::to_string(&msg).unwrap();
+        let parsed = ServerMessage::parse_json(&json).unwrap();
+        assert_eq!(parsed, ServerMessage::Unadvertise(msg));
+    }
+
+    #[test]
+    fn test_parse_json_parameter_values() {
+        use crate::protocol::parameter::Parameter;
+        let msg = ParameterValues::new([Parameter::integer("p", 1)]);
+        let json = serde_json::to_string(&msg).unwrap();
+        let parsed = ServerMessage::parse_json(&json).unwrap();
+        assert_eq!(parsed, ServerMessage::ParameterValues(msg));
+    }
+
+    #[test]
+    fn test_parse_json_advertise_services() {
+        let msg = AdvertiseServices::new([]);
+        let json = serde_json::to_string(&msg).unwrap();
+        let parsed = ServerMessage::parse_json(&json).unwrap();
+        assert_eq!(parsed, ServerMessage::AdvertiseServices(msg));
+    }
+
+    #[test]
+    fn test_parse_json_unadvertise_services() {
+        let msg = UnadvertiseServices::new([1, 2]);
+        let json = serde_json::to_string(&msg).unwrap();
+        let parsed = ServerMessage::parse_json(&json).unwrap();
+        assert_eq!(parsed, ServerMessage::UnadvertiseServices(msg));
+    }
+
+    #[test]
+    fn test_parse_json_connection_graph_update() {
+        let msg = ConnectionGraphUpdate::default();
+        let json = serde_json::to_string(&msg).unwrap();
+        let parsed = ServerMessage::parse_json(&json).unwrap();
+        assert_eq!(parsed, ServerMessage::ConnectionGraphUpdate(msg));
+    }
+
+    #[test]
+    fn test_parse_json_service_call_failure() {
+        let msg = ServiceCallFailure::new(1, 2, "error");
+        let json = serde_json::to_string(&msg).unwrap();
+        let parsed = ServerMessage::parse_json(&json).unwrap();
+        assert_eq!(parsed, ServerMessage::ServiceCallFailure(msg));
     }
 }
 
