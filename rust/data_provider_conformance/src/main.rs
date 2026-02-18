@@ -7,9 +7,7 @@
 //! - `DATA_PROVIDER_URL` (required) — full manifest URL including query parameters,
 //!   e.g. `http://127.0.0.1:8081/v1/manifest?flightId=TEST&startTime=...&endTime=...`
 //! - `DATA_PROVIDER_CMD` — path to a server binary to spawn; if unset, the server must already be
-//!   running
-//! - `DATA_PROVIDER_ADDR` — socket address to wait for when spawning a server (required if
-//!   `DATA_PROVIDER_CMD` is set), e.g. `127.0.0.1:8081`
+//!   running at the host/port in `DATA_PROVIDER_URL`
 //! - `DATA_PROVIDER_BEARER_TOKEN` — bearer token for authentication (default: `test-token`)
 //!
 //! # Examples
@@ -25,43 +23,33 @@
 //!
 //! ```sh
 //! DATA_PROVIDER_CMD=cpp/build/example_data_provider \
-//! DATA_PROVIDER_ADDR=127.0.0.1:8081 \
 //! DATA_PROVIDER_URL="http://127.0.0.1:8081/v1/manifest?flightId=TEST&startTime=2024-01-01T00:00:00Z&endTime=2024-01-01T00:00:05Z" \
 //!   cargo run -p data_provider_conformance
 //! ```
 
 use std::process::ExitCode;
 
-use data_provider_conformance::DataProviderTestConfig;
-
-fn required_env(key: &str) -> String {
-    std::env::var_os(key)
-        .unwrap_or_else(|| {
-            eprintln!("error: {key} environment variable must be set");
-            std::process::exit(2);
-        })
-        .into_string()
-        .unwrap_or_else(|_| panic!("{key} must be valid Unicode"))
-}
+use data_provider_conformance::{DataProviderTestConfig, Url};
 
 fn main() -> ExitCode {
-    let manifest_url = required_env("DATA_PROVIDER_URL")
+    let manifest_url: Url = std::env::var("DATA_PROVIDER_URL")
+        .expect("DATA_PROVIDER_URL must be set")
         .parse()
-        .unwrap_or_else(|e| {
-            eprintln!("error: DATA_PROVIDER_URL is not a valid URL: {e}");
-            std::process::exit(2);
-        });
+        .expect("DATA_PROVIDER_URL must be a valid URL");
 
-    let bearer_token = std::env::var_os("DATA_PROVIDER_BEARER_TOKEN")
-        .map(|v| {
-            v.into_string()
-                .expect("DATA_PROVIDER_BEARER_TOKEN must be valid Unicode")
-        })
-        .unwrap_or_else(|| "test-token".into());
+    let bearer_token =
+        std::env::var("DATA_PROVIDER_BEARER_TOKEN").unwrap_or_else(|_| "test-token".into());
 
     // If DATA_PROVIDER_CMD is set, spawn the server binary and keep it alive for the test run.
+    // The socket address to wait on is derived from DATA_PROVIDER_URL.
     let _guard = std::env::var_os("DATA_PROVIDER_CMD").map(|cmd| {
-        let addr = required_env("DATA_PROVIDER_ADDR");
+        let host = manifest_url
+            .host_str()
+            .expect("DATA_PROVIDER_URL must have a host");
+        let port = manifest_url
+            .port_or_known_default()
+            .expect("DATA_PROVIDER_URL must have a port");
+        let addr = format!("{host}:{port}");
         data_provider_conformance::spawn_server(cmd, &addr)
     });
 
