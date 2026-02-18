@@ -8,11 +8,19 @@ workspace = true
 
 [dependencies]
 axum = "0.8"
-chrono = { version = "0.4", features = ["serde"] }
+chrono.workspace = true
 foxglove = { path = "../../foxglove", features = ["data_provider", "stream", "derive", "chrono"] }
 futures = "0.3"
-serde = { version = "1.0", features = ["derive"] }
+serde.workspace = true
 serde_urlencoded = "0.7"
 tokio.workspace = true
-tracing = { version = "0.1", features = ["log"] }
+tracing.workspace = true
 tracing-subscriber = "0.3"
+
+[dev-dependencies]
+data_provider_conformance = { path = "../../data_provider_conformance" }
+tokio.workspace = true
+
+[[test]]
+name = "data_provider_test"
+harness = false
