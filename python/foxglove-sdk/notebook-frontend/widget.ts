@@ -13,9 +13,8 @@ interface WidgetModel {
 
 const DEFAULT_NOTEBOOK_LAYOUT_STORAGE_KEY = "foxglove-notebook-default-layout";
 
-type Message = {
-  type: "update-data";
-};
+type MessageToPython = { type: "ready" } | { type: "error"; message: string };
+type MessageFromPython = { type: "update-data" };
 
 function createSelectLayoutParams(layoutJson: string | undefined): SelectLayoutParams {
   // Even if no layout is provided, we want to always provide our storageKey and force=true so that
@@ -54,13 +53,15 @@ function render({ model, el }: RenderProps<WidgetModel>): void {
         : createSelectLayoutParams(initialLayoutJson),
   });
 
-  viewer.addEventListener("ready", () => {
-    model.send({
-      type: "ready",
-    });
+  viewer.addEventListener("error", (event) => {
+    model.send({ type: "error", message: event.detail } satisfies MessageToPython);
   });
 
-  model.on("msg:custom", (msg: Message, buffers: DataView<ArrayBuffer>[]) => {
+  viewer.addEventListener("ready", () => {
+    model.send({ type: "ready" } satisfies MessageToPython);
+  });
+
+  model.on("msg:custom", (msg: MessageFromPython, buffers: DataView<ArrayBuffer>[]) => {
     // Only one message is supported currently, however let's keep the if clause to be explicit
     // and avoid future pitfalls
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition

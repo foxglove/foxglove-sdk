@@ -84,7 +84,7 @@ impl Participant {
 
 impl std::fmt::Debug for Participant {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self.identity)
+        write!(f, "Participant {{ identity: {:?} }}", self.identity)
     }
 }
 

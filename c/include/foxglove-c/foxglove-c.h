@@ -69,9 +69,9 @@
 
 #if !defined(__wasm__)
 /**
- * Indicates that the server is sending data within a fixed time range. This requires the
- * server to specify the `data_start_time` and `data_end_time` fields in
- * `foxglove_server_options`.
+ * Indicates that the server is capable of responding to playback control requests from controls
+ * in the Foxglove app. This requires the server to specify the `data_start_time` and
+ * `data_end_time` fields in `foxglove_server_options`.
  */
 #define FOXGLOVE_SERVER_CAPABILITY_PLAYBACK_CONTROL (1 << 6)
 #endif

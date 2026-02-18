@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, sync::Arc, time::Duration};
 
 use crate::{
     remote_access::{RemoteAccessConnection, RemoteAccessConnectionOptions},
@@ -41,7 +41,7 @@ pub struct RemoteAccessSinkHandle {
 
 impl RemoteAccessSinkHandle {
     fn new(connection: Arc<RemoteAccessConnection>) -> Self {
-        let runner = tokio::spawn(connection.clone().run_until_cancelled());
+        let runner = connection.clone().spawn_run_until_cancelled();
 
         Self { connection, runner }
     }
@@ -57,31 +57,28 @@ impl RemoteAccessSinkHandle {
     }
 }
 
+const FOXGLOVE_DEVICE_TOKEN_ENV: &str = "FOXGLOVE_DEVICE_TOKEN";
+const FOXGLOVE_API_URL_ENV: &str = "FOXGLOVE_API_URL";
+const FOXGLOVE_API_TIMEOUT_ENV: &str = "FOXGLOVE_API_TIMEOUT";
+
 /// A RemoteAccessSink for live visualization and teleop in Foxglove.
 ///
 /// You may only create one RemoteAccessSink at a time for the device.
 #[must_use]
 #[doc(hidden)]
+#[derive(Default)]
 pub struct RemoteAccessSink {
     options: RemoteAccessConnectionOptions,
-    context: Arc<Context>,
+    device_token: Option<String>,
+    foxglove_api_url: Option<String>,
+    foxglove_api_timeout: Option<Duration>,
 }
 
 impl std::fmt::Debug for RemoteAccessSink {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("RemoteAccessSink")
             .field("options", &self.options)
-            .field("context", &self.context)
             .finish()
-    }
-}
-
-impl Default for RemoteAccessSink {
-    fn default() -> Self {
-        Self {
-            options: RemoteAccessConnectionOptions::default(),
-            context: Context::get_default(),
-        }
     }
 }
 
@@ -89,6 +86,14 @@ impl RemoteAccessSink {
     /// Creates a new RemoteAccessSink with default options.
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Sets the server name reported in the ServerInfo message.
+    ///
+    /// If not set, the device name from the Foxglove platform is used.
+    pub fn name(mut self, name: impl Into<String>) -> Self {
+        self.options.name = Some(name.into());
+        self
     }
 
     /// Configure an event listener to receive client message events.
@@ -129,7 +134,7 @@ impl RemoteAccessSink {
 
     /// Sets the context for this sink.
     pub fn context(mut self, ctx: &Arc<Context>) -> Self {
-        self.context = ctx.clone();
+        self.options.context = ctx.clone();
         self
     }
 
@@ -153,6 +158,32 @@ impl RemoteAccessSink {
         self
     }
 
+    /// Sets the device token for authenticating with the Foxglove platform.
+    ///
+    /// If not set, the token is read from the `FOXGLOVE_DEVICE_TOKEN` environment variable.
+    pub fn device_token(mut self, token: impl Into<String>) -> Self {
+        self.device_token = Some(token.into());
+        self
+    }
+
+    /// Sets the Foxglove API base URL.
+    ///
+    /// If not set, the URL is read from the `FOXGLOVE_API_URL` environment variable,
+    /// falling back to `https://api.foxglove.dev`.
+    pub fn foxglove_api_url(mut self, url: impl Into<String>) -> Self {
+        self.foxglove_api_url = Some(url.into());
+        self
+    }
+
+    /// Sets the timeout for Foxglove API requests.
+    ///
+    /// If not set, the timeout is read from the `FOXGLOVE_API_TIMEOUT` environment variable
+    /// (in seconds), falling back to 30 seconds.
+    pub fn foxglove_api_timeout(mut self, timeout: Duration) -> Self {
+        self.foxglove_api_timeout = Some(timeout);
+        self
+    }
+
     /// Sets a channel filter. See [`SinkChannelFilter`] for more information.
     pub fn channel_filter_fn(
         mut self,
@@ -167,10 +198,28 @@ impl RemoteAccessSink {
     /// Returns a handle that can optionally be used to manage the sink.
     /// The caller can safely drop the handle and the connection will continue in the background.
     /// Use stop() on the returned handle to stop the connection.
-    pub fn start(self) -> Result<RemoteAccessSinkHandle, FoxgloveError> {
-        let mut options = self.options;
-        options.context = self.context;
-        let connection = RemoteAccessConnection::new(options);
+    ///
+    /// Returns an error if no device token is provided and the `FOXGLOVE_DEVICE_TOKEN`
+    /// environment variable is not set.
+    pub fn start(mut self) -> Result<RemoteAccessSinkHandle, FoxgloveError> {
+        self.options.device_token = self
+            .device_token
+            .or_else(|| std::env::var(FOXGLOVE_DEVICE_TOKEN_ENV).ok())
+            .ok_or_else(|| {
+                FoxgloveError::ConfigurationError(format!(
+                    "No device token provided. Set the {FOXGLOVE_DEVICE_TOKEN_ENV} environment variable or call .device_token() on the builder."
+                ))
+            })?;
+        self.options.foxglove_api_url = self
+            .foxglove_api_url
+            .or_else(|| std::env::var(FOXGLOVE_API_URL_ENV).ok());
+        self.options.foxglove_api_timeout = self.foxglove_api_timeout.or_else(|| {
+            std::env::var(FOXGLOVE_API_TIMEOUT_ENV)
+                .ok()
+                .and_then(|s| s.parse::<u64>().ok())
+                .map(Duration::from_secs)
+        });
+        let connection = RemoteAccessConnection::new(self.options);
         Ok(RemoteAccessSinkHandle::new(Arc::new(connection)))
     }
 }
