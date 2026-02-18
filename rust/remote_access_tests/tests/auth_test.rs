@@ -1,7 +1,7 @@
 //! Integration test that validates authentication against the Foxglove platform.
 //!
 //! Requires `FOXGLOVE_API_KEY` to be set (e.g. via `.env`).
-//! Run with: `cargo test -p remote-access-tests -- --ignored auth_`
+//! Run with: `cargo test -p remote_access_tests -- --ignored auth_`
 
 use std::time::Duration;
 

@@ -25,11 +25,11 @@ jobs:
         run: docker compose up -d --wait
 
       - name: Run LiveKit integration tests
-        run: cargo test -p remote-access-tests -- --ignored livekit_
+        run: cargo test -p remote_access_tests -- --ignored livekit_
 
       - name: Run auth integration tests
         if: ${{ !github.event.pull_request.head.repo.fork && github.actor != 'dependabot[bot]' }}
-        run: cargo test -p remote-access-tests -- --ignored auth_
+        run: cargo test -p remote_access_tests -- --ignored auth_
         env:
           FOXGLOVE_API_KEY: ${{ secrets.FOXGLOVE_API_KEY }}
 

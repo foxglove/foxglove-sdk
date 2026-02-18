@@ -2,7 +2,7 @@
 //! advertisement using a local LiveKit dev server.
 //!
 //! Requires a local LiveKit server via `docker compose up -d`.
-//! Run with: `cargo test -p remote-access-tests -- --ignored livekit_`
+//! Run with: `cargo test -p remote_access_tests -- --ignored livekit_`
 
 use std::time::Duration;
 
