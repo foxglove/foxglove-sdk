@@ -4,8 +4,11 @@ use std::{
     time::Duration,
 };
 
-use bytes::Bytes;
-use livekit::{id::ParticipantIdentity, Room, RoomEvent, RoomOptions, StreamByteOptions};
+use bytes::{Bytes, BytesMut};
+use futures::StreamExt;
+use livekit::{
+    id::ParticipantIdentity, ByteStreamReader, Room, RoomEvent, RoomOptions, StreamByteOptions,
+};
 use parking_lot::RwLock;
 use smallvec::SmallVec;
 use tokio::{runtime::Handle, sync::mpsc::UnboundedReceiver};
@@ -14,6 +17,7 @@ use tracing::{debug, error, info, warn};
 
 use crate::{
     library_version::get_library_version,
+    protocol::v2::client::ClientMessage,
     remote_access::{
         participant::{Participant, ParticipantWriter},
         RemoteAccessError,
@@ -27,6 +31,7 @@ use crate::protocol::v2::{server::ServerInfo, JsonMessage};
 type Result<T> = std::result::Result<T, RemoteAccessError>;
 
 const WS_PROTOCOL_TOPIC: &str = "ws-protocol";
+const MESSAGE_FRAME_SIZE: usize = 5;
 const AUTH_RETRY_PERIOD: Duration = Duration::from_secs(30);
 
 /// The operation code for the message framing for protocol v2.
@@ -106,6 +111,15 @@ impl std::fmt::Debug for RemoteAccessConnectionOptions {
 /// and any state that is specific to that session.
 /// We discard this state if we close or lose the connection.
 /// [`RemoteAccessConnection`] manages the current connected session (if any)
+///
+/// The Sink impl should be at the RemoteAccessSession level.
+/// It is tempting to make it at the participant session level,
+/// similarly to how we do with the WebSocketServer connection,
+/// but that make it very difficult to support sending multi-cast messages.
+///
+/// The session level receives the sink messages and can then
+/// choose to deliver them via multi-cast to multiple participants
+/// when that is desirable.
 struct RemoteAccessSession {
     room: Room,
     participants: RwLock<HashMap<ParticipantIdentity, Arc<Participant>>>,
@@ -334,6 +348,112 @@ impl RemoteAccessSession {
         Self {
             room,
             participants: RwLock::new(HashMap::new()),
+        }
+    }
+
+    async fn handle_byte_stream_from_client(
+        self: &Arc<Self>,
+        participant_identity: ParticipantIdentity,
+        mut reader: ByteStreamReader,
+    ) {
+        let mut buffer = BytesMut::new();
+        loop {
+            // Read chunk from stream
+            let chunk = match reader.next().await {
+                Some(Ok(chunk)) => chunk,
+                Some(Err(e)) => {
+                    error!(
+                        "Error reading from byte stream for client {:?}: {:?}",
+                        participant_identity, e
+                    );
+                    break;
+                }
+                None => {
+                    break;
+                }
+            };
+
+            buffer.extend_from_slice(&chunk);
+
+            // Parse complete messages from buffer
+            while buffer.len() >= MESSAGE_FRAME_SIZE {
+                // Parse frame header: 1 byte OpCode + 4 bytes little-endian u32 length
+                let opcode = buffer[0];
+                let length =
+                    u32::from_le_bytes(buffer[1..MESSAGE_FRAME_SIZE].try_into().unwrap()) as usize;
+
+                // Check if we have the complete message
+                if buffer.len() < MESSAGE_FRAME_SIZE + length {
+                    break; // Wait for more data
+                }
+
+                // Split off the header (opcode + length) and payload as a single message
+                let message = buffer.split_to(MESSAGE_FRAME_SIZE + length);
+
+                // Extract the payload without copying by splitting off the header
+                let payload = message.freeze().slice(MESSAGE_FRAME_SIZE..);
+
+                // Create a simple message structure with OpCode and payload
+                // Since we don't know the exact structure of ClientMessage,
+                // we'll pass the raw data to handle_client_message
+                self.handle_client_message(&participant_identity, opcode, payload)
+                    .await;
+            }
+        }
+    }
+
+    async fn handle_client_message(
+        self: &Arc<Self>,
+        participant_identity: &ParticipantIdentity,
+        opcode: u8,
+        payload: Bytes,
+    ) {
+        const TEXT: u8 = OpCode::Text as u8;
+        const BINARY: u8 = OpCode::Binary as u8;
+        let client_msg = match opcode {
+            TEXT => match std::str::from_utf8(&payload) {
+                Ok(text) => ClientMessage::parse_json(text),
+                Err(e) => {
+                    error!("Invalid UTF-8 in text message: {e:?}");
+                    return;
+                }
+            },
+            BINARY => ClientMessage::parse_binary(&payload[..]),
+            _ => {
+                error!("Invalid opcode: {opcode}");
+                return;
+            }
+        };
+
+        let client_msg = match client_msg {
+            Ok(msg) => msg,
+            Err(e) => {
+                error!("failed to parse client message: {e:?}");
+                return;
+            }
+        };
+
+        // Look up participant ID before the final match
+        let Some(participant) = ({
+            let participants = self.participants.read();
+            participants.get(participant_identity).cloned()
+        }) else {
+            error!("Unknown participant identity: {:?}", participant_identity);
+            return;
+        };
+
+        match client_msg {
+            // Subscriptions to server channels
+            ClientMessage::Subscribe(subscribe_msg) => {
+                self.handle_client_subscribe(participant, subscribe_msg)
+                    .await;
+            }
+            ClientMessage::Unsubscribe(unsubscribe_msg) => {
+                self.handle_client_unsubscribe(participant, unsubscribe_msg)
+                    .await;
+            }
+            // TODO: Implement other message handling branches
+            _ => {}
         }
     }
 
