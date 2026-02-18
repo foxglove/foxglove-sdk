@@ -29,8 +29,6 @@ impl JsonMessage for UnsubscribeParameterUpdates {}
 
 #[cfg(test)]
 mod tests {
-    use crate::protocol::v1::client::ClientMessage;
-
     use super::*;
 
     fn message() -> UnsubscribeParameterUpdates {
@@ -48,7 +46,7 @@ mod tests {
     fn test_roundtrip() {
         let orig = message();
         let buf = orig.to_string();
-        let msg = ClientMessage::parse_json(&buf).unwrap();
-        assert_eq!(msg, ClientMessage::UnsubscribeParameterUpdates(orig));
+        let parsed: UnsubscribeParameterUpdates = serde_json::from_str(&buf).unwrap();
+        assert_eq!(parsed, orig);
     }
 }
