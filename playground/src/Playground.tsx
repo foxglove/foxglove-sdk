@@ -17,7 +17,7 @@ import { tss } from "tss-react/mui";
 
 import { Editor, EditorInterface } from "./Editor";
 import { Runner } from "./Runner";
-import { DEFAULT_EXAMPLE, EXAMPLES, Example } from "./examples";
+import { DEFAULT_EXAMPLE, EXAMPLES, Example, FALLBACK_LAYOUT } from "./examples";
 import { getUrlState, setUrlState, UrlState } from "./urlState";
 
 import "./Playground.css";
@@ -147,13 +147,11 @@ export function Playground(): React.JSX.Element {
 
   const onExampleSelected = useCallback((example: Example) => {
     editorRef.current?.setValue(example.code);
-    if (example.layout != undefined) {
-      setSelectedLayout({
-        storageKey: LAYOUT_STORAGE_KEY,
-        opaqueLayout: example.layout,
-        force: true,
-      });
-    }
+    setSelectedLayout({
+      storageKey: LAYOUT_STORAGE_KEY,
+      opaqueLayout: example.layout ?? FALLBACK_LAYOUT,
+      force: true,
+    });
   }, []);
 
   const run = useCallback(async () => {

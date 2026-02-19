@@ -518,3 +518,49 @@ with foxglove.open_mcap("playground.mcap") as writer:
 export const EXAMPLES: Example[] = [SCENE_EXAMPLE, TRANSFORMS_EXAMPLE, LAYOUT_API_EXAMPLE];
 
 export const DEFAULT_EXAMPLE = EXAMPLES[0]!;
+
+/** A minimal single-panel layout used as fallback when an example sets its layout programmatically. */
+export const FALLBACK_LAYOUT: Record<string, unknown> = {
+  configById: {
+    "3D!fallback": {
+      cameraState: {
+        distance: 20,
+        perspective: true,
+        phi: 60,
+        target: [0, 0, 0],
+        targetOffset: [0, 0, 0],
+        targetOrientation: [0, 0, 0, 1],
+        thetaOffset: 45,
+        fovy: 45,
+        near: 0.5,
+        far: 5000,
+      },
+      followMode: "follow-pose",
+      scene: {},
+      transforms: {},
+      topics: {},
+      layers: {
+        grid: {
+          visible: true,
+          drawBehind: false,
+          frameLocked: true,
+          label: "Grid",
+          instanceId: "fallback-grid",
+          layerId: "foxglove.Grid",
+          size: 10,
+          divisions: 10,
+          lineWidth: 1,
+          color: "#248eff",
+          position: [0, 0, 0],
+          rotation: [0, 0, 0],
+        },
+      },
+      imageMode: {},
+    },
+  },
+  globalVariables: {},
+  userNodes: {},
+  playbackConfig: { speed: 1 },
+  drawerConfig: { tracks: [] },
+  layout: "3D!fallback",
+};
