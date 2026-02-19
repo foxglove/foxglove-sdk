@@ -38,6 +38,8 @@ pub(crate) enum BinaryOpcode {
     PlaybackState = 5,
 }
 
+const OPCODE_SIZE: usize = std::mem::size_of::<BinaryOpcode>();
+
 impl BinaryOpcode {
     pub(crate) fn from_repr(value: u8) -> Option<Self> {
         match value {
@@ -53,7 +55,7 @@ impl BinaryOpcode {
 
 impl BinaryMessage for MessageData<'_> {
     fn encoded_len(&self) -> usize {
-        1 + self.payload_size()
+        OPCODE_SIZE + self.payload_size()
     }
 
     fn encode(&self, buf: &mut impl BufMut) {
@@ -64,7 +66,7 @@ impl BinaryMessage for MessageData<'_> {
 
 impl BinaryMessage for Time {
     fn encoded_len(&self) -> usize {
-        1 + self.payload_size()
+        OPCODE_SIZE + self.payload_size()
     }
 
     fn encode(&self, buf: &mut impl BufMut) {
@@ -75,7 +77,7 @@ impl BinaryMessage for Time {
 
 impl BinaryMessage for ServiceCallResponse<'_> {
     fn encoded_len(&self) -> usize {
-        1 + self.payload_size()
+        OPCODE_SIZE + self.payload_size()
     }
 
     fn encode(&self, buf: &mut impl BufMut) {
@@ -86,7 +88,7 @@ impl BinaryMessage for ServiceCallResponse<'_> {
 
 impl BinaryMessage for FetchAssetResponse<'_> {
     fn encoded_len(&self) -> usize {
-        1 + self.payload_size()
+        OPCODE_SIZE + self.payload_size()
     }
 
     fn encode(&self, buf: &mut impl BufMut) {
@@ -97,7 +99,7 @@ impl BinaryMessage for FetchAssetResponse<'_> {
 
 impl BinaryMessage for PlaybackState {
     fn encoded_len(&self) -> usize {
-        1 + self.payload_size()
+        OPCODE_SIZE + self.payload_size()
     }
 
     fn encode(&self, buf: &mut impl BufMut) {
