@@ -40,6 +40,8 @@ const MESSAGE_FRAME_SIZE: usize = 5;
 const AUTH_RETRY_PERIOD: Duration = Duration::from_secs(30);
 const DEFAULT_MESSAGE_BACKLOG_SIZE: usize = 1024;
 const MAX_SEND_RETRIES: usize = 3;
+const MAX_MESSAGE_SIZE: usize = 16 * 1024 * 1024; // 16 MiB
+const RECV_MESSAGE_TIMEOUT: Duration = Duration::from_secs(30);
 
 /// A data plane message queued for delivery to subscribed participants.
 struct ChannelMessage {
@@ -596,7 +598,7 @@ impl RemoteAccessSession {
     }
 
     /// Enqueue a control plane message for a specific participant.
-    /// Drops the message with a warning if the queue is full.
+    /// Blocks the thread if the queue is full.
     fn send_control(&self, participant: Arc<Participant>, data: Bytes) {
         let msg = ControlPlaneMessage { participant, data };
         if let Err(e) = self.control_plane_tx.send(msg) {
@@ -629,7 +631,7 @@ impl RemoteAccessSession {
                 }
                 msg = session.data_plane_rx.recv_async() => {
                     let Ok(msg) = msg else { break };
-                    // Use a SmallVec to avoid extra allocations/free for the temporary participants vev
+                    // Use a SmallVec to avoid extra allocations/free for the temporary participants vec
                     let participants: SmallVec<[Arc<Participant>; 8]> = {
                         let participants = session.participants.read();
                         participants
@@ -654,9 +656,30 @@ impl RemoteAccessSession {
         mut reader: ByteStreamReader,
     ) {
         let mut buffer = BytesMut::new();
+        // Tracks the absolute deadline by which the current partial message must be fully received.
+        // None means no partial message is in-flight (we are between messages).
+        let mut message_deadline: Option<tokio::time::Instant> = None;
+
         loop {
-            // Read chunk from stream
-            let chunk = match reader.next().await {
+            // Wait for the next chunk. When we are mid-message, enforce the per-message deadline
+            // so that the total read time (across all chunks) does not exceed RECV_MESSAGE_TIMEOUT.
+            let next = match message_deadline {
+                None => reader.next().await,
+                Some(deadline) => {
+                    match tokio::time::timeout_at(deadline, reader.next()).await {
+                        Ok(result) => result,
+                        Err(_) => {
+                            error!(
+                                "timed out reading message from client {:?}, disconnecting",
+                                participant_identity
+                            );
+                            break;
+                        }
+                    }
+                }
+            };
+
+            let chunk = match next {
                 Some(Ok(chunk)) => chunk,
                 Some(Err(e)) => {
                     error!(
@@ -665,19 +688,26 @@ impl RemoteAccessSession {
                     );
                     break;
                 }
-                None => {
-                    break;
-                }
+                None => break,
             };
 
             buffer.extend_from_slice(&chunk);
 
             // Parse complete messages from buffer
+            let mut completed_message = false;
             while buffer.len() >= MESSAGE_FRAME_SIZE {
                 // Parse frame header: 1 byte OpCode + 4 bytes little-endian u32 length
                 let opcode = buffer[0];
                 let length =
                     u32::from_le_bytes(buffer[1..MESSAGE_FRAME_SIZE].try_into().unwrap()) as usize;
+
+                if length > MAX_MESSAGE_SIZE {
+                    error!(
+                        "message too large ({length} bytes) from client {:?}, disconnecting",
+                        participant_identity
+                    );
+                    return;
+                }
 
                 // Check if we have the complete message
                 if buffer.len() < MESSAGE_FRAME_SIZE + length {
@@ -691,7 +721,22 @@ impl RemoteAccessSession {
                 let payload = message.freeze().slice(MESSAGE_FRAME_SIZE..);
 
                 self.handle_client_message(&participant_identity, opcode, payload);
+                completed_message = true;
             }
+
+            // Update the deadline for the next iteration:
+            // - Buffer empty → no partial message, clear the deadline.
+            // - Just completed a message with leftover bytes → those bytes start a new message,
+            //   so reset the deadline to give it a full RECV_MESSAGE_TIMEOUT.
+            // - Still accumulating the same partial message → keep the existing deadline so
+            //   the total read time for this message is bounded by RECV_MESSAGE_TIMEOUT.
+            message_deadline = if buffer.is_empty() {
+                None
+            } else if completed_message || message_deadline.is_none() {
+                Some(tokio::time::Instant::now() + RECV_MESSAGE_TIMEOUT)
+            } else {
+                message_deadline
+            };
         }
     }
 
