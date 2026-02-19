@@ -166,18 +166,21 @@ def init_notebook_buffer(context: Context | None = None) -> NotebookBuffer:
         it with ``pip install foxglove-sdk[notebook]``.
 
     Example:
-        >>> import foxglove
-        >>>
-        >>> # Create a basic viewer using the default context
-        >>> nb_buffer = foxglove.init_notebook_buffer()
-        >>>
-        >>> # Or use a specific context
-        >>> nb_buffer = foxglove.init_notebook_buffer(context=my_ctx)
-        >>>
-        >>> # ... log data as usual ...
-        >>>
-        >>> # Display the widget in the notebook
-        >>> nb_buffer.show()
+
+    .. code-block:: python
+
+        import foxglove
+
+        # Create a basic viewer using the default context
+        nb_buffer = foxglove.init_notebook_buffer()
+
+        # Or use a specific context
+        nb_buffer = foxglove.init_notebook_buffer(context=my_ctx)
+
+        # ... log data as usual ...
+
+        # Display the widget in the notebook
+        nb_buffer.show()
     """
     try:
         from .notebook.notebook_buffer import NotebookBuffer
