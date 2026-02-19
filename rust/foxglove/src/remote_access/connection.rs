@@ -475,7 +475,7 @@ impl Sink for RemoteAccessSession {
     ) -> std::result::Result<(), FoxgloveError> {
         let channel_id = channel.id();
         let message = ServerMessageData::new(u32::from(channel_id), metadata.log_time, msg);
-        let data = Bytes::from(frame_message(&message.to_bytes(), OpCode::Binary));
+        let data = encode_binary_message(&message);
         self.send_data_lossy(ChannelMessage { channel_id, data });
         Ok(())
     }
@@ -536,6 +536,19 @@ impl Sink for RemoteAccessSession {
     fn auto_subscribe(&self) -> bool {
         false
     }
+}
+
+fn encode_binary_message(message: &impl BinaryMessage) -> Bytes {
+    let msg_len = message.encoded_len();
+    let mut buf = Vec::with_capacity(MESSAGE_FRAME_SIZE + msg_len);
+    buf.push(OpCode::Binary as u8);
+    buf.extend_from_slice(
+        &u32::try_from(msg_len)
+            .expect("message too large")
+            .to_le_bytes(),
+    );
+    message.encode(&mut buf);
+    Bytes::from(buf)
 }
 
 impl RemoteAccessSession {
