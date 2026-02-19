@@ -184,6 +184,17 @@ impl RemoteAccessSink {
         self
     }
 
+    /// Set the message backlog size.
+    ///
+    /// The sink buffers outgoing log entries into a queue. If the backlog size is exceeded, the
+    /// oldest entries will be dropped.
+    ///
+    /// By default, the sink will buffer 1024 messages.
+    pub fn message_backlog_size(mut self, size: usize) -> Self {
+        self.options.message_backlog_size = Some(size);
+        self
+    }
+
     /// Sets a channel filter. See [`SinkChannelFilter`] for more information.
     pub fn channel_filter_fn(
         mut self,

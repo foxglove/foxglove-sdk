@@ -5,7 +5,7 @@ use std::{
 };
 
 use bytes::{Bytes, BytesMut};
-use futures::StreamExt;
+use futures_util::StreamExt;
 use livekit::{
     id::ParticipantIdentity, ByteStreamReader, Room, RoomEvent, RoomOptions, StreamByteOptions,
 };
@@ -38,6 +38,20 @@ type Result<T> = std::result::Result<T, RemoteAccessError>;
 const WS_PROTOCOL_TOPIC: &str = "ws-protocol";
 const MESSAGE_FRAME_SIZE: usize = 5;
 const AUTH_RETRY_PERIOD: Duration = Duration::from_secs(30);
+const DEFAULT_MESSAGE_BACKLOG_SIZE: usize = 1024;
+const MAX_SEND_RETRIES: usize = 3;
+
+/// A data plane message queued for delivery to subscribed participants.
+struct ChannelMessage {
+    channel_id: ChannelId,
+    data: Bytes,
+}
+
+/// A control plane message queued for delivery to a specific participant.
+struct ControlPlaneMessage {
+    participant: Arc<Participant>,
+    data: Bytes,
+}
 
 /// The operation code for the message framing for protocol v2.
 /// Distinguishes between frames containing JSON messages vs binary messages.
@@ -66,6 +80,7 @@ pub(crate) struct RemoteAccessConnectionOptions {
     pub runtime: Option<Handle>,
     pub channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     pub server_info: Option<HashMap<String, String>>,
+    pub message_backlog_size: Option<usize>,
     pub cancellation_token: CancellationToken,
     pub context: Arc<Context>,
 }
@@ -84,6 +99,7 @@ impl Default for RemoteAccessConnectionOptions {
             runtime: None,
             channel_filter: None,
             server_info: None,
+            message_backlog_size: None,
             cancellation_token: CancellationToken::new(),
             context: Context::get_default(),
         }
@@ -104,6 +120,7 @@ impl std::fmt::Debug for RemoteAccessConnectionOptions {
             .field("has_runtime", &self.runtime.is_some())
             .field("has_channel_filter", &self.channel_filter.is_some())
             .field("server_info", &self.server_info)
+            .field("message_backlog_size", &self.message_backlog_size)
             .field("context", &self.context)
             .finish()
     }
@@ -156,6 +173,11 @@ impl RemoteAccessConnection {
             .await
             .map_err(|e| RemoteAccessError::AuthError(e.to_string()))?;
 
+        let message_backlog_size = self
+            .options
+            .message_backlog_size
+            .unwrap_or(DEFAULT_MESSAGE_BACKLOG_SIZE);
+
         let (session, room_events) =
             match Room::connect(&credentials.url, &credentials.token, RoomOptions::default()).await
             {
@@ -163,6 +185,8 @@ impl RemoteAccessConnection {
                     Arc::new(RemoteAccessSession::new(
                         room,
                         self.options.channel_filter.clone(),
+                        self.options.cancellation_token.clone(),
+                        message_backlog_size,
                     )),
                     room_events,
                 ),
@@ -211,6 +235,9 @@ impl RemoteAccessConnection {
         // This synchronously triggers add_channels for all existing channels.
         self.options.context.add_sink(session.clone());
 
+        // We can use spawn here because we're already running on self.options.runtime (if set)
+        let sender_task = tokio::spawn(RemoteAccessSession::run_sender(session.clone()));
+
         let attributes = session.room.local_participant().attributes();
         let identity = session.room.local_participant().identity();
         info!(
@@ -226,6 +253,7 @@ impl RemoteAccessConnection {
 
         // Remove the sink before closing the room.
         self.options.context.remove_sink(session.sink_id);
+        sender_task.abort();
 
         info!("disconnecting from room");
         // Close the room (disconnect) on shutdown.
@@ -427,8 +455,11 @@ struct RemoteAccessSession {
     /// Channels that have been advertised to participants.
     channels: RwLock<HashMap<ChannelId, Arc<RawChannel>>>,
     channel_filter: Option<Arc<dyn SinkChannelFilter>>,
-    /// Handle to the tokio runtime, used to spawn async sends from sync Sink callbacks.
-    runtime: Handle,
+    cancellation_token: CancellationToken,
+    data_plane_tx: flume::Sender<ChannelMessage>,
+    data_plane_rx: flume::Receiver<ChannelMessage>,
+    control_plane_tx: flume::Sender<ControlPlaneMessage>,
+    control_plane_rx: flume::Receiver<ControlPlaneMessage>,
 }
 
 impl Sink for RemoteAccessSession {
@@ -443,35 +474,9 @@ impl Sink for RemoteAccessSession {
         metadata: &Metadata,
     ) -> std::result::Result<(), FoxgloveError> {
         let channel_id = channel.id();
-
-        // TODO FLE-32 check if channel is "lossy" and use a different queue and mechanism for sending multi-cast messages
-
-        // Collect the subscribed participants
-        // Use a SmallVec to avoid alloc+free on each message logged
-        let participants: SmallVec<[Arc<Participant>; 8]> = {
-            let participants = self.participants.read();
-            participants
-                .values()
-                .filter(|p| p.is_subscribed(channel_id))
-                .cloned()
-                .collect()
-        };
-
-        if participants.is_empty() {
-            return Ok(());
-        }
-
         let message = ServerMessageData::new(u32::from(channel_id), metadata.log_time, msg);
-        let framed = frame_message(&message.to_bytes(), OpCode::Binary);
-
-        self.runtime.spawn(async move {
-            for participant in participants {
-                if let Err(e) = participant.send(&framed).await {
-                    error!("failed to send message data to {participant:?}: {e:?}");
-                }
-            }
-        });
-
+        let data = Bytes::from(frame_message(&message.to_bytes(), OpCode::Binary));
+        self.send_data_lossy(ChannelMessage { channel_id, data });
         Ok(())
     }
 
@@ -493,7 +498,7 @@ impl Sink for RemoteAccessSession {
 
         let advertise_msg = advertise::advertise_channels(filtered.iter().copied());
 
-        // Cache channels
+        // Track advertised channels
         {
             let mut cached = self.channels.write();
             for &ch in &filtered {
@@ -505,19 +510,11 @@ impl Sink for RemoteAccessSession {
             return None;
         }
 
-        let framed = frame_message(advertise_msg.to_string().as_bytes(), OpCode::Text);
-
-        let participants: Vec<Arc<Participant>> =
-            self.participants.read().values().cloned().collect();
-        if !participants.is_empty() {
-            self.runtime.spawn(async move {
-                for participant in participants {
-                    if let Err(e) = participant.send(&framed).await {
-                        error!("failed to send channel advertisement to {participant:?}: {e:?}");
-                    }
-                }
-            });
-        }
+        let framed = Bytes::from(frame_message(
+            advertise_msg.to_string().as_bytes(),
+            OpCode::Text,
+        ));
+        self.broadcast_control(framed);
 
         None
     }
@@ -529,19 +526,11 @@ impl Sink for RemoteAccessSession {
         }
 
         let unadvertise = Unadvertise::new([u64::from(channel_id)]);
-        let framed = frame_message(unadvertise.to_string().as_bytes(), OpCode::Text);
-
-        let participants: Vec<Arc<Participant>> =
-            self.participants.read().values().cloned().collect();
-        if !participants.is_empty() {
-            self.runtime.spawn(async move {
-                for participant in participants {
-                    if let Err(e) = participant.send(&framed).await {
-                        error!("failed to send channel unadvertisement to {participant:?}: {e:?}");
-                    }
-                }
-            });
-        }
+        let framed = Bytes::from(frame_message(
+            unadvertise.to_string().as_bytes(),
+            OpCode::Text,
+        ));
+        self.broadcast_control(framed);
     }
 
     fn auto_subscribe(&self) -> bool {
@@ -550,14 +539,107 @@ impl Sink for RemoteAccessSession {
 }
 
 impl RemoteAccessSession {
-    fn new(room: Room, channel_filter: Option<Arc<dyn SinkChannelFilter>>) -> Self {
+    fn new(
+        room: Room,
+        channel_filter: Option<Arc<dyn SinkChannelFilter>>,
+        cancellation_token: CancellationToken,
+        message_backlog_size: usize,
+    ) -> Self {
+        let (data_plane_tx, data_plane_rx) = flume::bounded(message_backlog_size);
+        let (control_plane_tx, control_plane_rx) = flume::bounded(message_backlog_size);
         Self {
             sink_id: SinkId::next(),
             room,
             participants: RwLock::new(HashMap::new()),
             channels: RwLock::new(HashMap::new()),
             channel_filter,
-            runtime: Handle::current(),
+            cancellation_token,
+            data_plane_tx,
+            data_plane_rx,
+            control_plane_tx,
+            control_plane_rx,
+        }
+    }
+
+    /// Enqueue a data plane message, dropping old messages if the queue is full.
+    fn send_data_lossy(&self, mut msg: ChannelMessage) {
+        static THROTTLER: parking_lot::Mutex<crate::throttler::Throttler> =
+            parking_lot::Mutex::new(crate::throttler::Throttler::new(Duration::from_secs(30)));
+        let mut dropped = 0;
+        loop {
+            match self.data_plane_tx.try_send(msg) {
+                Ok(_) => {
+                    if dropped > 0 && THROTTLER.lock().try_acquire() {
+                        info!("data plane queue full, dropped {dropped} message(s)");
+                    }
+                    return;
+                }
+                Err(flume::TrySendError::Disconnected(_)) => return,
+                Err(flume::TrySendError::Full(rejected)) => {
+                    if dropped >= MAX_SEND_RETRIES {
+                        if THROTTLER.lock().try_acquire() {
+                            info!("data plane queue full, dropped message");
+                        }
+                        return;
+                    }
+                    msg = rejected;
+                    let _ = self.data_plane_rx.try_recv();
+                    dropped += 1;
+                }
+            }
+        }
+    }
+
+    /// Enqueue a control plane message for a specific participant.
+    /// Drops the message with a warning if the queue is full.
+    fn send_control(&self, participant: Arc<Participant>, data: Bytes) {
+        let msg = ControlPlaneMessage { participant, data };
+        if let Err(e) = self.control_plane_tx.send(msg) {
+            warn!("control plane queue disconnected, dropping message: {e}");
+        }
+    }
+
+    /// Enqueue a control plane message for all currently connected participants.
+    fn broadcast_control(&self, data: Bytes) {
+        let participants = self.participants.read();
+        for participant in participants.values() {
+            self.send_control(participant.clone(), data.clone());
+        }
+    }
+
+    /// Reads from the data plane and control plane queues and sends messages to participants.
+    ///
+    /// Control plane messages are sent to the targeted participant.
+    /// Data plane messages are sent to all participants subscribed to the message's channel.
+    async fn run_sender(session: Arc<Self>) {
+        loop {
+            tokio::select! {
+                biased;
+                () = session.cancellation_token.cancelled() => break,
+                msg = session.control_plane_rx.recv_async() => {
+                    let Ok(msg) = msg else { break };
+                    if let Err(e) = msg.participant.send(&msg.data).await {
+                        error!("failed to send control message to {:?}: {e:?}", msg.participant);
+                    }
+                }
+                msg = session.data_plane_rx.recv_async() => {
+                    let Ok(msg) = msg else { break };
+                    // Use a SmallVec to avoid extra allocations/free for the temporary participants vev
+                    let participants: SmallVec<[Arc<Participant>; 8]> = {
+                        let participants = session.participants.read();
+                        participants
+                            .values()
+                            .filter(|p| p.is_subscribed(msg.channel_id))
+                            .cloned()
+                            .collect()
+                    };
+                    for participant in &participants {
+                        if let Err(e) = participant.send(&msg.data).await {
+                            error!("failed to send message data to {participant:?}: {e:?}");
+                        }
+                    }
+                }
+            }
         }
     }
 
