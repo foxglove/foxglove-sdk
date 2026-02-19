@@ -663,18 +663,16 @@ impl RemoteAccessSession {
             // so that the total read time (across all chunks) does not exceed RECV_MESSAGE_TIMEOUT.
             let next = match message_deadline {
                 None => reader.next().await,
-                Some(deadline) => {
-                    match tokio::time::timeout_at(deadline, reader.next()).await {
-                        Ok(result) => result,
-                        Err(_) => {
-                            error!(
-                                "timed out reading message from client {:?}, disconnecting",
-                                participant_identity
-                            );
-                            break;
-                        }
+                Some(deadline) => match tokio::time::timeout_at(deadline, reader.next()).await {
+                    Ok(result) => result,
+                    Err(_) => {
+                        error!(
+                            "timed out reading message from client {:?}, disconnecting",
+                            participant_identity
+                        );
+                        break;
                     }
-                }
+                },
             };
 
             let chunk = match next {
@@ -884,11 +882,7 @@ impl RemoteAccessSession {
     /// Messages are routed through the control plane queue so that all writes to the
     /// participant's ByteStreamWriter are serialized by the sender task. ByteStreamWriter::write
     /// is not safe to call concurrently from multiple tasks.
-    fn send_info_and_advertisements(
-        &self,
-        participant: Arc<Participant>,
-        server_info: ServerInfo,
-    ) {
+    fn send_info_and_advertisements(&self, participant: Arc<Participant>, server_info: ServerInfo) {
         info!("sending server info and advertisements to participant {participant:?}");
         let framed = frame_text_message(server_info.to_string().as_bytes());
         self.send_control(participant.clone(), framed);

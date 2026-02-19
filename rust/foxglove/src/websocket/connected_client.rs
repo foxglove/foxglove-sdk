@@ -421,9 +421,7 @@ impl ConnectedClient {
                 match Subscription::try_from(s) {
                     Ok(sub) => Some(sub),
                     Err(_) => {
-                        self.send_error(format!(
-                            "Subscription {id}: channel_id out of range"
-                        ));
+                        self.send_error(format!("Subscription {id}: channel_id out of range"));
                         None
                     }
                 }
