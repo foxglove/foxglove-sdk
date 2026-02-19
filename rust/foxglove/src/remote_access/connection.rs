@@ -332,9 +332,7 @@ impl RemoteAccessConnection {
                     };
 
                     let server_info = self.create_server_info();
-                    session
-                        .send_info_and_advertisements(&participant_id, server_info)
-                        .await;
+                    session.send_info_and_advertisements(participant_id.clone(), server_info);
                 }
                 RoomEvent::ParticipantDisconnected(participant) => {
                     let mut participants = session.participants.write();
@@ -838,19 +836,24 @@ impl RemoteAccessSession {
         Ok(participant)
     }
 
-    async fn send_info_and_advertisements(
+    /// Enqueue server info and channel advertisements for delivery to a participant.
+    ///
+    /// Messages are routed through the control plane queue so that all writes to the
+    /// participant's ByteStreamWriter are serialized by the sender task. ByteStreamWriter::write
+    /// is not safe to call concurrently from multiple tasks.
+    fn send_info_and_advertisements(
         &self,
-        participant: &Participant,
+        participant: Arc<Participant>,
         server_info: ServerInfo,
     ) {
         info!("sending server info and advertisements to participant {participant:?}");
         let framed = frame_text_message(server_info.to_string().as_bytes());
-        Self::send_to_participant(participant, framed).await;
-        self.send_channel_advertisements(participant).await;
+        self.send_control(participant.clone(), framed);
+        self.send_channel_advertisements(participant);
     }
 
-    /// Send all currently cached channel advertisements to a single participant.
-    async fn send_channel_advertisements(&self, participant: &Participant) {
+    /// Enqueue all currently cached channel advertisements for delivery to a single participant.
+    fn send_channel_advertisements(&self, participant: Arc<Participant>) {
         let framed = {
             let channels = self.channels.read();
             if channels.is_empty() {
@@ -863,13 +866,6 @@ impl RemoteAccessSession {
             frame_text_message(advertise_msg.to_string().as_bytes())
         };
 
-        Self::send_to_participant(participant, framed).await;
-    }
-
-    /// Send a pre-framed message to one participant.
-    async fn send_to_participant(participant: &Participant, data: Bytes) {
-        if let Err(e) = participant.send(&data).await {
-            error!("failed to send to participant {participant:?}: {e:?}");
-        }
+        self.send_control(participant, framed);
     }
 }
