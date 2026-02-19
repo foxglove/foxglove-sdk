@@ -124,7 +124,7 @@ impl std::fmt::Debug for RemoteAccessConnectionOptions {
             .field("has_channel_filter", &self.channel_filter.is_some())
             .field("server_info", &self.server_info)
             .field("message_backlog_size", &self.message_backlog_size)
-            .field("has_context", &self.context.strong_count() > 0)
+            .field("has_context", &(self.context.strong_count() > 0))
             .finish()
     }
 }
@@ -781,7 +781,7 @@ impl RemoteAccessSession {
             for &channel_id in &channel_ids {
                 let subscribers = subscriptions.entry(channel_id).or_default();
                 if subscribers.contains(participant.identity()) {
-                    warn!(
+                    info!(
                         "Participant {:?} is already subscribed to channel {channel_id:?}; ignoring",
                         participant
                     );
@@ -818,15 +818,17 @@ impl RemoteAccessSession {
             let mut subscriptions = self.subscriptions.write();
             for &channel_id in &channel_ids {
                 let Some(subscribers) = subscriptions.get_mut(&channel_id) else {
-                    warn!(
+                    info!(
                         "Participant {:?} is not subscribed to channel {channel_id:?}; ignoring",
                         participant
                     );
                     continue;
                 };
-                let Some(pos) = subscribers.iter().position(|id| id == participant.identity())
+                let Some(pos) = subscribers
+                    .iter()
+                    .position(|id| id == participant.identity())
                 else {
-                    warn!(
+                    info!(
                         "Participant {:?} is not subscribed to channel {channel_id:?}; ignoring",
                         participant
                     );
@@ -896,12 +898,7 @@ impl RemoteAccessSession {
     ///
     /// Channels that lose their last subscriber are unsubscribed from the context.
     fn remove_participant(&self, participant_id: &ParticipantIdentity) {
-        if self
-            .participants
-            .write()
-            .remove(participant_id)
-            .is_none()
-        {
+        if self.participants.write().remove(participant_id).is_none() {
             return;
         }
         info!("removed participant {participant_id:?}");
