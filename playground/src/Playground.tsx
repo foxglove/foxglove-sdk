@@ -1,7 +1,15 @@
 import { PlayFilledAlt, DocumentDownload } from "@carbon/icons-react";
 import { DataSource, Layout, SelectLayoutParams } from "@foxglove/embed";
 import { FoxgloveViewer, FoxgloveViewerInterface } from "@foxglove/embed-react";
-import { Button, GlobalStyles, IconButton, Tooltip, Typography } from "@mui/material";
+import {
+  Button,
+  GlobalStyles,
+  IconButton,
+  MenuItem,
+  Select,
+  Tooltip,
+  Typography,
+} from "@mui/material";
 import { Allotment } from "allotment";
 import { useCallback, useEffect, useRef, useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
@@ -9,6 +17,7 @@ import { tss } from "tss-react/mui";
 
 import { Editor, EditorInterface } from "./Editor";
 import { Runner } from "./Runner";
+import { DEFAULT_EXAMPLE, EXAMPLES, Example } from "./examples";
 import { getUrlState, setUrlState, UrlState } from "./urlState";
 
 import "./Playground.css";
@@ -38,10 +47,16 @@ const useStyles = tss.create(({ theme }) => ({
       display: "none",
     },
   },
+  exampleSelect: {
+    "@container topBar (width < 480px)": {
+      display: "none",
+    },
+  },
   controls: {
     display: "flex",
     flexGrow: 1,
     justifyContent: "flex-end",
+    alignItems: "center",
     gap: 8,
   },
   toast: {
@@ -94,7 +109,7 @@ export function Playground(): React.JSX.Element {
         }
       : {
           storageKey: LAYOUT_STORAGE_KEY,
-          opaqueLayout: DEFAULT_LAYOUT_DATA,
+          opaqueLayout: DEFAULT_EXAMPLE.layout,
           force: false,
         },
   );
@@ -128,6 +143,17 @@ export function Playground(): React.JSX.Element {
       runner.dispose();
       runnerRef.current = undefined;
     };
+  }, []);
+
+  const onExampleSelected = useCallback((example: Example) => {
+    editorRef.current?.setValue(example.code);
+    if (example.layout != undefined) {
+      setSelectedLayout({
+        storageKey: LAYOUT_STORAGE_KEY,
+        opaqueLayout: example.layout,
+        force: true,
+      });
+    }
   }, []);
 
   const run = useCallback(async () => {
@@ -250,6 +276,26 @@ export function Playground(): React.JSX.Element {
             Foxglove SDK Playground
           </Typography>
           <div className={classes.controls}>
+            <Select
+              className={classes.exampleSelect}
+              size="small"
+              displayEmpty
+              value=""
+              onChange={(e) => {
+                const example = EXAMPLES[Number(e.target.value)];
+                if (example) {
+                  onExampleSelected(example);
+                }
+              }}
+              renderValue={() => "Examples"}
+              sx={{ minWidth: 120, height: 32 }}
+            >
+              {EXAMPLES.map((example, index) => (
+                <MenuItem key={index} value={index}>
+                  {example.label}
+                </MenuItem>
+              ))}
+            </Select>
             {mcapFilename && (
               <Tooltip title={`Download ${mcapFilename}`}>
                 <IconButton onClick={() => void download()}>
@@ -281,7 +327,7 @@ export function Playground(): React.JSX.Element {
         </div>
         <Editor
           ref={editorRef}
-          initialValue={initialState?.code ?? DEFAULT_CODE}
+          initialValue={initialState?.code ?? DEFAULT_EXAMPLE.code}
           onSave={share}
           runner={runnerRef}
         />
@@ -299,135 +345,4 @@ export function Playground(): React.JSX.Element {
   );
 }
 
-const DEFAULT_CODE = `\
-import foxglove
-from foxglove import Channel
-from foxglove.channels import SceneUpdateChannel
-from foxglove.schemas import (
-  Color,
-  CubePrimitive,
-  SceneEntity,
-  SceneUpdate,
-  Vector3,
-)
-
-scene_channel = SceneUpdateChannel("/scene")
-
-with foxglove.open_mcap("playground.mcap") as writer:
-  for i in range(10):
-    size = 1 + 0.2 * i
-    scene_channel.log(
-      SceneUpdate(
-        entities=[
-          SceneEntity(
-            cubes=[
-              CubePrimitive(
-                size=Vector3(x=size, y=size, z=size),
-                color=Color(r=1.0, g=0, b=0, a=1.0),
-              )
-            ],
-          ),
-        ]
-      ),
-      log_time=i * 200_000_000,
-    )
-`;
-
 const LAYOUT_STORAGE_KEY = "playground-layout";
-const DEFAULT_LAYOUT_DATA = {
-  configById: {
-    "3D!1ehnpb2": {
-      cameraState: {
-        distance: 20,
-        perspective: true,
-        phi: 60,
-        target: [0, 0, 0],
-        targetOffset: [0, 0, 0],
-        targetOrientation: [0, 0, 0, 1],
-        thetaOffset: 45,
-        fovy: 45,
-        near: 0.5,
-        far: 5000,
-      },
-      followMode: "follow-pose",
-      scene: {},
-      transforms: {},
-      topics: {
-        "/scene": {
-          visible: true,
-        },
-      },
-      layers: {
-        grid: {
-          visible: true,
-          drawBehind: false,
-          frameLocked: true,
-          label: "Grid",
-          instanceId: "7cfdaa56-0cc3-4576-b763-5a8882575cd4",
-          layerId: "foxglove.Grid",
-          size: 10,
-          divisions: 10,
-          lineWidth: 1,
-          color: "#248eff",
-          position: [0, 0, 0],
-          rotation: [0, 0, 0],
-        },
-      },
-      publish: {
-        type: "point",
-        poseTopic: "/move_base_simple/goal",
-        pointTopic: "/clicked_point",
-        poseEstimateTopic: "/initialpose",
-        poseEstimateXDeviation: 0.5,
-        poseEstimateYDeviation: 0.5,
-        poseEstimateThetaDeviation: 0.26179939,
-      },
-      imageMode: {},
-    },
-    "RawMessages!2zn7j4u": {
-      diffEnabled: false,
-      diffMethod: "custom",
-      diffTopicPath: "",
-      showFullMessageForDiff: false,
-      topicPath: "/scene",
-      fontSize: 12,
-    },
-    "Plot!30ea437": {
-      paths: [
-        {
-          value: "/scene.entities[:].cubes[0].size.x",
-          enabled: true,
-          timestampMethod: "receiveTime",
-          label: "Cube size",
-        },
-      ],
-      showXAxisLabels: true,
-      showYAxisLabels: true,
-      showLegend: true,
-      legendDisplay: "floating",
-      showPlotValuesInLegend: false,
-      isSynced: true,
-      xAxisVal: "timestamp",
-      sidebarDimension: 240,
-    },
-  },
-  globalVariables: {},
-  userNodes: {},
-  playbackConfig: {
-    speed: 1,
-  },
-  drawerConfig: {
-    tracks: [],
-  },
-  layout: {
-    first: "3D!1ehnpb2",
-    second: {
-      direction: "row",
-      second: "Plot!30ea437",
-      first: "RawMessages!2zn7j4u",
-      splitPercentage: 33,
-    },
-    direction: "column",
-    splitPercentage: 60.57971014492753,
-  },
-};

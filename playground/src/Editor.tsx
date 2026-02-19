@@ -13,6 +13,7 @@ type EditorProps = {
 
 export type EditorInterface = {
   getValue: () => string;
+  setValue: (value: string) => void;
 };
 
 export const Editor = forwardRef<EditorInterface, EditorProps>(
@@ -166,6 +167,9 @@ export const Editor = forwardRef<EditorInterface, EditorProps>(
       () => ({
         getValue() {
           return editorRef.current?.getValue() ?? "";
+        },
+        setValue(value: string) {
+          editorRef.current?.setValue(value);
         },
       }),
       [],
