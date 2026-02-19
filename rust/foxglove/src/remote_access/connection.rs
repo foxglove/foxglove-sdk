@@ -20,7 +20,7 @@ use crate::{
     library_version::get_library_version,
     protocol::v2::{
         client::{self, ClientMessage},
-        server::{MessageData as ServerMessageData, ServerInfo, Unadvertise},
+        server::{MessageData as ServerMessageData, ServerInfo, Unadvertise, Advertise},
         BinaryMessage, JsonMessage,
     },
     remote_access::{
@@ -431,14 +431,14 @@ impl RemoteAccessConnection {
     }
 }
 
-/// Frames a payload with the v2 message framing (1 byte opcode + 4 byte LE length + payload).
-fn frame_message(payload: &[u8], op_code: OpCode) -> Vec<u8> {
-    let mut buf = Vec::with_capacity(payload.len() + MESSAGE_FRAME_SIZE);
-    buf.push(op_code as u8);
+/// Frames a text payload with the v2 message framing (1 byte opcode + 4 byte LE length + payload).
+fn frame_text_message(payload: &[u8]) -> Bytes {
+    let mut buf = Vec::with_capacity(MESSAGE_FRAME_SIZE + payload.len());
+    buf.push(OpCode::Text as u8);
     let len = u32::try_from(payload.len()).expect("message too large");
     buf.extend_from_slice(&len.to_le_bytes());
     buf.extend_from_slice(payload);
-    buf
+    Bytes::from(buf)
 }
 
 /// RemoteAccessSession tracks a connected LiveKit session (the Room)
@@ -510,10 +510,7 @@ impl Sink for RemoteAccessSession {
             return None;
         }
 
-        let framed = Bytes::from(frame_message(
-            advertise_msg.to_string().as_bytes(),
-            OpCode::Text,
-        ));
+        let framed = frame_text_message(advertise_msg.to_string().as_bytes());
         self.broadcast_control(framed);
 
         None
@@ -526,10 +523,7 @@ impl Sink for RemoteAccessSession {
         }
 
         let unadvertise = Unadvertise::new([u64::from(channel_id)]);
-        let framed = Bytes::from(frame_message(
-            unadvertise.to_string().as_bytes(),
-            OpCode::Text,
-        ));
+        let framed = frame_text_message(unadvertise.to_string().as_bytes());
         self.broadcast_control(framed);
     }
 
@@ -850,18 +844,14 @@ impl RemoteAccessSession {
         server_info: ServerInfo,
     ) {
         info!("sending server info and advertisements to participant {participant:?}");
-        Self::send_to_participant(
-            participant,
-            server_info.to_string().as_bytes(),
-            OpCode::Text,
-        )
-        .await;
+        let framed = frame_text_message(server_info.to_string().as_bytes());
+        Self::send_to_participant(participant, framed).await;
         self.send_channel_advertisements(participant).await;
     }
 
     /// Send all currently cached channel advertisements to a single participant.
     async fn send_channel_advertisements(&self, participant: &Participant) {
-        let advertise_bytes = {
+        let framed = {
             let channels = self.channels.read();
             if channels.is_empty() {
                 return;
@@ -870,16 +860,15 @@ impl RemoteAccessSession {
             if advertise_msg.channels.is_empty() {
                 return;
             }
-            advertise_msg.to_string()
+            frame_text_message(advertise_msg.to_string().as_bytes())
         };
 
-        Self::send_to_participant(participant, advertise_bytes.as_bytes(), OpCode::Text).await;
+        Self::send_to_participant(participant, framed).await;
     }
 
-    /// Send a framed message to one participant.
-    async fn send_to_participant(participant: &Participant, payload: &[u8], op_code: OpCode) {
-        let framed = frame_message(payload, op_code);
-        if let Err(e) = participant.send(&framed).await {
+    /// Send a pre-framed message to one participant.
+    async fn send_to_participant(participant: &Participant, data: Bytes) {
+        if let Err(e) = participant.send(&data).await {
             error!("failed to send to participant {participant:?}: {e:?}");
         }
     }
