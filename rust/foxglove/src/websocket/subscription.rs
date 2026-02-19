@@ -29,16 +29,13 @@ pub(crate) struct Subscription {
     pub id: SubscriptionId,
     pub channel_id: ChannelId,
 }
-impl From<subscribe::Subscription> for Subscription {
-    fn from(value: subscribe::Subscription) -> Self {
-        Self {
+impl TryFrom<subscribe::Subscription> for Subscription {
+    type Error = std::num::TryFromIntError;
+
+    fn try_from(value: subscribe::Subscription) -> Result<Self, Self::Error> {
+        Ok(Self {
             id: SubscriptionId::new(value.id),
-            channel_id: ChannelId::new(
-                value
-                    .channel_id
-                    .try_into()
-                    .expect("channel_id out of u32 range"),
-            ),
-        }
+            channel_id: ChannelId::new(value.channel_id.try_into()?),
+        })
     }
 }
