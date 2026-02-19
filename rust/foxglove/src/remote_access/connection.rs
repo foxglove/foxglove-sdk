@@ -1,8 +1,6 @@
-use std::{
-    collections::{HashMap, HashSet},
-    sync::Arc,
-    time::Duration,
-};
+use std::{collections::HashMap, sync::Arc, time::Duration};
+
+use indexmap::IndexSet;
 
 use bytes::{Bytes, BytesMut};
 use futures_util::StreamExt;
@@ -78,7 +76,7 @@ pub(crate) struct RemoteAccessConnectionOptions {
     pub session_id: String,
     pub listener: Option<Arc<dyn RemoteAccessSinkListener>>,
     pub capabilities: Vec<websocket::Capability>,
-    pub supported_encodings: Option<HashSet<String>>,
+    pub supported_encodings: Option<IndexSet<String>>,
     pub runtime: Option<Handle>,
     pub channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     pub server_info: Option<HashMap<String, String>>,

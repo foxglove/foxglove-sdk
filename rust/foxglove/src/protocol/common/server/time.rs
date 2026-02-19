@@ -38,8 +38,6 @@ impl<'a> BinaryPayload<'a> for Time {
 
 #[cfg(test)]
 mod tests {
-    use crate::protocol::v1::{server::ServerMessage, BinaryMessage};
-
     use super::*;
 
     fn message() -> Time {
@@ -47,15 +45,11 @@ mod tests {
     }
 
     #[test]
-    fn test_encode() {
-        insta::assert_snapshot!(format!("{:#04x?}", message().to_bytes()));
-    }
-
-    #[test]
     fn test_roundtrip() {
         let orig = message();
-        let buf = orig.to_bytes();
-        let msg = ServerMessage::parse_binary(&buf).unwrap();
-        assert_eq!(msg, ServerMessage::Time(orig));
+        let mut buf = Vec::new();
+        orig.write_payload(&mut buf);
+        let parsed = Time::parse_payload(&buf).unwrap();
+        assert_eq!(parsed, orig);
     }
 }
