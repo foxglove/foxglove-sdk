@@ -8,6 +8,8 @@ use crate::protocol::{BinaryPayload, ParseError};
 
 mod message_data;
 
+#[allow(unused_imports)]
+pub use crate::protocol::common::server::advertise;
 #[doc(hidden)]
 pub use crate::protocol::common::server::PlaybackState;
 pub use crate::protocol::common::server::{

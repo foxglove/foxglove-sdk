@@ -1,11 +1,14 @@
 //! Server advertise message types.
 
 use std::borrow::Cow;
+use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
 
 use crate::protocol::schema::{self, Schema};
 use crate::protocol::JsonMessage;
+use crate::RawChannel;
+use crate::Schema as CrateSchema;
 
 /// Server advertise message.
 ///
@@ -156,6 +159,49 @@ impl<'a> ChannelBuilder<'a> {
             }),
         }
     }
+}
+
+impl<'a> From<&'a CrateSchema> for Schema<'a> {
+    fn from(schema: &'a CrateSchema) -> Self {
+        Self::new(&schema.name, &schema.encoding, schema.data.clone())
+    }
+}
+
+impl<'a> TryFrom<&'a RawChannel> for Channel<'a> {
+    type Error = schema::EncodeError;
+
+    fn try_from(ch: &'a RawChannel) -> Result<Self, Self::Error> {
+        let mut builder = Self::builder(ch.id().into(), ch.topic(), ch.message_encoding());
+        if let Some(s) = ch.schema() {
+            builder = builder.with_schema(s.into());
+        }
+        builder.build()
+    }
+}
+
+fn maybe_advertise_channel(channel: &Arc<RawChannel>) -> Option<Channel<'_>> {
+    channel
+        .as_ref()
+        .try_into()
+        .inspect_err(|err| match err {
+            schema::EncodeError::MissingSchema => {
+                tracing::error!(
+                    "Ignoring advertise channel for {} because a schema is required",
+                    channel.topic()
+                );
+            }
+            err => {
+                tracing::error!("Error advertising channel to client: {err}");
+            }
+        })
+        .ok()
+}
+
+/// Creates an advertise message for the specified channels.
+pub fn advertise_channels<'a>(
+    channels: impl IntoIterator<Item = &'a Arc<RawChannel>>,
+) -> Advertise<'a> {
+    Advertise::new(channels.into_iter().filter_map(maybe_advertise_channel))
 }
 
 #[cfg(test)]

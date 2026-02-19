@@ -20,7 +20,7 @@ use crate::{
     library_version::get_library_version,
     protocol::v2::{
         client::{self, ClientMessage},
-        server::{MessageData as ServerMessageData, ServerInfo, Unadvertise, Advertise},
+        server::{advertise, MessageData as ServerMessageData, ServerInfo, Unadvertise},
         BinaryMessage, JsonMessage,
     },
     remote_access::{
@@ -28,7 +28,7 @@ use crate::{
         participant::{Participant, ParticipantWriter},
         RemoteAccessError,
     },
-    websocket::{self, advertise, Server},
+    websocket::{self, Server},
     ChannelId, Context, FoxgloveError, Metadata, RawChannel, RemoteAccessSinkListener, Sink,
     SinkChannelFilter, SinkId,
 };
