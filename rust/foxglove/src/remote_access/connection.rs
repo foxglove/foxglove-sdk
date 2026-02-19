@@ -1,4 +1,8 @@
-use std::{collections::HashMap, sync::Arc, time::Duration};
+use std::{
+    collections::HashMap,
+    sync::{Arc, Weak},
+    time::Duration,
+};
 
 use indexmap::IndexSet;
 
@@ -81,7 +85,7 @@ pub(crate) struct RemoteAccessConnectionOptions {
     pub server_info: Option<HashMap<String, String>>,
     pub message_backlog_size: Option<usize>,
     pub cancellation_token: CancellationToken,
-    pub context: Arc<Context>,
+    pub context: Weak<Context>,
 }
 
 impl Default for RemoteAccessConnectionOptions {
@@ -100,7 +104,7 @@ impl Default for RemoteAccessConnectionOptions {
             server_info: None,
             message_backlog_size: None,
             cancellation_token: CancellationToken::new(),
-            context: Context::get_default(),
+            context: Arc::downgrade(&Context::get_default()),
         }
     }
 }
@@ -120,7 +124,7 @@ impl std::fmt::Debug for RemoteAccessConnectionOptions {
             .field("has_channel_filter", &self.channel_filter.is_some())
             .field("server_info", &self.server_info)
             .field("message_backlog_size", &self.message_backlog_size)
-            .field("context", &self.context)
+            .field("has_context", &self.context.strong_count() > 0)
             .finish()
     }
 }
@@ -183,6 +187,7 @@ impl RemoteAccessConnection {
                 Ok((room, room_events)) => (
                     Arc::new(RemoteAccessSession::new(
                         room,
+                        self.options.context.clone(),
                         self.options.channel_filter.clone(),
                         self.options.cancellation_token.clone(),
                         message_backlog_size,
@@ -232,7 +237,11 @@ impl RemoteAccessConnection {
 
         // Register the session as a sink so it receives channel notifications.
         // This synchronously triggers add_channels for all existing channels.
-        self.options.context.add_sink(session.clone());
+        let Some(context) = self.options.context.upgrade() else {
+            info!("context has been dropped, stopping remote access connection");
+            return;
+        };
+        context.add_sink(session.clone());
 
         // We can use spawn here because we're already running on self.options.runtime (if set)
         let sender_task = tokio::spawn(RemoteAccessSession::run_sender(session.clone()));
@@ -251,7 +260,7 @@ impl RemoteAccessConnection {
         }
 
         // Remove the sink before closing the room.
-        self.options.context.remove_sink(session.sink_id);
+        context.remove_sink(session.sink_id);
         sender_task.abort();
 
         info!("disconnecting from room");
@@ -334,11 +343,7 @@ impl RemoteAccessConnection {
                     session.send_info_and_advertisements(participant_id.clone(), server_info);
                 }
                 RoomEvent::ParticipantDisconnected(participant) => {
-                    let mut participants = session.participants.write();
-                    let participant_id = participant.identity();
-                    if participants.remove(&participant_id).is_some() {
-                        info!("removed participant {participant_id:?}");
-                    }
+                    session.remove_participant(&participant.identity());
                 }
                 RoomEvent::DataReceived {
                     payload: _,
@@ -448,9 +453,12 @@ fn frame_text_message(payload: &[u8]) -> Bytes {
 struct RemoteAccessSession {
     sink_id: SinkId,
     room: Room,
+    context: Weak<Context>,
     participants: RwLock<HashMap<ParticipantIdentity, Arc<Participant>>>,
     /// Channels that have been advertised to participants.
     channels: RwLock<HashMap<ChannelId, Arc<RawChannel>>>,
+    /// Maps channel ID to the participant identities subscribed to that channel.
+    subscriptions: RwLock<HashMap<ChannelId, SmallVec<[ParticipantIdentity; 1]>>>,
     channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     cancellation_token: CancellationToken,
     data_plane_tx: flume::Sender<ChannelMessage>,
@@ -510,6 +518,7 @@ impl Sink for RemoteAccessSession {
         let framed = frame_text_message(advertise_msg.to_string().as_bytes());
         self.broadcast_control(framed);
 
+        // Clients subscribe asynchronously.
         None
     }
 
@@ -545,6 +554,7 @@ fn encode_binary_message(message: &impl BinaryMessage) -> Bytes {
 impl RemoteAccessSession {
     fn new(
         room: Room,
+        context: Weak<Context>,
         channel_filter: Option<Arc<dyn SinkChannelFilter>>,
         cancellation_token: CancellationToken,
         message_backlog_size: usize,
@@ -554,8 +564,10 @@ impl RemoteAccessSession {
         Self {
             sink_id: SinkId::next(),
             room,
+            context,
             participants: RwLock::new(HashMap::new()),
             channels: RwLock::new(HashMap::new()),
+            subscriptions: RwLock::new(HashMap::new()),
             channel_filter,
             cancellation_token,
             data_plane_tx,
@@ -628,13 +640,18 @@ impl RemoteAccessSession {
                 }
                 msg = session.data_plane_rx.recv_async() => {
                     let Ok(msg) = msg else { break };
-                    // Use a SmallVec to avoid extra allocations/free for the temporary participants vec
+                    let subscriber_ids: SmallVec<[ParticipantIdentity; 8]> = {
+                        let subscriptions = session.subscriptions.read();
+                        match subscriptions.get(&msg.channel_id) {
+                            Some(ids) => ids.iter().cloned().collect(),
+                            None => continue,
+                        }
+                    };
                     let participants: SmallVec<[Arc<Participant>; 8]> = {
                         let participants = session.participants.read();
-                        participants
-                            .values()
-                            .filter(|p| p.is_subscribed(msg.channel_id))
-                            .cloned()
+                        subscriber_ids
+                            .iter()
+                            .filter_map(|id| participants.get(id).cloned())
                             .collect()
                     };
                     for participant in &participants {
@@ -758,19 +775,33 @@ impl RemoteAccessSession {
             .map(|&id| ChannelId::new(id))
             .collect();
 
-        let newly_subscribed = participant.subscribe(&channel_ids);
-
-        for &channel_id in &channel_ids {
-            if newly_subscribed.contains(&channel_id) {
+        let mut first_subscribed: SmallVec<[ChannelId; 4]> = SmallVec::new();
+        {
+            let mut subscriptions = self.subscriptions.write();
+            for &channel_id in &channel_ids {
+                let subscribers = subscriptions.entry(channel_id).or_default();
+                if subscribers.contains(participant.identity()) {
+                    warn!(
+                        "Participant {:?} is already subscribed to channel {channel_id:?}; ignoring",
+                        participant
+                    );
+                    continue;
+                }
+                let is_first = subscribers.is_empty();
+                subscribers.push(participant.identity().clone());
                 debug!(
                     "Participant {:?} subscribed to channel {channel_id:?}",
                     participant
                 );
-            } else {
-                warn!(
-                    "Participant {:?} is already subscribed to channel {channel_id:?}; ignoring",
-                    participant
-                );
+                if is_first {
+                    first_subscribed.push(channel_id);
+                }
+            }
+        }
+
+        if !first_subscribed.is_empty() {
+            if let Some(context) = self.context.upgrade() {
+                context.subscribe_channels(self.sink_id, &first_subscribed);
             }
         }
     }
@@ -782,19 +813,40 @@ impl RemoteAccessSession {
             .map(|&id| ChannelId::new(id))
             .collect();
 
-        let unsubscribed = participant.unsubscribe(&channel_ids);
-
-        for &channel_id in &channel_ids {
-            if unsubscribed.contains(&channel_id) {
+        let mut last_unsubscribed: SmallVec<[ChannelId; 4]> = SmallVec::new();
+        {
+            let mut subscriptions = self.subscriptions.write();
+            for &channel_id in &channel_ids {
+                let Some(subscribers) = subscriptions.get_mut(&channel_id) else {
+                    warn!(
+                        "Participant {:?} is not subscribed to channel {channel_id:?}; ignoring",
+                        participant
+                    );
+                    continue;
+                };
+                let Some(pos) = subscribers.iter().position(|id| id == participant.identity())
+                else {
+                    warn!(
+                        "Participant {:?} is not subscribed to channel {channel_id:?}; ignoring",
+                        participant
+                    );
+                    continue;
+                };
+                subscribers.swap_remove(pos);
                 debug!(
                     "Participant {:?} unsubscribed from channel {channel_id:?}",
                     participant
                 );
-            } else {
-                warn!(
-                    "Participant {:?} is not subscribed to channel {channel_id:?}; ignoring",
-                    participant
-                );
+                if subscribers.is_empty() {
+                    subscriptions.remove(&channel_id);
+                    last_unsubscribed.push(channel_id);
+                }
+            }
+        }
+
+        if !last_unsubscribed.is_empty() {
+            if let Some(context) = self.context.upgrade() {
+                context.unsubscribe_channels(self.sink_id, &last_unsubscribed);
             }
         }
     }
@@ -838,6 +890,41 @@ impl RemoteAccessSession {
             .write()
             .insert(participant_id, participant.clone());
         Ok(participant)
+    }
+
+    /// Remove a participant from the session, cleaning up its subscriptions.
+    ///
+    /// Channels that lose their last subscriber are unsubscribed from the context.
+    fn remove_participant(&self, participant_id: &ParticipantIdentity) {
+        if self
+            .participants
+            .write()
+            .remove(participant_id)
+            .is_none()
+        {
+            return;
+        }
+        info!("removed participant {participant_id:?}");
+
+        let mut last_unsubscribed: SmallVec<[ChannelId; 4]> = SmallVec::new();
+        {
+            let mut subscriptions = self.subscriptions.write();
+            subscriptions.retain(|&channel_id, subscribers| {
+                subscribers.retain(|id| id != participant_id);
+                if subscribers.is_empty() {
+                    last_unsubscribed.push(channel_id);
+                    false
+                } else {
+                    true
+                }
+            });
+        }
+
+        if !last_unsubscribed.is_empty() {
+            if let Some(context) = self.context.upgrade() {
+                context.unsubscribe_channels(self.sink_id, &last_unsubscribed);
+            }
+        }
     }
 
     /// Enqueue server info and channel advertisements for delivery to a participant.

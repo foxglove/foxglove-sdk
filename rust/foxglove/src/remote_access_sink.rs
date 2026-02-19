@@ -134,7 +134,7 @@ impl RemoteAccessSink {
 
     /// Sets the context for this sink.
     pub fn context(mut self, ctx: &Arc<Context>) -> Self {
-        self.options.context = ctx.clone();
+        self.options.context = Arc::downgrade(ctx);
         self
     }
 
