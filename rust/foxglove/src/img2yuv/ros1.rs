@@ -1,6 +1,6 @@
 //! ROS 1 message decoder.
 
-use crate::schemas::Timestamp;
+use crate::messages::Timestamp;
 use bytes::Buf;
 
 use super::{

@@ -1,9 +1,17 @@
 ---
-source: rust/foxglove/src/protocol/common/client/playback_control_request.rs
+source: rust/foxglove/src/protocol/v1/server.rs
 expression: "format!(\"{:#04x?}\", message.to_bytes())"
 ---
 [
-    0x03,
+    0x05,
+    0x00,
+    0x39,
+    0x30,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
     0x00,
     0x00,
     0x00,
@@ -14,19 +22,4 @@ expression: "format!(\"{:#04x?}\", message.to_bytes())"
     0x00,
     0x00,
     0x00,
-    0x00,
-    0x00,
-    0x00,
-    0x00,
-    0x07,
-    0x00,
-    0x00,
-    0x00,
-    0x73,
-    0x6f,
-    0x6d,
-    0x65,
-    0x2d,
-    0x69,
-    0x64,
 ]

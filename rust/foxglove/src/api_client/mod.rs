@@ -6,11 +6,11 @@
 #![allow(unused)]
 
 mod client;
-mod credentials_provider;
 #[cfg(test)]
-mod test_utils;
+pub(crate) mod test_utils;
 mod types;
 
-pub(crate) use client::{DeviceToken, FoxgloveApiClientBuilder, FoxgloveApiClientError};
-pub(crate) use credentials_provider::{CredentialsError, CredentialsProvider};
-pub(crate) use types::RtcCredentials;
+pub(crate) use client::{
+    DeviceToken, FoxgloveApiClient, FoxgloveApiClientBuilder, FoxgloveApiClientError,
+};
+pub(crate) use types::{DeviceResponse, RtcCredentials};
