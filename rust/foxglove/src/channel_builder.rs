@@ -99,7 +99,7 @@ impl ChannelBuilder {
 
 #[cfg(test)]
 mod tests {
-    use crate::schemas::Log;
+    use crate::messages::Log;
 
     use super::*;
 

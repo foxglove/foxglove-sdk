@@ -32,7 +32,7 @@ pub struct ArrowPrimitive {
 pub struct CameraCalibration {
     /// Timestamp of calibration data
     #[prost(message, optional, tag = "1")]
-    pub timestamp: ::core::option::Option<crate::schemas::Timestamp>,
+    pub timestamp: ::core::option::Option<crate::messages::Timestamp>,
     /// Frame of reference for the camera. The origin of the frame is the optical center of the camera. +x points to the right in the image, +y points down, and +z points into the plane of the image.
     #[prost(string, tag = "9")]
     pub frame_id: ::prost::alloc::string::String,
@@ -112,7 +112,7 @@ pub struct CameraCalibration {
 pub struct CircleAnnotation {
     /// Timestamp of circle
     #[prost(message, optional, tag = "1")]
-    pub timestamp: ::core::option::Option<crate::schemas::Timestamp>,
+    pub timestamp: ::core::option::Option<crate::messages::Timestamp>,
     /// Center of the circle in 2D image coordinates (pixels).
     /// The coordinate uses the top-left corner of the top-left pixel of the image as the origin.
     #[prost(message, optional, tag = "2")]
@@ -157,13 +157,13 @@ pub struct Color {
 pub struct CompressedImage {
     /// Timestamp of image
     #[prost(message, optional, tag = "1")]
-    pub timestamp: ::core::option::Option<crate::schemas::Timestamp>,
+    pub timestamp: ::core::option::Option<crate::messages::Timestamp>,
     /// Frame of reference for the image. The origin of the frame is the optical center of the camera. +x points to the right in the image, +y points down, and +z points into the plane of the image.
     #[prost(string, tag = "4")]
     pub frame_id: ::prost::alloc::string::String,
     /// Compressed image data
     #[prost(bytes = "bytes", tag = "2")]
-    #[cfg_attr(feature = "serde", serde(with = "crate::schemas::serde_bytes"))]
+    #[cfg_attr(feature = "serde", serde(with = "crate::messages::serde_bytes"))]
     pub data: ::prost::bytes::Bytes,
     /// Image format
     ///
@@ -179,7 +179,7 @@ pub struct CompressedImage {
 pub struct CompressedVideo {
     /// Timestamp of video frame
     #[prost(message, optional, tag = "1")]
-    pub timestamp: ::core::option::Option<crate::schemas::Timestamp>,
+    pub timestamp: ::core::option::Option<crate::messages::Timestamp>,
     /// Frame of reference for the video.
     ///
     /// The origin of the frame is the optical center of the camera. +x points to the right in the video, +y points down, and +z points into the plane of the video.
@@ -209,7 +209,7 @@ pub struct CompressedVideo {
     ///    - Each CompressedVideo message should contain enough OBUs to decode exactly one video frame
     ///    - Each message containing a key frame must also include a Sequence Header OBU
     #[prost(bytes = "bytes", tag = "3")]
-    #[cfg_attr(feature = "serde", serde(with = "crate::schemas::serde_bytes"))]
+    #[cfg_attr(feature = "serde", serde(with = "crate::messages::serde_bytes"))]
     pub data: ::prost::bytes::Bytes,
     /// Video format.
     ///
@@ -271,7 +271,7 @@ pub struct CylinderPrimitive {
 pub struct FrameTransform {
     /// Timestamp of transform
     #[prost(message, optional, tag = "1")]
-    pub timestamp: ::core::option::Option<crate::schemas::Timestamp>,
+    pub timestamp: ::core::option::Option<crate::messages::Timestamp>,
     /// Name of the parent frame
     #[prost(string, tag = "2")]
     pub parent_frame_id: ::prost::alloc::string::String,
@@ -313,7 +313,7 @@ pub struct GeoJson {
 pub struct Grid {
     /// Timestamp of grid
     #[prost(message, optional, tag = "1")]
-    pub timestamp: ::core::option::Option<crate::schemas::Timestamp>,
+    pub timestamp: ::core::option::Option<crate::messages::Timestamp>,
     /// Frame of reference
     #[prost(string, tag = "2")]
     pub frame_id: ::prost::alloc::string::String,
@@ -378,7 +378,7 @@ pub struct Grid {
     /// - y = i / row_stride * cell_size.y
     /// - x = (i % row_stride) / cell_stride * cell_size.x
     #[prost(bytes = "bytes", tag = "9")]
-    #[cfg_attr(feature = "serde", serde(with = "crate::schemas::serde_bytes"))]
+    #[cfg_attr(feature = "serde", serde(with = "crate::messages::serde_bytes"))]
     pub data: ::prost::bytes::Bytes,
 }
 /// Array of annotations for a 2D image
@@ -418,7 +418,7 @@ pub struct KeyValuePair {
 pub struct LaserScan {
     /// Timestamp of scan
     #[prost(message, optional, tag = "1")]
-    pub timestamp: ::core::option::Option<crate::schemas::Timestamp>,
+    pub timestamp: ::core::option::Option<crate::messages::Timestamp>,
     /// Frame of reference
     #[prost(string, tag = "2")]
     pub frame_id: ::prost::alloc::string::String,
@@ -526,7 +526,7 @@ pub mod line_primitive {
 pub struct LocationFix {
     /// Timestamp of the message
     #[prost(message, optional, tag = "6")]
-    pub timestamp: ::core::option::Option<crate::schemas::Timestamp>,
+    pub timestamp: ::core::option::Option<crate::messages::Timestamp>,
     /// Frame for the sensor. Latitude and longitude readings are at the origin of the frame.
     #[prost(string, tag = "7")]
     pub frame_id: ::prost::alloc::string::String,
@@ -623,7 +623,7 @@ pub struct LocationFixes {
 pub struct Log {
     /// Timestamp of log message
     #[prost(message, optional, tag = "1")]
-    pub timestamp: ::core::option::Option<crate::schemas::Timestamp>,
+    pub timestamp: ::core::option::Option<crate::messages::Timestamp>,
     /// Log level
     #[prost(enumeration = "log::Level", tag = "2")]
     #[cfg_attr(feature = "serde", serde(with = "serde_enum::log_level"))]
@@ -725,7 +725,7 @@ pub struct ModelPrimitive {
     pub media_type: ::prost::alloc::string::String,
     /// Embedded model. One of `url` or `data` should be non-empty. If `data` is non-empty, `media_type` must be set to indicate the type of the data.
     #[prost(bytes = "bytes", tag = "7")]
-    #[cfg_attr(feature = "serde", serde(with = "crate::schemas::serde_bytes"))]
+    #[cfg_attr(feature = "serde", serde(with = "crate::messages::serde_bytes"))]
     pub data: ::prost::bytes::Bytes,
 }
 /// A field present within each element in a byte array of packed elements.
@@ -855,7 +855,7 @@ pub struct Point3 {
 pub struct Point3InFrame {
     /// Timestamp of point
     #[prost(message, optional, tag = "1")]
-    pub timestamp: ::core::option::Option<crate::schemas::Timestamp>,
+    pub timestamp: ::core::option::Option<crate::messages::Timestamp>,
     /// Frame of reference for point position
     #[prost(string, tag = "2")]
     pub frame_id: ::prost::alloc::string::String,
@@ -871,7 +871,7 @@ pub struct Point3InFrame {
 pub struct PointCloud {
     /// Timestamp of point cloud
     #[prost(message, optional, tag = "1")]
-    pub timestamp: ::core::option::Option<crate::schemas::Timestamp>,
+    pub timestamp: ::core::option::Option<crate::messages::Timestamp>,
     /// Frame of reference
     #[prost(string, tag = "2")]
     pub frame_id: ::prost::alloc::string::String,
@@ -886,7 +886,7 @@ pub struct PointCloud {
     pub fields: ::prost::alloc::vec::Vec<PackedElementField>,
     /// Point data, interpreted using `fields`
     #[prost(bytes = "bytes", tag = "6")]
-    #[cfg_attr(feature = "serde", serde(with = "crate::schemas::serde_bytes"))]
+    #[cfg_attr(feature = "serde", serde(with = "crate::messages::serde_bytes"))]
     pub data: ::prost::bytes::Bytes,
 }
 /// An array of points on a 2D image
@@ -897,7 +897,7 @@ pub struct PointCloud {
 pub struct PointsAnnotation {
     /// Timestamp of annotation
     #[prost(message, optional, tag = "1")]
-    pub timestamp: ::core::option::Option<crate::schemas::Timestamp>,
+    pub timestamp: ::core::option::Option<crate::messages::Timestamp>,
     /// Type of points annotation to draw
     #[prost(enumeration = "points_annotation::Type", tag = "2")]
     #[cfg_attr(feature = "serde", serde(with = "serde_enum::points_annotation_type"))]
@@ -994,7 +994,7 @@ pub struct Pose {
 pub struct PoseInFrame {
     /// Timestamp of pose
     #[prost(message, optional, tag = "1")]
-    pub timestamp: ::core::option::Option<crate::schemas::Timestamp>,
+    pub timestamp: ::core::option::Option<crate::messages::Timestamp>,
     /// Frame of reference for pose position and orientation
     #[prost(string, tag = "2")]
     pub frame_id: ::prost::alloc::string::String,
@@ -1010,7 +1010,7 @@ pub struct PoseInFrame {
 pub struct PosesInFrame {
     /// Timestamp of pose
     #[prost(message, optional, tag = "1")]
-    pub timestamp: ::core::option::Option<crate::schemas::Timestamp>,
+    pub timestamp: ::core::option::Option<crate::messages::Timestamp>,
     /// Frame of reference for pose position and orientation
     #[prost(string, tag = "2")]
     pub frame_id: ::prost::alloc::string::String,
@@ -1045,10 +1045,10 @@ pub struct Quaternion {
 pub struct RawAudio {
     /// Timestamp of the start of the audio block
     #[prost(message, optional, tag = "1")]
-    pub timestamp: ::core::option::Option<crate::schemas::Timestamp>,
+    pub timestamp: ::core::option::Option<crate::messages::Timestamp>,
     /// Audio data. The samples in the data must be interleaved and little-endian
     #[prost(bytes = "bytes", tag = "2")]
-    #[cfg_attr(feature = "serde", serde(with = "crate::schemas::serde_bytes"))]
+    #[cfg_attr(feature = "serde", serde(with = "crate::messages::serde_bytes"))]
     pub data: ::prost::bytes::Bytes,
     /// Audio format. Only 'pcm-s16' is currently supported
     #[prost(string, tag = "3")]
@@ -1068,7 +1068,7 @@ pub struct RawAudio {
 pub struct RawImage {
     /// Timestamp of image
     #[prost(message, optional, tag = "1")]
-    pub timestamp: ::core::option::Option<crate::schemas::Timestamp>,
+    pub timestamp: ::core::option::Option<crate::messages::Timestamp>,
     /// Frame of reference for the image. The origin of the frame is the optical center of the camera. +x points to the right in the image, +y points down, and +z points into the plane of the image.
     #[prost(string, tag = "7")]
     pub frame_id: ::prost::alloc::string::String,
@@ -1138,7 +1138,7 @@ pub struct RawImage {
     ///    - Pixel brightness is represented as 16-bit unsigned little-endian integers. Rendering of these values is controlled in [Image panel color mode settings](<https://docs.foxglove.dev/docs/visualization/panels/image#general>).
     ///    - `step` must be greater than or equal to `width` * 2.
     #[prost(bytes = "bytes", tag = "6")]
-    #[cfg_attr(feature = "serde", serde(with = "crate::schemas::serde_bytes"))]
+    #[cfg_attr(feature = "serde", serde(with = "crate::messages::serde_bytes"))]
     pub data: ::prost::bytes::Bytes,
 }
 /// A visual element in a 3D scene. An entity may be composed of multiple primitives which all share the same frame of reference.
@@ -1149,7 +1149,7 @@ pub struct RawImage {
 pub struct SceneEntity {
     /// Timestamp of the entity
     #[prost(message, optional, tag = "1")]
-    pub timestamp: ::core::option::Option<crate::schemas::Timestamp>,
+    pub timestamp: ::core::option::Option<crate::messages::Timestamp>,
     /// Frame of reference
     #[prost(string, tag = "2")]
     pub frame_id: ::prost::alloc::string::String,
@@ -1158,7 +1158,7 @@ pub struct SceneEntity {
     pub id: ::prost::alloc::string::String,
     /// Length of time (relative to `timestamp`) after which the entity should be automatically removed. Zero value indicates the entity should remain visible until it is replaced or deleted.
     #[prost(message, optional, tag = "4")]
-    pub lifetime: ::core::option::Option<crate::schemas::Duration>,
+    pub lifetime: ::core::option::Option<crate::messages::Duration>,
     /// Whether the entity should keep its location in the fixed frame (false) or follow the frame specified in `frame_id` as it moves relative to the fixed frame (true)
     #[prost(bool, tag = "5")]
     pub frame_locked: bool,
@@ -1198,7 +1198,7 @@ pub struct SceneEntity {
 pub struct SceneEntityDeletion {
     /// Timestamp of the deletion. Only matching entities earlier than this timestamp will be deleted.
     #[prost(message, optional, tag = "1")]
-    pub timestamp: ::core::option::Option<crate::schemas::Timestamp>,
+    pub timestamp: ::core::option::Option<crate::messages::Timestamp>,
     /// Type of deletion action to perform
     #[prost(enumeration = "scene_entity_deletion::Type", tag = "2")]
     #[cfg_attr(
@@ -1289,7 +1289,7 @@ pub struct SpherePrimitive {
 pub struct TextAnnotation {
     /// Timestamp of annotation
     #[prost(message, optional, tag = "1")]
-    pub timestamp: ::core::option::Option<crate::schemas::Timestamp>,
+    pub timestamp: ::core::option::Option<crate::messages::Timestamp>,
     /// Bottom-left origin of the text label in 2D image coordinates (pixels).
     /// The coordinate uses the top-left corner of the top-left pixel of the image as the origin.
     #[prost(message, optional, tag = "2")]
@@ -1393,7 +1393,7 @@ pub struct Vector3 {
 pub struct VoxelGrid {
     /// Timestamp of grid
     #[prost(message, optional, tag = "1")]
-    pub timestamp: ::core::option::Option<crate::schemas::Timestamp>,
+    pub timestamp: ::core::option::Option<crate::messages::Timestamp>,
     /// Frame of reference
     #[prost(string, tag = "2")]
     pub frame_id: ::prost::alloc::string::String,
@@ -1428,7 +1428,7 @@ pub struct VoxelGrid {
     /// - y = (i % slice_stride) / row_stride * cell_size.y
     /// - x = (i % row_stride) / cell_stride * cell_size.x
     #[prost(bytes = "bytes", tag = "11")]
-    #[cfg_attr(feature = "serde", serde(with = "crate::schemas::serde_bytes"))]
+    #[cfg_attr(feature = "serde", serde(with = "crate::messages::serde_bytes"))]
     pub data: ::prost::bytes::Bytes,
 }
 #[cfg(feature = "serde")]
@@ -1437,10 +1437,10 @@ pub(crate) mod serde_enum {
     use serde::de::Error as _;
     use serde::{Deserialize, Deserializer, Serializer};
 
-    crate::schemas::serde_enum_mod!(line_primitive_type, line_primitive::Type);
-    crate::schemas::serde_enum_mod!(location_fix_position_covariance_type, location_fix::PositionCovarianceType);
-    crate::schemas::serde_enum_mod!(log_level, log::Level);
-    crate::schemas::serde_enum_mod!(packed_element_field_numeric_type, packed_element_field::NumericType);
-    crate::schemas::serde_enum_mod!(points_annotation_type, points_annotation::Type);
-    crate::schemas::serde_enum_mod!(scene_entity_deletion_type, scene_entity_deletion::Type);
+    crate::messages::serde_enum_mod!(line_primitive_type, line_primitive::Type);
+    crate::messages::serde_enum_mod!(location_fix_position_covariance_type, location_fix::PositionCovarianceType);
+    crate::messages::serde_enum_mod!(log_level, log::Level);
+    crate::messages::serde_enum_mod!(packed_element_field_numeric_type, packed_element_field::NumericType);
+    crate::messages::serde_enum_mod!(points_annotation_type, points_annotation::Type);
+    crate::messages::serde_enum_mod!(scene_entity_deletion_type, scene_entity_deletion::Type);
 }

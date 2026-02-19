@@ -46,7 +46,7 @@ pub fn create_channel<T: Encode>(
 ///
 /// Optional keyword arguments:
 /// - `log_time`: timestamp when the message was logged. It can be a u64 (nanoseconds since epoch),
-///   a foxglove [`Timestamp`][crate::schemas::Timestamp], a [`SystemTime`][std::time::SystemTime],
+///   a foxglove [`Timestamp`][crate::messages::Timestamp], a [`SystemTime`][std::time::SystemTime],
 ///   or anything else that implements [`ToUnixNanos`][crate::ToUnixNanos].
 ///
 /// If a channel for the topic already exists in the default Context, it will be used.
@@ -104,8 +104,8 @@ mod tests {
     use bytes::BufMut;
     use tracing_test::traced_test;
 
+    use crate::messages::{Color, LaserScan, Log, Timestamp};
     use crate::nanoseconds_since_epoch;
-    use crate::schemas::{Color, LaserScan, Log, Timestamp};
     use crate::{testutil::RecordingSink, Context};
     use crate::{FoxgloveError, Schema};
 
