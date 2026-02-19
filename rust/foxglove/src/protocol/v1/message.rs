@@ -10,7 +10,7 @@ pub trait BinaryMessage {
     /// Encodes the message (opcode byte + payload) into the provided buffer.
     fn encode(&self, buf: &mut impl BufMut);
 
-    /// Encodes the message to a new `Vec<u8>`.
+    /// Encodes the message (opcode byte + payload) to a new `Vec<u8>`.
     fn to_bytes(&self) -> Vec<u8> {
         let mut buf = Vec::with_capacity(self.encoded_len());
         self.encode(&mut buf);

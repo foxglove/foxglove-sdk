@@ -1,5 +1,5 @@
 ---
-source: rust/foxglove/src/schemas.rs
+source: rust/foxglove/src/messages.rs
 expression: "format!(\"{bytes:#04x?}\")"
 ---
 [
