@@ -19,6 +19,8 @@ pub use raw_channel::RawChannel;
 
 /// Stack buffer size to use for encoding messages.
 const STACK_BUFFER_SIZE: usize = 256 * 1024;
+/// Maximum integer that can be represented safely in a double floating point value (for JavaScript numbers)
+const MAX_SAFE_DOUBLE_INTEGER_VALUE: u64 = 1 << 53;
 
 /// Uniquely identifies a channel in the context of this program.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Deserialize, Serialize)]
@@ -34,6 +36,13 @@ impl ChannelId {
     pub(crate) fn next() -> Self {
         static NEXT_ID: AtomicU64 = AtomicU64::new(1);
         let id = NEXT_ID.fetch_add(1, Relaxed);
+        // Panic if we exceed the maximum value we can safely represent in a double floating point number
+        // because the app in JavaScript currently parses these from JSON as numbers.
+        // It is assumed that nobody is able to actually trigger this in the real world.
+        assert!(
+            id < MAX_SAFE_DOUBLE_INTEGER_VALUE,
+            "ChannelId overflow, you win the prize!"
+        );
         Self(id)
     }
 }
@@ -168,7 +177,7 @@ impl<T: Encode> Channel<T> {
     }
 
     /// Encodes the message and logs it on the channel with the given `timestamp`.
-    /// `timestamp` can be a u64 (nanoseconds since epoch), a foxglove [`Timestamp`][crate::schemas::Timestamp],
+    /// `timestamp` can be a u64 (nanoseconds since epoch), a foxglove [`Timestamp`][crate::messages::Timestamp],
     /// a [`SystemTime`][std::time::SystemTime], or anything else that implements [`ToUnixNanos`][crate::ToUnixNanos].
     ///
     /// The buffering behavior depends on the log sink; see [`McapWriter`][crate::McapWriter] and

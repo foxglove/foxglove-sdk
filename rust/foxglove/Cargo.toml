@@ -8,23 +8,33 @@ repository.workspace = true
 license.workspace = true
 
 [features]
-default = ["derive", "live_visualization", "lz4", "zstd"]
+default = ["derive", "websocket", "lz4", "zstd"]
 chrono = ["dep:chrono"]
 derive = ["dep:foxglove_derive"]
-agent = ["live_visualization"]
-live_visualization = [
+_remote_common = [
   "dep:base64",
   "dep:flume",
-  "dep:futures-util",
   "dep:tokio",
   "dep:tokio-util",
-  "dep:tokio-tungstenite",
   "dep:serde_repr",
   "dep:serde_with",
 ]
+websocket = [
+  "_remote_common",
+  "dep:futures-util",
+  "dep:tokio-tungstenite",
+]
+live_visualization = ["websocket"]
+remote_access = [
+  "_remote_common",
+  "dep:livekit",
+  "dep:libwebrtc",
+  "dep:reqwest",
+  "dep:percent-encoding",
+]
 lz4 = ["mcap/lz4"]
 tls = [
-  "live_visualization",
+  "websocket",
   "tokio-tungstenite/rustls-tls-native-roots",
   "dep:aws-lc-rs",
   "dep:tokio-rustls",
@@ -59,9 +69,12 @@ bytes.workspace = true
 chrono = { workspace = true, optional = true }
 delegate = "0.13.2"
 flume = { version = "0.11.1", optional = true }
+indexmap = "2"
 foxglove_derive = { version = "0.17.2", path = "../foxglove_derive", optional = true }
 futures = { version = "0.3.31", optional = true }
 futures-util = { version = "0.3.31", features = ["sink", "std"], optional = true }
+livekit = { version = "0.7.29", optional = true, features = ["rustls-tls-native-roots"] }
+libwebrtc = { version = "0.3.24", optional = true }
 mcap.workspace = true
 parking_lot = "0.12.4"
 prost-types.workspace = true
@@ -88,10 +101,13 @@ image = { version = "0.25.9", default-features = false, optional = true }
 yuv = { version = "0.8.9", optional = true }
 regex = { version = "1", optional = true }
 cdr = { version = "0.2.4", optional = true }
+reqwest = { version = "0.13.1", features = ["json", "rustls"], optional = true }
+percent-encoding = { version = "2.3.2", optional = true }
 
 [dev-dependencies]
 assert_matches = "1.5.0"
 insta.workspace = true
+axum = "0.8.8"
 hexdump = "0.1.2"
 maplit = "1.0.2"
 serde_cbor = "0.11.2"

@@ -130,16 +130,14 @@ pub enum Capability {
     ConnectionGraph,
     /// Allow clients to fetch assets.
     Assets,
-    /// Indicates that the server is sending data within a fixed time range. This requires the
-    /// server to specify the `data_start_time` and `data_end_time` fields in its `ServerInfo` message.
-    /// Playback control requests are only accepted when this capability is enabled.
-    RangedPlayback,
+    /// Indicates that the server is capable of responding to playback control requests from
+    /// controls in the Foxglove app. This requires the server to specify the `data_start_time`
+    /// and `data_end_time` fields in its `ServerInfo` message.
+    PlaybackControl,
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::protocol::v1::server::ServerMessage;
-
     use super::*;
 
     fn message() -> ServerInfo {
@@ -151,7 +149,7 @@ mod tests {
             .with_capabilities([
                 Capability::ClientPublish,
                 Capability::Time,
-                Capability::RangedPlayback,
+                Capability::PlaybackControl,
             ])
             .with_supported_encodings(["json"])
             .with_metadata(maplit::hashmap! {
@@ -173,8 +171,8 @@ mod tests {
 
     fn test_roundtrip_inner(orig: ServerInfo) {
         let buf = orig.to_string();
-        let msg = ServerMessage::parse_json(&buf).unwrap();
-        assert_eq!(msg, ServerMessage::ServerInfo(orig));
+        let parsed: ServerInfo = serde_json::from_str(&buf).unwrap();
+        assert_eq!(parsed, orig);
     }
 
     #[test]

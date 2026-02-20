@@ -6,6 +6,7 @@ members = [
   "rust/foxglove_derive",
   "rust/foxglove_proto_gen",
   "rust/foxglove_data_loader",
+  "rust/data_provider_conformance",
   "rust/examples/*",
   "python/foxglove-sdk",
 ]
@@ -32,9 +33,9 @@ prost-types = "0.14"
 serde = { version = "1.0", features = ["derive"] }
 serde_with = { version = "3.14.0", features = ["macros", "base64"] }
 thiserror = "2.0"
-tokio = { version = "1.47", features = ["macros", "rt-multi-thread", "signal", "time"] }
+tokio = { version = "1.47", features = ["macros", "net", "rt-multi-thread", "signal", "time"] }
 tokio-tungstenite = "0.28"
-tokio-util = { version = "0.7", features = ["rt"] }
+tokio-util = { version = "0.7", features = ["io", "rt"] }
 tracing = { version = "0.1", features = ["log"] }
 tracing-test = "0.2.5"
 insta = { version = "1.42.2", features = ["json"] }

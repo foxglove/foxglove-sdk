@@ -122,6 +122,17 @@ fn validate_field_type(ty: &Type) -> Option<TokenStream> {
 }
 
 /// Derive macro for enums and structs allowing them to be logged to a Foxglove channel.
+///
+/// This is a convenience for getting data into Foxglove with minimal friction. It generates a
+/// schema and serialization code automatically based on your type's fields. The underlying
+/// serialization format is an implementation detail and may change across SDK versions.
+///
+/// **Important:** The derived schema is not designed for schema evolution. Reordering, inserting,
+/// or removing fields will silently break compatibility with previously recorded data.
+///
+/// If you need backwards-compatible schemas, maintain an explicit `.proto` file and use a library
+/// like [prost](https://docs.rs/prost) to generate your types. You can then implement
+/// `Encode` manually for those types.
 #[proc_macro_derive(Encode)]
 pub fn derive_loggable(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);

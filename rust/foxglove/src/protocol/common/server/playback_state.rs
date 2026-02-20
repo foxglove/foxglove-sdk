@@ -1,7 +1,6 @@
-use crate::protocol::{BinaryPayload, ParseError};
+use crate::protocol::{BinaryMessage, BinaryPayload, ParseError};
 use bytes::{Buf, BufMut};
 
-#[doc(hidden)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 /// The status playback of data that the server is providing
@@ -30,7 +29,6 @@ impl TryFrom<u8> for PlaybackStatus {
     }
 }
 
-#[doc(hidden)]
 #[derive(Debug, Clone, PartialEq)]
 /// The state of the server playing back data.
 ///
@@ -38,7 +36,7 @@ impl TryFrom<u8> for PlaybackStatus {
 /// state of playback has changed; for example, reaching the end of data, or an external mechanism
 /// causes playback to pause.
 ///
-/// Only relevant if the `RangedPlayback` capability is enabled.
+/// Only relevant if the `PlaybackControl` capability is enabled.
 pub struct PlaybackState {
     /// The status of server data playback
     pub status: PlaybackStatus,
@@ -118,52 +116,19 @@ impl<'a> BinaryPayload<'a> for PlaybackState {
     }
 }
 
+impl<'a> BinaryMessage<'a> for PlaybackState {
+    const OPCODE: u8 = 5;
+}
+
 #[cfg(test)]
 mod tests {
     use assert_matches::assert_matches;
 
     use super::*;
-    use crate::protocol::v1::{server::ServerMessage, BinaryMessage};
-
-    #[test]
-    fn test_encode_playing() {
-        let message = PlaybackState {
-            status: PlaybackStatus::Playing,
-            playback_speed: 1.0,
-            did_seek: false,
-            current_time: 12345,
-            request_id: None,
-        };
-        insta::assert_snapshot!(format!("{:#04x?}", message.to_bytes()));
-    }
-
-    #[test]
-    fn test_encode_did_seek() {
-        let message = PlaybackState {
-            status: PlaybackStatus::Playing,
-            playback_speed: 1.0,
-            did_seek: true,
-            current_time: 12345,
-            request_id: None,
-        };
-        insta::assert_snapshot!(format!("{:#04x?}", message.to_bytes()));
-    }
-
-    #[test]
-    fn test_encode_playing_with_request_id() {
-        let message = PlaybackState {
-            status: PlaybackStatus::Playing,
-            playback_speed: 1.0,
-            did_seek: false,
-            current_time: 12345,
-            request_id: Some("i-am-a-request".to_string()),
-        };
-        insta::assert_snapshot!(format!("{:#04x?}", message.to_bytes()));
-    }
 
     #[test]
     fn test_roundtrip_with_request_id() {
-        let message = PlaybackState {
+        let orig = PlaybackState {
             status: PlaybackStatus::Playing,
             playback_speed: 1.0,
             current_time: 12345,
@@ -171,16 +136,15 @@ mod tests {
             request_id: Some("i-am-a-request".to_string()),
         };
 
-        let bytes = message.to_bytes();
-        let parse_result = ServerMessage::parse_binary(&bytes);
-        assert_matches!(parse_result, Ok(ServerMessage::PlaybackState(parse_result)) => {
-            assert_eq!(parse_result, message);
-        });
+        let mut buf = Vec::new();
+        BinaryPayload::write_payload(&orig, &mut buf);
+        let parsed = PlaybackState::parse_payload(&buf).unwrap();
+        assert_eq!(parsed, orig);
     }
 
     #[test]
     fn test_roundtrip_without_request_id() {
-        let message = PlaybackState {
+        let orig = PlaybackState {
             status: PlaybackStatus::Playing,
             playback_speed: 1.0,
             current_time: 12345,
@@ -188,11 +152,10 @@ mod tests {
             request_id: None,
         };
 
-        let bytes = message.to_bytes();
-        let parse_result = ServerMessage::parse_binary(&bytes);
-        assert_matches!(parse_result, Ok(ServerMessage::PlaybackState(parse_result)) => {
-            assert_eq!(parse_result, message);
-        });
+        let mut buf = Vec::new();
+        BinaryPayload::write_payload(&orig, &mut buf);
+        let parsed = PlaybackState::parse_payload(&buf).unwrap();
+        assert_eq!(parsed, orig);
     }
 
     #[test]

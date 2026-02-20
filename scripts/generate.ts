@@ -92,7 +92,7 @@ async function main({ clean }: { clean: boolean }) {
     await rimraf(path.join(rosOutDir, "ros1"));
     await rimraf(path.join(rosOutDir, "ros2"));
     await rimraf(typescriptTypesDir);
-    await rimraf(path.join(repoRoot, "rust/foxglove/src/schemas"));
+    await rimraf(path.join(repoRoot, "rust/foxglove/src/messages"));
     await rimraf(pythonSdkGeneratedRoot);
     await rimraf(path.join(pythonSdkPyRoot, "_foxglove_py/schemas.pyi"));
     await rimraf(path.join(pythonSdkPyRoot, "schemas/__init__.py"));

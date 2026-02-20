@@ -24,6 +24,10 @@ pub struct StreamConfiguration {
 }
 
 fn build_tls_acceptor(tls_identity: &TlsIdentity) -> Result<TlsAcceptor, FoxgloveError> {
+    // Install aws-lc-rs as the default crypto provider, because we have both ring and aws-lc-rs in the dependency tree
+    // TODO: can we choose one or the other via a crate feature (or flag on tls_identity?)
+    let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
+
     let cert = CertificateDer::from_pem_slice(&tls_identity.cert)
         .map_err(|e| FoxgloveError::ConfigurationError(format!("TLS configuration: {e}")))?;
 

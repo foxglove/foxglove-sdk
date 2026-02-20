@@ -4,7 +4,7 @@ use std::borrow::Cow;
 
 use bytes::{Buf, BufMut};
 
-use crate::protocol::{BinaryPayload, ParseError};
+use crate::protocol::{BinaryMessage, BinaryPayload, ParseError};
 
 /// Fetch asset response message.
 ///
@@ -93,6 +93,10 @@ impl<'a> BinaryPayload<'a> for FetchAssetResponse<'a> {
     }
 }
 
+impl<'a> BinaryMessage<'a> for FetchAssetResponse<'a> {
+    const OPCODE: u8 = 4;
+}
+
 /// Status code.
 #[repr(u8)]
 enum Status {
@@ -132,8 +136,6 @@ impl Payload<'_> {
 mod tests {
     use assert_matches::assert_matches;
 
-    use crate::protocol::v1::{server::ServerMessage, BinaryMessage};
-
     use super::*;
 
     fn asset_data() -> FetchAssetResponse<'static> {
@@ -142,16 +144,6 @@ mod tests {
 
     fn error_message() -> FetchAssetResponse<'static> {
         FetchAssetResponse::error_message(10, "oh no")
-    }
-
-    #[test]
-    fn test_encode_asset_data() {
-        insta::assert_snapshot!(format!("{:#04x?}", asset_data().to_bytes()));
-    }
-
-    #[test]
-    fn test_encode_error_message() {
-        insta::assert_snapshot!(format!("{:#04x?}", error_message().to_bytes()));
     }
 
     #[test]
@@ -187,16 +179,18 @@ mod tests {
     #[test]
     fn test_roundtrip_asset_data() {
         let orig = asset_data();
-        let buf = orig.to_bytes();
-        let msg = ServerMessage::parse_binary(&buf).unwrap();
-        assert_eq!(msg, ServerMessage::FetchAssetResponse(orig));
+        let mut buf = Vec::new();
+        BinaryPayload::write_payload(&orig, &mut buf);
+        let parsed = FetchAssetResponse::parse_payload(&buf).unwrap();
+        assert_eq!(parsed, orig);
     }
 
     #[test]
     fn test_roundtrip_error_message() {
         let orig = error_message();
-        let buf = orig.to_bytes();
-        let msg = ServerMessage::parse_binary(&buf).unwrap();
-        assert_eq!(msg, ServerMessage::FetchAssetResponse(orig));
+        let mut buf = Vec::new();
+        BinaryPayload::write_payload(&orig, &mut buf);
+        let parsed = FetchAssetResponse::parse_payload(&buf).unwrap();
+        assert_eq!(parsed, orig);
     }
 }

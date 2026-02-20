@@ -1,9 +1,8 @@
 //! Client messages for Foxglove protocol v1.
 
-use bytes::{Buf, BufMut};
+use bytes::Buf;
 use serde::Deserialize;
 
-use super::message::BinaryMessage;
 use crate::protocol::{BinaryPayload, ParseError};
 
 pub mod subscribe;
@@ -40,30 +39,74 @@ impl BinaryOpcode {
     }
 }
 
-impl BinaryMessage for MessageData<'_> {
-    fn to_bytes(&self) -> Vec<u8> {
-        let mut buf = Vec::with_capacity(1 + self.payload_size());
-        buf.put_u8(BinaryOpcode::MessageData as u8);
-        self.write_payload(&mut buf);
-        buf
-    }
-}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::protocol::BinaryMessage;
 
-impl BinaryMessage for ServiceCallRequest<'_> {
-    fn to_bytes(&self) -> Vec<u8> {
-        let mut buf = Vec::with_capacity(1 + self.payload_size());
-        buf.put_u8(BinaryOpcode::ServiceCallRequest as u8);
-        self.write_payload(&mut buf);
-        buf
+    #[test]
+    fn test_message_data_encode() {
+        let message = MessageData::new(30, br#"{"key": "value"}"#);
+        let buf = message.to_bytes();
+        insta::assert_snapshot!(format!("{:#04x?}", buf));
+        let parsed = ClientMessage::parse_binary(&buf).unwrap();
+        assert_eq!(parsed, ClientMessage::MessageData(message));
     }
-}
 
-impl BinaryMessage for PlaybackControlRequest {
-    fn to_bytes(&self) -> Vec<u8> {
-        let mut buf = Vec::with_capacity(1 + self.payload_size());
-        buf.put_u8(BinaryOpcode::PlaybackControlRequest as u8);
-        self.write_payload(&mut buf);
-        buf
+    #[test]
+    fn test_playback_control_request_encode_play() {
+        let message = PlaybackControlRequest {
+            playback_command: PlaybackCommand::Play,
+            playback_speed: 1.0,
+            seek_time: None,
+            request_id: "some-id".to_string(),
+        };
+        let buf = message.to_bytes();
+        insta::assert_snapshot!(format!("{:#04x?}", buf));
+        let parsed = ClientMessage::parse_binary(&buf).unwrap();
+        assert_eq!(parsed, ClientMessage::PlaybackControlRequest(message));
+    }
+
+    #[test]
+    fn test_playback_control_request_encode_play_with_seek() {
+        let message = PlaybackControlRequest {
+            playback_command: PlaybackCommand::Play,
+            playback_speed: 1.0,
+            seek_time: Some(123_456_789),
+            request_id: "some-id".to_string(),
+        };
+        let buf = message.to_bytes();
+        insta::assert_snapshot!(format!("{:#04x?}", buf));
+        let parsed = ClientMessage::parse_binary(&buf).unwrap();
+        assert_eq!(parsed, ClientMessage::PlaybackControlRequest(message));
+    }
+
+    #[test]
+    fn test_playback_control_request_encode_pause() {
+        let message = PlaybackControlRequest {
+            playback_command: PlaybackCommand::Pause,
+            playback_speed: 1.0,
+            seek_time: None,
+            request_id: "some-id".to_string(),
+        };
+        let buf = message.to_bytes();
+        insta::assert_snapshot!(format!("{:#04x?}", buf));
+        let parsed = ClientMessage::parse_binary(&buf).unwrap();
+        assert_eq!(parsed, ClientMessage::PlaybackControlRequest(message));
+    }
+
+    #[test]
+    fn test_service_call_request_encode() {
+        let message = ServiceCallRequest {
+            service_id: 10,
+            call_id: 12,
+            encoding: "json".into(),
+            payload: br#"{"key": "value"}"#.into(),
+        };
+        let buf = message.to_bytes();
+        insta::assert_snapshot!(format!("{:#04x?}", buf));
+        let parsed = ClientMessage::parse_binary(&buf).unwrap();
+        assert_eq!(parsed, ClientMessage::ServiceCallRequest(message));
     }
 }
 
