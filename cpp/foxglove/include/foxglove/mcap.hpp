@@ -219,14 +219,18 @@ FoxgloveError McapWriter::writeMetadata(std::string_view name, Iter begin, Iter 
   return FoxgloveError(error);
 }
 
+/// @brief The type of a seek function in a @ref CustomWriter.
+using SeekFunction = std::function<int(int64_t pos, int whence, uint64_t* new_pos)>;
+
 /// @brief Build a no-op seek function that only supports position queries.
 ///
 /// Use with @ref McapWriterOptions::disable_seeking = true.
 ///
-/// @param position Pointer to the current position.
-/// @return A no-op seek function.
+/// @param position Pointer to the current write position, which must be kept up to date by the
+///   caller's write function.
+/// @return A seek function suitable for @ref CustomWriter::seek.
 /// @note This function is used to build a @ref CustomWriter for non-seekable output destinations.
-inline std::function<int(int64_t, int, uint64_t*)> no_seek_fn(uint64_t* position) {
+inline SeekFunction no_seek_fn(uint64_t* position) {
   return [position](int64_t pos, int whence, uint64_t* new_pos) -> int {
     if (whence == SEEK_CUR && pos == 0) {
       *new_pos = *position;

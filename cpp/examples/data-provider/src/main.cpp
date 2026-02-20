@@ -287,8 +287,7 @@ void data_handler(const httplib::Request& req, httplib::Response& res) {
         // major implementations).
         channel.log(
           msg,
-          static_cast<uint64_t>(
-            date::floor<std::chrono::nanoseconds>(ts).time_since_epoch().count()
+          static_cast<uint64_t>(date::floor<std::chrono::nanoseconds>(ts).time_since_epoch().count()
           )
         );
 
