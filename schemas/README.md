@@ -1615,6 +1615,19 @@ Color used to visualize the location
 
 </td>
 </tr>
+<tr>
+<td><code>metadata</code></td>
+<td>
+
+[KeyValuePair](#keyvaluepair)[]
+
+</td>
+<td>
+
+Additional user-provided metadata associated with the location fix. Keys must be unique.
+
+</td>
+</tr>
 </table>
 
 ## LocationFixes

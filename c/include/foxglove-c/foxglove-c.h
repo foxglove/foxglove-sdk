@@ -1245,6 +1245,11 @@ typedef struct foxglove_location_fix {
    * Color used to visualize the location
    */
   const struct foxglove_color *color;
+  /**
+   * Additional user-provided metadata associated with the location fix. Keys must be unique.
+   */
+  const struct foxglove_key_value_pair *metadata;
+  size_t metadata_count;
 } foxglove_location_fix;
 
 /**

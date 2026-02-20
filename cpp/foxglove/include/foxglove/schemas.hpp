@@ -1224,6 +1224,10 @@ struct LocationFix {
   /// @brief Color used to visualize the location
   std::optional<Color> color;
 
+  /// @brief Additional user-provided metadata associated with the location fix. Keys must be
+  /// unique.
+  std::vector<KeyValuePair> metadata;
+
   /// @brief Encoded the LocationFix as protobuf to the provided buffer.
   ///
   /// On success, writes the serialized length to *encoded_len.
