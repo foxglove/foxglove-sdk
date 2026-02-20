@@ -167,6 +167,11 @@ impl BorrowToNative for ${name} {
         switch (field.type.type) {
           case "primitive":
             if (field.type.name === "string") {
+              if (field.optional) {
+                return [
+                  `let ${fieldName} = unsafe { optional_string_from_raw(self.${fieldName}.as_ptr() as *const _, self.${fieldName}.len(), "${field.name}")? };`,
+                ];
+              }
               return [
                 `let ${fieldName} = unsafe { string_from_raw(self.${fieldName}.as_ptr() as *const _, self.${fieldName}.len(), "${field.name}")? };`,
               ];
@@ -208,7 +213,7 @@ impl BorrowToNative for ${name} {
           case "primitive":
             if (field.type.name === "string") {
               if (field.optional) {
-                return `${fieldName}: Some(ManuallyDrop::into_inner(${fieldName}))`;
+                return `${fieldName}: ${fieldName}.map(ManuallyDrop::into_inner)`;
               }
               return `${fieldName}: ManuallyDrop::into_inner(${fieldName})`;
             } else if (field.type.name === "bytes") {
@@ -332,7 +337,7 @@ pub unsafe extern "C" fn foxglove_${snakeName}_encode(
     `#[cfg(not(target_family = "wasm"))]`,
     "use crate::{FoxgloveChannel, FoxgloveContext, log_msg_to_channel, result_to_c, do_foxglove_channel_create, FoxgloveSinkId};",
     "use crate::arena::{Arena, BorrowToNative};",
-    "use crate::util::{bytes_from_raw, string_from_raw, vec_from_raw};",
+    "use crate::util::{bytes_from_raw, optional_string_from_raw, string_from_raw, vec_from_raw};",
   ];
 
   const enumDefs = enums.map((enumSchema) => {

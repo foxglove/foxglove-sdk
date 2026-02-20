@@ -7,7 +7,7 @@ use std::pin::{pin, Pin};
 use foxglove::Encode;
 
 use crate::arena::{Arena, BorrowToNative};
-use crate::util::{bytes_from_raw, string_from_raw, vec_from_raw};
+use crate::util::{bytes_from_raw, optional_string_from_raw, string_from_raw, vec_from_raw};
 #[cfg(not(target_family = "wasm"))]
 use crate::{
     do_foxglove_channel_create, log_msg_to_channel, result_to_c, FoxgloveChannel, FoxgloveContext,
@@ -3277,7 +3277,7 @@ impl BorrowToNative for LocationFix {
         }
         .transpose()?;
         let details = unsafe {
-            string_from_raw(
+            optional_string_from_raw(
                 self.details.as_ptr() as *const _,
                 self.details.len(),
                 "details",
@@ -3298,7 +3298,7 @@ impl BorrowToNative for LocationFix {
             }),
             position_covariance_type: self.position_covariance_type as i32,
             color: color.map(ManuallyDrop::into_inner),
-            details: Some(ManuallyDrop::into_inner(details)),
+            details: details.map(ManuallyDrop::into_inner),
         }))
     }
 }
