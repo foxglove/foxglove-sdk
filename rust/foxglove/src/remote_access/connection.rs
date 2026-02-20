@@ -675,16 +675,19 @@ impl RemoteAccessSession {
     ) {
         let mut buffer = BytesMut::new();
         loop {
-            let chunk = match reader.next().await {
-                Some(Ok(chunk)) => chunk,
-                Some(Err(e)) => {
-                    error!(
-                        "Error reading from byte stream for client {:?}: {:?}",
-                        participant_identity, e
-                    );
-                    break;
-                }
-                None => break,
+            let chunk = tokio::select! {
+                () = self.cancellation_token.cancelled() => break,
+                result = reader.next() => match result {
+                    Some(Ok(chunk)) => chunk,
+                    Some(Err(e)) => {
+                        error!(
+                            "Error reading from byte stream for client {:?}: {:?}",
+                            participant_identity, e
+                        );
+                        break;
+                    }
+                    None => break,
+                },
             };
 
             buffer.extend_from_slice(&chunk);
