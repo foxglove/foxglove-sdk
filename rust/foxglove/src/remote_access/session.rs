@@ -4,7 +4,6 @@ use std::time::Duration;
 use bytes::Bytes;
 use futures_util::StreamExt;
 use livekit::{id::ParticipantIdentity, ByteStreamReader, Room, StreamByteOptions};
-use parking_lot::RwLock;
 use smallvec::SmallVec;
 use tokio::io::AsyncReadExt;
 use tokio_util::{io::StreamReader, sync::CancellationToken};
@@ -82,7 +81,7 @@ pub(crate) struct RemoteAccessSession {
     sink_id: SinkId,
     room: Room,
     context: Weak<Context>,
-    state: RwLock<SessionState>,
+    state: SessionState,
     channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     cancellation_token: CancellationToken,
     data_plane_tx: flume::Sender<ChannelMessage>,
@@ -133,12 +132,9 @@ impl Sink for RemoteAccessSession {
         // Track advertised channels, excluding any that failed to encode (e.g. MissingSchema).
         let advertised_ids: std::collections::HashSet<u64> =
             advertise_msg.channels.iter().map(|ch| ch.id).collect();
-        {
-            let mut state = self.state.write();
-            for &ch in &filtered {
-                if advertised_ids.contains(&u64::from(ch.id())) {
-                    state.insert_channel(ch);
-                }
+        for &ch in &filtered {
+            if advertised_ids.contains(&u64::from(ch.id())) {
+                self.state.insert_channel(ch);
             }
         }
 
@@ -151,7 +147,7 @@ impl Sink for RemoteAccessSession {
 
     fn remove_channel(&self, channel: &RawChannel) {
         let channel_id = channel.id();
-        if !self.state.write().remove_channel(channel_id) {
+        if !self.state.remove_channel(channel_id) {
             return;
         }
 
@@ -179,7 +175,7 @@ impl RemoteAccessSession {
             sink_id: SinkId::next(),
             room,
             context,
-            state: RwLock::new(SessionState::new()),
+            state: SessionState::new(),
             channel_filter,
             cancellation_token,
             data_plane_tx,
@@ -237,8 +233,7 @@ impl RemoteAccessSession {
 
     /// Enqueue a control plane message for all currently connected participants.
     fn broadcast_control(&self, data: Bytes) {
-        let participants: SmallVec<[Arc<Participant>; 8]> =
-            self.state.read().participants().cloned().collect();
+        let participants = self.state.collect_participants();
         for participant in participants {
             self.send_control(participant, data.clone());
         }
@@ -261,20 +256,16 @@ impl RemoteAccessSession {
                 }
                 msg = session.data_plane_rx.recv_async() => {
                     let Ok(msg) = msg else { break };
-                    let subscriber_ids: SmallVec<[ParticipantIdentity; 8]> = {
-                        let state = session.state.read();
-                        match state.get_subscribers(&msg.channel_id) {
-                            Some(ids) => ids.iter().cloned().collect(),
-                            None => continue,
-                        }
+                    // Note: we do fan-out ourselves here because we can't use multicast with the ByteStreams
+                    // Most data plane messages should get sent as datagram messages, which do support multicast
+                    // by passing a Vec<ParticipantIdentity> of recipients.
+                    let Some(subscriber_ids) = session.state.collect_subscribers(&msg.channel_id) else {
+                        continue;
                     };
-                    let participants: SmallVec<[Arc<Participant>; 8]> = {
-                        let state = session.state.read();
-                        subscriber_ids
-                            .iter()
-                            .filter_map(|id| state.get_participant(id).cloned())
-                            .collect()
-                    };
+                    let participants: SmallVec<[Arc<Participant>; 8]> = subscriber_ids
+                        .iter()
+                        .filter_map(|id| session.state.get_participant(id))
+                        .collect();
                     for participant in &participants {
                         if let Err(e) = participant.send(&msg.data).await {
                             error!("failed to send message data to {participant:?}: {e:?}");
@@ -379,12 +370,7 @@ impl RemoteAccessSession {
             }
         };
 
-        let Some(participant) = self
-            .state
-            .read()
-            .get_participant(participant_identity)
-            .cloned()
-        else {
+        let Some(participant) = self.state.get_participant(participant_identity) else {
             error!("Unknown participant identity: {:?}", participant_identity);
             return false;
         };
@@ -411,7 +397,7 @@ impl RemoteAccessSession {
             .map(|&id| ChannelId::new(id))
             .collect();
 
-        let first_subscribed = self.state.write().subscribe(participant, &channel_ids);
+        let first_subscribed = self.state.subscribe(participant, &channel_ids);
 
         if !first_subscribed.is_empty() {
             if let Some(context) = self.context.upgrade() {
@@ -427,7 +413,7 @@ impl RemoteAccessSession {
             .map(|&id| ChannelId::new(id))
             .collect();
 
-        let last_unsubscribed = self.state.write().unsubscribe(participant, &channel_ids);
+        let last_unsubscribed = self.state.unsubscribe(participant, &channel_ids);
 
         if !last_unsubscribed.is_empty() {
             if let Some(context) = self.context.upgrade() {
@@ -444,7 +430,7 @@ impl RemoteAccessSession {
     ) -> Result<Arc<Participant>, RemoteAccessError> {
         use crate::remote_access::participant::ParticipantWriter;
 
-        if let Some(existing) = self.state.read().get_participant(&participant_id).cloned() {
+        if let Some(existing) = self.state.get_participant(&participant_id) {
             return Ok(existing);
         }
 
@@ -471,7 +457,6 @@ impl RemoteAccessSession {
         ));
 
         self.state
-            .write()
             .insert_participant(participant_id, participant.clone());
         Ok(participant)
     }
@@ -480,7 +465,7 @@ impl RemoteAccessSession {
     ///
     /// Channels that lose their last subscriber are unsubscribed from the context.
     pub(crate) fn remove_participant(&self, participant_id: &ParticipantIdentity) {
-        let last_unsubscribed = self.state.write().remove_participant(participant_id);
+        let last_unsubscribed = self.state.remove_participant(participant_id);
 
         if !last_unsubscribed.is_empty() {
             if let Some(context) = self.context.upgrade() {
@@ -507,17 +492,18 @@ impl RemoteAccessSession {
 
     /// Enqueue all currently cached channel advertisements for delivery to a single participant.
     fn send_channel_advertisements(&self, participant: Arc<Participant>) {
-        let framed = {
-            let state = self.state.read();
-            let channels = state.channels();
-            if channels.is_empty() {
-                return;
-            }
+        let Some(framed) = self.state.with_channels(|channels| {
             let advertise_msg = advertise::advertise_channels(channels.values());
             if advertise_msg.channels.is_empty() {
-                return;
+                return None;
             }
-            frame_text_message(advertise_msg.to_string().as_bytes())
+            Some(frame_text_message(advertise_msg.to_string().as_bytes()))
+        }) else {
+            return;
+        };
+
+        let Some(framed) = framed else {
+            return;
         };
 
         self.send_control(participant, framed);

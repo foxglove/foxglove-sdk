@@ -2,46 +2,47 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use livekit::id::ParticipantIdentity;
+use parking_lot::RwLock;
 use smallvec::SmallVec;
 use tracing::{debug, info};
 
 use crate::remote_access::participant::Participant;
 use crate::{ChannelId, RawChannel};
 
-/// Pure state machine for a remote access session.
+/// State machine for a remote access session.
 ///
-/// Tracks participants, advertised channels, and per-channel subscriptions.
-/// All methods take `&mut self`; the caller (RemoteAccessSession) handles synchronization.
+/// Tracks participants, advertised channels, and per-channel subscriptions
+/// using fine-grained locking on each data structure. All methods take `&self`.
 ///
 /// Methods that modify subscriptions return the set of channel IDs whose subscription
 /// status changed (first subscriber added or last subscriber removed), so the caller
 /// can notify the Context.
 pub(crate) struct SessionState {
-    participants: HashMap<ParticipantIdentity, Arc<Participant>>,
+    participants: RwLock<HashMap<ParticipantIdentity, Arc<Participant>>>,
     /// Channels that have been advertised to participants.
-    channels: HashMap<ChannelId, Arc<RawChannel>>,
+    channels: RwLock<HashMap<ChannelId, Arc<RawChannel>>>,
     /// Maps channel ID to the participant identities subscribed to that channel.
-    subscriptions: HashMap<ChannelId, SmallVec<[ParticipantIdentity; 1]>>,
+    subscriptions: RwLock<HashMap<ChannelId, SmallVec<[ParticipantIdentity; 1]>>>,
 }
 
 impl SessionState {
     pub fn new() -> Self {
         Self {
-            participants: HashMap::new(),
-            channels: HashMap::new(),
-            subscriptions: HashMap::new(),
+            participants: RwLock::new(HashMap::new()),
+            channels: RwLock::new(HashMap::new()),
+            subscriptions: RwLock::new(HashMap::new()),
         }
     }
 
     /// Inserts a participant. Returns `true` if the participant was newly added,
     /// `false` if it was already present (in which case the entry is unchanged).
     pub fn insert_participant(
-        &mut self,
+        &self,
         identity: ParticipantIdentity,
         participant: Arc<Participant>,
     ) -> bool {
         use std::collections::hash_map::Entry;
-        match self.participants.entry(identity) {
+        match self.participants.write().entry(identity) {
             Entry::Occupied(_) => false,
             Entry::Vacant(v) => {
                 v.insert(participant);
@@ -53,64 +54,73 @@ impl SessionState {
     /// Removes a participant and all of its subscriptions.
     ///
     /// Returns channel IDs that lost their last subscriber (now have zero subscribers).
-    pub fn remove_participant(
-        &mut self,
-        identity: &ParticipantIdentity,
-    ) -> SmallVec<[ChannelId; 4]> {
-        if self.participants.remove(identity).is_none() {
+    pub fn remove_participant(&self, identity: &ParticipantIdentity) -> SmallVec<[ChannelId; 4]> {
+        if self.participants.write().remove(identity).is_none() {
             return SmallVec::new();
         }
         info!("removed participant {identity:?}");
 
         let mut last_unsubscribed: SmallVec<[ChannelId; 4]> = SmallVec::new();
-        self.subscriptions.retain(|&channel_id, subscribers| {
-            subscribers.retain(|id| id != identity);
-            if subscribers.is_empty() {
-                last_unsubscribed.push(channel_id);
-                false
-            } else {
-                true
-            }
-        });
+        self.subscriptions
+            .write()
+            .retain(|&channel_id, subscribers| {
+                subscribers.retain(|id| id != identity);
+                if subscribers.is_empty() {
+                    last_unsubscribed.push(channel_id);
+                    false
+                } else {
+                    true
+                }
+            });
         last_unsubscribed
     }
 
     /// Returns the participant for the given identity, if present.
-    pub fn get_participant(&self, identity: &ParticipantIdentity) -> Option<&Arc<Participant>> {
-        self.participants.get(identity)
+    pub fn get_participant(&self, identity: &ParticipantIdentity) -> Option<Arc<Participant>> {
+        self.participants.read().get(identity).cloned()
     }
 
-    /// Returns an iterator over all participants.
-    pub fn participants(&self) -> impl Iterator<Item = &Arc<Participant>> {
-        self.participants.values()
+    /// Collects and returns all current participants.
+    pub fn collect_participants(&self) -> SmallVec<[Arc<Participant>; 8]> {
+        self.participants.read().values().cloned().collect()
     }
 
     /// Records a channel as advertised.
-    pub fn insert_channel(&mut self, channel: &Arc<RawChannel>) {
-        self.channels.insert(channel.id(), channel.clone());
+    pub fn insert_channel(&self, channel: &Arc<RawChannel>) {
+        self.channels.write().insert(channel.id(), channel.clone());
     }
 
     /// Removes an advertised channel. Returns `true` if it was present.
-    pub fn remove_channel(&mut self, channel_id: ChannelId) -> bool {
-        self.channels.remove(&channel_id).is_some()
+    pub fn remove_channel(&self, channel_id: ChannelId) -> bool {
+        self.channels.write().remove(&channel_id).is_some()
     }
 
-    /// Returns the advertised channels.
-    pub fn channels(&self) -> &HashMap<ChannelId, Arc<RawChannel>> {
-        &self.channels
+    /// Calls `f` with a read-lock on the advertised channels map.
+    ///
+    /// Returns `None` if the channels map is empty; otherwise returns `Some(f(&channels))`.
+    pub fn with_channels<R>(
+        &self,
+        f: impl FnOnce(&HashMap<ChannelId, Arc<RawChannel>>) -> R,
+    ) -> Option<R> {
+        let channels = self.channels.read();
+        if channels.is_empty() {
+            return None;
+        }
+        Some(f(&channels))
     }
 
     /// Subscribes a participant to the given channels.
     ///
     /// Returns channel IDs that gained their first subscriber.
     pub fn subscribe(
-        &mut self,
+        &self,
         participant: &Participant,
         channel_ids: &[ChannelId],
     ) -> SmallVec<[ChannelId; 4]> {
         let mut first_subscribed: SmallVec<[ChannelId; 4]> = SmallVec::new();
+        let mut subscriptions = self.subscriptions.write();
         for &channel_id in channel_ids {
-            let subscribers = self.subscriptions.entry(channel_id).or_default();
+            let subscribers = subscriptions.entry(channel_id).or_default();
             if subscribers.contains(participant.identity()) {
                 info!("{participant} is already subscribed to channel {channel_id:?}; ignoring",);
                 continue;
@@ -129,13 +139,14 @@ impl SessionState {
     ///
     /// Returns channel IDs that lost their last subscriber.
     pub fn unsubscribe(
-        &mut self,
+        &self,
         participant: &Participant,
         channel_ids: &[ChannelId],
     ) -> SmallVec<[ChannelId; 4]> {
         let mut last_unsubscribed: SmallVec<[ChannelId; 4]> = SmallVec::new();
+        let mut subscriptions = self.subscriptions.write();
         for &channel_id in channel_ids {
-            let Some(subscribers) = self.subscriptions.get_mut(&channel_id) else {
+            let Some(subscribers) = subscriptions.get_mut(&channel_id) else {
                 info!("{participant} is not subscribed to channel {channel_id:?}; ignoring",);
                 continue;
             };
@@ -149,25 +160,35 @@ impl SessionState {
             subscribers.swap_remove(pos);
             debug!("{participant} unsubscribed from channel {channel_id:?}");
             if subscribers.is_empty() {
-                self.subscriptions.remove(&channel_id);
+                subscriptions.remove(&channel_id);
                 last_unsubscribed.push(channel_id);
             }
         }
         last_unsubscribed
     }
 
-    /// Returns the subscriber identities for a channel.
-    pub fn get_subscribers(
+    /// Collects subscriber identities for a channel, or returns `None` if no
+    /// subscriptions exist.
+    pub fn collect_subscribers(
         &self,
         channel_id: &ChannelId,
-    ) -> Option<&SmallVec<[ParticipantIdentity; 1]>> {
-        self.subscriptions.get(channel_id)
+    ) -> Option<SmallVec<[ParticipantIdentity; 8]>> {
+        let subscriptions = self.subscriptions.read();
+        subscriptions
+            .get(channel_id)
+            .map(|ids| ids.iter().cloned().collect())
     }
 
     /// Returns the number of subscribers for a channel, or `None` if no subscriptions exist.
     #[cfg(test)]
     pub fn get_subscriber_count(&self, channel_id: &ChannelId) -> Option<usize> {
-        self.subscriptions.get(channel_id).map(|s| s.len())
+        self.subscriptions.read().get(channel_id).map(|s| s.len())
+    }
+
+    /// Returns the number of advertised channels.
+    #[cfg(test)]
+    pub fn channel_count(&self) -> usize {
+        self.channels.read().len()
     }
 }
 
@@ -201,14 +222,14 @@ mod tests {
 
     #[test]
     fn insert_new_participant_returns_true() {
-        let mut state = SessionState::new();
+        let state = SessionState::new();
         let (id, p) = make_participant("alice");
         assert!(state.insert_participant(id, p));
     }
 
     #[test]
     fn insert_duplicate_participant_returns_false() {
-        let mut state = SessionState::new();
+        let state = SessionState::new();
         let (id, p) = make_participant("alice");
         assert!(state.insert_participant(id.clone(), p.clone()));
         assert!(!state.insert_participant(id, p));
@@ -216,7 +237,7 @@ mod tests {
 
     #[test]
     fn get_participant_returns_existing() {
-        let mut state = SessionState::new();
+        let state = SessionState::new();
         let (id, p) = make_participant("alice");
         state.insert_participant(id.clone(), p);
         assert!(state.get_participant(&id).is_some());
@@ -231,7 +252,7 @@ mod tests {
 
     #[test]
     fn remove_missing_participant_is_noop() {
-        let mut state = SessionState::new();
+        let state = SessionState::new();
         let id = ParticipantIdentity("nobody".to_string());
         let last = state.remove_participant(&id);
         assert!(last.is_empty());
@@ -239,7 +260,7 @@ mod tests {
 
     #[test]
     fn remove_participant_cleans_up_subscriptions() {
-        let mut state = SessionState::new();
+        let state = SessionState::new();
         let (id, p) = make_participant("alice");
         state.insert_participant(id.clone(), p.clone());
 
@@ -253,7 +274,7 @@ mod tests {
 
     #[test]
     fn remove_participant_reports_only_last_unsubscribed_channels() {
-        let mut state = SessionState::new();
+        let state = SessionState::new();
         let (id_a, pa) = make_participant("alice");
         let (id_b, pb) = make_participant("bob");
         state.insert_participant(id_a.clone(), pa.clone());
@@ -276,15 +297,15 @@ mod tests {
 
     #[test]
     fn insert_and_query_channel() {
-        let mut state = SessionState::new();
+        let state = SessionState::new();
         let ch = make_channel("/topic1");
         state.insert_channel(&ch);
-        assert!(state.channels().contains_key(&ch.id()));
+        assert_eq!(state.channel_count(), 1);
     }
 
     #[test]
     fn remove_channel_returns_true_when_present() {
-        let mut state = SessionState::new();
+        let state = SessionState::new();
         let ch = make_channel("/topic1");
         state.insert_channel(&ch);
         assert!(state.remove_channel(ch.id()));
@@ -292,7 +313,7 @@ mod tests {
 
     #[test]
     fn remove_channel_returns_false_when_absent() {
-        let mut state = SessionState::new();
+        let state = SessionState::new();
         assert!(!state.remove_channel(ChannelId::new(999)));
     }
 
@@ -300,7 +321,7 @@ mod tests {
 
     #[test]
     fn first_subscriber_is_reported() {
-        let mut state = SessionState::new();
+        let state = SessionState::new();
         let (_id, p) = make_participant("alice");
         let ch = ChannelId::new(1);
 
@@ -310,7 +331,7 @@ mod tests {
 
     #[test]
     fn second_subscriber_is_not_reported_as_first() {
-        let mut state = SessionState::new();
+        let state = SessionState::new();
         let (_id_a, pa) = make_participant("alice");
         let (_id_b, pb) = make_participant("bob");
         let ch = ChannelId::new(1);
@@ -322,7 +343,7 @@ mod tests {
 
     #[test]
     fn duplicate_subscribe_is_idempotent() {
-        let mut state = SessionState::new();
+        let state = SessionState::new();
         let (_id, p) = make_participant("alice");
         let ch = ChannelId::new(1);
 
@@ -334,7 +355,7 @@ mod tests {
 
     #[test]
     fn subscribe_multiple_channels_at_once() {
-        let mut state = SessionState::new();
+        let state = SessionState::new();
         let (_id, p) = make_participant("alice");
         let ch1 = ChannelId::new(1);
         let ch2 = ChannelId::new(2);
@@ -347,7 +368,7 @@ mod tests {
 
     #[test]
     fn last_unsubscriber_is_reported() {
-        let mut state = SessionState::new();
+        let state = SessionState::new();
         let (_id, p) = make_participant("alice");
         let ch = ChannelId::new(1);
 
@@ -358,7 +379,7 @@ mod tests {
 
     #[test]
     fn unsubscribe_with_remaining_subscribers_is_not_reported() {
-        let mut state = SessionState::new();
+        let state = SessionState::new();
         let (_id_a, pa) = make_participant("alice");
         let (_id_b, pb) = make_participant("bob");
         let ch = ChannelId::new(1);
@@ -373,7 +394,7 @@ mod tests {
 
     #[test]
     fn unsubscribe_when_not_subscribed_is_noop() {
-        let mut state = SessionState::new();
+        let state = SessionState::new();
         let (_id, p) = make_participant("alice");
         let ch = ChannelId::new(1);
 
@@ -383,7 +404,7 @@ mod tests {
 
     #[test]
     fn unsubscribe_multiple_channels_at_once() {
-        let mut state = SessionState::new();
+        let state = SessionState::new();
         let (_id, p) = make_participant("alice");
         let ch1 = ChannelId::new(1);
         let ch2 = ChannelId::new(2);
@@ -396,14 +417,14 @@ mod tests {
     }
 
     #[test]
-    fn get_subscribers_returns_none_for_no_subscriptions() {
+    fn collect_subscribers_returns_none_for_no_subscriptions() {
         let state = SessionState::new();
-        assert!(state.get_subscribers(&ChannelId::new(1)).is_none());
+        assert!(state.collect_subscribers(&ChannelId::new(1)).is_none());
     }
 
     #[test]
-    fn get_subscribers_returns_subscriber_identities() {
-        let mut state = SessionState::new();
+    fn collect_subscribers_returns_subscriber_identities() {
+        let state = SessionState::new();
         let (id_a, pa) = make_participant("alice");
         let (id_b, pb) = make_participant("bob");
         let ch = ChannelId::new(1);
@@ -411,19 +432,19 @@ mod tests {
         state.subscribe(&pa, &[ch]);
         state.subscribe(&pb, &[ch]);
 
-        let subs = state.get_subscribers(&ch).unwrap();
+        let subs = state.collect_subscribers(&ch).unwrap();
         assert_eq!(subs.len(), 2);
         assert!(subs.contains(&id_a));
         assert!(subs.contains(&id_b));
     }
 
     #[test]
-    fn participants_iterator_yields_all() {
-        let mut state = SessionState::new();
+    fn collect_participants_yields_all() {
+        let state = SessionState::new();
         let (id_a, pa) = make_participant("alice");
         let (id_b, pb) = make_participant("bob");
         state.insert_participant(id_a, pa);
         state.insert_participant(id_b, pb);
-        assert_eq!(state.participants().count(), 2);
+        assert_eq!(state.collect_participants().len(), 2);
     }
 }
