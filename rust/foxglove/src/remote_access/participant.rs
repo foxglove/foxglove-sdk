@@ -39,7 +39,15 @@ impl Participant {
 
 impl std::fmt::Debug for Participant {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Participant {{ identity: {:?} }}", self.identity)
+        f.debug_struct("Participant")
+            .field("identity", &self.identity)
+            .finish()
+    }
+}
+
+impl std::fmt::Display for Participant {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Participant({})", self.identity)
     }
 }
 
