@@ -21,7 +21,7 @@ impl LogSinkSet {
     }
 
     /// Returns the number of sinks in the set.
-    #[cfg(all(test, feature = "live_visualization"))]
+    #[cfg(all(test, feature = "websocket"))]
     pub fn len(&self) -> usize {
         self.0.load().len()
     }
