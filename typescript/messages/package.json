@@ -1,7 +1,7 @@
 {
-  "name": "@foxglove/schemas",
+  "name": "@foxglove/messages",
   "version": "1.9.0",
-  "description": "Deprecated: use @foxglove/messages instead. Re-exports all types from @foxglove/messages for backward compatibility.",
+  "description": "Foxglove message type definitions for ROS, Protobuf, FlatBuffers, OMG IDL, and JSON",
   "license": "MIT",
   "author": {
     "name": "Foxglove",
@@ -11,7 +11,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/foxglove/foxglove-sdk.git",
-    "directory": "typescript/schemas"
+    "directory": "typescript/messages"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -24,13 +24,13 @@
   ],
   "packageManager": "yarn@4.6.0",
   "scripts": {
-    "build": "tsc -b",
+    "build": "cp -R ../../schemas/jsonschema ./src/jsonschema && tsc -b",
     "clean": "git clean -Xdf",
     "clean-build": "yarn clean && yarn build",
     "prepack": "yarn clean-build"
   },
   "dependencies": {
-    "@foxglove/messages": "workspace:^",
+    "@foxglove/rosmsg-msgs-common": "^3.2.2",
     "tslib": "^2"
   },
   "devDependencies": {

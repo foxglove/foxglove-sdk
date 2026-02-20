@@ -145,7 +145,8 @@ jobs:
       - run: yarn install --immutable
       - run: yarn lint:ci
 
-      # must run this first because it copies the jsonschema directory
+      # must run messages first because it copies the jsonschema directory
+      - run: yarn workspace @foxglove/messages build
       - run: yarn workspace @foxglove/schemas build
 
       # typecheck remaining files in the repo
@@ -187,7 +188,12 @@ jobs:
       - name: Validate protobuf definitions
         run: protoc --proto_path=schemas/proto schemas/proto/**/*.proto --descriptor_set_out=/dev/null
 
+      - run: yarn workspace @foxglove/messages pack
+      - name: Publish @foxglove/messages to NPM
+        if: startsWith(github.ref, 'refs/tags/typescript/messages/v')
+        run: npx npm@11.7.0 publish typescript/messages/package.tgz --provenance --access public
+
       - run: yarn workspace @foxglove/schemas pack
-      - name: Publish @foxglove/schemas to NPM
+      - name: Publish @foxglove/schemas to NPM (deprecated, for backward compatibility)
         if: startsWith(github.ref, 'refs/tags/typescript/schemas/v')
         run: npx npm@11.7.0 publish typescript/schemas/package.tgz --provenance --access public

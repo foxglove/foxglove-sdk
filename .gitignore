@@ -28,5 +28,5 @@
 /rust/examples/*/target/
 /target/
 /typescript/*/dist/
-/typescript/schemas/src/jsonschema/
+/typescript/messages/src/jsonschema/
 node_modules/

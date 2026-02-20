@@ -1,1 +1,1 @@
-export * from "./dist/jsonschema/index";
+export * from "@foxglove/messages/jsonschema";
