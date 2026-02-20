@@ -10,6 +10,7 @@ use remote_access_tests::config::Config;
 use reqwest::header::{AUTHORIZATION, CONTENT_TYPE};
 use serde::Deserialize;
 use tracing::{info, warn};
+use tracing_test::traced_test;
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -120,10 +121,10 @@ async fn delete_device(
 /// Foxglove platform controls room creation and token issuance — there's no way to
 /// independently join the room from the test. Once Gateway exposes a connection
 /// status callback or similar API, this test should assert on successful connection.
+#[traced_test]
 #[ignore]
 #[tokio::test]
 async fn auth_remote_access_connection() -> Result<()> {
-    let _ = tracing_subscriber::fmt::try_init();
     let config = Config::get();
     let client = reqwest::Client::new();
 
