@@ -112,13 +112,13 @@ async fn delete_device(
     Ok(())
 }
 
-/// Test that we can provision a device and device token, then start a RemoteAccessSink
+/// Test that we can provision a device and device token, then start a Gateway
 /// that successfully authenticates and begins running.
 ///
 /// TODO: This test currently only validates that the auth + connect flow doesn't panic or
 /// hang. It cannot verify that the LiveKit connection actually succeeded because the
 /// Foxglove platform controls room creation and token issuance — there's no way to
-/// independently join the room from the test. Once RemoteAccessSink exposes a connection
+/// independently join the room from the test. Once Gateway exposes a connection
 /// status callback or similar API, this test should assert on successful connection.
 #[ignore]
 #[tokio::test]
@@ -193,12 +193,12 @@ async fn auth_remote_access_connection() -> Result<()> {
 }
 
 async fn run_auth_test(config: &Config, token: &str) -> Result<()> {
-    let handle = foxglove::RemoteAccessSink::new()
+    let handle = foxglove::remote_access::Gateway::new()
         .name("auth-integration-test")
         .device_token(token)
         .foxglove_api_url(&config.foxglove_api_url)
         .start()
-        .context("start RemoteAccessSink")?;
+        .context("start Gateway")?;
 
     // Give it time to connect and authenticate.
     // The sink authenticates via device-info, then fetches RTC credentials.

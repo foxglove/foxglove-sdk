@@ -5,7 +5,9 @@ use maplit::hashmap;
 #[cfg(feature = "tls")]
 use rcgen::{CertificateParams, Issuer, KeyPair};
 use std::borrow::Cow;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
+
+use indexmap::IndexSet;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::Duration;
@@ -722,7 +724,7 @@ async fn test_service_registration_missing_request_encoding() {
     let server = create_server(
         &ctx,
         ServerOptions {
-            capabilities: Some(HashSet::from([Capability::Services])),
+            capabilities: Some(IndexSet::from([Capability::Services])),
             ..Default::default()
         },
     );
@@ -741,9 +743,9 @@ async fn test_service_registration_duplicate_name() {
     let server = create_server(
         &ctx,
         ServerOptions {
-            capabilities: Some(HashSet::from([Capability::Services])),
+            capabilities: Some(IndexSet::from([Capability::Services])),
             services: HashMap::from([(sa1.name().to_string(), sa1)]),
-            supported_encodings: Some(HashSet::from(["ros1msg".into()])),
+            supported_encodings: Some(IndexSet::from(["ros1msg".into()])),
             ..Default::default()
         },
     );
@@ -827,8 +829,8 @@ async fn test_client_advertising() {
     let server = create_server(
         &ctx,
         ServerOptions {
-            capabilities: Some(HashSet::from([Capability::ClientPublish])),
-            supported_encodings: Some(HashSet::from(["json".to_string()])),
+            capabilities: Some(IndexSet::from([Capability::ClientPublish])),
+            supported_encodings: Some(IndexSet::from(["json".to_string()])),
             listener: Some(recording_listener.clone()),
             ..Default::default()
         },
@@ -944,7 +946,7 @@ async fn test_parameter_values_with_empty_values() {
     let server = create_server(
         &ctx,
         ServerOptions {
-            capabilities: Some(HashSet::from([Capability::Parameters])),
+            capabilities: Some(IndexSet::from([Capability::Parameters])),
             listener: Some(listener.clone()),
             ..Default::default()
         },
@@ -981,7 +983,7 @@ async fn test_parameter_values() {
     let server = create_server(
         &ctx,
         ServerOptions {
-            capabilities: Some(HashSet::from([Capability::Parameters])),
+            capabilities: Some(IndexSet::from([Capability::Parameters])),
             listener: Some(recording_listener.clone()),
             ..Default::default()
         },
@@ -1024,7 +1026,7 @@ async fn test_parameter_unsubscribe_no_updates() {
     let server = create_server(
         &ctx,
         ServerOptions {
-            capabilities: Some(HashSet::from([Capability::Parameters])),
+            capabilities: Some(IndexSet::from([Capability::Parameters])),
             listener: Some(recording_listener.clone()),
             ..Default::default()
         },
@@ -1095,7 +1097,7 @@ async fn test_set_parameters() {
     let server = create_server(
         &ctx,
         ServerOptions {
-            capabilities: Some(HashSet::from([Capability::Parameters])),
+            capabilities: Some(IndexSet::from([Capability::Parameters])),
             listener: Some(recording_listener.clone()),
             ..Default::default()
         },
@@ -1156,7 +1158,7 @@ async fn test_get_parameters() {
     let server = create_server(
         &ctx,
         ServerOptions {
-            capabilities: Some(HashSet::from([Capability::Parameters])),
+            capabilities: Some(IndexSet::from([Capability::Parameters])),
             listener: Some(recording_listener.clone()),
             ..Default::default()
         },
@@ -1210,7 +1212,7 @@ async fn test_services() {
                 .into_iter()
                 .map(|s| (s.name().to_string(), s))
                 .collect(),
-            supported_encodings: Some(HashSet::from(["raw".to_string()])),
+            supported_encodings: Some(IndexSet::from(["raw".to_string()])),
             ..Default::default()
         },
     );
@@ -1356,7 +1358,7 @@ async fn test_fetch_asset() {
     let server = create_server(
         &ctx,
         ServerOptions {
-            capabilities: Some(HashSet::from([Capability::Assets])),
+            capabilities: Some(IndexSet::from([Capability::Assets])),
             fetch_asset_handler: Some(Box::new(BlockingAssetHandlerFn(Arc::new(
                 |_client, uri: String| {
                     if uri.ends_with("error") {
@@ -1424,7 +1426,7 @@ async fn test_update_connection_graph() {
     let server = create_server(
         &ctx,
         ServerOptions {
-            capabilities: Some(HashSet::from([Capability::ConnectionGraph])),
+            capabilities: Some(IndexSet::from([Capability::ConnectionGraph])),
             listener: Some(recording_listener.clone()),
             ..Default::default()
         },
@@ -1579,7 +1581,7 @@ async fn test_broadcast_time() {
     let server = create_server(
         &ctx,
         ServerOptions {
-            capabilities: Some(HashSet::from([Capability::Time])),
+            capabilities: Some(IndexSet::from([Capability::Time])),
             ..Default::default()
         },
     );
@@ -1661,7 +1663,7 @@ async fn test_on_playback_control_request() {
     let server = create_server(
         &ctx,
         ServerOptions {
-            capabilities: Some(HashSet::from([Capability::PlaybackControl])),
+            capabilities: Some(IndexSet::from([Capability::PlaybackControl])),
             playback_time_range: Some((123_456_789, 234_567_890)),
             listener: Some(listener.clone()),
             ..Default::default()
@@ -1892,7 +1894,7 @@ async fn test_broadcast_playback_state() {
 async fn test_playback_control_without_time_range() {
     let ctx = Context::new();
     let options = ServerOptions {
-        capabilities: Some(HashSet::from([Capability::PlaybackControl])),
+        capabilities: Some(IndexSet::from([Capability::PlaybackControl])),
         playback_time_range: None,
         ..Default::default()
     };

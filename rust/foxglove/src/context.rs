@@ -201,7 +201,7 @@ impl ContextInner {
 /// It is also possible to create explicit contexts:
 ///
 /// ```
-/// use foxglove::schemas::Log;
+/// use foxglove::messages::Log;
 /// use foxglove::{Context, FoxgloveError};
 ///
 /// // Create a channel for the "/log" topic.
@@ -263,7 +263,7 @@ impl Context {
     }
 
     /// Returns a builder for a websocket server in this context.
-    #[cfg(feature = "live_visualization")]
+    #[cfg(feature = "websocket")]
     pub fn websocket_server(self: &Arc<Self>) -> crate::WebSocketServer {
         crate::WebSocketServer::new().context(self)
     }

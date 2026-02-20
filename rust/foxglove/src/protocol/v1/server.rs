@@ -1,10 +1,9 @@
 //! Server messages for Foxglove protocol v1.
 
-use bytes::{Buf, BufMut};
+use bytes::Buf;
 use serde::Deserialize;
 
-use super::message::BinaryMessage;
-use crate::protocol::{BinaryPayload, ParseError};
+use crate::protocol::{BinaryMessage, BinaryPayload, ParseError};
 
 mod message_data;
 
@@ -51,48 +50,99 @@ impl BinaryOpcode {
     }
 }
 
-impl BinaryMessage for MessageData<'_> {
-    fn to_bytes(&self) -> Vec<u8> {
-        let mut buf = Vec::with_capacity(1 + self.payload_size());
-        buf.put_u8(BinaryOpcode::MessageData as u8);
-        self.write_payload(&mut buf);
-        buf
-    }
+impl<'a> BinaryMessage<'a> for MessageData<'a> {
+    const OPCODE: u8 = BinaryOpcode::MessageData as u8;
 }
 
-impl BinaryMessage for Time {
-    fn to_bytes(&self) -> Vec<u8> {
-        let mut buf = Vec::with_capacity(1 + self.payload_size());
-        buf.put_u8(BinaryOpcode::Time as u8);
-        self.write_payload(&mut buf);
-        buf
-    }
-}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::protocol::common::server::playback_state::PlaybackStatus;
 
-impl BinaryMessage for ServiceCallResponse<'_> {
-    fn to_bytes(&self) -> Vec<u8> {
-        let mut buf = Vec::with_capacity(1 + self.payload_size());
-        buf.put_u8(BinaryOpcode::ServiceCallResponse as u8);
-        self.write_payload(&mut buf);
-        buf
+    #[test]
+    fn test_time_encode() {
+        let message = Time::new(1234567890);
+        let buf = message.to_bytes();
+        insta::assert_snapshot!(format!("{:#04x?}", buf));
+        let parsed = ServerMessage::parse_binary(&buf).unwrap();
+        assert_eq!(parsed, ServerMessage::Time(message));
     }
-}
 
-impl BinaryMessage for FetchAssetResponse<'_> {
-    fn to_bytes(&self) -> Vec<u8> {
-        let mut buf = Vec::with_capacity(1 + self.payload_size());
-        buf.put_u8(BinaryOpcode::FetchAssetResponse as u8);
-        self.write_payload(&mut buf);
-        buf
+    #[test]
+    fn test_service_call_response_encode() {
+        let message = ServiceCallResponse {
+            service_id: 10,
+            call_id: 12,
+            encoding: "json".into(),
+            payload: br#"{"key": "value"}"#.into(),
+        };
+        let buf = message.to_bytes();
+        insta::assert_snapshot!(format!("{:#04x?}", buf));
+        let parsed = ServerMessage::parse_binary(&buf).unwrap();
+        assert_eq!(parsed, ServerMessage::ServiceCallResponse(message));
     }
-}
 
-impl BinaryMessage for PlaybackState {
-    fn to_bytes(&self) -> Vec<u8> {
-        let mut buf = Vec::with_capacity(1 + self.payload_size());
-        buf.put_u8(BinaryOpcode::PlaybackState as u8);
-        self.write_payload(&mut buf);
-        buf
+    #[test]
+    fn test_fetch_asset_response_encode_asset_data() {
+        let message = FetchAssetResponse::asset_data(10, b"data");
+        let buf = message.to_bytes();
+        insta::assert_snapshot!(format!("{:#04x?}", buf));
+        let parsed = ServerMessage::parse_binary(&buf).unwrap();
+        assert_eq!(parsed, ServerMessage::FetchAssetResponse(message));
+    }
+
+    #[test]
+    fn test_fetch_asset_response_encode_error_message() {
+        let message = FetchAssetResponse::error_message(10, "oh no");
+        let buf = message.to_bytes();
+        insta::assert_snapshot!(format!("{:#04x?}", buf));
+        let parsed = ServerMessage::parse_binary(&buf).unwrap();
+        assert_eq!(parsed, ServerMessage::FetchAssetResponse(message));
+    }
+
+    #[test]
+    fn test_playback_state_encode_playing() {
+        let message = PlaybackState {
+            status: PlaybackStatus::Playing,
+            playback_speed: 1.0,
+            did_seek: false,
+            current_time: 12345,
+            request_id: None,
+        };
+        let buf = message.to_bytes();
+        insta::assert_snapshot!(format!("{:#04x?}", buf));
+        let parsed = ServerMessage::parse_binary(&buf).unwrap();
+        assert_eq!(parsed, ServerMessage::PlaybackState(message));
+    }
+
+    #[test]
+    fn test_playback_state_encode_did_seek() {
+        let message = PlaybackState {
+            status: PlaybackStatus::Playing,
+            playback_speed: 1.0,
+            did_seek: true,
+            current_time: 12345,
+            request_id: None,
+        };
+        let buf = message.to_bytes();
+        insta::assert_snapshot!(format!("{:#04x?}", buf));
+        let parsed = ServerMessage::parse_binary(&buf).unwrap();
+        assert_eq!(parsed, ServerMessage::PlaybackState(message));
+    }
+
+    #[test]
+    fn test_playback_state_encode_playing_with_request_id() {
+        let message = PlaybackState {
+            status: PlaybackStatus::Playing,
+            playback_speed: 1.0,
+            did_seek: false,
+            current_time: 12345,
+            request_id: Some("i-am-a-request".to_string()),
+        };
+        let buf = message.to_bytes();
+        insta::assert_snapshot!(format!("{:#04x?}", buf));
+        let parsed = ServerMessage::parse_binary(&buf).unwrap();
+        assert_eq!(parsed, ServerMessage::PlaybackState(message));
     }
 }
 

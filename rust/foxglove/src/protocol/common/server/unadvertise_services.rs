@@ -25,8 +25,6 @@ impl JsonMessage for UnadvertiseServices {}
 
 #[cfg(test)]
 mod tests {
-    use crate::protocol::v1::server::ServerMessage;
-
     use super::*;
 
     fn message() -> UnadvertiseServices {
@@ -43,8 +41,8 @@ mod tests {
     #[test]
     fn test_roundtrip() {
         let orig = message();
-        let buf = serde_json::to_string(&orig).unwrap();
-        let msg = ServerMessage::parse_json(&buf).unwrap();
-        assert_eq!(msg, ServerMessage::UnadvertiseServices(orig));
+        let buf = orig.to_string();
+        let parsed: UnadvertiseServices = serde_json::from_str(&buf).unwrap();
+        assert_eq!(parsed, orig);
     }
 }

@@ -17,7 +17,7 @@ use tracing::info;
 use foxglove::protocol::v2::server::ServerMessage;
 
 /// Test that a viewer participant receives a correctly-framed ServerInfo message
-/// when joining the same LiveKit room as a RemoteAccessSink device.
+/// when joining the same LiveKit room as a Gateway device.
 #[ignore]
 #[tokio::test]
 async fn livekit_viewer_receives_server_info() -> Result<()> {
@@ -30,15 +30,15 @@ async fn livekit_viewer_receives_server_info() -> Result<()> {
     let mock = mock_server::start_mock_server(&room_name).await;
     info!("mock server started at {}", mock.url());
 
-    // Start RemoteAccessSink pointed at mock API.
+    // Start Gateway pointed at mock API.
     let sink_name = format!("test-device-{}", unique_id());
-    let handle = foxglove::RemoteAccessSink::new()
+    let handle = foxglove::remote_access::Gateway::new()
         .name(&sink_name)
         .device_token(mock_server::TEST_DEVICE_TOKEN)
         .foxglove_api_url(mock.url())
         .supported_encodings(["json"])
         .start()
-        .context("start RemoteAccessSink")?;
+        .context("start Gateway")?;
 
     // Give the SDK time to authenticate and join the LiveKit room.
     tokio::time::sleep(Duration::from_secs(5)).await;

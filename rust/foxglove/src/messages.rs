@@ -1,4 +1,4 @@
-//! Types implementing well-known Foxglove schemas
+//! Types implementing well-known Foxglove message types.
 //!
 //! Using these types when possible will allow for richer visualizations and a better experience
 //! in the Foxglove App. They are encoded as compact, binary protobuf messages and can be
@@ -7,13 +7,13 @@
 //! # Serde support
 //!
 //! The `serde` feature enables [`Serialize`](serde::Serialize) and
-//! [`Deserialize`](serde::Deserialize) for all schema types. This is intended for debugging,
+//! [`Deserialize`](serde::Deserialize) for all message types. This is intended for debugging,
 //! logging, and integration with tools that consume JSON or other serde-compatible formats.
 //!
 //! For human-readable formats (e.g., JSON), enums are serialized as string names, and binary data
 //! are serialized as base64. For binary formats, enums are serialized as i32 values.
 //!
-//! Note that [CDR](https://docs.rs/cdr) is not compatible with these schemas, because it does
+//! Note that [CDR](https://docs.rs/cdr) is not compatible with these message types, because it does
 //! not support optional fields.
 
 pub(crate) mod descriptors;
@@ -24,7 +24,7 @@ mod foxglove;
 mod impls;
 
 pub use self::foxglove::*;
-pub use crate::schemas_wkt::{Duration, Timestamp};
+pub use crate::messages_wkt::{Duration, Timestamp};
 
 /// Custom serde serialization for `bytes::Bytes`.
 ///
