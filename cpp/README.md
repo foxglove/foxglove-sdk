@@ -4,6 +4,20 @@ The Foxglove C++ SDK is a higher-level wrapper around the [C library](../c). To 
 
 The SDK headers include a copy of `expected.hpp` from [tl-expected](https://github.com/TartanLlama/expected) ([docs](https://tl.tartanllama.xyz/en/latest/api/expected.html)), which provides an implementation similar to `std::expected` from C++23.
 
+## Message Types
+
+Foxglove message types are available in the `foxglove::messages` namespace:
+
+```cpp
+#include <foxglove/messages.hpp>
+
+foxglove::messages::Log log_msg;
+foxglove::messages::SceneUpdate scene;
+```
+
+> **Note:** The `foxglove::schemas` namespace is deprecated. Please use `foxglove::messages` instead.
+> The old namespace will continue to work as an alias for backward compatibility.
+
 ## Local development
 
 Build the library and examples:

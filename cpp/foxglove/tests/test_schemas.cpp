@@ -12,11 +12,11 @@ using Catch::Matchers::Equals;
 using namespace foxglove;
 using namespace foxglove::schemas;
 
-namespace foxglove::schemas {
+namespace foxglove::messages {
 void triangleListPrimitiveToC(
   foxglove_triangle_list_primitive& dest, const TriangleListPrimitive& src, Arena& arena
 );
-}  // namespace foxglove::schemas
+}  // namespace foxglove::messages
 
 TEST_CASE("triangle list primitive to c") {
   Arena arena;

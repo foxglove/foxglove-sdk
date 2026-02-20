@@ -3,7 +3,7 @@
 #![allow(clippy::too_many_arguments)]
 #![allow(clippy::enum_variant_names)]
 #![allow(non_snake_case)]
-use crate::schemas_wkt::{Duration, Timestamp};
+use crate::messages_wkt::{Duration, Timestamp};
 use crate::PySchema;
 use bytes::Bytes;
 use foxglove::Encode;
@@ -11,7 +11,7 @@ use pyo3::prelude::*;
 use pyo3::types::PyBytes;
 
 /// An enumeration indicating how input points should be interpreted to create lines
-#[pyclass(eq, eq_int, module = "foxglove.schemas")]
+#[pyclass(eq, eq_int, module = "foxglove.messages")]
 #[derive(PartialEq, Clone)]
 pub(crate) enum LinePrimitiveLineType {
     LineStrip = 0,
@@ -20,7 +20,7 @@ pub(crate) enum LinePrimitiveLineType {
 }
 
 /// Log level
-#[pyclass(eq, eq_int, module = "foxglove.schemas")]
+#[pyclass(eq, eq_int, module = "foxglove.messages")]
 #[derive(PartialEq, Clone)]
 pub(crate) enum LogLevel {
     Unknown = 0,
@@ -32,7 +32,7 @@ pub(crate) enum LogLevel {
 }
 
 /// An enumeration indicating which entities should match a SceneEntityDeletion command
-#[pyclass(eq, eq_int, module = "foxglove.schemas")]
+#[pyclass(eq, eq_int, module = "foxglove.messages")]
 #[derive(PartialEq, Clone)]
 pub(crate) enum SceneEntityDeletionType {
     MatchingId = 0,
@@ -40,7 +40,7 @@ pub(crate) enum SceneEntityDeletionType {
 }
 
 /// Numeric type
-#[pyclass(eq, eq_int, module = "foxglove.schemas")]
+#[pyclass(eq, eq_int, module = "foxglove.messages")]
 #[derive(PartialEq, Clone)]
 pub(crate) enum PackedElementFieldNumericType {
     Unknown = 0,
@@ -55,7 +55,7 @@ pub(crate) enum PackedElementFieldNumericType {
 }
 
 /// Type of points annotation
-#[pyclass(eq, eq_int, module = "foxglove.schemas")]
+#[pyclass(eq, eq_int, module = "foxglove.messages")]
 #[derive(PartialEq, Clone)]
 pub(crate) enum PointsAnnotationType {
     Unknown = 0,
@@ -66,7 +66,7 @@ pub(crate) enum PointsAnnotationType {
 }
 
 /// Type of position covariance
-#[pyclass(eq, eq_int, module = "foxglove.schemas")]
+#[pyclass(eq, eq_int, module = "foxglove.messages")]
 #[derive(PartialEq, Clone)]
 pub(crate) enum LocationFixPositionCovarianceType {
     Unknown = 0,
@@ -85,9 +85,9 @@ pub(crate) enum LocationFixPositionCovarianceType {
 /// :param color: Color of the arrow
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/arrow-primitive
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
-pub(crate) struct ArrowPrimitive(pub(crate) foxglove::schemas::ArrowPrimitive);
+pub(crate) struct ArrowPrimitive(pub(crate) foxglove::messages::ArrowPrimitive);
 #[pymethods]
 impl ArrowPrimitive {
     #[new]
@@ -100,7 +100,7 @@ impl ArrowPrimitive {
         head_diameter: f64,
         color: Option<Color>,
     ) -> Self {
-        Self(foxglove::schemas::ArrowPrimitive {
+        Self(foxglove::messages::ArrowPrimitive {
             pose: pose.map(Into::into),
             shaft_length,
             shaft_diameter,
@@ -123,7 +123,7 @@ impl ArrowPrimitive {
     /// Returns the ArrowPrimitive schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
-        foxglove::schemas::ArrowPrimitive::get_schema()
+        foxglove::messages::ArrowPrimitive::get_schema()
             .unwrap()
             .into()
     }
@@ -131,7 +131,7 @@ impl ArrowPrimitive {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -143,7 +143,7 @@ impl ArrowPrimitive {
     }
 }
 
-impl From<ArrowPrimitive> for foxglove::schemas::ArrowPrimitive {
+impl From<ArrowPrimitive> for foxglove::messages::ArrowPrimitive {
     fn from(value: ArrowPrimitive) -> Self {
         value.0
     }
@@ -204,9 +204,9 @@ impl From<ArrowPrimitive> for foxglove::schemas::ArrowPrimitive {
 ///     
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/camera-calibration
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
-pub(crate) struct CameraCalibration(pub(crate) foxglove::schemas::CameraCalibration);
+pub(crate) struct CameraCalibration(pub(crate) foxglove::messages::CameraCalibration);
 #[pymethods]
 impl CameraCalibration {
     #[new]
@@ -222,7 +222,7 @@ impl CameraCalibration {
         R: Option<Vec<f64>>,
         P: Option<Vec<f64>>,
     ) -> Self {
-        Self(foxglove::schemas::CameraCalibration {
+        Self(foxglove::messages::CameraCalibration {
             timestamp: timestamp.map(Into::into),
             frame_id: frame_id.to_string(),
             width,
@@ -251,7 +251,7 @@ impl CameraCalibration {
     /// Returns the CameraCalibration schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
-        foxglove::schemas::CameraCalibration::get_schema()
+        foxglove::messages::CameraCalibration::get_schema()
             .unwrap()
             .into()
     }
@@ -259,7 +259,7 @@ impl CameraCalibration {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -271,7 +271,7 @@ impl CameraCalibration {
     }
 }
 
-impl From<CameraCalibration> for foxglove::schemas::CameraCalibration {
+impl From<CameraCalibration> for foxglove::messages::CameraCalibration {
     fn from(value: CameraCalibration) -> Self {
         value.0
     }
@@ -288,9 +288,9 @@ impl From<CameraCalibration> for foxglove::schemas::CameraCalibration {
 /// :param outline_color: Outline color
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/circle-annotation
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
-pub(crate) struct CircleAnnotation(pub(crate) foxglove::schemas::CircleAnnotation);
+pub(crate) struct CircleAnnotation(pub(crate) foxglove::messages::CircleAnnotation);
 #[pymethods]
 impl CircleAnnotation {
     #[new]
@@ -303,7 +303,7 @@ impl CircleAnnotation {
         fill_color: Option<Color>,
         outline_color: Option<Color>,
     ) -> Self {
-        Self(foxglove::schemas::CircleAnnotation {
+        Self(foxglove::messages::CircleAnnotation {
             timestamp: timestamp.map(Into::into),
             position: position.map(Into::into),
             diameter,
@@ -326,7 +326,7 @@ impl CircleAnnotation {
     /// Returns the CircleAnnotation schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
-        foxglove::schemas::CircleAnnotation::get_schema()
+        foxglove::messages::CircleAnnotation::get_schema()
             .unwrap()
             .into()
     }
@@ -334,7 +334,7 @@ impl CircleAnnotation {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -346,7 +346,7 @@ impl CircleAnnotation {
     }
 }
 
-impl From<CircleAnnotation> for foxglove::schemas::CircleAnnotation {
+impl From<CircleAnnotation> for foxglove::messages::CircleAnnotation {
     fn from(value: CircleAnnotation) -> Self {
         value.0
     }
@@ -360,15 +360,15 @@ impl From<CircleAnnotation> for foxglove::schemas::CircleAnnotation {
 /// :param a: Alpha value between 0 and 1
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/color
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
-pub(crate) struct Color(pub(crate) foxglove::schemas::Color);
+pub(crate) struct Color(pub(crate) foxglove::messages::Color);
 #[pymethods]
 impl Color {
     #[new]
     #[pyo3(signature = (*, r=0.0, g=0.0, b=0.0, a=0.0) )]
     fn new(r: f64, g: f64, b: f64, a: f64) -> Self {
-        Self(foxglove::schemas::Color { r, g, b, a })
+        Self(foxglove::messages::Color { r, g, b, a })
     }
     fn __repr__(&self) -> String {
         format!(
@@ -379,13 +379,13 @@ impl Color {
     /// Returns the Color schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
-        foxglove::schemas::Color::get_schema().unwrap().into()
+        foxglove::messages::Color::get_schema().unwrap().into()
     }
     /// Encodes the Color as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -397,7 +397,7 @@ impl Color {
     }
 }
 
-impl From<Color> for foxglove::schemas::Color {
+impl From<Color> for foxglove::messages::Color {
     fn from(value: Color) -> Self {
         value.0
     }
@@ -413,9 +413,9 @@ impl From<Color> for foxglove::schemas::Color {
 ///     Supported values: `jpeg`, `png`, `webp`, `avif`
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/compressed-image
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
-pub(crate) struct CompressedImage(pub(crate) foxglove::schemas::CompressedImage);
+pub(crate) struct CompressedImage(pub(crate) foxglove::messages::CompressedImage);
 #[pymethods]
 impl CompressedImage {
     #[new]
@@ -426,7 +426,7 @@ impl CompressedImage {
         data: Option<Bound<'_, PyBytes>>,
         format: &str,
     ) -> Self {
-        Self(foxglove::schemas::CompressedImage {
+        Self(foxglove::messages::CompressedImage {
             timestamp: timestamp.map(Into::into),
             frame_id: frame_id.to_string(),
             data: data
@@ -444,7 +444,7 @@ impl CompressedImage {
     /// Returns the CompressedImage schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
-        foxglove::schemas::CompressedImage::get_schema()
+        foxglove::messages::CompressedImage::get_schema()
             .unwrap()
             .into()
     }
@@ -452,7 +452,7 @@ impl CompressedImage {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -464,7 +464,7 @@ impl CompressedImage {
     }
 }
 
-impl From<CompressedImage> for foxglove::schemas::CompressedImage {
+impl From<CompressedImage> for foxglove::messages::CompressedImage {
     fn from(value: CompressedImage) -> Self {
         value.0
     }
@@ -506,9 +506,9 @@ impl From<CompressedImage> for foxglove::schemas::CompressedImage {
 ///     Note: compressed video support is subject to hardware limitations and patent licensing, so not all encodings may be supported on all platforms. See more about `H.265 support <https://caniuse.com/hevc>`__, `VP9 support <https://caniuse.com/webm>`__, and `AV1 support <https://caniuse.com/av1>`__.
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/compressed-video
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
-pub(crate) struct CompressedVideo(pub(crate) foxglove::schemas::CompressedVideo);
+pub(crate) struct CompressedVideo(pub(crate) foxglove::messages::CompressedVideo);
 #[pymethods]
 impl CompressedVideo {
     #[new]
@@ -519,7 +519,7 @@ impl CompressedVideo {
         data: Option<Bound<'_, PyBytes>>,
         format: &str,
     ) -> Self {
-        Self(foxglove::schemas::CompressedVideo {
+        Self(foxglove::messages::CompressedVideo {
             timestamp: timestamp.map(Into::into),
             frame_id: frame_id.to_string(),
             data: data
@@ -537,7 +537,7 @@ impl CompressedVideo {
     /// Returns the CompressedVideo schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
-        foxglove::schemas::CompressedVideo::get_schema()
+        foxglove::messages::CompressedVideo::get_schema()
             .unwrap()
             .into()
     }
@@ -545,7 +545,7 @@ impl CompressedVideo {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -557,7 +557,7 @@ impl CompressedVideo {
     }
 }
 
-impl From<CompressedVideo> for foxglove::schemas::CompressedVideo {
+impl From<CompressedVideo> for foxglove::messages::CompressedVideo {
     fn from(value: CompressedVideo) -> Self {
         value.0
     }
@@ -572,9 +572,9 @@ impl From<CompressedVideo> for foxglove::schemas::CompressedVideo {
 /// :param color: Color of the cylinder
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/cylinder-primitive
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
-pub(crate) struct CylinderPrimitive(pub(crate) foxglove::schemas::CylinderPrimitive);
+pub(crate) struct CylinderPrimitive(pub(crate) foxglove::messages::CylinderPrimitive);
 #[pymethods]
 impl CylinderPrimitive {
     #[new]
@@ -586,7 +586,7 @@ impl CylinderPrimitive {
         top_scale: f64,
         color: Option<Color>,
     ) -> Self {
-        Self(foxglove::schemas::CylinderPrimitive {
+        Self(foxglove::messages::CylinderPrimitive {
             pose: pose.map(Into::into),
             size: size.map(Into::into),
             bottom_scale,
@@ -607,7 +607,7 @@ impl CylinderPrimitive {
     /// Returns the CylinderPrimitive schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
-        foxglove::schemas::CylinderPrimitive::get_schema()
+        foxglove::messages::CylinderPrimitive::get_schema()
             .unwrap()
             .into()
     }
@@ -615,7 +615,7 @@ impl CylinderPrimitive {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -627,7 +627,7 @@ impl CylinderPrimitive {
     }
 }
 
-impl From<CylinderPrimitive> for foxglove::schemas::CylinderPrimitive {
+impl From<CylinderPrimitive> for foxglove::messages::CylinderPrimitive {
     fn from(value: CylinderPrimitive) -> Self {
         value.0
     }
@@ -640,15 +640,15 @@ impl From<CylinderPrimitive> for foxglove::schemas::CylinderPrimitive {
 /// :param color: Color of the cube
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/cube-primitive
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
-pub(crate) struct CubePrimitive(pub(crate) foxglove::schemas::CubePrimitive);
+pub(crate) struct CubePrimitive(pub(crate) foxglove::messages::CubePrimitive);
 #[pymethods]
 impl CubePrimitive {
     #[new]
     #[pyo3(signature = (*, pose=None, size=None, color=None) )]
     fn new(pose: Option<Pose>, size: Option<Vector3>, color: Option<Color>) -> Self {
-        Self(foxglove::schemas::CubePrimitive {
+        Self(foxglove::messages::CubePrimitive {
             pose: pose.map(Into::into),
             size: size.map(Into::into),
             color: color.map(Into::into),
@@ -663,7 +663,7 @@ impl CubePrimitive {
     /// Returns the CubePrimitive schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
-        foxglove::schemas::CubePrimitive::get_schema()
+        foxglove::messages::CubePrimitive::get_schema()
             .unwrap()
             .into()
     }
@@ -671,7 +671,7 @@ impl CubePrimitive {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -683,7 +683,7 @@ impl CubePrimitive {
     }
 }
 
-impl From<CubePrimitive> for foxglove::schemas::CubePrimitive {
+impl From<CubePrimitive> for foxglove::messages::CubePrimitive {
     fn from(value: CubePrimitive) -> Self {
         value.0
     }
@@ -704,9 +704,9 @@ impl From<CubePrimitive> for foxglove::schemas::CubePrimitive {
 /// :param rotation: Rotation component of the transform, representing the orientation of the child frame in the parent frame
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/frame-transform
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
-pub(crate) struct FrameTransform(pub(crate) foxglove::schemas::FrameTransform);
+pub(crate) struct FrameTransform(pub(crate) foxglove::messages::FrameTransform);
 #[pymethods]
 impl FrameTransform {
     #[new]
@@ -718,7 +718,7 @@ impl FrameTransform {
         translation: Option<Vector3>,
         rotation: Option<Quaternion>,
     ) -> Self {
-        Self(foxglove::schemas::FrameTransform {
+        Self(foxglove::messages::FrameTransform {
             timestamp: timestamp.map(Into::into),
             parent_frame_id: parent_frame_id.to_string(),
             child_frame_id: child_frame_id.to_string(),
@@ -739,7 +739,7 @@ impl FrameTransform {
     /// Returns the FrameTransform schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
-        foxglove::schemas::FrameTransform::get_schema()
+        foxglove::messages::FrameTransform::get_schema()
             .unwrap()
             .into()
     }
@@ -747,7 +747,7 @@ impl FrameTransform {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -759,7 +759,7 @@ impl FrameTransform {
     }
 }
 
-impl From<FrameTransform> for foxglove::schemas::FrameTransform {
+impl From<FrameTransform> for foxglove::messages::FrameTransform {
     fn from(value: FrameTransform) -> Self {
         value.0
     }
@@ -770,15 +770,15 @@ impl From<FrameTransform> for foxglove::schemas::FrameTransform {
 /// :param transforms: Array of transforms
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/frame-transforms
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
-pub(crate) struct FrameTransforms(pub(crate) foxglove::schemas::FrameTransforms);
+pub(crate) struct FrameTransforms(pub(crate) foxglove::messages::FrameTransforms);
 #[pymethods]
 impl FrameTransforms {
     #[new]
     #[pyo3(signature = (*, transforms=None) )]
     fn new(transforms: Option<Vec<FrameTransform>>) -> Self {
-        Self(foxglove::schemas::FrameTransforms {
+        Self(foxglove::messages::FrameTransforms {
             transforms: transforms
                 .unwrap_or_default()
                 .into_iter()
@@ -792,7 +792,7 @@ impl FrameTransforms {
     /// Returns the FrameTransforms schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
-        foxglove::schemas::FrameTransforms::get_schema()
+        foxglove::messages::FrameTransforms::get_schema()
             .unwrap()
             .into()
     }
@@ -800,7 +800,7 @@ impl FrameTransforms {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -812,7 +812,7 @@ impl FrameTransforms {
     }
 }
 
-impl From<FrameTransforms> for foxglove::schemas::FrameTransforms {
+impl From<FrameTransforms> for foxglove::messages::FrameTransforms {
     fn from(value: FrameTransforms) -> Self {
         value.0
     }
@@ -823,15 +823,15 @@ impl From<FrameTransforms> for foxglove::schemas::FrameTransforms {
 /// :param geojson: GeoJSON data encoded as a UTF-8 string
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/geo-json
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
-pub(crate) struct GeoJson(pub(crate) foxglove::schemas::GeoJson);
+pub(crate) struct GeoJson(pub(crate) foxglove::messages::GeoJson);
 #[pymethods]
 impl GeoJson {
     #[new]
     #[pyo3(signature = (*, geojson="") )]
     fn new(geojson: &str) -> Self {
-        Self(foxglove::schemas::GeoJson {
+        Self(foxglove::messages::GeoJson {
             geojson: geojson.to_string(),
         })
     }
@@ -841,13 +841,13 @@ impl GeoJson {
     /// Returns the GeoJson schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
-        foxglove::schemas::GeoJson::get_schema().unwrap().into()
+        foxglove::messages::GeoJson::get_schema().unwrap().into()
     }
     /// Encodes the GeoJson as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -859,7 +859,7 @@ impl GeoJson {
     }
 }
 
-impl From<GeoJson> for foxglove::schemas::GeoJson {
+impl From<GeoJson> for foxglove::messages::GeoJson {
     fn from(value: GeoJson) -> Self {
         value.0
     }
@@ -919,9 +919,9 @@ impl From<GeoJson> for foxglove::schemas::GeoJson {
 ///     - x = (i % row_stride) / cell_stride * cell_size.x
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/grid
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
-pub(crate) struct Grid(pub(crate) foxglove::schemas::Grid);
+pub(crate) struct Grid(pub(crate) foxglove::messages::Grid);
 #[pymethods]
 impl Grid {
     #[new]
@@ -937,7 +937,7 @@ impl Grid {
         fields: Option<Vec<PackedElementField>>,
         data: Option<Bound<'_, PyBytes>>,
     ) -> Self {
-        Self(foxglove::schemas::Grid {
+        Self(foxglove::messages::Grid {
             timestamp: timestamp.map(Into::into),
             frame_id: frame_id.to_string(),
             pose: pose.map(Into::into),
@@ -972,13 +972,13 @@ impl Grid {
     /// Returns the Grid schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
-        foxglove::schemas::Grid::get_schema().unwrap().into()
+        foxglove::messages::Grid::get_schema().unwrap().into()
     }
     /// Encodes the Grid as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -990,7 +990,7 @@ impl Grid {
     }
 }
 
-impl From<Grid> for foxglove::schemas::Grid {
+impl From<Grid> for foxglove::messages::Grid {
     fn from(value: Grid) -> Self {
         value.0
     }
@@ -1016,9 +1016,9 @@ impl From<Grid> for foxglove::schemas::Grid {
 ///     - x = (i % row_stride) / cell_stride * cell_size.x
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/voxel-grid
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
-pub(crate) struct VoxelGrid(pub(crate) foxglove::schemas::VoxelGrid);
+pub(crate) struct VoxelGrid(pub(crate) foxglove::messages::VoxelGrid);
 #[pymethods]
 impl VoxelGrid {
     #[new]
@@ -1036,7 +1036,7 @@ impl VoxelGrid {
         fields: Option<Vec<PackedElementField>>,
         data: Option<Bound<'_, PyBytes>>,
     ) -> Self {
-        Self(foxglove::schemas::VoxelGrid {
+        Self(foxglove::messages::VoxelGrid {
             timestamp: timestamp.map(Into::into),
             frame_id: frame_id.to_string(),
             pose: pose.map(Into::into),
@@ -1075,13 +1075,13 @@ impl VoxelGrid {
     /// Returns the VoxelGrid schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
-        foxglove::schemas::VoxelGrid::get_schema().unwrap().into()
+        foxglove::messages::VoxelGrid::get_schema().unwrap().into()
     }
     /// Encodes the VoxelGrid as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -1093,7 +1093,7 @@ impl VoxelGrid {
     }
 }
 
-impl From<VoxelGrid> for foxglove::schemas::VoxelGrid {
+impl From<VoxelGrid> for foxglove::messages::VoxelGrid {
     fn from(value: VoxelGrid) -> Self {
         value.0
     }
@@ -1106,9 +1106,9 @@ impl From<VoxelGrid> for foxglove::schemas::VoxelGrid {
 /// :param texts: Text annotations
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/image-annotations
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
-pub(crate) struct ImageAnnotations(pub(crate) foxglove::schemas::ImageAnnotations);
+pub(crate) struct ImageAnnotations(pub(crate) foxglove::messages::ImageAnnotations);
 #[pymethods]
 impl ImageAnnotations {
     #[new]
@@ -1118,7 +1118,7 @@ impl ImageAnnotations {
         points: Option<Vec<PointsAnnotation>>,
         texts: Option<Vec<TextAnnotation>>,
     ) -> Self {
-        Self(foxglove::schemas::ImageAnnotations {
+        Self(foxglove::messages::ImageAnnotations {
             circles: circles
                 .unwrap_or_default()
                 .into_iter()
@@ -1145,7 +1145,7 @@ impl ImageAnnotations {
     /// Returns the ImageAnnotations schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
-        foxglove::schemas::ImageAnnotations::get_schema()
+        foxglove::messages::ImageAnnotations::get_schema()
             .unwrap()
             .into()
     }
@@ -1153,7 +1153,7 @@ impl ImageAnnotations {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -1165,7 +1165,7 @@ impl ImageAnnotations {
     }
 }
 
-impl From<ImageAnnotations> for foxglove::schemas::ImageAnnotations {
+impl From<ImageAnnotations> for foxglove::messages::ImageAnnotations {
     fn from(value: ImageAnnotations) -> Self {
         value.0
     }
@@ -1177,15 +1177,15 @@ impl From<ImageAnnotations> for foxglove::schemas::ImageAnnotations {
 /// :param value: Value
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/key-value-pair
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
-pub(crate) struct KeyValuePair(pub(crate) foxglove::schemas::KeyValuePair);
+pub(crate) struct KeyValuePair(pub(crate) foxglove::messages::KeyValuePair);
 #[pymethods]
 impl KeyValuePair {
     #[new]
     #[pyo3(signature = (*, key="", value="") )]
     fn new(key: &str, value: &str) -> Self {
-        Self(foxglove::schemas::KeyValuePair {
+        Self(foxglove::messages::KeyValuePair {
             key: key.to_string(),
             value: value.to_string(),
         })
@@ -1199,7 +1199,7 @@ impl KeyValuePair {
     /// Returns the KeyValuePair schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
-        foxglove::schemas::KeyValuePair::get_schema()
+        foxglove::messages::KeyValuePair::get_schema()
             .unwrap()
             .into()
     }
@@ -1207,7 +1207,7 @@ impl KeyValuePair {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -1219,7 +1219,7 @@ impl KeyValuePair {
     }
 }
 
-impl From<KeyValuePair> for foxglove::schemas::KeyValuePair {
+impl From<KeyValuePair> for foxglove::messages::KeyValuePair {
     fn from(value: KeyValuePair) -> Self {
         value.0
     }
@@ -1236,9 +1236,9 @@ impl From<KeyValuePair> for foxglove::schemas::KeyValuePair {
 /// :param intensities: Intensity of detections
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/laser-scan
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
-pub(crate) struct LaserScan(pub(crate) foxglove::schemas::LaserScan);
+pub(crate) struct LaserScan(pub(crate) foxglove::messages::LaserScan);
 #[pymethods]
 impl LaserScan {
     #[new]
@@ -1252,7 +1252,7 @@ impl LaserScan {
         ranges: Option<Vec<f64>>,
         intensities: Option<Vec<f64>>,
     ) -> Self {
-        Self(foxglove::schemas::LaserScan {
+        Self(foxglove::messages::LaserScan {
             timestamp: timestamp.map(Into::into),
             frame_id: frame_id.to_string(),
             pose: pose.map(Into::into),
@@ -1277,13 +1277,13 @@ impl LaserScan {
     /// Returns the LaserScan schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
-        foxglove::schemas::LaserScan::get_schema().unwrap().into()
+        foxglove::messages::LaserScan::get_schema().unwrap().into()
     }
     /// Encodes the LaserScan as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -1295,7 +1295,7 @@ impl LaserScan {
     }
 }
 
-impl From<LaserScan> for foxglove::schemas::LaserScan {
+impl From<LaserScan> for foxglove::messages::LaserScan {
     fn from(value: LaserScan) -> Self {
         value.0
     }
@@ -1315,9 +1315,9 @@ impl From<LaserScan> for foxglove::schemas::LaserScan {
 ///     If omitted or empty, indexing will not be used. This default behavior is equivalent to specifying [0, 1, ..., N-1] for the indices (where N is the number of `points` provided).
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/line-primitive
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
-pub(crate) struct LinePrimitive(pub(crate) foxglove::schemas::LinePrimitive);
+pub(crate) struct LinePrimitive(pub(crate) foxglove::messages::LinePrimitive);
 #[pymethods]
 impl LinePrimitive {
     #[new]
@@ -1332,7 +1332,7 @@ impl LinePrimitive {
         colors: Option<Vec<Color>>,
         indices: Option<Vec<u32>>,
     ) -> Self {
-        Self(foxglove::schemas::LinePrimitive {
+        Self(foxglove::messages::LinePrimitive {
             r#type: r#type as i32,
             pose: pose.map(Into::into),
             thickness,
@@ -1367,7 +1367,7 @@ impl LinePrimitive {
     /// Returns the LinePrimitive schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
-        foxglove::schemas::LinePrimitive::get_schema()
+        foxglove::messages::LinePrimitive::get_schema()
             .unwrap()
             .into()
     }
@@ -1375,7 +1375,7 @@ impl LinePrimitive {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -1387,7 +1387,7 @@ impl LinePrimitive {
     }
 }
 
-impl From<LinePrimitive> for foxglove::schemas::LinePrimitive {
+impl From<LinePrimitive> for foxglove::messages::LinePrimitive {
     fn from(value: LinePrimitive) -> Self {
         value.0
     }
@@ -1405,9 +1405,9 @@ impl From<LinePrimitive> for foxglove::schemas::LinePrimitive {
 /// :param color: Color used to visualize the location
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/location-fix
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
-pub(crate) struct LocationFix(pub(crate) foxglove::schemas::LocationFix);
+pub(crate) struct LocationFix(pub(crate) foxglove::messages::LocationFix);
 #[pymethods]
 impl LocationFix {
     #[new]
@@ -1422,7 +1422,7 @@ impl LocationFix {
         position_covariance_type: LocationFixPositionCovarianceType,
         color: Option<Color>,
     ) -> Self {
-        Self(foxglove::schemas::LocationFix {
+        Self(foxglove::messages::LocationFix {
             timestamp: timestamp.map(Into::into),
             frame_id: frame_id.to_string(),
             latitude,
@@ -1449,13 +1449,15 @@ impl LocationFix {
     /// Returns the LocationFix schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
-        foxglove::schemas::LocationFix::get_schema().unwrap().into()
+        foxglove::messages::LocationFix::get_schema()
+            .unwrap()
+            .into()
     }
     /// Encodes the LocationFix as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -1467,7 +1469,7 @@ impl LocationFix {
     }
 }
 
-impl From<LocationFix> for foxglove::schemas::LocationFix {
+impl From<LocationFix> for foxglove::messages::LocationFix {
     fn from(value: LocationFix) -> Self {
         value.0
     }
@@ -1478,15 +1480,15 @@ impl From<LocationFix> for foxglove::schemas::LocationFix {
 /// :param fixes: An array of location fixes
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/location-fixes
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
-pub(crate) struct LocationFixes(pub(crate) foxglove::schemas::LocationFixes);
+pub(crate) struct LocationFixes(pub(crate) foxglove::messages::LocationFixes);
 #[pymethods]
 impl LocationFixes {
     #[new]
     #[pyo3(signature = (*, fixes=None) )]
     fn new(fixes: Option<Vec<LocationFix>>) -> Self {
-        Self(foxglove::schemas::LocationFixes {
+        Self(foxglove::messages::LocationFixes {
             fixes: fixes
                 .unwrap_or_default()
                 .into_iter()
@@ -1500,7 +1502,7 @@ impl LocationFixes {
     /// Returns the LocationFixes schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
-        foxglove::schemas::LocationFixes::get_schema()
+        foxglove::messages::LocationFixes::get_schema()
             .unwrap()
             .into()
     }
@@ -1508,7 +1510,7 @@ impl LocationFixes {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -1520,7 +1522,7 @@ impl LocationFixes {
     }
 }
 
-impl From<LocationFixes> for foxglove::schemas::LocationFixes {
+impl From<LocationFixes> for foxglove::messages::LocationFixes {
     fn from(value: LocationFixes) -> Self {
         value.0
     }
@@ -1536,9 +1538,9 @@ impl From<LocationFixes> for foxglove::schemas::LocationFixes {
 /// :param line: Line number in the file
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/log
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
-pub(crate) struct Log(pub(crate) foxglove::schemas::Log);
+pub(crate) struct Log(pub(crate) foxglove::messages::Log);
 #[pymethods]
 impl Log {
     #[new]
@@ -1551,7 +1553,7 @@ impl Log {
         file: &str,
         line: u32,
     ) -> Self {
-        Self(foxglove::schemas::Log {
+        Self(foxglove::messages::Log {
             timestamp: timestamp.map(Into::into),
             level: level as i32,
             message: message.to_string(),
@@ -1569,13 +1571,13 @@ impl Log {
     /// Returns the Log schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
-        foxglove::schemas::Log::get_schema().unwrap().into()
+        foxglove::messages::Log::get_schema().unwrap().into()
     }
     /// Encodes the Log as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -1587,7 +1589,7 @@ impl Log {
     }
 }
 
-impl From<Log> for foxglove::schemas::Log {
+impl From<Log> for foxglove::messages::Log {
     fn from(value: Log) -> Self {
         value.0
     }
@@ -1600,15 +1602,15 @@ impl From<Log> for foxglove::schemas::Log {
 /// :param id: Identifier which must match if `type` is `MATCHING_ID`.
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/scene-entity-deletion
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
-pub(crate) struct SceneEntityDeletion(pub(crate) foxglove::schemas::SceneEntityDeletion);
+pub(crate) struct SceneEntityDeletion(pub(crate) foxglove::messages::SceneEntityDeletion);
 #[pymethods]
 impl SceneEntityDeletion {
     #[new]
     #[pyo3(signature = (*, timestamp=None, r#type=SceneEntityDeletionType::MatchingId, id="") )]
     fn new(timestamp: Option<Timestamp>, r#type: SceneEntityDeletionType, id: &str) -> Self {
-        Self(foxglove::schemas::SceneEntityDeletion {
+        Self(foxglove::messages::SceneEntityDeletion {
             timestamp: timestamp.map(Into::into),
             r#type: r#type as i32,
             id: id.to_string(),
@@ -1623,7 +1625,7 @@ impl SceneEntityDeletion {
     /// Returns the SceneEntityDeletion schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
-        foxglove::schemas::SceneEntityDeletion::get_schema()
+        foxglove::messages::SceneEntityDeletion::get_schema()
             .unwrap()
             .into()
     }
@@ -1631,7 +1633,7 @@ impl SceneEntityDeletion {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -1643,7 +1645,7 @@ impl SceneEntityDeletion {
     }
 }
 
-impl From<SceneEntityDeletion> for foxglove::schemas::SceneEntityDeletion {
+impl From<SceneEntityDeletion> for foxglove::messages::SceneEntityDeletion {
     fn from(value: SceneEntityDeletion) -> Self {
         value.0
     }
@@ -1667,9 +1669,9 @@ impl From<SceneEntityDeletion> for foxglove::schemas::SceneEntityDeletion {
 /// :param models: Model primitives
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/scene-entity
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
-pub(crate) struct SceneEntity(pub(crate) foxglove::schemas::SceneEntity);
+pub(crate) struct SceneEntity(pub(crate) foxglove::messages::SceneEntity);
 #[pymethods]
 impl SceneEntity {
     #[new]
@@ -1690,7 +1692,7 @@ impl SceneEntity {
         texts: Option<Vec<TextPrimitive>>,
         models: Option<Vec<ModelPrimitive>>,
     ) -> Self {
-        Self(foxglove::schemas::SceneEntity {
+        Self(foxglove::messages::SceneEntity {
             timestamp: timestamp.map(Into::into),
             frame_id: frame_id.to_string(),
             id: id.to_string(),
@@ -1765,13 +1767,15 @@ impl SceneEntity {
     /// Returns the SceneEntity schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
-        foxglove::schemas::SceneEntity::get_schema().unwrap().into()
+        foxglove::messages::SceneEntity::get_schema()
+            .unwrap()
+            .into()
     }
     /// Encodes the SceneEntity as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -1783,7 +1787,7 @@ impl SceneEntity {
     }
 }
 
-impl From<SceneEntity> for foxglove::schemas::SceneEntity {
+impl From<SceneEntity> for foxglove::messages::SceneEntity {
     fn from(value: SceneEntity) -> Self {
         value.0
     }
@@ -1795,9 +1799,9 @@ impl From<SceneEntity> for foxglove::schemas::SceneEntity {
 /// :param entities: Scene entities to add or replace
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/scene-update
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
-pub(crate) struct SceneUpdate(pub(crate) foxglove::schemas::SceneUpdate);
+pub(crate) struct SceneUpdate(pub(crate) foxglove::messages::SceneUpdate);
 #[pymethods]
 impl SceneUpdate {
     #[new]
@@ -1806,7 +1810,7 @@ impl SceneUpdate {
         deletions: Option<Vec<SceneEntityDeletion>>,
         entities: Option<Vec<SceneEntity>>,
     ) -> Self {
-        Self(foxglove::schemas::SceneUpdate {
+        Self(foxglove::messages::SceneUpdate {
             deletions: deletions
                 .unwrap_or_default()
                 .into_iter()
@@ -1828,13 +1832,15 @@ impl SceneUpdate {
     /// Returns the SceneUpdate schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
-        foxglove::schemas::SceneUpdate::get_schema().unwrap().into()
+        foxglove::messages::SceneUpdate::get_schema()
+            .unwrap()
+            .into()
     }
     /// Encodes the SceneUpdate as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -1846,7 +1852,7 @@ impl SceneUpdate {
     }
 }
 
-impl From<SceneUpdate> for foxglove::schemas::SceneUpdate {
+impl From<SceneUpdate> for foxglove::messages::SceneUpdate {
     fn from(value: SceneUpdate) -> Self {
         value.0
     }
@@ -1863,9 +1869,9 @@ impl From<SceneUpdate> for foxglove::schemas::SceneUpdate {
 /// :param data: Embedded model. One of `url` or `data` should be non-empty. If `data` is non-empty, `media_type` must be set to indicate the type of the data.
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/model-primitive
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
-pub(crate) struct ModelPrimitive(pub(crate) foxglove::schemas::ModelPrimitive);
+pub(crate) struct ModelPrimitive(pub(crate) foxglove::messages::ModelPrimitive);
 #[pymethods]
 impl ModelPrimitive {
     #[new]
@@ -1879,7 +1885,7 @@ impl ModelPrimitive {
         media_type: &str,
         data: Option<Bound<'_, PyBytes>>,
     ) -> Self {
-        Self(foxglove::schemas::ModelPrimitive {
+        Self(foxglove::messages::ModelPrimitive {
             pose: pose.map(Into::into),
             scale: scale.map(Into::into),
             color: color.map(Into::into),
@@ -1906,7 +1912,7 @@ impl ModelPrimitive {
     /// Returns the ModelPrimitive schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
-        foxglove::schemas::ModelPrimitive::get_schema()
+        foxglove::messages::ModelPrimitive::get_schema()
             .unwrap()
             .into()
     }
@@ -1914,7 +1920,7 @@ impl ModelPrimitive {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -1926,7 +1932,7 @@ impl ModelPrimitive {
     }
 }
 
-impl From<ModelPrimitive> for foxglove::schemas::ModelPrimitive {
+impl From<ModelPrimitive> for foxglove::messages::ModelPrimitive {
     fn from(value: ModelPrimitive) -> Self {
         value.0
     }
@@ -1939,15 +1945,15 @@ impl From<ModelPrimitive> for foxglove::schemas::ModelPrimitive {
 /// :param type: Type of data in the field. Integers are stored using little-endian byte order.
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/packed-element-field
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
-pub(crate) struct PackedElementField(pub(crate) foxglove::schemas::PackedElementField);
+pub(crate) struct PackedElementField(pub(crate) foxglove::messages::PackedElementField);
 #[pymethods]
 impl PackedElementField {
     #[new]
     #[pyo3(signature = (*, name="", offset=0, r#type=PackedElementFieldNumericType::Unknown) )]
     fn new(name: &str, offset: u32, r#type: PackedElementFieldNumericType) -> Self {
-        Self(foxglove::schemas::PackedElementField {
+        Self(foxglove::messages::PackedElementField {
             name: name.to_string(),
             offset,
             r#type: r#type as i32,
@@ -1962,7 +1968,7 @@ impl PackedElementField {
     /// Returns the PackedElementField schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
-        foxglove::schemas::PackedElementField::get_schema()
+        foxglove::messages::PackedElementField::get_schema()
             .unwrap()
             .into()
     }
@@ -1970,7 +1976,7 @@ impl PackedElementField {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -1982,7 +1988,7 @@ impl PackedElementField {
     }
 }
 
-impl From<PackedElementField> for foxglove::schemas::PackedElementField {
+impl From<PackedElementField> for foxglove::messages::PackedElementField {
     fn from(value: PackedElementField) -> Self {
         value.0
     }
@@ -1994,15 +2000,15 @@ impl From<PackedElementField> for foxglove::schemas::PackedElementField {
 /// :param y: y coordinate position
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/point2
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
-pub(crate) struct Point2(pub(crate) foxglove::schemas::Point2);
+pub(crate) struct Point2(pub(crate) foxglove::messages::Point2);
 #[pymethods]
 impl Point2 {
     #[new]
     #[pyo3(signature = (*, x=0.0, y=0.0) )]
     fn new(x: f64, y: f64) -> Self {
-        Self(foxglove::schemas::Point2 { x, y })
+        Self(foxglove::messages::Point2 { x, y })
     }
     fn __repr__(&self) -> String {
         format!("Point2(x={:?}, y={:?})", self.0.x, self.0.y,)
@@ -2010,13 +2016,13 @@ impl Point2 {
     /// Returns the Point2 schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
-        foxglove::schemas::Point2::get_schema().unwrap().into()
+        foxglove::messages::Point2::get_schema().unwrap().into()
     }
     /// Encodes the Point2 as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -2028,7 +2034,7 @@ impl Point2 {
     }
 }
 
-impl From<Point2> for foxglove::schemas::Point2 {
+impl From<Point2> for foxglove::messages::Point2 {
     fn from(value: Point2) -> Self {
         value.0
     }
@@ -2041,15 +2047,15 @@ impl From<Point2> for foxglove::schemas::Point2 {
 /// :param z: z coordinate position
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/point3
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
-pub(crate) struct Point3(pub(crate) foxglove::schemas::Point3);
+pub(crate) struct Point3(pub(crate) foxglove::messages::Point3);
 #[pymethods]
 impl Point3 {
     #[new]
     #[pyo3(signature = (*, x=0.0, y=0.0, z=0.0) )]
     fn new(x: f64, y: f64, z: f64) -> Self {
-        Self(foxglove::schemas::Point3 { x, y, z })
+        Self(foxglove::messages::Point3 { x, y, z })
     }
     fn __repr__(&self) -> String {
         format!(
@@ -2060,13 +2066,13 @@ impl Point3 {
     /// Returns the Point3 schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
-        foxglove::schemas::Point3::get_schema().unwrap().into()
+        foxglove::messages::Point3::get_schema().unwrap().into()
     }
     /// Encodes the Point3 as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -2078,7 +2084,7 @@ impl Point3 {
     }
 }
 
-impl From<Point3> for foxglove::schemas::Point3 {
+impl From<Point3> for foxglove::messages::Point3 {
     fn from(value: Point3) -> Self {
         value.0
     }
@@ -2091,15 +2097,15 @@ impl From<Point3> for foxglove::schemas::Point3 {
 /// :param point: Point in 3D space
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/point3-in-frame
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
-pub(crate) struct Point3InFrame(pub(crate) foxglove::schemas::Point3InFrame);
+pub(crate) struct Point3InFrame(pub(crate) foxglove::messages::Point3InFrame);
 #[pymethods]
 impl Point3InFrame {
     #[new]
     #[pyo3(signature = (*, timestamp=None, frame_id="", point=None) )]
     fn new(timestamp: Option<Timestamp>, frame_id: &str, point: Option<Point3>) -> Self {
-        Self(foxglove::schemas::Point3InFrame {
+        Self(foxglove::messages::Point3InFrame {
             timestamp: timestamp.map(Into::into),
             frame_id: frame_id.to_string(),
             point: point.map(Into::into),
@@ -2114,7 +2120,7 @@ impl Point3InFrame {
     /// Returns the Point3InFrame schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
-        foxglove::schemas::Point3InFrame::get_schema()
+        foxglove::messages::Point3InFrame::get_schema()
             .unwrap()
             .into()
     }
@@ -2122,7 +2128,7 @@ impl Point3InFrame {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -2134,7 +2140,7 @@ impl Point3InFrame {
     }
 }
 
-impl From<Point3InFrame> for foxglove::schemas::Point3InFrame {
+impl From<Point3InFrame> for foxglove::messages::Point3InFrame {
     fn from(value: Point3InFrame) -> Self {
         value.0
     }
@@ -2150,9 +2156,9 @@ impl From<Point3InFrame> for foxglove::schemas::Point3InFrame {
 /// :param data: Point data, interpreted using `fields`
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/point-cloud
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
-pub(crate) struct PointCloud(pub(crate) foxglove::schemas::PointCloud);
+pub(crate) struct PointCloud(pub(crate) foxglove::messages::PointCloud);
 #[pymethods]
 impl PointCloud {
     #[new]
@@ -2165,7 +2171,7 @@ impl PointCloud {
         fields: Option<Vec<PackedElementField>>,
         data: Option<Bound<'_, PyBytes>>,
     ) -> Self {
-        Self(foxglove::schemas::PointCloud {
+        Self(foxglove::messages::PointCloud {
             timestamp: timestamp.map(Into::into),
             frame_id: frame_id.to_string(),
             pose: pose.map(Into::into),
@@ -2194,13 +2200,13 @@ impl PointCloud {
     /// Returns the PointCloud schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
-        foxglove::schemas::PointCloud::get_schema().unwrap().into()
+        foxglove::messages::PointCloud::get_schema().unwrap().into()
     }
     /// Encodes the PointCloud as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -2212,7 +2218,7 @@ impl PointCloud {
     }
 }
 
-impl From<PointCloud> for foxglove::schemas::PointCloud {
+impl From<PointCloud> for foxglove::messages::PointCloud {
     fn from(value: PointCloud) -> Self {
         value.0
     }
@@ -2230,9 +2236,9 @@ impl From<PointCloud> for foxglove::schemas::PointCloud {
 /// :param thickness: Stroke thickness in pixels
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/points-annotation
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
-pub(crate) struct PointsAnnotation(pub(crate) foxglove::schemas::PointsAnnotation);
+pub(crate) struct PointsAnnotation(pub(crate) foxglove::messages::PointsAnnotation);
 #[pymethods]
 impl PointsAnnotation {
     #[new]
@@ -2246,7 +2252,7 @@ impl PointsAnnotation {
         fill_color: Option<Color>,
         thickness: f64,
     ) -> Self {
-        Self(foxglove::schemas::PointsAnnotation {
+        Self(foxglove::messages::PointsAnnotation {
             timestamp: timestamp.map(Into::into),
             r#type: r#type as i32,
             points: points
@@ -2279,7 +2285,7 @@ impl PointsAnnotation {
     /// Returns the PointsAnnotation schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
-        foxglove::schemas::PointsAnnotation::get_schema()
+        foxglove::messages::PointsAnnotation::get_schema()
             .unwrap()
             .into()
     }
@@ -2287,7 +2293,7 @@ impl PointsAnnotation {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -2299,7 +2305,7 @@ impl PointsAnnotation {
     }
 }
 
-impl From<PointsAnnotation> for foxglove::schemas::PointsAnnotation {
+impl From<PointsAnnotation> for foxglove::messages::PointsAnnotation {
     fn from(value: PointsAnnotation) -> Self {
         value.0
     }
@@ -2311,15 +2317,15 @@ impl From<PointsAnnotation> for foxglove::schemas::PointsAnnotation {
 /// :param orientation: Quaternion denoting orientation in 3D space
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/pose
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
-pub(crate) struct Pose(pub(crate) foxglove::schemas::Pose);
+pub(crate) struct Pose(pub(crate) foxglove::messages::Pose);
 #[pymethods]
 impl Pose {
     #[new]
     #[pyo3(signature = (*, position=None, orientation=None) )]
     fn new(position: Option<Vector3>, orientation: Option<Quaternion>) -> Self {
-        Self(foxglove::schemas::Pose {
+        Self(foxglove::messages::Pose {
             position: position.map(Into::into),
             orientation: orientation.map(Into::into),
         })
@@ -2333,13 +2339,13 @@ impl Pose {
     /// Returns the Pose schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
-        foxglove::schemas::Pose::get_schema().unwrap().into()
+        foxglove::messages::Pose::get_schema().unwrap().into()
     }
     /// Encodes the Pose as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -2351,7 +2357,7 @@ impl Pose {
     }
 }
 
-impl From<Pose> for foxglove::schemas::Pose {
+impl From<Pose> for foxglove::messages::Pose {
     fn from(value: Pose) -> Self {
         value.0
     }
@@ -2364,15 +2370,15 @@ impl From<Pose> for foxglove::schemas::Pose {
 /// :param pose: Pose in 3D space
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/pose-in-frame
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
-pub(crate) struct PoseInFrame(pub(crate) foxglove::schemas::PoseInFrame);
+pub(crate) struct PoseInFrame(pub(crate) foxglove::messages::PoseInFrame);
 #[pymethods]
 impl PoseInFrame {
     #[new]
     #[pyo3(signature = (*, timestamp=None, frame_id="", pose=None) )]
     fn new(timestamp: Option<Timestamp>, frame_id: &str, pose: Option<Pose>) -> Self {
-        Self(foxglove::schemas::PoseInFrame {
+        Self(foxglove::messages::PoseInFrame {
             timestamp: timestamp.map(Into::into),
             frame_id: frame_id.to_string(),
             pose: pose.map(Into::into),
@@ -2387,13 +2393,15 @@ impl PoseInFrame {
     /// Returns the PoseInFrame schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
-        foxglove::schemas::PoseInFrame::get_schema().unwrap().into()
+        foxglove::messages::PoseInFrame::get_schema()
+            .unwrap()
+            .into()
     }
     /// Encodes the PoseInFrame as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -2405,7 +2413,7 @@ impl PoseInFrame {
     }
 }
 
-impl From<PoseInFrame> for foxglove::schemas::PoseInFrame {
+impl From<PoseInFrame> for foxglove::messages::PoseInFrame {
     fn from(value: PoseInFrame) -> Self {
         value.0
     }
@@ -2418,15 +2426,15 @@ impl From<PoseInFrame> for foxglove::schemas::PoseInFrame {
 /// :param poses: Poses in 3D space
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/poses-in-frame
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
-pub(crate) struct PosesInFrame(pub(crate) foxglove::schemas::PosesInFrame);
+pub(crate) struct PosesInFrame(pub(crate) foxglove::messages::PosesInFrame);
 #[pymethods]
 impl PosesInFrame {
     #[new]
     #[pyo3(signature = (*, timestamp=None, frame_id="", poses=None) )]
     fn new(timestamp: Option<Timestamp>, frame_id: &str, poses: Option<Vec<Pose>>) -> Self {
-        Self(foxglove::schemas::PosesInFrame {
+        Self(foxglove::messages::PosesInFrame {
             timestamp: timestamp.map(Into::into),
             frame_id: frame_id.to_string(),
             poses: poses
@@ -2445,7 +2453,7 @@ impl PosesInFrame {
     /// Returns the PosesInFrame schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
-        foxglove::schemas::PosesInFrame::get_schema()
+        foxglove::messages::PosesInFrame::get_schema()
             .unwrap()
             .into()
     }
@@ -2453,7 +2461,7 @@ impl PosesInFrame {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -2465,7 +2473,7 @@ impl PosesInFrame {
     }
 }
 
-impl From<PosesInFrame> for foxglove::schemas::PosesInFrame {
+impl From<PosesInFrame> for foxglove::messages::PosesInFrame {
     fn from(value: PosesInFrame) -> Self {
         value.0
     }
@@ -2479,15 +2487,15 @@ impl From<PosesInFrame> for foxglove::schemas::PosesInFrame {
 /// :param w: w value
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/quaternion
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
-pub(crate) struct Quaternion(pub(crate) foxglove::schemas::Quaternion);
+pub(crate) struct Quaternion(pub(crate) foxglove::messages::Quaternion);
 #[pymethods]
 impl Quaternion {
     #[new]
     #[pyo3(signature = (*, x=0.0, y=0.0, z=0.0, w=0.0) )]
     fn new(x: f64, y: f64, z: f64, w: f64) -> Self {
-        Self(foxglove::schemas::Quaternion { x, y, z, w })
+        Self(foxglove::messages::Quaternion { x, y, z, w })
     }
     fn __repr__(&self) -> String {
         format!(
@@ -2498,13 +2506,13 @@ impl Quaternion {
     /// Returns the Quaternion schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
-        foxglove::schemas::Quaternion::get_schema().unwrap().into()
+        foxglove::messages::Quaternion::get_schema().unwrap().into()
     }
     /// Encodes the Quaternion as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -2516,7 +2524,7 @@ impl Quaternion {
     }
 }
 
-impl From<Quaternion> for foxglove::schemas::Quaternion {
+impl From<Quaternion> for foxglove::messages::Quaternion {
     fn from(value: Quaternion) -> Self {
         value.0
     }
@@ -2531,9 +2539,9 @@ impl From<Quaternion> for foxglove::schemas::Quaternion {
 /// :param number_of_channels: Number of channels in the audio block
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/raw-audio
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
-pub(crate) struct RawAudio(pub(crate) foxglove::schemas::RawAudio);
+pub(crate) struct RawAudio(pub(crate) foxglove::messages::RawAudio);
 #[pymethods]
 impl RawAudio {
     #[new]
@@ -2545,7 +2553,7 @@ impl RawAudio {
         sample_rate: u32,
         number_of_channels: u32,
     ) -> Self {
-        Self(foxglove::schemas::RawAudio {
+        Self(foxglove::messages::RawAudio {
             timestamp: timestamp.map(Into::into),
             data: data
                 .map(|x| Bytes::copy_from_slice(x.as_bytes()))
@@ -2568,13 +2576,13 @@ impl RawAudio {
     /// Returns the RawAudio schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
-        foxglove::schemas::RawAudio::get_schema().unwrap().into()
+        foxglove::messages::RawAudio::get_schema().unwrap().into()
     }
     /// Encodes the RawAudio as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -2586,7 +2594,7 @@ impl RawAudio {
     }
 }
 
-impl From<RawAudio> for foxglove::schemas::RawAudio {
+impl From<RawAudio> for foxglove::messages::RawAudio {
     fn from(value: RawAudio) -> Self {
         value.0
     }
@@ -2656,9 +2664,9 @@ impl From<RawAudio> for foxglove::schemas::RawAudio {
 ///     
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/raw-image
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
-pub(crate) struct RawImage(pub(crate) foxglove::schemas::RawImage);
+pub(crate) struct RawImage(pub(crate) foxglove::messages::RawImage);
 #[pymethods]
 impl RawImage {
     #[new]
@@ -2672,7 +2680,7 @@ impl RawImage {
         step: u32,
         data: Option<Bound<'_, PyBytes>>,
     ) -> Self {
-        Self(foxglove::schemas::RawImage {
+        Self(foxglove::messages::RawImage {
             timestamp: timestamp.map(Into::into),
             frame_id: frame_id.to_string(),
             width,
@@ -2699,13 +2707,13 @@ impl RawImage {
     /// Returns the RawImage schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
-        foxglove::schemas::RawImage::get_schema().unwrap().into()
+        foxglove::messages::RawImage::get_schema().unwrap().into()
     }
     /// Encodes the RawImage as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -2717,7 +2725,7 @@ impl RawImage {
     }
 }
 
-impl From<RawImage> for foxglove::schemas::RawImage {
+impl From<RawImage> for foxglove::messages::RawImage {
     fn from(value: RawImage) -> Self {
         value.0
     }
@@ -2730,15 +2738,15 @@ impl From<RawImage> for foxglove::schemas::RawImage {
 /// :param color: Color of the sphere
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/sphere-primitive
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
-pub(crate) struct SpherePrimitive(pub(crate) foxglove::schemas::SpherePrimitive);
+pub(crate) struct SpherePrimitive(pub(crate) foxglove::messages::SpherePrimitive);
 #[pymethods]
 impl SpherePrimitive {
     #[new]
     #[pyo3(signature = (*, pose=None, size=None, color=None) )]
     fn new(pose: Option<Pose>, size: Option<Vector3>, color: Option<Color>) -> Self {
-        Self(foxglove::schemas::SpherePrimitive {
+        Self(foxglove::messages::SpherePrimitive {
             pose: pose.map(Into::into),
             size: size.map(Into::into),
             color: color.map(Into::into),
@@ -2753,7 +2761,7 @@ impl SpherePrimitive {
     /// Returns the SpherePrimitive schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
-        foxglove::schemas::SpherePrimitive::get_schema()
+        foxglove::messages::SpherePrimitive::get_schema()
             .unwrap()
             .into()
     }
@@ -2761,7 +2769,7 @@ impl SpherePrimitive {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -2773,7 +2781,7 @@ impl SpherePrimitive {
     }
 }
 
-impl From<SpherePrimitive> for foxglove::schemas::SpherePrimitive {
+impl From<SpherePrimitive> for foxglove::messages::SpherePrimitive {
     fn from(value: SpherePrimitive) -> Self {
         value.0
     }
@@ -2790,9 +2798,9 @@ impl From<SpherePrimitive> for foxglove::schemas::SpherePrimitive {
 /// :param background_color: Background fill color
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/text-annotation
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
-pub(crate) struct TextAnnotation(pub(crate) foxglove::schemas::TextAnnotation);
+pub(crate) struct TextAnnotation(pub(crate) foxglove::messages::TextAnnotation);
 #[pymethods]
 impl TextAnnotation {
     #[new]
@@ -2805,7 +2813,7 @@ impl TextAnnotation {
         text_color: Option<Color>,
         background_color: Option<Color>,
     ) -> Self {
-        Self(foxglove::schemas::TextAnnotation {
+        Self(foxglove::messages::TextAnnotation {
             timestamp: timestamp.map(Into::into),
             position: position.map(Into::into),
             text: text.to_string(),
@@ -2828,7 +2836,7 @@ impl TextAnnotation {
     /// Returns the TextAnnotation schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
-        foxglove::schemas::TextAnnotation::get_schema()
+        foxglove::messages::TextAnnotation::get_schema()
             .unwrap()
             .into()
     }
@@ -2836,7 +2844,7 @@ impl TextAnnotation {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -2848,7 +2856,7 @@ impl TextAnnotation {
     }
 }
 
-impl From<TextAnnotation> for foxglove::schemas::TextAnnotation {
+impl From<TextAnnotation> for foxglove::messages::TextAnnotation {
     fn from(value: TextAnnotation) -> Self {
         value.0
     }
@@ -2864,9 +2872,9 @@ impl From<TextAnnotation> for foxglove::schemas::TextAnnotation {
 /// :param text: Text
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/text-primitive
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
-pub(crate) struct TextPrimitive(pub(crate) foxglove::schemas::TextPrimitive);
+pub(crate) struct TextPrimitive(pub(crate) foxglove::messages::TextPrimitive);
 #[pymethods]
 impl TextPrimitive {
     #[new]
@@ -2879,7 +2887,7 @@ impl TextPrimitive {
         color: Option<Color>,
         text: &str,
     ) -> Self {
-        Self(foxglove::schemas::TextPrimitive {
+        Self(foxglove::messages::TextPrimitive {
             pose: pose.map(Into::into),
             billboard,
             font_size,
@@ -2902,7 +2910,7 @@ impl TextPrimitive {
     /// Returns the TextPrimitive schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
-        foxglove::schemas::TextPrimitive::get_schema()
+        foxglove::messages::TextPrimitive::get_schema()
             .unwrap()
             .into()
     }
@@ -2910,7 +2918,7 @@ impl TextPrimitive {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -2922,7 +2930,7 @@ impl TextPrimitive {
     }
 }
 
-impl From<TextPrimitive> for foxglove::schemas::TextPrimitive {
+impl From<TextPrimitive> for foxglove::messages::TextPrimitive {
     fn from(value: TextPrimitive) -> Self {
         value.0
     }
@@ -2939,9 +2947,9 @@ impl From<TextPrimitive> for foxglove::schemas::TextPrimitive {
 ///     If omitted or empty, indexing will not be used. This default behavior is equivalent to specifying [0, 1, ..., N-1] for the indices (where N is the number of `points` provided).
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/triangle-list-primitive
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
-pub(crate) struct TriangleListPrimitive(pub(crate) foxglove::schemas::TriangleListPrimitive);
+pub(crate) struct TriangleListPrimitive(pub(crate) foxglove::messages::TriangleListPrimitive);
 #[pymethods]
 impl TriangleListPrimitive {
     #[new]
@@ -2953,7 +2961,7 @@ impl TriangleListPrimitive {
         colors: Option<Vec<Color>>,
         indices: Option<Vec<u32>>,
     ) -> Self {
-        Self(foxglove::schemas::TriangleListPrimitive {
+        Self(foxglove::messages::TriangleListPrimitive {
             pose: pose.map(Into::into),
             points: points
                 .unwrap_or_default()
@@ -2978,7 +2986,7 @@ impl TriangleListPrimitive {
     /// Returns the TriangleListPrimitive schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
-        foxglove::schemas::TriangleListPrimitive::get_schema()
+        foxglove::messages::TriangleListPrimitive::get_schema()
             .unwrap()
             .into()
     }
@@ -2986,7 +2994,7 @@ impl TriangleListPrimitive {
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -2998,7 +3006,7 @@ impl TriangleListPrimitive {
     }
 }
 
-impl From<TriangleListPrimitive> for foxglove::schemas::TriangleListPrimitive {
+impl From<TriangleListPrimitive> for foxglove::messages::TriangleListPrimitive {
     fn from(value: TriangleListPrimitive) -> Self {
         value.0
     }
@@ -3010,15 +3018,15 @@ impl From<TriangleListPrimitive> for foxglove::schemas::TriangleListPrimitive {
 /// :param y: y coordinate length
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/vector2
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
-pub(crate) struct Vector2(pub(crate) foxglove::schemas::Vector2);
+pub(crate) struct Vector2(pub(crate) foxglove::messages::Vector2);
 #[pymethods]
 impl Vector2 {
     #[new]
     #[pyo3(signature = (*, x=0.0, y=0.0) )]
     fn new(x: f64, y: f64) -> Self {
-        Self(foxglove::schemas::Vector2 { x, y })
+        Self(foxglove::messages::Vector2 { x, y })
     }
     fn __repr__(&self) -> String {
         format!("Vector2(x={:?}, y={:?})", self.0.x, self.0.y,)
@@ -3026,13 +3034,13 @@ impl Vector2 {
     /// Returns the Vector2 schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
-        foxglove::schemas::Vector2::get_schema().unwrap().into()
+        foxglove::messages::Vector2::get_schema().unwrap().into()
     }
     /// Encodes the Vector2 as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -3044,7 +3052,7 @@ impl Vector2 {
     }
 }
 
-impl From<Vector2> for foxglove::schemas::Vector2 {
+impl From<Vector2> for foxglove::messages::Vector2 {
     fn from(value: Vector2) -> Self {
         value.0
     }
@@ -3057,15 +3065,15 @@ impl From<Vector2> for foxglove::schemas::Vector2 {
 /// :param z: z coordinate length
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/vector3
-#[pyclass(module = "foxglove.schemas")]
+#[pyclass(module = "foxglove.messages")]
 #[derive(Clone)]
-pub(crate) struct Vector3(pub(crate) foxglove::schemas::Vector3);
+pub(crate) struct Vector3(pub(crate) foxglove::messages::Vector3);
 #[pymethods]
 impl Vector3 {
     #[new]
     #[pyo3(signature = (*, x=0.0, y=0.0, z=0.0) )]
     fn new(x: f64, y: f64, z: f64) -> Self {
-        Self(foxglove::schemas::Vector3 { x, y, z })
+        Self(foxglove::messages::Vector3 { x, y, z })
     }
     fn __repr__(&self) -> String {
         format!(
@@ -3076,13 +3084,13 @@ impl Vector3 {
     /// Returns the Vector3 schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
-        foxglove::schemas::Vector3::get_schema().unwrap().into()
+        foxglove::messages::Vector3::get_schema().unwrap().into()
     }
     /// Encodes the Vector3 as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
+            self.0.encoded_len().expect("foxglove messages provide len"),
             |mut b: &mut [u8]| {
                 self.0
                     .encode(&mut b)
@@ -3094,14 +3102,14 @@ impl Vector3 {
     }
 }
 
-impl From<Vector3> for foxglove::schemas::Vector3 {
+impl From<Vector3> for foxglove::messages::Vector3 {
     fn from(value: Vector3) -> Self {
         value.0
     }
 }
 
 pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
-    let module = PyModule::new(parent_module.py(), "schemas")?;
+    let module = PyModule::new(parent_module.py(), "messages")?;
 
     module.add_class::<LinePrimitiveLineType>()?;
     module.add_class::<LogLevel>()?;
@@ -3159,7 +3167,7 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = parent_module.py();
     py.import("sys")?
         .getattr("modules")?
-        .set_item("foxglove._foxglove_py.schemas", &module)?;
+        .set_item("foxglove._foxglove_py.messages", &module)?;
 
     parent_module.add_submodule(&module)
 }

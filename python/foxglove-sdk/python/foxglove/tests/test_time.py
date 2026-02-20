@@ -1,7 +1,7 @@
 import datetime
 
 import pytest
-from foxglove.schemas import Duration, Timestamp
+from foxglove.messages import Duration, Timestamp
 
 
 def test_duration_normalization() -> None:

@@ -1,8 +1,8 @@
 """
 This module provides interfaces for logging messages to Foxglove.
 
-See :py:mod:`foxglove.schemas` and :py:mod:`foxglove.channels` for working with well-known Foxglove
-schemas.
+See :py:mod:`foxglove.messages` and :py:mod:`foxglove.channels` for working with well-known Foxglove
+message types.
 """
 
 from __future__ import annotations

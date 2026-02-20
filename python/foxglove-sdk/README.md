@@ -14,6 +14,17 @@ See https://foxglove.github.io/foxglove-sdk/python/
 
 - Python 3.10+
 
+## Message Types
+
+Foxglove message types are available in the `foxglove.messages` module:
+
+```python
+from foxglove.messages import Log, SceneUpdate, CompressedImage
+```
+
+> **Note:** The `foxglove.schemas` module is deprecated. Please use `foxglove.messages` instead.
+> The old import path will continue to work but will emit a deprecation warning.
+
 ## Examples
 
 We're using uv as a Python package manager in the foxglove-sdk-examples.

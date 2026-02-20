@@ -6,7 +6,7 @@ import time
 
 import foxglove
 from foxglove.channels import RawAudioChannel
-from foxglove.schemas import RawAudio, Timestamp
+from foxglove.messages import RawAudio, Timestamp
 
 # Parse command-line arguments for output file path
 parser = argparse.ArgumentParser()
