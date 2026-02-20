@@ -110,7 +110,7 @@ struct FlightParams {
 
 /// Parse flight parameters from the request query string.
 /// Returns the parsed parameters, or nullopt after setting a 400 response if invalid.
-std::optional<FlightParams> parse_flight_params(
+std::optional<FlightParams> require_flight_params(
   const httplib::Request& req, httplib::Response& res
 ) {
   if (!req.has_param("flightId") || !req.has_param("startTime") || !req.has_param("endTime")) {
@@ -164,7 +164,7 @@ void manifest_handler(const httplib::Request& req, httplib::Response& res) {
   if (!require_auth(req, res)) {
     return;
   }
-  auto params = parse_flight_params(req, res);
+  auto params = require_flight_params(req, res);
   if (!params) {
     return;
   }
@@ -209,7 +209,7 @@ void data_handler(const httplib::Request& req, httplib::Response& res) {
   if (!require_auth(req, res)) {
     return;
   }
-  auto params = parse_flight_params(req, res);
+  auto params = require_flight_params(req, res);
   if (!params) {
     return;
   }
