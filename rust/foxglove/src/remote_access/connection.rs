@@ -718,17 +718,21 @@ impl RemoteAccessSession {
                 // Extract the payload without copying by splitting off the header
                 let payload = message.freeze().slice(MESSAGE_FRAME_SIZE..);
 
-                self.handle_client_message(&participant_identity, opcode, payload);
+                if !self.handle_client_message(&participant_identity, opcode, payload) {
+                    return;
+                }
             }
         }
     }
 
+    /// Handle a single framed client message. Returns `false` if the byte stream
+    /// should be closed (e.g. unrecognized opcode indicating a protocol mismatch).
     fn handle_client_message(
         self: &Arc<Self>,
         participant_identity: &ParticipantIdentity,
         opcode: u8,
         payload: Bytes,
-    ) {
+    ) -> bool {
         const TEXT: u8 = OpCode::Text as u8;
         const BINARY: u8 = OpCode::Binary as u8;
         let client_msg = match opcode {
@@ -736,13 +740,13 @@ impl RemoteAccessSession {
                 Ok(text) => ClientMessage::parse_json(text),
                 Err(e) => {
                     error!("Invalid UTF-8 in text message: {e:?}");
-                    return;
+                    return true;
                 }
             },
             BINARY => ClientMessage::parse_binary(&payload[..]),
             _ => {
-                error!("Invalid opcode: {opcode}");
-                return;
+                error!("Unrecognized message opcode ({opcode}) received, you likely need to upgrade to a newer version of the Foxglove SDK");
+                return false;
             }
         };
 
@@ -750,7 +754,7 @@ impl RemoteAccessSession {
             Ok(msg) => msg,
             Err(e) => {
                 error!("failed to parse client message: {e:?}");
-                return;
+                return true;
             }
         };
 
@@ -760,7 +764,7 @@ impl RemoteAccessSession {
             participants.get(participant_identity).cloned()
         }) else {
             error!("Unknown participant identity: {:?}", participant_identity);
-            return;
+            return true;
         };
 
         match client_msg {
@@ -775,6 +779,7 @@ impl RemoteAccessSession {
                 warn!("Unhandled client message: {client_msg:?}");
             }
         }
+        true
     }
 
     fn handle_client_subscribe(&self, participant: &Participant, msg: client::Subscribe) {
