@@ -267,10 +267,10 @@ jobs:
 
   # Gate job for branch protection. Always posts a status so that the required
   # check passes even when the other jobs are skipped. Configure your required
-  # status check to reference this job ("C/C++ / status") instead of the
+  # status check to reference this job ("C/C++ / c-cpp-status") instead of the
   # individual matrix jobs.
   c-cpp-status:
-    name: status
+    name: c-cpp-status
     needs: [changes, lint, build, test-asan-ubsan]
     if: always()
     runs-on: ubuntu-latest

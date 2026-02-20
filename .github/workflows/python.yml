@@ -429,10 +429,10 @@ jobs:
 
   # Gate job for branch protection. Always posts a status so that the required
   # check passes even when the other jobs are skipped. Configure your required
-  # status check to reference this job ("Python / status") instead of the
+  # status check to reference this job ("Python / python-status") instead of the
   # individual matrix jobs.
   python-status:
-    name: status
+    name: python-status
     needs: [changes, lint, lint-and-test-sdk, schemas, sdist, linux, musllinux, windows, macos, playground-wasm, playground, test-sdk-examples]
     if: always()
     runs-on: ubuntu-latest

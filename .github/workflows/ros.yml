@@ -59,10 +59,10 @@ jobs:
 
   # Gate job for branch protection. Always posts a status so that the required
   # check passes even when the ros matrix is skipped. Configure your required
-  # status check to reference this job ("ROS / status") instead of the
+  # status check to reference this job ("ROS / ros-status") instead of the
   # individual matrix jobs.
   ros-status:
-    name: status
+    name: ros-status
     needs: [changes, ros]
     if: always()
     runs-on: ubuntu-latest
