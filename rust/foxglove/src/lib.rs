@@ -1,4 +1,4 @@
-//! The official [Foxglove] SDK.
+//! The official [Foxglove] SDK!
 //!
 //! This crate provides support for integrating with the Foxglove platform. It can be used to log
 //! events to local [MCAP] files or a local visualization server that communicates with the Foxglove
