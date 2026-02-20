@@ -48,7 +48,6 @@
 #include <cerrno>
 #include <chrono>
 #include <cstdint>
-#include <cstdio>
 #include <httplib.h>
 #include <iostream>
 #include <optional>
@@ -189,8 +188,7 @@ void manifest_handler(const httplib::Request& req, httplib::Response& res) {
   manifest.name = "Flight " + params->flight_id;
   manifest.sources = {std::move(source)};
 
-  nlohmann::json j = manifest;
-  res.set_content(j.dump(), "application/json");
+  res.set_content(dp::to_json_string(manifest), "application/json");
 }
 
 /// Handler for `GET /v1/data`.
@@ -219,46 +217,21 @@ void data_handler(const httplib::Request& req, httplib::Response& res) {
       // Create a dedicated context for this request's MCAP output.
       auto context = foxglove::Context::create();
 
-      // Track bytes written for position queries from the MCAP writer.
-      uint64_t write_position = 0;
       bool write_ok = true;
 
       // The CustomWriter sends MCAP data directly to the HTTP socket. The MCAP writer
       // buffers internally (up to chunk_size bytes) before calling write, so each call
       // here corresponds to one MCAP chunk being flushed.
-      foxglove::CustomWriter custom_writer;
-      custom_writer.write =
-        [&sink, &write_position, &write_ok](const uint8_t* data, size_t len, int* error) -> size_t {
-        if (!sink.write(reinterpret_cast<const char*>(data), len)) {
-          if (error != nullptr) {
+      auto custom_writer = foxglove::make_streaming_writer(
+        [&sink, &write_ok](const uint8_t* data, size_t len, int* error) -> size_t {
+          if (!sink.write(reinterpret_cast<const char*>(data), len)) {
             *error = EIO;
+            write_ok = false;
+            return 0;
           }
-          write_ok = false;
-          return 0;
+          return len;
         }
-        write_position += len;
-        return len;
-      };
-      custom_writer.flush = []() -> int {
-        return 0;
-      };
-      // Support position queries but reject actual seeking. The MCAP writer may query
-      // the current position even with disable_seeking = true.
-      custom_writer.seek = [&write_position](int64_t pos, int whence, uint64_t* new_pos) -> int {
-        if (whence == SEEK_CUR && pos == 0) {
-          if (new_pos != nullptr) {
-            *new_pos = write_position;
-          }
-          return 0;
-        }
-        if (whence == SEEK_SET && static_cast<uint64_t>(pos) == write_position) {
-          if (new_pos != nullptr) {
-            *new_pos = write_position;
-          }
-          return 0;
-        }
-        return EIO;
-      };
+      );
 
       foxglove::McapWriterOptions options;
       options.context = context;

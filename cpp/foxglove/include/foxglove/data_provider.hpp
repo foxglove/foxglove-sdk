@@ -33,8 +33,7 @@
 /// manifest.name = "Flight ABC123";
 /// manifest.sources = {std::move(source)};
 ///
-/// nlohmann::json j = manifest;
-/// std::string json_str = j.dump();
+/// std::string json_str = dp::to_json_string(manifest);
 /// @endcode
 
 #include <foxglove/schema.hpp>
@@ -113,51 +112,70 @@ struct Manifest {
 };
 
 // ============================================================================
-// JSON serialization (nlohmann/json)
+// JSON serialization
 // ============================================================================
 
-/// @cond foxglove_internal
-inline void to_json(nlohmann::json& j, const Topic& t) {
-  j = nlohmann::json{
-    {"name", t.name},
-    {"messageEncoding", t.message_encoding},
+/// @brief Serialize a Manifest to a JSON string.
+///
+/// The output conforms to the Foxglove data provider manifest JSON schema.
+inline std::string to_json_string(const Manifest& m) {
+  // Use nlohmann/json internally without exposing it in the public API.
+  using json = nlohmann::json;
+
+  auto topic_to_json = [](const Topic& t) -> json {
+    json j{
+      {"name", t.name},
+      {"messageEncoding", t.message_encoding},
+    };
+    if (t.schema_id.has_value()) {
+      j["schemaId"] = *t.schema_id;
+    }
+    return j;
   };
-  if (t.schema_id.has_value()) {
-    j["schemaId"] = *t.schema_id;
+
+  auto schema_to_json = [](const Schema& s) -> json {
+    return json{
+      {"id", s.id},
+      {"name", s.name},
+      {"encoding", s.encoding},
+      {"data", s.data},
+    };
+  };
+
+  auto source_to_json = [&](const StreamedSource& s) -> json {
+    json topics = json::array();
+    for (const auto& t : s.topics) {
+      topics.push_back(topic_to_json(t));
+    }
+    json schemas = json::array();
+    for (const auto& sc : s.schemas) {
+      schemas.push_back(schema_to_json(sc));
+    }
+    json j{
+      {"url", s.url},
+      {"topics", topics},
+      {"schemas", schemas},
+      {"startTime", s.start_time},
+      {"endTime", s.end_time},
+    };
+    if (s.id.has_value()) {
+      j["id"] = *s.id;
+    }
+    return j;
+  };
+
+  json sources = json::array();
+  for (const auto& s : m.sources) {
+    sources.push_back(source_to_json(s));
   }
-}
-
-inline void to_json(nlohmann::json& j, const Schema& s) {
-  j = nlohmann::json{
-    {"id", s.id},
-    {"name", s.name},
-    {"encoding", s.encoding},
-    {"data", s.data},
-  };
-}
-
-inline void to_json(nlohmann::json& j, const StreamedSource& s) {
-  j = nlohmann::json{
-    {"url", s.url},
-    {"topics", s.topics},
-    {"schemas", s.schemas},
-    {"startTime", s.start_time},
-    {"endTime", s.end_time},
-  };
-  if (s.id.has_value()) {
-    j["id"] = *s.id;
-  }
-}
-
-inline void to_json(nlohmann::json& j, const Manifest& m) {
-  j = nlohmann::json{
-    {"sources", m.sources},
+  json j{
+    {"sources", sources},
   };
   if (m.name.has_value()) {
     j["name"] = *m.name;
   }
+  return j.dump();
 }
-/// @endcond
 
 // ============================================================================
 // ChannelSet
