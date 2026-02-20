@@ -30,5 +30,4 @@
 /target/
 /typescript/*/dist/
 /typescript/messages/src/jsonschema/
-/typescript/schemas/src/jsonschema/
 node_modules/
