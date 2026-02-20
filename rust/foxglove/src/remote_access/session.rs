@@ -133,17 +133,20 @@ impl Sink for RemoteAccessSession {
         }
 
         let advertise_msg = advertise::advertise_channels(filtered.iter().copied());
-
-        // Track advertised channels
-        {
-            let mut cached = self.channels.write();
-            for &ch in &filtered {
-                cached.insert(ch.id(), ch.clone());
-            }
-        }
-
         if advertise_msg.channels.is_empty() {
             return None;
+        }
+
+        // Track advertised channels, excluding any that failed to encode (e.g. MissingSchema).
+        let advertised_ids: std::collections::HashSet<u64> =
+            advertise_msg.channels.iter().map(|ch| ch.id).collect();
+        {
+            let mut advertised_channels = self.channels.write();
+            for &ch in &filtered {
+                if advertised_ids.contains(&u64::from(ch.id())) {
+                    advertised_channels.insert(ch.id(), ch.clone());
+                }
+            }
         }
 
         let framed = frame_text_message(advertise_msg.to_string().as_bytes());
