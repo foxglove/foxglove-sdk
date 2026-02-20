@@ -764,7 +764,7 @@ impl RemoteAccessSession {
             participants.get(participant_identity).cloned()
         }) else {
             error!("Unknown participant identity: {:?}", participant_identity);
-            return true;
+            return false;
         };
 
         match client_msg {
