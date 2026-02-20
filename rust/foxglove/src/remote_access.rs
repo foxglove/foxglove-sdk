@@ -2,6 +2,7 @@ mod connection;
 mod credentials_provider;
 mod participant;
 mod session;
+mod session_state;
 
 use thiserror::Error;
 
