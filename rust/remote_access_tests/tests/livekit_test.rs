@@ -21,14 +21,14 @@ use foxglove::protocol::v2::client::Subscribe;
 use foxglove::protocol::v2::server::ServerMessage;
 use foxglove::protocol::v2::BinaryMessage;
 
-/// Default timeout for waiting for the gateway to join the LiveKit room.
-const GATEWAY_JOIN_TIMEOUT: Duration = Duration::from_secs(5);
 /// Default timeout for waiting for events or stream data.
 const EVENT_TIMEOUT: Duration = Duration::from_secs(15);
 /// Default timeout for reading frames from the byte stream.
 const READ_TIMEOUT: Duration = Duration::from_secs(10);
 /// Default timeout for gateway shutdown.
 const SHUTDOWN_TIMEOUT: Duration = Duration::from_secs(10);
+/// Polling interval for condition checks.
+const POLL_INTERVAL: Duration = Duration::from_millis(50);
 
 // ---------------------------------------------------------------------------
 // Viewer helper: accumulates bytes from a LiveKit byte stream reader and
@@ -97,40 +97,52 @@ struct ViewerConnection {
 
 impl ViewerConnection {
     /// Connects a viewer to the LiveKit room and waits for the ws-protocol
-    /// byte stream to open. Returns the room handle and a [`FrameReader`].
+    /// byte stream to open. Retries the connection if the gateway hasn't
+    /// joined the room yet (no ByteStreamOpened within a short window).
     async fn connect(room_name: &str, viewer_identity: &str) -> Result<Self> {
-        let token = livekit_token::generate_token(room_name, viewer_identity)?;
-        let (room, mut events) =
-            Room::connect(livekit_token::LIVEKIT_URL, &token, RoomOptions::default())
-                .await
-                .context("viewer failed to connect to LiveKit")?;
-        info!("{viewer_identity} connected to room");
+        let outer_deadline = tokio::time::Instant::now() + EVENT_TIMEOUT;
+        loop {
+            let token = livekit_token::generate_token(room_name, viewer_identity)?;
+            let (room, mut events) =
+                Room::connect(livekit_token::LIVEKIT_URL, &token, RoomOptions::default())
+                    .await
+                    .context("viewer failed to connect to LiveKit")?;
+            info!("{viewer_identity} connected to room, waiting for byte stream");
 
-        // Wait for the ByteStreamOpened event on the "ws-protocol" topic.
-        let deadline = tokio::time::Instant::now() + EVENT_TIMEOUT;
-        let reader = loop {
-            let event = tokio::time::timeout_at(deadline, events.recv())
-                .await
-                .context("timeout waiting for ByteStreamOpened")?
-                .context("room events channel closed")?;
-
-            if let RoomEvent::ByteStreamOpened {
-                reader: stream_reader,
-                topic,
-                ..
-            } = event
-            {
-                if topic == "ws-protocol" {
-                    break stream_reader.take().context("reader already taken")?;
+            // Wait for a ByteStreamOpened event. Use a short inner timeout so we
+            // can retry the connection if the gateway hasn't joined yet.
+            let inner_deadline = tokio::time::Instant::now() + Duration::from_secs(3);
+            let reader = loop {
+                let event = tokio::time::timeout_at(inner_deadline, events.recv()).await;
+                match event {
+                    Err(_) => break None, // inner timeout — retry
+                    Ok(None) => anyhow::bail!("room events channel closed"),
+                    Ok(Some(RoomEvent::ByteStreamOpened {
+                        reader: stream_reader,
+                        topic,
+                        ..
+                    })) if topic == "ws-protocol" => {
+                        break Some(stream_reader.take().context("reader already taken")?)
+                    }
+                    Ok(Some(_)) => continue,
                 }
-            }
-        };
+            };
 
-        Ok(Self {
-            room,
-            _events: events,
-            frame_reader: FrameReader::new(reader),
-        })
+            if let Some(reader) = reader {
+                return Ok(Self {
+                    room,
+                    _events: events,
+                    frame_reader: FrameReader::new(reader),
+                });
+            }
+
+            // Gateway not ready yet — close and retry.
+            let _ = room.close().await;
+            if tokio::time::Instant::now() >= outer_deadline {
+                anyhow::bail!("timeout waiting for gateway to open byte stream");
+            }
+            info!("{viewer_identity} retrying connection (gateway not ready)");
+        }
     }
 
     /// Reads and validates the initial ServerInfo message.
@@ -174,7 +186,8 @@ impl ViewerConnection {
     }
 
     /// Opens a byte stream back to the gateway participant and sends a
-    /// binary-framed Subscribe message.
+    /// binary-framed Subscribe message. Polls `channel.has_sinks()` to confirm
+    /// the gateway has processed the subscription.
     async fn send_subscribe(&self, channel_ids: &[u64]) -> Result<()> {
         let subscribe = Subscribe::new(channel_ids.iter().copied());
         let inner = subscribe.to_bytes();
@@ -197,8 +210,17 @@ impl ViewerConnection {
             .await
             .map_err(|e| anyhow::anyhow!("failed to write subscribe message: {e}"))?;
 
-        // Small delay to allow the gateway to process the subscription.
-        tokio::time::sleep(Duration::from_millis(500)).await;
+        Ok(())
+    }
+
+    /// Sends a Subscribe and waits for the channel to have at least one sink.
+    async fn subscribe_and_wait(
+        &self,
+        channel_ids: &[u64],
+        channel: &foxglove::RawChannel,
+    ) -> Result<()> {
+        self.send_subscribe(channel_ids).await?;
+        poll_until(|| channel.has_sinks()).await;
         Ok(())
     }
 
@@ -214,6 +236,17 @@ impl ViewerConnection {
 // ---------------------------------------------------------------------------
 // Test helpers
 // ---------------------------------------------------------------------------
+
+/// Polls `cond` until it returns true, or panics after `EVENT_TIMEOUT`.
+async fn poll_until(cond: impl Fn() -> bool) {
+    let deadline = tokio::time::Instant::now() + EVENT_TIMEOUT;
+    while !cond() {
+        if tokio::time::Instant::now() >= deadline {
+            panic!("poll_until condition not met within {EVENT_TIMEOUT:?}");
+        }
+        tokio::time::sleep(POLL_INTERVAL).await;
+    }
+}
 
 /// Generate a unique identifier for use in room names.
 fn unique_id() -> String {
@@ -260,9 +293,6 @@ impl TestGateway {
         }
 
         let handle = gateway.start().context("start Gateway")?;
-
-        // Give the SDK time to authenticate and join the LiveKit room.
-        tokio::time::sleep(GATEWAY_JOIN_TIMEOUT).await;
 
         Ok(Self {
             room_name,
@@ -373,7 +403,7 @@ async fn livekit_viewer_receives_message_after_subscribe() -> Result<()> {
     let channel_id = advertise.channels[0].id;
 
     // Subscribe to the channel.
-    viewer.send_subscribe(&[channel_id]).await?;
+    viewer.subscribe_and_wait(&[channel_id], &channel).await?;
 
     // Log a message.
     let payload = b"hello world";
@@ -412,11 +442,8 @@ async fn livekit_viewer_does_not_receive_message_before_subscribe() -> Result<()
     // Log a message BEFORE subscribing — this should NOT be delivered.
     channel.log(b"message-before-subscribe");
 
-    // Small delay to ensure the message would have been delivered if it were going to be.
-    tokio::time::sleep(Duration::from_millis(500)).await;
-
     // Now subscribe.
-    viewer.send_subscribe(&[channel_id]).await?;
+    viewer.subscribe_and_wait(&[channel_id], &channel).await?;
 
     // Log a second message — this one should be delivered.
     let expected_payload = b"message-after-subscribe";
@@ -565,7 +592,7 @@ async fn livekit_multiple_participants_receive_messages() -> Result<()> {
     let _si1 = viewer1.expect_server_info().await?;
     let adv1 = viewer1.expect_advertise().await?;
     let channel_id = adv1.channels[0].id;
-    viewer1.send_subscribe(&[channel_id]).await?;
+    viewer1.subscribe_and_wait(&[channel_id], &channel).await?;
 
     // Log message-1 — only viewer-1 should receive it.
     channel.log(b"message-1");
@@ -579,6 +606,9 @@ async fn livekit_multiple_participants_receive_messages() -> Result<()> {
     let adv2 = viewer2.expect_advertise().await?;
     assert_eq!(adv2.channels[0].id, channel_id);
     viewer2.send_subscribe(&[channel_id]).await?;
+    // Channel already has a sink from viewer-1, so we can't poll has_sinks().
+    // Use a brief settle time for the gateway to process viewer-2's subscription.
+    tokio::time::sleep(Duration::from_millis(500)).await;
 
     // Log message-2 — both viewers should receive it.
     channel.log(b"message-2");
