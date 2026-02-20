@@ -1,6 +1,6 @@
 //! Websocket functionality
 
-pub(crate) mod advertise;
+mod advertise;
 mod capability;
 mod channel_view;
 mod client;

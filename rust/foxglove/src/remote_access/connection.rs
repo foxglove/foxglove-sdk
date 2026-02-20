@@ -538,7 +538,7 @@ impl Sink for RemoteAccessSession {
     }
 }
 
-fn encode_binary_message(message: &impl BinaryMessage<'_>) -> Bytes {
+fn encode_binary_message<'a>(message: &impl BinaryMessage<'a>) -> Bytes {
     let msg_len = message.encoded_len();
     let mut buf = Vec::with_capacity(MESSAGE_FRAME_SIZE + msg_len);
     buf.push(OpCode::Binary as u8);
@@ -640,6 +640,9 @@ impl RemoteAccessSession {
                 }
                 msg = session.data_plane_rx.recv_async() => {
                     let Ok(msg) = msg else { break };
+                    // Note: we do fan-out ourselves here because we can't use multicast with the ByteStreams
+                    // Most data plane messages should get sent as datagram messages, which do support multicast
+                    // by passing a Vec<ParticipantIdentity> of recipients.
                     let subscriber_ids: SmallVec<[ParticipantIdentity; 8]> = {
                         let subscriptions = session.subscriptions.read();
                         match subscriptions.get(&msg.channel_id) {
@@ -647,6 +650,7 @@ impl RemoteAccessSession {
                             None => continue,
                         }
                     };
+                    // Get the participants that are subscribed to the channel
                     let participants: SmallVec<[Arc<Participant>; 8]> = {
                         let participants = session.participants.read();
                         subscriber_ids
@@ -764,7 +768,9 @@ impl RemoteAccessSession {
                 self.handle_client_unsubscribe(&participant, msg);
             }
             // TODO: Implement other message handling branches
-            _ => {}
+            _ => {
+                warn!("Unhandled client message: {client_msg:?}");
+            }
         }
     }
 

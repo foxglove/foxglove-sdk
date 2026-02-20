@@ -45,6 +45,7 @@ pub trait BinaryMessage<'a>: BinaryPayload<'a> {
 
     /// Returns the total encoded length of this message (opcode byte + payload).
     fn encoded_len(&self) -> usize {
+        // 1 byte opcode + payload
         1 + self.payload_size()
     }
 
