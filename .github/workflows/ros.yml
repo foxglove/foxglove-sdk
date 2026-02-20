@@ -4,10 +4,31 @@ on:
   push:
     branches: [main]
     tags: ["**"]
-  pull_request: {}
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      should_run: ${{ github.event_name != 'pull_request' || steps.paths.outputs.ros == 'true' || contains(github.event.pull_request.labels.*.name, 'ci:ros') }}
+    steps:
+      - uses: dorny/paths-filter@v3
+        if: github.event_name == 'pull_request'
+        id: paths
+        with:
+          filters: |
+            ros:
+              - 'c/**'
+              - 'cpp/**'
+              - 'ros/**'
+              - '.github/workflows/ros.yml'
+
   ros:
+    needs: changes
+    if: needs.changes.outputs.should_run == 'true'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -36,3 +57,15 @@ jobs:
         run: make GTEST_REPEAT=50 docker-test-${{ matrix.ros_distribution }}
         working-directory: ros
 
+  # Gate job for branch protection. Always posts a status so that the required
+  # check passes even when the ros matrix is skipped. Configure your required
+  # status check to reference this job ("ROS / status") instead of the
+  # individual matrix jobs.
+  ros-status:
+    name: status
+    needs: [changes, ros]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1
