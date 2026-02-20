@@ -4,6 +4,7 @@
 #include <foxglove/error.hpp>
 
 #include <cerrno>
+#include <cstdio>
 #include <functional>
 #include <memory>
 #include <optional>
@@ -218,47 +219,25 @@ FoxgloveError McapWriter::writeMetadata(std::string_view name, Iter begin, Iter 
   return FoxgloveError(error);
 }
 
-/// @brief Build a CustomWriter for non-seekable streaming destinations.
+/// @brief Build a no-op seek function that only supports position queries.
 ///
-/// Creates a complete CustomWriter from just a write callback. Flush is a no-op, and seek supports
-/// position queries (required by the MCAP writer even with disable_seeking) but rejects actual
-/// seeking.
+/// Use with @ref McapWriterOptions::disable_seeking = true.
 ///
-/// The write callback has the same signature as CustomWriter::write. Position tracking is handled
-/// automatically.
-///
-/// Use with McapWriterOptions::disable_seeking = true.
-///
-/// @param write_fn Called with each chunk of MCAP data. Should return the number of bytes written,
-///   or 0 on failure (setting *error to an errno value).
-/// @return A ready-to-use CustomWriter.
-inline CustomWriter make_streaming_writer(
-  std::function<size_t(const uint8_t* data, size_t len, int* error)> write_fn
-) {
-  auto position = std::make_shared<uint64_t>(0);
-
-  CustomWriter cw;
-  cw.write = [write_fn = std::move(write_fn),
-              position](const uint8_t* data, size_t len, int* error) -> size_t {
-    size_t written = write_fn(data, len, error);
-    *position += written;
-    return written;
-  };
-  cw.flush = []() -> int {
-    return 0;
-  };
-  cw.seek = [position](int64_t pos, int whence, uint64_t* new_pos) -> int {
-    if (whence == 1 /*SEEK_CUR*/ && pos == 0) {
+/// @param position Pointer to the current position.
+/// @return A no-op seek function.
+/// @note This function is used to build a @ref CustomWriter for non-seekable output destinations.
+inline std::function<int(int64_t, int, uint64_t*)> no_seek_fn(uint64_t* position) {
+  return [position](int64_t pos, int whence, uint64_t* new_pos) -> int {
+    if (whence == SEEK_CUR && pos == 0) {
       *new_pos = *position;
       return 0;
     }
-    if (whence == 0 /*SEEK_SET*/ && static_cast<uint64_t>(pos) == *position) {
+    if (whence == SEEK_SET && static_cast<uint64_t>(pos) == *position) {
       *new_pos = *position;
       return 0;
     }
     return EIO;
   };
-  return cw;
 }
 
 }  // namespace foxglove

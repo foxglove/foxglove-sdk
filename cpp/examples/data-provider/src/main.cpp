@@ -199,12 +199,6 @@ void manifest_handler(const httplib::Request& req, httplib::Response& res) {
 /// Handler for `GET /v1/data`.
 ///
 /// Streams MCAP data for the requested flight. The response body is a stream of MCAP bytes.
-///
-/// Uses chunked transfer encoding, which is the standard HTTP/1.1 mechanism for streaming
-/// responses of unknown length. The MCAP writer buffers data internally (controlled by
-/// chunk_size) and calls the CustomWriter when a chunk is ready; the CustomWriter sends each
-/// chunk directly to the HTTP socket via sink.write(). The content provider runs in httplib's
-/// thread pool, so it is safe to block here (e.g. on database I/O).
 void data_handler(const httplib::Request& req, httplib::Response& res) {
   if (!require_auth(req, res)) {
     return;
@@ -225,16 +219,23 @@ void data_handler(const httplib::Request& req, httplib::Response& res) {
       // The CustomWriter sends MCAP data directly to the HTTP socket. The MCAP writer
       // buffers internally (up to chunk_size bytes) before calling write, so each call
       // here corresponds to one MCAP chunk being flushed.
-      auto custom_writer = foxglove::make_streaming_writer(
-        [&sink, &write_ok](const uint8_t* data, size_t len, int* error) -> size_t {
-          if (!sink.write(reinterpret_cast<const char*>(data), len)) {
-            *error = EIO;
-            write_ok = false;
-            return 0;
-          }
+      uint64_t position = 0;
+      foxglove::CustomWriter custom_writer;
+      custom_writer.write =
+        [&position, &sink, &write_ok](const uint8_t* data, size_t len, int* error) -> size_t {
+        if (sink.write(reinterpret_cast<const char*>(data), len)) {
+          position += len;
           return len;
         }
-      );
+        *error = EIO;
+        write_ok = false;
+        return 0;
+      };
+      custom_writer.flush = []() -> int {
+        // httplib manages flushing itself, so we don't do anything here.
+        return 0;
+      };
+      custom_writer.seek = foxglove::no_seek_fn(&position);
 
       foxglove::McapWriterOptions options;
       options.context = context;
@@ -286,7 +287,8 @@ void data_handler(const httplib::Request& req, httplib::Response& res) {
         // major implementations).
         channel.log(
           msg,
-          static_cast<uint64_t>(date::floor<std::chrono::nanoseconds>(ts).time_since_epoch().count()
+          static_cast<uint64_t>(
+            date::floor<std::chrono::nanoseconds>(ts).time_since_epoch().count()
           )
         );
 
