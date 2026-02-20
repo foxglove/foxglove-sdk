@@ -9,7 +9,7 @@ use tokio::net::TcpListener;
 use crate::livekit_token;
 
 pub const TEST_DEVICE_TOKEN: &str = "fox_dt_testtoken";
-const TEST_DEVICE_ID: &str = "dev_testdevice";
+pub const TEST_DEVICE_ID: &str = "dev_testdevice";
 const TEST_DEVICE_NAME: &str = "test-device";
 const TEST_PROJECT_ID: &str = "prj_testproj";
 

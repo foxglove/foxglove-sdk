@@ -21,6 +21,7 @@ dotenvy = "0.15"
 
 [dev-dependencies]
 tracing-subscriber = "0.3"
+tracing-test.workspace = true
 
 [lints]
 workspace = true

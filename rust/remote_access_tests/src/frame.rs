@@ -30,6 +30,20 @@ pub struct Frame {
 /// Header size: 1 byte opcode + 4 byte LE u32 length.
 pub const HEADER_SIZE: usize = 5;
 
+/// Frames a binary protocol message for sending over the ws-protocol byte stream.
+///
+/// `inner` is the encoded protocol message (opcode + payload, as produced by
+/// `BinaryMessage::to_bytes()`). The result is wrapped in the ws-protocol frame
+/// format: `[Binary opcode (2)] [length: u32 LE] [inner]`.
+pub fn frame_binary_message(inner: &[u8]) -> Vec<u8> {
+    let len = inner.len() as u32;
+    let mut buf = Vec::with_capacity(HEADER_SIZE + inner.len());
+    buf.push(OpCode::Binary as u8);
+    buf.extend_from_slice(&len.to_le_bytes());
+    buf.extend_from_slice(inner);
+    buf
+}
+
 /// Attempts to parse a single frame from the accumulated buffer.
 ///
 /// Returns `Some((frame, bytes_consumed))` if a complete frame is available,
