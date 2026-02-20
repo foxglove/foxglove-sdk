@@ -6,15 +6,18 @@ use std::{
 
 use indexmap::IndexSet;
 
-use bytes::{Bytes, BytesMut};
+use bytes::Bytes;
 use futures_util::StreamExt;
 use livekit::{
     id::ParticipantIdentity, ByteStreamReader, Room, RoomEvent, RoomOptions, StreamByteOptions,
 };
 use parking_lot::RwLock;
 use smallvec::SmallVec;
-use tokio::{runtime::Handle, sync::mpsc::UnboundedReceiver, sync::OnceCell, task::JoinHandle};
-use tokio_util::sync::CancellationToken;
+use tokio::{
+    io::AsyncReadExt, runtime::Handle, sync::mpsc::UnboundedReceiver, sync::OnceCell,
+    task::JoinHandle,
+};
+use tokio_util::{io::StreamReader, sync::CancellationToken};
 use tracing::{debug, error, info, warn};
 
 use crate::{
@@ -671,56 +674,61 @@ impl RemoteAccessSession {
     async fn handle_byte_stream_from_client(
         self: &Arc<Self>,
         participant_identity: ParticipantIdentity,
-        mut reader: ByteStreamReader,
+        reader: ByteStreamReader,
     ) {
-        let mut buffer = BytesMut::new();
+        let stream = reader
+            .map(|result| result.map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e)));
+        let mut reader = StreamReader::new(stream);
+
         loop {
-            let chunk = tokio::select! {
+            let mut header = [0u8; MESSAGE_FRAME_SIZE];
+            let read_result = tokio::select! {
                 () = self.cancellation_token.cancelled() => break,
-                result = reader.next() => match result {
-                    Some(Ok(chunk)) => chunk,
-                    Some(Err(e)) => {
-                        error!(
-                            "Error reading from byte stream for client {:?}: {:?}",
-                            participant_identity, e
-                        );
-                        break;
-                    }
-                    None => break,
-                },
+                result = reader.read_exact(&mut header) => result,
             };
-
-            buffer.extend_from_slice(&chunk);
-
-            // Parse complete messages from buffer
-            while buffer.len() >= MESSAGE_FRAME_SIZE {
-                // Parse frame header: 1 byte OpCode + 4 bytes little-endian u32 length
-                let opcode = buffer[0];
-                let length =
-                    u32::from_le_bytes(buffer[1..MESSAGE_FRAME_SIZE].try_into().unwrap()) as usize;
-
-                if length > MAX_MESSAGE_SIZE {
+            match read_result {
+                Ok(()) => {}
+                Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => break,
+                Err(e) => {
                     error!(
-                        "message too large ({length} bytes) from client {:?}, disconnecting",
-                        participant_identity
+                        "Error reading from byte stream for client {:?}: {:?}",
+                        participant_identity, e
                     );
-                    return;
+                    break;
                 }
+            }
 
-                // Check if we have the complete message
-                if buffer.len() < MESSAGE_FRAME_SIZE + length {
-                    break; // Wait for more data
+            let opcode = header[0];
+            let length =
+                u32::from_le_bytes(header[1..MESSAGE_FRAME_SIZE].try_into().unwrap()) as usize;
+
+            if length > MAX_MESSAGE_SIZE {
+                error!(
+                    "message too large ({length} bytes) from client {:?}, disconnecting",
+                    participant_identity
+                );
+                return;
+            }
+
+            let mut payload = vec![0u8; length];
+            let read_result = tokio::select! {
+                () = self.cancellation_token.cancelled() => break,
+                result = reader.read_exact(&mut payload) => result,
+            };
+            match read_result {
+                Ok(()) => {}
+                Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => break,
+                Err(e) => {
+                    error!(
+                        "Error reading from byte stream for client {:?}: {:?}",
+                        participant_identity, e
+                    );
+                    break;
                 }
+            }
 
-                // Split off the header (opcode + length) and payload as a single message
-                let message = buffer.split_to(MESSAGE_FRAME_SIZE + length);
-
-                // Extract the payload without copying by splitting off the header
-                let payload = message.freeze().slice(MESSAGE_FRAME_SIZE..);
-
-                if !self.handle_client_message(&participant_identity, opcode, payload) {
-                    return;
-                }
+            if !self.handle_client_message(&participant_identity, opcode, Bytes::from(payload)) {
+                return;
             }
         }
     }
