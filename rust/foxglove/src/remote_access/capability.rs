@@ -1,6 +1,6 @@
 use crate::protocol::v2::server::server_info;
 
-/// A capability that can be advertised by a [`Server`](super::Server).
+/// A capability that can be advertised by a [`Gateway`](super::Gateway).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Capability {
     /// Allow clients to advertise channels to send data messages to the server.
