@@ -108,18 +108,25 @@ struct FlightParams {
   }
 };
 
-/// Parse flight parameters from request query string.
-std::optional<FlightParams> parse_flight_params(const httplib::Request& req) {
+/// Parse flight parameters from the request query string.
+/// Returns the parsed parameters, or nullopt after setting a 400 response if invalid.
+std::optional<FlightParams> parse_flight_params(
+  const httplib::Request& req, httplib::Response& res
+) {
   if (!req.has_param("flightId") || !req.has_param("startTime") || !req.has_param("endTime")) {
+    res.status = 400;
+    res.set_content("Missing required query parameters", "text/plain");
+    return std::nullopt;
+  }
+  auto start = parse_iso8601(req.get_param_value("startTime"));
+  auto end = parse_iso8601(req.get_param_value("endTime"));
+  if (!start || !end) {
+    res.status = 400;
+    res.set_content("Invalid timestamp format", "text/plain");
     return std::nullopt;
   }
   FlightParams params;
   params.flight_id = req.get_param_value("flightId");
-  auto start = parse_iso8601(req.get_param_value("startTime"));
-  auto end = parse_iso8601(req.get_param_value("endTime"));
-  if (!start || !end) {
-    return std::nullopt;
-  }
   params.start_time = *start;
   params.end_time = *end;
   return params;
@@ -157,10 +164,8 @@ void manifest_handler(const httplib::Request& req, httplib::Response& res) {
   if (!require_auth(req, res)) {
     return;
   }
-  auto params = parse_flight_params(req);
+  auto params = parse_flight_params(req, res);
   if (!params) {
-    res.status = 400;
-    res.set_content("Missing or invalid query parameters", "text/plain");
     return;
   }
 
@@ -204,10 +209,8 @@ void data_handler(const httplib::Request& req, httplib::Response& res) {
   if (!require_auth(req, res)) {
     return;
   }
-  auto params = parse_flight_params(req);
+  auto params = parse_flight_params(req, res);
   if (!params) {
-    res.status = 400;
-    res.set_content("Missing or invalid query parameters", "text/plain");
     return;
   }
 
