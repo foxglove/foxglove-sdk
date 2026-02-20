@@ -30,4 +30,7 @@ export type LocationFix = {
 
   /** Color used to visualize the location */
   color?: Color;
+
+  /** Informational text to be displayed on-demand when visualizing the location. Supports newline (`\n`) characters. */
+  details?: string;
 };

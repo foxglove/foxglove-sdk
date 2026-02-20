@@ -38,3 +38,6 @@ uint8 position_covariance_type
 
 # Color used to visualize the location
 foxglove_msgs/Color color
+
+# Informational text to be displayed on-demand when visualizing the location. Supports newline (`\n`) characters.
+string details

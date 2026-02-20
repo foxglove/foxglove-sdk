@@ -45,6 +45,9 @@ table LocationFix {
 
   /// Color used to visualize the location
   color:foxglove.Color (id: 7);
+
+  /// Informational text to be displayed on-demand when visualizing the location. Supports newline (`\n`) characters.
+  details:string (id: 8);
 }
 
 root_type LocationFix;

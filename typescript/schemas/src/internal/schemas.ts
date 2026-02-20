@@ -1572,6 +1572,14 @@ const LocationFix: FoxgloveMessageSchema = {
       protobufFieldNumber: 8,
       optional: true,
     },
+    {
+      name: "details",
+      type: { type: "primitive", name: "string" },
+      description:
+        "Informational text to be displayed on-demand when visualizing the location. Supports newline (`\\n`) characters.",
+      protobufFieldNumber: 9,
+      optional: true,
+    },
   ],
 };
 
