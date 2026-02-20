@@ -554,7 +554,7 @@ pub struct LocationFix {
     /// Color used to visualize the location
     #[prost(message, optional, tag = "8")]
     pub color: ::core::option::Option<Color>,
-    /// Additional user-provided metadata associated with the entity. Keys must be unique.
+    /// Additional user-provided metadata associated with the location fix. Keys must be unique.
     #[prost(message, repeated, tag = "9")]
     pub metadata: ::prost::alloc::vec::Vec<KeyValuePair>,
 }

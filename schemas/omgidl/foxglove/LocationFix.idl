@@ -34,7 +34,7 @@ struct LocationFix {
   @optional
   Color color;
 
-  // Additional user-provided metadata associated with the entity. Keys must be unique.
+  // Additional user-provided metadata associated with the location fix. Keys must be unique.
   sequence<KeyValuePair> metadata;
 };
 

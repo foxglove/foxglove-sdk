@@ -3228,7 +3228,7 @@ pub struct LocationFix {
     /// Color used to visualize the location
     pub color: *const Color,
 
-    /// Additional user-provided metadata associated with the entity. Keys must be unique.
+    /// Additional user-provided metadata associated with the location fix. Keys must be unique.
     pub metadata: *const KeyValuePair,
     pub metadata_count: usize,
 }

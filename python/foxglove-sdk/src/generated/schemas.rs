@@ -1403,7 +1403,7 @@ impl From<LinePrimitive> for foxglove::schemas::LinePrimitive {
 /// :param position_covariance: Position covariance (m^2) defined relative to a tangential plane through the reported position. The components are East, North, and Up (ENU), in row-major order.
 /// :param position_covariance_type: If `position_covariance` is available, `position_covariance_type` must be set to indicate the type of covariance.
 /// :param color: Color used to visualize the location
-/// :param metadata: Additional user-provided metadata associated with the entity. Keys must be unique.
+/// :param metadata: Additional user-provided metadata associated with the location fix. Keys must be unique.
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/location-fix
 #[pyclass(module = "foxglove.schemas")]

@@ -1624,7 +1624,7 @@ Color used to visualize the location
 </td>
 <td>
 
-Additional user-provided metadata associated with the entity. Keys must be unique.
+Additional user-provided metadata associated with the location fix. Keys must be unique.
 
 </td>
 </tr>

@@ -1246,7 +1246,7 @@ typedef struct foxglove_location_fix {
    */
   const struct foxglove_color *color;
   /**
-   * Additional user-provided metadata associated with the entity. Keys must be unique.
+   * Additional user-provided metadata associated with the location fix. Keys must be unique.
    */
   const struct foxglove_key_value_pair *metadata;
   size_t metadata_count;

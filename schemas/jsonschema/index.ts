@@ -2333,7 +2333,7 @@ export const LocationFix = {
           "value"
         ]
       },
-      "description": "Additional user-provided metadata associated with the entity. Keys must be unique."
+      "description": "Additional user-provided metadata associated with the location fix. Keys must be unique."
     }
   },
   "required": [
@@ -2478,7 +2478,7 @@ export const LocationFixes = {
                 "value"
               ]
             },
-            "description": "Additional user-provided metadata associated with the entity. Keys must be unique."
+            "description": "Additional user-provided metadata associated with the location fix. Keys must be unique."
           }
         },
         "required": [
