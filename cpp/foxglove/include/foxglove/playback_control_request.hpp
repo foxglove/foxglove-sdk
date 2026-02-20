@@ -5,7 +5,6 @@
 #include <string>
 
 namespace foxglove {
-/// @cond foxglove_internal
 
 /// @brief Playback command coming from the Foxglove app
 enum class PlaybackCommand : uint8_t {
@@ -48,5 +47,5 @@ public:
     };
   }
 };
-/// @endcond
+
 }  // namespace foxglove

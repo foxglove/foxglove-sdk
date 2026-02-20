@@ -1,5 +1,5 @@
 ---
-source: rust/foxglove/src/protocol/common/server/playback_state.rs
+source: rust/foxglove/src/protocol/v1/server.rs
 expression: "format!(\"{:#04x?}\", message.to_bytes())"
 ---
 [

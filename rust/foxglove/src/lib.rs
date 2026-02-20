@@ -128,7 +128,7 @@
 //!
 //! ### Well-known types
 //!
-//! The SDK provides [structs for well-known schemas](schemas). These can be used in conjunction
+//! The SDK provides [structs for well-known message types](messages). These can be used in conjunction
 //! with [`Channel`] for type-safe logging, which ensures at compile time that messages logged to a
 //! channel all share a common schema.
 //!
@@ -137,8 +137,8 @@
 //! You can also define your own custom data types by implementing the [`Encode`] trait.
 //!
 //! The easiest way to do this is to enable the `derive` feature and derive the [`Encode`] trait,
-//! which will generate a schema and allow you to log your struct to a channel. This currently uses
-//! protobuf encoding.
+//! which will generate a schema and allow you to log your struct to a channel. The underlying
+//! serialization format is an implementation detail and may change across SDK versions.
 //!
 //! ```no_run
 //! # #[cfg(feature = "derive")]
@@ -156,6 +156,14 @@
 //! });
 //! # }
 //! ```
+//!
+//! **Note:** The `Encode` derive macro is a convenience for getting data into Foxglove with
+//! minimal friction. The generated schema is not designed for evolution — reordering, inserting,
+//! or removing fields will silently break compatibility with previously recorded data. If you need
+//! backwards-compatible schema evolution, maintain an explicit `.proto` file and implement
+//! [`Encode`] manually for your generated types. See
+//! [logging with protobuf schemas](https://docs.foxglove.dev/docs/sdk/logging-messages#logging-with-protobuf-schemas)
+//! for an example.
 //!
 //! If you'd like to use JSON encoding for integration with particular tooling, you can enable the
 //! `schemars` feature, which will provide a blanket [`Encode`] implementation for types that
@@ -283,7 +291,7 @@
 //! - `schemars`: provides a blanket implementation of the [`Encode`] trait for types that
 //!   implement [`Serialize`](serde::Serialize) and [`JsonSchema`][jsonschema-trait].
 //! - `serde`: derives [`Serialize`](serde::Serialize) and [`Deserialize`](serde::Deserialize) for
-//!   all [schema types](crate::messages).
+//!   all [message types](crate::messages).
 //! - `unstable`: features which are under active development and likely to change in an upcoming
 //!   version.
 //! - `zstd`: enables support for the zstd compression algorithm for mcap files. Enabled by
@@ -328,10 +336,10 @@ mod schema;
 
 /// Deprecated module alias. Use [`messages`] instead.
 ///
-/// Types implementing well-known Foxglove message schemas.
+/// Types implementing well-known Foxglove message types.
 ///
 /// **Deprecated**: Use [`crate::messages`] instead.
-#[deprecated(since = "0.2.0", note = "Use `foxglove::messages` instead")]
+#[deprecated(since = "0.18.0", note = "Use `foxglove::messages` instead")]
 pub mod schemas {
     pub use crate::messages::*;
 }
@@ -374,12 +382,14 @@ pub use sink_channel_filter::SinkChannelFilter;
 pub use std::collections::BTreeMap;
 pub(crate) use time::nanoseconds_since_epoch;
 
-#[cfg(feature = "agent")]
+#[cfg(feature = "remote_access")]
 mod api_client;
-#[cfg(feature = "agent")]
-mod cloud_sink;
 #[cfg(feature = "live_visualization")]
 mod protocol;
+#[cfg(feature = "remote_access")]
+mod remote_access;
+#[cfg(feature = "remote_access")]
+mod remote_access_sink;
 #[cfg(feature = "live_visualization")]
 mod runtime;
 #[cfg(feature = "live_visualization")]
@@ -388,8 +398,9 @@ pub mod websocket;
 mod websocket_client;
 #[cfg(feature = "live_visualization")]
 mod websocket_server;
-#[cfg(feature = "agent")]
-pub use cloud_sink::{CloudSink, CloudSinkHandle, CloudSinkListener};
+#[doc(hidden)]
+#[cfg(feature = "remote_access")]
+pub use remote_access_sink::{RemoteAccessSink, RemoteAccessSinkHandle, RemoteAccessSinkListener};
 #[cfg(feature = "live_visualization")]
 pub(crate) use runtime::get_runtime_handle;
 #[cfg(feature = "live_visualization")]
@@ -462,6 +473,11 @@ pub enum FoxgloveError {
     /// An error related to configuration
     #[error("Configuration error: {0}")]
     ConfigurationError(String),
+    /// An error occurred while communicating with remote access.
+    #[doc(hidden)]
+    #[cfg(feature = "remote_access")]
+    #[error(transparent)]
+    RemoteAccessError(#[from] crate::remote_access::RemoteAccessError),
 }
 
 impl From<convert::RangeError> for FoxgloveError {

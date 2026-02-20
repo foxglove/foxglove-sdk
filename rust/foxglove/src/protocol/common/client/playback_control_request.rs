@@ -2,7 +2,7 @@ use bytes::{Buf, BufMut};
 
 use crate::protocol::{BinaryPayload, ParseError};
 
-#[doc(hidden)]
+/// A playback command from the client.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum PlaybackCommand {
@@ -21,7 +21,6 @@ impl TryFrom<u8> for PlaybackCommand {
     }
 }
 
-#[doc(hidden)]
 /// A request to control playback from the client
 #[derive(Debug, Clone, PartialEq)]
 pub struct PlaybackControlRequest {
@@ -94,42 +93,7 @@ impl<'a> BinaryPayload<'a> for PlaybackControlRequest {
 
 #[cfg(test)]
 mod tests {
-    use crate::protocol::v1::{client::BinaryOpcode, client::ClientMessage, BinaryMessage};
-
     use super::*;
-
-    #[test]
-    fn test_encode_play() {
-        let message = PlaybackControlRequest {
-            playback_command: PlaybackCommand::Play,
-            playback_speed: 1.0,
-            seek_time: None,
-            request_id: "some-id".to_string(),
-        };
-        insta::assert_snapshot!(format!("{:#04x?}", message.to_bytes()));
-    }
-
-    #[test]
-    fn test_encode_play_with_seek() {
-        let message = PlaybackControlRequest {
-            playback_command: PlaybackCommand::Play,
-            playback_speed: 1.0,
-            seek_time: Some(123_456_789),
-            request_id: "some-id".to_string(),
-        };
-        insta::assert_snapshot!(format!("{:#04x?}", message.to_bytes()));
-    }
-
-    #[test]
-    fn test_encode_pause() {
-        let message = PlaybackControlRequest {
-            playback_command: PlaybackCommand::Pause,
-            playback_speed: 1.0,
-            seek_time: None,
-            request_id: "some-id".to_string(),
-        };
-        insta::assert_snapshot!(format!("{:#04x?}", message.to_bytes()));
-    }
 
     #[test]
     fn test_roundtrip_play_with_seek_time() {
@@ -139,9 +103,10 @@ mod tests {
             seek_time: Some(100_500_000_000),
             request_id: "some-id".to_string(),
         };
-        let buf = orig.to_bytes();
-        let msg = ClientMessage::parse_binary(&buf).unwrap();
-        assert_eq!(msg, ClientMessage::PlaybackControlRequest(orig));
+        let mut buf = Vec::new();
+        orig.write_payload(&mut buf);
+        let parsed = PlaybackControlRequest::parse_payload(&buf).unwrap();
+        assert_eq!(parsed, orig);
     }
 
     #[test]
@@ -152,17 +117,17 @@ mod tests {
             seek_time: None,
             request_id: "some-id".to_string(),
         };
-        let buf = orig.to_bytes();
-        let msg = ClientMessage::parse_binary(&buf).unwrap();
-        assert_eq!(msg, ClientMessage::PlaybackControlRequest(orig));
+        let mut buf = Vec::new();
+        orig.write_payload(&mut buf);
+        let parsed = PlaybackControlRequest::parse_payload(&buf).unwrap();
+        assert_eq!(parsed, orig);
     }
 
     #[test]
-    fn test_parse_binary_with_seek_time() {
+    fn test_parse_payload_with_seek_time() {
         let request_id = "some-id".to_string();
-        // Manually construct binary data: opcode + command + speed + had_seek + seek_time + request_id_len + request_id
+        // Manually construct binary payload: command + speed + had_seek + seek_time + request_id_len + request_id
         let mut data = Vec::new();
-        data.put_u8(BinaryOpcode::PlaybackControlRequest as u8); // opcode
         data.put_u8(PlaybackCommand::Play as u8); // command
         data.put_f32_le(1.5); // speed
         data.put_u8(1); // had_seek = true
@@ -170,25 +135,19 @@ mod tests {
         data.put_u32_le(request_id.len() as u32);
         data.put_slice(request_id.as_bytes());
 
-        let msg = ClientMessage::parse_binary(&data).unwrap();
-        match msg {
-            ClientMessage::PlaybackControlRequest(request) => {
-                assert_eq!(request.playback_command, PlaybackCommand::Play);
-                assert_eq!(request.playback_speed, 1.5);
-                assert_eq!(request.seek_time, Some(100_500_000_000));
-                assert_eq!(request.request_id, "some-id".to_string());
-            }
-            _ => panic!("Expected PlaybackControlRequest message"),
-        }
+        let parsed = PlaybackControlRequest::parse_payload(&data).unwrap();
+        assert_eq!(parsed.playback_command, PlaybackCommand::Play);
+        assert_eq!(parsed.playback_speed, 1.5);
+        assert_eq!(parsed.seek_time, Some(100_500_000_000));
+        assert_eq!(parsed.request_id, "some-id".to_string());
     }
 
     #[test]
-    fn test_parse_binary_without_seek_time() {
-        // Manually construct binary data with had_seek = false (seek_time bytes still present but zeroed)
+    fn test_parse_payload_without_seek_time() {
+        // Manually construct binary payload with had_seek = false (seek_time bytes still present but zeroed)
         let request_id = "some-id".to_string();
 
         let mut data = Vec::new();
-        data.put_u8(BinaryOpcode::PlaybackControlRequest as u8); // opcode
         data.put_u8(PlaybackCommand::Play as u8); // command
         data.put_f32_le(2.0); // speed
         data.put_u8(0); // had_seek = false
@@ -196,15 +155,10 @@ mod tests {
         data.put_u32_le(request_id.len() as u32);
         data.put_slice(request_id.as_bytes());
 
-        let msg = ClientMessage::parse_binary(&data).unwrap();
-        match msg {
-            ClientMessage::PlaybackControlRequest(request) => {
-                assert_eq!(request.playback_command, PlaybackCommand::Play);
-                assert_eq!(request.playback_speed, 2.0);
-                assert_eq!(request.seek_time, None);
-                assert_eq!(request.request_id, "some-id".to_string())
-            }
-            _ => panic!("Expected PlaybackControlRequest message"),
-        }
+        let parsed = PlaybackControlRequest::parse_payload(&data).unwrap();
+        assert_eq!(parsed.playback_command, PlaybackCommand::Play);
+        assert_eq!(parsed.playback_speed, 2.0);
+        assert_eq!(parsed.seek_time, None);
+        assert_eq!(parsed.request_id, "some-id".to_string());
     }
 }

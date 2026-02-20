@@ -11,7 +11,14 @@ license.workspace = true
 default = ["derive", "live_visualization", "lz4", "zstd"]
 chrono = ["dep:chrono"]
 derive = ["dep:foxglove_derive"]
-agent = ["live_visualization", "tls", "dep:reqwest", "dep:percent-encoding"]
+remote_access = [
+  "live_visualization",
+  "tls",
+  "dep:livekit",
+  "dep:libwebrtc",
+  "dep:reqwest",
+  "dep:percent-encoding",
+]
 live_visualization = [
   "dep:base64",
   "dep:flume",
@@ -59,9 +66,12 @@ bytes.workspace = true
 chrono = { workspace = true, optional = true }
 delegate = "0.13.2"
 flume = { version = "0.11.1", optional = true }
+indexmap = "2"
 foxglove_derive = { version = "0.17.2", path = "../foxglove_derive", optional = true }
 futures = { version = "0.3.31", optional = true }
 futures-util = { version = "0.3.31", features = ["sink", "std"], optional = true }
+livekit = { version = "0.7.29", optional = true, features = ["rustls-tls-native-roots"] }
+libwebrtc = { version = "0.3.24", optional = true }
 mcap.workspace = true
 parking_lot = "0.12.4"
 prost-types.workspace = true

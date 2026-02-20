@@ -31,6 +31,7 @@ dev = [
   "sphinx-toolbox>=4.1.2,<5",
   "types-docutils",
   "mcap>=1.3.0,<2",
+  "sphinx-copybutton>=0.5.2",
 ]
 
 [tool.uv]

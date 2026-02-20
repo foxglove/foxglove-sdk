@@ -69,8 +69,6 @@ impl<'a> BinaryPayload<'a> for ServiceCallRequest<'a> {
 mod tests {
     use assert_matches::assert_matches;
 
-    use crate::protocol::v1::{client::ClientMessage, BinaryMessage};
-
     use super::*;
 
     fn message() -> ServiceCallRequest<'static> {
@@ -80,11 +78,6 @@ mod tests {
             encoding: "json".into(),
             payload: br#"{"key": "value"}"#.into(),
         }
-    }
-
-    #[test]
-    fn test_encode() {
-        insta::assert_snapshot!(format!("{:#04x?}", message().to_bytes()));
     }
 
     #[test]
@@ -110,8 +103,9 @@ mod tests {
     #[test]
     fn test_roundtrip() {
         let orig = message();
-        let buf = orig.to_bytes();
-        let msg = ClientMessage::parse_binary(&buf).unwrap();
-        assert_eq!(msg, ClientMessage::ServiceCallRequest(orig));
+        let mut buf = Vec::new();
+        orig.write_payload(&mut buf);
+        let parsed = ServiceCallRequest::parse_payload(&buf).unwrap();
+        assert_eq!(parsed, orig);
     }
 }
