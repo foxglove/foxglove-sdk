@@ -38,7 +38,7 @@ use crate::{
 type Result<T> = std::result::Result<T, RemoteAccessError>;
 
 const WS_PROTOCOL_TOPIC: &str = "ws-protocol";
-const MESSAGE_FRAME_SIZE: usize = 5;
+const MESSAGE_FRAME_SIZE: usize = 5; // 1 byte opcode + u32 LE length
 const AUTH_RETRY_PERIOD: Duration = Duration::from_secs(30);
 const DEFAULT_MESSAGE_BACKLOG_SIZE: usize = 1024;
 const MAX_SEND_RETRIES: usize = 3;
