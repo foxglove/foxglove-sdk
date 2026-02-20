@@ -2,9 +2,9 @@ mod capability;
 mod client;
 mod connection;
 mod credentials_provider;
-mod participant;
 mod gateway;
 mod listener;
+mod participant;
 mod session;
 
 pub use capability::Capability;
