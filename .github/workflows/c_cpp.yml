@@ -4,7 +4,8 @@ on:
   push:
     branches: [main]
     tags: ["**"]
-  pull_request: {}
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
   workflow_call:
     inputs:
       sdk-version:
@@ -16,6 +17,23 @@ on:
         value: ${{ jobs.build.outputs.artifact_pattern }}
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      build: ${{ github.event_name != 'pull_request' || steps.paths.outputs.c-cpp == 'true' || contains(github.event.pull_request.labels.*.name, 'ci:c-cpp') }}
+    steps:
+      - uses: dorny/paths-filter@v3
+        if: github.event_name == 'pull_request'
+        id: paths
+        with:
+          filters: |
+            c-cpp:
+              - 'c/**'
+              - 'cpp/**'
+              - '.github/workflows/c_cpp.yml'
+
   lint:
     runs-on: ubuntu-latest
     steps:
@@ -30,6 +48,8 @@ jobs:
         working-directory: cpp
 
   build:
+    needs: changes
+    if: needs.changes.outputs.build == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -229,6 +249,8 @@ jobs:
           if-no-files-found: error
 
   test-asan-ubsan:
+    needs: changes
+    if: needs.changes.outputs.build == 'true'
     runs-on: ubuntu-latest
     env:
       CC: clang
@@ -242,3 +264,16 @@ jobs:
 
       - run: make SANITIZE=address,undefined test
         working-directory: cpp
+
+  # Gate job for branch protection. Always posts a status so that the required
+  # check passes even when the other jobs are skipped. Configure your required
+  # status check to reference this job ("C/C++ / status") instead of the
+  # individual matrix jobs.
+  c-cpp-status:
+    name: status
+    needs: [changes, lint, build, test-asan-ubsan]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1
