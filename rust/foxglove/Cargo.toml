@@ -8,30 +8,33 @@ repository.workspace = true
 license.workspace = true
 
 [features]
-default = ["derive", "live_visualization", "lz4", "zstd"]
+default = ["derive", "websocket", "lz4", "zstd"]
 chrono = ["dep:chrono"]
 derive = ["dep:foxglove_derive"]
+_remote_common = [
+  "dep:base64",
+  "dep:flume",
+  "dep:tokio",
+  "dep:tokio-util",
+  "dep:serde_repr",
+  "dep:serde_with",
+]
+websocket = [
+  "_remote_common",
+  "dep:futures-util",
+  "dep:tokio-tungstenite",
+]
+live_visualization = ["websocket"]
 remote_access = [
-  "live_visualization",
-  "tls",
+  "_remote_common",
   "dep:livekit",
   "dep:libwebrtc",
   "dep:reqwest",
   "dep:percent-encoding",
 ]
-live_visualization = [
-  "dep:base64",
-  "dep:flume",
-  "dep:futures-util",
-  "dep:tokio",
-  "dep:tokio-util",
-  "dep:tokio-tungstenite",
-  "dep:serde_repr",
-  "dep:serde_with",
-]
 lz4 = ["mcap/lz4"]
 tls = [
-  "live_visualization",
+  "websocket",
   "tokio-tungstenite/rustls-tls-native-roots",
   "dep:aws-lc-rs",
   "dep:tokio-rustls",

@@ -1,7 +1,7 @@
 use std::{
     collections::HashMap,
     sync::{Arc, Weak},
-    time::Duration,
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
 use indexmap::IndexSet;
@@ -16,10 +16,10 @@ use crate::{
     library_version::get_library_version,
     protocol::v2::server::ServerInfo,
     remote_access::{
-        credentials_provider::CredentialsProvider, session::RemoteAccessSession, RemoteAccessError,
+        credentials_provider::CredentialsProvider, session::RemoteAccessSession, Capability,
+        RemoteAccessError,
     },
-    websocket::{self, Server},
-    Context, RemoteAccessSinkListener, SinkChannelFilter,
+    Context, SinkChannelFilter,
 };
 
 type Result<T> = std::result::Result<T, RemoteAccessError>;
@@ -27,9 +27,18 @@ type Result<T> = std::result::Result<T, RemoteAccessError>;
 const AUTH_RETRY_PERIOD: Duration = Duration::from_secs(30);
 const DEFAULT_MESSAGE_BACKLOG_SIZE: usize = 1024;
 
+/// Generate a session ID from the current timestamp.
+fn generate_session_id() -> String {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .ok()
+        .map(|d| d.as_millis().to_string())
+        .unwrap_or_default()
+}
+
 /// Options for the remote access connection.
 ///
-/// This should be constructed from the [`crate::RemoteAccessSink`] builder.
+/// This should be constructed from the [`crate::remote_access::Gateway`] builder.
 #[derive(Clone)]
 pub(crate) struct RemoteAccessConnectionOptions {
     pub name: Option<String>,
@@ -37,8 +46,8 @@ pub(crate) struct RemoteAccessConnectionOptions {
     pub foxglove_api_url: Option<String>,
     pub foxglove_api_timeout: Option<Duration>,
     pub session_id: String,
-    pub listener: Option<Arc<dyn RemoteAccessSinkListener>>,
-    pub capabilities: Vec<websocket::Capability>,
+    pub listener: Option<Arc<dyn super::Listener>>,
+    pub capabilities: Vec<Capability>,
     pub supported_encodings: Option<IndexSet<String>>,
     pub runtime: Option<Handle>,
     pub channel_filter: Option<Arc<dyn SinkChannelFilter>>,
@@ -55,7 +64,7 @@ impl Default for RemoteAccessConnectionOptions {
             device_token: String::new(),
             foxglove_api_url: None,
             foxglove_api_timeout: None,
-            session_id: Server::generate_session_id(),
+            session_id: generate_session_id(),
             listener: None,
             capabilities: Vec::new(),
             supported_encodings: None,
