@@ -1,13 +1,14 @@
 //! Server messages for Foxglove protocol v2.
 
-use bytes::{Buf, BufMut};
+use bytes::Buf;
 use serde::Deserialize;
 
-use super::message::BinaryMessage;
-use crate::protocol::{BinaryPayload, ParseError};
+use crate::protocol::{BinaryMessage, BinaryPayload, ParseError};
 
 mod message_data;
 
+#[allow(unused_imports)]
+pub use crate::protocol::common::server::advertise;
 pub use crate::protocol::common::server::server_info;
 pub use crate::protocol::common::server::{
     Advertise, AdvertiseServices, ConnectionGraphUpdate, FetchAssetResponse, ParameterValues,
@@ -40,49 +41,8 @@ impl BinaryOpcode {
     }
 }
 
-impl BinaryMessage for MessageData<'_> {
-    fn to_bytes(&self) -> Vec<u8> {
-        let mut buf = Vec::with_capacity(1 + self.payload_size());
-        buf.put_u8(BinaryOpcode::MessageData as u8);
-        self.write_payload(&mut buf);
-        buf
-    }
-}
-
-impl BinaryMessage for Time {
-    fn to_bytes(&self) -> Vec<u8> {
-        let mut buf = Vec::with_capacity(1 + self.payload_size());
-        buf.put_u8(BinaryOpcode::Time as u8);
-        self.write_payload(&mut buf);
-        buf
-    }
-}
-
-impl BinaryMessage for ServiceCallResponse<'_> {
-    fn to_bytes(&self) -> Vec<u8> {
-        let mut buf = Vec::with_capacity(1 + self.payload_size());
-        buf.put_u8(BinaryOpcode::ServiceCallResponse as u8);
-        self.write_payload(&mut buf);
-        buf
-    }
-}
-
-impl BinaryMessage for FetchAssetResponse<'_> {
-    fn to_bytes(&self) -> Vec<u8> {
-        let mut buf = Vec::with_capacity(1 + self.payload_size());
-        buf.put_u8(BinaryOpcode::FetchAssetResponse as u8);
-        self.write_payload(&mut buf);
-        buf
-    }
-}
-
-impl BinaryMessage for PlaybackState {
-    fn to_bytes(&self) -> Vec<u8> {
-        let mut buf = Vec::with_capacity(1 + self.payload_size());
-        buf.put_u8(BinaryOpcode::PlaybackState as u8);
-        self.write_payload(&mut buf);
-        buf
-    }
+impl<'a> BinaryMessage<'a> for MessageData<'a> {
+    const OPCODE: u8 = BinaryOpcode::MessageData as u8;
 }
 
 /// A representation of a server message useful for deserializing.

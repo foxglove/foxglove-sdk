@@ -4,6 +4,8 @@ use std::sync::Weak;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use std::{collections::HashMap, net::SocketAddr, sync::Arc};
 
+use indexmap::IndexSet;
+
 use futures_util::SinkExt;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::runtime::Handle;
@@ -40,9 +42,9 @@ pub(crate) struct ServerOptions {
     pub name: Option<String>,
     pub message_backlog_size: Option<usize>,
     pub listener: Option<Arc<dyn ServerListener>>,
-    pub capabilities: Option<HashSet<Capability>>,
+    pub capabilities: Option<IndexSet<Capability>>,
     pub services: HashMap<String, Service>,
-    pub supported_encodings: Option<HashSet<String>>,
+    pub supported_encodings: Option<IndexSet<String>>,
     pub runtime: Option<Handle>,
     pub fetch_asset_handler: Option<Box<dyn AssetHandler>>,
     pub tls_identity: Option<TlsIdentity>,
@@ -146,11 +148,11 @@ pub(crate) struct Server {
     /// Callbacks for handling client messages, etc.
     listener: Option<Arc<dyn ServerListener>>,
     /// Capabilities advertised to clients
-    capabilities: HashSet<Capability>,
+    capabilities: IndexSet<Capability>,
     /// Parameters subscribed to by clients
     subscribed_parameters: parking_lot::RwLock<HashMap<String, HashSet<ClientId>>>,
     /// Encodings server can accept from clients. Ignored unless the "clientPublish" capability is set.
-    supported_encodings: HashSet<String>,
+    supported_encodings: IndexSet<String>,
     /// The current connection graph, unused unless the "connectionGraph" capability is set.
     connection_graph: parking_lot::Mutex<ConnectionGraph>,
     /// Token for cancelling all tasks

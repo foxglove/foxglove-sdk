@@ -117,7 +117,7 @@ impl Server {
 
     /// Sets the context for this sink.
     pub fn context(mut self, ctx: &Arc<Context>) -> Self {
-        self.options.context = ctx.clone();
+        self.options.context = Arc::downgrade(ctx);
         self
     }
 
@@ -164,6 +164,17 @@ impl Server {
     /// (in seconds), falling back to 30 seconds.
     pub fn foxglove_api_timeout(mut self, timeout: Duration) -> Self {
         self.foxglove_api_timeout = Some(timeout);
+        self
+    }
+
+    /// Set the message backlog size.
+    ///
+    /// The sink buffers outgoing log entries into a queue. If the backlog size is exceeded, the
+    /// oldest entries will be dropped.
+    ///
+    /// By default, the sink will buffer 1024 messages.
+    pub fn message_backlog_size(mut self, size: usize) -> Self {
+        self.options.message_backlog_size = Some(size);
         self
     }
 

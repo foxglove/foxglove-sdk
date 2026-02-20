@@ -5,6 +5,7 @@ mod credentials_provider;
 mod participant;
 mod server;
 mod server_listener;
+mod session;
 
 pub use capability::Capability;
 pub use client::Client;

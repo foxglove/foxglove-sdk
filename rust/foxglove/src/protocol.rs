@@ -5,7 +5,7 @@
 #[doc(hidden)]
 mod common;
 use common::{parameter, schema};
-use common::{BinaryPayload, JsonMessage, ParseError};
+use common::{BinaryMessage, BinaryPayload, JsonMessage, ParseError};
 
 // Protocol v1, used by the Foxglove WebSocket server/client
 #[doc(hidden)]

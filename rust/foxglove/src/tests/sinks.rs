@@ -5,7 +5,7 @@ use tempfile::NamedTempFile;
 
 #[cfg(feature = "websocket")]
 use crate::{
-    schemas::Log,
+    messages::Log,
     testutil::{assert_eventually, read_summary},
     websocket::ws_protocol::{
         client::{subscribe::Subscription, Subscribe},

@@ -1,7 +1,7 @@
 use std::{error::Error, fmt::Display};
 #[cfg(feature = "websocket")]
 mod logging;
-mod schemas;
+mod messages;
 mod sinks;
 
 use crate::FoxgloveError;

@@ -126,8 +126,8 @@ mod tests {
     #[test]
     fn test_streamed_source_builder_snapshot() {
         let mut channels = ChannelSet::new();
-        channels.insert::<crate::schemas::Vector3>("/topic1");
-        channels.insert::<crate::schemas::Vector3>("/topic2");
+        channels.insert::<crate::messages::Vector3>("/topic1");
+        channels.insert::<crate::messages::Vector3>("/topic2");
 
         let (topics, schemas) = channels.into_topics_and_schemas();
         assert_eq!(topics.len(), 2);

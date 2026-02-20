@@ -138,8 +138,6 @@ pub enum Capability {
 
 #[cfg(test)]
 mod tests {
-    use crate::protocol::v1::server::ServerMessage;
-
     use super::*;
 
     fn message() -> ServerInfo {
@@ -173,8 +171,8 @@ mod tests {
 
     fn test_roundtrip_inner(orig: ServerInfo) {
         let buf = orig.to_string();
-        let msg = ServerMessage::parse_json(&buf).unwrap();
-        assert_eq!(msg, ServerMessage::ServerInfo(orig));
+        let parsed: ServerInfo = serde_json::from_str(&buf).unwrap();
+        assert_eq!(parsed, orig);
     }
 
     #[test]

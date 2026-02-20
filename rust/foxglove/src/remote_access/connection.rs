@@ -1,13 +1,12 @@
 use std::{
-    collections::{HashMap, HashSet},
-    sync::Arc,
+    collections::HashMap,
+    sync::{Arc, Weak},
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
-use bytes::Bytes;
-use livekit::{id::ParticipantIdentity, Room, RoomEvent, RoomOptions, StreamByteOptions};
-use parking_lot::RwLock;
-use smallvec::SmallVec;
+use indexmap::IndexSet;
+
+use livekit::{Room, RoomEvent, RoomOptions};
 use tokio::{runtime::Handle, sync::mpsc::UnboundedReceiver, sync::OnceCell, task::JoinHandle};
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info, warn};
@@ -15,20 +14,18 @@ use tracing::{debug, error, info, warn};
 use crate::{
     api_client::{DeviceToken, FoxgloveApiClientBuilder},
     library_version::get_library_version,
+    protocol::v2::server::ServerInfo,
     remote_access::{
-        credentials_provider::CredentialsProvider,
-        participant::{Participant, ParticipantWriter},
-        Capability, RemoteAccessError,
+        credentials_provider::CredentialsProvider, session::RemoteAccessSession, Capability,
+        RemoteAccessError,
     },
     Context, SinkChannelFilter,
 };
 
-use crate::protocol::v2::{server::ServerInfo, JsonMessage};
-
 type Result<T> = std::result::Result<T, RemoteAccessError>;
 
-const WS_PROTOCOL_TOPIC: &str = "ws-protocol";
 const AUTH_RETRY_PERIOD: Duration = Duration::from_secs(30);
+const DEFAULT_MESSAGE_BACKLOG_SIZE: usize = 1024;
 
 /// Generate a session ID from the current timestamp.
 fn generate_session_id() -> String {
@@ -37,19 +34,6 @@ fn generate_session_id() -> String {
         .ok()
         .map(|d| d.as_millis().to_string())
         .unwrap_or_default()
-}
-
-/// The operation code for the message framing for protocol v2.
-/// Distinguishes between frames containing JSON messages vs binary messages.
-#[derive(Clone, Copy, Debug)]
-#[repr(u8)]
-enum OpCode {
-    /// The frame contains a JSON message.
-    Text = 1,
-    /// The frame contains a binary message.
-    // TODO future use
-    #[expect(dead_code)]
-    Binary = 2,
 }
 
 /// Options for the remote access connection.
@@ -64,12 +48,13 @@ pub(crate) struct RemoteAccessConnectionOptions {
     pub session_id: String,
     pub listener: Option<Arc<dyn super::ServerListener>>,
     pub capabilities: Vec<Capability>,
-    pub supported_encodings: Option<HashSet<String>>,
+    pub supported_encodings: Option<IndexSet<String>>,
     pub runtime: Option<Handle>,
     pub channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     pub server_info: Option<HashMap<String, String>>,
+    pub message_backlog_size: Option<usize>,
     pub cancellation_token: CancellationToken,
-    pub context: Arc<Context>,
+    pub context: Weak<Context>,
 }
 
 impl Default for RemoteAccessConnectionOptions {
@@ -86,8 +71,9 @@ impl Default for RemoteAccessConnectionOptions {
             runtime: None,
             channel_filter: None,
             server_info: None,
+            message_backlog_size: None,
             cancellation_token: CancellationToken::new(),
-            context: Context::get_default(),
+            context: Arc::downgrade(&Context::get_default()),
         }
     }
 }
@@ -106,18 +92,10 @@ impl std::fmt::Debug for RemoteAccessConnectionOptions {
             .field("has_runtime", &self.runtime.is_some())
             .field("has_channel_filter", &self.channel_filter.is_some())
             .field("server_info", &self.server_info)
-            .field("context", &self.context)
+            .field("message_backlog_size", &self.message_backlog_size)
+            .field("has_context", &(self.context.strong_count() > 0))
             .finish()
     }
-}
-
-/// RemoteAccessSession tracks a connected LiveKit session (the Room)
-/// and any state that is specific to that session.
-/// We discard this state if we close or lose the connection.
-/// [`RemoteAccessConnection`] manages the current connected session (if any)
-struct RemoteAccessSession {
-    room: Room,
-    participants: RwLock<HashMap<ParticipantIdentity, Arc<Participant>>>,
 }
 
 /// RemoteAccessConnection manages the connected [`RemoteAccessSession`] to the LiveKit server,
@@ -167,10 +145,24 @@ impl RemoteAccessConnection {
             .await
             .map_err(|e| RemoteAccessError::AuthError(e.to_string()))?;
 
+        let message_backlog_size = self
+            .options
+            .message_backlog_size
+            .unwrap_or(DEFAULT_MESSAGE_BACKLOG_SIZE);
+
         let (session, room_events) =
             match Room::connect(&credentials.url, &credentials.token, RoomOptions::default()).await
             {
-                Ok((room, room_events)) => (Arc::new(RemoteAccessSession::new(room)), room_events),
+                Ok((room, room_events)) => (
+                    Arc::new(RemoteAccessSession::new(
+                        room,
+                        self.options.context.clone(),
+                        self.options.channel_filter.clone(),
+                        self.options.cancellation_token.clone(),
+                        message_backlog_size,
+                    )),
+                    room_events,
+                ),
                 Err(e) => {
                     return Err(e.into());
                 }
@@ -212,8 +204,19 @@ impl RemoteAccessConnection {
             return;
         };
 
-        let attributes = session.room.local_participant().attributes();
-        let identity = session.room.local_participant().identity();
+        // Register the session as a sink so it receives channel notifications.
+        // This synchronously triggers add_channels for all existing channels.
+        let Some(context) = self.options.context.upgrade() else {
+            info!("context has been dropped, stopping remote access connection");
+            return;
+        };
+        context.add_sink(session.clone());
+
+        // We can use spawn here because we're already running on self.options.runtime (if set)
+        let sender_task = tokio::spawn(RemoteAccessSession::run_sender(session.clone()));
+
+        let attributes = session.room().local_participant().attributes();
+        let identity = session.room().local_participant().identity();
         info!(
             "local participant {:?} attributes: {:?}",
             identity, attributes
@@ -225,10 +228,14 @@ impl RemoteAccessConnection {
             _ = self.listen_for_room_events(session.clone(), room_events) => {}
         }
 
+        // Remove the sink before closing the room.
+        context.remove_sink(session.sink_id());
+        sender_task.abort();
+
         info!("disconnecting from room");
         // Close the room (disconnect) on shutdown.
         // If we don't do that, there's a 15s delay before this device is removed from the participants
-        if let Err(e) = session.room.close().await {
+        if let Err(e) = session.room().close().await {
             error!("failed to close room: {e:?}");
         }
     }
@@ -302,16 +309,10 @@ impl RemoteAccessConnection {
                     };
 
                     let server_info = self.create_server_info();
-                    session
-                        .send_info_and_advertisements(participant_id, server_info)
-                        .await;
+                    session.send_info_and_advertisements(participant_id.clone(), server_info);
                 }
                 RoomEvent::ParticipantDisconnected(participant) => {
-                    let mut participants = session.participants.write();
-                    let participant_id = participant.identity();
-                    if participants.remove(&participant_id).is_some() {
-                        info!("removed participant {participant_id:?}");
-                    }
+                    session.remove_participant(&participant.identity());
                 }
                 RoomEvent::DataReceived {
                     payload: _,
@@ -322,15 +323,24 @@ impl RemoteAccessConnection {
                     info!("data received: {:?}", topic);
                 }
                 RoomEvent::ByteStreamOpened {
-                    reader: _,
+                    reader,
                     topic: _,
                     participant_identity,
                 } => {
+                    // This is how we handle incoming reliable messages from the client
+                    // They open a byte stream to the device participant (us).
                     info!(
                         "byte stream opened from participant: {:?}",
                         participant_identity
                     );
-                    // TODO handle byte stream from client
+                    if let Some(reader) = reader.take() {
+                        let session2 = session.clone();
+                        tokio::spawn(async move {
+                            session2
+                                .handle_byte_stream_from_client(participant_identity, reader)
+                                .await;
+                        });
+                    }
                 }
                 RoomEvent::Disconnected { reason } => {
                     info!(
@@ -389,89 +399,5 @@ impl RemoteAccessConnection {
 
     pub(crate) fn shutdown(&self) {
         self.cancellation_token().cancel();
-    }
-}
-
-impl RemoteAccessSession {
-    fn new(room: Room) -> Self {
-        Self {
-            room,
-            participants: RwLock::new(HashMap::new()),
-        }
-    }
-
-    /// Add a participant to the server, if it hasn't already been added.
-    /// In either case, return the new or existing participant.
-    async fn add_participant(
-        &self,
-        participant_id: ParticipantIdentity,
-    ) -> Result<Arc<Participant>> {
-        // First, check if we already have this participant by identity
-        {
-            if let Some(existing_participant) = self.participants.read().get(&participant_id) {
-                return Ok(existing_participant.clone());
-            }
-        }
-
-        let stream = match self
-            .room
-            .local_participant()
-            .stream_bytes(StreamByteOptions {
-                topic: WS_PROTOCOL_TOPIC.to_string(),
-                destination_identities: vec![participant_id.clone()],
-                ..StreamByteOptions::default()
-            })
-            .await
-        {
-            Ok(stream) => stream,
-            Err(e) => {
-                error!("failed to create stream for participant {participant_id}: {e:?}");
-                return Err(e.into());
-            }
-        };
-
-        let participant = Arc::new(Participant::new(
-            participant_id.clone(),
-            ParticipantWriter::Livekit(stream),
-        ));
-
-        self.participants
-            .write()
-            .insert(participant_id, participant.clone());
-        Ok(participant)
-    }
-
-    async fn send_info_and_advertisements(
-        &self,
-        participant: Arc<Participant>,
-        server_info: ServerInfo,
-    ) {
-        info!("sending server info and advertisements to participant {participant:?}");
-        self.send_to_participant(participant, server_info.to_string().into(), OpCode::Text)
-            .await;
-        // TODO send advertisements
-        //self.send_advertisements(participant_id).await;
-    }
-
-    // Send a message to one participant identified by the id
-    async fn send_to_participant(
-        &self,
-        participant: Arc<Participant>,
-        bytes: Bytes,
-        op_code: OpCode,
-    ) {
-        // Add the message framing, 1 byte op code + 4 byte little-endian length
-        let mut buf = SmallVec::<[u8; 4 * 1024]>::with_capacity(bytes.len() + 5);
-        buf.push(op_code as u8);
-        buf.extend_from_slice(
-            &u32::try_from(bytes.len())
-                .expect("message too large")
-                .to_le_bytes(),
-        );
-        buf.extend_from_slice(&bytes);
-
-        if let Err(e) = participant.send(&buf).await {
-            error!("failed to send to participant {participant:?}: {e:?}");
-        }
     }
 }
