@@ -1,3 +1,4 @@
 /schemas
+/typescript/messages/src/types
 /typescript/schemas/src/types
 /python/foxglove-sdk/python/foxglove/notebook/static
