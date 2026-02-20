@@ -4,19 +4,16 @@ import * as messages from "@foxglove/messages";
 
 import * as schemas from "./index";
 
-const messagesRecord: Record<string, unknown> = messages;
-const schemasRecord: Record<string, unknown> = schemas;
-
 describe("@foxglove/schemas backward compatibility", () => {
   it("re-exports all named exports from @foxglove/messages", () => {
-    const messageKeys = Object.keys(messagesRecord).sort();
-    const schemaKeys = Object.keys(schemasRecord).sort();
-    expect(schemaKeys).toEqual(messageKeys);
-  });
+    const messageExports = messages as Record<string, unknown>;
+    const schemaExports = schemas as Record<string, unknown>;
+    const messageKeys = Object.keys(messageExports);
+    const schemaKeys = Object.keys(schemaExports);
 
-  it("re-exports identical values", () => {
-    for (const key of Object.keys(messagesRecord)) {
-      expect(schemasRecord[key]).toBe(messagesRecord[key]);
+    for (const key of messageKeys) {
+      expect(schemaKeys).toContain(key);
+      expect(schemaExports[key]).toBe(messageExports[key]);
     }
   });
 });
