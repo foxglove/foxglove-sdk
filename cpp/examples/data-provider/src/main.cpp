@@ -138,9 +138,9 @@ std::optional<FlightParams> require_flight_params(
 
 /// Validate the bearer token from the Authorization header.
 /// Returns true if the request is authorized; sets a 401 response and returns false otherwise.
-///
-/// Replace this with real token validation (e.g. JWT verification).
 bool require_auth(const httplib::Request& req, httplib::Response& res) {
+  // THIS ACCEPTS ANY NON-EMPTY BEARER TOKEN.
+  // DEMO ONLY: REPLACE WITH REAL AUTH!
   auto it = req.headers.find("Authorization");
   if (it != req.headers.end()) {
     const auto& value = it->second;
