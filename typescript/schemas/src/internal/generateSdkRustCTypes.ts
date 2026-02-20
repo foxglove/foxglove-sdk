@@ -207,6 +207,9 @@ impl BorrowToNative for ${name} {
         switch (field.type.type) {
           case "primitive":
             if (field.type.name === "string") {
+              if (field.optional) {
+                return `${fieldName}: Some(ManuallyDrop::into_inner(${fieldName}))`;
+              }
               return `${fieldName}: ManuallyDrop::into_inner(${fieldName})`;
             } else if (field.type.name === "bytes") {
               return `${fieldName}: ManuallyDrop::into_inner(unsafe { bytes_from_raw(self.${fieldName}, self.${fieldName}_len) })`;

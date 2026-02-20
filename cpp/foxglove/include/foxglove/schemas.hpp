@@ -1224,6 +1224,10 @@ struct LocationFix {
   /// @brief Color used to visualize the location
   std::optional<Color> color;
 
+  /// @brief Informational text to be displayed on-demand when visualizing the location. Supports
+  /// newline (`\n`) characters.
+  std::optional<std::string> details;
+
   /// @brief Encoded the LocationFix as protobuf to the provided buffer.
   ///
   /// On success, writes the serialized length to *encoded_len.
