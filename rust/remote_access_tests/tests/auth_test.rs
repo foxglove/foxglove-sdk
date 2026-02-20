@@ -9,7 +9,7 @@ use anyhow::{Context, Result};
 use remote_access_tests::config::Config;
 use reqwest::header::{AUTHORIZATION, CONTENT_TYPE};
 use serde::Deserialize;
-use tracing::info;
+use tracing::{info, warn};
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -129,22 +129,28 @@ async fn auth_remote_access_connection() -> Result<()> {
 
     // Create a device and device token via the Foxglove platform API.
     let device_name = format!("ra-integration-test-{}", unique_id());
-    let device = create_device(
-        &client,
-        &config.foxglove_api_url,
-        &config.foxglove_api_key,
-        &device_name,
-    )
+    let device = retry(3, || async {
+        create_device(
+            &client,
+            &config.foxglove_api_url,
+            &config.foxglove_api_key,
+            &device_name,
+        )
+        .await
+    })
     .await
     .context("create device")?;
     info!("created device: {}", device.id);
 
-    let device_token = create_device_token(
-        &client,
-        &config.foxglove_api_url,
-        &config.foxglove_api_key,
-        &device.id,
-    )
+    let device_token = retry(3, || async {
+        create_device_token(
+            &client,
+            &config.foxglove_api_url,
+            &config.foxglove_api_key,
+            &device.id,
+        )
+        .await
+    })
     .await
     .context("create device token")?;
     info!("created device token: {}", device_token.id);
@@ -154,21 +160,27 @@ async fn auth_remote_access_connection() -> Result<()> {
 
     // Always clean up platform resources regardless of test outcome.
     // Run both deletions unconditionally so a token deletion failure doesn't leak the device.
-    let token_result = delete_device_token(
-        &client,
-        &config.foxglove_api_url,
-        &config.foxglove_api_key,
-        &device_token.id,
-    )
+    let token_result = retry(3, || async {
+        delete_device_token(
+            &client,
+            &config.foxglove_api_url,
+            &config.foxglove_api_key,
+            &device_token.id,
+        )
+        .await
+    })
     .await
     .context("delete device token");
 
-    let device_result = delete_device(
-        &client,
-        &config.foxglove_api_url,
-        &config.foxglove_api_key,
-        &device.id,
-    )
+    let device_result = retry(3, || async {
+        delete_device(
+            &client,
+            &config.foxglove_api_url,
+            &config.foxglove_api_key,
+            &device.id,
+        )
+        .await
+    })
     .await
     .context("delete device");
 
@@ -201,6 +213,29 @@ async fn run_auth_test(config: &Config, token: &str) -> Result<()> {
         .context("sink runner panicked")?;
 
     Ok(())
+}
+
+/// Retries an async operation with exponential backoff on failure.
+async fn retry<F, Fut, T>(max_attempts: u32, f: F) -> Result<T>
+where
+    F: Fn() -> Fut,
+    Fut: std::future::Future<Output = Result<T>>,
+{
+    let mut last_err = None;
+    for attempt in 1..=max_attempts {
+        match f().await {
+            Ok(val) => return Ok(val),
+            Err(e) => {
+                if attempt < max_attempts {
+                    let delay = Duration::from_secs(2u64.pow(attempt - 1));
+                    warn!("attempt {attempt}/{max_attempts} failed: {e:#}; retrying in {delay:?}");
+                    tokio::time::sleep(delay).await;
+                }
+                last_err = Some(e);
+            }
+        }
+    }
+    Err(last_err.unwrap())
 }
 
 fn unique_id() -> String {
