@@ -2311,6 +2311,10 @@ export const LocationFix = {
         "b",
         "a"
       ]
+    },
+    "details": {
+      "type": "string",
+      "description": "Informational text to be displayed on-demand when visualizing the location. Supports newline (`\\n`) characters."
     }
   },
   "required": [
@@ -2432,6 +2436,10 @@ export const LocationFixes = {
               "b",
               "a"
             ]
+          },
+          "details": {
+            "type": "string",
+            "description": "Informational text to be displayed on-demand when visualizing the location. Supports newline (`\\n`) characters."
           }
         },
         "required": [

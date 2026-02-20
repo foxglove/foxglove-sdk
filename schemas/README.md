@@ -1615,6 +1615,19 @@ Color used to visualize the location
 
 </td>
 </tr>
+<tr>
+<td><code>details</code> (optional)</td>
+<td>
+
+string
+
+</td>
+<td>
+
+Informational text to be displayed on-demand when visualizing the location. Supports newline (`\n`) characters.
+
+</td>
+</tr>
 </table>
 
 ## LocationFixes

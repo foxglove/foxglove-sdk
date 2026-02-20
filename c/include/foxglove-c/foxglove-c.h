@@ -1245,6 +1245,10 @@ typedef struct foxglove_location_fix {
    * Color used to visualize the location
    */
   const struct foxglove_color *color;
+  /**
+   * Informational text to be displayed on-demand when visualizing the location. Supports newline (`\n`) characters.
+   */
+  struct foxglove_string details;
 } foxglove_location_fix;
 
 /**

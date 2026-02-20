@@ -7,7 +7,7 @@ use std::pin::{pin, Pin};
 use foxglove::Encode;
 
 use crate::arena::{Arena, BorrowToNative};
-use crate::util::{bytes_from_raw, string_from_raw, vec_from_raw};
+use crate::util::{bytes_from_raw, optional_string_from_raw, string_from_raw, vec_from_raw};
 #[cfg(not(target_family = "wasm"))]
 use crate::{
     do_foxglove_channel_create, log_msg_to_channel, result_to_c, FoxgloveChannel, FoxgloveContext,
@@ -3227,6 +3227,9 @@ pub struct LocationFix {
 
     /// Color used to visualize the location
     pub color: *const Color,
+
+    /// Informational text to be displayed on-demand when visualizing the location. Supports newline (`\n`) characters.
+    pub details: FoxgloveString,
 }
 
 #[cfg(not(target_family = "wasm"))]
@@ -3273,6 +3276,13 @@ impl BorrowToNative for LocationFix {
                 .map(|m| m.borrow_to_native(arena.as_mut()))
         }
         .transpose()?;
+        let details = unsafe {
+            optional_string_from_raw(
+                self.details.as_ptr() as *const _,
+                self.details.len(),
+                "details",
+            )?
+        };
 
         Ok(ManuallyDrop::new(foxglove::messages::LocationFix {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
@@ -3288,6 +3298,7 @@ impl BorrowToNative for LocationFix {
             }),
             position_covariance_type: self.position_covariance_type as i32,
             color: color.map(ManuallyDrop::into_inner),
+            details: details.map(ManuallyDrop::into_inner),
         }))
     }
 }

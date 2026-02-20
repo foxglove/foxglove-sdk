@@ -323,6 +323,9 @@ function cppToC(schema: FoxgloveMessageSchema, copyTypes: Set<string>): string[]
     switch (field.type.type) {
       case "primitive":
         if (field.type.name === "string") {
+          if (field.optional) {
+            return `dest.${dstName} = src.${srcName} ? foxglove_string{src.${srcName}->data(), src.${srcName}->size()} : foxglove_string{};`;
+          }
           return `dest.${dstName} = {src.${srcName}.data(), src.${srcName}.size()};`;
         } else if (field.type.name === "bytes") {
           return `dest.${dstName} = reinterpret_cast<const unsigned char *>(src.${srcName}.data());\n    dest.${dstName}_len = src.${srcName}.size();`;

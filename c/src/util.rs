@@ -39,6 +39,25 @@ pub(crate) unsafe fn string_from_raw(
     }
 }
 
+/// Like [`string_from_raw`], but returns `None` when the pointer is null, allowing C callers to
+/// express the absence of an optional string field.
+///
+/// # Safety
+///
+/// If len > 0, the pointer must be a valid pointer to len bytes.
+///
+/// The returned String must never be dropped as a String.
+pub(crate) unsafe fn optional_string_from_raw(
+    ptr: *const u8,
+    len: usize,
+    field_name: &str,
+) -> Result<Option<ManuallyDrop<String>>, FoxgloveError> {
+    if ptr.is_null() && len == 0 {
+        return Ok(None);
+    }
+    unsafe { string_from_raw(ptr, len, field_name).map(Some) }
+}
+
 /// Create a borrowed vec from a raw pointer and length.
 ///
 /// # Safety

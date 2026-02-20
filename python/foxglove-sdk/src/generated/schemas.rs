@@ -1403,6 +1403,7 @@ impl From<LinePrimitive> for foxglove::schemas::LinePrimitive {
 /// :param position_covariance: Position covariance (m^2) defined relative to a tangential plane through the reported position. The components are East, North, and Up (ENU), in row-major order.
 /// :param position_covariance_type: If `position_covariance` is available, `position_covariance_type` must be set to indicate the type of covariance.
 /// :param color: Color used to visualize the location
+/// :param details: Informational text to be displayed on-demand when visualizing the location. Supports newline (`\n`) characters.
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/location-fix
 #[pyclass(module = "foxglove.schemas")]
@@ -1411,7 +1412,7 @@ pub(crate) struct LocationFix(pub(crate) foxglove::schemas::LocationFix);
 #[pymethods]
 impl LocationFix {
     #[new]
-    #[pyo3(signature = (*, timestamp=None, frame_id="", latitude=0.0, longitude=0.0, altitude=0.0, position_covariance=None, position_covariance_type=LocationFixPositionCovarianceType::Unknown, color=None) )]
+    #[pyo3(signature = (*, timestamp=None, frame_id="", latitude=0.0, longitude=0.0, altitude=0.0, position_covariance=None, position_covariance_type=LocationFixPositionCovarianceType::Unknown, color=None, details=None) )]
     fn new(
         timestamp: Option<Timestamp>,
         frame_id: &str,
@@ -1421,6 +1422,7 @@ impl LocationFix {
         position_covariance: Option<Vec<f64>>,
         position_covariance_type: LocationFixPositionCovarianceType,
         color: Option<Color>,
+        details: Option<&str>,
     ) -> Self {
         Self(foxglove::schemas::LocationFix {
             timestamp: timestamp.map(Into::into),
@@ -1431,11 +1433,12 @@ impl LocationFix {
             position_covariance: position_covariance.unwrap_or_default(),
             position_covariance_type: position_covariance_type as i32,
             color: color.map(Into::into),
+            details: details.map(|s| s.to_string()),
         })
     }
     fn __repr__(&self) -> String {
         format!(
-            "LocationFix(timestamp={:?}, frame_id={:?}, latitude={:?}, longitude={:?}, altitude={:?}, position_covariance={:?}, position_covariance_type={:?}, color={:?})",
+            "LocationFix(timestamp={:?}, frame_id={:?}, latitude={:?}, longitude={:?}, altitude={:?}, position_covariance={:?}, position_covariance_type={:?}, color={:?}, details={:?})",
             self.0.timestamp,
             self.0.frame_id,
             self.0.latitude,
@@ -1444,6 +1447,7 @@ impl LocationFix {
             self.0.position_covariance,
             self.0.position_covariance_type,
             self.0.color,
+            self.0.details,
         )
     }
     /// Returns the LocationFix schema.

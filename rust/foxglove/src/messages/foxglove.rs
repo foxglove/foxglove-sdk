@@ -554,6 +554,9 @@ pub struct LocationFix {
     /// Color used to visualize the location
     #[prost(message, optional, tag = "8")]
     pub color: ::core::option::Option<Color>,
+    /// Informational text to be displayed on-demand when visualizing the location. Supports newline (`\n`) characters.
+    #[prost(string, optional, tag = "9")]
+    pub details: ::core::option::Option<::prost::alloc::string::String>,
 }
 /// Nested message and enum types in `LocationFix`.
 pub mod location_fix {
