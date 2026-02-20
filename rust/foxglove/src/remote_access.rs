@@ -3,14 +3,14 @@ mod client;
 mod connection;
 mod credentials_provider;
 mod participant;
-mod server;
-mod server_listener;
+mod gateway;
+mod listener;
 mod session;
 
 pub use capability::Capability;
 pub use client::Client;
-pub use server::{Server, ServerHandle};
-pub use server_listener::ServerListener;
+pub use gateway::{Gateway, GatewayHandle};
+pub use listener::Listener;
 
 use thiserror::Error;
 

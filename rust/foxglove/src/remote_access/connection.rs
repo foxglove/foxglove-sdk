@@ -38,7 +38,7 @@ fn generate_session_id() -> String {
 
 /// Options for the remote access connection.
 ///
-/// This should be constructed from the [`crate::remote_access::Server`] builder.
+/// This should be constructed from the [`crate::remote_access::Gateway`] builder.
 #[derive(Clone)]
 pub(crate) struct RemoteAccessConnectionOptions {
     pub name: Option<String>,
@@ -46,7 +46,7 @@ pub(crate) struct RemoteAccessConnectionOptions {
     pub foxglove_api_url: Option<String>,
     pub foxglove_api_timeout: Option<Duration>,
     pub session_id: String,
-    pub listener: Option<Arc<dyn super::ServerListener>>,
+    pub listener: Option<Arc<dyn super::Listener>>,
     pub capabilities: Vec<Capability>,
     pub supported_encodings: Option<IndexSet<String>>,
     pub runtime: Option<Handle>,

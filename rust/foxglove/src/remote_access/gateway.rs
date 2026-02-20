@@ -8,18 +8,18 @@ use crate::{
 use tokio::task::JoinHandle;
 
 use super::connection::{RemoteAccessConnection, RemoteAccessConnectionOptions};
-use super::{Capability, ServerListener};
+use super::{Capability, Listener};
 
-/// A handle to the remote access server connection.
+/// A handle to the remote access gateway connection.
 ///
 /// This handle can safely be dropped and the connection will run forever.
 #[doc(hidden)]
-pub struct ServerHandle {
+pub struct GatewayHandle {
     connection: Arc<RemoteAccessConnection>,
     runner: JoinHandle<()>,
 }
 
-impl ServerHandle {
+impl GatewayHandle {
     fn new(connection: Arc<RemoteAccessConnection>) -> Self {
         let runner = connection.clone().spawn_run_until_cancelled();
 
@@ -39,29 +39,29 @@ const FOXGLOVE_DEVICE_TOKEN_ENV: &str = "FOXGLOVE_DEVICE_TOKEN";
 const FOXGLOVE_API_URL_ENV: &str = "FOXGLOVE_API_URL";
 const FOXGLOVE_API_TIMEOUT_ENV: &str = "FOXGLOVE_API_TIMEOUT";
 
-/// A remote access server for live visualization and teleop in Foxglove.
+/// A remote access gateway for live visualization and teleop in Foxglove.
 ///
-/// You may only create one server at a time for the device.
+/// You may only create one gateway at a time for the device.
 #[must_use]
 #[doc(hidden)]
 #[derive(Default)]
-pub struct Server {
+pub struct Gateway {
     options: RemoteAccessConnectionOptions,
     device_token: Option<String>,
     foxglove_api_url: Option<String>,
     foxglove_api_timeout: Option<Duration>,
 }
 
-impl std::fmt::Debug for Server {
+impl std::fmt::Debug for Gateway {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Server")
+        f.debug_struct("Gateway")
             .field("options", &self.options)
             .finish()
     }
 }
 
-impl Server {
-    /// Creates a new Server with default options.
+impl Gateway {
+    /// Creates a new Gateway with default options.
     pub fn new() -> Self {
         Self::default()
     }
@@ -75,7 +75,7 @@ impl Server {
     }
 
     /// Configure an event listener to receive client message events.
-    pub fn listener(mut self, listener: Arc<dyn ServerListener>) -> Self {
+    pub fn listener(mut self, listener: Arc<dyn Listener>) -> Self {
         self.options.listener = Some(listener);
         self
     }
@@ -121,11 +121,11 @@ impl Server {
         self
     }
 
-    /// Configure the tokio runtime for the server to use for async tasks.
+    /// Configure the tokio runtime for the gateway to use for async tasks.
     ///
-    /// By default, the server will use either the current runtime (if started with
-    /// [`Server::start`]), or spawn its own internal runtime (if started with
-    /// [`Server::start_blocking`]).
+    /// By default, the gateway will use either the current runtime (if started with
+    /// [`Gateway::start`]), or spawn its own internal runtime (if started with
+    /// [`Gateway::start_blocking`]).
     #[doc(hidden)]
     pub fn tokio_runtime(mut self, handle: &tokio::runtime::Handle) -> Self {
         self.options.runtime = Some(handle.clone());
@@ -187,15 +187,15 @@ impl Server {
         self
     }
 
-    /// Starts the remote access server, which will establish a connection in the background.
+    /// Starts the remote access gateway, which will establish a connection in the background.
     ///
-    /// Returns a handle that can optionally be used to manage the server.
+    /// Returns a handle that can optionally be used to manage the gateway.
     /// The caller can safely drop the handle and the connection will continue in the background.
     /// Use stop() on the returned handle to stop the connection.
     ///
     /// Returns an error if no device token is provided and the `FOXGLOVE_DEVICE_TOKEN`
     /// environment variable is not set.
-    pub fn start(mut self) -> Result<ServerHandle, FoxgloveError> {
+    pub fn start(mut self) -> Result<GatewayHandle, FoxgloveError> {
         self.options.device_token = self
             .device_token
             .or_else(|| std::env::var(FOXGLOVE_DEVICE_TOKEN_ENV).ok())
@@ -214,6 +214,6 @@ impl Server {
                 .map(Duration::from_secs)
         });
         let connection = RemoteAccessConnection::new(self.options);
-        Ok(ServerHandle::new(Arc::new(connection)))
+        Ok(GatewayHandle::new(Arc::new(connection)))
     }
 }
