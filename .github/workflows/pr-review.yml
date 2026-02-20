@@ -3,13 +3,126 @@ name: PR Review
 on:
   pull_request: {}
 
+concurrency:
+  group: claude-review-${{ github.repository }}-${{ github.head_ref }}-${{ github.event.action }}
+  cancel-in-progress: true
+
 jobs:
   review:
+    if: >-
+      github.event.pull_request != null &&
+      github.actor != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       actions: read
       contents: read
       pull-requests: write
       id-token: write
-    uses: foxglove/actions/.github/workflows/review.yml@main
-    secrets:
-      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+    steps:
+      - name: Checkout project repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Checkout workflow repository
+        uses: actions/checkout@v6
+        with:
+          repository: foxglove/actions
+          path: .foxglove-actions
+
+      - name: Read review prompt file
+        id: prompt
+        shell: bash
+        run: |
+          prompt_file=".foxglove-actions/prompts/review.md"
+          if [ ! -f "$prompt_file" ]; then
+            echo "Missing required review prompt file: $prompt_file" >&2
+            exit 1
+          fi
+
+          {
+            echo "content<<EOF"
+            cat "$prompt_file"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Clean up prior reviews
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            const reviews = await github.paginate(github.rest.pulls.listReviews, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+              per_page: 100,
+            });
+
+            for (const review of reviews) {
+              const reviewerLogin = review.user?.login;
+              if (reviewerLogin !== "claude[bot]" || review.state !== "PENDING") {
+                continue;
+              }
+
+              try {
+                await github.rest.pulls.deletePendingReview({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: context.payload.pull_request.number,
+                  review_id: review.id,
+                });
+                core.info(`Deleted pending review ${review.id} from ${reviewerLogin}`);
+              } catch (error) {
+                const message = error instanceof Error ? error.message : String(error);
+                core.warning(`Failed to delete pending review ${review.id} from ${reviewerLogin}: ${message}`);
+              }
+            }
+
+      - name: Run Claude review
+        id: review
+        continue-on-error: true
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          track_progress: false
+          use_sticky_comment: false
+          allowed_bots: cursor[bot]
+
+          prompt: |
+            CONTEXT:
+              repo: ${{ github.repository }}
+              pr_number: ${{ github.event.pull_request.number }}
+              base_branch: ${{ github.event.pull_request.base.ref }}
+              is_draft: ${{ github.event.pull_request.draft }}
+              bot_login: claude[bot]
+
+            ${{ steps.prompt.outputs.content }}
+
+          claude_args: |
+            --model claude-opus-4-6
+            --allowedTools "Read,Glob,Grep,mcp__github__pull_request_read,mcp__github__pull_request_review_write,mcp__github__add_comment_to_pending_review,mcp__github__add_reply_to_pull_request_comment,mcp__github__get_pull_request,mcp__github__get_pull_request_files,mcp__github__get_pull_request_review_comments,mcp__github__get_pull_request_reviews,mcp__github__create_pending_pull_request_review,mcp__github__add_comment_to_pending_pull_request_review,mcp__github__submit_pending_pull_request_review,Bash(yarn:*),Bash(git diff:*),Bash(git fetch:*),Bash(git lfs:*),Bash(git log:*),Bash(git show:*),Bash(gh api:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(python3:*),Bash(python:*)"
+
+      - name: Retry Claude review on failure
+        if: steps.review.outcome == 'failure'
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          track_progress: false
+          use_sticky_comment: false
+          allowed_bots: cursor[bot]
+
+          prompt: |
+            CONTEXT:
+              repo: ${{ github.repository }}
+              pr_number: ${{ github.event.pull_request.number }}
+              base_branch: ${{ github.event.pull_request.base.ref }}
+              is_draft: ${{ github.event.pull_request.draft }}
+              bot_login: claude[bot]
+
+            ${{ steps.prompt.outputs.content }}
+
+          claude_args: |
+            --model claude-opus-4-6
+            --allowedTools "Read,Glob,Grep,mcp__github__pull_request_read,mcp__github__pull_request_review_write,mcp__github__add_comment_to_pending_review,mcp__github__add_reply_to_pull_request_comment,mcp__github__get_pull_request,mcp__github__get_pull_request_files,mcp__github__get_pull_request_review_comments,mcp__github__get_pull_request_reviews,mcp__github__create_pending_pull_request_review,mcp__github__add_comment_to_pending_pull_request_review,mcp__github__submit_pending_pull_request_review,Bash(yarn:*),Bash(git diff:*),Bash(git fetch:*),Bash(git lfs:*),Bash(git log:*),Bash(git show:*),Bash(gh api:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(python3:*),Bash(python:*)"
