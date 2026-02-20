@@ -1,7 +1,7 @@
 use foxglove::{
     bytes::Bytes,
-    remote_access::{Capability, Client, Gateway, Listener},
     messages::RawImage,
+    remote_access::{Capability, Client, Gateway, Listener},
     ChannelDescriptor,
 };
 use serde_json::Value;
@@ -25,8 +25,7 @@ async fn main() {
     let env = env_logger::Env::default().default_filter_or("info");
     env_logger::init_from_env(env);
 
-    // Open a connection for remote visualization and teleop.
-    // This requires Foxglove Agent to be running on the same machine.
+    // Open a gateway for remote visualization and teleop.
     let handle = Gateway::new()
         .capabilities([Capability::ClientPublish])
         .supported_encodings(["json"])
