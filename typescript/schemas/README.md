@@ -1,18 +1,19 @@
-# @foxglove/schemas
+# @foxglove/schemas (deprecated)
 
-This package contains TypeScript type definitions and JSON Schemas for the Foxglove schemas.
+> **Deprecated:** This package re-exports from [`@foxglove/messages`](../messages). Please migrate to `@foxglove/messages` for new projects.
 
-## Installation
+## Migration
 
-```bash
-npm install @foxglove/schemas
+Replace your dependency:
+
+```diff
+- "@foxglove/schemas": "..."
++ "@foxglove/messages": "..."
 ```
 
-## Usage
+Update your imports:
 
-For a list of available schemas, see https://docs.foxglove.dev/docs/visualization/message-schemas/introduction
-
-```ts
-import type { CompressedImage } from '@foxglove/schemas';
-import { CompressedImage } from '@foxglove/schemas/jsonschema';
+```diff
+- import type { CompressedImage } from "@foxglove/schemas";
++ import type { CompressedImage } from "@foxglove/messages";
 ```

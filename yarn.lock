@@ -939,6 +939,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@foxglove/messages@workspace:^, @foxglove/messages@workspace:typescript/messages":
+  version: 0.0.0-use.local
+  resolution: "@foxglove/messages@workspace:typescript/messages"
+  dependencies:
+    "@foxglove/rosmsg-msgs-common": "npm:^3.2.2"
+    rimraf: "npm:^6.0.1"
+    tslib: "npm:^2"
+    typescript: "npm:5.9.2"
+  languageName: unknown
+  linkType: soft
+
 "@foxglove/notebook-frontend@workspace:python/foxglove-sdk/notebook-frontend":
   version: 0.0.0-use.local
   resolution: "@foxglove/notebook-frontend@workspace:python/foxglove-sdk/notebook-frontend"
@@ -984,7 +995,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@foxglove/schemas@workspace:typescript/schemas"
   dependencies:
-    "@foxglove/rosmsg-msgs-common": "npm:^3.2.2"
+    "@foxglove/messages": "workspace:^"
     rimraf: "npm:^6.0.1"
     tslib: "npm:^2"
     typescript: "npm:5.9.2"

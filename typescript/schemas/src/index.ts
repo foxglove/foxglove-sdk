@@ -1,1 +1,5 @@
-export * from "./types/index";
+/**
+ * @deprecated Use @foxglove/messages instead.
+ * @packageDocumentation
+ */
+export * from "@foxglove/messages";
