@@ -1577,7 +1577,7 @@ const LocationFix: FoxgloveMessageSchema = {
       type: { type: "nested", schema: KeyValuePair },
       array: true,
       description:
-        "Additional user-provided metadata associated with the entity. Keys must be unique.",
+        "Additional user-provided metadata associated with the location fix. Keys must be unique.",
       protobufFieldNumber: 9,
     },
   ],
