@@ -226,6 +226,8 @@ fn unique_id() -> String {
     format!("{nanos:x}-{pid:x}")
 }
 
+type ChannelFilterFn = Box<dyn Fn(&foxglove::ChannelDescriptor) -> bool + Send + Sync + 'static>;
+
 struct TestGateway {
     room_name: String,
     _mock: mock_server::MockServerHandle,
@@ -240,14 +242,14 @@ impl TestGateway {
 
     async fn start_with_filter(
         ctx: &Arc<foxglove::Context>,
-        filter: Option<Box<dyn Fn(&foxglove::ChannelDescriptor) -> bool + Send + Sync + 'static>>,
+        filter: Option<ChannelFilterFn>,
     ) -> Result<Self> {
         let room_name = format!("test-room-{}", unique_id());
         let mock = mock_server::start_mock_server(&room_name).await;
         info!("mock server started at {}", mock.url());
 
         let mut gateway = foxglove::remote_access::Gateway::new()
-            .name(&format!("test-device-{}", unique_id()))
+            .name(format!("test-device-{}", unique_id()))
             .device_token(mock_server::TEST_DEVICE_TOKEN)
             .foxglove_api_url(mock.url())
             .supported_encodings(["json"])
