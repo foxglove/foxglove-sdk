@@ -432,9 +432,7 @@ impl RemoteAccessSession {
                 }
                 let is_first = subscribers.is_empty();
                 subscribers.push(participant.identity().clone());
-                debug!(
-                    "{participant} subscribed to channel {channel_id:?}",
-                );
+                debug!("{participant} subscribed to channel {channel_id:?}",);
                 if is_first {
                     first_subscribed.push(channel_id);
                 }
@@ -460,24 +458,18 @@ impl RemoteAccessSession {
             let mut subscriptions = self.subscriptions.write();
             for &channel_id in &channel_ids {
                 let Some(subscribers) = subscriptions.get_mut(&channel_id) else {
-                    info!(
-                        "{participant} is not subscribed to channel {channel_id:?}; ignoring",
-                    );
+                    info!("{participant} is not subscribed to channel {channel_id:?}; ignoring",);
                     continue;
                 };
                 let Some(pos) = subscribers
                     .iter()
                     .position(|id| id == participant.identity())
                 else {
-                    info!(
-                        "{participant} is not subscribed to channel {channel_id:?}; ignoring",
-                    );
+                    info!("{participant} is not subscribed to channel {channel_id:?}; ignoring",);
                     continue;
                 };
                 subscribers.swap_remove(pos);
-                debug!(
-                    "{participant} unsubscribed from channel {channel_id:?}",
-                );
+                debug!("{participant} unsubscribed from channel {channel_id:?}",);
                 if subscribers.is_empty() {
                     subscriptions.remove(&channel_id);
                     last_unsubscribed.push(channel_id);
