@@ -1,10 +1,9 @@
 //! Client messages for Foxglove protocol v2
 
-use bytes::{Buf, BufMut};
+use bytes::Buf;
 use serde::Deserialize;
 
-use super::message::BinaryMessage;
-use crate::protocol::{BinaryPayload, ParseError};
+use crate::protocol::{BinaryMessage, BinaryPayload, ParseError};
 
 pub mod subscribe;
 mod unsubscribe;
@@ -42,60 +41,14 @@ impl BinaryOpcode {
     }
 }
 
-impl BinaryMessage for MessageData<'_> {
-    fn encoded_len(&self) -> usize {
-        1 + self.payload_size()
-    }
-
-    fn encode(&self, buf: &mut impl BufMut) {
-        buf.put_u8(BinaryOpcode::MessageData as u8);
-        self.write_payload(buf);
-    }
+impl<'a> BinaryMessage<'a> for Subscribe {
+    const OPCODE: u8 = BinaryOpcode::Subscribe as u8;
 }
 
-impl BinaryMessage for ServiceCallRequest<'_> {
-    fn encoded_len(&self) -> usize {
-        1 + self.payload_size()
-    }
-
-    fn encode(&self, buf: &mut impl BufMut) {
-        buf.put_u8(BinaryOpcode::ServiceCallRequest as u8);
-        self.write_payload(buf);
-    }
+impl<'a> BinaryMessage<'a> for Unsubscribe {
+    const OPCODE: u8 = BinaryOpcode::Unsubscribe as u8;
 }
 
-impl BinaryMessage for PlaybackControlRequest {
-    fn encoded_len(&self) -> usize {
-        1 + self.payload_size()
-    }
-
-    fn encode(&self, buf: &mut impl BufMut) {
-        buf.put_u8(BinaryOpcode::PlaybackControlRequest as u8);
-        self.write_payload(buf);
-    }
-}
-
-impl BinaryMessage for Subscribe {
-    fn encoded_len(&self) -> usize {
-        1 + self.payload_size()
-    }
-
-    fn encode(&self, buf: &mut impl BufMut) {
-        buf.put_u8(BinaryOpcode::Subscribe as u8);
-        self.write_payload(buf);
-    }
-}
-
-impl BinaryMessage for Unsubscribe {
-    fn encoded_len(&self) -> usize {
-        1 + self.payload_size()
-    }
-
-    fn encode(&self, buf: &mut impl BufMut) {
-        buf.put_u8(BinaryOpcode::Unsubscribe as u8);
-        self.write_payload(buf);
-    }
-}
 /// A representation of a client message useful for deserializing.
 #[derive(Debug, Clone, PartialEq)]
 #[allow(missing_docs)]

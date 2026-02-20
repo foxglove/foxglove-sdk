@@ -1,10 +1,9 @@
 //! Server messages for Foxglove protocol v2.
 
-use bytes::{Buf, BufMut};
+use bytes::Buf;
 use serde::Deserialize;
 
-use super::message::BinaryMessage;
-use crate::protocol::{BinaryPayload, ParseError};
+use crate::protocol::{BinaryMessage, BinaryPayload, ParseError};
 
 mod message_data;
 
@@ -30,8 +29,6 @@ pub(crate) enum BinaryOpcode {
     PlaybackState = 5,
 }
 
-const OPCODE_SIZE: usize = std::mem::size_of::<BinaryOpcode>();
-
 impl BinaryOpcode {
     pub(crate) fn from_repr(value: u8) -> Option<Self> {
         match value {
@@ -45,59 +42,8 @@ impl BinaryOpcode {
     }
 }
 
-impl BinaryMessage for MessageData<'_> {
-    fn encoded_len(&self) -> usize {
-        OPCODE_SIZE + self.payload_size()
-    }
-
-    fn encode(&self, buf: &mut impl BufMut) {
-        buf.put_u8(BinaryOpcode::MessageData as u8);
-        self.write_payload(buf);
-    }
-}
-
-impl BinaryMessage for Time {
-    fn encoded_len(&self) -> usize {
-        OPCODE_SIZE + self.payload_size()
-    }
-
-    fn encode(&self, buf: &mut impl BufMut) {
-        buf.put_u8(BinaryOpcode::Time as u8);
-        self.write_payload(buf);
-    }
-}
-
-impl BinaryMessage for ServiceCallResponse<'_> {
-    fn encoded_len(&self) -> usize {
-        OPCODE_SIZE + self.payload_size()
-    }
-
-    fn encode(&self, buf: &mut impl BufMut) {
-        buf.put_u8(BinaryOpcode::ServiceCallResponse as u8);
-        self.write_payload(buf);
-    }
-}
-
-impl BinaryMessage for FetchAssetResponse<'_> {
-    fn encoded_len(&self) -> usize {
-        OPCODE_SIZE + self.payload_size()
-    }
-
-    fn encode(&self, buf: &mut impl BufMut) {
-        buf.put_u8(BinaryOpcode::FetchAssetResponse as u8);
-        self.write_payload(buf);
-    }
-}
-
-impl BinaryMessage for PlaybackState {
-    fn encoded_len(&self) -> usize {
-        OPCODE_SIZE + self.payload_size()
-    }
-
-    fn encode(&self, buf: &mut impl BufMut) {
-        buf.put_u8(BinaryOpcode::PlaybackState as u8);
-        self.write_payload(buf);
-    }
+impl<'a> BinaryMessage<'a> for MessageData<'a> {
+    const OPCODE: u8 = BinaryOpcode::MessageData as u8;
 }
 
 /// A representation of a server message useful for deserializing.

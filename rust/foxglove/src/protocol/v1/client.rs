@@ -1,9 +1,8 @@
 //! Client messages for Foxglove protocol v1.
 
-use bytes::{Buf, BufMut};
+use bytes::Buf;
 use serde::Deserialize;
 
-use super::message::BinaryMessage;
 use crate::protocol::{BinaryPayload, ParseError};
 
 pub mod subscribe;
@@ -40,42 +39,10 @@ impl BinaryOpcode {
     }
 }
 
-impl BinaryMessage for MessageData<'_> {
-    fn encoded_len(&self) -> usize {
-        1 + self.payload_size()
-    }
-
-    fn encode(&self, buf: &mut impl BufMut) {
-        buf.put_u8(BinaryOpcode::MessageData as u8);
-        self.write_payload(buf);
-    }
-}
-
-impl BinaryMessage for ServiceCallRequest<'_> {
-    fn encoded_len(&self) -> usize {
-        1 + self.payload_size()
-    }
-
-    fn encode(&self, buf: &mut impl BufMut) {
-        buf.put_u8(BinaryOpcode::ServiceCallRequest as u8);
-        self.write_payload(buf);
-    }
-}
-
-impl BinaryMessage for PlaybackControlRequest {
-    fn encoded_len(&self) -> usize {
-        1 + self.payload_size()
-    }
-
-    fn encode(&self, buf: &mut impl BufMut) {
-        buf.put_u8(BinaryOpcode::PlaybackControlRequest as u8);
-        self.write_payload(buf);
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::protocol::BinaryMessage;
 
     #[test]
     fn test_message_data_encode() {

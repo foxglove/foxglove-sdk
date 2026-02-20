@@ -538,7 +538,7 @@ impl Sink for RemoteAccessSession {
     }
 }
 
-fn encode_binary_message(message: &impl BinaryMessage) -> Bytes {
+fn encode_binary_message(message: &impl BinaryMessage<'_>) -> Bytes {
     let msg_len = message.encoded_len();
     let mut buf = Vec::with_capacity(MESSAGE_FRAME_SIZE + msg_len);
     buf.push(OpCode::Binary as u8);
