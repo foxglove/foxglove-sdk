@@ -13,7 +13,7 @@ jobs:
     permissions:
       pull-requests: read
     outputs:
-      should_run: ${{ steps.check.outputs.should_run }}
+      should_run: ${{ github.event_name != 'pull_request' || steps.paths.outputs.ros == 'true' || contains(github.event.pull_request.labels.*.name, 'ci:ros') }}
     steps:
       - uses: dorny/paths-filter@v3
         if: github.event_name == 'pull_request'
@@ -25,15 +25,6 @@ jobs:
               - 'cpp/**'
               - 'ros/**'
               - '.github/workflows/ros.yml'
-      - id: check
-        run: |
-          if [[ "${{ github.event_name }}" != "pull_request" \
-              || "${{ steps.paths.outputs.ros }}" == "true" \
-              || "${{ contains(github.event.pull_request.labels.*.name, 'ci:ros') }}" == "true" ]]; then
-            echo "should_run=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "should_run=false" >> "$GITHUB_OUTPUT"
-          fi
 
   ros:
     needs: changes
@@ -76,5 +67,5 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     steps:
-      - if: needs.ros.result == 'failure' || needs.ros.result == 'cancelled'
+      - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
         run: exit 1
