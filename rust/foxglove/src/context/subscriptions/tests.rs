@@ -17,7 +17,7 @@ macro_rules! assert_subscribers_eq {
     };
 }
 
-fn chid(id: u32) -> ChannelId {
+fn chid(id: u64) -> ChannelId {
     ChannelId::new(id)
 }
 

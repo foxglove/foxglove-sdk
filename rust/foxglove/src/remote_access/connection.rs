@@ -479,7 +479,7 @@ impl Sink for RemoteAccessSession {
         metadata: &Metadata,
     ) -> std::result::Result<(), FoxgloveError> {
         let channel_id = channel.id();
-        let message = ServerMessageData::new(u32::from(channel_id), metadata.log_time, msg);
+        let message = ServerMessageData::new(u64::from(channel_id), metadata.log_time, msg);
         let data = encode_binary_message(&message);
         self.send_data_lossy(ChannelMessage { channel_id, data });
         Ok(())

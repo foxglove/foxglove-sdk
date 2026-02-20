@@ -416,16 +416,7 @@ impl ConnectedClient {
         let mut subscriptions: Vec<_> = message
             .subscriptions
             .into_iter()
-            .filter_map(|s| {
-                let id = s.id;
-                match Subscription::try_from(s) {
-                    Ok(sub) => Some(sub),
-                    Err(_) => {
-                        self.send_error(format!("Subscription {id}: channel_id out of range"));
-                        None
-                    }
-                }
-            })
+            .map(Subscription::from)
             .collect();
 
         // First prune out any subscriptions for channels not in the channel map,

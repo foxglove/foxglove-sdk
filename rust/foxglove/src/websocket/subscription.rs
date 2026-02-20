@@ -29,13 +29,11 @@ pub(crate) struct Subscription {
     pub id: SubscriptionId,
     pub channel_id: ChannelId,
 }
-impl TryFrom<subscribe::Subscription> for Subscription {
-    type Error = std::num::TryFromIntError;
-
-    fn try_from(value: subscribe::Subscription) -> Result<Self, Self::Error> {
-        Ok(Self {
+impl From<subscribe::Subscription> for Subscription {
+    fn from(value: subscribe::Subscription) -> Self {
+        Self {
             id: SubscriptionId::new(value.id),
-            channel_id: ChannelId::new(value.channel_id.try_into()?),
-        })
+            channel_id: ChannelId::new(value.channel_id),
+        }
     }
 }

@@ -1,5 +1,5 @@
 use std::collections::BTreeMap;
-use std::sync::atomic::AtomicU32;
+use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering::Relaxed;
 use std::sync::Arc;
 
@@ -19,40 +19,42 @@ pub use raw_channel::RawChannel;
 
 /// Stack buffer size to use for encoding messages.
 const STACK_BUFFER_SIZE: usize = 256 * 1024;
+/// Maximum integer that can be represented safely in a double floating point value (for JavaScript numbers)
+const MAX_SAFE_DOUBLE_INTEGER_VALUE: u64 = 1 << 53;
 
 /// Uniquely identifies a channel in the context of this program.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Deserialize, Serialize)]
-pub struct ChannelId(u32);
+pub struct ChannelId(u64);
 
 impl ChannelId {
     /// Returns a new ChannelId
-    pub fn new(id: u32) -> Self {
+    pub fn new(id: u64) -> Self {
         Self(id)
     }
 
     /// Allocates the next channel ID.
     pub(crate) fn next() -> Self {
-        static NEXT_ID: AtomicU32 = AtomicU32::new(1);
+        static NEXT_ID: AtomicU64 = AtomicU64::new(1);
         let id = NEXT_ID.fetch_add(1, Relaxed);
-        assert_ne!(id, 0, "ChannelId overflow");
+        // Panic if we exceed the maximum value we can safely represent in a double floating point number
+        // because the app in JavaScript currently parses these from JSON as numbers.
+        // It is assumed that nobody is able to actually trigger this in the real world.
+        assert!(
+            id < MAX_SAFE_DOUBLE_INTEGER_VALUE,
+            "ChannelId overflow, you win the prize!"
+        );
         Self(id)
-    }
-}
-
-impl From<ChannelId> for u32 {
-    fn from(id: ChannelId) -> u32 {
-        id.0
     }
 }
 
 impl From<ChannelId> for u64 {
     fn from(id: ChannelId) -> u64 {
-        u64::from(id.0)
+        id.0
     }
 }
 
-impl From<u32> for ChannelId {
-    fn from(value: u32) -> Self {
+impl From<u64> for ChannelId {
+    fn from(value: u64) -> Self {
         ChannelId::new(value)
     }
 }
@@ -238,7 +240,7 @@ mod test {
             .context(&ctx)
             .build_raw()
             .expect("Failed to create channel");
-        assert!(u32::from(channel.id()) > 0);
+        assert!(u64::from(channel.id()) > 0);
         assert_eq!(channel.topic(), topic);
         assert_eq!(channel.message_encoding(), message_encoding);
         assert_eq!(channel.schema(), Some(&schema));
