@@ -249,6 +249,8 @@ jobs:
           if-no-files-found: error
 
   test-asan-ubsan:
+    needs: changes
+    if: needs.changes.outputs.build == 'true'
     runs-on: ubuntu-latest
     env:
       CC: clang
