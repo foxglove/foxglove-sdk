@@ -154,9 +154,7 @@ impl ViewerConnection {
     }
 
     /// Reads and returns the next Unadvertise message.
-    async fn expect_unadvertise(
-        &mut self,
-    ) -> Result<foxglove::protocol::v2::server::Unadvertise> {
+    async fn expect_unadvertise(&mut self) -> Result<foxglove::protocol::v2::server::Unadvertise> {
         let msg = self.frame_reader.next_server_message().await?;
         match msg {
             ServerMessage::Unadvertise(unadv) => Ok(unadv),
@@ -182,8 +180,7 @@ impl ViewerConnection {
         let inner = subscribe.to_bytes();
         let framed = frame::frame_binary_message(&inner);
 
-        let gateway_identity =
-            ParticipantIdentity(mock_server::TEST_DEVICE_ID.to_string());
+        let gateway_identity = ParticipantIdentity(mock_server::TEST_DEVICE_ID.to_string());
         let writer = self
             .room
             .local_participant()
