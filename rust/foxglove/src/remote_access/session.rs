@@ -426,16 +426,14 @@ impl RemoteAccessSession {
                 let subscribers = subscriptions.entry(channel_id).or_default();
                 if subscribers.contains(participant.identity()) {
                     info!(
-                        "Participant {:?} is already subscribed to channel {channel_id:?}; ignoring",
-                        participant
+                        "{participant} is already subscribed to channel {channel_id:?}; ignoring",
                     );
                     continue;
                 }
                 let is_first = subscribers.is_empty();
                 subscribers.push(participant.identity().clone());
                 debug!(
-                    "Participant {:?} subscribed to channel {channel_id:?}",
-                    participant
+                    "{participant} subscribed to channel {channel_id:?}",
                 );
                 if is_first {
                     first_subscribed.push(channel_id);
@@ -463,8 +461,7 @@ impl RemoteAccessSession {
             for &channel_id in &channel_ids {
                 let Some(subscribers) = subscriptions.get_mut(&channel_id) else {
                     info!(
-                        "Participant {:?} is not subscribed to channel {channel_id:?}; ignoring",
-                        participant
+                        "{participant} is not subscribed to channel {channel_id:?}; ignoring",
                     );
                     continue;
                 };
@@ -473,15 +470,13 @@ impl RemoteAccessSession {
                     .position(|id| id == participant.identity())
                 else {
                     info!(
-                        "Participant {:?} is not subscribed to channel {channel_id:?}; ignoring",
-                        participant
+                        "{participant} is not subscribed to channel {channel_id:?}; ignoring",
                     );
                     continue;
                 };
                 subscribers.swap_remove(pos);
                 debug!(
-                    "Participant {:?} unsubscribed from channel {channel_id:?}",
-                    participant
+                    "{participant} unsubscribed from channel {channel_id:?}",
                 );
                 if subscribers.is_empty() {
                     subscriptions.remove(&channel_id);
