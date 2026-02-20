@@ -38,7 +38,7 @@ pub trait BinaryPayload<'a>: Sized + 'a {
 
 /// Trait for a binary message with protocol opcodes.
 ///
-/// Extends [`BinaryPayload`], adding the opcode byte that frames each binary message.
+/// Extends `BinaryPayload`, adding the opcode byte that frames each binary message.
 pub trait BinaryMessage<'a>: BinaryPayload<'a> {
     /// The opcode for this message.
     const OPCODE: u8;

@@ -299,8 +299,7 @@ impl RemoteAccessSession {
         participant_identity: ParticipantIdentity,
         reader: ByteStreamReader,
     ) {
-        let stream = reader
-            .map(|result| result.map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e)));
+        let stream = reader.map(|result| result.map_err(std::io::Error::other));
         let mut reader = StreamReader::new(stream);
 
         loop {
