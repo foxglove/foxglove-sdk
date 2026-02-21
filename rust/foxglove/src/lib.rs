@@ -367,7 +367,9 @@ mod img2yuv;
 pub use app_url::AppUrl;
 // Re-export bytes crate for convenience when implementing the `Encode` trait
 pub use bytes;
-pub use channel::{Channel, ChannelDescriptor, ChannelId, LazyChannel, LazyRawChannel, RawChannel};
+pub use channel::{
+    Channel, ChannelDescriptor, ChannelId, LazyChannel, LazyRawChannel, RawChannel, TransportKind,
+};
 pub use channel_builder::ChannelBuilder;
 pub use context::{Context, LazyContext};
 #[doc(hidden)]
