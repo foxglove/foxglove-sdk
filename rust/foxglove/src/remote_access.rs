@@ -6,6 +6,7 @@ mod gateway;
 mod listener;
 mod participant;
 mod session;
+mod session_state;
 
 pub use capability::Capability;
 pub use client::Client;
