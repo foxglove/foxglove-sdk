@@ -121,7 +121,7 @@ find_package(rosgraph_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_components REQUIRED)
 find_package(resource_retriever REQUIRED)
-find_package(rosx_introspection REQUIRED)
+find_package(rosx_introspection QUIET)
 find_package(std_msgs REQUIRED)
 
 # Generate version.hpp
@@ -182,8 +182,15 @@ target_link_libraries(foxglove_bridge_component
   rclcpp_components::component
   rclcpp_components::component_manager
   resource_retriever::resource_retriever
-  rosx_introspection::rosx_introspection
 )
+
+if(rosx_introspection_FOUND)
+  message(STATUS "rosx_introspection found, enabling JSON client publish encoding support")
+  target_link_libraries(foxglove_bridge_component rosx_introspection::rosx_introspection)
+  target_compile_definitions(foxglove_bridge_component PRIVATE FOXGLOVE_BRIDGE_HAS_ROSX_INTROSPECTION)
+else()
+  message(STATUS "rosx_introspection not found, JSON client publish encoding will not be supported")
+endif()
 
 rclcpp_components_register_nodes(foxglove_bridge_component "foxglove_bridge::FoxgloveBridge")
 enable_strict_compiler_warnings(foxglove_bridge_component)
