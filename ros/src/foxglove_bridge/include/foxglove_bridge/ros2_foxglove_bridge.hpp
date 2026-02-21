@@ -8,9 +8,7 @@
 
 #include <rclcpp/rclcpp.hpp>
 #include <rosgraph_msgs/msg/clock.hpp>
-#ifdef FOXGLOVE_BRIDGE_HAS_ROSX_INTROSPECTION
-  #include <rosx_introspection/ros_parser.hpp>
-#endif
+#include <rosx_introspection/ros_parser.hpp>
 #include <std_msgs/msg/u_int32.hpp>
 
 #include <foxglove/foxglove.hpp>
@@ -105,9 +103,7 @@ private:
   std::atomic<bool> _subscribeGraphUpdates = false;
   bool _includeHidden = false;
   bool _disableLoanMessage = true;
-#ifdef FOXGLOVE_BRIDGE_HAS_ROSX_INTROSPECTION
   std::unordered_map<std::string, std::shared_ptr<RosMsgParser::Parser>> _jsonParsers;
-#endif
   std::atomic<bool> _shuttingDown = false;
   foxglove::Context _serverContext;
 

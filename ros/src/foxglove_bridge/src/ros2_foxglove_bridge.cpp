@@ -112,11 +112,7 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
   _capabilities = processCapabilities(capabilities);
   sdkServerOptions.host = address;
   sdkServerOptions.port = port;
-#ifdef FOXGLOVE_BRIDGE_HAS_ROSX_INTROSPECTION
   sdkServerOptions.supported_encodings = {"cdr", "json"};
-#else
-  sdkServerOptions.supported_encodings = {"cdr"};
-#endif
   sdkServerOptions.capabilities = _capabilities;
   sdkServerOptions.context = _serverContext;
 
@@ -704,7 +700,6 @@ void FoxgloveBridge::clientAdvertise(ClientId clientId, const foxglove::ClientCh
   }
 
   if (encoding == "json") {
-#ifdef FOXGLOVE_BRIDGE_HAS_ROSX_INTROSPECTION
     // register the JSON parser for this schemaName
     std::string schemaName(channel.schema_name);
     auto parserIt = _jsonParsers.find(schemaName);
@@ -728,12 +723,6 @@ void FoxgloveBridge::clientAdvertise(ClientId clientId, const foxglove::ClientCh
         topicName, RosMsgParser::ROSType(schemaName), schema);
       _jsonParsers.insert({schemaName, parser});
     }
-#else
-    throw ClientChannelError(
-      "Received client advertisement from client ID " + std::to_string(clientId) + " for channel " +
-      std::to_string(channel.id) +
-      " with encoding \"json\", but foxglove_bridge was built without rosx_introspection support");
-#endif
   }
 
   try {
@@ -842,7 +831,6 @@ void FoxgloveBridge::clientMessage(ClientId clientId, ChannelId clientChannelId,
   if (encoding == "cdr") {
     publishMessage(data, dataLen);
   } else if (encoding == "json") {
-#ifdef FOXGLOVE_BRIDGE_HAS_ROSX_INTROSPECTION
     // get the specific parser for this schemaName
     std::shared_ptr<RosMsgParser::Parser> parser;
     {
@@ -869,12 +857,6 @@ void FoxgloveBridge::clientMessage(ClientId clientId, ChannelId clientChannelId,
           " from client ID " + std::to_string(clientId) + " with encoding \"json\": " + ex.what());
       }
     }
-#else
-    throw ClientChannelError(
-      "Dropping client message on client channel " + std::to_string(clientChannelId) +
-      " from client ID " + std::to_string(clientId) +
-      " with encoding \"json\": foxglove_bridge was built without rosx_introspection support");
-#endif
   } else {
     throw ClientChannelError("Dropping client message on client channel " +
                              std::to_string(clientChannelId) + " from client ID " +
