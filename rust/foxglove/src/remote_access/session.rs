@@ -456,9 +456,7 @@ impl RemoteAccessSession {
             ParticipantWriter::Livekit(stream),
         ));
 
-        self.state
-            .insert_participant(participant_id, participant.clone());
-        Ok(participant)
+        Ok(self.state.insert_participant(participant_id, participant))
     }
 
     /// Remove a participant from the session, cleaning up its subscriptions.
@@ -492,17 +490,17 @@ impl RemoteAccessSession {
 
     /// Enqueue all currently cached channel advertisements for delivery to a single participant.
     fn send_channel_advertisements(&self, participant: Arc<Participant>) {
-        let Some(framed) = self.state.with_channels(|channels| {
-            let advertise_msg = advertise::advertise_channels(channels.values());
-            if advertise_msg.channels.is_empty() {
-                return None;
-            }
-            Some(frame_text_message(advertise_msg.to_string().as_bytes()))
-        }) else {
-            return;
-        };
-
-        let Some(framed) = framed else {
+        let Some(framed) = self
+            .state
+            .with_channels(|channels| {
+                let advertise_msg = advertise::advertise_channels(channels.values());
+                if advertise_msg.channels.is_empty() {
+                    return None;
+                }
+                Some(frame_text_message(advertise_msg.to_string().as_bytes()))
+            })
+            .flatten()
+        else {
             return;
         };
 

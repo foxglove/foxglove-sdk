@@ -34,19 +34,22 @@ impl SessionState {
         }
     }
 
-    /// Inserts a participant. Returns `true` if the participant was newly added,
-    /// `false` if it was already present (in which case the entry is unchanged).
+    /// Inserts a participant if not already present.
+    ///
+    /// Returns the participant that is stored in the map — either the existing one
+    /// (on conflict) or the newly inserted one. This avoids a TOCTOU race where a
+    /// caller could receive a participant that isn't actually tracked by the session.
     pub fn insert_participant(
         &self,
         identity: ParticipantIdentity,
         participant: Arc<Participant>,
-    ) -> bool {
+    ) -> Arc<Participant> {
         use std::collections::hash_map::Entry;
         match self.participants.write().entry(identity) {
-            Entry::Occupied(_) => false,
+            Entry::Occupied(e) => e.get().clone(),
             Entry::Vacant(v) => {
-                v.insert(participant);
-                true
+                v.insert(participant.clone());
+                participant
             }
         }
     }
@@ -221,18 +224,22 @@ mod tests {
     // ---- participant management ----
 
     #[test]
-    fn insert_new_participant_returns_true() {
+    fn insert_new_participant() {
         let state = SessionState::new();
         let (id, p) = make_participant("alice");
-        assert!(state.insert_participant(id, p));
+        let stored = state.insert_participant(id.clone(), p);
+        assert_eq!(stored.identity(), &id);
+        assert!(state.get_participant(&id).is_some());
     }
 
     #[test]
-    fn insert_duplicate_participant_returns_false() {
+    fn insert_duplicate_returns_existing() {
         let state = SessionState::new();
-        let (id, p) = make_participant("alice");
-        assert!(state.insert_participant(id.clone(), p.clone()));
-        assert!(!state.insert_participant(id, p));
+        let (id, p1) = make_participant("alice");
+        let stored1 = state.insert_participant(id.clone(), p1);
+        let (_id2, p2) = make_participant("alice");
+        let stored2 = state.insert_participant(id, p2);
+        assert!(Arc::ptr_eq(&stored1, &stored2));
     }
 
     #[test]
