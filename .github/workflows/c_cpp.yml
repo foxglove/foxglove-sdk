@@ -205,6 +205,15 @@ jobs:
         run: make test
         working-directory: cpp
 
+      - name: Run data provider conformance tests
+        if: ${{ !fromJson(matrix.cross) }}
+        env:
+          DATA_PROVIDER_CMD: ${{ runner.os == 'Windows' && 'cpp/build/RelWithDebInfo/example_data_provider.exe' || 'cpp/build/example_data_provider' }}
+          DATA_PROVIDER_URL: "http://127.0.0.1:8081/v1/manifest?flightId=TEST123&startTime=2024-01-01T00:00:00Z&endTime=2024-01-01T00:00:05Z"
+          DATA_PROVIDER_EXPECTED_STREAMED_SOURCE_COUNT: "1"
+          DATA_PROVIDER_EXPECTED_STATIC_FILE_SOURCE_COUNT: "0"
+        run: cargo run -p data_provider_conformance
+
       - name: Build & test (Debug mode)
         if: ${{ fromJson(matrix.test_debug) }}
         env:

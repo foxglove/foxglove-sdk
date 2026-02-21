@@ -3,51 +3,26 @@
 //! This is a thin wrapper that starts the example binary as a subprocess, and delegates all checks
 //! to the reusable test suite in [`data_provider_conformance`].
 
-use std::process::{ExitCode, Stdio};
-use std::time::Duration;
+use std::process::ExitCode;
 
 use data_provider_conformance::DataProviderTestConfig;
 
 const BIND_ADDR: &str = "127.0.0.1:8080";
 
-struct KillOnDrop(std::process::Child);
-
-impl Drop for KillOnDrop {
-    fn drop(&mut self) {
-        self.0
-            .kill()
-            .expect("should be able to kill example_data_provider binary");
-    }
-}
-
-/// Spawn the example binary and wait until it accepts connections.
-fn start_server() -> KillOnDrop {
-    if std::net::TcpStream::connect(BIND_ADDR).is_ok() {
-        panic!("example_data_provider should not yet be running on {BIND_ADDR}");
-    }
-
-    let child = KillOnDrop(
-        std::process::Command::new(env!("CARGO_BIN_EXE_example_data_provider"))
-            .stdout(Stdio::inherit())
-            .stderr(Stdio::inherit())
-            .spawn()
-            .expect("should be able to start example_data_provider binary"),
+fn main() -> ExitCode {
+    let _guard = data_provider_conformance::spawn_server(
+        env!("CARGO_BIN_EXE_example_data_provider"),
+        BIND_ADDR,
     );
 
-    for _ in 0..100 {
-        if std::net::TcpStream::connect(BIND_ADDR).is_ok() {
-            return child;
-        }
-        std::thread::sleep(Duration::from_millis(50));
-    }
-    panic!("example_data_provider should become ready within 5 s");
-}
-
-fn main() -> ExitCode {
-    let manifest_url =
-        format!("http://{BIND_ADDR}/v1/manifest?flightId=TEST123&startTime=2024-01-01T00:00:00Z&endTime=2024-01-01T00:00:05Z")
-    .parse().unwrap();
-    let _guard = start_server();
+    let manifest_url = format!(
+        "http://{BIND_ADDR}/v1/manifest\
+         ?flightId=TEST123\
+         &startTime=2024-01-01T00:00:00Z\
+         &endTime=2024-01-01T00:00:05Z"
+    )
+    .parse()
+    .unwrap();
 
     data_provider_conformance::run_tests(DataProviderTestConfig {
         manifest_url,

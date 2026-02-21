@@ -25,13 +25,58 @@
 //! ```
 
 use std::collections::{HashMap, HashSet};
-use std::process::ExitCode;
+use std::ffi::OsStr;
+use std::net::TcpStream;
+use std::process::{Child, Command, ExitCode, Stdio};
+use std::time::Duration;
 
 use foxglove::data_provider::{Manifest, UpstreamSource};
 use libtest_mimic::{Arguments, Trial};
 use reqwest::blocking::Client;
 use reqwest::StatusCode;
 pub use reqwest::Url;
+
+/// A guard that kills a child process when dropped.
+pub struct ServerGuard(Child);
+
+impl Drop for ServerGuard {
+    fn drop(&mut self) {
+        self.0
+            .kill()
+            .expect("should be able to kill server process");
+        self.0
+            .wait()
+            .expect("should be able to wait on server process");
+    }
+}
+
+/// Spawn a server binary and wait for it to accept TCP connections.
+///
+/// Panics if the address is already in use, the binary cannot be started, or the server does not
+/// become ready within 5 seconds.
+///
+/// Returns a [`ServerGuard`] that kills the server process when dropped.
+pub fn spawn_server(command: impl AsRef<OsStr>, addr: &str) -> ServerGuard {
+    if TcpStream::connect(addr).is_ok() {
+        panic!("a server should not already be running on {addr}");
+    }
+
+    let child = Command::new(command.as_ref())
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .spawn()
+        .unwrap_or_else(|e| panic!("should be able to start {:?}: {e}", command.as_ref()));
+
+    let guard = ServerGuard(child);
+
+    for _ in 0..100 {
+        if TcpStream::connect(addr).is_ok() {
+            return guard;
+        }
+        std::thread::sleep(Duration::from_millis(50));
+    }
+    panic!("server should become ready within 5 s");
+}
 
 /// Configuration for running the data provider test suite.
 pub struct DataProviderTestConfig {
