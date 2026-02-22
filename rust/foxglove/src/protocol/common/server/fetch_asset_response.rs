@@ -4,7 +4,7 @@ use std::borrow::Cow;
 
 use bytes::{Buf, BufMut};
 
-use crate::protocol::{BinaryPayload, ParseError};
+use crate::protocol::{BinaryMessage, BinaryPayload, ParseError};
 
 /// Fetch asset response message.
 ///
@@ -93,6 +93,10 @@ impl<'a> BinaryPayload<'a> for FetchAssetResponse<'a> {
     }
 }
 
+impl<'a> BinaryMessage<'a> for FetchAssetResponse<'a> {
+    const OPCODE: u8 = 4;
+}
+
 /// Status code.
 #[repr(u8)]
 enum Status {
@@ -176,7 +180,7 @@ mod tests {
     fn test_roundtrip_asset_data() {
         let orig = asset_data();
         let mut buf = Vec::new();
-        orig.write_payload(&mut buf);
+        BinaryPayload::write_payload(&orig, &mut buf);
         let parsed = FetchAssetResponse::parse_payload(&buf).unwrap();
         assert_eq!(parsed, orig);
     }
@@ -185,7 +189,7 @@ mod tests {
     fn test_roundtrip_error_message() {
         let orig = error_message();
         let mut buf = Vec::new();
-        orig.write_payload(&mut buf);
+        BinaryPayload::write_payload(&orig, &mut buf);
         let parsed = FetchAssetResponse::parse_payload(&buf).unwrap();
         assert_eq!(parsed, orig);
     }

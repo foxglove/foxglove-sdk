@@ -1,4 +1,4 @@
-use crate::protocol::{BinaryPayload, ParseError};
+use crate::protocol::{BinaryMessage, BinaryPayload, ParseError};
 use bytes::{Buf, BufMut};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -116,6 +116,10 @@ impl<'a> BinaryPayload<'a> for PlaybackState {
     }
 }
 
+impl<'a> BinaryMessage<'a> for PlaybackState {
+    const OPCODE: u8 = 5;
+}
+
 #[cfg(test)]
 mod tests {
     use assert_matches::assert_matches;
@@ -133,7 +137,7 @@ mod tests {
         };
 
         let mut buf = Vec::new();
-        orig.write_payload(&mut buf);
+        BinaryPayload::write_payload(&orig, &mut buf);
         let parsed = PlaybackState::parse_payload(&buf).unwrap();
         assert_eq!(parsed, orig);
     }
@@ -149,7 +153,7 @@ mod tests {
         };
 
         let mut buf = Vec::new();
-        orig.write_payload(&mut buf);
+        BinaryPayload::write_payload(&orig, &mut buf);
         let parsed = PlaybackState::parse_payload(&buf).unwrap();
         assert_eq!(parsed, orig);
     }
