@@ -20,8 +20,7 @@ pub trait JsonMessage: Serialize {
 /// Trait for binary message payload encoding/decoding.
 ///
 /// This trait handles the raw payload without the opcode byte.
-/// Protocol-specific modules (e.g., v1) provide a `BinaryMessage` trait
-/// that adds the appropriate opcode framing.
+/// [`BinaryMessage`] extends this trait to add the opcode framing.
 pub trait BinaryPayload<'a>: Sized + 'a {
     /// Parses a binary payload from the provided buffer.
     ///
@@ -35,4 +34,31 @@ pub trait BinaryPayload<'a>: Sized + 'a {
     ///
     /// The buffer must have enough capacity to hold the payload.
     fn write_payload(&self, buf: &mut impl BufMut);
+}
+
+/// Trait for a binary message with protocol opcodes.
+///
+/// Extends `BinaryPayload`, adding the opcode byte that frames each binary message.
+pub trait BinaryMessage<'a>: BinaryPayload<'a> {
+    /// The opcode for this message.
+    const OPCODE: u8;
+
+    /// Returns the total encoded length of this message (opcode byte + payload).
+    fn encoded_len(&self) -> usize {
+        // 1 byte opcode + payload
+        1 + self.payload_size()
+    }
+
+    /// Encodes the message (opcode byte + payload) into the provided buffer.
+    fn encode(&self, buf: &mut impl BufMut) {
+        buf.put_u8(Self::OPCODE);
+        self.write_payload(buf);
+    }
+
+    /// Encodes the message (opcode byte + payload) to a new `Vec<u8>`.
+    fn to_bytes(&self) -> Vec<u8> {
+        let mut buf = Vec::with_capacity(self.encoded_len());
+        self.encode(&mut buf);
+        buf
+    }
 }

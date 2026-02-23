@@ -1,6 +1,6 @@
 use bytes::{Buf, BufMut};
 
-use crate::protocol::{BinaryPayload, ParseError};
+use crate::protocol::{BinaryMessage, BinaryPayload, ParseError};
 
 /// A playback command from the client.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -91,6 +91,10 @@ impl<'a> BinaryPayload<'a> for PlaybackControlRequest {
     }
 }
 
+impl<'a> BinaryMessage<'a> for PlaybackControlRequest {
+    const OPCODE: u8 = 3;
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -104,7 +108,7 @@ mod tests {
             request_id: "some-id".to_string(),
         };
         let mut buf = Vec::new();
-        orig.write_payload(&mut buf);
+        BinaryPayload::write_payload(&orig, &mut buf);
         let parsed = PlaybackControlRequest::parse_payload(&buf).unwrap();
         assert_eq!(parsed, orig);
     }
@@ -118,7 +122,7 @@ mod tests {
             request_id: "some-id".to_string(),
         };
         let mut buf = Vec::new();
-        orig.write_payload(&mut buf);
+        BinaryPayload::write_payload(&orig, &mut buf);
         let parsed = PlaybackControlRequest::parse_payload(&buf).unwrap();
         assert_eq!(parsed, orig);
     }

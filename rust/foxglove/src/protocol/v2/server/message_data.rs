@@ -10,7 +10,7 @@ use crate::protocol::{BinaryPayload, ParseError};
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MessageData<'a> {
     /// Channel ID.
-    pub channel_id: u32,
+    pub channel_id: u64,
     /// Log time.
     pub log_time: u64,
     /// Message data.
@@ -19,7 +19,7 @@ pub struct MessageData<'a> {
 
 impl<'a> MessageData<'a> {
     /// Creates a new message data message.
-    pub fn new(channel_id: u32, log_time: u64, data: impl Into<Cow<'a, [u8]>>) -> Self {
+    pub fn new(channel_id: u64, log_time: u64, data: impl Into<Cow<'a, [u8]>>) -> Self {
         Self {
             channel_id,
             log_time,
@@ -39,10 +39,10 @@ impl<'a> MessageData<'a> {
 
 impl<'a> BinaryPayload<'a> for MessageData<'a> {
     fn parse_payload(mut data: &'a [u8]) -> Result<Self, ParseError> {
-        if data.len() < 4 + 8 {
+        if data.len() < 8 + 8 {
             return Err(ParseError::BufferTooShort);
         }
-        let channel_id = data.get_u32_le();
+        let channel_id = data.get_u64_le();
         let log_time = data.get_u64_le();
         Ok(Self {
             channel_id,
@@ -52,11 +52,11 @@ impl<'a> BinaryPayload<'a> for MessageData<'a> {
     }
 
     fn payload_size(&self) -> usize {
-        4 + 8 + self.data.len()
+        8 + 8 + self.data.len()
     }
 
     fn write_payload(&self, buf: &mut impl BufMut) {
-        buf.put_u32_le(self.channel_id);
+        buf.put_u64_le(self.channel_id);
         buf.put_u64_le(self.log_time);
         buf.put_slice(&self.data);
     }
