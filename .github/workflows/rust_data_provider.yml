@@ -9,8 +9,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-        with:
-          ref: ${{ github.ref }}
 
       - uses: actions-rust-lang/setup-rust-toolchain@v1
 
