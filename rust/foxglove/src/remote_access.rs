@@ -61,7 +61,10 @@ impl From<CredentialsError> for RemoteAccessError {
 impl RemoteAccessError {
     /// Returns `true` if this error is likely auth-related and credentials should be refreshed.
     pub(super) fn should_clear_credentials(&self) -> bool {
-        matches!(self, RemoteAccessError::Auth(_) | RemoteAccessError::Room(_))
+        matches!(
+            self,
+            RemoteAccessError::Auth(_) | RemoteAccessError::Room(_)
+        )
     }
 }
 
