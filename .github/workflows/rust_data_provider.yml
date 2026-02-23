@@ -5,11 +5,7 @@ on:
     branches: [main]
     tags: ["**"]
   pull_request: {}
-  workflow_call:
-    inputs:
-      sdk-version:
-        required: true
-        type: string
+  workflow_call: {}
 
 jobs:
   build:
@@ -28,6 +24,6 @@ jobs:
       - name: Upload binary to artifacts
         uses: actions/upload-artifact@v6
         with:
-          name: example_data_provider-${{ inputs.sdk-version || github.ref_name }}
+          name: example_data_provider
           path: target/release/example_data_provider
           if-no-files-found: error
