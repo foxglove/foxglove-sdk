@@ -168,29 +168,6 @@
     "thickness": {
       "type": "number",
       "description": "Stroke thickness in pixels"
-    },
-    "metadata": {
-      "type": "array",
-      "items": {
-        "title": "foxglove.KeyValuePair",
-        "description": "A key with its associated value",
-        "type": "object",
-        "properties": {
-          "key": {
-            "type": "string",
-            "description": "Key"
-          },
-          "value": {
-            "type": "string",
-            "description": "Value"
-          }
-        },
-        "required": [
-          "key",
-          "value"
-        ]
-      },
-      "description": "Additional user-provided metadata associated with the annotation. Keys must be unique."
     }
   },
   "required": [
@@ -200,7 +177,6 @@
     "outline_color",
     "outline_colors",
     "fill_color",
-    "thickness",
-    "metadata"
+    "thickness"
   ]
 }

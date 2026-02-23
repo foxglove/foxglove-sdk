@@ -3,6 +3,7 @@
 syntax = "proto3";
 
 import "foxglove/CircleAnnotation.proto";
+import "foxglove/KeyValuePair.proto";
 import "foxglove/PointsAnnotation.proto";
 import "foxglove/TextAnnotation.proto";
 
@@ -18,4 +19,7 @@ message ImageAnnotations {
 
   // Text annotations
   repeated foxglove.TextAnnotation texts = 3;
+
+  // Additional user-provided metadata associated with the image annotations. Keys must be unique.
+  repeated foxglove.KeyValuePair metadata = 4;
 }

@@ -331,33 +331,6 @@ struct Point2 {
   static Schema schema();
 };
 
-/// @brief A key with its associated value
-struct KeyValuePair {
-  /// @brief Key
-  std::string key;
-
-  /// @brief Value
-  std::string value;
-
-  /// @brief Encoded the KeyValuePair as protobuf to the provided buffer.
-  ///
-  /// On success, writes the serialized length to *encoded_len.
-  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
-  /// and returns FoxgloveError::BufferTooShort.
-  /// If the message cannot be encoded, writes the reason to stderr and returns
-  /// FoxgloveError::EncodeError.
-  ///
-  /// @param ptr the destination buffer. must point to at least len valid bytes.
-  /// @param len the length of the destination buffer.
-  /// @param encoded_len where the serialized length or required capacity will be written to.
-  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
-
-  /// @brief Get the KeyValuePair schema.
-  ///
-  /// The schema data returned is statically allocated.
-  static Schema schema();
-};
-
 /// @brief A circle annotation on a 2D image
 struct CircleAnnotation {
   /// @brief Timestamp of circle
@@ -379,9 +352,6 @@ struct CircleAnnotation {
 
   /// @brief Outline color
   std::optional<Color> outline_color;
-
-  /// @brief Additional user-provided metadata associated with the annotation. Keys must be unique.
-  std::vector<KeyValuePair> metadata;
 
   /// @brief Encoded the CircleAnnotation as protobuf to the provided buffer.
   ///
@@ -964,9 +934,6 @@ struct PointsAnnotation {
   /// @brief Stroke thickness in pixels
   double thickness = 0;
 
-  /// @brief Additional user-provided metadata associated with the annotation. Keys must be unique.
-  std::vector<KeyValuePair> metadata;
-
   /// @brief Encoded the PointsAnnotation as protobuf to the provided buffer.
   ///
   /// On success, writes the serialized length to *encoded_len.
@@ -1008,9 +975,6 @@ struct TextAnnotation {
   /// @brief Background fill color
   std::optional<Color> background_color;
 
-  /// @brief Additional user-provided metadata associated with the annotation. Keys must be unique.
-  std::vector<KeyValuePair> metadata;
-
   /// @brief Encoded the TextAnnotation as protobuf to the provided buffer.
   ///
   /// On success, writes the serialized length to *encoded_len.
@@ -1030,6 +994,33 @@ struct TextAnnotation {
   static Schema schema();
 };
 
+/// @brief A key with its associated value
+struct KeyValuePair {
+  /// @brief Key
+  std::string key;
+
+  /// @brief Value
+  std::string value;
+
+  /// @brief Encoded the KeyValuePair as protobuf to the provided buffer.
+  ///
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
+  /// and returns FoxgloveError::BufferTooShort.
+  /// If the message cannot be encoded, writes the reason to stderr and returns
+  /// FoxgloveError::EncodeError.
+  ///
+  /// @param ptr the destination buffer. must point to at least len valid bytes.
+  /// @param len the length of the destination buffer.
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
+
+  /// @brief Get the KeyValuePair schema.
+  ///
+  /// The schema data returned is statically allocated.
+  static Schema schema();
+};
+
 /// @brief Array of annotations for a 2D image
 struct ImageAnnotations {
   /// @brief Circle annotations
@@ -1040,6 +1031,10 @@ struct ImageAnnotations {
 
   /// @brief Text annotations
   std::vector<TextAnnotation> texts;
+
+  /// @brief Additional user-provided metadata associated with the image annotations. Keys must be
+  /// unique.
+  std::vector<KeyValuePair> metadata;
 
   /// @brief Encoded the ImageAnnotations as protobuf to the provided buffer.
   ///

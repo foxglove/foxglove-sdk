@@ -498,19 +498,6 @@ Outline color
 
 </td>
 </tr>
-<tr>
-<td><code>metadata</code></td>
-<td>
-
-[KeyValuePair](#keyvaluepair)[]
-
-</td>
-<td>
-
-Additional user-provided metadata associated with the annotation. Keys must be unique.
-
-</td>
-</tr>
 </table>
 
 ## Color
@@ -1250,6 +1237,19 @@ Points annotations
 <td>
 
 Text annotations
+
+</td>
+</tr>
+<tr>
+<td><code>metadata</code></td>
+<td>
+
+[KeyValuePair](#keyvaluepair)[]
+
+</td>
+<td>
+
+Additional user-provided metadata associated with the image annotations. Keys must be unique.
 
 </td>
 </tr>
@@ -2244,19 +2244,6 @@ Stroke thickness in pixels
 
 </td>
 </tr>
-<tr>
-<td><code>metadata</code></td>
-<td>
-
-[KeyValuePair](#keyvaluepair)[]
-
-</td>
-<td>
-
-Additional user-provided metadata associated with the annotation. Keys must be unique.
-
-</td>
-</tr>
 </table>
 
 ## Pose
@@ -3116,19 +3103,6 @@ Text color
 <td>
 
 Background fill color
-
-</td>
-</tr>
-<tr>
-<td><code>metadata</code></td>
-<td>
-
-[KeyValuePair](#keyvaluepair)[]
-
-</td>
-<td>
-
-Additional user-provided metadata associated with the annotation. Keys must be unique.
 
 </td>
 </tr>
