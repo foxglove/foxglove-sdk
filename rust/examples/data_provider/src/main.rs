@@ -162,11 +162,11 @@ async fn data_handler(headers: HeaderMap, Query(params): Query<FlightParams>) ->
             // the client receives data incrementally instead of all at once, and memory usage stays
             // bounded instead of growing with the entire recording.
             const FLUSH_THRESHOLD: usize = 1024 * 1024;
-            if handle.buffer_size() >= FLUSH_THRESHOLD {
-                if let Err(e) = handle.flush().await {
-                    tracing::error!(%e, "flush failed");
-                    return;
-                }
+            if handle.buffer_size() >= FLUSH_THRESHOLD
+                && let Err(e) = handle.flush().await
+            {
+                tracing::error!(%e, "flush failed");
+                return;
             }
 
             ts = inner.checked_add_signed(INTERVAL);

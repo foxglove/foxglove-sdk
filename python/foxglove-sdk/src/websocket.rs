@@ -1081,13 +1081,13 @@ impl PyParameter {
     ) -> PyResult<Self> {
         // Use the derived type, unless there's a kwarg override.
         let mut r#type = value.as_ref().and_then(|tv| tv.0);
-        if let Some(dict) = kwargs {
-            if let Some(kw_type) = dict.get_item("type")? {
-                if kw_type.is_none() {
-                    r#type = None
-                } else {
-                    r#type = kw_type.extract()?;
-                }
+        if let Some(dict) = kwargs
+            && let Some(kw_type) = dict.get_item("type")?
+        {
+            if kw_type.is_none() {
+                r#type = None
+            } else {
+                r#type = kw_type.extract()?;
             }
         }
         Ok(Self {
