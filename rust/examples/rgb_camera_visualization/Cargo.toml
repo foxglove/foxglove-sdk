@@ -1,6 +1,6 @@
 [package]
 name = "example_rgb_camera_visualization"
-edition = "2021"
+edition = "2024"
 publish = false
 
 [dependencies]
