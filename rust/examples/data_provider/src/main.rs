@@ -37,7 +37,7 @@ use std::net::SocketAddr;
 use axum::{
     body::Body,
     extract::Query,
-    http::{header::AUTHORIZATION, HeaderMap, StatusCode},
+    http::{HeaderMap, StatusCode},
     response::{IntoResponse, Response},
     routing::get,
     Json, Router,
@@ -67,23 +67,20 @@ struct FlightParams {
     end_time: DateTime<Utc>,
 }
 
-/// Validate the bearer token from the Authorization header.
-///
-/// Replace this with real token validation (e.g. JWT verification).
-fn check_auth(headers: &HeaderMap) -> Result<(), StatusCode> {
-    let _token = headers
-        .get(AUTHORIZATION)
-        .and_then(|v| v.to_str().ok())
-        .and_then(|v| v.strip_prefix("Bearer "))
-        .ok_or(StatusCode::UNAUTHORIZED)?;
+/// Check the bearer token to see if the user is authorized to access the flight.
+fn check_auth(_headers: &HeaderMap, _params: &FlightParams) -> Result<(), StatusCode> {
+    // EXAMPLE ONLY: REPLACE THIS WITH A REAL AUTH CHECK.
     Ok(())
 }
 
 /// Handler for `GET /v1/manifest`.
 ///
 /// Builds a manifest describing the channels and schemas available for the requested flight.
+///
+/// The user **MUST** be authorized to read all sources returned in the manifest. Do not rely
+/// on authorization checks on individual sources, because they may not be called for cached data.
 async fn manifest_handler(headers: HeaderMap, Query(params): Query<FlightParams>) -> Response {
-    if let Err(status) = check_auth(&headers) {
+    if let Err(status) = check_auth(&headers, &params) {
         return status.into_response();
     }
 
@@ -120,7 +117,7 @@ async fn manifest_handler(headers: HeaderMap, Query(params): Query<FlightParams>
 ///
 /// Streams MCAP data for the requested flight. The response body is a stream of MCAP bytes.
 async fn data_handler(headers: HeaderMap, Query(params): Query<FlightParams>) -> Response {
-    if let Err(status) = check_auth(&headers) {
+    if let Err(status) = check_auth(&headers, &params) {
         return status.into_response();
     }
 

@@ -24,6 +24,11 @@ impl Participant {
         Self { identity, writer }
     }
 
+    /// Returns the participant's identity.
+    pub fn identity(&self) -> &ParticipantIdentity {
+        &self.identity
+    }
+
     /// Sends a message to the participant.
     ///
     /// The message is serialized and framed already and provided as a slice of bytes.
@@ -34,7 +39,15 @@ impl Participant {
 
 impl std::fmt::Debug for Participant {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Participant {{ identity: {:?} }}", self.identity)
+        f.debug_struct("Participant")
+            .field("identity", &self.identity)
+            .finish()
+    }
+}
+
+impl std::fmt::Display for Participant {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Participant({})", self.identity)
     }
 }
 

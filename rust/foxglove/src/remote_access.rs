@@ -1,12 +1,20 @@
-// Internal error handling and submodule exports for the remote access feature.
+//! Internal error handling and submodule exports for the remote access feature.
 
+mod capability;
+mod client;
 mod connection;
 mod credentials_provider;
+mod gateway;
+mod listener;
 mod participant;
+mod session;
+
+pub use capability::Capability;
+pub use client::Client;
+pub use gateway::{Gateway, GatewayHandle};
+pub use listener::Listener;
 
 use thiserror::Error;
-
-pub(crate) use connection::{RemoteAccessConnection, RemoteAccessConnectionOptions};
 
 use crate::api_client::FoxgloveApiClientError;
 
