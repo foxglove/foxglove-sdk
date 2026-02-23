@@ -17,7 +17,6 @@
 //! let _server = start_my_server();
 //! let config = DataProviderTestConfig {
 //!     manifest_url: "http://127.0.0.1:8080/v1/manifest?...".parse().unwrap(),
-//!     bearer_token: "my-token".into(),
 //!     expected_streamed_source_count: 1,
 //!     expected_static_file_source_count: 0,
 //! };
