@@ -111,6 +111,29 @@
               "b",
               "a"
             ]
+          },
+          "metadata": {
+            "type": "array",
+            "items": {
+              "title": "foxglove.KeyValuePair",
+              "description": "A key with its associated value",
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string",
+                  "description": "Key"
+                },
+                "value": {
+                  "type": "string",
+                  "description": "Value"
+                }
+              },
+              "required": [
+                "key",
+                "value"
+              ]
+            },
+            "description": "Additional user-provided metadata associated with the annotation. Keys must be unique."
           }
         },
         "required": [
@@ -119,7 +142,8 @@
           "diameter",
           "thickness",
           "fill_color",
-          "outline_color"
+          "outline_color",
+          "metadata"
         ]
       },
       "description": "Circle annotations"
@@ -295,6 +319,29 @@
           "thickness": {
             "type": "number",
             "description": "Stroke thickness in pixels"
+          },
+          "metadata": {
+            "type": "array",
+            "items": {
+              "title": "foxglove.KeyValuePair",
+              "description": "A key with its associated value",
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string",
+                  "description": "Key"
+                },
+                "value": {
+                  "type": "string",
+                  "description": "Value"
+                }
+              },
+              "required": [
+                "key",
+                "value"
+              ]
+            },
+            "description": "Additional user-provided metadata associated with the annotation. Keys must be unique."
           }
         },
         "required": [
@@ -304,7 +351,8 @@
           "outline_color",
           "outline_colors",
           "fill_color",
-          "thickness"
+          "thickness",
+          "metadata"
         ]
       },
       "description": "Points annotations"
@@ -416,6 +464,29 @@
               "b",
               "a"
             ]
+          },
+          "metadata": {
+            "type": "array",
+            "items": {
+              "title": "foxglove.KeyValuePair",
+              "description": "A key with its associated value",
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string",
+                  "description": "Key"
+                },
+                "value": {
+                  "type": "string",
+                  "description": "Value"
+                }
+              },
+              "required": [
+                "key",
+                "value"
+              ]
+            },
+            "description": "Additional user-provided metadata associated with the annotation. Keys must be unique."
           }
         },
         "required": [
@@ -424,7 +495,8 @@
           "text",
           "font_size",
           "text_color",
-          "background_color"
+          "background_color",
+          "metadata"
         ]
       },
       "description": "Text annotations"

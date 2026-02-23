@@ -320,6 +320,29 @@ export const CircleAnnotation = {
         "b",
         "a"
       ]
+    },
+    "metadata": {
+      "type": "array",
+      "items": {
+        "title": "foxglove.KeyValuePair",
+        "description": "A key with its associated value",
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "Key"
+          },
+          "value": {
+            "type": "string",
+            "description": "Value"
+          }
+        },
+        "required": [
+          "key",
+          "value"
+        ]
+      },
+      "description": "Additional user-provided metadata associated with the annotation. Keys must be unique."
     }
   },
   "required": [
@@ -328,7 +351,8 @@ export const CircleAnnotation = {
     "diameter",
     "thickness",
     "fill_color",
-    "outline_color"
+    "outline_color",
+    "metadata"
   ]
 };
 
@@ -1529,6 +1553,29 @@ export const ImageAnnotations = {
               "b",
               "a"
             ]
+          },
+          "metadata": {
+            "type": "array",
+            "items": {
+              "title": "foxglove.KeyValuePair",
+              "description": "A key with its associated value",
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string",
+                  "description": "Key"
+                },
+                "value": {
+                  "type": "string",
+                  "description": "Value"
+                }
+              },
+              "required": [
+                "key",
+                "value"
+              ]
+            },
+            "description": "Additional user-provided metadata associated with the annotation. Keys must be unique."
           }
         },
         "required": [
@@ -1537,7 +1584,8 @@ export const ImageAnnotations = {
           "diameter",
           "thickness",
           "fill_color",
-          "outline_color"
+          "outline_color",
+          "metadata"
         ]
       },
       "description": "Circle annotations"
@@ -1713,6 +1761,29 @@ export const ImageAnnotations = {
           "thickness": {
             "type": "number",
             "description": "Stroke thickness in pixels"
+          },
+          "metadata": {
+            "type": "array",
+            "items": {
+              "title": "foxglove.KeyValuePair",
+              "description": "A key with its associated value",
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string",
+                  "description": "Key"
+                },
+                "value": {
+                  "type": "string",
+                  "description": "Value"
+                }
+              },
+              "required": [
+                "key",
+                "value"
+              ]
+            },
+            "description": "Additional user-provided metadata associated with the annotation. Keys must be unique."
           }
         },
         "required": [
@@ -1722,7 +1793,8 @@ export const ImageAnnotations = {
           "outline_color",
           "outline_colors",
           "fill_color",
-          "thickness"
+          "thickness",
+          "metadata"
         ]
       },
       "description": "Points annotations"
@@ -1834,6 +1906,29 @@ export const ImageAnnotations = {
               "b",
               "a"
             ]
+          },
+          "metadata": {
+            "type": "array",
+            "items": {
+              "title": "foxglove.KeyValuePair",
+              "description": "A key with its associated value",
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string",
+                  "description": "Key"
+                },
+                "value": {
+                  "type": "string",
+                  "description": "Value"
+                }
+              },
+              "required": [
+                "key",
+                "value"
+              ]
+            },
+            "description": "Additional user-provided metadata associated with the annotation. Keys must be unique."
           }
         },
         "required": [
@@ -1842,7 +1937,8 @@ export const ImageAnnotations = {
           "text",
           "font_size",
           "text_color",
-          "background_color"
+          "background_color",
+          "metadata"
         ]
       },
       "description": "Text annotations"
@@ -5995,6 +6091,29 @@ export const PointsAnnotation = {
     "thickness": {
       "type": "number",
       "description": "Stroke thickness in pixels"
+    },
+    "metadata": {
+      "type": "array",
+      "items": {
+        "title": "foxglove.KeyValuePair",
+        "description": "A key with its associated value",
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "Key"
+          },
+          "value": {
+            "type": "string",
+            "description": "Value"
+          }
+        },
+        "required": [
+          "key",
+          "value"
+        ]
+      },
+      "description": "Additional user-provided metadata associated with the annotation. Keys must be unique."
     }
   },
   "required": [
@@ -6004,7 +6123,8 @@ export const PointsAnnotation = {
     "outline_color",
     "outline_colors",
     "fill_color",
-    "thickness"
+    "thickness",
+    "metadata"
   ]
 };
 
@@ -6655,6 +6775,29 @@ export const TextAnnotation = {
         "b",
         "a"
       ]
+    },
+    "metadata": {
+      "type": "array",
+      "items": {
+        "title": "foxglove.KeyValuePair",
+        "description": "A key with its associated value",
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "Key"
+          },
+          "value": {
+            "type": "string",
+            "description": "Value"
+          }
+        },
+        "required": [
+          "key",
+          "value"
+        ]
+      },
+      "description": "Additional user-provided metadata associated with the annotation. Keys must be unique."
     }
   },
   "required": [
@@ -6663,7 +6806,8 @@ export const TextAnnotation = {
     "text",
     "font_size",
     "text_color",
-    "background_color"
+    "background_color",
+    "metadata"
   ]
 };
 

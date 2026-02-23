@@ -21,3 +21,6 @@ foxglove_msgs/Color fill_color
 
 # Outline color
 foxglove_msgs/Color outline_color
+
+# Additional user-provided metadata associated with the annotation. Keys must be unique.
+foxglove_msgs/KeyValuePair[] metadata

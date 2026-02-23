@@ -2,6 +2,7 @@
 // Options: {}
 
 import { Color } from "./Color";
+import { KeyValuePair } from "./KeyValuePair";
 import { Point2 } from "./Point2";
 import { PointsAnnotationType } from "./PointsAnnotationType";
 import { Time } from "./Time";
@@ -31,4 +32,7 @@ export type PointsAnnotation = {
 
   /** Stroke thickness in pixels */
   thickness: number;
+
+  /** Additional user-provided metadata associated with the annotation. Keys must be unique. */
+  metadata: KeyValuePair[];
 };

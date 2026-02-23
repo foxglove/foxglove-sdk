@@ -286,6 +286,7 @@ impl From<CameraCalibration> for foxglove::schemas::CameraCalibration {
 /// :param thickness: Line thickness in pixels
 /// :param fill_color: Fill color
 /// :param outline_color: Outline color
+/// :param metadata: Additional user-provided metadata associated with the annotation. Keys must be unique.
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/circle-annotation
 #[pyclass(module = "foxglove.schemas")]
@@ -294,7 +295,7 @@ pub(crate) struct CircleAnnotation(pub(crate) foxglove::schemas::CircleAnnotatio
 #[pymethods]
 impl CircleAnnotation {
     #[new]
-    #[pyo3(signature = (*, timestamp=None, position=None, diameter=0.0, thickness=0.0, fill_color=None, outline_color=None) )]
+    #[pyo3(signature = (*, timestamp=None, position=None, diameter=0.0, thickness=0.0, fill_color=None, outline_color=None, metadata=None) )]
     fn new(
         timestamp: Option<Timestamp>,
         position: Option<Point2>,
@@ -302,6 +303,7 @@ impl CircleAnnotation {
         thickness: f64,
         fill_color: Option<Color>,
         outline_color: Option<Color>,
+        metadata: Option<Vec<KeyValuePair>>,
     ) -> Self {
         Self(foxglove::schemas::CircleAnnotation {
             timestamp: timestamp.map(Into::into),
@@ -310,17 +312,23 @@ impl CircleAnnotation {
             thickness,
             fill_color: fill_color.map(Into::into),
             outline_color: outline_color.map(Into::into),
+            metadata: metadata
+                .unwrap_or_default()
+                .into_iter()
+                .map(|x| x.into())
+                .collect(),
         })
     }
     fn __repr__(&self) -> String {
         format!(
-            "CircleAnnotation(timestamp={:?}, position={:?}, diameter={:?}, thickness={:?}, fill_color={:?}, outline_color={:?})",
+            "CircleAnnotation(timestamp={:?}, position={:?}, diameter={:?}, thickness={:?}, fill_color={:?}, outline_color={:?}, metadata={:?})",
             self.0.timestamp,
             self.0.position,
             self.0.diameter,
             self.0.thickness,
             self.0.fill_color,
             self.0.outline_color,
+            self.0.metadata,
         )
     }
     /// Returns the CircleAnnotation schema.
@@ -2236,6 +2244,7 @@ impl From<PointCloud> for foxglove::schemas::PointCloud {
 /// :param outline_colors: Per-point colors, if `type` is `POINTS`, or per-segment stroke colors, if `type` is `LINE_LIST`, `LINE_STRIP` or `LINE_LOOP`.
 /// :param fill_color: Fill color
 /// :param thickness: Stroke thickness in pixels
+/// :param metadata: Additional user-provided metadata associated with the annotation. Keys must be unique.
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/points-annotation
 #[pyclass(module = "foxglove.schemas")]
@@ -2244,7 +2253,7 @@ pub(crate) struct PointsAnnotation(pub(crate) foxglove::schemas::PointsAnnotatio
 #[pymethods]
 impl PointsAnnotation {
     #[new]
-    #[pyo3(signature = (*, timestamp=None, r#type=PointsAnnotationType::Unknown, points=None, outline_color=None, outline_colors=None, fill_color=None, thickness=0.0) )]
+    #[pyo3(signature = (*, timestamp=None, r#type=PointsAnnotationType::Unknown, points=None, outline_color=None, outline_colors=None, fill_color=None, thickness=0.0, metadata=None) )]
     fn new(
         timestamp: Option<Timestamp>,
         r#type: PointsAnnotationType,
@@ -2253,6 +2262,7 @@ impl PointsAnnotation {
         outline_colors: Option<Vec<Color>>,
         fill_color: Option<Color>,
         thickness: f64,
+        metadata: Option<Vec<KeyValuePair>>,
     ) -> Self {
         Self(foxglove::schemas::PointsAnnotation {
             timestamp: timestamp.map(Into::into),
@@ -2270,11 +2280,16 @@ impl PointsAnnotation {
                 .collect(),
             fill_color: fill_color.map(Into::into),
             thickness,
+            metadata: metadata
+                .unwrap_or_default()
+                .into_iter()
+                .map(|x| x.into())
+                .collect(),
         })
     }
     fn __repr__(&self) -> String {
         format!(
-            "PointsAnnotation(timestamp={:?}, r#type={:?}, points={:?}, outline_color={:?}, outline_colors={:?}, fill_color={:?}, thickness={:?})",
+            "PointsAnnotation(timestamp={:?}, r#type={:?}, points={:?}, outline_color={:?}, outline_colors={:?}, fill_color={:?}, thickness={:?}, metadata={:?})",
             self.0.timestamp,
             self.0.r#type,
             self.0.points,
@@ -2282,6 +2297,7 @@ impl PointsAnnotation {
             self.0.outline_colors,
             self.0.fill_color,
             self.0.thickness,
+            self.0.metadata,
         )
     }
     /// Returns the PointsAnnotation schema.
@@ -2796,6 +2812,7 @@ impl From<SpherePrimitive> for foxglove::schemas::SpherePrimitive {
 /// :param font_size: Font size in pixels
 /// :param text_color: Text color
 /// :param background_color: Background fill color
+/// :param metadata: Additional user-provided metadata associated with the annotation. Keys must be unique.
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/text-annotation
 #[pyclass(module = "foxglove.schemas")]
@@ -2804,7 +2821,7 @@ pub(crate) struct TextAnnotation(pub(crate) foxglove::schemas::TextAnnotation);
 #[pymethods]
 impl TextAnnotation {
     #[new]
-    #[pyo3(signature = (*, timestamp=None, position=None, text="", font_size=0.0, text_color=None, background_color=None) )]
+    #[pyo3(signature = (*, timestamp=None, position=None, text="", font_size=0.0, text_color=None, background_color=None, metadata=None) )]
     fn new(
         timestamp: Option<Timestamp>,
         position: Option<Point2>,
@@ -2812,6 +2829,7 @@ impl TextAnnotation {
         font_size: f64,
         text_color: Option<Color>,
         background_color: Option<Color>,
+        metadata: Option<Vec<KeyValuePair>>,
     ) -> Self {
         Self(foxglove::schemas::TextAnnotation {
             timestamp: timestamp.map(Into::into),
@@ -2820,17 +2838,23 @@ impl TextAnnotation {
             font_size,
             text_color: text_color.map(Into::into),
             background_color: background_color.map(Into::into),
+            metadata: metadata
+                .unwrap_or_default()
+                .into_iter()
+                .map(|x| x.into())
+                .collect(),
         })
     }
     fn __repr__(&self) -> String {
         format!(
-            "TextAnnotation(timestamp={:?}, position={:?}, text={:?}, font_size={:?}, text_color={:?}, background_color={:?})",
+            "TextAnnotation(timestamp={:?}, position={:?}, text={:?}, font_size={:?}, text_color={:?}, background_color={:?}, metadata={:?})",
             self.0.timestamp,
             self.0.position,
             self.0.text,
             self.0.font_size,
             self.0.text_color,
             self.0.background_color,
+            self.0.metadata,
         )
     }
     /// Returns the TextAnnotation schema.
