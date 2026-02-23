@@ -60,6 +60,14 @@ impl From<CredentialsError> for RemoteAccessError {
 
 impl RemoteAccessError {
     /// Returns `true` if this error is likely auth-related and credentials should be refreshed.
+    ///
+    /// All `Room` errors are treated as potentially auth-related, even though only a subset
+    /// (e.g. `RoomError::Engine(EngineError::Signal(SignalError::Client(401, ...)))`) truly
+    /// indicate expired or invalid credentials. The blanket match is intentional: credential
+    /// refresh is cheap, and the only call site is a retry loop with a 30-second interval, so
+    /// an unnecessary refresh has negligible cost. The native `RoomError` is preserved here so
+    /// that this logic can be refined in the future if needed (e.g. to skip refresh for
+    /// `AlreadyClosed` or `TrackAlreadyPublished`).
     pub(super) fn should_clear_credentials(&self) -> bool {
         matches!(
             self,
