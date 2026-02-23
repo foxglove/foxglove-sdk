@@ -27,6 +27,7 @@ websocket = [
 live_visualization = ["websocket"]
 remote_access = [
   "_remote_common",
+  "img2yuv",
   "dep:livekit",
   "dep:libwebrtc",
   "dep:reqwest",

@@ -1,0 +1,283 @@
+use bytes::Bytes;
+use libwebrtc::prelude::*;
+use libwebrtc::video_source::native::NativeVideoSource;
+use tracing::{debug, error, warn};
+
+use crate::img2yuv::{ImageMessage, Yuv420Buffer};
+use crate::RawChannel;
+
+/// The input schema type for a video-capable channel.
+///
+/// Each variant identifies which message format decoder to use for extracting image data.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum VideoInputSchema {
+    /// `foxglove.CompressedImage` with protobuf encoding.
+    FoxgloveCompressedImage,
+    /// `foxglove.RawImage` with protobuf encoding.
+    FoxgloveRawImage,
+    /// ROS 1 `sensor_msgs/CompressedImage` with ros1 encoding.
+    #[cfg(feature = "img2yuv-ros1")]
+    Ros1CompressedImage,
+    /// ROS 1 `sensor_msgs/Image` with ros1 encoding.
+    #[cfg(feature = "img2yuv-ros1")]
+    Ros1Image,
+    /// ROS 2 `sensor_msgs/msg/CompressedImage` with cdr encoding.
+    #[cfg(feature = "img2yuv-ros2")]
+    Ros2CompressedImage,
+    /// ROS 2 `sensor_msgs/msg/Image` with cdr encoding.
+    #[cfg(feature = "img2yuv-ros2")]
+    Ros2Image,
+}
+
+/// Detect the video input schema from an (encoding, schema_name) pair.
+///
+/// Returns `Some(InputSchema)` if the channel carries an image type we can transcode to video.
+pub fn detect_video_schema(encoding: &str, schema_name: &str) -> Option<VideoInputSchema> {
+    match (encoding, schema_name) {
+        ("protobuf", "foxglove.CompressedImage") => Some(VideoInputSchema::FoxgloveCompressedImage),
+        ("protobuf", "foxglove.RawImage") => Some(VideoInputSchema::FoxgloveRawImage),
+        #[cfg(feature = "img2yuv-ros1")]
+        ("ros1", "sensor_msgs/CompressedImage") => Some(VideoInputSchema::Ros1CompressedImage),
+        #[cfg(feature = "img2yuv-ros1")]
+        ("ros1", "sensor_msgs/Image") => Some(VideoInputSchema::Ros1Image),
+        #[cfg(feature = "img2yuv-ros2")]
+        ("cdr", "sensor_msgs/msg/CompressedImage") => Some(VideoInputSchema::Ros2CompressedImage),
+        #[cfg(feature = "img2yuv-ros2")]
+        ("cdr", "sensor_msgs/msg/Image") => Some(VideoInputSchema::Ros2Image),
+        _ => None,
+    }
+}
+
+/// Convenience function to detect a video input schema from a [`RawChannel`].
+pub fn get_video_input_schema(channel: &RawChannel) -> Option<VideoInputSchema> {
+    let schema_name = channel.schema().map(|s| s.name.as_str()).unwrap_or("");
+    detect_video_schema(channel.message_encoding(), schema_name)
+}
+
+/// Newtype wrapping [`I420Buffer`] that implements [`Yuv420Buffer`].
+struct I420Yuv420(I420Buffer);
+
+impl Yuv420Buffer for I420Yuv420 {
+    fn dimensions(&self) -> (u32, u32) {
+        (self.0.width(), self.0.height())
+    }
+
+    fn yuv(&self) -> (&[u8], &[u8], &[u8]) {
+        self.0.data()
+    }
+
+    fn yuv_mut(&mut self) -> (&mut [u8], &mut [u8], &mut [u8]) {
+        self.0.data_mut()
+    }
+
+    fn yuv_strides(&self) -> (u32, u32, u32) {
+        self.0.strides()
+    }
+}
+
+/// Error during video encoding.
+#[derive(Debug, thiserror::Error)]
+enum VideoEncodeError {
+    #[error("failed to decode image message: {0}")]
+    Decode(String),
+    #[error("failed to convert image to YUV420: {0}")]
+    YuvConversion(#[from] crate::img2yuv::Error),
+}
+
+/// Publishes video frames to a LiveKit video track.
+///
+/// Owns a bounded channel and a background processing task. Dropping the publisher
+/// closes the channel, which terminates the task.
+pub(crate) struct VideoPublisher {
+    tx: tokio::sync::mpsc::Sender<Bytes>,
+    #[allow(dead_code)]
+    video_source: NativeVideoSource,
+}
+
+impl VideoPublisher {
+    /// The bounded channel capacity for frame back-pressure.
+    const CHANNEL_CAPACITY: usize = 2;
+
+    /// Creates a new video publisher and spawns the background processing task.
+    pub fn new(video_source: NativeVideoSource, input_schema: VideoInputSchema) -> Self {
+        let (tx, mut rx) = tokio::sync::mpsc::channel::<Bytes>(Self::CHANNEL_CAPACITY);
+        let source = video_source.clone();
+        tokio::spawn(async move {
+            while let Some(data) = rx.recv().await {
+                let source = source.clone();
+                let result = tokio::task::spawn_blocking(move || {
+                    encode_and_publish(input_schema, &source, &data)
+                })
+                .await;
+                match result {
+                    Ok(Ok(())) => {}
+                    Ok(Err(e)) => {
+                        debug!("video encode error: {e}");
+                    }
+                    Err(e) => {
+                        error!("video encode task panicked: {e}");
+                    }
+                }
+            }
+        });
+        Self { tx, video_source }
+    }
+
+    /// Returns a reference to the underlying video source.
+    #[allow(dead_code)]
+    pub fn video_source(&self) -> &NativeVideoSource {
+        &self.video_source
+    }
+
+    /// Send a frame for encoding. Non-blocking: if the channel is full, the frame is
+    /// silently dropped (back-pressure for live video).
+    pub fn send(&self, data: Bytes) {
+        if let Err(tokio::sync::mpsc::error::TrySendError::Closed(_)) = self.tx.try_send(data) {
+            warn!("video publisher channel closed");
+        }
+        // Full channel: frame dropped silently (acceptable for live video)
+    }
+}
+
+/// Decode the image message and publish it as a video frame.
+fn encode_and_publish(
+    input_schema: VideoInputSchema,
+    video_source: &NativeVideoSource,
+    data: &[u8],
+) -> Result<(), VideoEncodeError> {
+    let image_msg = decode_image_message(input_schema, data)?;
+
+    let (width, height) = image_msg
+        .image
+        .probe_dimensions()
+        .map_err(VideoEncodeError::YuvConversion)?;
+
+    // Ensure even dimensions for YUV 4:2:0
+    let width = width & !1;
+    let height = height & !1;
+    if width == 0 || height == 0 {
+        return Err(VideoEncodeError::YuvConversion(
+            crate::img2yuv::Error::ZeroSized,
+        ));
+    }
+
+    let mut buffer = I420Yuv420(I420Buffer::new(width, height));
+    image_msg
+        .image
+        .to_yuv420(&mut buffer)
+        .map_err(VideoEncodeError::YuvConversion)?;
+
+    let frame = VideoFrame {
+        rotation: VideoRotation::VideoRotation0,
+        timestamp_us: 0,
+        buffer: buffer.0,
+    };
+    video_source.capture_frame(&frame);
+    Ok(())
+}
+
+/// Decode raw message bytes into an [`ImageMessage`] based on the input schema.
+fn decode_image_message<'a>(
+    input_schema: VideoInputSchema,
+    data: &'a [u8],
+) -> Result<ImageMessage<'a>, VideoEncodeError> {
+    match input_schema {
+        VideoInputSchema::FoxgloveCompressedImage => {
+            let msg = <crate::messages::CompressedImage as crate::Decode>::decode(data)
+                .map_err(|e| VideoEncodeError::Decode(e.to_string()))?;
+            ImageMessage::try_from(msg).map_err(|e| VideoEncodeError::Decode(e.to_string()))
+        }
+        VideoInputSchema::FoxgloveRawImage => {
+            let msg = <crate::messages::RawImage as crate::Decode>::decode(data)
+                .map_err(|e| VideoEncodeError::Decode(e.to_string()))?;
+            ImageMessage::try_from(msg).map_err(|e| VideoEncodeError::Decode(e.to_string()))
+        }
+        #[cfg(feature = "img2yuv-ros1")]
+        VideoInputSchema::Ros1CompressedImage => {
+            let msg = crate::img2yuv::ros1::Ros1CompressedImage::decode(data)
+                .map_err(|e| VideoEncodeError::Decode(e.to_string()))?;
+            ImageMessage::try_from(msg).map_err(|e| VideoEncodeError::Decode(e.to_string()))
+        }
+        #[cfg(feature = "img2yuv-ros1")]
+        VideoInputSchema::Ros1Image => {
+            let msg = crate::img2yuv::ros1::Ros1Image::decode(data)
+                .map_err(|e| VideoEncodeError::Decode(e.to_string()))?;
+            ImageMessage::try_from(msg).map_err(|e| VideoEncodeError::Decode(e.to_string()))
+        }
+        #[cfg(feature = "img2yuv-ros2")]
+        VideoInputSchema::Ros2CompressedImage => {
+            let msg = crate::img2yuv::ros2::Ros2CompressedImage::decode(data)
+                .map_err(|e| VideoEncodeError::Decode(e.to_string()))?;
+            ImageMessage::try_from(msg).map_err(|e| VideoEncodeError::Decode(e.to_string()))
+        }
+        #[cfg(feature = "img2yuv-ros2")]
+        VideoInputSchema::Ros2Image => {
+            let msg = crate::img2yuv::ros2::Ros2Image::decode(data)
+                .map_err(|e| VideoEncodeError::Decode(e.to_string()))?;
+            ImageMessage::try_from(msg).map_err(|e| VideoEncodeError::Decode(e.to_string()))
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_foxglove_compressed_image() {
+        assert_eq!(
+            detect_video_schema("protobuf", "foxglove.CompressedImage"),
+            Some(VideoInputSchema::FoxgloveCompressedImage)
+        );
+    }
+
+    #[test]
+    fn test_foxglove_raw_image() {
+        assert_eq!(
+            detect_video_schema("protobuf", "foxglove.RawImage"),
+            Some(VideoInputSchema::FoxgloveRawImage)
+        );
+    }
+
+    #[cfg(feature = "img2yuv-ros1")]
+    #[test]
+    fn test_ros1_compressed_image() {
+        assert_eq!(
+            detect_video_schema("ros1", "sensor_msgs/CompressedImage"),
+            Some(VideoInputSchema::Ros1CompressedImage)
+        );
+    }
+
+    #[cfg(feature = "img2yuv-ros1")]
+    #[test]
+    fn test_ros1_image() {
+        assert_eq!(
+            detect_video_schema("ros1", "sensor_msgs/Image"),
+            Some(VideoInputSchema::Ros1Image)
+        );
+    }
+
+    #[cfg(feature = "img2yuv-ros2")]
+    #[test]
+    fn test_ros2_compressed_image() {
+        assert_eq!(
+            detect_video_schema("cdr", "sensor_msgs/msg/CompressedImage"),
+            Some(VideoInputSchema::Ros2CompressedImage)
+        );
+    }
+
+    #[cfg(feature = "img2yuv-ros2")]
+    #[test]
+    fn test_ros2_image() {
+        assert_eq!(
+            detect_video_schema("cdr", "sensor_msgs/msg/Image"),
+            Some(VideoInputSchema::Ros2Image)
+        );
+    }
+
+    #[test]
+    fn test_unknown_schema() {
+        assert_eq!(detect_video_schema("json", "SomeCustomType"), None);
+        assert_eq!(detect_video_schema("protobuf", "foxglove.Pose"), None);
+    }
+}
