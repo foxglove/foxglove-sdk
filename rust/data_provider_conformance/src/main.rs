@@ -12,7 +12,6 @@
 //!   sources in the manifest
 //! - `DATA_PROVIDER_CMD` — path to a server binary to spawn; if unset, the server must already be
 //!   running at the host/port in `DATA_PROVIDER_URL`
-//! - `DATA_PROVIDER_BEARER_TOKEN` — bearer token for authentication (default: `test-token`)
 //!
 //! # Examples
 //!
@@ -72,8 +71,6 @@ fn main() -> ExitCode {
                 "DATA_PROVIDER_EXPECTED_STATIC_FILE_SOURCE_COUNT must be a nonnegative integer",
             );
 
-    let bearer_token = var("DATA_PROVIDER_BEARER_TOKEN").unwrap_or("test-token".into());
-
     // If DATA_PROVIDER_CMD is set, spawn the server binary and keep it alive for the test run.
     // The socket address to wait on is derived from DATA_PROVIDER_URL.
     let _guard = std::env::var_os("DATA_PROVIDER_CMD").map(|cmd| {
@@ -89,7 +86,6 @@ fn main() -> ExitCode {
 
     data_provider_conformance::run_tests(DataProviderTestConfig {
         manifest_url,
-        bearer_token,
         expected_streamed_source_count,
         expected_static_file_source_count,
     })
