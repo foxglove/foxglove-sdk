@@ -1,6 +1,6 @@
 {
   "name": "@foxglove/messages",
-  "version": "1.9.0",
+  "version": "0.18.0",
   "description": "Foxglove message type definitions for ROS, Protobuf, FlatBuffers, OMG IDL, and JSON",
   "license": "MIT",
   "author": {
