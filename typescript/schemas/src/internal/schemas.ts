@@ -1361,13 +1361,6 @@ const CircleAnnotation: FoxgloveMessageSchema = {
       type: { type: "nested", schema: Color },
       description: "Outline color",
     },
-    {
-      name: "metadata",
-      type: { type: "nested", schema: KeyValuePair },
-      array: true,
-      description:
-        "Additional user-provided metadata associated with the annotation. Keys must be unique.",
-    },
   ],
 };
 
@@ -1434,13 +1427,6 @@ const PointsAnnotation: FoxgloveMessageSchema = {
       type: { type: "primitive", name: "float64" },
       description: "Stroke thickness in pixels",
     },
-    {
-      name: "metadata",
-      type: { type: "nested", schema: KeyValuePair },
-      array: true,
-      description:
-        "Additional user-provided metadata associated with the annotation. Keys must be unique.",
-    },
   ],
 };
 
@@ -1481,13 +1467,6 @@ const TextAnnotation: FoxgloveMessageSchema = {
       type: { type: "nested", schema: Color },
       description: "Background fill color",
     },
-    {
-      name: "metadata",
-      type: { type: "nested", schema: KeyValuePair },
-      array: true,
-      description:
-        "Additional user-provided metadata associated with the annotation. Keys must be unique.",
-    },
   ],
 };
 
@@ -1512,6 +1491,13 @@ const ImageAnnotations: FoxgloveMessageSchema = {
       name: "texts",
       type: { type: "nested", schema: TextAnnotation },
       description: "Text annotations",
+      array: true,
+    },
+    {
+      name: "metadata",
+      type: { type: "nested", schema: KeyValuePair },
+      description:
+        "Additional user-provided metadata associated with the image annotations. Keys must be unique.",
       array: true,
     },
   ],
