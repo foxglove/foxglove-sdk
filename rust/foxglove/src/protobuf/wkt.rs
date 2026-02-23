@@ -6,7 +6,7 @@ use prost::Message;
 use prost_types::field_descriptor_proto::Type as ProstFieldType;
 
 use super::ProtobufField;
-use crate::messages::{descriptors, Duration, Timestamp};
+use crate::messages::{Duration, Timestamp, descriptors};
 
 /// Decodes a FileDescriptorSet from binary and returns the first FileDescriptorProto.
 fn decode_file_descriptor(bytes: &[u8]) -> prost_types::FileDescriptorProto {

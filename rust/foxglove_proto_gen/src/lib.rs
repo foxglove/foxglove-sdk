@@ -1,6 +1,6 @@
 use std::{
     collections::{BTreeMap, HashMap, HashSet},
-    fs::{self, rename, File},
+    fs::{self, File, rename},
     io::{self, BufRead, Write},
     path::{Path, PathBuf},
 };

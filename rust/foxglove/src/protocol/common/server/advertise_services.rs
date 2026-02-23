@@ -5,8 +5,8 @@ use std::convert::TryFrom;
 
 use serde::{Deserialize, Serialize};
 
-use crate::protocol::schema::{self, Schema};
 use crate::protocol::JsonMessage;
+use crate::protocol::schema::{self, Schema};
 
 /// Advertise services message.
 ///

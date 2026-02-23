@@ -1,10 +1,10 @@
 use std::pin::pin;
 
 use crate::{
-    arena::{Arena, BorrowToNative},
-    generated_types::{Color, Point3, Pose, Quaternion, TriangleListPrimitive, Vector3},
     CircleAnnotation, FoxglovePointsAnnotationType, FoxgloveString, FoxgloveTimestamp,
     ImageAnnotations, Point2, PointsAnnotation, TextAnnotation,
+    arena::{Arena, BorrowToNative},
+    generated_types::{Color, Point3, Pose, Quaternion, TriangleListPrimitive, Vector3},
 };
 use foxglove::messages::TriangleListPrimitive as NativeTriangleListPrimitive;
 use std::ffi::c_char;

@@ -13,11 +13,11 @@ use playback_source::PlaybackSource;
 
 use anyhow::Result;
 use clap::Parser;
+use foxglove::WebSocketServer;
 use foxglove::websocket::{
     Capability, PlaybackCommand, PlaybackControlRequest, PlaybackState, PlaybackStatus,
     ServerListener,
 };
-use foxglove::WebSocketServer;
 use tracing::info;
 
 struct Listener {

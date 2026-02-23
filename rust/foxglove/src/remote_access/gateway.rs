@@ -1,8 +1,8 @@
 use std::{collections::HashMap, sync::Arc, time::Duration};
 
 use crate::{
-    sink_channel_filter::{SinkChannelFilter, SinkChannelFilterFn},
     ChannelDescriptor, Context, FoxgloveError,
+    sink_channel_filter::{SinkChannelFilter, SinkChannelFilterFn},
 };
 
 use tokio::task::JoinHandle;

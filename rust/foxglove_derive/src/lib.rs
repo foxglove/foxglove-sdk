@@ -4,8 +4,8 @@ use proc_macro::TokenStream;
 use quote::quote;
 use std::collections::HashMap;
 use syn::{
-    parse_macro_input, parse_quote, Data, DataEnum, DataStruct, DeriveInput, Fields,
-    GenericArgument, GenericParam, Generics, PathArguments, Type,
+    Data, DataEnum, DataStruct, DeriveInput, Fields, GenericArgument, GenericParam, Generics,
+    PathArguments, Type, parse_macro_input, parse_quote,
 };
 
 /// Extract the inner type from a wrapper type like `Vec<T>` or `Option<T>`.
@@ -104,14 +104,38 @@ type TypeCheck = (fn(&Type) -> bool, &'static str);
 /// Returns `Some(compile_error!(...))` if the type is invalid, `None` if valid.
 fn validate_field_type(ty: &Type) -> Option<TokenStream> {
     let checks: &[TypeCheck] = &[
-        (is_vec_of_option, "Vec<Option<T>> is not supported. Protobuf repeated fields cannot represent null/missing elements."),
-        (is_option_of_vec, "Option<Vec<T>> is not supported. Protobuf cannot distinguish between absent and empty repeated fields."),
-        (is_vec_of_vec, "Vec<Vec<T>> is not supported. Protobuf does not support nested repeated fields."),
-        (is_array_of_option, "[Option<T>; N] is not supported. Protobuf repeated fields cannot represent null/missing elements."),
-        (is_option_of_array, "Option<[T; N]> is not supported. Protobuf cannot distinguish between absent and empty repeated fields."),
-        (is_array_of_array, "[[T; M]; N] is not supported. Protobuf does not support nested repeated fields."),
-        (is_array_of_vec, "[Vec<T>; N] is not supported. Protobuf does not support nested repeated fields."),
-        (is_vec_of_array, "Vec<[T; N]> is not supported. Protobuf does not support nested repeated fields."),
+        (
+            is_vec_of_option,
+            "Vec<Option<T>> is not supported. Protobuf repeated fields cannot represent null/missing elements.",
+        ),
+        (
+            is_option_of_vec,
+            "Option<Vec<T>> is not supported. Protobuf cannot distinguish between absent and empty repeated fields.",
+        ),
+        (
+            is_vec_of_vec,
+            "Vec<Vec<T>> is not supported. Protobuf does not support nested repeated fields.",
+        ),
+        (
+            is_array_of_option,
+            "[Option<T>; N] is not supported. Protobuf repeated fields cannot represent null/missing elements.",
+        ),
+        (
+            is_option_of_array,
+            "Option<[T; N]> is not supported. Protobuf cannot distinguish between absent and empty repeated fields.",
+        ),
+        (
+            is_array_of_array,
+            "[[T; M]; N] is not supported. Protobuf does not support nested repeated fields.",
+        ),
+        (
+            is_array_of_vec,
+            "[Vec<T>; N] is not supported. Protobuf does not support nested repeated fields.",
+        ),
+        (
+            is_vec_of_array,
+            "Vec<[T; N]> is not supported. Protobuf does not support nested repeated fields.",
+        ),
     ];
     for &(check, msg) in checks {
         if check(ty) {

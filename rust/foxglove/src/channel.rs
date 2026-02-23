@@ -1,13 +1,13 @@
 use std::collections::BTreeMap;
+use std::sync::Arc;
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering::Relaxed;
-use std::sync::Arc;
 
 use delegate::delegate;
 use serde::{Deserialize, Serialize};
 use smallbytes::SmallBytes;
 
-use crate::{metadata::ToUnixNanos, ChannelBuilder, Encode, PartialMetadata, Schema, SinkId};
+use crate::{ChannelBuilder, Encode, PartialMetadata, Schema, SinkId, metadata::ToUnixNanos};
 
 mod channel_descriptor;
 mod lazy_channel;

@@ -5,12 +5,12 @@ use std::path::Path;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use foxglove::websocket::PlaybackStatus;
 use foxglove::{ChannelBuilder, PartialMetadata, RawChannel, Schema, WebSocketServerHandle};
+use mcap::Summary;
 use mcap::sans_io::indexed_reader::{IndexedReadEvent, IndexedReader, IndexedReaderOptions};
 use mcap::sans_io::summary_reader::{SummaryReadEvent, SummaryReader};
-use mcap::Summary;
 
 use crate::playback_source::{Nanoseconds, PlaybackSource};
 

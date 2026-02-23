@@ -35,12 +35,12 @@ use std::convert::Infallible;
 use std::net::SocketAddr;
 
 use axum::{
+    Json, Router,
     body::Body,
     extract::Query,
     http::{HeaderMap, StatusCode},
     response::{IntoResponse, Response},
     routing::get,
-    Json, Router,
 };
 use chrono::{DateTime, DurationRound, Utc};
 use foxglove::stream::create_mcap_stream;

@@ -11,13 +11,13 @@
 //!
 //! In this example, we log some point cloud data to one MCAP file, and some minimal metadata to
 //! another.
-use foxglove::messages::{
-    packed_element_field::NumericType, PackedElementField, PointCloud, Pose, Quaternion, Vector3,
-};
 use foxglove::messages::{FrameTransform, FrameTransforms};
+use foxglove::messages::{
+    PackedElementField, PointCloud, Pose, Quaternion, Vector3, packed_element_field::NumericType,
+};
 use foxglove::{Encode, LazyChannel, McapWriter};
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, SystemTime};
 
 const SMALL_MCAP_FILE: &str = "example-topic-splitting-small.mcap";

@@ -1,14 +1,14 @@
-use crate::{errors::PyFoxgloveError, PySchema};
 use crate::{PyContext, PySinkChannelFilter};
+use crate::{PySchema, errors::PyFoxgloveError};
 use base64::prelude::*;
 use foxglove::websocket::{
     AssetHandler, ChannelView, Client, ClientChannel, PlaybackCommand, PlaybackControlRequest,
     PlaybackState, PlaybackStatus, ServerListener, Status, StatusLevel,
 };
 use foxglove::{WebSocketServer, WebSocketServerHandle};
+use pyo3::IntoPyObjectExt;
 use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::types::{PyDict, PyList, PyTuple};
-use pyo3::IntoPyObjectExt;
 use pyo3::{
     exceptions::PyIOError,
     prelude::*,

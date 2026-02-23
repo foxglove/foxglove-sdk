@@ -117,10 +117,12 @@ fn test_timedelta_field_serialization() {
     assert_eq!(field.type_name(), ".google.protobuf.Duration");
 
     // Verify the google.protobuf.Duration file is included
-    assert!(fds
-        .file
-        .iter()
-        .any(|f| f.package() == "google.protobuf" && f.name() == "google/protobuf/duration.proto"));
+    assert!(
+        fds.file
+            .iter()
+            .any(|f| f.package() == "google.protobuf"
+                && f.name() == "google/protobuf/duration.proto")
+    );
 }
 
 #[test]
@@ -168,10 +170,12 @@ fn test_mixed_chrono_fields_serialization() {
             .any(|f| f.package() == "google.protobuf"
                 && f.name() == "google/protobuf/timestamp.proto")
     );
-    assert!(fds
-        .file
-        .iter()
-        .any(|f| f.package() == "google.protobuf" && f.name() == "google/protobuf/duration.proto"));
+    assert!(
+        fds.file
+            .iter()
+            .any(|f| f.package() == "google.protobuf"
+                && f.name() == "google/protobuf/duration.proto")
+    );
 }
 
 #[test]

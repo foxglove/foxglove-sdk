@@ -7,19 +7,19 @@ use std::{
 use indexmap::IndexSet;
 
 use livekit::{Room, RoomEvent, RoomOptions};
-use tokio::{runtime::Handle, sync::mpsc::UnboundedReceiver, sync::OnceCell, task::JoinHandle};
+use tokio::{runtime::Handle, sync::OnceCell, sync::mpsc::UnboundedReceiver, task::JoinHandle};
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info, warn};
 
 use crate::{
+    Context, SinkChannelFilter,
     api_client::{DeviceToken, FoxgloveApiClientBuilder},
     library_version::get_library_version,
     protocol::v2::server::ServerInfo,
     remote_access::{
-        credentials_provider::CredentialsProvider, session::RemoteAccessSession, Capability,
-        RemoteAccessError,
+        Capability, RemoteAccessError, credentials_provider::CredentialsProvider,
+        session::RemoteAccessSession,
     },
-    Context, SinkChannelFilter,
 };
 
 type Result<T> = std::result::Result<T, RemoteAccessError>;

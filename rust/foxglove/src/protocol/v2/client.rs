@@ -41,11 +41,11 @@ impl BinaryOpcode {
     }
 }
 
-impl<'a> BinaryMessage<'a> for Subscribe {
+impl BinaryMessage<'_> for Subscribe {
     const OPCODE: u8 = BinaryOpcode::Subscribe as u8;
 }
 
-impl<'a> BinaryMessage<'a> for Unsubscribe {
+impl BinaryMessage<'_> for Unsubscribe {
     const OPCODE: u8 = BinaryOpcode::Unsubscribe as u8;
 }
 

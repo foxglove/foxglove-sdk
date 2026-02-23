@@ -9,8 +9,8 @@
 
 use clap::Parser;
 use foxglove::convert::SaturatingInto;
-use foxglove::messages::log::Level;
 use foxglove::messages::Log;
+use foxglove::messages::log::Level;
 use foxglove::websocket::{Capability, Client, ClientChannel, ServerListener};
 use foxglove::{Channel, WebSocketServer};
 use std::sync::Arc;

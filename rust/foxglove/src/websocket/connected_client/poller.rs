@@ -1,11 +1,11 @@
 use futures_util::{SinkExt, StreamExt};
 use tokio::net::TcpStream;
 use tokio::sync::oneshot;
-use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::WebSocketStream;
+use tokio_tungstenite::tungstenite::Message;
 
-use crate::websocket::streams::ServerStream;
 use crate::websocket::Status;
+use crate::websocket::streams::ServerStream;
 
 use super::{ConnectedClient, ShutdownReason};
 
