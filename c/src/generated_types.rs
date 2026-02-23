@@ -3227,6 +3227,10 @@ pub struct LocationFix {
 
     /// Color used to visualize the location
     pub color: *const Color,
+
+    /// Additional user-provided metadata associated with the location fix. Keys must be unique.
+    pub metadata: *const KeyValuePair,
+    pub metadata_count: usize,
 }
 
 #[cfg(not(target_family = "wasm"))]
@@ -3273,6 +3277,7 @@ impl BorrowToNative for LocationFix {
                 .map(|m| m.borrow_to_native(arena.as_mut()))
         }
         .transpose()?;
+        let metadata = unsafe { arena.as_mut().map(self.metadata, self.metadata_count)? };
 
         Ok(ManuallyDrop::new(foxglove::messages::LocationFix {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
@@ -3288,6 +3293,7 @@ impl BorrowToNative for LocationFix {
             }),
             position_covariance_type: self.position_covariance_type as i32,
             color: color.map(ManuallyDrop::into_inner),
+            metadata: ManuallyDrop::into_inner(metadata),
         }))
     }
 }

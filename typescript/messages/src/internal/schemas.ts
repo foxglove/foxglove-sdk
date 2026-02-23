@@ -1572,6 +1572,14 @@ const LocationFix: FoxgloveMessageSchema = {
       protobufFieldNumber: 8,
       optional: true,
     },
+    {
+      name: "metadata",
+      type: { type: "nested", schema: KeyValuePair },
+      array: true,
+      description:
+        "Additional user-provided metadata associated with the location fix. Keys must be unique.",
+      protobufFieldNumber: 9,
+    },
   ],
 };
 
