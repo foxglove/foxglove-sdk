@@ -19,15 +19,13 @@
 ///
 /// Get a manifest for a specific flight:
 /// @code{.sh}
-///   curl -H "Authorization: Bearer test" \
-///     "http://localhost:8081/v1/manifest?flightId=ABC123\
-///     &startTime=2024-01-01T00:00:00Z&endTime=2024-01-02T00:00:00Z"
+///   curl "http://localhost:8081/v1/manifest?flightId=ABC123&startTime=2024-01-01T00:00:00Z\
+///     &endTime=2024-01-02T00:00:00Z"
 /// @endcode
 ///
 /// Stream MCAP data:
 /// @code{.sh}
-///   curl -H "Authorization: Bearer test" --output data.mcap \
-///     "http://localhost:8081/v1/data?flightId=ABC123\
+///   curl --output data.mcap "http://localhost:8081/v1/data?flightId=ABC123\
 ///     &startTime=2024-01-01T00:00:00Z&endTime=2024-01-02T00:00:00Z"
 /// @endcode
 ///
@@ -136,21 +134,13 @@ std::optional<FlightParams> require_flight_params(
 // Auth
 // ============================================================================
 
-/// Validate the bearer token from the Authorization header.
+/// Check the bearer token to see if the user is authorized to access the flight.
 /// Returns true if the request is authorized; sets a 401 response and returns false otherwise.
-bool require_auth(const httplib::Request& req, httplib::Response& res) {
-  // THIS ACCEPTS ANY NON-EMPTY BEARER TOKEN.
-  // DEMO ONLY: REPLACE WITH REAL AUTH!
-  auto it = req.headers.find("Authorization");
-  if (it != req.headers.end()) {
-    const auto& value = it->second;
-    // Accept any non-empty bearer token.
-    if (value.size() > 7 && value.compare(0, 7, "Bearer ") == 0) {
-      return true;
-    }
-  }
-  res.status = 401;
-  return false;
+bool require_auth(
+  const httplib::Request& /*req*/, const FlightParams& /*params*/, httplib::Response& /*res*/
+) {
+  // EXAMPLE ONLY: REPLACE THIS WITH A REAL AUTH CHECK.
+  return true;
 }
 
 // ============================================================================
@@ -160,12 +150,16 @@ bool require_auth(const httplib::Request& req, httplib::Response& res) {
 /// Handler for `GET /v1/manifest`.
 ///
 /// Builds a manifest describing the channels and schemas available for the requested flight.
+///
+/// The user **MUST** be authorized to read all sources returned in the manifest. Do not rely
+/// on authorization checks on individual sources, because they may not be called for cached data.
 void manifest_handler(const httplib::Request& req, httplib::Response& res) {
-  if (!require_auth(req, res)) {
-    return;
-  }
   auto params = require_flight_params(req, res);
   if (!params) {
+    return;
+  }
+
+  if (!require_auth(req, *params, res)) {
     return;
   }
 
@@ -200,11 +194,12 @@ void manifest_handler(const httplib::Request& req, httplib::Response& res) {
 ///
 /// Streams MCAP data for the requested flight. The response body is a stream of MCAP bytes.
 void data_handler(const httplib::Request& req, httplib::Response& res) {
-  if (!require_auth(req, res)) {
-    return;
-  }
   auto params = require_flight_params(req, res);
   if (!params) {
+    return;
+  }
+
+  if (!require_auth(req, *params, res)) {
     return;
   }
 
