@@ -26,7 +26,6 @@ fn main() -> ExitCode {
 
     data_provider_conformance::run_tests(DataProviderTestConfig {
         manifest_url,
-        bearer_token: "test-token".into(),
         expected_streamed_source_count: 1,
         expected_static_file_source_count: 0,
     })

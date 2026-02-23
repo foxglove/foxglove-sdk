@@ -17,7 +17,6 @@
 //! let _server = start_my_server();
 //! let config = DataProviderTestConfig {
 //!     manifest_url: "http://127.0.0.1:8080/v1/manifest?...".parse().unwrap(),
-//!     bearer_token: "my-token".into(),
 //!     expected_streamed_source_count: 1,
 //!     expected_static_file_source_count: 0,
 //! };
@@ -82,8 +81,6 @@ pub fn spawn_server(command: impl AsRef<OsStr>, addr: &str) -> ServerGuard {
 pub struct DataProviderTestConfig {
     /// Full URL of the manifest endpoint, including query parameters.
     pub manifest_url: Url,
-    /// Bearer token to use for authenticated requests.
-    pub bearer_token: String,
     /// Expected number of streamed sources in the manifest.
     pub expected_streamed_source_count: usize,
     /// Expected number of static file sources in the manifest.
@@ -106,7 +103,6 @@ pub fn run_tests(config: DataProviderTestConfig) -> ExitCode {
 pub fn build_tests(
     DataProviderTestConfig {
         manifest_url,
-        bearer_token,
         expected_streamed_source_count,
         expected_static_file_source_count,
     }: DataProviderTestConfig,
@@ -115,7 +111,6 @@ pub fn build_tests(
 
     let resp = client
         .get(manifest_url.clone())
-        .bearer_auth(&bearer_token)
         .send()
         .expect("manifest request should succeed");
     assert_eq!(resp.status(), 200, "manifest endpoint should return 200");
@@ -153,14 +148,7 @@ pub fn build_tests(
             let client = client.clone();
             let manifest_url = manifest_url.clone();
             move || {
-                test_manifest_and_mcap_agree(&client, &manifest_url, &bearer_token, &manifest);
-                Ok(())
-            }
-        }),
-        Trial::test("auth_required", {
-            let client = client.clone();
-            move || {
-                check_auth_required(&client, manifest_url);
+                test_manifest_and_mcap_agree(&client, &manifest_url, &manifest);
                 Ok(())
             }
         }),
@@ -181,12 +169,7 @@ fn test_manifest_matches_json_schema(json: &serde_json::Value) {
         .expect("manifest should conform to the JSON schema");
 }
 
-fn test_manifest_and_mcap_agree(
-    client: &Client,
-    manifest_url: &Url,
-    bearer_token: &str,
-    manifest: &Manifest,
-) {
+fn test_manifest_and_mcap_agree(client: &Client, manifest_url: &Url, manifest: &Manifest) {
     for source in &manifest.sources {
         let (url, topics, schemas) = match source {
             UpstreamSource::Streamed(s) => (&s.url, &s.topics, &s.schemas),
@@ -201,7 +184,6 @@ fn test_manifest_and_mcap_agree(
 
         let resp = client
             .get(data_url)
-            .bearer_auth(bearer_token)
             .send()
             .expect("data request should succeed");
         assert_eq!(
@@ -284,17 +266,4 @@ fn test_manifest_and_mcap_agree(
             assert_eq!(*schema.data, *manifest_schema.data, "schema data for channel {channel_id} on topic {topic_name:?} should match manifest");
         }
     }
-}
-
-fn check_auth_required(client: &Client, manifest_url: Url) {
-    let status = client
-        .get(manifest_url)
-        .send()
-        .expect("manifest request should succeed")
-        .status();
-    assert_eq!(
-        status,
-        StatusCode::UNAUTHORIZED,
-        "getting manifest without auth should fail with 401 Unauthorized"
-    );
 }
