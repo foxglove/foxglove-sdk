@@ -37,7 +37,7 @@ use std::net::SocketAddr;
 use axum::{
     body::Body,
     extract::Query,
-    http::{header::AUTHORIZATION, HeaderMap, StatusCode},
+    http::{HeaderMap, StatusCode},
     response::{IntoResponse, Response},
     routing::get,
     Json, Router,
