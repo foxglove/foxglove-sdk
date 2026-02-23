@@ -176,6 +176,7 @@ fn test_image_annotations_borrow_to_native() {
                 b: 0.9,
                 a: 1.0,
             }),
+            metadata: vec![],
         }],
         points: vec![foxglove::messages::PointsAnnotation {
             timestamp: Some(foxglove::messages::Timestamp::new(1000000000, 500000000)),
@@ -204,6 +205,7 @@ fn test_image_annotations_borrow_to_native() {
                 a: 0.5,
             }),
             thickness: 3.0,
+            metadata: vec![],
         }],
         texts: vec![foxglove::messages::TextAnnotation {
             timestamp: Some(foxglove::messages::Timestamp::new(1000000000, 500000000)),
@@ -222,6 +224,7 @@ fn test_image_annotations_borrow_to_native() {
                 b: 1.0,
                 a: 0.7,
             }),
+            metadata: vec![],
         }],
     };
 
@@ -255,6 +258,8 @@ fn test_image_annotations_borrow_to_native() {
         thickness: 2.0,
         fill_color: &raw const circle_fill_color,
         outline_color: &raw const circle_outline_color,
+        metadata: std::ptr::null(),
+        metadata_count: 0,
     };
 
     // Create points annotation
@@ -295,6 +300,8 @@ fn test_image_annotations_borrow_to_native() {
         outline_colors_count: points_outline_colors.len(),
         fill_color: &raw const points_fill_color,
         thickness: 3.0,
+        metadata: std::ptr::null(),
+        metadata_count: 0,
     };
 
     // Create text annotation
@@ -328,6 +335,8 @@ fn test_image_annotations_borrow_to_native() {
         font_size: 14.0,
         text_color: &raw const text_color,
         background_color: &raw const background_color,
+        metadata: std::ptr::null(),
+        metadata_count: 0,
     };
 
     // Create ImageAnnotations struct
