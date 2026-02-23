@@ -52,6 +52,9 @@ impl From<livekit::RoomError> for RemoteAccessError {
     }
 }
 
+/// The only Foxglove API calls in this module are `fetch_device_info` and
+/// `authorize_remote_viz`, both of which are auth-related, so mapping all
+/// API client errors to `Auth` is appropriate here.
 impl From<FoxgloveApiClientError> for RemoteAccessError {
     fn from(error: FoxgloveApiClientError) -> Self {
         RemoteAccessError::Auth(error)
