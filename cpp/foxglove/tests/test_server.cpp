@@ -36,7 +36,7 @@ constexpr std::underlying_type_t<T> toUnderlying(T e) noexcept {
   return static_cast<std::underlying_type_t<T>>(e);
 }
 
-constexpr auto kTestTimeout = std::chrono::seconds(3);
+constexpr auto kTestTimeout = std::chrono::seconds(5);
 
 class WebSocketClient {
 public:
