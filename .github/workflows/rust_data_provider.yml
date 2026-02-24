@@ -9,6 +9,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          repository: foxglove/foxglove-sdk
+          ref: ${{ github.workflow_sha }}
 
       - uses: actions-rust-lang/setup-rust-toolchain@v1
 
