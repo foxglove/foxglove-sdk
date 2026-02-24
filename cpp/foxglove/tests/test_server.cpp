@@ -1159,9 +1159,15 @@ TEST_CASE("Broadcast time") {
 
   server.broadcastTime(42);
 
-  // Wait for the time message.
-  payload = client.recv();
-  validateTimeMessage(payload, 42);
+  // Use filterRecv to handle async broadcast timing
+  auto time_payload = client.filterRecv(
+    [](const std::string& msg) {
+      return !msg.empty() && static_cast<uint8_t>(msg[0]) == 0x02;  // Time opcode
+    },
+    kTestTimeout
+  );
+  REQUIRE(time_payload.has_value());
+  validateTimeMessage(*time_payload, 42);
 
   REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
 }
@@ -1698,8 +1704,18 @@ TEST_CASE("Broadcast playback state") {
 
   server.broadcastPlaybackState(playback_state);
 
+  // Use filterRecv to handle potential out-of-order messages or give more time for async broadcast
+  auto received_payload = client.filterRecv(
+    [](const std::string& msg) {
+      // Binary messages start with opcode byte
+      return !msg.empty() && static_cast<uint8_t>(msg[0]) == 0x05;  // Playback state opcode
+    },
+    kTestTimeout
+  );
+  REQUIRE(received_payload.has_value());
+
   std::vector<std::byte> received_binary_playback_state;
-  for (const unsigned char c : client.recv()) {
+  for (const unsigned char c : *received_payload) {
     received_binary_playback_state.emplace_back(static_cast<std::byte>(c));
   }
   auto received_playback_state = parseBinaryPlaybackState(received_binary_playback_state);
