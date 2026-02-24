@@ -3584,7 +3584,7 @@ dependencies = [
  "anyhow",
  "axum",
  "dotenvy",
- "foxglove 0.17.2",
+ "foxglove 0.18.0",
  "futures-util",
  "livekit",
  "livekit-api",
