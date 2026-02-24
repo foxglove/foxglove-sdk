@@ -9,15 +9,5 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Resolve ref
-      id: resolve
-      shell: bash
-      run: |
-        echo "repository=${{ github.action_repository }}" >> "$GITHUB_OUTPUT"
-        echo "ref=${{ github.action_ref }}" >> "$GITHUB_OUTPUT"
-
-    - uses: actions/checkout@v6
-      with:
-        repository: ${{ steps.resolve.outputs.repository }}
-        ref: ${{ steps.resolve.outputs.ref }}
-        path: ${{ inputs.path }}
+    - shell: bash
+      run: cp -a "$(realpath "$GITHUB_ACTION_PATH/../../..")" "${{ inputs.path }}"
