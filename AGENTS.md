@@ -99,7 +99,6 @@ The core SDK is written in Rust, with bindings for Python and C/C++, plus TypeSc
 ### TypeScript (Schemas only)
 
 - Use `yarn` to install dependencies and run scripts
-- Schemas are generated — edit source definitions in `scripts/generate.ts` and run `make generate` or `yarn generate` to regenerate outputs; do not hand-edit generated files
 - Prefer explicit types; avoid `any`
 
 ### Schema Generation
