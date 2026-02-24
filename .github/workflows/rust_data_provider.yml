@@ -7,11 +7,17 @@ jobs:
   build:
     name: Build Rust Data Provider Example
     runs-on: ubuntu-latest
+    env:
+      WORKFLOW_REF: ${{ github.workflow_ref }}
     steps:
+      - name: Determine ref
+        id: ref
+        run: echo "ref=${WORKFLOW_REF##*@}" >> "$GITHUB_OUTPUT"
+
       - uses: actions/checkout@v6
         with:
           repository: foxglove/foxglove-sdk
-          ref: ${{ github.workflow_sha }}
+          ref: ${{ steps.ref.outputs.ref }}
 
       - uses: actions-rust-lang/setup-rust-toolchain@v1
 
