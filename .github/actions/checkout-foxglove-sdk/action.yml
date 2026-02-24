@@ -10,4 +10,4 @@ runs:
   using: composite
   steps:
     - shell: bash
-      run: cp -a "$(realpath "$GITHUB_ACTION_PATH/../../..")" "${{ inputs.path }}"
+      run: ln -s "$GITHUB_ACTION_PATH/../../.." "${{ inputs.path }}"
