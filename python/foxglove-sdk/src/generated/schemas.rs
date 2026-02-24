@@ -1104,6 +1104,7 @@ impl From<VoxelGrid> for foxglove::schemas::VoxelGrid {
 /// :param circles: Circle annotations
 /// :param points: Points annotations
 /// :param texts: Text annotations
+/// :param metadata: Additional user-provided metadata associated with the image annotations. Keys must be unique.
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/image-annotations
 #[pyclass(module = "foxglove.schemas")]
@@ -1112,11 +1113,12 @@ pub(crate) struct ImageAnnotations(pub(crate) foxglove::schemas::ImageAnnotation
 #[pymethods]
 impl ImageAnnotations {
     #[new]
-    #[pyo3(signature = (*, circles=None, points=None, texts=None) )]
+    #[pyo3(signature = (*, circles=None, points=None, texts=None, metadata=None) )]
     fn new(
         circles: Option<Vec<CircleAnnotation>>,
         points: Option<Vec<PointsAnnotation>>,
         texts: Option<Vec<TextAnnotation>>,
+        metadata: Option<Vec<KeyValuePair>>,
     ) -> Self {
         Self(foxglove::schemas::ImageAnnotations {
             circles: circles
@@ -1134,12 +1136,17 @@ impl ImageAnnotations {
                 .into_iter()
                 .map(|x| x.into())
                 .collect(),
+            metadata: metadata
+                .unwrap_or_default()
+                .into_iter()
+                .map(|x| x.into())
+                .collect(),
         })
     }
     fn __repr__(&self) -> String {
         format!(
-            "ImageAnnotations(circles={:?}, points={:?}, texts={:?})",
-            self.0.circles, self.0.points, self.0.texts,
+            "ImageAnnotations(circles={:?}, points={:?}, texts={:?}, metadata={:?})",
+            self.0.circles, self.0.points, self.0.texts, self.0.metadata,
         )
     }
     /// Returns the ImageAnnotations schema.

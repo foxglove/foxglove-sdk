@@ -396,6 +396,9 @@ pub struct ImageAnnotations {
     /// Text annotations
     #[prost(message, repeated, tag = "3")]
     pub texts: ::prost::alloc::vec::Vec<TextAnnotation>,
+    /// Additional user-provided metadata associated with the image annotations. Keys must be unique.
+    #[prost(message, repeated, tag = "4")]
+    pub metadata: ::prost::alloc::vec::Vec<KeyValuePair>,
 }
 /// A key with its associated value
 ///

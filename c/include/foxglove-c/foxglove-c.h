@@ -1078,6 +1078,20 @@ typedef struct foxglove_text_annotation {
 } foxglove_text_annotation;
 
 /**
+ * A key with its associated value
+ */
+typedef struct foxglove_key_value_pair {
+  /**
+   * Key
+   */
+  struct foxglove_string key;
+  /**
+   * Value
+   */
+  struct foxglove_string value;
+} foxglove_key_value_pair;
+
+/**
  * Array of annotations for a 2D image
  */
 typedef struct foxglove_image_annotations {
@@ -1096,21 +1110,12 @@ typedef struct foxglove_image_annotations {
    */
   const struct foxglove_text_annotation *texts;
   size_t texts_count;
+  /**
+   * Additional user-provided metadata associated with the image annotations. Keys must be unique.
+   */
+  const struct foxglove_key_value_pair *metadata;
+  size_t metadata_count;
 } foxglove_image_annotations;
-
-/**
- * A key with its associated value
- */
-typedef struct foxglove_key_value_pair {
-  /**
-   * Key
-   */
-  struct foxglove_string key;
-  /**
-   * Value
-   */
-  struct foxglove_string value;
-} foxglove_key_value_pair;
 
 /**
  * A single scan from a planar laser range-finder

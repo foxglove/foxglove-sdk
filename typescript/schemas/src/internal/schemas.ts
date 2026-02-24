@@ -1493,6 +1493,13 @@ const ImageAnnotations: FoxgloveMessageSchema = {
       description: "Text annotations",
       array: true,
     },
+    {
+      name: "metadata",
+      type: { type: "nested", schema: KeyValuePair },
+      description:
+        "Additional user-provided metadata associated with the image annotations. Keys must be unique.",
+      array: true,
+    },
   ],
 };
 

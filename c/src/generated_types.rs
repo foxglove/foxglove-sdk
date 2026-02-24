@@ -2519,6 +2519,10 @@ pub struct ImageAnnotations {
     /// Text annotations
     pub texts: *const TextAnnotation,
     pub texts_count: usize,
+
+    /// Additional user-provided metadata associated with the image annotations. Keys must be unique.
+    pub metadata: *const KeyValuePair,
+    pub metadata_count: usize,
 }
 
 #[cfg(not(target_family = "wasm"))]
@@ -2555,11 +2559,13 @@ impl BorrowToNative for ImageAnnotations {
         let circles = unsafe { arena.as_mut().map(self.circles, self.circles_count)? };
         let points = unsafe { arena.as_mut().map(self.points, self.points_count)? };
         let texts = unsafe { arena.as_mut().map(self.texts, self.texts_count)? };
+        let metadata = unsafe { arena.as_mut().map(self.metadata, self.metadata_count)? };
 
         Ok(ManuallyDrop::new(foxglove::messages::ImageAnnotations {
             circles: ManuallyDrop::into_inner(circles),
             points: ManuallyDrop::into_inner(points),
             texts: ManuallyDrop::into_inner(texts),
+            metadata: ManuallyDrop::into_inner(metadata),
         }))
     }
 }
