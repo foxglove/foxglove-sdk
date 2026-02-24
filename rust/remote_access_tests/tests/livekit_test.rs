@@ -17,9 +17,9 @@ use remote_access_tests::mock_server;
 use tracing::info;
 use tracing_test::traced_test;
 
+use foxglove::protocol::v2::BinaryMessage;
 use foxglove::protocol::v2::client::Subscribe;
 use foxglove::protocol::v2::server::ServerMessage;
-use foxglove::protocol::v2::BinaryMessage;
 
 /// Default timeout for waiting for events or stream data.
 const EVENT_TIMEOUT: Duration = Duration::from_secs(15);
@@ -122,7 +122,7 @@ impl ViewerConnection {
                         topic,
                         ..
                     })) if topic == "ws-protocol" => {
-                        break Some(stream_reader.take().context("reader already taken")?)
+                        break Some(stream_reader.take().context("reader already taken")?);
                     }
                     Ok(Some(_)) => continue,
                 }
