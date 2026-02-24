@@ -83,7 +83,7 @@ The core SDK is written in Rust, with bindings for Python and C/C++, plus TypeSc
 - Type-check with `mypy`
 - Co-locate `test_*.py` files with source, or place them in a `tests/` directory following existing conventions
 - Tests use pytest
-- Python code should use modern features and idioms where applicable, the oldest version we need to support is 3.10
+- Python code should use modern features and idioms where applicable, the oldest version we need to support is defined in `python/foxglove-sdk/pyproject.toml`
 
 ### C / C++
 
