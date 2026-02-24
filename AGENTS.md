@@ -74,6 +74,7 @@ The core SDK is written in Rust, with bindings for Python and C/C++, plus TypeSc
 - The MSRV (Minimum Supported Rust Version) is defined in Cargo.toml. Don't use Rust features that aren't stabilized as of this version.
 - Use the tracing crate (tracing::info!, tracing::warn!, etc.), not println!, eprintln!, or the log crate macros directly
 - Modules should be defined as `foo.rs`, not `foo/mod.rs`
+- Use `cargo public-api` for evaluating public API changes
 
 ### Python
 
