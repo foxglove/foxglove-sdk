@@ -1146,7 +1146,20 @@ void validateTimeMessage(const std::string_view msg, uint64_t timestamp) {
 
 TEST_CASE("Broadcast time") {
   auto context = foxglove::Context::create();
-  auto server = startServer(context, foxglove::WebSocketServerCapabilities::Time);
+
+  std::mutex mutex;
+  std::condition_variable cv;
+  bool client_connected = false;
+
+  foxglove::WebSocketServerOptions ws_options;
+  ws_options.context = context;
+  ws_options.capabilities = foxglove::WebSocketServerCapabilities::Time;
+  ws_options.callbacks.onClientConnect = [&]() {
+    std::scoped_lock lock{mutex};
+    client_connected = true;
+    cv.notify_one();
+  };
+  auto server = startServer(std::move(ws_options));
 
   WebSocketClient client;
   client.start(server.port());
@@ -1157,17 +1170,17 @@ TEST_CASE("Broadcast time") {
   REQUIRE(parsed.contains("op"));
   REQUIRE(parsed["op"] == "serverInfo");
 
+  // Wait for the server to register the client before broadcasting.
+  {
+    std::unique_lock lock{mutex};
+    auto wait_result = cv.wait_for(lock, kTestTimeout, [&] { return client_connected; });
+    REQUIRE(wait_result);
+  }
+
   server.broadcastTime(42);
 
-  // Use filterRecv to handle async broadcast timing
-  auto time_payload = client.filterRecv(
-    [](const std::string& msg) {
-      return !msg.empty() && static_cast<uint8_t>(msg[0]) == 0x02;  // Time opcode
-    },
-    kTestTimeout
-  );
-  REQUIRE(time_payload.has_value());
-  validateTimeMessage(*time_payload, 42);
+  auto time_payload = client.recv();
+  validateTimeMessage(time_payload, 42);
 
   REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
 }
@@ -1653,9 +1666,9 @@ TEST_CASE("Playback control request callback") {
 
   {
     std::unique_lock lock{mutex};
-    auto wait_result = cv.wait_for(lock, kTestTimeout);
-    REQUIRE(wait_result != std::cv_status::timeout);
-    REQUIRE(received_playback_control_request.has_value());
+    auto wait_result =
+      cv.wait_for(lock, kTestTimeout, [&] { return received_playback_control_request.has_value(); });
+    REQUIRE(wait_result);
     REQUIRE(
       received_playback_control_request->playback_command == foxglove::PlaybackCommand::Pause
     );
@@ -1679,10 +1692,20 @@ TEST_CASE("Playback control request callback") {
 
 TEST_CASE("Broadcast playback state") {
   auto context = foxglove::Context::create();
+
+  std::mutex mutex;
+  std::condition_variable cv;
+  bool client_connected = false;
+
   foxglove::WebSocketServerOptions ws_options;
   ws_options.context = context;
   ws_options.capabilities = foxglove::WebSocketServerCapabilities::PlaybackControl;
   ws_options.playback_time_range = std::make_pair(0, 1000);
+  ws_options.callbacks.onClientConnect = [&]() {
+    std::scoped_lock lock{mutex};
+    client_connected = true;
+    cv.notify_one();
+  };
   auto server = startServer(std::move(ws_options));
 
   WebSocketClient client;
@@ -1694,6 +1717,13 @@ TEST_CASE("Broadcast playback state") {
   REQUIRE(parsed.contains("op"));
   REQUIRE(parsed["op"] == "serverInfo");
 
+  // Wait for the server to register the client before broadcasting.
+  {
+    std::unique_lock lock{mutex};
+    auto wait_result = cv.wait_for(lock, kTestTimeout, [&] { return client_connected; });
+    REQUIRE(wait_result);
+  }
+
   foxglove::PlaybackState playback_state{
     foxglove::PlaybackStatus::Paused,
     0,
@@ -1704,18 +1734,8 @@ TEST_CASE("Broadcast playback state") {
 
   server.broadcastPlaybackState(playback_state);
 
-  // Use filterRecv to handle potential out-of-order messages or give more time for async broadcast
-  auto received_payload = client.filterRecv(
-    [](const std::string& msg) {
-      // Binary messages start with opcode byte
-      return !msg.empty() && static_cast<uint8_t>(msg[0]) == 0x05;  // Playback state opcode
-    },
-    kTestTimeout
-  );
-  REQUIRE(received_payload.has_value());
-
   std::vector<std::byte> received_binary_playback_state;
-  for (const unsigned char c : *received_payload) {
+  for (const unsigned char c : client.recv()) {
     received_binary_playback_state.emplace_back(static_cast<std::byte>(c));
   }
   auto received_playback_state = parseBinaryPlaybackState(received_binary_playback_state);
