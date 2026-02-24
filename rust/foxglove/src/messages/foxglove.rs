@@ -396,6 +396,9 @@ pub struct ImageAnnotations {
     /// Text annotations
     #[prost(message, repeated, tag = "3")]
     pub texts: ::prost::alloc::vec::Vec<TextAnnotation>,
+    /// Additional user-provided metadata associated with the image annotations. Keys must be unique.
+    #[prost(message, repeated, tag = "4")]
+    pub metadata: ::prost::alloc::vec::Vec<KeyValuePair>,
 }
 /// A key with its associated value
 ///
@@ -554,6 +557,9 @@ pub struct LocationFix {
     /// Color used to visualize the location
     #[prost(message, optional, tag = "8")]
     pub color: ::core::option::Option<Color>,
+    /// Additional user-provided metadata associated with the location fix. Keys must be unique.
+    #[prost(message, repeated, tag = "9")]
+    pub metadata: ::prost::alloc::vec::Vec<KeyValuePair>,
 }
 /// Nested message and enum types in `LocationFix`.
 pub mod location_fix {

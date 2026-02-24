@@ -1703,6 +1703,8 @@ void imageAnnotationsToC(
   dest.points_count = src.points.size();
   dest.texts = arena.map<foxglove_text_annotation>(src.texts, textAnnotationToC);
   dest.texts_count = src.texts.size();
+  dest.metadata = arena.map<foxglove_key_value_pair>(src.metadata, keyValuePairToC);
+  dest.metadata_count = src.metadata.size();
 }
 
 void keyValuePairToC(
@@ -1758,6 +1760,8 @@ void locationFixToC(
   dest.position_covariance_type =
     static_cast<foxglove_position_covariance_type>(src.position_covariance_type);
   dest.color = src.color ? reinterpret_cast<const foxglove_color*>(&*src.color) : nullptr;
+  dest.metadata = arena.map<foxglove_key_value_pair>(src.metadata, keyValuePairToC);
+  dest.metadata_count = src.metadata.size();
 }
 
 void locationFixesToC(

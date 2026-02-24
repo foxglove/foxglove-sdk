@@ -2519,6 +2519,10 @@ pub struct ImageAnnotations {
     /// Text annotations
     pub texts: *const TextAnnotation,
     pub texts_count: usize,
+
+    /// Additional user-provided metadata associated with the image annotations. Keys must be unique.
+    pub metadata: *const KeyValuePair,
+    pub metadata_count: usize,
 }
 
 #[cfg(not(target_family = "wasm"))]
@@ -2555,11 +2559,13 @@ impl BorrowToNative for ImageAnnotations {
         let circles = unsafe { arena.as_mut().map(self.circles, self.circles_count)? };
         let points = unsafe { arena.as_mut().map(self.points, self.points_count)? };
         let texts = unsafe { arena.as_mut().map(self.texts, self.texts_count)? };
+        let metadata = unsafe { arena.as_mut().map(self.metadata, self.metadata_count)? };
 
         Ok(ManuallyDrop::new(foxglove::messages::ImageAnnotations {
             circles: ManuallyDrop::into_inner(circles),
             points: ManuallyDrop::into_inner(points),
             texts: ManuallyDrop::into_inner(texts),
+            metadata: ManuallyDrop::into_inner(metadata),
         }))
     }
 }
@@ -3227,6 +3233,10 @@ pub struct LocationFix {
 
     /// Color used to visualize the location
     pub color: *const Color,
+
+    /// Additional user-provided metadata associated with the location fix. Keys must be unique.
+    pub metadata: *const KeyValuePair,
+    pub metadata_count: usize,
 }
 
 #[cfg(not(target_family = "wasm"))]
@@ -3273,6 +3283,7 @@ impl BorrowToNative for LocationFix {
                 .map(|m| m.borrow_to_native(arena.as_mut()))
         }
         .transpose()?;
+        let metadata = unsafe { arena.as_mut().map(self.metadata, self.metadata_count)? };
 
         Ok(ManuallyDrop::new(foxglove::messages::LocationFix {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
@@ -3288,6 +3299,7 @@ impl BorrowToNative for LocationFix {
             }),
             position_covariance_type: self.position_covariance_type as i32,
             color: color.map(ManuallyDrop::into_inner),
+            metadata: ManuallyDrop::into_inner(metadata),
         }))
     }
 }

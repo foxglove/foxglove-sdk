@@ -46,7 +46,7 @@ pub struct PartialMetadata {
 impl PartialMetadata {
     /// Returns a new PartialMetadata with the given log time.
     ///
-    /// `log_time` can be a u64 (nanoseconds since epoch), a foxglove [`Timestamp`][crate::messages::Timestamp],
+    /// `log_time` can be a u64 (nanoseconds since epoch), a foxglove [`Timestamp`][crate::schemas::Timestamp],
     /// a [`SystemTime`][std::time::SystemTime], or anything else that implements [`ToUnixNanos`][crate::ToUnixNanos].
     pub fn with_log_time(log_time: impl ToUnixNanos) -> Self {
         Self {

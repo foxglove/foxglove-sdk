@@ -177,7 +177,7 @@ impl<T: Encode> Channel<T> {
     }
 
     /// Encodes the message and logs it on the channel with the given `timestamp`.
-    /// `timestamp` can be a u64 (nanoseconds since epoch), a foxglove [`Timestamp`][crate::messages::Timestamp],
+    /// `timestamp` can be a u64 (nanoseconds since epoch), a foxglove [`Timestamp`][crate::schemas::Timestamp],
     /// a [`SystemTime`][std::time::SystemTime], or anything else that implements [`ToUnixNanos`][crate::ToUnixNanos].
     ///
     /// The buffering behavior depends on the log sink; see [`McapWriter`][crate::McapWriter] and
