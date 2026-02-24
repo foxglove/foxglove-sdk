@@ -1036,6 +1036,11 @@ struct ImageAnnotations {
   /// unique.
   std::vector<KeyValuePair> metadata;
 
+  /// @brief Timestamp for the image annotations. Some Foxglove features will use this timestamp
+  /// when set. It is preferable that individual annotation timestamps match this value when
+  /// provided.
+  std::optional<Timestamp> timestamp;
+
   /// @brief Encoded the ImageAnnotations as protobuf to the provided buffer.
   ///
   /// On success, writes the serialized length to *encoded_len.
@@ -1601,6 +1606,10 @@ struct SceneUpdate {
 
   /// @brief Scene entities to add or replace
   std::vector<SceneEntity> entities;
+
+  /// @brief Timestamp for the scene update. Some Foxglove features will use this timestamp when
+  /// set. It is preferable that entity and deletion timestamps match this value when provided.
+  std::optional<Timestamp> timestamp;
 
   /// @brief Encoded the SceneUpdate as protobuf to the provided buffer.
   ///
@@ -4332,8 +4341,8 @@ public:
   [[nodiscard]] bool has_sinks() const noexcept;
 
   TriangleListPrimitiveChannel(const TriangleListPrimitiveChannel& other) noexcept = delete;
-  TriangleListPrimitiveChannel& operator=(const TriangleListPrimitiveChannel& other
-  ) noexcept = delete;
+  TriangleListPrimitiveChannel& operator=(const TriangleListPrimitiveChannel& other) noexcept =
+    delete;
   /// @brief Default move constructor.
   TriangleListPrimitiveChannel(TriangleListPrimitiveChannel&& other) noexcept = default;
   /// @brief Default move assignment.

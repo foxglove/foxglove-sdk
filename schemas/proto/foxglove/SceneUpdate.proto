@@ -4,6 +4,7 @@ syntax = "proto3";
 
 import "foxglove/SceneEntity.proto";
 import "foxglove/SceneEntityDeletion.proto";
+import "google/protobuf/timestamp.proto";
 
 package foxglove;
 
@@ -14,4 +15,7 @@ message SceneUpdate {
 
   // Scene entities to add or replace
   repeated foxglove.SceneEntity entities = 2;
+
+  // Timestamp for the scene update. Some Foxglove features will use this timestamp when set. It is preferable that entity and deletion timestamps match this value when provided.
+  optional google.protobuf.Timestamp timestamp = 3;
 }

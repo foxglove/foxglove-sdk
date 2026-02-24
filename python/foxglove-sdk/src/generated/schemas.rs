@@ -1101,6 +1101,7 @@ impl From<VoxelGrid> for foxglove::schemas::VoxelGrid {
 /// :param points: Points annotations
 /// :param texts: Text annotations
 /// :param metadata: Additional user-provided metadata associated with the image annotations. Keys must be unique.
+/// :param timestamp: Timestamp for the image annotations. Some Foxglove features will use this timestamp when set. It is preferable that individual annotation timestamps match this value when provided.
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/image-annotations
 #[pyclass(module = "foxglove.schemas")]
@@ -1109,12 +1110,13 @@ pub(crate) struct ImageAnnotations(pub(crate) foxglove::schemas::ImageAnnotation
 #[pymethods]
 impl ImageAnnotations {
     #[new]
-    #[pyo3(signature = (*, circles=None, points=None, texts=None, metadata=None) )]
+    #[pyo3(signature = (*, circles=None, points=None, texts=None, metadata=None, timestamp=None) )]
     fn new(
         circles: Option<Vec<CircleAnnotation>>,
         points: Option<Vec<PointsAnnotation>>,
         texts: Option<Vec<TextAnnotation>>,
         metadata: Option<Vec<KeyValuePair>>,
+        timestamp: Option<Timestamp>,
     ) -> Self {
         Self(foxglove::schemas::ImageAnnotations {
             circles: circles
@@ -1137,12 +1139,17 @@ impl ImageAnnotations {
                 .into_iter()
                 .map(|x| x.into())
                 .collect(),
+            timestamp: timestamp.map(Into::into),
         })
     }
     fn __repr__(&self) -> String {
         format!(
-            "ImageAnnotations(circles={:?}, points={:?}, texts={:?}, metadata={:?})",
-            self.0.circles, self.0.points, self.0.texts, self.0.metadata,
+            "ImageAnnotations(circles={:?}, points={:?}, texts={:?}, metadata={:?}, timestamp={:?})",
+            self.0.circles,
+            self.0.points,
+            self.0.texts,
+            self.0.metadata,
+            self.0.timestamp,
         )
     }
     /// Returns the ImageAnnotations schema.
@@ -1804,6 +1811,7 @@ impl From<SceneEntity> for foxglove::schemas::SceneEntity {
 ///
 /// :param deletions: Scene entities to delete
 /// :param entities: Scene entities to add or replace
+/// :param timestamp: Timestamp for the scene update. Some Foxglove features will use this timestamp when set. It is preferable that entity and deletion timestamps match this value when provided.
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/scene-update
 #[pyclass(module = "foxglove.schemas")]
@@ -1812,10 +1820,11 @@ pub(crate) struct SceneUpdate(pub(crate) foxglove::schemas::SceneUpdate);
 #[pymethods]
 impl SceneUpdate {
     #[new]
-    #[pyo3(signature = (*, deletions=None, entities=None) )]
+    #[pyo3(signature = (*, deletions=None, entities=None, timestamp=None) )]
     fn new(
         deletions: Option<Vec<SceneEntityDeletion>>,
         entities: Option<Vec<SceneEntity>>,
+        timestamp: Option<Timestamp>,
     ) -> Self {
         Self(foxglove::schemas::SceneUpdate {
             deletions: deletions
@@ -1828,12 +1837,13 @@ impl SceneUpdate {
                 .into_iter()
                 .map(|x| x.into())
                 .collect(),
+            timestamp: timestamp.map(Into::into),
         })
     }
     fn __repr__(&self) -> String {
         format!(
-            "SceneUpdate(deletions={:?}, entities={:?})",
-            self.0.deletions, self.0.entities,
+            "SceneUpdate(deletions={:?}, entities={:?}, timestamp={:?})",
+            self.0.deletions, self.0.entities, self.0.timestamp,
         )
     }
     /// Returns the SceneUpdate schema.

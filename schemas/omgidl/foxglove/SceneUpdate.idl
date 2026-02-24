@@ -2,6 +2,7 @@
 
 #include "foxglove/SceneEntity.idl"
 #include "foxglove/SceneEntityDeletion.idl"
+#include "foxglove/Time.idl"
 
 module foxglove {
 
@@ -12,6 +13,10 @@ struct SceneUpdate {
 
   // Scene entities to add or replace
   sequence<SceneEntity> entities;
+
+  // Timestamp for the scene update. Some Foxglove features will use this timestamp when set. It is preferable that entity and deletion timestamps match this value when provided.
+  @optional
+  Time timestamp;
 };
 
 };

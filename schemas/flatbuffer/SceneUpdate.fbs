@@ -2,6 +2,7 @@
 
 include "SceneEntity.fbs";
 include "SceneEntityDeletion.fbs";
+include "Time.fbs";
 
 namespace foxglove;
 
@@ -12,6 +13,9 @@ table SceneUpdate {
 
   /// Scene entities to add or replace
   entities:[foxglove.SceneEntity] (id: 1);
+
+  /// Timestamp for the scene update. Some Foxglove features will use this timestamp when set. It is preferable that entity and deletion timestamps match this value when provided.
+  timestamp:Time (id: 2);
 }
 
 root_type SceneUpdate;

@@ -2523,6 +2523,9 @@ pub struct ImageAnnotations {
     /// Additional user-provided metadata associated with the image annotations. Keys must be unique.
     pub metadata: *const KeyValuePair,
     pub metadata_count: usize,
+
+    /// Timestamp for the image annotations. Some Foxglove features will use this timestamp when set. It is preferable that individual annotation timestamps match this value when provided.
+    pub timestamp: *const FoxgloveTimestamp,
 }
 
 #[cfg(not(target_family = "wasm"))]
@@ -2566,6 +2569,7 @@ impl BorrowToNative for ImageAnnotations {
             points: ManuallyDrop::into_inner(points),
             texts: ManuallyDrop::into_inner(texts),
             metadata: ManuallyDrop::into_inner(metadata),
+            timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
         }))
     }
 }
@@ -4116,6 +4120,9 @@ pub struct SceneUpdate {
     /// Scene entities to add or replace
     pub entities: *const SceneEntity,
     pub entities_count: usize,
+
+    /// Timestamp for the scene update. Some Foxglove features will use this timestamp when set. It is preferable that entity and deletion timestamps match this value when provided.
+    pub timestamp: *const FoxgloveTimestamp,
 }
 
 #[cfg(not(target_family = "wasm"))]
@@ -4155,6 +4162,7 @@ impl BorrowToNative for SceneUpdate {
         Ok(ManuallyDrop::new(foxglove::messages::SceneUpdate {
             deletions: ManuallyDrop::into_inner(deletions),
             entities: ManuallyDrop::into_inner(entities),
+            timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
         }))
     }
 }

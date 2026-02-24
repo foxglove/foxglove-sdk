@@ -399,6 +399,9 @@ pub struct ImageAnnotations {
     /// Additional user-provided metadata associated with the image annotations. Keys must be unique.
     #[prost(message, repeated, tag = "4")]
     pub metadata: ::prost::alloc::vec::Vec<KeyValuePair>,
+    /// Timestamp for the image annotations. Some Foxglove features will use this timestamp when set. It is preferable that individual annotation timestamps match this value when provided.
+    #[prost(message, optional, tag = "5")]
+    pub timestamp: ::core::option::Option<crate::messages::Timestamp>,
 }
 /// A key with its associated value
 ///
@@ -1270,6 +1273,9 @@ pub struct SceneUpdate {
     /// Scene entities to add or replace
     #[prost(message, repeated, tag = "2")]
     pub entities: ::prost::alloc::vec::Vec<SceneEntity>,
+    /// Timestamp for the scene update. Some Foxglove features will use this timestamp when set. It is preferable that entity and deletion timestamps match this value when provided.
+    #[prost(message, optional, tag = "3")]
+    pub timestamp: ::core::option::Option<crate::messages::Timestamp>,
 }
 /// A primitive representing a sphere or ellipsoid
 ///

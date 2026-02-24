@@ -764,6 +764,13 @@ const SceneUpdate: FoxgloveMessageSchema = {
       array: true,
       description: "Scene entities to add or replace",
     },
+    {
+      name: "timestamp",
+      type: { type: "nested", schema: Timestamp },
+      description:
+        "Timestamp for the scene update. Some Foxglove features will use this timestamp when set. It is preferable that entity and deletion timestamps match this value when provided.",
+      optional: true,
+    },
   ],
 };
 
@@ -1499,6 +1506,13 @@ const ImageAnnotations: FoxgloveMessageSchema = {
       description:
         "Additional user-provided metadata associated with the image annotations. Keys must be unique.",
       array: true,
+    },
+    {
+      name: "timestamp",
+      type: { type: "nested", schema: Timestamp },
+      description:
+        "Timestamp for the image annotations. Some Foxglove features will use this timestamp when set. It is preferable that individual annotation timestamps match this value when provided.",
+      optional: true,
     },
   ],
 };

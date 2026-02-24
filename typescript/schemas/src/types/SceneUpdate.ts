@@ -3,6 +3,7 @@
 
 import { SceneEntity } from "./SceneEntity";
 import { SceneEntityDeletion } from "./SceneEntityDeletion";
+import { Time } from "./Time";
 
 /** An update to the entities displayed in a 3D scene */
 export type SceneUpdate = {
@@ -11,4 +12,7 @@ export type SceneUpdate = {
 
   /** Scene entities to add or replace */
   entities: SceneEntity[];
+
+  /** Timestamp for the scene update. Some Foxglove features will use this timestamp when set. It is preferable that entity and deletion timestamps match this value when provided. */
+  timestamp?: Time;
 };

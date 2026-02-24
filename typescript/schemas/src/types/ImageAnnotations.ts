@@ -5,6 +5,7 @@ import { CircleAnnotation } from "./CircleAnnotation";
 import { KeyValuePair } from "./KeyValuePair";
 import { PointsAnnotation } from "./PointsAnnotation";
 import { TextAnnotation } from "./TextAnnotation";
+import { Time } from "./Time";
 
 /** Array of annotations for a 2D image */
 export type ImageAnnotations = {
@@ -19,4 +20,7 @@ export type ImageAnnotations = {
 
   /** Additional user-provided metadata associated with the image annotations. Keys must be unique. */
   metadata: KeyValuePair[];
+
+  /** Timestamp for the image annotations. Some Foxglove features will use this timestamp when set. It is preferable that individual annotation timestamps match this value when provided. */
+  timestamp?: Time;
 };

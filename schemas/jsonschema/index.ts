@@ -1869,6 +1869,22 @@ export const ImageAnnotations = {
         ]
       },
       "description": "Additional user-provided metadata associated with the image annotations. Keys must be unique."
+    },
+    "timestamp": {
+      "type": "object",
+      "title": "time",
+      "properties": {
+        "sec": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "nsec": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 999999999
+        }
+      },
+      "description": "Timestamp for the image annotations. Some Foxglove features will use this timestamp when set. It is preferable that individual annotation timestamps match this value when provided."
     }
   },
   "required": [
@@ -5323,6 +5339,22 @@ export const SceneUpdate = {
         ]
       },
       "description": "Scene entities to add or replace"
+    },
+    "timestamp": {
+      "type": "object",
+      "title": "time",
+      "properties": {
+        "sec": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "nsec": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 999999999
+        }
+      },
+      "description": "Timestamp for the scene update. Some Foxglove features will use this timestamp when set. It is preferable that entity and deletion timestamps match this value when provided."
     }
   },
   "required": [

@@ -357,6 +357,7 @@ class ImageAnnotations:
         points: list[PointsAnnotation] | None = None,
         texts: list[TextAnnotation] | None = None,
         metadata: list[KeyValuePair] | None = None,
+        timestamp: Timestamp | None = None,
     ) -> None: ...
     @staticmethod
     def get_schema() -> Schema:
@@ -832,6 +833,7 @@ class SceneUpdate:
         *,
         deletions: list[SceneEntityDeletion] | None = None,
         entities: list[SceneEntity] | None = None,
+        timestamp: Timestamp | None = None,
     ) -> None: ...
     @staticmethod
     def get_schema() -> Schema:
