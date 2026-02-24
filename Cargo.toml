@@ -9,6 +9,7 @@ members = [
   "rust/data_provider_conformance",
   "rust/examples/*",
   "python/foxglove-sdk",
+  "rust/remote_access_tests",
 ]
 
 exclude = [

@@ -46,6 +46,7 @@ schemars = ["dep:schemars"]
 schemars-chrono = ["schemars", "chrono", "schemars/chrono04"]
 serde = ["dep:base64"]
 unstable = []
+_protocol = ["_remote_common"]
 zstd = ["mcap/zstd"]
 
 # img2yuv feature and sub-features

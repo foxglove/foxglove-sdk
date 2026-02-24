@@ -1,0 +1,13 @@
+services:
+  livekit:
+    image: livekit/livekit-server:v1.9.11
+    command: --dev --bind 0.0.0.0 --node-ip 127.0.0.1
+    ports:
+      - "7880:7880" # HTTP / WebSocket
+      - "7881:7881" # RTC over TCP
+      - "7882:7882/udp" # RTC over UDP
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:7880"]
+      interval: 2s
+      timeout: 5s
+      retries: 15

@@ -381,7 +381,9 @@ pub(crate) use time::nanoseconds_since_epoch;
 
 #[cfg(feature = "remote_access")]
 mod api_client;
-#[cfg(feature = "_remote_common")]
+#[cfg(all(feature = "_remote_common", feature = "_protocol"))]
+pub mod protocol;
+#[cfg(all(feature = "_remote_common", not(feature = "_protocol")))]
 mod protocol;
 #[doc(hidden)]
 #[cfg(feature = "remote_access")]
