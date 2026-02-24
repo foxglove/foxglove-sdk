@@ -71,7 +71,7 @@ The core SDK is written in Rust, with bindings for Python and C/C++, plus TypeSc
   `cargo clippy --no-deps --tests --all-features -- -D warnings`
 - Prefer `crate::` import over `super::` import; though importing `super::*` is fine within a test module (`mod tests`)
 - Use `mod tests` rather than `mod test` for declaring unit tests in a submodule
-- The MSRV (Minimum Supported Rust Version) is 1.83.0 (defined in Cargo.toml). Don't use Rust features that aren't stabilized as of this version.
+- The MSRV (Minimum Supported Rust Version) is defined in Cargo.toml. Don't use Rust features that aren't stabilized as of this version.
 - Use the tracing crate (tracing::info!, tracing::warn!, etc.), not println!, eprintln!, or the log crate macros directly
 
 ### Python
