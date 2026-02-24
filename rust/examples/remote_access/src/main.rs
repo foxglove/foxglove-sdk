@@ -1,7 +1,7 @@
 use foxglove::{
     bytes::Bytes,
-    schemas::RawImage,
     remote_access::{Capability, Client, Gateway, Listener},
+    schemas::RawImage,
     ChannelDescriptor,
 };
 use serde_json::Value;
