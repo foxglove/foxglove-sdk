@@ -1,6 +1,6 @@
 use foxglove::{
     bytes::Bytes,
-    messages::RawImage,
+    schemas::RawImage,
     remote_access::{Capability, Client, Gateway, Listener},
     ChannelDescriptor,
 };

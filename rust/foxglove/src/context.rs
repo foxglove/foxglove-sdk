@@ -201,7 +201,7 @@ impl ContextInner {
 /// It is also possible to create explicit contexts:
 ///
 /// ```
-/// use foxglove::messages::Log;
+/// use foxglove::schemas::Log;
 /// use foxglove::{Context, FoxgloveError};
 ///
 /// // Create a channel for the "/log" topic.
