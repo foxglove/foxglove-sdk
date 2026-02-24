@@ -3,6 +3,7 @@
 pub mod client;
 mod message;
 pub mod server;
+#[cfg(feature = "websocket")]
 pub mod tungstenite;
 
 pub use crate::protocol::common::{parameter, schema};

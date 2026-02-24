@@ -13,5 +13,5 @@ pub mod v1;
 
 // Protocol v2
 #[doc(hidden)]
-#[allow(dead_code)]
+#[allow(unused)]
 pub mod v2;

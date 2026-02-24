@@ -1,45 +1,25 @@
 use std::{collections::HashMap, sync::Arc, time::Duration};
 
 use crate::{
-    remote_access::{RemoteAccessConnection, RemoteAccessConnectionOptions},
     sink_channel_filter::{SinkChannelFilter, SinkChannelFilterFn},
-    websocket, ChannelDescriptor, Context, FoxgloveError,
+    ChannelDescriptor, Context, FoxgloveError,
 };
 
 use tokio::task::JoinHandle;
-pub use websocket::{ChannelView, Client, ClientChannel};
 
-/// Provides a mechanism for registering callbacks for handling client message events.
-///
-/// These methods are invoked from the client's main poll loop and must not block. If blocking or
-/// long-running behavior is required, the implementation should use [`tokio::task::spawn`] (or
-/// [`tokio::task::spawn_blocking`]).
-#[doc(hidden)]
-pub trait RemoteAccessSinkListener: Send + Sync {
-    /// Callback invoked when a client message is received.
-    fn on_message_data(&self, _client: Client, _client_channel: &ClientChannel, _payload: &[u8]) {}
-    /// Callback invoked when a client subscribes to a channel.
-    /// Only invoked if the channel is associated with the sink and isn't already subscribed to by the client.
-    fn on_subscribe(&self, _client: Client, _channel: ChannelView) {}
-    /// Callback invoked when a client unsubscribes from a channel or disconnects.
-    /// Only invoked for channels that had an active subscription from the client.
-    fn on_unsubscribe(&self, _client: Client, _channel: ChannelView) {}
-    /// Callback invoked when a client advertises a client channel.
-    fn on_client_advertise(&self, _client: Client, _channel: &ClientChannel) {}
-    /// Callback invoked when a client unadvertises a client channel.
-    fn on_client_unadvertise(&self, _client: Client, _channel: &ClientChannel) {}
-}
+use super::connection::{RemoteAccessConnection, RemoteAccessConnectionOptions};
+use super::{Capability, Listener};
 
-/// A handle to the RemoteAccessSink connection.
+/// A handle to the remote access gateway connection.
 ///
 /// This handle can safely be dropped and the connection will run forever.
 #[doc(hidden)]
-pub struct RemoteAccessSinkHandle {
+pub struct GatewayHandle {
     connection: Arc<RemoteAccessConnection>,
     runner: JoinHandle<()>,
 }
 
-impl RemoteAccessSinkHandle {
+impl GatewayHandle {
     fn new(connection: Arc<RemoteAccessConnection>) -> Self {
         let runner = connection.clone().spawn_run_until_cancelled();
 
@@ -50,8 +30,6 @@ impl RemoteAccessSinkHandle {
     ///
     /// Returns a JoinHandle that will allow waiting until the connection has been fully closed.
     pub fn stop(self) -> JoinHandle<()> {
-        // Do we need to do something like the WebSocketServerHandle and return a ShutdownHandle
-        // that lets us block until the RemoteAccessConnection is completely shutdown?
         self.connection.shutdown();
         self.runner
     }
@@ -61,29 +39,29 @@ const FOXGLOVE_DEVICE_TOKEN_ENV: &str = "FOXGLOVE_DEVICE_TOKEN";
 const FOXGLOVE_API_URL_ENV: &str = "FOXGLOVE_API_URL";
 const FOXGLOVE_API_TIMEOUT_ENV: &str = "FOXGLOVE_API_TIMEOUT";
 
-/// A RemoteAccessSink for live visualization and teleop in Foxglove.
+/// A remote access gateway for live visualization and teleop in Foxglove.
 ///
-/// You may only create one RemoteAccessSink at a time for the device.
+/// You may only create one gateway at a time for the device.
 #[must_use]
 #[doc(hidden)]
 #[derive(Default)]
-pub struct RemoteAccessSink {
+pub struct Gateway {
     options: RemoteAccessConnectionOptions,
     device_token: Option<String>,
     foxglove_api_url: Option<String>,
     foxglove_api_timeout: Option<Duration>,
 }
 
-impl std::fmt::Debug for RemoteAccessSink {
+impl std::fmt::Debug for Gateway {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("RemoteAccessSink")
+        f.debug_struct("Gateway")
             .field("options", &self.options)
             .finish()
     }
 }
 
-impl RemoteAccessSink {
-    /// Creates a new RemoteAccessSink with default options.
+impl Gateway {
+    /// Creates a new Gateway with default options.
     pub fn new() -> Self {
         Self::default()
     }
@@ -97,9 +75,14 @@ impl RemoteAccessSink {
     }
 
     /// Configure an event listener to receive client message events.
-    pub fn listener(mut self, listener: Arc<dyn RemoteAccessSinkListener>) -> Self {
-        self.options.capabilities = vec![websocket::Capability::ClientPublish];
+    pub fn listener(mut self, listener: Arc<dyn Listener>) -> Self {
         self.options.listener = Some(listener);
+        self
+    }
+
+    /// Sets capabilities to advertise in the server info message.
+    pub fn capabilities(mut self, capabilities: impl IntoIterator<Item = Capability>) -> Self {
+        self.options.capabilities = capabilities.into_iter().collect();
         self
     }
 
@@ -138,11 +121,11 @@ impl RemoteAccessSink {
         self
     }
 
-    /// Configure the tokio runtime for the server to use for async tasks.
+    /// Configure the tokio runtime for the gateway to use for async tasks.
     ///
-    /// By default, the server will use either the current runtime (if started with
-    /// [`RemoteAccessSink::start`]), or spawn its own internal runtime (if started with
-    /// [`RemoteAccessSink::start_blocking`]).
+    /// By default, the gateway will use either the current runtime (if started with
+    /// [`Gateway::start`]), or spawn its own internal runtime (if started with
+    /// [`Gateway::start_blocking`]).
     #[doc(hidden)]
     pub fn tokio_runtime(mut self, handle: &tokio::runtime::Handle) -> Self {
         self.options.runtime = Some(handle.clone());
@@ -204,15 +187,15 @@ impl RemoteAccessSink {
         self
     }
 
-    /// Starts the RemoteAccessSink, which will establish a connection in the background.
+    /// Starts the remote access gateway, which will establish a connection in the background.
     ///
-    /// Returns a handle that can optionally be used to manage the sink.
+    /// Returns a handle that can optionally be used to manage the gateway.
     /// The caller can safely drop the handle and the connection will continue in the background.
     /// Use stop() on the returned handle to stop the connection.
     ///
     /// Returns an error if no device token is provided and the `FOXGLOVE_DEVICE_TOKEN`
     /// environment variable is not set.
-    pub fn start(mut self) -> Result<RemoteAccessSinkHandle, FoxgloveError> {
+    pub fn start(mut self) -> Result<GatewayHandle, FoxgloveError> {
         self.options.device_token = self
             .device_token
             .or_else(|| std::env::var(FOXGLOVE_DEVICE_TOKEN_ENV).ok())
@@ -231,6 +214,6 @@ impl RemoteAccessSink {
                 .map(Duration::from_secs)
         });
         let connection = RemoteAccessConnection::new(self.options);
-        Ok(RemoteAccessSinkHandle::new(Arc::new(connection)))
+        Ok(GatewayHandle::new(Arc::new(connection)))
     }
 }

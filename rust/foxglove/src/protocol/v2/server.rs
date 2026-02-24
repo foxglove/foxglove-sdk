@@ -9,12 +9,11 @@ mod message_data;
 
 #[allow(unused_imports)]
 pub use crate::protocol::common::server::advertise;
-#[doc(hidden)]
-pub use crate::protocol::common::server::PlaybackState;
+pub use crate::protocol::common::server::server_info;
 pub use crate::protocol::common::server::{
     Advertise, AdvertiseServices, ConnectionGraphUpdate, FetchAssetResponse, ParameterValues,
-    RemoveStatus, ServerInfo, ServiceCallFailure, ServiceCallResponse, Status, Time, Unadvertise,
-    UnadvertiseServices,
+    PlaybackState, RemoveStatus, ServerInfo, ServiceCallFailure, ServiceCallResponse, Status, Time,
+    Unadvertise, UnadvertiseServices,
 };
 pub use message_data::MessageData;
 
