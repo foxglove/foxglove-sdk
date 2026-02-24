@@ -1173,7 +1173,9 @@ TEST_CASE("Broadcast time") {
   // Wait for the server to register the client before broadcasting.
   {
     std::unique_lock lock{mutex};
-    auto wait_result = cv.wait_for(lock, kTestTimeout, [&] { return client_connected; });
+    auto wait_result = cv.wait_for(lock, kTestTimeout, [&] {
+      return client_connected;
+    });
     REQUIRE(wait_result);
   }
 
@@ -1666,8 +1668,9 @@ TEST_CASE("Playback control request callback") {
 
   {
     std::unique_lock lock{mutex};
-    auto wait_result =
-      cv.wait_for(lock, kTestTimeout, [&] { return received_playback_control_request.has_value(); });
+    auto wait_result = cv.wait_for(lock, kTestTimeout, [&] {
+      return received_playback_control_request.has_value();
+    });
     REQUIRE(wait_result);
     REQUIRE(
       received_playback_control_request->playback_command == foxglove::PlaybackCommand::Pause
@@ -1720,7 +1723,9 @@ TEST_CASE("Broadcast playback state") {
   // Wait for the server to register the client before broadcasting.
   {
     std::unique_lock lock{mutex};
-    auto wait_result = cv.wait_for(lock, kTestTimeout, [&] { return client_connected; });
+    auto wait_result = cv.wait_for(lock, kTestTimeout, [&] {
+      return client_connected;
+    });
     REQUIRE(wait_result);
   }
 
