@@ -41,6 +41,13 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          cache: false
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "python-sdk"
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Install common dependencies
         uses: ./.github/actions/common-deps
@@ -71,6 +78,12 @@ jobs:
           # similar to https://github.com/godotengine/godot/issues/100841
           toolchain: 1.86.0
           target: wasm32-unknown-emscripten
+          cache: false
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "playground-wasm"
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Set up Emscripten
         run: |
@@ -345,6 +358,12 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          cache: false
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "python-sdk"
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       - uses: astral-sh/setup-uv@v7
       - run: corepack enable
       - uses: actions/setup-node@v6
@@ -415,6 +434,12 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          cache: false
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "python-sdk"
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       - uses: actions/setup-python@v6
         with:
           python-version: "3.10"
