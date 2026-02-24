@@ -1,0 +1,26 @@
+name: Build Rust Data Provider Example
+description: Builds the example_data_provider binary from foxglove-sdk
+
+outputs:
+  binary-path:
+    description: Path to the built binary
+    value: ${{ steps.build.outputs.binary-path }}
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/checkout@v6
+      with:
+        repository: ${{ github.action_repository }}
+        ref: ${{ github.action_ref }}
+        path: .foxglove-sdk
+
+    - uses: actions-rust-lang/setup-rust-toolchain@v1
+
+    - name: Build the example
+      id: build
+      shell: bash
+      working-directory: .foxglove-sdk
+      run: |
+        cargo build --release -p example_data_provider
+        echo "binary-path=$(pwd)/target/release/example_data_provider" >> "$GITHUB_OUTPUT"
