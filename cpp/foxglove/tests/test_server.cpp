@@ -36,6 +36,8 @@ constexpr std::underlying_type_t<T> toUnderlying(T e) noexcept {
   return static_cast<std::underlying_type_t<T>>(e);
 }
 
+constexpr auto kTestTimeout = std::chrono::seconds(3);
+
 class WebSocketClient {
 public:
   explicit WebSocketClient() {
@@ -88,7 +90,7 @@ public:
 
   void waitForConnection() {
     std::unique_lock lock{mutex_};
-    auto wait_result = cv_.wait_for(lock, std::chrono::seconds(3), [this] {
+    auto wait_result = cv_.wait_for(lock, kTestTimeout, [this] {
       return connection_opened_;
     });
     REQUIRE(wait_result);
@@ -96,7 +98,7 @@ public:
 
   std::string recv() {
     std::unique_lock lock{mutex_};
-    auto wait_result = cv_.wait_for(lock, std::chrono::seconds(3), [this] {
+    auto wait_result = cv_.wait_for(lock, kTestTimeout, [this] {
       return !rx_queue_.empty();
     });
     REQUIRE(wait_result);
@@ -314,7 +316,7 @@ TEST_CASE("Subscribe and unsubscribe callbacks") {
       ]
     })"
   );
-  cv.wait_for(lock, std::chrono::seconds(3), [&] {
+  cv.wait_for(lock, kTestTimeout, [&] {
     return !subscribe_calls.empty();
   });
   REQUIRE_THAT(subscribe_calls, Equals(std::vector<uint64_t>{1}));
@@ -325,7 +327,7 @@ TEST_CASE("Subscribe and unsubscribe callbacks") {
       "subscriptionIds": [100]
     })"
   );
-  cv.wait_for(lock, std::chrono::seconds(3), [&] {
+  cv.wait_for(lock, kTestTimeout, [&] {
     return !unsubscribe_calls.empty();
   });
   REQUIRE_THAT(unsubscribe_calls, Equals(std::vector<uint64_t>{1}));
@@ -435,7 +437,7 @@ TEST_CASE("Client advertise/publish callbacks") {
       ]
     })"
   );
-  auto advertised_result = cv.wait_for(lock, std::chrono::seconds(3), [&] {
+  auto advertised_result = cv.wait_for(lock, kTestTimeout, [&] {
     return advertised;
   });
   REQUIRE(advertised_result);
@@ -443,7 +445,7 @@ TEST_CASE("Client advertise/publish callbacks") {
   // send ClientMessageData message
   std::array<char, 8> msg = {1, 100, 0, 0, 0, 'a', 'b', 'c'};
   client.send(msg.data(), msg.size());
-  auto received_result = cv.wait_for(lock, std::chrono::seconds(3), [&] {
+  auto received_result = cv.wait_for(lock, kTestTimeout, [&] {
     return received_message;
   });
   REQUIRE(received_result);
@@ -540,7 +542,7 @@ TEST_CASE("Parameter callbacks") {
   // Wait for the server to process the callback.
   {
     std::unique_lock lock{mutex};
-    auto wait_result = cv.wait_for(lock, std::chrono::seconds(3), [&] {
+    auto wait_result = cv.wait_for(lock, kTestTimeout, [&] {
       if (server_get_parameters.has_value()) {
         auto request_id = (*server_get_parameters).first;
         auto param_names = (*server_get_parameters).second;
@@ -587,7 +589,7 @@ TEST_CASE("Parameter callbacks") {
   // Wait for the server to process the callback.
   {
     std::unique_lock lock{mutex};
-    auto wait_result = cv.wait_for(lock, std::chrono::seconds(3), [&] {
+    auto wait_result = cv.wait_for(lock, kTestTimeout, [&] {
       if (server_set_parameters.has_value()) {
         auto [requestId, params] = *std::move(server_set_parameters);
         REQUIRE(requestId.has_value());
@@ -683,7 +685,7 @@ TEST_CASE("Parameter subscription callbacks") {
   // Wait for the server to process the callback.
   {
     std::unique_lock lock{mutex};
-    auto wait_result = cv.wait_for(lock, std::chrono::seconds(3), [&] {
+    auto wait_result = cv.wait_for(lock, kTestTimeout, [&] {
       if (server_sub_names.has_value()) {
         auto names = *server_sub_names;
         REQUIRE_THAT(names, Equals(std::vector<std::string>{"foo", "beep"}));
@@ -913,7 +915,7 @@ TEST_CASE("Service callbacks") {
   // Wait for the server to process the callback.
   {
     std::unique_lock lock{mutex};
-    auto wait_result = cv.wait_for(lock, std::chrono::seconds(3), [&] {
+    auto wait_result = cv.wait_for(lock, kTestTimeout, [&] {
       if (last_request.has_value()) {
         REQUIRE(last_request->service_name == "/echo");
         REQUIRE(last_request->call_id == 99);
@@ -938,7 +940,7 @@ TEST_CASE("Service callbacks") {
   // Wait for the server to process the callback.
   {
     std::unique_lock lock{mutex};
-    auto wait_result = cv.wait_for(lock, std::chrono::seconds(3), [&] {
+    auto wait_result = cv.wait_for(lock, kTestTimeout, [&] {
       if (last_request.has_value()) {
         REQUIRE(last_request->service_name == "/error");
         REQUIRE(last_request->call_id == 123);
@@ -1034,7 +1036,7 @@ TEST_CASE("Fetch asset callback") {
   // Wait for the server to process the callback.
   {
     std::unique_lock lock{mutex};
-    auto wait_result = cv.wait_for(lock, std::chrono::seconds(3), [&] {
+    auto wait_result = cv.wait_for(lock, kTestTimeout, [&] {
       if (last_uri.has_value()) {
         REQUIRE(last_uri == "package://foo/robot.urdf");
         last_uri.reset();
@@ -1104,7 +1106,7 @@ TEST_CASE("Fetch asset error") {
   // Wait for the server to process the callback.
   {
     std::unique_lock lock{mutex};
-    auto wait_result = cv.wait_for(lock, std::chrono::seconds(3), [&] {
+    auto wait_result = cv.wait_for(lock, kTestTimeout, [&] {
       if (last_uri.has_value()) {
         REQUIRE(last_uri == "package://foo/robot.urdf");
         last_uri.reset();
@@ -1359,7 +1361,7 @@ TEST_CASE("Log message to websocket sinks") {
   // Wait for subscriptions to set up
   {
     std::unique_lock lock{mutex};
-    auto wait_result = cv.wait_for(lock, std::chrono::seconds(3), [&] {
+    auto wait_result = cv.wait_for(lock, kTestTimeout, [&] {
       return client_sink_ids.size() == num_clients;
     });
     REQUIRE(wait_result);
@@ -1484,7 +1486,7 @@ TEST_CASE("Server channel filtering") {
     })"
   );
 
-  cv.wait_for(lock, std::chrono::seconds(3), [&] {
+  cv.wait_for(lock, kTestTimeout, [&] {
     return !subscribe_calls.empty();
   });
   REQUIRE_THAT(subscribe_calls, Equals(std::vector<uint64_t>{1}));
@@ -1645,7 +1647,7 @@ TEST_CASE("Playback control request callback") {
 
   {
     std::unique_lock lock{mutex};
-    auto wait_result = cv.wait_for(lock, std::chrono::seconds(3));
+    auto wait_result = cv.wait_for(lock, kTestTimeout);
     REQUIRE(wait_result != std::cv_status::timeout);
     REQUIRE(received_playback_control_request.has_value());
     REQUIRE(
