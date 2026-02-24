@@ -182,10 +182,13 @@ impl SessionState {
             .map(|ids| ids.iter().cloned().collect())
     }
 
-    /// Returns the number of subscribers for a channel, or `None` if no subscriptions exist.
+    /// Returns the number of subscribers for a channel.
     #[cfg(test)]
-    pub fn get_subscriber_count(&self, channel_id: &ChannelId) -> Option<usize> {
-        self.subscriptions.read().get(channel_id).map(|s| s.len())
+    pub fn get_subscriber_count(&self, channel_id: &ChannelId) -> usize {
+        self.subscriptions
+            .read()
+            .get(channel_id)
+            .map_or(0, |s| s.len())
     }
 
     /// Returns the number of advertised channels.
@@ -229,7 +232,7 @@ mod tests {
         let (id, p) = make_participant("alice");
         let stored = state.insert_participant(id.clone(), p);
         assert_eq!(stored.identity(), &id);
-        assert!(state.get_participant(&id).is_some());
+        assert!(Arc::ptr_eq(&stored, &state.get_participant(&id).unwrap()));
     }
 
     #[test]
@@ -237,7 +240,7 @@ mod tests {
         let state = SessionState::new();
         let (id, p1) = make_participant("alice");
         let stored1 = state.insert_participant(id.clone(), p1);
-        let (_id2, p2) = make_participant("alice");
+        let (_id2, p2) = make_participant("bob");
         let stored2 = state.insert_participant(id, p2);
         assert!(Arc::ptr_eq(&stored1, &stored2));
     }
@@ -276,7 +279,7 @@ mod tests {
 
         let last = state.remove_participant(&id);
         assert_eq!(last.as_slice(), &[ch]);
-        assert!(state.get_subscriber_count(&ch).is_none());
+        assert_eq!(state.get_subscriber_count(&ch), 0);
     }
 
     #[test]
@@ -297,7 +300,7 @@ mod tests {
         let last = state.remove_participant(&id_a);
         // ch1 still has bob, so only ch2 should be reported
         assert_eq!(last.as_slice(), &[ch2]);
-        assert_eq!(state.get_subscriber_count(&ch1), Some(1));
+        assert_eq!(state.get_subscriber_count(&ch1), 1);
     }
 
     // ---- channel management ----
@@ -357,7 +360,7 @@ mod tests {
         state.subscribe(&p, &[ch]);
         let first = state.subscribe(&p, &[ch]);
         assert!(first.is_empty());
-        assert_eq!(state.get_subscriber_count(&ch), Some(1));
+        assert_eq!(state.get_subscriber_count(&ch), 1);
     }
 
     #[test]
@@ -396,7 +399,7 @@ mod tests {
 
         let last = state.unsubscribe(&pa, &[ch]);
         assert!(last.is_empty());
-        assert_eq!(state.get_subscriber_count(&ch), Some(1));
+        assert_eq!(state.get_subscriber_count(&ch), 1);
     }
 
     #[test]
