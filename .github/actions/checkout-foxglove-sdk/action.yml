@@ -1,10 +1,12 @@
-name: Checkout foxglove-sdk
-description: Checks out foxglove-sdk at the action's pinned ref
+name: "[Internal] Checkout foxglove-sdk"
+description: >
+  For internal Foxglove use only. Not publicly supported.
+  Checks out foxglove-sdk at the action's pinned ref.
 
 inputs:
   path:
     description: Where to check out the repository
-    default: .foxglove-sdk
+    required: true
 
 runs:
   using: composite
