@@ -20,7 +20,7 @@ from datetime import datetime
 
 # Workflows and the job names to look for in each.
 WORKFLOWS = {
-    "ci.yml": ["rust", "rust-lint", "rust-test"],
+    "ci.yml": ["rust", "rust-compat", "rust-lint", "rust-test"],
     "remote-access-tests.yml": ["test"],
 }
 
@@ -51,15 +51,8 @@ LAYOUTS = {
             "build_no_def", "msrv", "nightly_doc", "test_all", "test_no_def",
         ],
     },
-    "rust-lint + rust-test (current, 2 jobs)": {
-        "rust-lint": ["fmt", "proto_gen", "clippy"],
-        "rust-test": [
-            "build", "build_examples", "build_no_def", "msrv",
-            "nightly_doc", "test_all", "test_no_def",
-        ],
-    },
-    "rust-stable + rust-compat (2 jobs)": {
-        "rust-stable": [
+    "rust + rust-compat (current, 2 jobs)": {
+        "rust": [
             "fmt", "proto_gen", "clippy", "build", "build_examples",
             "build_no_def", "test_all", "test_no_def",
         ],
@@ -219,6 +212,8 @@ def fmt_stat(values):
 
 
 def job_time(timings, steps_in_job):
+    # Each job pays one setup overhead. This uses the average setup time observed
+    # across all jobs in the run as an approximation.
     return timings.get("setup", 0) + sum(timings.get(s, 0) for s in steps_in_job)
 
 
