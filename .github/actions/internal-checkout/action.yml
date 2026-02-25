@@ -12,4 +12,6 @@ runs:
   using: composite
   steps:
     - shell: bash
-      run: ln -s "$GITHUB_ACTION_PATH/../../.." "${{ inputs.path }}"
+      env:
+        TARGET_PATH: ${{ inputs.path }}
+      run: ln -s "$GITHUB_ACTION_PATH/../../.." "$TARGET_PATH"
