@@ -1104,6 +1104,7 @@ impl From<VoxelGrid> for foxglove::schemas::VoxelGrid {
 /// :param circles: Circle annotations
 /// :param points: Points annotations
 /// :param texts: Text annotations
+/// :param metadata: Additional user-provided metadata associated with the image annotations. Keys must be unique.
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/image-annotations
 #[pyclass(module = "foxglove.schemas")]
@@ -1112,11 +1113,12 @@ pub(crate) struct ImageAnnotations(pub(crate) foxglove::schemas::ImageAnnotation
 #[pymethods]
 impl ImageAnnotations {
     #[new]
-    #[pyo3(signature = (*, circles=None, points=None, texts=None) )]
+    #[pyo3(signature = (*, circles=None, points=None, texts=None, metadata=None) )]
     fn new(
         circles: Option<Vec<CircleAnnotation>>,
         points: Option<Vec<PointsAnnotation>>,
         texts: Option<Vec<TextAnnotation>>,
+        metadata: Option<Vec<KeyValuePair>>,
     ) -> Self {
         Self(foxglove::schemas::ImageAnnotations {
             circles: circles
@@ -1134,12 +1136,17 @@ impl ImageAnnotations {
                 .into_iter()
                 .map(|x| x.into())
                 .collect(),
+            metadata: metadata
+                .unwrap_or_default()
+                .into_iter()
+                .map(|x| x.into())
+                .collect(),
         })
     }
     fn __repr__(&self) -> String {
         format!(
-            "ImageAnnotations(circles={:?}, points={:?}, texts={:?})",
-            self.0.circles, self.0.points, self.0.texts,
+            "ImageAnnotations(circles={:?}, points={:?}, texts={:?}, metadata={:?})",
+            self.0.circles, self.0.points, self.0.texts, self.0.metadata,
         )
     }
     /// Returns the ImageAnnotations schema.
@@ -1403,6 +1410,7 @@ impl From<LinePrimitive> for foxglove::schemas::LinePrimitive {
 /// :param position_covariance: Position covariance (m^2) defined relative to a tangential plane through the reported position. The components are East, North, and Up (ENU), in row-major order.
 /// :param position_covariance_type: If `position_covariance` is available, `position_covariance_type` must be set to indicate the type of covariance.
 /// :param color: Color used to visualize the location
+/// :param metadata: Additional user-provided metadata associated with the location fix. Keys must be unique.
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/location-fix
 #[pyclass(module = "foxglove.schemas")]
@@ -1411,7 +1419,7 @@ pub(crate) struct LocationFix(pub(crate) foxglove::schemas::LocationFix);
 #[pymethods]
 impl LocationFix {
     #[new]
-    #[pyo3(signature = (*, timestamp=None, frame_id="", latitude=0.0, longitude=0.0, altitude=0.0, position_covariance=None, position_covariance_type=LocationFixPositionCovarianceType::Unknown, color=None) )]
+    #[pyo3(signature = (*, timestamp=None, frame_id="", latitude=0.0, longitude=0.0, altitude=0.0, position_covariance=None, position_covariance_type=LocationFixPositionCovarianceType::Unknown, color=None, metadata=None) )]
     fn new(
         timestamp: Option<Timestamp>,
         frame_id: &str,
@@ -1421,6 +1429,7 @@ impl LocationFix {
         position_covariance: Option<Vec<f64>>,
         position_covariance_type: LocationFixPositionCovarianceType,
         color: Option<Color>,
+        metadata: Option<Vec<KeyValuePair>>,
     ) -> Self {
         Self(foxglove::schemas::LocationFix {
             timestamp: timestamp.map(Into::into),
@@ -1431,11 +1440,16 @@ impl LocationFix {
             position_covariance: position_covariance.unwrap_or_default(),
             position_covariance_type: position_covariance_type as i32,
             color: color.map(Into::into),
+            metadata: metadata
+                .unwrap_or_default()
+                .into_iter()
+                .map(|x| x.into())
+                .collect(),
         })
     }
     fn __repr__(&self) -> String {
         format!(
-            "LocationFix(timestamp={:?}, frame_id={:?}, latitude={:?}, longitude={:?}, altitude={:?}, position_covariance={:?}, position_covariance_type={:?}, color={:?})",
+            "LocationFix(timestamp={:?}, frame_id={:?}, latitude={:?}, longitude={:?}, altitude={:?}, position_covariance={:?}, position_covariance_type={:?}, color={:?}, metadata={:?})",
             self.0.timestamp,
             self.0.frame_id,
             self.0.latitude,
@@ -1444,6 +1458,7 @@ impl LocationFix {
             self.0.position_covariance,
             self.0.position_covariance_type,
             self.0.color,
+            self.0.metadata,
         )
     }
     /// Returns the LocationFix schema.

@@ -1,7 +1,7 @@
 use foxglove::{
     convert::SaturatingInto,
     log,
-    messages::{
+    schemas::{
         Color, CubePrimitive, Log, Pose, Quaternion, SceneEntity, SceneUpdate, Timestamp, Vector3,
     },
     ChannelBuilder, McapWriter,

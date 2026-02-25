@@ -2,6 +2,7 @@
 // Options: {}
 
 import { CircleAnnotation } from "./CircleAnnotation";
+import { KeyValuePair } from "./KeyValuePair";
 import { PointsAnnotation } from "./PointsAnnotation";
 import { TextAnnotation } from "./TextAnnotation";
 
@@ -15,4 +16,7 @@ export type ImageAnnotations = {
 
   /** Text annotations */
   texts: TextAnnotation[];
+
+  /** Additional user-provided metadata associated with the image annotations. Keys must be unique. */
+  metadata: KeyValuePair[];
 };

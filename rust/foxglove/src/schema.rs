@@ -3,7 +3,7 @@ use std::borrow::Cow;
 /// A Schema is a description of the data format of messages in a channel.
 ///
 /// It allows Foxglove to validate messages and provide richer visualizations.
-/// You can use the well known types provided in the [crate::messages] module or provide your own.
+/// You can use the well known types provided in the [crate::schemas] module or provide your own.
 /// See the [MCAP spec](https://mcap.dev/spec#schema-op0x03) for more information.
 #[derive(Clone, PartialEq, Eq)]
 pub struct Schema {
