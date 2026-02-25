@@ -47,6 +47,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: "rust-ci"
+          cache-workspace-crates: "true"
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Install common dependencies
@@ -83,6 +84,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: "playground-wasm"
+          cache-workspace-crates: "true"
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Set up Emscripten
@@ -363,6 +365,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: "rust-ci"
+          cache-workspace-crates: "true"
           save-if: ${{ github.ref == 'refs/heads/main' }}
       - uses: astral-sh/setup-uv@v7
       - run: corepack enable
@@ -439,6 +442,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: "rust-ci"
+          cache-workspace-crates: "true"
           save-if: ${{ github.ref == 'refs/heads/main' }}
       - uses: actions/setup-python@v6
         with:

@@ -27,6 +27,7 @@ jobs:
           cache: false
       - uses: Swatinem/rust-cache@v2
         with:
+          cache-workspace-crates: "true"
           save-if: ${{ github.ref == 'refs/heads/main' }}
       - name: Install WASI SDK
         run: |

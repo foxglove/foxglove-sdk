@@ -165,6 +165,7 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
         with:
+          cache-workspace-crates: "true"
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - run: sudo apt-get update && sudo apt-get install gcc-aarch64-linux-gnu
@@ -279,6 +280,7 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
         with:
+          cache-workspace-crates: "true"
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - run: make SANITIZE=address,undefined test
