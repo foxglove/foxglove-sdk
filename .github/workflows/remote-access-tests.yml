@@ -1,0 +1,38 @@
+name: Remote Access Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request: {}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          lfs: true
+
+      - name: Install common dependencies
+        uses: ./.github/actions/common-deps
+
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+
+      - name: Start LiveKit server
+        run: docker compose up -d --wait
+
+      - name: Run LiveKit integration tests
+        run: cargo test -p remote_access_tests -- --ignored livekit_
+
+      - name: Run auth integration tests
+        if: ${{ !github.event.pull_request.head.repo.fork && github.actor != 'dependabot[bot]' }}
+        run: cargo test -p remote_access_tests -- --ignored auth_
+        env:
+          FOXGLOVE_API_KEY: ${{ secrets.REMOTE_ACCESS_TESTS_API_KEY }}
+
+      - name: Stop LiveKit server
+        if: always()
+        run: docker compose down

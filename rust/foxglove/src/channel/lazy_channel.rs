@@ -21,7 +21,7 @@ use super::{Channel, RawChannel};
 ///
 /// # Example
 /// ```
-/// use foxglove::messages::FrameTransform;
+/// use foxglove::schemas::FrameTransform;
 /// use foxglove::LazyChannel;
 ///
 /// static TF: LazyChannel<FrameTransform> = LazyChannel::new("/tf");
