@@ -166,6 +166,13 @@ async fn netem_sidecar_drops_packets() -> Result<()> {
 // ===========================================================================
 // WebRTC under impairment
 // ===========================================================================
+//
+// No dedicated reordering sidecar test: netem's `reorder` param is a modifier
+// on `delay` (no-op without it), and UDP through Docker can reorder packets
+// even without netem, making detection unreliable. The interesting property —
+// that LiveKit's reliable data channel delivers messages in order despite
+// transport-level reordering — is already covered by
+// `netem_burst_delivery_under_impairment`.
 
 /// Verify that a viewer can connect and receive a valid ServerInfo message
 /// under network impairment. This is the basic "connectivity still works" check.
