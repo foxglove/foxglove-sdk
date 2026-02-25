@@ -7,7 +7,7 @@ on:
   pull_request: {}
 
 jobs:
-  rust-lint:
+  rust-stable:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -40,8 +40,26 @@ jobs:
         run: cargo run --bin foxglove_proto_gen && git diff --exit-code
 
       - run: cargo clippy --no-deps --all-targets --tests -- -D warnings
+      - run: cargo build --verbose
+      # Validate that we can build each example individually.
+      - name: Build examples individually
+        run: |
+          set -euo pipefail
+          cargo metadata --no-deps --format-version 1 \
+            | jq -r ".packages[].name" \
+            | grep example \
+            | while read package; do
+            echo "Building $package"
+            cargo build -p "$package"
+          done
+      # Validate that we can build without default features.
+      - run: cargo build -p foxglove --verbose --no-default-features
+      - run: cargo test --all-features --verbose
+        timeout-minutes: 5
+      - run: cargo test -p foxglove --no-default-features --verbose
+        timeout-minutes: 5
 
-  rust-test:
+  rust-compat:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -58,46 +76,27 @@ jobs:
 
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
-          toolchain: stable
+          toolchain: 1.83.0,stable
           cache: false
 
       - uses: Swatinem/rust-cache@v2
         with:
-          shared-key: "rust-ci"
           cache-workspace-crates: "true"
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
-      - run: rustup toolchain install nightly 1.83.0
+      - run: rustup toolchain install nightly
 
-      - run: cargo build --verbose
-      # Validate that we can build each example individually.
-      - name: Build examples individually
-        run: |
-          set -euo pipefail
-          cargo metadata --no-deps --format-version 1 \
-            | jq -r ".packages[].name" \
-            | grep example \
-            | while read package; do
-            echo "Building $package"
-            cargo build -p "$package"
-          done
-      # Validate that we can build without default features.
-      - run: cargo build -p foxglove --verbose --no-default-features
       # Validate that we can build against the MSRV (minimum specified rust version).
       - run: cargo +1.83.0 build -p foxglove --verbose
       - run: cargo +nightly rustdoc -p foxglove --all-features -- -D warnings --cfg docsrs
       - run: "[ -d ./target/doc/foxglove ] || exit 1"
       - name: Check for ws-protocol references in public docs
         run: '! grep -R "foxglove/ws-protocol" ./target/doc/foxglove'
-      - run: cargo test --all-features --verbose
-        timeout-minutes: 5
-      - run: cargo test -p foxglove --no-default-features --verbose
-        timeout-minutes: 5
 
   release-rust:
     if: startsWith(github.ref, 'refs/tags/sdk/v')
     runs-on: ubuntu-latest
-    needs: [rust-lint, rust-test]
+    needs: [rust-stable, rust-compat]
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v6
@@ -120,7 +119,7 @@ jobs:
   release-foxglove-data-loader:
     if: startsWith(github.ref, 'refs/tags/rust/foxglove_data_loader/v')
     runs-on: ubuntu-latest
-    needs: [rust-lint, rust-test]
+    needs: [rust-stable, rust-compat]
     timeout-minutes: 10
     env:
       github_ref: ${{ github.ref }}
