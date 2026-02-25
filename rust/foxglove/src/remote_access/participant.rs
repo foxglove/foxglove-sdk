@@ -18,6 +18,51 @@ pub(crate) struct Participant {
     writer: ParticipantWriter,
 }
 
+/// A per-channel writer for data plane messages.
+///
+/// Wraps a `ByteStreamWriter` addressed to a specific set of participants, together with
+/// the subscription version at which the writer was created. The version is used for a
+/// cheap staleness check: if the current subscription version for the channel differs from
+/// `version`, the writer must be replaced.
+pub(crate) struct ChannelWriter {
+    inner: ChannelWriterInner,
+    /// Subscription version this writer was opened for.
+    version: u32,
+}
+
+impl ChannelWriter {
+    /// Creates a new `ChannelWriter` wrapping a LiveKit byte stream writer.
+    pub fn new(writer: ByteStreamWriter, version: u32) -> Self {
+        Self {
+            inner: ChannelWriterInner::Livekit(writer),
+            version,
+        }
+    }
+
+    /// Returns the subscription version this writer was created for.
+    pub fn version(&self) -> u32 {
+        self.version
+    }
+
+    /// Writes bytes to the channel's byte stream.
+    pub async fn write(&self, bytes: &[u8]) -> Result<(), RemoteAccessError> {
+        self.inner.write(bytes).await
+    }
+
+}
+
+enum ChannelWriterInner {
+    Livekit(ByteStreamWriter),
+}
+
+impl ChannelWriterInner {
+    async fn write(&self, bytes: &[u8]) -> Result<(), RemoteAccessError> {
+        match self {
+            ChannelWriterInner::Livekit(stream) => stream.write(bytes).await.map_err(|e| e.into()),
+        }
+    }
+}
+
 impl Participant {
     /// Creates a new participant.
     pub fn new(identity: ParticipantIdentity, writer: ParticipantWriter) -> Self {

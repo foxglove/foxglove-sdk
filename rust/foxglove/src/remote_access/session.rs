@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::sync::{Arc, Weak};
 use std::time::Duration;
 
@@ -5,7 +6,6 @@ use bytes::Bytes;
 use futures_util::StreamExt;
 use livekit::{id::ParticipantIdentity, ByteStreamReader, Room, StreamByteOptions};
 use parking_lot::RwLock;
-use smallvec::SmallVec;
 use tokio::io::AsyncReadExt;
 use tokio_util::{io::StreamReader, sync::CancellationToken};
 use tracing::{error, info, warn};
@@ -16,11 +16,16 @@ use crate::{
         server::{advertise, MessageData as ServerMessageData, ServerInfo, Unadvertise},
         BinaryMessage, JsonMessage,
     },
-    remote_access::{participant::Participant, session_state::SessionState, RemoteAccessError},
+    remote_access::{
+        participant::{ChannelWriter, Participant},
+        session_state::SessionState,
+        RemoteAccessError,
+    },
     ChannelId, Context, FoxgloveError, Metadata, RawChannel, Sink, SinkChannelFilter, SinkId,
 };
 
 const WS_PROTOCOL_TOPIC: &str = "ws-protocol";
+const CHANNEL_TOPIC_PREFIX: &str = "ch-";
 const MESSAGE_FRAME_SIZE: usize = 5; // 1 byte opcode + u32 LE length
 const MAX_MESSAGE_SIZE: usize = 16 * 1024 * 1024; // 16 MiB
 const MAX_SEND_RETRIES: usize = 3;
@@ -244,9 +249,13 @@ impl RemoteAccessSession {
 
     /// Reads from the data plane and control plane queues and sends messages to participants.
     ///
-    /// Control plane messages are sent to the targeted participant.
-    /// Data plane messages are sent to all participants subscribed to the message's channel.
+    /// Control plane messages are sent to the targeted participant via its per-participant writer.
+    /// Data plane messages are written to a per-channel `ByteStreamWriter` addressed to the
+    /// channel's current subscriber set. The writer is created (or replaced) lazily: if the
+    /// locally cached writer's subscription version differs from the current version in state,
+    /// the old writer is dropped and a new one is opened for the up-to-date subscriber set.
     pub(crate) async fn run_sender(session: Arc<Self>) {
+        let mut channel_writers: HashMap<ChannelId, ChannelWriter> = HashMap::new();
         loop {
             tokio::select! {
                 biased;
@@ -259,24 +268,69 @@ impl RemoteAccessSession {
                 }
                 msg = session.data_plane_rx.recv_async() => {
                     let Ok(msg) = msg else { break };
-                    // Note: we do fan-out ourselves here because we can't use multicast with the ByteStreams
-                    // Most data plane messages should get sent as datagram messages, which do support multicast
-                    // by passing a Vec<ParticipantIdentity> of recipients.
-                    let participants: SmallVec<[Arc<Participant>; 8]> = {
-                        let state = session.state.read();
-                        let Some(ids) = state.collect_subscribers(&msg.channel_id) else {
-                            continue;
-                        };
-                        ids.iter().filter_map(|id| state.get_participant(id)).collect()
+                    let writer = session
+                        .get_or_replace_channel_writer(&msg.channel_id, &mut channel_writers)
+                        .await;
+                    let Some(writer) = writer else {
+                        continue;
                     };
-                    for participant in &participants {
-                        if let Err(e) = participant.send(&msg.data).await {
-                            error!("failed to send message data to {participant:?}: {e:?}");
-                        }
+                    if let Err(e) = writer.write(&msg.data).await {
+                        error!("failed to send data for channel {:?}: {e:?}", msg.channel_id);
                     }
                 }
             }
         }
+    }
+
+    /// Returns a reference to the locally cached `ChannelWriter` for `channel_id`,
+    /// creating or replacing it if the subscription version has changed.
+    ///
+    /// Returns `None` if the channel has no subscribers.
+    async fn get_or_replace_channel_writer<'a>(
+        &self,
+        channel_id: &ChannelId,
+        channel_writers: &'a mut HashMap<ChannelId, ChannelWriter>,
+    ) -> Option<&'a ChannelWriter> {
+        // Read the current subscription version (fast read-lock, no await).
+        let (current_version, subscribers) = {
+            let state = self.state.read();
+            let sub = state.get_subscription(channel_id)?;
+            if sub.subscribers.is_empty() {
+                channel_writers.remove(channel_id);
+                return None;
+            }
+            let cached_version = channel_writers.get(channel_id).map(|w| w.version());
+            if cached_version == Some(sub.version) {
+                // Fast path: writer is up to date.
+                return channel_writers.get(channel_id);
+            }
+            let subscribers: Vec<ParticipantIdentity> = sub.subscribers.iter().cloned().collect();
+            (sub.version, subscribers)
+        };
+
+        // Subscriber set changed (or no writer yet): open a new byte stream.
+        // The old writer is implicitly closed when it is replaced in the map.
+        let topic = format!("{CHANNEL_TOPIC_PREFIX}{}", u64::from(*channel_id));
+        let stream = match self
+            .room
+            .local_participant()
+            .stream_bytes(StreamByteOptions {
+                topic,
+                destination_identities: subscribers,
+                ..StreamByteOptions::default()
+            })
+            .await
+        {
+            Ok(s) => s,
+            Err(e) => {
+                error!("failed to open byte stream for channel {channel_id:?}: {e:?}");
+                channel_writers.remove(channel_id);
+                return None;
+            }
+        };
+
+        channel_writers.insert(*channel_id, ChannelWriter::new(stream, current_version));
+        channel_writers.get(channel_id)
     }
 
     pub(crate) async fn handle_byte_stream_from_client(
