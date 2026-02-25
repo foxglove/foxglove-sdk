@@ -18,22 +18,85 @@ import sys
 from datetime import datetime
 
 
-WORKFLOW = "ci.yml"
-JOB_NAMES = ["rust", "rust-lint", "rust-test"]
+# Workflows and the job names to look for in each.
+WORKFLOWS = {
+    "ci.yml": ["rust", "rust-lint", "rust-test"],
+    "remote-access-tests.yml": ["test"],
+}
 
-# Canonical step names, matched by prefix against the cargo command
+# Canonical step names, matched by prefix against the run command.
 STEP_KEYS = [
     ("fmt",            "cargo fmt"),
     ("proto_gen",      "cargo run --bin foxglove_proto_gen"),
     ("clippy",         "cargo clippy"),
-    ("build",          "cargo build --"),  # matches "cargo build --verbose" but not "cargo build -p"
+    ("build",          "cargo build --"),
     ("build_examples", "set -euo"),
     ("build_no_def",   "cargo build -p foxglove"),
     ("msrv",           "cargo +1.83.0"),
     ("nightly_doc",    "cargo +nightly"),
     ("test_all",       "cargo test --all"),
     ("test_no_def",    "cargo test -p foxglove"),
+    ("docker_up",      "docker compose up"),
+    ("ra_test_lk",     "cargo test -p remote_access_tests -- --ignored livekit_"),
+    ("ra_test_auth",   "cargo test -p remote_access_tests -- --ignored auth_"),
+    ("docker_down",    "docker compose down"),
 ]
+
+# Each layout maps job names to the steps that run in that job.
+# Every job implicitly includes one "setup" overhead.
+LAYOUTS = {
+    "Monolithic (1 job)": {
+        "rust": [
+            "fmt", "proto_gen", "clippy", "build", "build_examples",
+            "build_no_def", "msrv", "nightly_doc", "test_all", "test_no_def",
+        ],
+    },
+    "rust-lint + rust-test (current, 2 jobs)": {
+        "rust-lint": ["fmt", "proto_gen", "clippy"],
+        "rust-test": [
+            "build", "build_examples", "build_no_def", "msrv",
+            "nightly_doc", "test_all", "test_no_def",
+        ],
+    },
+    "rust-stable + rust-compat (2 jobs)": {
+        "rust-stable": [
+            "fmt", "proto_gen", "clippy", "build", "build_examples",
+            "build_no_def", "test_all", "test_no_def",
+        ],
+        "rust-compat": ["msrv", "nightly_doc"],
+    },
+    "rust-lint + rust-test + rust-compat (3 jobs)": {
+        "rust-lint": ["fmt", "proto_gen", "clippy"],
+        "rust-test": [
+            "build", "build_examples", "build_no_def",
+            "test_all", "test_no_def",
+        ],
+        "rust-compat": ["msrv", "nightly_doc"],
+    },
+}
+
+# Same layouts but with remote-access-tests included.
+# "ra" job uses its own setup overhead since it starts docker etc.
+LAYOUTS_WITH_RA = {
+    f"{name} + remote-access-tests": {
+        **jobs,
+        "remote-access": ["docker_up", "ra_test_lk", "ra_test_auth", "docker_down"],
+    }
+    for name, jobs in LAYOUTS.items()
+}
+
+# Variant: fold remote-access tests into rust-test
+LAYOUTS_RA_FOLDED = {
+    "rust-lint + rust-test(+ra) + rust-compat": {
+        "rust-lint": ["fmt", "proto_gen", "clippy"],
+        "rust-test": [
+            "build", "build_examples", "build_no_def",
+            "test_all", "test_no_def",
+            "docker_up", "ra_test_lk", "ra_test_auth", "docker_down",
+        ],
+        "rust-compat": ["msrv", "nightly_doc"],
+    },
+}
 
 
 REPO_ROOT = subprocess.run(
@@ -52,9 +115,9 @@ def gh(*args):
     return r.stdout.strip()
 
 
-def find_run_ids(limit):
+def find_run_ids(workflow, limit):
     raw = gh(
-        "run", "list", "--workflow", WORKFLOW, "--branch", "main",
+        "run", "list", "--workflow", workflow, "--branch", "main",
         "--limit", str(limit * 3),
         "--json", "databaseId,conclusion",
     )
@@ -112,33 +175,30 @@ def parse_job_log(run_id, job_name):
     return steps, cache_hit
 
 
-def match_step(raw_name, key_prefix):
-    return raw_name.strip().startswith(key_prefix)
-
-
-def extract_timings(run_id):
-    """Extract canonical step timings and setup overhead from a run."""
+def extract_timings(run_ids_by_workflow):
+    """Extract canonical step timings from paired workflow runs."""
     all_raw_steps = {}
     cache_hit = None
 
-    for job_name in JOB_NAMES:
-        raw, hit = parse_job_log(run_id, job_name)
-        if raw:
-            all_raw_steps.update(raw)
-            if hit is not None:
-                cache_hit = hit
+    for workflow, run_id in run_ids_by_workflow.items():
+        job_names = WORKFLOWS[workflow]
+        for job_name in job_names:
+            raw, hit = parse_job_log(run_id, job_name)
+            if raw:
+                all_raw_steps.update(raw)
+                if hit is not None:
+                    cache_hit = hit
 
     if not all_raw_steps:
         return None
 
-    # Match raw step names to canonical keys
     matched = {}
     setup_total = 0.0
 
     for raw_name, duration in all_raw_steps.items():
         found = False
         for key, prefix in STEP_KEYS:
-            if match_step(raw_name, prefix):
+            if raw_name.strip().startswith(prefix):
                 matched[key] = duration
                 found = True
                 break
@@ -157,7 +217,6 @@ def extract_timings(run_id):
 
     matched["setup"] = setup_total
     matched["cache_hit"] = cache_hit
-    matched["run_id"] = run_id
     return matched
 
 
@@ -173,44 +232,103 @@ def fmt_stat(values):
     return f"{m:.1f}s ± {s:.1f}s"
 
 
+def job_time(timings, steps_in_job):
+    return timings.get("setup", 0) + sum(timings.get(s, 0) for s in steps_in_job)
+
+
+def print_layout_tables(group, step_keys, all_layouts):
+    step_means = {}
+    for key in ["setup"] + step_keys:
+        values = [t.get(key, 0) for t in group]
+        step_means[key] = statistics.mean(values)
+
+    print(f"\n## Layout comparison (using mean step durations)\n")
+    print("| Layout | Per-job times | Wall clock | Runners |")
+    print("|--------|---------------|------------|---------|")
+    for layout_name, jobs in all_layouts.items():
+        job_times = {jn: job_time(step_means, steps) for jn, steps in jobs.items()}
+        wall = max(job_times.values())
+        job_strs = ", ".join(f"{jn}={t/60:.1f}m" for jn, t in job_times.items())
+        print(f"| {layout_name} | {job_strs} | **{wall/60:.1f}m** | {len(jobs)} |")
+
+    print(f"\n## Layout wall-clock distribution (per-run)\n")
+    print("| Layout | Mean ± StdDev | Values |")
+    print("|--------|---------------|--------|")
+
+    for layout_name, jobs in all_layouts.items():
+        per_run_walls = [
+            max(job_time(t, steps) for steps in jobs.values())
+            for t in group
+        ]
+        m = statistics.mean(per_run_walls)
+        s = statistics.stdev(per_run_walls) if len(per_run_walls) >= 2 else 0
+        vals_str = ", ".join(f"{v/60:.1f}" for v in per_run_walls)
+        print(f"| {layout_name} | {m/60:.1f}m ± {s/60:.1f}m | [{vals_str}] min |")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Analyze CI timing across multiple runs")
-    parser.add_argument("--run-ids", type=int, nargs="+", help="Specific run IDs to analyze")
-    parser.add_argument("--limit", type=int, default=8, help="Number of recent runs to fetch (default: 8)")
+    parser.add_argument("--run-ids", type=int, nargs="+",
+                        help="Specific CI run IDs to analyze (must pair with --ra-run-ids)")
+    parser.add_argument("--ra-run-ids", type=int, nargs="+",
+                        help="Specific remote-access-tests run IDs (paired 1:1 with --run-ids)")
+    parser.add_argument("--limit", type=int, default=8,
+                        help="Number of recent runs to fetch (default: 8)")
     args = parser.parse_args()
 
     if args.run_ids:
-        run_ids = args.run_ids
+        ci_run_ids = args.run_ids
+        ra_run_ids = args.ra_run_ids or []
     else:
-        print(f"Finding up to {args.limit} recent successful CI runs on main...\n")
-        run_ids = find_run_ids(args.limit)
+        print(f"Finding up to {args.limit} recent successful runs on main...\n")
+        ci_run_ids = find_run_ids("ci.yml", args.limit)
+        ra_run_ids = find_run_ids("remote-access-tests.yml", args.limit)
 
-    if not run_ids:
-        print("No runs found.", file=sys.stderr)
+    if not ci_run_ids:
+        print("No CI runs found.", file=sys.stderr)
         sys.exit(1)
 
-    print(f"Analyzing {len(run_ids)} runs: {run_ids}\n")
+    # Pair CI and remote-access runs by proximity (they trigger on the same push)
+    # Match by taking the closest ra run for each ci run
+    paired = []
+    ra_remaining = list(ra_run_ids)
+    for ci_id in ci_run_ids:
+        best_ra = None
+        if ra_remaining:
+            # Run IDs are monotonically increasing, so closest = smallest abs diff
+            best_ra = min(ra_remaining, key=lambda ra: abs(ra - ci_id))
+            # Only pair if they're from the same push (within 100 IDs of each other)
+            if abs(best_ra - ci_id) < 100:
+                ra_remaining.remove(best_ra)
+            else:
+                best_ra = None
+        paired.append((ci_id, best_ra))
 
-    # Collect timings from all runs
+    print(f"Analyzing {len(paired)} run pairs:\n")
+
     all_timings = []
-    for rid in run_ids:
-        t = extract_timings(rid)
+    step_keys = [k for k, _ in STEP_KEYS]
+
+    for ci_id, ra_id in paired:
+        workflows = {"ci.yml": ci_id}
+        if ra_id:
+            workflows["remote-access-tests.yml"] = ra_id
+
+        t = extract_timings(workflows)
         if t:
             all_timings.append(t)
             status = "HIT" if t["cache_hit"] else "MISS" if t["cache_hit"] is False else "?"
-            print(f"  run {rid}: cache {status}")
+            ra_str = f" + ra:{ra_id}" if ra_id else ""
+            print(f"  ci:{ci_id}{ra_str}: cache {status}")
         else:
-            print(f"  run {rid}: failed to parse")
+            print(f"  ci:{ci_id}: failed to parse")
 
     if not all_timings:
         print("No timing data collected.", file=sys.stderr)
         sys.exit(1)
 
-    # Split by cache hit/miss
     hits = [t for t in all_timings if t.get("cache_hit") is True]
     misses = [t for t in all_timings if t.get("cache_hit") is False]
-
-    step_keys = [k for k, _ in STEP_KEYS]
 
     for group_label, group in [("Cache HIT", hits), ("Cache MISS", misses)]:
         if not group:
@@ -220,70 +338,27 @@ def main():
         print(f"# {group_label} ({len(group)} runs)")
         print(f"{'=' * 70}")
 
-        # Per-step statistics
         print(f"\n## Step durations (mean ± stddev, n={len(group)})\n")
         print("| Step | Mean ± StdDev | Min | Max | Values |")
         print("|------|---------------|-----|-----|--------|")
 
-        step_means = {}
         for key in ["setup"] + step_keys:
             values = [t.get(key, 0) for t in group]
-            step_means[key] = statistics.mean(values)
             vals_str = ", ".join(f"{v:.0f}" for v in values)
             print(f"| {key} | {fmt_stat(values)} | {fmt_dur(min(values))} | {fmt_dur(max(values))} | [{vals_str}] |")
 
-        # Each layout is a list of (job_name, [step_keys_in_job]).
-        # Every job implicitly includes "setup" overhead.
-        LAYOUTS = {
-            "Monolithic (1 job)": {
-                "rust": ["fmt", "proto_gen", "clippy", "build", "build_examples",
-                         "build_no_def", "msrv", "nightly_doc", "test_all", "test_no_def"],
-            },
-            "rust-lint + rust-test (current, 2 jobs)": {
-                "rust-lint": ["fmt", "proto_gen", "clippy"],
-                "rust-test": ["build", "build_examples", "build_no_def", "msrv",
-                              "nightly_doc", "test_all", "test_no_def"],
-            },
-            "rust-stable + rust-compat (2 jobs)": {
-                "rust-stable": ["fmt", "proto_gen", "clippy", "build", "build_examples",
-                                "build_no_def", "test_all", "test_no_def"],
-                "rust-compat": ["msrv", "nightly_doc"],
-            },
-            "rust-lint + rust-test + rust-compat (3 jobs)": {
-                "rust-lint": ["fmt", "proto_gen", "clippy"],
-                "rust-test": ["build", "build_examples", "build_no_def",
-                              "test_all", "test_no_def"],
-                "rust-compat": ["msrv", "nightly_doc"],
-            },
-        }
+        # CI-only layouts
+        print("\n### CI only (ci.yml)")
+        print_layout_tables(group, step_keys, LAYOUTS)
 
-        def job_time(timings, steps_in_job):
-            return timings.get("setup", 0) + sum(timings.get(s, 0) for s in steps_in_job)
+        # CI + remote-access as separate job
+        has_ra = any(t.get("ra_test_lk", 0) > 0 for t in group)
+        if has_ra:
+            print("\n### CI + remote-access-tests (separate job)")
+            print_layout_tables(group, step_keys, LAYOUTS_WITH_RA)
 
-        # Layout comparison using mean values
-        print(f"\n## Layout comparison (using mean step durations)\n")
-        print("| Layout | Per-job times | Wall clock | Runners |")
-        print("|--------|---------------|------------|---------|")
-        for layout_name, jobs in LAYOUTS.items():
-            job_times = {jn: job_time(step_means, steps) for jn, steps in jobs.items()}
-            wall = max(job_times.values())
-            job_strs = ", ".join(f"{jn}={t/60:.1f}m" for jn, t in job_times.items())
-            print(f"| {layout_name} | {job_strs} | **{wall/60:.1f}m** | {len(jobs)} |")
-
-        # Per-run wall-clock distribution
-        print(f"\n## Layout wall-clock distribution (per-run)\n")
-        print("| Layout | Mean ± StdDev | Values |")
-        print("|--------|---------------|--------|")
-
-        for layout_name, jobs in LAYOUTS.items():
-            per_run_walls = [
-                max(job_time(t, steps) for steps in jobs.values())
-                for t in group
-            ]
-            m = statistics.mean(per_run_walls)
-            s = statistics.stdev(per_run_walls) if len(per_run_walls) >= 2 else 0
-            vals_str = ", ".join(f"{v/60:.1f}" for v in per_run_walls)
-            print(f"| {layout_name} | {m/60:.1f}m ± {s/60:.1f}m | [{vals_str}] min |")
+            print("\n### CI + remote-access-tests (folded into rust-test)")
+            print_layout_tables(group, step_keys, LAYOUTS_RA_FOLDED)
 
 
 if __name__ == "__main__":
