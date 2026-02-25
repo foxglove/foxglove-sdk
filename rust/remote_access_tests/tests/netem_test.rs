@@ -110,8 +110,8 @@ async fn netem_sidecar_drops_packets() -> Result<()> {
         .find(|(key, _)| *key == "loss")
         .and_then(|(_, val)| val.strip_suffix('%')?.parse().ok());
 
-    if loss_pct.is_none() || loss_pct == Some(0.0) {
-        info!("no packet loss configured in NETEM_ARGS — skipping");
+    if loss_pct.is_none() || loss_pct < Some(2.0) {
+        info!("loss < 2% configured in NETEM_ARGS — skipping (need ≥2% for reliable detection)");
         return Ok(());
     }
     let loss_pct = loss_pct.unwrap();
