@@ -1,7 +1,7 @@
 name: "[Internal] Checkout foxglove-sdk"
 description: >
   For internal Foxglove use only. Not publicly supported.
-  Checks out foxglove-sdk at the action's pinned ref.
+  Symlinks the foxglove-sdk source from the commit this action was resolved at.
 
 inputs:
   path:
