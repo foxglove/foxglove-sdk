@@ -20,6 +20,13 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: stable
+          cache: false
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "rust-ci"
+          cache-workspace-crates: "true"
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Start LiveKit server
         run: docker compose up -d --wait
