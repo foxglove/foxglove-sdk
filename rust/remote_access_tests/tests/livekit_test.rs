@@ -723,7 +723,9 @@ async fn livekit_video_channel_has_video_track_metadata() -> Result<()> {
     for ch in &advertise.channels {
         if ch.id == u64::from(video_channel.id()) {
             assert_eq!(
-                ch.metadata.get("foxglove.hasVideoTrack").map(|s| s.as_str()),
+                ch.metadata
+                    .get("foxglove.hasVideoTrack")
+                    .map(|s| s.as_str()),
                 Some("true"),
                 "video channel should have foxglove.hasVideoTrack metadata"
             );

@@ -138,7 +138,11 @@ impl SessionState {
     }
 
     /// Inserts a video publisher for a channel.
-    pub fn insert_video_publisher(&mut self, channel_id: ChannelId, publisher: Arc<VideoPublisher>) {
+    pub fn insert_video_publisher(
+        &mut self,
+        channel_id: ChannelId,
+        publisher: Arc<VideoPublisher>,
+    ) {
         self.video_publishers.insert(channel_id, publisher);
     }
 
@@ -167,10 +171,8 @@ impl SessionState {
     pub fn inject_video_track_metadata(&self, advertise: &mut advertise::Advertise<'_>) {
         for ch in &mut advertise.channels {
             if self.video_schemas.contains_key(&ChannelId::new(ch.id)) {
-                ch.metadata.insert(
-                    "foxglove.hasVideoTrack".to_string(),
-                    "true".to_string(),
-                );
+                ch.metadata
+                    .insert("foxglove.hasVideoTrack".to_string(), "true".to_string());
             }
         }
     }
