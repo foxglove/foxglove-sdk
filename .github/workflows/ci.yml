@@ -7,7 +7,7 @@ on:
   pull_request: {}
 
 jobs:
-  rust-stable:
+  rust:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -76,7 +76,7 @@ jobs:
 
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
-          toolchain: 1.83.0,stable
+          toolchain: 1.83.0
           cache: false
 
       - uses: Swatinem/rust-cache@v2
@@ -96,7 +96,7 @@ jobs:
   release-rust:
     if: startsWith(github.ref, 'refs/tags/sdk/v')
     runs-on: ubuntu-latest
-    needs: [rust-stable, rust-compat]
+    needs: [rust, rust-compat]
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v6
@@ -119,7 +119,7 @@ jobs:
   release-foxglove-data-loader:
     if: startsWith(github.ref, 'refs/tags/rust/foxglove_data_loader/v')
     runs-on: ubuntu-latest
-    needs: [rust-stable, rust-compat]
+    needs: [rust, rust-compat]
     timeout-minutes: 10
     env:
       github_ref: ${{ github.ref }}
