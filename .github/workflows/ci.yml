@@ -94,7 +94,7 @@ jobs:
           cache-workspace-crates: "true"
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
-      - run: rustup toolchain install nightly
+      - run: rustup toolchain install nightly --profile minimal
 
       # Validate that we can build against the MSRV (minimum specified rust version).
       - run: cargo +1.83.0 build -p foxglove --verbose
