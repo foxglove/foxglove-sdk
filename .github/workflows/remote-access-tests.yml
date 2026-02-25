@@ -24,6 +24,7 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
         with:
+          shared-key: "rust-ci"
           cache-workspace-crates: "true"
           save-if: ${{ github.ref == 'refs/heads/main' }}
 

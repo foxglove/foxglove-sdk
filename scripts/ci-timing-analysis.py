@@ -36,10 +36,16 @@ STEP_KEYS = [
 ]
 
 
+REPO_ROOT = subprocess.run(
+    ["git", "rev-parse", "--show-toplevel"],
+    capture_output=True, text=True,
+).stdout.strip() or "."
+
+
 def gh(*args):
     r = subprocess.run(
         ["gh"] + list(args),
-        capture_output=True, text=True, cwd="/workspace",
+        capture_output=True, text=True, cwd=REPO_ROOT,
     )
     if r.returncode != 0:
         return None
@@ -84,11 +90,13 @@ def parse_job_log(run_id, job_name):
         cache_hit = True
 
     entries = []
+    last_ts = None
     for line in raw.split("\n"):
         m = ts_re.search(line)
         if not m:
             continue
         ts = datetime.fromisoformat(m.group(1))
+        last_ts = ts
         if "##[group]Run " in line:
             step_name = line.split("##[group]Run ", 1)[-1].strip()[:120]
             entries.append((ts, step_name))
@@ -97,7 +105,7 @@ def parse_job_log(run_id, job_name):
     for i in range(len(entries)):
         name = entries[i][1]
         start = entries[i][0]
-        end = entries[i + 1][0] if i + 1 < len(entries) else start
+        end = entries[i + 1][0] if i + 1 < len(entries) else last_ts
         duration = (end - start).total_seconds()
         steps[name] = duration
 
