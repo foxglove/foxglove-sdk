@@ -276,6 +276,7 @@ impl RemoteAccessSession {
                     };
                     if let Err(e) = writer.write(&msg.data).await {
                         error!("failed to send data for channel {:?}: {e:?}", msg.channel_id);
+                        channel_writers.remove(&msg.channel_id);
                     }
                 }
             }

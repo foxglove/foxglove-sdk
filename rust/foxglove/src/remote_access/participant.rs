@@ -25,7 +25,7 @@ pub(crate) struct Participant {
 /// cheap staleness check: if the current subscription version for the channel differs from
 /// `version`, the writer must be replaced.
 pub(crate) struct ChannelWriter {
-    inner: ChannelWriterInner,
+    writer: ByteStreamWriter,
     /// Subscription version this writer was opened for.
     version: u32,
 }
@@ -33,10 +33,7 @@ pub(crate) struct ChannelWriter {
 impl ChannelWriter {
     /// Creates a new `ChannelWriter` wrapping a LiveKit byte stream writer.
     pub fn new(writer: ByteStreamWriter, version: u32) -> Self {
-        Self {
-            inner: ChannelWriterInner::Livekit(writer),
-            version,
-        }
+        Self { writer, version }
     }
 
     /// Returns the subscription version this writer was created for.
@@ -46,20 +43,7 @@ impl ChannelWriter {
 
     /// Writes bytes to the channel's byte stream.
     pub async fn write(&self, bytes: &[u8]) -> Result<(), RemoteAccessError> {
-        self.inner.write(bytes).await
-    }
-
-}
-
-enum ChannelWriterInner {
-    Livekit(ByteStreamWriter),
-}
-
-impl ChannelWriterInner {
-    async fn write(&self, bytes: &[u8]) -> Result<(), RemoteAccessError> {
-        match self {
-            ChannelWriterInner::Livekit(stream) => stream.write(bytes).await.map_err(|e| e.into()),
-        }
+        self.writer.write(bytes).await.map_err(|e| e.into())
     }
 }
 
