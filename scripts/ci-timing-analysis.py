@@ -75,27 +75,13 @@ LAYOUTS = {
     },
 }
 
-# Same layouts but with remote-access-tests included.
-# "ra" job uses its own setup overhead since it starts docker etc.
+# Same layouts but with remote-access-tests as a separate parallel job.
 LAYOUTS_WITH_RA = {
-    f"{name} + remote-access-tests": {
+    f"{name} + remote-access": {
         **jobs,
         "remote-access": ["docker_up", "ra_test_lk", "ra_test_auth", "docker_down"],
     }
     for name, jobs in LAYOUTS.items()
-}
-
-# Variant: fold remote-access tests into rust-test
-LAYOUTS_RA_FOLDED = {
-    "rust-lint + rust-test(+ra) + rust-compat": {
-        "rust-lint": ["fmt", "proto_gen", "clippy"],
-        "rust-test": [
-            "build", "build_examples", "build_no_def",
-            "test_all", "test_no_def",
-            "docker_up", "ra_test_lk", "ra_test_auth", "docker_down",
-        ],
-        "rust-compat": ["msrv", "nightly_doc"],
-    },
 }
 
 
@@ -229,47 +215,51 @@ def fmt_dur(seconds):
 def fmt_stat(values):
     m = statistics.mean(values)
     s = statistics.stdev(values) if len(values) >= 2 else 0
-    return f"{m:.1f}s ± {s:.1f}s"
+    return f"{m:.1f} ± {s:.1f}"
 
 
 def job_time(timings, steps_in_job):
     return timings.get("setup", 0) + sum(timings.get(s, 0) for s in steps_in_job)
 
 
-def print_layout_tables(group, step_keys, all_layouts):
-    step_means = {}
-    for key in ["setup"] + step_keys:
-        values = [t.get(key, 0) for t in group]
-        step_means[key] = statistics.mean(values)
-
-    print(f"\n## Layout comparison (using mean step durations)\n")
-    print("| Layout | Per-job times | Wall clock | Runners |")
-    print("|--------|---------------|------------|---------|")
+def analyze_layouts(group, all_layouts, step_keys):
+    """Compute wall-clock and total runner-minutes for each layout across runs."""
+    results = {}
     for layout_name, jobs in all_layouts.items():
-        job_times = {jn: job_time(step_means, steps) for jn, steps in jobs.items()}
-        wall = max(job_times.values())
-        job_strs = ", ".join(f"{jn}={t/60:.1f}m" for jn, t in job_times.items())
-        print(f"| {layout_name} | {job_strs} | **{wall/60:.1f}m** | {len(jobs)} |")
+        per_run_walls = []
+        per_run_total_runner = []
+        for t in group:
+            job_times = {jn: job_time(t, steps) for jn, steps in jobs.items()}
+            per_run_walls.append(max(job_times.values()))
+            per_run_total_runner.append(sum(job_times.values()))
+        results[layout_name] = {
+            "jobs": jobs,
+            "wall": per_run_walls,
+            "runner": per_run_total_runner,
+        }
+    return results
 
-    print(f"\n## Layout wall-clock distribution (per-run)\n")
-    print("| Layout | Mean ± StdDev | Values |")
-    print("|--------|---------------|--------|")
 
-    for layout_name, jobs in all_layouts.items():
-        per_run_walls = [
-            max(job_time(t, steps) for steps in jobs.values())
-            for t in group
-        ]
-        m = statistics.mean(per_run_walls)
-        s = statistics.stdev(per_run_walls) if len(per_run_walls) >= 2 else 0
-        vals_str = ", ".join(f"{v/60:.1f}" for v in per_run_walls)
-        print(f"| {layout_name} | {m/60:.1f}m ± {s/60:.1f}m | [{vals_str}] min |")
+def print_layout_table(results):
+    print("| Layout | Runners | Wall clock (mean ± sd) | Runner-minutes (mean ± sd) |")
+    print("|--------|---------|------------------------|---------------------------|")
+    for layout_name, data in results.items():
+        n_runners = len(data["jobs"])
+        wall = data["wall"]
+        runner = data["runner"]
+        wall_m = statistics.mean(wall)
+        wall_s = statistics.stdev(wall) if len(wall) >= 2 else 0
+        runner_m = statistics.mean(runner)
+        runner_s = statistics.stdev(runner) if len(runner) >= 2 else 0
+        print(f"| {layout_name} | {n_runners} | "
+              f"{wall_m/60:.1f}m ± {wall_s/60:.1f}m | "
+              f"{runner_m/60:.1f}m ± {runner_s/60:.1f}m |")
 
 
 def main():
     parser = argparse.ArgumentParser(description="Analyze CI timing across multiple runs")
     parser.add_argument("--run-ids", type=int, nargs="+",
-                        help="Specific CI run IDs to analyze (must pair with --ra-run-ids)")
+                        help="Specific CI run IDs to analyze")
     parser.add_argument("--ra-run-ids", type=int, nargs="+",
                         help="Specific remote-access-tests run IDs (paired 1:1 with --run-ids)")
     parser.add_argument("--limit", type=int, default=8,
@@ -289,15 +279,12 @@ def main():
         sys.exit(1)
 
     # Pair CI and remote-access runs by proximity (they trigger on the same push)
-    # Match by taking the closest ra run for each ci run
-    paired = []
     ra_remaining = list(ra_run_ids)
+    paired = []
     for ci_id in ci_run_ids:
         best_ra = None
         if ra_remaining:
-            # Run IDs are monotonically increasing, so closest = smallest abs diff
             best_ra = min(ra_remaining, key=lambda ra: abs(ra - ci_id))
-            # Only pair if they're from the same push (within 100 IDs of each other)
             if abs(best_ra - ci_id) < 100:
                 ra_remaining.remove(best_ra)
             else:
@@ -335,30 +322,29 @@ def main():
             continue
 
         print(f"\n{'=' * 70}")
-        print(f"# {group_label} ({len(group)} runs)")
+        print(f"# {group_label} (n={len(group)})")
         print(f"{'=' * 70}")
 
-        print(f"\n## Step durations (mean ± stddev, n={len(group)})\n")
-        print("| Step | Mean ± StdDev | Min | Max | Values |")
-        print("|------|---------------|-----|-----|--------|")
+        print(f"\n## Step durations in seconds (mean ± stddev)\n")
+        print("| Step | Mean ± StdDev | Min | Max |")
+        print("|------|---------------|-----|-----|")
 
         for key in ["setup"] + step_keys:
             values = [t.get(key, 0) for t in group]
-            vals_str = ", ".join(f"{v:.0f}" for v in values)
-            print(f"| {key} | {fmt_stat(values)} | {fmt_dur(min(values))} | {fmt_dur(max(values))} | [{vals_str}] |")
+            if max(values) == 0:
+                continue
+            print(f"| {key} | {fmt_stat(values)}s | {fmt_dur(min(values))} | {fmt_dur(max(values))} |")
 
-        # CI-only layouts
-        print("\n### CI only (ci.yml)")
-        print_layout_tables(group, step_keys, LAYOUTS)
-
-        # CI + remote-access as separate job
         has_ra = any(t.get("ra_test_lk", 0) > 0 for t in group)
-        if has_ra:
-            print("\n### CI + remote-access-tests (separate job)")
-            print_layout_tables(group, step_keys, LAYOUTS_WITH_RA)
 
-            print("\n### CI + remote-access-tests (folded into rust-test)")
-            print_layout_tables(group, step_keys, LAYOUTS_RA_FOLDED)
+        print("\n## CI-only layouts\n")
+        results = analyze_layouts(group, LAYOUTS, step_keys)
+        print_layout_table(results)
+
+        if has_ra:
+            print("\n## CI + remote-access-tests (separate parallel job)\n")
+            results_ra = analyze_layouts(group, LAYOUTS_WITH_RA, step_keys)
+            print_layout_table(results_ra)
 
 
 if __name__ == "__main__":
