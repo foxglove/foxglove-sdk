@@ -120,7 +120,7 @@ impl Sink for RemoteAccessSession {
         // If a video publisher is active for this channel, send the frame to it
         // and skip the raw data plane.
         if let Some(publisher) = self.state.read().get_video_publisher(&channel_id) {
-            publisher.send(Bytes::copy_from_slice(msg));
+            publisher.send(Bytes::copy_from_slice(msg), metadata.log_time);
             return Ok(());
         }
 
