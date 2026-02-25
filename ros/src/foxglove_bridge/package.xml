@@ -15,7 +15,11 @@
     <depend>rclcpp</depend>
     <depend>rclcpp_components</depend>
     <depend>rosx_introspection</depend>
-    <depend>sensor_msgs</depend>
+    <!-- Workaround: rosx_introspection incorrectly exports sensor_msgs and
+         geometry_msgs (test-only deps) via ament_export_dependencies.
+         https://github.com/facontidavide/rosx_introspection/issues/TBD -->
+    <build_depend>geometry_msgs</build_depend>
+    <build_depend>sensor_msgs</build_depend>
 
     <!-- Test dependencies -->
     <test_depend>ament_cmake_gtest</test_depend>
