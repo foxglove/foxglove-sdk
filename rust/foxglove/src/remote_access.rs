@@ -1,4 +1,4 @@
-//! Internal error handling and submodule exports for the remote access feature.
+//! Remote access implementation.
 
 mod capability;
 mod client;
