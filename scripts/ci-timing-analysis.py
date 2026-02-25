@@ -11,12 +11,10 @@ automatically. Requires `gh` CLI to be authenticated.
 """
 import argparse
 import json
-import math
 import re
+import statistics
 import subprocess
 import sys
-from collections import defaultdict
-from dataclasses import dataclass, field
 from datetime import datetime
 
 
@@ -161,20 +159,9 @@ def fmt_dur(seconds):
     return f"{seconds:.1f}s"
 
 
-def mean(values):
-    return sum(values) / len(values) if values else 0
-
-
-def stdev(values):
-    if len(values) < 2:
-        return 0
-    m = mean(values)
-    return math.sqrt(sum((x - m) ** 2 for x in values) / (len(values) - 1))
-
-
 def fmt_stat(values):
-    m = mean(values)
-    s = stdev(values)
+    m = statistics.mean(values)
+    s = statistics.stdev(values) if len(values) >= 2 else 0
     return f"{m:.1f}s ± {s:.1f}s"
 
 
@@ -233,13 +220,9 @@ def main():
         step_means = {}
         for key in ["setup"] + step_keys:
             values = [t.get(key, 0) for t in group]
-            m = mean(values)
-            s = stdev(values)
-            step_means[key] = m
-            mn = min(values)
-            mx = max(values)
+            step_means[key] = statistics.mean(values)
             vals_str = ", ".join(f"{v:.0f}" for v in values)
-            print(f"| {key} | {fmt_stat(values)} | {fmt_dur(mn)} | {fmt_dur(mx)} | [{vals_str}] |")
+            print(f"| {key} | {fmt_stat(values)} | {fmt_dur(min(values))} | {fmt_dur(max(values))} | [{vals_str}] |")
 
         # Each layout is a list of (job_name, [step_keys_in_job]).
         # Every job implicitly includes "setup" overhead.
@@ -285,12 +268,14 @@ def main():
         print("|--------|---------------|--------|")
 
         for layout_name, jobs in LAYOUTS.items():
-            per_run_walls = []
-            for t in group:
-                wall = max(job_time(t, steps) for steps in jobs.values())
-                per_run_walls.append(wall)
+            per_run_walls = [
+                max(job_time(t, steps) for steps in jobs.values())
+                for t in group
+            ]
+            m = statistics.mean(per_run_walls)
+            s = statistics.stdev(per_run_walls) if len(per_run_walls) >= 2 else 0
             vals_str = ", ".join(f"{v/60:.1f}" for v in per_run_walls)
-            print(f"| {layout_name} | {mean(per_run_walls)/60:.1f}m ± {stdev(per_run_walls)/60:.1f}m | [{vals_str}] min |")
+            print(f"| {layout_name} | {m/60:.1f}m ± {s/60:.1f}m | [{vals_str}] min |")
 
 
 if __name__ == "__main__":
