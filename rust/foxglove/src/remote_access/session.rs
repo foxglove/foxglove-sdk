@@ -591,7 +591,9 @@ impl RemoteAccessSession {
             let publisher = Arc::new(VideoPublisher::new(video_source.clone(), input_schema));
             let expected_publisher = publisher.clone();
 
-            self.state.write().insert_video_publisher(channel_id, publisher);
+            self.state
+                .write()
+                .insert_video_publisher(channel_id, publisher);
 
             let track =
                 LocalVideoTrack::create_video_track(&topic, RtcVideoSource::Native(video_source));
@@ -614,7 +616,7 @@ impl RemoteAccessSession {
                             let mut state = session.state.write();
                             let is_ours = state
                                 .get_video_publisher(&channel_id)
-                                .map_or(false, |p| Arc::ptr_eq(&p, &expected_publisher));
+                                .is_some_and(|p| Arc::ptr_eq(&p, &expected_publisher));
                             if is_ours {
                                 state.insert_video_track_sid(channel_id, sid.clone());
                             }
@@ -662,6 +664,8 @@ impl RemoteAccessSession {
             tokio::spawn(async move {
                 if let Err(e) = local_participant.unpublish_track(&sid).await {
                     error!("failed to unpublish video track {sid}: {e:?}");
+                } else {
+                    debug!("unpublished video track {sid} for channel {channel_id:?}");
                 }
             });
         }
