@@ -7,25 +7,20 @@ on:
   pull_request: {}
 
 jobs:
-  rust-fmt:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
-        with:
-          toolchain: stable
-          components: rustfmt
-          cache: false
-
-      - run: cargo fmt --all --check
-
   rust-lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
         with:
           lfs: true
+
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: 1.83.0,nightly,stable
+          components: rustfmt, clippy
+          cache: false
+
+      - run: cargo fmt --all --check
 
       - name: Install common dependencies
         uses: ./.github/actions/common-deps
@@ -34,12 +29,6 @@ jobs:
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           version: "29.x"
-
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
-        with:
-          toolchain: 1.83.0,nightly,stable
-          components: clippy
-          cache: false
 
       - uses: Swatinem/rust-cache@v2
         with:
@@ -104,7 +93,7 @@ jobs:
   release-rust:
     if: startsWith(github.ref, 'refs/tags/sdk/v')
     runs-on: ubuntu-latest
-    needs: [rust-fmt, rust-lint, rust-test]
+    needs: [rust-lint, rust-test]
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v6
@@ -127,7 +116,7 @@ jobs:
   release-foxglove-data-loader:
     if: startsWith(github.ref, 'refs/tags/rust/foxglove_data_loader/v')
     runs-on: ubuntu-latest
-    needs: [rust-fmt, rust-lint, rust-test]
+    needs: [rust-lint, rust-test]
     timeout-minutes: 10
     env:
       github_ref: ${{ github.ref }}
