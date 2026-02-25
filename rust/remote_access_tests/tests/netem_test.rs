@@ -93,7 +93,8 @@ async fn netem_sidecar_adds_measurable_latency() -> Result<()> {
 /// The configured loss percentage is read from `NETEM_ARGS`. If no `loss` keyword
 /// is present, the assertion is skipped.
 ///
-/// With 500 packets at 2% loss, the probability of zero drops is ~0.004%.
+/// With 500 packets at 2% loss, the probability of a false failure (zero
+/// drops despite loss being configured) is roughly 4 in 100,000.
 #[traced_test]
 #[ignore]
 #[tokio::test]
