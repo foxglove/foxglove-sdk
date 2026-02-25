@@ -48,7 +48,6 @@ impl ChannelWriter {
     pub async fn write(&self, bytes: &[u8]) -> Result<(), RemoteAccessError> {
         self.inner.write(bytes).await
     }
-
 }
 
 enum ChannelWriterInner {
