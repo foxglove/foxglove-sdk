@@ -129,9 +129,7 @@ impl RemoteAccessConnection {
                 if let Some(timeout) = self.options.foxglove_api_timeout {
                     builder = builder.timeout(timeout);
                 }
-                CredentialsProvider::new(builder)
-                    .await
-                    .map_err(|e| RemoteAccessError::AuthError(e.to_string()))
+                Ok(CredentialsProvider::new(builder).await?)
             })
             .await
     }
@@ -140,10 +138,7 @@ impl RemoteAccessConnection {
         &self,
     ) -> Result<(Arc<RemoteAccessSession>, UnboundedReceiver<RoomEvent>)> {
         let provider = self.get_or_init_provider().await?;
-        let credentials = provider
-            .load_credentials()
-            .await
-            .map_err(|e| RemoteAccessError::AuthError(e.to_string()))?;
+        let credentials = provider.load_credentials().await?;
 
         let message_backlog_size = self
             .options
@@ -272,13 +267,9 @@ impl RemoteAccessConnection {
                 }
                 Err(e) => {
                     error!("{e}");
-                    // Refresh credentials if we experience an AuthError. We also do this for
-                    // RoomErrors, which may be auth-related, and for which we do not have any
-                    // distinguishing type information at this point.
-                    if matches!(
-                        e,
-                        RemoteAccessError::AuthError(_) | RemoteAccessError::RoomError(_)
-                    ) {
+                    // Refresh credentials for auth-related errors, including room errors which
+                    // may be caused by expired or invalid credentials.
+                    if e.should_clear_credentials() {
                         if let Some(provider) = self.credentials_provider.get() {
                             debug!("clearing credentials");
                             provider.clear().await;

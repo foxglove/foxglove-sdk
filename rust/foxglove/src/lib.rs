@@ -468,11 +468,6 @@ pub enum FoxgloveError {
     /// An error related to configuration
     #[error("Configuration error: {0}")]
     ConfigurationError(String),
-    /// An error occurred while communicating with remote access.
-    #[doc(hidden)]
-    #[cfg(feature = "remote_access")]
-    #[error(transparent)]
-    RemoteAccessError(#[from] crate::remote_access::RemoteAccessError),
 }
 
 impl From<convert::RangeError> for FoxgloveError {
