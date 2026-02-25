@@ -71,8 +71,10 @@ The core SDK is written in Rust, with bindings for Python and C/C++, plus TypeSc
   `cargo clippy --no-deps --tests --all-features -- -D warnings`
 - Prefer `crate::` import over `super::` import; though importing `super::*` is fine within a test module (`mod tests`)
 - Use `mod tests` rather than `mod test` for declaring unit tests in a submodule
-- The MSRV (Minimum Supported Rust Version) is 1.83.0 (defined in Cargo.toml). Don't use Rust features that aren't stabilized as of this version.
+- The MSRV (Minimum Supported Rust Version) is defined in Cargo.toml. Don't use Rust features that aren't stabilized as of this version.
 - Use the tracing crate (tracing::info!, tracing::warn!, etc.), not println!, eprintln!, or the log crate macros directly
+- Modules should be defined as `foo.rs`, not `foo/mod.rs`
+- Use `cargo public-api` for evaluating public API changes
 
 ### Python
 
@@ -83,7 +85,7 @@ The core SDK is written in Rust, with bindings for Python and C/C++, plus TypeSc
 - Type-check with `mypy`
 - Co-locate `test_*.py` files with source, or place them in a `tests/` directory following existing conventions
 - Tests use pytest
-- Python code should use modern features and idioms where applicable, the oldest version we need to support is 3.10
+- Python code should use modern features and idioms where applicable, the oldest version we need to support is defined in `python/foxglove-sdk/pyproject.toml`
 
 ### C / C++
 
@@ -99,7 +101,6 @@ The core SDK is written in Rust, with bindings for Python and C/C++, plus TypeSc
 ### TypeScript (Schemas only)
 
 - Use `yarn` to install dependencies and run scripts
-- Schemas are generated — edit source definitions in `scripts/generate.ts` and run `make generate` or `yarn generate` to regenerate outputs; do not hand-edit generated files
 - Prefer explicit types; avoid `any`
 
 ### Schema Generation
