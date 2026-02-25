@@ -49,16 +49,18 @@ ALL_WORKFLOWS = [
 
 LAYOUT_SETS = {
     "ci": {
-        "monolithic (1 job)": {
+        "monolithic (baseline)": {
             "rust": ["*"],
         },
-        "rust + rust-compat (current)": {
+        "rust + rust-compat (this PR)": {
             "rust": [
                 "cargo fmt", "cargo run --bin foxglove_proto_gen",
                 "cargo clippy", "cargo build", "set -euo",
                 "cargo test",
             ],
-            "rust-compat": ["cargo +1.83.0", "cargo +nightly"],
+            "rust-compat": [
+                "cargo +1.83.0", "cargo +nightly", "[ -d ", "! grep",
+            ],
         },
         "rust-lint + rust-test + rust-compat": {
             "rust-lint": [
@@ -66,11 +68,13 @@ LAYOUT_SETS = {
                 "cargo clippy",
             ],
             "rust-test": ["cargo build", "set -euo", "cargo test"],
-            "rust-compat": ["cargo +1.83.0", "cargo +nightly"],
+            "rust-compat": [
+                "cargo +1.83.0", "cargo +nightly", "[ -d ", "! grep",
+            ],
         },
     },
     "c_cpp_lint": {
-        "lint (current, 1 job)": {
+        "lint (current)": {
             "lint": ["*"],
         },
     },
