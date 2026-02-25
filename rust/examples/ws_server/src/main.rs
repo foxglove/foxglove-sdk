@@ -74,6 +74,7 @@ fn log(counter: u32) {
             }],
             ..Default::default()
         }],
+        ..Default::default()
     });
 
     TF_CHANNEL.log(&FrameTransform {
