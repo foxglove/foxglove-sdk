@@ -58,7 +58,7 @@ jobs:
 
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
-          toolchain: 1.83.0,nightly,stable
+          toolchain: 1.83.0,stable
           cache: false
 
       - uses: Swatinem/rust-cache@v2
@@ -66,6 +66,8 @@ jobs:
           shared-key: "rust-ci"
           cache-workspace-crates: "true"
           save-if: ${{ github.ref == 'refs/heads/main' }}
+
+      - run: rustup toolchain install nightly
 
       - run: cargo build --verbose
       # Validate that we can build each example individually.
