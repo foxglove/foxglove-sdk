@@ -356,6 +356,7 @@ class ImageAnnotations:
         circles: list[CircleAnnotation] | None = None,
         points: list[PointsAnnotation] | None = None,
         texts: list[TextAnnotation] | None = None,
+        metadata: list[KeyValuePair] | None = None,
     ) -> None: ...
     @staticmethod
     def get_schema() -> Schema:

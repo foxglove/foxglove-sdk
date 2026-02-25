@@ -11,10 +11,10 @@
 //!
 //! In this example, we log some point cloud data to one MCAP file, and some minimal metadata to
 //! another.
-use foxglove::messages::{
+use foxglove::schemas::{
     packed_element_field::NumericType, PackedElementField, PointCloud, Pose, Quaternion, Vector3,
 };
-use foxglove::messages::{FrameTransform, FrameTransforms};
+use foxglove::schemas::{FrameTransform, FrameTransforms};
 use foxglove::{Encode, LazyChannel, McapWriter};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;

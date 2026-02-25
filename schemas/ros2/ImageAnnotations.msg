@@ -11,3 +11,6 @@ foxglove_msgs/PointsAnnotation[] points
 
 # Text annotations
 foxglove_msgs/TextAnnotation[] texts
+
+# Additional user-provided metadata associated with the image annotations. Keys must be unique.
+foxglove_msgs/KeyValuePair[] metadata
