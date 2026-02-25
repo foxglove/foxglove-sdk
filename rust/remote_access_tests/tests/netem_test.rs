@@ -11,13 +11,57 @@
 //! impairment via the `NETEM_ARGS` environment variable (see
 //! `docker-compose.netem.yml` for details).
 
+use std::time::Duration;
+
 use anyhow::{Context as _, Result};
 use remote_access_tests::test_helpers::{TestGateway, ViewerConnection};
 use tracing::info;
 use tracing_test::traced_test;
 
 // ===========================================================================
-// Tests
+// Sidecar validation
+// ===========================================================================
+
+/// Verify that the netem sidecar is actually delaying traffic. Without netem,
+/// the LiveKit health endpoint (port 7880) responds in under 5ms. With the
+/// default `NETEM_ARGS` (delay 80ms 20ms), each egress packet is delayed, so
+/// TCP round-trips take noticeably longer.
+///
+/// This is the foundational smoke test: if this fails, the sidecar isn't
+/// working and the other netem tests are meaningless.
+#[traced_test]
+#[ignore]
+#[tokio::test]
+async fn netem_sidecar_adds_measurable_latency() -> Result<()> {
+    let client = reqwest::Client::new();
+
+    // Make several requests and collect response times.
+    let mut durations = Vec::new();
+    for i in 0..5 {
+        let start = tokio::time::Instant::now();
+        let status = client.get("http://localhost:7880").send().await?.status();
+        let elapsed = start.elapsed();
+        assert!(status.is_success(), "health check failed: {status}");
+        info!("request {i}: {elapsed:?}");
+        durations.push(elapsed);
+    }
+
+    // Sort and take the median to filter out outliers.
+    durations.sort();
+    let median = durations[durations.len() / 2];
+
+    // Without netem: <5ms. With default netem (80ms ±20ms): ~80–160ms.
+    // Use a conservative 30ms threshold.
+    assert!(
+        median > Duration::from_millis(30),
+        "netem does not appear active: median response time was only {median:?}"
+    );
+    info!("median response time: {median:?} — netem is working");
+    Ok(())
+}
+
+// ===========================================================================
+// WebRTC under impairment
 // ===========================================================================
 
 /// Verify that a viewer can connect and receive a valid ServerInfo message
