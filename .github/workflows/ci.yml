@@ -76,8 +76,12 @@ jobs:
 
       # Only install the MSRV toolchain before the cache step. Nightly is
       # installed afterward because Swatinem/rust-cache hashes all installed
-      # toolchains into the cache key. Nightly's commit hash changes daily,
-      # so including it would invalidate the entire cache every night. By
+      # toolchains into the cache key (see getRustVersions in config.ts). The
+      # key is computed once at restore time and saved to GitHub Actions state;
+      # the post-job save step reuses it via CacheConfig.fromState() without
+      # recomputing. So toolchains installed after the cache step don't affect
+      # the key. Nightly's commit hash changes daily, so including it before
+      # the cache step would invalidate the entire cache every night. By
       # deferring the install, the cache key stays pinned on the MSRV version
       # and nightly artifacts from earlier same-day runs are still reused.
       - uses: actions-rust-lang/setup-rust-toolchain@v1
