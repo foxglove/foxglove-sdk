@@ -4,7 +4,7 @@ import time
 import foxglove
 from foxglove import Channel
 from foxglove.channels import SceneUpdateChannel
-from foxglove.messages import (
+from foxglove.schemas import (
     Color,
     CubePrimitive,
     SceneEntity,

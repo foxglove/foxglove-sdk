@@ -1,5 +1,5 @@
 use bytes::BytesMut;
-use foxglove::messages::{Log, Point3, Pose, Quaternion, Timestamp, Vector3};
+use foxglove::schemas::{Log, Point3, Pose, Quaternion, Timestamp, Vector3};
 use foxglove::Encode;
 use prost::Message;
 use prost_reflect::DescriptorPool;
@@ -35,7 +35,7 @@ fn test_nested_foxglove_log() {
     let test_struct = MessageWithLog {
         log: Log {
             timestamp: Some(Timestamp::new(1234567890, 123456789)),
-            level: foxglove::messages::log::Level::Info as i32,
+            level: foxglove::schemas::log::Level::Info as i32,
             message: "Hello from nested log".to_string(),
             name: "test".to_string(),
             file: "test.rs".to_string(),
@@ -151,7 +151,7 @@ fn test_optional_foxglove_log() {
     let test_struct = MessageWithOptionalLog {
         log: Some(Log {
             timestamp: None,
-            level: foxglove::messages::log::Level::Warning as i32,
+            level: foxglove::schemas::log::Level::Warning as i32,
             message: "Warning!".to_string(),
             name: "".to_string(),
             file: "".to_string(),

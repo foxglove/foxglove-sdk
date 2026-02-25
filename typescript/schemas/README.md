@@ -1,25 +1,18 @@
 # @foxglove/schemas
 
-> **Deprecated**: This package has been renamed to [`@foxglove/messages`](https://www.npmjs.com/package/@foxglove/messages). Please update your dependencies and imports.
+This package contains TypeScript type definitions and JSON Schemas for the Foxglove schemas.
 
-This package re-exports everything from `@foxglove/messages` for backward compatibility.
+## Installation
 
-## Migration
-
-1. Update your package.json:
-
-```diff
-- "@foxglove/schemas": "^1.9.0"
-+ "@foxglove/messages": "^1.9.0"
+```bash
+npm install @foxglove/schemas
 ```
 
-2. Update your imports:
+## Usage
 
-```diff
-- import { CompressedImage } from "@foxglove/schemas";
-+ import { CompressedImage } from "@foxglove/messages";
+For a list of available schemas, see https://docs.foxglove.dev/docs/visualization/message-schemas/introduction
+
+```ts
+import type { CompressedImage } from '@foxglove/schemas';
+import { CompressedImage } from '@foxglove/schemas/jsonschema';
 ```
-
-## Why the rename?
-
-The package was renamed from `@foxglove/schemas` to `@foxglove/messages` to better reflect that these are **message type definitions**, not schema format files. Schema formats (like JSON Schema or Protobuf `.proto` files) remain in the `schemas/` directory of the repository.

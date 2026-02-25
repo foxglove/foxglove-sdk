@@ -1,7 +1,5 @@
 /**
- * Tests for the deprecated @foxglove/schemas package.
- *
- * This package re-exports everything from @foxglove/messages for backward compatibility.
+ * Tests that `@foxglove/schemas` re-exports everything from `@foxglove/messages`.
  */
 
 import * as messages from "@foxglove/messages";
@@ -37,7 +35,7 @@ export type SceneUpdateTypeIsReexported = AssertType<
 export type PointCloudTypeIsReexported = AssertType<IsEqual<SchemasPointCloud, MessagesPointCloud>>;
 
 // Runtime tests
-describe("@foxglove/schemas backward compatibility", () => {
+describe("@foxglove/schemas re-exports", () => {
   it("re-exports all named exports from @foxglove/messages", () => {
     const messageExports = messages as Record<string, unknown>;
     const schemaExports = schemas as Record<string, unknown>;

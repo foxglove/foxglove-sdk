@@ -6,7 +6,7 @@ import time
 
 import foxglove
 from foxglove.channels import RawImageChannel
-from foxglove.messages import (
+from foxglove.schemas import (
     FrameTransform,
     FrameTransforms,
     Quaternion,

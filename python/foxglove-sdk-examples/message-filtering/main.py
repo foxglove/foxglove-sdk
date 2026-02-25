@@ -6,7 +6,7 @@ from math import cos, sin
 import foxglove
 import foxglove.channels
 from foxglove import ChannelDescriptor
-from foxglove.messages import (
+from foxglove.schemas import (
     FrameTransform,
     FrameTransforms,
     PackedElementField,

@@ -102,15 +102,15 @@ Visit [Foxglove SDK Docs](https://docs.foxglove.dev/sdk) to get started.
 <tr>
 <td>
 
-[@foxglove/messages](./typescript/messages)
+[@foxglove/schemas](./typescript/schemas)
 
 </td>
 <td>
 
-[![npm version](https://img.shields.io/npm/v/@foxglove/messages)](https://www.npmjs.com/package/@foxglove/messages)
+[![npm version](https://img.shields.io/npm/v/@foxglove/schemas)](https://www.npmjs.com/package/@foxglove/schemas)
 
 </td>
-<td>Foxglove message types for TypeScript</td>
+<td>Foxglove schemas for TypeScript</td>
 </tr>
 
 <tr><td><strong>Other</strong></td><td></td><td></td></tr>
