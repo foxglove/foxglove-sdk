@@ -56,7 +56,10 @@ impl SessionState {
     /// Removes a participant and all of its subscriptions.
     ///
     /// Returns channel IDs that lost their last subscriber (now have zero subscribers).
-    pub fn remove_participant(&mut self, identity: &ParticipantIdentity) -> SmallVec<[ChannelId; 4]> {
+    pub fn remove_participant(
+        &mut self,
+        identity: &ParticipantIdentity,
+    ) -> SmallVec<[ChannelId; 4]> {
         if self.participants.remove(identity).is_none() {
             return SmallVec::new();
         }
@@ -178,9 +181,7 @@ impl SessionState {
     /// Returns the number of subscribers for a channel.
     #[cfg(test)]
     pub fn get_subscriber_count(&self, channel_id: &ChannelId) -> usize {
-        self.subscriptions
-            .get(channel_id)
-            .map_or(0, |s| s.len())
+        self.subscriptions.get(channel_id).map_or(0, |s| s.len())
     }
 
     /// Returns the number of advertised channels.

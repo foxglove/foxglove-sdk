@@ -459,7 +459,10 @@ impl RemoteAccessSession {
             ParticipantWriter::Livekit(stream),
         ));
 
-        Ok(self.state.write().insert_participant(participant_id, participant))
+        Ok(self
+            .state
+            .write()
+            .insert_participant(participant_id, participant))
     }
 
     /// Remove a participant from the session, cleaning up its subscriptions.
