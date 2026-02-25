@@ -46,7 +46,7 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
         with:
-          shared-key: "python-sdk"
+          shared-key: "rust-ci"
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Install common dependencies
@@ -362,7 +362,7 @@ jobs:
           cache: false
       - uses: Swatinem/rust-cache@v2
         with:
-          shared-key: "python-sdk"
+          shared-key: "rust-ci"
           save-if: ${{ github.ref == 'refs/heads/main' }}
       - uses: astral-sh/setup-uv@v7
       - run: corepack enable
@@ -438,7 +438,7 @@ jobs:
           cache: false
       - uses: Swatinem/rust-cache@v2
         with:
-          shared-key: "python-sdk"
+          shared-key: "rust-ci"
           save-if: ${{ github.ref == 'refs/heads/main' }}
       - uses: actions/setup-python@v6
         with:
