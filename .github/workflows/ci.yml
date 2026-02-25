@@ -16,7 +16,7 @@ jobs:
 
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
-          toolchain: nightly,stable
+          toolchain: stable
           components: rustfmt, clippy
           cache: false
 
@@ -40,10 +40,6 @@ jobs:
         run: cargo run --bin foxglove_proto_gen && git diff --exit-code
 
       - run: cargo clippy --no-deps --all-targets --tests -- -D warnings
-      - run: cargo +nightly rustdoc -p foxglove --all-features -- -D warnings --cfg docsrs
-      - run: "[ -d ./target/doc/foxglove ] || exit 1"
-      - name: Check for ws-protocol references in public docs
-        run: '! grep -R "foxglove/ws-protocol" ./target/doc/foxglove'
 
   rust-test:
     runs-on: ubuntu-latest
@@ -62,7 +58,7 @@ jobs:
 
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
-          toolchain: 1.83.0,stable
+          toolchain: 1.83.0,nightly,stable
           cache: false
 
       - uses: Swatinem/rust-cache@v2
@@ -87,6 +83,10 @@ jobs:
       - run: cargo build -p foxglove --verbose --no-default-features
       # Validate that we can build against the MSRV (minimum specified rust version).
       - run: cargo +1.83.0 build -p foxglove --verbose
+      - run: cargo +nightly rustdoc -p foxglove --all-features -- -D warnings --cfg docsrs
+      - run: "[ -d ./target/doc/foxglove ] || exit 1"
+      - name: Check for ws-protocol references in public docs
+        run: '! grep -R "foxglove/ws-protocol" ./target/doc/foxglove'
       - run: cargo test --all-features --verbose
         timeout-minutes: 5
       - run: cargo test -p foxglove --no-default-features --verbose
