@@ -182,6 +182,7 @@ impl Sink for RemoteAccessSession {
         }
 
         self.teardown_video_track(channel_id);
+        self.state.write().remove_video_schema(&channel_id);
 
         let unadvertise = Unadvertise::new([u64::from(channel_id)]);
         let framed = frame_text_message(unadvertise.to_string().as_bytes());
@@ -646,13 +647,13 @@ impl RemoteAccessSession {
         }
     }
 
-    /// Clean up video state for a single channel: remove publisher, remove and unpublish track.
+    /// Clean up video runtime state for a single channel: remove publisher, remove and unpublish
+    /// track. Does not remove the video schema, which persists for the lifetime of the channel.
     ///
     /// Caller must hold `subscription_lock`.
     fn teardown_video_track(&self, channel_id: ChannelId) {
         let sid = {
             let mut state = self.state.write();
-            state.remove_video_schema(&channel_id);
             // Removing the publisher drops it, which closes the mpsc channel and
             // terminates the background processing task.
             state.remove_video_publisher(&channel_id);
