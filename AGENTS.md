@@ -48,8 +48,9 @@ The core SDK is written in Rust, with bindings for Python and C/C++, plus TypeSc
 - **Rust** - Core SDK implementation; Cargo workspace at the repo root
 - **Python** - PyO3 bindings; managed with `uv`; type-checked with `mypy`; formatted with `black` + `isort`; linted with `flake8`
 - **C/C++** - FFI layer (C) and idiomatic wrapper (C++); built with CMake + `cargo` (via `corrosion`)
-- **TypeScript** - Schema definitions only; managed with `yarn`; tested with `jest`
+- **TypeScript** - Schema definitions, codegen, and CI scripts; managed with `yarn`; tested with `jest`
 - **Schemas** - Protobuf, Flatbuffers, JSON Schema, OMG IDL, ROS 1/2 message definitions; generated via `make generate`
+  - The schemas are defined in `typescript/schemas/src/internal/schemas.ts`
 
 ## High-level Architecture
 
@@ -91,10 +92,10 @@ The core SDK is written in Rust, with bindings for Python and C/C++, plus TypeSc
 
 - Build with CMake; the C layer is generated from Rust via `cbindgen`, if the `c/` project is changed, use `cd c; cargo build` to regenerate it.
 - The C++ layer depends on the C layer.
-- Prior to committing C++ changes or considering them completed run:
-  `make lint-fix`
-  `CLANG_TIDY=1 make build`
-  `make test`
+- Prior to committing C++ changes or considering them completed run from the repo root:
+  `make lint-fix-cpp`
+  `make build-cpp-tidy`
+  `make test-cpp`
 - Tests use Catch2 (v3)
 - C++ code should use modern C++17 idioms where applicable, that's the oldest version we need to support
 
@@ -160,11 +161,4 @@ The core SDK is written in Rust, with bindings for Python and C/C++, plus TypeSc
 - Commit messages must be descriptive
 - Write tests for new features and bug fixes
 - Run the checks, formatting, and lints for the relevant language(s) specified in this file.
-  - **Before pushing**, run applicable tests and auto-fixes on changed files so trivial lint/format fixes do not require a follow-up push
-
-### Development Tools
-
-- **Rust**: use `cargo` for building, testing, and dependency management
-- **Python**: use `uv` (not `pip` directly) to manage dependencies and run commands; pin dependency versions
-- **TypeScript**: use `yarn` (v2+), not `npm`; pin dependency versions
-- **Schema generation**: run `make generate` after modifying schema source files
+  - **Before pushing**, run applicable tests and auto-fixes on changed files
