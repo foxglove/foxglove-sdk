@@ -23,9 +23,13 @@ use tracing_test::traced_test;
 // ===========================================================================
 
 /// Verify that the netem sidecar is actually delaying traffic. Without netem,
-/// the LiveKit health endpoint (port 7880) responds in under 5ms. With the
-/// default `NETEM_ARGS` (delay 80ms 20ms), each egress packet is delayed, so
-/// TCP round-trips take noticeably longer.
+/// the LiveKit health endpoint (port 7880) responds in under 5ms. With netem
+/// delay configured, each egress packet is delayed, so TCP round-trips take
+/// noticeably longer.
+///
+/// The threshold is derived from the `NETEM_ARGS` environment variable (the
+/// same one that drives the sidecar). If `NETEM_ARGS` contains no `delay`
+/// keyword, the latency assertion is skipped.
 ///
 /// This is the foundational smoke test: if this fails, the sidecar isn't
 /// working and the other netem tests are meaningless.
@@ -33,6 +37,25 @@ use tracing_test::traced_test;
 #[ignore]
 #[tokio::test]
 async fn netem_sidecar_adds_measurable_latency() -> Result<()> {
+    // Read the same env var the compose sidecar uses, falling back to the
+    // default defined in docker-compose.netem.yml.
+    let netem_args =
+        std::env::var("NETEM_ARGS").unwrap_or_else(|_| "delay 80ms 20ms loss 2%".into());
+    info!("NETEM_ARGS: {netem_args}");
+
+    // Parse the delay value (in ms) from NETEM_ARGS. Format is "delay <N>ms ...".
+    let configured_delay_ms: Option<u64> = netem_args
+        .split_whitespace()
+        .zip(netem_args.split_whitespace().skip(1))
+        .find(|(key, _)| *key == "delay")
+        .and_then(|(_, val)| val.strip_suffix("ms")?.parse().ok());
+
+    if configured_delay_ms.is_none() {
+        info!("no delay configured in NETEM_ARGS — skipping latency assertion");
+        return Ok(());
+    }
+    let delay_ms = configured_delay_ms.unwrap();
+
     let client = reqwest::Client::new();
 
     // Make several requests and collect response times.
@@ -50,13 +73,15 @@ async fn netem_sidecar_adds_measurable_latency() -> Result<()> {
     durations.sort();
     let median = durations[durations.len() / 2];
 
-    // Without netem: <5ms. With default netem (80ms ±20ms): ~80–160ms.
-    // Use a conservative 30ms threshold.
+    // Use 1/3 of the configured delay as a conservative threshold. Without
+    // netem this endpoint responds in <1ms, so any real delay is detectable.
+    let threshold = Duration::from_millis(delay_ms / 3);
     assert!(
-        median > Duration::from_millis(30),
-        "netem does not appear active: median response time was only {median:?}"
+        median > threshold,
+        "netem does not appear active: median response time was {median:?}, \
+         expected >{threshold:?} (configured delay: {delay_ms}ms)"
     );
-    info!("median response time: {median:?} — netem is working");
+    info!("median response time: {median:?} (threshold: {threshold:?}) — netem is working");
     Ok(())
 }
 
