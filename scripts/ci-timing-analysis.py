@@ -241,83 +241,54 @@ def main():
             vals_str = ", ".join(f"{v:.0f}" for v in values)
             print(f"| {key} | {fmt_stat(values)} | {fmt_dur(mn)} | {fmt_dur(mx)} | [{vals_str}] |")
 
-        # Model layouts using mean values
-        S = step_means["setup"]
+        # Each layout is a list of (job_name, [step_keys_in_job]).
+        # Every job implicitly includes "setup" overhead.
+        LAYOUTS = {
+            "Monolithic (1 job)": {
+                "rust": ["fmt", "proto_gen", "clippy", "build", "build_examples",
+                         "build_no_def", "msrv", "nightly_doc", "test_all", "test_no_def"],
+            },
+            "rust-lint + rust-test (current, 2 jobs)": {
+                "rust-lint": ["fmt", "proto_gen", "clippy"],
+                "rust-test": ["build", "build_examples", "build_no_def", "msrv",
+                              "nightly_doc", "test_all", "test_no_def"],
+            },
+            "rust-stable + rust-compat (2 jobs)": {
+                "rust-stable": ["fmt", "proto_gen", "clippy", "build", "build_examples",
+                                "build_no_def", "test_all", "test_no_def"],
+                "rust-compat": ["msrv", "nightly_doc"],
+            },
+            "rust-lint + rust-test + rust-compat (3 jobs)": {
+                "rust-lint": ["fmt", "proto_gen", "clippy"],
+                "rust-test": ["build", "build_examples", "build_no_def",
+                              "test_all", "test_no_def"],
+                "rust-compat": ["msrv", "nightly_doc"],
+            },
+        }
 
-        d = step_means
-        d_fmt = d.get("fmt", 0)
-        d_proto = d.get("proto_gen", 0)
-        d_clippy = d.get("clippy", 0)
-        d_build = d.get("build", 0)
-        d_examples = d.get("build_examples", 0)
-        d_no_def = d.get("build_no_def", 0)
-        d_msrv = d.get("msrv", 0)
-        d_nightly = d.get("nightly_doc", 0)
-        d_test_all = d.get("test_all", 0)
-        d_test_no_def = d.get("test_no_def", 0)
+        def job_time(timings, steps_in_job):
+            return timings.get("setup", 0) + sum(timings.get(s, 0) for s in steps_in_job)
 
-        layouts = [
-            ("Monolithic (1 job)", [
-                ("rust", S + d_fmt + d_proto + d_build + d_examples + d_no_def +
-                 d_msrv + d_clippy + d_nightly + d_test_all + d_test_no_def),
-            ]),
-            ("rust-lint + rust-test (current, 2 jobs)", [
-                ("rust-lint", S + d_fmt + d_proto + d_clippy),
-                ("rust-test", S + d_build + d_examples + d_no_def + d_msrv +
-                 d_nightly + d_test_all + d_test_no_def),
-            ]),
-            ("rust-stable + rust-compat (2 jobs)", [
-                ("rust-stable", S + d_fmt + d_proto + d_build + d_examples +
-                 d_no_def + d_clippy + d_test_all + d_test_no_def),
-                ("rust-compat", S + d_msrv + d_nightly),
-            ]),
-            ("rust-lint + rust-test + rust-compat (3 jobs)", [
-                ("rust-lint", S + d_fmt + d_proto + d_clippy),
-                ("rust-test", S + d_build + d_examples + d_no_def +
-                 d_test_all + d_test_no_def),
-                ("rust-compat", S + d_msrv + d_nightly),
-            ]),
-        ]
-
+        # Layout comparison using mean values
         print(f"\n## Layout comparison (using mean step durations)\n")
         print("| Layout | Per-job times | Wall clock | Runners |")
         print("|--------|---------------|------------|---------|")
-        for name, jobs in layouts:
-            wall = max(t for _, t in jobs)
-            job_strs = ", ".join(f"{jn}={t/60:.1f}m" for jn, t in jobs)
-            print(f"| {name} | {job_strs} | **{wall/60:.1f}m** | {len(jobs)} |")
+        for layout_name, jobs in LAYOUTS.items():
+            job_times = {jn: job_time(step_means, steps) for jn, steps in jobs.items()}
+            wall = max(job_times.values())
+            job_strs = ", ".join(f"{jn}={t/60:.1f}m" for jn, t in job_times.items())
+            print(f"| {layout_name} | {job_strs} | **{wall/60:.1f}m** | {len(jobs)} |")
 
-        # Also compute layout wall-clock per-run to get stddev of wall clock
+        # Per-run wall-clock distribution
         print(f"\n## Layout wall-clock distribution (per-run)\n")
         print("| Layout | Mean ± StdDev | Values |")
         print("|--------|---------------|--------|")
 
-        for layout_name, layout_jobs in layouts:
+        for layout_name, jobs in LAYOUTS.items():
             per_run_walls = []
             for t in group:
-                S_r = t.get("setup", 0)
-                d_r = {k: t.get(k, 0) for k in step_keys}
-
-                job_times = []
-                for jname, _ in layout_jobs:
-                    if jname == "rust":
-                        jt = S_r + sum(d_r.get(k, 0) for k in step_keys)
-                    elif jname == "rust-lint":
-                        jt = S_r + d_r.get("fmt", 0) + d_r.get("proto_gen", 0) + d_r.get("clippy", 0)
-                    elif jname == "rust-test" and len(layout_jobs) == 2:
-                        jt = S_r + d_r.get("build", 0) + d_r.get("build_examples", 0) + d_r.get("build_no_def", 0) + d_r.get("msrv", 0) + d_r.get("nightly_doc", 0) + d_r.get("test_all", 0) + d_r.get("test_no_def", 0)
-                    elif jname == "rust-test" and len(layout_jobs) == 3:
-                        jt = S_r + d_r.get("build", 0) + d_r.get("build_examples", 0) + d_r.get("build_no_def", 0) + d_r.get("test_all", 0) + d_r.get("test_no_def", 0)
-                    elif jname == "rust-stable":
-                        jt = S_r + d_r.get("fmt", 0) + d_r.get("proto_gen", 0) + d_r.get("build", 0) + d_r.get("build_examples", 0) + d_r.get("build_no_def", 0) + d_r.get("clippy", 0) + d_r.get("test_all", 0) + d_r.get("test_no_def", 0)
-                    elif jname == "rust-compat":
-                        jt = S_r + d_r.get("msrv", 0) + d_r.get("nightly_doc", 0)
-                    else:
-                        jt = 0
-                    job_times.append(jt)
-
-                per_run_walls.append(max(job_times))
-
+                wall = max(job_time(t, steps) for steps in jobs.values())
+                per_run_walls.append(wall)
             vals_str = ", ".join(f"{v/60:.1f}" for v in per_run_walls)
             print(f"| {layout_name} | {mean(per_run_walls)/60:.1f}m ± {stdev(per_run_walls)/60:.1f}m | [{vals_str}] min |")
 
