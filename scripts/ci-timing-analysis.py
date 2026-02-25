@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 """
-Analyze CI build step timings and model the wall-clock impact of different
-job layouts.
+Analyze end-to-end CI timing across all workflows triggered by a push.
+
+Fetches job-level start/end times from every workflow, computes per-workflow
+and overall wall-clock and runner-minutes, and models the impact of ci.yml
+layout changes on the full CI flow.
 
 Usage:
-    python3 scripts/ci-timing-analysis.py [--run-ids ID1 ID2 ...] [--limit N]
+    python3 scripts/ci-timing-analysis.py [--limit N]
 
-If run IDs are not provided, the script finds recent successful runs on main
-automatically. Requires `gh` CLI to be authenticated.
+Requires `gh` CLI to be authenticated.
 """
 import argparse
 import json
@@ -15,17 +17,23 @@ import re
 import statistics
 import subprocess
 import sys
-from datetime import datetime
+from collections import defaultdict
+from datetime import datetime, timezone
 
 
-# Workflows and the job names to look for in each.
-WORKFLOWS = {
-    "ci.yml": ["rust", "rust-compat", "rust-lint", "rust-test"],
-    "remote-access-tests.yml": ["test"],
-}
+# All workflows that trigger on push-to-main / PR.
+ALL_WORKFLOWS = [
+    "ci.yml",
+    "python.yml",
+    "c_cpp.yml",
+    "cpp_data_loader.yml",
+    "remote-access-tests.yml",
+    "docs.yml",
+    "ros.yml",
+]
 
-# Canonical step names, matched by prefix against the run command.
-STEP_KEYS = [
+# ci.yml step prefixes for detailed modeling of layout options.
+CI_STEP_KEYS = [
     ("fmt",            "cargo fmt"),
     ("proto_gen",      "cargo run --bin foxglove_proto_gen"),
     ("clippy",         "cargo clippy"),
@@ -36,29 +44,25 @@ STEP_KEYS = [
     ("nightly_doc",    "cargo +nightly"),
     ("test_all",       "cargo test --all"),
     ("test_no_def",    "cargo test -p foxglove"),
-    ("docker_up",      "docker compose up"),
-    ("ra_test_lk",     "cargo test -p remote_access_tests -- --ignored livekit_"),
-    ("ra_test_auth",   "cargo test -p remote_access_tests -- --ignored auth_"),
-    ("docker_down",    "docker compose down"),
 ]
 
-# Each layout maps job names to the steps that run in that job.
-# Every job implicitly includes one "setup" overhead.
-LAYOUTS = {
-    "Monolithic (1 job)": {
+# ci.yml layout options. Each maps job names to step keys.
+# Every job implicitly pays one "setup" overhead.
+CI_LAYOUTS = {
+    "monolithic (1 job)": {
         "rust": [
             "fmt", "proto_gen", "clippy", "build", "build_examples",
             "build_no_def", "msrv", "nightly_doc", "test_all", "test_no_def",
         ],
     },
-    "rust + rust-compat (current, 2 jobs)": {
+    "rust + rust-compat (current)": {
         "rust": [
             "fmt", "proto_gen", "clippy", "build", "build_examples",
             "build_no_def", "test_all", "test_no_def",
         ],
         "rust-compat": ["msrv", "nightly_doc"],
     },
-    "rust-lint + rust-test + rust-compat (3 jobs)": {
+    "rust-lint + rust-test + rust-compat": {
         "rust-lint": ["fmt", "proto_gen", "clippy"],
         "rust-test": [
             "build", "build_examples", "build_no_def",
@@ -66,15 +70,6 @@ LAYOUTS = {
         ],
         "rust-compat": ["msrv", "nightly_doc"],
     },
-}
-
-# Same layouts but with remote-access-tests as a separate parallel job.
-LAYOUTS_WITH_RA = {
-    f"{name} + remote-access": {
-        **jobs,
-        "remote-access": ["docker_up", "ra_test_lk", "ra_test_auth", "docker_down"],
-    }
-    for name, jobs in LAYOUTS.items()
 }
 
 
@@ -94,34 +89,85 @@ def gh(*args):
     return r.stdout.strip()
 
 
-def find_run_ids(workflow, limit):
+def find_push_events(limit):
+    """Find recent pushes to main by looking at ci.yml runs (always triggers)."""
     raw = gh(
-        "run", "list", "--workflow", workflow, "--branch", "main",
-        "--limit", str(limit * 3),
+        "run", "list", "--workflow", "ci.yml", "--branch", "main",
+        "--limit", str(limit * 2),
+        "--json", "databaseId,conclusion,headSha,startedAt",
+    )
+    if not raw:
+        return []
+    runs = json.loads(raw)
+    seen = set()
+    pushes = []
+    for r in runs:
+        if r["conclusion"] == "success" and r["headSha"] not in seen:
+            seen.add(r["headSha"])
+            pushes.append({
+                "sha": r["headSha"],
+                "started": r["startedAt"],
+            })
+    return pushes[:limit]
+
+
+def get_workflow_jobs(sha, workflow):
+    """Get all jobs for a workflow triggered by a specific commit."""
+    raw = gh(
+        "run", "list", "--workflow", workflow, "--commit", sha,
         "--json", "databaseId,conclusion",
     )
     if not raw:
         return []
     runs = json.loads(raw)
-    return [r["databaseId"] for r in runs if r["conclusion"] == "success"][:limit]
+    if not runs:
+        return []
 
-
-def get_job_id(run_id, job_name):
+    run_id = runs[0]["databaseId"]
     raw = gh(
+        "run", "view", str(run_id), "--json", "jobs",
+        "--jq", ".jobs[]",
+    )
+    if not raw:
+        return []
+
+    jobs = []
+    for line in raw.split("\n"):
+        if not line.strip():
+            continue
+        try:
+            job = json.loads(line)
+            jobs.append(job)
+        except json.JSONDecodeError:
+            pass
+
+    if not jobs:
+        raw2 = gh("run", "view", str(run_id), "--json", "jobs")
+        if raw2:
+            data = json.loads(raw2)
+            jobs = data.get("jobs", [])
+
+    return jobs
+
+
+def parse_ts(ts_str):
+    if not ts_str:
+        return None
+    return datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
+
+
+def parse_ci_step_log(run_id, job_name):
+    """Parse step-level timings from ci.yml job logs for layout modeling."""
+    job_id_raw = gh(
         "run", "view", str(run_id), "--json", "jobs", "--jq",
         f'.jobs[] | select(.name=="{job_name}") | .databaseId',
     )
-    return raw if raw else None
+    if not job_id_raw:
+        return None
 
-
-def parse_job_log(run_id, job_name):
-    job_id = get_job_id(run_id, job_name)
-    if not job_id:
-        return None, None
-
-    raw = gh("run", "view", str(run_id), "--log", "--job", job_id)
+    raw = gh("run", "view", str(run_id), "--log", "--job", job_id_raw)
     if not raw:
-        return None, None
+        return None
 
     ts_re = re.compile(r"(\d{4}-\d{2}-\d{2}T[\d:.]+)Z")
 
@@ -144,202 +190,251 @@ def parse_job_log(run_id, job_name):
             entries.append((ts, step_name))
 
     steps = {}
+    setup_total = 0.0
     for i in range(len(entries)):
         name = entries[i][1]
         start = entries[i][0]
         end = entries[i + 1][0] if i + 1 < len(entries) else last_ts
         duration = (end - start).total_seconds()
-        steps[name] = duration
 
-    return steps, cache_hit
-
-
-def extract_timings(run_ids_by_workflow):
-    """Extract canonical step timings from paired workflow runs."""
-    all_raw_steps = {}
-    cache_hit = None
-
-    for workflow, run_id in run_ids_by_workflow.items():
-        job_names = WORKFLOWS[workflow]
-        for job_name in job_names:
-            raw, hit = parse_job_log(run_id, job_name)
-            if raw:
-                all_raw_steps.update(raw)
-                if hit is not None:
-                    cache_hit = hit
-
-    if not all_raw_steps:
-        return None
-
-    matched = {}
-    setup_total = 0.0
-
-    for raw_name, duration in all_raw_steps.items():
-        found = False
-        for key, prefix in STEP_KEYS:
-            if raw_name.strip().startswith(prefix):
-                matched[key] = duration
-                found = True
+        matched = False
+        for key, prefix in CI_STEP_KEYS:
+            if name.strip().startswith(prefix):
+                steps[key] = duration
+                matched = True
                 break
 
-        if not found:
-            rn = raw_name.lower()
-            is_setup = any(kw in rn for kw in [
+        if not matched:
+            rn = name.lower()
+            if any(kw in rn for kw in [
                 "checkout", "setup-", "common-deps", "protoc", "rust-cache",
                 "rust-toolchain", "rustup", "corepack", "actions/",
                 "apt-get", "sudo ", "swatinem", "not all versions",
                 "construct rustup", "add-matcher", "command -v rustup",
                 "grep -r", "! grep",
-            ])
-            if is_setup:
+            ]):
                 setup_total += duration
 
-    matched["setup"] = setup_total
-    matched["cache_hit"] = cache_hit
-    return matched
-
-
-def fmt_dur(seconds):
-    if seconds >= 60:
-        return f"{int(seconds // 60)}m {seconds % 60:.0f}s"
-    return f"{seconds:.1f}s"
+    steps["setup"] = setup_total
+    steps["cache_hit"] = cache_hit
+    return steps
 
 
 def fmt_stat(values):
     m = statistics.mean(values)
     s = statistics.stdev(values) if len(values) >= 2 else 0
-    return f"{m:.1f} ± {s:.1f}"
+    return f"{m/60:.1f}m ± {s/60:.1f}m"
 
 
-def job_time(timings, steps_in_job):
-    # Each job pays one setup overhead. This uses the average setup time observed
-    # across all jobs in the run as an approximation.
+def ci_job_time(timings, steps_in_job):
+    # Each job pays one setup overhead (approximated as the average observed).
     return timings.get("setup", 0) + sum(timings.get(s, 0) for s in steps_in_job)
 
 
-def analyze_layouts(group, all_layouts, step_keys):
-    """Compute wall-clock and total runner-minutes for each layout across runs."""
-    results = {}
-    for layout_name, jobs in all_layouts.items():
-        per_run_walls = []
-        per_run_total_runner = []
-        for t in group:
-            job_times = {jn: job_time(t, steps) for jn, steps in jobs.items()}
-            per_run_walls.append(max(job_times.values()))
-            per_run_total_runner.append(sum(job_times.values()))
-        results[layout_name] = {
-            "jobs": jobs,
-            "wall": per_run_walls,
-            "runner": per_run_total_runner,
-        }
-    return results
-
-
-def print_layout_table(results):
-    print("| Layout | Runners | Wall clock (mean ± sd) | Runner-minutes (mean ± sd) |")
-    print("|--------|---------|------------------------|---------------------------|")
-    for layout_name, data in results.items():
-        n_runners = len(data["jobs"])
-        wall = data["wall"]
-        runner = data["runner"]
-        wall_m = statistics.mean(wall)
-        wall_s = statistics.stdev(wall) if len(wall) >= 2 else 0
-        runner_m = statistics.mean(runner)
-        runner_s = statistics.stdev(runner) if len(runner) >= 2 else 0
-        print(f"| {layout_name} | {n_runners} | "
-              f"{wall_m/60:.1f}m ± {wall_s/60:.1f}m | "
-              f"{runner_m/60:.1f}m ± {runner_s/60:.1f}m |")
-
-
 def main():
-    parser = argparse.ArgumentParser(description="Analyze CI timing across multiple runs")
-    parser.add_argument("--run-ids", type=int, nargs="+",
-                        help="Specific CI run IDs to analyze")
-    parser.add_argument("--ra-run-ids", type=int, nargs="+",
-                        help="Specific remote-access-tests run IDs (paired 1:1 with --run-ids)")
-    parser.add_argument("--limit", type=int, default=8,
-                        help="Number of recent runs to fetch (default: 8)")
+    parser = argparse.ArgumentParser(description="Analyze end-to-end CI timing")
+    parser.add_argument("--limit", type=int, default=10,
+                        help="Number of recent pushes to analyze (default: 10)")
     args = parser.parse_args()
 
-    if args.run_ids:
-        ci_run_ids = args.run_ids
-        ra_run_ids = args.ra_run_ids or []
-    else:
-        print(f"Finding up to {args.limit} recent successful runs on main...\n")
-        ci_run_ids = find_run_ids("ci.yml", args.limit)
-        ra_run_ids = find_run_ids("remote-access-tests.yml", args.limit)
-
-    if not ci_run_ids:
-        print("No CI runs found.", file=sys.stderr)
+    print(f"Finding {args.limit} recent pushes to main...\n")
+    pushes = find_push_events(args.limit)
+    if not pushes:
+        print("No pushes found.", file=sys.stderr)
         sys.exit(1)
 
-    # Pair CI and remote-access runs by proximity (they trigger on the same push)
-    ra_remaining = list(ra_run_ids)
-    paired = []
-    for ci_id in ci_run_ids:
-        best_ra = None
-        if ra_remaining:
-            best_ra = min(ra_remaining, key=lambda ra: abs(ra - ci_id))
-            if abs(best_ra - ci_id) < 100:
-                ra_remaining.remove(best_ra)
-            else:
-                best_ra = None
-        paired.append((ci_id, best_ra))
+    # For each push, gather timing from all workflows
+    all_push_data = []
 
-    print(f"Analyzing {len(paired)} run pairs:\n")
+    for push in pushes:
+        sha = push["sha"]
+        push_data = {"sha": sha[:8], "workflows": {}}
 
-    all_timings = []
-    step_keys = [k for k, _ in STEP_KEYS]
+        for wf in ALL_WORKFLOWS:
+            jobs = get_workflow_jobs(sha, wf)
+            if not jobs:
+                continue
 
-    for ci_id, ra_id in paired:
-        workflows = {"ci.yml": ci_id}
-        if ra_id:
-            workflows["remote-access-tests.yml"] = ra_id
+            wf_jobs = []
+            for job in jobs:
+                started = parse_ts(job.get("startedAt"))
+                completed = parse_ts(job.get("completedAt"))
+                if not started or not completed:
+                    continue
+                duration = (completed - started).total_seconds()
+                wf_jobs.append({
+                    "name": job["name"],
+                    "duration": duration,
+                    "conclusion": job.get("conclusion", "?"),
+                    "started": started,
+                    "completed": completed,
+                })
 
-        t = extract_timings(workflows)
-        if t:
-            all_timings.append(t)
-            status = "HIT" if t["cache_hit"] else "MISS" if t["cache_hit"] is False else "?"
-            ra_str = f" + ra:{ra_id}" if ra_id else ""
-            print(f"  ci:{ci_id}{ra_str}: cache {status}")
-        else:
-            print(f"  ci:{ci_id}: failed to parse")
+            if wf_jobs:
+                earliest = min(j["started"] for j in wf_jobs)
+                latest = max(j["completed"] for j in wf_jobs)
+                push_data["workflows"][wf] = {
+                    "jobs": wf_jobs,
+                    "wall": (latest - earliest).total_seconds(),
+                    "runner_total": sum(j["duration"] for j in wf_jobs),
+                }
 
-    if not all_timings:
-        print("No timing data collected.", file=sys.stderr)
+        # Get ci.yml step-level detail for layout modeling
+        ci_run_raw = gh(
+            "run", "list", "--workflow", "ci.yml", "--commit", sha,
+            "--json", "databaseId",
+        )
+        if ci_run_raw:
+            ci_runs = json.loads(ci_run_raw)
+            if ci_runs:
+                ci_run_id = ci_runs[0]["databaseId"]
+                for job_name in ["rust", "rust-compat", "rust-lint", "rust-test"]:
+                    steps = parse_ci_step_log(ci_run_id, job_name)
+                    if steps:
+                        push_data["ci_steps"] = steps
+                        break
+
+        if push_data["workflows"]:
+            all_push_data.append(push_data)
+            print(f"  {sha[:8]}: {len(push_data['workflows'])} workflows")
+
+    if not all_push_data:
+        print("No data collected.", file=sys.stderr)
         sys.exit(1)
 
-    hits = [t for t in all_timings if t.get("cache_hit") is True]
-    misses = [t for t in all_timings if t.get("cache_hit") is False]
+    # === Section 1: Per-workflow wall clock ===
+    print(f"\n{'='*70}")
+    print(f"# Per-workflow wall clock (n={len(all_push_data)} pushes)")
+    print(f"{'='*70}\n")
 
-    for group_label, group in [("Cache HIT", hits), ("Cache MISS", misses)]:
+    print("| Workflow | Wall clock (mean ± sd) | Runner-min (mean ± sd) | Bottleneck job |")
+    print("|----------|------------------------|------------------------|----------------|")
+
+    for wf in ALL_WORKFLOWS:
+        walls = []
+        runners = []
+        bottleneck_counts = defaultdict(int)
+        for pd in all_push_data:
+            wf_data = pd["workflows"].get(wf)
+            if wf_data:
+                walls.append(wf_data["wall"])
+                runners.append(wf_data["runner_total"])
+                longest_job = max(wf_data["jobs"], key=lambda j: j["duration"])
+                bottleneck_counts[longest_job["name"]] += 1
+
+        if not walls:
+            print(f"| {wf} | (no data) | | |")
+            continue
+
+        top_bottleneck = max(bottleneck_counts, key=bottleneck_counts.get) if bottleneck_counts else "?"
+        print(f"| {wf} | {fmt_stat(walls)} | {fmt_stat(runners)} | {top_bottleneck} |")
+
+    # === Section 2: End-to-end across all workflows ===
+    print(f"\n{'='*70}")
+    print(f"# End-to-end CI time (all workflows, n={len(all_push_data)} pushes)")
+    print(f"{'='*70}\n")
+
+    e2e_walls = []
+    e2e_runners = []
+    e2e_bottleneck_counts = defaultdict(int)
+
+    for pd in all_push_data:
+        all_starts = []
+        all_ends = []
+        total_runner = 0
+        slowest_wf = None
+        slowest_wf_time = 0
+        for wf, wf_data in pd["workflows"].items():
+            total_runner += wf_data["runner_total"]
+            for j in wf_data["jobs"]:
+                all_starts.append(j["started"])
+                all_ends.append(j["completed"])
+            if wf_data["wall"] > slowest_wf_time:
+                slowest_wf_time = wf_data["wall"]
+                slowest_wf = wf
+
+        if all_starts and all_ends:
+            e2e = (max(all_ends) - min(all_starts)).total_seconds()
+            e2e_walls.append(e2e)
+            e2e_runners.append(total_runner)
+            if slowest_wf:
+                e2e_bottleneck_counts[slowest_wf] += 1
+
+    print(f"End-to-end wall clock: **{fmt_stat(e2e_walls)}**")
+    print(f"Total runner-minutes:  **{fmt_stat(e2e_runners)}**\n")
+    print("Bottleneck workflow frequency:")
+    for wf, count in sorted(e2e_bottleneck_counts.items(), key=lambda x: -x[1]):
+        print(f"  {wf}: {count}/{len(all_push_data)} pushes")
+
+    # === Section 3: ci.yml layout modeling ===
+    ci_step_data = [pd["ci_steps"] for pd in all_push_data if "ci_steps" in pd]
+    if not ci_step_data:
+        print("\nNo ci.yml step-level data available for layout modeling.")
+        return
+
+    hits = [s for s in ci_step_data if s.get("cache_hit") is True]
+    misses = [s for s in ci_step_data if s.get("cache_hit") is False]
+
+    for label, group in [("Cache HIT", hits), ("Cache MISS", misses)]:
         if not group:
             continue
 
-        print(f"\n{'=' * 70}")
-        print(f"# {group_label} (n={len(group)})")
-        print(f"{'=' * 70}")
+        print(f"\n{'='*70}")
+        print(f"# ci.yml layout modeling — {label} (n={len(group)})")
+        print(f"{'='*70}\n")
 
-        print(f"\n## Step durations in seconds (mean ± stddev)\n")
+        step_keys = [k for k, _ in CI_STEP_KEYS]
+
+        print("## ci.yml step durations\n")
         print("| Step | Mean ± StdDev | Min | Max |")
         print("|------|---------------|-----|-----|")
-
         for key in ["setup"] + step_keys:
             values = [t.get(key, 0) for t in group]
             if max(values) == 0:
                 continue
-            print(f"| {key} | {fmt_stat(values)}s | {fmt_dur(min(values))} | {fmt_dur(max(values))} |")
+            m = statistics.mean(values)
+            s = statistics.stdev(values) if len(values) >= 2 else 0
+            mn, mx = min(values), max(values)
+            mn_s = f"{int(mn//60)}m {mn%60:.0f}s" if mn >= 60 else f"{mn:.1f}s"
+            mx_s = f"{int(mx//60)}m {mx%60:.0f}s" if mx >= 60 else f"{mx:.1f}s"
+            print(f"| {key} | {m:.1f} ± {s:.1f}s | {mn_s} | {mx_s} |")
 
-        has_ra = any(t.get("ra_test_lk", 0) > 0 for t in group)
+        # Model ci.yml layouts and compute impact on end-to-end
+        # Get the non-ci.yml workflow wall clocks for these same pushes
+        other_wf_walls = []
+        for pd in all_push_data:
+            if "ci_steps" not in pd:
+                continue
+            if pd["ci_steps"].get("cache_hit") != (label == "Cache HIT"):
+                continue
+            max_other = 0
+            for wf, wf_data in pd["workflows"].items():
+                if wf != "ci.yml":
+                    max_other = max(max_other, wf_data["wall"])
+            other_wf_walls.append(max_other)
 
-        print("\n## CI-only layouts\n")
-        results = analyze_layouts(group, LAYOUTS, step_keys)
-        print_layout_table(results)
+        print(f"\n## Impact on end-to-end CI time\n")
+        print(f"Slowest non-ci.yml workflow per push: {fmt_stat(other_wf_walls)}\n")
+        print("| ci.yml layout | ci.yml wall | E2E wall (with other workflows) | ci.yml runners |")
+        print("|---------------|-------------|--------------------------------|----------------|")
 
-        if has_ra:
-            print("\n## CI + remote-access-tests (separate parallel job)\n")
-            results_ra = analyze_layouts(group, LAYOUTS_WITH_RA, step_keys)
-            print_layout_table(results_ra)
+        for layout_name, jobs in CI_LAYOUTS.items():
+            ci_walls = []
+            e2e_with_layout = []
+            ci_runners = []
+
+            for i, t in enumerate(group):
+                job_times = {jn: ci_job_time(t, steps) for jn, steps in jobs.items()}
+                ci_wall = max(job_times.values())
+                ci_runner = sum(job_times.values())
+                ci_walls.append(ci_wall)
+                ci_runners.append(ci_runner)
+                if i < len(other_wf_walls):
+                    e2e_with_layout.append(max(ci_wall, other_wf_walls[i]))
+
+            print(f"| {layout_name} | {fmt_stat(ci_walls)} | "
+                  f"{fmt_stat(e2e_with_layout) if e2e_with_layout else 'N/A'} | "
+                  f"{len(jobs)} ({fmt_stat(ci_runners)}) |")
 
 
 if __name__ == "__main__":
