@@ -85,6 +85,83 @@ async fn netem_sidecar_adds_measurable_latency() -> Result<()> {
     Ok(())
 }
 
+/// Verify that the netem sidecar is actually dropping packets. Sends a burst of
+/// UDP datagrams to a socat echo server running inside the container and counts
+/// how many echo responses come back. Responses traverse the netem-shaped egress
+/// path, so a fraction will be lost.
+///
+/// The configured loss percentage is read from `NETEM_ARGS`. If no `loss` keyword
+/// is present, the assertion is skipped.
+///
+/// With 500 packets at 2% loss, the probability of zero drops is ~0.004%.
+#[traced_test]
+#[ignore]
+#[tokio::test]
+async fn netem_sidecar_drops_packets() -> Result<()> {
+    let netem_args =
+        std::env::var("NETEM_ARGS").unwrap_or_else(|_| "delay 80ms 20ms loss 2%".into());
+    info!("NETEM_ARGS: {netem_args}");
+
+    // Parse loss percentage from NETEM_ARGS. Format: "... loss <N>% ...".
+    let loss_pct: Option<f64> = netem_args
+        .split_whitespace()
+        .zip(netem_args.split_whitespace().skip(1))
+        .find(|(key, _)| *key == "loss")
+        .and_then(|(_, val)| val.strip_suffix('%')?.parse().ok());
+
+    if loss_pct.is_none() || loss_pct == Some(0.0) {
+        info!("no packet loss configured in NETEM_ARGS — skipping");
+        return Ok(());
+    }
+    let loss_pct = loss_pct.unwrap();
+
+    let sock = tokio::net::UdpSocket::bind("0.0.0.0:0").await?;
+    let dest: std::net::SocketAddr = "127.0.0.1:9999".parse().unwrap();
+
+    // Send a burst of UDP packets to the echo server inside the container.
+    let sent: u32 = 500;
+    for i in 0..sent {
+        let msg = format!("pkt-{i:04}");
+        sock.send_to(msg.as_bytes(), dest).await?;
+    }
+
+    // Collect echo responses. Use a generous timeout to accommodate any
+    // configured netem delay.
+    let mut received: u32 = 0;
+    let deadline = tokio::time::Instant::now() + Duration::from_secs(3);
+    let mut buf = [0u8; 64];
+    loop {
+        match tokio::time::timeout_at(deadline, sock.recv_from(&mut buf)).await {
+            Ok(Ok(_)) => received += 1,
+            _ => break,
+        }
+        if received == sent {
+            break;
+        }
+    }
+
+    let lost = sent - received;
+    let observed_loss = (lost as f64 / sent as f64) * 100.0;
+    info!("sent: {sent}, received: {received}, lost: {lost} ({observed_loss:.1}%)");
+    info!("configured loss: {loss_pct}%");
+
+    // Verify the echo server is reachable — at least some packets must arrive.
+    assert!(
+        received > 0,
+        "no echo responses received — is the netem stack running? \
+         Start with: docker compose -f docker-compose.yaml \
+         -f docker-compose.netem.yml up -d --wait"
+    );
+
+    // Verify that netem is actually dropping some packets.
+    assert!(
+        lost > 0,
+        "expected some packet loss with {loss_pct}% configured, \
+         but all {sent} packets were echoed back"
+    );
+    Ok(())
+}
+
 // ===========================================================================
 // WebRTC under impairment
 // ===========================================================================

@@ -32,6 +32,10 @@
 #   - GitHub Actions: works on ubuntu-latest runners.
 
 services:
+  livekit:
+    ports:
+      - "9999:9999/udp" # UDP echo for netem packet loss testing
+
   netem:
     image: alpine:3
     network_mode: "service:livekit"
@@ -42,7 +46,10 @@ services:
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
-        apk add --no-cache iproute2 > /dev/null 2>&1
+        apk add --no-cache iproute2 socat > /dev/null 2>&1
+        # Start a UDP echo server for packet loss testing. Each received
+        # datagram is echoed back through the netem-shaped egress path.
+        socat UDP-RECVFROM:9999,fork EXEC:/bin/cat &
         tc qdisc add dev eth0 root netem $${NETEM_ARGS}
         echo "netem applied: $${NETEM_ARGS}"
         tc -s qdisc show dev eth0
