@@ -1,0 +1,58 @@
+# Compose override that adds a netem sidecar to the LiveKit service for
+# simulating degraded network conditions (latency, jitter, packet loss) on
+# WebRTC UDP traffic.
+#
+# Usage:
+#   docker compose -f docker-compose.yaml -f docker-compose.netem.yml up -d --wait
+#
+# The sidecar shares the LiveKit container's network namespace and applies tc
+# netem rules to its eth0 interface. This shapes all egress from LiveKit —
+# including RTC media/data packets sent back to test clients.
+#
+# Configure via the NETEM_ARGS environment variable. It accepts any arguments
+# valid after `tc qdisc add dev eth0 root netem`. Defaults to moderate
+# impairment (80ms delay, 20ms jitter, 2% packet loss).
+#
+# Examples:
+#   # Good network
+#   NETEM_ARGS="delay 20ms 5ms" docker compose -f docker-compose.yaml -f docker-compose.netem.yml up -d --wait
+#
+#   # Poor wifi
+#   NETEM_ARGS="delay 150ms 50ms loss 5%" docker compose -f docker-compose.yaml -f docker-compose.netem.yml up -d --wait
+#
+#   # Severe degradation with bandwidth cap
+#   NETEM_ARGS="delay 300ms 100ms loss 10% rate 500kbit" docker compose -f docker-compose.yaml -f docker-compose.netem.yml up -d --wait
+#
+#   # Packet reordering (common trigger for WebRTC jitter buffer issues)
+#   NETEM_ARGS="delay 50ms 10ms reorder 25% loss 1%" docker compose -f docker-compose.yaml -f docker-compose.netem.yml up -d --wait
+#
+# Requirements:
+#   - Linux host: works natively.
+#   - macOS host: requires Docker Desktop >= 4.27 (sch_netem kernel module fix).
+#   - GitHub Actions: works on ubuntu-latest runners.
+
+services:
+  netem:
+    image: alpine:3
+    network_mode: "service:livekit"
+    cap_add:
+      - NET_ADMIN
+    environment:
+      NETEM_ARGS: "${NETEM_ARGS:-delay 80ms 20ms loss 2%}"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        apk add --no-cache iproute2 > /dev/null 2>&1
+        tc qdisc add dev eth0 root netem $${NETEM_ARGS}
+        echo "netem applied: $${NETEM_ARGS}"
+        tc -s qdisc show dev eth0
+        # Keep the container alive so the qdisc rules persist.
+        exec sleep infinity
+    healthcheck:
+      test: ["CMD-SHELL", "tc qdisc show dev eth0 | grep -q netem"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+    depends_on:
+      livekit:
+        condition: service_started
