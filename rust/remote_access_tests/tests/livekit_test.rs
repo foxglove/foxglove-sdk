@@ -833,3 +833,50 @@ async fn livekit_video_track_lifecycle() -> Result<()> {
     gw.stop().await?;
     Ok(())
 }
+
+/// Test that a video track can be re-established after an unsubscribe/resubscribe cycle.
+/// Validates that the video schema persists across teardown so the track can be recreated.
+#[traced_test]
+#[ignore]
+#[tokio::test]
+async fn livekit_video_track_resubscribe() -> Result<()> {
+    let ctx = foxglove::Context::new();
+
+    let video_channel = ctx
+        .channel_builder("/camera")
+        .message_encoding("protobuf")
+        .schema(Schema::new("foxglove.RawImage", "protobuf", &b""[..]))
+        .build_raw()
+        .context("create video channel")?;
+
+    let gw = TestGateway::start(&ctx).await?;
+    let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+
+    let _server_info = viewer.expect_server_info().await?;
+    let advertise = viewer.expect_advertise().await?;
+    let channel_id = advertise.channels[0].id;
+
+    // First subscribe — video track should be published.
+    viewer
+        .subscribe_and_wait(&[channel_id], &video_channel)
+        .await?;
+    let track_name = viewer.expect_track_subscribed().await?;
+    assert_eq!(track_name, "/camera");
+    info!("first subscribe: video track published");
+
+    // Unsubscribe — video track should be torn down.
+    viewer.send_unsubscribe(&[channel_id]).await?;
+    let track_name = viewer.expect_track_unsubscribed().await?;
+    assert_eq!(track_name, "/camera");
+    info!("unsubscribe: video track torn down");
+
+    // Resubscribe — video track should come back.
+    viewer.send_subscribe(&[channel_id]).await?;
+    let track_name = viewer.expect_track_subscribed().await?;
+    assert_eq!(track_name, "/camera");
+    info!("resubscribe: video track re-established");
+
+    viewer.close().await?;
+    gw.stop().await?;
+    Ok(())
+}
