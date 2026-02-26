@@ -14,17 +14,23 @@ TEST_CASE("allocate different types from arena and verify alignment") {
 
   // Allocate different types and verify alignment
   auto* intPtr = arena.alloc<int>(10);
-  REQUIRE(reinterpret_cast<uintptr_t>(intPtr) % alignof(int) == 0);  // NOLINT(cppcoreguidelines-avoid-do-while)
+  REQUIRE(
+    reinterpret_cast<uintptr_t>(intPtr) % alignof(int) == 0
+  );  // NOLINT(cppcoreguidelines-avoid-do-while)
 
   auto* doublePtr = arena.alloc<double>(5);
-  REQUIRE(reinterpret_cast<uintptr_t>(doublePtr) % alignof(double) == 0);  // NOLINT(cppcoreguidelines-avoid-do-while)
+  REQUIRE(
+    reinterpret_cast<uintptr_t>(doublePtr) % alignof(double) == 0
+  );  // NOLINT(cppcoreguidelines-avoid-do-while)
 
   struct AlignedStruct {
     alignas(16) std::array<char, 32> data;
   };
 
   auto* structPtr = arena.alloc<AlignedStruct>(3);
-  REQUIRE(reinterpret_cast<uintptr_t>(structPtr) % alignof(AlignedStruct) == 0);  // NOLINT(cppcoreguidelines-avoid-do-while)
+  REQUIRE(
+    reinterpret_cast<uintptr_t>(structPtr) % alignof(AlignedStruct) == 0
+  );  // NOLINT(cppcoreguidelines-avoid-do-while)
 
   // Verify we can write to the allocated memory
   for (int i = 0; i < 10; i++) {
@@ -56,12 +62,12 @@ TEST_CASE("allocate from heap when arena capacity is exceeded") {
   // Verify some data can be written to the arena allocation
   buffer[0] = 'A';
   buffer[nearlyFullSize - 1] = 'Z';
-  REQUIRE(buffer[0] == 'A');  // NOLINT(cppcoreguidelines-avoid-do-while)
+  REQUIRE(buffer[0] == 'A');                   // NOLINT(cppcoreguidelines-avoid-do-while)
   REQUIRE(buffer[nearlyFullSize - 1] == 'Z');  // NOLINT(cppcoreguidelines-avoid-do-while)
 
   // Check arena's reported space
   REQUIRE(arena.used() >= nearlyFullSize);  // NOLINT(cppcoreguidelines-avoid-do-while)
-  REQUIRE(arena.available() == 1024);  // NOLINT(cppcoreguidelines-avoid-do-while)
+  REQUIRE(arena.available() == 1024);       // NOLINT(cppcoreguidelines-avoid-do-while)
 
   // Now allocate more than what's left in the arena
   constexpr size_t largeAllocationSize = 8192;
@@ -84,6 +90,6 @@ TEST_CASE("allocate from heap when arena capacity is exceeded") {
   overflow1[0] = 1234567890;
   overflow2[0] = 1234567890123456789;
 
-  REQUIRE(overflow1[0] == 1234567890);  // NOLINT(cppcoreguidelines-avoid-do-while)
+  REQUIRE(overflow1[0] == 1234567890);           // NOLINT(cppcoreguidelines-avoid-do-while)
   REQUIRE(overflow2[0] == 1234567890123456789);  // NOLINT(cppcoreguidelines-avoid-do-while)
 }

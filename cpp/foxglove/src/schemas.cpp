@@ -1595,9 +1595,15 @@ void cameraCalibrationToC(
   dest.distortion_model = {src.distortion_model.data(), src.distortion_model.size()};
   dest.d = src.d.data();
   dest.d_count = src.d.size();
-  ::memcpy(dest.k, src.k.data(), src.k.size() * sizeof(*src.k.data()));  // NOLINT(cppcoreguidelines-pro-bounds-array-to-pointer-decay,hicpp-no-array-decay)
-  ::memcpy(dest.r, src.r.data(), src.r.size() * sizeof(*src.r.data()));  // NOLINT(cppcoreguidelines-pro-bounds-array-to-pointer-decay,hicpp-no-array-decay)
-  ::memcpy(dest.p, src.p.data(), src.p.size() * sizeof(*src.p.data()));  // NOLINT(cppcoreguidelines-pro-bounds-array-to-pointer-decay,hicpp-no-array-decay)
+  ::memcpy(
+    dest.k, src.k.data(), src.k.size() * sizeof(*src.k.data())
+  );  // NOLINT(cppcoreguidelines-pro-bounds-array-to-pointer-decay,hicpp-no-array-decay)
+  ::memcpy(
+    dest.r, src.r.data(), src.r.size() * sizeof(*src.r.data())
+  );  // NOLINT(cppcoreguidelines-pro-bounds-array-to-pointer-decay,hicpp-no-array-decay)
+  ::memcpy(
+    dest.p, src.p.data(), src.p.size() * sizeof(*src.p.data())
+  );  // NOLINT(cppcoreguidelines-pro-bounds-array-to-pointer-decay,hicpp-no-array-decay)
 }
 
 void circleAnnotationToC(

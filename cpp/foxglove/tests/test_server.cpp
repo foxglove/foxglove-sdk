@@ -385,21 +385,21 @@ TEST_CASE("Client advertise/publish callbacks") {
     );
     cv.notify_all();
   };
-  callbacks.onMessageData =
-    [&](
-      uint32_t client_id [[maybe_unused]],       // NOLINT(bugprone-easily-swappable-parameters)
-      uint32_t client_channel_id [[maybe_unused]],
-      const std::byte* data,
-      size_t data_len
-    ) {
-      std::scoped_lock lock{mutex};
-      received_message = true;
-      REQUIRE(data_len == 3);
-      REQUIRE(char(data[0]) == 'a');
-      REQUIRE(char(data[1]) == 'b');
-      REQUIRE(char(data[2]) == 'c');
-      cv.notify_all();
-    };
+  callbacks.onMessageData = [&](
+                              uint32_t client_id
+                              [[maybe_unused]],  // NOLINT(bugprone-easily-swappable-parameters)
+                              uint32_t client_channel_id [[maybe_unused]],
+                              const std::byte* data,
+                              size_t data_len
+                            ) {
+    std::scoped_lock lock{mutex};
+    received_message = true;
+    REQUIRE(data_len == 3);
+    REQUIRE(char(data[0]) == 'a');
+    REQUIRE(char(data[1]) == 'b');
+    REQUIRE(char(data[2]) == 'c');
+    cv.notify_all();
+  };
   callbacks.onClientUnadvertise = [&](uint32_t client_id, uint32_t client_channel_id) {
     std::scoped_lock lock{mutex};
     advertised = false;
@@ -1330,13 +1330,15 @@ TEST_CASE("Log message to websocket sinks") {
   auto channel_result = foxglove::RawChannel::create("test", "json", std::nullopt, context);
   REQUIRE(channel_result.has_value());
 
-  foxglove::RawChannel channel = std::move(channel_result.value());  // NOLINT(bugprone-unchecked-optional-access)
+  foxglove::RawChannel channel =
+    std::move(channel_result.value());  // NOLINT(bugprone-unchecked-optional-access)
 
   foxglove::WebSocketServerCallbacks cb;
   cb.onSubscribe = [&](uint64_t subscribed_channel_id, const foxglove::ClientMetadata& metadata) {
     std::scoped_lock lock{mutex};
     if (subscribed_channel_id == channel.id() && metadata.sink_id.has_value()) {
-      client_sink_ids.push_back(metadata.sink_id.value());  // NOLINT(bugprone-unchecked-optional-access)
+      client_sink_ids.push_back(metadata.sink_id.value()
+      );  // NOLINT(bugprone-unchecked-optional-access)
     }
     cv.notify_one();
   };
@@ -1462,11 +1464,13 @@ TEST_CASE("Server channel filtering") {
 
   auto channel_result_1 = foxglove::RawChannel::create("/1", "json", std::nullopt, context);
   REQUIRE(channel_result_1.has_value());
-  auto channel_1 = std::move(channel_result_1.value());  // NOLINT(bugprone-unchecked-optional-access)
+  auto channel_1 =
+    std::move(channel_result_1.value());  // NOLINT(bugprone-unchecked-optional-access)
 
   auto channel_result_2 = foxglove::RawChannel::create("/2", "json", std::nullopt, context);
   REQUIRE(channel_result_2.has_value());
-  auto channel_2 = std::move(channel_result_2.value());  // NOLINT(bugprone-unchecked-optional-access)
+  auto channel_2 =
+    std::move(channel_result_2.value());  // NOLINT(bugprone-unchecked-optional-access)
 
   WebSocketClient client;
   client.start(server.port());
@@ -1676,10 +1680,17 @@ TEST_CASE("Playback control request callback") {
     REQUIRE(  // NOLINT(bugprone-unchecked-optional-access)
       received_playback_control_request->playback_command == foxglove::PlaybackCommand::Pause
     );
-    REQUIRE(received_playback_control_request->playback_speed == 1.0);  // NOLINT(bugprone-unchecked-optional-access)
-    REQUIRE(received_playback_control_request->seek_time.has_value());  // NOLINT(bugprone-unchecked-optional-access)
-    REQUIRE(received_playback_control_request->seek_time.value() == 42);  // NOLINT(bugprone-unchecked-optional-access)
-    REQUIRE(received_playback_control_request->request_id == "a_request_id");  // NOLINT(bugprone-unchecked-optional-access)
+    REQUIRE(
+      received_playback_control_request->playback_speed == 1.0
+    );  // NOLINT(bugprone-unchecked-optional-access)
+    REQUIRE(received_playback_control_request->seek_time.has_value()
+    );  // NOLINT(bugprone-unchecked-optional-access)
+    REQUIRE(
+      received_playback_control_request->seek_time.value() == 42
+    );  // NOLINT(bugprone-unchecked-optional-access)
+    REQUIRE(
+      received_playback_control_request->request_id == "a_request_id"
+    );  // NOLINT(bugprone-unchecked-optional-access)
   }
 
   std::vector<std::byte> received_binary_playback_state;
@@ -1689,8 +1700,11 @@ TEST_CASE("Playback control request callback") {
   auto received_playback_state = parseBinaryPlaybackState(received_binary_playback_state);
 
   REQUIRE(received_playback_state.has_value());
-  REQUIRE(received_playback_state->request_id.has_value());  // NOLINT(bugprone-unchecked-optional-access)
-  REQUIRE(received_playback_state->request_id.value() == "a_request_id");  // NOLINT(bugprone-unchecked-optional-access)
+  REQUIRE(received_playback_state->request_id.has_value()
+  );  // NOLINT(bugprone-unchecked-optional-access)
+  REQUIRE(
+    received_playback_state->request_id.value() == "a_request_id"
+  );  // NOLINT(bugprone-unchecked-optional-access)
   REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
 }
 
@@ -1747,7 +1761,9 @@ TEST_CASE("Broadcast playback state") {
   auto received_playback_state = parseBinaryPlaybackState(received_binary_playback_state);
 
   REQUIRE(received_playback_state.has_value());
-  REQUIRE(received_playback_state->request_id == std::nullopt);  // NOLINT(bugprone-unchecked-optional-access)
+  REQUIRE(
+    received_playback_state->request_id == std::nullopt
+  );                                           // NOLINT(bugprone-unchecked-optional-access)
   REQUIRE(received_playback_state->did_seek);  // NOLINT(bugprone-unchecked-optional-access)
   REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
 }

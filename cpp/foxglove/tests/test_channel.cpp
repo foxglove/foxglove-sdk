@@ -51,7 +51,7 @@ TEST_CASE("channel.message_encoding()") {
 }
 
 TEST_CASE("channel.has_sinks()") {
-  const auto *fname = "test-channel-has-sinks.mcap";
+  const auto* fname = "test-channel-has-sinks.mcap";
   FileCleanup cleanup(fname);
 
   auto context = foxglove::Context::create();
@@ -71,7 +71,7 @@ TEST_CASE("channel.has_sinks()") {
 }
 
 TEST_CASE("channel.close() disconnects sinks") {
-  const auto *fname = "test-channel-close-disconnects-sinks.mcap";
+  const auto* fname = "test-channel-close-disconnects-sinks.mcap";
   FileCleanup cleanup(fname);
 
   auto context = foxglove::Context::create();
@@ -112,11 +112,12 @@ TEST_CASE("channel.schema()") {
 
   auto schema = channel.value().schema();
   REQUIRE(schema.has_value());
-  REQUIRE(schema->name == "test_schema");      // NOLINT(bugprone-unchecked-optional-access)
-  REQUIRE(schema->encoding == "jsonschema");    // NOLINT(bugprone-unchecked-optional-access)
+  REQUIRE(schema->name == "test_schema");           // NOLINT(bugprone-unchecked-optional-access)
+  REQUIRE(schema->encoding == "jsonschema");        // NOLINT(bugprone-unchecked-optional-access)
   REQUIRE(schema->data_len == schema_data.size());  // NOLINT(bugprone-unchecked-optional-access)
   REQUIRE(
-    std::string_view(reinterpret_cast<const char*>(schema->data), schema->data_len) == schema_data  // NOLINT(bugprone-unchecked-optional-access)
+    std::string_view(reinterpret_cast<const char*>(schema->data), schema->data_len) ==
+    schema_data  // NOLINT(bugprone-unchecked-optional-access)
   );
 }
 
@@ -134,7 +135,9 @@ TEST_CASE("channel with metadata") {
   std::map<std::string, std::string> metadata = {{"key1", "value1"}, {"key2", "value2"}};
   auto channel = foxglove::RawChannel::create("test", "json", std::nullopt, context, metadata);
   REQUIRE(channel.has_value());
-  REQUIRE(channel.value().metadata().value().size() == 2);  // NOLINT(bugprone-unchecked-optional-access)
+  REQUIRE(
+    channel.value().metadata().value().size() == 2
+  );  // NOLINT(bugprone-unchecked-optional-access)
   REQUIRE(channel.value().metadata() == metadata);
 }
 
@@ -144,7 +147,8 @@ TEST_CASE("channel with no metadata returns an empty value from metadata()") {
 
   REQUIRE(channel.has_value());
   REQUIRE(channel.value().metadata().has_value());
-  REQUIRE(channel.value().metadata().value().empty());  // NOLINT(bugprone-unchecked-optional-access)
+  REQUIRE(channel.value().metadata().value().empty()
+  );  // NOLINT(bugprone-unchecked-optional-access)
 }
 
 // NOLINTEND(cppcoreguidelines-avoid-do-while)
