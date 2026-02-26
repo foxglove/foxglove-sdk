@@ -1595,15 +1595,9 @@ void cameraCalibrationToC(
   dest.distortion_model = {src.distortion_model.data(), src.distortion_model.size()};
   dest.d = src.d.data();
   dest.d_count = src.d.size();
-  ::memcpy(
-    dest.k, src.k.data(), src.k.size() * sizeof(*src.k.data())
-  );  // NOLINT(cppcoreguidelines-pro-bounds-array-to-pointer-decay,hicpp-no-array-decay)
-  ::memcpy(
-    dest.r, src.r.data(), src.r.size() * sizeof(*src.r.data())
-  );  // NOLINT(cppcoreguidelines-pro-bounds-array-to-pointer-decay,hicpp-no-array-decay)
-  ::memcpy(
-    dest.p, src.p.data(), src.p.size() * sizeof(*src.p.data())
-  );  // NOLINT(cppcoreguidelines-pro-bounds-array-to-pointer-decay,hicpp-no-array-decay)
+  ::memcpy(dest.k, src.k.data(), src.k.size() * sizeof(*src.k.data()));
+  ::memcpy(dest.r, src.r.data(), src.r.size() * sizeof(*src.r.data()));
+  ::memcpy(dest.p, src.p.data(), src.p.size() * sizeof(*src.p.data()));
 }
 
 void circleAnnotationToC(
@@ -1762,13 +1756,11 @@ void locationFixToC(
   dest.latitude = src.latitude;
   dest.longitude = src.longitude;
   dest.altitude = src.altitude;
-  // NOLINTBEGIN(cppcoreguidelines-pro-bounds-array-to-pointer-decay,hicpp-no-array-decay)
   ::memcpy(
     dest.position_covariance,
     src.position_covariance.data(),
     src.position_covariance.size() * sizeof(*src.position_covariance.data())
   );
-  // NOLINTEND(cppcoreguidelines-pro-bounds-array-to-pointer-decay,hicpp-no-array-decay)
   dest.position_covariance_type =
     static_cast<foxglove_position_covariance_type>(src.position_covariance_type);
   dest.color = src.color ? reinterpret_cast<const foxglove_color*>(&*src.color) : nullptr;
@@ -2022,288 +2014,288 @@ void voxelGridToC(foxglove_voxel_grid& dest, const VoxelGrid& src, [[maybe_unuse
   dest.data_len = src.data.size();
 }
 
-FoxgloveError ArrowPrimitive::encode(uint8_t* ptr, size_t len, size_t* encoded_len) const {
+FoxgloveError ArrowPrimitive::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_arrow_primitive c_msg;
   arrowPrimitiveToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_arrow_primitive_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError CameraCalibration::encode(uint8_t* ptr, size_t len, size_t* encoded_len) const {
+FoxgloveError CameraCalibration::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_camera_calibration c_msg;
   cameraCalibrationToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_camera_calibration_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError CircleAnnotation::encode(uint8_t* ptr, size_t len, size_t* encoded_len) const {
+FoxgloveError CircleAnnotation::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_circle_annotation c_msg;
   circleAnnotationToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_circle_annotation_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError Color::encode(uint8_t* ptr, size_t len, size_t* encoded_len) const {
+FoxgloveError Color::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   return FoxgloveError(
     foxglove_color_encode(reinterpret_cast<const foxglove_color*>(this), ptr, len, encoded_len)
   );
 }
 
-FoxgloveError CompressedImage::encode(uint8_t* ptr, size_t len, size_t* encoded_len) const {
+FoxgloveError CompressedImage::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_compressed_image c_msg;
   compressedImageToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_compressed_image_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError CompressedVideo::encode(uint8_t* ptr, size_t len, size_t* encoded_len) const {
+FoxgloveError CompressedVideo::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_compressed_video c_msg;
   compressedVideoToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_compressed_video_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError CubePrimitive::encode(uint8_t* ptr, size_t len, size_t* encoded_len) const {
+FoxgloveError CubePrimitive::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_cube_primitive c_msg;
   cubePrimitiveToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_cube_primitive_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError CylinderPrimitive::encode(uint8_t* ptr, size_t len, size_t* encoded_len) const {
+FoxgloveError CylinderPrimitive::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_cylinder_primitive c_msg;
   cylinderPrimitiveToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_cylinder_primitive_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError FrameTransform::encode(uint8_t* ptr, size_t len, size_t* encoded_len) const {
+FoxgloveError FrameTransform::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_frame_transform c_msg;
   frameTransformToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_frame_transform_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError FrameTransforms::encode(uint8_t* ptr, size_t len, size_t* encoded_len) const {
+FoxgloveError FrameTransforms::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_frame_transforms c_msg;
   frameTransformsToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_frame_transforms_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError GeoJSON::encode(uint8_t* ptr, size_t len, size_t* encoded_len) const {
+FoxgloveError GeoJSON::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_geo_json c_msg;
   geoJSONToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_geo_json_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError Grid::encode(uint8_t* ptr, size_t len, size_t* encoded_len) const {
+FoxgloveError Grid::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_grid c_msg;
   gridToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_grid_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError ImageAnnotations::encode(uint8_t* ptr, size_t len, size_t* encoded_len) const {
+FoxgloveError ImageAnnotations::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_image_annotations c_msg;
   imageAnnotationsToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_image_annotations_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError KeyValuePair::encode(uint8_t* ptr, size_t len, size_t* encoded_len) const {
+FoxgloveError KeyValuePair::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_key_value_pair c_msg;
   keyValuePairToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_key_value_pair_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError LaserScan::encode(uint8_t* ptr, size_t len, size_t* encoded_len) const {
+FoxgloveError LaserScan::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_laser_scan c_msg;
   laserScanToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_laser_scan_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError LinePrimitive::encode(uint8_t* ptr, size_t len, size_t* encoded_len) const {
+FoxgloveError LinePrimitive::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_line_primitive c_msg;
   linePrimitiveToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_line_primitive_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError LocationFix::encode(uint8_t* ptr, size_t len, size_t* encoded_len) const {
+FoxgloveError LocationFix::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_location_fix c_msg;
   locationFixToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_location_fix_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError LocationFixes::encode(uint8_t* ptr, size_t len, size_t* encoded_len) const {
+FoxgloveError LocationFixes::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_location_fixes c_msg;
   locationFixesToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_location_fixes_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError Log::encode(uint8_t* ptr, size_t len, size_t* encoded_len) const {
+FoxgloveError Log::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_log c_msg;
   logToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_log_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError ModelPrimitive::encode(uint8_t* ptr, size_t len, size_t* encoded_len) const {
+FoxgloveError ModelPrimitive::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_model_primitive c_msg;
   modelPrimitiveToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_model_primitive_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError PackedElementField::encode(uint8_t* ptr, size_t len, size_t* encoded_len) const {
+FoxgloveError PackedElementField::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_packed_element_field c_msg;
   packedElementFieldToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_packed_element_field_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError Point2::encode(uint8_t* ptr, size_t len, size_t* encoded_len) const {
+FoxgloveError Point2::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   return FoxgloveError(
     foxglove_point2_encode(reinterpret_cast<const foxglove_point2*>(this), ptr, len, encoded_len)
   );
 }
 
-FoxgloveError Point3::encode(uint8_t* ptr, size_t len, size_t* encoded_len) const {
+FoxgloveError Point3::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   return FoxgloveError(
     foxglove_point3_encode(reinterpret_cast<const foxglove_point3*>(this), ptr, len, encoded_len)
   );
 }
 
-FoxgloveError Point3InFrame::encode(uint8_t* ptr, size_t len, size_t* encoded_len) const {
+FoxgloveError Point3InFrame::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_point3_in_frame c_msg;
   point3InFrameToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_point3_in_frame_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError PointCloud::encode(uint8_t* ptr, size_t len, size_t* encoded_len) const {
+FoxgloveError PointCloud::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_point_cloud c_msg;
   pointCloudToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_point_cloud_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError PointsAnnotation::encode(uint8_t* ptr, size_t len, size_t* encoded_len) const {
+FoxgloveError PointsAnnotation::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_points_annotation c_msg;
   pointsAnnotationToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_points_annotation_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError Pose::encode(uint8_t* ptr, size_t len, size_t* encoded_len) const {
+FoxgloveError Pose::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_pose c_msg;
   poseToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_pose_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError PoseInFrame::encode(uint8_t* ptr, size_t len, size_t* encoded_len) const {
+FoxgloveError PoseInFrame::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_pose_in_frame c_msg;
   poseInFrameToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_pose_in_frame_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError PosesInFrame::encode(uint8_t* ptr, size_t len, size_t* encoded_len) const {
+FoxgloveError PosesInFrame::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_poses_in_frame c_msg;
   posesInFrameToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_poses_in_frame_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError Quaternion::encode(uint8_t* ptr, size_t len, size_t* encoded_len) const {
+FoxgloveError Quaternion::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   return FoxgloveError(foxglove_quaternion_encode(
     reinterpret_cast<const foxglove_quaternion*>(this), ptr, len, encoded_len
   ));
 }
 
-FoxgloveError RawAudio::encode(uint8_t* ptr, size_t len, size_t* encoded_len) const {
+FoxgloveError RawAudio::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_raw_audio c_msg;
   rawAudioToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_raw_audio_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError RawImage::encode(uint8_t* ptr, size_t len, size_t* encoded_len) const {
+FoxgloveError RawImage::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_raw_image c_msg;
   rawImageToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_raw_image_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError SceneEntity::encode(uint8_t* ptr, size_t len, size_t* encoded_len) const {
+FoxgloveError SceneEntity::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_scene_entity c_msg;
   sceneEntityToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_scene_entity_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError SceneEntityDeletion::encode(uint8_t* ptr, size_t len, size_t* encoded_len) const {
+FoxgloveError SceneEntityDeletion::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_scene_entity_deletion c_msg;
   sceneEntityDeletionToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_scene_entity_deletion_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError SceneUpdate::encode(uint8_t* ptr, size_t len, size_t* encoded_len) const {
+FoxgloveError SceneUpdate::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_scene_update c_msg;
   sceneUpdateToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_scene_update_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError SpherePrimitive::encode(uint8_t* ptr, size_t len, size_t* encoded_len) const {
+FoxgloveError SpherePrimitive::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_sphere_primitive c_msg;
   spherePrimitiveToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_sphere_primitive_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError TextAnnotation::encode(uint8_t* ptr, size_t len, size_t* encoded_len) const {
+FoxgloveError TextAnnotation::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_text_annotation c_msg;
   textAnnotationToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_text_annotation_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError TextPrimitive::encode(uint8_t* ptr, size_t len, size_t* encoded_len) const {
+FoxgloveError TextPrimitive::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_text_primitive c_msg;
   textPrimitiveToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_text_primitive_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError TriangleListPrimitive::encode(uint8_t* ptr, size_t len, size_t* encoded_len) const {
+FoxgloveError TriangleListPrimitive::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_triangle_list_primitive c_msg;
   triangleListPrimitiveToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_triangle_list_primitive_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError Vector2::encode(uint8_t* ptr, size_t len, size_t* encoded_len) const {
+FoxgloveError Vector2::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   return FoxgloveError(
     foxglove_vector2_encode(reinterpret_cast<const foxglove_vector2*>(this), ptr, len, encoded_len)
   );
 }
 
-FoxgloveError Vector3::encode(uint8_t* ptr, size_t len, size_t* encoded_len) const {
+FoxgloveError Vector3::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   return FoxgloveError(
     foxglove_vector3_encode(reinterpret_cast<const foxglove_vector3*>(this), ptr, len, encoded_len)
   );
 }
 
-FoxgloveError VoxelGrid::encode(uint8_t* ptr, size_t len, size_t* encoded_len) const {
+FoxgloveError VoxelGrid::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_voxel_grid c_msg;
   voxelGridToC(c_msg, *this, arena);

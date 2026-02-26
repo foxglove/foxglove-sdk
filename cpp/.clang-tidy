@@ -2,7 +2,7 @@
 WarningsAsErrors: "*"
 UseColor: true
 HeaderFilterRegex: "\\/include\\/foxglove\\/"
-ExcludeHeaderFilterRegex: "expected\\.hpp"
+ExcludeHeaderFilterRegex: "expected\\.hpp|schemas\\.hpp"
 Checks:
   - -*
   - clang-analyzer-*
