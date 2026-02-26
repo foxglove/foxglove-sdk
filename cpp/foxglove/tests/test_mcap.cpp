@@ -584,9 +584,9 @@ TEST_CASE("Custom writer basic functionality") {
     flush_called = true;
     return 0;
   };
-  custom_writer.seek = [&cursor, &buffer, &seek_called](
-                         int64_t pos, int whence, uint64_t* new_pos
-                       ) -> int {  // NOLINT(bugprone-easily-swappable-parameters)
+  custom_writer.seek =
+    // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
+    [&cursor, &buffer, &seek_called](int64_t pos, int whence, uint64_t* new_pos) -> int {
     seek_called = true;
     switch (whence) {
       case SEEK_SET:
