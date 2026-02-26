@@ -58,6 +58,7 @@ impl<'a> BinaryMessage<'a> for MessageData<'a> {
 mod tests {
     use super::*;
     use crate::protocol::common::server::playback_state::PlaybackStatus;
+    use assert_matches::assert_matches;
 
     #[test]
     fn test_time_encode() {
@@ -143,6 +144,22 @@ mod tests {
         insta::assert_snapshot!(format!("{:#04x?}", buf));
         let parsed = ServerMessage::parse_binary(&buf).unwrap();
         assert_eq!(parsed, ServerMessage::PlaybackState(message));
+    }
+
+    #[test]
+    fn test_parse_binary_empty() {
+        assert_matches!(
+            ServerMessage::parse_binary(b""),
+            Err(ParseError::EmptyBinaryMessage)
+        );
+    }
+
+    #[test]
+    fn test_parse_binary_invalid_opcode() {
+        assert_matches!(
+            ServerMessage::parse_binary(&[0xff]),
+            Err(ParseError::InvalidOpcode(0xff))
+        );
     }
 }
 
