@@ -1,11 +1,9 @@
 """
-Tests for the `foxglove.messages` module and backward-compatible `foxglove.schemas` module.
+Tests for the `foxglove.messages` module and `foxglove.schemas` module.
 
 The messages module contains well-known Foxglove message types for logging. The schemas
-module is deprecated and re-exports from messages for backward compatibility.
+module re-exports from messages.
 """
-
-import warnings
 
 from foxglove.messages import Log, LogLevel, Timestamp
 
@@ -49,36 +47,12 @@ class TestMessagesModule:
         assert len(schema.data) > 0
 
 
-class TestSchemasDeprecation:
-    """Tests for the deprecated foxglove.schemas module."""
-
-    def test_schemas_import_emits_deprecation_warning(self) -> None:
-        """Importing foxglove.schemas should emit a DeprecationWarning."""
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            # Force reimport by removing from cache.
-            import sys
-
-            if "foxglove.schemas" in sys.modules:
-                del sys.modules["foxglove.schemas"]
-
-            import foxglove.schemas  # noqa: F401
-
-            # Check that a DeprecationWarning was raised.
-            deprecation_warnings = [
-                x for x in w if issubclass(x.category, DeprecationWarning)
-            ]
-            assert len(deprecation_warnings) >= 1
-            assert "foxglove.schemas is deprecated" in str(
-                deprecation_warnings[0].message
-            )
-            assert "foxglove.messages" in str(deprecation_warnings[0].message)
+class TestSchemasReexports:
+    """Tests for the foxglove.schemas module re-exports."""
 
     def test_schemas_exports_same_types_as_messages(self) -> None:
         """The schemas module should export the same types as messages."""
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", DeprecationWarning)
-            import foxglove.schemas as schemas_mod
+        import foxglove.schemas as schemas_mod
 
         import foxglove.messages as messages_mod
 
@@ -91,11 +65,9 @@ class TestSchemasDeprecation:
 
     def test_schemas_types_work_correctly(self) -> None:
         """Types imported from schemas should work the same as from messages."""
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", DeprecationWarning)
-            from foxglove.schemas import Log as SchemasLog
-            from foxglove.schemas import LogLevel as SchemasLogLevel
-            from foxglove.schemas import Timestamp as SchemasTimestamp
+        from foxglove.schemas import Log as SchemasLog
+        from foxglove.schemas import LogLevel as SchemasLogLevel
+        from foxglove.schemas import Timestamp as SchemasTimestamp
 
         msg = SchemasLog(
             timestamp=SchemasTimestamp(1, 2),
@@ -108,9 +80,7 @@ class TestSchemasDeprecation:
 
     def test_schemas_all_exports_match_messages(self) -> None:
         """The __all__ export list should match between modules."""
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", DeprecationWarning)
-            import foxglove.schemas as schemas_mod
+        import foxglove.schemas as schemas_mod
 
         import foxglove.messages as messages_mod
 

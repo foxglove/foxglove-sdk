@@ -1,17 +1,9 @@
 """
-Deprecated module: Use `foxglove.messages` instead.
+This module re-exports all types from `foxglove.messages`.
 
-This module re-exports all types from `foxglove.messages` for backward compatibility.
+Log messages to a corresponding channel type from :py:mod:`foxglove.channels`.
 """
 
-import warnings
-
-warnings.warn(
-    "foxglove.schemas is deprecated, use foxglove.messages instead",
-    DeprecationWarning,
-    stacklevel=2,
-)
-
-# Re-export everything from messages for backward compatibility.
+# Re-export everything from messages.
 from foxglove.messages import *  # noqa: F401, F403, E402
 from foxglove.messages import __all__  # noqa: F401, E402

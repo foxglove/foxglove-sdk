@@ -26,8 +26,8 @@ TEST_CASE("messages namespace types work correctly") {
   REQUIRE(color.a == 1.0);
 }
 
-TEST_CASE("schemas namespace alias works for backward compatibility") {
-  // Create types using the deprecated schemas namespace alias
+TEST_CASE("schemas namespace alias works") {
+  // Create types using the schemas namespace alias
   foxglove::schemas::Vector3 vec{1.0, 2.0, 3.0};
   REQUIRE(vec.x == 1.0);
   REQUIRE(vec.y == 2.0);
