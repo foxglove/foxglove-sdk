@@ -16,22 +16,6 @@
 
 #include "channel.hpp"
 
-/// @cond foxglove_internal
-enum foxglove_error : uint8_t;
-struct foxglove_mcap_writer;
-struct FoxgloveCustomWriter;
-struct foxglove_mcap_attachment;
-
-foxglove_error foxglove_mcap_write_metadata(
-  foxglove_mcap_writer* writer, const foxglove_string* name, const foxglove_key_value* metadata,
-  size_t metadata_len
-);
-
-foxglove_error foxglove_mcap_attach(
-  foxglove_mcap_writer* writer, const foxglove_mcap_attachment* attachment
-);
-/// @endcond
-
 /// The foxglove namespace.
 namespace foxglove {
 
@@ -146,7 +130,7 @@ struct McapWriterOptions {
   /// @brief Whether to truncate the MCAP file.
   bool truncate = false;
   /// @brief Optional channel filter to use for the MCAP file.
-  SinkChannelFilterFn sink_channel_filter = {};
+  SinkChannelFilterFn sink_channel_filter;
 
   McapWriterOptions() = default;
 };
@@ -245,7 +229,7 @@ using SeekFunction = std::function<int(int64_t pos, int whence, uint64_t* new_po
 ///   caller's write function.
 /// @return A seek function suitable for @ref CustomWriter::seek.
 /// @note This function is used to build a @ref CustomWriter for non-seekable output destinations.
-inline SeekFunction no_seek_fn(uint64_t* position) {
+inline SeekFunction no_seek_fn(const uint64_t* position) {
   return [position](int64_t pos, int whence, uint64_t* new_pos) -> int {
     if (whence == SEEK_CUR && pos == 0) {
       *new_pos = *position;

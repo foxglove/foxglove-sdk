@@ -44,19 +44,14 @@ FetchContent_Declare(
   websocketpp
   GIT_REPOSITORY https://github.com/zaphoyd/websocketpp.git
   GIT_TAG 0.8.2
-  OVERRIDE_FIND_PACKAGE
+  # Use a non-existent SOURCE_SUBDIR so FetchContent_MakeAvailable skips
+  # add_subdirectory (websocketpp's CMakeLists.txt modifies global settings).
+  SOURCE_SUBDIR _unused
 )
-# Set WebSocketPP CMake policy to suppress the warning
-set(FETCHCONTENT_TRY_FIND_PACKAGE_MODE NEVER)
-FetchContent_GetProperties(websocketpp)
-if(NOT websocketpp_POPULATED)
-  FetchContent_Populate(websocketpp)
-  # Don't call add_subdirectory to avoid running the original CMakeLists.txt
-  # Just set up the include directory
-  add_library(websocketpp INTERFACE)
-  target_include_directories(websocketpp INTERFACE ${websocketpp_SOURCE_DIR})
-endif()
 FetchContent_MakeAvailable(websocketpp)
+# websocketpp is header-only; set up an interface target manually.
+add_library(websocketpp INTERFACE)
+target_include_directories(websocketpp INTERFACE ${websocketpp_SOURCE_DIR})
 
 FetchContent_Declare(asio
   GIT_REPOSITORY https://github.com/chriskohlhoff/asio.git

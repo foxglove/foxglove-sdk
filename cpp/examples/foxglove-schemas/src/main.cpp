@@ -7,12 +7,11 @@
 #include <cmath>
 #include <iostream>
 
-foxglove::schemas::SceneUpdateChannel SCENE_UPDATE_CHANNEL =
-  foxglove::schemas::SceneUpdateChannel::create("/boxes").value();
-foxglove::schemas::FrameTransformChannel FRAME_TRANSFORM_CHANNEL =
-  foxglove::schemas::FrameTransformChannel::create("/tf").value();
-
-void log_to_channels(int counter) {
+void log_to_channels(
+  foxglove::schemas::SceneUpdateChannel& scene_update_channel,
+  foxglove::schemas::FrameTransformChannel& frame_transform_channel,
+  int counter
+) {
   // Create a SceneUpdate message for the box
   foxglove::schemas::SceneUpdate scene_update;
   foxglove::schemas::SceneEntity entity;
@@ -55,7 +54,7 @@ void log_to_channels(int counter) {
 
   entity.cubes.push_back(cube);
   scene_update.entities.push_back(entity);
-  SCENE_UPDATE_CHANNEL.log(scene_update);
+  scene_update_channel.log(scene_update);
 
   // Create a FrameTransform message
   foxglove::schemas::FrameTransform transform;
@@ -71,7 +70,7 @@ void log_to_channels(int counter) {
   rotation.w = std::cos(yaw2 / 2.0);
   transform.rotation = rotation;
 
-  FRAME_TRANSFORM_CHANNEL.log(transform);
+  frame_transform_channel.log(transform);
 }
 
 // NOLINTNEXTLINE(bugprone-exception-escape)
@@ -86,8 +85,13 @@ int main() {
   }
   auto writer = std::move(writer_result.value());
 
+  foxglove::schemas::SceneUpdateChannel scene_update_channel =
+    foxglove::schemas::SceneUpdateChannel::create("/boxes").value();
+  foxglove::schemas::FrameTransformChannel frame_transform_channel =
+    foxglove::schemas::FrameTransformChannel::create("/tf").value();
+
   for (int i = 0; i < 100; ++i) {
-    log_to_channels(i);
+    log_to_channels(scene_update_channel, frame_transform_channel, i);
   }
 
   // Optional, if you want to check for or handle errors
