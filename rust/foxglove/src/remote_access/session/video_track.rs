@@ -89,7 +89,8 @@ enum VideoEncodeError {
 /// Owns a bounded channel and a background processing task. Dropping the publisher
 /// closes the channel, which terminates the task.
 pub(crate) struct VideoPublisher {
-    tx: tokio::sync::mpsc::Sender<(Bytes, u64)>,
+    tx: flume::Sender<(Bytes, u64)>,
+    rx: flume::Receiver<(Bytes, u64)>,
     #[allow(dead_code)]
     video_source: NativeVideoSource,
 }
@@ -100,10 +101,11 @@ impl VideoPublisher {
 
     /// Creates a new video publisher and spawns the background processing task.
     pub fn new(video_source: NativeVideoSource, input_schema: VideoInputSchema) -> Self {
-        let (tx, mut rx) = tokio::sync::mpsc::channel::<(Bytes, u64)>(Self::CHANNEL_CAPACITY);
+        let (tx, rx) = flume::bounded::<(Bytes, u64)>(Self::CHANNEL_CAPACITY);
         let source = video_source.clone();
+        let consumer_rx = rx.clone();
         tokio::spawn(async move {
-            while let Some((data, log_time_ns)) = rx.recv().await {
+            while let Ok((data, log_time_ns)) = consumer_rx.recv_async().await {
                 let source = source.clone();
                 let result = tokio::task::spawn_blocking(move || {
                     transcode_and_publish(input_schema, &source, &data, log_time_ns)
@@ -120,7 +122,7 @@ impl VideoPublisher {
                 }
             }
         });
-        Self { tx, video_source }
+        Self { tx, rx, video_source }
     }
 
     /// Returns a reference to the underlying video source.
@@ -129,18 +131,23 @@ impl VideoPublisher {
         &self.video_source
     }
 
-    /// Send a frame for encoding. Non-blocking: if the channel is full, the frame is
-    /// silently dropped (back-pressure for live video).
+    /// Send a frame for encoding. Non-blocking: if the channel is full, the oldest frame
+    /// is dropped to make room (head-drop for minimal latency on live video).
     ///
     /// `log_time_ns` is the message log time in nanoseconds since epoch, forwarded to the
     /// video encoder as frame timestamp.
     pub fn send(&self, data: Bytes, log_time_ns: u64) {
-        if let Err(tokio::sync::mpsc::error::TrySendError::Closed(_)) =
-            self.tx.try_send((data, log_time_ns))
-        {
-            warn!("video publisher channel closed");
+        let msg = (data, log_time_ns);
+        match self.tx.try_send(msg) {
+            Ok(()) => {}
+            Err(flume::TrySendError::Full(msg)) => {
+                let _ = self.rx.try_recv();
+                let _ = self.tx.try_send(msg);
+            }
+            Err(flume::TrySendError::Disconnected(_)) => {
+                warn!("video publisher channel closed");
+            }
         }
-        // Full channel: frame dropped silently (acceptable for live video)
     }
 }
 
