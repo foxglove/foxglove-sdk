@@ -6,7 +6,7 @@ use futures_util::StreamExt;
 use libwebrtc::video_source::{native::NativeVideoSource, RtcVideoSource};
 use livekit::options::TrackPublishOptions;
 use livekit::prelude::*;
-use livekit::{id::ParticipantIdentity, ByteStreamReader, Room, StreamByteOptions};
+use livekit::{ByteStreamReader, Room, StreamByteOptions, id::ParticipantIdentity};
 use parking_lot::RwLock;
 use smallvec::SmallVec;
 use tokio::io::AsyncReadExt;
@@ -14,17 +14,17 @@ use tokio_util::{io::StreamReader, sync::CancellationToken};
 use tracing::{debug, error, info, warn};
 
 use crate::{
+    ChannelId, Context, FoxgloveError, Metadata, RawChannel, Sink, SinkChannelFilter, SinkId,
     protocol::v2::{
-        client::{self, ClientMessage},
-        server::{advertise, MessageData as ServerMessageData, ServerInfo, Unadvertise},
         BinaryMessage, JsonMessage,
+        client::{self, ClientMessage},
+        server::{MessageData as ServerMessageData, ServerInfo, Unadvertise, advertise},
     },
     remote_access::{
+        RemoteAccessError,
         participant::{Participant, ParticipantWriter},
         session_state::SessionState,
-        RemoteAccessError,
     },
-    ChannelId, Context, FoxgloveError, Metadata, RawChannel, Sink, SinkChannelFilter, SinkId,
 };
 
 mod video_track;
@@ -391,7 +391,9 @@ impl RemoteAccessSession {
             },
             BINARY => ClientMessage::parse_binary(&payload[..]),
             _ => {
-                error!("Unrecognized message opcode ({opcode}) received, you likely need to upgrade to a newer version of the Foxglove SDK");
+                error!(
+                    "Unrecognized message opcode ({opcode}) received, you likely need to upgrade to a newer version of the Foxglove SDK"
+                );
                 return false;
             }
         };

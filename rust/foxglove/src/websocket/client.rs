@@ -1,9 +1,9 @@
+use std::sync::Weak;
 use std::sync::atomic::AtomicU32;
 use std::sync::atomic::Ordering::Relaxed;
-use std::sync::Weak;
 
-use super::connected_client::ConnectedClient;
 use super::Status;
+use super::connected_client::ConnectedClient;
 use crate::SinkId;
 
 /// Identifies a client connection. Unique for the duration of the server's lifetime.

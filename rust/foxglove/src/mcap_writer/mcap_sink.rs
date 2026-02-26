@@ -222,7 +222,7 @@ impl<W: Write + Seek + Send> Sink for McapSink<W> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{testutil::read_summary, ChannelBuilder, Context, Metadata, Schema};
+    use crate::{ChannelBuilder, Context, Metadata, Schema, testutil::read_summary};
     use mcap::McapError;
     use std::path::Path;
     use tempfile::NamedTempFile;

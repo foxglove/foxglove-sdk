@@ -11,7 +11,7 @@ use indexmap::IndexSet;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::Duration;
-use tokio_tungstenite::tungstenite::{self, http::HeaderValue, Message};
+use tokio_tungstenite::tungstenite::{self, Message, http::HeaderValue};
 use tracing_test::traced_test;
 use tungstenite::client::IntoClientRequest;
 
@@ -28,16 +28,16 @@ use super::ws_protocol::server::server_info::{
     Capability as ServerInfoCapability, SerializedTimestamp,
 };
 use super::ws_protocol::server::{
-    advertise_services, ConnectionGraphUpdate, FetchAssetResponse, ParameterValues, ServerInfo,
-    ServerMessage, ServiceCallFailure, ServiceCallResponse, Status,
+    ConnectionGraphUpdate, FetchAssetResponse, ParameterValues, ServerInfo, ServerMessage,
+    ServiceCallFailure, ServiceCallResponse, Status, advertise_services,
 };
 use crate::library_version::get_library_version;
-use crate::testutil::{assert_eventually, RecordingServerListener};
-use crate::websocket::handshake::SUBPROTOCOL;
-use crate::websocket::server::{create_server as do_create_server, ServerOptions};
-use crate::websocket::service::{CallId, Service, ServiceSchema};
+use crate::testutil::{RecordingServerListener, assert_eventually};
 #[cfg(feature = "tls")]
 use crate::websocket::TlsIdentity;
+use crate::websocket::handshake::SUBPROTOCOL;
+use crate::websocket::server::{ServerOptions, create_server as do_create_server};
+use crate::websocket::service::{CallId, Service, ServiceSchema};
 use crate::websocket::{
     BlockingAssetHandlerFn, Capability, ClientChannelId, ConnectionGraph, Parameter, Server,
 };
@@ -1845,9 +1845,10 @@ async fn test_server_info_with_playback_control() {
 
     // By starting the server with a set playback_time_range, it should enable the PlaybackControl
     // capability
-    assert!(msg
-        .capabilities
-        .contains(&ServerInfoCapability::PlaybackControl));
+    assert!(
+        msg.capabilities
+            .contains(&ServerInfoCapability::PlaybackControl)
+    );
 
     let _ = server.stop();
 }

@@ -64,9 +64,7 @@ pub fn create_channel<T: Encode>(
 /// Panics if a channel can't be created for `$msg`.
 #[macro_export]
 macro_rules! log {
-    ($topic:literal, $msg:expr $(,)? ) => {{
-        $crate::log_with_meta!($topic, $msg, $crate::PartialMetadata::default())
-    }};
+    ($topic:literal, $msg:expr $(,)? ) => {{ $crate::log_with_meta!($topic, $msg, $crate::PartialMetadata::default()) }};
 
     ($topic:literal, $msg:expr, log_time = $log_time:expr $(,)? ) => {{
         $crate::log_with_meta!(
@@ -106,7 +104,7 @@ mod tests {
 
     use crate::messages::{Color, LaserScan, Log, Timestamp};
     use crate::nanoseconds_since_epoch;
-    use crate::{testutil::RecordingSink, Context};
+    use crate::{Context, testutil::RecordingSink};
     use crate::{FoxgloveError, Schema};
 
     use super::*;

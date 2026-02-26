@@ -2,7 +2,7 @@ use std::ffi::c_void;
 
 use foxglove::websocket::{AssetHandler, AssetResponder};
 
-use crate::{bytes::FoxgloveBytes, FoxgloveString};
+use crate::{FoxgloveString, bytes::FoxgloveBytes};
 
 pub struct FoxgloveFetchAssetResponder(AssetResponder);
 impl FoxgloveFetchAssetResponder {

@@ -73,7 +73,7 @@ impl CredentialsProvider {
 #[cfg(test)]
 mod tests {
     use crate::api_client::test_utils::{
-        create_test_builder, create_test_server, TEST_DEVICE_TOKEN,
+        TEST_DEVICE_TOKEN, create_test_builder, create_test_server,
     };
 
     use crate::api_client::DeviceToken;
