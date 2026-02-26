@@ -116,7 +116,9 @@ if (STRICT)
 endif()
 
 if(DEFINED CLANG_TIDY)
-  set(CMAKE_CXX_CLANG_TIDY clang-tidy)
+  find_program(CLANG_TIDY_EXE NAMES clang-tidy REQUIRED)
+  message(STATUS "Found clang-tidy: ${CLANG_TIDY_EXE}")
+  set(CMAKE_CXX_CLANG_TIDY "${CLANG_TIDY_EXE}")
 endif()
 
 ### C
