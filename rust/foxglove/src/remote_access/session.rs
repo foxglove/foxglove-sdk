@@ -647,8 +647,8 @@ mod tests {
     }
 
     /// A factory that always fails to open a stream.
-    fn failing_factory(
-    ) -> impl FnOnce(ChannelId, Vec<ParticipantIdentity>, u32) -> std::future::Ready<Option<ChannelWriter>>
+    fn failing_factory()
+    -> impl FnOnce(ChannelId, Vec<ParticipantIdentity>, u32) -> std::future::Ready<Option<ChannelWriter>>
     {
         |_channel_id, _subscribers, _version| std::future::ready(None)
     }
