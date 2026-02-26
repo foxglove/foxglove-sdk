@@ -70,6 +70,38 @@ FetchContent_Declare(json
 )
 FetchContent_MakeAvailable(json)
 
+FetchContent_Declare(base64
+  GIT_REPOSITORY https://github.com/tobiaslocker/base64.git
+  GIT_TAG 8d96a2a737ac1396304b1de289beb3a5ea0cb752
+)
+set(BASE64_ENABLE_TESTING OFF CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(base64)
+
+option(BUILD_DATA_PROVIDER_EXAMPLE "Build the data provider example (requires cpp-httplib and date)" ON)
+
+if(BUILD_DATA_PROVIDER_EXAMPLE)
+  FetchContent_Declare(date
+    GIT_REPOSITORY https://github.com/HowardHinnant/date.git
+    GIT_TAG v3.0.4
+  )
+  set(ENABLE_DATE_TESTING OFF CACHE BOOL "" FORCE)
+  FetchContent_MakeAvailable(date)
+
+  FetchContent_Declare(httplib
+    GIT_REPOSITORY https://github.com/yhirose/cpp-httplib.git
+    GIT_TAG v0.32.0
+  )
+  set(HTTPLIB_COMPILE OFF CACHE BOOL "" FORCE)
+  set(HTTPLIB_REQUIRE_OPENSSL OFF CACHE BOOL "" FORCE)
+  set(HTTPLIB_USE_OPENSSL_IF_AVAILABLE OFF CACHE BOOL "" FORCE)
+  set(HTTPLIB_REQUIRE_ZLIB OFF CACHE BOOL "" FORCE)
+  set(HTTPLIB_USE_ZLIB_IF_AVAILABLE OFF CACHE BOOL "" FORCE)
+  set(HTTPLIB_USE_BROTLI_IF_AVAILABLE OFF CACHE BOOL "" FORCE)
+  set(HTTPLIB_USE_ZSTD_IF_AVAILABLE OFF CACHE BOOL "" FORCE)
+  set(HTTPLIB_USE_NON_BLOCKING_GETADDRINFO OFF CACHE BOOL "" FORCE)
+  FetchContent_MakeAvailable(httplib)
+endif()
+
 if(DEFINED SANITIZE)
   if(NOT CMAKE_CXX_COMPILER_ID MATCHES ".*Clang")
     message(FATAL_ERROR "Sanitizers are only supported with Clang, not ${CMAKE_CXX_COMPILER_ID}")
@@ -254,3 +286,13 @@ set_property(TARGET example_message_filtering PROPERTY CXX_STANDARD_REQUIRED Tru
 target_compile_options(example_message_filtering PUBLIC ${SANITIZER_COMPILE_OPTIONS})
 target_link_options(example_message_filtering PUBLIC ${SANITIZER_LINK_OPTIONS})
 target_link_libraries(example_message_filtering foxglove_cpp_static)
+
+if(BUILD_DATA_PROVIDER_EXAMPLE)
+  add_executable(example_data_provider examples/data-provider/src/main.cpp)
+  set_property(TARGET example_data_provider PROPERTY CXX_STANDARD 17)
+  set_property(TARGET example_data_provider PROPERTY CXX_STANDARD_REQUIRED True)
+  target_compile_options(example_data_provider PUBLIC ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
+  target_include_directories(example_data_provider SYSTEM PRIVATE ${json_SOURCE_DIR}/include)
+  target_link_options(example_data_provider PUBLIC ${SANITIZER_LINK_OPTIONS})
+  target_link_libraries(example_data_provider foxglove_cpp_static httplib::httplib base64 date::date)
+endif()

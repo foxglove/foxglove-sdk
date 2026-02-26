@@ -2,7 +2,7 @@ use std::borrow::Cow;
 
 use bytes::{Buf, BufMut};
 
-use crate::protocol::{BinaryPayload, ParseError};
+use crate::protocol::{BinaryMessage, BinaryPayload, ParseError};
 
 /// Client message data message.
 ///
@@ -55,6 +55,10 @@ impl<'a> BinaryPayload<'a> for MessageData<'a> {
     }
 }
 
+impl<'a> BinaryMessage<'a> for MessageData<'a> {
+    const OPCODE: u8 = 1;
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -67,7 +71,7 @@ mod tests {
     fn test_roundtrip() {
         let orig = message();
         let mut buf = Vec::new();
-        orig.write_payload(&mut buf);
+        BinaryPayload::write_payload(&orig, &mut buf);
         let parsed = MessageData::parse_payload(&buf).unwrap();
         assert_eq!(parsed, orig);
     }

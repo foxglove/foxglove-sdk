@@ -1846,12 +1846,36 @@ export const ImageAnnotations = {
         ]
       },
       "description": "Text annotations"
+    },
+    "metadata": {
+      "type": "array",
+      "items": {
+        "title": "foxglove.KeyValuePair",
+        "description": "A key with its associated value",
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "Key"
+          },
+          "value": {
+            "type": "string",
+            "description": "Value"
+          }
+        },
+        "required": [
+          "key",
+          "value"
+        ]
+      },
+      "description": "Additional user-provided metadata associated with the image annotations. Keys must be unique."
     }
   },
   "required": [
     "circles",
     "points",
-    "texts"
+    "texts",
+    "metadata"
   ]
 };
 
@@ -2311,6 +2335,29 @@ export const LocationFix = {
         "b",
         "a"
       ]
+    },
+    "metadata": {
+      "type": "array",
+      "items": {
+        "title": "foxglove.KeyValuePair",
+        "description": "A key with its associated value",
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "Key"
+          },
+          "value": {
+            "type": "string",
+            "description": "Value"
+          }
+        },
+        "required": [
+          "key",
+          "value"
+        ]
+      },
+      "description": "Additional user-provided metadata associated with the location fix. Keys must be unique."
     }
   },
   "required": [
@@ -2320,7 +2367,8 @@ export const LocationFix = {
     "longitude",
     "altitude",
     "position_covariance",
-    "position_covariance_type"
+    "position_covariance_type",
+    "metadata"
   ]
 };
 
@@ -2432,6 +2480,29 @@ export const LocationFixes = {
               "b",
               "a"
             ]
+          },
+          "metadata": {
+            "type": "array",
+            "items": {
+              "title": "foxglove.KeyValuePair",
+              "description": "A key with its associated value",
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string",
+                  "description": "Key"
+                },
+                "value": {
+                  "type": "string",
+                  "description": "Value"
+                }
+              },
+              "required": [
+                "key",
+                "value"
+              ]
+            },
+            "description": "Additional user-provided metadata associated with the location fix. Keys must be unique."
           }
         },
         "required": [
@@ -2441,7 +2512,8 @@ export const LocationFixes = {
           "longitude",
           "altitude",
           "position_covariance",
-          "position_covariance_type"
+          "position_covariance_type",
+          "metadata"
         ]
       },
       "description": "An array of location fixes"

@@ -7,5 +7,5 @@ mod parse_error;
 pub mod schema;
 pub mod server;
 
-pub use message::{BinaryPayload, JsonMessage};
+pub use message::{BinaryMessage, BinaryPayload, JsonMessage};
 pub use parse_error::ParseError;

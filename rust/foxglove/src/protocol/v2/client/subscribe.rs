@@ -10,12 +10,12 @@ use crate::protocol::{BinaryPayload, ParseError};
 #[serde(tag = "op", rename = "subscribe", rename_all = "camelCase")]
 pub struct Subscribe {
     /// Channel IDs to subscribe to.
-    pub channel_ids: Vec<u32>,
+    pub channel_ids: Vec<u64>,
 }
 
 impl Subscribe {
     /// Creates a new subscribe message.
-    pub fn new(channel_ids: impl IntoIterator<Item = u32>) -> Self {
+    pub fn new(channel_ids: impl IntoIterator<Item = u64>) -> Self {
         Self {
             channel_ids: channel_ids.into_iter().collect(),
         }
@@ -28,25 +28,25 @@ impl BinaryPayload<'_> for Subscribe {
             return Err(ParseError::BufferTooShort);
         }
         let count = data.get_u32_le() as usize;
-        let required_len = count.checked_mul(4).ok_or(ParseError::BufferTooShort)?;
+        let required_len = count.checked_mul(8).ok_or(ParseError::BufferTooShort)?;
         if data.len() < required_len {
             return Err(ParseError::BufferTooShort);
         }
         let mut channel_ids = Vec::with_capacity(count);
         for _ in 0..count {
-            channel_ids.push(data.get_u32_le());
+            channel_ids.push(data.get_u64_le());
         }
         Ok(Self { channel_ids })
     }
 
     fn payload_size(&self) -> usize {
-        4 + self.channel_ids.len() * 4
+        4 + self.channel_ids.len() * 8
     }
 
     fn write_payload(&self, buf: &mut impl BufMut) {
         buf.put_u32_le(self.channel_ids.len() as u32);
         for &channel_id in &self.channel_ids {
-            buf.put_u32_le(channel_id);
+            buf.put_u64_le(channel_id);
         }
     }
 }

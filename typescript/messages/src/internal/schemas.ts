@@ -1493,6 +1493,13 @@ const ImageAnnotations: FoxgloveMessageSchema = {
       description: "Text annotations",
       array: true,
     },
+    {
+      name: "metadata",
+      type: { type: "nested", schema: KeyValuePair },
+      description:
+        "Additional user-provided metadata associated with the image annotations. Keys must be unique.",
+      array: true,
+    },
   ],
 };
 
@@ -1571,6 +1578,14 @@ const LocationFix: FoxgloveMessageSchema = {
       description: "Color used to visualize the location",
       protobufFieldNumber: 8,
       optional: true,
+    },
+    {
+      name: "metadata",
+      type: { type: "nested", schema: KeyValuePair },
+      array: true,
+      description:
+        "Additional user-provided metadata associated with the location fix. Keys must be unique.",
+      protobufFieldNumber: 9,
     },
   ],
 };

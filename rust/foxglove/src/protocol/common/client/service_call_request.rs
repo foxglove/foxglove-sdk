@@ -2,7 +2,7 @@ use std::borrow::Cow;
 
 use bytes::{Buf, BufMut};
 
-use crate::protocol::{BinaryPayload, ParseError};
+use crate::protocol::{BinaryMessage, BinaryPayload, ParseError};
 
 /// Service call request message.
 ///
@@ -65,6 +65,10 @@ impl<'a> BinaryPayload<'a> for ServiceCallRequest<'a> {
     }
 }
 
+impl<'a> BinaryMessage<'a> for ServiceCallRequest<'a> {
+    const OPCODE: u8 = 2;
+}
+
 #[cfg(test)]
 mod tests {
     use assert_matches::assert_matches;
@@ -104,7 +108,7 @@ mod tests {
     fn test_roundtrip() {
         let orig = message();
         let mut buf = Vec::new();
-        orig.write_payload(&mut buf);
+        BinaryPayload::write_payload(&orig, &mut buf);
         let parsed = ServiceCallRequest::parse_payload(&buf).unwrap();
         assert_eq!(parsed, orig);
     }

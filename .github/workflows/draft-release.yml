@@ -19,6 +19,8 @@ concurrency:
 jobs:
   c-cpp:
     uses: ./.github/workflows/c_cpp.yml
+    permissions:
+      pull-requests: read
     with:
       sdk-version: ${{ github.event.inputs.version }}
   cpp-data-loader:

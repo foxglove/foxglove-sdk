@@ -165,6 +165,30 @@ impl ProtobufField for u64 {
     }
 }
 
+impl ProtobufField for usize {
+    fn field_type() -> ProstFieldType {
+        ProstFieldType::Uint64
+    }
+
+    fn wire_type() -> u32 {
+        prost::encoding::WireType::Varint as u32
+    }
+
+    fn write(&self, buf: &mut impl bytes::BufMut) {
+        encode_varint(*self as u64, buf);
+    }
+
+    fn encoded_len(&self) -> usize {
+        prost::encoding::encoded_len_varint(*self as u64)
+    }
+}
+
+// Compile-time assertion that usize fits in u64
+const _: () = assert!(
+    usize::BITS <= u64::BITS,
+    "Target architecture has a usize larger than u64"
+);
+
 impl ProtobufField for u32 {
     fn field_type() -> ProstFieldType {
         ProstFieldType::Uint32
@@ -706,5 +730,89 @@ mod tests {
         let mut buf = bytes::BytesMut::new();
         bool::write_tagged(&true, 256, &mut buf);
         assert_eq!(&buf[..], &[0x80, 0x10, 0x01]);
+    }
+
+    #[test]
+    fn test_usize_field_type() {
+        assert_eq!(ProstFieldType::Uint64, usize::field_type());
+    }
+
+    #[test]
+    fn test_usize_encoded_len() {
+        // Small values
+        assert_eq!(1, usize::encoded_len(&0));
+        assert_eq!(1, usize::encoded_len(&127));
+        assert_eq!(2, usize::encoded_len(&128));
+
+        // Test with usize::MAX which is platform-specific
+        #[cfg(target_pointer_width = "64")]
+        {
+            // On 64-bit platforms, usize::MAX == u64::MAX
+            assert_eq!(10, usize::encoded_len(&usize::MAX));
+        }
+        #[cfg(target_pointer_width = "32")]
+        {
+            // On 32-bit platforms, usize::MAX == u32::MAX
+            assert_eq!(5, usize::encoded_len(&usize::MAX));
+        }
+    }
+
+    #[test]
+    fn test_usize_write() {
+        // Test small value
+        let mut buf = bytes::BytesMut::new();
+        usize::write(&42, &mut buf);
+        assert_eq!(&buf[..], &[42]);
+
+        // Test usize::MAX which is platform-specific
+        #[cfg(target_pointer_width = "64")]
+        {
+            // On 64-bit platforms, usize::MAX == u64::MAX
+            let mut buf = bytes::BytesMut::new();
+            usize::write(&usize::MAX, &mut buf);
+            assert_eq!(
+                &buf[..],
+                &[0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01]
+            );
+        }
+        #[cfg(target_pointer_width = "32")]
+        {
+            // On 32-bit platforms, usize::MAX == u32::MAX
+            let mut buf = bytes::BytesMut::new();
+            usize::write(&usize::MAX, &mut buf);
+            assert_eq!(&buf[..], &[0xff, 0xff, 0xff, 0xff, 0x0f]);
+        }
+    }
+
+    #[test]
+    fn test_usize_matches_u64() {
+        // usize should behave identically to u64 for values within u64 range
+        let test_values = vec![
+            0usize,
+            1,
+            127,
+            128,
+            255,
+            256,
+            65535,
+            65536,
+            u32::MAX as usize,
+        ];
+
+        for val in test_values {
+            let mut buf_usize = bytes::BytesMut::new();
+            usize::write(&val, &mut buf_usize);
+
+            let mut buf_u64 = bytes::BytesMut::new();
+            u64::write(&(val as u64), &mut buf_u64);
+
+            assert_eq!(
+                &buf_usize[..],
+                &buf_u64[..],
+                "usize and u64 should encode identically for value {}",
+                val
+            );
+            assert_eq!(usize::encoded_len(&val), u64::encoded_len(&(val as u64)));
+        }
     }
 }

@@ -1,6 +1,6 @@
 use bytes::{Buf, BufMut};
 
-use crate::protocol::{BinaryPayload, ParseError};
+use crate::protocol::{BinaryMessage, BinaryPayload, ParseError};
 
 /// Time message.
 ///
@@ -36,6 +36,10 @@ impl<'a> BinaryPayload<'a> for Time {
     }
 }
 
+impl<'a> BinaryMessage<'a> for Time {
+    const OPCODE: u8 = 2;
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -48,7 +52,7 @@ mod tests {
     fn test_roundtrip() {
         let orig = message();
         let mut buf = Vec::new();
-        orig.write_payload(&mut buf);
+        BinaryPayload::write_payload(&orig, &mut buf);
         let parsed = Time::parse_payload(&buf).unwrap();
         assert_eq!(parsed, orig);
     }

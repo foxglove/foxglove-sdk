@@ -38,3 +38,6 @@ uint8 position_covariance_type
 
 # Color used to visualize the location
 foxglove_msgs/Color color
+
+# Additional user-provided metadata associated with the location fix. Keys must be unique.
+foxglove_msgs/KeyValuePair[] metadata
