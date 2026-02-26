@@ -2,7 +2,7 @@ use foxglove::{
     ChannelDescriptor,
     bytes::Bytes,
     remote_access::{Capability, Client, Gateway, Listener},
-    schemas::{CameraCalibration, RawImage},
+    schemas::{CameraCalibration, RawImage, Timestamp},
 };
 use serde_json::Value;
 use std::{sync::Arc, time::Duration};
@@ -75,8 +75,12 @@ async fn camera_loop() {
         .collect();
 
     let calibration = CameraCalibration {
+        timestamp: None,
+        frame_id: "camera".into(),
         width: width as u32,
         height: height as u32,
+        distortion_model: String::new(),
+        d: vec![],
         k: vec![
             500.0,
             0.0,
@@ -88,6 +92,7 @@ async fn camera_loop() {
             0.0,
             1.0,
         ],
+        r: vec![],
         p: vec![
             500.0,
             0.0,
@@ -102,7 +107,6 @@ async fn camera_loop() {
             1.0,
             0.0,
         ],
-        ..Default::default()
     };
 
     let mut offset = 0usize;
@@ -113,24 +117,26 @@ async fn camera_loop() {
         // Mono image: all rows are identical; just repeat the shifted gradient row.
         let mono_row = &mono_gradient[offset..offset + width];
         let mono_img = RawImage {
+            timestamp: Some(Timestamp::now()),
+            frame_id: "camera".into(),
             width: width as u32,
             height: height as u32,
             encoding: "mono8".into(),
             step: width as u32,
             data: Bytes::from(mono_row.repeat(height)),
-            ..Default::default()
         };
         foxglove::log!("/camera/mono", mono_img);
 
         // RGB rainbow image: same approach with 3 bytes per pixel.
         let rgb_row = &rgb_gradient[offset * 3..(offset + width) * 3];
         let rgb_img = RawImage {
+            timestamp: Some(Timestamp::now()),
+            frame_id: "camera".into(),
             width: width as u32,
             height: height as u32,
             encoding: "rgb8".into(),
             step: (width * 3) as u32,
             data: Bytes::from(rgb_row.repeat(height)),
-            ..Default::default()
         };
         foxglove::log!("/camera/rgb", rgb_img);
 
