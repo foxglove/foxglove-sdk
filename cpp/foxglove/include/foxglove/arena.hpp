@@ -21,7 +21,7 @@ namespace foxglove {
 /// @cond foxglove_internal
 class Arena {
 public:
-  static constexpr std::size_t Size = static_cast<std::size_t>(8) * 1024;  // 128 KB
+  static constexpr std::size_t Size = static_cast<std::size_t>(8) * 1024;  // 8 KB
 
   Arena() = default;
 
@@ -94,7 +94,7 @@ public:
       // We don't use aligned_alloc because it fails on some platforms for larger alignments
       size_t size_with_alignment = alignment + bytes_needed;
       // NOLINTBEGIN(cppcoreguidelines-no-malloc,hicpp-no-malloc,cppcoreguidelines-owning-memory)
-      auto *ptr = ::malloc(size_with_alignment);
+      auto* ptr = ::malloc(size_with_alignment);
       // NOLINTNEXTLINE(clang-analyzer-unix.Malloc)
       aligned_ptr = std::align(alignment, bytes_needed, ptr, size_with_alignment);
       if (aligned_ptr == nullptr) {

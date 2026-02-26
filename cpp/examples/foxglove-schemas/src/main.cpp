@@ -9,8 +9,7 @@
 
 void log_to_channels(
   foxglove::schemas::SceneUpdateChannel& scene_update_channel,
-  foxglove::schemas::FrameTransformChannel& frame_transform_channel,
-  int counter
+  foxglove::schemas::FrameTransformChannel& frame_transform_channel, int counter
 ) {
   // Create a SceneUpdate message for the box
   foxglove::schemas::SceneUpdate scene_update;
