@@ -585,7 +585,6 @@ TEST_CASE("Custom writer basic functionality") {
     return 0;
   };
   custom_writer.seek =
-    // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
     [&cursor, &buffer, &seek_called](int64_t pos, int whence, uint64_t* new_pos) -> int {
     seek_called = true;
     switch (whence) {
