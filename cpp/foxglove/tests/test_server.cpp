@@ -386,8 +386,7 @@ TEST_CASE("Client advertise/publish callbacks") {
     cv.notify_all();
   };
   callbacks.onMessageData = [&](
-                              uint32_t client_id
-                              [[maybe_unused]],  // NOLINT(bugprone-easily-swappable-parameters)
+                              uint32_t client_id [[maybe_unused]],
                               uint32_t client_channel_id [[maybe_unused]],
                               const std::byte* data,
                               size_t data_len
@@ -795,7 +794,6 @@ std::vector<std::byte> makeServiceRequest(
 }
 
 void validateServiceResponse(
-  // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
   const std::string_view response, uint32_t service_id, uint32_t call_id, std::string_view encoding,
   const std::vector<std::byte>& payload
 ) {
