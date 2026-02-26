@@ -91,7 +91,7 @@ impl FrameReader {
 
 struct ViewerConnection {
     room: Room,
-    _events: tokio::sync::mpsc::UnboundedReceiver<RoomEvent>,
+    events: tokio::sync::mpsc::UnboundedReceiver<RoomEvent>,
     frame_reader: FrameReader,
 }
 
@@ -131,7 +131,7 @@ impl ViewerConnection {
             if let Some(reader) = reader {
                 return Ok(Self {
                     room,
-                    _events: events,
+                    events,
                     frame_reader: FrameReader::new(reader),
                 });
             }
@@ -174,14 +174,36 @@ impl ViewerConnection {
         }
     }
 
-    /// Reads and returns the next MessageData message.
+    /// Waits for a per-channel byte stream to open and reads the next MessageData
+    /// frame from it.
+    ///
+    /// Data plane messages are delivered on per-channel byte streams (topic `"ch-{id}"`)
+    /// rather than the control-plane `"ws-protocol"` stream. Each time the subscriber
+    /// set changes the gateway opens a new byte stream, so this method waits for the
+    /// corresponding `ByteStreamOpened` event.
     async fn expect_message_data(
         &mut self,
     ) -> Result<foxglove::protocol::v2::server::MessageData<'static>> {
-        let msg = self.frame_reader.next_server_message().await?;
-        match msg {
-            ServerMessage::MessageData(data) => Ok(data),
-            other => anyhow::bail!("expected MessageData, got: {other:?}"),
+        let deadline = tokio::time::Instant::now() + READ_TIMEOUT;
+        loop {
+            let event = tokio::time::timeout_at(deadline, self.events.recv())
+                .await
+                .context("timeout waiting for channel byte stream")?
+                .context("room events channel closed")?;
+            match event {
+                RoomEvent::ByteStreamOpened { reader, topic, .. } if topic.starts_with("ch-") => {
+                    let stream_reader = reader.take().context("reader already taken")?;
+                    let mut reader = FrameReader::new(stream_reader);
+                    let msg = reader.next_server_message().await?;
+                    return match msg {
+                        ServerMessage::MessageData(data) => Ok(data),
+                        other => {
+                            anyhow::bail!("expected MessageData on channel stream, got: {other:?}")
+                        }
+                    };
+                }
+                _ => continue,
+            }
         }
     }
 
