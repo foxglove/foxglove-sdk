@@ -1145,11 +1145,7 @@ impl ImageAnnotations {
     fn __repr__(&self) -> String {
         format!(
             "ImageAnnotations(circles={:?}, points={:?}, texts={:?}, metadata={:?}, timestamp={:?})",
-            self.0.circles,
-            self.0.points,
-            self.0.texts,
-            self.0.metadata,
-            self.0.timestamp,
+            self.0.circles, self.0.points, self.0.texts, self.0.metadata, self.0.timestamp,
         )
     }
     /// Returns the ImageAnnotations schema.
