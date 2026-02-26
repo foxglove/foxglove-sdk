@@ -7,6 +7,8 @@ use livekit::{ByteStreamWriter, StreamWriter, id::ParticipantIdentity};
 
 use crate::remote_access::RemoteAccessError;
 
+type Result<T> = std::result::Result<T, Box<RemoteAccessError>>;
+
 /// A participant in the remote access session.
 ///
 /// A participant has an identity and a dedicated TCP-like binary stream for sending messages.
@@ -54,7 +56,7 @@ impl ChannelWriter {
     }
 
     /// Writes bytes to the channel's byte stream.
-    pub async fn write(&self, bytes: &[u8]) -> Result<(), RemoteAccessError> {
+    pub async fn write(&self, bytes: &[u8]) -> Result<()> {
         self.inner.write(bytes).await
     }
 }
@@ -67,7 +69,7 @@ enum ChannelWriterInner {
 }
 
 impl ChannelWriterInner {
-    async fn write(&self, bytes: &[u8]) -> Result<(), RemoteAccessError> {
+    async fn write(&self, bytes: &[u8]) -> Result<()> {
         match self {
             ChannelWriterInner::Livekit(stream) => stream.write(bytes).await.map_err(|e| e.into()),
             #[cfg(test)]
@@ -90,7 +92,7 @@ impl Participant {
     /// Sends a message to the participant.
     ///
     /// The message is serialized and framed already and provided as a slice of bytes.
-    pub(crate) async fn send(&self, bytes: &[u8]) -> Result<(), RemoteAccessError> {
+    pub(crate) async fn send(&self, bytes: &[u8]) -> Result<()> {
         self.writer.write(bytes).await
     }
 }
@@ -122,7 +124,7 @@ pub(crate) enum ParticipantWriter {
 }
 
 impl ParticipantWriter {
-    async fn write(&self, bytes: &[u8]) -> Result<(), RemoteAccessError> {
+    async fn write(&self, bytes: &[u8]) -> Result<()> {
         match self {
             ParticipantWriter::Livekit(stream) => stream.write(bytes).await.map_err(|e| e.into()),
             #[cfg(test)]
@@ -181,12 +183,12 @@ impl TestChannelWriter {
         }
     }
 
-    fn write(&self, data: &[u8]) -> Result<(), RemoteAccessError> {
+    fn write(&self, data: &[u8]) -> Result<()> {
         if self.fail.load(std::sync::atomic::Ordering::Relaxed) {
-            return Err(RemoteAccessError::Io(std::io::Error::new(
+            return Err(Box::new(RemoteAccessError::Io(std::io::Error::new(
                 std::io::ErrorKind::BrokenPipe,
                 "test write failure",
-            )));
+            ))));
         }
         self.writes.lock().push(Bytes::copy_from_slice(data));
         Ok(())

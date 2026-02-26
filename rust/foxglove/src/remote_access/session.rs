@@ -457,7 +457,7 @@ impl RemoteAccessSession {
     pub(crate) async fn add_participant(
         &self,
         participant_id: ParticipantIdentity,
-    ) -> Result<Arc<Participant>, RemoteAccessError> {
+    ) -> Result<Arc<Participant>, Box<RemoteAccessError>> {
         use crate::remote_access::participant::ParticipantWriter;
 
         if let Some(existing) = self.state.read().get_participant(&participant_id) {
