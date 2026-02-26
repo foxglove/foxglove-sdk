@@ -9,6 +9,7 @@ use livekit::options::TrackPublishOptions;
 use livekit::prelude::*;
 use livekit::{ByteStreamReader, Room, StreamByteOptions, id::ParticipantIdentity};
 use parking_lot::RwLock;
+use smallvec::SmallVec;
 use tokio::io::AsyncReadExt;
 use tokio_util::{io::StreamReader, sync::CancellationToken};
 use tracing::{debug, error, info, warn};
@@ -21,11 +22,7 @@ use crate::{
         client::{self, ClientMessage},
         server::{MessageData as ServerMessageData, ServerInfo, Unadvertise, advertise},
     },
-    remote_access::{
-        RemoteAccessError,
-        participant::{Participant, ParticipantWriter},
-        session_state::SessionState,
-    },
+    remote_access::{RemoteAccessError, participant::Participant, session_state::SessionState},
 };
 
 mod video_track;
