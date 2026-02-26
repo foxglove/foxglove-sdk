@@ -106,7 +106,7 @@ impl VideoPublisher {
             while let Some((data, log_time_ns)) = rx.recv().await {
                 let source = source.clone();
                 let result = tokio::task::spawn_blocking(move || {
-                    encode_and_publish(input_schema, &source, &data, log_time_ns)
+                    transcode_and_publish(input_schema, &source, &data, log_time_ns)
                 })
                 .await;
                 match result {
@@ -144,8 +144,11 @@ impl VideoPublisher {
     }
 }
 
-/// Decode the image message and publish it as a video frame.
-fn encode_and_publish(
+/// Transcode the image message and publish it as a video frame.
+///
+/// This function decodes the original image data, encodes it as YUV 4:2:0, and then publishes it
+/// to the video track.
+fn transcode_and_publish(
     input_schema: VideoInputSchema,
     video_source: &NativeVideoSource,
     data: &[u8],
@@ -167,12 +170,14 @@ fn encode_and_publish(
         ));
     }
 
+    // Transcode to YUV 4:2:0.
     let mut buffer = I420Yuv420(I420Buffer::new(width, height));
     image_msg
         .image
         .to_yuv420(&mut buffer)
         .map_err(VideoEncodeError::YuvConversion)?;
 
+    // Publish the transcoded image to the video track.
     let frame = VideoFrame {
         rotation: VideoRotation::VideoRotation0,
         timestamp_us: (log_time_ns / 1000) as i64,
