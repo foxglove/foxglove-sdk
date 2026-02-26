@@ -2,7 +2,7 @@ use foxglove::{
     ChannelDescriptor,
     bytes::Bytes,
     remote_access::{Capability, Client, Gateway, Listener},
-    schemas::RawImage,
+    schemas::{RawImage, Timestamp},
 };
 use serde_json::Value;
 use std::{sync::Arc, time::Duration};
@@ -50,12 +50,13 @@ async fn camera_loop() {
 
         let data = gradient_data(width, height, offset as usize);
         let img = RawImage {
+            timestamp: Some(Timestamp::now()),
+            frame_id: "camera".into(),
             width: width as u32,
             height: height as u32,
             encoding: "bgr8".into(),
             step: (width * 3) as u32,
             data: Bytes::from(data),
-            ..Default::default()
         };
         foxglove::log!("/camera", img);
 
