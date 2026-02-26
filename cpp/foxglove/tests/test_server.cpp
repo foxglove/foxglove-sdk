@@ -450,9 +450,9 @@ TEST_CASE("Client advertise/publish callbacks") {
     );
     cv.notify_all();
   };
-  // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
   callbacks.onMessageData = [&](
-                              uint32_t client_id [[maybe_unused]],
+                              uint32_t client_id
+                              [[maybe_unused]],  // NOLINT(bugprone-easily-swappable-parameters)
                               uint32_t client_channel_id [[maybe_unused]],
                               const std::byte* data,
                               size_t data_len
