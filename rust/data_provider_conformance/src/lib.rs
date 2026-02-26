@@ -29,7 +29,7 @@ use std::net::TcpStream;
 use std::process::{Child, Command, ExitCode, Stdio};
 use std::time::Duration;
 
-use foxglove::data_provider::{Manifest, UpstreamSource};
+use foxglove::data_provider::{DataBackendSource, Manifest};
 use libtest_mimic::{Arguments, Trial};
 use reqwest::StatusCode;
 pub use reqwest::Url;
@@ -123,8 +123,8 @@ pub fn build_tests(
     let mut static_file_source_count = 0;
     for source in &manifest.sources {
         match source {
-            UpstreamSource::Streamed(_) => streamed_source_count += 1,
-            UpstreamSource::StaticFile { .. } => static_file_source_count += 1,
+            DataBackendSource::Streamed(_) => streamed_source_count += 1,
+            DataBackendSource::StaticFile { .. } => static_file_source_count += 1,
         }
     }
 
@@ -172,8 +172,8 @@ fn test_manifest_matches_json_schema(json: &serde_json::Value) {
 fn test_manifest_and_mcap_agree(client: &Client, manifest_url: &Url, manifest: &Manifest) {
     for source in &manifest.sources {
         let (url, topics, schemas) = match source {
-            UpstreamSource::Streamed(s) => (&s.url, &s.topics, &s.schemas),
-            UpstreamSource::StaticFile { .. } => {
+            DataBackendSource::Streamed(s) => (&s.url, &s.topics, &s.schemas),
+            DataBackendSource::StaticFile { .. } => {
                 // Nothing to check for a static source.
                 continue;
             }

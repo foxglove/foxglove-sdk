@@ -103,7 +103,7 @@ struct StreamedSource {
   std::string end_time;
 };
 
-/// @brief Manifest of upstream sources returned by the manifest endpoint.
+/// @brief Manifest of data backend sources returned by the manifest endpoint.
 struct Manifest {
   /// @brief Human-readable display name for this manifest.
   std::optional<std::string> name;

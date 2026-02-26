@@ -6,7 +6,7 @@ use serde_constant::ConstBool;
 use serde_with::{base64::Base64, serde_as};
 use std::num::NonZeroU16;
 
-/// Manifest of upstream sources.
+/// Manifest of data backend sources.
 #[derive(Debug, Deserialize, Serialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct Manifest {
@@ -14,16 +14,16 @@ pub struct Manifest {
     #[serde(default)]
     pub name: Option<String>,
     /// Data sources in this manifest.
-    pub sources: Vec<UpstreamSource>,
+    pub sources: Vec<DataBackendSource>,
 }
 
-/// A data source from an upstream manifest.
+/// A data source from a data backend manifest.
 ///
 /// Sources can be either static files (supporting range requests for random access)
 /// or streamed sources that must be read sequentially.
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", rename_all_fields = "camelCase", untagged)]
-pub enum UpstreamSource {
+pub enum DataBackendSource {
     /// A static file that supports HTTP range requests.
     StaticFile {
         /// URL to fetch the file from.
