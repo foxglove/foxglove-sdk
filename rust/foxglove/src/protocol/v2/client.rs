@@ -167,3 +167,109 @@ impl<'a> From<JsonMessage<'a>> for ClientMessage<'a> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::protocol::common::client::PlaybackCommand;
+    use assert_matches::assert_matches;
+
+    #[test]
+    fn test_message_data_encode() {
+        let message = MessageData::new(30, br#"{"key": "value"}"#);
+        let buf = message.to_bytes();
+        insta::assert_snapshot!(format!("{:#04x?}", buf));
+        let parsed = ClientMessage::parse_binary(&buf).unwrap();
+        assert_eq!(parsed, ClientMessage::MessageData(message));
+    }
+
+    #[test]
+    fn test_service_call_request_encode() {
+        let message = ServiceCallRequest {
+            service_id: 10,
+            call_id: 12,
+            encoding: "json".into(),
+            payload: br#"{"key": "value"}"#.into(),
+        };
+        let buf = message.to_bytes();
+        insta::assert_snapshot!(format!("{:#04x?}", buf));
+        let parsed = ClientMessage::parse_binary(&buf).unwrap();
+        assert_eq!(parsed, ClientMessage::ServiceCallRequest(message));
+    }
+
+    #[test]
+    fn test_playback_control_request_encode() {
+        let message = PlaybackControlRequest {
+            playback_command: PlaybackCommand::Play,
+            playback_speed: 1.0,
+            seek_time: None,
+            request_id: "some-id".to_string(),
+        };
+        let buf = message.to_bytes();
+        insta::assert_snapshot!(format!("{:#04x?}", buf));
+        let parsed = ClientMessage::parse_binary(&buf).unwrap();
+        assert_eq!(parsed, ClientMessage::PlaybackControlRequest(message));
+    }
+
+    #[test]
+    fn test_playback_control_request_encode_play_with_seek() {
+        let message = PlaybackControlRequest {
+            playback_command: PlaybackCommand::Play,
+            playback_speed: 1.0,
+            seek_time: Some(123_456_789),
+            request_id: "some-id".to_string(),
+        };
+        let buf = message.to_bytes();
+        insta::assert_snapshot!(format!("{:#04x?}", buf));
+        let parsed = ClientMessage::parse_binary(&buf).unwrap();
+        assert_eq!(parsed, ClientMessage::PlaybackControlRequest(message));
+    }
+
+    #[test]
+    fn test_playback_control_request_encode_pause() {
+        let message = PlaybackControlRequest {
+            playback_command: PlaybackCommand::Pause,
+            playback_speed: 1.0,
+            seek_time: None,
+            request_id: "some-id".to_string(),
+        };
+        let buf = message.to_bytes();
+        insta::assert_snapshot!(format!("{:#04x?}", buf));
+        let parsed = ClientMessage::parse_binary(&buf).unwrap();
+        assert_eq!(parsed, ClientMessage::PlaybackControlRequest(message));
+    }
+
+    #[test]
+    fn test_subscribe_encode() {
+        let message = Subscribe::new([10, 20, 30]);
+        let buf = message.to_bytes();
+        insta::assert_snapshot!(format!("{:#04x?}", buf));
+        let parsed = ClientMessage::parse_binary(&buf).unwrap();
+        assert_eq!(parsed, ClientMessage::Subscribe(message));
+    }
+
+    #[test]
+    fn test_unsubscribe_encode() {
+        let message = Unsubscribe::new([1, 2, 3]);
+        let buf = message.to_bytes();
+        insta::assert_snapshot!(format!("{:#04x?}", buf));
+        let parsed = ClientMessage::parse_binary(&buf).unwrap();
+        assert_eq!(parsed, ClientMessage::Unsubscribe(message));
+    }
+
+    #[test]
+    fn test_parse_binary_empty() {
+        assert_matches!(
+            ClientMessage::parse_binary(b""),
+            Err(ParseError::EmptyBinaryMessage)
+        );
+    }
+
+    #[test]
+    fn test_parse_binary_invalid_opcode() {
+        assert_matches!(
+            ClientMessage::parse_binary(&[0xff]),
+            Err(ParseError::InvalidOpcode(0xff))
+        );
+    }
+}
