@@ -1536,10 +1536,6 @@ typedef struct foxglove_scene_update {
    */
   const struct foxglove_scene_entity *entities;
   size_t entities_count;
-  /**
-   * Timestamp for the scene update. Some Foxglove features will use this timestamp when set. It is preferable that entity and deletion timestamps match this value when provided.
-   */
-  const struct foxglove_timestamp *timestamp;
 } foxglove_scene_update;
 
 /**

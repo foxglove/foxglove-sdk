@@ -8,6 +8,3 @@ foxglove_msgs/SceneEntityDeletion[] deletions
 
 # Scene entities to add or replace
 foxglove_msgs/SceneEntity[] entities
-
-# Timestamp for the scene update. Some Foxglove features will use this timestamp when set. It is preferable that entity and deletion timestamps match this value when provided.
-time timestamp

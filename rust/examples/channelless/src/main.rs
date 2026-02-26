@@ -86,7 +86,6 @@ fn main() {
                 }],
                 ..Default::default()
             }],
-            ..Default::default()
         }
     );
 

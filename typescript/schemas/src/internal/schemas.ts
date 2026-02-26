@@ -764,13 +764,6 @@ const SceneUpdate: FoxgloveMessageSchema = {
       array: true,
       description: "Scene entities to add or replace",
     },
-    {
-      name: "timestamp",
-      type: { type: "nested", schema: Timestamp },
-      description:
-        "Timestamp for the scene update. Some Foxglove features will use this timestamp when set. It is preferable that entity and deletion timestamps match this value when provided.",
-      optional: true,
-    },
   ],
 };
 

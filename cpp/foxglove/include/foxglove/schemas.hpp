@@ -1607,10 +1607,6 @@ struct SceneUpdate {
   /// @brief Scene entities to add or replace
   std::vector<SceneEntity> entities;
 
-  /// @brief Timestamp for the scene update. Some Foxglove features will use this timestamp when
-  /// set. It is preferable that entity and deletion timestamps match this value when provided.
-  std::optional<Timestamp> timestamp;
-
   /// @brief Encoded the SceneUpdate as protobuf to the provided buffer.
   ///
   /// On success, writes the serialized length to *encoded_len.

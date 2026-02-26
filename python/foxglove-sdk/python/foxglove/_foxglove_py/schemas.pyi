@@ -833,7 +833,6 @@ class SceneUpdate:
         *,
         deletions: list[SceneEntityDeletion] | None = None,
         entities: list[SceneEntity] | None = None,
-        timestamp: Timestamp | None = None,
     ) -> None: ...
     @staticmethod
     def get_schema() -> Schema:

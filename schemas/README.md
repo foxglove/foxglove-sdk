@@ -2977,19 +2977,6 @@ Scene entities to add or replace
 
 </td>
 </tr>
-<tr>
-<td><code>timestamp</code> (optional)</td>
-<td>
-
-[Timestamp](#timestamp)
-
-</td>
-<td>
-
-Timestamp for the scene update. Some Foxglove features will use this timestamp when set. It is preferable that entity and deletion timestamps match this value when provided.
-
-</td>
-</tr>
 </table>
 
 ## SpherePrimitive

@@ -4120,9 +4120,6 @@ pub struct SceneUpdate {
     /// Scene entities to add or replace
     pub entities: *const SceneEntity,
     pub entities_count: usize,
-
-    /// Timestamp for the scene update. Some Foxglove features will use this timestamp when set. It is preferable that entity and deletion timestamps match this value when provided.
-    pub timestamp: *const FoxgloveTimestamp,
 }
 
 #[cfg(not(target_family = "wasm"))]
@@ -4162,7 +4159,6 @@ impl BorrowToNative for SceneUpdate {
         Ok(ManuallyDrop::new(foxglove::messages::SceneUpdate {
             deletions: ManuallyDrop::into_inner(deletions),
             entities: ManuallyDrop::into_inner(entities),
-            timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
         }))
     }
 }

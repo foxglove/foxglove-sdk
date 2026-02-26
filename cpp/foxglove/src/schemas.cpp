@@ -1940,8 +1940,6 @@ void sceneUpdateToC(
   dest.deletions_count = src.deletions.size();
   dest.entities = arena.map<foxglove_scene_entity>(src.entities, sceneEntityToC);
   dest.entities_count = src.entities.size();
-  dest.timestamp =
-    src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
 }
 
 void spherePrimitiveToC(
