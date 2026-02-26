@@ -1,8 +1,5 @@
-use std::{
-    collections::HashMap,
-    sync::{Arc, Weak},
-    time::Duration,
-};
+use std::sync::{Arc, Weak};
+use std::time::Duration;
 
 use bytes::Bytes;
 use futures_util::StreamExt;
@@ -11,7 +8,7 @@ use parking_lot::RwLock;
 use smallvec::SmallVec;
 use tokio::io::AsyncReadExt;
 use tokio_util::{io::StreamReader, sync::CancellationToken};
-use tracing::{debug, error, info, warn};
+use tracing::{error, info, warn};
 
 use crate::{
     protocol::v2::{
@@ -19,7 +16,7 @@ use crate::{
         server::{advertise, MessageData as ServerMessageData, ServerInfo, Unadvertise},
         BinaryMessage, JsonMessage,
     },
-    remote_access::{participant::Participant, RemoteAccessError},
+    remote_access::{participant::Participant, session_state::SessionState, RemoteAccessError},
     ChannelId, Context, FoxgloveError, Metadata, RawChannel, Sink, SinkChannelFilter, SinkId,
 };
 
@@ -85,11 +82,7 @@ pub(crate) struct RemoteAccessSession {
     sink_id: SinkId,
     room: Room,
     context: Weak<Context>,
-    participants: RwLock<HashMap<ParticipantIdentity, Arc<Participant>>>,
-    /// Channels that have been advertised to participants.
-    channels: RwLock<HashMap<ChannelId, Arc<RawChannel>>>,
-    /// Maps channel ID to the participant identities subscribed to that channel.
-    subscriptions: RwLock<HashMap<ChannelId, SmallVec<[ParticipantIdentity; 1]>>>,
+    state: RwLock<SessionState>,
     channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     cancellation_token: CancellationToken,
     data_plane_tx: flume::Sender<ChannelMessage>,
@@ -140,14 +133,13 @@ impl Sink for RemoteAccessSession {
         // Track advertised channels, excluding any that failed to encode (e.g. MissingSchema).
         let advertised_ids: std::collections::HashSet<u64> =
             advertise_msg.channels.iter().map(|ch| ch.id).collect();
-        {
-            let mut advertised_channels = self.channels.write();
-            for &ch in &filtered {
-                if advertised_ids.contains(&u64::from(ch.id())) {
-                    advertised_channels.insert(ch.id(), ch.clone());
-                }
+        let mut state = self.state.write();
+        for &ch in &filtered {
+            if advertised_ids.contains(&u64::from(ch.id())) {
+                state.insert_channel(ch);
             }
         }
+        drop(state);
 
         let framed = frame_text_message(advertise_msg.to_string().as_bytes());
         self.broadcast_control(framed);
@@ -158,7 +150,7 @@ impl Sink for RemoteAccessSession {
 
     fn remove_channel(&self, channel: &RawChannel) {
         let channel_id = channel.id();
-        if self.channels.write().remove(&channel_id).is_none() {
+        if !self.state.write().remove_channel(channel_id) {
             return;
         }
 
@@ -186,9 +178,7 @@ impl RemoteAccessSession {
             sink_id: SinkId::next(),
             room,
             context,
-            participants: RwLock::new(HashMap::new()),
-            channels: RwLock::new(HashMap::new()),
-            subscriptions: RwLock::new(HashMap::new()),
+            state: RwLock::new(SessionState::new()),
             channel_filter,
             cancellation_token,
             data_plane_tx,
@@ -246,9 +236,9 @@ impl RemoteAccessSession {
 
     /// Enqueue a control plane message for all currently connected participants.
     fn broadcast_control(&self, data: Bytes) {
-        let participants = self.participants.read();
-        for participant in participants.values() {
-            self.send_control(participant.clone(), data.clone());
+        let participants = self.state.read().collect_participants();
+        for participant in participants {
+            self.send_control(participant, data.clone());
         }
     }
 
@@ -272,20 +262,12 @@ impl RemoteAccessSession {
                     // Note: we do fan-out ourselves here because we can't use multicast with the ByteStreams
                     // Most data plane messages should get sent as datagram messages, which do support multicast
                     // by passing a Vec<ParticipantIdentity> of recipients.
-                    let subscriber_ids: SmallVec<[ParticipantIdentity; 8]> = {
-                        let subscriptions = session.subscriptions.read();
-                        match subscriptions.get(&msg.channel_id) {
-                            Some(ids) => ids.iter().cloned().collect(),
-                            None => continue,
-                        }
-                    };
-                    // Get the participants that are subscribed to the channel
                     let participants: SmallVec<[Arc<Participant>; 8]> = {
-                        let participants = session.participants.read();
-                        subscriber_ids
-                            .iter()
-                            .filter_map(|id| participants.get(id).cloned())
-                            .collect()
+                        let state = session.state.read();
+                        let Some(ids) = state.collect_subscribers(&msg.channel_id) else {
+                            continue;
+                        };
+                        ids.iter().filter_map(|id| state.get_participant(id)).collect()
                     };
                     for participant in &participants {
                         if let Err(e) = participant.send(&msg.data).await {
@@ -391,11 +373,7 @@ impl RemoteAccessSession {
             }
         };
 
-        // Look up participant ID before the final match
-        let Some(participant) = ({
-            let participants = self.participants.read();
-            participants.get(participant_identity).cloned()
-        }) else {
+        let Some(participant) = self.state.read().get_participant(participant_identity) else {
             error!("Unknown participant identity: {:?}", participant_identity);
             return false;
         };
@@ -422,25 +400,7 @@ impl RemoteAccessSession {
             .map(|&id| ChannelId::new(id))
             .collect();
 
-        let mut first_subscribed: SmallVec<[ChannelId; 4]> = SmallVec::new();
-        {
-            let mut subscriptions = self.subscriptions.write();
-            for &channel_id in &channel_ids {
-                let subscribers = subscriptions.entry(channel_id).or_default();
-                if subscribers.contains(participant.identity()) {
-                    info!(
-                        "{participant} is already subscribed to channel {channel_id:?}; ignoring",
-                    );
-                    continue;
-                }
-                let is_first = subscribers.is_empty();
-                subscribers.push(participant.identity().clone());
-                debug!("{participant} subscribed to channel {channel_id:?}",);
-                if is_first {
-                    first_subscribed.push(channel_id);
-                }
-            }
-        }
+        let first_subscribed = self.state.write().subscribe(participant, &channel_ids);
 
         if !first_subscribed.is_empty() {
             if let Some(context) = self.context.upgrade() {
@@ -456,29 +416,7 @@ impl RemoteAccessSession {
             .map(|&id| ChannelId::new(id))
             .collect();
 
-        let mut last_unsubscribed: SmallVec<[ChannelId; 4]> = SmallVec::new();
-        {
-            let mut subscriptions = self.subscriptions.write();
-            for &channel_id in &channel_ids {
-                let Some(subscribers) = subscriptions.get_mut(&channel_id) else {
-                    info!("{participant} is not subscribed to channel {channel_id:?}; ignoring",);
-                    continue;
-                };
-                let Some(pos) = subscribers
-                    .iter()
-                    .position(|id| id == participant.identity())
-                else {
-                    info!("{participant} is not subscribed to channel {channel_id:?}; ignoring",);
-                    continue;
-                };
-                subscribers.swap_remove(pos);
-                debug!("{participant} unsubscribed from channel {channel_id:?}",);
-                if subscribers.is_empty() {
-                    subscriptions.remove(&channel_id);
-                    last_unsubscribed.push(channel_id);
-                }
-            }
-        }
+        let last_unsubscribed = self.state.write().unsubscribe(participant, &channel_ids);
 
         if !last_unsubscribed.is_empty() {
             if let Some(context) = self.context.upgrade() {
@@ -495,11 +433,8 @@ impl RemoteAccessSession {
     ) -> Result<Arc<Participant>, RemoteAccessError> {
         use crate::remote_access::participant::ParticipantWriter;
 
-        // First, check if we already have this participant by identity
-        {
-            if let Some(existing_participant) = self.participants.read().get(&participant_id) {
-                return Ok(existing_participant.clone());
-            }
+        if let Some(existing) = self.state.read().get_participant(&participant_id) {
+            return Ok(existing);
         }
 
         let stream = match self
@@ -524,34 +459,17 @@ impl RemoteAccessSession {
             ParticipantWriter::Livekit(stream),
         ));
 
-        self.participants
+        Ok(self
+            .state
             .write()
-            .insert(participant_id, participant.clone());
-        Ok(participant)
+            .insert_participant(participant_id, participant))
     }
 
     /// Remove a participant from the session, cleaning up its subscriptions.
     ///
     /// Channels that lose their last subscriber are unsubscribed from the context.
     pub(crate) fn remove_participant(&self, participant_id: &ParticipantIdentity) {
-        if self.participants.write().remove(participant_id).is_none() {
-            return;
-        }
-        info!("removed participant {participant_id:?}");
-
-        let mut last_unsubscribed: SmallVec<[ChannelId; 4]> = SmallVec::new();
-        {
-            let mut subscriptions = self.subscriptions.write();
-            subscriptions.retain(|&channel_id, subscribers| {
-                subscribers.retain(|id| id != participant_id);
-                if subscribers.is_empty() {
-                    last_unsubscribed.push(channel_id);
-                    false
-                } else {
-                    true
-                }
-            });
-        }
+        let last_unsubscribed = self.state.write().remove_participant(participant_id);
 
         if !last_unsubscribed.is_empty() {
             if let Some(context) = self.context.upgrade() {
@@ -578,16 +496,19 @@ impl RemoteAccessSession {
 
     /// Enqueue all currently cached channel advertisements for delivery to a single participant.
     fn send_channel_advertisements(&self, participant: Arc<Participant>) {
-        let framed = {
-            let channels = self.channels.read();
-            if channels.is_empty() {
-                return;
-            }
-            let advertise_msg = advertise::advertise_channels(channels.values());
-            if advertise_msg.channels.is_empty() {
-                return;
-            }
-            frame_text_message(advertise_msg.to_string().as_bytes())
+        let Some(framed) = self
+            .state
+            .read()
+            .with_channels(|channels| {
+                let advertise_msg = advertise::advertise_channels(channels.values());
+                if advertise_msg.channels.is_empty() {
+                    return None;
+                }
+                Some(frame_text_message(advertise_msg.to_string().as_bytes()))
+            })
+            .flatten()
+        else {
+            return;
         };
 
         self.send_control(participant, framed);

@@ -994,36 +994,6 @@ struct TextAnnotation {
   static Schema schema();
 };
 
-/// @brief Array of annotations for a 2D image
-struct ImageAnnotations {
-  /// @brief Circle annotations
-  std::vector<CircleAnnotation> circles;
-
-  /// @brief Points annotations
-  std::vector<PointsAnnotation> points;
-
-  /// @brief Text annotations
-  std::vector<TextAnnotation> texts;
-
-  /// @brief Encoded the ImageAnnotations as protobuf to the provided buffer.
-  ///
-  /// On success, writes the serialized length to *encoded_len.
-  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
-  /// and returns FoxgloveError::BufferTooShort.
-  /// If the message cannot be encoded, writes the reason to stderr and returns
-  /// FoxgloveError::EncodeError.
-  ///
-  /// @param ptr the destination buffer. must point to at least len valid bytes.
-  /// @param len the length of the destination buffer.
-  /// @param encoded_len where the serialized length or required capacity will be written to.
-  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
-
-  /// @brief Get the ImageAnnotations schema.
-  ///
-  /// The schema data returned is statically allocated.
-  static Schema schema();
-};
-
 /// @brief A key with its associated value
 struct KeyValuePair {
   /// @brief Key
@@ -1046,6 +1016,40 @@ struct KeyValuePair {
   FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 
   /// @brief Get the KeyValuePair schema.
+  ///
+  /// The schema data returned is statically allocated.
+  static Schema schema();
+};
+
+/// @brief Array of annotations for a 2D image
+struct ImageAnnotations {
+  /// @brief Circle annotations
+  std::vector<CircleAnnotation> circles;
+
+  /// @brief Points annotations
+  std::vector<PointsAnnotation> points;
+
+  /// @brief Text annotations
+  std::vector<TextAnnotation> texts;
+
+  /// @brief Additional user-provided metadata associated with the image annotations. Keys must be
+  /// unique.
+  std::vector<KeyValuePair> metadata;
+
+  /// @brief Encoded the ImageAnnotations as protobuf to the provided buffer.
+  ///
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
+  /// and returns FoxgloveError::BufferTooShort.
+  /// If the message cannot be encoded, writes the reason to stderr and returns
+  /// FoxgloveError::EncodeError.
+  ///
+  /// @param ptr the destination buffer. must point to at least len valid bytes.
+  /// @param len the length of the destination buffer.
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
+
+  /// @brief Get the ImageAnnotations schema.
   ///
   /// The schema data returned is statically allocated.
   static Schema schema();
