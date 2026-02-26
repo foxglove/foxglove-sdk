@@ -2,7 +2,7 @@
 
 use std::ffi::c_uchar;
 use std::mem::ManuallyDrop;
-use std::pin::{pin, Pin};
+use std::pin::{Pin, pin};
 
 use foxglove::Encode;
 
@@ -10,8 +10,8 @@ use crate::arena::{Arena, BorrowToNative};
 use crate::util::{bytes_from_raw, string_from_raw, vec_from_raw};
 #[cfg(not(target_family = "wasm"))]
 use crate::{
-    do_foxglove_channel_create, log_msg_to_channel, result_to_c, FoxgloveChannel, FoxgloveContext,
-    FoxgloveSinkId,
+    FoxgloveChannel, FoxgloveContext, FoxgloveSinkId, do_foxglove_channel_create,
+    log_msg_to_channel, result_to_c,
 };
 use crate::{FoxgloveDuration, FoxgloveError, FoxgloveSchema, FoxgloveString, FoxgloveTimestamp};
 

@@ -1,5 +1,5 @@
-use std::collections::hash_map::Entry;
 use std::collections::HashSet;
+use std::collections::hash_map::Entry;
 use std::sync::Weak;
 use std::{collections::HashMap, net::SocketAddr, sync::Arc};
 
@@ -8,12 +8,12 @@ use flume::TrySendError;
 use send_lossy::SendLossyResult;
 use tokio::net::TcpStream;
 use tokio::sync::oneshot;
-use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::WebSocketStream;
+use tokio_tungstenite::tungstenite::Message;
 
 use crate::sink_channel_filter::SinkChannelFilter;
-use crate::websocket::streams::ServerStream;
 use crate::websocket::PlaybackControlRequest;
+use crate::websocket::streams::ServerStream;
 use crate::{ChannelId, Context, FoxgloveError, Metadata, RawChannel, Sink, SinkId};
 
 use self::ws_protocol::server::{
@@ -28,8 +28,8 @@ use super::ws_protocol::client::ClientMessage;
 use super::ws_protocol::server::MessageData;
 use super::ws_protocol::{self, ParseError};
 use super::{
-    advertise, AssetResponder, Capability, Client, ClientChannel, ClientChannelId, ClientId,
-    Parameter, Status, StatusLevel,
+    AssetResponder, Capability, Client, ClientChannel, ClientChannelId, ClientId, Parameter,
+    Status, StatusLevel, advertise,
 };
 
 mod poller;

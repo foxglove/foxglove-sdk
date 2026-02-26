@@ -1,8 +1,8 @@
 use std::borrow::Cow;
 
 use bytes::BufMut;
-use schemars::generate::SchemaSettings;
 use schemars::JsonSchema;
+use schemars::generate::SchemaSettings;
 use serde::Serialize;
 
 use crate::{Encode, Schema};
@@ -42,7 +42,7 @@ impl<T: Serialize + JsonSchema> Encode for T {
 mod test {
     use schemars::JsonSchema;
     use serde::Serialize;
-    use serde_json::{json, Value};
+    use serde_json::{Value, json};
 
     use crate::Encode;
 

@@ -13,9 +13,9 @@ use livekit::id::ParticipantIdentity;
 use livekit::{Room, RoomEvent, RoomOptions, StreamByteOptions, StreamWriter as _};
 use tracing::info;
 
-use foxglove::protocol::v2::client::Subscribe;
-use foxglove::protocol::v2::server::ServerMessage;
 use foxglove::protocol::v2::BinaryMessage;
+use foxglove::protocol::v2::client::{Subscribe, Unsubscribe};
+use foxglove::protocol::v2::server::ServerMessage;
 
 use crate::frame::{self, Frame, OpCode};
 use crate::{livekit_token, mock_server};
@@ -97,7 +97,7 @@ impl FrameReader {
 /// A viewer connected to a LiveKit room with an open ws-protocol byte stream.
 pub struct ViewerConnection {
     pub room: Room,
-    pub _events: tokio::sync::mpsc::UnboundedReceiver<RoomEvent>,
+    pub events: tokio::sync::mpsc::UnboundedReceiver<RoomEvent>,
     pub frame_reader: FrameReader,
 }
 
@@ -128,7 +128,7 @@ impl ViewerConnection {
                         topic,
                         ..
                     })) if topic == "ws-protocol" => {
-                        break Some(stream_reader.take().context("reader already taken")?)
+                        break Some(stream_reader.take().context("reader already taken")?);
                     }
                     Ok(Some(_)) => continue,
                 }
@@ -137,7 +137,7 @@ impl ViewerConnection {
             if let Some(reader) = reader {
                 return Ok(Self {
                     room,
-                    _events: events,
+                    events,
                     frame_reader: FrameReader::new(reader),
                 });
             }
@@ -232,6 +232,60 @@ impl ViewerConnection {
         self.send_subscribe(channel_ids).await?;
         poll_until(|| channel.has_sinks()).await;
         Ok(())
+    }
+
+    /// Sends a binary-framed Unsubscribe message to the gateway.
+    pub async fn send_unsubscribe(&self, channel_ids: &[u64]) -> Result<()> {
+        let unsubscribe = Unsubscribe::new(channel_ids.iter().copied());
+        let inner = unsubscribe.to_bytes();
+        let framed = frame::frame_binary_message(&inner);
+
+        let gateway_identity = ParticipantIdentity(mock_server::TEST_DEVICE_ID.to_string());
+        let writer = self
+            .room
+            .local_participant()
+            .stream_bytes(StreamByteOptions {
+                topic: "ws-protocol".to_string(),
+                destination_identities: vec![gateway_identity],
+                ..StreamByteOptions::default()
+            })
+            .await
+            .map_err(|e| anyhow::anyhow!("failed to open byte stream to gateway: {e}"))?;
+
+        writer
+            .write(&framed)
+            .await
+            .map_err(|e| anyhow::anyhow!("failed to write unsubscribe message: {e}"))?;
+
+        Ok(())
+    }
+
+    /// Waits for a `TrackSubscribed` room event and returns the track name.
+    pub async fn expect_track_subscribed(&mut self) -> Result<String> {
+        let deadline = tokio::time::Instant::now() + EVENT_TIMEOUT;
+        loop {
+            let event = tokio::time::timeout_at(deadline, self.events.recv())
+                .await
+                .context("timeout waiting for TrackSubscribed event")?
+                .context("room events channel closed")?;
+            if let RoomEvent::TrackSubscribed { publication, .. } = event {
+                return Ok(publication.name());
+            }
+        }
+    }
+
+    /// Waits for a `TrackUnsubscribed` room event and returns the track name.
+    pub async fn expect_track_unsubscribed(&mut self) -> Result<String> {
+        let deadline = tokio::time::Instant::now() + EVENT_TIMEOUT;
+        loop {
+            let event = tokio::time::timeout_at(deadline, self.events.recv())
+                .await
+                .context("timeout waiting for TrackUnsubscribed event")?
+                .context("room events channel closed")?;
+            if let RoomEvent::TrackUnsubscribed { publication, .. } = event {
+                return Ok(publication.name());
+            }
+        }
     }
 
     pub async fn close(self) -> Result<()> {

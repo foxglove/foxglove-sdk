@@ -1,8 +1,8 @@
 //! Facades for TLS support when the "tls" feature is disabled.
 
 use crate::{
-    websocket::streams::{Acceptor, ServerStream, TlsIdentity},
     FoxgloveError,
+    websocket::streams::{Acceptor, ServerStream, TlsIdentity},
 };
 use tokio_util::either::Either;
 

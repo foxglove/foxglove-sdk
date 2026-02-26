@@ -1,5 +1,5 @@
-use foxglove::bytes::Bytes;
 use foxglove::FoxgloveError;
+use foxglove::bytes::Bytes;
 use std::mem::ManuallyDrop;
 
 /// Create a borrowed Bytes from a raw pointer and length.

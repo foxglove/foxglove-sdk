@@ -1,6 +1,6 @@
 use std::{collections::BTreeMap, sync::Arc};
 
-use crate::{channel::ChannelId, Schema};
+use crate::{Schema, channel::ChannelId};
 
 /// Information about a Channel.
 ///

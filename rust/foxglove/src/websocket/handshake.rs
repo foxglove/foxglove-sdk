@@ -1,7 +1,7 @@
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio_tungstenite::tungstenite::handshake::server;
 use tokio_tungstenite::tungstenite::http::HeaderValue;
-use tokio_tungstenite::{tungstenite, WebSocketStream};
+use tokio_tungstenite::{WebSocketStream, tungstenite};
 
 pub(crate) const SUBPROTOCOL: &str = "foxglove.sdk.v1";
 

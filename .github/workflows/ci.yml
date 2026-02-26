@@ -25,7 +25,7 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           # The last-specified toolchain is the default.
-          toolchain: 1.83.0,nightly,stable
+          toolchain: 1.85.0,nightly,stable
           components: rustfmt, clippy
 
       - name: Ensure generated protobuf schemas are up to date
@@ -47,7 +47,7 @@ jobs:
       # Validate that we can build without default features.
       - run: cargo build -p foxglove --verbose --no-default-features
       # Validate that we can build against the MSRV (minimum specified rust version).
-      - run: cargo +1.83.0 build -p foxglove --verbose
+      - run: cargo +1.85.0 build -p foxglove --verbose
       - run: cargo clippy --no-deps --all-targets --tests -- -D warnings
       - run: cargo +nightly rustdoc -p foxglove --all-features -- -D warnings --cfg docsrs
       - run: "[ -d ./target/doc/foxglove ] || exit 1"

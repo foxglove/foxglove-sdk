@@ -15,7 +15,7 @@ fn test_geojson_schema_preserves_schema_name() {
 
 #[test]
 fn test_log_message_can_be_encoded() {
-    use crate::messages::{log::Level, Log, Timestamp};
+    use crate::messages::{Log, Timestamp, log::Level};
 
     let msg = Log {
         timestamp: Some(Timestamp::new(5, 10)),
