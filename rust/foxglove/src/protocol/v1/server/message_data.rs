@@ -64,7 +64,7 @@ impl<'a> BinaryPayload<'a> for MessageData<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::protocol::v1::{server::ServerMessage, BinaryMessage};
+    use crate::protocol::v1::{BinaryMessage, server::ServerMessage};
 
     use super::*;
 

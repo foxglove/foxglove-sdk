@@ -5,10 +5,10 @@ use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
 
-use crate::protocol::schema::{self, Schema};
-use crate::protocol::JsonMessage;
 use crate::RawChannel;
 use crate::Schema as CrateSchema;
+use crate::protocol::JsonMessage;
+use crate::protocol::schema::{self, Schema};
 
 /// Server advertise message.
 ///

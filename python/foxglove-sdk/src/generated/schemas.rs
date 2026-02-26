@@ -3,8 +3,8 @@
 #![allow(clippy::too_many_arguments)]
 #![allow(clippy::enum_variant_names)]
 #![allow(non_snake_case)]
-use crate::schemas_wkt::{Duration, Timestamp};
 use crate::PySchema;
+use crate::schemas_wkt::{Duration, Timestamp};
 use bytes::Bytes;
 use foxglove::Encode;
 use pyo3::prelude::*;
@@ -597,11 +597,7 @@ impl CylinderPrimitive {
     fn __repr__(&self) -> String {
         format!(
             "CylinderPrimitive(pose={:?}, size={:?}, bottom_scale={:?}, top_scale={:?}, color={:?})",
-            self.0.pose,
-            self.0.size,
-            self.0.bottom_scale,
-            self.0.top_scale,
-            self.0.color,
+            self.0.pose, self.0.size, self.0.bottom_scale, self.0.top_scale, self.0.color,
         )
     }
     /// Returns the CylinderPrimitive schema.

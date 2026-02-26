@@ -13,11 +13,11 @@ use playback_source::PlaybackSource;
 
 use anyhow::Result;
 use clap::Parser;
+use foxglove::WebSocketServer;
 use foxglove::websocket::{
     Capability, PlaybackCommand, PlaybackControlRequest, PlaybackState, PlaybackStatus,
     ServerListener,
 };
-use foxglove::WebSocketServer;
 use tracing::info;
 
 struct Listener {
@@ -54,11 +54,11 @@ impl ServerListener for Listener {
         // for the data you're playing back.
         let mut did_seek = request.seek_time.is_some();
 
-        if let Some(seek_time) = request.seek_time {
-            if let Err(err) = player.seek(seek_time) {
-                did_seek = false;
-                tracing::warn!("failed to seek: {err:?}");
-            }
+        if let Some(seek_time) = request.seek_time
+            && let Err(err) = player.seek(seek_time)
+        {
+            did_seek = false;
+            tracing::warn!("failed to seek: {err:?}");
         }
 
         player.set_playback_speed(request.playback_speed);

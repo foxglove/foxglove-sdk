@@ -3,7 +3,7 @@ use std::time::Duration;
 
 use bytes::Bytes;
 use futures_util::StreamExt;
-use livekit::{id::ParticipantIdentity, ByteStreamReader, Room, StreamByteOptions};
+use livekit::{ByteStreamReader, Room, StreamByteOptions, id::ParticipantIdentity};
 use parking_lot::RwLock;
 use smallvec::SmallVec;
 use tokio::io::AsyncReadExt;
@@ -11,13 +11,13 @@ use tokio_util::{io::StreamReader, sync::CancellationToken};
 use tracing::{error, info, warn};
 
 use crate::{
-    protocol::v2::{
-        client::{self, ClientMessage},
-        server::{advertise, MessageData as ServerMessageData, ServerInfo, Unadvertise},
-        BinaryMessage, JsonMessage,
-    },
-    remote_access::{participant::Participant, session_state::SessionState, RemoteAccessError},
     ChannelId, Context, FoxgloveError, Metadata, RawChannel, Sink, SinkChannelFilter, SinkId,
+    protocol::v2::{
+        BinaryMessage, JsonMessage,
+        client::{self, ClientMessage},
+        server::{MessageData as ServerMessageData, ServerInfo, Unadvertise, advertise},
+    },
+    remote_access::{RemoteAccessError, participant::Participant, session_state::SessionState},
 };
 
 const WS_PROTOCOL_TOPIC: &str = "ws-protocol";
@@ -360,7 +360,9 @@ impl RemoteAccessSession {
             },
             BINARY => ClientMessage::parse_binary(&payload[..]),
             _ => {
-                error!("Unrecognized message opcode ({opcode}) received, you likely need to upgrade to a newer version of the Foxglove SDK");
+                error!(
+                    "Unrecognized message opcode ({opcode}) received, you likely need to upgrade to a newer version of the Foxglove SDK"
+                );
                 return false;
             }
         };

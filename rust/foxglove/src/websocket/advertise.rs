@@ -2,7 +2,7 @@
 
 use super::service::Service;
 use super::ws_protocol::schema;
-use super::ws_protocol::server::{advertise_services, AdvertiseServices};
+use super::ws_protocol::server::{AdvertiseServices, advertise_services};
 
 pub use super::ws_protocol::server::advertise::advertise_channels;
 

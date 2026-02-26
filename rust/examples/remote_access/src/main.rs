@@ -1,8 +1,8 @@
 use foxglove::{
+    ChannelDescriptor,
     bytes::Bytes,
     remote_access::{Capability, Client, Gateway, Listener},
     schemas::RawImage,
-    ChannelDescriptor,
 };
 use serde_json::Value;
 use std::{sync::Arc, time::Duration};

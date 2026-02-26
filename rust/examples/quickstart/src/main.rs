@@ -1,6 +1,6 @@
 use std::ops::Add;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::SystemTime;
 
 use foxglove::schemas::{Color, CubePrimitive, SceneEntity, SceneUpdate, Vector3};

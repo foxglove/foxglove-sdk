@@ -18,8 +18,8 @@ exclude = [
 
 [workspace.package]
 version = "0.18.0"
-edition = "2021"
-rust-version = "1.83.0"
+edition = "2024"
+rust-version = "1.85.0"
 repository = "https://github.com/foxglove/foxglove-sdk"
 license = "MIT"
 
@@ -40,35 +40,6 @@ tokio-util = { version = "0.7", features = ["io", "rt"] }
 tracing = { version = "0.1", features = ["log"] }
 tracing-test = "0.2.5"
 insta = { version = "1.42.2", features = ["json"] }
-
-[workspace.lints.rust]
-# Group to warn about changes coming in Rust 2024 edition. Having this on will
-# make a future transition smoother. Lowering the priority allows overriding
-# several lints in the group that shouldn't be automatically enabled.
-rust-2024-compatibility = { level = "warn", priority = 0 }
-
-# This lint flags all tail expressions that drop tempraries with a custom Drop
-# implementation. We'll manually review these we upgrade to 2024, but generally
-# don't expect any of our code to depend on drop-ordering in this way.
-#
-# See also: https://doc.rust-lang.org/edition-guide/rust-2024/temporary-tail-expr-scope.html
-tail-expr-drop-order = { level = "allow", priority = 1 }
-
-# This lint is extremely conservative in preserving the if-let scoping from the
-# 2021 edition, which typically isn't necessary. We'll manually review this when
-# we upgrade to 2024, but generally don't expect any of our code to depend on
-# the broader scope of 2021's if-let bindings.
-#
-# See also: https://doc.rust-lang.org/edition-guide/rust-2024/temporary-if-let-scope.html
-if-let-rescope = { level = "allow", priority = 1 }
-
-# This lint explicitly preserves the 2021 semantics of the `expr` fragment in
-# macro rules, which would only matter if we had special-case patterns for
-# `const` or `_` expressions. We'll manually review this when we upgrade to
-# 2024.
-#
-# See also: https://doc.rust-lang.org/edition-guide/rust-2024/macro-fragment-specifiers.html
-edition-2024-expr-fragment-specifier = { level = "allow", priority = 1 }
 
 [workspace.lints.clippy]
 assigning_clones = "warn"

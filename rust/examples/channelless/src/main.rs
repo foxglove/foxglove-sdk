@@ -1,10 +1,10 @@
 use foxglove::{
+    ChannelBuilder, McapWriter,
     convert::SaturatingInto,
     log,
     schemas::{
         Color, CubePrimitive, Log, Pose, Quaternion, SceneEntity, SceneUpdate, Timestamp, Vector3,
     },
-    ChannelBuilder, McapWriter,
 };
 use std::time::Duration;
 
