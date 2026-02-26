@@ -15,7 +15,7 @@ using Catch::Matchers::ContainsSubstring;
 using Catch::Matchers::Equals;
 using foxglove_tests::FileCleanup;
 
-// NOLINTBEGIN(cppcoreguidelines-avoid-do-while)
+// NOLINTBEGIN(cppcoreguidelines-avoid-do-while,bugprone-unchecked-optional-access)
 
 TEST_CASE("topic is not valid utf-8") {
   auto channel =
@@ -112,12 +112,11 @@ TEST_CASE("channel.schema()") {
 
   auto schema = channel.value().schema();
   REQUIRE(schema.has_value());
-  REQUIRE(schema->name == "test_schema");           // NOLINT(bugprone-unchecked-optional-access)
-  REQUIRE(schema->encoding == "jsonschema");        // NOLINT(bugprone-unchecked-optional-access)
-  REQUIRE(schema->data_len == schema_data.size());  // NOLINT(bugprone-unchecked-optional-access)
+  REQUIRE(schema->name == "test_schema");
+  REQUIRE(schema->encoding == "jsonschema");
+  REQUIRE(schema->data_len == schema_data.size());
   REQUIRE(
-    std::string_view(reinterpret_cast<const char*>(schema->data), schema->data_len) ==
-    schema_data  // NOLINT(bugprone-unchecked-optional-access)
+    std::string_view(reinterpret_cast<const char*>(schema->data), schema->data_len) == schema_data
   );
 }
 
@@ -135,9 +134,7 @@ TEST_CASE("channel with metadata") {
   std::map<std::string, std::string> metadata = {{"key1", "value1"}, {"key2", "value2"}};
   auto channel = foxglove::RawChannel::create("test", "json", std::nullopt, context, metadata);
   REQUIRE(channel.has_value());
-  REQUIRE(
-    channel.value().metadata().value().size() == 2
-  );  // NOLINT(bugprone-unchecked-optional-access)
+  REQUIRE(channel.value().metadata().value().size() == 2);
   REQUIRE(channel.value().metadata() == metadata);
 }
 
@@ -147,8 +144,7 @@ TEST_CASE("channel with no metadata returns an empty value from metadata()") {
 
   REQUIRE(channel.has_value());
   REQUIRE(channel.value().metadata().has_value());
-  REQUIRE(channel.value().metadata().value().empty()
-  );  // NOLINT(bugprone-unchecked-optional-access)
+  REQUIRE(channel.value().metadata().value().empty());
 }
 
-// NOLINTEND(cppcoreguidelines-avoid-do-while)
+// NOLINTEND(cppcoreguidelines-avoid-do-while,bugprone-unchecked-optional-access)
