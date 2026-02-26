@@ -122,7 +122,11 @@ impl VideoPublisher {
                 }
             }
         });
-        Self { tx, rx, video_source }
+        Self {
+            tx,
+            rx,
+            video_source,
+        }
     }
 
     /// Returns a reference to the underlying video source.
