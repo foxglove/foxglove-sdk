@@ -2,7 +2,7 @@ use std::alloc::Layout;
 use std::cell::{Cell, RefCell, UnsafeCell};
 use std::marker::PhantomPinned;
 use std::mem::ManuallyDrop;
-use std::mem::{align_of, size_of, MaybeUninit};
+use std::mem::{MaybeUninit, align_of, size_of};
 use std::pin::Pin;
 
 use foxglove::FoxgloveError;

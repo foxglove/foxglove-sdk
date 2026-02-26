@@ -1,4 +1,4 @@
-use bytes::{buf::UninitSlice, BufMut};
+use bytes::{BufMut, buf::UninitSlice};
 
 /// For testing only: an implementation of BufMut that will not grow beyond a fixed size
 pub(crate) struct FixedSizeBuffer {

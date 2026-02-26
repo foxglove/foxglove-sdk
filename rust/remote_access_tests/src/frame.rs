@@ -1,4 +1,4 @@
-use anyhow::{bail, ensure, Result};
+use anyhow::{Result, bail, ensure};
 
 /// Operation code for ws-protocol byte stream framing.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

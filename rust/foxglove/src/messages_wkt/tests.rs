@@ -1,6 +1,6 @@
 use assert_matches::assert_matches;
 
-use super::{normalize_nsec, Duration, NormalizeResult, Timestamp};
+use super::{Duration, NormalizeResult, Timestamp, normalize_nsec};
 use crate::convert::{RangeError, SaturatingFrom};
 
 #[test]
