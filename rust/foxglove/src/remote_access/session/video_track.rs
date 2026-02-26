@@ -3,8 +3,8 @@ use libwebrtc::prelude::*;
 use libwebrtc::video_source::native::NativeVideoSource;
 use tracing::{debug, error, warn};
 
-use crate::img2yuv::{ImageMessage, Yuv420Buffer};
 use crate::RawChannel;
+use crate::img2yuv::{ImageMessage, Yuv420Buffer};
 
 /// The input schema type for a video-capable channel.
 ///

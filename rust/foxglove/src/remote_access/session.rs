@@ -3,7 +3,7 @@ use std::time::Duration;
 
 use bytes::Bytes;
 use futures_util::StreamExt;
-use libwebrtc::video_source::{native::NativeVideoSource, RtcVideoSource};
+use libwebrtc::video_source::{RtcVideoSource, native::NativeVideoSource};
 use livekit::options::TrackPublishOptions;
 use livekit::prelude::*;
 use livekit::{ByteStreamReader, Room, StreamByteOptions, id::ParticipantIdentity};
@@ -28,7 +28,7 @@ use crate::{
 };
 
 mod video_track;
-pub(crate) use video_track::{get_video_input_schema, VideoInputSchema, VideoPublisher};
+pub(crate) use video_track::{VideoInputSchema, VideoPublisher, get_video_input_schema};
 
 const WS_PROTOCOL_TOPIC: &str = "ws-protocol";
 const MESSAGE_FRAME_SIZE: usize = 5; // 1 byte opcode + u32 LE length
@@ -626,7 +626,9 @@ impl RemoteAccessSession {
                             is_ours
                         };
                         if !store {
-                            debug!("video track {sid} for channel {channel_id:?} was torn down during publish; unpublishing");
+                            debug!(
+                                "video track {sid} for channel {channel_id:?} was torn down during publish; unpublishing"
+                            );
                             if let Err(e) = local_participant.unpublish_track(&sid).await {
                                 error!("failed to unpublish orphaned video track {sid}: {e:?}");
                             }

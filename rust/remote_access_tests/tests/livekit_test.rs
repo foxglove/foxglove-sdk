@@ -17,10 +17,10 @@ use remote_access_tests::mock_server;
 use tracing::info;
 use tracing_test::traced_test;
 
+use foxglove::Schema;
 use foxglove::protocol::v2::BinaryMessage;
 use foxglove::protocol::v2::client::{Subscribe, Unsubscribe};
 use foxglove::protocol::v2::server::ServerMessage;
-use foxglove::Schema;
 
 /// Default timeout for waiting for events or stream data.
 const EVENT_TIMEOUT: Duration = Duration::from_secs(15);
