@@ -11,6 +11,8 @@
 
 using Catch::Matchers::Equals;
 
+// NOLINTBEGIN(cppcoreguidelines-avoid-do-while)
+
 TEST_CASE("ParameterValue construction and access") {
   SECTION("double value") {
     foxglove::ParameterValue value(42.0);
@@ -75,7 +77,7 @@ TEST_CASE("ParameterValue construction and access") {
   }
 }
 
-TEST_CASE("Parameter construction and access") {
+TEST_CASE("Parameter construction and access") {  // NOLINT(hicpp-function-size,readability-function-size)
   SECTION("parameter without value") {
     foxglove::Parameter param("test_param");
     REQUIRE(param.name() == "test_param");
@@ -418,3 +420,5 @@ TEST_CASE("Parameter cloning") {
     REQUIRE(original_array[1].get<int64_t>() == clone_array[1].get<int64_t>());
   }
 }
+
+// NOLINTEND(cppcoreguidelines-avoid-do-while)

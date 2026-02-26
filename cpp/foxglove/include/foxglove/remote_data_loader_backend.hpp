@@ -196,8 +196,7 @@ inline std::string to_json_string(const Manifest& m) {
 /// source.topics = std::move(channels.topics);
 /// source.schemas = std::move(channels.schemas);
 /// @endcode
-class ChannelSet {
-public:
+struct ChannelSet {
   /// @brief Insert a channel for schema type `T` on the given topic.
   ///
   /// `T` must have a static `schema()` method returning `foxglove::Schema`
@@ -215,9 +214,9 @@ public:
   }
 
   /// @brief The accumulated topics.
-  std::vector<Topic> topics;
+  std::vector<Topic> topics;  // NOLINT(cppcoreguidelines-non-private-member-variables-in-classes)
   /// @brief The accumulated schemas (deduplicated).
-  std::vector<Schema> schemas;
+  std::vector<Schema> schemas;  // NOLINT(cppcoreguidelines-non-private-member-variables-in-classes)
 
 private:
   // Next schema ID to assign. 0 means we have exhausted all IDs.

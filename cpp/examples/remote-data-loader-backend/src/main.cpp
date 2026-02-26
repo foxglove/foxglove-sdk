@@ -94,7 +94,7 @@ struct FlightParams {
   system_clock::time_point end_time;
 
   /// Build a query string for these parameters.
-  std::string to_query_string() const {
+  [[nodiscard]] std::string to_query_string() const {
     std::string q;
     q += "flightId=";
     q += httplib::encode_uri_component(flight_id);
@@ -236,7 +236,7 @@ void data_handler(const httplib::Request& req, httplib::Response& res) {
       options.context = context;
       options.custom_writer = custom_writer;
       options.disable_seeking = true;
-      options.chunk_size = 64 * 1024;
+      options.chunk_size = static_cast<uint64_t>(64) * 1024;
 
       auto writer_result = foxglove::McapWriter::create(options);
       if (!writer_result.has_value()) {
