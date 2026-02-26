@@ -268,70 +268,43 @@ impl RemoteAccessSession {
                 }
                 msg = session.data_plane_rx.recv_async() => {
                     let Ok(msg) = msg else { break };
-                    let writer = session
-                        .get_or_replace_channel_writer(&msg.channel_id, &mut channel_writers)
-                        .await;
-                    let Some(writer) = writer else {
-                        continue;
-                    };
-                    if let Err(e) = writer.write(&msg.data).await {
-                        error!("failed to send data for channel {:?}: {e:?}", msg.channel_id);
-                        channel_writers.remove(&msg.channel_id);
-                    }
+                    process_data_message(
+                        &session.state,
+                        &msg,
+                        &mut channel_writers,
+                        |channel_id, subscribers, version| {
+                            let session = Arc::clone(&session);
+                            async move {
+                                let topic = format!(
+                                    "{CHANNEL_TOPIC_PREFIX}{}",
+                                    u64::from(channel_id),
+                                );
+                                match session
+                                    .room
+                                    .local_participant()
+                                    .stream_bytes(StreamByteOptions {
+                                        topic,
+                                        destination_identities: subscribers,
+                                        ..StreamByteOptions::default()
+                                    })
+                                    .await
+                                {
+                                    Ok(s) => Some(ChannelWriter::new(s, version)),
+                                    Err(e) => {
+                                        error!(
+                                            "failed to open byte stream for channel \
+                                             {channel_id:?}: {e:?}",
+                                        );
+                                        None
+                                    }
+                                }
+                            }
+                        },
+                    )
+                    .await;
                 }
             }
         }
-    }
-
-    /// Returns a reference to the locally cached `ChannelWriter` for `channel_id`,
-    /// creating or replacing it if the subscription version has changed.
-    ///
-    /// Returns `None` if the channel has no subscribers.
-    async fn get_or_replace_channel_writer<'a>(
-        &self,
-        channel_id: &ChannelId,
-        channel_writers: &'a mut HashMap<ChannelId, ChannelWriter>,
-    ) -> Option<&'a ChannelWriter> {
-        // Read the current subscription version (fast read-lock, no await).
-        let (current_version, subscribers) = {
-            let state = self.state.read();
-            let sub = state.get_subscription(channel_id)?;
-            if sub.subscribers.is_empty() {
-                channel_writers.remove(channel_id);
-                return None;
-            }
-            let cached_version = channel_writers.get(channel_id).map(|w| w.version());
-            if cached_version == Some(sub.version) {
-                // Fast path: writer is up to date.
-                return channel_writers.get(channel_id);
-            }
-            let subscribers: Vec<ParticipantIdentity> = sub.subscribers.iter().cloned().collect();
-            (sub.version, subscribers)
-        };
-
-        // Subscriber set changed (or no writer yet): open a new byte stream.
-        // The old writer is implicitly closed when it is replaced in the map.
-        let topic = format!("{CHANNEL_TOPIC_PREFIX}{}", u64::from(*channel_id));
-        let stream = match self
-            .room
-            .local_participant()
-            .stream_bytes(StreamByteOptions {
-                topic,
-                destination_identities: subscribers,
-                ..StreamByteOptions::default()
-            })
-            .await
-        {
-            Ok(s) => s,
-            Err(e) => {
-                error!("failed to open byte stream for channel {channel_id:?}: {e:?}");
-                channel_writers.remove(channel_id);
-                return None;
-            }
-        };
-
-        channel_writers.insert(*channel_id, ChannelWriter::new(stream, current_version));
-        channel_writers.get(channel_id)
     }
 
     pub(crate) async fn handle_byte_stream_from_client(
@@ -567,5 +540,283 @@ impl RemoteAccessSession {
         };
 
         self.send_control(participant, framed);
+    }
+}
+
+/// Returns a reference to the locally cached `ChannelWriter` for `channel_id`,
+/// creating or replacing it if the subscription version has changed.
+///
+/// `open_stream` is called to create a new writer when the cached version is stale
+/// or no writer exists yet. It receives `(channel_id, subscribers, version)` and
+/// returns `Some(writer)` on success or `None` on failure.
+///
+/// Returns `None` if the channel has no subscribers or if stream creation fails.
+async fn get_or_replace_channel_writer<'a, F, Fut>(
+    state: &RwLock<SessionState>,
+    channel_id: &ChannelId,
+    channel_writers: &'a mut HashMap<ChannelId, ChannelWriter>,
+    open_stream: F,
+) -> Option<&'a ChannelWriter>
+where
+    F: FnOnce(ChannelId, Vec<ParticipantIdentity>, u32) -> Fut,
+    Fut: std::future::Future<Output = Option<ChannelWriter>>,
+{
+    // Read the current subscription version (fast read-lock, no await).
+    let (current_version, subscribers) = {
+        let state = state.read();
+        let sub = state.get_subscription(channel_id)?;
+        if sub.subscribers.is_empty() {
+            channel_writers.remove(channel_id);
+            return None;
+        }
+        let cached_version = channel_writers.get(channel_id).map(|w| w.version());
+        if cached_version == Some(sub.version) {
+            // Fast path: writer is up to date.
+            return channel_writers.get(channel_id);
+        }
+        let subscribers: Vec<ParticipantIdentity> = sub.subscribers.iter().cloned().collect();
+        (sub.version, subscribers)
+    };
+
+    // Subscriber set changed (or no writer yet): open a new byte stream.
+    // The old writer is implicitly closed when it is replaced in the map.
+    match open_stream(*channel_id, subscribers, current_version).await {
+        Some(writer) => {
+            channel_writers.insert(*channel_id, writer);
+            channel_writers.get(channel_id)
+        }
+        None => {
+            channel_writers.remove(channel_id);
+            None
+        }
+    }
+}
+
+/// Processes a single data plane message: looks up (or creates) the channel writer
+/// and writes the message data through it.
+///
+/// On write failure the writer is removed from the cache so the next message
+/// triggers stream re-creation.
+async fn process_data_message<F, Fut>(
+    state: &RwLock<SessionState>,
+    msg: &ChannelMessage,
+    channel_writers: &mut HashMap<ChannelId, ChannelWriter>,
+    open_stream: F,
+) where
+    F: FnOnce(ChannelId, Vec<ParticipantIdentity>, u32) -> Fut,
+    Fut: std::future::Future<Output = Option<ChannelWriter>>,
+{
+    let writer =
+        get_or_replace_channel_writer(state, &msg.channel_id, channel_writers, open_stream).await;
+    let Some(writer) = writer else {
+        return;
+    };
+    if let Err(e) = writer.write(&msg.data).await {
+        error!(
+            "failed to send data for channel {:?}: {e:?}",
+            msg.channel_id
+        );
+        channel_writers.remove(&msg.channel_id);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::remote_access::participant::{
+        ParticipantWriter, TestByteStreamWriter, TestChannelWriter,
+    };
+
+    fn make_participant(name: &str) -> (ParticipantIdentity, Arc<Participant>) {
+        let identity = ParticipantIdentity(name.to_string());
+        let writer = Arc::new(TestByteStreamWriter::default());
+        let participant = Arc::new(Participant::new(
+            identity.clone(),
+            ParticipantWriter::Test(writer),
+        ));
+        (identity, participant)
+    }
+
+    /// A factory that produces a `ChannelWriter` backed by the given test writer.
+    fn test_factory(
+        writer: Arc<TestChannelWriter>,
+    ) -> impl FnOnce(ChannelId, Vec<ParticipantIdentity>, u32) -> std::future::Ready<Option<ChannelWriter>>
+    {
+        move |_channel_id, _subscribers, version| {
+            std::future::ready(Some(ChannelWriter::test(writer, version)))
+        }
+    }
+
+    /// A factory that always fails to open a stream.
+    fn failing_factory(
+    ) -> impl FnOnce(ChannelId, Vec<ParticipantIdentity>, u32) -> std::future::Ready<Option<ChannelWriter>>
+    {
+        |_channel_id, _subscribers, _version| std::future::ready(None)
+    }
+
+    #[tokio::test]
+    async fn data_message_writes_to_channel() {
+        let state = RwLock::new(SessionState::new());
+        let (_id, p) = make_participant("alice");
+        let ch = ChannelId::new(1);
+        state.write().subscribe(&p, &[ch]);
+
+        let test_writer = Arc::new(TestChannelWriter::default());
+        let mut writers = HashMap::new();
+
+        let msg = ChannelMessage {
+            channel_id: ch,
+            data: Bytes::from_static(b"hello"),
+        };
+        process_data_message(
+            &state,
+            &msg,
+            &mut writers,
+            test_factory(test_writer.clone()),
+        )
+        .await;
+
+        assert_eq!(test_writer.writes(), vec![Bytes::from_static(b"hello")]);
+        assert!(writers.contains_key(&ch));
+    }
+
+    #[tokio::test]
+    async fn cached_writer_reused_on_version_match() {
+        let state = RwLock::new(SessionState::new());
+        let (_id, p) = make_participant("alice");
+        let ch = ChannelId::new(1);
+        state.write().subscribe(&p, &[ch]);
+
+        let test_writer = Arc::new(TestChannelWriter::default());
+        let mut writers = HashMap::new();
+
+        let msg1 = ChannelMessage {
+            channel_id: ch,
+            data: Bytes::from_static(b"msg1"),
+        };
+        process_data_message(
+            &state,
+            &msg1,
+            &mut writers,
+            test_factory(test_writer.clone()),
+        )
+        .await;
+
+        // Second message should reuse the cached writer (factory not called).
+        let other_writer = Arc::new(TestChannelWriter::default());
+        let msg2 = ChannelMessage {
+            channel_id: ch,
+            data: Bytes::from_static(b"msg2"),
+        };
+        process_data_message(
+            &state,
+            &msg2,
+            &mut writers,
+            test_factory(other_writer.clone()),
+        )
+        .await;
+
+        assert_eq!(
+            test_writer.writes(),
+            vec![Bytes::from_static(b"msg1"), Bytes::from_static(b"msg2")]
+        );
+        assert!(other_writer.writes().is_empty());
+    }
+
+    #[tokio::test]
+    async fn writer_replaced_on_subscriber_change() {
+        let state = RwLock::new(SessionState::new());
+        let (_id_a, pa) = make_participant("alice");
+        let (_id_b, pb) = make_participant("bob");
+        let ch = ChannelId::new(1);
+        state.write().subscribe(&pa, &[ch]);
+
+        let writer1 = Arc::new(TestChannelWriter::default());
+        let mut writers = HashMap::new();
+
+        let msg1 = ChannelMessage {
+            channel_id: ch,
+            data: Bytes::from_static(b"before"),
+        };
+        process_data_message(&state, &msg1, &mut writers, test_factory(writer1.clone())).await;
+
+        // Adding a subscriber bumps the version, so the next message creates a new writer.
+        state.write().subscribe(&pb, &[ch]);
+
+        let writer2 = Arc::new(TestChannelWriter::default());
+        let msg2 = ChannelMessage {
+            channel_id: ch,
+            data: Bytes::from_static(b"after"),
+        };
+        process_data_message(&state, &msg2, &mut writers, test_factory(writer2.clone())).await;
+
+        assert_eq!(writer1.writes(), vec![Bytes::from_static(b"before")]);
+        assert_eq!(writer2.writes(), vec![Bytes::from_static(b"after")]);
+    }
+
+    #[tokio::test]
+    async fn no_subscribers_skips_write() {
+        let state = RwLock::new(SessionState::new());
+        let mut writers = HashMap::new();
+        let ch = ChannelId::new(1);
+
+        let factory_called = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let fc = factory_called.clone();
+
+        let msg = ChannelMessage {
+            channel_id: ch,
+            data: Bytes::from_static(b"nobody"),
+        };
+        process_data_message(&state, &msg, &mut writers, move |_id, _subs, _v| {
+            fc.store(true, std::sync::atomic::Ordering::Relaxed);
+            std::future::ready(None)
+        })
+        .await;
+
+        assert!(!factory_called.load(std::sync::atomic::Ordering::Relaxed));
+        assert!(!writers.contains_key(&ch));
+    }
+
+    #[tokio::test]
+    async fn write_failure_removes_writer_from_cache() {
+        let state = RwLock::new(SessionState::new());
+        let (_id, p) = make_participant("alice");
+        let ch = ChannelId::new(1);
+        state.write().subscribe(&p, &[ch]);
+
+        let failing = Arc::new(TestChannelWriter::new_failing());
+        let mut writers = HashMap::new();
+
+        let msg = ChannelMessage {
+            channel_id: ch,
+            data: Bytes::from_static(b"will fail"),
+        };
+        process_data_message(&state, &msg, &mut writers, test_factory(failing)).await;
+
+        assert!(
+            !writers.contains_key(&ch),
+            "writer should be evicted from cache after write failure"
+        );
+    }
+
+    #[tokio::test]
+    async fn stream_open_failure_does_not_cache_writer() {
+        let state = RwLock::new(SessionState::new());
+        let (_id, p) = make_participant("alice");
+        let ch = ChannelId::new(1);
+        state.write().subscribe(&p, &[ch]);
+
+        let mut writers = HashMap::new();
+
+        let msg = ChannelMessage {
+            channel_id: ch,
+            data: Bytes::from_static(b"no stream"),
+        };
+        process_data_message(&state, &msg, &mut writers, failing_factory()).await;
+
+        assert!(
+            !writers.contains_key(&ch),
+            "no writer should be cached when stream creation fails"
+        );
     }
 }
