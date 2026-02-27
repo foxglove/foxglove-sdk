@@ -106,6 +106,11 @@ impl RequestBuilder {
         self
     }
 
+    pub fn json(mut self, body: &impl serde::Serialize) -> Self {
+        self.0 = self.0.json(body);
+        self
+    }
+
     pub async fn send(self) -> Result<reqwest::Response, RequestError> {
         let response = self.0.send().await.map_err(RequestError::SendRequest)?;
 
@@ -227,18 +232,24 @@ impl FoxgloveApiClient<DeviceToken> {
 
     /// Authorizes a remote visualization session for the given device.
     ///
+    /// The `session_id` is included in the POST body so the API server can log it
+    /// for cross-component debugging correlation.
+    ///
     /// This endpoint is not intended for direct usage. Access may be blocked if suspicious
     /// activity is detected.
     pub async fn authorize_remote_viz(
         &self,
         device_id: &str,
+        session_id: &str,
     ) -> Result<RtcCredentials, FoxgloveApiClientError> {
         let device_id = encode_uri_component(device_id);
+        let body = serde_json::json!({ "sessionId": session_id });
         let response = self
             .post(&format!(
                 "/internal/platform/v1/devices/{device_id}/remote-sessions"
             ))
             .device_token(&self.auth)
+            .json(&body)
             .send()
             .await?;
 
@@ -338,7 +349,7 @@ mod tests {
         let client = create_test_api_client(server.url(), DeviceToken::new(TEST_DEVICE_TOKEN));
 
         let result = client
-            .authorize_remote_viz(TEST_DEVICE_ID)
+            .authorize_remote_viz(TEST_DEVICE_ID, "test-session-id")
             .await
             .expect("could not authorize remote viz");
         assert_eq!(result.token, "rtc-token-abc123");
@@ -350,7 +361,7 @@ mod tests {
         let server = create_test_server().await;
         let client =
             create_test_api_client(server.url(), DeviceToken::new("some-bad-device-token"));
-        let result = client.authorize_remote_viz(TEST_DEVICE_ID).await;
+        let result = client.authorize_remote_viz(TEST_DEVICE_ID, "test-session-id").await;
         assert!(result.is_err());
     }
 }
