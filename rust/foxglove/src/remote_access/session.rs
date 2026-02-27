@@ -722,7 +722,11 @@ where
     // Read the current subscription version (fast read-lock, no await).
     let (current_version, subscribers) = {
         let state = state.read();
-        let sub = state.get_subscription(channel_id)?;
+        let Some(sub) = state.get_subscription(channel_id) else {
+            channel_writers.remove(channel_id);
+            return None;
+        };
+        // This is very defensive because we always remove the subscription when empty in unsubscribe
         if sub.is_empty() {
             channel_writers.remove(channel_id);
             return None;
