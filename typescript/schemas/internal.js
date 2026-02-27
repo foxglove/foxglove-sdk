@@ -1,2 +1,2 @@
-// Deprecated: use @foxglove/messages/internal instead.
+// Allows importing @foxglove/schemas/internal.
 module.exports = require("@foxglove/messages/internal");
