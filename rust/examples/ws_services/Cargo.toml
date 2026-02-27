@@ -1,6 +1,6 @@
 [package]
 name = "example_ws_services"
-edition = "2021"
+edition = "2024"
 
 [lints]
 workspace = true

@@ -4,8 +4,8 @@ use std::collections::BTreeMap;
 
 use base64::prelude::*;
 use serde::{
-    de::{self, MapAccess, Visitor},
     Deserialize, Deserializer, Serialize,
+    de::{self, MapAccess, Visitor},
 };
 use serde_with::serde_as;
 

@@ -29,7 +29,7 @@ pub use connection_graph::ConnectionGraph;
 pub use fetch_asset::{AssetHandler, AssetResponder};
 pub(crate) use fetch_asset::{AsyncAssetHandlerFn, BlockingAssetHandlerFn};
 pub use server::ShutdownHandle;
-pub(crate) use server::{create_server, Server, ServerOptions};
+pub(crate) use server::{Server, ServerOptions, create_server};
 pub use server_listener::ServerListener;
 pub use streams::TlsIdentity;
 pub use ws_protocol::client::{PlaybackCommand, PlaybackControlRequest};

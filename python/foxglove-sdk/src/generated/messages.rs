@@ -597,11 +597,7 @@ impl CylinderPrimitive {
     fn __repr__(&self) -> String {
         format!(
             "CylinderPrimitive(pose={:?}, size={:?}, bottom_scale={:?}, top_scale={:?}, color={:?})",
-            self.0.pose,
-            self.0.size,
-            self.0.bottom_scale,
-            self.0.top_scale,
-            self.0.color,
+            self.0.pose, self.0.size, self.0.bottom_scale, self.0.top_scale, self.0.color,
         )
     }
     /// Returns the CylinderPrimitive schema.

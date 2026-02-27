@@ -54,6 +54,8 @@ struct ClientMetadata {
 /// A server may advertise certain capabilities to clients and provide related functionality
 /// in WebSocketServerCallbacks.
 enum class WebSocketServerCapabilities : uint8_t {
+  /// No capabilities.
+  None = 0,
   /// Allow clients to advertise channels to send data messages to the server.
   ClientPublish = 1 << 0,
   /// Allow clients to subscribe and make connection graph updates
@@ -236,7 +238,7 @@ struct WebSocketServerOptions {
   /// @brief The callbacks of the server.
   WebSocketServerCallbacks callbacks;
   /// @brief The capabilities of the server.
-  WebSocketServerCapabilities capabilities = WebSocketServerCapabilities(0);
+  WebSocketServerCapabilities capabilities = WebSocketServerCapabilities::None;
   /// @brief The supported encodings of the server.
   std::vector<std::string> supported_encodings;
   /// @brief An optional session ID for the server.

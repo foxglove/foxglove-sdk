@@ -116,7 +116,7 @@ impl<'a> BinaryPayload<'a> for PlaybackState {
     }
 }
 
-impl<'a> BinaryMessage<'a> for PlaybackState {
+impl BinaryMessage<'_> for PlaybackState {
     const OPCODE: u8 = 5;
 }
 

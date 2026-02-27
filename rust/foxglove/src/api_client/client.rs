@@ -2,7 +2,7 @@ use std::fmt::Display;
 use std::time::Duration;
 
 use percent_encoding::AsciiSet;
-use reqwest::header::{HeaderMap, AUTHORIZATION, USER_AGENT};
+use reqwest::header::{AUTHORIZATION, HeaderMap, USER_AGENT};
 use reqwest::{Method, StatusCode};
 use thiserror::Error;
 
@@ -283,8 +283,8 @@ impl<A> FoxgloveApiClientBuilder<A> {
 #[cfg(test)]
 mod tests {
     use crate::api_client::test_utils::{
-        create_test_api_client, create_test_server, TEST_DEVICE_ID, TEST_DEVICE_TOKEN,
-        TEST_PROJECT_ID,
+        TEST_DEVICE_ID, TEST_DEVICE_TOKEN, TEST_PROJECT_ID, create_test_api_client,
+        create_test_server,
     };
 
     use super::DeviceToken;

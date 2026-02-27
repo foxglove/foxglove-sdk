@@ -1,0 +1,13 @@
+# Workaround for livekit/rust-sdks#795: the prebuilt WebRTC binaries in the
+# `livekit` crate define ObjC category methods that require `-ObjC` to be
+# linked. Without this flag, macOS strips the categories at link time, causing
+# an `unrecognized selector` crash at runtime.
+#
+# Upstream fix: https://github.com/livekit/rust-sdks/pull/847
+# Remove this once a livekit release includes that PR.
+
+[target.aarch64-apple-darwin]
+rustflags = ["-C", "link-arg=-ObjC"]
+
+[target.x86_64-apple-darwin]
+rustflags = ["-C", "link-arg=-ObjC"]

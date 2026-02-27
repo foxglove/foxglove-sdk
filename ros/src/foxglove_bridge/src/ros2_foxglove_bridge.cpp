@@ -27,7 +27,7 @@ inline foxglove::WebSocketServerCapabilities processCapabilities(
       {"connectionGraph", foxglove::WebSocketServerCapabilities::ConnectionGraph},
       {"assets", foxglove::WebSocketServerCapabilities::Assets},
     };
-  foxglove::WebSocketServerCapabilities out = foxglove::WebSocketServerCapabilities(0);
+  foxglove::WebSocketServerCapabilities out = foxglove::WebSocketServerCapabilities::None;
   for (const auto& capability : capabilities) {
     if (STRING_TO_CAPABILITY.find(capability) != STRING_TO_CAPABILITY.end()) {
       out = out | STRING_TO_CAPABILITY.at(capability);

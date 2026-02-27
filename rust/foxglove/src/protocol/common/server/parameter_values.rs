@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
-use crate::protocol::parameter::Parameter;
 use crate::protocol::JsonMessage;
+use crate::protocol::parameter::Parameter;
 
 /// Parameter values message.
 ///

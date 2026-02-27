@@ -1,7 +1,7 @@
 //! A semaphore for admission control
 
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 /// A non-blocking counting semaphore for concurrency control.
 ///
@@ -49,8 +49,8 @@ impl Drop for SemaphoreGuard {
 mod tests {
     use super::*;
 
-    use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::Arc;
+    use std::sync::atomic::{AtomicUsize, Ordering};
     use std::time::Duration;
 
     use tokio::task::JoinSet;
