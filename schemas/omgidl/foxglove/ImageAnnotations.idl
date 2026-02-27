@@ -20,6 +20,7 @@ struct ImageAnnotations {
   sequence<TextAnnotation> texts;
 
   // Additional user-provided metadata associated with the image annotations. Keys must be unique.
+  @optional
   sequence<KeyValuePair> metadata;
 
   // Timestamp of the image annotations. When set, individual annotation timestamps will be ignored.

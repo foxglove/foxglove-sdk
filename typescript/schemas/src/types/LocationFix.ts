@@ -33,5 +33,5 @@ export type LocationFix = {
   color?: Color;
 
   /** Additional user-provided metadata associated with the location fix. Keys must be unique. */
-  metadata: KeyValuePair[];
+  metadata?: KeyValuePair[];
 };

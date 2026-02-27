@@ -472,7 +472,6 @@
   "required": [
     "circles",
     "points",
-    "texts",
-    "metadata"
+    "texts"
   ]
 }

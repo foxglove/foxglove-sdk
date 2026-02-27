@@ -1499,6 +1499,7 @@ const ImageAnnotations: FoxgloveMessageSchema = {
       description:
         "Additional user-provided metadata associated with the image annotations. Keys must be unique.",
       array: true,
+      optional: true,
     },
     {
       name: "timestamp",
@@ -1593,6 +1594,7 @@ const LocationFix: FoxgloveMessageSchema = {
       description:
         "Additional user-provided metadata associated with the location fix. Keys must be unique.",
       protobufFieldNumber: 9,
+      optional: true,
     },
   ],
 };

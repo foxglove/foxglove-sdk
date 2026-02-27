@@ -138,8 +138,7 @@
           "longitude",
           "altitude",
           "position_covariance",
-          "position_covariance_type",
-          "metadata"
+          "position_covariance_type"
         ]
       },
       "description": "An array of location fixes"

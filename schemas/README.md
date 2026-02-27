@@ -1241,7 +1241,7 @@ Text annotations
 </td>
 </tr>
 <tr>
-<td><code>metadata</code></td>
+<td><code>metadata</code> (optional)</td>
 <td>
 
 [KeyValuePair](#keyvaluepair)[]
@@ -1642,7 +1642,7 @@ Color used to visualize the location
 </td>
 </tr>
 <tr>
-<td><code>metadata</code></td>
+<td><code>metadata</code> (optional)</td>
 <td>
 
 [KeyValuePair](#keyvaluepair)[]
