@@ -8,7 +8,7 @@ from typing import Any, cast
 from . import Context
 from . import _foxglove_py as _foxglove
 from . import channels as _channels
-from . import schemas as _schemas
+from . import messages as _messages
 
 JsonSchema = dict[str, Any]
 JsonMessage = dict[str, Any]
@@ -145,7 +145,7 @@ _channels_by_id: dict[int, Channel] = {}
 
 def log(
     topic: str,
-    message: JsonMessage | list[Any] | bytes | str | _schemas.FoxgloveSchema,
+    message: JsonMessage | list[Any] | bytes | str | _messages.FoxgloveSchema,
     *,
     log_time: int | None = None,
     sink_id: int | None = None,
@@ -153,7 +153,7 @@ def log(
     """Log a message on a topic.
 
     Creates a new channel the first time called for a given topic.
-    For Foxglove types in the schemas module, this creates a typed channel
+    For Foxglove types in the messages module, this creates a typed channel
     (see :py:mod:`foxglove.channels` for supported types).
     For bytes and str, this creates a simple schemaless channel and logs the bytes as-is.
     For dict and list, this creates a schemaless json channel.

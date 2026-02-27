@@ -284,14 +284,14 @@ export function generateHppSchemas(
 
     "struct foxglove_channel;",
 
-    "namespace foxglove::schemas {",
+    "namespace foxglove::messages {",
     structDefs.join("\n\n"),
 
     "#ifndef __wasm32__",
     uniquePtr.join("\n"),
     channelClasses.join("\n\n"),
     "#endif",
-    "} // namespace foxglove::schemas",
+    "} // namespace foxglove::messages",
   ].filter(Boolean);
 
   return outputSections.join("\n\n") + "\n";
@@ -463,7 +463,7 @@ export function generateCppSchemas(schemas: FoxgloveMessageSchema[]): string {
 
   const includes = [
     "#include <foxglove/error.hpp>",
-    "#include <foxglove/schemas.hpp>",
+    "#include <foxglove/messages.hpp>",
     "#include <foxglove/arena.hpp>",
     "#include <foxglove/schema.hpp>",
     "#ifndef __wasm32__",
@@ -480,7 +480,7 @@ export function generateCppSchemas(schemas: FoxgloveMessageSchema[]): string {
 
     systemIncludes.join("\n"),
 
-    "namespace foxglove::schemas {",
+    "namespace foxglove::messages {",
     conversionFuncDecls.join("\n"),
     "#ifndef __wasm32__",
     channelUniquePtr.join("\n"),
@@ -491,7 +491,7 @@ export function generateCppSchemas(schemas: FoxgloveMessageSchema[]): string {
     encodeImpls.join("\n"),
 
     getSchemaImpls.join("\n"),
-    "} // namespace foxglove::schemas",
+    "} // namespace foxglove::messages",
   ];
 
   return outputSections.join("\n\n") + "\n";

@@ -3,8 +3,8 @@ from enum import Enum
 from typing import Union
 
 from . import Schema
-from .schemas_wkt import Duration as Duration
-from .schemas_wkt import Timestamp as Timestamp
+from .messages_wkt import Duration as Duration
+from .messages_wkt import Timestamp as Timestamp
 
 #
 # Enums

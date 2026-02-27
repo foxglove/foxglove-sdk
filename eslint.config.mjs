@@ -10,6 +10,7 @@ export default defineConfig(
       "**/dist",
       "cpp/build-*",
       "cpp/build",
+      "typescript/messages/src/jsonschema",
       "python/foxglove-sdk/**/_build",
       "python/foxglove-sdk/python/foxglove/notebook/static",
       "target",

@@ -1,6 +1,6 @@
 {
   "extends": "@foxglove/tsconfig/base",
-  "include": ["./src/index.ts", "./src/index.test.ts", "./internal.d.ts", "./jsonschema.d.ts"],
+  "include": ["./**/*"],
   "compilerOptions": {
     "rootDir": "./src",
     "outDir": "./dist",
