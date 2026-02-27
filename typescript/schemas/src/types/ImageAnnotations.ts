@@ -18,5 +18,5 @@ export type ImageAnnotations = {
   texts: TextAnnotation[];
 
   /** Additional user-provided metadata associated with the image annotations. Keys must be unique. */
-  metadata: KeyValuePair[];
+  metadata?: KeyValuePair[];
 };
