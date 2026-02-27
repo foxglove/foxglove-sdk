@@ -5,7 +5,7 @@ use crate::service::FoxgloveService;
 use crate::sink_channel_filter::ChannelFilter;
 use bitflags::bitflags;
 use std::collections::HashMap;
-use std::ffi::{c_char, c_void, CString};
+use std::ffi::{CString, c_char, c_void};
 use std::mem::ManuallyDrop;
 use std::sync::Arc;
 
@@ -14,7 +14,7 @@ use crate::playback_control_request::FoxglovePlaybackControlRequest;
 use crate::playback_state::FoxglovePlaybackState;
 
 use crate::{
-    result_to_c, FoxgloveContext, FoxgloveError, FoxgloveKeyValue, FoxgloveSinkId, FoxgloveString,
+    FoxgloveContext, FoxgloveError, FoxgloveKeyValue, FoxgloveSinkId, FoxgloveString, result_to_c,
 };
 
 // Easier to get reasonable C output from cbindgen with constants rather than directly exporting the bitflags macro

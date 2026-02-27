@@ -13,8 +13,8 @@ use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
 
 use crate::websocket::handshake::SUBPROTOCOL;
 
-use super::ws_protocol::server::ServerMessage;
 use super::ws_protocol::ParseError;
+use super::ws_protocol::server::ServerMessage;
 
 #[doc(hidden)]
 #[derive(Debug, thiserror::Error)]

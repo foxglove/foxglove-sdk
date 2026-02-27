@@ -131,7 +131,6 @@
     "longitude",
     "altitude",
     "position_covariance",
-    "position_covariance_type",
-    "metadata"
+    "position_covariance_type"
   ]
 }

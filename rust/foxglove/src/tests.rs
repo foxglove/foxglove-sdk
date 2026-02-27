@@ -19,9 +19,11 @@ fn test_unspecified_error_downcast() {
     let src_err = SourceError("oh no");
     let fg_err = FoxgloveError::Unspecified(src_err.into());
     assert_eq!(format!("{fg_err}"), "oh no");
-    assert!(fg_err
-        .source()
-        .unwrap()
-        .downcast_ref::<SourceError>()
-        .is_some());
+    assert!(
+        fg_err
+            .source()
+            .unwrap()
+            .downcast_ref::<SourceError>()
+            .is_some()
+    );
 }

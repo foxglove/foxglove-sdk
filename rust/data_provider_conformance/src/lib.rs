@@ -31,9 +31,9 @@ use std::time::Duration;
 
 use foxglove::data_provider::{Manifest, UpstreamSource};
 use libtest_mimic::{Arguments, Trial};
-use reqwest::blocking::Client;
 use reqwest::StatusCode;
 pub use reqwest::Url;
+use reqwest::blocking::Client;
 
 /// A guard that kills a child process when dropped.
 pub struct ServerGuard(Child);
@@ -257,13 +257,26 @@ fn test_manifest_and_mcap_agree(client: &Client, manifest_url: &Url, manifest: &
                 (None, None) => {
                     continue;
                 }
-                (None, Some(_)) => panic!("channel {channel_id} on topic {topic_name:?} should have a schema according to manifest"),
-                (Some(_), None) => panic!("channel {channel_id} on topic {topic_name:?} should be schemaless according to manifest"),
+                (None, Some(_)) => panic!(
+                    "channel {channel_id} on topic {topic_name:?} should have a schema according to manifest"
+                ),
+                (Some(_), None) => panic!(
+                    "channel {channel_id} on topic {topic_name:?} should be schemaless according to manifest"
+                ),
             };
 
-            assert_eq!(schema.name, manifest_schema.name, "schema name for channel {channel_id} on topic {topic_name:?} should match manifest");
-            assert_eq!(schema.encoding, manifest_schema.encoding, "schema encoding for channel {channel_id} on topic {topic_name:?} should match manifest");
-            assert_eq!(*schema.data, *manifest_schema.data, "schema data for channel {channel_id} on topic {topic_name:?} should match manifest");
+            assert_eq!(
+                schema.name, manifest_schema.name,
+                "schema name for channel {channel_id} on topic {topic_name:?} should match manifest"
+            );
+            assert_eq!(
+                schema.encoding, manifest_schema.encoding,
+                "schema encoding for channel {channel_id} on topic {topic_name:?} should match manifest"
+            );
+            assert_eq!(
+                *schema.data, *manifest_schema.data,
+                "schema data for channel {channel_id} on topic {topic_name:?} should match manifest"
+            );
         }
     }
 }

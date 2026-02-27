@@ -65,7 +65,7 @@ pub(crate) mod serde_bytes {
 
     struct BytesVisitor;
 
-    impl<'de> Visitor<'de> for BytesVisitor {
+    impl Visitor<'_> for BytesVisitor {
         type Value = Bytes;
 
         fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -136,8 +136,8 @@ mod tests {
     use bytes::Bytes;
 
     use super::{
-        packed_element_field::NumericType, Grid, PackedElementField, Pose, Quaternion, Timestamp,
-        Vector2, Vector3,
+        Grid, PackedElementField, Pose, Quaternion, Timestamp, Vector2, Vector3,
+        packed_element_field::NumericType,
     };
 
     fn sample_grid() -> Grid {

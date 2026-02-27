@@ -13,7 +13,7 @@ use super::{ChannelDescriptor, ChannelId};
 use crate::log_sink_set::LogSinkSet;
 use crate::sink::SmallSinkVec;
 use crate::throttler::Throttler;
-use crate::{nanoseconds_since_epoch, Context, Metadata, PartialMetadata, Schema, SinkId};
+use crate::{Context, Metadata, PartialMetadata, Schema, SinkId, nanoseconds_since_epoch};
 
 /// Interval for throttled warnings.
 static WARN_THROTTLER_INTERVAL: Duration = Duration::from_secs(10);

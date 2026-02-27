@@ -14,7 +14,7 @@ use std::{
 use tokio::sync::mpsc::{Receiver as TokioReceiver, Sender as TokioSender};
 
 use bytes::{Bytes, BytesMut};
-use futures::{ready, Stream};
+use futures::{Stream, ready};
 use parking_lot::Mutex;
 
 use crate::{ChannelBuilder, Context, FoxgloveError, McapWriteOptions, McapWriterHandle};

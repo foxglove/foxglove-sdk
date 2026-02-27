@@ -4,17 +4,17 @@ use std::sync::Arc;
 
 use tokio::net::TcpStream;
 use tokio_rustls::{
+    TlsAcceptor,
     rustls::{
         self,
-        pki_types::{pem::PemObject, CertificateDer, PrivateKeyDer},
+        pki_types::{CertificateDer, PrivateKeyDer, pem::PemObject},
     },
-    TlsAcceptor,
 };
 use tokio_util::either::Either;
 
 use crate::{
-    websocket::streams::{Acceptor, ServerStream, TlsIdentity},
     FoxgloveError,
+    websocket::streams::{Acceptor, ServerStream, TlsIdentity},
 };
 
 pub(crate) type TlsStream<S> = tokio_rustls::server::TlsStream<S>;
