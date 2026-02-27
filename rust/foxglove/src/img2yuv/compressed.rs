@@ -2,7 +2,7 @@ use std::{borrow::Cow, io::Cursor, str::FromStr};
 
 use image::ImageReader;
 
-use super::{raw::rgb_to_yuv420, Error, RawImageEncoding, Yuv420Buffer};
+use super::{Error, RawImageEncoding, Yuv420Buffer, raw::rgb_to_yuv420};
 
 /// Unknown compression codec.
 #[derive(Debug, thiserror::Error)]

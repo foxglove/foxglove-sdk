@@ -1,12 +1,12 @@
-use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 use std::time::Duration;
 
 use anyhow::{Context, Result};
 use clap::Parser;
-use foxglove::websocket::service::{Request, Service, ServiceSchema, SyncHandler};
-use foxglove::websocket::Capability;
 use foxglove::Schema;
+use foxglove::websocket::Capability;
+use foxglove::websocket::service::{Request, Service, ServiceSchema, SyncHandler};
 use tracing::info;
 
 mod types;

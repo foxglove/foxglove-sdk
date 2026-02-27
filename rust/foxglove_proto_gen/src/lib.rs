@@ -1,6 +1,6 @@
 use std::{
     collections::{BTreeMap, HashMap, HashSet},
-    fs::{self, rename, File},
+    fs::{self, File, rename},
     io::{self, BufRead, Write},
     path::{Path, PathBuf},
 };
@@ -37,10 +37,10 @@ fn build_fds_inner(
     let mut dependencies = fd.dependency.iter().map(|d| d.as_str()).collect::<Vec<_>>();
     dependencies.sort_unstable();
     for name in dependencies {
-        if seen.insert(name.to_string()) {
-            if let Some(dep_fd) = fd_map.get(name) {
-                build_fds_inner(dep_fd, fd_map, fds, seen);
-            }
+        if seen.insert(name.to_string())
+            && let Some(dep_fd) = fd_map.get(name)
+        {
+            build_fds_inner(dep_fd, fd_map, fds, seen);
         }
     }
     fds.file.push(FileDescriptorProto {
@@ -169,35 +169,35 @@ fn collect_field_info(
     }
 
     // Check for enum type
-    if field.r#type == Some(Type::Enum as i32) {
-        if let Some(type_name) = &field.type_name {
-            // type_name is like ".foxglove.Log.Level" or ".foxglove.line_primitive.Type"
-            // We need to find the enum within the message's nested enums
-            let enum_name = type_name.rsplit('.').next().unwrap_or("");
+    if field.r#type == Some(Type::Enum as i32)
+        && let Some(type_name) = &field.type_name
+    {
+        // type_name is like ".foxglove.Log.Level" or ".foxglove.line_primitive.Type"
+        // We need to find the enum within the message's nested enums
+        let enum_name = type_name.rsplit('.').next().unwrap_or("");
 
-            // Check if this is a nested enum in the current message
-            let is_nested = msg
-                .enum_type
-                .iter()
-                .any(|e| e.name.as_deref() == Some(enum_name));
+        // Check if this is a nested enum in the current message
+        let is_nested = msg
+            .enum_type
+            .iter()
+            .any(|e| e.name.as_deref() == Some(enum_name));
 
-            if is_nested {
-                // For nested enums, use the message's snake_case name as the module
-                let msg_snake = msg
-                    .name
-                    .as_deref()
-                    .map(camel_case_to_snake_case)
-                    .unwrap_or_default();
-                let enum_rust_path = format!("{msg_snake}::{enum_name}");
-                let serde_module_name =
-                    format!("{}_{}", msg_snake, camel_case_to_snake_case(enum_name));
+        if is_nested {
+            // For nested enums, use the message's snake_case name as the module
+            let msg_snake = msg
+                .name
+                .as_deref()
+                .map(camel_case_to_snake_case)
+                .unwrap_or_default();
+            let enum_rust_path = format!("{msg_snake}::{enum_name}");
+            let serde_module_name =
+                format!("{}_{}", msg_snake, camel_case_to_snake_case(enum_name));
 
-                enum_fields.push(EnumFieldInfo {
-                    field_path,
-                    enum_rust_path,
-                    serde_module_name,
-                });
-            }
+            enum_fields.push(EnumFieldInfo {
+                field_path,
+                enum_rust_path,
+                serde_module_name,
+            });
         }
     }
 }
@@ -392,10 +392,10 @@ impl ProtobufField for {name} {{
 pub fn generate_protos(proto_path: &Path, out_dir: &Path) -> anyhow::Result<()> {
     let proto_path = fs::canonicalize(proto_path).context("Failed to canonicalize proto path")?;
 
-    if let Err(err) = fs::create_dir(out_dir) {
-        if err.kind() != io::ErrorKind::AlreadyExists {
-            panic!("Failed to create directory: {err}");
-        }
+    if let Err(err) = fs::create_dir(out_dir)
+        && err.kind() != io::ErrorKind::AlreadyExists
+    {
+        panic!("Failed to create directory: {err}");
     }
 
     let mut proto_files: Vec<PathBuf> = vec![];

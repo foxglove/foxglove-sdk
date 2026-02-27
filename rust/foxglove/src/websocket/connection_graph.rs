@@ -1,9 +1,9 @@
 use std::collections::{HashMap, HashSet};
 
+use super::ClientId;
 use super::ws_protocol::server::connection_graph_update::{
     AdvertisedService, ConnectionGraphUpdate, PublishedTopic, SubscribedTopic,
 };
-use super::ClientId;
 
 /// A HashMap where the keys are the topic or service name and the value is a set of string ids.
 type MapOfSets = HashMap<String, HashSet<String>>;

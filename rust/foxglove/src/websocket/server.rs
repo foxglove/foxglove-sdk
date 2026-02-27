@@ -1,5 +1,5 @@
-use std::collections::hash_map::Entry;
 use std::collections::HashSet;
+use std::collections::hash_map::Entry;
 use std::sync::Weak;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use std::{collections::HashMap, net::SocketAddr, sync::Arc};
@@ -28,8 +28,8 @@ use super::ws_protocol::server::{
     AdvertiseServices, RemoveStatus, ServerInfo, UnadvertiseServices,
 };
 use super::{
-    advertise, handshake, AssetHandler, Capability, ClientId, ConnectionGraph, Parameter,
-    ServerListener, Status,
+    AssetHandler, Capability, ClientId, ConnectionGraph, Parameter, ServerListener, Status,
+    advertise, handshake,
 };
 
 // Queue up to 1024 messages per connected client before dropping messages
@@ -208,7 +208,9 @@ impl Server {
         } else if capabilities.contains(&Capability::PlaybackControl) {
             // The PlaybackControl capability requires a time range to be set using
             // ServerOptions::playback_time_range
-            panic!("Server declared the PlaybackControl capability but did not provide a playback time range");
+            panic!(
+                "Server declared the PlaybackControl capability but did not provide a playback time range"
+            );
         }
 
         // If the server was declared with fetch asset handler, automatically add the "assets" capability

@@ -27,6 +27,7 @@ websocket = [
 live_visualization = ["websocket"]
 remote_access = [
   "_remote_common",
+  "img2yuv",
   "dep:livekit",
   "dep:libwebrtc",
   "dep:reqwest",
@@ -46,6 +47,7 @@ schemars = ["dep:schemars"]
 schemars-chrono = ["schemars", "chrono", "schemars/chrono04"]
 serde = ["dep:base64"]
 unstable = []
+_protocol = ["_remote_common"]
 zstd = ["mcap/zstd"]
 
 # img2yuv feature and sub-features
@@ -70,7 +72,7 @@ chrono = { workspace = true, optional = true }
 delegate = "0.13.2"
 flume = { version = "0.11.1", optional = true }
 indexmap = "2"
-foxglove_derive = { version = "0.17.2", path = "../foxglove_derive", optional = true }
+foxglove_derive = { version = "0.18.0", path = "../foxglove_derive", optional = true }
 futures = { version = "0.3.31", optional = true }
 futures-util = { version = "0.3.31", features = ["sink", "std"], optional = true }
 livekit = { version = "0.7.29", optional = true, features = ["rustls-tls-native-roots"] }

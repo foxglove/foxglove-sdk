@@ -1240,6 +1240,19 @@ Text annotations
 
 </td>
 </tr>
+<tr>
+<td><code>metadata</code></td>
+<td>
+
+[KeyValuePair](#keyvaluepair)[]
+
+</td>
+<td>
+
+Additional user-provided metadata associated with the image annotations. Keys must be unique.
+
+</td>
+</tr>
 </table>
 
 ## KeyValuePair

@@ -2,7 +2,7 @@
 
 use std::ffi::c_uchar;
 use std::mem::ManuallyDrop;
-use std::pin::{pin, Pin};
+use std::pin::{Pin, pin};
 
 use foxglove::Encode;
 
@@ -10,8 +10,8 @@ use crate::arena::{Arena, BorrowToNative};
 use crate::util::{bytes_from_raw, string_from_raw, vec_from_raw};
 #[cfg(not(target_family = "wasm"))]
 use crate::{
-    do_foxglove_channel_create, log_msg_to_channel, result_to_c, FoxgloveChannel, FoxgloveContext,
-    FoxgloveSinkId,
+    FoxgloveChannel, FoxgloveContext, FoxgloveSinkId, do_foxglove_channel_create,
+    log_msg_to_channel, result_to_c,
 };
 use crate::{FoxgloveDuration, FoxgloveError, FoxgloveSchema, FoxgloveString, FoxgloveTimestamp};
 
@@ -2519,6 +2519,10 @@ pub struct ImageAnnotations {
     /// Text annotations
     pub texts: *const TextAnnotation,
     pub texts_count: usize,
+
+    /// Additional user-provided metadata associated with the image annotations. Keys must be unique.
+    pub metadata: *const KeyValuePair,
+    pub metadata_count: usize,
 }
 
 #[cfg(not(target_family = "wasm"))]
@@ -2555,11 +2559,13 @@ impl BorrowToNative for ImageAnnotations {
         let circles = unsafe { arena.as_mut().map(self.circles, self.circles_count)? };
         let points = unsafe { arena.as_mut().map(self.points, self.points_count)? };
         let texts = unsafe { arena.as_mut().map(self.texts, self.texts_count)? };
+        let metadata = unsafe { arena.as_mut().map(self.metadata, self.metadata_count)? };
 
         Ok(ManuallyDrop::new(foxglove::messages::ImageAnnotations {
             circles: ManuallyDrop::into_inner(circles),
             points: ManuallyDrop::into_inner(points),
             texts: ManuallyDrop::into_inner(texts),
+            metadata: ManuallyDrop::into_inner(metadata),
         }))
     }
 }

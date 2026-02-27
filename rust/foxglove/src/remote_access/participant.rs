@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 #[cfg(test)]
 use bytes::Bytes;
-use livekit::{id::ParticipantIdentity, ByteStreamWriter, StreamWriter};
+use livekit::{ByteStreamWriter, StreamWriter, id::ParticipantIdentity};
 
 use crate::remote_access::RemoteAccessError;
 

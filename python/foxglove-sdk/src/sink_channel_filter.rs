@@ -1,7 +1,7 @@
 use foxglove::ChannelDescriptor;
 use pyo3::prelude::*;
 use pyo3::types::IntoPyDict;
-use pyo3::{types::PyDict, Py};
+use pyo3::{Py, types::PyDict};
 
 use crate::PySchema;
 

@@ -68,7 +68,7 @@ impl NormalizeResult {
 /// # Example
 ///
 /// ```
-/// use foxglove::messages::Duration;
+/// use foxglove::schemas::Duration;
 ///
 /// // A duration of 2.718... seconds.
 /// let duration = Duration::new(2, 718_281_828);
@@ -82,7 +82,7 @@ impl NormalizeResult {
 /// [`Duration`] represents a more restrictive range of values.
 ///
 /// ```
-/// # use foxglove::messages::Duration;
+/// # use foxglove::schemas::Duration;
 /// let duration: Duration = std::time::Duration::from_micros(577_215)
 ///     .try_into()
 ///     .unwrap();
@@ -101,7 +101,7 @@ impl NormalizeResult {
 /// used to saturate when the range is exceeded.
 ///
 /// ```
-/// # use foxglove::messages::Duration;
+/// # use foxglove::schemas::Duration;
 /// use foxglove::convert::SaturatingInto;
 ///
 /// let duration: Duration = std::time::Duration::from_secs(u64::MAX).saturating_into();
@@ -243,7 +243,7 @@ where
 /// # Example
 ///
 /// ```
-/// use foxglove::messages::Timestamp;
+/// use foxglove::schemas::Timestamp;
 ///
 /// let timestamp = Timestamp::new(1_548_054_420, 76_657_283);
 /// ```
@@ -253,7 +253,7 @@ where
 /// represents a more restrictive range of values.
 ///
 /// ```
-/// # use foxglove::messages::Timestamp;
+/// # use foxglove::schemas::Timestamp;
 /// let timestamp = Timestamp::try_from(std::time::SystemTime::UNIX_EPOCH).unwrap();
 /// assert_eq!(timestamp, Timestamp::MIN);
 ///
@@ -270,7 +270,7 @@ where
 /// used to saturate when the range is exceeded.
 ///
 /// ```
-/// # use foxglove::messages::Timestamp;
+/// # use foxglove::schemas::Timestamp;
 /// use foxglove::convert::SaturatingInto;
 ///
 /// let timestamp: Timestamp = std::time::SystemTime::UNIX_EPOCH

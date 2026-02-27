@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use anyhow::{Context, Result};
 use clap::Parser;
-use foxglove::messages::{RawImage, Timestamp};
+use foxglove::schemas::{RawImage, Timestamp};
 use foxglove::LazyChannel;
 use opencv::{
     core::Mat,

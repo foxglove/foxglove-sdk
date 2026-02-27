@@ -1703,6 +1703,8 @@ void imageAnnotationsToC(
   dest.points_count = src.points.size();
   dest.texts = arena.map<foxglove_text_annotation>(src.texts, textAnnotationToC);
   dest.texts_count = src.texts.size();
+  dest.metadata = arena.map<foxglove_key_value_pair>(src.metadata, keyValuePairToC);
+  dest.metadata_count = src.metadata.size();
 }
 
 void keyValuePairToC(

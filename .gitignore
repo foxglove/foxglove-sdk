@@ -1,4 +1,5 @@
-.cargo/
+.cargo/*
+!.cargo/config.toml
 .claude/
 .catkin_tools
 .DS_Store

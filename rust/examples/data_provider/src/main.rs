@@ -35,18 +35,18 @@ use std::convert::Infallible;
 use std::net::SocketAddr;
 
 use axum::{
+    Json, Router,
     body::Body,
     extract::Query,
     http::{HeaderMap, StatusCode},
     response::{IntoResponse, Response},
     routing::get,
-    Json, Router,
 };
 use chrono::{DateTime, DurationRound, Utc};
 use foxglove::stream::create_mcap_stream;
 use foxglove::{
     data_provider::{ChannelSet, Manifest, StreamedSource, UpstreamSource},
-    messages::Vector3,
+    schemas::Vector3,
 };
 use futures::StreamExt;
 use serde::{Deserialize, Serialize};
@@ -162,11 +162,11 @@ async fn data_handler(headers: HeaderMap, Query(params): Query<FlightParams>) ->
             // the client receives data incrementally instead of all at once, and memory usage stays
             // bounded instead of growing with the entire recording.
             const FLUSH_THRESHOLD: usize = 1024 * 1024;
-            if handle.buffer_size() >= FLUSH_THRESHOLD {
-                if let Err(e) = handle.flush().await {
-                    tracing::error!(%e, "flush failed");
-                    return;
-                }
+            if handle.buffer_size() >= FLUSH_THRESHOLD
+                && let Err(e) = handle.flush().await
+            {
+                tracing::error!(%e, "flush failed");
+                return;
             }
 
             ts = inner.checked_add_signed(INTERVAL);

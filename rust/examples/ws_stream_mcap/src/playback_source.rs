@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use anyhow::Result;
-use foxglove::{websocket::PlaybackStatus, WebSocketServerHandle};
+use foxglove::{WebSocketServerHandle, websocket::PlaybackStatus};
 
 /// A timestamp in nanoseconds since epoch.
 pub type Nanoseconds = u64;

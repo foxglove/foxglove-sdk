@@ -1,9 +1,9 @@
 use std::ops::Add;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::SystemTime;
 
-use foxglove::messages::{Color, CubePrimitive, SceneEntity, SceneUpdate, Vector3};
+use foxglove::schemas::{Color, CubePrimitive, SceneEntity, SceneUpdate, Vector3};
 use foxglove::{LazyChannel, LazyRawChannel, McapWriter};
 
 const FILE_NAME: &str = "quickstart-rust.mcap";

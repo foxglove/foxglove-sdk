@@ -1,4 +1,4 @@
-use crate::{result_to_c, FoxgloveError, FoxgloveString};
+use crate::{FoxgloveError, FoxgloveString, result_to_c};
 
 pub struct FoxgloveConnectionGraph(pub(crate) foxglove::websocket::ConnectionGraph);
 
