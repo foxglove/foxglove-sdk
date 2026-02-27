@@ -1,2 +1,2 @@
-// allows importing @foxglove/schemas/jsonschema
-module.exports = require("./dist/jsonschema/index.js");
+// Deprecated: use @foxglove/messages/jsonschema instead.
+module.exports = require("@foxglove/messages/jsonschema");

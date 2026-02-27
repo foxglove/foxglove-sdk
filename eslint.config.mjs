@@ -13,6 +13,7 @@ export default defineConfig(
       "python/foxglove-sdk/**/_build",
       "python/foxglove-sdk/python/foxglove/notebook/static",
       "target",
+      "typescript/*/src/jsonschema",
     ],
   },
   ...foxglove.configs.base,
