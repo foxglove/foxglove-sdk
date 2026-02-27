@@ -1,6 +1,7 @@
 //! Remote access implementation.
 
 mod capability;
+mod channel_subscription;
 mod client;
 mod connection;
 mod credentials_provider;

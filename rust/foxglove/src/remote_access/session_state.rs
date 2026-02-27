@@ -6,31 +6,10 @@ use smallvec::SmallVec;
 use tracing::{debug, info};
 
 use crate::protocol::v2::server::advertise;
+use crate::remote_access::channel_subscription::ChannelSubscription;
 use crate::remote_access::participant::Participant;
 use crate::remote_access::session::{VideoInputSchema, VideoPublisher};
 use crate::{ChannelId, RawChannel};
-
-/// Tracks subscribers for a channel along with a version counter.
-///
-/// The version is incremented on every mutation so that the sender task can detect
-/// stale `ChannelWriter`s with a single integer comparison.
-pub(crate) struct ChannelSubscription {
-    pub subscribers: SmallVec<[ParticipantIdentity; 1]>,
-    pub version: u32,
-}
-
-impl ChannelSubscription {
-    fn new() -> Self {
-        Self {
-            subscribers: SmallVec::new(),
-            version: 0,
-        }
-    }
-
-    fn bump_version(&mut self) {
-        self.version = self.version.wrapping_add(1);
-    }
-}
 
 /// State machine for a remote access session.
 ///
@@ -100,12 +79,8 @@ impl SessionState {
 
         let mut last_unsubscribed: SmallVec<[ChannelId; 4]> = SmallVec::new();
         self.subscriptions.retain(|&channel_id, sub| {
-            let had = sub.subscribers.len();
-            sub.subscribers.retain(|id| id != identity);
-            if sub.subscribers.len() != had {
-                sub.bump_version();
-            }
-            if sub.subscribers.is_empty() {
+            sub.retain(|id| id != identity);
+            if sub.is_empty() {
                 last_unsubscribed.push(channel_id);
                 false
             } else {
@@ -217,13 +192,12 @@ impl SessionState {
                 .subscriptions
                 .entry(channel_id)
                 .or_insert_with(ChannelSubscription::new);
-            if sub.subscribers.contains(participant.identity()) {
+            if sub.subscribers().contains(participant.identity()) {
                 info!("{participant} is already subscribed to channel {channel_id:?}; ignoring",);
                 continue;
             }
-            let is_first = sub.subscribers.is_empty();
-            sub.subscribers.push(participant.identity().clone());
-            sub.bump_version();
+            let is_first = sub.is_empty();
+            sub.push(participant.identity().clone());
             debug!("{participant} subscribed to channel {channel_id:?}");
             if is_first {
                 first_subscribed.push(channel_id);
@@ -246,18 +220,12 @@ impl SessionState {
                 info!("{participant} is not subscribed to channel {channel_id:?}; ignoring",);
                 continue;
             };
-            let Some(pos) = sub
-                .subscribers
-                .iter()
-                .position(|id| id == participant.identity())
-            else {
+            if !sub.swap_remove(participant.identity()) {
                 info!("{participant} is not subscribed to channel {channel_id:?}; ignoring",);
                 continue;
-            };
-            sub.subscribers.swap_remove(pos);
-            sub.bump_version();
+            }
             debug!("{participant} unsubscribed from channel {channel_id:?}");
-            if sub.subscribers.is_empty() {
+            if sub.is_empty() {
                 self.subscriptions.remove(&channel_id);
                 last_unsubscribed.push(channel_id);
             }
@@ -275,7 +243,7 @@ impl SessionState {
     pub fn get_subscriber_count(&self, channel_id: &ChannelId) -> usize {
         self.subscriptions
             .get(channel_id)
-            .map_or(0, |s| s.subscribers.len())
+            .map_or(0, |s| s.subscribers().len())
     }
 
     /// Returns the number of advertised channels.
@@ -530,9 +498,9 @@ mod tests {
         state.subscribe(&pb, &[ch]);
 
         let sub = state.get_subscription(&ch).unwrap();
-        assert_eq!(sub.subscribers.len(), 2);
-        assert!(sub.subscribers.contains(&id_a));
-        assert!(sub.subscribers.contains(&id_b));
+        assert_eq!(sub.subscribers().len(), 2);
+        assert!(sub.subscribers().contains(&id_a));
+        assert!(sub.subscribers().contains(&id_b));
     }
 
     #[test]

@@ -723,7 +723,7 @@ where
     let (current_version, subscribers) = {
         let state = state.read();
         let sub = state.get_subscription(channel_id)?;
-        if sub.subscribers.is_empty() {
+        if sub.is_empty() {
             channel_writers.remove(channel_id);
             return None;
         }
@@ -732,7 +732,7 @@ where
             // Fast path: writer is up to date.
             return channel_writers.get(channel_id);
         }
-        let subscribers: Vec<ParticipantIdentity> = sub.subscribers.iter().cloned().collect();
+        let subscribers: Vec<ParticipantIdentity> = sub.subscribers().iter().cloned().collect();
         (sub.version, subscribers)
     };
 
