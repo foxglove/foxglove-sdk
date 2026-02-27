@@ -6,11 +6,13 @@
 #   docker compose -f docker-compose.yaml -f docker-compose.netem.yml up -d --wait
 #
 # The sidecar shares the LiveKit container's network namespace and applies tc
-# netem rules to its eth0 interface. This shapes all egress from LiveKit —
-# including RTC media/data packets sent back to test clients.
+# netem rules to all network interfaces. This shapes all egress from LiveKit —
+# including RTC media/data packets sent back to test clients. Applying to all
+# interfaces (not just eth0) is necessary because rootless Podman with pasta
+# networking forwards published-port traffic through the loopback interface.
 #
 # Configure via the NETEM_ARGS environment variable. It accepts any arguments
-# valid after `tc qdisc add dev eth0 root netem`. Defaults to moderate
+# valid after `tc qdisc replace dev <iface> root netem`. Defaults to moderate
 # impairment (80ms delay, 20ms jitter, 2% packet loss).
 #
 # Examples:
@@ -50,13 +52,18 @@ services:
         # Start a UDP echo server for packet loss testing. Each received
         # datagram is echoed back through the netem-shaped egress path.
         socat UDP-RECVFROM:9999,fork EXEC:/bin/cat &
-        tc qdisc add dev eth0 root netem $${NETEM_ARGS}
-        echo "netem applied: $${NETEM_ARGS}"
-        tc -s qdisc show dev eth0
+        # Apply netem to all interfaces. This covers both Docker (eth0)
+        # and Podman rootless/pasta (lo) port forwarding paths.
+        # Use "replace" instead of "add" to handle pre-existing qdiscs.
+        for iface in $$(ls /sys/class/net/); do
+          tc qdisc replace dev "$$iface" root netem $${NETEM_ARGS} 2>/dev/null && \
+            echo "netem applied to $$iface: $${NETEM_ARGS}"
+        done
+        tc -s qdisc show
         # Keep the container alive so the qdisc rules persist.
         exec sleep infinity
     healthcheck:
-      test: ["CMD-SHELL", "tc qdisc show dev eth0 | grep -q netem"]
+      test: ["CMD-SHELL", "tc qdisc show | grep -q netem"]
       interval: 2s
       timeout: 5s
       retries: 10
