@@ -112,21 +112,18 @@ impl RequestBuilder {
         let status = response.status();
         if status.is_client_error() || status.is_server_error() {
             let headers = Box::new(response.headers().clone());
-            if response.content_length().is_some_and(|len| len > MAX_ERROR_RESPONSE_LEN) {
-                return Err(RequestError::ErrorResponseTooLarge {
-                    status,
-                    headers,
-                });
+            if response
+                .content_length()
+                .is_some_and(|len| len > MAX_ERROR_RESPONSE_LEN)
+            {
+                return Err(RequestError::ErrorResponseTooLarge { status, headers });
             }
             let body = response
                 .bytes()
                 .await
                 .map_err(RequestError::LoadResponseBytes)?;
             if body.len() as u64 > MAX_ERROR_RESPONSE_LEN {
-                return Err(RequestError::ErrorResponseTooLarge {
-                    status,
-                    headers,
-                });
+                return Err(RequestError::ErrorResponseTooLarge { status, headers });
             }
             match serde_json::from_slice::<ErrorResponse>(&body) {
                 Ok(error) => {
