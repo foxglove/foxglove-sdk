@@ -301,6 +301,25 @@ impl ViewerConnection {
         }
     }
 
+    /// Waits for a `ParticipantDisconnected` room event for the given identity.
+    ///
+    /// Used to synchronize on a participant's departure before sending further messages,
+    /// ensuring the gateway has had a chance to update its subscription state.
+    async fn wait_for_participant_disconnected(&mut self, identity: &str) -> Result<()> {
+        let deadline = tokio::time::Instant::now() + EVENT_TIMEOUT;
+        loop {
+            let event = tokio::time::timeout_at(deadline, self.events.recv())
+                .await
+                .context("timeout waiting for ParticipantDisconnected event")?
+                .context("room events channel closed")?;
+            if let RoomEvent::ParticipantDisconnected(participant) = event {
+                if participant.identity().0 == identity {
+                    return Ok(());
+                }
+            }
+        }
+    }
+
     async fn close(self) -> Result<()> {
         self.room
             .close()
@@ -700,8 +719,11 @@ async fn livekit_multiple_participants_receive_messages() -> Result<()> {
 
     // Disconnect viewer-1.
     viewer1.close().await?;
-    // Allow time for the gateway to process the disconnection.
-    tokio::time::sleep(Duration::from_secs(2)).await;
+    // Wait until viewer-2 sees the disconnect (confirming the gateway has also received
+    // the ParticipantDisconnected event), then allow a brief settle for the gateway to
+    // update its subscription state before we log the next message.
+    viewer2.wait_for_participant_disconnected("viewer-1").await?;
+    tokio::time::sleep(Duration::from_millis(200)).await;
 
     // Log message-3 — only viewer-2 should receive it.
     channel.log(b"message-3");
