@@ -722,7 +722,9 @@ async fn livekit_multiple_participants_receive_messages() -> Result<()> {
     // Wait until viewer-2 sees the disconnect (confirming the gateway has also received
     // the ParticipantDisconnected event), then allow a brief settle for the gateway to
     // update its subscription state before we log the next message.
-    viewer2.wait_for_participant_disconnected("viewer-1").await?;
+    viewer2
+        .wait_for_participant_disconnected("viewer-1")
+        .await?;
     tokio::time::sleep(Duration::from_millis(200)).await;
 
     // Log message-3 — only viewer-2 should receive it.
