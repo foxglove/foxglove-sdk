@@ -732,12 +732,12 @@ where
             return None;
         }
         let cached_version = channel_writers.get(channel_id).map(|w| w.version());
-        if cached_version == Some(sub.version) {
+        if cached_version == Some(sub.version()) {
             // Fast path: writer is up to date.
             return channel_writers.get(channel_id);
         }
         let subscribers: Vec<ParticipantIdentity> = sub.subscribers().iter().cloned().collect();
-        (sub.version, subscribers)
+        (sub.version(), subscribers)
     };
 
     // Subscriber set changed (or no writer yet): open a new byte stream.

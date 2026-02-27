@@ -511,10 +511,10 @@ mod tests {
         let ch = ChannelId::new(1);
 
         state.subscribe(&pa, &[ch]);
-        let v1 = state.get_subscription(&ch).unwrap().version;
+        let v1 = state.get_subscription(&ch).unwrap().version();
 
         state.subscribe(&pb, &[ch]);
-        let v2 = state.get_subscription(&ch).unwrap().version;
+        let v2 = state.get_subscription(&ch).unwrap().version();
 
         assert_ne!(v1, v2);
     }
@@ -526,10 +526,10 @@ mod tests {
         let ch = ChannelId::new(1);
 
         state.subscribe(&p, &[ch]);
-        let v1 = state.get_subscription(&ch).unwrap().version;
+        let v1 = state.get_subscription(&ch).unwrap().version();
 
         state.subscribe(&p, &[ch]);
-        let v2 = state.get_subscription(&ch).unwrap().version;
+        let v2 = state.get_subscription(&ch).unwrap().version();
 
         assert_eq!(v1, v2);
     }
@@ -543,10 +543,10 @@ mod tests {
 
         state.subscribe(&pa, &[ch]);
         state.subscribe(&pb, &[ch]);
-        let v1 = state.get_subscription(&ch).unwrap().version;
+        let v1 = state.get_subscription(&ch).unwrap().version();
 
         state.unsubscribe(&pa, &[ch]);
-        let v2 = state.get_subscription(&ch).unwrap().version;
+        let v2 = state.get_subscription(&ch).unwrap().version();
 
         assert_ne!(v1, v2);
     }
@@ -563,10 +563,10 @@ mod tests {
 
         state.subscribe(&pa, &[ch]);
         state.subscribe(&pb, &[ch]);
-        let v1 = state.get_subscription(&ch).unwrap().version;
+        let v1 = state.get_subscription(&ch).unwrap().version();
 
         state.remove_participant(&id_a);
-        let v2 = state.get_subscription(&ch).unwrap().version;
+        let v2 = state.get_subscription(&ch).unwrap().version();
 
         assert_ne!(v1, v2);
     }

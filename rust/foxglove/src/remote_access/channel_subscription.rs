@@ -7,7 +7,7 @@ use smallvec::SmallVec;
 /// stale `ChannelWriter`s with a single integer comparison.
 pub(crate) struct ChannelSubscription {
     subscribers: SmallVec<[ParticipantIdentity; 1]>,
-    pub version: u32,
+    version: u32,
 }
 
 impl ChannelSubscription {
@@ -20,6 +20,11 @@ impl ChannelSubscription {
 
     fn bump_version(&mut self) {
         self.version = self.version.wrapping_add(1);
+    }
+
+    /// Returns the current version counter.
+    pub fn version(&self) -> u32 {
+        self.version
     }
 
     /// Returns a slice of subscriber identities.
