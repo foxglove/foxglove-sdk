@@ -1,6 +1,7 @@
 //! Server advertise message types.
 
 use std::borrow::Cow;
+use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
@@ -63,6 +64,9 @@ pub struct Channel<'a> {
     /// decode it.
     #[serde(borrow)]
     pub schema: Cow<'a, str>,
+    /// Channel metadata.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub metadata: BTreeMap<String, String>,
 }
 
 impl<'a> Channel<'a> {
@@ -78,6 +82,7 @@ impl<'a> Channel<'a> {
             topic: topic.into(),
             encoding: encoding.into(),
             schema: None,
+            metadata: BTreeMap::new(),
         }
     }
 
@@ -99,6 +104,7 @@ impl<'a> Channel<'a> {
             schema_name: self.schema_name.into_owned().into(),
             schema_encoding: self.schema_encoding.map(|s| s.into_owned().into()),
             schema: self.schema.into_owned().into(),
+            metadata: self.metadata,
         }
     }
 }
@@ -122,6 +128,7 @@ pub struct ChannelBuilder<'a> {
     topic: Cow<'a, str>,
     encoding: Cow<'a, str>,
     schema: Option<Schema<'a>>,
+    metadata: BTreeMap<String, String>,
 }
 
 impl<'a> ChannelBuilder<'a> {
@@ -129,6 +136,13 @@ impl<'a> ChannelBuilder<'a> {
     #[must_use]
     pub fn with_schema(mut self, schema: Schema<'a>) -> Self {
         self.schema = Some(schema);
+        self
+    }
+
+    /// Adds metadata to the channel advertisement.
+    #[must_use]
+    pub fn with_metadata(mut self, metadata: BTreeMap<String, String>) -> Self {
+        self.metadata = metadata;
         self
     }
 
@@ -146,6 +160,7 @@ impl<'a> ChannelBuilder<'a> {
                         schema_name: "".into(),
                         schema_encoding: None,
                         schema: Cow::Borrowed(""),
+                        metadata: self.metadata,
                     })
                 }
             }
@@ -156,6 +171,7 @@ impl<'a> ChannelBuilder<'a> {
                 schema: schema::encode_schema_data(&schema.encoding, schema.data)?,
                 schema_name: schema.name,
                 schema_encoding: Some(schema.encoding),
+                metadata: self.metadata,
             }),
         }
     }
@@ -174,6 +190,10 @@ impl<'a> TryFrom<&'a RawChannel> for Channel<'a> {
         let mut builder = Self::builder(ch.id().into(), ch.topic(), ch.message_encoding());
         if let Some(s) = ch.schema() {
             builder = builder.with_schema(s.into());
+        }
+        let metadata = ch.metadata();
+        if !metadata.is_empty() {
+            builder = builder.with_metadata(metadata.clone());
         }
         builder.build()
     }
@@ -225,6 +245,13 @@ mod tests {
                     "protobuf",
                     &[0xde, 0xad, 0xbe, 0xef],
                 ))
+                .build()
+                .unwrap(),
+            Channel::builder(40, "/t4", "json")
+                .with_metadata(BTreeMap::from([(
+                    "foxglove.hasVideoTrack".to_string(),
+                    "true".to_string(),
+                )]))
                 .build()
                 .unwrap(),
         ])

@@ -3,12 +3,15 @@ use std::time::Duration;
 
 use bytes::Bytes;
 use futures_util::StreamExt;
+use libwebrtc::video_source::{RtcVideoSource, native::NativeVideoSource};
+use livekit::options::TrackPublishOptions;
+use livekit::prelude::*;
 use livekit::{ByteStreamReader, Room, StreamByteOptions, id::ParticipantIdentity};
 use parking_lot::RwLock;
 use smallvec::SmallVec;
 use tokio::io::AsyncReadExt;
 use tokio_util::{io::StreamReader, sync::CancellationToken};
-use tracing::{error, info, warn};
+use tracing::{debug, error, info, warn};
 
 use crate::{
     ChannelId, Context, FoxgloveError, Metadata, RawChannel, Sink, SinkChannelFilter, SinkId,
@@ -17,8 +20,15 @@ use crate::{
         client::{self, ClientMessage},
         server::{MessageData as ServerMessageData, ServerInfo, Unadvertise, advertise},
     },
-    remote_access::{RemoteAccessError, participant::Participant, session_state::SessionState},
+    remote_access::{
+        RemoteAccessError,
+        participant::{Participant, ParticipantWriter},
+        session_state::SessionState,
+    },
 };
+
+mod video_track;
+pub(crate) use video_track::{VideoInputSchema, VideoPublisher, get_video_input_schema};
 
 const WS_PROTOCOL_TOPIC: &str = "ws-protocol";
 const MESSAGE_FRAME_SIZE: usize = 5; // 1 byte opcode + u32 LE length
@@ -89,6 +99,9 @@ pub(crate) struct RemoteAccessSession {
     data_plane_rx: flume::Receiver<ChannelMessage>,
     control_plane_tx: flume::Sender<ControlPlaneMessage>,
     control_plane_rx: flume::Receiver<ControlPlaneMessage>,
+    /// Serializes subscription changes and their associated video track lifecycle
+    /// operations, which must not interleave across participants.
+    subscription_lock: parking_lot::Mutex<()>,
 }
 
 impl Sink for RemoteAccessSession {
@@ -103,6 +116,14 @@ impl Sink for RemoteAccessSession {
         metadata: &Metadata,
     ) -> std::result::Result<(), FoxgloveError> {
         let channel_id = channel.id();
+
+        // If a video publisher is active for this channel, send the frame to it
+        // and skip the raw data plane.
+        if let Some(publisher) = self.state.read().get_video_publisher(&channel_id) {
+            publisher.send(Bytes::copy_from_slice(msg), metadata.log_time);
+            return Ok(());
+        }
+
         let message = ServerMessageData::new(u64::from(channel_id), metadata.log_time, msg);
         let data = encode_binary_message(&message);
         self.send_data_lossy(ChannelMessage { channel_id, data });
@@ -125,21 +146,26 @@ impl Sink for RemoteAccessSession {
             return None;
         }
 
-        let advertise_msg = advertise::advertise_channels(filtered.iter().copied());
+        let mut advertise_msg = advertise::advertise_channels(filtered.iter().copied());
         if advertise_msg.channels.is_empty() {
             return None;
         }
 
-        // Track advertised channels, excluding any that failed to encode (e.g. MissingSchema).
+        // Track advertised channels and detect video-capable ones.
         let advertised_ids: std::collections::HashSet<u64> =
             advertise_msg.channels.iter().map(|ch| ch.id).collect();
-        let mut state = self.state.write();
-        for &ch in &filtered {
-            if advertised_ids.contains(&u64::from(ch.id())) {
-                state.insert_channel(ch);
+        {
+            let mut state = self.state.write();
+            for &ch in &filtered {
+                if advertised_ids.contains(&u64::from(ch.id())) {
+                    state.insert_channel(ch);
+                    if let Some(input_schema) = get_video_input_schema(ch) {
+                        state.insert_video_schema(ch.id(), input_schema);
+                    }
+                }
             }
+            state.inject_video_track_metadata(&mut advertise_msg);
         }
-        drop(state);
 
         let framed = frame_text_message(advertise_msg.to_string().as_bytes());
         self.broadcast_control(framed);
@@ -149,10 +175,14 @@ impl Sink for RemoteAccessSession {
     }
 
     fn remove_channel(&self, channel: &RawChannel) {
+        let _guard = self.subscription_lock.lock();
         let channel_id = channel.id();
         if !self.state.write().remove_channel(channel_id) {
             return;
         }
+
+        self.teardown_video_track(channel_id);
+        self.state.write().remove_video_schema(&channel_id);
 
         let unadvertise = Unadvertise::new([u64::from(channel_id)]);
         let framed = frame_text_message(unadvertise.to_string().as_bytes());
@@ -185,6 +215,7 @@ impl RemoteAccessSession {
             data_plane_rx,
             control_plane_tx,
             control_plane_rx,
+            subscription_lock: parking_lot::Mutex::new(()),
         }
     }
 
@@ -395,7 +426,12 @@ impl RemoteAccessSession {
         true
     }
 
-    fn handle_client_subscribe(&self, participant: &Participant, msg: client::Subscribe) {
+    fn handle_client_subscribe(
+        self: &Arc<Self>,
+        participant: &Participant,
+        msg: client::Subscribe,
+    ) {
+        let _guard = self.subscription_lock.lock();
         let channel_ids: Vec<ChannelId> = msg
             .channel_ids
             .iter()
@@ -409,9 +445,16 @@ impl RemoteAccessSession {
                 context.subscribe_channels(self.sink_id, &first_subscribed);
             }
         }
+
+        self.start_video_tracks(&first_subscribed);
     }
 
-    fn handle_client_unsubscribe(&self, participant: &Participant, msg: client::Unsubscribe) {
+    fn handle_client_unsubscribe(
+        self: &Arc<Self>,
+        participant: &Participant,
+        msg: client::Unsubscribe,
+    ) {
+        let _guard = self.subscription_lock.lock();
         let channel_ids: Vec<ChannelId> = msg
             .channel_ids
             .iter()
@@ -425,6 +468,8 @@ impl RemoteAccessSession {
                 context.unsubscribe_channels(self.sink_id, &last_unsubscribed);
             }
         }
+
+        self.stop_video_tracks(&last_unsubscribed);
     }
 
     /// Add a participant to the server, if it hasn't already been added.
@@ -433,8 +478,6 @@ impl RemoteAccessSession {
         &self,
         participant_id: ParticipantIdentity,
     ) -> Result<Arc<Participant>, RemoteAccessError> {
-        use crate::remote_access::participant::ParticipantWriter;
-
         if let Some(existing) = self.state.read().get_participant(&participant_id) {
             return Ok(existing);
         }
@@ -470,7 +513,8 @@ impl RemoteAccessSession {
     /// Remove a participant from the session, cleaning up its subscriptions.
     ///
     /// Channels that lose their last subscriber are unsubscribed from the context.
-    pub(crate) fn remove_participant(&self, participant_id: &ParticipantIdentity) {
+    pub(crate) fn remove_participant(self: &Arc<Self>, participant_id: &ParticipantIdentity) {
+        let _guard = self.subscription_lock.lock();
         let last_unsubscribed = self.state.write().remove_participant(participant_id);
 
         if !last_unsubscribed.is_empty() {
@@ -478,6 +522,8 @@ impl RemoteAccessSession {
                 context.unsubscribe_channels(self.sink_id, &last_unsubscribed);
             }
         }
+
+        self.stop_video_tracks(&last_unsubscribed);
     }
 
     /// Enqueue server info and channel advertisements for delivery to a participant.
@@ -498,21 +544,135 @@ impl RemoteAccessSession {
 
     /// Enqueue all currently cached channel advertisements for delivery to a single participant.
     fn send_channel_advertisements(&self, participant: Arc<Participant>) {
-        let Some(framed) = self
-            .state
-            .read()
-            .with_channels(|channels| {
-                let advertise_msg = advertise::advertise_channels(channels.values());
-                if advertise_msg.channels.is_empty() {
-                    return None;
-                }
-                Some(frame_text_message(advertise_msg.to_string().as_bytes()))
-            })
-            .flatten()
-        else {
+        let Some(advertise_msg) = ({
+            let state = self.state.read();
+            state
+                .with_channels(|channels| {
+                    let msg = advertise::advertise_channels(channels.values());
+                    if msg.channels.is_empty() {
+                        return None;
+                    }
+                    let mut msg = msg.into_owned();
+                    state.inject_video_track_metadata(&mut msg);
+                    Some(msg)
+                })
+                .flatten()
+        }) else {
             return;
         };
 
+        let framed = frame_text_message(advertise_msg.to_string().as_bytes());
         self.send_control(participant, framed);
+    }
+
+    /// Start video tracks for first-subscribed channels that have video schemas.
+    ///
+    /// Caller must hold `subscription_lock`.
+    fn start_video_tracks(self: &Arc<Self>, first_subscribed: &[ChannelId]) {
+        // Collect video-capable channels and their topics while holding the read lock.
+        let to_start: SmallVec<[(ChannelId, VideoInputSchema, String); 4]> = {
+            let state = self.state.read();
+            state
+                .with_channels(|channels| {
+                    first_subscribed
+                        .iter()
+                        .filter_map(|&channel_id| {
+                            let input_schema = state.get_video_schema(&channel_id)?;
+                            let topic = channels
+                                .get(&channel_id)
+                                .map(|ch| ch.topic().to_string())
+                                .unwrap_or_default();
+                            Some((channel_id, input_schema, topic))
+                        })
+                        .collect()
+                })
+                .unwrap_or_default()
+        };
+
+        for (channel_id, input_schema, topic) in to_start {
+            let video_source = NativeVideoSource::default();
+            let publisher = Arc::new(VideoPublisher::new(video_source.clone(), input_schema));
+            let expected_publisher = publisher.clone();
+
+            self.state
+                .write()
+                .insert_video_publisher(channel_id, publisher);
+
+            let track =
+                LocalVideoTrack::create_video_track(&topic, RtcVideoSource::Native(video_source));
+
+            let local_participant = self.room.local_participant().clone();
+            let session = self.clone();
+            tokio::spawn(async move {
+                let local_track = LocalTrack::Video(track);
+                match local_participant
+                    .publish_track(local_track, TrackPublishOptions::default())
+                    .await
+                {
+                    Ok(publication) => {
+                        let sid = publication.sid();
+                        debug!("published video track {sid} for channel {channel_id:?}");
+                        // Only store the SID if the publisher in state is still the
+                        // one we created. A teardown+resubscribe cycle could have
+                        // replaced it with a different publisher.
+                        let store = {
+                            let mut state = session.state.write();
+                            let is_ours = state
+                                .get_video_publisher(&channel_id)
+                                .is_some_and(|p| Arc::ptr_eq(&p, &expected_publisher));
+                            if is_ours {
+                                state.insert_video_track_sid(channel_id, sid.clone());
+                            }
+                            is_ours
+                        };
+                        if !store {
+                            debug!(
+                                "video track {sid} for channel {channel_id:?} was torn down during publish; unpublishing"
+                            );
+                            if let Err(e) = local_participant.unpublish_track(&sid).await {
+                                error!("failed to unpublish orphaned video track {sid}: {e:?}");
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        error!("failed to publish video track for channel {channel_id:?}: {e:?}");
+                    }
+                }
+            });
+        }
+    }
+
+    /// Stop video tracks for last-unsubscribed channels.
+    ///
+    /// Caller must hold `subscription_lock`.
+    fn stop_video_tracks(self: &Arc<Self>, last_unsubscribed: &[ChannelId]) {
+        for &channel_id in last_unsubscribed {
+            self.teardown_video_track(channel_id);
+        }
+    }
+
+    /// Clean up video runtime state for a single channel: remove publisher, remove and unpublish
+    /// track. Does not remove the video schema, which persists for the lifetime of the channel.
+    ///
+    /// Caller must hold `subscription_lock`.
+    fn teardown_video_track(&self, channel_id: ChannelId) {
+        let sid = {
+            let mut state = self.state.write();
+            // Removing the publisher drops it, which closes the mpsc channel and
+            // terminates the background processing task.
+            state.remove_video_publisher(&channel_id);
+            state.remove_video_track_sid(&channel_id)
+        };
+
+        if let Some(sid) = sid {
+            let local_participant = self.room.local_participant().clone();
+            tokio::spawn(async move {
+                if let Err(e) = local_participant.unpublish_track(&sid).await {
+                    error!("failed to unpublish video track {sid}: {e:?}");
+                } else {
+                    debug!("unpublished video track {sid} for channel {channel_id:?}");
+                }
+            });
+        }
     }
 }

@@ -201,3 +201,69 @@ impl From<&server::UnadvertiseServices> for Message {
         Message::Text(value.to_string().into())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use assert_matches::assert_matches;
+    use tokio_tungstenite::tungstenite::Message;
+
+    use crate::protocol::v1::{BinaryMessage, ParseError, client, server};
+
+    // --- TryFrom<&Message> for ClientMessage ---
+
+    #[test]
+    fn test_client_message_try_from_text() {
+        let msg = client::Subscribe::new([client::Subscription::new(1, 10)]);
+        let json = serde_json::to_string(&msg).unwrap();
+        let ws_msg = Message::Text(json.into());
+        let parsed = client::ClientMessage::try_from(&ws_msg).unwrap();
+        assert_eq!(parsed, client::ClientMessage::Subscribe(msg));
+    }
+
+    #[test]
+    fn test_client_message_try_from_binary() {
+        let msg = client::MessageData::new(30, br#"{"key": "value"}"#);
+        let bytes = msg.to_bytes();
+        let ws_msg = Message::Binary(bytes.into());
+        let parsed = client::ClientMessage::try_from(&ws_msg).unwrap();
+        assert_eq!(parsed, client::ClientMessage::MessageData(msg));
+    }
+
+    #[test]
+    fn test_client_message_try_from_unhandled() {
+        let ws_msg = Message::Ping(vec![].into());
+        assert_matches!(
+            client::ClientMessage::try_from(&ws_msg),
+            Err(ParseError::UnhandledMessageType)
+        );
+    }
+
+    // --- TryFrom<&Message> for ServerMessage ---
+
+    #[test]
+    fn test_server_message_try_from_text() {
+        let msg = server::ServerInfo::new("test server");
+        let json = serde_json::to_string(&msg).unwrap();
+        let ws_msg = Message::Text(json.into());
+        let parsed = server::ServerMessage::try_from(&ws_msg).unwrap();
+        assert_eq!(parsed, server::ServerMessage::ServerInfo(msg));
+    }
+
+    #[test]
+    fn test_server_message_try_from_binary() {
+        let msg = server::Time::new(1234567890);
+        let bytes = msg.to_bytes();
+        let ws_msg = Message::Binary(bytes.into());
+        let parsed = server::ServerMessage::try_from(&ws_msg).unwrap();
+        assert_eq!(parsed, server::ServerMessage::Time(msg));
+    }
+
+    #[test]
+    fn test_server_message_try_from_unhandled() {
+        let ws_msg = Message::Ping(vec![].into());
+        assert_matches!(
+            server::ServerMessage::try_from(&ws_msg),
+            Err(ParseError::UnhandledMessageType)
+        );
+    }
+}

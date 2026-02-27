@@ -43,6 +43,7 @@ impl BinaryOpcode {
 mod tests {
     use super::*;
     use crate::protocol::BinaryMessage;
+    use assert_matches::assert_matches;
 
     #[test]
     fn test_message_data_encode() {
@@ -107,6 +108,22 @@ mod tests {
         insta::assert_snapshot!(format!("{:#04x?}", buf));
         let parsed = ClientMessage::parse_binary(&buf).unwrap();
         assert_eq!(parsed, ClientMessage::ServiceCallRequest(message));
+    }
+
+    #[test]
+    fn test_parse_binary_empty() {
+        assert_matches!(
+            ClientMessage::parse_binary(b""),
+            Err(ParseError::EmptyBinaryMessage)
+        );
+    }
+
+    #[test]
+    fn test_parse_binary_invalid_opcode() {
+        assert_matches!(
+            ClientMessage::parse_binary(&[0xff]),
+            Err(ParseError::InvalidOpcode(0xff))
+        );
     }
 }
 

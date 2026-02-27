@@ -17,8 +17,9 @@ use remote_access_tests::mock_server;
 use tracing::info;
 use tracing_test::traced_test;
 
+use foxglove::Schema;
 use foxglove::protocol::v2::BinaryMessage;
-use foxglove::protocol::v2::client::Subscribe;
+use foxglove::protocol::v2::client::{Subscribe, Unsubscribe};
 use foxglove::protocol::v2::server::ServerMessage;
 
 /// Default timeout for waiting for events or stream data.
@@ -91,7 +92,7 @@ impl FrameReader {
 
 struct ViewerConnection {
     room: Room,
-    _events: tokio::sync::mpsc::UnboundedReceiver<RoomEvent>,
+    events: tokio::sync::mpsc::UnboundedReceiver<RoomEvent>,
     frame_reader: FrameReader,
 }
 
@@ -131,7 +132,7 @@ impl ViewerConnection {
             if let Some(reader) = reader {
                 return Ok(Self {
                     room,
-                    _events: events,
+                    events,
                     frame_reader: FrameReader::new(reader),
                 });
             }
@@ -222,6 +223,60 @@ impl ViewerConnection {
         self.send_subscribe(channel_ids).await?;
         poll_until(|| channel.has_sinks()).await;
         Ok(())
+    }
+
+    /// Sends a binary-framed Unsubscribe message to the gateway.
+    async fn send_unsubscribe(&self, channel_ids: &[u64]) -> Result<()> {
+        let unsubscribe = Unsubscribe::new(channel_ids.iter().copied());
+        let inner = unsubscribe.to_bytes();
+        let framed = frame::frame_binary_message(&inner);
+
+        let gateway_identity = ParticipantIdentity(mock_server::TEST_DEVICE_ID.to_string());
+        let writer = self
+            .room
+            .local_participant()
+            .stream_bytes(StreamByteOptions {
+                topic: "ws-protocol".to_string(),
+                destination_identities: vec![gateway_identity],
+                ..StreamByteOptions::default()
+            })
+            .await
+            .map_err(|e| anyhow::anyhow!("failed to open byte stream to gateway: {e}"))?;
+
+        writer
+            .write(&framed)
+            .await
+            .map_err(|e| anyhow::anyhow!("failed to write unsubscribe message: {e}"))?;
+
+        Ok(())
+    }
+
+    /// Waits for a `TrackSubscribed` room event and returns the track name.
+    async fn expect_track_subscribed(&mut self) -> Result<String> {
+        let deadline = tokio::time::Instant::now() + EVENT_TIMEOUT;
+        loop {
+            let event = tokio::time::timeout_at(deadline, self.events.recv())
+                .await
+                .context("timeout waiting for TrackSubscribed event")?
+                .context("room events channel closed")?;
+            if let RoomEvent::TrackSubscribed { publication, .. } = event {
+                return Ok(publication.name());
+            }
+        }
+    }
+
+    /// Waits for a `TrackUnsubscribed` room event and returns the track name.
+    async fn expect_track_unsubscribed(&mut self) -> Result<String> {
+        let deadline = tokio::time::Instant::now() + EVENT_TIMEOUT;
+        loop {
+            let event = tokio::time::timeout_at(deadline, self.events.recv())
+                .await
+                .context("timeout waiting for TrackUnsubscribed event")?
+                .context("room events channel closed")?;
+            if let RoomEvent::TrackUnsubscribed { publication, .. } = event {
+                return Ok(publication.name());
+            }
+        }
     }
 
     async fn close(self) -> Result<()> {
@@ -633,6 +688,195 @@ async fn livekit_multiple_participants_receive_messages() -> Result<()> {
     info!("viewer-2 received message-3 (viewer-1 disconnected)");
 
     viewer2.close().await?;
+    gw.stop().await?;
+    Ok(())
+}
+
+/// Test that a video-capable channel (protobuf-encoded foxglove.RawImage) is advertised
+/// with `foxglove.hasVideoTrack` metadata.
+#[traced_test]
+#[ignore]
+#[tokio::test]
+async fn livekit_video_channel_has_video_track_metadata() -> Result<()> {
+    let ctx = foxglove::Context::new();
+
+    // Create a video-capable channel and a plain JSON channel.
+    let video_channel = ctx
+        .channel_builder("/camera")
+        .message_encoding("protobuf")
+        .schema(Schema::new("foxglove.RawImage", "protobuf", &b""[..]))
+        .build_raw()
+        .context("create video channel")?;
+    let json_channel = ctx
+        .channel_builder("/data")
+        .message_encoding("json")
+        .build_raw()
+        .context("create json channel")?;
+
+    let gw = TestGateway::start(&ctx).await?;
+    let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+
+    let _server_info = viewer.expect_server_info().await?;
+    let advertise = viewer.expect_advertise().await?;
+
+    assert_eq!(advertise.channels.len(), 2);
+    for ch in &advertise.channels {
+        if ch.id == u64::from(video_channel.id()) {
+            assert_eq!(
+                ch.metadata
+                    .get("foxglove.hasVideoTrack")
+                    .map(|s| s.as_str()),
+                Some("true"),
+                "video channel should have foxglove.hasVideoTrack metadata"
+            );
+        } else {
+            assert_eq!(ch.id, u64::from(json_channel.id()));
+            assert!(
+                !ch.metadata.contains_key("foxglove.hasVideoTrack"),
+                "json channel should not have foxglove.hasVideoTrack metadata"
+            );
+        }
+    }
+    info!("video track metadata validated");
+
+    viewer.close().await?;
+    gw.stop().await?;
+    Ok(())
+}
+
+/// Test that messages logged to a video-capable channel are routed through the video
+/// publisher and do NOT produce MessageData frames on the data plane.
+#[traced_test]
+#[ignore]
+#[tokio::test]
+async fn livekit_video_channel_messages_bypass_data_plane() -> Result<()> {
+    let ctx = foxglove::Context::new();
+
+    let video_channel = ctx
+        .channel_builder("/camera")
+        .message_encoding("protobuf")
+        .schema(Schema::new("foxglove.RawImage", "protobuf", &b""[..]))
+        .build_raw()
+        .context("create video channel")?;
+    let json_channel = ctx
+        .channel_builder("/data")
+        .message_encoding("json")
+        .build_raw()
+        .context("create json channel")?;
+
+    let gw = TestGateway::start(&ctx).await?;
+    let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+
+    let _server_info = viewer.expect_server_info().await?;
+    let _advertise = viewer.expect_advertise().await?;
+
+    let video_id = u64::from(video_channel.id());
+    let json_id = u64::from(json_channel.id());
+
+    // Subscribe to both channels.
+    viewer.send_subscribe(&[video_id, json_id]).await?;
+    poll_until(|| json_channel.has_sinks()).await;
+
+    // Log to the video channel first, then the JSON channel.
+    // If the video message leaked to the data plane, it would arrive before
+    // the JSON message (FIFO ordering).
+    video_channel.log(b"video-frame");
+    json_channel.log(b"json-payload");
+
+    let msg = viewer.expect_message_data().await?;
+    assert_eq!(msg.channel_id, json_id, "should receive the JSON message");
+    assert_eq!(msg.data.as_ref(), b"json-payload");
+    info!("video channel correctly bypassed data plane");
+
+    viewer.close().await?;
+    gw.stop().await?;
+    Ok(())
+}
+
+/// Test that subscribing to a video-capable channel publishes a video track to the
+/// LiveKit room, and unsubscribing tears it down.
+#[traced_test]
+#[ignore]
+#[tokio::test]
+async fn livekit_video_track_lifecycle() -> Result<()> {
+    let ctx = foxglove::Context::new();
+
+    let video_channel = ctx
+        .channel_builder("/camera")
+        .message_encoding("protobuf")
+        .schema(Schema::new("foxglove.RawImage", "protobuf", &b""[..]))
+        .build_raw()
+        .context("create video channel")?;
+
+    let gw = TestGateway::start(&ctx).await?;
+    let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+
+    let _server_info = viewer.expect_server_info().await?;
+    let advertise = viewer.expect_advertise().await?;
+    let channel_id = advertise.channels[0].id;
+
+    // Subscribe to the video channel — the gateway should publish a video track.
+    viewer
+        .subscribe_and_wait(&[channel_id], &video_channel)
+        .await?;
+    let track_name = viewer.expect_track_subscribed().await?;
+    assert_eq!(track_name, "/camera", "video track name should match topic");
+    info!("video track published on subscribe: {track_name}");
+
+    // Unsubscribe — the gateway should unpublish the video track.
+    viewer.send_unsubscribe(&[channel_id]).await?;
+    let track_name = viewer.expect_track_unsubscribed().await?;
+    assert_eq!(track_name, "/camera");
+    info!("video track torn down on unsubscribe: {track_name}");
+
+    viewer.close().await?;
+    gw.stop().await?;
+    Ok(())
+}
+
+/// Test that a video track can be re-established after an unsubscribe/resubscribe cycle.
+/// Validates that the video schema persists across teardown so the track can be recreated.
+#[traced_test]
+#[ignore]
+#[tokio::test]
+async fn livekit_video_track_resubscribe() -> Result<()> {
+    let ctx = foxglove::Context::new();
+
+    let video_channel = ctx
+        .channel_builder("/camera")
+        .message_encoding("protobuf")
+        .schema(Schema::new("foxglove.RawImage", "protobuf", &b""[..]))
+        .build_raw()
+        .context("create video channel")?;
+
+    let gw = TestGateway::start(&ctx).await?;
+    let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+
+    let _server_info = viewer.expect_server_info().await?;
+    let advertise = viewer.expect_advertise().await?;
+    let channel_id = advertise.channels[0].id;
+
+    // First subscribe — video track should be published.
+    viewer
+        .subscribe_and_wait(&[channel_id], &video_channel)
+        .await?;
+    let track_name = viewer.expect_track_subscribed().await?;
+    assert_eq!(track_name, "/camera");
+    info!("first subscribe: video track published");
+
+    // Unsubscribe — video track should be torn down.
+    viewer.send_unsubscribe(&[channel_id]).await?;
+    let track_name = viewer.expect_track_unsubscribed().await?;
+    assert_eq!(track_name, "/camera");
+    info!("unsubscribe: video track torn down");
+
+    // Resubscribe — video track should come back.
+    viewer.send_subscribe(&[channel_id]).await?;
+    let track_name = viewer.expect_track_subscribed().await?;
+    assert_eq!(track_name, "/camera");
+    info!("resubscribe: video track re-established");
+
+    viewer.close().await?;
     gw.stop().await?;
     Ok(())
 }
