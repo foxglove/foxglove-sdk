@@ -344,6 +344,29 @@ impl SessionState {
         }
     }
 
+    /// Returns the number of connected participants.
+    pub fn participant_count(&self) -> usize {
+        self.participants.len()
+    }
+
+    /// Returns the total number of active subscriptions across all channels.
+    pub fn subscription_count(&self) -> usize {
+        self.subscriptions.values().map(|s| s.subscribers().len()).sum()
+    }
+
+    /// Returns the number of active video tracks being published.
+    pub fn video_track_count(&self) -> usize {
+        self.video_track_sids.len()
+    }
+
+    /// Returns the number of subscribers for a channel.
+    #[cfg(test)]
+    pub fn get_subscriber_count(&self, channel_id: &ChannelId) -> usize {
+        self.subscriptions
+            .get(channel_id)
+            .map_or(0, |s| s.subscribers().len())
+    }
+
     /// Adds a participant to video subscribers for the given channels.
     ///
     /// The caller is responsible for calling [`Self::subscribe`] separately, if necessary.

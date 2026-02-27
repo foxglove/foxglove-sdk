@@ -240,6 +240,16 @@ impl RemoteAccessSession {
         &self.room
     }
 
+    /// Returns (participant_count, subscription_count, video_track_count).
+    pub(crate) fn stats(&self) -> (usize, usize, usize) {
+        let state = self.state.read();
+        (
+            state.participant_count(),
+            state.subscription_count(),
+            state.video_track_count(),
+        )
+    }
+
     /// Enqueue a data plane message, dropping old messages if the queue is full.
     fn send_data_lossy(&self, mut msg: ChannelMessage) {
         static THROTTLER: parking_lot::Mutex<crate::throttler::Throttler> =

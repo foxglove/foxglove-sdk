@@ -102,7 +102,7 @@ impl Gateway {
     /// This allows the client to understand if the connection is a re-connection or if it is
     /// connecting to a new server instance. This can for example be a timestamp or a UUID.
     ///
-    /// By default, this is set to the number of milliseconds since the unix epoch.
+    /// By default, this is generated as `{device_id}:{uuid}` after connecting to the API.
     pub fn session_id(mut self, id: impl Into<String>) -> Self {
         self.options.session_id = id.into();
         self
