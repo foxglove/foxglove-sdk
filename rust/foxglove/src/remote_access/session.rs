@@ -736,7 +736,7 @@ where
             // Fast path: writer is up to date.
             return channel_writers.get(channel_id);
         }
-        let subscribers: Vec<ParticipantIdentity> = sub.subscribers().iter().cloned().collect();
+        let subscribers: Vec<ParticipantIdentity> = sub.subscribers().to_vec();
         (sub.version(), subscribers)
     };
 
