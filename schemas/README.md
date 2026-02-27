@@ -1262,7 +1262,7 @@ Additional user-provided metadata associated with the image annotations. Keys mu
 </td>
 <td>
 
-Timestamp for the image annotations. Some Foxglove features will use this timestamp when set. It is preferable that individual annotation timestamps match this value when provided.
+Timestamp of the image annotations. When set, individual annotation timestamps will be ignored.
 
 </td>
 </tr>

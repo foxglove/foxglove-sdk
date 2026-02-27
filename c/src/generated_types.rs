@@ -2524,7 +2524,7 @@ pub struct ImageAnnotations {
     pub metadata: *const KeyValuePair,
     pub metadata_count: usize,
 
-    /// Timestamp for the image annotations. Some Foxglove features will use this timestamp when set. It is preferable that individual annotation timestamps match this value when provided.
+    /// Timestamp of the image annotations. When set, individual annotation timestamps will be ignored.
     pub timestamp: *const FoxgloveTimestamp,
 }
 

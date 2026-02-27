@@ -69,8 +69,7 @@ fn main() {
                     ..Default::default()
                 }],
                 ..Default::default()
-            }],
-            ..Default::default()
+            }]
         });
 
         std::thread::sleep(std::time::Duration::from_millis(33));

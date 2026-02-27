@@ -1036,9 +1036,8 @@ struct ImageAnnotations {
   /// unique.
   std::vector<KeyValuePair> metadata;
 
-  /// @brief Timestamp for the image annotations. Some Foxglove features will use this timestamp
-  /// when set. It is preferable that individual annotation timestamps match this value when
-  /// provided.
+  /// @brief Timestamp of the image annotations. When set, individual annotation timestamps will be
+  /// ignored.
   std::optional<Timestamp> timestamp;
 
   /// @brief Encoded the ImageAnnotations as protobuf to the provided buffer.

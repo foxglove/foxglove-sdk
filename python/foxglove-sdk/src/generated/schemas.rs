@@ -1101,7 +1101,7 @@ impl From<VoxelGrid> for foxglove::schemas::VoxelGrid {
 /// :param points: Points annotations
 /// :param texts: Text annotations
 /// :param metadata: Additional user-provided metadata associated with the image annotations. Keys must be unique.
-/// :param timestamp: Timestamp for the image annotations. Some Foxglove features will use this timestamp when set. It is preferable that individual annotation timestamps match this value when provided.
+/// :param timestamp: Timestamp of the image annotations. When set, individual annotation timestamps will be ignored.
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/image-annotations
 #[pyclass(module = "foxglove.schemas")]
