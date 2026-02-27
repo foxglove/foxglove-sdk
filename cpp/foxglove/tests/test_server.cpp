@@ -187,7 +187,7 @@ foxglove::WebSocketServer startServer(foxglove::WebSocketServerOptions&& options
 
 foxglove::WebSocketServer startServer(
   foxglove::Context context,
-  foxglove::WebSocketServerCapabilities capabilities = foxglove::WebSocketServerCapabilities(0),
+  foxglove::WebSocketServerCapabilities capabilities = foxglove::WebSocketServerCapabilities::None,
   foxglove::WebSocketServerCallbacks&& callbacks = {},
   std::vector<std::string> supported_encodings = {}
 ) {
@@ -1340,7 +1340,7 @@ TEST_CASE("Log message to websocket sinks") {
     cv.notify_one();
   };
 
-  auto server = startServer(context, foxglove::WebSocketServerCapabilities(0), std::move(cb));
+  auto server = startServer(context, foxglove::WebSocketServerCapabilities::None, std::move(cb));
 
   // Set up a few clients and connect them
   constexpr size_t num_clients = 3;

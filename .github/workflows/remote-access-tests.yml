@@ -36,3 +36,28 @@ jobs:
       - name: Stop LiveKit server
         if: always()
         run: docker compose down
+
+  netem-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          lfs: true
+
+      - name: Install common dependencies
+        uses: ./.github/actions/common-deps
+
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+
+      - name: Start LiveKit with netem
+        run: docker compose -f docker-compose.yaml -f docker-compose.netem.yml up -d --wait
+
+      - name: Run netem integration tests
+        run: cargo test -p remote_access_tests -- --ignored netem_
+
+      - name: Stop LiveKit with netem
+        if: always()
+        run: docker compose -f docker-compose.yaml -f docker-compose.netem.yml down

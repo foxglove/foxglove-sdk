@@ -1,9 +1,9 @@
 use std::{ffi::c_void, fs::File, io::BufWriter, mem::ManuallyDrop, sync::Arc};
 
 use crate::{
-    channel_descriptor::FoxgloveChannelDescriptor, result_to_c, sink_channel_filter::ChannelFilter,
     FoxgloveChannelMetadata, FoxgloveError, FoxgloveKeyValue, FoxgloveSchema, FoxgloveSinkId,
-    FoxgloveString,
+    FoxgloveString, channel_descriptor::FoxgloveChannelDescriptor, result_to_c,
+    sink_channel_filter::ChannelFilter,
 };
 use mcap::{Compression, WriteOptions};
 use std::io::{Seek, SeekFrom, Write};

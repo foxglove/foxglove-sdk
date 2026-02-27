@@ -36,7 +36,7 @@ impl<'a> BinaryPayload<'a> for Time {
     }
 }
 
-impl<'a> BinaryMessage<'a> for Time {
+impl BinaryMessage<'_> for Time {
     const OPCODE: u8 = 2;
 }
 

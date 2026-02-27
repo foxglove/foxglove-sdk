@@ -91,7 +91,7 @@ impl<'a> BinaryPayload<'a> for PlaybackControlRequest {
     }
 }
 
-impl<'a> BinaryMessage<'a> for PlaybackControlRequest {
+impl BinaryMessage<'_> for PlaybackControlRequest {
     const OPCODE: u8 = 3;
 }
 

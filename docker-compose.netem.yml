@@ -1,0 +1,72 @@
+# Compose override that adds a netem sidecar to the LiveKit service for
+# simulating degraded network conditions (latency, jitter, packet loss) on
+# WebRTC UDP traffic.
+#
+# Usage:
+#   docker compose -f docker-compose.yaml -f docker-compose.netem.yml up -d --wait
+#
+# The sidecar shares the LiveKit container's network namespace and applies tc
+# netem rules to all network interfaces. This shapes all egress from LiveKit —
+# including RTC media/data packets sent back to test clients. Applying to all
+# interfaces (not just eth0) is necessary because rootless Podman with pasta
+# networking forwards published-port traffic through the loopback interface.
+#
+# Configure via the NETEM_ARGS environment variable. It accepts any arguments
+# valid after `tc qdisc replace dev <iface> root netem`. Defaults to moderate
+# impairment (80ms delay, 20ms jitter, 2% packet loss).
+#
+# Examples:
+#   # Good network
+#   NETEM_ARGS="delay 20ms 5ms" docker compose -f docker-compose.yaml -f docker-compose.netem.yml up -d --wait
+#
+#   # Poor wifi
+#   NETEM_ARGS="delay 150ms 50ms loss 5%" docker compose -f docker-compose.yaml -f docker-compose.netem.yml up -d --wait
+#
+#   # Severe degradation with bandwidth cap
+#   NETEM_ARGS="delay 300ms 100ms loss 10% rate 500kbit" docker compose -f docker-compose.yaml -f docker-compose.netem.yml up -d --wait
+#
+#   # Packet reordering (common trigger for WebRTC jitter buffer issues)
+#   NETEM_ARGS="delay 50ms 10ms reorder 25% loss 1%" docker compose -f docker-compose.yaml -f docker-compose.netem.yml up -d --wait
+#
+# Requirements:
+#   - Linux host: works natively.
+#   - macOS host: requires Docker Desktop >= 4.27 (sch_netem kernel module fix).
+#   - GitHub Actions: works on ubuntu-latest runners.
+
+services:
+  livekit:
+    ports:
+      - "9999:9999/udp" # UDP echo for netem packet loss testing
+
+  netem:
+    image: alpine:3
+    network_mode: "service:livekit"
+    cap_add:
+      - NET_ADMIN
+    environment:
+      NETEM_ARGS: "${NETEM_ARGS:-delay 80ms 20ms loss 2%}"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        apk add --no-cache iproute2 socat > /dev/null 2>&1
+        # Start a UDP echo server for packet loss testing. Each received
+        # datagram is echoed back through the netem-shaped egress path.
+        socat UDP-RECVFROM:9999,fork EXEC:/bin/cat &
+        # Apply netem to all interfaces. This covers both Docker (eth0)
+        # and Podman rootless/pasta (lo) port forwarding paths.
+        # Use "replace" instead of "add" to handle pre-existing qdiscs.
+        for iface in $$(ls /sys/class/net/); do
+          tc qdisc replace dev "$$iface" root netem $${NETEM_ARGS} 2>/dev/null && \
+            echo "netem applied to $$iface: $${NETEM_ARGS}"
+        done
+        tc -s qdisc show
+        # Keep the container alive so the qdisc rules persist.
+        exec sleep infinity
+    healthcheck:
+      test: ["CMD-SHELL", "tc qdisc show | grep -q netem"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+    depends_on:
+      livekit:
+        condition: service_started

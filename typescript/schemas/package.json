@@ -1,7 +1,7 @@
 {
   "name": "@foxglove/schemas",
-  "version": "1.9.0",
-  "description": "Deprecated: use @foxglove/messages instead. Re-exports all types from @foxglove/messages for backward compatibility.",
+  "version": "1.10.1",
+  "description": "Foxglove-defined message schemas for ROS, Protobuf, FlatBuffers, OMG IDL, and JSON",
   "license": "MIT",
   "author": {
     "name": "Foxglove",

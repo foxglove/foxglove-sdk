@@ -7,15 +7,15 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 
 use crate::sink_channel_filter::{SinkChannelFilter, SinkChannelFilterFn};
-use crate::websocket::service::Service;
 use crate::websocket::PlaybackState;
 #[cfg(feature = "tls")]
 use crate::websocket::TlsIdentity;
+use crate::websocket::service::Service;
 use crate::websocket::{
-    create_server, AssetHandler, AsyncAssetHandlerFn, BlockingAssetHandlerFn, Capability, Client,
-    ConnectionGraph, Parameter, Server, ServerOptions, ShutdownHandle, Status,
+    AssetHandler, AsyncAssetHandlerFn, BlockingAssetHandlerFn, Capability, Client, ConnectionGraph,
+    Parameter, Server, ServerOptions, ShutdownHandle, Status, create_server,
 };
-use crate::{get_runtime_handle, AppUrl, ChannelDescriptor, Context, FoxgloveError};
+use crate::{AppUrl, ChannelDescriptor, Context, FoxgloveError, get_runtime_handle};
 
 /// A WebSocket server for live visualization in Foxglove.
 ///

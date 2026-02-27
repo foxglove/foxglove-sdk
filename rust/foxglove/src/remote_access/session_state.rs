@@ -1,11 +1,13 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use livekit::id::ParticipantIdentity;
+use livekit::id::{ParticipantIdentity, TrackSid};
 use smallvec::SmallVec;
 use tracing::{debug, info};
 
+use crate::protocol::v2::server::advertise;
 use crate::remote_access::participant::Participant;
+use crate::remote_access::session::{VideoInputSchema, VideoPublisher};
 use crate::{ChannelId, RawChannel};
 
 /// State machine for a remote access session.
@@ -22,6 +24,12 @@ pub(crate) struct SessionState {
     channels: HashMap<ChannelId, Arc<RawChannel>>,
     /// Maps channel ID to the participant identities subscribed to that channel.
     subscriptions: HashMap<ChannelId, SmallVec<[ParticipantIdentity; 1]>>,
+    /// Detected video input schemas for channels.
+    video_schemas: HashMap<ChannelId, VideoInputSchema>,
+    /// Active video publishers, keyed by channel ID.
+    video_publishers: HashMap<ChannelId, Arc<VideoPublisher>>,
+    /// Track SIDs for published video tracks.
+    video_track_sids: HashMap<ChannelId, TrackSid>,
 }
 
 impl SessionState {
@@ -30,6 +38,9 @@ impl SessionState {
             participants: HashMap::new(),
             channels: HashMap::new(),
             subscriptions: HashMap::new(),
+            video_schemas: HashMap::new(),
+            video_publishers: HashMap::new(),
+            video_track_sids: HashMap::new(),
         }
     }
 
@@ -109,6 +120,61 @@ impl SessionState {
             return None;
         }
         Some(f(&self.channels))
+    }
+
+    /// Records a video input schema for a channel.
+    pub fn insert_video_schema(&mut self, channel_id: ChannelId, schema: VideoInputSchema) {
+        self.video_schemas.insert(channel_id, schema);
+    }
+
+    /// Returns the video input schema for a channel, if any.
+    pub fn get_video_schema(&self, channel_id: &ChannelId) -> Option<VideoInputSchema> {
+        self.video_schemas.get(channel_id).copied()
+    }
+
+    /// Removes the video input schema for a channel.
+    pub fn remove_video_schema(&mut self, channel_id: &ChannelId) {
+        self.video_schemas.remove(channel_id);
+    }
+
+    /// Inserts a video publisher for a channel.
+    pub fn insert_video_publisher(
+        &mut self,
+        channel_id: ChannelId,
+        publisher: Arc<VideoPublisher>,
+    ) {
+        self.video_publishers.insert(channel_id, publisher);
+    }
+
+    /// Returns the video publisher for a channel, if any.
+    pub fn get_video_publisher(&self, channel_id: &ChannelId) -> Option<Arc<VideoPublisher>> {
+        self.video_publishers.get(channel_id).cloned()
+    }
+
+    /// Removes the video publisher for a channel.
+    pub fn remove_video_publisher(&mut self, channel_id: &ChannelId) {
+        self.video_publishers.remove(channel_id);
+    }
+
+    /// Inserts a track SID for a published video track.
+    pub fn insert_video_track_sid(&mut self, channel_id: ChannelId, sid: TrackSid) {
+        self.video_track_sids.insert(channel_id, sid);
+    }
+
+    /// Removes and returns the track SID for a channel, if any.
+    pub fn remove_video_track_sid(&mut self, channel_id: &ChannelId) -> Option<TrackSid> {
+        self.video_track_sids.remove(channel_id)
+    }
+
+    /// Annotates channels in an advertise message with video track metadata
+    /// for channels that have a detected video schema.
+    pub fn inject_video_track_metadata(&self, advertise: &mut advertise::Advertise<'_>) {
+        for ch in &mut advertise.channels {
+            if self.video_schemas.contains_key(&ChannelId::new(ch.id)) {
+                ch.metadata
+                    .insert("foxglove.hasVideoTrack".to_string(), "true".to_string());
+            }
+        }
     }
 
     /// Subscribes a participant to the given channels.
