@@ -37,10 +37,16 @@ impl ChannelSubscription {
         self.subscribers.is_empty()
     }
 
-    /// Adds a subscriber without checking for duplicates, and bumps the version.
-    pub fn add(&mut self, identity: ParticipantIdentity) {
-        self.subscribers.push(identity);
-        self.bump_version();
+    /// Adds a subscriber, skipping if already present. Bumps the version only if added.
+    /// Returns true if the identity was inserted, false if it was already present.
+    pub fn add(&mut self, identity: ParticipantIdentity) -> bool {
+        if self.subscribers.iter().any(|id| id == &identity) {
+            false
+        } else {
+            self.subscribers.push(identity);
+            self.bump_version();
+            true
+        }
     }
 
     /// Removes a subscriber by identity and bumps the version.

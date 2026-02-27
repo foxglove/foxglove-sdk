@@ -182,7 +182,7 @@ impl ViewerConnection {
     /// rather than the control-plane `"ws-protocol"` stream. Each time the subscriber
     /// set changes the gateway opens a new byte stream, so this method waits for the
     /// corresponding `ByteStreamOpened` event.
-    async fn expect_message_data(
+    async fn expect_new_bytestream_and_message_data(
         &mut self,
     ) -> Result<foxglove::protocol::v2::server::MessageData<'static>> {
         let deadline = tokio::time::Instant::now() + READ_TIMEOUT;
@@ -193,11 +193,23 @@ impl ViewerConnection {
                 .context("room events channel closed")?;
             match event {
                 RoomEvent::ByteStreamOpened { reader, topic, .. } if topic.starts_with("ch-") => {
+                    // Parse channel id from topic ("ch-<id>")
+                    let id_str = topic.trim_start_matches("ch-");
+                    let parsed_channel_id = id_str
+                        .parse::<u64>()
+                        .with_context(|| format!("invalid channel id in topic: {topic}"))?;
                     let stream_reader = reader.take().context("reader already taken")?;
                     let mut reader = FrameReader::new(stream_reader);
                     let msg = reader.next_server_message().await?;
                     return match msg {
-                        ServerMessage::MessageData(data) => Ok(data),
+                        ServerMessage::MessageData(data) => {
+                            // Assert that the parsed channel id matches the one in the message
+                            assert_eq!(
+                                data.channel_id, parsed_channel_id,
+                                "channel id in bytestream topic does not match MessageData"
+                            );
+                            Ok(data)
+                        }
                         other => {
                             anyhow::bail!("expected MessageData on channel stream, got: {other:?}")
                         }
@@ -506,7 +518,7 @@ async fn livekit_viewer_receives_message_after_subscribe() -> Result<()> {
     channel.log(payload);
 
     // Expect to receive the message.
-    let msg_data = viewer.expect_message_data().await?;
+    let msg_data = viewer.expect_new_bytestream_and_message_data().await?;
     assert_eq!(msg_data.channel_id, channel_id);
     assert_eq!(msg_data.data.as_ref(), payload);
     info!("MessageData validated: channel_id={channel_id}");
@@ -545,7 +557,7 @@ async fn livekit_viewer_does_not_receive_message_before_subscribe() -> Result<()
     let expected_payload = b"message-after-subscribe";
     channel.log(expected_payload);
 
-    let msg_data = viewer.expect_message_data().await?;
+    let msg_data = viewer.expect_new_bytestream_and_message_data().await?;
     assert_eq!(msg_data.channel_id, channel_id);
     assert_eq!(
         msg_data.data.as_ref(),
@@ -685,6 +697,8 @@ async fn livekit_multiple_participants_receive_messages() -> Result<()> {
 
     // Connect viewer-1, subscribe.
     let mut viewer1 = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+    // Connect viewer-2
+    let mut viewer2 = ViewerConnection::connect(&gw.room_name, "viewer-2").await?;
     let _si1 = viewer1.expect_server_info().await?;
     let adv1 = viewer1.expect_advertise().await?;
     let channel_id = adv1.channels[0].id;
@@ -692,12 +706,12 @@ async fn livekit_multiple_participants_receive_messages() -> Result<()> {
 
     // Log message-1 — only viewer-1 should receive it.
     channel.log(b"message-1");
-    let msg1 = viewer1.expect_message_data().await?;
+    let msg1 = viewer1.expect_new_bytestream_and_message_data().await?;
     assert_eq!(msg1.data.as_ref(), b"message-1");
     info!("viewer-1 received message-1");
+    // viewer-2 won't receive message-1, but we verify that below when it reads message-2 as expected and not message-1
 
-    // Connect viewer-2, subscribe.
-    let mut viewer2 = ViewerConnection::connect(&gw.room_name, "viewer-2").await?;
+    // Subscribe viewer-2
     let _si2 = viewer2.expect_server_info().await?;
     let adv2 = viewer2.expect_advertise().await?;
     assert_eq!(adv2.channels[0].id, channel_id);
@@ -709,11 +723,11 @@ async fn livekit_multiple_participants_receive_messages() -> Result<()> {
     // Log message-2 — both viewers should receive it.
     channel.log(b"message-2");
 
-    let msg2_v1 = viewer1.expect_message_data().await?;
+    let msg2_v1 = viewer1.expect_new_bytestream_and_message_data().await?;
     assert_eq!(msg2_v1.data.as_ref(), b"message-2");
     info!("viewer-1 received message-2");
 
-    let msg2_v2 = viewer2.expect_message_data().await?;
+    let msg2_v2 = viewer2.expect_new_bytestream_and_message_data().await?;
     assert_eq!(msg2_v2.data.as_ref(), b"message-2");
     info!("viewer-2 received message-2");
 
@@ -729,7 +743,7 @@ async fn livekit_multiple_participants_receive_messages() -> Result<()> {
 
     // Log message-3 — only viewer-2 should receive it.
     channel.log(b"message-3");
-    let msg3_v2 = viewer2.expect_message_data().await?;
+    let msg3_v2 = viewer2.expect_new_bytestream_and_message_data().await?;
     assert_eq!(msg3_v2.data.as_ref(), b"message-3");
     info!("viewer-2 received message-3 (viewer-1 disconnected)");
 
@@ -829,7 +843,7 @@ async fn livekit_video_channel_messages_bypass_data_plane() -> Result<()> {
     video_channel.log(b"video-frame");
     json_channel.log(b"json-payload");
 
-    let msg = viewer.expect_message_data().await?;
+    let msg = viewer.expect_new_bytestream_and_message_data().await?;
     assert_eq!(msg.channel_id, json_id, "should receive the JSON message");
     assert_eq!(msg.data.as_ref(), b"json-payload");
     info!("video channel correctly bypassed data plane");
