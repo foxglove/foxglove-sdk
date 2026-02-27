@@ -79,7 +79,7 @@ impl SessionState {
 
         let mut last_unsubscribed: SmallVec<[ChannelId; 4]> = SmallVec::new();
         self.subscriptions.retain(|&channel_id, sub| {
-            sub.retain(|id| id != identity);
+            sub.remove(identity);
             if sub.is_empty() {
                 last_unsubscribed.push(channel_id);
                 false
@@ -197,7 +197,7 @@ impl SessionState {
                 continue;
             }
             let is_first = sub.is_empty();
-            sub.push(participant.identity().clone());
+            sub.add(participant.identity().clone());
             debug!("{participant} subscribed to channel {channel_id:?}");
             if is_first {
                 first_subscribed.push(channel_id);
@@ -220,7 +220,7 @@ impl SessionState {
                 info!("{participant} is not subscribed to channel {channel_id:?}; ignoring",);
                 continue;
             };
-            if !sub.swap_remove(participant.identity()) {
+            if !sub.remove(participant.identity()) {
                 info!("{participant} is not subscribed to channel {channel_id:?}; ignoring",);
                 continue;
             }

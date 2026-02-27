@@ -38,30 +38,20 @@ impl ChannelSubscription {
     }
 
     /// Adds a subscriber without checking for duplicates, and bumps the version.
-    pub fn push(&mut self, identity: ParticipantIdentity) {
+    pub fn add(&mut self, identity: ParticipantIdentity) {
         self.subscribers.push(identity);
         self.bump_version();
     }
 
-    /// Removes a subscriber by identity using swap_remove and bumps the version.
+    /// Removes a subscriber by identity and bumps the version.
     ///
     /// Returns `true` if the subscriber was found and removed.
-    pub fn swap_remove(&mut self, identity: &ParticipantIdentity) -> bool {
+    pub fn remove(&mut self, identity: &ParticipantIdentity) -> bool {
         let Some(pos) = self.subscribers.iter().position(|id| id == identity) else {
             return false;
         };
         self.subscribers.swap_remove(pos);
         self.bump_version();
         true
-    }
-
-    /// Retains only the subscribers satisfying the predicate, bumping the version if
-    /// any were removed.
-    pub fn retain(&mut self, f: impl Fn(&ParticipantIdentity) -> bool) {
-        let before = self.subscribers.len();
-        self.subscribers.retain(|id| f(id));
-        if self.subscribers.len() != before {
-            self.bump_version();
-        }
     }
 }
