@@ -1,6 +1,7 @@
 {
   "extends": "@foxglove/tsconfig/base",
-  "include": ["./**/*"],
+  "include": ["./src/**/*"],
+  "exclude": ["./dist"],
   "compilerOptions": {
     "rootDir": "./src",
     "outDir": "./dist",
