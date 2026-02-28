@@ -37,7 +37,8 @@ The core SDK is written in Rust, with bindings for Python and C/C++, plus TypeSc
 | `python/foxglove-sdk-examples`       | Python example programs                                         |
 | `python/foxglove-schemas-flatbuffer` | Flatbuffer schema definitions for Python                        |
 | `python/foxglove-schemas-protobuf`   | Protobuf schema definitions for Python                          |
-| `typescript/schemas`                 | TypeScript schema definitions                                   |
+| `typescript/messages`                | TypeScript message type definitions and codegen (source of truth)|
+| `typescript/schemas`                 | TypeScript re-export wrapper for `@foxglove/messages`           |
 | `schemas/`                           | Schema definitions (flatbuffer, jsonschema, omgidl, proto, ros) |
 | `ros/`                               | ROS message package                                             |
 | `scripts/`                           | Build and code generation scripts                               |
