@@ -1,9 +1,9 @@
 use clap::Parser;
 use foxglove::convert::SaturatingInto;
+use foxglove::remote_access::Gateway;
 use foxglove::schemas::{
     Color, CubePrimitive, FrameTransform, Pose, Quaternion, SceneEntity, SceneUpdate, Vector3,
 };
-
 use foxglove::{LazyChannel, LazyRawChannel};
 use std::time::Duration;
 
@@ -88,12 +88,6 @@ fn log(counter: u32) {
 
 #[derive(Debug, Parser)]
 struct Cli {
-    /// Server TCP port.
-    #[arg(short, long, default_value_t = 8765)]
-    port: u16,
-    /// Server IP address.
-    #[arg(long, default_value = "127.0.0.1")]
-    host: String,
     /// Frames per second.
     #[arg(long, default_value_t = 60)]
     fps: u8,
@@ -106,20 +100,13 @@ async fn main() {
 
     let args = Cli::parse();
 
-    let server = foxglove::WebSocketServer::new()
-        .name(env!("CARGO_PKG_NAME"))
-        .bind(&args.host, args.port)
+    let handle = Gateway::new()
         .start()
-        .await
-        .expect("Server failed to start");
-
-    let app_url = server.app_url();
-    println!("View in browser: {app_url}");
-    println!("View in desktop: {}", app_url.with_open_in_desktop());
+        .expect("Failed to start remote access gateway");
 
     tokio::task::spawn(log_forever(args.fps));
     _ = tokio::signal::ctrl_c().await;
-    server.stop().wait().await;
+    _ = handle.stop().await;
 }
 
 fn euler_to_quaternion(roll: f64, pitch: f64, yaw: f64) -> Quaternion {
