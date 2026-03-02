@@ -22,6 +22,14 @@
 
 #if !defined(__wasm__)
 /**
+ * Sentinel value for `compression_threads` indicating the default behavior
+ * of using the number of physical CPUs.
+ */
+#define FOXGLOVE_MCAP_COMPRESSION_THREADS_DEFAULT UINT32_MAX
+#endif
+
+#if !defined(__wasm__)
+/**
  * Allow clients to advertise channels to send data messages to the server.
  */
 #define FOXGLOVE_SERVER_CAPABILITY_CLIENT_PUBLISH (1 << 0)
@@ -1771,13 +1779,6 @@ typedef struct foxglove_custom_writer {
 #endif
 
 #if !defined(__wasm__)
-
-/**
- * Sentinel value for `compression_threads` indicating the default behavior
- * of using the number of physical CPUs.
- */
-#define FOXGLOVE_MCAP_COMPRESSION_THREADS_DEFAULT UINT32_MAX
-
 typedef struct foxglove_mcap_options {
   /**
    * `context` can be null, or a valid pointer to a context created via `foxglove_context_new`.
@@ -1806,7 +1807,9 @@ typedef struct foxglove_mcap_options {
   bool emit_metadata_indexes;
   bool repeat_channels;
   bool repeat_schemas;
-  /** Whether to calculate and include CRCs in the respective records. */
+  /**
+   * Whether to calculate and include CRCs in the respective records.
+   */
   bool calculate_chunk_crcs;
   bool calculate_data_section_crc;
   bool calculate_summary_section_crc;
@@ -4388,7 +4391,9 @@ foxglove_error foxglove_vector3_encode(const struct foxglove_vector3 *msg,
 
 #if !defined(__wasm__)
 /**
- * Returns a `foxglove_mcap_options` with defaults matching `mcap::WriteOptions::default()`.
+ * Returns a `FoxgloveMcapOptions` with defaults matching `mcap::WriteOptions::default()`.
+ *
+ * The test `test_mcap_options_default_matches_write_options` verifies these stay in sync.
  */
 struct foxglove_mcap_options foxglove_mcap_options_default(void);
 #endif
