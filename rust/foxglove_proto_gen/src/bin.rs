@@ -7,7 +7,7 @@ fn main() {
         .join("rust")
         .join("foxglove")
         .join("src")
-        .join("schemas");
+        .join("messages");
 
     foxglove_proto_gen::generate_protos(&proto_path, &out_path).expect("Failed to generate protos");
 }

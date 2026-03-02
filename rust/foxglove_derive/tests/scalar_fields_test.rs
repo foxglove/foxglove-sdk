@@ -56,6 +56,12 @@ struct TestMessageOption {
     optional: Option<u32>,
 }
 
+#[derive(Encode)]
+struct TestMessageUsize {
+    size_value: usize,
+    small_size: usize,
+}
+
 #[test]
 fn test_primitive_serialization() {
     let test_struct = TestMessagePrimitives {
@@ -538,6 +544,80 @@ fn test_optional_field_label() {
         prost_types::field_descriptor_proto::Label::Optional as i32,
         "Option<T> field should have Optional label"
     );
+}
+
+#[test]
+fn test_usize_field_serialization() {
+    let test_struct = TestMessageUsize {
+        size_value: usize::MAX,
+        small_size: 42,
+    };
+
+    let mut buf = BytesMut::new();
+    test_struct.encode(&mut buf).expect("Failed to encode");
+
+    let schema = TestMessageUsize::get_schema().expect("Failed to get schema");
+    assert_eq!(schema.encoding, "protobuf");
+    assert_eq!(schema.name, "testmessageusize.TestMessageUsize");
+
+    // Verify the schema uses uint64 for usize fields
+    let descriptor_set = prost_types::FileDescriptorSet::decode(schema.data.as_ref())
+        .expect("Failed to decode descriptor set");
+    let file = &descriptor_set.file[0];
+    let message_type = &file.message_type[0];
+    assert_eq!(message_type.name.as_ref().unwrap(), "TestMessageUsize");
+
+    // Verify both fields are uint64
+    for field_name in ["size_value", "small_size"] {
+        let field = message_type
+            .field
+            .iter()
+            .find(|f| f.name.as_ref().unwrap() == field_name)
+            .unwrap_or_else(|| panic!("Field '{}' not found", field_name));
+        assert_eq!(
+            field.r#type.unwrap(),
+            prost_types::field_descriptor_proto::Type::Uint64 as i32,
+            "usize field '{}' should be encoded as uint64",
+            field_name
+        );
+    }
+
+    // Deserialize and verify values
+    let message_descriptor = get_message_descriptor(&schema);
+    let deserialized_message = DynamicMessage::decode(message_descriptor.clone(), buf.as_ref())
+        .expect("Failed to deserialize");
+
+    let size_value_field = message_descriptor
+        .get_field_by_name("size_value")
+        .expect("Field 'size_value' not found");
+    let size_value = deserialized_message
+        .get_field(&size_value_field)
+        .as_u64()
+        .expect("Field value is not a u64");
+
+    // On 64-bit platforms, usize::MAX == u64::MAX
+    // On 32-bit platforms, usize::MAX == u32::MAX
+    #[cfg(target_pointer_width = "64")]
+    assert_eq!(
+        size_value,
+        u64::MAX,
+        "On 64-bit platforms, usize::MAX should be encoded as u64::MAX"
+    );
+    #[cfg(target_pointer_width = "32")]
+    assert_eq!(
+        size_value,
+        u32::MAX as u64,
+        "On 32-bit platforms, usize::MAX should be encoded as u32::MAX"
+    );
+
+    let small_size_field = message_descriptor
+        .get_field_by_name("small_size")
+        .expect("Field 'small_size' not found");
+    let small_size = deserialized_message
+        .get_field(&small_size_field)
+        .as_u64()
+        .expect("Field value is not a u64");
+    assert_eq!(small_size, 42);
 }
 
 fn get_message_descriptor(schema: &Schema) -> MessageDescriptor {

@@ -356,6 +356,8 @@ class ImageAnnotations:
         circles: list[CircleAnnotation] | None = None,
         points: list[PointsAnnotation] | None = None,
         texts: list[TextAnnotation] | None = None,
+        metadata: list[KeyValuePair] | None = None,
+        timestamp: Timestamp | None = None,
     ) -> None: ...
     @staticmethod
     def get_schema() -> Schema:
@@ -448,6 +450,7 @@ class LocationFix:
         position_covariance: list[float] | None = None,
         position_covariance_type: LocationFixPositionCovarianceType = LocationFixPositionCovarianceType.Unknown,
         color: Color | None = None,
+        metadata: list[KeyValuePair] | None = None,
     ) -> None: ...
     @staticmethod
     def get_schema() -> Schema:

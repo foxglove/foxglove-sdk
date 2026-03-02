@@ -36,8 +36,6 @@ impl JsonMessage for GetParameters {}
 
 #[cfg(test)]
 mod tests {
-    use crate::protocol::v1::client::ClientMessage;
-
     use super::*;
 
     fn message() -> GetParameters {
@@ -60,8 +58,8 @@ mod tests {
 
     fn test_roundtrip_inner(orig: GetParameters) {
         let buf = orig.to_string();
-        let msg = ClientMessage::parse_json(&buf).unwrap();
-        assert_eq!(msg, ClientMessage::GetParameters(orig));
+        let parsed: GetParameters = serde_json::from_str(&buf).unwrap();
+        assert_eq!(parsed, orig);
     }
 
     #[test]

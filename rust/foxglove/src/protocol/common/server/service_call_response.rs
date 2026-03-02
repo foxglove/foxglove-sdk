@@ -2,7 +2,7 @@ use std::borrow::Cow;
 
 use bytes::{Buf, BufMut};
 
-use crate::protocol::{BinaryPayload, ParseError};
+use crate::protocol::{BinaryMessage, BinaryPayload, ParseError};
 
 /// Service call response message.
 ///
@@ -65,11 +65,13 @@ impl<'a> BinaryPayload<'a> for ServiceCallResponse<'a> {
     }
 }
 
+impl<'a> BinaryMessage<'a> for ServiceCallResponse<'a> {
+    const OPCODE: u8 = 3;
+}
+
 #[cfg(test)]
 mod tests {
     use assert_matches::assert_matches;
-
-    use crate::protocol::v1::{server::ServerMessage, BinaryMessage};
 
     use super::*;
 
@@ -80,11 +82,6 @@ mod tests {
             encoding: "json".into(),
             payload: br#"{"key": "value"}"#.into(),
         }
-    }
-
-    #[test]
-    fn test_encode() {
-        insta::assert_snapshot!(format!("{:#04x?}", message().to_bytes()));
     }
 
     #[test]
@@ -110,8 +107,9 @@ mod tests {
     #[test]
     fn test_roundtrip() {
         let orig = message();
-        let buf = orig.to_bytes();
-        let msg = ServerMessage::parse_binary(&buf).unwrap();
-        assert_eq!(msg, ServerMessage::ServiceCallResponse(orig));
+        let mut buf = Vec::new();
+        BinaryPayload::write_payload(&orig, &mut buf);
+        let parsed = ServiceCallResponse::parse_payload(&buf).unwrap();
+        assert_eq!(parsed, orig);
     }
 }

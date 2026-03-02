@@ -15,6 +15,14 @@ See [Foxglove Schemas documentation](https://docs.foxglove.dev/docs/visualizatio
 
 All schemas are generated from [schemas.ts](/internal/schemas.ts).`,
 
+    [
+      "## Optional fields",
+      "",
+      "Optional message fields may be omitted. When omitted, the consumer (e.g. a Foxglove panel) determines the behavior.",
+      "",
+      "If the IDL does not support optional fields (e.g. ROS) you must specify a value for the field.",
+    ].join("\n"),
+
     "## Contents",
 
     [
@@ -64,9 +72,10 @@ ${schema.fields
         type = field.type.name;
         break;
     }
+    const optionalSuffix = field.optional ? " (optional)" : "";
     return `\
 <tr>
-<td><code>${field.name}</code></td>
+<td><code>${field.name}</code>${optionalSuffix}</td>
 <td>
 
 ${type}${arraySuffix}

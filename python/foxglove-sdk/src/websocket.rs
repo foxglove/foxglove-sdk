@@ -1,14 +1,14 @@
-use crate::{errors::PyFoxgloveError, PySchema};
 use crate::{PyContext, PySinkChannelFilter};
+use crate::{PySchema, errors::PyFoxgloveError};
 use base64::prelude::*;
 use foxglove::websocket::{
     AssetHandler, ChannelView, Client, ClientChannel, PlaybackCommand, PlaybackControlRequest,
     PlaybackState, PlaybackStatus, ServerListener, Status, StatusLevel,
 };
 use foxglove::{WebSocketServer, WebSocketServerHandle};
+use pyo3::IntoPyObjectExt;
 use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::types::{PyDict, PyList, PyTuple};
-use pyo3::IntoPyObjectExt;
 use pyo3::{
     exceptions::PyIOError,
     prelude::*,
@@ -761,9 +761,10 @@ pub enum PyCapability {
     Time,
     /// Allow clients to call services.
     Services,
-    /// Indicates that the server is sending data within a fixed time range. This requires the
-    /// server to specify the `data_start_time` and `data_end_time` fields in its `ServerInfo` message.
-    RangedPlayback,
+    /// Indicates that the server is capable of responding to playback control requests from
+    /// controls in the Foxglove app. This requires the server to specify the `data_start_time`
+    /// and `data_end_time` fields in its `ServerInfo` message.
+    PlaybackControl,
 }
 
 impl From<PyCapability> for foxglove::websocket::Capability {
@@ -774,7 +775,7 @@ impl From<PyCapability> for foxglove::websocket::Capability {
             PyCapability::Parameters => foxglove::websocket::Capability::Parameters,
             PyCapability::Time => foxglove::websocket::Capability::Time,
             PyCapability::Services => foxglove::websocket::Capability::Services,
-            PyCapability::RangedPlayback => foxglove::websocket::Capability::RangedPlayback,
+            PyCapability::PlaybackControl => foxglove::websocket::Capability::PlaybackControl,
         }
     }
 }
@@ -1080,13 +1081,13 @@ impl PyParameter {
     ) -> PyResult<Self> {
         // Use the derived type, unless there's a kwarg override.
         let mut r#type = value.as_ref().and_then(|tv| tv.0);
-        if let Some(dict) = kwargs {
-            if let Some(kw_type) = dict.get_item("type")? {
-                if kw_type.is_none() {
-                    r#type = None
-                } else {
-                    r#type = kw_type.extract()?;
-                }
+        if let Some(dict) = kwargs
+            && let Some(kw_type) = dict.get_item("type")?
+        {
+            if kw_type.is_none() {
+                r#type = None
+            } else {
+                r#type = kw_type.extract()?;
             }
         }
         Ok(Self {

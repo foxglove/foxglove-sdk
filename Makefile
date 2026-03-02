@@ -1,6 +1,6 @@
 IMAGE_NAME=foxglove-sdk
 CONTAINER_MAKEFILE=Container.mk
-MSRV_RUST_VERSION=1.83.0
+MSRV_RUST_VERSION=1.85.0
 
 .PHONY: default
 default: build-rust

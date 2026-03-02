@@ -4,8 +4,8 @@ use std::borrow::Cow;
 
 use serde::{Deserialize, Serialize};
 
-use crate::protocol::schema::{self, Schema};
 use crate::protocol::JsonMessage;
+use crate::protocol::schema::{self, Schema};
 
 /// Client advertise message.
 ///
@@ -162,8 +162,6 @@ impl<'a> ChannelBuilder<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::protocol::v1::client::ClientMessage;
-
     use super::*;
 
     fn message() -> Advertise<'static> {
@@ -196,8 +194,8 @@ mod tests {
     #[test]
     fn test_roundtrip() {
         let orig = message();
-        let buf = serde_json::to_string(&orig).unwrap();
-        let msg = ClientMessage::parse_json(&buf).unwrap();
-        assert_eq!(msg, ClientMessage::Advertise(orig));
+        let buf = orig.to_string();
+        let parsed: Advertise = serde_json::from_str(&buf).unwrap();
+        assert_eq!(parsed, orig);
     }
 }

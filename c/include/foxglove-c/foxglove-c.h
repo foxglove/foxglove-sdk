@@ -69,11 +69,11 @@
 
 #if !defined(__wasm__)
 /**
- * Indicates that the server is sending data within a fixed time range. This requires the
- * server to specify the `data_start_time` and `data_end_time` fields in
- * `foxglove_server_options`.
+ * Indicates that the server is capable of responding to playback control requests from controls
+ * in the Foxglove app. This requires the server to specify the `data_start_time` and
+ * `data_end_time` fields in `foxglove_server_options`.
  */
-#define FOXGLOVE_SERVER_CAPABILITY_RANGED_PLAYBACK (1 << 6)
+#define FOXGLOVE_SERVER_CAPABILITY_PLAYBACK_CONTROL (1 << 6)
 #endif
 
 enum foxglove_error
@@ -1078,6 +1078,20 @@ typedef struct foxglove_text_annotation {
 } foxglove_text_annotation;
 
 /**
+ * A key with its associated value
+ */
+typedef struct foxglove_key_value_pair {
+  /**
+   * Key
+   */
+  struct foxglove_string key;
+  /**
+   * Value
+   */
+  struct foxglove_string value;
+} foxglove_key_value_pair;
+
+/**
  * Array of annotations for a 2D image
  */
 typedef struct foxglove_image_annotations {
@@ -1096,21 +1110,16 @@ typedef struct foxglove_image_annotations {
    */
   const struct foxglove_text_annotation *texts;
   size_t texts_count;
+  /**
+   * Additional user-provided metadata associated with the image annotations. Keys must be unique.
+   */
+  const struct foxglove_key_value_pair *metadata;
+  size_t metadata_count;
+  /**
+   * Timestamp of the image annotations. When set, individual annotation timestamps will be ignored.
+   */
+  const struct foxglove_timestamp *timestamp;
 } foxglove_image_annotations;
-
-/**
- * A key with its associated value
- */
-typedef struct foxglove_key_value_pair {
-  /**
-   * Key
-   */
-  struct foxglove_string key;
-  /**
-   * Value
-   */
-  struct foxglove_string value;
-} foxglove_key_value_pair;
 
 /**
  * A single scan from a planar laser range-finder
@@ -1245,6 +1254,11 @@ typedef struct foxglove_location_fix {
    * Color used to visualize the location
    */
   const struct foxglove_color *color;
+  /**
+   * Additional user-provided metadata associated with the location fix. Keys must be unique.
+   */
+  const struct foxglove_key_value_pair *metadata;
+  size_t metadata_count;
 } foxglove_location_fix;
 
 /**
@@ -2239,7 +2253,7 @@ typedef struct foxglove_server_callbacks {
   /**
    * Callback invoked when a client sends a playback control request message.
    *
-   * Requires `FOXGLOVE_CAPABILITY_RANGED_PLAYBACK`.
+   * Requires `FOXGLOVE_CAPABILITY_PLAYBACK_CONTROL`.
    *
    * `playback_control_request` is an input parameter and guaranteed to be non-NULL.
    * `playback_state` is a non-NULL output pointer to a struct that has already been allocated.
@@ -2340,12 +2354,12 @@ typedef struct foxglove_server_options {
    */
   bool (*sink_channel_filter)(const void *context, const struct foxglove_channel_descriptor *channel);
   /**
-   * If the server is sending data from a fixed time range, and has the RangedPlayback capability,
+   * If the server is sending data from a fixed time range, and has the PlaybackControl capability,
    * the start time of the data range.
    */
   const uint64_t *playback_start_time;
   /**
-   * If the server is sending data from a fixed time range, and has the RangedPlayback capability,
+   * If the server is sending data from a fixed time range, and has the PlaybackControl capability,
    * the end time of the data range.
    */
   const uint64_t *playback_end_time;
@@ -5317,7 +5331,7 @@ foxglove_error foxglove_server_broadcast_time(const struct foxglove_websocket_se
 /**
  * Publishes the current playback state to all clients.
  *
- * Requires the `FOXGLOVE_CAPABILITY_RANGED_PLAYBACK` capability.
+ * Requires the `FOXGLOVE_CAPABILITY_PLAYBACK_CONTROL` capability.
  *
  * # Safety
  * - `playback_state` must be a valid pointer to a playback state that lives for the duration of the call.

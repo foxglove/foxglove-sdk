@@ -2,8 +2,10 @@
 // Options: {}
 
 import { CircleAnnotation } from "./CircleAnnotation";
+import { KeyValuePair } from "./KeyValuePair";
 import { PointsAnnotation } from "./PointsAnnotation";
 import { TextAnnotation } from "./TextAnnotation";
+import { Time } from "./Time";
 
 /** Array of annotations for a 2D image */
 export type ImageAnnotations = {
@@ -15,4 +17,10 @@ export type ImageAnnotations = {
 
   /** Text annotations */
   texts: TextAnnotation[];
+
+  /** Additional user-provided metadata associated with the image annotations. Keys must be unique. */
+  metadata?: KeyValuePair[];
+
+  /** Timestamp of the image annotations. When set, individual annotation timestamps will be ignored. */
+  timestamp?: Time;
 };

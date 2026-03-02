@@ -20,9 +20,10 @@ pub enum Capability {
     Assets,
     /// Allow clients to subscribe and make connection graph updates
     ConnectionGraph,
-    /// Indicates that the server is sending data within a fixed time range. This requires the
-    /// server to specify the `data_start_time` and `data_end_time` fields in its `ServerInfo` message.
-    RangedPlayback,
+    /// Indicates that the server is capable of responding to playback control requests from
+    /// controls in the Foxglove app. This requires the server to specify the `data_start_time`
+    /// and `data_end_time` fields in its `ServerInfo` message.
+    PlaybackControl,
 }
 
 impl Capability {
@@ -37,7 +38,7 @@ impl Capability {
             Self::Services => &[server_info::Capability::Services],
             Self::Assets => &[server_info::Capability::Assets],
             Self::ConnectionGraph => &[server_info::Capability::ConnectionGraph],
-            Self::RangedPlayback => &[server_info::Capability::RangedPlayback],
+            Self::PlaybackControl => &[server_info::Capability::PlaybackControl],
         }
     }
 }

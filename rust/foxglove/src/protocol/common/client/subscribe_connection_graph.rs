@@ -17,8 +17,6 @@ impl JsonMessage for SubscribeConnectionGraph {}
 
 #[cfg(test)]
 mod tests {
-    use crate::protocol::v1::client::ClientMessage;
-
     use super::*;
 
     #[test]
@@ -30,7 +28,7 @@ mod tests {
     fn test_roundtrip() {
         let orig = SubscribeConnectionGraph {};
         let buf = orig.to_string();
-        let msg = ClientMessage::parse_json(&buf).unwrap();
-        assert_eq!(msg, ClientMessage::SubscribeConnectionGraph);
+        let parsed: SubscribeConnectionGraph = serde_json::from_str(&buf).unwrap();
+        assert_eq!(parsed, orig);
     }
 }

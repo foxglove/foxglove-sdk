@@ -4,9 +4,26 @@ on:
   push:
     branches: [main]
     tags: ["**"]
-  pull_request: {}
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      wheels: ${{ github.event_name != 'pull_request' || steps.paths.outputs.wheels == 'true' || contains(github.event.pull_request.labels.*.name, 'ci:python') }}
+    steps:
+      - uses: dorny/paths-filter@v3
+        if: github.event_name == 'pull_request'
+        id: paths
+        with:
+          filters: |
+            wheels:
+              - 'python/**'
+              - '.github/workflows/python.yml'
+
   lint:
     runs-on: ubuntu-latest
     steps:
@@ -160,7 +177,8 @@ jobs:
 
   linux:
     runs-on: ${{ matrix.platform.runner }}
-    needs: [sdist]
+    needs: [changes, sdist]
+    if: needs.changes.outputs.wheels == 'true'
     strategy:
       matrix:
         platform:
@@ -202,7 +220,8 @@ jobs:
 
   musllinux:
     runs-on: ${{ matrix.platform.runner }}
-    needs: [sdist]
+    needs: [changes, sdist]
+    if: needs.changes.outputs.wheels == 'true'
     strategy:
       matrix:
         platform:
@@ -240,7 +259,8 @@ jobs:
 
   windows:
     runs-on: ${{ matrix.platform.runner }}
-    needs: [sdist]
+    needs: [changes, sdist]
+    if: needs.changes.outputs.wheels == 'true'
     strategy:
       matrix:
         platform:
@@ -288,7 +308,8 @@ jobs:
 
   macos:
     runs-on: ${{ matrix.platform.runner }}
-    needs: [sdist]
+    needs: [changes, sdist]
+    if: needs.changes.outputs.wheels == 'true'
     strategy:
       matrix:
         platform:
@@ -405,3 +426,16 @@ jobs:
           cache: yarn
       - run: yarn install
       - run: yarn run-python-sdk-examples
+
+  # Gate job for branch protection. Always posts a status so that the required
+  # check passes even when the other jobs are skipped. Configure your required
+  # status check to reference this job ("Python / python-status") instead of the
+  # individual matrix jobs.
+  python-status:
+    name: python-status
+    needs: [changes, lint, lint-and-test-sdk, schemas, sdist, linux, musllinux, windows, macos, playground-wasm, playground, test-sdk-examples]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1

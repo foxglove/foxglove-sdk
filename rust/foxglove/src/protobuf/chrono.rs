@@ -2,7 +2,7 @@
 
 use super::ProtobufField;
 use crate::convert::SaturatingFrom;
-use crate::schemas_wkt::{Duration, Timestamp};
+use crate::messages_wkt::{Duration, Timestamp};
 use prost_types::field_descriptor_proto::Type as ProstFieldType;
 
 impl ProtobufField for ::chrono::DateTime<::chrono::Utc> {

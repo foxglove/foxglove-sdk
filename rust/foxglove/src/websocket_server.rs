@@ -7,15 +7,15 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 
 use crate::sink_channel_filter::{SinkChannelFilter, SinkChannelFilterFn};
-use crate::websocket::service::Service;
 use crate::websocket::PlaybackState;
 #[cfg(feature = "tls")]
 use crate::websocket::TlsIdentity;
+use crate::websocket::service::Service;
 use crate::websocket::{
-    create_server, AssetHandler, AsyncAssetHandlerFn, BlockingAssetHandlerFn, Capability, Client,
-    ConnectionGraph, Parameter, Server, ServerOptions, ShutdownHandle, Status,
+    AssetHandler, AsyncAssetHandlerFn, BlockingAssetHandlerFn, Capability, Client, ConnectionGraph,
+    Parameter, Server, ServerOptions, ShutdownHandle, Status, create_server,
 };
-use crate::{get_runtime_handle, AppUrl, ChannelDescriptor, Context, FoxgloveError};
+use crate::{AppUrl, ChannelDescriptor, Context, FoxgloveError, get_runtime_handle};
 
 /// A WebSocket server for live visualization in Foxglove.
 ///
@@ -126,7 +126,7 @@ impl WebSocketServer {
     }
 
     /// Declare the time range for playback, in absolute nanoseconds. This applies if the server is playing back a fixed time range of data.
-    /// This will add the RangedPlayback capability to the server.
+    /// This will add the PlaybackControl capability to the server.
     pub fn playback_time_range(mut self, start_time: u64, end_time: u64) -> Self {
         self.options.playback_time_range = Some((start_time, end_time));
         self
@@ -329,8 +329,7 @@ impl WebSocketServerHandle {
 
     /// Publish the current playback state to all clients.
     ///
-    /// Requires the [`RangedPlayback`](crate::websocket::Capability::Time) capability.
-    #[doc(hidden)]
+    /// Requires the [`PlaybackControl`](crate::websocket::Capability::PlaybackControl) capability.
     pub fn broadcast_playback_state(&self, playback_state: PlaybackState) {
         self.0.broadcast_playback_state(playback_state);
     }

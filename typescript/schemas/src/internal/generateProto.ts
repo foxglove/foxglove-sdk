@@ -93,6 +93,8 @@ export function generateProto(
     const qualifiers: string[] = [];
     if (field.array != undefined) {
       qualifiers.push("repeated");
+    } else if (field.optional) {
+      qualifiers.push("optional");
     }
     if (typeof field.array === "number") {
       lineComments.push(`length ${field.array}`);

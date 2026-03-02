@@ -3,6 +3,7 @@
 syntax = "proto3";
 
 import "foxglove/Color.proto";
+import "foxglove/KeyValuePair.proto";
 import "google/protobuf/timestamp.proto";
 
 package foxglove;
@@ -45,5 +46,8 @@ message LocationFix {
   PositionCovarianceType position_covariance_type = 5;
 
   // Color used to visualize the location
-  foxglove.Color color = 8;
+  optional foxglove.Color color = 8;
+
+  // Additional user-provided metadata associated with the location fix. Keys must be unique.
+  repeated foxglove.KeyValuePair metadata = 9;
 }

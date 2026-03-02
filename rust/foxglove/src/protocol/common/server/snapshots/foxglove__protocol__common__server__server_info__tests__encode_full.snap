@@ -8,7 +8,7 @@ expression: message_full()
   "capabilities": [
     "clientPublish",
     "time",
-    "rangedPlayback"
+    "playbackControl"
   ],
   "supportedEncodings": [
     "json"

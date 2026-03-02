@@ -142,14 +142,14 @@ impl ${name} {
           return FoxgloveError::ValueError;
       }
       unsafe {
-          let result = do_foxglove_channel_create::<foxglove::schemas::${name}>(topic, context);
+          let result = do_foxglove_channel_create::<foxglove::messages::${name}>(topic, context);
           result_to_c(result, channel)
       }
   }
 }
 
 impl BorrowToNative for ${name} {
-  type NativeType = foxglove::schemas::${name};
+  type NativeType = foxglove::messages::${name};
 
   unsafe fn borrow_to_native(&self, #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
     ${fields
@@ -185,7 +185,7 @@ impl BorrowToNative for ${name} {
       })
       .join("\n    ")}
 
-    Ok(ManuallyDrop::new(foxglove::schemas::${name} {
+    Ok(ManuallyDrop::new(foxglove::messages::${name} {
     ${fields
       .map((field) => {
         const fieldName = escapeId(toSnakeCase(field.name));
@@ -254,7 +254,7 @@ pub extern "C" fn foxglove_channel_log_${snakeName}(channel: Option<&FoxgloveCha
 #[allow(clippy::missing_safety_doc, reason="no preconditions and returned lifetime is static")]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_${snakeName}_schema() -> FoxgloveSchema {
-    let native = foxglove::schemas::${name}::get_schema().expect("${name} schema is Some");
+    let native = foxglove::messages::${name}::get_schema().expect("${name} schema is Some");
     let name: &'static str = "foxglove.${schema.name}";
     let encoding: &'static str = "protobuf";
     assert_eq!(name, &native.name);
@@ -293,7 +293,7 @@ pub unsafe extern "C" fn foxglove_${snakeName}_encode(
         Ok(msg) => {
             if len == 0 || ptr.is_null() {
                 if let Some(encoded_len) = encoded_len {
-                    *encoded_len = msg.encoded_len().expect("foxglove schemas return Some(len)");
+                    *encoded_len = msg.encoded_len().expect("foxglove messages return Some(len)");
                 }
                 return FoxgloveError::BufferTooShort;
             }

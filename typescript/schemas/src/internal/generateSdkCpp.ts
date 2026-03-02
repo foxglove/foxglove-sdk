@@ -157,8 +157,11 @@ export function generateHppSchemas(
             fieldType = `std::array<${fieldType}, ${field.array}>`;
           } else if (field.array) {
             fieldType = `std::vector<${fieldType}>`;
-          } else if (field.type.type === "nested") {
+          } else if (field.optional || field.type.type === "nested") {
             fieldType = `std::optional<${fieldType}>`;
+            if (field.optional && defaultStr !== "") {
+              defaultStr = " = std::nullopt";
+            }
           }
           return `${formatComment(field.description, 2)}\n  ${fieldType} ${toSnakeCase(field.name)}${defaultStr};`;
         })

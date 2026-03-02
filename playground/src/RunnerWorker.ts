@@ -39,12 +39,24 @@ type GetHover = (
   col: number,
 ) => { destroy(): void } & Array<GetHoverResultItem>;
 
+type GetReferenceRangesResultItem = {
+  line: number;
+  col: number;
+  len: number;
+};
+type GetReferenceRanges = (
+  code: string,
+  line: number,
+  col: number,
+) => { destroy(): void } & Array<GetReferenceRangesResultItem>;
+
 export class RunnerWorker {
   #abortController = new AbortController();
   #pyodide: Promise<PyodideInterface>;
   #getCompletionItems: Promise<GetCompletionItems>;
   #getSignatures: Promise<GetSignatures>;
   #getHover: Promise<GetHover>;
+  #getReferenceRanges: Promise<GetReferenceRanges>;
   #stdoutCallback: (output: string) => void = (output) => {
     console.log("[stdout]", output);
   };
@@ -142,6 +154,30 @@ export class RunnerWorker {
           // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           { globals: pyodide.toPy({ prelude }) },
         ) as GetHover,
+    );
+    this.#getReferenceRanges = this.#pyodide.then(
+      (pyodide) =>
+        pyodide.runPython(
+          `
+            import jedi
+            from pyodide.ffi import to_js
+            def get_reference_ranges(code, line, col):
+              prelude_lines = prelude.count("\\n")
+              names = jedi.Script(prelude + code).get_references(line + prelude_lines, col - 1, scope="file")
+              return to_js([
+                {
+                  "line": name.line - prelude_lines,
+                  "col": name.column + 1,
+                  "len": len(name.name),
+                }
+                for name in names
+                if name.line > prelude_lines
+              ])
+            get_reference_ranges
+          `,
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+          { globals: pyodide.toPy({ prelude }) },
+        ) as GetReferenceRanges,
     );
   }
 
@@ -318,6 +354,16 @@ def set_layout(layout: "foxglove.layouts.Layout", /) -> None:
     return {
       contents,
     };
+  }
+
+  async getReferenceRanges(code: string, line: number, col: number): Promise<monaco.IRange[]> {
+    const getReferenceRanges = await this.#getReferenceRanges;
+    return getReferenceRanges(code, line, col).map((item) => ({
+      startLineNumber: item.line,
+      startColumn: item.col,
+      endLineNumber: item.line,
+      endColumn: item.col + item.len,
+    }));
   }
 }
 

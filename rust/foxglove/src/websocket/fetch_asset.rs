@@ -2,8 +2,8 @@ use std::fmt::Display;
 use std::future::Future;
 use std::sync::Arc;
 
-use super::semaphore::SemaphoreGuard;
 use super::Client;
+use super::semaphore::SemaphoreGuard;
 
 /// A handler to respond to fetch asset requests.
 ///

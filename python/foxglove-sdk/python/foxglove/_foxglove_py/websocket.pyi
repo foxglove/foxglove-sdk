@@ -27,8 +27,8 @@ class Capability(Enum):
     Time = ...
     """Inform clients about the latest server time."""
 
-    RangedPlayback = ...
-    """Indicates that the server is sending data within a fixed time range."""
+    PlaybackControl = ...
+    """Indicates that the server is capable of responding to playback control requests from controls in the Foxglove app."""
 
 class Client:
     """

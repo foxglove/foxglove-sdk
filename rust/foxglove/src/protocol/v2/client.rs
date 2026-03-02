@@ -1,10 +1,9 @@
 //! Client messages for Foxglove protocol v2
 
-use bytes::{Buf, BufMut};
+use bytes::Buf;
 use serde::Deserialize;
 
-use super::message::BinaryMessage;
-use crate::protocol::{BinaryPayload, ParseError};
+use crate::protocol::{BinaryMessage, BinaryPayload, ParseError};
 
 pub mod subscribe;
 mod unsubscribe;
@@ -42,50 +41,14 @@ impl BinaryOpcode {
     }
 }
 
-impl BinaryMessage for MessageData<'_> {
-    fn to_bytes(&self) -> Vec<u8> {
-        let mut buf = Vec::with_capacity(1 + self.payload_size());
-        buf.put_u8(BinaryOpcode::MessageData as u8);
-        self.write_payload(&mut buf);
-        buf
-    }
+impl BinaryMessage<'_> for Subscribe {
+    const OPCODE: u8 = BinaryOpcode::Subscribe as u8;
 }
 
-impl BinaryMessage for ServiceCallRequest<'_> {
-    fn to_bytes(&self) -> Vec<u8> {
-        let mut buf = Vec::with_capacity(1 + self.payload_size());
-        buf.put_u8(BinaryOpcode::ServiceCallRequest as u8);
-        self.write_payload(&mut buf);
-        buf
-    }
+impl BinaryMessage<'_> for Unsubscribe {
+    const OPCODE: u8 = BinaryOpcode::Unsubscribe as u8;
 }
 
-impl BinaryMessage for PlaybackControlRequest {
-    fn to_bytes(&self) -> Vec<u8> {
-        let mut buf = Vec::with_capacity(1 + self.payload_size());
-        buf.put_u8(BinaryOpcode::PlaybackControlRequest as u8);
-        self.write_payload(&mut buf);
-        buf
-    }
-}
-
-impl BinaryMessage for Subscribe {
-    fn to_bytes(&self) -> Vec<u8> {
-        let mut buf = Vec::with_capacity(1 + self.payload_size());
-        buf.put_u8(BinaryOpcode::Subscribe as u8);
-        self.write_payload(&mut buf);
-        buf
-    }
-}
-
-impl BinaryMessage for Unsubscribe {
-    fn to_bytes(&self) -> Vec<u8> {
-        let mut buf = Vec::with_capacity(1 + self.payload_size());
-        buf.put_u8(BinaryOpcode::Unsubscribe as u8);
-        self.write_payload(&mut buf);
-        buf
-    }
-}
 /// A representation of a client message useful for deserializing.
 #[derive(Debug, Clone, PartialEq)]
 #[allow(missing_docs)]
@@ -202,5 +165,111 @@ impl<'a> From<JsonMessage<'a>> for ClientMessage<'a> {
             JsonMessage::UnsubscribeConnectionGraph => Self::UnsubscribeConnectionGraph,
             JsonMessage::FetchAsset(m) => Self::FetchAsset(m),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::protocol::common::client::PlaybackCommand;
+    use assert_matches::assert_matches;
+
+    #[test]
+    fn test_message_data_encode() {
+        let message = MessageData::new(30, br#"{"key": "value"}"#);
+        let buf = message.to_bytes();
+        insta::assert_snapshot!(format!("{:#04x?}", buf));
+        let parsed = ClientMessage::parse_binary(&buf).unwrap();
+        assert_eq!(parsed, ClientMessage::MessageData(message));
+    }
+
+    #[test]
+    fn test_service_call_request_encode() {
+        let message = ServiceCallRequest {
+            service_id: 10,
+            call_id: 12,
+            encoding: "json".into(),
+            payload: br#"{"key": "value"}"#.into(),
+        };
+        let buf = message.to_bytes();
+        insta::assert_snapshot!(format!("{:#04x?}", buf));
+        let parsed = ClientMessage::parse_binary(&buf).unwrap();
+        assert_eq!(parsed, ClientMessage::ServiceCallRequest(message));
+    }
+
+    #[test]
+    fn test_playback_control_request_encode() {
+        let message = PlaybackControlRequest {
+            playback_command: PlaybackCommand::Play,
+            playback_speed: 1.0,
+            seek_time: None,
+            request_id: "some-id".to_string(),
+        };
+        let buf = message.to_bytes();
+        insta::assert_snapshot!(format!("{:#04x?}", buf));
+        let parsed = ClientMessage::parse_binary(&buf).unwrap();
+        assert_eq!(parsed, ClientMessage::PlaybackControlRequest(message));
+    }
+
+    #[test]
+    fn test_playback_control_request_encode_play_with_seek() {
+        let message = PlaybackControlRequest {
+            playback_command: PlaybackCommand::Play,
+            playback_speed: 1.0,
+            seek_time: Some(123_456_789),
+            request_id: "some-id".to_string(),
+        };
+        let buf = message.to_bytes();
+        insta::assert_snapshot!(format!("{:#04x?}", buf));
+        let parsed = ClientMessage::parse_binary(&buf).unwrap();
+        assert_eq!(parsed, ClientMessage::PlaybackControlRequest(message));
+    }
+
+    #[test]
+    fn test_playback_control_request_encode_pause() {
+        let message = PlaybackControlRequest {
+            playback_command: PlaybackCommand::Pause,
+            playback_speed: 1.0,
+            seek_time: None,
+            request_id: "some-id".to_string(),
+        };
+        let buf = message.to_bytes();
+        insta::assert_snapshot!(format!("{:#04x?}", buf));
+        let parsed = ClientMessage::parse_binary(&buf).unwrap();
+        assert_eq!(parsed, ClientMessage::PlaybackControlRequest(message));
+    }
+
+    #[test]
+    fn test_subscribe_encode() {
+        let message = Subscribe::new([10, 20, 30]);
+        let buf = message.to_bytes();
+        insta::assert_snapshot!(format!("{:#04x?}", buf));
+        let parsed = ClientMessage::parse_binary(&buf).unwrap();
+        assert_eq!(parsed, ClientMessage::Subscribe(message));
+    }
+
+    #[test]
+    fn test_unsubscribe_encode() {
+        let message = Unsubscribe::new([1, 2, 3]);
+        let buf = message.to_bytes();
+        insta::assert_snapshot!(format!("{:#04x?}", buf));
+        let parsed = ClientMessage::parse_binary(&buf).unwrap();
+        assert_eq!(parsed, ClientMessage::Unsubscribe(message));
+    }
+
+    #[test]
+    fn test_parse_binary_empty() {
+        assert_matches!(
+            ClientMessage::parse_binary(b""),
+            Err(ParseError::EmptyBinaryMessage)
+        );
+    }
+
+    #[test]
+    fn test_parse_binary_invalid_opcode() {
+        assert_matches!(
+            ClientMessage::parse_binary(&[0xff]),
+            Err(ParseError::InvalidOpcode(0xff))
+        );
     }
 }

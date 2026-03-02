@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use crate::schemas::Timestamp;
+use crate::messages::Timestamp;
 
 use super::{
     CompressedImage, Endian, Image, RawImage, RawImageEncoding, UnknownCompressionError,
@@ -17,10 +17,10 @@ pub struct ImageMessage<'a> {
     /// The image data.
     pub image: Image<'a>,
 }
-impl TryFrom<crate::schemas::CompressedImage> for ImageMessage<'static> {
+impl TryFrom<crate::messages::CompressedImage> for ImageMessage<'static> {
     type Error = UnknownCompressionError;
 
-    fn try_from(image: crate::schemas::CompressedImage) -> std::result::Result<Self, Self::Error> {
+    fn try_from(image: crate::messages::CompressedImage) -> std::result::Result<Self, Self::Error> {
         Ok(ImageMessage {
             timestamp: image.timestamp,
             frame_id: image.frame_id,
@@ -31,10 +31,10 @@ impl TryFrom<crate::schemas::CompressedImage> for ImageMessage<'static> {
         })
     }
 }
-impl TryFrom<crate::schemas::RawImage> for ImageMessage<'static> {
+impl TryFrom<crate::messages::RawImage> for ImageMessage<'static> {
     type Error = UnknownEncodingError;
 
-    fn try_from(image: crate::schemas::RawImage) -> std::result::Result<Self, Self::Error> {
+    fn try_from(image: crate::messages::RawImage) -> std::result::Result<Self, Self::Error> {
         // Pixel values in Foxglove RawImage messages are always little-endian.
         let encoding = RawImageEncoding::parse_endian(&image.encoding, Endian::Little)?;
         Ok(Self {

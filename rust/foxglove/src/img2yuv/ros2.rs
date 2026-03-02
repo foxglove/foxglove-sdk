@@ -2,7 +2,7 @@
 
 use std::borrow::Cow;
 
-use crate::schemas::Timestamp;
+use crate::messages::Timestamp;
 use serde::{Deserialize, Serialize};
 
 use super::{

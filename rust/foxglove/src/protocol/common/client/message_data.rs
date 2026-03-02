@@ -2,7 +2,7 @@ use std::borrow::Cow;
 
 use bytes::{Buf, BufMut};
 
-use crate::protocol::{BinaryPayload, ParseError};
+use crate::protocol::{BinaryMessage, BinaryPayload, ParseError};
 
 /// Client message data message.
 ///
@@ -55,10 +55,12 @@ impl<'a> BinaryPayload<'a> for MessageData<'a> {
     }
 }
 
+impl<'a> BinaryMessage<'a> for MessageData<'a> {
+    const OPCODE: u8 = 1;
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::protocol::v1::{client::ClientMessage, BinaryMessage};
-
     use super::*;
 
     fn message() -> MessageData<'static> {
@@ -66,15 +68,11 @@ mod tests {
     }
 
     #[test]
-    fn test_encode() {
-        insta::assert_snapshot!(format!("{:#04x?}", message().to_bytes()));
-    }
-
-    #[test]
     fn test_roundtrip() {
         let orig = message();
-        let buf = orig.to_bytes();
-        let msg = ClientMessage::parse_binary(&buf).unwrap();
-        assert_eq!(msg, ClientMessage::MessageData(orig));
+        let mut buf = Vec::new();
+        BinaryPayload::write_payload(&orig, &mut buf);
+        let parsed = MessageData::parse_payload(&buf).unwrap();
+        assert_eq!(parsed, orig);
     }
 }

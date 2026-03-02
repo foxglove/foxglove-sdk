@@ -1,0 +1,17 @@
+name: "[Internal] Checkout foxglove-sdk"
+description: >
+  For internal Foxglove use only. Not publicly supported.
+  Symlinks the foxglove-sdk source from the commit this action was resolved at.
+
+inputs:
+  path:
+    description: Where to check out the repository
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        TARGET_PATH: ${{ inputs.path }}
+      run: ln -s "$GITHUB_ACTION_PATH/../../.." "$TARGET_PATH"

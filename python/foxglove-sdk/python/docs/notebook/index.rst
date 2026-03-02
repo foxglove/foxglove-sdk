@@ -3,6 +3,8 @@ Notebook integration
 
 Functions and classes for integrating with Jupyter notebooks and creating interactive visualizations.
 
+For setup instructions and examples, visit the `Jupyter notebook integration <https://docs.foxglove.dev/docs/notebook>`__ docs.
+
 .. note::
    The notebook integration classes and functions are only available when the ``notebook`` extra package is installed.
    Install it with ``pip install foxglove-sdk[notebook]``.

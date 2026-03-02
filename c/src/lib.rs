@@ -359,7 +359,7 @@ pub struct FoxgloveTimestamp {
     pub nsec: u32,
 }
 
-impl From<FoxgloveTimestamp> for foxglove::schemas::Timestamp {
+impl From<FoxgloveTimestamp> for foxglove::messages::Timestamp {
     fn from(other: FoxgloveTimestamp) -> Self {
         Self::new(other.sec, other.nsec)
     }
@@ -377,7 +377,7 @@ pub struct FoxgloveDuration {
     nsec: u32,
 }
 
-impl From<FoxgloveDuration> for foxglove::schemas::Duration {
+impl From<FoxgloveDuration> for foxglove::messages::Duration {
     fn from(other: FoxgloveDuration) -> Self {
         Self::new(other.sec, other.nsec)
     }

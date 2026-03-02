@@ -184,7 +184,7 @@ class ServerListener(Protocol):
         """
         Called by the server when it receives an updated player state from the client.
 
-        Requires :py:data:`Capability.RangedPlayback`.
+        Requires :py:data:`Capability.PlaybackControl`.
 
         :meta private:
         :param playback_control_request: The playback control request sent from the client

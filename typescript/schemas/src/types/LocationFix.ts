@@ -2,6 +2,7 @@
 // Options: {}
 
 import { Color } from "./Color";
+import { KeyValuePair } from "./KeyValuePair";
 import { PositionCovarianceType } from "./PositionCovarianceType";
 import { Time } from "./Time";
 
@@ -29,5 +30,8 @@ export type LocationFix = {
   position_covariance_type: PositionCovarianceType;
 
   /** Color used to visualize the location */
-  color: Color;
+  color?: Color;
+
+  /** Additional user-provided metadata associated with the location fix. Keys must be unique. */
+  metadata?: KeyValuePair[];
 };

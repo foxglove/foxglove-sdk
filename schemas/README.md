@@ -4,6 +4,12 @@ See [Foxglove Schemas documentation](https://docs.foxglove.dev/docs/visualizatio
 
 All schemas are generated from [schemas.ts](/internal/schemas.ts).
 
+## Optional fields
+
+Optional message fields may be omitted. When omitted, the consumer (e.g. a Foxglove panel) determines the behavior.
+
+If the IDL does not support optional fields (e.g. ROS) you must specify a value for the field.
+
 ## Contents
 
 - [enum LineType](#enum-linetype)
@@ -1234,6 +1240,32 @@ Text annotations
 
 </td>
 </tr>
+<tr>
+<td><code>metadata</code> (optional)</td>
+<td>
+
+[KeyValuePair](#keyvaluepair)[]
+
+</td>
+<td>
+
+Additional user-provided metadata associated with the image annotations. Keys must be unique.
+
+</td>
+</tr>
+<tr>
+<td><code>timestamp</code> (optional)</td>
+<td>
+
+[Timestamp](#timestamp)
+
+</td>
+<td>
+
+Timestamp of the image annotations. When set, individual annotation timestamps will be ignored.
+
+</td>
+</tr>
 </table>
 
 ## KeyValuePair
@@ -1597,7 +1629,7 @@ If `position_covariance` is available, `position_covariance_type` must be set to
 </td>
 </tr>
 <tr>
-<td><code>color</code></td>
+<td><code>color</code> (optional)</td>
 <td>
 
 [Color](#color)
@@ -1606,6 +1638,19 @@ If `position_covariance` is available, `position_covariance_type` must be set to
 <td>
 
 Color used to visualize the location
+
+</td>
+</tr>
+<tr>
+<td><code>metadata</code> (optional)</td>
+<td>
+
+[KeyValuePair](#keyvaluepair)[]
+
+</td>
+<td>
+
+Additional user-provided metadata associated with the location fix. Keys must be unique.
 
 </td>
 </tr>

@@ -1,6 +1,6 @@
 use bytes::BytesMut;
-use foxglove::schemas::{Log, Point3, Pose, Quaternion, Timestamp, Vector3};
 use foxglove::Encode;
+use foxglove::schemas::{Log, Point3, Pose, Quaternion, Timestamp, Vector3};
 use prost::Message;
 use prost_reflect::DescriptorPool;
 

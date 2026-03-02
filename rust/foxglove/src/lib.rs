@@ -128,7 +128,7 @@
 //!
 //! ### Well-known types
 //!
-//! The SDK provides [structs for well-known schemas](schemas). These can be used in conjunction
+//! The SDK provides [structs for well-known message types](schemas). These can be used in conjunction
 //! with [`Channel`] for type-safe logging, which ensures at compile time that messages logged to a
 //! channel all share a common schema.
 //!
@@ -137,8 +137,8 @@
 //! You can also define your own custom data types by implementing the [`Encode`] trait.
 //!
 //! The easiest way to do this is to enable the `derive` feature and derive the [`Encode`] trait,
-//! which will generate a schema and allow you to log your struct to a channel. This currently uses
-//! protobuf encoding.
+//! which will generate a schema and allow you to log your struct to a channel. The underlying
+//! serialization format is an implementation detail and may change across SDK versions.
 //!
 //! ```no_run
 //! # #[cfg(feature = "derive")]
@@ -156,6 +156,14 @@
 //! });
 //! # }
 //! ```
+//!
+//! **Note:** The `Encode` derive macro is a convenience for getting data into Foxglove with
+//! minimal friction. The generated schema is not designed for evolution — reordering, inserting,
+//! or removing fields will silently break compatibility with previously recorded data. If you need
+//! backwards-compatible schema evolution, maintain an explicit `.proto` file and implement
+//! [`Encode`] manually for your generated types. See
+//! [logging with protobuf schemas](https://docs.foxglove.dev/docs/sdk/logging-messages#logging-with-protobuf-schemas)
+//! for an example.
 //!
 //! If you'd like to use JSON encoding for integration with particular tooling, you can enable the
 //! `schemars` feature, which will provide a blanket [`Encode`] implementation for types that
@@ -235,7 +243,7 @@
 //!
 //! You can use the SDK to publish messages to the Foxglove app.
 //!
-//! Note: this requires the `live_visualization` feature, which is enabled by default.
+//! Note: this requires the `websocket` feature, which is enabled by default.
 //!
 //! Use [`WebSocketServer::new`] to create a new live visualization server. By default, the server
 //! listens on `127.0.0.1:8765`. Once the server is configured, call [`WebSocketServer::start`] to
@@ -254,7 +262,7 @@
 //! [app-connect]: https://docs.foxglove.dev/docs/connecting-to-data/frameworks/custom#connect
 //!
 //! ```no_run
-//! # #[cfg(feature = "live_visualization")]
+//! # #[cfg(feature = "websocket")]
 //! # async fn func() {
 //! let server = foxglove::WebSocketServer::new()
 //!     .name("Wall-E")
@@ -277,24 +285,25 @@
 //!   [`Timestamp`][crate::schemas::Timestamp].
 //! - `derive`: enables the use of `#[derive(Encode)]` to derive the [`Encode`] trait for logging
 //!   custom structs. Enabled by default.
-//! - `live_visualization`: enables the live visualization server and client, and adds dependencies
-//!   on [tokio]. Enabled by default.
+//! - `live_visualization`: deprecated alias for `websocket`.
 //! - `lz4`: enables support for the LZ4 compression algorithm for mcap files. Enabled by default.
 //! - `schemars`: provides a blanket implementation of the [`Encode`] trait for types that
 //!   implement [`Serialize`](serde::Serialize) and [`JsonSchema`][jsonschema-trait].
 //! - `serde`: derives [`Serialize`](serde::Serialize) and [`Deserialize`](serde::Deserialize) for
-//!   all [schema types](crate::schemas).
+//!   all [message types](crate::schemas).
 //! - `unstable`: features which are under active development and likely to change in an upcoming
 //!   version.
+//! - `websocket`: enables the websocket server and client for live visualization. Enabled by
+//!   default.
 //! - `zstd`: enables support for the zstd compression algorithm for mcap files. Enabled by
 //!   default.
 //!
-//! If you do not require live visualization features, you can disable that flag to reduce the
+//! If you do not require websocket features, you can disable that flag to reduce the
 //! compiled size of the SDK.
 //!
 //! # Requirements
 //!
-//! With the `live_visualization` feature (enabled by default), the Foxglove SDK depends on [tokio]
+//! With the `websocket` feature (enabled by default), the Foxglove SDK depends on [tokio]
 //! as its async runtime. See [`WebSocketServer`] for more information. Refer to the tokio
 //! documentation for more information about how to configure your application to use tokio.
 //!
@@ -318,13 +327,19 @@ pub mod library_version;
 pub mod log_macro;
 mod log_sink_set;
 mod mcap_writer;
+#[doc(hidden)]
+pub mod messages;
+mod messages_wkt;
 mod metadata;
 #[doc(hidden)]
 #[cfg(feature = "derive")]
 pub mod protobuf;
 mod schema;
-pub mod schemas;
-mod schemas_wkt;
+
+/// Types implementing well-known Foxglove message types.
+pub mod schemas {
+    pub use crate::messages::*;
+}
 mod sink;
 mod sink_channel_filter;
 
@@ -337,6 +352,9 @@ mod time;
 
 #[cfg(feature = "stream")]
 pub mod stream;
+
+#[cfg(feature = "data_provider")]
+pub mod data_provider;
 
 #[cfg(feature = "img2yuv-core")]
 #[allow(unused)]
@@ -361,31 +379,34 @@ pub use sink_channel_filter::SinkChannelFilter;
 pub use std::collections::BTreeMap;
 pub(crate) use time::nanoseconds_since_epoch;
 
-#[cfg(feature = "agent")]
-mod cloud_sink;
-#[cfg(feature = "live_visualization")]
+#[cfg(feature = "remote_access")]
+mod api_client;
+#[cfg(all(feature = "_remote_common", feature = "_protocol"))]
+pub mod protocol;
+#[cfg(all(feature = "_remote_common", not(feature = "_protocol")))]
 mod protocol;
-#[cfg(feature = "live_visualization")]
+#[doc(hidden)]
+#[cfg(feature = "remote_access")]
+pub mod remote_access;
+#[cfg(feature = "websocket")]
 mod runtime;
-#[cfg(feature = "live_visualization")]
+#[cfg(feature = "websocket")]
 pub mod websocket;
-#[cfg(feature = "live_visualization")]
+#[cfg(feature = "websocket")]
 mod websocket_client;
-#[cfg(feature = "live_visualization")]
+#[cfg(feature = "websocket")]
 mod websocket_server;
-#[cfg(feature = "agent")]
-pub use cloud_sink::{CloudSink, CloudSinkHandle, CloudSinkListener};
-#[cfg(feature = "live_visualization")]
+#[cfg(feature = "websocket")]
 pub(crate) use runtime::get_runtime_handle;
-#[cfg(feature = "live_visualization")]
+#[cfg(feature = "websocket")]
 pub use runtime::shutdown_runtime;
 #[doc(hidden)]
-#[cfg(feature = "live_visualization")]
+#[cfg(feature = "websocket")]
 pub use websocket::ws_protocol;
 #[doc(hidden)]
-#[cfg(feature = "live_visualization")]
+#[cfg(feature = "websocket")]
 pub use websocket_client::{WebSocketClient, WebSocketClientError};
-#[cfg(feature = "live_visualization")]
+#[cfg(feature = "websocket")]
 pub use websocket_server::{WebSocketServer, WebSocketServerHandle};
 
 #[doc(hidden)]

@@ -111,7 +111,8 @@ export function generateTypeScript(
         } else {
           comment = `/**\n  ${descriptionLines.map((line) => ` * ${line}`).join("\n  ")}\n   */`;
         }
-        return `${comment}\n  ${field.name}: ${fieldType};`;
+        const optionalSuffix = field.optional ? "?" : "";
+        return `${comment}\n  ${field.name}${optionalSuffix}: ${fieldType};`;
       });
 
       const typeDescriptionLines = schema.description.trim().split("\n");

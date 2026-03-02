@@ -1,5 +1,5 @@
-use std::collections::hash_map::Entry;
 use std::collections::HashMap;
+use std::collections::hash_map::Entry;
 use std::fmt::Debug;
 use std::sync::Arc;
 
@@ -263,7 +263,7 @@ impl Context {
     }
 
     /// Returns a builder for a websocket server in this context.
-    #[cfg(feature = "live_visualization")]
+    #[cfg(feature = "websocket")]
     pub fn websocket_server(self: &Arc<Self>) -> crate::WebSocketServer {
         crate::WebSocketServer::new().context(self)
     }
@@ -346,8 +346,8 @@ mod tests {
     use crate::context::*;
     use crate::log_sink_set::ERROR_LOGGING_MESSAGE;
     use crate::testutil::{ErrorSink, MockSink, RecordingSink};
-    use crate::{nanoseconds_since_epoch, PartialMetadata, RawChannel, Schema};
     use crate::{ChannelBuilder, FoxgloveError};
+    use crate::{PartialMetadata, RawChannel, Schema, nanoseconds_since_epoch};
     use std::sync::Arc;
     use tracing_test::traced_test;
 
