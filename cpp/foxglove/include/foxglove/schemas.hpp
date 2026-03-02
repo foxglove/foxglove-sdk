@@ -16,6 +16,20 @@
 #include <foxglove/context.hpp>
 #endif
 
+// Some Debug builds define DEBUG as a macro (e.g. -DDEBUG=1).
+
+// Undefine it while this header declares LogLevel::DEBUG, then restore it below.
+
+#ifdef DEBUG
+
+#pragma push_macro("DEBUG")
+
+#undef DEBUG
+
+#define FOXGLOVE_SCHEMAS_RESTORE_DEBUG_MACRO
+
+#endif
+
 struct foxglove_channel;
 
 namespace foxglove::schemas {
@@ -4332,8 +4346,8 @@ public:
   [[nodiscard]] bool has_sinks() const noexcept;
 
   TriangleListPrimitiveChannel(const TriangleListPrimitiveChannel& other) noexcept = delete;
-  TriangleListPrimitiveChannel& operator=(const TriangleListPrimitiveChannel& other
-  ) noexcept = delete;
+  TriangleListPrimitiveChannel& operator=(const TriangleListPrimitiveChannel& other) noexcept =
+    delete;
   /// @brief Default move constructor.
   TriangleListPrimitiveChannel(TriangleListPrimitiveChannel&& other) noexcept = default;
   /// @brief Default move assignment.
@@ -4473,3 +4487,13 @@ private:
 #endif
 
 }  // namespace foxglove::schemas
+
+// Restore any DEBUG macro from before this header was included.
+
+#ifdef FOXGLOVE_SCHEMAS_RESTORE_DEBUG_MACRO
+
+#pragma pop_macro("DEBUG")
+
+#undef FOXGLOVE_SCHEMAS_RESTORE_DEBUG_MACRO
+
+#endif

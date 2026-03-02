@@ -282,6 +282,14 @@ export function generateHppSchemas(
     "#pragma once",
     includes.join("\n"),
 
+    "// Some Debug builds define DEBUG as a macro (e.g. -DDEBUG=1).",
+    "// Undefine it while this header declares LogLevel::DEBUG, then restore it below.",
+    "#ifdef DEBUG",
+    '#pragma push_macro("DEBUG")',
+    "#undef DEBUG",
+    "#define FOXGLOVE_SCHEMAS_RESTORE_DEBUG_MACRO",
+    "#endif",
+
     "struct foxglove_channel;",
 
     "namespace foxglove::schemas {",
@@ -292,6 +300,11 @@ export function generateHppSchemas(
     channelClasses.join("\n\n"),
     "#endif",
     "} // namespace foxglove::schemas",
+    "// Restore any DEBUG macro from before this header was included.",
+    "#ifdef FOXGLOVE_SCHEMAS_RESTORE_DEBUG_MACRO",
+    '#pragma pop_macro("DEBUG")',
+    "#undef FOXGLOVE_SCHEMAS_RESTORE_DEBUG_MACRO",
+    "#endif",
   ].filter(Boolean);
 
   return outputSections.join("\n\n") + "\n";

@@ -218,6 +218,8 @@ jobs:
         if: ${{ fromJson(matrix.test_debug) }}
         env:
           CMAKE_BUILD_TYPE: Debug
+          BUILD_DIR: build-debug
+          CXXFLAGS: "-DDEBUG=1"
         run: make test
         working-directory: cpp
 

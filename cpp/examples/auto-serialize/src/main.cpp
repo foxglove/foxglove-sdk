@@ -21,11 +21,11 @@ using namespace std::chrono_literals;
  */
 namespace messages {
 enum MessageLevel {
-  DEBUG,
-  INFO,
+  Debug,
+  Info,
 };
 
-NLOHMANN_JSON_SERIALIZE_ENUM(MessageLevel, {{DEBUG, "debug"}, {INFO, "info"}})
+NLOHMANN_JSON_SERIALIZE_ENUM(MessageLevel, {{Debug, "debug"}, {Info, "info"}})
 
 struct Message {
   MessageLevel level;
@@ -81,7 +81,7 @@ int main() {
 
   for (int i = 0; i < 10; i++) {
     messages::Message msg;
-    msg.level = messages::MessageLevel::INFO;
+    msg.level = messages::MessageLevel::Info;
     msg.msg = "Hello, World";
     msg.count = i;
 
