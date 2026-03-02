@@ -1786,6 +1786,32 @@ typedef struct foxglove_mcap_options {
   bool repeat_channels;
   bool repeat_schemas;
   /**
+   * Specifies whether to calculate and write CRCs for chunk records.
+   */
+  bool calculate_chunk_crcs;
+  /**
+   * Specifies whether to calculate and write a data section CRC into the DataEnd record.
+   */
+  bool calculate_data_section_crc;
+  /**
+   * Specifies whether to calculate and write a summary section CRC into the Footer record.
+   */
+  bool calculate_summary_section_crc;
+  /**
+   * Specifies whether to calculate and write CRCs for attachment records.
+   */
+  bool calculate_attachment_crcs;
+  /**
+   * Compression level. 0 means use the compressor default. Only used when zstd or lz4
+   * compression is enabled.
+   */
+  uint32_t compression_level;
+  /**
+   * Number of threads to use for compression. 0 means single-threaded.
+   * Only used with zstd compression.
+   */
+  uint32_t compression_threads;
+  /**
    * Context provided to the `sink_channel_filter` callback.
    */
   const void *sink_channel_filter_context;

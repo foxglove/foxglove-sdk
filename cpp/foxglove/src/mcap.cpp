@@ -57,6 +57,12 @@ FoxgloveResult<McapWriter> McapWriter::create(const McapWriterOptions& options) 
   c_options.emit_metadata_indexes = options.emit_metadata_indexes;
   c_options.repeat_channels = options.repeat_channels;
   c_options.repeat_schemas = options.repeat_schemas;
+  c_options.calculate_chunk_crcs = options.calculate_chunk_crcs;
+  c_options.calculate_data_section_crc = options.calculate_data_section_crc;
+  c_options.calculate_summary_section_crc = options.calculate_summary_section_crc;
+  c_options.calculate_attachment_crcs = options.calculate_attachment_crcs;
+  c_options.compression_level = options.compression_level;
+  c_options.compression_threads = options.compression_threads;
   c_options.truncate = options.truncate;
 
   // Handle sink channel filter with context

@@ -126,6 +126,20 @@ struct McapWriterOptions {
   bool repeat_channels = true;
   /// @brief Whether to repeat schemas in the MCAP file.
   bool repeat_schemas = true;
+  /// @brief Whether to calculate and write CRCs for chunk records.
+  bool calculate_chunk_crcs = true;
+  /// @brief Whether to calculate and write a data section CRC into the DataEnd record.
+  bool calculate_data_section_crc = true;
+  /// @brief Whether to calculate and write a summary section CRC into the Footer record.
+  bool calculate_summary_section_crc = true;
+  /// @brief Whether to calculate and write CRCs for attachment records.
+  bool calculate_attachment_crcs = true;
+  /// @brief Compression level. 0 means use the compressor default.
+  /// Only used when zstd or lz4 compression is enabled.
+  uint32_t compression_level = 0;
+  /// @brief Number of threads to use for compression. 0 means single-threaded.
+  /// Only used with zstd compression.
+  uint32_t compression_threads = 0;
   /// @brief Whether to truncate the MCAP file.
   bool truncate = false;
   /// @brief Optional channel filter to use for the MCAP file.

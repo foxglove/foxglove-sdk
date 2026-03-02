@@ -141,6 +141,20 @@ pub struct FoxgloveMcapOptions {
     pub emit_metadata_indexes: bool,
     pub repeat_channels: bool,
     pub repeat_schemas: bool,
+    /// Specifies whether to calculate and write CRCs for chunk records.
+    pub calculate_chunk_crcs: bool,
+    /// Specifies whether to calculate and write a data section CRC into the DataEnd record.
+    pub calculate_data_section_crc: bool,
+    /// Specifies whether to calculate and write a summary section CRC into the Footer record.
+    pub calculate_summary_section_crc: bool,
+    /// Specifies whether to calculate and write CRCs for attachment records.
+    pub calculate_attachment_crcs: bool,
+    /// Compression level. 0 means use the compressor default. Only used when zstd or lz4
+    /// compression is enabled.
+    pub compression_level: u32,
+    /// Number of threads to use for compression. 0 means single-threaded.
+    /// Only used with zstd compression.
+    pub compression_threads: u32,
     /// Context provided to the `sink_channel_filter` callback.
     pub sink_channel_filter_context: *const c_void,
     /// A filter for channels that can be used to subscribe to or unsubscribe from channels.
@@ -189,7 +203,13 @@ impl FoxgloveMcapOptions {
             .emit_attachment_indexes(self.emit_attachment_indexes)
             .emit_metadata_indexes(self.emit_metadata_indexes)
             .repeat_channels(self.repeat_channels)
-            .repeat_schemas(self.repeat_schemas))
+            .repeat_schemas(self.repeat_schemas)
+            .calculate_chunk_crcs(self.calculate_chunk_crcs)
+            .calculate_data_section_crc(self.calculate_data_section_crc)
+            .calculate_summary_section_crc(self.calculate_summary_section_crc)
+            .calculate_attachment_crcs(self.calculate_attachment_crcs)
+            .compression_level(self.compression_level)
+            .compression_threads(self.compression_threads))
     }
 }
 
