@@ -36,6 +36,12 @@ class MCAPWriteOptions:
         into the DataEnd record.
     :param calculate_summary_section_crc: Specifies whether to calculate and write a summary section
         CRC into the Footer record.
+    :param calculate_attachment_crcs: Specifies whether to calculate and write CRCs for attachment
+        records.
+    :param compression_level: Specifies the compression level to use. 0 means use the compressor
+        default.
+    :param compression_threads: Specifies how many threads to use for zstd compression. None uses
+        the number of physical CPUs. 0 disables multithreaded compression.
     """
 
     def __init__(
@@ -44,7 +50,7 @@ class MCAPWriteOptions:
         compression: MCAPCompression | None = MCAPCompression.Zstd,
         profile: str | None = None,
         chunk_size: int | None = None,
-        use_chunks: bool = False,
+        use_chunks: bool = True,
         emit_statistics: bool = True,
         emit_summary_offsets: bool = True,
         emit_message_indexes: bool = True,
@@ -55,6 +61,9 @@ class MCAPWriteOptions:
         calculate_chunk_crcs: bool = True,
         calculate_data_section_crc: bool = True,
         calculate_summary_section_crc: bool = True,
+        calculate_attachment_crcs: bool = True,
+        compression_level: int = 0,
+        compression_threads: int | None = None,
     ) -> None: ...
 
 class MCAPWriter:

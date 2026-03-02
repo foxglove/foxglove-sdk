@@ -126,6 +126,12 @@ impl From<PyMcapCompression> for McapCompression {
 /// :type calculate_data_section_crc: bool
 /// :param calculate_summary_section_crc: Specifies whether to calculate and write a summary section CRC into the Footer record.
 /// :type calculate_summary_section_crc: bool
+/// :param calculate_attachment_crcs: Specifies whether to calculate and write CRCs for attachment records.
+/// :type calculate_attachment_crcs: bool
+/// :param compression_level: Specifies the compression level to use. 0 means use the compressor default.
+/// :type compression_level: int
+/// :param compression_threads: Specifies how many threads to use for zstd compression. None uses the number of physical CPUs. 0 disables multithreaded compression.
+/// :type compression_threads: int | None
 #[derive(Default, Clone)]
 #[pyclass(name = "MCAPWriteOptions", module = "foxglove.mcap")]
 pub(crate) struct PyMcapWriteOptions(McapWriteOptions);
@@ -138,7 +144,7 @@ impl PyMcapWriteOptions {
         compression = None,
         profile = None,
         chunk_size = None,
-        use_chunks = false,
+        use_chunks = true,
         emit_statistics = true,
         emit_summary_offsets = true,
         emit_message_indexes = true,
@@ -149,6 +155,9 @@ impl PyMcapWriteOptions {
         calculate_chunk_crcs = true,
         calculate_data_section_crc = true,
         calculate_summary_section_crc = true,
+        calculate_attachment_crcs = true,
+        compression_level = 0,
+        compression_threads = None,
     ))]
     #[allow(clippy::too_many_arguments)]
     fn new(
@@ -166,12 +175,15 @@ impl PyMcapWriteOptions {
         calculate_chunk_crcs: Option<bool>,
         calculate_data_section_crc: Option<bool>,
         calculate_summary_section_crc: Option<bool>,
+        calculate_attachment_crcs: Option<bool>,
+        compression_level: u32,
+        compression_threads: Option<u32>,
     ) -> Self {
         let compression = compression.or(Some(PyMcapCompression::Zstd));
         let opts = McapWriteOptions::default()
             .compression(compression.map(Into::into))
             .chunk_size(chunk_size)
-            .use_chunks(use_chunks.unwrap_or(false))
+            .use_chunks(use_chunks.unwrap_or(true))
             .emit_statistics(emit_statistics.unwrap_or(true))
             .emit_summary_offsets(emit_summary_offsets.unwrap_or(true))
             .emit_message_indexes(emit_message_indexes.unwrap_or(true))
@@ -181,7 +193,15 @@ impl PyMcapWriteOptions {
             .calculate_chunk_crcs(calculate_chunk_crcs.unwrap_or(true))
             .calculate_data_section_crc(calculate_data_section_crc.unwrap_or(true))
             .calculate_summary_section_crc(calculate_summary_section_crc.unwrap_or(true))
+            .calculate_attachment_crcs(calculate_attachment_crcs.unwrap_or(true))
+            .compression_level(compression_level)
             .disable_seeking(disable_seeking.unwrap_or(false));
+
+        let opts = if let Some(threads) = compression_threads {
+            opts.compression_threads(threads)
+        } else {
+            opts
+        };
 
         let opts = if let Some(profile) = profile {
             opts.profile(profile)
