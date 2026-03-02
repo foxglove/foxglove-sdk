@@ -119,6 +119,7 @@ export const exampleMessage: FoxgloveMessageSchema = {
       type: { type: "nested", schema: exampleNestedMessage },
       array: true,
       protobufFieldNumber: 4,
+      flatbuffersFieldNumber: 27,
     },
     {
       name: "field_optional_string",
