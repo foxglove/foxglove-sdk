@@ -1771,6 +1771,13 @@ typedef struct foxglove_custom_writer {
 #endif
 
 #if !defined(__wasm__)
+
+/**
+ * Sentinel value for `compression_threads` indicating the default behavior
+ * of using the number of physical CPUs.
+ */
+#define FOXGLOVE_MCAP_COMPRESSION_THREADS_DEFAULT UINT32_MAX
+
 typedef struct foxglove_mcap_options {
   /**
    * `context` can be null, or a valid pointer to a context created via `foxglove_context_new`.
@@ -1799,30 +1806,19 @@ typedef struct foxglove_mcap_options {
   bool emit_metadata_indexes;
   bool repeat_channels;
   bool repeat_schemas;
-  /**
-   * Specifies whether to calculate and write CRCs for chunk records.
-   */
+  /** Whether to calculate and include CRCs in the respective records. */
   bool calculate_chunk_crcs;
-  /**
-   * Specifies whether to calculate and write a data section CRC into the DataEnd record.
-   */
   bool calculate_data_section_crc;
-  /**
-   * Specifies whether to calculate and write a summary section CRC into the Footer record.
-   */
   bool calculate_summary_section_crc;
-  /**
-   * Specifies whether to calculate and write CRCs for attachment records.
-   */
   bool calculate_attachment_crcs;
   /**
-   * Compression level. 0 means use the compressor default. Only used when zstd or lz4
-   * compression is enabled.
+   * Compression level passed to the underlying compressor (zstd or lz4).
+   * A value of 0 instructs the compressor to use its default level.
    */
   uint32_t compression_level;
   /**
-   * Number of threads to use for compression. 0 means single-threaded.
-   * Only used with zstd compression.
+   * Number of threads for zstd compression. 0 disables multithreading.
+   * The default uses the number of physical CPUs.
    */
   uint32_t compression_threads;
   /**
@@ -4389,6 +4385,13 @@ foxglove_error foxglove_vector3_encode(const struct foxglove_vector3 *msg,
                                        uint8_t *ptr,
                                        size_t len,
                                        size_t *encoded_len);
+
+#if !defined(__wasm__)
+/**
+ * Returns a `foxglove_mcap_options` with defaults matching `mcap::WriteOptions::default()`.
+ */
+struct foxglove_mcap_options foxglove_mcap_options_default(void);
+#endif
 
 #if !defined(__wasm__)
 /**

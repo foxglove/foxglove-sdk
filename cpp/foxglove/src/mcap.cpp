@@ -21,10 +21,33 @@ static size_t custom_write(void* fn, const uint8_t* data, size_t len, int32_t* e
   return writer->write(data, len, error);
 }
 
+McapWriterOptions::McapWriterOptions() {
+  auto c = foxglove_mcap_options_default();
+  chunk_size = c.chunk_size;
+  compression = static_cast<McapCompression>(c.compression);
+  use_chunks = c.use_chunks;
+  disable_seeking = c.disable_seeking;
+  emit_statistics = c.emit_statistics;
+  emit_summary_offsets = c.emit_summary_offsets;
+  emit_message_indexes = c.emit_message_indexes;
+  emit_chunk_indexes = c.emit_chunk_indexes;
+  emit_attachment_indexes = c.emit_attachment_indexes;
+  emit_metadata_indexes = c.emit_metadata_indexes;
+  repeat_channels = c.repeat_channels;
+  repeat_schemas = c.repeat_schemas;
+  calculate_chunk_crcs = c.calculate_chunk_crcs;
+  calculate_data_section_crc = c.calculate_data_section_crc;
+  calculate_summary_section_crc = c.calculate_summary_section_crc;
+  calculate_attachment_crcs = c.calculate_attachment_crcs;
+  compression_level = c.compression_level;
+  compression_threads = c.compression_threads;
+  truncate = c.truncate;
+}
+
 FoxgloveResult<McapWriter> McapWriter::create(const McapWriterOptions& options) {
   foxglove_internal_register_cpp_wrapper();
 
-  foxglove_mcap_options c_options = {};
+  foxglove_mcap_options c_options = foxglove_mcap_options_default();
   c_options.context = options.context.getInner();
   c_options.path = {options.path.data(), options.path.length()};
   c_options.profile = {options.profile.data(), options.profile.length()};
