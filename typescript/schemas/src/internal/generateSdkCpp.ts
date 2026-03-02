@@ -314,6 +314,9 @@ function cppToC(schema: FoxgloveMessageSchema, copyTypes: Set<string>): string[]
           }
         } else if (field.type.type === "primitive") {
           assert(field.type.name !== "bytes");
+          if (field.type.name === "string") {
+            return `dest.${dstName} = arena.map<foxglove_string>(src.${srcName}, [](foxglove_string& dest, const std::string& src, Arena&) {\n      dest = {src.data(), src.size()};\n    });\n    dest.${dstName}_count = src.${srcName}.size();`;
+          }
           return `dest.${dstName} = src.${srcName}.data();\n    dest.${dstName}_count = src.${srcName}.size();`;
         } else {
           throw Error(`unsupported array type: ${field.type.type}`);
