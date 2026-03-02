@@ -2523,6 +2523,9 @@ pub struct ImageAnnotations {
     /// Additional user-provided metadata associated with the image annotations. Keys must be unique.
     pub metadata: *const KeyValuePair,
     pub metadata_count: usize,
+
+    /// Timestamp of the image annotations. When set, individual annotation timestamps will be ignored.
+    pub timestamp: *const FoxgloveTimestamp,
 }
 
 #[cfg(not(target_family = "wasm"))]
@@ -2566,6 +2569,7 @@ impl BorrowToNative for ImageAnnotations {
             points: ManuallyDrop::into_inner(points),
             texts: ManuallyDrop::into_inner(texts),
             metadata: ManuallyDrop::into_inner(metadata),
+            timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
         }))
     }
 }

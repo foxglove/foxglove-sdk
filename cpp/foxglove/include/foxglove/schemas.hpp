@@ -1036,6 +1036,10 @@ struct ImageAnnotations {
   /// unique.
   std::vector<KeyValuePair> metadata;
 
+  /// @brief Timestamp of the image annotations. When set, individual annotation timestamps will be
+  /// ignored.
+  std::optional<Timestamp> timestamp;
+
   /// @brief Encoded the ImageAnnotations as protobuf to the provided buffer.
   ///
   /// On success, writes the serialized length to *encoded_len.

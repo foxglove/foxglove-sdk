@@ -357,6 +357,7 @@ class ImageAnnotations:
         points: list[PointsAnnotation] | None = None,
         texts: list[TextAnnotation] | None = None,
         metadata: list[KeyValuePair] | None = None,
+        timestamp: Timestamp | None = None,
     ) -> None: ...
     @staticmethod
     def get_schema() -> Schema:
