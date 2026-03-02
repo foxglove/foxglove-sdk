@@ -141,7 +141,7 @@ impl PyMcapWriteOptions {
     #[new]
     #[pyo3(signature = (
         *,
-        compression = None,
+        compression = PyMcapCompression::Zstd,
         profile = None,
         chunk_size = None,
         use_chunks = true,
@@ -179,7 +179,6 @@ impl PyMcapWriteOptions {
         compression_level: u32,
         compression_threads: Option<u32>,
     ) -> Self {
-        let compression = compression.or(Some(PyMcapCompression::Zstd));
         let opts = McapWriteOptions::default()
             .compression(compression.map(Into::into))
             .chunk_size(chunk_size)
