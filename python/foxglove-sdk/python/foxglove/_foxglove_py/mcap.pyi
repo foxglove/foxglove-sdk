@@ -16,7 +16,8 @@ class MCAPWriteOptions:
     :param compression: Specifies the compression that should be used on chunks. Defaults to Zstd.
         Pass `None` to disable compression.
     :param profile: Specifies the profile that should be written to the MCAP Header record.
-    :param chunk_size: Specifies the target uncompressed size of each chunk.
+    :param chunk_size: Specifies the target uncompressed size of each chunk. Pass `None` to disable
+        the chunk size limit.
     :param use_chunks: Specifies whether to use chunks for storing messages.
     :param emit_statistics: Specifies whether to write a statistics record in the summary section.
     :param emit_summary_offsets: Specifies whether to write summary offset records.
@@ -49,7 +50,7 @@ class MCAPWriteOptions:
         *,
         compression: MCAPCompression | None = MCAPCompression.Zstd,
         profile: str | None = None,
-        chunk_size: int | None = None,
+        chunk_size: int | None = 786432,
         use_chunks: bool = True,
         emit_statistics: bool = True,
         emit_summary_offsets: bool = True,
