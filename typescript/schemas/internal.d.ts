@@ -1,1 +1,1 @@
-export * from "./dist/internal/index";
+export * from "@foxglove/messages/internal";

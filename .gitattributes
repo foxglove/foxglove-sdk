@@ -17,4 +17,4 @@ rust/foxglove/src/schemas/descriptors.rs linguist-generated
 rust/foxglove/src/schemas/foxglove.rs linguist-generated
 rust/foxglove/src/schemas/impls.rs linguist-generated
 schemas/** linguist-generated
-typescript/schemas/src/types/* linguist-generated
+typescript/messages/src/types/* linguist-generated

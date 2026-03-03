@@ -37,7 +37,8 @@ The core SDK is written in Rust, with bindings for Python and C/C++, plus TypeSc
 | `python/foxglove-sdk-examples`       | Python example programs                                         |
 | `python/foxglove-schemas-flatbuffer` | Flatbuffer schema definitions for Python                        |
 | `python/foxglove-schemas-protobuf`   | Protobuf schema definitions for Python                          |
-| `typescript/schemas`                 | TypeScript schema definitions                                   |
+| `typescript/messages`                | TypeScript message type definitions and codegen (source of truth)|
+| `typescript/schemas`                 | TypeScript re-export wrapper for `@foxglove/messages`           |
 | `schemas/`                           | Schema definitions (flatbuffer, jsonschema, omgidl, proto, ros) |
 | `ros/`                               | ROS message package                                             |
 | `scripts/`                           | Build and code generation scripts                               |
@@ -50,7 +51,7 @@ The core SDK is written in Rust, with bindings for Python and C/C++, plus TypeSc
 - **C/C++** - FFI layer (C) and idiomatic wrapper (C++); built with CMake + `cargo` (via `corrosion`)
 - **TypeScript** - Schema definitions, codegen, and CI scripts; managed with `yarn`; tested with `jest`
 - **Schemas** - Protobuf, Flatbuffers, JSON Schema, OMG IDL, ROS 1/2 message definitions; generated via `make generate`
-  - The schemas are defined in `typescript/schemas/src/internal/schemas.ts`
+  - The schemas are defined in `typescript/messages/src/internal/schemas.ts`
 
 ## High-level Architecture
 

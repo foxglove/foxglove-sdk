@@ -1,1 +1,1 @@
-export * from "./types/index";
+export * from "@foxglove/messages";
