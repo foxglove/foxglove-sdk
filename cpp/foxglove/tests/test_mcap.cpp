@@ -744,3 +744,28 @@ TEST_CASE("Write empty attachment data") {
   std::string content = readFile("test.mcap");
   REQUIRE_THAT(content, ContainsSubstring("empty.txt"));
 }
+
+TEST_CASE("McapWriterOptions defaults match C defaults") {
+  foxglove::McapWriterOptions defaults;
+  auto c = foxglove_mcap_options_default();
+
+  CHECK(defaults.chunk_size == c.chunk_size);
+  CHECK(static_cast<foxglove_mcap_compression>(defaults.compression) == c.compression);
+  CHECK(defaults.use_chunks == c.use_chunks);
+  CHECK(defaults.disable_seeking == c.disable_seeking);
+  CHECK(defaults.emit_statistics == c.emit_statistics);
+  CHECK(defaults.emit_summary_offsets == c.emit_summary_offsets);
+  CHECK(defaults.emit_message_indexes == c.emit_message_indexes);
+  CHECK(defaults.emit_chunk_indexes == c.emit_chunk_indexes);
+  CHECK(defaults.emit_attachment_indexes == c.emit_attachment_indexes);
+  CHECK(defaults.emit_metadata_indexes == c.emit_metadata_indexes);
+  CHECK(defaults.repeat_channels == c.repeat_channels);
+  CHECK(defaults.repeat_schemas == c.repeat_schemas);
+  CHECK(defaults.calculate_chunk_crcs == c.calculate_chunk_crcs);
+  CHECK(defaults.calculate_data_section_crc == c.calculate_data_section_crc);
+  CHECK(defaults.calculate_summary_section_crc == c.calculate_summary_section_crc);
+  CHECK(defaults.calculate_attachment_crcs == c.calculate_attachment_crcs);
+  CHECK(defaults.compression_level == c.compression_level);
+  CHECK(defaults.compression_threads == c.compression_threads);
+  CHECK(defaults.truncate == c.truncate);
+}

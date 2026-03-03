@@ -4,6 +4,7 @@
 #include <foxglove/error.hpp>
 
 #include <cerrno>
+#include <cstdint>
 #include <cstdio>
 #include <functional>
 #include <memory>
@@ -93,9 +94,6 @@ struct Attachment {
 };
 
 /// @brief Options for an MCAP writer.
-///
-/// MCAP recording fields default to match `mcap::WriteOptions::default()` via the
-/// C function `foxglove_mcap_options_default()`. See the constructor in mcap.cpp.
 struct McapWriterOptions {
   friend class McapWriter;
 
@@ -108,49 +106,49 @@ struct McapWriterOptions {
   /// @brief The profile to use for the MCAP file.
   std::string_view profile;
   /// @brief The size of each chunk in the MCAP file.
-  uint64_t chunk_size;
+  uint64_t chunk_size = static_cast<uint64_t>(1024 * 768);
   /// @brief The compression algorithm to use for the MCAP file.
-  McapCompression compression;
+  McapCompression compression = McapCompression::Zstd;
   /// @brief Whether to use chunks in the MCAP file.
-  bool use_chunks;
+  bool use_chunks = true;
   /// @brief Whether to disable seeking in the MCAP file.
-  bool disable_seeking;
+  bool disable_seeking = false;
   /// @brief Whether to emit statistics in the MCAP file.
-  bool emit_statistics;
+  bool emit_statistics = true;
   /// @brief Whether to emit summary offsets in the MCAP file.
-  bool emit_summary_offsets;
+  bool emit_summary_offsets = true;
   /// @brief Whether to emit message indexes in the MCAP file.
-  bool emit_message_indexes;
+  bool emit_message_indexes = true;
   /// @brief Whether to emit chunk indexes in the MCAP file.
-  bool emit_chunk_indexes;
+  bool emit_chunk_indexes = true;
   /// @brief Whether to emit attachment indexes in the MCAP file.
-  bool emit_attachment_indexes;
+  bool emit_attachment_indexes = true;
   /// @brief Whether to emit metadata indexes in the MCAP file.
-  bool emit_metadata_indexes;
+  bool emit_metadata_indexes = true;
   /// @brief Whether to repeat channels in the MCAP file.
-  bool repeat_channels;
+  bool repeat_channels = true;
   /// @brief Whether to repeat schemas in the MCAP file.
-  bool repeat_schemas;
+  bool repeat_schemas = true;
   /// @brief Whether to calculate and write CRCs for chunk records.
-  bool calculate_chunk_crcs;
+  bool calculate_chunk_crcs = true;
   /// @brief Whether to calculate and write a data section CRC into the DataEnd record.
-  bool calculate_data_section_crc;
+  bool calculate_data_section_crc = true;
   /// @brief Whether to calculate and write a summary section CRC into the Footer record.
-  bool calculate_summary_section_crc;
+  bool calculate_summary_section_crc = true;
   /// @brief Whether to calculate and write CRCs for attachment records.
-  bool calculate_attachment_crcs;
+  bool calculate_attachment_crcs = true;
   /// @brief Compression level passed to the underlying compressor (zstd or lz4).
   /// A value of 0 instructs the compressor to use its default level.
-  uint32_t compression_level;
+  uint32_t compression_level = 0;
   /// @brief Number of threads for zstd compression. 0 disables multithreading.
   /// The default uses the number of physical CPUs.
-  uint32_t compression_threads;
+  uint32_t compression_threads = UINT32_MAX;
   /// @brief Whether to truncate the MCAP file.
-  bool truncate;
+  bool truncate = false;
   /// @brief Optional channel filter to use for the MCAP file.
   SinkChannelFilterFn sink_channel_filter = {};
 
-  McapWriterOptions();
+  McapWriterOptions() = default;
 };
 
 /// @brief An MCAP writer, used to log messages to an MCAP file.

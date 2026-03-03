@@ -21,51 +21,11 @@ static size_t custom_write(void* fn, const uint8_t* data, size_t len, int32_t* e
   return writer->write(data, len, error);
 }
 
-McapWriterOptions::McapWriterOptions() {
-  auto c = foxglove_mcap_options_default();
-  chunk_size = c.chunk_size;
-  compression = static_cast<McapCompression>(c.compression);
-  use_chunks = c.use_chunks;
-  disable_seeking = c.disable_seeking;
-  emit_statistics = c.emit_statistics;
-  emit_summary_offsets = c.emit_summary_offsets;
-  emit_message_indexes = c.emit_message_indexes;
-  emit_chunk_indexes = c.emit_chunk_indexes;
-  emit_attachment_indexes = c.emit_attachment_indexes;
-  emit_metadata_indexes = c.emit_metadata_indexes;
-  repeat_channels = c.repeat_channels;
-  repeat_schemas = c.repeat_schemas;
-  calculate_chunk_crcs = c.calculate_chunk_crcs;
-  calculate_data_section_crc = c.calculate_data_section_crc;
-  calculate_summary_section_crc = c.calculate_summary_section_crc;
-  calculate_attachment_crcs = c.calculate_attachment_crcs;
-  compression_level = c.compression_level;
-  compression_threads = c.compression_threads;
-  truncate = c.truncate;
-}
-
-FoxgloveResult<McapWriter> McapWriter::create(const McapWriterOptions& options) {
-  foxglove_internal_register_cpp_wrapper();
-
+static foxglove_mcap_options to_c_mcap_options(const McapWriterOptions& options) {
   foxglove_mcap_options c_options = foxglove_mcap_options_default();
   c_options.context = options.context.getInner();
   c_options.path = {options.path.data(), options.path.length()};
   c_options.profile = {options.profile.data(), options.profile.length()};
-
-  // Handle custom writer if provided
-  std::unique_ptr<CustomWriter> custom_writer;
-  foxglove_custom_writer c_custom_writer;
-  if (options.custom_writer.has_value()) {
-    custom_writer = std::make_unique<CustomWriter>(options.custom_writer.value());
-    c_custom_writer.context = custom_writer.get();
-    c_custom_writer.write_fn = custom_write;
-    c_custom_writer.flush_fn = custom_flush;
-    c_custom_writer.seek_fn = custom_seek;
-    c_options.custom_writer = &c_custom_writer;
-  } else {
-    c_options.custom_writer = nullptr;
-  }
-
   // TODO FG-11215: generate the enum for C++ from the C enum
   // so this is guaranteed to never get out of sync
   c_options.compression = static_cast<foxglove_mcap_compression>(options.compression);
@@ -87,6 +47,25 @@ FoxgloveResult<McapWriter> McapWriter::create(const McapWriterOptions& options) 
   c_options.compression_level = options.compression_level;
   c_options.compression_threads = options.compression_threads;
   c_options.truncate = options.truncate;
+  return c_options;
+}
+
+FoxgloveResult<McapWriter> McapWriter::create(const McapWriterOptions& options) {
+  foxglove_internal_register_cpp_wrapper();
+
+  foxglove_mcap_options c_options = to_c_mcap_options(options);
+
+  // Handle custom writer if provided
+  std::unique_ptr<CustomWriter> custom_writer;
+  foxglove_custom_writer c_custom_writer;
+  if (options.custom_writer.has_value()) {
+    custom_writer = std::make_unique<CustomWriter>(options.custom_writer.value());
+    c_custom_writer.context = custom_writer.get();
+    c_custom_writer.write_fn = custom_write;
+    c_custom_writer.flush_fn = custom_flush;
+    c_custom_writer.seek_fn = custom_seek;
+    c_options.custom_writer = &c_custom_writer;
+  }
 
   // Handle sink channel filter with context
   std::unique_ptr<SinkChannelFilterFn> sink_channel_filter;
