@@ -547,6 +547,7 @@ async fn livekit_video_track_resubscribe() -> Result<()> {
 #[traced_test]
 #[ignore]
 #[tokio::test]
+#[serial(livekit)]
 async fn livekit_existing_participant_receives_server_info_and_advertisement() -> Result<()> {
     let ctx = foxglove::Context::new();
     let channel = ctx
