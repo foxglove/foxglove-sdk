@@ -1202,6 +1202,19 @@ Array of annotations for a 2D image
     <th>description</th>
   </tr>
 <tr>
+<td><code>timestamp</code> (optional)</td>
+<td>
+
+[Timestamp](#timestamp)
+
+</td>
+<td>
+
+Timestamp of the image annotations. When set, individual annotation timestamps will be ignored.
+
+</td>
+</tr>
+<tr>
 <td><code>circles</code></td>
 <td>
 
@@ -1250,19 +1263,6 @@ Text annotations
 <td>
 
 Additional user-provided metadata associated with the image annotations. Keys must be unique.
-
-</td>
-</tr>
-<tr>
-<td><code>timestamp</code> (optional)</td>
-<td>
-
-[Timestamp](#timestamp)
-
-</td>
-<td>
-
-Timestamp of the image annotations. When set, individual annotation timestamps will be ignored.
 
 </td>
 </tr>

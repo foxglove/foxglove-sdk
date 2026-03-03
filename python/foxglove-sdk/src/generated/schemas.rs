@@ -1097,11 +1097,11 @@ impl From<VoxelGrid> for foxglove::schemas::VoxelGrid {
 
 /// Array of annotations for a 2D image
 ///
+/// :param timestamp: Timestamp of the image annotations. When set, individual annotation timestamps will be ignored.
 /// :param circles: Circle annotations
 /// :param points: Points annotations
 /// :param texts: Text annotations
 /// :param metadata: Additional user-provided metadata associated with the image annotations. Keys must be unique.
-/// :param timestamp: Timestamp of the image annotations. When set, individual annotation timestamps will be ignored.
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/image-annotations
 #[pyclass(module = "foxglove.schemas")]
@@ -1110,15 +1110,16 @@ pub(crate) struct ImageAnnotations(pub(crate) foxglove::schemas::ImageAnnotation
 #[pymethods]
 impl ImageAnnotations {
     #[new]
-    #[pyo3(signature = (*, circles=None, points=None, texts=None, metadata=None, timestamp=None) )]
+    #[pyo3(signature = (*, timestamp=None, circles=None, points=None, texts=None, metadata=None) )]
     fn new(
+        timestamp: Option<Timestamp>,
         circles: Option<Vec<CircleAnnotation>>,
         points: Option<Vec<PointsAnnotation>>,
         texts: Option<Vec<TextAnnotation>>,
         metadata: Option<Vec<KeyValuePair>>,
-        timestamp: Option<Timestamp>,
     ) -> Self {
         Self(foxglove::schemas::ImageAnnotations {
+            timestamp: timestamp.map(Into::into),
             circles: circles
                 .unwrap_or_default()
                 .into_iter()
@@ -1139,13 +1140,12 @@ impl ImageAnnotations {
                 .into_iter()
                 .map(|x| x.into())
                 .collect(),
-            timestamp: timestamp.map(Into::into),
         })
     }
     fn __repr__(&self) -> String {
         format!(
-            "ImageAnnotations(circles={:?}, points={:?}, texts={:?}, metadata={:?}, timestamp={:?})",
-            self.0.circles, self.0.points, self.0.texts, self.0.metadata, self.0.timestamp,
+            "ImageAnnotations(timestamp={:?}, circles={:?}, points={:?}, texts={:?}, metadata={:?})",
+            self.0.timestamp, self.0.circles, self.0.points, self.0.texts, self.0.metadata,
         )
     }
     /// Returns the ImageAnnotations schema.
