@@ -1501,6 +1501,13 @@ const ImageAnnotations: FoxgloveMessageSchema = {
       array: true,
       optional: true,
     },
+    {
+      name: "timestamp",
+      type: { type: "nested", schema: Timestamp },
+      description:
+        "Timestamp of the image annotations. When set, individual annotation timestamps will be ignored.",
+      optional: true,
+    },
   ],
 };
 

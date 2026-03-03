@@ -8,7 +8,10 @@ use std::time::Duration;
 
 use anyhow::{Context as _, Result};
 use foxglove::Schema;
+use livekit::{Room, RoomOptions};
+use remote_access_tests::livekit_token;
 use remote_access_tests::test_helpers::{TestGateway, ViewerConnection, poll_until};
+use serial_test::serial;
 use tracing::info;
 use tracing_test::traced_test;
 
@@ -21,6 +24,7 @@ use tracing_test::traced_test;
 #[traced_test]
 #[ignore]
 #[tokio::test]
+#[serial(livekit)]
 async fn livekit_viewer_receives_server_info() -> Result<()> {
     let ctx = foxglove::Context::new();
     let gw = TestGateway::start(&ctx).await?;
@@ -54,6 +58,7 @@ async fn livekit_viewer_receives_server_info() -> Result<()> {
 #[traced_test]
 #[ignore]
 #[tokio::test]
+#[serial(livekit)]
 async fn livekit_viewer_receives_channel_advertisement() -> Result<()> {
     let ctx = foxglove::Context::new();
 
@@ -88,6 +93,7 @@ async fn livekit_viewer_receives_channel_advertisement() -> Result<()> {
 #[traced_test]
 #[ignore]
 #[tokio::test]
+#[serial(livekit)]
 async fn livekit_viewer_receives_message_after_subscribe() -> Result<()> {
     let ctx = foxglove::Context::new();
     let channel = ctx
@@ -125,6 +131,7 @@ async fn livekit_viewer_receives_message_after_subscribe() -> Result<()> {
 #[traced_test]
 #[ignore]
 #[tokio::test]
+#[serial(livekit)]
 async fn livekit_viewer_does_not_receive_message_before_subscribe() -> Result<()> {
     let ctx = foxglove::Context::new();
     let channel = ctx
@@ -168,6 +175,7 @@ async fn livekit_viewer_does_not_receive_message_before_subscribe() -> Result<()
 #[traced_test]
 #[ignore]
 #[tokio::test]
+#[serial(livekit)]
 async fn livekit_viewer_receives_unadvertise_on_channel_close() -> Result<()> {
     let ctx = foxglove::Context::new();
     let channel = ctx
@@ -199,6 +207,7 @@ async fn livekit_viewer_receives_unadvertise_on_channel_close() -> Result<()> {
 #[traced_test]
 #[ignore]
 #[tokio::test]
+#[serial(livekit)]
 async fn livekit_viewer_receives_advertisement_for_late_channel() -> Result<()> {
     let ctx = foxglove::Context::new();
 
@@ -231,6 +240,7 @@ async fn livekit_viewer_receives_advertisement_for_late_channel() -> Result<()> 
 #[traced_test]
 #[ignore]
 #[tokio::test]
+#[serial(livekit)]
 async fn livekit_channel_filter_excludes_filtered_channels() -> Result<()> {
     let ctx = foxglove::Context::new();
 
@@ -278,6 +288,7 @@ async fn livekit_channel_filter_excludes_filtered_channels() -> Result<()> {
 #[traced_test]
 #[ignore]
 #[tokio::test]
+#[serial(livekit)]
 async fn livekit_multiple_participants_receive_messages() -> Result<()> {
     let ctx = foxglove::Context::new();
     let channel = ctx
@@ -350,6 +361,7 @@ async fn livekit_multiple_participants_receive_messages() -> Result<()> {
 #[traced_test]
 #[ignore]
 #[tokio::test]
+#[serial(livekit)]
 async fn livekit_video_channel_has_video_track_metadata() -> Result<()> {
     let ctx = foxglove::Context::new();
 
@@ -402,6 +414,7 @@ async fn livekit_video_channel_has_video_track_metadata() -> Result<()> {
 #[traced_test]
 #[ignore]
 #[tokio::test]
+#[serial(livekit)]
 async fn livekit_video_channel_messages_bypass_data_plane() -> Result<()> {
     let ctx = foxglove::Context::new();
 
@@ -451,6 +464,7 @@ async fn livekit_video_channel_messages_bypass_data_plane() -> Result<()> {
 #[traced_test]
 #[ignore]
 #[tokio::test]
+#[serial(livekit)]
 async fn livekit_video_track_lifecycle() -> Result<()> {
     let ctx = foxglove::Context::new();
 
@@ -492,6 +506,7 @@ async fn livekit_video_track_lifecycle() -> Result<()> {
 #[traced_test]
 #[ignore]
 #[tokio::test]
+#[serial(livekit)]
 async fn livekit_video_track_resubscribe() -> Result<()> {
     let ctx = foxglove::Context::new();
 
@@ -528,6 +543,59 @@ async fn livekit_video_track_resubscribe() -> Result<()> {
     let track_name = viewer.expect_track_subscribed().await?;
     assert_eq!(track_name, "/camera");
     info!("resubscribe: video track re-established");
+
+    viewer.close().await?;
+    gw.stop().await?;
+    Ok(())
+}
+
+/// Test that when a viewer is already in the room before the gateway joins,
+/// the viewer still receives ServerInfo and Advertise messages.
+#[traced_test]
+#[ignore]
+#[tokio::test]
+#[serial(livekit)]
+async fn livekit_existing_participant_receives_server_info_and_advertisement() -> Result<()> {
+    let ctx = foxglove::Context::new();
+    let channel = ctx
+        .channel_builder("/test")
+        .message_encoding("json")
+        .build_raw()
+        .context("create channel")?;
+
+    // Create mock server and room name without starting the gateway yet.
+    let (room_name, mock) = TestGateway::prepare().await;
+
+    // Connect viewer to the room BEFORE the gateway joins.
+    let token = livekit_token::generate_token(&room_name, "viewer-1")?;
+    let (room, events) = Room::connect(livekit_token::LIVEKIT_URL, &token, RoomOptions::default())
+        .await
+        .context("viewer failed to connect to LiveKit")?;
+    info!("viewer connected to room before gateway");
+
+    // Now start the gateway — it should discover the existing viewer participant.
+    let channel_filter = None;
+    let gw = TestGateway::start_with_mock(&ctx, room_name, mock, channel_filter)?;
+
+    // Wait for the gateway to open a byte stream to the viewer.
+    let mut viewer = ViewerConnection::from_room(room, events).await?;
+
+    // Verify the viewer receives ServerInfo and Advertise.
+    let server_info = viewer.expect_server_info().await?;
+    assert!(
+        server_info.session_id.is_some(),
+        "session_id should be present"
+    );
+    assert!(
+        server_info.metadata.contains_key("fg-library"),
+        "metadata should contain fg-library"
+    );
+
+    let advertise = viewer.expect_advertise().await?;
+    assert_eq!(advertise.channels.len(), 1, "expected exactly one channel");
+    assert_eq!(advertise.channels[0].topic, "/test");
+    assert_eq!(advertise.channels[0].id, u64::from(channel.id()));
+    info!("existing participant received server info and advertisement");
 
     viewer.close().await?;
     gw.stop().await?;

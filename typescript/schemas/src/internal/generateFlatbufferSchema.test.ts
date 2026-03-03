@@ -1,5 +1,6 @@
 import { generateFlatbuffers } from "./generateFlatbufferSchema";
 import { exampleEnum, exampleMessage } from "./testFixtures";
+import { FoxgloveMessageSchema } from "./types";
 
 describe("generateFlatbuffers", () => {
   it("generates Message .fbs files", () => {
@@ -108,20 +109,45 @@ describe("generateFlatbuffers", () => {
         /// very
         /// long
         /// description
-        field_nested_array:[foxglove.NestedMessage] (id: 24);
+        field_nested_array:[foxglove.NestedMessage] (id: 27);
 
         /// An optional string field
-        field_optional_string:string (id: 25);
+        field_optional_string:string (id: 24);
 
         /// An optional bool field
-        field_optional_bool:bool (id: 26);
+        field_optional_bool:bool (id: 25);
 
         /// An optional float64 field
-        field_optional_float64:double (id: 27);
+        field_optional_float64:double (id: 26);
       }
 
       root_type ExampleMessage;
       "
     `);
+  });
+
+  it("throws on duplicate flatbuffersFieldNumber", () => {
+    const schema: FoxgloveMessageSchema = {
+      type: "message",
+      name: "DuplicateTest",
+      description: "test",
+      fields: [
+        {
+          name: "a",
+          description: "field a",
+          type: { type: "primitive", name: "uint32" },
+          flatbuffersFieldNumber: 0,
+        },
+        {
+          name: "b",
+          description: "field b",
+          type: { type: "primitive", name: "uint32" },
+          flatbuffersFieldNumber: 0,
+        },
+      ],
+    };
+    expect(() => generateFlatbuffers(schema, [])).toThrow(
+      "More than one field with flatbuffersFieldNumber 0",
+    );
   });
 });

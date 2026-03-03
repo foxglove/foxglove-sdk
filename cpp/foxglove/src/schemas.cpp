@@ -1705,6 +1705,8 @@ void imageAnnotationsToC(
   dest.texts_count = src.texts.size();
   dest.metadata = arena.map<foxglove_key_value_pair>(src.metadata, keyValuePairToC);
   dest.metadata_count = src.metadata.size();
+  dest.timestamp =
+    src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
 }
 
 void keyValuePairToC(

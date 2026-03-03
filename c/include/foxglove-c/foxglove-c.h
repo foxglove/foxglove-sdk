@@ -1115,6 +1115,10 @@ typedef struct foxglove_image_annotations {
    */
   const struct foxglove_key_value_pair *metadata;
   size_t metadata_count;
+  /**
+   * Timestamp of the image annotations. When set, individual annotation timestamps will be ignored.
+   */
+  const struct foxglove_timestamp *timestamp;
 } foxglove_image_annotations;
 
 /**

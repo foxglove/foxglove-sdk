@@ -1253,6 +1253,19 @@ Additional user-provided metadata associated with the image annotations. Keys mu
 
 </td>
 </tr>
+<tr>
+<td><code>timestamp</code> (optional)</td>
+<td>
+
+[Timestamp](#timestamp)
+
+</td>
+<td>
+
+Timestamp of the image annotations. When set, individual annotation timestamps will be ignored.
+
+</td>
+</tr>
 </table>
 
 ## KeyValuePair

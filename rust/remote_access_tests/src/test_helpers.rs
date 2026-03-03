@@ -102,6 +102,38 @@ pub struct ViewerConnection {
 }
 
 impl ViewerConnection {
+    /// Constructs a `ViewerConnection` from a pre-connected room by waiting for the
+    /// gateway to open a ws-protocol byte stream. Unlike [`connect`], this does not
+    /// retry the room connection — useful when the viewer must remain in the room while
+    /// the gateway joins (e.g., testing advertisement to existing participants).
+    pub async fn from_room(
+        room: Room,
+        mut events: tokio::sync::mpsc::UnboundedReceiver<RoomEvent>,
+    ) -> Result<Self> {
+        let deadline = tokio::time::Instant::now() + EVENT_TIMEOUT;
+        let reader = loop {
+            let event = tokio::time::timeout_at(deadline, events.recv())
+                .await
+                .context("timeout waiting for gateway to open byte stream")?
+                .context("room events channel closed")?;
+            if let RoomEvent::ByteStreamOpened {
+                reader: stream_reader,
+                topic,
+                ..
+            } = event
+            {
+                if topic == "ws-protocol" {
+                    break stream_reader.take().context("reader already taken")?;
+                }
+            }
+        };
+        Ok(Self {
+            room,
+            events,
+            frame_reader: FrameReader::new(reader),
+        })
+    }
+
     /// Connects a viewer to the LiveKit room and waits for the ws-protocol
     /// byte stream to open. Retries the connection if the gateway hasn't
     /// joined the room yet (no ByteStreamOpened within a short window).
@@ -381,10 +413,27 @@ impl TestGateway {
         ctx: &Arc<foxglove::Context>,
         filter: Option<ChannelFilterFn>,
     ) -> Result<Self> {
+        let (room_name, mock) = Self::prepare().await;
+        Self::start_with_mock(ctx, room_name, mock, filter)
+    }
+
+    /// Creates a mock server and room name without starting the gateway.
+    /// Use this when you need to perform setup (e.g., connecting a viewer)
+    /// before the gateway joins the room.
+    pub async fn prepare() -> (String, mock_server::MockServerHandle) {
         let room_name = format!("test-room-{}", unique_id());
         let mock = mock_server::start_mock_server(&room_name).await;
         info!("mock server started at {}", mock.url());
+        (room_name, mock)
+    }
 
+    /// Starts the gateway using a pre-created mock server and room name.
+    pub fn start_with_mock(
+        ctx: &Arc<foxglove::Context>,
+        room_name: String,
+        mock: mock_server::MockServerHandle,
+        filter: Option<ChannelFilterFn>,
+    ) -> Result<Self> {
         let mut gateway = foxglove::remote_access::Gateway::new()
             .name(format!("test-device-{}", unique_id()))
             .device_token(mock_server::TEST_DEVICE_TOKEN)
