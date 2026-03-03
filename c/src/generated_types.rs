@@ -2675,6 +2675,184 @@ pub unsafe extern "C" fn foxglove_image_annotations_encode(
     }
 }
 
+/// The state of a set of joints. The state of each joint (revolute or prismatic) is defined by its position, velocity, and effort (force or torque). Each joint is uniquely identified by its name.
+///
+/// This message consists of multiple arrays, one for each part of the joint state. Each array can be left empty if that data is not available. All non-empty arrays must have the same length.
+#[repr(C)]
+pub struct JointState {
+    /// Timestamp at which the joint states were recorded. All joint states in one message must be recorded at the same time.
+    pub timestamp: *const FoxgloveTimestamp,
+
+    /// Joint names. If non-empty, must have the same length as all other non-empty arrays. The name is used to uniquely associate each joint with its corresponding position, velocity, and effort values.
+    pub name: *const FoxgloveString,
+    pub name_count: usize,
+
+    /// Joint positions. Radians for revolute joints, meters for prismatic joints. Can be empty if position data is not available.
+    pub position: *const f64,
+    pub position_count: usize,
+
+    /// Joint velocities. Rad/s for revolute joints, m/s for prismatic joints. Can be empty if velocity data is not available.
+    pub velocity: *const f64,
+    pub velocity_count: usize,
+
+    /// Joint efforts (force or torque). Nm for revolute joints, N for prismatic joints. Can be empty if effort data is not available.
+    pub effort: *const f64,
+    pub effort_count: usize,
+}
+
+#[cfg(not(target_family = "wasm"))]
+impl JointState {
+    /// Create a new typed channel, and return an owned raw channel pointer to it.
+    ///
+    /// # Safety
+    /// We're trusting the caller that the channel will only be used with this type T.
+    #[unsafe(no_mangle)]
+    pub unsafe extern "C" fn foxglove_channel_create_joint_state(
+        topic: FoxgloveString,
+        context: *const FoxgloveContext,
+        channel: *mut *const FoxgloveChannel,
+    ) -> FoxgloveError {
+        if channel.is_null() {
+            tracing::error!("channel cannot be null");
+            return FoxgloveError::ValueError;
+        }
+        unsafe {
+            let result =
+                do_foxglove_channel_create::<foxglove::messages::JointState>(topic, context);
+            result_to_c(result, channel)
+        }
+    }
+}
+
+impl BorrowToNative for JointState {
+    type NativeType = foxglove::messages::JointState;
+
+    unsafe fn borrow_to_native(
+        &self,
+        #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
+    ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
+        let name = unsafe {
+            arena
+                .as_mut()
+                .map_strings(self.name, self.name_count, "name")?
+        };
+
+        Ok(ManuallyDrop::new(foxglove::messages::JointState {
+            timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
+            name: ManuallyDrop::into_inner(name),
+            position: ManuallyDrop::into_inner(unsafe {
+                vec_from_raw(self.position as *mut f64, self.position_count)
+            }),
+            velocity: ManuallyDrop::into_inner(unsafe {
+                vec_from_raw(self.velocity as *mut f64, self.velocity_count)
+            }),
+            effort: ManuallyDrop::into_inner(unsafe {
+                vec_from_raw(self.effort as *mut f64, self.effort_count)
+            }),
+        }))
+    }
+}
+
+/// Log a JointState message to a channel.
+///
+/// # Safety
+/// The channel must have been created for this type with foxglove_channel_create_joint_state.
+#[cfg(not(target_family = "wasm"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn foxglove_channel_log_joint_state(
+    channel: Option<&FoxgloveChannel>,
+    msg: Option<&JointState>,
+    log_time: Option<&u64>,
+    sink_id: FoxgloveSinkId,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { JointState::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
+            log_msg_to_channel(channel, &*msg, log_time, sink_id)
+        }
+        Err(e) => {
+            tracing::error!("JointState: {}", e);
+            e.into()
+        }
+    }
+}
+
+/// Get the JointState schema.
+///
+/// All buffers in the returned schema are statically allocated.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_joint_state_schema() -> FoxgloveSchema {
+    let native = foxglove::messages::JointState::get_schema().expect("JointState schema is Some");
+    let name: &'static str = "foxglove.JointState";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("JointState schema data is static");
+    };
+    FoxgloveSchema {
+        name: name.into(),
+        encoding: encoding.into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
+/// Encode a JointState message as protobuf to the buffer provided.
+///
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+/// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+/// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+///
+/// # Safety
+/// ptr must be a valid pointer to a memory region at least len bytes long.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_joint_state_encode(
+    msg: Option<&JointState>,
+    ptr: *mut u8,
+    len: usize,
+    encoded_len: Option<&mut usize>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { JointState::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            if len == 0 || ptr.is_null() {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = msg
+                        .encoded_len()
+                        .expect("foxglove messages return Some(len)");
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
+            if let Err(encode_error) = msg.encode(&mut buf) {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
+            }
+            FoxgloveError::Ok
+        }
+        Err(e) => {
+            tracing::error!("JointState: {}", e);
+            FoxgloveError::EncodeError
+        }
+    }
+}
+
 /// A key with its associated value
 #[repr(C)]
 pub struct KeyValuePair {

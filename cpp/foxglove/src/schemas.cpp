@@ -34,6 +34,7 @@ void gridToC(foxglove_grid& dest, const Grid& src, Arena& arena);
 void imageAnnotationsToC(
   foxglove_image_annotations& dest, const ImageAnnotations& src, Arena& arena
 );
+void jointStateToC(foxglove_joint_state& dest, const JointState& src, Arena& arena);
 void keyValuePairToC(foxglove_key_value_pair& dest, const KeyValuePair& src, Arena& arena);
 void laserScanToC(foxglove_laser_scan& dest, const LaserScan& src, Arena& arena);
 void linePrimitiveToC(foxglove_line_primitive& dest, const LinePrimitive& src, Arena& arena);
@@ -535,6 +536,41 @@ uint64_t ImageAnnotationsChannel::id() const noexcept {
 }
 
 bool ImageAnnotationsChannel::has_sinks() const noexcept {
+  return foxglove_channel_has_sinks(impl_.get());
+}
+
+FoxgloveResult<JointStateChannel> JointStateChannel::create(
+  const std::string_view& topic, const Context& context
+) {
+  const foxglove_channel* channel = nullptr;
+  foxglove_error error =
+    foxglove_channel_create_joint_state({topic.data(), topic.size()}, context.getInner(), &channel);
+  if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
+    return tl::unexpected(FoxgloveError(error));
+  }
+  return JointStateChannel(ChannelUniquePtr(channel));
+}
+
+FoxgloveError JointStateChannel::log(
+  const JointState& msg, std::optional<uint64_t> log_time, std::optional<uint64_t> sink_id
+) noexcept {
+  Arena arena;
+  foxglove_joint_state c_msg;
+  jointStateToC(c_msg, msg, arena);
+  return FoxgloveError(foxglove_channel_log_joint_state(
+    impl_.get(), &c_msg, log_time ? &*log_time : nullptr, sink_id ? *sink_id : 0
+  ));
+}
+
+void JointStateChannel::close() noexcept {
+  foxglove_channel_close(impl_.get());
+}
+
+uint64_t JointStateChannel::id() const noexcept {
+  return foxglove_channel_get_id(impl_.get());
+}
+
+bool JointStateChannel::has_sinks() const noexcept {
   return foxglove_channel_has_sinks(impl_.get());
 }
 
@@ -1709,6 +1745,24 @@ void imageAnnotationsToC(
     src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
 }
 
+void jointStateToC(
+  foxglove_joint_state& dest, const JointState& src, [[maybe_unused]] Arena& arena
+) {
+  dest.timestamp =
+    src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
+  dest.name =
+    arena.map<foxglove_string>(src.name, [](foxglove_string& dest, const std::string& src, Arena&) {
+      dest = {src.data(), src.size()};
+    });
+  dest.name_count = src.name.size();
+  dest.position = src.position.data();
+  dest.position_count = src.position.size();
+  dest.velocity = src.velocity.data();
+  dest.velocity_count = src.velocity.size();
+  dest.effort = src.effort.data();
+  dest.effort_count = src.effort.size();
+}
+
 void keyValuePairToC(
   foxglove_key_value_pair& dest, const KeyValuePair& src, [[maybe_unused]] Arena& arena
 ) {
@@ -2098,6 +2152,13 @@ FoxgloveError ImageAnnotations::encode(uint8_t* ptr, size_t len, size_t* encoded
   return FoxgloveError(foxglove_image_annotations_encode(&c_msg, ptr, len, encoded_len));
 }
 
+FoxgloveError JointState::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
+  Arena arena;
+  foxglove_joint_state c_msg;
+  jointStateToC(c_msg, *this, arena);
+  return FoxgloveError(foxglove_joint_state_encode(&c_msg, ptr, len, encoded_len));
+}
+
 FoxgloveError KeyValuePair::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_key_value_pair c_msg;
@@ -2418,6 +2479,16 @@ Schema Grid::schema() {
 
 Schema ImageAnnotations::schema() {
   struct foxglove_schema c_schema = foxglove_image_annotations_schema();
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data_len = c_schema.data_len;
+  return result;
+}
+
+Schema JointState::schema() {
+  struct foxglove_schema c_schema = foxglove_joint_state_schema();
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);

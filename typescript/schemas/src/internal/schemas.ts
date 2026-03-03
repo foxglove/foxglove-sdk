@@ -1755,6 +1755,49 @@ const LaserScan: FoxgloveMessageSchema = {
   ],
 };
 
+const JointState: FoxgloveMessageSchema = {
+  type: "message",
+  name: "JointState",
+  description:
+    "The state of a set of joints. The state of each joint (revolute or prismatic) is defined by its position, velocity, and effort (force or torque). Each joint is uniquely identified by its name.\n\nThis message consists of multiple arrays, one for each part of the joint state. Each array can be left empty if that data is not available. All non-empty arrays must have the same length.",
+  fields: [
+    {
+      name: "timestamp",
+      type: { type: "nested", schema: Timestamp },
+      description:
+        "Timestamp at which the joint states were recorded. All joint states in one message must be recorded at the same time.",
+    },
+    {
+      name: "name",
+      type: { type: "primitive", name: "string" },
+      description:
+        "Joint names. If non-empty, must have the same length as all other non-empty arrays. The name is used to uniquely associate each joint with its corresponding position, velocity, and effort values.",
+      array: true,
+    },
+    {
+      name: "position",
+      type: { type: "primitive", name: "float64" },
+      description:
+        "Joint positions. Radians for revolute joints, meters for prismatic joints. Can be empty if position data is not available.",
+      array: true,
+    },
+    {
+      name: "velocity",
+      type: { type: "primitive", name: "float64" },
+      description:
+        "Joint velocities. Rad/s for revolute joints, m/s for prismatic joints. Can be empty if velocity data is not available.",
+      array: true,
+    },
+    {
+      name: "effort",
+      type: { type: "primitive", name: "float64" },
+      description:
+        "Joint efforts (force or torque). Nm for revolute joints, N for prismatic joints. Can be empty if effort data is not available.",
+      array: true,
+    },
+  ],
+};
+
 export const foxgloveMessageSchemas = {
   ArrowPrimitive,
   CameraCalibration,
@@ -1771,6 +1814,7 @@ export const foxgloveMessageSchemas = {
   Grid,
   VoxelGrid,
   ImageAnnotations,
+  JointState,
   KeyValuePair,
   LaserScan,
   LinePrimitive,

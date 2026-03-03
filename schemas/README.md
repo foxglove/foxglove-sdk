@@ -32,6 +32,7 @@ If the IDL does not support optional fields (e.g. ROS) you must specify a value 
 - [GeoJSON](#geojson)
 - [Grid](#grid)
 - [ImageAnnotations](#imageannotations)
+- [JointState](#jointstate)
 - [KeyValuePair](#keyvaluepair)
 - [LaserScan](#laserscan)
 - [LinePrimitive](#lineprimitive)
@@ -1263,6 +1264,85 @@ Additional user-provided metadata associated with the image annotations. Keys mu
 <td>
 
 Timestamp of the image annotations. When set, individual annotation timestamps will be ignored.
+
+</td>
+</tr>
+</table>
+
+## JointState
+
+The state of a set of joints. The state of each joint (revolute or prismatic) is defined by its position, velocity, and effort (force or torque). Each joint is uniquely identified by its name.
+
+This message consists of multiple arrays, one for each part of the joint state. Each array can be left empty if that data is not available. All non-empty arrays must have the same length.
+
+<table>
+  <tr>
+    <th>field</th>
+    <th>type</th>
+    <th>description</th>
+  </tr>
+<tr>
+<td><code>timestamp</code></td>
+<td>
+
+[Timestamp](#timestamp)
+
+</td>
+<td>
+
+Timestamp at which the joint states were recorded. All joint states in one message must be recorded at the same time.
+
+</td>
+</tr>
+<tr>
+<td><code>name</code></td>
+<td>
+
+string[]
+
+</td>
+<td>
+
+Joint names. If non-empty, must have the same length as all other non-empty arrays. The name is used to uniquely associate each joint with its corresponding position, velocity, and effort values.
+
+</td>
+</tr>
+<tr>
+<td><code>position</code></td>
+<td>
+
+float64[]
+
+</td>
+<td>
+
+Joint positions. Radians for revolute joints, meters for prismatic joints. Can be empty if position data is not available.
+
+</td>
+</tr>
+<tr>
+<td><code>velocity</code></td>
+<td>
+
+float64[]
+
+</td>
+<td>
+
+Joint velocities. Rad/s for revolute joints, m/s for prismatic joints. Can be empty if velocity data is not available.
+
+</td>
+</tr>
+<tr>
+<td><code>effort</code></td>
+<td>
+
+float64[]
+
+</td>
+<td>
+
+Joint efforts (force or torque). Nm for revolute joints, N for prismatic joints. Can be empty if effort data is not available.
 
 </td>
 </tr>
