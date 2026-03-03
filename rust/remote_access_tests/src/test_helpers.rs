@@ -320,6 +320,67 @@ impl ViewerConnection {
         }
     }
 
+    /// Waits for a per-channel byte stream to open and returns a [`FrameReader`]
+    /// for it.
+    ///
+    /// Data plane messages are delivered on per-channel byte streams (topic `"ch-{id}"`)
+    /// rather than the control-plane `"ws-protocol"` stream. Each time the subscriber
+    /// set changes the gateway opens a new byte stream, so this method waits for the
+    /// corresponding `ByteStreamOpened` event.
+    pub async fn expect_channel_byte_stream(&mut self) -> Result<FrameReader> {
+        let deadline = tokio::time::Instant::now() + READ_TIMEOUT;
+        loop {
+            let event = tokio::time::timeout_at(deadline, self.events.recv())
+                .await
+                .context("timeout waiting for channel byte stream")?
+                .context("room events channel closed")?;
+            match event {
+                RoomEvent::ByteStreamOpened { reader, topic, .. } if topic.starts_with("ch-") => {
+                    let stream_reader = reader.take().context("reader already taken")?;
+                    return Ok(FrameReader::new(stream_reader));
+                }
+                _ => continue,
+            }
+        }
+    }
+
+    /// Waits for a per-channel byte stream to open and reads the next MessageData
+    /// frame from it.
+    ///
+    /// This is a convenience wrapper around [`expect_channel_byte_stream`] for
+    /// tests that only need a single message from a freshly opened stream.
+    pub async fn expect_new_bytestream_and_message_data(
+        &mut self,
+    ) -> Result<foxglove::protocol::v2::server::MessageData<'static>> {
+        let mut reader = self.expect_channel_byte_stream().await?;
+        let msg = reader.next_server_message().await?;
+        match msg {
+            ServerMessage::MessageData(data) => Ok(data),
+            other => {
+                anyhow::bail!("expected MessageData on channel stream, got: {other:?}")
+            }
+        }
+    }
+
+    /// Waits for a `ParticipantDisconnected` room event for the given identity.
+    ///
+    /// Used to synchronize on a participant's departure before sending further messages,
+    /// ensuring the gateway has had a chance to update its subscription state.
+    pub async fn wait_for_participant_disconnected(&mut self, identity: &str) -> Result<()> {
+        let deadline = tokio::time::Instant::now() + EVENT_TIMEOUT;
+        loop {
+            let event = tokio::time::timeout_at(deadline, self.events.recv())
+                .await
+                .context("timeout waiting for ParticipantDisconnected event")?
+                .context("room events channel closed")?;
+            if let RoomEvent::ParticipantDisconnected(participant) = event {
+                if participant.identity().0 == identity {
+                    return Ok(());
+                }
+            }
+        }
+    }
+
     pub async fn close(self) -> Result<()> {
         self.room
             .close()

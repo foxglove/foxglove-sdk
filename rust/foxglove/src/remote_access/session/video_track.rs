@@ -10,6 +10,7 @@ use crate::img2yuv::{ImageMessage, Yuv420Buffer};
 ///
 /// Each variant identifies which message format decoder to use for extracting image data.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[allow(clippy::enum_variant_names)]
 pub enum VideoInputSchema {
     /// `foxglove.CompressedImage` with protobuf encoding.
     FoxgloveCompressedImage,

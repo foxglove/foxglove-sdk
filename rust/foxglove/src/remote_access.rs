@@ -1,6 +1,7 @@
 //! Remote access implementation.
 
 mod capability;
+mod channel_subscription;
 mod client;
 mod connection;
 mod credentials_provider;
@@ -67,6 +68,36 @@ impl From<CredentialsError> for RemoteAccessError {
         match error {
             CredentialsError::FetchFailed(e) => RemoteAccessError::Auth(e),
         }
+    }
+}
+
+impl From<livekit::StreamError> for Box<RemoteAccessError> {
+    fn from(e: livekit::StreamError) -> Self {
+        Box::new(RemoteAccessError::from(e))
+    }
+}
+
+impl From<livekit::RoomError> for Box<RemoteAccessError> {
+    fn from(e: livekit::RoomError) -> Self {
+        Box::new(RemoteAccessError::from(e))
+    }
+}
+
+impl From<FoxgloveApiClientError> for Box<RemoteAccessError> {
+    fn from(e: FoxgloveApiClientError) -> Self {
+        Box::new(RemoteAccessError::from(e))
+    }
+}
+
+impl From<CredentialsError> for Box<RemoteAccessError> {
+    fn from(e: CredentialsError) -> Self {
+        Box::new(RemoteAccessError::from(e))
+    }
+}
+
+impl From<std::io::Error> for Box<RemoteAccessError> {
+    fn from(e: std::io::Error) -> Self {
+        Box::new(RemoteAccessError::from(e))
     }
 }
 

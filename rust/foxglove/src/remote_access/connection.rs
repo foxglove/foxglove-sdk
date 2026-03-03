@@ -22,7 +22,7 @@ use crate::{
     },
 };
 
-type Result<T> = std::result::Result<T, RemoteAccessError>;
+type Result<T> = std::result::Result<T, Box<RemoteAccessError>>;
 
 const AUTH_RETRY_PERIOD: Duration = Duration::from_secs(30);
 const DEFAULT_MESSAGE_BACKLOG_SIZE: usize = 1024;

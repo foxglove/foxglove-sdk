@@ -6,6 +6,7 @@ use smallvec::SmallVec;
 use tracing::{debug, info};
 
 use crate::protocol::v2::server::advertise;
+use crate::remote_access::channel_subscription::ChannelSubscription;
 use crate::remote_access::participant::Participant;
 use crate::remote_access::session::{VideoInputSchema, VideoPublisher};
 use crate::{ChannelId, RawChannel};
@@ -22,8 +23,8 @@ pub(crate) struct SessionState {
     participants: HashMap<ParticipantIdentity, Arc<Participant>>,
     /// Channels that have been advertised to participants.
     channels: HashMap<ChannelId, Arc<RawChannel>>,
-    /// Maps channel ID to the participant identities subscribed to that channel.
-    subscriptions: HashMap<ChannelId, SmallVec<[ParticipantIdentity; 1]>>,
+    /// Maps channel ID to subscriber identities and a version counter.
+    subscriptions: HashMap<ChannelId, ChannelSubscription>,
     /// Detected video input schemas for channels.
     video_schemas: HashMap<ChannelId, VideoInputSchema>,
     /// Active video publishers, keyed by channel ID.
@@ -77,9 +78,9 @@ impl SessionState {
         info!("removed participant {identity:?}");
 
         let mut last_unsubscribed: SmallVec<[ChannelId; 4]> = SmallVec::new();
-        self.subscriptions.retain(|&channel_id, subscribers| {
-            subscribers.retain(|id| id != identity);
-            if subscribers.is_empty() {
+        self.subscriptions.retain(|&channel_id, sub| {
+            sub.remove(identity);
+            if sub.is_empty() {
                 last_unsubscribed.push(channel_id);
                 false
             } else {
@@ -187,13 +188,16 @@ impl SessionState {
     ) -> SmallVec<[ChannelId; 4]> {
         let mut first_subscribed: SmallVec<[ChannelId; 4]> = SmallVec::new();
         for &channel_id in channel_ids {
-            let subscribers = self.subscriptions.entry(channel_id).or_default();
-            if subscribers.contains(participant.identity()) {
+            let sub = self
+                .subscriptions
+                .entry(channel_id)
+                .or_insert_with(ChannelSubscription::new);
+            if sub.subscribers().contains(participant.identity()) {
                 info!("{participant} is already subscribed to channel {channel_id:?}; ignoring",);
                 continue;
             }
-            let is_first = subscribers.is_empty();
-            subscribers.push(participant.identity().clone());
+            let is_first = sub.is_empty();
+            sub.add(participant.identity().clone());
             debug!("{participant} subscribed to channel {channel_id:?}");
             if is_first {
                 first_subscribed.push(channel_id);
@@ -212,20 +216,16 @@ impl SessionState {
     ) -> SmallVec<[ChannelId; 4]> {
         let mut last_unsubscribed: SmallVec<[ChannelId; 4]> = SmallVec::new();
         for &channel_id in channel_ids {
-            let Some(subscribers) = self.subscriptions.get_mut(&channel_id) else {
+            let Some(sub) = self.subscriptions.get_mut(&channel_id) else {
                 info!("{participant} is not subscribed to channel {channel_id:?}; ignoring",);
                 continue;
             };
-            let Some(pos) = subscribers
-                .iter()
-                .position(|id| id == participant.identity())
-            else {
+            if !sub.remove(participant.identity()) {
                 info!("{participant} is not subscribed to channel {channel_id:?}; ignoring",);
                 continue;
-            };
-            subscribers.swap_remove(pos);
+            }
             debug!("{participant} unsubscribed from channel {channel_id:?}");
-            if subscribers.is_empty() {
+            if sub.is_empty() {
                 self.subscriptions.remove(&channel_id);
                 last_unsubscribed.push(channel_id);
             }
@@ -233,21 +233,17 @@ impl SessionState {
         last_unsubscribed
     }
 
-    /// Collects subscriber identities for a channel, or returns `None` if no
-    /// subscriptions exist.
-    pub fn collect_subscribers(
-        &self,
-        channel_id: &ChannelId,
-    ) -> Option<SmallVec<[ParticipantIdentity; 8]>> {
-        self.subscriptions
-            .get(channel_id)
-            .map(|ids| ids.iter().cloned().collect())
+    /// Returns the current subscription for a channel, if any.
+    pub fn get_subscription(&self, channel_id: &ChannelId) -> Option<&ChannelSubscription> {
+        self.subscriptions.get(channel_id)
     }
 
     /// Returns the number of subscribers for a channel.
     #[cfg(test)]
     pub fn get_subscriber_count(&self, channel_id: &ChannelId) -> usize {
-        self.subscriptions.get(channel_id).map_or(0, |s| s.len())
+        self.subscriptions
+            .get(channel_id)
+            .map_or(0, |s| s.subscribers().len())
     }
 
     /// Returns the number of advertised channels.
@@ -486,13 +482,13 @@ mod tests {
     }
 
     #[test]
-    fn collect_subscribers_returns_none_for_no_subscriptions() {
+    fn get_subscription_returns_none_for_no_subscriptions() {
         let state = SessionState::new();
-        assert!(state.collect_subscribers(&ChannelId::new(1)).is_none());
+        assert!(state.get_subscription(&ChannelId::new(1)).is_none());
     }
 
     #[test]
-    fn collect_subscribers_returns_subscriber_identities() {
+    fn get_subscription_returns_subscriber_identities() {
         let mut state = SessionState::new();
         let (id_a, pa) = make_participant("alice");
         let (id_b, pb) = make_participant("bob");
@@ -501,10 +497,78 @@ mod tests {
         state.subscribe(&pa, &[ch]);
         state.subscribe(&pb, &[ch]);
 
-        let subs = state.collect_subscribers(&ch).unwrap();
-        assert_eq!(subs.len(), 2);
-        assert!(subs.contains(&id_a));
-        assert!(subs.contains(&id_b));
+        let sub = state.get_subscription(&ch).unwrap();
+        assert_eq!(sub.subscribers().len(), 2);
+        assert!(sub.subscribers().contains(&id_a));
+        assert!(sub.subscribers().contains(&id_b));
+    }
+
+    #[test]
+    fn subscription_version_increments_on_subscribe() {
+        let mut state = SessionState::new();
+        let (_id_a, pa) = make_participant("alice");
+        let (_id_b, pb) = make_participant("bob");
+        let ch = ChannelId::new(1);
+
+        state.subscribe(&pa, &[ch]);
+        let v1 = state.get_subscription(&ch).unwrap().version();
+
+        state.subscribe(&pb, &[ch]);
+        let v2 = state.get_subscription(&ch).unwrap().version();
+
+        assert_ne!(v1, v2);
+    }
+
+    #[test]
+    fn subscription_version_does_not_increment_on_duplicate_subscribe() {
+        let mut state = SessionState::new();
+        let (_id, p) = make_participant("alice");
+        let ch = ChannelId::new(1);
+
+        state.subscribe(&p, &[ch]);
+        let v1 = state.get_subscription(&ch).unwrap().version();
+
+        state.subscribe(&p, &[ch]);
+        let v2 = state.get_subscription(&ch).unwrap().version();
+
+        assert_eq!(v1, v2);
+    }
+
+    #[test]
+    fn subscription_version_increments_on_unsubscribe() {
+        let mut state = SessionState::new();
+        let (_id_a, pa) = make_participant("alice");
+        let (_id_b, pb) = make_participant("bob");
+        let ch = ChannelId::new(1);
+
+        state.subscribe(&pa, &[ch]);
+        state.subscribe(&pb, &[ch]);
+        let v1 = state.get_subscription(&ch).unwrap().version();
+
+        state.unsubscribe(&pa, &[ch]);
+        let v2 = state.get_subscription(&ch).unwrap().version();
+
+        assert_ne!(v1, v2);
+    }
+
+    #[test]
+    fn subscription_version_increments_on_remove_participant() {
+        let mut state = SessionState::new();
+        let (id_a, pa) = make_participant("alice");
+        let (id_b, pb) = make_participant("bob");
+        let ch = ChannelId::new(1);
+
+        state.insert_participant(id_a.clone(), pa.clone());
+        state.insert_participant(id_b, pb.clone());
+
+        state.subscribe(&pa, &[ch]);
+        state.subscribe(&pb, &[ch]);
+        let v1 = state.get_subscription(&ch).unwrap().version();
+
+        state.remove_participant(&id_a);
+        let v2 = state.get_subscription(&ch).unwrap().version();
+
+        assert_ne!(v1, v2);
     }
 
     #[test]
