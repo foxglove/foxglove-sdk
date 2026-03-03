@@ -1,5 +1,7 @@
 {
   "extends": "@foxglove/tsconfig/base",
+  // Only include src/; the root-level .d.ts shims (internal.d.ts, jsonschema.d.ts) reference
+  // ./dist paths, so including them here would conflict with the build output.
   "include": ["./src/**/*"],
   "exclude": ["./dist"],
   "compilerOptions": {
