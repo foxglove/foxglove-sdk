@@ -320,16 +320,14 @@ impl ViewerConnection {
         }
     }
 
-    /// Waits for a per-channel byte stream to open and reads the next MessageData
-    /// frame from it.
+    /// Waits for a per-channel byte stream to open and returns a [`FrameReader`]
+    /// for it.
     ///
     /// Data plane messages are delivered on per-channel byte streams (topic `"ch-{id}"`)
     /// rather than the control-plane `"ws-protocol"` stream. Each time the subscriber
     /// set changes the gateway opens a new byte stream, so this method waits for the
     /// corresponding `ByteStreamOpened` event.
-    pub async fn expect_new_bytestream_and_message_data(
-        &mut self,
-    ) -> Result<foxglove::protocol::v2::server::MessageData<'static>> {
+    pub async fn expect_channel_byte_stream(&mut self) -> Result<FrameReader> {
         let deadline = tokio::time::Instant::now() + READ_TIMEOUT;
         loop {
             let event = tokio::time::timeout_at(deadline, self.events.recv())
@@ -338,27 +336,28 @@ impl ViewerConnection {
                 .context("room events channel closed")?;
             match event {
                 RoomEvent::ByteStreamOpened { reader, topic, .. } if topic.starts_with("ch-") => {
-                    let id_str = topic.trim_start_matches("ch-");
-                    let parsed_channel_id = id_str
-                        .parse::<u64>()
-                        .with_context(|| format!("invalid channel id in topic: {topic}"))?;
                     let stream_reader = reader.take().context("reader already taken")?;
-                    let mut reader = FrameReader::new(stream_reader);
-                    let msg = reader.next_server_message().await?;
-                    return match msg {
-                        ServerMessage::MessageData(data) => {
-                            assert_eq!(
-                                data.channel_id, parsed_channel_id,
-                                "channel id in bytestream topic does not match MessageData"
-                            );
-                            Ok(data)
-                        }
-                        other => {
-                            anyhow::bail!("expected MessageData on channel stream, got: {other:?}")
-                        }
-                    };
+                    return Ok(FrameReader::new(stream_reader));
                 }
                 _ => continue,
+            }
+        }
+    }
+
+    /// Waits for a per-channel byte stream to open and reads the next MessageData
+    /// frame from it.
+    ///
+    /// This is a convenience wrapper around [`expect_channel_byte_stream`] for
+    /// tests that only need a single message from a freshly opened stream.
+    pub async fn expect_new_bytestream_and_message_data(
+        &mut self,
+    ) -> Result<foxglove::protocol::v2::server::MessageData<'static>> {
+        let mut reader = self.expect_channel_byte_stream().await?;
+        let msg = reader.next_server_message().await?;
+        match msg {
+            ServerMessage::MessageData(data) => Ok(data),
+            other => {
+                anyhow::bail!("expected MessageData on channel stream, got: {other:?}")
             }
         }
     }

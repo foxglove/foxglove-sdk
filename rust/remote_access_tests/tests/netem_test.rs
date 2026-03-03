@@ -14,6 +14,7 @@
 use std::time::Duration;
 
 use anyhow::{Context as _, Result};
+use foxglove::protocol::v2::server::ServerMessage;
 use remote_access_tests::test_helpers::{TestGateway, ViewerConnection};
 use tracing::info;
 use tracing_test::traced_test;
@@ -253,7 +254,7 @@ async fn netem_message_delivery_under_impairment() -> Result<()> {
     let payload = b"netem-hello";
     channel.log(payload);
 
-    let msg = viewer.expect_message_data().await?;
+    let msg = viewer.expect_new_bytestream_and_message_data().await?;
     assert_eq!(msg.channel_id, channel_id);
     assert_eq!(msg.data.as_ref(), payload);
     info!("message delivered under impairment");
@@ -293,16 +294,22 @@ async fn netem_burst_delivery_under_impairment() -> Result<()> {
         channel.log(payload.as_bytes());
     }
 
-    // Verify all messages arrive in order.
+    // Wait for the per-channel byte stream to open, then read all messages from it.
+    let mut ch_reader = viewer.expect_channel_byte_stream().await?;
     for i in 0..count {
-        let msg = viewer.expect_message_data().await?;
+        let msg = ch_reader.next_server_message().await?;
         let expected = format!("msg-{i:04}");
-        assert_eq!(msg.channel_id, channel_id);
-        assert_eq!(
-            msg.data.as_ref(),
-            expected.as_bytes(),
-            "message {i} out of order or missing"
-        );
+        match msg {
+            ServerMessage::MessageData(data) => {
+                assert_eq!(data.channel_id, channel_id);
+                assert_eq!(
+                    data.data.as_ref(),
+                    expected.as_bytes(),
+                    "message {i} out of order or missing"
+                );
+            }
+            other => anyhow::bail!("expected MessageData, got: {other:?}"),
+        }
     }
     info!("all {count} messages delivered in order under impairment");
 
