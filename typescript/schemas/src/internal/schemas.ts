@@ -1476,22 +1476,37 @@ const ImageAnnotations: FoxgloveMessageSchema = {
   description: "Array of annotations for a 2D image",
   fields: [
     {
+      name: "timestamp",
+      type: { type: "nested", schema: Timestamp },
+      description:
+        "Timestamp of the image annotations. When set, individual annotation timestamps will be ignored.",
+      optional: true,
+      protobufFieldNumber: 5,
+      flatbuffersFieldNumber: 4,
+    },
+    {
       name: "circles",
       type: { type: "nested", schema: CircleAnnotation },
       description: "Circle annotations",
       array: true,
+      protobufFieldNumber: 1,
+      flatbuffersFieldNumber: 0,
     },
     {
       name: "points",
       type: { type: "nested", schema: PointsAnnotation },
       description: "Points annotations",
       array: true,
+      protobufFieldNumber: 2,
+      flatbuffersFieldNumber: 1,
     },
     {
       name: "texts",
       type: { type: "nested", schema: TextAnnotation },
       description: "Text annotations",
       array: true,
+      protobufFieldNumber: 3,
+      flatbuffersFieldNumber: 2,
     },
     {
       name: "metadata",
@@ -1500,13 +1515,8 @@ const ImageAnnotations: FoxgloveMessageSchema = {
         "Additional user-provided metadata associated with the image annotations. Keys must be unique.",
       array: true,
       optional: true,
-    },
-    {
-      name: "timestamp",
-      type: { type: "nested", schema: Timestamp },
-      description:
-        "Timestamp of the image annotations. When set, individual annotation timestamps will be ignored.",
-      optional: true,
+      protobufFieldNumber: 4,
+      flatbuffersFieldNumber: 3,
     },
   ],
 };

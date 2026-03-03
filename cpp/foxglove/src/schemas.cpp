@@ -1697,6 +1697,8 @@ void gridToC(foxglove_grid& dest, const Grid& src, [[maybe_unused]] Arena& arena
 void imageAnnotationsToC(
   foxglove_image_annotations& dest, const ImageAnnotations& src, [[maybe_unused]] Arena& arena
 ) {
+  dest.timestamp =
+    src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
   dest.circles = arena.map<foxglove_circle_annotation>(src.circles, circleAnnotationToC);
   dest.circles_count = src.circles.size();
   dest.points = arena.map<foxglove_points_annotation>(src.points, pointsAnnotationToC);
@@ -1705,8 +1707,6 @@ void imageAnnotationsToC(
   dest.texts_count = src.texts.size();
   dest.metadata = arena.map<foxglove_key_value_pair>(src.metadata, keyValuePairToC);
   dest.metadata_count = src.metadata.size();
-  dest.timestamp =
-    src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
 }
 
 void keyValuePairToC(

@@ -12,6 +12,9 @@ package foxglove;
 
 // Array of annotations for a 2D image
 message ImageAnnotations {
+  // Timestamp of the image annotations. When set, individual annotation timestamps will be ignored.
+  optional google.protobuf.Timestamp timestamp = 5;
+
   // Circle annotations
   repeated foxglove.CircleAnnotation circles = 1;
 
@@ -23,7 +26,4 @@ message ImageAnnotations {
 
   // Additional user-provided metadata associated with the image annotations. Keys must be unique.
   repeated foxglove.KeyValuePair metadata = 4;
-
-  // Timestamp of the image annotations. When set, individual annotation timestamps will be ignored.
-  optional google.protobuf.Timestamp timestamp = 5;
 }
