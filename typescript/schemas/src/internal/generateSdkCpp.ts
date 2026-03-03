@@ -303,6 +303,9 @@ function cppToC(schema: FoxgloveMessageSchema, copyTypes: Set<string>): string[]
     const dstName = srcName;
     if (field.array != undefined) {
       if (typeof field.array === "number") {
+        if (field.type.type === "primitive" && field.type.name === "string") {
+          return `for (size_t i = 0; i < src.${srcName}.size(); i++) {\n      dest.${dstName}[i] = {src.${srcName}[i].data(), src.${srcName}[i].size()};\n    }`;
+        }
         return `::memcpy(dest.${dstName}, src.${srcName}.data(), src.${srcName}.size() * sizeof(*src.${srcName}.data()));`;
       } else {
         if (field.type.type === "nested") {
