@@ -14,6 +14,8 @@ export default defineConfig(
       "python/foxglove-sdk/python/foxglove/notebook/static",
       "target",
       "typescript/*/src/jsonschema",
+      "typescript/messages/internal.d.ts",
+      "typescript/messages/jsonschema.d.ts",
     ],
   },
   ...foxglove.configs.base,
