@@ -240,9 +240,6 @@ function generateMessageClass(schema: FoxgloveMessageSchema): string {
     switch (field.type.type) {
       case "primitive":
         if (field.array != undefined) {
-          if (field.type.name === "string") {
-            return `${safeRustName(field.name)}.unwrap_or_default().into_iter().map(String::from).collect()`;
-          }
           return `${safeRustName(field.name)}.unwrap_or_default()`;
         }
         if (field.type.name === "string") {
@@ -380,7 +377,7 @@ function rustOutputType(field: FoxgloveMessageField): string {
     case "primitive":
       switch (field.type.name) {
         case "string":
-          type = "&str";
+          type = isVec ? "String" : "&str";
           break;
         case "float64":
           type = "f64";

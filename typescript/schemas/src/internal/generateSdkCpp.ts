@@ -303,6 +303,9 @@ function cppToC(schema: FoxgloveMessageSchema, copyTypes: Set<string>): string[]
     const dstName = srcName;
     if (field.array != undefined) {
       if (typeof field.array === "number") {
+        if (field.type.type === "primitive" && field.type.name === "string") {
+          return `for (size_t i = 0; i < src.${srcName}.size(); i++) {\n      dest.${dstName}[i] = {src.${srcName}[i].data(), src.${srcName}[i].size()};\n    }`;
+        }
         return `::memcpy(dest.${dstName}, src.${srcName}.data(), src.${srcName}.size() * sizeof(*src.${srcName}.data()));`;
       } else {
         if (field.type.type === "nested") {
@@ -314,6 +317,9 @@ function cppToC(schema: FoxgloveMessageSchema, copyTypes: Set<string>): string[]
           }
         } else if (field.type.type === "primitive") {
           assert(field.type.name !== "bytes");
+          if (field.type.name === "string") {
+            return `dest.${dstName} = arena.map<foxglove_string>(src.${srcName}, [](foxglove_string& dest, const std::string& src, Arena&) {\n      dest = {src.data(), src.size()};\n    });\n    dest.${dstName}_count = src.${srcName}.size();`;
+          }
           return `dest.${dstName} = src.${srcName}.data();\n    dest.${dstName}_count = src.${srcName}.size();`;
         } else {
           throw Error(`unsupported array type: ${field.type.type}`);

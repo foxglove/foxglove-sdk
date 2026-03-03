@@ -167,6 +167,17 @@ impl BorrowToNative for ${name} {
         switch (field.type.type) {
           case "primitive":
             if (field.type.name === "string") {
+              if (field.array != undefined) {
+                if (typeof field.array === "number") {
+                  return [
+                    `let ${fieldName} = unsafe { arena.as_mut().map_strings(self.${fieldName}.as_ptr(), self.${fieldName}.len(), "${field.name}")? };`,
+                  ];
+                } else {
+                  return [
+                    `let ${fieldName} = unsafe { arena.as_mut().map_strings(self.${fieldName}, self.${fieldName}_count, "${field.name}")? };`,
+                  ];
+                }
+              }
               return [
                 `let ${fieldName} = unsafe { string_from_raw(self.${fieldName}.as_ptr() as *const _, self.${fieldName}.len(), "${field.name}")? };`,
               ];
@@ -192,12 +203,18 @@ impl BorrowToNative for ${name} {
         if (field.array != undefined) {
           if (typeof field.array === "number") {
             assert(field.type.type === "primitive", `unsupported array type: ${field.type.type}`);
+            if (field.type.name === "string") {
+              return `${fieldName}: ManuallyDrop::into_inner(${fieldName})`;
+            }
             return `${fieldName}: ManuallyDrop::into_inner(unsafe { vec_from_raw(self.${fieldName}.as_ptr() as *mut ${primitiveToRust(field.type.name)}, self.${fieldName}.len()) })`;
           } else {
             if (field.type.type === "nested") {
               return `${fieldName}: ManuallyDrop::into_inner(${fieldName})`;
             } else if (field.type.type === "primitive") {
               assert(field.type.name !== "bytes");
+              if (field.type.name === "string") {
+                return `${fieldName}: ManuallyDrop::into_inner(${fieldName})`;
+              }
               return `${fieldName}: ManuallyDrop::into_inner(unsafe { vec_from_raw(self.${fieldName} as *mut ${primitiveToRust(field.type.name)}, self.${fieldName}_count) })`;
             } else {
               throw Error(`unsupported array type: ${field.type.type}`);
