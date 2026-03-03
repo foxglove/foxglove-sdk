@@ -2508,6 +2508,9 @@ pub unsafe extern "C" fn foxglove_voxel_grid_encode(
 /// Array of annotations for a 2D image
 #[repr(C)]
 pub struct ImageAnnotations {
+    /// Timestamp of the image annotations. When set, individual annotation timestamps will be ignored.
+    pub timestamp: *const FoxgloveTimestamp,
+
     /// Circle annotations
     pub circles: *const CircleAnnotation,
     pub circles_count: usize,
@@ -2523,9 +2526,6 @@ pub struct ImageAnnotations {
     /// Additional user-provided metadata associated with the image annotations. Keys must be unique.
     pub metadata: *const KeyValuePair,
     pub metadata_count: usize,
-
-    /// Timestamp of the image annotations. When set, individual annotation timestamps will be ignored.
-    pub timestamp: *const FoxgloveTimestamp,
 }
 
 #[cfg(not(target_family = "wasm"))]
@@ -2565,11 +2565,11 @@ impl BorrowToNative for ImageAnnotations {
         let metadata = unsafe { arena.as_mut().map(self.metadata, self.metadata_count)? };
 
         Ok(ManuallyDrop::new(foxglove::messages::ImageAnnotations {
+            timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
             circles: ManuallyDrop::into_inner(circles),
             points: ManuallyDrop::into_inner(points),
             texts: ManuallyDrop::into_inner(texts),
             metadata: ManuallyDrop::into_inner(metadata),
-            timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
         }))
     }
 }

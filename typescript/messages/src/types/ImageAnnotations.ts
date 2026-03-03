@@ -9,6 +9,9 @@ import { Time } from "./Time";
 
 /** Array of annotations for a 2D image */
 export type ImageAnnotations = {
+  /** Timestamp of the image annotations. When set, individual annotation timestamps will be ignored. */
+  timestamp?: Time;
+
   /** Circle annotations */
   circles: CircleAnnotation[];
 
@@ -20,7 +23,4 @@ export type ImageAnnotations = {
 
   /** Additional user-provided metadata associated with the image annotations. Keys must be unique. */
   metadata?: KeyValuePair[];
-
-  /** Timestamp of the image annotations. When set, individual annotation timestamps will be ignored. */
-  timestamp?: Time;
 };

@@ -1023,6 +1023,10 @@ struct KeyValuePair {
 
 /// @brief Array of annotations for a 2D image
 struct ImageAnnotations {
+  /// @brief Timestamp of the image annotations. When set, individual annotation timestamps will be
+  /// ignored.
+  std::optional<Timestamp> timestamp;
+
   /// @brief Circle annotations
   std::vector<CircleAnnotation> circles;
 
@@ -1035,10 +1039,6 @@ struct ImageAnnotations {
   /// @brief Additional user-provided metadata associated with the image annotations. Keys must be
   /// unique.
   std::vector<KeyValuePair> metadata;
-
-  /// @brief Timestamp of the image annotations. When set, individual annotation timestamps will be
-  /// ignored.
-  std::optional<Timestamp> timestamp;
 
   /// @brief Encoded the ImageAnnotations as protobuf to the provided buffer.
   ///
