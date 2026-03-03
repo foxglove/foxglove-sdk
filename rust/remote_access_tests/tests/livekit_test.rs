@@ -11,6 +11,7 @@ use foxglove::Schema;
 use livekit::{Room, RoomOptions};
 use remote_access_tests::livekit_token;
 use remote_access_tests::test_helpers::{TestGateway, ViewerConnection, poll_until};
+use serial_test::serial;
 use tracing::info;
 use tracing_test::traced_test;
 
@@ -23,6 +24,7 @@ use tracing_test::traced_test;
 #[traced_test]
 #[ignore]
 #[tokio::test]
+#[serial(livekit)]
 async fn livekit_viewer_receives_server_info() -> Result<()> {
     let ctx = foxglove::Context::new();
     let gw = TestGateway::start(&ctx).await?;
@@ -56,6 +58,7 @@ async fn livekit_viewer_receives_server_info() -> Result<()> {
 #[traced_test]
 #[ignore]
 #[tokio::test]
+#[serial(livekit)]
 async fn livekit_viewer_receives_channel_advertisement() -> Result<()> {
     let ctx = foxglove::Context::new();
 
@@ -90,6 +93,7 @@ async fn livekit_viewer_receives_channel_advertisement() -> Result<()> {
 #[traced_test]
 #[ignore]
 #[tokio::test]
+#[serial(livekit)]
 async fn livekit_viewer_receives_message_after_subscribe() -> Result<()> {
     let ctx = foxglove::Context::new();
     let channel = ctx
@@ -127,6 +131,7 @@ async fn livekit_viewer_receives_message_after_subscribe() -> Result<()> {
 #[traced_test]
 #[ignore]
 #[tokio::test]
+#[serial(livekit)]
 async fn livekit_viewer_does_not_receive_message_before_subscribe() -> Result<()> {
     let ctx = foxglove::Context::new();
     let channel = ctx
@@ -170,6 +175,7 @@ async fn livekit_viewer_does_not_receive_message_before_subscribe() -> Result<()
 #[traced_test]
 #[ignore]
 #[tokio::test]
+#[serial(livekit)]
 async fn livekit_viewer_receives_unadvertise_on_channel_close() -> Result<()> {
     let ctx = foxglove::Context::new();
     let channel = ctx
@@ -201,6 +207,7 @@ async fn livekit_viewer_receives_unadvertise_on_channel_close() -> Result<()> {
 #[traced_test]
 #[ignore]
 #[tokio::test]
+#[serial(livekit)]
 async fn livekit_viewer_receives_advertisement_for_late_channel() -> Result<()> {
     let ctx = foxglove::Context::new();
 
@@ -233,6 +240,7 @@ async fn livekit_viewer_receives_advertisement_for_late_channel() -> Result<()> 
 #[traced_test]
 #[ignore]
 #[tokio::test]
+#[serial(livekit)]
 async fn livekit_channel_filter_excludes_filtered_channels() -> Result<()> {
     let ctx = foxglove::Context::new();
 
@@ -280,6 +288,7 @@ async fn livekit_channel_filter_excludes_filtered_channels() -> Result<()> {
 #[traced_test]
 #[ignore]
 #[tokio::test]
+#[serial(livekit)]
 async fn livekit_multiple_participants_receive_messages() -> Result<()> {
     let ctx = foxglove::Context::new();
     let channel = ctx
@@ -345,6 +354,7 @@ async fn livekit_multiple_participants_receive_messages() -> Result<()> {
 #[traced_test]
 #[ignore]
 #[tokio::test]
+#[serial(livekit)]
 async fn livekit_video_channel_has_video_track_metadata() -> Result<()> {
     let ctx = foxglove::Context::new();
 
@@ -397,6 +407,7 @@ async fn livekit_video_channel_has_video_track_metadata() -> Result<()> {
 #[traced_test]
 #[ignore]
 #[tokio::test]
+#[serial(livekit)]
 async fn livekit_video_channel_messages_bypass_data_plane() -> Result<()> {
     let ctx = foxglove::Context::new();
 
@@ -446,6 +457,7 @@ async fn livekit_video_channel_messages_bypass_data_plane() -> Result<()> {
 #[traced_test]
 #[ignore]
 #[tokio::test]
+#[serial(livekit)]
 async fn livekit_video_track_lifecycle() -> Result<()> {
     let ctx = foxglove::Context::new();
 
@@ -487,6 +499,7 @@ async fn livekit_video_track_lifecycle() -> Result<()> {
 #[traced_test]
 #[ignore]
 #[tokio::test]
+#[serial(livekit)]
 async fn livekit_video_track_resubscribe() -> Result<()> {
     let ctx = foxglove::Context::new();
 
