@@ -24,13 +24,13 @@
   ],
   "packageManager": "yarn@4.6.0",
   "scripts": {
-    "build": "cp -R ../../schemas/jsonschema ./src/jsonschema && tsc -b",
+    "build": "tsc -b",
     "clean": "git clean -Xdf",
     "clean-build": "yarn clean && yarn build",
     "prepack": "yarn clean-build"
   },
   "dependencies": {
-    "@foxglove/rosmsg-msgs-common": "^3.2.2",
+    "@foxglove/messages": "workspace:^",
     "tslib": "^2"
   },
   "devDependencies": {
