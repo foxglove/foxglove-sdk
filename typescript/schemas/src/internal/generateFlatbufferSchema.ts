@@ -1,5 +1,6 @@
 import {
   FoxgloveEnumSchema,
+  FoxgloveMessageField,
   FoxgloveMessageSchema,
   FoxglovePrimitive,
   FoxgloveSchema,
@@ -121,7 +122,32 @@ export function generateFlatbuffers(
       break;
     }
     case "message": {
-      const fields = schema.fields.map((field, fieldId) => {
+      const explicitFieldNumbers = new Set<number>();
+      for (const field of schema.fields) {
+        if (field.flatbuffersFieldNumber != undefined) {
+          if (explicitFieldNumbers.has(field.flatbuffersFieldNumber)) {
+            throw new Error(
+              `More than one field with flatbuffersFieldNumber ${field.flatbuffersFieldNumber}`,
+            );
+          }
+          explicitFieldNumbers.add(field.flatbuffersFieldNumber);
+        }
+      }
+
+      let nextFieldNumber = 0;
+      const numberedFields = schema.fields.map(
+        (field): FoxgloveMessageField & { flatbuffersFieldNumber: number } => {
+          if (field.flatbuffersFieldNumber != undefined) {
+            return { ...field, flatbuffersFieldNumber: field.flatbuffersFieldNumber };
+          }
+          while (explicitFieldNumbers.has(nextFieldNumber)) {
+            ++nextFieldNumber;
+          }
+          return { ...field, flatbuffersFieldNumber: nextFieldNumber++ };
+        },
+      );
+
+      const fields = numberedFields.map((field) => {
         const isArray = field.array != undefined;
 
         let type;
@@ -184,7 +210,7 @@ export function generateFlatbuffers(
           // convert field.name to lowercase for flatbuffer compilation compliance
         }  ${field.name.toLowerCase()}:${isArray ? `[${type}]` : type}${
           defaultValue ? ` = ${defaultValue}` : ""
-        } (id: ${fieldId});`;
+        } (id: ${field.flatbuffersFieldNumber});`;
       });
 
       const tableDescriptionLines = schema.description

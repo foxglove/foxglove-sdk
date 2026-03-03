@@ -14,3 +14,6 @@ foxglove_msgs/TextAnnotation[] texts
 
 # Additional user-provided metadata associated with the image annotations. Keys must be unique.
 foxglove_msgs/KeyValuePair[] metadata
+
+# Timestamp of the image annotations. When set, individual annotation timestamps will be ignored.
+builtin_interfaces/Time timestamp

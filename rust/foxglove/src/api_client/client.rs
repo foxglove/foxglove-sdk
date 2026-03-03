@@ -12,6 +12,8 @@ use super::types::{DeviceResponse, ErrorResponse, RtcCredentials};
 
 const DEFAULT_API_URL: &str = "https://api.foxglove.dev";
 
+const MAX_ERROR_RESPONSE_LEN: u64 = 16_384;
+
 const PATH_ENCODING: AsciiSet = percent_encoding::NON_ALPHANUMERIC
     .remove(b'-')
     .remove(b'.')
@@ -58,6 +60,12 @@ pub(crate) enum RequestError {
         headers: Box<HeaderMap>,
     },
 
+    #[error("error response {status} too large")]
+    ErrorResponseTooLarge {
+        status: StatusCode,
+        headers: Box<HeaderMap>,
+    },
+
     #[error("failed to parse response: {0}")]
     ParseResponse(#[source] serde_json::Error),
 }
@@ -77,7 +85,8 @@ impl FoxgloveApiClientError {
         match self {
             Self::Request(
                 RequestError::MalformedErrorResponse { status, .. }
-                | RequestError::ErrorResponse { status, .. },
+                | RequestError::ErrorResponse { status, .. }
+                | RequestError::ErrorResponseTooLarge { status, .. },
             ) => Some(*status),
             _ => None,
         }
@@ -103,10 +112,19 @@ impl RequestBuilder {
         let status = response.status();
         if status.is_client_error() || status.is_server_error() {
             let headers = Box::new(response.headers().clone());
+            if response
+                .content_length()
+                .is_some_and(|len| len > MAX_ERROR_RESPONSE_LEN)
+            {
+                return Err(RequestError::ErrorResponseTooLarge { status, headers });
+            }
             let body = response
                 .bytes()
                 .await
                 .map_err(RequestError::LoadResponseBytes)?;
+            if body.len() as u64 > MAX_ERROR_RESPONSE_LEN {
+                return Err(RequestError::ErrorResponseTooLarge { status, headers });
+            }
             match serde_json::from_slice::<ErrorResponse>(&body) {
                 Ok(error) => {
                     return Err(RequestError::ErrorResponse {

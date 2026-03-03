@@ -224,6 +224,7 @@ fn test_image_annotations_borrow_to_native() {
             }),
         }],
         metadata: vec![],
+        timestamp: None,
     };
 
     // Create the timestamp value
@@ -345,6 +346,7 @@ fn test_image_annotations_borrow_to_native() {
         texts_count: texts.len(),
         metadata: std::ptr::null(),
         metadata_count: 0,
+        timestamp: std::ptr::null(),
     };
 
     let mut arena = pin!(Arena::new());

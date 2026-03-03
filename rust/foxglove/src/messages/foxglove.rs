@@ -399,6 +399,9 @@ pub struct ImageAnnotations {
     /// Additional user-provided metadata associated with the image annotations. Keys must be unique.
     #[prost(message, repeated, tag = "4")]
     pub metadata: ::prost::alloc::vec::Vec<KeyValuePair>,
+    /// Timestamp of the image annotations. When set, individual annotation timestamps will be ignored.
+    #[prost(message, optional, tag = "5")]
+    pub timestamp: ::core::option::Option<crate::messages::Timestamp>,
 }
 /// A key with its associated value
 ///
