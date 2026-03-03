@@ -12,6 +12,8 @@ export * from "./FrameTransforms";
 export * from "./GeoJSON";
 export * from "./Grid";
 export * from "./ImageAnnotations";
+export * from "./JointState";
+export * from "./JointStates";
 export * from "./KeyValuePair";
 export * from "./LaserScan";
 export * from "./LinePrimitive";

@@ -1068,6 +1068,77 @@ struct ImageAnnotations {
   static Schema schema();
 };
 
+/// @brief The state of a single joint (revolute or prismatic).
+struct JointState {
+  /// @brief Joint name
+  std::string name;
+
+  /// @brief Joint position. Radians for revolute joints, meters for prismatic joints. Use NaN to
+  /// indicate that the value is not present if the message definition does not support optional
+  /// fields.
+  std::optional<double> position = std::nullopt;
+
+  /// @brief Joint velocity. Rad/s for revolute joints, m/s for prismatic joints. Use NaN to
+  /// indicate that the value is not present if the message definition does not support optional
+  /// fields.
+  std::optional<double> velocity = std::nullopt;
+
+  /// @brief Joint acceleration. Rad/s² for revolute joints, m/s² for prismatic joints. Use NaN to
+  /// indicate that the value is not present if the message definition does not support optional
+  /// fields.
+  std::optional<double> acceleration = std::nullopt;
+
+  /// @brief Joint effort (force or torque). Nm for revolute joints, N for prismatic joints. Use NaN
+  /// to indicate that the value is not present if the message definition does not support optional
+  /// fields.
+  std::optional<double> effort = std::nullopt;
+
+  /// @brief Encoded the JointState as protobuf to the provided buffer.
+  ///
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
+  /// and returns FoxgloveError::BufferTooShort.
+  /// If the message cannot be encoded, writes the reason to stderr and returns
+  /// FoxgloveError::EncodeError.
+  ///
+  /// @param ptr the destination buffer. must point to at least len valid bytes.
+  /// @param len the length of the destination buffer.
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
+
+  /// @brief Get the JointState schema.
+  ///
+  /// The schema data returned is statically allocated.
+  static Schema schema();
+};
+
+/// @brief The state of a set of joints at a given time.
+struct JointStates {
+  /// @brief Timestamp of the joint states
+  std::optional<Timestamp> timestamp;
+
+  /// @brief Joint states
+  std::vector<JointState> joints;
+
+  /// @brief Encoded the JointStates as protobuf to the provided buffer.
+  ///
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
+  /// and returns FoxgloveError::BufferTooShort.
+  /// If the message cannot be encoded, writes the reason to stderr and returns
+  /// FoxgloveError::EncodeError.
+  ///
+  /// @param ptr the destination buffer. must point to at least len valid bytes.
+  /// @param len the length of the destination buffer.
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
+
+  /// @brief Get the JointStates schema.
+  ///
+  /// The schema data returned is statically allocated.
+  static Schema schema();
+};
+
 /// @brief A single scan from a planar laser range-finder
 struct LaserScan {
   /// @brief Timestamp of scan
@@ -2769,6 +2840,128 @@ public:
 
 private:
   explicit ImageAnnotationsChannel(ChannelUniquePtr&& channel)
+      : impl_(std::move(channel)) {}
+
+  ChannelUniquePtr impl_;
+};
+
+/// @brief A channel for logging JointState messages to a topic.
+///
+/// @note While channels are fully thread-safe, the JointState struct is not thread-safe.
+/// Avoid modifying it concurrently or during a log operation.
+class JointStateChannel {
+public:
+  /// @brief Create a new channel.
+  ///
+  /// @param topic The topic name. You should choose a unique topic name per channel for
+  /// compatibility with the Foxglove app.
+  /// @param context The context which associates logs to a sink. If omitted, the default context is
+  /// used.
+  static FoxgloveResult<JointStateChannel> create(
+    const std::string_view& topic, const Context& context = Context()
+  );
+
+  /// @brief Log a message to the channel.
+  ///
+  /// @param msg The JointState message to log.
+  /// @param log_time The timestamp of the message, as nanoseconds since epoch. If omitted, the
+  /// current time is used.
+  /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
+  FoxgloveError log(
+    const JointState& msg, std::optional<uint64_t> log_time = std::nullopt,
+    std::optional<uint64_t> sink_id = std::nullopt
+  ) noexcept;
+
+  /// @brief Close the channel.
+  ///
+  /// You can use this to explicitly unadvertise the channel to sinks that subscribe to channels
+  /// dynamically, such as the WebSocketServer.
+  ///
+  /// Attempts to log on a closed channel will elicit a throttled warning message.
+  void close() noexcept;
+
+  /// @brief Uniquely identifies a channel in the context of this program.
+  ///
+  /// @return The ID of the channel.
+  [[nodiscard]] uint64_t id() const noexcept;
+
+  /// @brief Find out if any sinks have been added to the channel.
+  ///
+  /// @return True if sinks have been added to the channel, false otherwise.
+  [[nodiscard]] bool has_sinks() const noexcept;
+
+  JointStateChannel(const JointStateChannel& other) noexcept = delete;
+  JointStateChannel& operator=(const JointStateChannel& other) noexcept = delete;
+  /// @brief Default move constructor.
+  JointStateChannel(JointStateChannel&& other) noexcept = default;
+  /// @brief Default move assignment.
+  JointStateChannel& operator=(JointStateChannel&& other) noexcept = default;
+  /// @brief Default destructor.
+  ~JointStateChannel() = default;
+
+private:
+  explicit JointStateChannel(ChannelUniquePtr&& channel)
+      : impl_(std::move(channel)) {}
+
+  ChannelUniquePtr impl_;
+};
+
+/// @brief A channel for logging JointStates messages to a topic.
+///
+/// @note While channels are fully thread-safe, the JointStates struct is not thread-safe.
+/// Avoid modifying it concurrently or during a log operation.
+class JointStatesChannel {
+public:
+  /// @brief Create a new channel.
+  ///
+  /// @param topic The topic name. You should choose a unique topic name per channel for
+  /// compatibility with the Foxglove app.
+  /// @param context The context which associates logs to a sink. If omitted, the default context is
+  /// used.
+  static FoxgloveResult<JointStatesChannel> create(
+    const std::string_view& topic, const Context& context = Context()
+  );
+
+  /// @brief Log a message to the channel.
+  ///
+  /// @param msg The JointStates message to log.
+  /// @param log_time The timestamp of the message, as nanoseconds since epoch. If omitted, the
+  /// current time is used.
+  /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
+  FoxgloveError log(
+    const JointStates& msg, std::optional<uint64_t> log_time = std::nullopt,
+    std::optional<uint64_t> sink_id = std::nullopt
+  ) noexcept;
+
+  /// @brief Close the channel.
+  ///
+  /// You can use this to explicitly unadvertise the channel to sinks that subscribe to channels
+  /// dynamically, such as the WebSocketServer.
+  ///
+  /// Attempts to log on a closed channel will elicit a throttled warning message.
+  void close() noexcept;
+
+  /// @brief Uniquely identifies a channel in the context of this program.
+  ///
+  /// @return The ID of the channel.
+  [[nodiscard]] uint64_t id() const noexcept;
+
+  /// @brief Find out if any sinks have been added to the channel.
+  ///
+  /// @return True if sinks have been added to the channel, false otherwise.
+  [[nodiscard]] bool has_sinks() const noexcept;
+
+  JointStatesChannel(const JointStatesChannel& other) noexcept = delete;
+  JointStatesChannel& operator=(const JointStatesChannel& other) noexcept = delete;
+  /// @brief Default move constructor.
+  JointStatesChannel(JointStatesChannel&& other) noexcept = default;
+  /// @brief Default move assignment.
+  JointStatesChannel& operator=(JointStatesChannel&& other) noexcept = default;
+  /// @brief Default destructor.
+  ~JointStatesChannel() = default;
+
+private:
+  explicit JointStatesChannel(ChannelUniquePtr&& channel)
       : impl_(std::move(channel)) {}
 
   ChannelUniquePtr impl_;

@@ -406,6 +406,41 @@ pub struct ImageAnnotations {
     #[prost(message, repeated, tag = "4")]
     pub metadata: ::prost::alloc::vec::Vec<KeyValuePair>,
 }
+/// The state of a single joint (revolute or prismatic).
+///
+/// <https://docs.foxglove.dev/docs/visualization/message-schemas/joint-state>
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct JointState {
+    /// Joint name
+    #[prost(string, tag = "1")]
+    pub name: ::prost::alloc::string::String,
+    /// Joint position. Radians for revolute joints, meters for prismatic joints. Use NaN to indicate that the value is not present if the message definition does not support optional fields.
+    #[prost(double, optional, tag = "2")]
+    pub position: ::core::option::Option<f64>,
+    /// Joint velocity. Rad/s for revolute joints, m/s for prismatic joints. Use NaN to indicate that the value is not present if the message definition does not support optional fields.
+    #[prost(double, optional, tag = "3")]
+    pub velocity: ::core::option::Option<f64>,
+    /// Joint acceleration. Rad/s² for revolute joints, m/s² for prismatic joints. Use NaN to indicate that the value is not present if the message definition does not support optional fields.
+    #[prost(double, optional, tag = "4")]
+    pub acceleration: ::core::option::Option<f64>,
+    /// Joint effort (force or torque). Nm for revolute joints, N for prismatic joints. Use NaN to indicate that the value is not present if the message definition does not support optional fields.
+    #[prost(double, optional, tag = "5")]
+    pub effort: ::core::option::Option<f64>,
+}
+/// The state of a set of joints at a given time.
+///
+/// <https://docs.foxglove.dev/docs/visualization/message-schemas/joint-states>
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct JointStates {
+    /// Timestamp of the joint states
+    #[prost(message, optional, tag = "1")]
+    pub timestamp: ::core::option::Option<crate::messages::Timestamp>,
+    /// Joint states
+    #[prost(message, repeated, tag = "2")]
+    pub joints: ::prost::alloc::vec::Vec<JointState>,
+}
 /// A key with its associated value
 ///
 /// <https://docs.foxglove.dev/docs/visualization/message-schemas/key-value-pair>
