@@ -321,6 +321,23 @@ impl PyMcapWriter {
     }
 }
 
+pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
+    let module = PyModule::new(parent_module.py(), "mcap")?;
+
+    module.add_class::<PyMcapCompression>()?;
+    module.add_class::<PyMcapWriter>()?;
+    module.add_class::<PyMcapWriteOptions>()?;
+
+    // Define as a package
+    // https://github.com/PyO3/pyo3/issues/759
+    let py = parent_module.py();
+    py.import("sys")?
+        .getattr("modules")?
+        .set_item("foxglove._foxglove_py.mcap", &module)?;
+
+    parent_module.add_submodule(&module)
+}
+
 #[cfg(test)]
 mod tests {
     use super::PyMcapWriteOptions;
@@ -355,21 +372,4 @@ mod tests {
             );
         });
     }
-}
-
-pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
-    let module = PyModule::new(parent_module.py(), "mcap")?;
-
-    module.add_class::<PyMcapCompression>()?;
-    module.add_class::<PyMcapWriter>()?;
-    module.add_class::<PyMcapWriteOptions>()?;
-
-    // Define as a package
-    // https://github.com/PyO3/pyo3/issues/759
-    let py = parent_module.py();
-    py.import("sys")?
-        .getattr("modules")?
-        .set_item("foxglove._foxglove_py.mcap", &module)?;
-
-    parent_module.add_submodule(&module)
 }
