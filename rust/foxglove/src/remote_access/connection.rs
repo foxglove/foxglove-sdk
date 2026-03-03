@@ -217,6 +217,20 @@ impl RemoteAccessConnection {
             identity, attributes
         );
 
+        // Send ServerInfo and channel advertisements to participants already in the room.
+        // ParticipantConnected events only fire for participants joining after us.
+        let server_info = self.create_server_info();
+        for (identity, _) in session.room().remote_participants() {
+            match session.add_participant(identity.clone()).await {
+                Ok(participant) => {
+                    session.send_info_and_advertisements(participant, server_info.clone());
+                }
+                Err(e) => {
+                    error!("failed to add existing participant {identity}: {e:?}");
+                }
+            }
+        }
+
         info!("running remote access server");
         tokio::select! {
             () = self.cancellation_token().cancelled() => (),
