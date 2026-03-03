@@ -188,6 +188,8 @@ jobs:
       - name: Validate protobuf definitions
         run: protoc --proto_path=schemas/proto schemas/proto/**/*.proto --descriptor_set_out=/dev/null
 
+      # @foxglove/messages must be published before @foxglove/schemas, because
+      # schemas depends on messages as a runtime dependency.
       - run: yarn workspace @foxglove/messages pack
       - name: Publish @foxglove/messages to NPM
         if: startsWith(github.ref, 'refs/tags/typescript/messages/v')
