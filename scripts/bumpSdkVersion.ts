@@ -27,7 +27,13 @@ async function main() {
   const workspaceRoot = path.resolve(__dirname, "..");
   const cargoFiles = await glob("**/Cargo.toml", {
     // foxglove_data_loader is versioned separately
-    ignore: ["**/target/**", "**/node_modules/**", "cpp/build/**", "rust/foxglove_data_loader/**"],
+    ignore: [
+      "**/target/**",
+      "**/node_modules/**",
+      "cpp/build/**",
+      "rust/foxglove_data_loader/**",
+      "rust/remote_access_tests/**",
+    ],
     cwd: workspaceRoot,
     absolute: true,
   });
