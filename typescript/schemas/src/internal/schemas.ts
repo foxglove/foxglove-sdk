@@ -1780,8 +1780,7 @@ const JointState: FoxgloveMessageSchema = {
     {
       name: "acceleration",
       type: { type: "primitive", name: "float64" },
-      description:
-        "Joint acceleration. Rad/s² for revolute joints, m/s² for prismatic joints.",
+      description: "Joint acceleration. Rad/s² for revolute joints, m/s² for prismatic joints.",
       optional: true,
     },
     {
