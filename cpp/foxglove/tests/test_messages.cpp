@@ -29,7 +29,7 @@ TEST_CASE("messages alias supports construction and encoding") {
 
 TEST_CASE("messages alias provides schema access") {
   auto schema = messages::Log::schema();
-  REQUIRE(schema.name == std::string("foxglove.Log"));
-  REQUIRE(schema.encoding == std::string("protobuf"));
+  REQUIRE(schema.name == "foxglove.Log");
+  REQUIRE(schema.encoding == "protobuf");
   REQUIRE(schema.data_len > 0);
 }
