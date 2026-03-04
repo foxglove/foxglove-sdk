@@ -1,5 +1,3 @@
-#include "../src/mcap_internal.hpp"
-
 #include <foxglove/arena.hpp>
 #include <foxglove/channel.hpp>
 #include <foxglove/context.hpp>
@@ -13,6 +11,7 @@
 #include <fstream>
 #include <optional>
 
+#include "../src/mcap_internal.hpp"
 #include "common/file_cleanup.hpp"
 
 using Catch::Matchers::ContainsSubstring;

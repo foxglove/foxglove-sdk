@@ -1,8 +1,8 @@
-#include "mcap_internal.hpp"
-
 #include <foxglove/channel.hpp>
 #include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
+
+#include "mcap_internal.hpp"
 
 namespace foxglove {
 
