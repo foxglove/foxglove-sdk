@@ -14,9 +14,9 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::{bail, Context as _, Result};
-use clap::Parser;
+use clap::{Parser, ValueEnum};
 use foxglove::ws_protocol::server::ServerMessage;
-use foxglove::{Context, McapWriter};
+use foxglove::{Context, McapCompression, McapWriteOptions, McapWriter};
 use tracing::info;
 
 use example_ws_record_mcap::record_stream;
@@ -36,6 +36,31 @@ struct Cli {
     /// If not specified, all advertised topics are recorded.
     #[arg(short, long)]
     topic: Vec<String>,
+
+    /// Compression algorithm to use for MCAP chunks.
+    #[arg(long, default_value = "zstd")]
+    compression: CompressionArg,
+
+    /// Chunk size in bytes.
+    #[arg(long, default_value_t = 5 * 1024 * 1024)]
+    chunk_size: u64,
+}
+
+#[derive(Debug, Clone, ValueEnum)]
+enum CompressionArg {
+    Zstd,
+    Lz4,
+    None,
+}
+
+impl From<CompressionArg> for Option<McapCompression> {
+    fn from(value: CompressionArg) -> Self {
+        match value {
+            CompressionArg::Zstd => Some(McapCompression::Zstd),
+            CompressionArg::Lz4 => Some(McapCompression::Lz4),
+            CompressionArg::None => None,
+        }
+    }
 }
 
 #[tokio::main]
@@ -49,7 +74,10 @@ async fn main() -> Result<()> {
     let ctx = Arc::new(Context::new());
 
     // Open the MCAP file before connecting, so it's ready to record from the first message.
-    let mcap = McapWriter::new()
+    let options = McapWriteOptions::new()
+        .chunk_size(Some(args.chunk_size))
+        .compression(args.compression.into());
+    let mcap = McapWriter::with_options(options)
         .context(&ctx)
         .create_new_buffered_file(&args.output)
         .with_context(|| format!("Failed to create {:?}", args.output))?;

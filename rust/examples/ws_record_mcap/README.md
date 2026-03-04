@@ -15,6 +15,12 @@ cargo run -p example_ws_record_mcap -- --addr 192.168.1.10:8765 --output recordi
 
 # Record only specific topics
 cargo run -p example_ws_record_mcap -- --output recording.mcap --topic /pose --topic /imu
+
+# Use LZ4 compression with a 10MB chunk size
+cargo run -p example_ws_record_mcap -- --output recording.mcap --compression lz4 --chunk-size 10485760
+
+# Disable compression
+cargo run -p example_ws_record_mcap -- --output recording.mcap --compression none
 ```
 
 Press **Ctrl-C** to stop recording. The MCAP file is flushed and finalized on shutdown.
@@ -26,6 +32,8 @@ Press **Ctrl-C** to stop recording. The MCAP file is flushed and finalized on sh
 | `--addr` | `127.0.0.1:8765` | WebSocket server address (`host:port`) |
 | `--output` / `-o` | `output.mcap` | Output MCAP file path |
 | `--topic` / `-t` | _(all topics)_ | Topic to subscribe to; repeat to record multiple topics |
+| `--compression` | `zstd` | Compression algorithm: `zstd`, `lz4`, or `none` |
+| `--chunk-size` | `5242880` (5 MB) | Chunk size in bytes |
 
 ## How It Works
 
