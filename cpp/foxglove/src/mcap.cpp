@@ -21,6 +21,7 @@ static size_t custom_write(void* fn, const uint8_t* data, size_t len, int32_t* e
   return writer->write(data, len, error);
 }
 
+/// @cond foxglove_internal
 foxglove_mcap_options to_c_mcap_options(const McapWriterOptions& options) {
   foxglove_mcap_options c_options = foxglove_mcap_options_default();
   c_options.context = options.context.getInner();
@@ -50,6 +51,7 @@ foxglove_mcap_options to_c_mcap_options(const McapWriterOptions& options) {
   c_options.truncate = options.truncate;
   return c_options;
 }
+/// @endcond
 
 FoxgloveResult<McapWriter> McapWriter::create(const McapWriterOptions& options) {
   foxglove_internal_register_cpp_wrapper();
