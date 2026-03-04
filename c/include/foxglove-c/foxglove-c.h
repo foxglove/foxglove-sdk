@@ -104,6 +104,22 @@ enum foxglove_error
 typedef uint8_t foxglove_error;
 #endif // __cplusplus
 
+enum foxglove_event_property_type
+#ifdef __cplusplus
+  : int32_t
+#endif // __cplusplus
+ {
+  FOXGLOVE_EVENT_PROPERTY_TYPE_TEXT = 0,
+  FOXGLOVE_EVENT_PROPERTY_TYPE_MULTILINE_TEXT = 1,
+  FOXGLOVE_EVENT_PROPERTY_TYPE_BOOLEAN = 2,
+  FOXGLOVE_EVENT_PROPERTY_TYPE_NUMBER = 3,
+  FOXGLOVE_EVENT_PROPERTY_TYPE_SINGLE_SELECT = 4,
+  FOXGLOVE_EVENT_PROPERTY_TYPE_MULTI_SELECT = 5,
+};
+#ifndef __cplusplus
+typedef int32_t foxglove_event_property_type;
+#endif // __cplusplus
+
 enum foxglove_line_type
 #ifdef __cplusplus
   : int32_t
@@ -783,6 +799,99 @@ typedef struct foxglove_cube_primitive {
 } foxglove_cube_primitive;
 
 /**
+ * A signed, fixed-length span of time.
+ *
+ * The duration is represented by a count of seconds (which may be negative), and a count of
+ * fractional seconds at nanosecond resolution (which are always positive).
+ */
+typedef struct foxglove_duration {
+  /**
+   * Seconds offset.
+   */
+  int32_t sec;
+  /**
+   * Nanoseconds offset in the positive direction.
+   */
+  uint32_t nsec;
+} foxglove_duration;
+
+/**
+ * A typed property value on an event, matching the platform's structured properties model
+ */
+typedef struct foxglove_event_property {
+  /**
+   * Property name
+   */
+  struct foxglove_string key;
+  /**
+   * Value type
+   */
+  foxglove_event_property_type type;
+  /**
+   * String-encoded value. Interpretation depends on type.
+   */
+  struct foxglove_string value;
+} foxglove_event_property;
+
+/**
+ * A key with its associated value
+ */
+typedef struct foxglove_key_value_pair {
+  /**
+   * Key
+   */
+  struct foxglove_string key;
+  /**
+   * Value
+   */
+  struct foxglove_string value;
+} foxglove_key_value_pair;
+
+/**
+ * A discrete event that occurred at a specific time. An event may have zero duration (instantaneous) or a non-zero duration.
+ */
+typedef struct foxglove_event {
+  /**
+   * Timestamp of the event
+   */
+  const struct foxglove_timestamp *timestamp;
+  /**
+   * Duration of the event. If absent or zero, the event is an instantaneous point marker.
+   */
+  const struct foxglove_duration *duration;
+  /**
+   * Category name matching a platform event type (e.g. "FAULT", "MANEUVER"). Used for filtering and grouping.
+   */
+  const struct foxglove_string *event_type;
+  /**
+   * Typed property values matching the platform's structured properties model
+   */
+  const struct foxglove_event_property *event_properties;
+  size_t event_properties_count;
+  /**
+   * Unstructured key-value metadata, complementary to event_properties. Keys must be unique.
+   */
+  const struct foxglove_key_value_pair *metadata;
+  size_t metadata_count;
+  /**
+   * Short human-readable label shown on the timeline marker
+   */
+  const struct foxglove_string *display_name;
+  /**
+   * Hex color string (e.g. "#FF5733" or "#FF573380"). If absent the player assigns a default color.
+   */
+  const struct foxglove_string *color;
+  /**
+   * Stable identity for deduplication during platform ingestion. If absent the platform may compute a fingerprint.
+   */
+  const struct foxglove_string *id;
+  /**
+   * Platform device ID this event is associated with. If absent during ingestion, inferred from upload context.
+   */
+  const struct foxglove_string *device_id;
+} foxglove_event;
+
+/**
  * A transform between two reference frames in 3D space. The transform defines the position and orientation of a child frame within a parent frame. Translation moves the origin of the child frame relative to the parent origin. The rotation changes the orientiation of the child frame around its origin.
  *
  * Examples:
@@ -1078,20 +1187,6 @@ typedef struct foxglove_text_annotation {
 } foxglove_text_annotation;
 
 /**
- * A key with its associated value
- */
-typedef struct foxglove_key_value_pair {
-  /**
-   * Key
-   */
-  struct foxglove_string key;
-  /**
-   * Value
-   */
-  struct foxglove_string value;
-} foxglove_key_value_pair;
-
-/**
  * Array of annotations for a 2D image
  */
 typedef struct foxglove_image_annotations {
@@ -1319,23 +1414,6 @@ typedef struct foxglove_scene_entity_deletion {
    */
   struct foxglove_string id;
 } foxglove_scene_entity_deletion;
-
-/**
- * A signed, fixed-length span of time.
- *
- * The duration is represented by a count of seconds (which may be negative), and a count of
- * fractional seconds at nanosecond resolution (which are always positive).
- */
-typedef struct foxglove_duration {
-  /**
-   * Seconds offset.
-   */
-  int32_t sec;
-  /**
-   * Nanoseconds offset in the positive direction.
-   */
-  uint32_t nsec;
-} foxglove_duration;
 
 /**
  * A primitive representing a sphere or ellipsoid
@@ -2796,6 +2874,98 @@ struct foxglove_schema foxglove_cube_primitive_schema(void);
  * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_cube_primitive_encode(const struct foxglove_cube_primitive *msg,
+                                              uint8_t *ptr,
+                                              size_t len,
+                                              size_t *encoded_len);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_event(struct foxglove_string topic,
+                                             const struct foxglove_context *context,
+                                             const struct foxglove_channel **channel);
+
+#if !defined(__wasm__)
+/**
+ * Log a Event message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_event.
+ */
+foxglove_error foxglove_channel_log_event(const struct foxglove_channel *channel,
+                                          const struct foxglove_event *msg,
+                                          const uint64_t *log_time,
+                                          FoxgloveSinkId sink_id);
+#endif
+
+/**
+ * Get the Event schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_event_schema(void);
+
+/**
+ * Encode a Event message as protobuf to the buffer provided.
+ *
+ * On success, writes the encoded length to *encoded_len.
+ * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+ * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+ * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+ *
+ * # Safety
+ * ptr must be a valid pointer to a memory region at least len bytes long.
+ */
+foxglove_error foxglove_event_encode(const struct foxglove_event *msg,
+                                     uint8_t *ptr,
+                                     size_t len,
+                                     size_t *encoded_len);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_event_property(struct foxglove_string topic,
+                                                      const struct foxglove_context *context,
+                                                      const struct foxglove_channel **channel);
+
+#if !defined(__wasm__)
+/**
+ * Log a EventProperty message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_event_property.
+ */
+foxglove_error foxglove_channel_log_event_property(const struct foxglove_channel *channel,
+                                                   const struct foxglove_event_property *msg,
+                                                   const uint64_t *log_time,
+                                                   FoxgloveSinkId sink_id);
+#endif
+
+/**
+ * Get the EventProperty schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_event_property_schema(void);
+
+/**
+ * Encode a EventProperty message as protobuf to the buffer provided.
+ *
+ * On success, writes the encoded length to *encoded_len.
+ * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+ * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+ * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+ *
+ * # Safety
+ * ptr must be a valid pointer to a memory region at least len bytes long.
+ */
+foxglove_error foxglove_event_property_encode(const struct foxglove_event_property *msg,
                                               uint8_t *ptr,
                                               size_t len,
                                               size_t *encoded_len);

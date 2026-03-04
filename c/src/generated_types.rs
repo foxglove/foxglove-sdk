@@ -17,6 +17,17 @@ use crate::{FoxgloveDuration, FoxgloveError, FoxgloveSchema, FoxgloveString, Fox
 
 #[derive(Clone, Copy, Debug)]
 #[repr(i32)]
+pub enum FoxgloveEventPropertyType {
+    Text = 0,
+    MultilineText = 1,
+    Boolean = 2,
+    Number = 3,
+    SingleSelect = 4,
+    MultiSelect = 5,
+}
+
+#[derive(Clone, Copy, Debug)]
+#[repr(i32)]
 pub enum FoxgloveLineType {
     LineStrip = 0,
     LineLoop = 1,
@@ -1556,6 +1567,377 @@ pub unsafe extern "C" fn foxglove_cube_primitive_encode(
         }
         Err(e) => {
             tracing::error!("CubePrimitive: {}", e);
+            FoxgloveError::EncodeError
+        }
+    }
+}
+
+/// A discrete event that occurred at a specific time. An event may have zero duration (instantaneous) or a non-zero duration.
+#[repr(C)]
+pub struct Event {
+    /// Timestamp of the event
+    pub timestamp: *const FoxgloveTimestamp,
+
+    /// Duration of the event. If absent or zero, the event is an instantaneous point marker.
+    pub duration: *const FoxgloveDuration,
+
+    /// Category name matching a platform event type (e.g. "FAULT", "MANEUVER"). Used for filtering and grouping.
+    pub event_type: *const FoxgloveString,
+
+    /// Typed property values matching the platform's structured properties model
+    pub event_properties: *const EventProperty,
+    pub event_properties_count: usize,
+
+    /// Unstructured key-value metadata, complementary to event_properties. Keys must be unique.
+    pub metadata: *const KeyValuePair,
+    pub metadata_count: usize,
+
+    /// Short human-readable label shown on the timeline marker
+    pub display_name: *const FoxgloveString,
+
+    /// Hex color string (e.g. "#FF5733" or "#FF573380"). If absent the player assigns a default color.
+    pub color: *const FoxgloveString,
+
+    /// Stable identity for deduplication during platform ingestion. If absent the platform may compute a fingerprint.
+    pub id: *const FoxgloveString,
+
+    /// Platform device ID this event is associated with. If absent during ingestion, inferred from upload context.
+    pub device_id: *const FoxgloveString,
+}
+
+#[cfg(not(target_family = "wasm"))]
+impl Event {
+    /// Create a new typed channel, and return an owned raw channel pointer to it.
+    ///
+    /// # Safety
+    /// We're trusting the caller that the channel will only be used with this type T.
+    #[unsafe(no_mangle)]
+    pub unsafe extern "C" fn foxglove_channel_create_event(
+        topic: FoxgloveString,
+        context: *const FoxgloveContext,
+        channel: *mut *const FoxgloveChannel,
+    ) -> FoxgloveError {
+        if channel.is_null() {
+            tracing::error!("channel cannot be null");
+            return FoxgloveError::ValueError;
+        }
+        unsafe {
+            let result = do_foxglove_channel_create::<foxglove::messages::Event>(topic, context);
+            result_to_c(result, channel)
+        }
+    }
+}
+
+impl BorrowToNative for Event {
+    type NativeType = foxglove::messages::Event;
+
+    unsafe fn borrow_to_native(
+        &self,
+        #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
+    ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
+        let event_type = unsafe {
+            self.event_type
+                .as_ref()
+                .map(|s| string_from_raw(s.as_ptr() as *const _, s.len(), "event_type"))
+                .transpose()?
+        };
+        let event_properties = unsafe {
+            arena
+                .as_mut()
+                .map(self.event_properties, self.event_properties_count)?
+        };
+        let metadata = unsafe { arena.as_mut().map(self.metadata, self.metadata_count)? };
+        let display_name = unsafe {
+            self.display_name
+                .as_ref()
+                .map(|s| string_from_raw(s.as_ptr() as *const _, s.len(), "display_name"))
+                .transpose()?
+        };
+        let color = unsafe {
+            self.color
+                .as_ref()
+                .map(|s| string_from_raw(s.as_ptr() as *const _, s.len(), "color"))
+                .transpose()?
+        };
+        let id = unsafe {
+            self.id
+                .as_ref()
+                .map(|s| string_from_raw(s.as_ptr() as *const _, s.len(), "id"))
+                .transpose()?
+        };
+        let device_id = unsafe {
+            self.device_id
+                .as_ref()
+                .map(|s| string_from_raw(s.as_ptr() as *const _, s.len(), "device_id"))
+                .transpose()?
+        };
+
+        Ok(ManuallyDrop::new(foxglove::messages::Event {
+            timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
+            duration: unsafe { self.duration.as_ref() }.map(|&m| m.into()),
+            event_type: event_type.map(ManuallyDrop::into_inner),
+            event_properties: ManuallyDrop::into_inner(event_properties),
+            metadata: ManuallyDrop::into_inner(metadata),
+            display_name: display_name.map(ManuallyDrop::into_inner),
+            color: color.map(ManuallyDrop::into_inner),
+            id: id.map(ManuallyDrop::into_inner),
+            device_id: device_id.map(ManuallyDrop::into_inner),
+        }))
+    }
+}
+
+/// Log a Event message to a channel.
+///
+/// # Safety
+/// The channel must have been created for this type with foxglove_channel_create_event.
+#[cfg(not(target_family = "wasm"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn foxglove_channel_log_event(
+    channel: Option<&FoxgloveChannel>,
+    msg: Option<&Event>,
+    log_time: Option<&u64>,
+    sink_id: FoxgloveSinkId,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { Event::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
+            log_msg_to_channel(channel, &*msg, log_time, sink_id)
+        }
+        Err(e) => {
+            tracing::error!("Event: {}", e);
+            e.into()
+        }
+    }
+}
+
+/// Get the Event schema.
+///
+/// All buffers in the returned schema are statically allocated.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_event_schema() -> FoxgloveSchema {
+    let native = foxglove::messages::Event::get_schema().expect("Event schema is Some");
+    let name: &'static str = "foxglove.Event";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("Event schema data is static");
+    };
+    FoxgloveSchema {
+        name: name.into(),
+        encoding: encoding.into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
+/// Encode a Event message as protobuf to the buffer provided.
+///
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+/// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+/// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+///
+/// # Safety
+/// ptr must be a valid pointer to a memory region at least len bytes long.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_event_encode(
+    msg: Option<&Event>,
+    ptr: *mut u8,
+    len: usize,
+    encoded_len: Option<&mut usize>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { Event::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            if len == 0 || ptr.is_null() {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = msg
+                        .encoded_len()
+                        .expect("foxglove messages return Some(len)");
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
+            if let Err(encode_error) = msg.encode(&mut buf) {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
+            }
+            FoxgloveError::Ok
+        }
+        Err(e) => {
+            tracing::error!("Event: {}", e);
+            FoxgloveError::EncodeError
+        }
+    }
+}
+
+/// A typed property value on an event, matching the platform's structured properties model
+#[repr(C)]
+pub struct EventProperty {
+    /// Property name
+    pub key: FoxgloveString,
+
+    /// Value type
+    pub r#type: FoxgloveEventPropertyType,
+
+    /// String-encoded value. Interpretation depends on type.
+    pub value: FoxgloveString,
+}
+
+#[cfg(not(target_family = "wasm"))]
+impl EventProperty {
+    /// Create a new typed channel, and return an owned raw channel pointer to it.
+    ///
+    /// # Safety
+    /// We're trusting the caller that the channel will only be used with this type T.
+    #[unsafe(no_mangle)]
+    pub unsafe extern "C" fn foxglove_channel_create_event_property(
+        topic: FoxgloveString,
+        context: *const FoxgloveContext,
+        channel: *mut *const FoxgloveChannel,
+    ) -> FoxgloveError {
+        if channel.is_null() {
+            tracing::error!("channel cannot be null");
+            return FoxgloveError::ValueError;
+        }
+        unsafe {
+            let result =
+                do_foxglove_channel_create::<foxglove::messages::EventProperty>(topic, context);
+            result_to_c(result, channel)
+        }
+    }
+}
+
+impl BorrowToNative for EventProperty {
+    type NativeType = foxglove::messages::EventProperty;
+
+    unsafe fn borrow_to_native(
+        &self,
+        #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
+    ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
+        let key = unsafe { string_from_raw(self.key.as_ptr() as *const _, self.key.len(), "key")? };
+        let value =
+            unsafe { string_from_raw(self.value.as_ptr() as *const _, self.value.len(), "value")? };
+
+        Ok(ManuallyDrop::new(foxglove::messages::EventProperty {
+            key: ManuallyDrop::into_inner(key),
+            r#type: self.r#type as i32,
+            value: ManuallyDrop::into_inner(value),
+        }))
+    }
+}
+
+/// Log a EventProperty message to a channel.
+///
+/// # Safety
+/// The channel must have been created for this type with foxglove_channel_create_event_property.
+#[cfg(not(target_family = "wasm"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn foxglove_channel_log_event_property(
+    channel: Option<&FoxgloveChannel>,
+    msg: Option<&EventProperty>,
+    log_time: Option<&u64>,
+    sink_id: FoxgloveSinkId,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { EventProperty::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
+            log_msg_to_channel(channel, &*msg, log_time, sink_id)
+        }
+        Err(e) => {
+            tracing::error!("EventProperty: {}", e);
+            e.into()
+        }
+    }
+}
+
+/// Get the EventProperty schema.
+///
+/// All buffers in the returned schema are statically allocated.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_event_property_schema() -> FoxgloveSchema {
+    let native =
+        foxglove::messages::EventProperty::get_schema().expect("EventProperty schema is Some");
+    let name: &'static str = "foxglove.EventProperty";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("EventProperty schema data is static");
+    };
+    FoxgloveSchema {
+        name: name.into(),
+        encoding: encoding.into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
+/// Encode a EventProperty message as protobuf to the buffer provided.
+///
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+/// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+/// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+///
+/// # Safety
+/// ptr must be a valid pointer to a memory region at least len bytes long.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_event_property_encode(
+    msg: Option<&EventProperty>,
+    ptr: *mut u8,
+    len: usize,
+    encoded_len: Option<&mut usize>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { EventProperty::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            if len == 0 || ptr.is_null() {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = msg
+                        .encoded_len()
+                        .expect("foxglove messages return Some(len)");
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
+            if let Err(encode_error) = msg.encode(&mut buf) {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
+            }
+            FoxgloveError::Ok
+        }
+        Err(e) => {
+            tracing::error!("EventProperty: {}", e);
             FoxgloveError::EncodeError
         }
     }

@@ -27,6 +27,8 @@ void cubePrimitiveToC(foxglove_cube_primitive& dest, const CubePrimitive& src, A
 void cylinderPrimitiveToC(
   foxglove_cylinder_primitive& dest, const CylinderPrimitive& src, Arena& arena
 );
+void eventToC(foxglove_event& dest, const Event& src, Arena& arena);
+void eventPropertyToC(foxglove_event_property& dest, const EventProperty& src, Arena& arena);
 void frameTransformToC(foxglove_frame_transform& dest, const FrameTransform& src, Arena& arena);
 void frameTransformsToC(foxglove_frame_transforms& dest, const FrameTransforms& src, Arena& arena);
 void geoJSONToC(foxglove_geo_json& dest, const GeoJSON& src, Arena& arena);
@@ -357,6 +359,77 @@ uint64_t CylinderPrimitiveChannel::id() const noexcept {
 }
 
 bool CylinderPrimitiveChannel::has_sinks() const noexcept {
+  return foxglove_channel_has_sinks(impl_.get());
+}
+
+FoxgloveResult<EventChannel> EventChannel::create(
+  const std::string_view& topic, const Context& context
+) {
+  const foxglove_channel* channel = nullptr;
+  foxglove_error error =
+    foxglove_channel_create_event({topic.data(), topic.size()}, context.getInner(), &channel);
+  if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
+    return tl::unexpected(FoxgloveError(error));
+  }
+  return EventChannel(ChannelUniquePtr(channel));
+}
+
+FoxgloveError EventChannel::log(
+  const Event& msg, std::optional<uint64_t> log_time, std::optional<uint64_t> sink_id
+) noexcept {
+  Arena arena;
+  foxglove_event c_msg;
+  eventToC(c_msg, msg, arena);
+  return FoxgloveError(foxglove_channel_log_event(
+    impl_.get(), &c_msg, log_time ? &*log_time : nullptr, sink_id ? *sink_id : 0
+  ));
+}
+
+void EventChannel::close() noexcept {
+  foxglove_channel_close(impl_.get());
+}
+
+uint64_t EventChannel::id() const noexcept {
+  return foxglove_channel_get_id(impl_.get());
+}
+
+bool EventChannel::has_sinks() const noexcept {
+  return foxglove_channel_has_sinks(impl_.get());
+}
+
+FoxgloveResult<EventPropertyChannel> EventPropertyChannel::create(
+  const std::string_view& topic, const Context& context
+) {
+  const foxglove_channel* channel = nullptr;
+  foxglove_error error = foxglove_channel_create_event_property(
+    {topic.data(), topic.size()}, context.getInner(), &channel
+  );
+  if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
+    return tl::unexpected(FoxgloveError(error));
+  }
+  return EventPropertyChannel(ChannelUniquePtr(channel));
+}
+
+FoxgloveError EventPropertyChannel::log(
+  const EventProperty& msg, std::optional<uint64_t> log_time, std::optional<uint64_t> sink_id
+) noexcept {
+  Arena arena;
+  foxglove_event_property c_msg;
+  eventPropertyToC(c_msg, msg, arena);
+  return FoxgloveError(foxglove_channel_log_event_property(
+    impl_.get(), &c_msg, log_time ? &*log_time : nullptr, sink_id ? *sink_id : 0
+  ));
+}
+
+void EventPropertyChannel::close() noexcept {
+  foxglove_channel_close(impl_.get());
+}
+
+uint64_t EventPropertyChannel::id() const noexcept {
+  return foxglove_channel_get_id(impl_.get());
+}
+
+bool EventPropertyChannel::has_sinks() const noexcept {
   return foxglove_channel_has_sinks(impl_.get());
 }
 
@@ -1654,6 +1727,31 @@ void cylinderPrimitiveToC(
   dest.color = src.color ? reinterpret_cast<const foxglove_color*>(&*src.color) : nullptr;
 }
 
+void eventToC(foxglove_event& dest, const Event& src, [[maybe_unused]] Arena& arena) {
+  dest.timestamp =
+    src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
+  dest.duration =
+    src.duration ? reinterpret_cast<const foxglove_duration*>(&*src.duration) : nullptr;
+  dest.event_type = {src.event_type.data(), src.event_type.size()};
+  dest.event_properties =
+    arena.map<foxglove_event_property>(src.event_properties, eventPropertyToC);
+  dest.event_properties_count = src.event_properties.size();
+  dest.metadata = arena.map<foxglove_key_value_pair>(src.metadata, keyValuePairToC);
+  dest.metadata_count = src.metadata.size();
+  dest.display_name = {src.display_name.data(), src.display_name.size()};
+  dest.color = {src.color.data(), src.color.size()};
+  dest.id = {src.id.data(), src.id.size()};
+  dest.device_id = {src.device_id.data(), src.device_id.size()};
+}
+
+void eventPropertyToC(
+  foxglove_event_property& dest, const EventProperty& src, [[maybe_unused]] Arena& arena
+) {
+  dest.key = {src.key.data(), src.key.size()};
+  dest.type = static_cast<foxglove_event_property_type>(src.type);
+  dest.value = {src.value.data(), src.value.size()};
+}
+
 void frameTransformToC(
   foxglove_frame_transform& dest, const FrameTransform& src, [[maybe_unused]] Arena& arena
 ) {
@@ -2063,6 +2161,20 @@ FoxgloveError CylinderPrimitive::encode(uint8_t* ptr, size_t len, size_t* encode
   return FoxgloveError(foxglove_cylinder_primitive_encode(&c_msg, ptr, len, encoded_len));
 }
 
+FoxgloveError Event::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
+  Arena arena;
+  foxglove_event c_msg;
+  eventToC(c_msg, *this, arena);
+  return FoxgloveError(foxglove_event_encode(&c_msg, ptr, len, encoded_len));
+}
+
+FoxgloveError EventProperty::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
+  Arena arena;
+  foxglove_event_property c_msg;
+  eventPropertyToC(c_msg, *this, arena);
+  return FoxgloveError(foxglove_event_property_encode(&c_msg, ptr, len, encoded_len));
+}
+
 FoxgloveError FrameTransform::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_frame_transform c_msg;
@@ -2368,6 +2480,26 @@ Schema CubePrimitive::schema() {
 
 Schema CylinderPrimitive::schema() {
   struct foxglove_schema c_schema = foxglove_cylinder_primitive_schema();
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data_len = c_schema.data_len;
+  return result;
+}
+
+Schema Event::schema() {
+  struct foxglove_schema c_schema = foxglove_event_schema();
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data_len = c_schema.data_len;
+  return result;
+}
+
+Schema EventProperty::schema() {
+  struct foxglove_schema c_schema = foxglove_event_property_schema();
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
