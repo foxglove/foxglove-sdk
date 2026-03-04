@@ -1,9 +1,9 @@
-#include <foxglove-c/foxglove-c.h>
+#include "../src/mcap_internal.hpp"
+
 #include <foxglove/arena.hpp>
 #include <foxglove/channel.hpp>
 #include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
-#include <foxglove/mcap.hpp>
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
@@ -744,10 +744,6 @@ TEST_CASE("Write empty attachment data") {
   std::string content = readFile("test.mcap");
   REQUIRE_THAT(content, ContainsSubstring("empty.txt"));
 }
-
-namespace foxglove {
-foxglove_mcap_options to_c_mcap_options(const McapWriterOptions& options);
-}  // namespace foxglove
 
 TEST_CASE("McapWriterOptions defaults match C defaults") {
   foxglove::McapWriterOptions defaults;
