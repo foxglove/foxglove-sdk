@@ -21,7 +21,7 @@ static size_t custom_write(void* fn, const uint8_t* data, size_t len, int32_t* e
   return writer->write(data, len, error);
 }
 
-static foxglove_mcap_options to_c_mcap_options(const McapWriterOptions& options) {
+foxglove_mcap_options to_c_mcap_options(const McapWriterOptions& options) {
   foxglove_mcap_options c_options = foxglove_mcap_options_default();
   c_options.context = options.context.getInner();
   c_options.path = {options.path.data(), options.path.length()};
@@ -45,7 +45,8 @@ static foxglove_mcap_options to_c_mcap_options(const McapWriterOptions& options)
   c_options.calculate_summary_section_crc = options.calculate_summary_section_crc;
   c_options.calculate_attachment_crcs = options.calculate_attachment_crcs;
   c_options.compression_level = options.compression_level;
-  c_options.compression_threads = options.compression_threads;
+  c_options.compression_threads =
+    options.compression_threads.value_or(FOXGLOVE_MCAP_COMPRESSION_THREADS_DEFAULT);
   c_options.truncate = options.truncate;
   return c_options;
 }

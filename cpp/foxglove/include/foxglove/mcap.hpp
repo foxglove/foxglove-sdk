@@ -141,8 +141,8 @@ struct McapWriterOptions {
   /// A value of 0 instructs the compressor to use its default level.
   uint32_t compression_level = 0;
   /// @brief Number of threads for zstd compression. 0 disables multithreading.
-  /// The default uses the number of physical CPUs.
-  uint32_t compression_threads = UINT32_MAX;
+  /// The default (nullopt) uses the number of physical CPUs.
+  std::optional<uint32_t> compression_threads;
   /// @brief Whether to truncate the MCAP file.
   bool truncate = false;
   /// @brief Optional channel filter to use for the MCAP file.
