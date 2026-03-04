@@ -1186,6 +1186,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "example_ws_record_mcap"
+version = "0.0.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "env_logger",
+ "foxglove 0.18.0",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "example_ws_server"
 version = "0.0.0"
 dependencies = [
