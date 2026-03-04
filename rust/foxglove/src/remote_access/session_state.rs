@@ -106,7 +106,6 @@ impl SessionState {
 
     /// Removes an advertised channel. Returns `true` if it was present.
     pub fn remove_channel(&mut self, channel_id: ChannelId) -> bool {
-        self.subscriptions.remove(&channel_id);
         self.channels.remove(&channel_id).is_some()
     }
 
