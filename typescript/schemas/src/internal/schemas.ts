@@ -297,6 +297,117 @@ const KeyValuePair: FoxgloveMessageSchema = {
   ],
 };
 
+const EventPropertyType: FoxgloveEnumSchema = {
+  type: "enum",
+  name: "EventPropertyType",
+  description: "Type of an event property value",
+  parentSchemaName: "EventProperty",
+  protobufEnumName: "Type",
+  values: [
+    { value: 0, name: "TEXT", description: "Single-line text" },
+    { value: 1, name: "MULTILINE_TEXT", description: "Multi-line text" },
+    { value: 2, name: "BOOLEAN", description: "True/false" },
+    { value: 3, name: "NUMBER", description: "Numeric value" },
+    { value: 4, name: "SINGLE_SELECT", description: "Single choice from options" },
+    { value: 5, name: "MULTI_SELECT", description: "Multiple choices from options" },
+  ],
+};
+
+const EventProperty: FoxgloveMessageSchema = {
+  type: "message",
+  name: "EventProperty",
+  description:
+    "A typed property value on an event, matching the platform's structured properties model",
+  fields: [
+    {
+      name: "key",
+      type: { type: "primitive", name: "string" },
+      description: "Property name",
+    },
+    {
+      name: "type",
+      type: { type: "enum", enum: EventPropertyType },
+      description: "Value type",
+    },
+    {
+      name: "value",
+      type: { type: "primitive", name: "string" },
+      description: "String-encoded value. Interpretation depends on type.",
+    },
+  ],
+};
+
+const Event: FoxgloveMessageSchema = {
+  type: "message",
+  name: "Event",
+  description:
+    "A discrete event that occurred at a specific time. An event may have zero duration (instantaneous) or a non-zero duration.",
+  fields: [
+    {
+      name: "timestamp",
+      type: { type: "nested", schema: Timestamp },
+      description: "Timestamp of the event",
+    },
+    {
+      name: "duration",
+      type: { type: "nested", schema: Duration },
+      description:
+        "Duration of the event. If absent or zero, the event is an instantaneous point marker.",
+      optional: true,
+    },
+    {
+      name: "event_type",
+      type: { type: "primitive", name: "string" },
+      description:
+        'Category name matching a platform event type (e.g. "FAULT", "MANEUVER"). Used for filtering and grouping.',
+      optional: true,
+    },
+    {
+      name: "event_properties",
+      type: { type: "nested", schema: EventProperty },
+      array: true,
+      description:
+        "Typed property values matching the platform's structured properties model",
+      optional: true,
+    },
+    {
+      name: "metadata",
+      type: { type: "nested", schema: KeyValuePair },
+      array: true,
+      description:
+        "Unstructured key-value metadata, complementary to event_properties. Keys must be unique.",
+      optional: true,
+    },
+    {
+      name: "display_name",
+      type: { type: "primitive", name: "string" },
+      description: "Short human-readable label shown on the timeline marker",
+      optional: true,
+    },
+    {
+      name: "color",
+      type: { type: "primitive", name: "string" },
+      description:
+        'Hex color string (e.g. "#FF5733" or "#FF573380"). If absent the player assigns a default color.',
+      optional: true,
+    },
+    {
+      name: "id",
+      type: { type: "primitive", name: "string" },
+      description:
+        "Stable identity for deduplication during platform ingestion. If absent the platform may compute a fingerprint.",
+      optional: true,
+    },
+    {
+      name: "device_id",
+      type: { type: "primitive", name: "string" },
+      description:
+        "Platform device ID this event is associated with. If absent during ingestion, inferred from upload context.",
+      optional: true,
+    },
+  ],
+};
+
 const SceneEntityDeletionType: FoxgloveEnumSchema = {
   type: "enum",
   name: "SceneEntityDeletionType",
@@ -1765,6 +1876,8 @@ export const foxgloveMessageSchemas = {
   CylinderPrimitive,
   CubePrimitive,
   Duration,
+  Event,
+  EventProperty,
   FrameTransform,
   FrameTransforms,
   GeoJSON,
@@ -1803,6 +1916,7 @@ export const foxgloveMessageSchemas = {
 };
 
 export const foxgloveEnumSchemas = {
+  EventPropertyType,
   LineType,
   LogLevel,
   SceneEntityDeletionType,

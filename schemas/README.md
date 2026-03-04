@@ -12,6 +12,7 @@ If the IDL does not support optional fields (e.g. ROS) you must specify a value 
 
 ## Contents
 
+- [enum EventPropertyType](#enum-eventpropertytype)
 - [enum LineType](#enum-linetype)
 - [enum LogLevel](#enum-loglevel)
 - [enum NumericType](#enum-numerictype)
@@ -27,6 +28,8 @@ If the IDL does not support optional fields (e.g. ROS) you must specify a value 
 - [CubePrimitive](#cubeprimitive)
 - [CylinderPrimitive](#cylinderprimitive)
 - [Duration](#duration)
+- [Event](#event)
+- [EventProperty](#eventproperty)
 - [FrameTransform](#frametransform)
 - [FrameTransforms](#frametransforms)
 - [GeoJSON](#geojson)
@@ -64,6 +67,21 @@ If the IDL does not support optional fields (e.g. ROS) you must specify a value 
 - [VoxelGrid](#voxelgrid)
 
 ----
+
+## enum EventPropertyType
+
+Type of an event property value
+
+name | value | description
+---- | ----- | -----------
+`TEXT` | 0 | Single-line text
+`MULTILINE_TEXT` | 1 | Multi-line text
+`BOOLEAN` | 2 | True/false
+`NUMBER` | 3 | Numeric value
+`SINGLE_SELECT` | 4 | Single choice from options
+`MULTI_SELECT` | 5 | Multiple choices from options
+
+
 
 ## enum LineType
 
@@ -883,6 +901,186 @@ uint32
 <td>
 
 The number of nanoseconds in the positive direction
+
+</td>
+</tr>
+</table>
+
+## Event
+
+A discrete event that occurred at a specific time. An event may have zero duration (instantaneous) or a non-zero duration.
+
+<table>
+  <tr>
+    <th>field</th>
+    <th>type</th>
+    <th>description</th>
+  </tr>
+<tr>
+<td><code>timestamp</code></td>
+<td>
+
+[Timestamp](#timestamp)
+
+</td>
+<td>
+
+Timestamp of the event
+
+</td>
+</tr>
+<tr>
+<td><code>duration</code> (optional)</td>
+<td>
+
+[Duration](#duration)
+
+</td>
+<td>
+
+Duration of the event. If absent or zero, the event is an instantaneous point marker.
+
+</td>
+</tr>
+<tr>
+<td><code>event_type</code> (optional)</td>
+<td>
+
+string
+
+</td>
+<td>
+
+Category name matching a platform event type (e.g. "FAULT", "MANEUVER"). Used for filtering and grouping.
+
+</td>
+</tr>
+<tr>
+<td><code>event_properties</code> (optional)</td>
+<td>
+
+[EventProperty](#eventproperty)[]
+
+</td>
+<td>
+
+Typed property values matching the platform's structured properties model
+
+</td>
+</tr>
+<tr>
+<td><code>metadata</code> (optional)</td>
+<td>
+
+[KeyValuePair](#keyvaluepair)[]
+
+</td>
+<td>
+
+Unstructured key-value metadata, complementary to event_properties. Keys must be unique.
+
+</td>
+</tr>
+<tr>
+<td><code>display_name</code> (optional)</td>
+<td>
+
+string
+
+</td>
+<td>
+
+Short human-readable label shown on the timeline marker
+
+</td>
+</tr>
+<tr>
+<td><code>color</code> (optional)</td>
+<td>
+
+string
+
+</td>
+<td>
+
+Hex color string (e.g. "#FF5733" or "#FF573380"). If absent the player assigns a default color.
+
+</td>
+</tr>
+<tr>
+<td><code>id</code> (optional)</td>
+<td>
+
+string
+
+</td>
+<td>
+
+Stable identity for deduplication during platform ingestion. If absent the platform may compute a fingerprint.
+
+</td>
+</tr>
+<tr>
+<td><code>device_id</code> (optional)</td>
+<td>
+
+string
+
+</td>
+<td>
+
+Platform device ID this event is associated with. If absent during ingestion, inferred from upload context.
+
+</td>
+</tr>
+</table>
+
+## EventProperty
+
+A typed property value on an event, matching the platform's structured properties model
+
+<table>
+  <tr>
+    <th>field</th>
+    <th>type</th>
+    <th>description</th>
+  </tr>
+<tr>
+<td><code>key</code></td>
+<td>
+
+string
+
+</td>
+<td>
+
+Property name
+
+</td>
+</tr>
+<tr>
+<td><code>type</code></td>
+<td>
+
+[enum EventPropertyType](#enum-eventpropertytype)
+
+</td>
+<td>
+
+Value type
+
+</td>
+</tr>
+<tr>
+<td><code>value</code></td>
+<td>
+
+string
+
+</td>
+<td>
+
+String-encoded value. Interpretation depends on type.
 
 </td>
 </tr>

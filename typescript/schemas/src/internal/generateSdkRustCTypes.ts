@@ -112,7 +112,7 @@ pub struct ${name} {
         }
         lines.push(`pub ${identName}_count: usize,`);
       } else {
-        if (field.type.type === "nested") {
+        if (field.type.type === "nested" || (field.type.type === "primitive" && field.type.name === "string" && field.optional === true)) {
           fieldType = `*const ${fieldType}`;
         }
         lines.push(`pub ${identName}: ${fieldType},`);
@@ -167,6 +167,11 @@ impl BorrowToNative for ${name} {
         switch (field.type.type) {
           case "primitive":
             if (field.type.name === "string") {
+              if (field.optional === true) {
+                return [
+                  `let ${fieldName} = unsafe { self.${fieldName}.as_ref().map(|s| string_from_raw(s.as_ptr() as *const _, s.len(), "${field.name}")).transpose()? };`,
+                ];
+              }
               return [
                 `let ${fieldName} = unsafe { string_from_raw(self.${fieldName}.as_ptr() as *const _, self.${fieldName}.len(), "${field.name}")? };`,
               ];
@@ -207,6 +212,9 @@ impl BorrowToNative for ${name} {
         switch (field.type.type) {
           case "primitive":
             if (field.type.name === "string") {
+              if (field.optional === true) {
+                return `${fieldName}: ${fieldName}.map(ManuallyDrop::into_inner)`;
+              }
               return `${fieldName}: ManuallyDrop::into_inner(${fieldName})`;
             } else if (field.type.name === "bytes") {
               return `${fieldName}: ManuallyDrop::into_inner(unsafe { bytes_from_raw(self.${fieldName}, self.${fieldName}_len) })`;
