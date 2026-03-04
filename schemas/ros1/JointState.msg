@@ -6,14 +6,14 @@
 # Joint name
 string name
 
-# Joint position. Radians for revolute joints, meters for prismatic joints. Use NaN to indicate that the value is not present, in case your encoding does not support optional fields.
+# Joint position. Radians for revolute joints, meters for prismatic joints. Use NaN to indicate that the value is not present, in case your schema does not support optional fields.
 float64 position
 
-# Joint velocity. Rad/s for revolute joints, m/s for prismatic joints. Use NaN to indicate that the value is not present, in case your encoding does not support optional fields.
+# Joint velocity. Rad/s for revolute joints, m/s for prismatic joints. Use NaN to indicate that the value is not present, in case your schema does not support optional fields.
 float64 velocity
 
-# Joint acceleration. Rad/s² for revolute joints, m/s² for prismatic joints. Use NaN to indicate that the value is not present, in case your encoding does not support optional fields.
+# Joint acceleration. Rad/s² for revolute joints, m/s² for prismatic joints. Use NaN to indicate that the value is not present, in case your schema does not support optional fields.
 float64 acceleration
 
-# Joint effort (force or torque). Nm for revolute joints, N for prismatic joints. Use NaN to indicate that the value is not present, in case your encoding does not support optional fields.
+# Joint effort (force or torque). Nm for revolute joints, N for prismatic joints. Use NaN to indicate that the value is not present, in case your schema does not support optional fields.
 float64 effort

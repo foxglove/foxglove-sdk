@@ -1180,10 +1180,10 @@ impl From<ImageAnnotations> for foxglove::schemas::ImageAnnotations {
 /// The state of a single joint (revolute or prismatic).
 ///
 /// :param name: Joint name
-/// :param position: Joint position. Radians for revolute joints, meters for prismatic joints. Use NaN to indicate that the value is not present, in case your encoding does not support optional fields.
-/// :param velocity: Joint velocity. Rad/s for revolute joints, m/s for prismatic joints. Use NaN to indicate that the value is not present, in case your encoding does not support optional fields.
-/// :param acceleration: Joint acceleration. Rad/s² for revolute joints, m/s² for prismatic joints. Use NaN to indicate that the value is not present, in case your encoding does not support optional fields.
-/// :param effort: Joint effort (force or torque). Nm for revolute joints, N for prismatic joints. Use NaN to indicate that the value is not present, in case your encoding does not support optional fields.
+/// :param position: Joint position. Radians for revolute joints, meters for prismatic joints. Use NaN to indicate that the value is not present, in case your schema does not support optional fields.
+/// :param velocity: Joint velocity. Rad/s for revolute joints, m/s for prismatic joints. Use NaN to indicate that the value is not present, in case your schema does not support optional fields.
+/// :param acceleration: Joint acceleration. Rad/s² for revolute joints, m/s² for prismatic joints. Use NaN to indicate that the value is not present, in case your schema does not support optional fields.
+/// :param effort: Joint effort (force or torque). Nm for revolute joints, N for prismatic joints. Use NaN to indicate that the value is not present, in case your schema does not support optional fields.
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/joint-state
 #[pyclass(module = "foxglove.schemas")]
@@ -1241,7 +1241,7 @@ impl From<JointState> for foxglove::schemas::JointState {
     }
 }
 
-/// The state of a set of joints at a given time. All joint states in one message are recorded at the same time.
+/// The state of a set of joints at a given time.
 ///
 /// :param timestamp: Timestamp of the joint states
 /// :param joints: Joint states

@@ -4,7 +4,7 @@
 import { JointState } from "./JointState";
 import { Time } from "./Time";
 
-/** The state of a set of joints at a given time. All joint states in one message are recorded at the same time. */
+/** The state of a set of joints at a given time. */
 export type JointStates = {
   /** Timestamp of the joint states */
   timestamp: Time;

@@ -1302,7 +1302,7 @@ float64
 </td>
 <td>
 
-Joint position. Radians for revolute joints, meters for prismatic joints. Use NaN to indicate that the value is not present, in case your encoding does not support optional fields.
+Joint position. Radians for revolute joints, meters for prismatic joints. Use NaN to indicate that the value is not present, in case your schema does not support optional fields.
 
 </td>
 </tr>
@@ -1315,7 +1315,7 @@ float64
 </td>
 <td>
 
-Joint velocity. Rad/s for revolute joints, m/s for prismatic joints. Use NaN to indicate that the value is not present, in case your encoding does not support optional fields.
+Joint velocity. Rad/s for revolute joints, m/s for prismatic joints. Use NaN to indicate that the value is not present, in case your schema does not support optional fields.
 
 </td>
 </tr>
@@ -1328,7 +1328,7 @@ float64
 </td>
 <td>
 
-Joint acceleration. Rad/s² for revolute joints, m/s² for prismatic joints. Use NaN to indicate that the value is not present, in case your encoding does not support optional fields.
+Joint acceleration. Rad/s² for revolute joints, m/s² for prismatic joints. Use NaN to indicate that the value is not present, in case your schema does not support optional fields.
 
 </td>
 </tr>
@@ -1341,7 +1341,7 @@ float64
 </td>
 <td>
 
-Joint effort (force or torque). Nm for revolute joints, N for prismatic joints. Use NaN to indicate that the value is not present, in case your encoding does not support optional fields.
+Joint effort (force or torque). Nm for revolute joints, N for prismatic joints. Use NaN to indicate that the value is not present, in case your schema does not support optional fields.
 
 </td>
 </tr>
@@ -1349,7 +1349,7 @@ Joint effort (force or torque). Nm for revolute joints, N for prismatic joints. 
 
 ## JointStates
 
-The state of a set of joints at a given time. All joint states in one message are recorded at the same time.
+The state of a set of joints at a given time.
 
 <table>
   <tr>

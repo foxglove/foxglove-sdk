@@ -393,7 +393,7 @@ class JointState:
 
 class JointStates:
     """
-    The state of a set of joints at a given time. All joint states in one message are recorded at the same time.
+    The state of a set of joints at a given time.
     """
 
     def __init__(

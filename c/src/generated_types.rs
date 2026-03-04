@@ -2681,16 +2681,16 @@ pub struct JointState {
     /// Joint name
     pub name: FoxgloveString,
 
-    /// Joint position. Radians for revolute joints, meters for prismatic joints. Use NaN to indicate that the value is not present, in case your encoding does not support optional fields.
+    /// Joint position. Radians for revolute joints, meters for prismatic joints. Use NaN to indicate that the value is not present, in case your schema does not support optional fields.
     pub position: *const f64,
 
-    /// Joint velocity. Rad/s for revolute joints, m/s for prismatic joints. Use NaN to indicate that the value is not present, in case your encoding does not support optional fields.
+    /// Joint velocity. Rad/s for revolute joints, m/s for prismatic joints. Use NaN to indicate that the value is not present, in case your schema does not support optional fields.
     pub velocity: *const f64,
 
-    /// Joint acceleration. Rad/s² for revolute joints, m/s² for prismatic joints. Use NaN to indicate that the value is not present, in case your encoding does not support optional fields.
+    /// Joint acceleration. Rad/s² for revolute joints, m/s² for prismatic joints. Use NaN to indicate that the value is not present, in case your schema does not support optional fields.
     pub acceleration: *const f64,
 
-    /// Joint effort (force or torque). Nm for revolute joints, N for prismatic joints. Use NaN to indicate that the value is not present, in case your encoding does not support optional fields.
+    /// Joint effort (force or torque). Nm for revolute joints, N for prismatic joints. Use NaN to indicate that the value is not present, in case your schema does not support optional fields.
     pub effort: *const f64,
 }
 
@@ -2838,7 +2838,7 @@ pub unsafe extern "C" fn foxglove_joint_state_encode(
     }
 }
 
-/// The state of a set of joints at a given time. All joint states in one message are recorded at the same time.
+/// The state of a set of joints at a given time.
 #[repr(C)]
 pub struct JointStates {
     /// Timestamp of the joint states

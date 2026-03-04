@@ -7,7 +7,7 @@ import "google/protobuf/timestamp.proto";
 
 package foxglove;
 
-// The state of a set of joints at a given time. All joint states in one message are recorded at the same time.
+// The state of a set of joints at a given time.
 message JointStates {
   // Timestamp of the joint states
   google.protobuf.Timestamp timestamp = 1;
