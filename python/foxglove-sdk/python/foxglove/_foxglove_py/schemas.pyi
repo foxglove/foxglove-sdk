@@ -10,6 +10,18 @@ from .schemas_wkt import Timestamp as Timestamp
 # Enums
 #
 
+class EventPropertyType(Enum):
+    """
+    Type of an event property value
+    """
+
+    Text = 0
+    MultilineText = 1
+    Boolean = 2
+    Number = 3
+    SingleSelect = 4
+    MultiSelect = 5
+
 class LinePrimitiveLineType(Enum):
     """
     An enumeration indicating how input points should be interpreted to create lines
@@ -257,6 +269,54 @@ class CylinderPrimitive:
 
     def encode(self) -> bytes:
         """Encodes the CylinderPrimitive."""
+        ...
+
+class Event:
+    """
+    A discrete event that occurred at a specific time. An event may have zero duration (instantaneous) or a non-zero duration.
+    """
+
+    def __init__(
+        self,
+        *,
+        timestamp: Timestamp | None = None,
+        duration: Duration | None = None,
+        event_type: str | None = None,
+        event_properties: list[EventProperty] | None = None,
+        metadata: list[KeyValuePair] | None = None,
+        display_name: str | None = None,
+        color: str | None = None,
+        id: str | None = None,
+        device_id: str | None = None,
+    ) -> None: ...
+    @staticmethod
+    def get_schema() -> Schema:
+        """Returns the Event schema"""
+        ...
+
+    def encode(self) -> bytes:
+        """Encodes the Event."""
+        ...
+
+class EventProperty:
+    """
+    A typed property value on an event, matching the platform's structured properties model
+    """
+
+    def __init__(
+        self,
+        *,
+        key: str = "",
+        type: EventPropertyType = EventPropertyType.Text,
+        value: str = "",
+    ) -> None: ...
+    @staticmethod
+    def get_schema() -> Schema:
+        """Returns the EventProperty schema"""
+        ...
+
+    def encode(self) -> bytes:
+        """Encodes the EventProperty."""
         ...
 
 class FrameTransform:
@@ -1003,6 +1063,8 @@ FoxgloveSchema = Union[
     CompressedVideo,
     CylinderPrimitive,
     CubePrimitive,
+    Event,
+    EventProperty,
     FrameTransform,
     FrameTransforms,
     GeoJson,

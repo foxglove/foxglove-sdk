@@ -10,6 +10,18 @@ use foxglove::Encode;
 use pyo3::prelude::*;
 use pyo3::types::PyBytes;
 
+/// Type of an event property value
+#[pyclass(eq, eq_int, module = "foxglove.schemas")]
+#[derive(PartialEq, Clone)]
+pub(crate) enum EventPropertyType {
+    Text = 0,
+    MultilineText = 1,
+    Boolean = 2,
+    Number = 3,
+    SingleSelect = 4,
+    MultiSelect = 5,
+}
+
 /// An enumeration indicating how input points should be interpreted to create lines
 #[pyclass(eq, eq_int, module = "foxglove.schemas")]
 #[derive(PartialEq, Clone)]
@@ -681,6 +693,154 @@ impl CubePrimitive {
 
 impl From<CubePrimitive> for foxglove::schemas::CubePrimitive {
     fn from(value: CubePrimitive) -> Self {
+        value.0
+    }
+}
+
+/// A discrete event that occurred at a specific time. An event may have zero duration (instantaneous) or a non-zero duration.
+///
+/// :param timestamp: Timestamp of the event
+/// :param duration: Duration of the event. If absent or zero, the event is an instantaneous point marker.
+/// :param event_type: Category name matching a platform event type (e.g. "FAULT", "MANEUVER"). Used for filtering and grouping.
+/// :param event_properties: Typed property values matching the platform's structured properties model
+/// :param metadata: Unstructured key-value metadata, complementary to event_properties. Keys must be unique.
+/// :param display_name: Short human-readable label shown on the timeline marker
+/// :param color: Hex color string (e.g. "#FF5733" or "#FF573380"). If absent the player assigns a default color.
+/// :param id: Stable identity for deduplication during platform ingestion. If absent the platform may compute a fingerprint.
+/// :param device_id: Platform device ID this event is associated with. If absent during ingestion, inferred from upload context.
+///
+/// See https://docs.foxglove.dev/docs/visualization/message-schemas/event
+#[pyclass(module = "foxglove.schemas")]
+#[derive(Clone)]
+pub(crate) struct Event(pub(crate) foxglove::schemas::Event);
+#[pymethods]
+impl Event {
+    #[new]
+    #[pyo3(signature = (*, timestamp=None, duration=None, event_type=None, event_properties=None, metadata=None, display_name=None, color=None, id=None, device_id=None) )]
+    fn new(
+        timestamp: Option<Timestamp>,
+        duration: Option<Duration>,
+        event_type: Option<&str>,
+        event_properties: Option<Vec<EventProperty>>,
+        metadata: Option<Vec<KeyValuePair>>,
+        display_name: Option<&str>,
+        color: Option<&str>,
+        id: Option<&str>,
+        device_id: Option<&str>,
+    ) -> Self {
+        Self(foxglove::schemas::Event {
+            timestamp: timestamp.map(Into::into),
+            duration: duration.map(Into::into),
+            event_type: event_type.map(|s| s.to_string()),
+            event_properties: event_properties
+                .unwrap_or_default()
+                .into_iter()
+                .map(|x| x.into())
+                .collect(),
+            metadata: metadata
+                .unwrap_or_default()
+                .into_iter()
+                .map(|x| x.into())
+                .collect(),
+            display_name: display_name.map(|s| s.to_string()),
+            color: color.map(|s| s.to_string()),
+            id: id.map(|s| s.to_string()),
+            device_id: device_id.map(|s| s.to_string()),
+        })
+    }
+    fn __repr__(&self) -> String {
+        format!(
+            "Event(timestamp={:?}, duration={:?}, event_type={:?}, event_properties={:?}, metadata={:?}, display_name={:?}, color={:?}, id={:?}, device_id={:?})",
+            self.0.timestamp,
+            self.0.duration,
+            self.0.event_type,
+            self.0.event_properties,
+            self.0.metadata,
+            self.0.display_name,
+            self.0.color,
+            self.0.id,
+            self.0.device_id,
+        )
+    }
+    /// Returns the Event schema.
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::Event::get_schema().unwrap().into()
+    }
+    /// Encodes the Event as protobuf.
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("failed to allocate buffer for encoded message")
+    }
+}
+
+impl From<Event> for foxglove::schemas::Event {
+    fn from(value: Event) -> Self {
+        value.0
+    }
+}
+
+/// A typed property value on an event, matching the platform's structured properties model
+///
+/// :param key: Property name
+/// :param type: Value type
+/// :param value: String-encoded value. Interpretation depends on type.
+///
+/// See https://docs.foxglove.dev/docs/visualization/message-schemas/event-property
+#[pyclass(module = "foxglove.schemas")]
+#[derive(Clone)]
+pub(crate) struct EventProperty(pub(crate) foxglove::schemas::EventProperty);
+#[pymethods]
+impl EventProperty {
+    #[new]
+    #[pyo3(signature = (*, key="", r#type=EventPropertyType::Text, value="") )]
+    fn new(key: &str, r#type: EventPropertyType, value: &str) -> Self {
+        Self(foxglove::schemas::EventProperty {
+            key: key.to_string(),
+            r#type: r#type as i32,
+            value: value.to_string(),
+        })
+    }
+    fn __repr__(&self) -> String {
+        format!(
+            "EventProperty(key={:?}, r#type={:?}, value={:?})",
+            self.0.key, self.0.r#type, self.0.value,
+        )
+    }
+    /// Returns the EventProperty schema.
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::EventProperty::get_schema()
+            .unwrap()
+            .into()
+    }
+    /// Encodes the EventProperty as protobuf.
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("failed to allocate buffer for encoded message")
+    }
+}
+
+impl From<EventProperty> for foxglove::schemas::EventProperty {
+    fn from(value: EventProperty) -> Self {
         value.0
     }
 }
@@ -3117,6 +3277,7 @@ impl From<Vector3> for foxglove::schemas::Vector3 {
 pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     let module = PyModule::new(parent_module.py(), "schemas")?;
 
+    module.add_class::<EventPropertyType>()?;
     module.add_class::<LinePrimitiveLineType>()?;
     module.add_class::<LogLevel>()?;
     module.add_class::<SceneEntityDeletionType>()?;
@@ -3132,6 +3293,8 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<CylinderPrimitive>()?;
     module.add_class::<CubePrimitive>()?;
     module.add_class::<Duration>()?;
+    module.add_class::<Event>()?;
+    module.add_class::<EventProperty>()?;
     module.add_class::<FrameTransform>()?;
     module.add_class::<FrameTransforms>()?;
     module.add_class::<GeoJson>()?;
