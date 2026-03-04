@@ -18,6 +18,7 @@ use anyhow::{bail, Context as _, Result};
 use clap::Parser;
 use foxglove::ws_protocol::client::{Subscribe, Subscription};
 use foxglove::ws_protocol::server::ServerMessage;
+use foxglove::ws_protocol::ParseError;
 use foxglove::{ChannelBuilder, Context, McapWriter, PartialMetadata, RawChannel, Schema};
 use foxglove::WebSocketClientError;
 use tracing::info;
@@ -84,6 +85,10 @@ async fn main() -> Result<()> {
     };
     tokio::pin!(shutdown);
 
+    let mut msg_count: u64 = 0;
+    let mut ticker = tokio::time::interval(std::time::Duration::from_secs(1));
+    ticker.tick().await; // consume the immediate first tick
+
     loop {
         // Pending subscribe requests built up while processing an Advertise batch.
         let mut pending_subs: Vec<Subscription> = Vec::new();
@@ -96,12 +101,19 @@ async fn main() -> Result<()> {
                 break;
             }
 
+            _ = ticker.tick() => {
+                info!("Messages written: {msg_count}");
+            }
+
             result = client.recv() => {
                 let msg = match result {
                     Ok(msg) => msg,
                     // recv() has a 1-second internal timeout; just retry.
                     Err(WebSocketClientError::Timeout(_)) => continue,
-                    Err(WebSocketClientError::UnexpectedEndOfStream) => {
+                    Err(WebSocketClientError::UnexpectedEndOfStream)
+                    | Err(WebSocketClientError::ParseError(
+                        ParseError::UnhandledMessageType,
+                    )) => {
                         info!("Server closed the connection");
                         break;
                     }
@@ -165,6 +177,7 @@ async fn main() -> Result<()> {
                                     log_time: Some(msg.log_time),
                                 },
                             );
+                            msg_count += 1;
                         }
                     }
 
