@@ -1,20 +1,15 @@
 //! Integration test: stream an MCAP file with --autoplay and record it back to a new file,
 //! then verify the recorded file contains the same channels and messages as the source.
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
 use std::io::{BufReader, Read, Seek, SeekFrom};
 use std::net::TcpListener;
 use std::path::Path;
 use std::sync::Arc;
 use std::time::Duration;
 
-use foxglove::ws_protocol::ParseError;
-use foxglove::ws_protocol::client::{Subscribe, Subscription};
 use foxglove::ws_protocol::server::ServerMessage;
-use foxglove::{
-    ChannelBuilder, Context, McapWriter, PartialMetadata, RawChannel, Schema,
-    WebSocketClient, WebSocketClientError,
-};
+use foxglove::{ChannelBuilder, Context, McapWriter, PartialMetadata, WebSocketClient};
 use mcap::sans_io::indexed_reader::{IndexedReadEvent, IndexedReader, IndexedReaderOptions};
 use mcap::sans_io::summary_reader::{SummaryReadEvent, SummaryReader};
 
@@ -110,93 +105,6 @@ fn read_mcap_messages(path: &Path) -> BTreeMap<String, Vec<(u64, Vec<u8>)>> {
     out
 }
 
-/// Connect to the WebSocket server and write all incoming messages to `output` until the
-/// server closes the connection.
-async fn record_to_file(addr: &str, output: &Path) -> anyhow::Result<()> {
-    let ctx = Arc::new(Context::new());
-    let mcap = McapWriter::new()
-        .context(&ctx)
-        .create_new_buffered_file(output)?;
-
-    let mut client = WebSocketClient::connect(addr).await?;
-
-    match client.recv().await? {
-        ServerMessage::ServerInfo(_) => {}
-        msg => anyhow::bail!("expected ServerInfo, got {msg:?}"),
-    }
-
-    let mut server_channels: HashMap<u64, (u32, Arc<RawChannel>)> = HashMap::new();
-    let mut subscriptions: HashMap<u32, Arc<RawChannel>> = HashMap::new();
-    let mut next_sub_id: u32 = 0;
-
-    loop {
-        let mut pending_subs: Vec<Subscription> = Vec::new();
-
-        let msg = match client.recv().await {
-            Ok(msg) => msg,
-            Err(WebSocketClientError::Timeout(_)) => continue,
-            Err(WebSocketClientError::UnexpectedEndOfStream)
-            | Err(WebSocketClientError::ParseError(ParseError::UnhandledMessageType)) => break,
-            Err(e) => return Err(e.into()),
-        };
-
-        match msg {
-            ServerMessage::Advertise(advertise) => {
-                for adv_ch in advertise.channels {
-                    if server_channels.contains_key(&adv_ch.id) {
-                        continue;
-                    }
-                    let topic = adv_ch.topic.to_string();
-                    let encoding = adv_ch.encoding.to_string();
-                    let schema = decode_schema(&adv_ch);
-                    let ch_id = adv_ch.id;
-
-                    let channel = ChannelBuilder::new(&topic)
-                        .message_encoding(encoding)
-                        .schema(schema)
-                        .context(&ctx)
-                        .build_raw()?;
-
-                    let sub_id = next_sub_id;
-                    next_sub_id += 1;
-                    pending_subs.push(Subscription::new(sub_id, ch_id));
-                    subscriptions.insert(sub_id, channel.clone());
-                    server_channels.insert(ch_id, (sub_id, channel));
-                }
-            }
-            ServerMessage::MessageData(msg) => {
-                if let Some(ch) = subscriptions.get(&msg.subscription_id) {
-                    ch.log_with_meta(
-                        &msg.data,
-                        PartialMetadata { log_time: Some(msg.log_time) },
-                    );
-                }
-            }
-            _ => {}
-        }
-
-        if !pending_subs.is_empty() {
-            client.send(&Subscribe::new(pending_subs)).await?;
-        }
-    }
-
-    mcap.close()?;
-    Ok(())
-}
-
-fn decode_schema(adv_ch: &foxglove::ws_protocol::server::Channel<'_>) -> Option<Schema> {
-    let schema_encoding = adv_ch.schema_encoding.as_deref()?;
-    if schema_encoding.is_empty() {
-        return None;
-    }
-    let schema_data = adv_ch.decode_schema().ok()?;
-    Some(Schema::new(
-        adv_ch.schema_name.as_ref().to_owned(),
-        schema_encoding.to_owned(),
-        schema_data,
-    ))
-}
-
 #[tokio::test]
 async fn test_stream_and_record_roundtrip() {
     let tmpdir = tempfile::tempdir().unwrap();
@@ -239,10 +147,29 @@ async fn test_stream_and_record_roundtrip() {
         tokio::time::sleep(Duration::from_millis(50)).await;
     }
 
-    // Run the record-client logic; it exits when the server closes the connection.
-    record_to_file(&addr, &output_path)
-        .await
-        .expect("record_to_file failed");
+    // Connect and record until the server closes the connection.
+    let ctx = Arc::new(Context::new());
+    let mcap = McapWriter::new()
+        .context(&ctx)
+        .create_new_buffered_file(&output_path)
+        .expect("create output mcap");
+
+    let mut client = WebSocketClient::connect(&addr).await.expect("connect");
+    match client.recv().await.expect("recv") {
+        ServerMessage::ServerInfo(_) => {}
+        msg => panic!("expected ServerInfo, got {msg:?}"),
+    }
+
+    example_ws_record_mcap::record_stream(
+        &mut client,
+        &ctx,
+        &[],
+        std::pin::pin!(std::future::pending::<()>()),
+    )
+    .await
+    .expect("record_stream failed");
+
+    mcap.close().expect("close output mcap");
 
     // Compare channels and messages.
     let source_msgs = read_mcap_messages(&source_path);

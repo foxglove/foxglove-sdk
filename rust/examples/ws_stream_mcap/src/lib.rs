@@ -1,2 +1,2 @@
-// Empty lib target so this crate can be listed as a dependency in other packages,
-// enabling CARGO_BIN_EXE_example_ws_stream_mcap in their integration tests.
+// Lib target so this crate can be listed as a dev-dependency,
+// ensuring Cargo builds the binary before dependent integration tests run.
