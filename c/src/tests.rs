@@ -355,3 +355,20 @@ fn test_image_annotations_borrow_to_native() {
 
     assert_eq!(*borrowed, reference);
 }
+
+/// Verify that `foxglove_mcap_options_default()` produces `WriteOptions` matching
+/// `mcap::WriteOptions::default()`, since the upstream fields are private and
+/// our defaults are hardcoded.
+#[test]
+fn test_mcap_options_default_matches_write_options() {
+    let c_defaults = crate::channel::foxglove_mcap_options_default();
+    // Safety: the default struct contains valid (empty) strings.
+    let converted = unsafe { c_defaults.to_write_options() }.expect("to_write_options failed");
+    let canonical = mcap::WriteOptions::default();
+    assert_eq!(
+        format!("{converted:?}"),
+        format!("{canonical:?}"),
+        "FoxgloveMcapOptions defaults diverge from mcap::WriteOptions::default(). \
+         Update foxglove_mcap_options_default() in channel.rs to match."
+    );
+}
