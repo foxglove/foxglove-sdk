@@ -257,6 +257,115 @@ pub struct CylinderPrimitive {
     #[prost(message, optional, tag = "5")]
     pub color: ::core::option::Option<Color>,
 }
+/// A discrete event that occurred at a specific time. An event may have zero duration (instantaneous) or a non-zero duration.
+///
+/// <https://docs.foxglove.dev/docs/visualization/message-schemas/event>
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct Event {
+    /// Timestamp of the event
+    #[prost(message, optional, tag = "1")]
+    pub timestamp: ::core::option::Option<crate::messages::Timestamp>,
+    /// Duration of the event. If absent or zero, the event is an instantaneous point marker.
+    #[prost(message, optional, tag = "2")]
+    pub duration: ::core::option::Option<crate::messages::Duration>,
+    /// Category name matching a platform event type (e.g. "FAULT", "MANEUVER"). Used for filtering and grouping.
+    #[prost(string, optional, tag = "3")]
+    pub event_type: ::core::option::Option<::prost::alloc::string::String>,
+    /// Typed property values matching the platform's structured properties model
+    #[prost(message, repeated, tag = "4")]
+    pub event_properties: ::prost::alloc::vec::Vec<EventProperty>,
+    /// Unstructured key-value metadata, complementary to event_properties. Keys must be unique.
+    #[prost(message, repeated, tag = "5")]
+    pub metadata: ::prost::alloc::vec::Vec<KeyValuePair>,
+    /// Short human-readable label shown on the timeline marker
+    #[prost(string, optional, tag = "6")]
+    pub display_name: ::core::option::Option<::prost::alloc::string::String>,
+    /// Hex color string (e.g. "#FF5733" or "#FF573380"). If absent the player assigns a default color.
+    #[prost(string, optional, tag = "7")]
+    pub color: ::core::option::Option<::prost::alloc::string::String>,
+    /// Stable identity for deduplication during platform ingestion. If absent the platform may compute a fingerprint.
+    #[prost(string, optional, tag = "8")]
+    pub id: ::core::option::Option<::prost::alloc::string::String>,
+    /// Platform device ID this event is associated with. If absent during ingestion, inferred from upload context.
+    #[prost(string, optional, tag = "9")]
+    pub device_id: ::core::option::Option<::prost::alloc::string::String>,
+}
+/// A typed property value on an event, matching the platform's structured properties model
+///
+/// <https://docs.foxglove.dev/docs/visualization/message-schemas/event-property>
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct EventProperty {
+    /// Property name
+    #[prost(string, tag = "1")]
+    pub key: ::prost::alloc::string::String,
+    /// Value type
+    #[prost(enumeration = "event_property::Type", tag = "2")]
+    #[cfg_attr(feature = "serde", serde(with = "serde_enum::event_property_type"))]
+    pub r#type: i32,
+    /// String-encoded value. Interpretation depends on type.
+    #[prost(string, tag = "3")]
+    pub value: ::prost::alloc::string::String,
+}
+/// Nested message and enum types in `EventProperty`.
+pub mod event_property {
+    /// Type of an event property value
+    #[derive(
+        Clone,
+        Copy,
+        Debug,
+        PartialEq,
+        Eq,
+        Hash,
+        PartialOrd,
+        Ord,
+        ::prost::Enumeration
+    )]
+    #[repr(i32)]
+    pub enum Type {
+        /// Single-line text
+        Text = 0,
+        /// Multi-line text
+        MultilineText = 1,
+        /// True/false
+        Boolean = 2,
+        /// Numeric value
+        Number = 3,
+        /// Single choice from options
+        SingleSelect = 4,
+        /// Multiple choices from options
+        MultiSelect = 5,
+    }
+    impl Type {
+        /// String value of the enum field names used in the ProtoBuf definition.
+        ///
+        /// The values are not transformed in any way and thus are considered stable
+        /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+        pub fn as_str_name(&self) -> &'static str {
+            match self {
+                Self::Text => "TEXT",
+                Self::MultilineText => "MULTILINE_TEXT",
+                Self::Boolean => "BOOLEAN",
+                Self::Number => "NUMBER",
+                Self::SingleSelect => "SINGLE_SELECT",
+                Self::MultiSelect => "MULTI_SELECT",
+            }
+        }
+        /// Creates an enum from field names used in the ProtoBuf definition.
+        pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+            match value {
+                "TEXT" => Some(Self::Text),
+                "MULTILINE_TEXT" => Some(Self::MultilineText),
+                "BOOLEAN" => Some(Self::Boolean),
+                "NUMBER" => Some(Self::Number),
+                "SINGLE_SELECT" => Some(Self::SingleSelect),
+                "MULTI_SELECT" => Some(Self::MultiSelect),
+                _ => None,
+            }
+        }
+    }
+}
 /// A transform between two reference frames in 3D space. The transform defines the position and orientation of a child frame within a parent frame. Translation moves the origin of the child frame relative to the parent origin. The rotation changes the orientiation of the child frame around its origin.
 ///
 /// Examples:
@@ -1446,6 +1555,7 @@ pub(crate) mod serde_enum {
     use serde::de::Error as _;
     use serde::{Deserialize, Deserializer, Serializer};
 
+    crate::messages::serde_enum_mod!(event_property_type, event_property::Type);
     crate::messages::serde_enum_mod!(line_primitive_type, line_primitive::Type);
     crate::messages::serde_enum_mod!(location_fix_position_covariance_type, location_fix::PositionCovarianceType);
     crate::messages::serde_enum_mod!(log_level, log::Level);
