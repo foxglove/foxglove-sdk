@@ -1192,7 +1192,10 @@ dependencies = [
  "anyhow",
  "clap",
  "env_logger",
+ "example_ws_stream_mcap",
  "foxglove 0.18.0",
+ "mcap 0.24.0",
+ "tempfile",
  "tokio",
  "tracing",
 ]

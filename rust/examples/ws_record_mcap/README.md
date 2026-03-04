@@ -37,3 +37,12 @@ Press **Ctrl-C** to stop recording. The MCAP file is flushed and finalized on sh
 6. On Ctrl-C, finalizes the MCAP file (writes the summary section and footer)
 
 Channel schemas are decoded from the advertised channel metadata and stored in the MCAP file, so the recording is self-contained and can be opened directly in Foxglove.
+
+## Testing
+
+An integration test in the [`ws_stream_mcap`](../ws_stream_mcap) example verifies that the
+recorder captures the same messages the stream server emits:
+
+```bash
+cargo test -p example_ws_record_mcap --test roundtrip_test
+```
