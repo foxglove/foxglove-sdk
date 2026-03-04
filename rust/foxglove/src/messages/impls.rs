@@ -904,6 +904,70 @@ impl ProtobufField for JointState {
     }
 }
 
+impl Encode for JointStates {
+    type Error = ::prost::EncodeError;
+
+    fn get_schema() -> Option<Schema> {
+        Some(Schema::new(
+            "foxglove.JointStates",
+            "protobuf",
+            descriptors::JOINT_STATES,
+        ))
+    }
+
+    fn get_message_encoding() -> String {
+        "protobuf".to_string()
+    }
+
+    fn encode(&self, buf: &mut impl BufMut) -> Result<(), prost::EncodeError> {
+        ::prost::Message::encode(self, buf)
+    }
+
+    fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
+}
+
+#[doc(hidden)]
+impl Decode for JointStates {
+    type Error = ::prost::DecodeError;
+
+    /// Decode a message from a serialized buffer.
+    fn decode(buf: impl bytes::Buf) -> Result<Self, ::prost::DecodeError> {
+        ::prost::Message::decode(buf)
+    }
+}
+
+#[cfg(feature = "derive")]
+impl ProtobufField for JointStates {
+    fn field_type() -> ::prost_types::field_descriptor_proto::Type {
+        ::prost_types::field_descriptor_proto::Type::Message
+    }
+
+    fn wire_type() -> u32 {
+        ::prost::encoding::WireType::LengthDelimited as u32
+    }
+
+    fn write(&self, buf: &mut impl BufMut) {
+        let len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encode_varint(len as u64, buf);
+        ::prost::Message::encode_raw(self, buf);
+    }
+
+    fn type_name() -> Option<String> {
+        Some(".foxglove.JointStates".to_string())
+    }
+
+    fn file_descriptors() -> Vec<::prost_types::FileDescriptorProto> {
+        let fds = ::prost_types::FileDescriptorSet::decode(descriptors::JOINT_STATES)
+            .expect("invalid file descriptor set");
+        fds.file
+    }
+
+    fn encoded_len(&self) -> usize {
+        let inner_len = ::prost::Message::encoded_len(self);
+        ::prost::encoding::encoded_len_varint(inner_len as u64) + inner_len
+    }
+}
+
 impl Encode for KeyValuePair {
     type Error = ::prost::EncodeError;
 

@@ -403,29 +403,40 @@ pub struct ImageAnnotations {
     #[prost(message, optional, tag = "5")]
     pub timestamp: ::core::option::Option<crate::messages::Timestamp>,
 }
-/// The state of a set of joints. The state of each joint (revolute or prismatic) is defined by its position, velocity, and effort (force or torque). Each joint is uniquely identified by its name.
-///
-/// This message consists of multiple arrays, one for each part of the joint state. Each array can be left empty if that data is not available. All non-empty arrays must have the same length.
+/// The state of a single joint (revolute or prismatic).
 ///
 /// <https://docs.foxglove.dev/docs/visualization/message-schemas/joint-state>
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct JointState {
-    /// Timestamp at which the joint states were recorded. All joint states in one message must be recorded at the same time.
+    /// Joint name
+    #[prost(string, tag = "1")]
+    pub name: ::prost::alloc::string::String,
+    /// Joint position. Radians for revolute joints, meters for prismatic joints.
+    #[prost(double, optional, tag = "2")]
+    pub position: ::core::option::Option<f64>,
+    /// Joint velocity. Rad/s for revolute joints, m/s for prismatic joints.
+    #[prost(double, optional, tag = "3")]
+    pub velocity: ::core::option::Option<f64>,
+    /// Joint acceleration. Rad/s² for revolute joints, m/s² for prismatic joints.
+    #[prost(double, optional, tag = "4")]
+    pub acceleration: ::core::option::Option<f64>,
+    /// Joint effort (force or torque). Nm for revolute joints, N for prismatic joints.
+    #[prost(double, optional, tag = "5")]
+    pub effort: ::core::option::Option<f64>,
+}
+/// The state of a set of joints at a given time. All joint states in one message are recorded at the same time.
+///
+/// <https://docs.foxglove.dev/docs/visualization/message-schemas/joint-states>
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct JointStates {
+    /// Timestamp of the joint states
     #[prost(message, optional, tag = "1")]
     pub timestamp: ::core::option::Option<crate::messages::Timestamp>,
-    /// Joint names. If non-empty, must have the same length as all other non-empty arrays. The name is used to uniquely associate each joint with its corresponding position, velocity, and effort values.
-    #[prost(string, repeated, tag = "2")]
-    pub name: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
-    /// Joint positions. Radians for revolute joints, meters for prismatic joints. Can be empty if position data is not available.
-    #[prost(double, repeated, tag = "3")]
-    pub position: ::prost::alloc::vec::Vec<f64>,
-    /// Joint velocities. Rad/s for revolute joints, m/s for prismatic joints. Can be empty if velocity data is not available.
-    #[prost(double, repeated, tag = "4")]
-    pub velocity: ::prost::alloc::vec::Vec<f64>,
-    /// Joint efforts (force or torque). Nm for revolute joints, N for prismatic joints. Can be empty if effort data is not available.
-    #[prost(double, repeated, tag = "5")]
-    pub effort: ::prost::alloc::vec::Vec<f64>,
+    /// Joint states
+    #[prost(message, repeated, tag = "2")]
+    pub joints: ::prost::alloc::vec::Vec<JointState>,
 }
 /// A key with its associated value
 ///

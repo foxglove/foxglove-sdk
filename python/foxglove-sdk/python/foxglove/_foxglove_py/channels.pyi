@@ -15,6 +15,7 @@ from .schemas import (
     Grid,
     ImageAnnotations,
     JointState,
+    JointStates,
     KeyValuePair,
     LaserScan,
     LinePrimitive,
@@ -982,6 +983,73 @@ class JointStateChannel:
         sink_id: int | None = None,
     ) -> None:
         """Log a Foxglove JointState message on the channel."""
+        ...
+
+class JointStatesChannel:
+    """
+    A channel for logging JointStates messages
+
+    You should choose a unique topic name per channel.
+    """
+
+    def __init__(
+        self,
+        topic: str,
+        *,
+        metadata: dict[str, str] | None = None,
+        context: Context | None = None,
+    ) -> None: ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    @property
+    def message_encoding(self) -> str:
+        """The message encoding for the channel"""
+        ...
+
+    def metadata(self) -> dict[str, str]:
+        """
+        Returns a copy of the channel's metadata.
+
+        Note that changes made to the returned dictionary will not be applied to
+        the channel's metadata.
+        """
+        ...
+
+    def schema(self) -> Schema | None:
+        """
+        Returns a copy of the channel's schema.
+
+        Note that changes made to the returned object will not be applied to
+        the channel's schema.
+        """
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def has_sinks(self) -> bool:
+        """Returns true if at least one sink is subscribed to this channel"""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
+    def log(
+        self,
+        message: "JointStates",
+        *,
+        log_time: int | None = None,
+        sink_id: int | None = None,
+    ) -> None:
+        """Log a Foxglove JointStates message on the channel."""
         ...
 
 class KeyValuePairChannel:

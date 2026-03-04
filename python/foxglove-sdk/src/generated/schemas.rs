@@ -1177,15 +1177,13 @@ impl From<ImageAnnotations> for foxglove::schemas::ImageAnnotations {
     }
 }
 
-/// The state of a set of joints. The state of each joint (revolute or prismatic) is defined by its position, velocity, and effort (force or torque). Each joint is uniquely identified by its name.
+/// The state of a single joint (revolute or prismatic).
 ///
-/// This message consists of multiple arrays, one for each part of the joint state. Each array can be left empty if that data is not available. All non-empty arrays must have the same length.
-///
-/// :param timestamp: Timestamp at which the joint states were recorded. All joint states in one message must be recorded at the same time.
-/// :param name: Joint names. If non-empty, must have the same length as all other non-empty arrays. The name is used to uniquely associate each joint with its corresponding position, velocity, and effort values.
-/// :param position: Joint positions. Radians for revolute joints, meters for prismatic joints. Can be empty if position data is not available.
-/// :param velocity: Joint velocities. Rad/s for revolute joints, m/s for prismatic joints. Can be empty if velocity data is not available.
-/// :param effort: Joint efforts (force or torque). Nm for revolute joints, N for prismatic joints. Can be empty if effort data is not available.
+/// :param name: Joint name
+/// :param position: Joint position. Radians for revolute joints, meters for prismatic joints.
+/// :param velocity: Joint velocity. Rad/s for revolute joints, m/s for prismatic joints.
+/// :param acceleration: Joint acceleration. Rad/s² for revolute joints, m/s² for prismatic joints.
+/// :param effort: Joint effort (force or torque). Nm for revolute joints, N for prismatic joints.
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/joint-state
 #[pyclass(module = "foxglove.schemas")]
@@ -1194,26 +1192,26 @@ pub(crate) struct JointState(pub(crate) foxglove::schemas::JointState);
 #[pymethods]
 impl JointState {
     #[new]
-    #[pyo3(signature = (*, timestamp=None, name=None, position=None, velocity=None, effort=None) )]
+    #[pyo3(signature = (*, name="", position=None, velocity=None, acceleration=None, effort=None) )]
     fn new(
-        timestamp: Option<Timestamp>,
-        name: Option<Vec<String>>,
-        position: Option<Vec<f64>>,
-        velocity: Option<Vec<f64>>,
-        effort: Option<Vec<f64>>,
+        name: &str,
+        position: Option<f64>,
+        velocity: Option<f64>,
+        acceleration: Option<f64>,
+        effort: Option<f64>,
     ) -> Self {
         Self(foxglove::schemas::JointState {
-            timestamp: timestamp.map(Into::into),
-            name: name.unwrap_or_default(),
-            position: position.unwrap_or_default(),
-            velocity: velocity.unwrap_or_default(),
-            effort: effort.unwrap_or_default(),
+            name: name.to_string(),
+            position,
+            velocity,
+            acceleration,
+            effort,
         })
     }
     fn __repr__(&self) -> String {
         format!(
-            "JointState(timestamp={:?}, name={:?}, position={:?}, velocity={:?}, effort={:?})",
-            self.0.timestamp, self.0.name, self.0.position, self.0.velocity, self.0.effort,
+            "JointState(name={:?}, position={:?}, velocity={:?}, acceleration={:?}, effort={:?})",
+            self.0.name, self.0.position, self.0.velocity, self.0.acceleration, self.0.effort,
         )
     }
     /// Returns the JointState schema.
@@ -1239,6 +1237,62 @@ impl JointState {
 
 impl From<JointState> for foxglove::schemas::JointState {
     fn from(value: JointState) -> Self {
+        value.0
+    }
+}
+
+/// The state of a set of joints at a given time. All joint states in one message are recorded at the same time.
+///
+/// :param timestamp: Timestamp of the joint states
+/// :param joints: Joint states
+///
+/// See https://docs.foxglove.dev/docs/visualization/message-schemas/joint-states
+#[pyclass(module = "foxglove.schemas")]
+#[derive(Clone)]
+pub(crate) struct JointStates(pub(crate) foxglove::schemas::JointStates);
+#[pymethods]
+impl JointStates {
+    #[new]
+    #[pyo3(signature = (*, timestamp=None, joints=None) )]
+    fn new(timestamp: Option<Timestamp>, joints: Option<Vec<JointState>>) -> Self {
+        Self(foxglove::schemas::JointStates {
+            timestamp: timestamp.map(Into::into),
+            joints: joints
+                .unwrap_or_default()
+                .into_iter()
+                .map(|x| x.into())
+                .collect(),
+        })
+    }
+    fn __repr__(&self) -> String {
+        format!(
+            "JointStates(timestamp={:?}, joints={:?})",
+            self.0.timestamp, self.0.joints,
+        )
+    }
+    /// Returns the JointStates schema.
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::JointStates::get_schema().unwrap().into()
+    }
+    /// Encodes the JointStates as protobuf.
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("failed to allocate buffer for encoded message")
+    }
+}
+
+impl From<JointStates> for foxglove::schemas::JointStates {
+    fn from(value: JointStates) -> Self {
         value.0
     }
 }
@@ -3205,6 +3259,7 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<VoxelGrid>()?;
     module.add_class::<ImageAnnotations>()?;
     module.add_class::<JointState>()?;
+    module.add_class::<JointStates>()?;
     module.add_class::<KeyValuePair>()?;
     module.add_class::<LaserScan>()?;
     module.add_class::<LinePrimitive>()?;
