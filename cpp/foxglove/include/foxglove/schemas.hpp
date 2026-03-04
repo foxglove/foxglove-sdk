@@ -1059,7 +1059,8 @@ struct ImageAnnotations {
   static Schema schema();
 };
 
-/// @brief The state of a single joint (revolute or prismatic).
+/// @brief The state of a single joint (revolute or prismatic). For encodings that do not support
+/// optional fields (e.g., ROS), NaN indicates that the value is not available.
 struct JointState {
   /// @brief Joint name
   std::string name;

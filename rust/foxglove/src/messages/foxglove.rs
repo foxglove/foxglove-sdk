@@ -403,7 +403,7 @@ pub struct ImageAnnotations {
     #[prost(message, optional, tag = "5")]
     pub timestamp: ::core::option::Option<crate::messages::Timestamp>,
 }
-/// The state of a single joint (revolute or prismatic).
+/// The state of a single joint (revolute or prismatic). For encodings that do not support optional fields (e.g., ROS), NaN indicates that the value is not available.
 ///
 /// <https://docs.foxglove.dev/docs/visualization/message-schemas/joint-state>
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]

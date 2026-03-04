@@ -1122,7 +1122,7 @@ typedef struct foxglove_image_annotations {
 } foxglove_image_annotations;
 
 /**
- * The state of a single joint (revolute or prismatic).
+ * The state of a single joint (revolute or prismatic). For encodings that do not support optional fields (e.g., ROS), NaN indicates that the value is not available.
  */
 typedef struct foxglove_joint_state {
   /**

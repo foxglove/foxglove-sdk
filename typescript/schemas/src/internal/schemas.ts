@@ -1758,7 +1758,8 @@ const LaserScan: FoxgloveMessageSchema = {
 const JointState: FoxgloveMessageSchema = {
   type: "message",
   name: "JointState",
-  description: "The state of a single joint (revolute or prismatic).",
+  description:
+    "The state of a single joint (revolute or prismatic). For encodings that do not support optional fields (e.g., ROS), NaN indicates that the value is not available.",
   fields: [
     {
       name: "name",

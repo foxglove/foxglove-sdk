@@ -1177,7 +1177,7 @@ impl From<ImageAnnotations> for foxglove::schemas::ImageAnnotations {
     }
 }
 
-/// The state of a single joint (revolute or prismatic).
+/// The state of a single joint (revolute or prismatic). For encodings that do not support optional fields (e.g., ROS), NaN indicates that the value is not available.
 ///
 /// :param name: Joint name
 /// :param position: Joint position. Radians for revolute joints, meters for prismatic joints.

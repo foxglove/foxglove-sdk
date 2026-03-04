@@ -1272,7 +1272,7 @@ Timestamp of the image annotations. When set, individual annotation timestamps w
 
 ## JointState
 
-The state of a single joint (revolute or prismatic).
+The state of a single joint (revolute or prismatic). For encodings that do not support optional fields (e.g., ROS), NaN indicates that the value is not available.
 
 <table>
   <tr>
