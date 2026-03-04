@@ -1758,8 +1758,7 @@ const LaserScan: FoxgloveMessageSchema = {
 const JointState: FoxgloveMessageSchema = {
   type: "message",
   name: "JointState",
-  description:
-    "The state of a single joint (revolute or prismatic). For encodings that do not support optional fields (e.g., ROS), NaN indicates that the value is not available.",
+  description: "The state of a single joint (revolute or prismatic).",
   fields: [
     {
       name: "name",
@@ -1769,26 +1768,29 @@ const JointState: FoxgloveMessageSchema = {
     {
       name: "position",
       type: { type: "primitive", name: "float64" },
-      description: "Joint position. Radians for revolute joints, meters for prismatic joints.",
+      description:
+        "Joint position. Radians for revolute joints, meters for prismatic joints. Use NaN to indicate that the value is not present, in case your encoding does not support optional fields.",
       optional: true,
     },
     {
       name: "velocity",
       type: { type: "primitive", name: "float64" },
-      description: "Joint velocity. Rad/s for revolute joints, m/s for prismatic joints.",
+      description:
+        "Joint velocity. Rad/s for revolute joints, m/s for prismatic joints. Use NaN to indicate that the value is not present, in case your encoding does not support optional fields.",
       optional: true,
     },
     {
       name: "acceleration",
       type: { type: "primitive", name: "float64" },
-      description: "Joint acceleration. Rad/s² for revolute joints, m/s² for prismatic joints.",
+      description:
+        "Joint acceleration. Rad/s² for revolute joints, m/s² for prismatic joints. Use NaN to indicate that the value is not present, in case your encoding does not support optional fields.",
       optional: true,
     },
     {
       name: "effort",
       type: { type: "primitive", name: "float64" },
       description:
-        "Joint effort (force or torque). Nm for revolute joints, N for prismatic joints.",
+        "Joint effort (force or torque). Nm for revolute joints, N for prismatic joints. Use NaN to indicate that the value is not present, in case your encoding does not support optional fields.",
       optional: true,
     },
   ],

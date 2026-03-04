@@ -2675,22 +2675,22 @@ pub unsafe extern "C" fn foxglove_image_annotations_encode(
     }
 }
 
-/// The state of a single joint (revolute or prismatic). For encodings that do not support optional fields (e.g., ROS), NaN indicates that the value is not available.
+/// The state of a single joint (revolute or prismatic).
 #[repr(C)]
 pub struct JointState {
     /// Joint name
     pub name: FoxgloveString,
 
-    /// Joint position. Radians for revolute joints, meters for prismatic joints.
+    /// Joint position. Radians for revolute joints, meters for prismatic joints. Use NaN to indicate that the value is not present, in case your encoding does not support optional fields.
     pub position: *const f64,
 
-    /// Joint velocity. Rad/s for revolute joints, m/s for prismatic joints.
+    /// Joint velocity. Rad/s for revolute joints, m/s for prismatic joints. Use NaN to indicate that the value is not present, in case your encoding does not support optional fields.
     pub velocity: *const f64,
 
-    /// Joint acceleration. Rad/s² for revolute joints, m/s² for prismatic joints.
+    /// Joint acceleration. Rad/s² for revolute joints, m/s² for prismatic joints. Use NaN to indicate that the value is not present, in case your encoding does not support optional fields.
     pub acceleration: *const f64,
 
-    /// Joint effort (force or torque). Nm for revolute joints, N for prismatic joints.
+    /// Joint effort (force or torque). Nm for revolute joints, N for prismatic joints. Use NaN to indicate that the value is not present, in case your encoding does not support optional fields.
     pub effort: *const f64,
 }
 

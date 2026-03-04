@@ -1059,22 +1059,29 @@ struct ImageAnnotations {
   static Schema schema();
 };
 
-/// @brief The state of a single joint (revolute or prismatic). For encodings that do not support
-/// optional fields (e.g., ROS), NaN indicates that the value is not available.
+/// @brief The state of a single joint (revolute or prismatic).
 struct JointState {
   /// @brief Joint name
   std::string name;
 
-  /// @brief Joint position. Radians for revolute joints, meters for prismatic joints.
+  /// @brief Joint position. Radians for revolute joints, meters for prismatic joints. Use NaN to
+  /// indicate that the value is not present, in case your encoding does not support optional
+  /// fields.
   std::optional<double> position = std::nullopt;
 
-  /// @brief Joint velocity. Rad/s for revolute joints, m/s for prismatic joints.
+  /// @brief Joint velocity. Rad/s for revolute joints, m/s for prismatic joints. Use NaN to
+  /// indicate that the value is not present, in case your encoding does not support optional
+  /// fields.
   std::optional<double> velocity = std::nullopt;
 
-  /// @brief Joint acceleration. Rad/s² for revolute joints, m/s² for prismatic joints.
+  /// @brief Joint acceleration. Rad/s² for revolute joints, m/s² for prismatic joints. Use NaN to
+  /// indicate that the value is not present, in case your encoding does not support optional
+  /// fields.
   std::optional<double> acceleration = std::nullopt;
 
-  /// @brief Joint effort (force or torque). Nm for revolute joints, N for prismatic joints.
+  /// @brief Joint effort (force or torque). Nm for revolute joints, N for prismatic joints. Use NaN
+  /// to indicate that the value is not present, in case your encoding does not support optional
+  /// fields.
   std::optional<double> effort = std::nullopt;
 
   /// @brief Encoded the JointState as protobuf to the provided buffer.

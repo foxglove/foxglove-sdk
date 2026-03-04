@@ -403,7 +403,7 @@ pub struct ImageAnnotations {
     #[prost(message, optional, tag = "5")]
     pub timestamp: ::core::option::Option<crate::messages::Timestamp>,
 }
-/// The state of a single joint (revolute or prismatic). For encodings that do not support optional fields (e.g., ROS), NaN indicates that the value is not available.
+/// The state of a single joint (revolute or prismatic).
 ///
 /// <https://docs.foxglove.dev/docs/visualization/message-schemas/joint-state>
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
@@ -412,16 +412,16 @@ pub struct JointState {
     /// Joint name
     #[prost(string, tag = "1")]
     pub name: ::prost::alloc::string::String,
-    /// Joint position. Radians for revolute joints, meters for prismatic joints.
+    /// Joint position. Radians for revolute joints, meters for prismatic joints. Use NaN to indicate that the value is not present, in case your encoding does not support optional fields.
     #[prost(double, optional, tag = "2")]
     pub position: ::core::option::Option<f64>,
-    /// Joint velocity. Rad/s for revolute joints, m/s for prismatic joints.
+    /// Joint velocity. Rad/s for revolute joints, m/s for prismatic joints. Use NaN to indicate that the value is not present, in case your encoding does not support optional fields.
     #[prost(double, optional, tag = "3")]
     pub velocity: ::core::option::Option<f64>,
-    /// Joint acceleration. Rad/s² for revolute joints, m/s² for prismatic joints.
+    /// Joint acceleration. Rad/s² for revolute joints, m/s² for prismatic joints. Use NaN to indicate that the value is not present, in case your encoding does not support optional fields.
     #[prost(double, optional, tag = "4")]
     pub acceleration: ::core::option::Option<f64>,
-    /// Joint effort (force or torque). Nm for revolute joints, N for prismatic joints.
+    /// Joint effort (force or torque). Nm for revolute joints, N for prismatic joints. Use NaN to indicate that the value is not present, in case your encoding does not support optional fields.
     #[prost(double, optional, tag = "5")]
     pub effort: ::core::option::Option<f64>,
 }

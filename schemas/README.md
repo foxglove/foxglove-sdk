@@ -1272,7 +1272,7 @@ Timestamp of the image annotations. When set, individual annotation timestamps w
 
 ## JointState
 
-The state of a single joint (revolute or prismatic). For encodings that do not support optional fields (e.g., ROS), NaN indicates that the value is not available.
+The state of a single joint (revolute or prismatic).
 
 <table>
   <tr>
@@ -1302,7 +1302,7 @@ float64
 </td>
 <td>
 
-Joint position. Radians for revolute joints, meters for prismatic joints.
+Joint position. Radians for revolute joints, meters for prismatic joints. Use NaN to indicate that the value is not present, in case your encoding does not support optional fields.
 
 </td>
 </tr>
@@ -1315,7 +1315,7 @@ float64
 </td>
 <td>
 
-Joint velocity. Rad/s for revolute joints, m/s for prismatic joints.
+Joint velocity. Rad/s for revolute joints, m/s for prismatic joints. Use NaN to indicate that the value is not present, in case your encoding does not support optional fields.
 
 </td>
 </tr>
@@ -1328,7 +1328,7 @@ float64
 </td>
 <td>
 
-Joint acceleration. Rad/s² for revolute joints, m/s² for prismatic joints.
+Joint acceleration. Rad/s² for revolute joints, m/s² for prismatic joints. Use NaN to indicate that the value is not present, in case your encoding does not support optional fields.
 
 </td>
 </tr>
@@ -1341,7 +1341,7 @@ float64
 </td>
 <td>
 
-Joint effort (force or torque). Nm for revolute joints, N for prismatic joints.
+Joint effort (force or torque). Nm for revolute joints, N for prismatic joints. Use NaN to indicate that the value is not present, in case your encoding does not support optional fields.
 
 </td>
 </tr>
