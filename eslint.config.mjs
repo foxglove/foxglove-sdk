@@ -13,6 +13,11 @@ export default defineConfig(
       "python/foxglove-sdk/**/_build",
       "python/foxglove-sdk/python/foxglove/notebook/static",
       "target",
+      "typescript/*/src/jsonschema",
+      // These root-level .d.ts shims reference ./dist paths and can't be added to the
+      // messages tsconfig without conflicting with the build output.
+      "typescript/messages/internal.d.ts",
+      "typescript/messages/jsonschema.d.ts",
     ],
   },
   ...foxglove.configs.base,
