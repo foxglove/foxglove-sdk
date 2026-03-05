@@ -1,6 +1,5 @@
 [package]
 name = "remote_access_tests"
-version = "0.0.0"
 edition.workspace = true
 rust-version.workspace = true
 publish = false
