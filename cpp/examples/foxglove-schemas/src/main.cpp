@@ -84,10 +84,23 @@ int main() {
   }
   auto writer = std::move(writer_result.value());
 
+  auto scene_update_result = foxglove::schemas::SceneUpdateChannel::create("/boxes");
+  if (!scene_update_result.has_value()) {
+    std::cerr << "Failed to create scene update channel: "
+              << foxglove::strerror(scene_update_result.error()) << '\n';
+    return 1;
+  }
   foxglove::schemas::SceneUpdateChannel scene_update_channel =
-    foxglove::schemas::SceneUpdateChannel::create("/boxes").value();
+    std::move(scene_update_result.value());
+
+  auto frame_transform_result = foxglove::schemas::FrameTransformChannel::create("/tf");
+  if (!frame_transform_result.has_value()) {
+    std::cerr << "Failed to create frame transform channel: "
+              << foxglove::strerror(frame_transform_result.error()) << '\n';
+    return 1;
+  }
   foxglove::schemas::FrameTransformChannel frame_transform_channel =
-    foxglove::schemas::FrameTransformChannel::create("/tf").value();
+    std::move(frame_transform_result.value());
 
   for (int i = 0; i < 100; ++i) {
     log_to_channels(scene_update_channel, frame_transform_channel, i);
