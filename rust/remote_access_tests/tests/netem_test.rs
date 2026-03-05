@@ -15,7 +15,7 @@ use std::time::Duration;
 
 use anyhow::{Context as _, Result};
 use foxglove::protocol::v2::server::ServerMessage;
-use remote_access_tests::test_helpers::{TestGateway, ViewerConnection};
+use remote_access_tests::test_helpers::{NETEM_EVENT_TIMEOUT, TestGateway, ViewerConnection};
 use serial_test::serial;
 use tracing::info;
 use tracing_test::traced_test;
@@ -190,7 +190,9 @@ async fn netem_viewer_connects_under_impairment() -> Result<()> {
     let ctx = foxglove::Context::new();
     let gw = TestGateway::start(&ctx).await?;
 
-    let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+    let mut viewer =
+        ViewerConnection::connect_with_timeout(&gw.room_name, "viewer-1", NETEM_EVENT_TIMEOUT)
+            .await?;
     let server_info = viewer.expect_server_info().await?;
 
     assert!(
@@ -219,7 +221,9 @@ async fn netem_channel_advertisement_under_impairment() -> Result<()> {
         .context("create channel")?;
 
     let gw = TestGateway::start(&ctx).await?;
-    let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+    let mut viewer =
+        ViewerConnection::connect_with_timeout(&gw.room_name, "viewer-1", NETEM_EVENT_TIMEOUT)
+            .await?;
 
     let _server_info = viewer.expect_server_info().await?;
     let advertise = viewer.expect_advertise().await?;
@@ -249,7 +253,9 @@ async fn netem_message_delivery_under_impairment() -> Result<()> {
         .context("create channel")?;
 
     let gw = TestGateway::start(&ctx).await?;
-    let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+    let mut viewer =
+        ViewerConnection::connect_with_timeout(&gw.room_name, "viewer-1", NETEM_EVENT_TIMEOUT)
+            .await?;
 
     let _server_info = viewer.expect_server_info().await?;
     let advertise = viewer.expect_advertise().await?;
@@ -286,7 +292,9 @@ async fn netem_burst_delivery_under_impairment() -> Result<()> {
         .context("create channel")?;
 
     let gw = TestGateway::start(&ctx).await?;
-    let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+    let mut viewer =
+        ViewerConnection::connect_with_timeout(&gw.room_name, "viewer-1", NETEM_EVENT_TIMEOUT)
+            .await?;
 
     let _server_info = viewer.expect_server_info().await?;
     let advertise = viewer.expect_advertise().await?;
