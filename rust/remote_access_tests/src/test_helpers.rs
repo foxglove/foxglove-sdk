@@ -28,6 +28,8 @@ pub const READ_TIMEOUT: Duration = Duration::from_secs(10);
 pub const SHUTDOWN_TIMEOUT: Duration = Duration::from_secs(10);
 /// Polling interval for condition checks.
 pub const POLL_INTERVAL: Duration = Duration::from_millis(50);
+/// Per-attempt timeout when waiting for a byte stream during connection retries.
+pub const CONNECT_RETRY_TIMEOUT: Duration = Duration::from_secs(5);
 
 /// Type alias for a channel filter function passed to [`TestGateway::start_with_filter`].
 pub type ChannelFilterFn =
@@ -147,9 +149,14 @@ impl ViewerConnection {
                     .context("viewer failed to connect to LiveKit")?;
             info!("{viewer_identity} connected to room, waiting for byte stream");
 
-            // Wait for a ByteStreamOpened event. Use a short inner timeout so we
-            // can retry the connection if the gateway hasn't joined yet.
-            let inner_deadline = tokio::time::Instant::now() + Duration::from_secs(3);
+            // Wait for a ByteStreamOpened event. Use a shorter inner timeout so
+            // we can retry the connection if the gateway hasn't joined yet.
+            // Cap to the outer deadline so the final attempt uses all remaining
+            // time.
+            let inner_deadline = std::cmp::min(
+                tokio::time::Instant::now() + CONNECT_RETRY_TIMEOUT,
+                outer_deadline,
+            );
             let reader = loop {
                 let event = tokio::time::timeout_at(inner_deadline, events.recv()).await;
                 match event {
