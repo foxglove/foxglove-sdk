@@ -699,15 +699,13 @@ impl From<CubePrimitive> for foxglove::schemas::CubePrimitive {
 
 /// A discrete event that occurred at a specific time. An event may have zero duration (instantaneous) or a non-zero duration.
 ///
-/// :param timestamp: Timestamp of the event
-/// :param duration: Duration of the event. If absent or zero, the event is an instantaneous point marker.
-/// :param event_type: Category name matching a platform event type (e.g. "FAULT", "MANEUVER"). Used for filtering and grouping.
-/// :param event_properties: Typed property values matching the platform's structured properties model
-/// :param metadata: Unstructured key-value metadata, complementary to event_properties. Keys must be unique.
-/// :param display_name: Short human-readable label shown on the timeline marker
-/// :param color: Hex color string (e.g. "#FF5733" or "#FF573380"). If absent the player assigns a default color.
-/// :param id: Stable identity for deduplication during platform ingestion. If absent the platform may compute a fingerprint.
-/// :param device_id: Platform device ID this event is associated with. If absent during ingestion, inferred from upload context.
+/// :param timestamp: Start time of the event.
+/// :param duration: Duration of the event. Omit or set to zero for an instant (point) event.
+/// :param event_type: Event type definition for this event. Provides category name, display color, and optional platform ID for reconciliation.
+/// :param event_properties: Typed property values matching the platform's structured properties model.
+/// :param metadata: Unstructured key-value metadata (complementary to event_properties).
+/// :param id: Stable identity for deduplication during data platform ingestion. If absent, the platform may compute a fingerprint.
+/// :param device_id: Device ID this event is associated with. Use the platform device ID when known, or a local identifier (e.g. hostname, serial number). Required so consumers always know the source device.
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/event
 #[pyclass(module = "foxglove.schemas")]
@@ -716,22 +714,20 @@ pub(crate) struct Event(pub(crate) foxglove::schemas::Event);
 #[pymethods]
 impl Event {
     #[new]
-    #[pyo3(signature = (*, timestamp=None, duration=None, event_type=None, event_properties=None, metadata=None, display_name=None, color=None, id=None, device_id=None) )]
+    #[pyo3(signature = (*, timestamp=None, duration=None, event_type=None, event_properties=None, metadata=None, id=None, device_id="") )]
     fn new(
         timestamp: Option<Timestamp>,
         duration: Option<Duration>,
-        event_type: Option<&str>,
+        event_type: Option<EventType>,
         event_properties: Option<Vec<EventProperty>>,
         metadata: Option<Vec<KeyValuePair>>,
-        display_name: Option<&str>,
-        color: Option<&str>,
         id: Option<&str>,
-        device_id: Option<&str>,
+        device_id: &str,
     ) -> Self {
         Self(foxglove::schemas::Event {
             timestamp: timestamp.map(Into::into),
             duration: duration.map(Into::into),
-            event_type: event_type.map(|s| s.to_string()),
+            event_type: event_type.map(Into::into),
             event_properties: event_properties
                 .unwrap_or_default()
                 .into_iter()
@@ -742,22 +738,18 @@ impl Event {
                 .into_iter()
                 .map(|x| x.into())
                 .collect(),
-            display_name: display_name.map(|s| s.to_string()),
-            color: color.map(|s| s.to_string()),
             id: id.map(|s| s.to_string()),
-            device_id: device_id.map(|s| s.to_string()),
+            device_id: device_id.to_string(),
         })
     }
     fn __repr__(&self) -> String {
         format!(
-            "Event(timestamp={:?}, duration={:?}, event_type={:?}, event_properties={:?}, metadata={:?}, display_name={:?}, color={:?}, id={:?}, device_id={:?})",
+            "Event(timestamp={:?}, duration={:?}, event_type={:?}, event_properties={:?}, metadata={:?}, id={:?}, device_id={:?})",
             self.0.timestamp,
             self.0.duration,
             self.0.event_type,
             self.0.event_properties,
             self.0.metadata,
-            self.0.display_name,
-            self.0.color,
             self.0.id,
             self.0.device_id,
         )
@@ -841,6 +833,60 @@ impl EventProperty {
 
 impl From<EventProperty> for foxglove::schemas::EventProperty {
     fn from(value: EventProperty) -> Self {
+        value.0
+    }
+}
+
+/// Event type definition providing category name, display color, and optional platform ID for reconciliation during ingestion
+///
+/// :param name: Human-readable event type name (e.g. "Traffic event", "FAULT"). Used for filtering, grouping, and display.
+/// :param color: Hex color string (e.g. "#FF5733"). Used by the player to color timeline markers. If absent, player assigns default.
+/// :param id: Platform event type UUID for reconciliation during ingestion. If present, platform matches by ID; if absent, falls back to name.
+///
+/// See https://docs.foxglove.dev/docs/visualization/message-schemas/event-type
+#[pyclass(module = "foxglove.schemas")]
+#[derive(Clone)]
+pub(crate) struct EventType(pub(crate) foxglove::schemas::EventType);
+#[pymethods]
+impl EventType {
+    #[new]
+    #[pyo3(signature = (*, name="", color=None, id=None) )]
+    fn new(name: &str, color: Option<&str>, id: Option<&str>) -> Self {
+        Self(foxglove::schemas::EventType {
+            name: name.to_string(),
+            color: color.map(|s| s.to_string()),
+            id: id.map(|s| s.to_string()),
+        })
+    }
+    fn __repr__(&self) -> String {
+        format!(
+            "EventType(name={:?}, color={:?}, id={:?})",
+            self.0.name, self.0.color, self.0.id,
+        )
+    }
+    /// Returns the EventType schema.
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::EventType::get_schema().unwrap().into()
+    }
+    /// Encodes the EventType as protobuf.
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("failed to allocate buffer for encoded message")
+    }
+}
+
+impl From<EventType> for foxglove::schemas::EventType {
+    fn from(value: EventType) -> Self {
         value.0
     }
 }
@@ -3295,6 +3341,7 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<Duration>()?;
     module.add_class::<Event>()?;
     module.add_class::<EventProperty>()?;
+    module.add_class::<EventType>()?;
     module.add_class::<FrameTransform>()?;
     module.add_class::<FrameTransforms>()?;
     module.add_class::<GeoJson>()?;

@@ -281,13 +281,11 @@ class Event:
         *,
         timestamp: Timestamp | None = None,
         duration: Duration | None = None,
-        event_type: str | None = None,
+        event_type: EventType | None = None,
         event_properties: list[EventProperty] | None = None,
         metadata: list[KeyValuePair] | None = None,
-        display_name: str | None = None,
-        color: str | None = None,
         id: str | None = None,
-        device_id: str | None = None,
+        device_id: str = "",
     ) -> None: ...
     @staticmethod
     def get_schema() -> Schema:
@@ -317,6 +315,23 @@ class EventProperty:
 
     def encode(self) -> bytes:
         """Encodes the EventProperty."""
+        ...
+
+class EventType:
+    """
+    Event type definition providing category name, display color, and optional platform ID for reconciliation during ingestion
+    """
+
+    def __init__(
+        self, *, name: str = "", color: str | None = None, id: str | None = None
+    ) -> None: ...
+    @staticmethod
+    def get_schema() -> Schema:
+        """Returns the EventType schema"""
+        ...
+
+    def encode(self) -> bytes:
+        """Encodes the EventType."""
         ...
 
 class FrameTransform:
@@ -1065,6 +1080,7 @@ FoxgloveSchema = Union[
     CubePrimitive,
     Event,
     EventProperty,
+    EventType,
     FrameTransform,
     FrameTransforms,
     GeoJson,
