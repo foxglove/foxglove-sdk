@@ -22,12 +22,17 @@ use crate::{livekit_token, mock_server};
 
 /// Default timeout for waiting for events or stream data.
 pub const EVENT_TIMEOUT: Duration = Duration::from_secs(15);
+/// Longer timeout for netem-impaired connections where gateway startup and
+/// WebRTC negotiation are significantly slower.
+pub const NETEM_EVENT_TIMEOUT: Duration = Duration::from_secs(30);
 /// Default timeout for reading frames from the byte stream.
 pub const READ_TIMEOUT: Duration = Duration::from_secs(10);
 /// Default timeout for gateway shutdown.
 pub const SHUTDOWN_TIMEOUT: Duration = Duration::from_secs(10);
 /// Polling interval for condition checks.
 pub const POLL_INTERVAL: Duration = Duration::from_millis(50);
+/// Per-attempt timeout when waiting for a byte stream during connection retries.
+pub const CONNECT_RETRY_TIMEOUT: Duration = Duration::from_secs(5);
 
 /// Type alias for a channel filter function passed to [`TestGateway::start_with_filter`].
 pub type ChannelFilterFn =
@@ -138,7 +143,17 @@ impl ViewerConnection {
     /// byte stream to open. Retries the connection if the gateway hasn't
     /// joined the room yet (no ByteStreamOpened within a short window).
     pub async fn connect(room_name: &str, viewer_identity: &str) -> Result<Self> {
-        let outer_deadline = tokio::time::Instant::now() + EVENT_TIMEOUT;
+        Self::connect_with_timeout(room_name, viewer_identity, EVENT_TIMEOUT).await
+    }
+
+    /// Like [`connect`](Self::connect), but with an explicit overall timeout.
+    /// Use [`NETEM_EVENT_TIMEOUT`] for tests running under network impairment.
+    pub async fn connect_with_timeout(
+        room_name: &str,
+        viewer_identity: &str,
+        timeout: Duration,
+    ) -> Result<Self> {
+        let outer_deadline = tokio::time::Instant::now() + timeout;
         loop {
             let token = livekit_token::generate_token(room_name, viewer_identity)?;
             let (room, mut events) =
@@ -147,9 +162,14 @@ impl ViewerConnection {
                     .context("viewer failed to connect to LiveKit")?;
             info!("{viewer_identity} connected to room, waiting for byte stream");
 
-            // Wait for a ByteStreamOpened event. Use a short inner timeout so we
-            // can retry the connection if the gateway hasn't joined yet.
-            let inner_deadline = tokio::time::Instant::now() + Duration::from_secs(3);
+            // Wait for a ByteStreamOpened event. Use a shorter inner timeout so
+            // we can retry the connection if the gateway hasn't joined yet.
+            // Cap to the outer deadline so the final attempt uses all remaining
+            // time.
+            let inner_deadline = std::cmp::min(
+                tokio::time::Instant::now() + CONNECT_RETRY_TIMEOUT,
+                outer_deadline,
+            );
             let reader = loop {
                 let event = tokio::time::timeout_at(inner_deadline, events.recv()).await;
                 match event {
