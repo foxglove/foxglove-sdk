@@ -45,16 +45,16 @@ PointCloud make_point_cloud(const std::chrono::duration<double>& elapsed) {
 
   for (int x = 0; x < 20; ++x) {
     for (int y = 0; y < 20; ++y) {
-      const float x_coord =
-        static_cast<float>(x) + static_cast<float>(std::cos(t + static_cast<float>(y) / 5.0f));
-      const float y_coord = static_cast<float>(y);
-      const float z_coord = 0.0f;
+      const auto x_coord =
+        static_cast<float>(x) + static_cast<float>(std::cos(t + (static_cast<float>(y) / 5.0F)));
+      const auto y_coord = static_cast<float>(y);
+      const float z_coord = 0.0F;
 
-      const uint8_t r = static_cast<uint8_t>(255.0 * (0.5 + 0.5 * x_coord / 20.0f));
-      const uint8_t g = static_cast<uint8_t>(255.0 * y_coord / 20.0f);
-      const uint8_t b = static_cast<uint8_t>(255.0 * (0.5 + 0.5 * std::sin(t)));
-      const uint8_t a =
-        static_cast<uint8_t>(255.0 * (0.5 + 0.5 * ((x_coord / 20.0f) * (y_coord / 20.0f))));
+      const auto r = static_cast<uint8_t>(255.0 * (0.5 + (0.5 * x_coord / 20.0F)));
+      const auto g = static_cast<uint8_t>(255.0 * y_coord / 20.0F);
+      const auto b = static_cast<uint8_t>(255.0 * (0.5 + (0.5 * std::sin(t))));
+      const auto a =
+        static_cast<uint8_t>(255.0 * (0.5 + (0.5 * ((x_coord / 20.0F) * (y_coord / 20.0F)))));
 
       points.emplace_back(x_coord, y_coord, z_coord, r, g, b, a);
     }
@@ -63,9 +63,9 @@ PointCloud make_point_cloud(const std::chrono::duration<double>& elapsed) {
   // Pack data into bytes
   std::vector<std::byte> buffer;
   for (const auto& [x, y, z, r, g, b, a] : points) {
-    const std::byte* x_bytes = reinterpret_cast<const std::byte*>(&x);
-    const std::byte* y_bytes = reinterpret_cast<const std::byte*>(&y);
-    const std::byte* z_bytes = reinterpret_cast<const std::byte*>(&z);
+    const auto* x_bytes = reinterpret_cast<const std::byte*>(&x);
+    const auto* y_bytes = reinterpret_cast<const std::byte*>(&y);
+    const auto* z_bytes = reinterpret_cast<const std::byte*>(&z);
 
     buffer.insert(buffer.end(), x_bytes, x_bytes + sizeof(float));
     buffer.insert(buffer.end(), y_bytes, y_bytes + sizeof(float));
@@ -181,7 +181,7 @@ int main() {
   // In one MCAP, drop all of our point_cloud (and related tf) messages
   auto small_writer = create_mcap_writer(
     "example-topic-splitting-small.mcap",
-    [](foxglove::ChannelDescriptor&& channel) -> bool {
+    [](const foxglove::ChannelDescriptor& channel) -> bool {
       return channel.topic().find("/point_cloud") == std::string::npos;
     }
   );
@@ -192,7 +192,7 @@ int main() {
   // In the other, log only the point_cloud (and related tf) messages
   auto large_writer = create_mcap_writer(
     "example-topic-splitting-large.mcap",
-    [](foxglove::ChannelDescriptor&& channel) -> bool {
+    [](const foxglove::ChannelDescriptor& channel) -> bool {
       return channel.topic().find("/point_cloud") != std::string::npos;
     }
   );
@@ -207,7 +207,7 @@ int main() {
 
   // We'll send all messages to the running app. We don't need a filter, since it's the same as
   // having no filter applied, but this demonstrates how to add one to the WS server.
-  ws_options.sink_channel_filter = [](foxglove::ChannelDescriptor&&) -> bool {
+  ws_options.sink_channel_filter = [](const foxglove::ChannelDescriptor&) -> bool {
     return true;
   };
 
@@ -245,7 +245,7 @@ int main() {
     // Generate state message
     const double t = std::cos(std::chrono::duration<double>(elapsed).count());
     const std::string state = (t > 0.0) ? "pos" : "neg";
-    const std::string info_msg = "{\"state\": \"" + state + "\"}";
+    const std::string info_msg = R"({"state": ")" + state + R"("})";
     const auto timestamp = std::chrono::nanoseconds(now.time_since_epoch()).count();
     info_channel.log(
       reinterpret_cast<const std::byte*>(info_msg.data()), info_msg.size(), timestamp

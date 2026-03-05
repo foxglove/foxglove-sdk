@@ -83,7 +83,7 @@ FoxgloveResult<McapWriter> McapWriter::create(const McapWriterOptions& options) 
         if (!context) {
           return true;
         }
-        auto* filter_func = static_cast<const SinkChannelFilterFn*>(context);
+        const auto* filter_func = static_cast<const SinkChannelFilterFn*>(context);
         auto cpp_channel = ChannelDescriptor(channel);
         return (*filter_func)(std::move(cpp_channel));
       } catch (const std::exception& exc) {

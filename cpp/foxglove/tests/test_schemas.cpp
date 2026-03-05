@@ -18,6 +18,8 @@ void triangleListPrimitiveToC(
 );
 }  // namespace foxglove::schemas
 
+// NOLINTBEGIN(cppcoreguidelines-avoid-do-while)
+
 TEST_CASE("triangle list primitive to c") {
   Arena arena;
   foxglove_triangle_list_primitive dest;
@@ -122,3 +124,5 @@ TEST_CASE("triangle list primitive returns a schema") {
   REQUIRE(schema.data != NULL);
   REQUIRE(schema.data_len > 0);
 }
+
+// NOLINTEND(cppcoreguidelines-avoid-do-while)

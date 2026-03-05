@@ -16,7 +16,6 @@
 #include <optional>
 #include <string>
 
-enum foxglove_error : uint8_t;
 struct foxglove_websocket_server;
 struct foxglove_connection_graph;
 struct foxglove_client;
@@ -44,7 +43,7 @@ struct ClientChannel {
 /// @brief A client connected to the server.
 struct ClientMetadata {
   /// @brief The ID of the client.
-  uint32_t id;
+  uint32_t id{};
   /// @brief The sink ID associated with the client.
   std::optional<uint64_t> sink_id;
 };

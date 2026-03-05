@@ -44,19 +44,14 @@ FetchContent_Declare(
   websocketpp
   GIT_REPOSITORY https://github.com/zaphoyd/websocketpp.git
   GIT_TAG 0.8.2
-  OVERRIDE_FIND_PACKAGE
+  # Use a non-existent SOURCE_SUBDIR so FetchContent_MakeAvailable skips
+  # add_subdirectory (websocketpp's CMakeLists.txt modifies global settings).
+  SOURCE_SUBDIR _unused
 )
-# Set WebSocketPP CMake policy to suppress the warning
-set(FETCHCONTENT_TRY_FIND_PACKAGE_MODE NEVER)
-FetchContent_GetProperties(websocketpp)
-if(NOT websocketpp_POPULATED)
-  FetchContent_Populate(websocketpp)
-  # Don't call add_subdirectory to avoid running the original CMakeLists.txt
-  # Just set up the include directory
-  add_library(websocketpp INTERFACE)
-  target_include_directories(websocketpp INTERFACE ${websocketpp_SOURCE_DIR})
-endif()
 FetchContent_MakeAvailable(websocketpp)
+# websocketpp is header-only; set up an interface target manually.
+add_library(websocketpp INTERFACE)
+target_include_directories(websocketpp INTERFACE ${websocketpp_SOURCE_DIR})
 
 FetchContent_Declare(asio
   GIT_REPOSITORY https://github.com/chriskohlhoff/asio.git
@@ -121,7 +116,9 @@ if (STRICT)
 endif()
 
 if(DEFINED CLANG_TIDY)
-  set(CMAKE_CXX_CLANG_TIDY clang-tidy)
+  find_program(CLANG_TIDY_EXE NAMES clang-tidy REQUIRED)
+  message(STATUS "Found clang-tidy: ${CLANG_TIDY_EXE}")
+  set(CMAKE_CXX_CLANG_TIDY "${CLANG_TIDY_EXE}")
 endif()
 
 ### C
@@ -149,10 +146,29 @@ endif()
 
 ### C++
 
+# Generated code (excluded from clang-tidy)
+set(foxglove_generated_srcs
+    "foxglove/include/foxglove/schemas.hpp"
+    "foxglove/src/schemas.cpp"
+)
+add_library(foxglove_generated_obj OBJECT "${foxglove_generated_srcs}")
+set_property(TARGET foxglove_generated_obj PROPERTY POSITION_INDEPENDENT_CODE True)
+set_property(TARGET foxglove_generated_obj PROPERTY CXX_STANDARD 17)
+set_property(TARGET foxglove_generated_obj PROPERTY CXX_STANDARD_REQUIRED True)
+set_property(TARGET foxglove_generated_obj PROPERTY CXX_CLANG_TIDY "")
+target_include_directories(foxglove_generated_obj PUBLIC foxglove/include ${CMAKE_CURRENT_SOURCE_DIR}/../c/include)
+target_compile_options(foxglove_generated_obj PUBLIC ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
+target_link_options(foxglove_generated_obj PUBLIC ${SANITIZER_LINK_OPTIONS})
+
+# Hand-written C++ code
 file(GLOB_RECURSE foxglove_cpp_srcs CONFIGURE_DEPENDS
     "foxglove/include/*.hpp"
     "foxglove/src/*.hpp"
     "foxglove/src/*.cpp"
+)
+list(REMOVE_ITEM foxglove_cpp_srcs
+    "${CMAKE_CURRENT_SOURCE_DIR}/foxglove/include/foxglove/schemas.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/foxglove/src/schemas.cpp"
 )
 
 add_library(foxglove_cpp_obj OBJECT "${foxglove_cpp_srcs}")
@@ -165,9 +181,9 @@ target_link_options(foxglove_cpp_obj PUBLIC ${SANITIZER_LINK_OPTIONS})
 
 add_library(foxglove_cpp_static STATIC)
 add_library(foxglove_cpp_shared SHARED)
-target_link_libraries(foxglove_cpp_static PUBLIC foxglove_cpp_obj)
+target_link_libraries(foxglove_cpp_static PUBLIC foxglove_cpp_obj foxglove_generated_obj)
 target_link_libraries(foxglove_cpp_static PRIVATE foxglove-static)
-target_link_libraries(foxglove_cpp_shared PUBLIC foxglove_cpp_obj)
+target_link_libraries(foxglove_cpp_shared PUBLIC foxglove_cpp_obj foxglove_generated_obj)
 target_link_libraries(foxglove_cpp_shared PRIVATE foxglove-shared)
 
 
