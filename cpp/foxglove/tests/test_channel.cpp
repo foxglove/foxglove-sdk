@@ -10,12 +10,14 @@
 #include <string>
 
 #include "common/file_cleanup.hpp"
+#include "common/test_helpers.hpp"
 
 using Catch::Matchers::ContainsSubstring;
 using Catch::Matchers::Equals;
 using foxglove_tests::FileCleanup;
+using foxglove_tests::requireValue;
 
-// NOLINTBEGIN(cppcoreguidelines-avoid-do-while,bugprone-unchecked-optional-access)
+// NOLINTBEGIN(cppcoreguidelines-avoid-do-while)
 
 TEST_CASE("topic is not valid utf-8") {
   auto channel =
@@ -30,24 +32,24 @@ TEST_CASE("duplicate topic") {
   REQUIRE(channel.has_value());
   auto channel2 = foxglove::RawChannel::create("test", "json", std::nullopt, context);
   REQUIRE(channel2.has_value());
-  REQUIRE(channel.value().id() == channel2.value().id());
+  REQUIRE(requireValue(channel).id() == requireValue(channel2).id());
   auto channel3 = foxglove::RawChannel::create("test", "msgpack", std::nullopt, context);
   REQUIRE(channel3.has_value());
-  REQUIRE(channel.value().id() != channel3.value().id());
+  REQUIRE(requireValue(channel).id() != requireValue(channel3).id());
 }
 
 TEST_CASE("channel.topic()") {
   auto context = foxglove::Context::create();
   auto channel = foxglove::RawChannel::create("/test-123", "json", std::nullopt, context);
   REQUIRE(channel.has_value());
-  REQUIRE(channel.value().topic() == "/test-123");
+  REQUIRE(requireValue(channel).topic() == "/test-123");
 }
 
 TEST_CASE("channel.message_encoding()") {
   auto context = foxglove::Context::create();
   auto channel = foxglove::RawChannel::create("test", "json", std::nullopt, context);
   REQUIRE(channel.has_value());
-  REQUIRE(channel.value().message_encoding() == "json");
+  REQUIRE(requireValue(channel).message_encoding() == "json");
 }
 
 TEST_CASE("channel.has_sinks()") {
@@ -57,7 +59,7 @@ TEST_CASE("channel.has_sinks()") {
   auto context = foxglove::Context::create();
   auto channel = foxglove::RawChannel::create("test", "json", std::nullopt, context);
   REQUIRE(channel.has_value());
-  REQUIRE(!channel.value().has_sinks());
+  REQUIRE(!requireValue(channel).has_sinks());
 
   foxglove::McapWriterOptions mcap_options = {};
   mcap_options.context = context;
@@ -67,7 +69,7 @@ TEST_CASE("channel.has_sinks()") {
 
   auto channel2 = foxglove::RawChannel::create("test2", "json", std::nullopt, context);
   REQUIRE(channel2.has_value());
-  REQUIRE(channel2.value().has_sinks());
+  REQUIRE(requireValue(channel2).has_sinks());
 }
 
 TEST_CASE("channel.close() disconnects sinks") {
@@ -84,17 +86,17 @@ TEST_CASE("channel.close() disconnects sinks") {
 
   auto raw_channel = foxglove::RawChannel::create("raw_test", "json", std::nullopt, context);
   REQUIRE(raw_channel.has_value());
-  REQUIRE(raw_channel.value().has_sinks());
+  REQUIRE(requireValue(raw_channel).has_sinks());
 
-  raw_channel.value().close();
-  REQUIRE(!raw_channel.value().has_sinks());
+  requireValue(raw_channel).close();
+  REQUIRE(!requireValue(raw_channel).has_sinks());
 
   auto typed_channel = foxglove::schemas::LogChannel::create("test", context);
   REQUIRE(typed_channel.has_value());
-  REQUIRE(typed_channel.value().has_sinks());
+  REQUIRE(requireValue(typed_channel).has_sinks());
 
-  typed_channel.value().close();
-  REQUIRE(!typed_channel.value().has_sinks());
+  requireValue(typed_channel).close();
+  REQUIRE(!requireValue(typed_channel).has_sinks());
 }
 
 TEST_CASE("channel.schema()") {
@@ -110,7 +112,7 @@ TEST_CASE("channel.schema()") {
   auto channel = foxglove::RawChannel::create("test", "json", mock_schema, context);
   REQUIRE(channel.has_value());
 
-  auto schema = channel.value().schema();
+  auto schema = requireValue(channel).schema();
   REQUIRE(schema.has_value());
   REQUIRE(schema->name == "test_schema");
   REQUIRE(schema->encoding == "jsonschema");
@@ -125,7 +127,7 @@ TEST_CASE("channel.schema() with no schema") {
   auto channel = foxglove::RawChannel::create("test", "json", std::nullopt, context);
   REQUIRE(channel.has_value());
 
-  auto schema = channel.value().schema();
+  auto schema = requireValue(channel).schema();
   REQUIRE(!schema.has_value());
 }
 
@@ -134,8 +136,9 @@ TEST_CASE("channel with metadata") {
   std::map<std::string, std::string> metadata = {{"key1", "value1"}, {"key2", "value2"}};
   auto channel = foxglove::RawChannel::create("test", "json", std::nullopt, context, metadata);
   REQUIRE(channel.has_value());
-  REQUIRE(channel.value().metadata().value().size() == 2);
-  REQUIRE(channel.value().metadata() == metadata);
+  auto chan_metadata = requireValue(channel).metadata();
+  REQUIRE(requireValue(chan_metadata).size() == 2);
+  REQUIRE(requireValue(channel).metadata() == metadata);
 }
 
 TEST_CASE("channel with no metadata returns an empty value from metadata()") {
@@ -143,8 +146,9 @@ TEST_CASE("channel with no metadata returns an empty value from metadata()") {
   auto channel = foxglove::RawChannel::create("test", "json", std::nullopt, context);
 
   REQUIRE(channel.has_value());
-  REQUIRE(channel.value().metadata().has_value());
-  REQUIRE(channel.value().metadata().value().empty());
+  auto chan_metadata = requireValue(channel).metadata();
+  REQUIRE(chan_metadata.has_value());
+  REQUIRE(requireValue(chan_metadata).empty());
 }
 
-// NOLINTEND(cppcoreguidelines-avoid-do-while,bugprone-unchecked-optional-access)
+// NOLINTEND(cppcoreguidelines-avoid-do-while)

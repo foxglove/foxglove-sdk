@@ -13,12 +13,14 @@
 
 #include "../src/mcap_internal.hpp"
 #include "common/file_cleanup.hpp"
+#include "common/test_helpers.hpp"
 
 using Catch::Matchers::ContainsSubstring;
 using Catch::Matchers::Equals;
 using foxglove_tests::FileCleanup;
+using foxglove_tests::requireValue;
 
-// NOLINTBEGIN(cppcoreguidelines-avoid-do-while,bugprone-unchecked-optional-access)
+// NOLINTBEGIN(cppcoreguidelines-avoid-do-while)
 
 TEST_CASE("Open new file and close mcap writer") {
   FileCleanup cleanup("test.mcap");
@@ -131,7 +133,7 @@ TEST_CASE("different contexts") {
   schema.name = "ExampleSchema";
   auto channel_result = foxglove::RawChannel::create("example1", "json", schema, context2);
   REQUIRE(channel_result.has_value());
-  auto channel = std::move(channel_result.value());
+  auto channel = std::move(requireValue(channel_result));
   std::string data = "Hello, world!";
   channel.log(reinterpret_cast<const std::byte*>(data.data()), data.size());
 
@@ -161,7 +163,7 @@ TEST_CASE("specify profile") {
   schema.name = "ExampleSchema";
   auto channel_result = foxglove::RawChannel::create("example1", "json", schema, context);
   REQUIRE(channel_result.has_value());
-  auto& channel = channel_result.value();
+  auto& channel = requireValue(channel_result);
   std::string data = "Hello, world!";
   channel.log(reinterpret_cast<const std::byte*>(data.data()), data.size());
 
@@ -193,7 +195,7 @@ TEST_CASE("zstd compression") {
   schema.name = "ExampleSchema";
   auto channel_result = foxglove::RawChannel::create("example2", "json", schema, context);
   REQUIRE(channel_result.has_value());
-  auto channel = std::move(channel_result.value());
+  auto channel = std::move(requireValue(channel_result));
   std::string data = "Hello, world!";
   channel.log(reinterpret_cast<const std::byte*>(data.data()), data.size());
 
@@ -225,7 +227,7 @@ TEST_CASE("lz4 compression") {
   schema.name = "ExampleSchema";
   auto channel_result = foxglove::RawChannel::create("example3", "json", schema, context);
   REQUIRE(channel_result.has_value());
-  auto& channel = channel_result.value();
+  auto& channel = requireValue(channel_result);
   std::string data = "Hello, world!";
   channel.log(reinterpret_cast<const std::byte*>(data.data()), data.size());
 
@@ -265,7 +267,7 @@ TEST_CASE("Channel can outlive Schema") {
     data[2] = 'I';
     data[3] = 'L';
     // Use emplace to construct the optional directly
-    channel.emplace(std::move(result.value()));
+    channel.emplace(std::move(requireValue(result)));
   }
 
   const std::array<uint8_t, 3> data = {4, 5, 6};
@@ -370,7 +372,7 @@ TEST_CASE("ImageAnnotations channel") {
 
   auto channel_result = foxglove::schemas::ImageAnnotationsChannel::create("example", context);
   REQUIRE(channel_result.has_value());
-  auto channel = std::move(channel_result.value());
+  auto channel = std::move(requireValue(channel_result));
 
   // Prepare ImageAnnotations message
   foxglove::schemas::ImageAnnotations msg;
@@ -439,7 +441,7 @@ TEST_CASE("MCAP Channel filtering") {
     std::cerr << "Failed to create writer: " << foxglove::strerror(writer_res_1.error()) << '\n';
   }
   REQUIRE(writer_res_1.has_value());
-  auto writer_1 = std::move(writer_res_1.value());
+  auto writer_1 = std::move(requireValue(writer_res_1));
 
   foxglove::McapWriterOptions opts_2;
   opts_2.context = context;
@@ -448,25 +450,27 @@ TEST_CASE("MCAP Channel filtering") {
   opts_2.sink_channel_filter = [](const foxglove::ChannelDescriptor& channel) -> bool {
     // Only log to topic /2, and validate the schema while we're at it
     if (channel.topic() == "/2") {
-      REQUIRE(channel.schema().has_value());
-      REQUIRE(channel.schema().value().name == "Topic2Schema");
-      REQUIRE(channel.schema().value().encoding == "fake-encoding");
-      REQUIRE(channel.metadata().has_value());
-      REQUIRE(channel.metadata().value().size() == 2);
-      REQUIRE(channel.metadata().value().at("key1") == "value1");
-      REQUIRE(channel.metadata().value().at("key2") == "value2");
+      auto schema = channel.schema();
+      REQUIRE(schema.has_value());
+      REQUIRE(requireValue(schema).name == "Topic2Schema");
+      REQUIRE(requireValue(schema).encoding == "fake-encoding");
+      auto metadata = channel.metadata();
+      REQUIRE(metadata.has_value());
+      REQUIRE(requireValue(metadata).size() == 2);
+      REQUIRE(requireValue(metadata).at("key1") == "value1");
+      REQUIRE(requireValue(metadata).at("key2") == "value2");
       return true;
     }
     return false;
   };
   auto writer_res_2 = foxglove::McapWriter::create(opts_2);
   REQUIRE(writer_res_2.has_value());
-  auto writer_2 = std::move(writer_res_2.value());
+  auto writer_2 = std::move(requireValue(writer_res_2));
 
   {
     auto result = foxglove::RawChannel::create("/1", "json", std::nullopt, context);
     REQUIRE(result.has_value());
-    auto channel = std::move(result.value());
+    auto channel = std::move(requireValue(result));
     std::string data = "Topic 1 msg";
     channel.log(reinterpret_cast<const std::byte*>(data.data()), data.size());
   }
@@ -483,7 +487,7 @@ TEST_CASE("MCAP Channel filtering") {
     auto result =
       foxglove::RawChannel::create("/2", "json", std::move(topic2Schema), context, metadata);
     REQUIRE(result.has_value());
-    auto channel = std::move(result.value());
+    auto channel = std::move(requireValue(result));
     std::string data = "Topic 2 msg";
     channel.log(reinterpret_cast<const std::byte*>(data.data()), data.size());
   }
@@ -619,11 +623,11 @@ TEST_CASE("Custom writer basic functionality") {
 
   auto channel_result = foxglove::schemas::Point2Channel::create("test_topic", context);
   REQUIRE(channel_result.has_value());
-  auto channel = std::move(channel_result.value());
+  auto channel = std::move(requireValue(channel_result));
   channel.log(foxglove::schemas::Point2{1.0, 2.0});
   channel.log(foxglove::schemas::Point2{3.0, 4.0});
   channel.close();
-  custom_mcap.value().close();
+  requireValue(custom_mcap).close();
 
   // Verify callbacks were called
   REQUIRE(write_called);
@@ -772,4 +776,4 @@ TEST_CASE("McapWriterOptions defaults match C defaults") {
   CHECK(converted.truncate == c.truncate);
 }
 
-// NOLINTEND(cppcoreguidelines-avoid-do-while,bugprone-unchecked-optional-access)
+// NOLINTEND(cppcoreguidelines-avoid-do-while)
