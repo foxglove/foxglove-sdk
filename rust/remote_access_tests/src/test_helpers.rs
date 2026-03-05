@@ -20,8 +20,10 @@ use foxglove::protocol::v2::server::ServerMessage;
 use crate::frame::{self, Frame, OpCode};
 use crate::{livekit_token, mock_server};
 
-/// Default timeout for waiting for events or stream data.
-pub const EVENT_TIMEOUT: Duration = Duration::from_secs(15);
+/// Default timeout for waiting for events or stream data. 30s accommodates
+/// netem-impaired connections where gateway startup and WebRTC negotiation
+/// are significantly slower.
+pub const EVENT_TIMEOUT: Duration = Duration::from_secs(30);
 /// Default timeout for reading frames from the byte stream.
 pub const READ_TIMEOUT: Duration = Duration::from_secs(10);
 /// Default timeout for gateway shutdown.
