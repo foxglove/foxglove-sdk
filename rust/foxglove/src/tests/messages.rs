@@ -174,13 +174,10 @@ fn test_protobuf_field_for_message_type() {
     );
 
     // Should have a type name matching the protobuf fully-qualified name.
-    let type_name = Log::type_name();
-    assert!(type_name.is_some());
-    assert_eq!(type_name.unwrap(), ".foxglove.Log");
+    assert_eq!(Log::type_name().as_deref(), Some(".foxglove.Log"));
 
     // Should provide file descriptors for schema exchange.
-    let file_descriptors = Log::file_descriptors();
-    assert!(!file_descriptors.is_empty());
+    assert!(!Log::file_descriptors().is_empty());
 }
 
 /// Test `ProtobufField` trait for the well-known `Timestamp` type.
@@ -197,14 +194,12 @@ fn test_protobuf_field_for_timestamp() {
         prost::encoding::WireType::LengthDelimited as u32
     );
     assert_eq!(
-        Timestamp::type_name(),
-        Some(".google.protobuf.Timestamp".to_string())
+        Timestamp::type_name().as_deref(),
+        Some(".google.protobuf.Timestamp")
     );
 
     // Should have a file descriptor for the google.protobuf.Timestamp type.
-    let fd = Timestamp::file_descriptor();
-    assert!(fd.is_some());
-    let fd = fd.unwrap();
+    let fd = Timestamp::file_descriptor().expect("Timestamp should have a file descriptor");
     assert_eq!(fd.name(), "google/protobuf/timestamp.proto");
 }
 
@@ -300,11 +295,14 @@ fn test_chrono_datetime_to_timestamp_protobuf_roundtrip() {
     use crate::messages::Timestamp;
     use crate::protobuf::ProtobufField;
 
-    let dt = Utc.timestamp_opt(1_700_000_000, 123_456_789).unwrap();
+    let expected_sec: i64 = 1_700_000_000;
+    let expected_nsec: u32 = 123_456_789;
+
+    let dt = Utc.timestamp_opt(expected_sec, expected_nsec).unwrap();
     let ts = Timestamp::try_from(dt).expect("conversion should succeed");
 
-    assert_eq!(ts.sec(), 1_700_000_000);
-    assert_eq!(ts.nsec(), 123_456_789);
+    assert_eq!(ts.sec() as i64, expected_sec);
+    assert_eq!(ts.nsec(), expected_nsec);
 
     // Write via ProtobufField (produces length-delimited format) and decode back.
     let mut buf = Vec::new();
@@ -313,8 +311,8 @@ fn test_chrono_datetime_to_timestamp_protobuf_roundtrip() {
     let decoded =
         <prost_types::Timestamp as prost::Message>::decode_length_delimited(buf.as_slice())
             .expect("should decode as prost Timestamp");
-    assert_eq!(decoded.seconds, 1_700_000_000);
-    assert_eq!(decoded.nanos, 123_456_789);
+    assert_eq!(decoded.seconds, expected_sec);
+    assert_eq!(decoded.nanos, expected_nsec as i32);
 }
 
 /// Test that the `convert` module's `SaturatingFrom` trait works for Timestamp edge cases.
