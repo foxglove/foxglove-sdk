@@ -1,8 +1,9 @@
 //! Tests for the `messages` module and backward-compatible `schemas` module alias.
 //!
 //! These tests exercise the public API surface for message types, encoding/decoding traits,
-//! protobuf field metadata, serde serialization, and feature-gated functionality. They serve
-//! as a contract test suite ensuring backward compatibility.
+//! protobuf field metadata, serde serialization, feature-gated functionality, and the
+//! backward-compatible `schemas` module alias. They serve as a contract test suite ensuring
+//! backward compatibility.
 
 use crate::encode::Encode;
 use crate::messages::GeoJson;
@@ -325,14 +326,13 @@ fn test_chrono_saturating_timestamp_conversion() {
     use crate::convert::SaturatingFrom;
     use crate::messages::Timestamp;
 
-    // A large (but representable) timestamp should saturate to valid Timestamp bounds.
-    let far_future = Utc.timestamp_opt(253_402_300_799, 0).unwrap(); // 9999-12-31T23:59:59Z
-    let ts = Timestamp::saturating_from(far_future);
-    assert!(ts.sec() > 0);
+    // A value exceeding u32::MAX should saturate to Timestamp::MAX.
+    let beyond_u32 = Utc.timestamp_opt(u32::MAX as i64 + 1, 0).unwrap();
+    let ts = Timestamp::saturating_from(beyond_u32);
+    assert_eq!(ts, Timestamp::MAX);
 
-    // A negative timestamp should saturate to zero (Timestamp uses u32 sec).
+    // A negative timestamp should saturate to Timestamp::MIN.
     let before_epoch = Utc.timestamp_opt(-1, 0).unwrap();
     let ts = Timestamp::saturating_from(before_epoch);
-    assert_eq!(ts.sec(), 0);
-    assert_eq!(ts.nsec(), 0);
+    assert_eq!(ts, Timestamp::MIN);
 }
