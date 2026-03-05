@@ -559,6 +559,40 @@ struct Duration {
   uint32_t nsec = 0;
 };
 
+/// @brief Event type definition providing category name, display color, and optional platform ID
+/// for reconciliation during ingestion
+struct EventType {
+  /// @brief Human-readable event type name (e.g. "Traffic event", "FAULT"). Used for filtering,
+  /// grouping, and display.
+  std::string name;
+
+  /// @brief Hex color string (e.g. "#FF5733"). Used by the player to color timeline markers. If
+  /// absent, player assigns default.
+  std::optional<std::string> color;
+
+  /// @brief Platform event type UUID for reconciliation during ingestion. If present, platform
+  /// matches by ID; if absent, falls back to name.
+  std::optional<std::string> id;
+
+  /// @brief Encoded the EventType as protobuf to the provided buffer.
+  ///
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
+  /// and returns FoxgloveError::BufferTooShort.
+  /// If the message cannot be encoded, writes the reason to stderr and returns
+  /// FoxgloveError::EncodeError.
+  ///
+  /// @param ptr the destination buffer. must point to at least len valid bytes.
+  /// @param len the length of the destination buffer.
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
+
+  /// @brief Get the EventType schema.
+  ///
+  /// The schema data returned is statically allocated.
+  static Schema schema();
+};
+
 /// @brief A typed property value on an event, matching the platform's structured properties model
 struct EventProperty {
   /// @brief Type of an event property value
@@ -634,37 +668,30 @@ struct KeyValuePair {
 /// @brief A discrete event that occurred at a specific time. An event may have zero duration
 /// (instantaneous) or a non-zero duration.
 struct Event {
-  /// @brief Timestamp of the event
+  /// @brief Start time of the event.
   std::optional<Timestamp> timestamp;
 
-  /// @brief Duration of the event. If absent or zero, the event is an instantaneous point marker.
+  /// @brief Duration of the event. Omit or set to zero for an instant (point) event.
   std::optional<Duration> duration;
 
-  /// @brief Category name matching a platform event type (e.g. "FAULT", "MANEUVER"). Used for
-  /// filtering and grouping.
-  std::optional<std::string> event_type;
+  /// @brief Event type definition for this event. Provides category name, display color, and
+  /// optional platform ID for reconciliation.
+  std::optional<EventType> event_type;
 
-  /// @brief Typed property values matching the platform's structured properties model
+  /// @brief Typed property values matching the platform's structured properties model.
   std::vector<EventProperty> event_properties;
 
-  /// @brief Unstructured key-value metadata, complementary to event_properties. Keys must be
-  /// unique.
+  /// @brief Unstructured key-value metadata (complementary to event_properties).
   std::vector<KeyValuePair> metadata;
 
-  /// @brief Short human-readable label shown on the timeline marker
-  std::optional<std::string> display_name;
-
-  /// @brief Hex color string (e.g. "#FF5733" or "#FF573380"). If absent the player assigns a
-  /// default color.
-  std::optional<std::string> color;
-
-  /// @brief Stable identity for deduplication during platform ingestion. If absent the platform may
-  /// compute a fingerprint.
+  /// @brief Stable identity for deduplication during data platform ingestion. If absent, the
+  /// platform may compute a fingerprint.
   std::optional<std::string> id;
 
-  /// @brief Platform device ID this event is associated with. If absent during ingestion, inferred
-  /// from upload context.
-  std::optional<std::string> device_id;
+  /// @brief Device ID this event is associated with. Use the platform device ID when known, or a
+  /// local identifier (e.g. hostname, serial number). Required so consumers always know the source
+  /// device.
+  std::string device_id;
 
   /// @brief Encoded the Event as protobuf to the provided buffer.
   ///
@@ -2615,6 +2642,67 @@ public:
 
 private:
   explicit EventPropertyChannel(ChannelUniquePtr&& channel)
+      : impl_(std::move(channel)) {}
+
+  ChannelUniquePtr impl_;
+};
+
+/// @brief A channel for logging EventType messages to a topic.
+///
+/// @note While channels are fully thread-safe, the EventType struct is not thread-safe.
+/// Avoid modifying it concurrently or during a log operation.
+class EventTypeChannel {
+public:
+  /// @brief Create a new channel.
+  ///
+  /// @param topic The topic name. You should choose a unique topic name per channel for
+  /// compatibility with the Foxglove app.
+  /// @param context The context which associates logs to a sink. If omitted, the default context is
+  /// used.
+  static FoxgloveResult<EventTypeChannel> create(
+    const std::string_view& topic, const Context& context = Context()
+  );
+
+  /// @brief Log a message to the channel.
+  ///
+  /// @param msg The EventType message to log.
+  /// @param log_time The timestamp of the message, as nanoseconds since epoch. If omitted, the
+  /// current time is used.
+  /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
+  FoxgloveError log(
+    const EventType& msg, std::optional<uint64_t> log_time = std::nullopt,
+    std::optional<uint64_t> sink_id = std::nullopt
+  ) noexcept;
+
+  /// @brief Close the channel.
+  ///
+  /// You can use this to explicitly unadvertise the channel to sinks that subscribe to channels
+  /// dynamically, such as the WebSocketServer.
+  ///
+  /// Attempts to log on a closed channel will elicit a throttled warning message.
+  void close() noexcept;
+
+  /// @brief Uniquely identifies a channel in the context of this program.
+  ///
+  /// @return The ID of the channel.
+  [[nodiscard]] uint64_t id() const noexcept;
+
+  /// @brief Find out if any sinks have been added to the channel.
+  ///
+  /// @return True if sinks have been added to the channel, false otherwise.
+  [[nodiscard]] bool has_sinks() const noexcept;
+
+  EventTypeChannel(const EventTypeChannel& other) noexcept = delete;
+  EventTypeChannel& operator=(const EventTypeChannel& other) noexcept = delete;
+  /// @brief Default move constructor.
+  EventTypeChannel(EventTypeChannel&& other) noexcept = default;
+  /// @brief Default move assignment.
+  EventTypeChannel& operator=(EventTypeChannel&& other) noexcept = default;
+  /// @brief Default destructor.
+  ~EventTypeChannel() = default;
+
+private:
+  explicit EventTypeChannel(ChannelUniquePtr&& channel)
       : impl_(std::move(channel)) {}
 
   ChannelUniquePtr impl_;
