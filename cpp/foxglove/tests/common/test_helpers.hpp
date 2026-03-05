@@ -1,10 +1,10 @@
 #pragma once
 
+#include <foxglove/expected.hpp>
+
 #include <catch2/catch_test_macros.hpp>
 
 #include <optional>
-
-#include <foxglove/expected.hpp>
 
 namespace foxglove_tests {
 
