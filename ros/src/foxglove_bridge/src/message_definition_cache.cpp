@@ -231,6 +231,9 @@ const MessageSpec& MessageDefinitionCache::load_message_spec(
 #if AMENT_INDEX_CPP_VERSION_GTE(1, 13, 0)
   ament_index_cpp::PathWithResource path_with_resource =
     ament_index_cpp::get_resource("rosidl_interfaces", package);
+  if (path_with_resource.resourcePath == std::nullopt) {
+    throw DefinitionNotFoundError(definition_identifier.package_resource_name);
+  }
   index_contents = path_with_resource.contents;
 #else
   if (!ament_index_cpp::get_resource("rosidl_interfaces", package, index_contents)) {
