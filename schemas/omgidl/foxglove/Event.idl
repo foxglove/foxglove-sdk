@@ -2,6 +2,7 @@
 
 #include "foxglove/Duration.idl"
 #include "foxglove/EventProperty.idl"
+#include "foxglove/EventType.idl"
 #include "foxglove/KeyValuePair.idl"
 #include "foxglove/Time.idl"
 
@@ -9,39 +10,30 @@ module foxglove {
 
 // A discrete event that occurred at a specific time. An event may have zero duration (instantaneous) or a non-zero duration.
 struct Event {
-  // Timestamp of the event
+  // Start time of the event.
   Time timestamp;
 
-  // Duration of the event. If absent or zero, the event is an instantaneous point marker.
+  // Duration of the event. Omit or set to zero for an instant (point) event.
   @optional
   Duration duration;
 
-  // Category name matching a platform event type (e.g. "FAULT", "MANEUVER"). Used for filtering and grouping.
+  // Event type definition for this event. Provides category name, display color, and optional platform ID for reconciliation.
   @optional
-  string event_type;
+  EventType event_type;
 
-  // Typed property values matching the platform's structured properties model
+  // Typed property values matching the platform's structured properties model.
   @optional
   sequence<EventProperty> event_properties;
 
-  // Unstructured key-value metadata, complementary to event_properties. Keys must be unique.
+  // Unstructured key-value metadata (complementary to event_properties).
   @optional
   sequence<KeyValuePair> metadata;
 
-  // Short human-readable label shown on the timeline marker
-  @optional
-  string display_name;
-
-  // Hex color string (e.g. "#FF5733" or "#FF573380"). If absent the player assigns a default color.
-  @optional
-  string color;
-
-  // Stable identity for deduplication during platform ingestion. If absent the platform may compute a fingerprint.
+  // Stable identity for deduplication during data platform ingestion. If absent, the platform may compute a fingerprint.
   @optional
   string id;
 
-  // Platform device ID this event is associated with. If absent during ingestion, inferred from upload context.
-  @optional
+  // Device ID this event is associated with. Use the platform device ID when known, or a local identifier (e.g. hostname, serial number). Required so consumers always know the source device.
   string device_id;
 };
 

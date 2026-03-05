@@ -30,6 +30,7 @@ If the IDL does not support optional fields (e.g. ROS) you must specify a value 
 - [Duration](#duration)
 - [Event](#event)
 - [EventProperty](#eventproperty)
+- [EventType](#eventtype)
 - [FrameTransform](#frametransform)
 - [FrameTransforms](#frametransforms)
 - [GeoJSON](#geojson)
@@ -925,7 +926,7 @@ A discrete event that occurred at a specific time. An event may have zero durati
 </td>
 <td>
 
-Timestamp of the event
+Start time of the event.
 
 </td>
 </tr>
@@ -938,7 +939,7 @@ Timestamp of the event
 </td>
 <td>
 
-Duration of the event. If absent or zero, the event is an instantaneous point marker.
+Duration of the event. Omit or set to zero for an instant (point) event.
 
 </td>
 </tr>
@@ -946,12 +947,12 @@ Duration of the event. If absent or zero, the event is an instantaneous point ma
 <td><code>event_type</code> (optional)</td>
 <td>
 
-string
+[EventType](#eventtype)
 
 </td>
 <td>
 
-Category name matching a platform event type (e.g. "FAULT", "MANEUVER"). Used for filtering and grouping.
+Event type definition for this event. Provides category name, display color, and optional platform ID for reconciliation.
 
 </td>
 </tr>
@@ -964,7 +965,7 @@ Category name matching a platform event type (e.g. "FAULT", "MANEUVER"). Used fo
 </td>
 <td>
 
-Typed property values matching the platform's structured properties model
+Typed property values matching the platform's structured properties model.
 
 </td>
 </tr>
@@ -977,33 +978,7 @@ Typed property values matching the platform's structured properties model
 </td>
 <td>
 
-Unstructured key-value metadata, complementary to event_properties. Keys must be unique.
-
-</td>
-</tr>
-<tr>
-<td><code>display_name</code> (optional)</td>
-<td>
-
-string
-
-</td>
-<td>
-
-Short human-readable label shown on the timeline marker
-
-</td>
-</tr>
-<tr>
-<td><code>color</code> (optional)</td>
-<td>
-
-string
-
-</td>
-<td>
-
-Hex color string (e.g. "#FF5733" or "#FF573380"). If absent the player assigns a default color.
+Unstructured key-value metadata (complementary to event_properties).
 
 </td>
 </tr>
@@ -1016,12 +991,12 @@ string
 </td>
 <td>
 
-Stable identity for deduplication during platform ingestion. If absent the platform may compute a fingerprint.
+Stable identity for deduplication during data platform ingestion. If absent, the platform may compute a fingerprint.
 
 </td>
 </tr>
 <tr>
-<td><code>device_id</code> (optional)</td>
+<td><code>device_id</code></td>
 <td>
 
 string
@@ -1029,7 +1004,7 @@ string
 </td>
 <td>
 
-Platform device ID this event is associated with. If absent during ingestion, inferred from upload context.
+Device ID this event is associated with. Use the platform device ID when known, or a local identifier (e.g. hostname, serial number). Required so consumers always know the source device.
 
 </td>
 </tr>
@@ -1081,6 +1056,57 @@ string
 <td>
 
 String-encoded value. Interpretation depends on type.
+
+</td>
+</tr>
+</table>
+
+## EventType
+
+Event type definition providing category name, display color, and optional platform ID for reconciliation during ingestion
+
+<table>
+  <tr>
+    <th>field</th>
+    <th>type</th>
+    <th>description</th>
+  </tr>
+<tr>
+<td><code>name</code></td>
+<td>
+
+string
+
+</td>
+<td>
+
+Human-readable event type name (e.g. "Traffic event", "FAULT"). Used for filtering, grouping, and display.
+
+</td>
+</tr>
+<tr>
+<td><code>color</code> (optional)</td>
+<td>
+
+string
+
+</td>
+<td>
+
+Hex color string (e.g. "#FF5733"). Used by the player to color timeline markers. If absent, player assigns default.
+
+</td>
+</tr>
+<tr>
+<td><code>id</code> (optional)</td>
+<td>
+
+string
+
+</td>
+<td>
+
+Platform event type UUID for reconciliation during ingestion. If present, platform matches by ID; if absent, falls back to name.
 
 </td>
 </tr>

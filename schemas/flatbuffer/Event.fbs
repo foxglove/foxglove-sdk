@@ -2,6 +2,7 @@
 
 include "Duration.fbs";
 include "EventProperty.fbs";
+include "EventType.fbs";
 include "KeyValuePair.fbs";
 include "Time.fbs";
 
@@ -9,32 +10,26 @@ namespace foxglove;
 
 /// A discrete event that occurred at a specific time. An event may have zero duration (instantaneous) or a non-zero duration.
 table Event {
-  /// Timestamp of the event
+  /// Start time of the event.
   timestamp:Time (id: 0);
 
-  /// Duration of the event. If absent or zero, the event is an instantaneous point marker.
+  /// Duration of the event. Omit or set to zero for an instant (point) event.
   duration:Duration (id: 1);
 
-  /// Category name matching a platform event type (e.g. "FAULT", "MANEUVER"). Used for filtering and grouping.
-  event_type:string (id: 2);
+  /// Event type definition for this event. Provides category name, display color, and optional platform ID for reconciliation.
+  event_type:foxglove.EventType (id: 2);
 
-  /// Typed property values matching the platform's structured properties model
+  /// Typed property values matching the platform's structured properties model.
   event_properties:[foxglove.EventProperty] (id: 3);
 
-  /// Unstructured key-value metadata, complementary to event_properties. Keys must be unique.
+  /// Unstructured key-value metadata (complementary to event_properties).
   metadata:[foxglove.KeyValuePair] (id: 4);
 
-  /// Short human-readable label shown on the timeline marker
-  display_name:string (id: 5);
+  /// Stable identity for deduplication during data platform ingestion. If absent, the platform may compute a fingerprint.
+  id:string (id: 5);
 
-  /// Hex color string (e.g. "#FF5733" or "#FF573380"). If absent the player assigns a default color.
-  color:string (id: 6);
-
-  /// Stable identity for deduplication during platform ingestion. If absent the platform may compute a fingerprint.
-  id:string (id: 7);
-
-  /// Platform device ID this event is associated with. If absent during ingestion, inferred from upload context.
-  device_id:string (id: 8);
+  /// Device ID this event is associated with. Use the platform device ID when known, or a local identifier (e.g. hostname, serial number). Required so consumers always know the source device.
+  device_id:string (id: 6);
 }
 
 root_type Event;
