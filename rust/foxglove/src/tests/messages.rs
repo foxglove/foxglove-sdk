@@ -263,4 +263,3 @@ fn test_compressed_image_json_roundtrip_with_base64() {
         serde_json::from_str(&json).expect("deserialization should succeed");
     assert_eq!(msg, parsed);
 }
-
