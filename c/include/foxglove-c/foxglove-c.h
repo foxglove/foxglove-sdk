@@ -22,6 +22,14 @@
 
 #if !defined(__wasm__)
 /**
+ * Sentinel value for `compression_threads` indicating the default behavior
+ * of using the number of physical CPUs.
+ */
+#define FOXGLOVE_MCAP_COMPRESSION_THREADS_DEFAULT UINT32_MAX
+#endif
+
+#if !defined(__wasm__)
+/**
  * Allow clients to advertise channels to send data messages to the server.
  */
 #define FOXGLOVE_SERVER_CAPABILITY_CLIENT_PUBLISH (1 << 0)
@@ -1799,6 +1807,23 @@ typedef struct foxglove_mcap_options {
   bool emit_metadata_indexes;
   bool repeat_channels;
   bool repeat_schemas;
+  /**
+   * Whether to calculate and include CRCs in the respective records.
+   */
+  bool calculate_chunk_crcs;
+  bool calculate_data_section_crc;
+  bool calculate_summary_section_crc;
+  bool calculate_attachment_crcs;
+  /**
+   * Compression level passed to the underlying compressor (zstd or lz4).
+   * A value of 0 instructs the compressor to use its default level.
+   */
+  uint32_t compression_level;
+  /**
+   * Number of threads for zstd compression. 0 disables multithreading.
+   * The default uses the number of physical CPUs.
+   */
+  uint32_t compression_threads;
   /**
    * Context provided to the `sink_channel_filter` callback.
    */
@@ -4363,6 +4388,15 @@ foxglove_error foxglove_vector3_encode(const struct foxglove_vector3 *msg,
                                        uint8_t *ptr,
                                        size_t len,
                                        size_t *encoded_len);
+
+#if !defined(__wasm__)
+/**
+ * Returns a `FoxgloveMcapOptions` with defaults matching `mcap::WriteOptions::default()`.
+ *
+ * The test `test_mcap_options_default_matches_write_options` verifies these stay in sync.
+ */
+struct foxglove_mcap_options foxglove_mcap_options_default(void);
+#endif
 
 #if !defined(__wasm__)
 /**

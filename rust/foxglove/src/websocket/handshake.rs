@@ -12,7 +12,7 @@ pub(crate) async fn do_handshake<S: AsyncRead + AsyncWrite + Unpin>(
 ) -> Result<WebSocketStream<S>, tungstenite::Error> {
     tokio_tungstenite::accept_hdr_async(
         stream,
-        #[allow(clippy::result_large_err)] // Error type is dictated by tungstenite's callback API.
+        #[allow(clippy::result_large_err)]
         |req: &server::Request, mut res: server::Response| {
             let protocol_headers = req.headers().get_all("sec-websocket-protocol");
             for header in &protocol_headers {
@@ -30,14 +30,12 @@ pub(crate) async fn do_handshake<S: AsyncRead + AsyncWrite + Unpin>(
                 }
             }
 
-            let resp = server::Response::builder()
+            Err(server::Response::builder()
                 .status(400)
                 .body(Some(
                     "Missing expected sec-websocket-protocol header".into(),
                 ))
-                .unwrap();
-
-            Err(resp)
+                .unwrap())
         },
     )
     .await

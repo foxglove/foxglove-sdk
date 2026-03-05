@@ -1,9 +1,7 @@
-#include <foxglove-c/foxglove-c.h>
 #include <foxglove/arena.hpp>
 #include <foxglove/channel.hpp>
 #include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
-#include <foxglove/mcap.hpp>
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
@@ -13,6 +11,7 @@
 #include <fstream>
 #include <optional>
 
+#include "../src/mcap_internal.hpp"
 #include "common/file_cleanup.hpp"
 
 using Catch::Matchers::ContainsSubstring;
@@ -743,4 +742,30 @@ TEST_CASE("Write empty attachment data") {
   // Verify the attachment name was written
   std::string content = readFile("test.mcap");
   REQUIRE_THAT(content, ContainsSubstring("empty.txt"));
+}
+
+TEST_CASE("McapWriterOptions defaults match C defaults") {
+  foxglove::McapWriterOptions defaults;
+  auto c = foxglove_mcap_options_default();
+  auto converted = foxglove::to_c_mcap_options(defaults);
+
+  CHECK(converted.chunk_size == c.chunk_size);
+  CHECK(converted.compression == c.compression);
+  CHECK(converted.use_chunks == c.use_chunks);
+  CHECK(converted.disable_seeking == c.disable_seeking);
+  CHECK(converted.emit_statistics == c.emit_statistics);
+  CHECK(converted.emit_summary_offsets == c.emit_summary_offsets);
+  CHECK(converted.emit_message_indexes == c.emit_message_indexes);
+  CHECK(converted.emit_chunk_indexes == c.emit_chunk_indexes);
+  CHECK(converted.emit_attachment_indexes == c.emit_attachment_indexes);
+  CHECK(converted.emit_metadata_indexes == c.emit_metadata_indexes);
+  CHECK(converted.repeat_channels == c.repeat_channels);
+  CHECK(converted.repeat_schemas == c.repeat_schemas);
+  CHECK(converted.calculate_chunk_crcs == c.calculate_chunk_crcs);
+  CHECK(converted.calculate_data_section_crc == c.calculate_data_section_crc);
+  CHECK(converted.calculate_summary_section_crc == c.calculate_summary_section_crc);
+  CHECK(converted.calculate_attachment_crcs == c.calculate_attachment_crcs);
+  CHECK(converted.compression_level == c.compression_level);
+  CHECK(converted.compression_threads == c.compression_threads);
+  CHECK(converted.truncate == c.truncate);
 }
