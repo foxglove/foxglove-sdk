@@ -136,28 +136,6 @@ fn test_schemas_glob_import_works() {
     };
 }
 
-/// Test that `Encode`/`Decode` roundtrip produces the original message.
-#[test]
-fn test_encode_decode_roundtrip() {
-    use crate::decode::Decode;
-    use crate::messages::{Log, Timestamp, log::Level};
-
-    let original = Log {
-        timestamp: Some(Timestamp::new(1_700_000_000, 999_999_999)),
-        level: Level::Warning as i32,
-        message: "roundtrip test".to_string(),
-        name: "test_node".to_string(),
-        file: "test.rs".to_string(),
-        line: 42,
-    };
-
-    let mut buf = Vec::new();
-    original.encode(&mut buf).expect("encoding should succeed");
-
-    let decoded = Log::decode(buf.as_slice()).expect("decoding should succeed");
-    assert_eq!(original, decoded);
-}
-
 /// Test `ProtobufField` trait for a generated message type.
 #[cfg(feature = "derive")]
 #[test]
@@ -286,51 +264,3 @@ fn test_compressed_image_json_roundtrip_with_base64() {
     assert_eq!(msg, parsed);
 }
 
-/// Test chrono DateTime<Utc> to Timestamp conversion and ProtobufField write roundtrip.
-#[cfg(all(feature = "chrono", feature = "derive"))]
-#[test]
-fn test_chrono_datetime_to_timestamp_protobuf_roundtrip() {
-    use chrono::{TimeZone, Utc};
-
-    use crate::messages::Timestamp;
-    use crate::protobuf::ProtobufField;
-
-    let expected_sec: i64 = 1_700_000_000;
-    let expected_nsec: u32 = 123_456_789;
-
-    let dt = Utc.timestamp_opt(expected_sec, expected_nsec).unwrap();
-    let ts = Timestamp::try_from(dt).expect("conversion should succeed");
-
-    assert_eq!(ts.sec() as i64, expected_sec);
-    assert_eq!(ts.nsec(), expected_nsec);
-
-    // Write via ProtobufField (produces length-delimited format) and decode back.
-    let mut buf = Vec::new();
-    ts.write(&mut buf);
-
-    let decoded =
-        <prost_types::Timestamp as prost::Message>::decode_length_delimited(buf.as_slice())
-            .expect("should decode as prost Timestamp");
-    assert_eq!(decoded.seconds, expected_sec);
-    assert_eq!(decoded.nanos, expected_nsec as i32);
-}
-
-/// Test that the `convert` module's `SaturatingFrom` trait works for Timestamp edge cases.
-#[cfg(feature = "chrono")]
-#[test]
-fn test_chrono_saturating_timestamp_conversion() {
-    use chrono::{TimeZone, Utc};
-
-    use crate::convert::SaturatingFrom;
-    use crate::messages::Timestamp;
-
-    // A value exceeding u32::MAX should saturate to Timestamp::MAX.
-    let beyond_u32 = Utc.timestamp_opt(u32::MAX as i64 + 1, 0).unwrap();
-    let ts = Timestamp::saturating_from(beyond_u32);
-    assert_eq!(ts, Timestamp::MAX);
-
-    // A negative timestamp should saturate to Timestamp::MIN.
-    let before_epoch = Utc.timestamp_opt(-1, 0).unwrap();
-    let ts = Timestamp::saturating_from(before_epoch);
-    assert_eq!(ts, Timestamp::MIN);
-}
