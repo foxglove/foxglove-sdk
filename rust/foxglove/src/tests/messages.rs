@@ -155,7 +155,12 @@ fn test_protobuf_field_for_message_type() {
     assert_eq!(Log::type_name().as_deref(), Some(".foxglove.Log"));
 
     // Should provide file descriptors for schema exchange.
-    assert!(!Log::file_descriptors().is_empty());
+    let fds = Log::file_descriptors();
+    assert!(
+        fds.iter().any(|fd| fd.name() == "foxglove/Log.proto"),
+        "expected foxglove/Log.proto descriptor, got: {:?}",
+        fds.iter().map(|f| f.name()).collect::<Vec<_>>()
+    );
 }
 
 /// Test `ProtobufField` trait for the well-known `Timestamp` type.
