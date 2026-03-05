@@ -40,6 +40,7 @@ export * from "./SceneEntity";
 export * from "./SceneEntityDeletion";
 export * from "./SceneEntityDeletionType";
 export * from "./SceneUpdate";
+export * from "./SelectedEntity";
 export * from "./SpherePrimitive";
 export * from "./TextAnnotation";
 export * from "./TextPrimitive";
