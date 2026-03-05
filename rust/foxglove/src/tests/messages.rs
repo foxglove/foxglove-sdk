@@ -8,6 +8,8 @@
 use crate::encode::Encode;
 use crate::messages::GeoJson;
 
+/// Catches: broken `crate::messages` re-export path, broken `Encode::get_schema()` or `Schema`
+/// struct for a type with non-standard casing (GeoJSON).
 #[test]
 fn test_geojson_schema_preserves_schema_name() {
     let schema = GeoJson::get_schema();
@@ -15,6 +17,8 @@ fn test_geojson_schema_preserves_schema_name() {
     assert_eq!(schema.unwrap().name, "foxglove.GeoJSON");
 }
 
+/// Catches: broken `crate::encode::Encode` re-export, broken `crate::messages::{Log, Timestamp}`
+/// paths, broken submodule path `crate::messages::log::Level`, or broken `Encode::encode()` impl.
 #[test]
 fn test_log_message_can_be_encoded() {
     use crate::messages::{Log, Timestamp, log::Level};
@@ -37,6 +41,7 @@ fn test_log_message_can_be_encoded() {
     assert!(!buf.is_empty());
 }
 
+/// Catches: broken `Timestamp::new()`, `sec()`, or `nsec()` accessors on the well-known type.
 #[test]
 fn test_timestamp_creation() {
     use crate::messages::Timestamp;
@@ -46,11 +51,11 @@ fn test_timestamp_creation() {
     assert_eq!(ts.nsec(), 456);
 }
 
-/// Test that the deprecated `schemas` module re-exports the same types as `messages`.
+/// Catches: broken `crate::schemas` re-export, type mismatch between `schemas` and `messages`
+/// modules, or encoding divergence between the two paths.
 ///
 /// Note: In Rust, we can't easily test that a deprecation warning is emitted at runtime.
-/// The `#[deprecated]` attribute emits warnings at compile time. This test verifies that
-/// the re-exported types are identical to those in the `messages` module.
+/// The `#[deprecated]` attribute emits warnings at compile time.
 #[test]
 #[allow(deprecated)]
 fn test_schemas_reexports_same_types_as_messages() {
@@ -87,7 +92,8 @@ fn test_schemas_reexports_same_types_as_messages() {
     );
 }
 
-/// Test that other common types are re-exported correctly from the deprecated schemas module.
+/// Catches: `crate::schemas` failing to re-export common types, or re-exporting a different
+/// type than `crate::messages` (e.g., due to a version mismatch after crate extraction).
 #[test]
 #[allow(deprecated)]
 fn test_schemas_reexports_common_types() {
@@ -119,7 +125,8 @@ fn test_schemas_reexports_common_types() {
     );
 }
 
-/// Test that using the deprecated module with `use foxglove::schemas::*` works.
+/// Catches: broken glob import from `crate::schemas::*`, which is the primary import pattern
+/// used by downstream code.
 #[test]
 #[allow(deprecated)]
 fn test_schemas_glob_import_works() {
@@ -136,7 +143,8 @@ fn test_schemas_glob_import_works() {
     };
 }
 
-/// Test `ProtobufField` trait for a generated message type.
+/// Catches: broken `crate::protobuf::ProtobufField` re-export, or incorrect metadata
+/// (field type, wire type, type name, file descriptors) on code-generated message types.
 #[cfg(feature = "derive")]
 #[test]
 fn test_protobuf_field_for_message_type() {
@@ -163,7 +171,8 @@ fn test_protobuf_field_for_message_type() {
     );
 }
 
-/// Test `ProtobufField` trait for the well-known `Timestamp` type.
+/// Catches: broken hand-written `ProtobufField` impl for the `Timestamp` well-known type,
+/// which is implemented separately from the code-generated message types.
 #[cfg(feature = "derive")]
 #[test]
 fn test_protobuf_field_for_timestamp() {
@@ -186,7 +195,8 @@ fn test_protobuf_field_for_timestamp() {
     assert_eq!(fd.name(), "google/protobuf/timestamp.proto");
 }
 
-/// Test `ProtobufField` write/read roundtrip for a generated message type.
+/// Catches: broken `ProtobufField::write()` or `encoded_len()` producing invalid or
+/// inconsistent length-delimited protobuf output.
 #[cfg(feature = "derive")]
 #[test]
 fn test_protobuf_field_write_roundtrip() {
@@ -212,7 +222,8 @@ fn test_protobuf_field_write_roundtrip() {
     assert_eq!(msg, decoded);
 }
 
-/// Test serde JSON roundtrip for a message with enum fields, verifying string enum names.
+/// Catches: broken `serde_enum_mod!` macro output — enums must serialize as string names
+/// (e.g., `"ERROR"`) not integers, and must roundtrip through JSON correctly.
 #[cfg(feature = "serde")]
 #[test]
 fn test_log_json_roundtrip_with_enum_strings() {
@@ -239,7 +250,8 @@ fn test_log_json_roundtrip_with_enum_strings() {
     assert_eq!(msg, parsed);
 }
 
-/// Test serde JSON roundtrip for a message with bytes fields, verifying base64 encoding.
+/// Catches: broken `serde_bytes` module — `Bytes` fields must serialize as base64 in JSON
+/// and roundtrip correctly.
 #[cfg(feature = "serde")]
 #[test]
 fn test_compressed_image_json_roundtrip_with_base64() {
