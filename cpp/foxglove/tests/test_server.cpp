@@ -19,9 +19,8 @@
 #include <thread>
 #include <type_traits>
 
-#include "foxglove/playback_state.hpp"
-
 #include "common/test_helpers.hpp"
+#include "foxglove/playback_state.hpp"
 
 using Catch::Matchers::ContainsSubstring;
 using Catch::Matchers::Equals;
@@ -1624,9 +1623,11 @@ std::vector<std::byte> playbackControlRequestToBinary(
   msg.reserve(message_size);
 
   msg.emplace_back(std::byte{0x03});
-  msg.emplace_back(std::byte{static_cast<std::underlying_type_t<foxglove::PlaybackCommand>>(
-    playback_control_request.playback_command
-  )});
+  msg.emplace_back(
+    std::byte{static_cast<std::underlying_type_t<foxglove::PlaybackCommand>>(
+      playback_control_request.playback_command
+    )}
+  );
 
   writeFloatLE(msg, playback_control_request.playback_speed);
   msg.emplace_back(
@@ -1694,7 +1695,8 @@ TEST_CASE("Playback control request callback") {
   ws_options.capabilities = foxglove::WebSocketServerCapabilities::PlaybackControl;
   ws_options.playback_time_range = std::make_pair(0, 1000);
   ws_options.callbacks.onPlaybackControlRequest =
-    [&]([[maybe_unused]] const foxglove::PlaybackControlRequest& playback_control_request
+    [&](
+      [[maybe_unused]] const foxglove::PlaybackControlRequest& playback_control_request
     ) -> foxglove::PlaybackState {
     {
       std::unique_lock lock(mutex);
