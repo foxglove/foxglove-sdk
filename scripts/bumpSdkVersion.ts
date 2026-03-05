@@ -26,7 +26,7 @@ async function main() {
   // Find all Cargo.toml files in the workspace
   const workspaceRoot = path.resolve(__dirname, "..");
   const cargoFiles = await glob("**/Cargo.toml", {
-    // foxglove_data_loader is versioned separately
+    // Ignore crates that are versioned separately or not published
     ignore: [
       "**/target/**",
       "**/node_modules/**",
