@@ -468,6 +468,11 @@ impl RemoteAccessSession {
     ) {
         let _guard = self.subscription_lock.lock();
 
+        // Collect new & modified subscriptions.
+        //
+        // If the client's subscription request is unsatisfiable, reject it with an error status
+        // message. Note that when a re-subscription fails, we currently leave the original
+        // subscription intact. In the future, we may choose to remove the original subscription.
         let mut channel_ids = SmallVec::<[ChannelId; 4]>::new();
         let mut video_channel_ids = SmallVec::<[ChannelId; 4]>::new();
         let mut data_channel_ids = SmallVec::<[ChannelId; 4]>::new();
