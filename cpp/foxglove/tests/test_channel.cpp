@@ -113,12 +113,13 @@ TEST_CASE("channel.schema()") {
   REQUIRE(channel.has_value());
 
   auto schema = requireValue(channel).schema();
-  REQUIRE(schema.has_value());
-  REQUIRE(schema->name == "test_schema");
-  REQUIRE(schema->encoding == "jsonschema");
-  REQUIRE(schema->data_len == schema_data.size());
+  auto& schema_val = requireValue(schema);
+  REQUIRE(schema_val.name == "test_schema");
+  REQUIRE(schema_val.encoding == "jsonschema");
+  REQUIRE(schema_val.data_len == schema_data.size());
   REQUIRE(
-    std::string_view(reinterpret_cast<const char*>(schema->data), schema->data_len) == schema_data
+    std::string_view(reinterpret_cast<const char*>(schema_val.data), schema_val.data_len) ==
+    schema_data
   );
 }
 
