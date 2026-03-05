@@ -11,6 +11,7 @@ pub const CYLINDER_PRIMITIVE: &[u8] = include_bytes!("data/CylinderPrimitive.bin
 pub const DURATION: &[u8] = include_bytes!("data/Duration.bin");
 pub const EVENT: &[u8] = include_bytes!("data/Event.bin");
 pub const EVENT_PROPERTY: &[u8] = include_bytes!("data/EventProperty.bin");
+pub const EVENT_TYPE: &[u8] = include_bytes!("data/EventType.bin");
 pub const FRAME_TRANSFORM: &[u8] = include_bytes!("data/FrameTransform.bin");
 pub const FRAME_TRANSFORMS: &[u8] = include_bytes!("data/FrameTransforms.bin");
 pub const GEO_JSON: &[u8] = include_bytes!("data/GeoJSON.bin");

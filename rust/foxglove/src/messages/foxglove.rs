@@ -263,33 +263,27 @@ pub struct CylinderPrimitive {
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Event {
-    /// Timestamp of the event
+    /// Start time of the event.
     #[prost(message, optional, tag = "1")]
     pub timestamp: ::core::option::Option<crate::messages::Timestamp>,
-    /// Duration of the event. If absent or zero, the event is an instantaneous point marker.
+    /// Duration of the event. Omit or set to zero for an instant (point) event.
     #[prost(message, optional, tag = "2")]
     pub duration: ::core::option::Option<crate::messages::Duration>,
-    /// Category name matching a platform event type (e.g. "FAULT", "MANEUVER"). Used for filtering and grouping.
-    #[prost(string, optional, tag = "3")]
-    pub event_type: ::core::option::Option<::prost::alloc::string::String>,
-    /// Typed property values matching the platform's structured properties model
+    /// Event type definition for this event. Provides category name, display color, and optional platform ID for reconciliation.
+    #[prost(message, optional, tag = "3")]
+    pub event_type: ::core::option::Option<EventType>,
+    /// Typed property values matching the platform's structured properties model.
     #[prost(message, repeated, tag = "4")]
     pub event_properties: ::prost::alloc::vec::Vec<EventProperty>,
-    /// Unstructured key-value metadata, complementary to event_properties. Keys must be unique.
+    /// Unstructured key-value metadata (complementary to event_properties).
     #[prost(message, repeated, tag = "5")]
     pub metadata: ::prost::alloc::vec::Vec<KeyValuePair>,
-    /// Short human-readable label shown on the timeline marker
+    /// Stable identity for deduplication during data platform ingestion. If absent, the platform may compute a fingerprint.
     #[prost(string, optional, tag = "6")]
-    pub display_name: ::core::option::Option<::prost::alloc::string::String>,
-    /// Hex color string (e.g. "#FF5733" or "#FF573380"). If absent the player assigns a default color.
-    #[prost(string, optional, tag = "7")]
-    pub color: ::core::option::Option<::prost::alloc::string::String>,
-    /// Stable identity for deduplication during platform ingestion. If absent the platform may compute a fingerprint.
-    #[prost(string, optional, tag = "8")]
     pub id: ::core::option::Option<::prost::alloc::string::String>,
-    /// Platform device ID this event is associated with. If absent during ingestion, inferred from upload context.
-    #[prost(string, optional, tag = "9")]
-    pub device_id: ::core::option::Option<::prost::alloc::string::String>,
+    /// Device ID this event is associated with. Use the platform device ID when known, or a local identifier (e.g. hostname, serial number). Required so consumers always know the source device.
+    #[prost(string, tag = "7")]
+    pub device_id: ::prost::alloc::string::String,
 }
 /// A typed property value on an event, matching the platform's structured properties model
 ///
@@ -365,6 +359,22 @@ pub mod event_property {
             }
         }
     }
+}
+/// Event type definition providing category name, display color, and optional platform ID for reconciliation during ingestion
+///
+/// <https://docs.foxglove.dev/docs/visualization/message-schemas/event-type>
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct EventType {
+    /// Human-readable event type name (e.g. "Traffic event", "FAULT"). Used for filtering, grouping, and display.
+    #[prost(string, tag = "1")]
+    pub name: ::prost::alloc::string::String,
+    /// Hex color string (e.g. "#FF5733"). Used by the player to color timeline markers. If absent, player assigns default.
+    #[prost(string, optional, tag = "2")]
+    pub color: ::core::option::Option<::prost::alloc::string::String>,
+    /// Platform event type UUID for reconciliation during ingestion. If present, platform matches by ID; if absent, falls back to name.
+    #[prost(string, optional, tag = "3")]
+    pub id: ::core::option::Option<::prost::alloc::string::String>,
 }
 /// A transform between two reference frames in 3D space. The transform defines the position and orientation of a child frame within a parent frame. Translation moves the origin of the child frame relative to the parent origin. The rotation changes the orientiation of the child frame around its origin.
 ///
