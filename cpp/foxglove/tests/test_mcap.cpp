@@ -297,34 +297,40 @@ void convertToCAndCheck(const foxglove::schemas::ImageAnnotations& msg) {
   REQUIRE(c_msg.texts_count == msg.texts.size());
 
   // Comapre circle annotation
-  REQUIRE(c_msg.circles[0].timestamp->sec == msg.circles[0].timestamp->sec);
-  REQUIRE(c_msg.circles[0].timestamp->nsec == msg.circles[0].timestamp->nsec);
-  REQUIRE(c_msg.circles[0].position->x == msg.circles[0].position->x);
-  REQUIRE(c_msg.circles[0].position->y == msg.circles[0].position->y);
+  const auto& circle_ts = requireValue(msg.circles[0].timestamp);
+  REQUIRE(c_msg.circles[0].timestamp->sec == circle_ts.sec);
+  REQUIRE(c_msg.circles[0].timestamp->nsec == circle_ts.nsec);
+  const auto& circle_pos = requireValue(msg.circles[0].position);
+  REQUIRE(c_msg.circles[0].position->x == circle_pos.x);
+  REQUIRE(c_msg.circles[0].position->y == circle_pos.y);
   REQUIRE(c_msg.circles[0].diameter == msg.circles[0].diameter);
   REQUIRE(c_msg.circles[0].thickness == msg.circles[0].thickness);
-  REQUIRE(c_msg.circles[0].fill_color->r == msg.circles[0].fill_color->r);
-  REQUIRE(c_msg.circles[0].fill_color->g == msg.circles[0].fill_color->g);
-  REQUIRE(c_msg.circles[0].fill_color->b == msg.circles[0].fill_color->b);
-  REQUIRE(c_msg.circles[0].fill_color->a == msg.circles[0].fill_color->a);
-  REQUIRE(c_msg.circles[0].outline_color->r == msg.circles[0].outline_color->r);
-  REQUIRE(c_msg.circles[0].outline_color->g == msg.circles[0].outline_color->g);
-  REQUIRE(c_msg.circles[0].outline_color->b == msg.circles[0].outline_color->b);
-  REQUIRE(c_msg.circles[0].outline_color->a == msg.circles[0].outline_color->a);
+  const auto& circle_fill = requireValue(msg.circles[0].fill_color);
+  REQUIRE(c_msg.circles[0].fill_color->r == circle_fill.r);
+  REQUIRE(c_msg.circles[0].fill_color->g == circle_fill.g);
+  REQUIRE(c_msg.circles[0].fill_color->b == circle_fill.b);
+  REQUIRE(c_msg.circles[0].fill_color->a == circle_fill.a);
+  const auto& circle_outline = requireValue(msg.circles[0].outline_color);
+  REQUIRE(c_msg.circles[0].outline_color->r == circle_outline.r);
+  REQUIRE(c_msg.circles[0].outline_color->g == circle_outline.g);
+  REQUIRE(c_msg.circles[0].outline_color->b == circle_outline.b);
+  REQUIRE(c_msg.circles[0].outline_color->a == circle_outline.a);
 
   // Compare points annotation
-  REQUIRE(c_msg.points[0].timestamp->sec == msg.points[0].timestamp->sec);
-  REQUIRE(c_msg.points[0].timestamp->nsec == msg.points[0].timestamp->nsec);
+  const auto& point_ts = requireValue(msg.points[0].timestamp);
+  REQUIRE(c_msg.points[0].timestamp->sec == point_ts.sec);
+  REQUIRE(c_msg.points[0].timestamp->nsec == point_ts.nsec);
   REQUIRE(static_cast<uint8_t>(c_msg.points[0].type) == static_cast<uint8_t>(msg.points[0].type));
   REQUIRE(c_msg.points[0].points_count == msg.points[0].points.size());
   for (size_t i = 0; i < msg.points[0].points.size(); ++i) {
     REQUIRE(c_msg.points[0].points[i].x == msg.points[0].points[i].x);
     REQUIRE(c_msg.points[0].points[i].y == msg.points[0].points[i].y);
   }
-  REQUIRE(c_msg.points[0].outline_color->r == msg.points[0].outline_color->r);
-  REQUIRE(c_msg.points[0].outline_color->g == msg.points[0].outline_color->g);
-  REQUIRE(c_msg.points[0].outline_color->b == msg.points[0].outline_color->b);
-  REQUIRE(c_msg.points[0].outline_color->a == msg.points[0].outline_color->a);
+  const auto& point_outline = requireValue(msg.points[0].outline_color);
+  REQUIRE(c_msg.points[0].outline_color->r == point_outline.r);
+  REQUIRE(c_msg.points[0].outline_color->g == point_outline.g);
+  REQUIRE(c_msg.points[0].outline_color->b == point_outline.b);
+  REQUIRE(c_msg.points[0].outline_color->a == point_outline.a);
   REQUIRE(c_msg.points[0].outline_colors_count == msg.points[0].outline_colors.size());
   for (size_t i = 0; i < msg.points[0].outline_colors.size(); ++i) {
     REQUIRE(c_msg.points[0].outline_colors[i].r == msg.points[0].outline_colors[i].r);
@@ -332,28 +338,33 @@ void convertToCAndCheck(const foxglove::schemas::ImageAnnotations& msg) {
     REQUIRE(c_msg.points[0].outline_colors[i].b == msg.points[0].outline_colors[i].b);
     REQUIRE(c_msg.points[0].outline_colors[i].a == msg.points[0].outline_colors[i].a);
   }
-  REQUIRE(c_msg.points[0].fill_color->r == msg.points[0].fill_color->r);
-  REQUIRE(c_msg.points[0].fill_color->g == msg.points[0].fill_color->g);
-  REQUIRE(c_msg.points[0].fill_color->b == msg.points[0].fill_color->b);
-  REQUIRE(c_msg.points[0].fill_color->a == msg.points[0].fill_color->a);
+  const auto& point_fill = requireValue(msg.points[0].fill_color);
+  REQUIRE(c_msg.points[0].fill_color->r == point_fill.r);
+  REQUIRE(c_msg.points[0].fill_color->g == point_fill.g);
+  REQUIRE(c_msg.points[0].fill_color->b == point_fill.b);
+  REQUIRE(c_msg.points[0].fill_color->a == point_fill.a);
   REQUIRE(c_msg.points[0].thickness == msg.points[0].thickness);
 
   // Compare text annotation
-  REQUIRE(c_msg.texts[0].timestamp->sec == msg.texts[0].timestamp->sec);
-  REQUIRE(c_msg.texts[0].timestamp->nsec == msg.texts[0].timestamp->nsec);
-  REQUIRE(c_msg.texts[0].position->x == msg.texts[0].position->x);
-  REQUIRE(c_msg.texts[0].position->y == msg.texts[0].position->y);
+  const auto& text_ts = requireValue(msg.texts[0].timestamp);
+  REQUIRE(c_msg.texts[0].timestamp->sec == text_ts.sec);
+  REQUIRE(c_msg.texts[0].timestamp->nsec == text_ts.nsec);
+  const auto& text_pos = requireValue(msg.texts[0].position);
+  REQUIRE(c_msg.texts[0].position->x == text_pos.x);
+  REQUIRE(c_msg.texts[0].position->y == text_pos.y);
   REQUIRE(c_msg.texts[0].text.data == msg.texts[0].text.data());
   REQUIRE(c_msg.texts[0].text.len == msg.texts[0].text.size());
   REQUIRE(c_msg.texts[0].font_size == msg.texts[0].font_size);
-  REQUIRE(c_msg.texts[0].text_color->r == msg.texts[0].text_color->r);
-  REQUIRE(c_msg.texts[0].text_color->g == msg.texts[0].text_color->g);
-  REQUIRE(c_msg.texts[0].text_color->b == msg.texts[0].text_color->b);
-  REQUIRE(c_msg.texts[0].text_color->a == msg.texts[0].text_color->a);
-  REQUIRE(c_msg.texts[0].background_color->r == msg.texts[0].background_color->r);
-  REQUIRE(c_msg.texts[0].background_color->g == msg.texts[0].background_color->g);
-  REQUIRE(c_msg.texts[0].background_color->b == msg.texts[0].background_color->b);
-  REQUIRE(c_msg.texts[0].background_color->a == msg.texts[0].background_color->a);
+  const auto& text_color = requireValue(msg.texts[0].text_color);
+  REQUIRE(c_msg.texts[0].text_color->r == text_color.r);
+  REQUIRE(c_msg.texts[0].text_color->g == text_color.g);
+  REQUIRE(c_msg.texts[0].text_color->b == text_color.b);
+  REQUIRE(c_msg.texts[0].text_color->a == text_color.a);
+  const auto& bg_color = requireValue(msg.texts[0].background_color);
+  REQUIRE(c_msg.texts[0].background_color->r == bg_color.r);
+  REQUIRE(c_msg.texts[0].background_color->g == bg_color.g);
+  REQUIRE(c_msg.texts[0].background_color->b == bg_color.b);
+  REQUIRE(c_msg.texts[0].background_color->a == bg_color.a);
 }
 
 TEST_CASE_METHOD(McapTestFile, "ImageAnnotations channel") {
