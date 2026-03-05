@@ -71,9 +71,12 @@ for iface in $(ls /sys/class/net/); do
             args_var="NETEM_LINK_${name}_ARGS"
 
             # eval is safe here — the variable names are derived from env var
-            # keys we control (filtered by the grep pattern above).
+            # keys we control (filtered by the grep pattern above). We avoid
+            # passing NETEM_ARGS through eval to prevent shell metacharacter
+            # interpretation.
             eval "dst=\${$dst_var:-}"
-            eval "link_args=\${$args_var:-$NETEM_ARGS}"
+            eval "link_args=\${$args_var:-}"
+            link_args="${link_args:-$NETEM_ARGS}"
 
             if [ -z "$dst" ]; then
                 echo "  WARNING: $dst_var is empty, skipping link $name"
