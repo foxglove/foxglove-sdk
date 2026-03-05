@@ -769,11 +769,12 @@ where
     // Read the current subscription version (fast read-lock, no await).
     let (current_version, subscribers) = {
         let state = state.read();
-        // Only consider data subscribers, not video subscribers.
+        // Only consider data subscribers.
         let Some(sub) = state.get_data_subscription(channel_id) else {
             channel_writers.remove(channel_id);
             return None;
         };
+        debug_assert!(!sub.subscribers().is_empty());
         let cached_version = channel_writers.get(channel_id).map(|w| w.version());
         if cached_version == Some(sub.version()) {
             // Fast path: writer is up to date.

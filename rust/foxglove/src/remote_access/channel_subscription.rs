@@ -5,7 +5,6 @@ use smallvec::SmallVec;
 ///
 /// The version is incremented on every mutation so that the sender task can detect
 /// stale `ChannelWriter`s with a single integer comparison.
-#[derive(Clone)]
 pub(crate) struct ChannelSubscription {
     subscribers: SmallVec<[ParticipantIdentity; 1]>,
     version: u32,

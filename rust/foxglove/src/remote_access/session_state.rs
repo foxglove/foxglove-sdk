@@ -361,19 +361,13 @@ impl SessionState {
 
     /// Returns true if a channel has any data subscribers.
     pub fn has_data_subscribers(&self, channel_id: &ChannelId) -> bool {
-        self.data_subscriptions
-            .get(channel_id)
-            .is_some_and(|s| !s.is_empty())
+        self.get_data_subscription(channel_id).is_some()
     }
 
-    /// Returns a clone of the data subscription for a channel, if it has subscribers.
-    pub fn get_data_subscription(&self, channel_id: &ChannelId) -> Option<ChannelSubscription> {
+    /// Returns the data subscription for a channel, if it has subscribers.
+    pub fn get_data_subscription(&self, channel_id: &ChannelId) -> Option<&ChannelSubscription> {
         let sub = self.data_subscriptions.get(channel_id)?;
-        if sub.is_empty() {
-            None
-        } else {
-            Some(sub.clone())
-        }
+        if sub.is_empty() { None } else { Some(sub) }
     }
 }
 
