@@ -3,35 +3,30 @@
 
 import { Duration } from "./Duration";
 import { EventProperty } from "./EventProperty";
+import { EventType } from "./EventType";
 import { KeyValuePair } from "./KeyValuePair";
 import { Time } from "./Time";
 
 /** A discrete event that occurred at a specific time. An event may have zero duration (instantaneous) or a non-zero duration. */
 export type Event = {
-  /** Timestamp of the event */
+  /** Start time of the event. */
   timestamp: Time;
 
-  /** Duration of the event. If absent or zero, the event is an instantaneous point marker. */
+  /** Duration of the event. Omit or set to zero for an instant (point) event. */
   duration?: Duration;
 
-  /** Category name matching a platform event type (e.g. "FAULT", "MANEUVER"). Used for filtering and grouping. */
-  event_type?: string;
+  /** Event type definition for this event. Provides category name, display color, and optional platform ID for reconciliation. */
+  event_type?: EventType;
 
-  /** Typed property values matching the platform's structured properties model */
+  /** Typed property values matching the platform's structured properties model. */
   event_properties?: EventProperty[];
 
-  /** Unstructured key-value metadata, complementary to event_properties. Keys must be unique. */
+  /** Unstructured key-value metadata (complementary to event_properties). */
   metadata?: KeyValuePair[];
 
-  /** Short human-readable label shown on the timeline marker */
-  display_name?: string;
-
-  /** Hex color string (e.g. "#FF5733" or "#FF573380"). If absent the player assigns a default color. */
-  color?: string;
-
-  /** Stable identity for deduplication during platform ingestion. If absent the platform may compute a fingerprint. */
+  /** Stable identity for deduplication during data platform ingestion. If absent, the platform may compute a fingerprint. */
   id?: string;
 
-  /** Platform device ID this event is associated with. If absent during ingestion, inferred from upload context. */
-  device_id?: string;
+  /** Device ID this event is associated with. Use the platform device ID when known, or a local identifier (e.g. hostname, serial number). Required so consumers always know the source device. */
+  device_id: string;
 };

@@ -10,6 +10,7 @@ export * from "./Duration";
 export * from "./Event";
 export * from "./EventProperty";
 export * from "./EventPropertyType";
+export * from "./EventType";
 export * from "./FrameTransform";
 export * from "./FrameTransforms";
 export * from "./GeoJSON";

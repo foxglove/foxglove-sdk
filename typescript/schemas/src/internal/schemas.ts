@@ -323,16 +323,51 @@ const EventProperty: FoxgloveMessageSchema = {
       name: "key",
       type: { type: "primitive", name: "string" },
       description: "Property name",
+      protobufFieldNumber: 1,
     },
     {
       name: "type",
       type: { type: "enum", enum: EventPropertyType },
       description: "Value type",
+      protobufFieldNumber: 2,
     },
     {
       name: "value",
       type: { type: "primitive", name: "string" },
       description: "String-encoded value. Interpretation depends on type.",
+      protobufFieldNumber: 3,
+    },
+  ],
+};
+
+const EventType: FoxgloveMessageSchema = {
+  type: "message",
+  name: "EventType",
+  description:
+    "Event type definition providing category name, display color, and optional platform ID for reconciliation during ingestion",
+  fields: [
+    {
+      name: "name",
+      type: { type: "primitive", name: "string" },
+      description:
+        'Human-readable event type name (e.g. "Traffic event", "FAULT"). Used for filtering, grouping, and display.',
+      protobufFieldNumber: 1,
+    },
+    {
+      name: "color",
+      type: { type: "primitive", name: "string" },
+      description:
+        'Hex color string (e.g. "#FF5733"). Used by the player to color timeline markers. If absent, player assigns default.',
+      optional: true,
+      protobufFieldNumber: 2,
+    },
+    {
+      name: "id",
+      type: { type: "primitive", name: "string" },
+      description:
+        "Platform event type UUID for reconciliation during ingestion. If present, platform matches by ID; if absent, falls back to name.",
+      optional: true,
+      protobufFieldNumber: 3,
     },
   ],
 };
@@ -346,64 +381,57 @@ const Event: FoxgloveMessageSchema = {
     {
       name: "timestamp",
       type: { type: "nested", schema: Timestamp },
-      description: "Timestamp of the event",
+      description: "Start time of the event.",
+      protobufFieldNumber: 1,
     },
     {
       name: "duration",
       type: { type: "nested", schema: Duration },
       description:
-        "Duration of the event. If absent or zero, the event is an instantaneous point marker.",
+        "Duration of the event. Omit or set to zero for an instant (point) event.",
       optional: true,
+      protobufFieldNumber: 2,
     },
     {
       name: "event_type",
-      type: { type: "primitive", name: "string" },
+      type: { type: "nested", schema: EventType },
       description:
-        'Category name matching a platform event type (e.g. "FAULT", "MANEUVER"). Used for filtering and grouping.',
+        "Event type definition for this event. Provides category name, display color, and optional platform ID for reconciliation.",
       optional: true,
+      protobufFieldNumber: 3,
     },
     {
       name: "event_properties",
       type: { type: "nested", schema: EventProperty },
       array: true,
       description:
-        "Typed property values matching the platform's structured properties model",
+        "Typed property values matching the platform's structured properties model.",
       optional: true,
+      protobufFieldNumber: 4,
     },
     {
       name: "metadata",
       type: { type: "nested", schema: KeyValuePair },
       array: true,
       description:
-        "Unstructured key-value metadata, complementary to event_properties. Keys must be unique.",
+        "Unstructured key-value metadata (complementary to event_properties).",
       optional: true,
-    },
-    {
-      name: "display_name",
-      type: { type: "primitive", name: "string" },
-      description: "Short human-readable label shown on the timeline marker",
-      optional: true,
-    },
-    {
-      name: "color",
-      type: { type: "primitive", name: "string" },
-      description:
-        'Hex color string (e.g. "#FF5733" or "#FF573380"). If absent the player assigns a default color.',
-      optional: true,
+      protobufFieldNumber: 5,
     },
     {
       name: "id",
       type: { type: "primitive", name: "string" },
       description:
-        "Stable identity for deduplication during platform ingestion. If absent the platform may compute a fingerprint.",
+        "Stable identity for deduplication during data platform ingestion. If absent, the platform may compute a fingerprint.",
       optional: true,
+      protobufFieldNumber: 6,
     },
     {
       name: "device_id",
       type: { type: "primitive", name: "string" },
       description:
-        "Platform device ID this event is associated with. If absent during ingestion, inferred from upload context.",
-      optional: true,
+        "Device ID this event is associated with. Use the platform device ID when known, or a local identifier (e.g. hostname, serial number). Required so consumers always know the source device.",
+      protobufFieldNumber: 7,
     },
   ],
 };
@@ -1878,6 +1906,7 @@ export const foxgloveMessageSchemas = {
   Duration,
   Event,
   EventProperty,
+  EventType,
   FrameTransform,
   FrameTransforms,
   GeoJSON,
