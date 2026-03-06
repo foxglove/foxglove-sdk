@@ -970,20 +970,7 @@ Typed property values matching the platform's structured properties model.
 </td>
 </tr>
 <tr>
-<td><code>metadata</code> (optional)</td>
-<td>
-
-[KeyValuePair](#keyvaluepair)[]
-
-</td>
-<td>
-
-Unstructured key-value metadata (complementary to event_properties).
-
-</td>
-</tr>
-<tr>
-<td><code>id</code> (optional)</td>
+<td><code>id</code></td>
 <td>
 
 string
@@ -991,7 +978,7 @@ string
 </td>
 <td>
 
-Stable identity for deduplication during data platform ingestion. If absent, the platform may compute a fingerprint.
+Stable identity for deduplication during data platform ingestion.
 
 </td>
 </tr>
