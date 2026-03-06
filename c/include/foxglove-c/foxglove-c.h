@@ -1547,24 +1547,6 @@ typedef struct foxglove_scene_update {
 } foxglove_scene_update;
 
 /**
- * A timestamped point for a position in 3D space
- */
-typedef struct foxglove_point3_in_frame {
-  /**
-   * Timestamp of point
-   */
-  const struct foxglove_timestamp *timestamp;
-  /**
-   * Frame of reference for point position
-   */
-  struct foxglove_string frame_id;
-  /**
-   * Point in 3D space
-   */
-  const struct foxglove_point3 *point;
-} foxglove_point3_in_frame;
-
-/**
  * A collection of N-dimensional points, which may contain additional fields with information like normals, intensity, etc.
  */
 typedef struct foxglove_point_cloud {
@@ -1632,6 +1614,82 @@ typedef struct foxglove_poses_in_frame {
   const struct foxglove_pose *poses;
   size_t poses_count;
 } foxglove_poses_in_frame;
+
+/**
+ * Information about a selected entity in a visualization panel
+ */
+typedef struct foxglove_selected_entity {
+  /**
+   * Timestamp of the selection
+   */
+  const struct foxglove_timestamp *timestamp;
+  /**
+   * Frame of reference for the selected entity
+   */
+  struct foxglove_string frame_id;
+  /**
+   * Topic from which the entity originated
+   */
+  struct foxglove_string source_topic;
+  /**
+   * Schema name of the source message
+   */
+  struct foxglove_string source_schema_name;
+  /**
+   * Identifier of the selected entity
+   */
+  struct foxglove_string entity_id;
+  /**
+   * Selected scene entity
+   */
+  const struct foxglove_scene_entity *scene_entity;
+  /**
+   * Selected point cloud
+   */
+  const struct foxglove_point_cloud *point_cloud;
+  /**
+   * Selected laser scan
+   */
+  const struct foxglove_laser_scan *laser_scan;
+  /**
+   * Selected grid
+   */
+  const struct foxglove_grid *grid;
+  /**
+   * Selected voxel grid
+   */
+  const struct foxglove_voxel_grid *voxel_grid;
+  /**
+   * Selected camera calibration
+   */
+  const struct foxglove_camera_calibration *camera_calibration;
+  /**
+   * Selected pose in frame
+   */
+  const struct foxglove_pose_in_frame *pose_in_frame;
+  /**
+   * Selected poses in frame
+   */
+  const struct foxglove_poses_in_frame *poses_in_frame;
+} foxglove_selected_entity;
+
+/**
+ * A timestamped point for a position in 3D space
+ */
+typedef struct foxglove_point3_in_frame {
+  /**
+   * Timestamp of point
+   */
+  const struct foxglove_timestamp *timestamp;
+  /**
+   * Frame of reference for point position
+   */
+  struct foxglove_string frame_id;
+  /**
+   * Point in 3D space
+   */
+  const struct foxglove_point3 *point;
+} foxglove_point3_in_frame;
 
 /**
  * A single block of an audio bitstream
@@ -3514,6 +3572,52 @@ foxglove_error foxglove_scene_update_encode(const struct foxglove_scene_update *
                                             uint8_t *ptr,
                                             size_t len,
                                             size_t *encoded_len);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_selected_entity(struct foxglove_string topic,
+                                                       const struct foxglove_context *context,
+                                                       const struct foxglove_channel **channel);
+
+#if !defined(__wasm__)
+/**
+ * Log a SelectedEntity message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_selected_entity.
+ */
+foxglove_error foxglove_channel_log_selected_entity(const struct foxglove_channel *channel,
+                                                    const struct foxglove_selected_entity *msg,
+                                                    const uint64_t *log_time,
+                                                    FoxgloveSinkId sink_id);
+#endif
+
+/**
+ * Get the SelectedEntity schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_selected_entity_schema(void);
+
+/**
+ * Encode a SelectedEntity message as protobuf to the buffer provided.
+ *
+ * On success, writes the encoded length to *encoded_len.
+ * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+ * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+ * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+ *
+ * # Safety
+ * ptr must be a valid pointer to a memory region at least len bytes long.
+ */
+foxglove_error foxglove_selected_entity_encode(const struct foxglove_selected_entity *msg,
+                                               uint8_t *ptr,
+                                               size_t len,
+                                               size_t *encoded_len);
 
 /**
  * Create a new typed channel, and return an owned raw channel pointer to it.

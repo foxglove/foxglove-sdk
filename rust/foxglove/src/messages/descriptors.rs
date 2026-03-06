@@ -36,6 +36,7 @@ pub const RAW_IMAGE: &[u8] = include_bytes!("data/RawImage.bin");
 pub const SCENE_ENTITY: &[u8] = include_bytes!("data/SceneEntity.bin");
 pub const SCENE_ENTITY_DELETION: &[u8] = include_bytes!("data/SceneEntityDeletion.bin");
 pub const SCENE_UPDATE: &[u8] = include_bytes!("data/SceneUpdate.bin");
+pub const SELECTED_ENTITY: &[u8] = include_bytes!("data/SelectedEntity.bin");
 pub const SPHERE_PRIMITIVE: &[u8] = include_bytes!("data/SpherePrimitive.bin");
 pub const TEXT_ANNOTATION: &[u8] = include_bytes!("data/TextAnnotation.bin");
 pub const TEXT_PRIMITIVE: &[u8] = include_bytes!("data/TextPrimitive.bin");

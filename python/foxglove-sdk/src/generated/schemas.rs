@@ -1866,6 +1866,108 @@ impl From<SceneUpdate> for foxglove::schemas::SceneUpdate {
     }
 }
 
+/// Information about a selected entity in a visualization panel
+///
+/// :param timestamp: Timestamp of the selection
+/// :param frame_id: Frame of reference for the selected entity
+/// :param source_topic: Topic from which the entity originated
+/// :param source_schema_name: Schema name of the source message
+/// :param entity_id: Identifier of the selected entity
+/// :param scene_entity: Selected scene entity
+/// :param point_cloud: Selected point cloud
+/// :param laser_scan: Selected laser scan
+/// :param grid: Selected grid
+/// :param voxel_grid: Selected voxel grid
+/// :param camera_calibration: Selected camera calibration
+/// :param pose_in_frame: Selected pose in frame
+/// :param poses_in_frame: Selected poses in frame
+///
+/// See https://docs.foxglove.dev/docs/visualization/message-schemas/selected-entity
+#[pyclass(module = "foxglove.schemas")]
+#[derive(Clone)]
+pub(crate) struct SelectedEntity(pub(crate) foxglove::schemas::SelectedEntity);
+#[pymethods]
+impl SelectedEntity {
+    #[new]
+    #[pyo3(signature = (*, timestamp=None, frame_id="", source_topic="", source_schema_name="", entity_id="", scene_entity=None, point_cloud=None, laser_scan=None, grid=None, voxel_grid=None, camera_calibration=None, pose_in_frame=None, poses_in_frame=None) )]
+    fn new(
+        timestamp: Option<Timestamp>,
+        frame_id: &str,
+        source_topic: &str,
+        source_schema_name: &str,
+        entity_id: &str,
+        scene_entity: Option<SceneEntity>,
+        point_cloud: Option<PointCloud>,
+        laser_scan: Option<LaserScan>,
+        grid: Option<Grid>,
+        voxel_grid: Option<VoxelGrid>,
+        camera_calibration: Option<CameraCalibration>,
+        pose_in_frame: Option<PoseInFrame>,
+        poses_in_frame: Option<PosesInFrame>,
+    ) -> Self {
+        Self(foxglove::schemas::SelectedEntity {
+            timestamp: timestamp.map(Into::into),
+            frame_id: frame_id.to_string(),
+            source_topic: source_topic.to_string(),
+            source_schema_name: source_schema_name.to_string(),
+            entity_id: entity_id.to_string(),
+            scene_entity: scene_entity.map(Into::into),
+            point_cloud: point_cloud.map(Into::into),
+            laser_scan: laser_scan.map(Into::into),
+            grid: grid.map(Into::into),
+            voxel_grid: voxel_grid.map(Into::into),
+            camera_calibration: camera_calibration.map(Into::into),
+            pose_in_frame: pose_in_frame.map(Into::into),
+            poses_in_frame: poses_in_frame.map(Into::into),
+        })
+    }
+    fn __repr__(&self) -> String {
+        format!(
+            "SelectedEntity(timestamp={:?}, frame_id={:?}, source_topic={:?}, source_schema_name={:?}, entity_id={:?}, scene_entity={:?}, point_cloud={:?}, laser_scan={:?}, grid={:?}, voxel_grid={:?}, camera_calibration={:?}, pose_in_frame={:?}, poses_in_frame={:?})",
+            self.0.timestamp,
+            self.0.frame_id,
+            self.0.source_topic,
+            self.0.source_schema_name,
+            self.0.entity_id,
+            self.0.scene_entity,
+            self.0.point_cloud,
+            self.0.laser_scan,
+            self.0.grid,
+            self.0.voxel_grid,
+            self.0.camera_calibration,
+            self.0.pose_in_frame,
+            self.0.poses_in_frame,
+        )
+    }
+    /// Returns the SelectedEntity schema.
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::SelectedEntity::get_schema()
+            .unwrap()
+            .into()
+    }
+    /// Encodes the SelectedEntity as protobuf.
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("failed to allocate buffer for encoded message")
+    }
+}
+
+impl From<SelectedEntity> for foxglove::schemas::SelectedEntity {
+    fn from(value: SelectedEntity) -> Self {
+        value.0
+    }
+}
+
 /// A primitive representing a 3D model file loaded from an external URL or embedded data
 ///
 /// :param pose: Origin of model relative to reference frame
@@ -3147,6 +3249,7 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<SceneEntityDeletion>()?;
     module.add_class::<SceneEntity>()?;
     module.add_class::<SceneUpdate>()?;
+    module.add_class::<SelectedEntity>()?;
     module.add_class::<ModelPrimitive>()?;
     module.add_class::<PackedElementField>()?;
     module.add_class::<Point2>()?;
