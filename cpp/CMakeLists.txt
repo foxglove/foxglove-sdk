@@ -20,7 +20,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 include(CTest)
 include(FetchContent)
 
-# Suppress CMake deprecation warnings from vendored libwebsockets and date with older cmake_minimum_required
+# Suppress CMake deprecation warnings from vendored dependencies with older cmake_minimum_required
+set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
 set(CMAKE_WARN_DEPRECATED OFF CACHE BOOL "" FORCE)
 
 FetchContent_Declare(
