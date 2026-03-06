@@ -3,7 +3,6 @@
 #include "foxglove/Duration.idl"
 #include "foxglove/EventProperty.idl"
 #include "foxglove/EventType.idl"
-#include "foxglove/KeyValuePair.idl"
 #include "foxglove/Time.idl"
 
 module foxglove {
@@ -25,12 +24,7 @@ struct Event {
   @optional
   sequence<EventProperty> event_properties;
 
-  // Unstructured key-value metadata (complementary to event_properties).
-  @optional
-  sequence<KeyValuePair> metadata;
-
-  // Stable identity for deduplication during data platform ingestion. If absent, the platform may compute a fingerprint.
-  @optional
+  // Stable identity for deduplication during data platform ingestion.
   string id;
 
   // Device ID this event is associated with. Use the platform device ID when known, or a local identifier (e.g. hostname, serial number). Required so consumers always know the source device.

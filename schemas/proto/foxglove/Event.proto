@@ -4,7 +4,6 @@ syntax = "proto3";
 
 import "foxglove/EventProperty.proto";
 import "foxglove/EventType.proto";
-import "foxglove/KeyValuePair.proto";
 import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
 
@@ -24,12 +23,9 @@ message Event {
   // Typed property values matching the platform's structured properties model.
   repeated foxglove.EventProperty event_properties = 4;
 
-  // Unstructured key-value metadata (complementary to event_properties).
-  repeated foxglove.KeyValuePair metadata = 5;
-
-  // Stable identity for deduplication during data platform ingestion. If absent, the platform may compute a fingerprint.
-  optional string id = 6;
+  // Stable identity for deduplication during data platform ingestion.
+  string id = 5;
 
   // Device ID this event is associated with. Use the platform device ID when known, or a local identifier (e.g. hostname, serial number). Required so consumers always know the source device.
-  string device_id = 7;
+  string device_id = 6;
 }

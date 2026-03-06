@@ -3,7 +3,6 @@
 include "Duration.fbs";
 include "EventProperty.fbs";
 include "EventType.fbs";
-include "KeyValuePair.fbs";
 include "Time.fbs";
 
 namespace foxglove;
@@ -22,14 +21,11 @@ table Event {
   /// Typed property values matching the platform's structured properties model.
   event_properties:[foxglove.EventProperty] (id: 3);
 
-  /// Unstructured key-value metadata (complementary to event_properties).
-  metadata:[foxglove.KeyValuePair] (id: 4);
-
-  /// Stable identity for deduplication during data platform ingestion. If absent, the platform may compute a fingerprint.
-  id:string (id: 5);
+  /// Stable identity for deduplication during data platform ingestion.
+  id:string (id: 4);
 
   /// Device ID this event is associated with. Use the platform device ID when known, or a local identifier (e.g. hostname, serial number). Required so consumers always know the source device.
-  device_id:string (id: 6);
+  device_id:string (id: 5);
 }
 
 root_type Event;

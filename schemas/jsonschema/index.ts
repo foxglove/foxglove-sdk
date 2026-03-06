@@ -864,32 +864,9 @@ export const Event = {
       },
       "description": "Typed property values matching the platform's structured properties model."
     },
-    "metadata": {
-      "type": "array",
-      "items": {
-        "title": "foxglove.KeyValuePair",
-        "description": "A key with its associated value",
-        "type": "object",
-        "properties": {
-          "key": {
-            "type": "string",
-            "description": "Key"
-          },
-          "value": {
-            "type": "string",
-            "description": "Value"
-          }
-        },
-        "required": [
-          "key",
-          "value"
-        ]
-      },
-      "description": "Unstructured key-value metadata (complementary to event_properties)."
-    },
     "id": {
       "type": "string",
-      "description": "Stable identity for deduplication during data platform ingestion. If absent, the platform may compute a fingerprint."
+      "description": "Stable identity for deduplication during data platform ingestion."
     },
     "device_id": {
       "type": "string",
@@ -898,6 +875,7 @@ export const Event = {
   },
   "required": [
     "timestamp",
+    "id",
     "device_id"
   ]
 };
