@@ -7,8 +7,10 @@
 use std::time::Duration;
 
 use anyhow::{Context as _, Result};
-use foxglove::Schema;
+use foxglove::{Encode, Schema};
+use foxglove::schemas::{RawImage, Timestamp};
 use foxglove::protocol::v2::client::SubscribeChannel;
+use foxglove::protocol::v2::server::ServerMessage;
 use livekit::{Room, RoomOptions};
 use remote_access_tests::livekit_token;
 use remote_access_tests::test_helpers::{TestGateway, ViewerConnection, poll_until};
@@ -762,6 +764,111 @@ async fn livekit_request_video_track_on_non_video_channel_sends_error() -> Resul
         !json_channel.has_sinks(),
         "channel should have no sinks after rejected video subscription"
     );
+
+    viewer.close().await?;
+    gw.stop().await?;
+    Ok(())
+}
+
+/// Encode a 4x4 rgb8 `foxglove.RawImage` as protobuf bytes.
+fn encode_raw_image(frame_id: &str) -> Vec<u8> {
+    let width: u32 = 4;
+    let height: u32 = 4;
+    let step = width * 3; // rgb8: 3 bytes per pixel
+    let data = vec![128u8; (step * height) as usize];
+    let msg = RawImage {
+        timestamp: Some(Timestamp::new(1, 0)),
+        frame_id: frame_id.to_string(),
+        width,
+        height,
+        encoding: "rgb8".to_string(),
+        step,
+        data: data.into(),
+    };
+    let mut buf = Vec::new();
+    Encode::encode(&msg, &mut buf).expect("encode RawImage");
+    buf
+}
+
+/// Test that logging a valid image to a video channel causes a re-advertisement
+/// with `foxglove.videoSourceEncoding` and `foxglove.videoFrameId` metadata.
+#[traced_test]
+#[ignore]
+#[tokio::test]
+#[serial(livekit)]
+async fn livekit_video_metadata_advertised_after_image_logged() -> Result<()> {
+    let ctx = foxglove::Context::new();
+
+    let video_channel = ctx
+        .channel_builder("/camera")
+        .message_encoding("protobuf")
+        .schema(Schema::new("foxglove.RawImage", "protobuf", &b""[..]))
+        .build_raw()
+        .context("create video channel")?;
+
+    let gw = TestGateway::start(&ctx).await?;
+    let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+
+    let _server_info = viewer.expect_server_info().await?;
+    let advertise = viewer.expect_advertise().await?;
+    let channel_id = advertise.channels[0].id;
+
+    // Initial advertisement should NOT have video metadata yet.
+    assert!(
+        !advertise.channels[0]
+            .metadata
+            .contains_key("foxglove.videoSourceEncoding"),
+        "initial advertisement should not have videoSourceEncoding"
+    );
+
+    // Subscribe with video track requested.
+    viewer
+        .subscribe_video_and_wait(&[channel_id], &video_channel)
+        .await?;
+    let _track_name = viewer.expect_track_subscribed().await?;
+
+    // Log a valid protobuf-encoded RawImage.
+    let image_bytes = encode_raw_image("camera_optical_frame");
+    video_channel.log(&image_bytes);
+
+    // Wait for a re-advertisement that includes the video metadata.
+    // The session's run_sender loop will detect the metadata change and re-advertise.
+    let deadline = tokio::time::Instant::now() + Duration::from_secs(10);
+    let metadata = loop {
+        let msg = tokio::time::timeout_at(
+            deadline,
+            viewer.frame_reader.next_server_message(),
+        )
+        .await
+        .context("timeout waiting for re-advertisement with video metadata")?
+        .context("failed to read server message")?;
+
+        if let ServerMessage::Advertise(adv) = msg {
+            if let Some(ch) = adv.channels.iter().find(|c| c.id == channel_id) {
+                if ch.metadata.contains_key("foxglove.videoSourceEncoding") {
+                    break ch.metadata.clone();
+                }
+            }
+        }
+        // Otherwise keep reading (might receive other messages).
+    };
+
+    assert_eq!(
+        metadata.get("foxglove.videoSourceEncoding").map(|s| s.as_str()),
+        Some("rgb8"),
+        "videoSourceEncoding should be rgb8"
+    );
+    assert_eq!(
+        metadata.get("foxglove.videoFrameId").map(|s| s.as_str()),
+        Some("camera_optical_frame"),
+        "videoFrameId should be camera_optical_frame"
+    );
+    assert_eq!(
+        metadata.get("foxglove.hasVideoTrack").map(|s| s.as_str()),
+        Some("true"),
+        "hasVideoTrack should still be present"
+    );
+    info!("video metadata re-advertisement validated: {metadata:?}");
 
     viewer.close().await?;
     gw.stop().await?;

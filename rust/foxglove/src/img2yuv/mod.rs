@@ -16,6 +16,27 @@ pub use self::compressed::{CompressedImage, Compression, UnknownCompressionError
 pub use self::message::ImageMessage;
 pub use self::raw::{BayerCfa, Endian, RawImage, RawImageEncoding, UnknownEncodingError};
 
+/// The encoding of an image.
+///
+/// For raw images this identifies the pixel format; for compressed images it identifies
+/// the compression codec.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ImageEncoding {
+    /// A compressed image format (e.g. JPEG, PNG).
+    Compressed(Compression),
+    /// A raw pixel encoding (e.g. `rgb8`, `mono8`).
+    Raw(RawImageEncoding),
+}
+impl ImageEncoding {
+    /// Returns the canonical encoding string for this format.
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Compressed(c) => c.as_str(),
+            Self::Raw(r) => r.as_str(),
+        }
+    }
+}
+
 /// An error returned by this library.
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -218,6 +239,16 @@ impl Image<'_> {
         match self {
             Image::Compressed(image) => Image::Compressed(image.into_owned()),
             Image::Raw(image) => Image::Raw(image.into_owned()),
+        }
+    }
+
+    /// Returns the encoding of this image.
+    ///
+    /// For raw images this is the pixel format; for compressed images it is the codec.
+    pub fn encoding(&self) -> ImageEncoding {
+        match self {
+            Image::Compressed(image) => ImageEncoding::Compressed(image.compression),
+            Image::Raw(image) => ImageEncoding::Raw(image.encoding),
         }
     }
 

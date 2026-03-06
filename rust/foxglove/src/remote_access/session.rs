@@ -26,7 +26,9 @@ use crate::{
 };
 
 mod video_track;
-pub(crate) use video_track::{VideoInputSchema, VideoPublisher, get_video_input_schema};
+pub(crate) use video_track::{
+    VideoInputSchema, VideoMetadata, VideoPublisher, get_video_input_schema,
+};
 
 const WS_PROTOCOL_TOPIC: &str = "ws-protocol";
 const CHANNEL_TOPIC_PREFIX: &str = "ch-";
@@ -101,6 +103,10 @@ pub(crate) struct RemoteAccessSession {
     /// Serializes subscription changes and their associated video track lifecycle
     /// operations, which must not interleave across participants.
     subscription_lock: parking_lot::Mutex<()>,
+    /// Signaled by video publishers when video metadata changes, prompting
+    /// the sender loop to re-advertise affected channels.
+    video_metadata_tx: tokio::sync::watch::Sender<()>,
+    video_metadata_rx: tokio::sync::watch::Receiver<()>,
 }
 
 impl Sink for RemoteAccessSession {
@@ -168,7 +174,7 @@ impl Sink for RemoteAccessSession {
                     }
                 }
             }
-            state.inject_video_track_metadata(&mut advertise_msg);
+            state.add_metadata_to_advertisement(&mut advertise_msg);
         }
 
         let framed = frame_text_message(advertise_msg.to_string().as_bytes());
@@ -208,6 +214,7 @@ impl RemoteAccessSession {
     ) -> Self {
         let (data_plane_tx, data_plane_rx) = flume::bounded(message_backlog_size);
         let (control_plane_tx, control_plane_rx) = flume::bounded(message_backlog_size);
+        let (video_metadata_tx, video_metadata_rx) = tokio::sync::watch::channel(());
         Self {
             sink_id: SinkId::next(),
             room,
@@ -220,6 +227,8 @@ impl RemoteAccessSession {
             control_plane_tx,
             control_plane_rx,
             subscription_lock: parking_lot::Mutex::new(()),
+            video_metadata_tx,
+            video_metadata_rx,
         }
     }
 
@@ -294,6 +303,8 @@ impl RemoteAccessSession {
     /// the old writer is dropped and a new one is opened for the up-to-date subscriber set.
     pub(crate) async fn run_sender(session: Arc<Self>) {
         let mut channel_writers: HashMap<ChannelId, ChannelWriter> = HashMap::new();
+        let mut video_metadata: HashMap<ChannelId, VideoMetadata> = HashMap::new();
+        let mut video_metadata_rx = session.video_metadata_rx.clone();
         loop {
             tokio::select! {
                 biased;
@@ -303,6 +314,11 @@ impl RemoteAccessSession {
                     if let Err(e) = msg.participant.send(&msg.data).await {
                         error!("failed to send control message to {:?}: {e:?}", msg.participant);
                     }
+                }
+                Ok(()) = video_metadata_rx.changed() => {
+                    session
+                        .republish_video_metadata(&mut video_metadata)
+                        .await;
                 }
                 msg = session.data_plane_rx.recv_async() => {
                     let Ok(msg) = msg else { break };
@@ -624,7 +640,7 @@ impl RemoteAccessSession {
                         return None;
                     }
                     let mut msg = msg.into_owned();
-                    state.inject_video_track_metadata(&mut msg);
+                    state.add_metadata_to_advertisement(&mut msg);
                     Some(msg)
                 })
                 .flatten()
@@ -634,6 +650,63 @@ impl RemoteAccessSession {
 
         let framed = frame_text_message(advertise_msg.to_string().as_bytes());
         self.send_control(participant, framed);
+    }
+
+    /// Check video publishers for metadata changes and re-advertise affected channels.
+    ///
+    /// Called from `run_sender` when `video_metadata_rx` signals a change. Compares each publisher's
+    /// current metadata against what was last advertised, updates session state for any
+    /// changes, and sends re-advertise messages directly to participants.
+    async fn republish_video_metadata(&self, advertised: &mut HashMap<ChannelId, VideoMetadata>) {
+        // Collect channels whose video metadata has changed.
+        let changed: SmallVec<[ChannelId; 4]> = {
+            let state = self.state.read();
+            state
+                .iter_video_publishers()
+                .filter_map(|(&channel_id, publisher)| {
+                    let guard = publisher.metadata();
+                    let current = guard.as_deref()?;
+                    if advertised.get(&channel_id) == Some(current) {
+                        return None;
+                    }
+                    advertised.insert(channel_id, current.clone());
+                    Some(channel_id)
+                })
+                .collect()
+        };
+        if changed.is_empty() {
+            return;
+        }
+
+        // Update session state and build the re-advertise message.
+        let advertise_msg = {
+            let mut state = self.state.write();
+            for &channel_id in &changed {
+                if let Some(meta) = advertised.get(&channel_id) {
+                    state.insert_video_metadata(channel_id, meta.clone());
+                }
+            }
+            state.with_channels(|channels| {
+                let chans = changed.iter().filter_map(|id| channels.get(id));
+                let msg = advertise::advertise_channels(chans);
+                if msg.channels.is_empty() {
+                    return None;
+                }
+                let mut msg = msg.into_owned();
+                state.add_metadata_to_advertisement(&mut msg);
+                Some(msg)
+            })
+        };
+
+        if let Some(Some(msg)) = advertise_msg {
+            let framed = frame_text_message(msg.to_string().as_bytes());
+            let participants = self.state.read().collect_participants();
+            for participant in participants {
+                if let Err(e) = participant.send(&framed).await {
+                    error!("failed to send metadata re-advertise to {participant:?}: {e:?}");
+                }
+            }
+        }
     }
 
     /// Start video tracks for first-subscribed channels that have video schemas.
@@ -662,7 +735,11 @@ impl RemoteAccessSession {
 
         for (channel_id, input_schema, topic) in to_start {
             let video_source = NativeVideoSource::default();
-            let publisher = Arc::new(VideoPublisher::new(video_source.clone(), input_schema));
+            let publisher = Arc::new(VideoPublisher::new(
+                video_source.clone(),
+                input_schema,
+                self.video_metadata_tx.clone(),
+            ));
             let expected_publisher = publisher.clone();
 
             self.state
@@ -723,7 +800,8 @@ impl RemoteAccessSession {
     }
 
     /// Clean up video runtime state for a single channel: remove publisher, remove and unpublish
-    /// track. Does not remove the video schema, which persists for the lifetime of the channel.
+    /// track. Does not remove the video schema or metadata, which persist for the lifetime of
+    /// the channel.
     ///
     /// Caller must hold `subscription_lock`.
     fn teardown_video_track(&self, channel_id: ChannelId) {

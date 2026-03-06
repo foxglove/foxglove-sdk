@@ -14,7 +14,7 @@ pub(crate) use self::helpers::{mono_to_yuv420, rgb_to_yuv420, yuv422_to_yuv420};
 pub struct UnknownEncodingError(String);
 
 /// Endianness for multi-byte numbers.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Endian {
     /// Little-endian.
     Little,
@@ -23,7 +23,7 @@ pub enum Endian {
 }
 
 /// Supported encodings for raw images.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RawImageEncoding {
     /// Pixel colors decomposed into R, G, and B channels.
     Rgb8,
@@ -49,6 +49,28 @@ pub enum RawImageEncoding {
     Bayer8(BayerCfa),
 }
 impl RawImageEncoding {
+    /// Returns a canonical encoding string for this format.
+    ///
+    /// This is the inverse of [`parse_endian`](Self::parse_endian), returning the preferred
+    /// (non-aliased) name for each encoding.
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Rgb8 => "rgb8",
+            Self::Rgba8 => "rgba8",
+            Self::Bgr8 => "bgr8",
+            Self::Bgra8 => "bgra8",
+            Self::Uyvy => "uyvy",
+            Self::Yuyv => "yuyv",
+            Self::Mono8 => "mono8",
+            Self::Mono16(_) => "mono16",
+            Self::Mono32F(_) => "32FC1",
+            Self::Bayer8(BayerCfa::Bggr) => "bayer_bggr8",
+            Self::Bayer8(BayerCfa::Gbrg) => "bayer_gbrg8",
+            Self::Bayer8(BayerCfa::Grbg) => "bayer_grbg8",
+            Self::Bayer8(BayerCfa::Rggb) => "bayer_rggb8",
+        }
+    }
+
     /// Parses an encoding string, with a hint about endian-ness for multi-byte values.
     ///
     /// Note that endianness does not affect channel ordering.
@@ -92,7 +114,7 @@ impl RawImageEncoding {
 }
 
 /// Bayer color filter array format.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BayerCfa {
     /// ```text
     /// B | G

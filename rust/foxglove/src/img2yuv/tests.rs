@@ -2,7 +2,10 @@ use std::{collections::HashMap, path::PathBuf, sync::LazyLock};
 
 use assert_matches::assert_matches;
 
-use super::{BayerCfa, Endian, Error, Image, RawImage, RawImageEncoding, Yuv420Buffer, Yuv420Vec};
+use super::{
+    BayerCfa, Endian, Error, Image, ImageEncoding, RawImage, RawImageEncoding, Yuv420Buffer,
+    Yuv420Vec,
+};
 #[cfg(any(
     feature = "img2yuv-jpeg",
     feature = "img2yuv-png",
@@ -617,4 +620,84 @@ fn test_uyvy_yuv420_padded() {
 #[test]
 fn test_mono32fle_yuv420_padded() {
     test_yuv420_padded("test.mono32fle.raw");
+}
+
+// ---- as_str / round-trip tests ----
+
+/// Verify that RawImageEncoding::as_str() produces strings that parse_endian() accepts,
+/// and that the result round-trips back to the same encoding.
+#[test]
+fn test_raw_encoding_as_str_round_trip() {
+    let cases = [
+        RawImageEncoding::Rgb8,
+        RawImageEncoding::Rgba8,
+        RawImageEncoding::Bgr8,
+        RawImageEncoding::Bgra8,
+        RawImageEncoding::Uyvy,
+        RawImageEncoding::Yuyv,
+        RawImageEncoding::Mono8,
+        RawImageEncoding::Mono16(Endian::Little),
+        RawImageEncoding::Mono32F(Endian::Little),
+        RawImageEncoding::Bayer8(BayerCfa::Bggr),
+        RawImageEncoding::Bayer8(BayerCfa::Gbrg),
+        RawImageEncoding::Bayer8(BayerCfa::Grbg),
+        RawImageEncoding::Bayer8(BayerCfa::Rggb),
+    ];
+    for encoding in cases {
+        let s = encoding.as_str();
+        let parsed = RawImageEncoding::parse_endian(s, Endian::Little)
+            .unwrap_or_else(|e| panic!("failed to parse canonical string {s:?}: {e}"));
+        assert_eq!(parsed, encoding, "round-trip failed for {s:?}");
+    }
+}
+
+#[cfg(any(
+    feature = "img2yuv-jpeg",
+    feature = "img2yuv-png",
+    feature = "img2yuv-webp"
+))]
+#[test]
+fn test_compression_as_str_round_trip() {
+    let cases = [
+        #[cfg(feature = "img2yuv-png")]
+        Compression::Png,
+        #[cfg(feature = "img2yuv-jpeg")]
+        Compression::Jpeg,
+        #[cfg(feature = "img2yuv-webp")]
+        Compression::WebP,
+    ];
+    for compression in cases {
+        let s = compression.as_str();
+        let parsed: Compression = s
+            .parse()
+            .unwrap_or_else(|e| panic!("failed to parse canonical string {s:?}: {e}"));
+        assert_eq!(parsed, compression, "round-trip failed for {s:?}");
+    }
+}
+
+#[test]
+fn test_image_encoding_raw() {
+    let image = Image::Raw(RawImage {
+        encoding: RawImageEncoding::Rgb8,
+        width: 2,
+        height: 2,
+        stride: 6,
+        data: vec![0; 12].into(),
+    });
+    assert_eq!(image.encoding(), ImageEncoding::Raw(RawImageEncoding::Rgb8));
+    assert_eq!(image.encoding().as_str(), "rgb8");
+}
+
+#[cfg(feature = "img2yuv-jpeg")]
+#[test]
+fn test_image_encoding_compressed() {
+    let image = Image::Compressed(CompressedImage {
+        compression: Compression::Jpeg,
+        data: b""[..].into(),
+    });
+    assert_eq!(
+        image.encoding(),
+        ImageEncoding::Compressed(Compression::Jpeg)
+    );
+    assert_eq!(image.encoding().as_str(), "jpeg");
 }

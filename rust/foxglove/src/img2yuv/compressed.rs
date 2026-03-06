@@ -50,6 +50,18 @@ impl FromStr for Compression {
     }
 }
 impl Compression {
+    /// Returns the canonical format string for this compression.
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            #[cfg(feature = "img2yuv-png")]
+            Self::Png => "png",
+            #[cfg(feature = "img2yuv-jpeg")]
+            Self::Jpeg => "jpeg",
+            #[cfg(feature = "img2yuv-webp")]
+            Self::WebP => "webp",
+        }
+    }
+
     /// Parses a format string from a ROS `CompressedImage` message.
     ///
     /// The format string is described at length in the ROS 2 [sensor_msgs/CompressedImage][ros2]
