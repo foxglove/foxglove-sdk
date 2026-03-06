@@ -20,19 +20,16 @@ using Catch::Matchers::Equals;
 using foxglove_tests::FileCleanup;
 
 struct McapTestFile {
-  McapTestFile() {
-    std::random_device rd;
-    path_ = "test_mcap_" + std::to_string(rd()) + ".mcap";
-  }
-  ~McapTestFile() {
-    std::filesystem::remove(path_);
-  }
+  McapTestFile()
+      : cleanup_(
+          "test_mcap_" + std::to_string(std::random_device{}()) + ".mcap"
+        ) {}
   const std::string& path() const {
-    return path_;
+    return cleanup_.path();
   }
 
 private:
-  std::string path_;
+  FileCleanup cleanup_;
 };
 
 TEST_CASE_METHOD(McapTestFile, "Open new file and close mcap writer") {
@@ -422,8 +419,9 @@ TEST_CASE_METHOD(McapTestFile, "ImageAnnotations channel") {
 }
 
 TEST_CASE("MCAP Channel filtering") {
-  FileCleanup file_1("test_filter-1.mcap");
-  FileCleanup file_2("test_filter-2.mcap");
+  auto suffix = std::to_string(std::random_device{}());
+  FileCleanup file_1("test_filter_" + suffix + "-1.mcap");
+  FileCleanup file_2("test_filter_" + suffix + "-2.mcap");
   auto context = foxglove::Context::create();
 
   foxglove::McapWriterOptions opts_1;
