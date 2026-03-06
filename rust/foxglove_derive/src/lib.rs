@@ -283,6 +283,18 @@ fn derive_newtype_impl(input: &DeriveInput, field: &syn::Field) -> TokenStream {
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
     let has_generics = !input.generics.params.is_empty();
 
+    let optional_oneof = if is_option(inner_type) {
+        quote! {
+            field_desc.proto3_optional = Some(true);
+            let mut oneof = ::foxglove::prost_types::OneofDescriptorProto::default();
+            oneof.name = Some(String::from("_value"));
+            field_desc.oneof_index = Some(message.oneof_decl.len() as i32);
+            message.oneof_decl.push(oneof);
+        }
+    } else {
+        quote! {}
+    };
+
     // Extract the schema computation body so we can conditionally wrap it
     // with OnceLock caching. For generic types, static items inside generic
     // functions are shared across all monomorphizations, so we must not cache.
@@ -324,18 +336,13 @@ fn derive_newtype_impl(input: &DeriveInput, field: &syn::Field) -> TokenStream {
 
         if <#inner_type as ::foxglove::protobuf::ProtobufField>::repeating() {
             field_desc.label = Some(::foxglove::prost_types::field_descriptor_proto::Label::Repeated as i32);
-        } else if <#inner_type as ::foxglove::protobuf::ProtobufField>::optional() {
-            field_desc.label = Some(::foxglove::prost_types::field_descriptor_proto::Label::Optional as i32);
-            field_desc.proto3_optional = Some(true);
-            let mut oneof = ::foxglove::prost_types::OneofDescriptorProto::default();
-            oneof.name = Some(String::from("_value"));
-            field_desc.oneof_index = Some(message.oneof_decl.len() as i32);
-            message.oneof_decl.push(oneof);
         } else {
             field_desc.label = Some(::foxglove::prost_types::field_descriptor_proto::Label::Optional as i32);
         }
         field_desc.r#type = Some(<#inner_type as ::foxglove::protobuf::ProtobufField>::field_type() as i32);
         field_desc.type_name = <#inner_type as ::foxglove::protobuf::ProtobufField>::type_name();
+
+        #optional_oneof
 
         message.field.push(field_desc);
 
@@ -417,10 +424,6 @@ fn derive_newtype_impl(input: &DeriveInput, field: &syn::Field) -> TokenStream {
 
             fn repeating() -> bool {
                 <#inner_type as ::foxglove::protobuf::ProtobufField>::repeating()
-            }
-
-            fn optional() -> bool {
-                <#inner_type as ::foxglove::protobuf::ProtobufField>::optional()
             }
 
             fn encoded_len(&self) -> usize {
