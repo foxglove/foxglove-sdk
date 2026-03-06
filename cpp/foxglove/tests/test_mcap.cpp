@@ -21,9 +21,7 @@ using foxglove_tests::FileCleanup;
 
 struct McapTestFile {
   McapTestFile()
-      : cleanup_(
-          "test_mcap_" + std::to_string(std::random_device{}()) + ".mcap"
-        ) {}
+      : cleanup_("test_mcap_" + std::to_string(std::random_device{}()) + ".mcap") {}
   const std::string& path() const {
     return cleanup_.path();
   }
