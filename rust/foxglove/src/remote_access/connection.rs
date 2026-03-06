@@ -306,7 +306,8 @@ impl RemoteAccessConnection {
             {
                 error!(
                     session_id,
-                    "failed to add existing participant {identity}: {e:?}"
+                    error = %e,
+                    "failed to add existing participant {identity}"
                 );
             }
         }
@@ -315,7 +316,7 @@ impl RemoteAccessConnection {
         tokio::select! {
             () = self.cancellation_token().cancelled() => (),
             _ = self.listen_for_room_events(session.clone(), room_events) => {},
-            _ = Self::log_periodic_stats(session.clone(), session_id.to_string()) => {},
+            _ = Self::log_periodic_stats(session.clone(), session_id.clone()) => {},
         }
 
         // Remove the sink before closing the room.
@@ -327,7 +328,7 @@ impl RemoteAccessConnection {
         // Close the room (disconnect) on shutdown.
         // If we don't do that, there's a 15s delay before this device is removed from the participants
         if let Err(e) = session.room().close().await {
-            error!(session_id, "failed to close room: {e:?}");
+            error!(session_id, error = %e, "failed to close room");
         }
     }
 
@@ -398,7 +399,7 @@ impl RemoteAccessConnection {
                         .add_participant(participant.identity(), server_info)
                         .await
                     {
-                        error!(session_id, "failed to add participant: {e:?}");
+                        error!(session_id, error = %e, "failed to add participant");
                         continue;
                     }
                 }
@@ -572,7 +573,7 @@ impl RemoteAccessConnection {
             interval.tick().await;
             let (participants, subscriptions, video_tracks) = session.stats();
             let connection_quality = session.room().local_participant().connection_quality();
-            let video_bytes_sent = match session.room().get_stats().await {
+            let total_video_bytes_sent = match session.room().get_stats().await {
                 Ok(stats) => stats
                     .publisher_stats
                     .iter()
@@ -586,7 +587,7 @@ impl RemoteAccessConnection {
                     })
                     .sum::<u64>(),
                 Err(e) => {
-                    warn!(session_id, "failed to get room stats: {e}");
+                    warn!(session_id, error = %e, "failed to get room stats");
                     0
                 }
             };
@@ -595,7 +596,7 @@ impl RemoteAccessConnection {
                 participants,
                 subscriptions,
                 video_tracks,
-                video_bytes_sent,
+                total_video_bytes_sent,
                 connection_quality = ?connection_quality,
                 "periodic stats"
             );
