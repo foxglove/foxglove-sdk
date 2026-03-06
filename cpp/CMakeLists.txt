@@ -20,6 +20,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 include(CTest)
 include(FetchContent)
 
+# Suppress CMake deprecation warnings from vendored libwebsockets and date with older cmake_minimum_required
+set(CMAKE_WARN_DEPRECATED OFF CACHE BOOL "" FORCE)
+
 FetchContent_Declare(
   Catch2
   GIT_REPOSITORY https://github.com/catchorg/Catch2.git
@@ -90,6 +93,8 @@ if(BUILD_DATA_PROVIDER_EXAMPLE)
   set(HTTPLIB_USE_NON_BLOCKING_GETADDRINFO OFF CACHE BOOL "" FORCE)
   FetchContent_MakeAvailable(httplib)
 endif()
+
+set(CMAKE_WARN_DEPRECATED ON CACHE BOOL "" FORCE)
 
 if(DEFINED SANITIZE)
   if(NOT CMAKE_CXX_COMPILER_ID MATCHES ".*Clang")
