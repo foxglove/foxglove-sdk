@@ -368,6 +368,49 @@ class ImageAnnotations:
         """Encodes the ImageAnnotations."""
         ...
 
+class JointState:
+    """
+    The state of a single joint (revolute or prismatic).
+    """
+
+    def __init__(
+        self,
+        *,
+        name: str = "",
+        position: float | None = None,
+        velocity: float | None = None,
+        acceleration: float | None = None,
+        effort: float | None = None,
+    ) -> None: ...
+    @staticmethod
+    def get_schema() -> Schema:
+        """Returns the JointState schema"""
+        ...
+
+    def encode(self) -> bytes:
+        """Encodes the JointState."""
+        ...
+
+class JointStates:
+    """
+    The state of a set of joints at a given time.
+    """
+
+    def __init__(
+        self,
+        *,
+        timestamp: Timestamp | None = None,
+        joints: list[JointState] | None = None,
+    ) -> None: ...
+    @staticmethod
+    def get_schema() -> Schema:
+        """Returns the JointStates schema"""
+        ...
+
+    def encode(self) -> bytes:
+        """Encodes the JointStates."""
+        ...
+
 class KeyValuePair:
     """
     A key with its associated value
@@ -1009,6 +1052,8 @@ FoxgloveSchema = Union[
     Grid,
     VoxelGrid,
     ImageAnnotations,
+    JointState,
+    JointStates,
     KeyValuePair,
     LaserScan,
     LinePrimitive,

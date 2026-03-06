@@ -1765,6 +1765,66 @@ const LaserScan: FoxgloveMessageSchema = {
   ],
 };
 
+const JointState: FoxgloveMessageSchema = {
+  type: "message",
+  name: "JointState",
+  description: "The state of a single joint (revolute or prismatic).",
+  fields: [
+    {
+      name: "name",
+      type: { type: "primitive", name: "string" },
+      description: "Joint name",
+    },
+    {
+      name: "position",
+      type: { type: "primitive", name: "float64" },
+      description:
+        "Joint position. Radians for revolute joints, meters for prismatic joints. Use NaN to indicate that the value is not present, in case your schema does not support optional fields.",
+      optional: true,
+    },
+    {
+      name: "velocity",
+      type: { type: "primitive", name: "float64" },
+      description:
+        "Joint velocity. Rad/s for revolute joints, m/s for prismatic joints. Use NaN to indicate that the value is not present, in case your schema does not support optional fields.",
+      optional: true,
+    },
+    {
+      name: "acceleration",
+      type: { type: "primitive", name: "float64" },
+      description:
+        "Joint acceleration. Rad/s² for revolute joints, m/s² for prismatic joints. Use NaN to indicate that the value is not present, in case your schema does not support optional fields.",
+      optional: true,
+    },
+    {
+      name: "effort",
+      type: { type: "primitive", name: "float64" },
+      description:
+        "Joint effort (force or torque). Nm for revolute joints, N for prismatic joints. Use NaN to indicate that the value is not present, in case your schema does not support optional fields.",
+      optional: true,
+    },
+  ],
+};
+
+const JointStates: FoxgloveMessageSchema = {
+  type: "message",
+  name: "JointStates",
+  description: "The state of a set of joints at a given time.",
+  fields: [
+    {
+      name: "timestamp",
+      type: { type: "nested", schema: Timestamp },
+      description: "Timestamp of the joint states",
+    },
+    {
+      name: "joints",
+      type: { type: "nested", schema: JointState },
+      description: "Joint states",
+      array: true,
+    },
+  ],
+};
+
 export const foxgloveMessageSchemas = {
   ArrowPrimitive,
   CameraCalibration,
@@ -1781,6 +1841,8 @@ export const foxgloveMessageSchemas = {
   Grid,
   VoxelGrid,
   ImageAnnotations,
+  JointState,
+  JointStates,
   KeyValuePair,
   LaserScan,
   LinePrimitive,

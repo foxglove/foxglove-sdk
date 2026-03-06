@@ -32,6 +32,8 @@ If the IDL does not support optional fields (e.g. ROS) you must specify a value 
 - [GeoJSON](#geojson)
 - [Grid](#grid)
 - [ImageAnnotations](#imageannotations)
+- [JointState](#jointstate)
+- [JointStates](#jointstates)
 - [KeyValuePair](#keyvaluepair)
 - [LaserScan](#laserscan)
 - [LinePrimitive](#lineprimitive)
@@ -1263,6 +1265,121 @@ Text annotations
 <td>
 
 Additional user-provided metadata associated with the image annotations. Keys must be unique.
+
+</td>
+</tr>
+</table>
+
+## JointState
+
+The state of a single joint (revolute or prismatic).
+
+<table>
+  <tr>
+    <th>field</th>
+    <th>type</th>
+    <th>description</th>
+  </tr>
+<tr>
+<td><code>name</code></td>
+<td>
+
+string
+
+</td>
+<td>
+
+Joint name
+
+</td>
+</tr>
+<tr>
+<td><code>position</code> (optional)</td>
+<td>
+
+float64
+
+</td>
+<td>
+
+Joint position. Radians for revolute joints, meters for prismatic joints. Use NaN to indicate that the value is not present, in case your schema does not support optional fields.
+
+</td>
+</tr>
+<tr>
+<td><code>velocity</code> (optional)</td>
+<td>
+
+float64
+
+</td>
+<td>
+
+Joint velocity. Rad/s for revolute joints, m/s for prismatic joints. Use NaN to indicate that the value is not present, in case your schema does not support optional fields.
+
+</td>
+</tr>
+<tr>
+<td><code>acceleration</code> (optional)</td>
+<td>
+
+float64
+
+</td>
+<td>
+
+Joint acceleration. Rad/s² for revolute joints, m/s² for prismatic joints. Use NaN to indicate that the value is not present, in case your schema does not support optional fields.
+
+</td>
+</tr>
+<tr>
+<td><code>effort</code> (optional)</td>
+<td>
+
+float64
+
+</td>
+<td>
+
+Joint effort (force or torque). Nm for revolute joints, N for prismatic joints. Use NaN to indicate that the value is not present, in case your schema does not support optional fields.
+
+</td>
+</tr>
+</table>
+
+## JointStates
+
+The state of a set of joints at a given time.
+
+<table>
+  <tr>
+    <th>field</th>
+    <th>type</th>
+    <th>description</th>
+  </tr>
+<tr>
+<td><code>timestamp</code></td>
+<td>
+
+[Timestamp](#timestamp)
+
+</td>
+<td>
+
+Timestamp of the joint states
+
+</td>
+</tr>
+<tr>
+<td><code>joints</code></td>
+<td>
+
+[JointState](#jointstate)[]
+
+</td>
+<td>
+
+Joint states
 
 </td>
 </tr>
