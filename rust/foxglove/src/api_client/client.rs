@@ -361,7 +361,9 @@ mod tests {
         let server = create_test_server().await;
         let client =
             create_test_api_client(server.url(), DeviceToken::new("some-bad-device-token"));
-        let result = client.authorize_remote_viz(TEST_DEVICE_ID, "test-session-id").await;
+        let result = client
+            .authorize_remote_viz(TEST_DEVICE_ID, "test-session-id")
+            .await;
         assert!(result.is_err());
     }
 }

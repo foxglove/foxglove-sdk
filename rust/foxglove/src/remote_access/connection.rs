@@ -263,7 +263,10 @@ impl RemoteAccessConnection {
         // Register the session as a sink so it receives channel notifications.
         // This synchronously triggers add_channels for all existing channels.
         let Some(context) = self.options.context.upgrade() else {
-            info!(session_id = self.session_id(), "context has been dropped, stopping remote access connection");
+            info!(
+                session_id = self.session_id(),
+                "context has been dropped, stopping remote access connection"
+            );
             return;
         };
         context.add_sink(session.clone());
@@ -285,7 +288,10 @@ impl RemoteAccessConnection {
         {
             warn!(session_id, error = %e, "failed to set session_id participant attribute");
         } else {
-            info!(session_id, "set session_id attribute on participant {:?}", identity);
+            info!(
+                session_id,
+                "set session_id attribute on participant {:?}", identity
+            );
         }
 
         // Send ServerInfo and channel advertisements to participants already in the room.
@@ -296,7 +302,10 @@ impl RemoteAccessConnection {
                 .add_participant(identity.clone(), server_info.clone())
                 .await
             {
-                error!(session_id, "failed to add existing participant {identity}: {e:?}");
+                error!(
+                    session_id,
+                    "failed to add existing participant {identity}: {e:?}"
+                );
             }
         }
 
@@ -562,20 +571,18 @@ impl RemoteAccessConnection {
             let (participants, subscriptions, video_tracks) = session.stats();
             let connection_quality = session.room().local_participant().connection_quality();
             let video_bytes_sent = match session.room().get_stats().await {
-                Ok(stats) => {
-                    stats
-                        .publisher_stats
-                        .iter()
-                        .filter_map(|s| match s {
-                            libwebrtc::stats::RtcStats::OutboundRtp(rtp)
-                                if rtp.stream.kind == "video" =>
-                            {
-                                Some(rtp.sent.bytes_sent)
-                            }
-                            _ => None,
-                        })
-                        .sum::<u64>()
-                }
+                Ok(stats) => stats
+                    .publisher_stats
+                    .iter()
+                    .filter_map(|s| match s {
+                        libwebrtc::stats::RtcStats::OutboundRtp(rtp)
+                            if rtp.stream.kind == "video" =>
+                        {
+                            Some(rtp.sent.bytes_sent)
+                        }
+                        _ => None,
+                    })
+                    .sum::<u64>(),
                 Err(e) => {
                     warn!(session_id, "failed to get room stats: {e}");
                     0

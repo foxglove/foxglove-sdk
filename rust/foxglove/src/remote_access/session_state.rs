@@ -351,7 +351,10 @@ impl SessionState {
 
     /// Returns the total number of active subscriptions across all channels.
     pub fn subscription_count(&self) -> usize {
-        self.subscriptions.values().map(|s| s.subscribers().len()).sum()
+        self.subscriptions
+            .values()
+            .map(|s| s.subscribers().len())
+            .sum()
     }
 
     /// Returns the number of active video tracks being published.
