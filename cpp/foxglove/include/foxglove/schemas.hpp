@@ -638,33 +638,6 @@ struct EventProperty {
   static Schema schema();
 };
 
-/// @brief A key with its associated value
-struct KeyValuePair {
-  /// @brief Key
-  std::string key;
-
-  /// @brief Value
-  std::string value;
-
-  /// @brief Encoded the KeyValuePair as protobuf to the provided buffer.
-  ///
-  /// On success, writes the serialized length to *encoded_len.
-  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
-  /// and returns FoxgloveError::BufferTooShort.
-  /// If the message cannot be encoded, writes the reason to stderr and returns
-  /// FoxgloveError::EncodeError.
-  ///
-  /// @param ptr the destination buffer. must point to at least len valid bytes.
-  /// @param len the length of the destination buffer.
-  /// @param encoded_len where the serialized length or required capacity will be written to.
-  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
-
-  /// @brief Get the KeyValuePair schema.
-  ///
-  /// The schema data returned is statically allocated.
-  static Schema schema();
-};
-
 /// @brief A discrete event that occurred at a specific time. An event may have zero duration
 /// (instantaneous) or a non-zero duration.
 struct Event {
@@ -681,12 +654,8 @@ struct Event {
   /// @brief Typed property values matching the platform's structured properties model.
   std::vector<EventProperty> event_properties;
 
-  /// @brief Unstructured key-value metadata (complementary to event_properties).
-  std::vector<KeyValuePair> metadata;
-
-  /// @brief Stable identity for deduplication during data platform ingestion. If absent, the
-  /// platform may compute a fingerprint.
-  std::optional<std::string> id;
+  /// @brief Stable identity for deduplication during data platform ingestion.
+  std::string id;
 
   /// @brief Device ID this event is associated with. Use the platform device ID when known, or a
   /// local identifier (e.g. hostname, serial number). Required so consumers always know the source
@@ -1142,6 +1111,33 @@ struct TextAnnotation {
   FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 
   /// @brief Get the TextAnnotation schema.
+  ///
+  /// The schema data returned is statically allocated.
+  static Schema schema();
+};
+
+/// @brief A key with its associated value
+struct KeyValuePair {
+  /// @brief Key
+  std::string key;
+
+  /// @brief Value
+  std::string value;
+
+  /// @brief Encoded the KeyValuePair as protobuf to the provided buffer.
+  ///
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
+  /// and returns FoxgloveError::BufferTooShort.
+  /// If the message cannot be encoded, writes the reason to stderr and returns
+  /// FoxgloveError::EncodeError.
+  ///
+  /// @param ptr the destination buffer. must point to at least len valid bytes.
+  /// @param len the length of the destination buffer.
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
+
+  /// @brief Get the KeyValuePair schema.
   ///
   /// The schema data returned is statically allocated.
   static Schema schema();

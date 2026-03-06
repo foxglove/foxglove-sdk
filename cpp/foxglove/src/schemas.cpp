@@ -1774,8 +1774,6 @@ void eventToC(foxglove_event& dest, const Event& src, [[maybe_unused]] Arena& ar
   dest.event_properties =
     arena.map<foxglove_event_property>(src.event_properties, eventPropertyToC);
   dest.event_properties_count = src.event_properties.size();
-  dest.metadata = arena.map<foxglove_key_value_pair>(src.metadata, keyValuePairToC);
-  dest.metadata_count = src.metadata.size();
   dest.id = {src.id.data(), src.id.size()};
   dest.device_id = {src.device_id.data(), src.device_id.size()};
 }

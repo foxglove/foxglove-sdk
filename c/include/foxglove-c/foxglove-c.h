@@ -852,20 +852,6 @@ typedef struct foxglove_event_property {
 } foxglove_event_property;
 
 /**
- * A key with its associated value
- */
-typedef struct foxglove_key_value_pair {
-  /**
-   * Key
-   */
-  struct foxglove_string key;
-  /**
-   * Value
-   */
-  struct foxglove_string value;
-} foxglove_key_value_pair;
-
-/**
  * A discrete event that occurred at a specific time. An event may have zero duration (instantaneous) or a non-zero duration.
  */
 typedef struct foxglove_event {
@@ -887,14 +873,9 @@ typedef struct foxglove_event {
   const struct foxglove_event_property *event_properties;
   size_t event_properties_count;
   /**
-   * Unstructured key-value metadata (complementary to event_properties).
+   * Stable identity for deduplication during data platform ingestion.
    */
-  const struct foxglove_key_value_pair *metadata;
-  size_t metadata_count;
-  /**
-   * Stable identity for deduplication during data platform ingestion. If absent, the platform may compute a fingerprint.
-   */
-  const struct foxglove_string *id;
+  struct foxglove_string id;
   /**
    * Device ID this event is associated with. Use the platform device ID when known, or a local identifier (e.g. hostname, serial number). Required so consumers always know the source device.
    */
@@ -1195,6 +1176,20 @@ typedef struct foxglove_text_annotation {
    */
   const struct foxglove_color *background_color;
 } foxglove_text_annotation;
+
+/**
+ * A key with its associated value
+ */
+typedef struct foxglove_key_value_pair {
+  /**
+   * Key
+   */
+  struct foxglove_string key;
+  /**
+   * Value
+   */
+  struct foxglove_string value;
+} foxglove_key_value_pair;
 
 /**
  * Array of annotations for a 2D image

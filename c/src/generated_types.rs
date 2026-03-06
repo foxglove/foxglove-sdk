@@ -1588,12 +1588,8 @@ pub struct Event {
     pub event_properties: *const EventProperty,
     pub event_properties_count: usize,
 
-    /// Unstructured key-value metadata (complementary to event_properties).
-    pub metadata: *const KeyValuePair,
-    pub metadata_count: usize,
-
-    /// Stable identity for deduplication during data platform ingestion. If absent, the platform may compute a fingerprint.
-    pub id: *const FoxgloveString,
+    /// Stable identity for deduplication during data platform ingestion.
+    pub id: FoxgloveString,
 
     /// Device ID this event is associated with. Use the platform device ID when known, or a local identifier (e.g. hostname, serial number). Required so consumers always know the source device.
     pub device_id: FoxgloveString,
@@ -1640,13 +1636,7 @@ impl BorrowToNative for Event {
                 .as_mut()
                 .map(self.event_properties, self.event_properties_count)?
         };
-        let metadata = unsafe { arena.as_mut().map(self.metadata, self.metadata_count)? };
-        let id = unsafe {
-            self.id
-                .as_ref()
-                .map(|s| string_from_raw(s.as_ptr() as *const _, s.len(), "id"))
-                .transpose()?
-        };
+        let id = unsafe { string_from_raw(self.id.as_ptr() as *const _, self.id.len(), "id")? };
         let device_id = unsafe {
             string_from_raw(
                 self.device_id.as_ptr() as *const _,
@@ -1660,8 +1650,7 @@ impl BorrowToNative for Event {
             duration: unsafe { self.duration.as_ref() }.map(|&m| m.into()),
             event_type: event_type.map(ManuallyDrop::into_inner),
             event_properties: ManuallyDrop::into_inner(event_properties),
-            metadata: ManuallyDrop::into_inner(metadata),
-            id: id.map(ManuallyDrop::into_inner),
+            id: ManuallyDrop::into_inner(id),
             device_id: ManuallyDrop::into_inner(device_id),
         }))
     }
