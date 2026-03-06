@@ -13,12 +13,11 @@
 #include <atomic>
 #include <condition_variable>
 #include <cstring>
+#include <libwebsockets.h>
 #include <mutex>
 #include <queue>
 #include <thread>
 #include <type_traits>
-
-#include <libwebsockets.h>
 
 #include "foxglove/playback_state.hpp"
 
@@ -92,7 +91,7 @@ public:
     running_ = true;
     thread_ = std::thread([this] {
       while (running_) {
-        lws_service(context_, 0);
+        lws_service(context_, 50);
       }
     });
   }
@@ -159,13 +158,6 @@ public:
 
   void send(std::vector<std::byte>& payload) {
     this->send(payload.data(), payload.size());
-  }
-
-  void close() {
-    running_ = false;
-    if (context_) {
-      lws_cancel_service(context_);
-    }
   }
 
 private:
