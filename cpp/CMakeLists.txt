@@ -40,29 +40,18 @@ if(CMAKE_GENERATOR MATCHES "Unix Makefiles|Ninja")
 endif()
 FetchContent_MakeAvailable(Corrosion)
 
-FetchContent_Declare(
-  websocketpp
-  GIT_REPOSITORY https://github.com/zaphoyd/websocketpp.git
-  GIT_TAG 0.8.2
-  OVERRIDE_FIND_PACKAGE
+FetchContent_Declare(libwebsockets
+  GIT_REPOSITORY https://github.com/warmcat/libwebsockets.git
+  GIT_TAG v4.3.3
 )
-# Set WebSocketPP CMake policy to suppress the warning
-set(FETCHCONTENT_TRY_FIND_PACKAGE_MODE NEVER)
-FetchContent_GetProperties(websocketpp)
-if(NOT websocketpp_POPULATED)
-  FetchContent_Populate(websocketpp)
-  # Don't call add_subdirectory to avoid running the original CMakeLists.txt
-  # Just set up the include directory
-  add_library(websocketpp INTERFACE)
-  target_include_directories(websocketpp INTERFACE ${websocketpp_SOURCE_DIR})
-endif()
-FetchContent_MakeAvailable(websocketpp)
-
-FetchContent_Declare(asio
-  GIT_REPOSITORY https://github.com/chriskohlhoff/asio.git
-  GIT_TAG asio-1-31-0
-)
-FetchContent_MakeAvailable(asio)
+set(LWS_WITH_SSL OFF CACHE BOOL "" FORCE)
+set(LWS_WITH_SHARED OFF CACHE BOOL "" FORCE)
+set(LWS_WITH_STATIC ON CACHE BOOL "" FORCE)
+set(LWS_WITHOUT_TESTAPPS ON CACHE BOOL "" FORCE)
+set(LWS_WITHOUT_TEST_SERVER ON CACHE BOOL "" FORCE)
+set(LWS_WITHOUT_TEST_PING ON CACHE BOOL "" FORCE)
+set(LWS_WITHOUT_TEST_CLIENT ON CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(libwebsockets)
 
 FetchContent_Declare(json
   GIT_REPOSITORY https://github.com/nlohmann/json.git
@@ -180,13 +169,10 @@ file(GLOB_RECURSE foxglove_test_srcs CONFIGURE_DEPENDS
 add_executable(tests "${foxglove_test_srcs}")
 set_property(TARGET tests PROPERTY CXX_STANDARD 17)
 set_property(TARGET tests PROPERTY CXX_STANDARD_REQUIRED True)
-target_compile_definitions(tests PRIVATE ASIO_STANDALONE)
 target_compile_options(tests PUBLIC ${SANITIZER_COMPILE_OPTIONS})
 target_link_options(tests PUBLIC ${SANITIZER_LINK_OPTIONS})
-target_include_directories(tests SYSTEM PRIVATE ${asio_SOURCE_DIR}/asio/include)
 target_include_directories(tests SYSTEM PRIVATE ${json_SOURCE_DIR}/include)
-target_include_directories(tests SYSTEM PRIVATE ${websocketpp_SOURCE_DIR})
-target_link_libraries(tests PRIVATE foxglove_cpp_static Catch2::Catch2WithMain)
+target_link_libraries(tests PRIVATE foxglove_cpp_static Catch2::Catch2WithMain websockets)
 catch_discover_tests(tests)
 if(MSVC)
   # Auto-detection of C++11 support is not working on the windows-2025 runner with default settings

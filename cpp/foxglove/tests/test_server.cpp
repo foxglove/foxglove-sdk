@@ -9,10 +9,16 @@
 #include <catch2/matchers/catch_matchers_string.hpp>
 #include <catch2/matchers/catch_matchers_vector.hpp>
 #include <nlohmann/json.hpp>
-#include <websocketpp/client.hpp>
-#include <websocketpp/config/asio_no_tls_client.hpp>
 
+#include <atomic>
+#include <condition_variable>
+#include <cstring>
+#include <mutex>
+#include <queue>
+#include <thread>
 #include <type_traits>
+
+#include <libwebsockets.h>
 
 #include "foxglove/playback_state.hpp"
 
@@ -23,11 +29,6 @@ using Json = nlohmann::json;
 
 using namespace std::string_literals;
 using namespace std::string_view_literals;
-
-using WebSocketClientInner = websocketpp::client<websocketpp::config::asio_client>;
-using WebSocketConnection =
-  std::shared_ptr<websocketpp::connection<websocketpp::config::asio_client>>;
-using WebSocketMessage = websocketpp::config::asio_client::message_type::ptr;
 
 namespace {
 
@@ -40,23 +41,7 @@ constexpr auto kTestTimeout = std::chrono::seconds(5);
 
 class WebSocketClient {
 public:
-  explicit WebSocketClient() {
-    client_.clear_access_channels(websocketpp::log::alevel::all);
-    client_.clear_error_channels(websocketpp::log::elevel::all);
-    client_.init_asio();
-    client_.set_open_handler([this](const auto& hdl [[maybe_unused]]) {
-      std::scoped_lock lock{mutex_};
-      connection_opened_ = true;
-      cv_.notify_one();
-    });
-    client_.set_message_handler(
-      [this](const websocketpp::connection_hdl&, const WebSocketMessage& msg) {
-        std::scoped_lock lock{mutex_};
-        rx_queue_.push(msg->get_payload());
-        cv_.notify_one();
-      }
-    );
-  }
+  explicit WebSocketClient() = default;
 
   WebSocketClient(const WebSocketClient&) = delete;
   WebSocketClient(WebSocketClient&&) = delete;
@@ -64,28 +49,52 @@ public:
   WebSocketClient& operator=(WebSocketClient&&) = delete;
 
   ~WebSocketClient() {
-    if (!started_ || !thread_.joinable()) {
-      return;
+    running_ = false;
+    if (context_) {
+      lws_cancel_service(context_);
     }
-    if (!closed_) {
-      std::error_code ec;
-      client_.close(connection_, websocketpp::close::status::normal, "", ec);
-      UNSCOPED_INFO(ec.message());
+    if (thread_.joinable()) {
+      thread_.join();
     }
-    client_.stop();
-    std::error_code ec;
-    thread_.join();
+    if (context_) {
+      lws_context_destroy(context_);
+    }
   }
 
   void start(uint16_t port) {
-    std::error_code ec;
-    connection_ = client_.get_connection("ws://127.0.0.1:" + std::to_string(port), ec);
-    connection_->add_subprotocol("foxglove.sdk.v1");
-    UNSCOPED_INFO(ec.message());
-    REQUIRE(!ec);
-    client_.connect(connection_);
-    started_ = true;
-    thread_ = std::thread{&WebSocketClientInner::run, std::ref(client_)};
+    port_ = port;
+
+    static const struct lws_protocols protocols[] = {
+      {"foxglove.sdk.v1", &WebSocketClient::callback, 0, 65536, 0, nullptr, 0},
+      LWS_PROTOCOL_LIST_TERM,
+    };
+
+    struct lws_context_creation_info info = {};
+    info.port = CONTEXT_PORT_NO_LISTEN;
+    info.protocols = protocols;
+    info.user = this;
+
+    context_ = lws_create_context(&info);
+    REQUIRE(context_ != nullptr);
+
+    struct lws_client_connect_info connect_info = {};
+    connect_info.context = context_;
+    connect_info.address = "127.0.0.1";
+    connect_info.port = port_;
+    connect_info.path = "/";
+    connect_info.host = connect_info.address;
+    connect_info.origin = connect_info.address;
+    connect_info.protocol = "foxglove.sdk.v1";
+
+    wsi_ = lws_client_connect_via_info(&connect_info);
+    REQUIRE(wsi_ != nullptr);
+
+    running_ = true;
+    thread_ = std::thread([this] {
+      while (running_) {
+        lws_service(context_, 0);
+      }
+    });
   }
 
   void waitForConnection() {
@@ -132,17 +141,20 @@ public:
   }
 
   void send(std::string const& payload) {
-    std::error_code ec;
-    client_.send(connection_, payload, websocketpp::frame::opcode::text, ec);
-    UNSCOPED_INFO(ec.message());
-    REQUIRE(!ec);
+    {
+      std::scoped_lock lock{tx_mutex_};
+      tx_queue_.push({std::vector<uint8_t>(payload.begin(), payload.end()), false});
+    }
+    lws_cancel_service(context_);
   }
 
   void send(void const* payload, size_t len) {
-    std::error_code ec;
-    client_.send(connection_, payload, len, websocketpp::frame::opcode::binary, ec);
-    UNSCOPED_INFO(ec.message());
-    REQUIRE(!ec);
+    auto ptr = static_cast<const uint8_t*>(payload);
+    {
+      std::scoped_lock lock{tx_mutex_};
+      tx_queue_.push({std::vector<uint8_t>(ptr, ptr + len), true});
+    }
+    lws_cancel_service(context_);
   }
 
   void send(std::vector<std::byte>& payload) {
@@ -150,23 +162,83 @@ public:
   }
 
   void close() {
-    closed_ = true;
-    std::error_code ec;
-    client_.close(connection_, websocketpp::close::status::normal, "", ec);
-    UNSCOPED_INFO(ec.message());
-    REQUIRE(!ec);
-  }
-
-  WebSocketClientInner& inner() {
-    return client_;
+    running_ = false;
+    if (context_) {
+      lws_cancel_service(context_);
+    }
   }
 
 private:
-  WebSocketClientInner client_;
-  WebSocketConnection connection_;
+  struct TxMessage {
+    std::vector<uint8_t> data;
+    bool binary;
+  };
+
+  static int callback(
+    struct lws* wsi, enum lws_callback_reasons reason, void* /*user*/, void* in, size_t len
+  ) {
+    auto* context = lws_get_context(wsi);
+    auto* self = static_cast<WebSocketClient*>(lws_context_user(context));
+    if (!self) {
+      return 0;
+    }
+
+    switch (reason) {
+      case LWS_CALLBACK_CLIENT_ESTABLISHED: {
+        std::scoped_lock lock{self->mutex_};
+        self->connection_opened_ = true;
+        self->cv_.notify_one();
+        lws_callback_on_writable(wsi);
+        break;
+      }
+      case LWS_CALLBACK_CLIENT_RECEIVE: {
+        auto* data = static_cast<const char*>(in);
+        self->rx_buffer_.append(data, len);
+        if (lws_is_final_fragment(wsi)) {
+          std::scoped_lock lock{self->mutex_};
+          self->rx_queue_.push(std::move(self->rx_buffer_));
+          self->rx_buffer_.clear();
+          self->cv_.notify_one();
+        }
+        break;
+      }
+      case LWS_CALLBACK_CLIENT_WRITEABLE: {
+        std::scoped_lock lock{self->tx_mutex_};
+        if (!self->tx_queue_.empty()) {
+          auto& msg = self->tx_queue_.front();
+          std::vector<uint8_t> buf(LWS_PRE + msg.data.size());
+          std::memcpy(buf.data() + LWS_PRE, msg.data.data(), msg.data.size());
+          auto protocol = msg.binary ? LWS_WRITE_BINARY : LWS_WRITE_TEXT;
+          lws_write(wsi, buf.data() + LWS_PRE, msg.data.size(), protocol);
+          self->tx_queue_.pop();
+          if (!self->tx_queue_.empty()) {
+            lws_callback_on_writable(wsi);
+          }
+        }
+        break;
+      }
+      case LWS_CALLBACK_EVENT_WAIT_CANCELLED: {
+        if (self->wsi_) {
+          lws_callback_on_writable(self->wsi_);
+        }
+        break;
+      }
+      default:
+        break;
+    }
+    return 0;
+  }
+
+  struct lws_context* context_ = nullptr;
+  struct lws* wsi_ = nullptr;
+  uint16_t port_ = 0;
   std::thread thread_;
-  bool started_{};
-  bool closed_{};
+  std::atomic<bool> running_{false};
+
+  std::mutex tx_mutex_;
+  std::queue<TxMessage> tx_queue_;
+
+  std::string rx_buffer_;
 
   std::mutex mutex_;
   std::condition_variable cv_;
