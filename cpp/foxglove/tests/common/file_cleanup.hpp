@@ -19,6 +19,10 @@ public:
     }
   }
 
+  const std::string& path() const {
+    return path_;
+  }
+
 private:
   std::string path_;
 };
