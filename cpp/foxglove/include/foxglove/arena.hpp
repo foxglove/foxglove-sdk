@@ -53,10 +53,10 @@ public:
 
   /// Map a single source object of type S to a new object of type T allocated from the arena.
   ///
-  /// @param src The source vector containing elements to map
-  /// @param map_fn Function taking (T& dest, const S& src) to map elements.
+  /// @param src The source object to map
+  /// @param map_fn Function taking (T& dest, const S& src) to map the element.
   /// T must be a POD type, without a custom constructor or destructor.
-  /// @return Pointer to the beginning of the allocated array of src.size() T elements
+  /// @return Pointer to the newly allocated T object
   /// @throws std::bad_alloc if the the fallback to heap allocation fails.
   /// On wasm32 platforms which do not support exceptions, calls std::terminate().
   template<
@@ -100,7 +100,7 @@ public:
         std::terminate();
 #endif
       }
-      overflow_.emplace_back(static_cast<char*>(aligned_ptr));
+      overflow_.emplace_back(static_cast<char*>(ptr));
       return reinterpret_cast<T*>(aligned_ptr);
     }
 

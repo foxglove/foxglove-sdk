@@ -10,9 +10,13 @@
 #include <unordered_set>
 #include <utility>
 
+#include <ament_index_cpp/version.h>
+#if AMENT_INDEX_CPP_VERSION_GTE(1, 13, 2)
+#include <ament_index_cpp/get_package_share_path.hpp>
+#else
 #include <ament_index_cpp/get_package_share_directory.hpp>
+#endif
 #include <ament_index_cpp/get_resource.hpp>
-#include <ament_index_cpp/get_resources.hpp>
 #include <rcutils/logging_macros.h>
 
 #include "foxglove_bridge/utils.hpp"
@@ -215,23 +219,27 @@ const MessageSpec& MessageDefinitionCache::load_message_spec(
   }
 
   // Get the package share directory, or throw a PackageNotFoundError
-  // TODO: FLE-167: Remove warning once ament_index_cpp is updated and synced across all current
-  // ROS2 distributions.
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-  const std::string share_dir = ament_index_cpp::get_package_share_directory(package);
-#pragma GCC diagnostic pop
+  std::filesystem::path share_dir;
+#if AMENT_INDEX_CPP_VERSION_GTE(1, 13, 2)
+  share_dir = ament_index_cpp::get_package_share_path(package);
+#else
+  share_dir = ament_index_cpp::get_package_share_directory(package);
+#endif
 
   // Get the rosidl_interfaces index contents for this package
-  // TODO: FLE-167: Remove warning once ament_index_cpp is updated and synced across all current
-  // ROS2 distributions.
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
   std::string index_contents;
+#if AMENT_INDEX_CPP_VERSION_GTE(1, 13, 0)
+  ament_index_cpp::PathWithResource path_with_resource =
+    ament_index_cpp::get_resource("rosidl_interfaces", package);
+  if (path_with_resource.resourcePath == std::nullopt) {
+    throw DefinitionNotFoundError(definition_identifier.package_resource_name);
+  }
+  index_contents = path_with_resource.contents;
+#else
   if (!ament_index_cpp::get_resource("rosidl_interfaces", package, index_contents)) {
     throw DefinitionNotFoundError(definition_identifier.package_resource_name);
   }
-#pragma GCC diagnostic pop
+#endif
 
   // Find the first line that ends with the filename we're looking for
   const auto lines = split_string(index_contents);
@@ -244,7 +252,7 @@ const MessageSpec& MessageDefinitionCache::load_message_spec(
   }
 
   // Read the file
-  const std::string full_path = share_dir + std::filesystem::path::preferred_separator + *it;
+  const auto full_path = share_dir / *it;
   std::ifstream file{full_path};
   if (!file.good()) {
     throw DefinitionNotFoundError(definition_identifier.package_resource_name);
