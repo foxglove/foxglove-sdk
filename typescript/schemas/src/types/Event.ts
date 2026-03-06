@@ -4,7 +4,6 @@
 import { Duration } from "./Duration";
 import { EventProperty } from "./EventProperty";
 import { EventType } from "./EventType";
-import { KeyValuePair } from "./KeyValuePair";
 import { Time } from "./Time";
 
 /** A discrete event that occurred at a specific time. An event may have zero duration (instantaneous) or a non-zero duration. */
@@ -21,11 +20,8 @@ export type Event = {
   /** Typed property values matching the platform's structured properties model. */
   event_properties?: EventProperty[];
 
-  /** Unstructured key-value metadata (complementary to event_properties). */
-  metadata?: KeyValuePair[];
-
-  /** Stable identity for deduplication during data platform ingestion. If absent, the platform may compute a fingerprint. */
-  id?: string;
+  /** Stable identity for deduplication during data platform ingestion. */
+  id: string;
 
   /** Device ID this event is associated with. Use the platform device ID when known, or a local identifier (e.g. hostname, serial number). Required so consumers always know the source device. */
   device_id: string;

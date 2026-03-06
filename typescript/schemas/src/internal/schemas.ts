@@ -410,28 +410,18 @@ const Event: FoxgloveMessageSchema = {
       protobufFieldNumber: 4,
     },
     {
-      name: "metadata",
-      type: { type: "nested", schema: KeyValuePair },
-      array: true,
-      description:
-        "Unstructured key-value metadata (complementary to event_properties).",
-      optional: true,
-      protobufFieldNumber: 5,
-    },
-    {
       name: "id",
       type: { type: "primitive", name: "string" },
       description:
-        "Stable identity for deduplication during data platform ingestion. If absent, the platform may compute a fingerprint.",
-      optional: true,
-      protobufFieldNumber: 6,
+        "Stable identity for deduplication during data platform ingestion.",
+      protobufFieldNumber: 5,
     },
     {
       name: "device_id",
       type: { type: "primitive", name: "string" },
       description:
         "Device ID this event is associated with. Use the platform device ID when known, or a local identifier (e.g. hostname, serial number). Required so consumers always know the source device.",
-      protobufFieldNumber: 7,
+      protobufFieldNumber: 6,
     },
   ],
 };
