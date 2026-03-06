@@ -189,10 +189,16 @@ fn transcode_and_publish(
         .to_yuv420(&mut buffer)
         .map_err(VideoEncodeError::YuvConversion)?;
 
+    // Use the image message timestamp, if it had one, otherwise log_time.
+    let timestamp_ns = match image_msg.timestamp {
+        Some(ts) => ts.total_nanos(),
+        None => log_time_ns,
+    };
+
     // Publish the transcoded image to the video track.
     let frame = VideoFrame {
         rotation: VideoRotation::VideoRotation0,
-        timestamp_us: (log_time_ns / 1000) as i64,
+        timestamp_us: (timestamp_ns / 1000) as i64,
         buffer: buffer.0,
     };
     video_source.capture_frame(&frame);
