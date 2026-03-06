@@ -59,9 +59,11 @@ for iface in $(ls /sys/class/net/); do
         tc qdisc replace dev "$iface" root handle 1: htb default ff00 2>/dev/null || continue
 
         # Default class (unclassified traffic).
-        tc class add dev "$iface" parent 1: classid 1:ff00 htb rate 10gbit 2>/dev/null
+        tc class add dev "$iface" parent 1: classid 1:ff00 htb rate 10gbit 2>/dev/null \
+            || echo "  WARNING: failed to add default class on $iface"
         # shellcheck disable=SC2086
-        tc qdisc add dev "$iface" parent 1:ff00 handle ff00: netem $NETEM_ARGS 2>/dev/null
+        tc qdisc add dev "$iface" parent 1:ff00 handle ff00: netem $NETEM_ARGS 2>/dev/null \
+            || echo "  WARNING: failed to add netem qdisc on default class ($iface)"
         echo "  default class 1:ff00 -> netem $NETEM_ARGS"
 
         # Per-link classes. Assign class IDs starting at 1:10, incrementing by 10.
@@ -86,11 +88,14 @@ for iface in $(ls /sys/class/net/); do
             class_id="1:$(printf '%x' $class_minor)"
             handle="$(printf '%x' $class_minor):"
 
-            tc class add dev "$iface" parent 1: classid "$class_id" htb rate 10gbit 2>/dev/null
+            tc class add dev "$iface" parent 1: classid "$class_id" htb rate 10gbit 2>/dev/null \
+                || echo "  WARNING: failed to add class $class_id on $iface"
             # shellcheck disable=SC2086
-            tc qdisc add dev "$iface" parent "$class_id" handle "$handle" netem $link_args 2>/dev/null
+            tc qdisc add dev "$iface" parent "$class_id" handle "$handle" netem $link_args 2>/dev/null \
+                || echo "  WARNING: failed to add netem qdisc on class $class_id ($iface)"
             tc filter add dev "$iface" parent 1: protocol ip u32 \
-                match ip dst "$dst/32" flowid "$class_id" 2>/dev/null
+                match ip dst "$dst/32" flowid "$class_id" 2>/dev/null \
+                || echo "  WARNING: failed to add u32 filter for $dst on $iface"
             echo "  link $name: class $class_id -> dst $dst -> netem $link_args"
 
             class_minor=$((class_minor + 10))
