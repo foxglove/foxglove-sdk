@@ -90,7 +90,7 @@ fn docker_exec(container: &str, cmd: &[&str]) -> Result<String> {
         String::from_utf8_lossy(&output.stderr)
     );
 
-    Ok(String::from_utf8(output.stdout).context("invalid UTF-8 from docker exec")?)
+    String::from_utf8(output.stdout).context("invalid UTF-8 from docker exec")
 }
 
 /// Measure TCP round-trip time to a target by timing a small echo exchange

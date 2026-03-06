@@ -1,4 +1,4 @@
-/// Shared helpers for parsing netem argument strings used by netem test suites.
+//! Shared helpers for parsing netem argument strings used by netem test suites.
 
 /// Parse the base delay (in ms) from a netem args string.
 ///
