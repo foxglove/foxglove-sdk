@@ -326,8 +326,13 @@ fn derive_newtype_impl(input: &DeriveInput, field: &syn::Field) -> TokenStream {
             field_desc.label = Some(::foxglove::prost_types::field_descriptor_proto::Label::Repeated as i32);
         } else if <#inner_type as ::foxglove::protobuf::ProtobufField>::optional() {
             field_desc.label = Some(::foxglove::prost_types::field_descriptor_proto::Label::Optional as i32);
+            field_desc.proto3_optional = Some(true);
+            let mut oneof = ::foxglove::prost_types::OneofDescriptorProto::default();
+            oneof.name = Some(String::from("_value"));
+            field_desc.oneof_index = Some(message.oneof_decl.len() as i32);
+            message.oneof_decl.push(oneof);
         } else {
-            field_desc.label = Some(::foxglove::prost_types::field_descriptor_proto::Label::Required as i32);
+            field_desc.label = Some(::foxglove::prost_types::field_descriptor_proto::Label::Optional as i32);
         }
         field_desc.r#type = Some(<#inner_type as ::foxglove::protobuf::ProtobufField>::field_type() as i32);
         field_desc.type_name = <#inner_type as ::foxglove::protobuf::ProtobufField>::type_name();
@@ -525,23 +530,40 @@ fn derive_named_struct_impl(
             }
         });
 
-        field_defs.push(quote! {
-            let mut field = ::foxglove::prost_types::FieldDescriptorProto::default();
-            field.name = Some(String::from(stringify!(#field_name)));
-            field.number = Some(#field_number as i32);
+        let is_optional = is_option(field_type);
+        field_defs.push(if is_optional {
+            let oneof_name = format!("_{}", field_name);
+            quote! {
+                let oneof_index = message.oneof_decl.len() as i32;
+                let mut oneof = ::foxglove::prost_types::OneofDescriptorProto::default();
+                oneof.name = Some(String::from(#oneof_name));
+                message.oneof_decl.push(oneof);
 
-            if <#field_type as ::foxglove::protobuf::ProtobufField>::repeating() {
-                field.label = Some(::foxglove::prost_types::field_descriptor_proto::Label::Repeated as i32);
-            } else if <#field_type as ::foxglove::protobuf::ProtobufField>::optional() {
+                let mut field = ::foxglove::prost_types::FieldDescriptorProto::default();
+                field.name = Some(String::from(stringify!(#field_name)));
+                field.number = Some(#field_number as i32);
                 field.label = Some(::foxglove::prost_types::field_descriptor_proto::Label::Optional as i32);
-            } else {
-                field.label = Some(::foxglove::prost_types::field_descriptor_proto::Label::Required as i32);
+                field.r#type = Some(<#field_type as ::foxglove::protobuf::ProtobufField>::field_type() as i32);
+                field.type_name = <#field_type as ::foxglove::protobuf::ProtobufField>::type_name();
+                field.proto3_optional = Some(true);
+                field.oneof_index = Some(oneof_index);
+                message.field.push(field);
             }
-            field.r#type = Some(<#field_type as ::foxglove::protobuf::ProtobufField>::field_type() as i32);
+        } else {
+            quote! {
+                let mut field = ::foxglove::prost_types::FieldDescriptorProto::default();
+                field.name = Some(String::from(stringify!(#field_name)));
+                field.number = Some(#field_number as i32);
 
-            field.type_name = <#field_type as ::foxglove::protobuf::ProtobufField>::type_name();
-
-            message.field.push(field);
+                if <#field_type as ::foxglove::protobuf::ProtobufField>::repeating() {
+                    field.label = Some(::foxglove::prost_types::field_descriptor_proto::Label::Repeated as i32);
+                } else {
+                    field.label = Some(::foxglove::prost_types::field_descriptor_proto::Label::Optional as i32);
+                }
+                field.r#type = Some(<#field_type as ::foxglove::protobuf::ProtobufField>::field_type() as i32);
+                field.type_name = <#field_type as ::foxglove::protobuf::ProtobufField>::type_name();
+                message.field.push(field);
+            }
         });
 
         field_encoders.push(quote! {
