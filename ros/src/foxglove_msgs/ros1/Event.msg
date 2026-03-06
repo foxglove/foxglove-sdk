@@ -15,10 +15,7 @@ foxglove_msgs/EventType event_type
 # Typed property values matching the platform's structured properties model.
 foxglove_msgs/EventProperty[] event_properties
 
-# Unstructured key-value metadata (complementary to event_properties).
-foxglove_msgs/KeyValuePair[] metadata
-
-# Stable identity for deduplication during data platform ingestion. If absent, the platform may compute a fingerprint.
+# Stable identity for deduplication during data platform ingestion.
 string id
 
 # Device ID this event is associated with. Use the platform device ID when known, or a local identifier (e.g. hostname, serial number). Required so consumers always know the source device.

@@ -283,8 +283,7 @@ class Event:
         duration: Duration | None = None,
         event_type: EventType | None = None,
         event_properties: list[EventProperty] | None = None,
-        metadata: list[KeyValuePair] | None = None,
-        id: str | None = None,
+        id: str = "",
         device_id: str = "",
     ) -> None: ...
     @staticmethod

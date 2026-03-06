@@ -275,14 +275,11 @@ pub struct Event {
     /// Typed property values matching the platform's structured properties model.
     #[prost(message, repeated, tag = "4")]
     pub event_properties: ::prost::alloc::vec::Vec<EventProperty>,
-    /// Unstructured key-value metadata (complementary to event_properties).
-    #[prost(message, repeated, tag = "5")]
-    pub metadata: ::prost::alloc::vec::Vec<KeyValuePair>,
-    /// Stable identity for deduplication during data platform ingestion. If absent, the platform may compute a fingerprint.
-    #[prost(string, optional, tag = "6")]
-    pub id: ::core::option::Option<::prost::alloc::string::String>,
+    /// Stable identity for deduplication during data platform ingestion.
+    #[prost(string, tag = "5")]
+    pub id: ::prost::alloc::string::String,
     /// Device ID this event is associated with. Use the platform device ID when known, or a local identifier (e.g. hostname, serial number). Required so consumers always know the source device.
-    #[prost(string, tag = "7")]
+    #[prost(string, tag = "6")]
     pub device_id: ::prost::alloc::string::String,
 }
 /// A typed property value on an event, matching the platform's structured properties model

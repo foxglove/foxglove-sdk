@@ -703,8 +703,7 @@ impl From<CubePrimitive> for foxglove::schemas::CubePrimitive {
 /// :param duration: Duration of the event. Omit or set to zero for an instant (point) event.
 /// :param event_type: Event type definition for this event. Provides category name, display color, and optional platform ID for reconciliation.
 /// :param event_properties: Typed property values matching the platform's structured properties model.
-/// :param metadata: Unstructured key-value metadata (complementary to event_properties).
-/// :param id: Stable identity for deduplication during data platform ingestion. If absent, the platform may compute a fingerprint.
+/// :param id: Stable identity for deduplication during data platform ingestion.
 /// :param device_id: Device ID this event is associated with. Use the platform device ID when known, or a local identifier (e.g. hostname, serial number). Required so consumers always know the source device.
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/event
@@ -714,14 +713,13 @@ pub(crate) struct Event(pub(crate) foxglove::schemas::Event);
 #[pymethods]
 impl Event {
     #[new]
-    #[pyo3(signature = (*, timestamp=None, duration=None, event_type=None, event_properties=None, metadata=None, id=None, device_id="") )]
+    #[pyo3(signature = (*, timestamp=None, duration=None, event_type=None, event_properties=None, id="", device_id="") )]
     fn new(
         timestamp: Option<Timestamp>,
         duration: Option<Duration>,
         event_type: Option<EventType>,
         event_properties: Option<Vec<EventProperty>>,
-        metadata: Option<Vec<KeyValuePair>>,
-        id: Option<&str>,
+        id: &str,
         device_id: &str,
     ) -> Self {
         Self(foxglove::schemas::Event {
@@ -733,23 +731,17 @@ impl Event {
                 .into_iter()
                 .map(|x| x.into())
                 .collect(),
-            metadata: metadata
-                .unwrap_or_default()
-                .into_iter()
-                .map(|x| x.into())
-                .collect(),
-            id: id.map(|s| s.to_string()),
+            id: id.to_string(),
             device_id: device_id.to_string(),
         })
     }
     fn __repr__(&self) -> String {
         format!(
-            "Event(timestamp={:?}, duration={:?}, event_type={:?}, event_properties={:?}, metadata={:?}, id={:?}, device_id={:?})",
+            "Event(timestamp={:?}, duration={:?}, event_type={:?}, event_properties={:?}, id={:?}, device_id={:?})",
             self.0.timestamp,
             self.0.duration,
             self.0.event_type,
             self.0.event_properties,
-            self.0.metadata,
             self.0.id,
             self.0.device_id,
         )
