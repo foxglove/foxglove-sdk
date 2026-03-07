@@ -14,7 +14,7 @@ pub use crate::protocol::common::client::{
     Advertise, FetchAsset, GetParameters, MessageData, ServiceCallRequest, SetParameters,
     SubscribeParameterUpdates, Unadvertise, UnsubscribeParameterUpdates,
 };
-pub use subscribe::Subscribe;
+pub use subscribe::{Subscribe, SubscribeChannel};
 pub use unsubscribe::Unsubscribe;
 
 /// Binary opcodes for v2 client messages.
@@ -24,8 +24,6 @@ pub(crate) enum BinaryOpcode {
     ServiceCallRequest = 2,
     #[doc(hidden)]
     PlaybackControlRequest = 3,
-    Subscribe = 4,
-    Unsubscribe = 5,
 }
 
 impl BinaryOpcode {
@@ -34,19 +32,9 @@ impl BinaryOpcode {
             1 => Some(Self::MessageData),
             2 => Some(Self::ServiceCallRequest),
             3 => Some(Self::PlaybackControlRequest),
-            4 => Some(Self::Subscribe),
-            5 => Some(Self::Unsubscribe),
             _ => None,
         }
     }
-}
-
-impl BinaryMessage<'_> for Subscribe {
-    const OPCODE: u8 = BinaryOpcode::Subscribe as u8;
-}
-
-impl BinaryMessage<'_> for Unsubscribe {
-    const OPCODE: u8 = BinaryOpcode::Unsubscribe as u8;
 }
 
 /// A representation of a client message useful for deserializing.
@@ -93,12 +81,6 @@ impl<'a> ClientMessage<'a> {
                 Some(BinaryOpcode::PlaybackControlRequest) => {
                     PlaybackControlRequest::parse_payload(data)
                         .map(ClientMessage::PlaybackControlRequest)
-                }
-                Some(BinaryOpcode::Subscribe) => {
-                    Subscribe::parse_payload(data).map(ClientMessage::Subscribe)
-                }
-                Some(BinaryOpcode::Unsubscribe) => {
-                    Unsubscribe::parse_payload(data).map(ClientMessage::Unsubscribe)
                 }
                 None => Err(ParseError::InvalidOpcode(opcode)),
             }
@@ -237,24 +219,6 @@ mod tests {
         insta::assert_snapshot!(format!("{:#04x?}", buf));
         let parsed = ClientMessage::parse_binary(&buf).unwrap();
         assert_eq!(parsed, ClientMessage::PlaybackControlRequest(message));
-    }
-
-    #[test]
-    fn test_subscribe_encode() {
-        let message = Subscribe::new([10, 20, 30]);
-        let buf = message.to_bytes();
-        insta::assert_snapshot!(format!("{:#04x?}", buf));
-        let parsed = ClientMessage::parse_binary(&buf).unwrap();
-        assert_eq!(parsed, ClientMessage::Subscribe(message));
-    }
-
-    #[test]
-    fn test_unsubscribe_encode() {
-        let message = Unsubscribe::new([1, 2, 3]);
-        let buf = message.to_bytes();
-        insta::assert_snapshot!(format!("{:#04x?}", buf));
-        let parsed = ClientMessage::parse_binary(&buf).unwrap();
-        assert_eq!(parsed, ClientMessage::Unsubscribe(message));
     }
 
     #[test]
