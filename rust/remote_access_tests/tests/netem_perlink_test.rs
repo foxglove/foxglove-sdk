@@ -285,8 +285,8 @@ fn perlink_link_a_has_more_packet_loss_than_link_b() -> Result<()> {
     let link_b_args =
         std::env::var("NETEM_LINK_B_ARGS").unwrap_or_else(|_| DEFAULT_LINK_B_ARGS.into());
 
-    let loss_a_pct = netem_helpers::parse_loss_pct(&link_a_args).unwrap_or(0.0);
-    let loss_b_pct = netem_helpers::parse_loss_pct(&link_b_args).unwrap_or(0.0);
+    let loss_a_pct = netem_helpers::parse_loss_percentage(&link_a_args).unwrap_or(0.0);
+    let loss_b_pct = netem_helpers::parse_loss_percentage(&link_b_args).unwrap_or(0.0);
 
     if loss_a_pct < 2.0 {
         info!("link A loss ({loss_a_pct}%) too low for reliable detection — skipping");
@@ -294,7 +294,9 @@ fn perlink_link_a_has_more_packet_loss_than_link_b() -> Result<()> {
     }
 
     let container = netem_container_id()?;
-    let packet_count: u32 = 100;
+    // 150 packets at ~9.75% effective round-trip loss gives P(0 lost) ≈ 1e-7,
+    // making false failures negligible. Runtime is ~2.5 minutes per link.
+    let packet_count: u32 = 150;
 
     let (sent_a, received_a) = measure_udp_loss(&container, TARGET_A_IP, packet_count)?;
     let (sent_b, received_b) = measure_udp_loss(&container, TARGET_B_IP, packet_count)?;

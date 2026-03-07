@@ -108,7 +108,7 @@ async fn netem_sidecar_drops_packets() -> Result<()> {
     info!("NETEM_ARGS: {netem_args}");
 
     // Parse loss percentage from NETEM_ARGS. Format: "... loss <N>% ...".
-    let loss_pct: Option<f64> = netem_helpers::parse_loss_pct(&netem_args);
+    let loss_pct: Option<f64> = netem_helpers::parse_loss_percentage(&netem_args);
 
     if loss_pct.is_none() || loss_pct < Some(2.0) {
         info!("loss < 2% configured in NETEM_ARGS — skipping (need ≥2% for reliable detection)");

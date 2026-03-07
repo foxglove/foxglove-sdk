@@ -26,7 +26,7 @@ pub fn parse_delay_ms(netem_args: &str) -> Option<u64> {
 /// "delay 200ms 50ms loss 5%" → Some(5.0)
 /// "delay 10ms 2ms"           → None
 /// ```
-pub fn parse_loss_pct(netem_args: &str) -> Option<f64> {
+pub fn parse_loss_percentage(netem_args: &str) -> Option<f64> {
     netem_args
         .split_whitespace()
         .zip(netem_args.split_whitespace().skip(1))
@@ -48,9 +48,9 @@ mod tests {
 
     #[test]
     fn parse_loss_basic() {
-        assert_eq!(parse_loss_pct("delay 200ms 50ms loss 5%"), Some(5.0));
-        assert_eq!(parse_loss_pct("delay 10ms 2ms"), None);
-        assert_eq!(parse_loss_pct("loss 0.1%"), Some(0.1));
-        assert_eq!(parse_loss_pct(""), None);
+        assert_eq!(parse_loss_percentage("delay 200ms 50ms loss 5%"), Some(5.0));
+        assert_eq!(parse_loss_percentage("delay 10ms 2ms"), None);
+        assert_eq!(parse_loss_percentage("loss 0.1%"), Some(0.1));
+        assert_eq!(parse_loss_percentage(""), None);
     }
 }
