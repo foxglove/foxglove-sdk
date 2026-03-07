@@ -33,3 +33,8 @@ $(TARGETS): image
 .PHONY: list-targets
 list-targets:
 	@echo $(TARGETS) | tr ' ' '\n' | sort
+
+.PHONY: init
+init:
+	git config core.hooksPath .githooks
+	bash .githooks/init-ai-tooling.sh
