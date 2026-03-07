@@ -19,6 +19,15 @@
 #   - target-b (10.99.0.20): low impairment path (simulates App on good network).
 #   - The netem sidecar classifies egress by destination IP using HTB + u32 filters.
 
+# The perlink network uses a fixed subnet so that tc u32 filters can classify
+# traffic by destination IP. This is safe because:
+#   - It is a Docker-internal bridge network, not routed to the host or internet.
+#   - 10.0.0.0/8 is RFC 1918 private space; 10.99.0.0/24 is chosen to avoid
+#     overlap with Docker's default bridge (172.17.0.0/16) and compose networks
+#     (172.18+.0.0/16).
+#   - Static IPs are scoped to this bridge — other Docker networks can reuse the
+#     same addresses without conflict.
+#   - CI runners are ephemeral VMs with no pre-existing Docker networks.
 networks:
   perlink:
     driver: bridge
