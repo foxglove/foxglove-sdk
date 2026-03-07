@@ -283,6 +283,9 @@ fn derive_newtype_impl(input: &DeriveInput, field: &syn::Field) -> TokenStream {
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
     let has_generics = !input.generics.params.is_empty();
 
+    // Proto3 explicit presence for optional newtypes. See the matching comment
+    // in derive_named_struct_impl for a full explanation of proto3_optional and
+    // synthetic oneofs.
     let optional_oneof = if is_option(inner_type) {
         quote! {
             field_desc.proto3_optional = Some(true);
@@ -334,6 +337,8 @@ fn derive_newtype_impl(input: &DeriveInput, field: &syn::Field) -> TokenStream {
         field_desc.name = Some(String::from("value"));
         field_desc.number = Some(1);
 
+        // In proto3, singular fields always use Label::Optional in the descriptor
+        // (implicit presence). See derive_named_struct_impl for details.
         if <#inner_type as ::foxglove::protobuf::ProtobufField>::repeating() {
             field_desc.label = Some(::foxglove::prost_types::field_descriptor_proto::Label::Repeated as i32);
         } else {
@@ -533,6 +538,15 @@ fn derive_named_struct_impl(
             }
         });
 
+        // In proto3, fields that map to Rust `Option<T>` need explicit presence tracking
+        // in the descriptor. This matches how protoc represents `optional` fields: it
+        // sets `proto3_optional = true` and creates a synthetic oneof named
+        // `_<field_name>`. The synthetic oneof is not a real oneof in the schema — it's
+        // a descriptor-level mechanism that signals to consumers that this field tracks
+        // presence (i.e., can distinguish "not set" from "set to default value").
+        //
+        // See: https://protobuf.dev/programming-guides/field_presence/
+        // See: https://github.com/protocolbuffers/protobuf/blob/main/docs/field_presence.md
         let optional_oneof = if is_option(field_type) {
             let oneof_name = format!("_{}", field_name);
             quote! {
@@ -551,6 +565,11 @@ fn derive_named_struct_impl(
             field.name = Some(String::from(stringify!(#field_name)));
             field.number = Some(#field_number as i32);
 
+            // In proto3, all singular fields use Label::Optional in the descriptor.
+            // This does NOT mean the field is "optional" in the Rust sense — it means
+            // the field has implicit presence (omitted when equal to the default value).
+            // Truly optional fields (Rust `Option<T>`) are additionally marked with
+            // `proto3_optional` and a synthetic oneof above.
             if <#field_type as ::foxglove::protobuf::ProtobufField>::repeating() {
                 field.label = Some(::foxglove::prost_types::field_descriptor_proto::Label::Repeated as i32);
             } else {
