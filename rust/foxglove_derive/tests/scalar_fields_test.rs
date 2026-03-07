@@ -521,7 +521,7 @@ fn test_optional_field_label() {
     let file = &descriptor_set.file[0];
     let message_type = &file.message_type[0];
 
-    // Find the required field and verify it has Required label
+    // Non-optional field should have Optional label (proto3 implicit presence)
     let required_field = message_type
         .field
         .iter()
@@ -529,11 +529,19 @@ fn test_optional_field_label() {
         .expect("Field 'required' not found");
     assert_eq!(
         required_field.label.unwrap(),
-        prost_types::field_descriptor_proto::Label::Required as i32,
-        "Non-optional field should have Required label"
+        prost_types::field_descriptor_proto::Label::Optional as i32,
+        "Non-optional field should have Optional label in proto3"
+    );
+    assert_eq!(
+        required_field.proto3_optional, None,
+        "Non-optional field should not have proto3_optional set"
+    );
+    assert_eq!(
+        required_field.oneof_index, None,
+        "Non-optional field should not have oneof_index set"
     );
 
-    // Find the optional field and verify it has Optional label
+    // Option<T> field should have Optional label with proto3 explicit presence
     let optional_field = message_type
         .field
         .iter()
@@ -543,6 +551,27 @@ fn test_optional_field_label() {
         optional_field.label.unwrap(),
         prost_types::field_descriptor_proto::Label::Optional as i32,
         "Option<T> field should have Optional label"
+    );
+    assert_eq!(
+        optional_field.proto3_optional,
+        Some(true),
+        "Option<T> field should have proto3_optional set"
+    );
+    assert!(
+        optional_field.oneof_index.is_some(),
+        "Option<T> field should have oneof_index pointing to synthetic oneof"
+    );
+
+    // Verify the synthetic oneof exists
+    let oneof_index = optional_field.oneof_index.unwrap() as usize;
+    assert!(
+        oneof_index < message_type.oneof_decl.len(),
+        "oneof_index should point to a valid oneof"
+    );
+    assert_eq!(
+        message_type.oneof_decl[oneof_index].name.as_deref(),
+        Some("_optional"),
+        "Synthetic oneof should be named _<field_name>"
     );
 }
 
