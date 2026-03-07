@@ -64,7 +64,9 @@ jobs:
 
   netem-perlink-test:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # UDP loss test sends 150 packets per link with 2s timeout each (~5 min
+    # total), plus build and Docker setup overhead.
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v6
         with:
