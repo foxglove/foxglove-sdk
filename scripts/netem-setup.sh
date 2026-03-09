@@ -117,13 +117,6 @@ for iface in $(ls /sys/class/net/); do
     fi
 done
 
-# Exit non-zero if any per-link tc command failed, so the container healthcheck
-# can detect partial setup failures.
-if [ "$SETUP_ERRORS" -gt 0 ]; then
-    echo ""
-    echo "ERROR: $SETUP_ERRORS tc command(s) failed during per-link setup."
-fi
-
 # Print final state for debugging. Iterate over all interfaces since per-link
 # rules may be applied to a non-default interface (e.g. eth1 for the perlink
 # network).
@@ -137,6 +130,10 @@ for iface in $(ls /sys/class/net/); do
     tc -s filter show dev "$iface" 2>/dev/null || true
 done
 
+# Print error summary last (after debug dump) so it's visible at the end of
+# the log. Exit non-zero so the container healthcheck can detect partial setup.
 if [ "$SETUP_ERRORS" -gt 0 ]; then
+    echo ""
+    echo "ERROR: $SETUP_ERRORS tc command(s) failed during per-link setup."
     exit 1
 fi
