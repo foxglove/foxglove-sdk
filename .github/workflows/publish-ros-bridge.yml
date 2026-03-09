@@ -64,7 +64,7 @@ jobs:
           echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
 
       - name: Build and push
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ros/src/foxglove_bridge
           file: ros/src/foxglove_bridge/Dockerfile
