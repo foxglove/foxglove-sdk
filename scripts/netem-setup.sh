@@ -25,6 +25,21 @@ set -eu
 
 NETEM_ARGS="${NETEM_ARGS:-delay 80ms 20ms loss 2%}"
 
+# Validate that a netem args string contains only safe characters. Netem args
+# are passed unquoted to tc (intentional word-splitting), so shell
+# metacharacters (;, &, |, $, `, etc.) would be interpreted by the shell.
+validate_netem_args() {
+    case "$2" in
+        *[';|&$`()\{\}\"'\''!'\\]* | *'>'* | *'<'*)
+            echo "ERROR: $1 contains shell metacharacters: $2"
+            echo "Only netem parameters are allowed (e.g. 'delay 200ms 50ms loss 5%')."
+            exit 1
+            ;;
+    esac
+}
+
+validate_netem_args "NETEM_ARGS" "$NETEM_ARGS"
+
 # Track whether any per-link tc command fails on an interface that accepted the
 # HTB root. We continue past failures to apply rules on other interfaces, but
 # exit non-zero at the end so the container healthcheck can detect partial setup.
@@ -85,14 +100,12 @@ for iface in $(ls /sys/class/net/); do
             dst_var="NETEM_LINK_${name}_DST"
             args_var="NETEM_LINK_${name}_ARGS"
 
-            # eval is used for variable indirection — the variable names are
-            # derived from env var keys we control (filtered by the grep
-            # pattern above). The resulting values ($link_args) are passed
-            # unquoted to tc (intentional word-splitting); callers must not
-            # include shell metacharacters in NETEM_LINK_*_ARGS values.
-            eval "dst=\${$dst_var:-}"
-            eval "link_args=\${$args_var:-}"
+            # Use printenv for variable indirection — avoids eval and any
+            # risk of shell metacharacter interpretation in the values.
+            dst=$(printenv "$dst_var" 2>/dev/null || true)
+            link_args=$(printenv "$args_var" 2>/dev/null || true)
             link_args="${link_args:-$NETEM_ARGS}"
+            validate_netem_args "$args_var" "$link_args"
 
             if [ -z "$dst" ]; then
                 echo "  WARNING: $dst_var is empty, skipping link $name"
