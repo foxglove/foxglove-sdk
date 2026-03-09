@@ -46,12 +46,15 @@ const DEFAULT_LINK_B_ARGS: &str = "delay 10ms 2ms";
 /// project-name resolution issues when the test binary's working directory
 /// differs from where compose was invoked.
 fn netem_container_id() -> Result<String> {
+    // The filter uses a regex anchor to match only containers whose name ends
+    // with "-netem-<N>" (the compose default naming convention), avoiding false
+    // matches on unrelated containers that happen to contain "netem" in their name.
     let output = Command::new("docker")
         .args([
             "ps",
             "-q",
             "--filter",
-            "name=netem",
+            "name=-netem-[0-9]+$",
             "--filter",
             "status=running",
         ])
@@ -145,7 +148,10 @@ fn measure_tcp_rtt(container: &str, target_ip: &str, count: usize) -> Result<Dur
 fn measure_udp_loss(container: &str, target_ip: &str, count: u32) -> Result<(u32, u32)> {
     // Send each packet individually and count successful echoes. Using
     // `UDP-CONNECT` creates a connected socket so socat waits for the response.
-    // `timeout 2` caps each probe to avoid hanging on lost packets.
+    // Two timeouts work together: `socat -T1` aborts after 1s of inactivity
+    // (no data received), while `timeout 2` is a hard wall-clock cap. The -T1
+    // is the binding constraint for lost packets; the outer timeout is a safety
+    // net in case socat hangs for other reasons.
     let script = format!(
         r#"
         received=0

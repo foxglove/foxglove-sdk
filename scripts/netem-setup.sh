@@ -25,6 +25,11 @@ set -eu
 
 NETEM_ARGS="${NETEM_ARGS:-delay 80ms 20ms loss 2%}"
 
+# Track whether any per-link tc command fails. We continue past failures to
+# apply rules on other interfaces, but exit non-zero at the end so the
+# container healthcheck can detect partial setup.
+SETUP_ERRORS=0
+
 # ---------------------------------------------------------------------------
 # Discover per-link definitions from NETEM_LINK_*_DST env vars.
 # ---------------------------------------------------------------------------
@@ -60,10 +65,10 @@ for iface in $(ls /sys/class/net/); do
 
         # Default class (unclassified traffic).
         tc class add dev "$iface" parent 1: classid 1:ff00 htb rate 10gbit 2>/dev/null \
-            || echo "  WARNING: failed to add default class on $iface"
+            || { echo "  ERROR: failed to add default class on $iface"; SETUP_ERRORS=$((SETUP_ERRORS + 1)); }
         # shellcheck disable=SC2086
         tc qdisc add dev "$iface" parent 1:ff00 handle ff00: netem $NETEM_ARGS 2>/dev/null \
-            || echo "  WARNING: failed to add netem qdisc on default class ($iface)"
+            || { echo "  ERROR: failed to add netem qdisc on default class ($iface)"; SETUP_ERRORS=$((SETUP_ERRORS + 1)); }
         echo "  default class 1:ff00 -> netem $NETEM_ARGS"
 
         # Per-link classes. Assign class IDs starting at 1:10, incrementing by 10.
@@ -89,19 +94,26 @@ for iface in $(ls /sys/class/net/); do
             handle="$(printf '%x' $class_minor):"
 
             tc class add dev "$iface" parent 1: classid "$class_id" htb rate 10gbit 2>/dev/null \
-                || echo "  WARNING: failed to add class $class_id on $iface"
+                || { echo "  ERROR: failed to add class $class_id on $iface"; SETUP_ERRORS=$((SETUP_ERRORS + 1)); }
             # shellcheck disable=SC2086
             tc qdisc add dev "$iface" parent "$class_id" handle "$handle" netem $link_args 2>/dev/null \
-                || echo "  WARNING: failed to add netem qdisc on class $class_id ($iface)"
+                || { echo "  ERROR: failed to add netem qdisc on class $class_id ($iface)"; SETUP_ERRORS=$((SETUP_ERRORS + 1)); }
             tc filter add dev "$iface" parent 1: protocol ip u32 \
                 match ip dst "$dst/32" flowid "$class_id" 2>/dev/null \
-                || echo "  WARNING: failed to add u32 filter for $dst on $iface"
+                || { echo "  ERROR: failed to add u32 filter for $dst on $iface"; SETUP_ERRORS=$((SETUP_ERRORS + 1)); }
             echo "  link $name: class $class_id -> dst $dst -> netem $link_args"
 
             class_minor=$((class_minor + 10))
         done
     fi
 done
+
+# Exit non-zero if any per-link tc command failed, so the container healthcheck
+# can detect partial setup failures.
+if [ "$SETUP_ERRORS" -gt 0 ]; then
+    echo ""
+    echo "ERROR: $SETUP_ERRORS tc command(s) failed during per-link setup."
+fi
 
 # Print final state for debugging. Iterate over all interfaces since per-link
 # rules may be applied to a non-default interface (e.g. eth1 for the perlink
@@ -115,3 +127,7 @@ for iface in $(ls /sys/class/net/); do
     echo "=== $iface: tc filter ==="
     tc -s filter show dev "$iface" 2>/dev/null || true
 done
+
+if [ "$SETUP_ERRORS" -gt 0 ]; then
+    exit 1
+fi
