@@ -1,5 +1,13 @@
-//! Integration tests that validate per-link network impairment using classful
-//! qdiscs (HTB root + netem leaf classes).
+//! Integration tests for per-link network impairment using classful qdiscs
+//! (HTB root + netem leaf classes).
+//!
+//! **Infrastructure tests** validate the tc hierarchy (qdisc, class, filter
+//! setup) and per-link impairment differentiation (latency, loss).
+//!
+//! **Product tests** verify that the SDK works correctly under the classful
+//! qdisc hierarchy, which is structurally different from the flat `root netem`
+//! used in `netem_test.rs`. Host traffic (via Docker port forwarding) hits the
+//! HTB default class, exercising the classful path.
 //!
 //! These tests require the per-link Docker Compose overlay:
 //!   docker compose \
@@ -25,6 +33,9 @@ use std::process::Command;
 use std::time::Duration;
 
 use anyhow::{Context as _, Result};
+use foxglove::protocol::v2::server::ServerMessage;
+use remote_access_tests::test_helpers::{NETEM_EVENT_TIMEOUT, TestGateway, ViewerConnection};
+use serial_test::serial;
 use tracing::info;
 use tracing_test::traced_test;
 
@@ -336,6 +347,99 @@ fn perlink_link_a_has_more_packet_loss_than_link_b() -> Result<()> {
         );
     }
 
+    Ok(())
+}
+
+// ===========================================================================
+// Product tests under classful qdisc hierarchy
+// ===========================================================================
+//
+// These tests exercise the SDK through the HTB default class. Host traffic
+// (via Docker port forwarding) is classified into the default HTB class,
+// which has its own netem leaf qdisc (matching NETEM_ARGS). This validates
+// that SDK connectivity and message delivery work under the classful
+// hierarchy, not just the flat `root netem` used in `netem_test.rs`.
+
+/// Verify that a viewer can connect and receive a valid ServerInfo message
+/// under the classful qdisc hierarchy.
+#[traced_test]
+#[ignore]
+#[tokio::test]
+#[serial(netem)]
+async fn perlink_viewer_connects_under_classful_qdisc() -> Result<()> {
+    let ctx = foxglove::Context::new();
+    let gw = TestGateway::start(&ctx).await?;
+
+    let mut viewer =
+        ViewerConnection::connect_with_timeout(&gw.room_name, "viewer-1", NETEM_EVENT_TIMEOUT)
+            .await?;
+    let server_info = viewer.expect_server_info().await?;
+
+    assert!(
+        server_info.session_id.is_some(),
+        "session_id should be present"
+    );
+    info!("ServerInfo received under classful qdisc: {server_info:?}");
+
+    viewer.close().await?;
+    gw.stop().await?;
+    Ok(())
+}
+
+/// Verify that a burst of messages is delivered completely and in order under
+/// the classful qdisc hierarchy. Exercises the full data path: connect →
+/// channel ads → subscribe → ordered delivery.
+#[traced_test]
+#[ignore]
+#[tokio::test]
+#[serial(netem)]
+async fn perlink_burst_delivery_under_classful_qdisc() -> Result<()> {
+    let ctx = foxglove::Context::new();
+    let channel = ctx
+        .channel_builder("/perlink-burst")
+        .message_encoding("json")
+        .build_raw()
+        .context("create channel")?;
+
+    let gw = TestGateway::start(&ctx).await?;
+    let mut viewer =
+        ViewerConnection::connect_with_timeout(&gw.room_name, "viewer-1", NETEM_EVENT_TIMEOUT)
+            .await?;
+
+    let _server_info = viewer.expect_server_info().await?;
+    let advertise = viewer.expect_advertise().await?;
+    let channel_id = advertise.channels[0].id;
+
+    viewer.subscribe_and_wait(&[channel_id], &channel).await?;
+
+    // Send a burst of messages.
+    let count = 20;
+    for i in 0..count {
+        let payload = format!("msg-{i:04}");
+        channel.log(payload.as_bytes());
+    }
+
+    // Wait for the per-channel byte stream to open, then read all messages from it.
+    let mut ch_reader = viewer.expect_channel_byte_stream().await?;
+    for i in 0..count {
+        let msg = ch_reader.next_server_message().await?;
+        let expected = format!("msg-{i:04}");
+        match msg {
+            ServerMessage::MessageData(data) => {
+                assert_eq!(data.channel_id, channel_id);
+                assert_eq!(
+                    data.data.as_ref(),
+                    expected.as_bytes(),
+                    "message {i} out of order or missing"
+                );
+            }
+            other => anyhow::bail!("expected MessageData, got: {other:?}"),
+        }
+    }
+    info!("all {count} messages delivered in order under classful qdisc");
+
+    viewer.close().await?;
+    gw.stop().await?;
     Ok(())
 }
 
