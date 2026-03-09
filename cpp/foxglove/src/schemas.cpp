@@ -2011,6 +2011,8 @@ void selectedEntityToC(
     src.poses_in_frame
       ? arena.map_one<foxglove_poses_in_frame>(src.poses_in_frame.value(), posesInFrameToC)
       : nullptr;
+  dest.metadata = arena.map<foxglove_key_value_pair>(src.metadata, keyValuePairToC);
+  dest.metadata_count = src.metadata.size();
 }
 
 void spherePrimitiveToC(

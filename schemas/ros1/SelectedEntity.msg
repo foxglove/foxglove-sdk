@@ -32,3 +32,6 @@ foxglove_msgs/PoseInFrame pose_in_frame
 
 # Selected poses in frame
 foxglove_msgs/PosesInFrame poses_in_frame
+
+# Additional user-provided metadata associated with the selected entity.
+foxglove_msgs/KeyValuePair[] metadata

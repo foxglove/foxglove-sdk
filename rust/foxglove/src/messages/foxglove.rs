@@ -1310,6 +1310,9 @@ pub struct SelectedEntity {
     /// Selected poses in frame
     #[prost(message, optional, tag = "10")]
     pub poses_in_frame: ::core::option::Option<PosesInFrame>,
+    /// Additional user-provided metadata associated with the selected entity.
+    #[prost(message, repeated, tag = "11")]
+    pub metadata: ::prost::alloc::vec::Vec<KeyValuePair>,
 }
 /// A primitive representing a sphere or ellipsoid
 ///

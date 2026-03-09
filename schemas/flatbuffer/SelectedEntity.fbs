@@ -2,6 +2,7 @@
 
 include "CameraCalibration.fbs";
 include "Grid.fbs";
+include "KeyValuePair.fbs";
 include "LaserScan.fbs";
 include "PointCloud.fbs";
 include "PoseInFrame.fbs";
@@ -42,6 +43,9 @@ table SelectedEntity {
 
   /// Selected poses in frame
   poses_in_frame:foxglove.PosesInFrame (id: 9);
+
+  /// Additional user-provided metadata associated with the selected entity.
+  metadata:[foxglove.KeyValuePair] (id: 10);
 }
 
 root_type SelectedEntity;

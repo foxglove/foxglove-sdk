@@ -4295,6 +4295,10 @@ pub struct SelectedEntity {
 
     /// Selected poses in frame
     pub poses_in_frame: *const PosesInFrame,
+
+    /// Additional user-provided metadata associated with the selected entity.
+    pub metadata: *const KeyValuePair,
+    pub metadata_count: usize,
 }
 
 #[cfg(not(target_family = "wasm"))]
@@ -4390,6 +4394,7 @@ impl BorrowToNative for SelectedEntity {
                 .map(|m| m.borrow_to_native(arena.as_mut()))
         }
         .transpose()?;
+        let metadata = unsafe { arena.as_mut().map(self.metadata, self.metadata_count)? };
 
         Ok(ManuallyDrop::new(foxglove::messages::SelectedEntity {
             source_topic: ManuallyDrop::into_inner(source_topic),
@@ -4402,6 +4407,7 @@ impl BorrowToNative for SelectedEntity {
             camera_calibration: camera_calibration.map(ManuallyDrop::into_inner),
             pose_in_frame: pose_in_frame.map(ManuallyDrop::into_inner),
             poses_in_frame: poses_in_frame.map(ManuallyDrop::into_inner),
+            metadata: ManuallyDrop::into_inner(metadata),
         }))
     }
 }

@@ -1659,6 +1659,11 @@ typedef struct foxglove_selected_entity {
    * Selected poses in frame
    */
   const struct foxglove_poses_in_frame *poses_in_frame;
+  /**
+   * Additional user-provided metadata associated with the selected entity.
+   */
+  const struct foxglove_key_value_pair *metadata;
+  size_t metadata_count;
 } foxglove_selected_entity;
 
 /**

@@ -3,6 +3,7 @@
 
 import { CameraCalibration } from "./CameraCalibration";
 import { Grid } from "./Grid";
+import { KeyValuePair } from "./KeyValuePair";
 import { LaserScan } from "./LaserScan";
 import { PointCloud } from "./PointCloud";
 import { PoseInFrame } from "./PoseInFrame";
@@ -41,4 +42,7 @@ export type SelectedEntity = {
 
   /** Selected poses in frame */
   poses_in_frame?: PosesInFrame;
+
+  /** Additional user-provided metadata associated with the selected entity. */
+  metadata?: KeyValuePair[];
 };

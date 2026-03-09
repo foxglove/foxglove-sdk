@@ -4,6 +4,7 @@ syntax = "proto3";
 
 import "foxglove/CameraCalibration.proto";
 import "foxglove/Grid.proto";
+import "foxglove/KeyValuePair.proto";
 import "foxglove/LaserScan.proto";
 import "foxglove/PointCloud.proto";
 import "foxglove/PoseInFrame.proto";
@@ -44,4 +45,7 @@ message SelectedEntity {
 
   // Selected poses in frame
   optional foxglove.PosesInFrame poses_in_frame = 10;
+
+  // Additional user-provided metadata associated with the selected entity.
+  repeated foxglove.KeyValuePair metadata = 11;
 }

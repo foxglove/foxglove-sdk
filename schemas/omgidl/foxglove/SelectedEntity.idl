@@ -2,6 +2,7 @@
 
 #include "foxglove/CameraCalibration.idl"
 #include "foxglove/Grid.idl"
+#include "foxglove/KeyValuePair.idl"
 #include "foxglove/LaserScan.idl"
 #include "foxglove/PointCloud.idl"
 #include "foxglove/PoseInFrame.idl"
@@ -50,6 +51,10 @@ struct SelectedEntity {
   // Selected poses in frame
   @optional
   PosesInFrame poses_in_frame;
+
+  // Additional user-provided metadata associated with the selected entity.
+  @optional
+  sequence<KeyValuePair> metadata;
 };
 
 };

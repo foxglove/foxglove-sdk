@@ -1759,6 +1759,9 @@ struct SelectedEntity {
   /// @brief Selected poses in frame
   std::optional<PosesInFrame> poses_in_frame;
 
+  /// @brief Additional user-provided metadata associated with the selected entity.
+  std::vector<KeyValuePair> metadata;
+
   /// @brief Encoded the SelectedEntity as protobuf to the provided buffer.
   ///
   /// On success, writes the serialized length to *encoded_len.

@@ -3120,6 +3120,19 @@ Selected poses in frame
 
 </td>
 </tr>
+<tr>
+<td><code>metadata</code> (optional)</td>
+<td>
+
+[KeyValuePair](#keyvaluepair)[]
+
+</td>
+<td>
+
+Additional user-provided metadata associated with the selected entity.
+
+</td>
+</tr>
 </table>
 
 ## SpherePrimitive

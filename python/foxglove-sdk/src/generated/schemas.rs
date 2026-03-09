@@ -1878,6 +1878,7 @@ impl From<SceneUpdate> for foxglove::schemas::SceneUpdate {
 /// :param camera_calibration: Selected camera calibration
 /// :param pose_in_frame: Selected pose in frame
 /// :param poses_in_frame: Selected poses in frame
+/// :param metadata: Additional user-provided metadata associated with the selected entity.
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/selected-entity
 #[pyclass(module = "foxglove.schemas")]
@@ -1886,7 +1887,7 @@ pub(crate) struct SelectedEntity(pub(crate) foxglove::schemas::SelectedEntity);
 #[pymethods]
 impl SelectedEntity {
     #[new]
-    #[pyo3(signature = (*, source_topic="", source_schema_name="", scene_entity=None, point_cloud=None, laser_scan=None, grid=None, voxel_grid=None, camera_calibration=None, pose_in_frame=None, poses_in_frame=None) )]
+    #[pyo3(signature = (*, source_topic="", source_schema_name="", scene_entity=None, point_cloud=None, laser_scan=None, grid=None, voxel_grid=None, camera_calibration=None, pose_in_frame=None, poses_in_frame=None, metadata=None) )]
     fn new(
         source_topic: &str,
         source_schema_name: &str,
@@ -1898,6 +1899,7 @@ impl SelectedEntity {
         camera_calibration: Option<CameraCalibration>,
         pose_in_frame: Option<PoseInFrame>,
         poses_in_frame: Option<PosesInFrame>,
+        metadata: Option<Vec<KeyValuePair>>,
     ) -> Self {
         Self(foxglove::schemas::SelectedEntity {
             source_topic: source_topic.to_string(),
@@ -1910,11 +1912,16 @@ impl SelectedEntity {
             camera_calibration: camera_calibration.map(Into::into),
             pose_in_frame: pose_in_frame.map(Into::into),
             poses_in_frame: poses_in_frame.map(Into::into),
+            metadata: metadata
+                .unwrap_or_default()
+                .into_iter()
+                .map(|x| x.into())
+                .collect(),
         })
     }
     fn __repr__(&self) -> String {
         format!(
-            "SelectedEntity(source_topic={:?}, source_schema_name={:?}, scene_entity={:?}, point_cloud={:?}, laser_scan={:?}, grid={:?}, voxel_grid={:?}, camera_calibration={:?}, pose_in_frame={:?}, poses_in_frame={:?})",
+            "SelectedEntity(source_topic={:?}, source_schema_name={:?}, scene_entity={:?}, point_cloud={:?}, laser_scan={:?}, grid={:?}, voxel_grid={:?}, camera_calibration={:?}, pose_in_frame={:?}, poses_in_frame={:?}, metadata={:?})",
             self.0.source_topic,
             self.0.source_schema_name,
             self.0.scene_entity,
@@ -1925,6 +1932,7 @@ impl SelectedEntity {
             self.0.camera_calibration,
             self.0.pose_in_frame,
             self.0.poses_in_frame,
+            self.0.metadata,
         )
     }
     /// Returns the SelectedEntity schema.

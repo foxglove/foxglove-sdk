@@ -861,6 +861,7 @@ class SelectedEntity:
         camera_calibration: CameraCalibration | None = None,
         pose_in_frame: PoseInFrame | None = None,
         poses_in_frame: PosesInFrame | None = None,
+        metadata: list[KeyValuePair] | None = None,
     ) -> None: ...
     @staticmethod
     def get_schema() -> Schema:
