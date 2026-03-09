@@ -640,6 +640,20 @@ typedef struct foxglove_point2 {
 } foxglove_point2;
 
 /**
+ * A key with its associated value
+ */
+typedef struct foxglove_key_value_pair {
+  /**
+   * Key
+   */
+  struct foxglove_string key;
+  /**
+   * Value
+   */
+  struct foxglove_string value;
+} foxglove_key_value_pair;
+
+/**
  * A circle annotation on a 2D image
  */
 typedef struct foxglove_circle_annotation {
@@ -668,6 +682,11 @@ typedef struct foxglove_circle_annotation {
    * Outline color
    */
   const struct foxglove_color *outline_color;
+  /**
+   * Additional user-provided metadata associated with this annotation. Keys must be unique.
+   */
+  const struct foxglove_key_value_pair *metadata;
+  size_t metadata_count;
 } foxglove_circle_annotation;
 
 /**
@@ -1052,6 +1071,11 @@ typedef struct foxglove_points_annotation {
    * Stroke thickness in pixels
    */
   double thickness;
+  /**
+   * Additional user-provided metadata associated with this annotation. Keys must be unique.
+   */
+  const struct foxglove_key_value_pair *metadata;
+  size_t metadata_count;
 } foxglove_points_annotation;
 
 /**
@@ -1083,21 +1107,12 @@ typedef struct foxglove_text_annotation {
    * Background fill color
    */
   const struct foxglove_color *background_color;
+  /**
+   * Additional user-provided metadata associated with this annotation. Keys must be unique.
+   */
+  const struct foxglove_key_value_pair *metadata;
+  size_t metadata_count;
 } foxglove_text_annotation;
-
-/**
- * A key with its associated value
- */
-typedef struct foxglove_key_value_pair {
-  /**
-   * Key
-   */
-  struct foxglove_string key;
-  /**
-   * Value
-   */
-  struct foxglove_string value;
-} foxglove_key_value_pair;
 
 /**
  * Array of annotations for a 2D image
@@ -1123,7 +1138,7 @@ typedef struct foxglove_image_annotations {
   const struct foxglove_text_annotation *texts;
   size_t texts_count;
   /**
-   * Additional user-provided metadata associated with the image annotations. Keys must be unique.
+   * Additional user-provided metadata associated with all annotations in the message. Keys must be unique.
    */
   const struct foxglove_key_value_pair *metadata;
   size_t metadata_count;
