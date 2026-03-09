@@ -1868,11 +1868,8 @@ impl From<SceneUpdate> for foxglove::schemas::SceneUpdate {
 
 /// Information about a selected entity in a visualization panel
 ///
-/// :param timestamp: Timestamp of the selection
-/// :param frame_id: Frame of reference for the selected entity
 /// :param source_topic: Topic from which the entity originated
 /// :param source_schema_name: Schema name of the source message
-/// :param entity_id: Identifier of the selected entity
 /// :param scene_entity: Selected scene entity
 /// :param point_cloud: Selected point cloud
 /// :param laser_scan: Selected laser scan
@@ -1889,13 +1886,10 @@ pub(crate) struct SelectedEntity(pub(crate) foxglove::schemas::SelectedEntity);
 #[pymethods]
 impl SelectedEntity {
     #[new]
-    #[pyo3(signature = (*, timestamp=None, frame_id="", source_topic="", source_schema_name="", entity_id="", scene_entity=None, point_cloud=None, laser_scan=None, grid=None, voxel_grid=None, camera_calibration=None, pose_in_frame=None, poses_in_frame=None) )]
+    #[pyo3(signature = (*, source_topic="", source_schema_name="", scene_entity=None, point_cloud=None, laser_scan=None, grid=None, voxel_grid=None, camera_calibration=None, pose_in_frame=None, poses_in_frame=None) )]
     fn new(
-        timestamp: Option<Timestamp>,
-        frame_id: &str,
         source_topic: &str,
         source_schema_name: &str,
-        entity_id: &str,
         scene_entity: Option<SceneEntity>,
         point_cloud: Option<PointCloud>,
         laser_scan: Option<LaserScan>,
@@ -1906,11 +1900,8 @@ impl SelectedEntity {
         poses_in_frame: Option<PosesInFrame>,
     ) -> Self {
         Self(foxglove::schemas::SelectedEntity {
-            timestamp: timestamp.map(Into::into),
-            frame_id: frame_id.to_string(),
             source_topic: source_topic.to_string(),
             source_schema_name: source_schema_name.to_string(),
-            entity_id: entity_id.to_string(),
             scene_entity: scene_entity.map(Into::into),
             point_cloud: point_cloud.map(Into::into),
             laser_scan: laser_scan.map(Into::into),
@@ -1923,12 +1914,9 @@ impl SelectedEntity {
     }
     fn __repr__(&self) -> String {
         format!(
-            "SelectedEntity(timestamp={:?}, frame_id={:?}, source_topic={:?}, source_schema_name={:?}, entity_id={:?}, scene_entity={:?}, point_cloud={:?}, laser_scan={:?}, grid={:?}, voxel_grid={:?}, camera_calibration={:?}, pose_in_frame={:?}, poses_in_frame={:?})",
-            self.0.timestamp,
-            self.0.frame_id,
+            "SelectedEntity(source_topic={:?}, source_schema_name={:?}, scene_entity={:?}, point_cloud={:?}, laser_scan={:?}, grid={:?}, voxel_grid={:?}, camera_calibration={:?}, pose_in_frame={:?}, poses_in_frame={:?})",
             self.0.source_topic,
             self.0.source_schema_name,
-            self.0.entity_id,
             self.0.scene_entity,
             self.0.point_cloud,
             self.0.laser_scan,

@@ -7,27 +7,17 @@
 #include "foxglove/PoseInFrame.idl"
 #include "foxglove/PosesInFrame.idl"
 #include "foxglove/SceneEntity.idl"
-#include "foxglove/Time.idl"
 #include "foxglove/VoxelGrid.idl"
 
 module foxglove {
 
 // Information about a selected entity in a visualization panel
 struct SelectedEntity {
-  // Timestamp of the selection
-  Time timestamp;
-
-  // Frame of reference for the selected entity
-  string frame_id;
-
   // Topic from which the entity originated
   string source_topic;
 
   // Schema name of the source message
   string source_schema_name;
-
-  // Identifier of the selected entity
-  string entity_id;
 
   // Selected scene entity
   @optional

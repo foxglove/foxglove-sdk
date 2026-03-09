@@ -851,11 +851,8 @@ class SelectedEntity:
     def __init__(
         self,
         *,
-        timestamp: Timestamp | None = None,
-        frame_id: str = "",
         source_topic: str = "",
         source_schema_name: str = "",
-        entity_id: str = "",
         scene_entity: SceneEntity | None = None,
         point_cloud: PointCloud | None = None,
         laser_scan: LaserScan | None = None,

@@ -4266,20 +4266,11 @@ pub unsafe extern "C" fn foxglove_scene_update_encode(
 /// Information about a selected entity in a visualization panel
 #[repr(C)]
 pub struct SelectedEntity {
-    /// Timestamp of the selection
-    pub timestamp: *const FoxgloveTimestamp,
-
-    /// Frame of reference for the selected entity
-    pub frame_id: FoxgloveString,
-
     /// Topic from which the entity originated
     pub source_topic: FoxgloveString,
 
     /// Schema name of the source message
     pub source_schema_name: FoxgloveString,
-
-    /// Identifier of the selected entity
-    pub entity_id: FoxgloveString,
 
     /// Selected scene entity
     pub scene_entity: *const SceneEntity,
@@ -4337,13 +4328,6 @@ impl BorrowToNative for SelectedEntity {
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
-        let frame_id = unsafe {
-            string_from_raw(
-                self.frame_id.as_ptr() as *const _,
-                self.frame_id.len(),
-                "frame_id",
-            )?
-        };
         let source_topic = unsafe {
             string_from_raw(
                 self.source_topic.as_ptr() as *const _,
@@ -4356,13 +4340,6 @@ impl BorrowToNative for SelectedEntity {
                 self.source_schema_name.as_ptr() as *const _,
                 self.source_schema_name.len(),
                 "source_schema_name",
-            )?
-        };
-        let entity_id = unsafe {
-            string_from_raw(
-                self.entity_id.as_ptr() as *const _,
-                self.entity_id.len(),
-                "entity_id",
             )?
         };
         let scene_entity = unsafe {
@@ -4415,11 +4392,8 @@ impl BorrowToNative for SelectedEntity {
         .transpose()?;
 
         Ok(ManuallyDrop::new(foxglove::messages::SelectedEntity {
-            timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
-            frame_id: ManuallyDrop::into_inner(frame_id),
             source_topic: ManuallyDrop::into_inner(source_topic),
             source_schema_name: ManuallyDrop::into_inner(source_schema_name),
-            entity_id: ManuallyDrop::into_inner(entity_id),
             scene_entity: scene_entity.map(ManuallyDrop::into_inner),
             point_cloud: point_cloud.map(ManuallyDrop::into_inner),
             laser_scan: laser_scan.map(ManuallyDrop::into_inner),

@@ -1982,12 +1982,8 @@ void sceneUpdateToC(
 void selectedEntityToC(
   foxglove_selected_entity& dest, const SelectedEntity& src, [[maybe_unused]] Arena& arena
 ) {
-  dest.timestamp =
-    src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
-  dest.frame_id = {src.frame_id.data(), src.frame_id.size()};
   dest.source_topic = {src.source_topic.data(), src.source_topic.size()};
   dest.source_schema_name = {src.source_schema_name.data(), src.source_schema_name.size()};
-  dest.entity_id = {src.entity_id.data(), src.entity_id.size()};
   dest.scene_entity =
     src.scene_entity
       ? arena.map_one<foxglove_scene_entity>(src.scene_entity.value(), sceneEntityToC)

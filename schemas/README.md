@@ -2991,32 +2991,6 @@ Information about a selected entity in a visualization panel
     <th>description</th>
   </tr>
 <tr>
-<td><code>timestamp</code></td>
-<td>
-
-[Timestamp](#timestamp)
-
-</td>
-<td>
-
-Timestamp of the selection
-
-</td>
-</tr>
-<tr>
-<td><code>frame_id</code></td>
-<td>
-
-string
-
-</td>
-<td>
-
-Frame of reference for the selected entity
-
-</td>
-</tr>
-<tr>
 <td><code>source_topic</code></td>
 <td>
 
@@ -3039,19 +3013,6 @@ string
 <td>
 
 Schema name of the source message
-
-</td>
-</tr>
-<tr>
-<td><code>entity_id</code></td>
-<td>
-
-string
-
-</td>
-<td>
-
-Identifier of the selected entity
 
 </td>
 </tr>

@@ -8,25 +8,15 @@ import { PointCloud } from "./PointCloud";
 import { PoseInFrame } from "./PoseInFrame";
 import { PosesInFrame } from "./PosesInFrame";
 import { SceneEntity } from "./SceneEntity";
-import { Time } from "./Time";
 import { VoxelGrid } from "./VoxelGrid";
 
 /** Information about a selected entity in a visualization panel */
 export type SelectedEntity = {
-  /** Timestamp of the selection */
-  timestamp: Time;
-
-  /** Frame of reference for the selected entity */
-  frame_id: string;
-
   /** Topic from which the entity originated */
   source_topic: string;
 
   /** Schema name of the source message */
   source_schema_name: string;
-
-  /** Identifier of the selected entity */
-  entity_id: string;
 
   /** Selected scene entity */
   scene_entity?: SceneEntity;

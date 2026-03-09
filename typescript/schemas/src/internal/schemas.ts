@@ -1771,16 +1771,6 @@ const SelectedEntity: FoxgloveMessageSchema = {
   description: "Information about a selected entity in a visualization panel",
   fields: [
     {
-      name: "timestamp",
-      type: { type: "nested", schema: Timestamp },
-      description: "Timestamp of the selection",
-    },
-    {
-      name: "frame_id",
-      type: { type: "primitive", name: "string" },
-      description: "Frame of reference for the selected entity",
-    },
-    {
       name: "source_topic",
       type: { type: "primitive", name: "string" },
       description: "Topic from which the entity originated",
@@ -1789,11 +1779,6 @@ const SelectedEntity: FoxgloveMessageSchema = {
       name: "source_schema_name",
       type: { type: "primitive", name: "string" },
       description: "Schema name of the source message",
-    },
-    {
-      name: "entity_id",
-      type: { type: "primitive", name: "string" },
-      description: "Identifier of the selected entity",
     },
     {
       name: "scene_entity",

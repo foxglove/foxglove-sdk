@@ -1729,20 +1729,11 @@ struct PosesInFrame {
 
 /// @brief Information about a selected entity in a visualization panel
 struct SelectedEntity {
-  /// @brief Timestamp of the selection
-  std::optional<Timestamp> timestamp;
-
-  /// @brief Frame of reference for the selected entity
-  std::string frame_id;
-
   /// @brief Topic from which the entity originated
   std::string source_topic;
 
   /// @brief Schema name of the source message
   std::string source_schema_name;
-
-  /// @brief Identifier of the selected entity
-  std::string entity_id;
 
   /// @brief Selected scene entity
   std::optional<SceneEntity> scene_entity;

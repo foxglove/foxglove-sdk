@@ -1280,44 +1280,35 @@ pub struct SceneUpdate {
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct SelectedEntity {
-    /// Timestamp of the selection
-    #[prost(message, optional, tag = "1")]
-    pub timestamp: ::core::option::Option<crate::messages::Timestamp>,
-    /// Frame of reference for the selected entity
-    #[prost(string, tag = "2")]
-    pub frame_id: ::prost::alloc::string::String,
     /// Topic from which the entity originated
-    #[prost(string, tag = "3")]
+    #[prost(string, tag = "1")]
     pub source_topic: ::prost::alloc::string::String,
     /// Schema name of the source message
-    #[prost(string, tag = "4")]
+    #[prost(string, tag = "2")]
     pub source_schema_name: ::prost::alloc::string::String,
-    /// Identifier of the selected entity
-    #[prost(string, tag = "5")]
-    pub entity_id: ::prost::alloc::string::String,
     /// Selected scene entity
-    #[prost(message, optional, tag = "6")]
+    #[prost(message, optional, tag = "3")]
     pub scene_entity: ::core::option::Option<SceneEntity>,
     /// Selected point cloud
-    #[prost(message, optional, tag = "7")]
+    #[prost(message, optional, tag = "4")]
     pub point_cloud: ::core::option::Option<PointCloud>,
     /// Selected laser scan
-    #[prost(message, optional, tag = "8")]
+    #[prost(message, optional, tag = "5")]
     pub laser_scan: ::core::option::Option<LaserScan>,
     /// Selected grid
-    #[prost(message, optional, tag = "9")]
+    #[prost(message, optional, tag = "6")]
     pub grid: ::core::option::Option<Grid>,
     /// Selected voxel grid
-    #[prost(message, optional, tag = "10")]
+    #[prost(message, optional, tag = "7")]
     pub voxel_grid: ::core::option::Option<VoxelGrid>,
     /// Selected camera calibration
-    #[prost(message, optional, tag = "11")]
+    #[prost(message, optional, tag = "8")]
     pub camera_calibration: ::core::option::Option<CameraCalibration>,
     /// Selected pose in frame
-    #[prost(message, optional, tag = "12")]
+    #[prost(message, optional, tag = "9")]
     pub pose_in_frame: ::core::option::Option<PoseInFrame>,
     /// Selected poses in frame
-    #[prost(message, optional, tag = "13")]
+    #[prost(message, optional, tag = "10")]
     pub poses_in_frame: ::core::option::Option<PosesInFrame>,
 }
 /// A primitive representing a sphere or ellipsoid

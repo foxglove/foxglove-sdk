@@ -1620,14 +1620,6 @@ typedef struct foxglove_poses_in_frame {
  */
 typedef struct foxglove_selected_entity {
   /**
-   * Timestamp of the selection
-   */
-  const struct foxglove_timestamp *timestamp;
-  /**
-   * Frame of reference for the selected entity
-   */
-  struct foxglove_string frame_id;
-  /**
    * Topic from which the entity originated
    */
   struct foxglove_string source_topic;
@@ -1635,10 +1627,6 @@ typedef struct foxglove_selected_entity {
    * Schema name of the source message
    */
   struct foxglove_string source_schema_name;
-  /**
-   * Identifier of the selected entity
-   */
-  struct foxglove_string entity_id;
   /**
    * Selected scene entity
    */
