@@ -25,9 +25,11 @@ set -eu
 
 NETEM_ARGS="${NETEM_ARGS:-delay 80ms 20ms loss 2%}"
 
-# Track whether any per-link tc command fails. We continue past failures to
-# apply rules on other interfaces, but exit non-zero at the end so the
-# container healthcheck can detect partial setup.
+# Track whether any per-link tc command fails on an interface that accepted the
+# HTB root. We continue past failures to apply rules on other interfaces, but
+# exit non-zero at the end so the container healthcheck can detect partial setup.
+# Flat-mode failures are logged but not tracked here since some interfaces
+# (e.g. lo) legitimately don't support netem.
 SETUP_ERRORS=0
 
 # ---------------------------------------------------------------------------
@@ -51,17 +53,23 @@ LINK_NAMES=$(echo "$LINK_NAMES" | sed 's/^ //')
 
 for iface in $(ls /sys/class/net/); do
     if [ -z "$LINK_NAMES" ]; then
-        # Flat mode: single root netem qdisc.
+        # Flat mode: single root netem qdisc. Some interfaces (e.g. lo) may
+        # not support netem; failures are logged but not fatal since at least
+        # one interface (eth0) must succeed for the tests to work.
         # shellcheck disable=SC2086
-        tc qdisc replace dev "$iface" root netem $NETEM_ARGS 2>/dev/null && \
-            echo "netem (flat) applied to $iface: $NETEM_ARGS"
+        tc qdisc replace dev "$iface" root netem $NETEM_ARGS 2>/dev/null \
+            && echo "netem (flat) applied to $iface: $NETEM_ARGS" \
+            || echo "  WARNING: failed to apply netem to $iface (may be expected for lo)"
     else
         # Per-link mode: HTB root with netem leaf classes.
         echo "configuring per-link netem on $iface..."
 
         # HTB root qdisc. Unclassified traffic goes to default class 1:ff00.
         # Use a high class ID for the default to leave room for link classes.
-        tc qdisc replace dev "$iface" root handle 1: htb default ff00 2>/dev/null || continue
+        # Failure here (e.g. on lo) means we can't add child classes, so skip
+        # this interface but still track the error.
+        tc qdisc replace dev "$iface" root handle 1: htb default ff00 2>/dev/null \
+            || { echo "  ERROR: failed to add HTB root qdisc on $iface"; SETUP_ERRORS=$((SETUP_ERRORS + 1)); continue; }
 
         # Default class (unclassified traffic).
         tc class add dev "$iface" parent 1: classid 1:ff00 htb rate 10gbit 2>/dev/null \
@@ -77,10 +85,11 @@ for iface in $(ls /sys/class/net/); do
             dst_var="NETEM_LINK_${name}_DST"
             args_var="NETEM_LINK_${name}_ARGS"
 
-            # eval is safe here — the variable names are derived from env var
-            # keys we control (filtered by the grep pattern above). We avoid
-            # passing NETEM_ARGS through eval to prevent shell metacharacter
-            # interpretation.
+            # eval is used for variable indirection — the variable names are
+            # derived from env var keys we control (filtered by the grep
+            # pattern above). The resulting values ($link_args) are passed
+            # unquoted to tc (intentional word-splitting); callers must not
+            # include shell metacharacters in NETEM_LINK_*_ARGS values.
             eval "dst=\${$dst_var:-}"
             eval "link_args=\${$args_var:-}"
             link_args="${link_args:-$NETEM_ARGS}"
