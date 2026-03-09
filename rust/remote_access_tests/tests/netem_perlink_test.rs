@@ -307,6 +307,10 @@ fn perlink_link_a_has_more_packet_loss_than_link_b() -> Result<()> {
     let (sent_a, received_a) = measure_udp_loss(&container, TARGET_A_IP, packet_count)?;
     let (sent_b, received_b) = measure_udp_loss(&container, TARGET_B_IP, packet_count)?;
 
+    assert!(
+        received_a <= sent_a && received_b <= sent_b,
+        "received more packets than sent (A: {received_a}/{sent_a}, B: {received_b}/{sent_b})"
+    );
     let lost_a = sent_a - received_a;
     let lost_b = sent_b - received_b;
     let loss_rate_a = (lost_a as f64 / sent_a as f64) * 100.0;
