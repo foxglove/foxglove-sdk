@@ -61,6 +61,13 @@ fn netem_container_id() -> Result<String> {
         .output()
         .context("failed to run docker ps")?;
 
+    anyhow::ensure!(
+        output.status.success(),
+        "docker ps failed ({}): {}",
+        output.status,
+        String::from_utf8_lossy(&output.stderr)
+    );
+
     let stdout = String::from_utf8(output.stdout).context("invalid UTF-8 from docker ps")?;
 
     // Take the first matching container. If there are multiple netem containers
