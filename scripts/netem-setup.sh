@@ -86,13 +86,17 @@ for iface in $(ls /sys/class/net/); do
         tc qdisc replace dev "$iface" root handle 1: htb default ff00 2>/dev/null \
             || { echo "  ERROR: failed to add HTB root qdisc on $iface"; SETUP_ERRORS=$((SETUP_ERRORS + 1)); continue; }
 
-        # Default class (unclassified traffic).
+        # Default class (unclassified traffic). Only log success if both
+        # commands succeed; failures are already logged by the || clauses.
+        default_ok=true
         tc class add dev "$iface" parent 1: classid 1:ff00 htb rate 10gbit 2>/dev/null \
-            || { echo "  ERROR: failed to add default class on $iface"; SETUP_ERRORS=$((SETUP_ERRORS + 1)); }
+            || { echo "  ERROR: failed to add default class on $iface"; SETUP_ERRORS=$((SETUP_ERRORS + 1)); default_ok=false; }
         # shellcheck disable=SC2086
         tc qdisc add dev "$iface" parent 1:ff00 handle ff00: netem $NETEM_ARGS 2>/dev/null \
-            || { echo "  ERROR: failed to add netem qdisc on default class ($iface)"; SETUP_ERRORS=$((SETUP_ERRORS + 1)); }
-        echo "  default class 1:ff00 -> netem $NETEM_ARGS"
+            || { echo "  ERROR: failed to add netem qdisc on default class ($iface)"; SETUP_ERRORS=$((SETUP_ERRORS + 1)); default_ok=false; }
+        if [ "$default_ok" = true ]; then
+            echo "  default class 1:ff00 -> netem $NETEM_ARGS"
+        fi
 
         # Per-link classes. Assign class IDs starting at 1:10, incrementing by 10.
         class_minor=10
@@ -115,15 +119,20 @@ for iface in $(ls /sys/class/net/); do
             class_id="1:$(printf '%x' $class_minor)"
             handle="$(printf '%x' $class_minor):"
 
+            # Only log success if all three commands succeed; failures are
+            # already logged by the || clauses.
+            link_ok=true
             tc class add dev "$iface" parent 1: classid "$class_id" htb rate 10gbit 2>/dev/null \
-                || { echo "  ERROR: failed to add class $class_id on $iface"; SETUP_ERRORS=$((SETUP_ERRORS + 1)); }
+                || { echo "  ERROR: failed to add class $class_id on $iface"; SETUP_ERRORS=$((SETUP_ERRORS + 1)); link_ok=false; }
             # shellcheck disable=SC2086
             tc qdisc add dev "$iface" parent "$class_id" handle "$handle" netem $link_args 2>/dev/null \
-                || { echo "  ERROR: failed to add netem qdisc on class $class_id ($iface)"; SETUP_ERRORS=$((SETUP_ERRORS + 1)); }
+                || { echo "  ERROR: failed to add netem qdisc on class $class_id ($iface)"; SETUP_ERRORS=$((SETUP_ERRORS + 1)); link_ok=false; }
             tc filter add dev "$iface" parent 1: protocol ip u32 \
                 match ip dst "$dst/32" flowid "$class_id" 2>/dev/null \
-                || { echo "  ERROR: failed to add u32 filter for $dst on $iface"; SETUP_ERRORS=$((SETUP_ERRORS + 1)); }
-            echo "  link $name: class $class_id -> dst $dst -> netem $link_args"
+                || { echo "  ERROR: failed to add u32 filter for $dst on $iface"; SETUP_ERRORS=$((SETUP_ERRORS + 1)); link_ok=false; }
+            if [ "$link_ok" = true ]; then
+                echo "  link $name: class $class_id -> dst $dst -> netem $link_args"
+            fi
 
             class_minor=$((class_minor + 10))
         done
