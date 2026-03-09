@@ -20,7 +20,7 @@ use crate::{
     protocol::v2::{
         BinaryMessage, JsonMessage,
         client::{self, ClientMessage},
-        server::{MessageData as ServerMessageData, ServerInfo, Unadvertise, advertise},
+        server::{MessageData as ServerMessageData, ServerInfo, Status, Unadvertise, advertise},
     },
     remote_access::{RemoteAccessError, participant::Participant, session_state::SessionState},
 };
@@ -116,16 +116,21 @@ impl Sink for RemoteAccessSession {
     ) -> std::result::Result<(), FoxgloveError> {
         let channel_id = channel.id();
 
-        // If a video publisher is active for this channel, send the frame to it
-        // and skip the raw data plane.
-        if let Some(publisher) = self.state.read().get_video_publisher(&channel_id) {
+        let state = self.state.read();
+
+        // Send to video publisher if any subscribers requested a video track.
+        if let Some(publisher) = state.get_video_publisher(&channel_id) {
             publisher.send(Bytes::copy_from_slice(msg), metadata.log_time);
-            return Ok(());
         }
 
-        let message = ServerMessageData::new(u64::from(channel_id), metadata.log_time, msg);
-        let data = encode_binary_message(&message);
-        self.send_data_lossy(ChannelMessage { channel_id, data });
+        // Send to data subscribers.
+        if state.has_data_subscribers(&channel_id) {
+            drop(state);
+            let message = ServerMessageData::new(u64::from(channel_id), metadata.log_time, msg);
+            let data = encode_binary_message(&message);
+            self.send_data_lossy(ChannelMessage { channel_id, data });
+        }
+
         Ok(())
     }
 
@@ -262,6 +267,14 @@ impl RemoteAccessSession {
         if let Err(e) = self.control_plane_tx.send(msg) {
             warn!("control plane queue disconnected, dropping message: {e}");
         }
+    }
+
+    /// Send an error status message to a participant.
+    fn send_error(&self, participant: &Arc<Participant>, message: String) {
+        debug!("Sending error to {participant}: {message}");
+        let status = Status::error(message);
+        let framed = frame_text_message(status.to_string().as_bytes());
+        self.send_control(participant.clone(), framed);
     }
 
     /// Enqueue a control plane message for all currently connected participants.
@@ -450,17 +463,46 @@ impl RemoteAccessSession {
 
     fn handle_client_subscribe(
         self: &Arc<Self>,
-        participant: &Participant,
+        participant: &Arc<Participant>,
         msg: client::Subscribe,
     ) {
         let _guard = self.subscription_lock.lock();
-        let channel_ids: Vec<ChannelId> = msg
-            .channel_ids
-            .iter()
-            .map(|&id| ChannelId::new(id))
-            .collect();
 
-        let first_subscribed = self.state.write().subscribe(participant, &channel_ids);
+        // Collect new & modified subscriptions.
+        //
+        // If the client's subscription request is unsatisfiable, reject it with an error status
+        // message. Note that when a re-subscription fails, we currently leave the original
+        // subscription intact. In the future, we may choose to remove the original subscription.
+        let mut channel_ids = SmallVec::<[ChannelId; 4]>::new();
+        let mut video_channel_ids = SmallVec::<[ChannelId; 4]>::new();
+        let mut data_channel_ids = SmallVec::<[ChannelId; 4]>::new();
+        let state = self.state.read();
+        for ch in &msg.channels {
+            let channel_id = ChannelId::new(ch.id);
+            if ch.request_video_track {
+                if state.get_video_schema(&channel_id).is_some() {
+                    video_channel_ids.push(channel_id);
+                } else {
+                    self.send_error(
+                        participant,
+                        format!("Channel {} does not support video transcoding", ch.id),
+                    );
+                    continue;
+                }
+            } else {
+                data_channel_ids.push(channel_id);
+            }
+            channel_ids.push(channel_id);
+        }
+        drop(state);
+
+        let mut state = self.state.write();
+        let first_subscribed = state.subscribe(participant, &channel_ids);
+        state.subscribe_data(participant, &data_channel_ids);
+        state.unsubscribe_data(participant, &video_channel_ids);
+        let first_video_subscribed = state.subscribe_video(participant, &video_channel_ids);
+        let last_video_unsubscribed = state.unsubscribe_video(participant, &data_channel_ids);
+        drop(state);
 
         if !first_subscribed.is_empty() {
             if let Some(context) = self.context.upgrade() {
@@ -468,7 +510,8 @@ impl RemoteAccessSession {
             }
         }
 
-        self.start_video_tracks(&first_subscribed);
+        self.start_video_tracks(&first_video_subscribed);
+        self.stop_video_tracks(&last_video_unsubscribed);
     }
 
     fn handle_client_unsubscribe(
@@ -483,7 +526,11 @@ impl RemoteAccessSession {
             .map(|&id| ChannelId::new(id))
             .collect();
 
-        let last_unsubscribed = self.state.write().unsubscribe(participant, &channel_ids);
+        let mut state = self.state.write();
+        let last_unsubscribed = state.unsubscribe(participant, &channel_ids);
+        state.unsubscribe_data(participant, &channel_ids);
+        let last_video_unsubscribed = state.unsubscribe_video(participant, &channel_ids);
+        drop(state);
 
         if !last_unsubscribed.is_empty() {
             if let Some(context) = self.context.upgrade() {
@@ -491,7 +538,7 @@ impl RemoteAccessSession {
             }
         }
 
-        self.stop_video_tracks(&last_unsubscribed);
+        self.stop_video_tracks(&last_video_unsubscribed);
     }
 
     /// Add a participant to the server, if it hasn't already been added.
@@ -539,15 +586,15 @@ impl RemoteAccessSession {
     /// Channels that lose their last subscriber are unsubscribed from the context.
     pub(crate) fn remove_participant(self: &Arc<Self>, participant_id: &ParticipantIdentity) {
         let _guard = self.subscription_lock.lock();
-        let last_unsubscribed = self.state.write().remove_participant(participant_id);
+        let removed = self.state.write().remove_participant(participant_id);
 
-        if !last_unsubscribed.is_empty() {
+        if !removed.last_unsubscribed.is_empty() {
             if let Some(context) = self.context.upgrade() {
-                context.unsubscribe_channels(self.sink_id, &last_unsubscribed);
+                context.unsubscribe_channels(self.sink_id, &removed.last_unsubscribed);
             }
         }
 
-        self.stop_video_tracks(&last_unsubscribed);
+        self.stop_video_tracks(&removed.last_video_unsubscribed);
     }
 
     /// Enqueue server info and channel advertisements for delivery to a participant.
@@ -722,22 +769,18 @@ where
     // Read the current subscription version (fast read-lock, no await).
     let (current_version, subscribers) = {
         let state = state.read();
-        let Some(sub) = state.get_subscription(channel_id) else {
+        // Only consider data subscribers.
+        let Some(sub) = state.get_data_subscription(channel_id) else {
             channel_writers.remove(channel_id);
             return None;
         };
-        // This is very defensive because we always remove the subscription when empty in unsubscribe
-        if sub.is_empty() {
-            channel_writers.remove(channel_id);
-            return None;
-        }
+        debug_assert!(!sub.subscribers().is_empty());
         let cached_version = channel_writers.get(channel_id).map(|w| w.version());
         if cached_version == Some(sub.version()) {
             // Fast path: writer is up to date.
             return channel_writers.get(channel_id);
         }
-        let subscribers: Vec<ParticipantIdentity> = sub.subscribers().to_vec();
-        (sub.version(), subscribers)
+        (sub.version(), sub.subscribers().to_vec())
     };
 
     // Subscriber set changed (or no writer yet): open a new byte stream.
@@ -821,7 +864,7 @@ mod tests {
         let state = RwLock::new(SessionState::new());
         let (_id, p) = make_participant("alice");
         let ch = ChannelId::new(1);
-        state.write().subscribe(&p, &[ch]);
+        state.write().subscribe_data(&p, &[ch]);
 
         let test_writer = Arc::new(TestChannelWriter::default());
         let mut writers = HashMap::new();
@@ -847,7 +890,7 @@ mod tests {
         let state = RwLock::new(SessionState::new());
         let (_id, p) = make_participant("alice");
         let ch = ChannelId::new(1);
-        state.write().subscribe(&p, &[ch]);
+        state.write().subscribe_data(&p, &[ch]);
 
         let test_writer = Arc::new(TestChannelWriter::default());
         let mut writers = HashMap::new();
@@ -891,7 +934,7 @@ mod tests {
         let (_id_a, pa) = make_participant("alice");
         let (_id_b, pb) = make_participant("bob");
         let ch = ChannelId::new(1);
-        state.write().subscribe(&pa, &[ch]);
+        state.write().subscribe_data(&pa, &[ch]);
 
         let writer1 = Arc::new(TestChannelWriter::default());
         let mut writers = HashMap::new();
@@ -903,7 +946,7 @@ mod tests {
         process_data_message(&state, &msg1, &mut writers, test_factory(writer1.clone())).await;
 
         // Adding a subscriber bumps the version, so the next message creates a new writer.
-        state.write().subscribe(&pb, &[ch]);
+        state.write().subscribe_data(&pb, &[ch]);
 
         let writer2 = Arc::new(TestChannelWriter::default());
         let msg2 = ChannelMessage {
@@ -944,7 +987,7 @@ mod tests {
         let state = RwLock::new(SessionState::new());
         let (_id, p) = make_participant("alice");
         let ch = ChannelId::new(1);
-        state.write().subscribe(&p, &[ch]);
+        state.write().subscribe_data(&p, &[ch]);
 
         let failing = Arc::new(TestChannelWriter::new_failing());
         let mut writers = HashMap::new();
@@ -962,11 +1005,46 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn writer_replaced_after_unsubscribe_resubscribe() {
+        let state = RwLock::new(SessionState::new());
+        let (_id, p) = make_participant("alice");
+        let ch = ChannelId::new(1);
+        state.write().subscribe_data(&p, &[ch]);
+
+        let writer1 = Arc::new(TestChannelWriter::default());
+        let mut writers = HashMap::new();
+
+        // First message creates a writer.
+        let msg1 = ChannelMessage {
+            channel_id: ch,
+            data: Bytes::from_static(b"before"),
+        };
+        process_data_message(&state, &msg1, &mut writers, test_factory(writer1.clone())).await;
+        assert_eq!(writer1.writes(), vec![Bytes::from_static(b"before")]);
+
+        // Unsubscribe and resubscribe — the version counter is preserved,
+        // so the new version differs from the cached writer's version.
+        state.write().unsubscribe_data(&p, &[ch]);
+        state.write().subscribe_data(&p, &[ch]);
+
+        // Second message should create a NEW writer (not reuse the old one).
+        let writer2 = Arc::new(TestChannelWriter::default());
+        let msg2 = ChannelMessage {
+            channel_id: ch,
+            data: Bytes::from_static(b"after"),
+        };
+        process_data_message(&state, &msg2, &mut writers, test_factory(writer2.clone())).await;
+
+        assert_eq!(writer1.writes(), vec![Bytes::from_static(b"before")]);
+        assert_eq!(writer2.writes(), vec![Bytes::from_static(b"after")]);
+    }
+
+    #[tokio::test]
     async fn stream_open_failure_does_not_cache_writer() {
         let state = RwLock::new(SessionState::new());
         let (_id, p) = make_participant("alice");
         let ch = ChannelId::new(1);
-        state.write().subscribe(&p, &[ch]);
+        state.write().subscribe_data(&p, &[ch]);
 
         let mut writers = HashMap::new();
 

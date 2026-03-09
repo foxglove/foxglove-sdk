@@ -10,6 +10,7 @@ mod message_data;
 #[allow(unused_imports)]
 pub use crate::protocol::common::server::advertise;
 pub use crate::protocol::common::server::server_info;
+pub use crate::protocol::common::server::status;
 pub use crate::protocol::common::server::{
     Advertise, AdvertiseServices, ConnectionGraphUpdate, FetchAssetResponse, ParameterValues,
     PlaybackState, RemoveStatus, ServerInfo, ServiceCallFailure, ServiceCallResponse, Status, Time,
