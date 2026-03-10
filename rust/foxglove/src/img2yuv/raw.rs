@@ -51,8 +51,9 @@ pub enum RawImageEncoding {
 impl RawImageEncoding {
     /// Returns a canonical encoding string for this format.
     ///
-    /// This is the inverse of [`parse_endian`](Self::parse_endian), returning the preferred
-    /// (non-aliased) name for each encoding.
+    /// Returns the preferred (non-aliased) name for each encoding. Note that endianness
+    /// information is not preserved: both `Mono16(BigEndian)` and `Mono16(LittleEndian)`
+    /// produce `"mono16"`.
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Rgb8 => "rgb8",

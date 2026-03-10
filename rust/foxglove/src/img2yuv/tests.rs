@@ -624,10 +624,13 @@ fn test_mono32fle_yuv420_padded() {
 
 // ---- as_str / round-trip tests ----
 
-/// Verify that RawImageEncoding::as_str() produces strings that parse_endian() accepts,
-/// and that the result round-trips back to the same encoding.
+/// Verify that every canonical string from `as_str()` is accepted by `parse_endian()`.
+///
+/// Note: this is not a true round-trip for `Mono16` and `Mono32F` because `as_str()` drops
+/// endianness information. The endianness of the parsed result comes from the `parse_endian`
+/// hint, not the string.
 #[test]
-fn test_raw_encoding_as_str_round_trip() {
+fn test_raw_encoding_as_str_parses_back() {
     let cases = [
         RawImageEncoding::Rgb8,
         RawImageEncoding::Rgba8,
@@ -636,8 +639,6 @@ fn test_raw_encoding_as_str_round_trip() {
         RawImageEncoding::Uyvy,
         RawImageEncoding::Yuyv,
         RawImageEncoding::Mono8,
-        RawImageEncoding::Mono16(Endian::Little),
-        RawImageEncoding::Mono32F(Endian::Little),
         RawImageEncoding::Bayer8(BayerCfa::Bggr),
         RawImageEncoding::Bayer8(BayerCfa::Gbrg),
         RawImageEncoding::Bayer8(BayerCfa::Grbg),
@@ -647,7 +648,20 @@ fn test_raw_encoding_as_str_round_trip() {
         let s = encoding.as_str();
         let parsed = RawImageEncoding::parse_endian(s, Endian::Little)
             .unwrap_or_else(|e| panic!("failed to parse canonical string {s:?}: {e}"));
-        assert_eq!(parsed, encoding, "round-trip failed for {s:?}");
+        assert_eq!(parsed, encoding, "parse failed for {s:?}");
+    }
+
+    // Mono16/Mono32F: as_str() drops endianness, so the parsed result uses the hint.
+    for endian in [Endian::Little, Endian::Big] {
+        let s = RawImageEncoding::Mono16(endian).as_str();
+        assert_eq!(s, "mono16");
+        let parsed = RawImageEncoding::parse_endian(s, endian).unwrap();
+        assert_eq!(parsed, RawImageEncoding::Mono16(endian));
+
+        let s = RawImageEncoding::Mono32F(endian).as_str();
+        assert_eq!(s, "32FC1");
+        let parsed = RawImageEncoding::parse_endian(s, endian).unwrap();
+        assert_eq!(parsed, RawImageEncoding::Mono32F(endian));
     }
 }
 
