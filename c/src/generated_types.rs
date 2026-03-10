@@ -2529,7 +2529,7 @@ pub struct ImageAnnotations {
     pub texts: *const TextAnnotation,
     pub texts_count: usize,
 
-    /// Additional user-provided metadata associated with all annotations in the message. Keys must be unique.
+    /// Additional user-provided metadata associated with the image annotations. Keys must be unique within this object. Per-annotation metadata takes precedence over these values.
     pub metadata: *const KeyValuePair,
     pub metadata_count: usize,
 }

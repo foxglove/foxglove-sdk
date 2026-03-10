@@ -1536,7 +1536,7 @@ const ImageAnnotations: FoxgloveMessageSchema = {
       name: "metadata",
       type: { type: "nested", schema: KeyValuePair },
       description:
-        "Additional user-provided metadata associated with all annotations in the message. Keys must be unique.",
+        "Additional user-provided metadata associated with the image annotations. Keys must be unique within this object. Per-annotation metadata takes precedence over these values.",
       array: true,
       optional: true,
       protobufFieldNumber: 4,

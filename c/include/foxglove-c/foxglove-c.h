@@ -1138,7 +1138,7 @@ typedef struct foxglove_image_annotations {
   const struct foxglove_text_annotation *texts;
   size_t texts_count;
   /**
-   * Additional user-provided metadata associated with all annotations in the message. Keys must be unique.
+   * Additional user-provided metadata associated with the image annotations. Keys must be unique within this object. Per-annotation metadata takes precedence over these values.
    */
   const struct foxglove_key_value_pair *metadata;
   size_t metadata_count;

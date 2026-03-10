@@ -21,6 +21,6 @@ export type ImageAnnotations = {
   /** Text annotations */
   texts: TextAnnotation[];
 
-  /** Additional user-provided metadata associated with all annotations in the message. Keys must be unique. */
+  /** Additional user-provided metadata associated with the image annotations. Keys must be unique within this object. Per-annotation metadata takes precedence over these values. */
   metadata?: KeyValuePair[];
 };

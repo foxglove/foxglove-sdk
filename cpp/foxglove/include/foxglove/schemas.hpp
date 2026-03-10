@@ -1045,8 +1045,8 @@ struct ImageAnnotations {
   /// @brief Text annotations
   std::vector<TextAnnotation> texts;
 
-  /// @brief Additional user-provided metadata associated with all annotations in the message. Keys
-  /// must be unique.
+  /// @brief Additional user-provided metadata associated with the image annotations. Keys must be
+  /// unique within this object. Per-annotation metadata takes precedence over these values.
   std::vector<KeyValuePair> metadata;
 
   /// @brief Encoded the ImageAnnotations as protobuf to the provided buffer.

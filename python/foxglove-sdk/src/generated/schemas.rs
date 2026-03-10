@@ -1109,7 +1109,7 @@ impl From<VoxelGrid> for foxglove::schemas::VoxelGrid {
 /// :param circles: Circle annotations
 /// :param points: Points annotations
 /// :param texts: Text annotations
-/// :param metadata: Additional user-provided metadata associated with all annotations in the message. Keys must be unique.
+/// :param metadata: Additional user-provided metadata associated with the image annotations. Keys must be unique within this object. Per-annotation metadata takes precedence over these values.
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/image-annotations
 #[pyclass(module = "foxglove.schemas")]
