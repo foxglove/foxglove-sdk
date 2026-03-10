@@ -13,8 +13,7 @@ use livekit::id::ParticipantIdentity;
 use livekit::{Room, RoomEvent, RoomOptions, StreamByteOptions, StreamWriter as _};
 use tracing::info;
 
-use foxglove::protocol::v2::BinaryMessage;
-use foxglove::protocol::v2::client::{Subscribe, Unsubscribe};
+use foxglove::protocol::v2::client::{Subscribe, SubscribeChannel, Unsubscribe};
 use foxglove::protocol::v2::server::ServerMessage;
 
 use crate::frame::{self, Frame, OpCode};
@@ -225,6 +224,15 @@ impl ViewerConnection {
         }
     }
 
+    /// Reads and returns the next Status message.
+    pub async fn expect_status(&mut self) -> Result<foxglove::protocol::v2::server::Status> {
+        let msg = self.frame_reader.next_server_message().await?;
+        match msg {
+            ServerMessage::Status(status) => Ok(status),
+            other => anyhow::bail!("expected Status, got: {other:?}"),
+        }
+    }
+
     /// Reads and returns the next Unadvertise message.
     pub async fn expect_unadvertise(
         &mut self,
@@ -248,12 +256,25 @@ impl ViewerConnection {
     }
 
     /// Opens a byte stream back to the gateway participant and sends a
-    /// binary-framed Subscribe message. Polls `channel.has_sinks()` to confirm
-    /// the gateway has processed the subscription.
+    /// JSON-framed Subscribe message.
     pub async fn send_subscribe(&self, channel_ids: &[u64]) -> Result<()> {
-        let subscribe = Subscribe::new(channel_ids.iter().copied());
-        let inner = subscribe.to_bytes();
-        let framed = frame::frame_binary_message(&inner);
+        self.send_subscribe_channels(
+            channel_ids
+                .iter()
+                .map(|&id| SubscribeChannel {
+                    id,
+                    request_video_track: false,
+                })
+                .collect(),
+        )
+        .await
+    }
+
+    /// Opens a byte stream and sends a JSON-framed Subscribe with explicit channel options.
+    pub async fn send_subscribe_channels(&self, channels: Vec<SubscribeChannel>) -> Result<()> {
+        let subscribe = Subscribe { channels };
+        let json = serde_json::to_string(&subscribe)?;
+        let framed = frame::frame_text_message(json.as_bytes());
 
         let gateway_identity = ParticipantIdentity(mock_server::TEST_DEVICE_ID.to_string());
         let writer = self
@@ -286,11 +307,29 @@ impl ViewerConnection {
         Ok(())
     }
 
-    /// Sends a binary-framed Unsubscribe message to the gateway.
+    /// Sends a Subscribe with video requested and waits for the channel to have at least one sink.
+    pub async fn subscribe_video_and_wait(
+        &self,
+        channel_ids: &[u64],
+        channel: &foxglove::RawChannel,
+    ) -> Result<()> {
+        let channels = channel_ids
+            .iter()
+            .map(|&id| SubscribeChannel {
+                id,
+                request_video_track: true,
+            })
+            .collect();
+        self.send_subscribe_channels(channels).await?;
+        poll_until(|| channel.has_sinks()).await;
+        Ok(())
+    }
+
+    /// Sends a JSON-framed Unsubscribe message to the gateway.
     pub async fn send_unsubscribe(&self, channel_ids: &[u64]) -> Result<()> {
         let unsubscribe = Unsubscribe::new(channel_ids.iter().copied());
-        let inner = unsubscribe.to_bytes();
-        let framed = frame::frame_binary_message(&inner);
+        let json = serde_json::to_string(&unsubscribe)?;
+        let framed = frame::frame_text_message(json.as_bytes());
 
         let gateway_identity = ParticipantIdentity(mock_server::TEST_DEVICE_ID.to_string());
         let writer = self
