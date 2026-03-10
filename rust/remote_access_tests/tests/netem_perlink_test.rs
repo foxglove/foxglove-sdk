@@ -329,8 +329,8 @@ fn perlink_link_a_has_more_packet_loss_than_link_b() -> Result<()> {
         received_a <= sent_a && received_b <= sent_b,
         "received more packets than sent (A: {received_a}/{sent_a}, B: {received_b}/{sent_b})"
     );
-    let lost_a = sent_a - received_a;
-    let lost_b = sent_b - received_b;
+    let lost_a = sent_a.saturating_sub(received_a);
+    let lost_b = sent_b.saturating_sub(received_b);
     let loss_rate_a = (lost_a as f64 / sent_a as f64) * 100.0;
     let loss_rate_b = (lost_b as f64 / sent_b as f64) * 100.0;
 

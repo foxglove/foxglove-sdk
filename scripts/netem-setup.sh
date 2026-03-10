@@ -68,15 +68,17 @@ LINK_NAMES=$(echo "$LINK_NAMES" | sed 's/^ //')
 
 for iface in $(ls /sys/class/net/); do
     if [ -z "$LINK_NAMES" ]; then
-        # Flat mode: single root netem qdisc. Some interfaces (e.g. lo) may
-        # not support netem; failures are logged but not fatal since at least
-        # one interface (eth0) must succeed for the tests to work.
+        # Flat mode: single root netem qdisc. Apply to all interfaces to cover
+        # both Docker (eth0) and Podman rootless/pasta (which may use different
+        # interface names). Some interfaces (e.g. lo) may not support netem;
+        # failures are logged but not fatal since at least one must succeed.
         # shellcheck disable=SC2086
         tc qdisc replace dev "$iface" root netem $NETEM_ARGS 2>/dev/null \
             && echo "netem (flat) applied to $iface: $NETEM_ARGS" \
             || echo "  WARNING: failed to apply netem to $iface (may be expected for lo)"
     else
-        # Per-link mode: HTB root with netem leaf classes.
+        # Per-link mode: HTB root with netem leaf classes. Applied to all
+        # interfaces (same Docker/Podman rationale as flat mode).
         echo "configuring per-link netem on $iface..."
 
         # HTB root qdisc. Unclassified traffic goes to default class 1:ff00.
