@@ -32,6 +32,8 @@ pub const SHUTDOWN_TIMEOUT: Duration = Duration::from_secs(10);
 pub const POLL_INTERVAL: Duration = Duration::from_millis(50);
 /// Per-attempt timeout when waiting for a byte stream during connection retries.
 pub const CONNECT_RETRY_TIMEOUT: Duration = Duration::from_secs(5);
+/// Sleep between connection retry attempts when `Room::connect` fails transiently.
+pub const CONNECT_RETRY_SLEEP: Duration = Duration::from_millis(500);
 
 /// Type alias for a channel filter function passed to [`TestGateway::start_with_filter`].
 pub type ChannelFilterFn =
@@ -166,7 +168,7 @@ impl ViewerConnection {
                         return Err(err).context("viewer failed to connect to LiveKit");
                     }
                     info!("{viewer_identity} connect failed ({err:#}), retrying...");
-                    tokio::time::sleep(Duration::from_millis(500)).await;
+                    tokio::time::sleep(CONNECT_RETRY_SLEEP).await;
                     continue;
                 }
             };
