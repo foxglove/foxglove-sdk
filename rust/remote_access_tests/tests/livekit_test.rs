@@ -7,10 +7,10 @@
 use std::time::Duration;
 
 use anyhow::{Context as _, Result};
-use foxglove::{Encode, Schema};
-use foxglove::schemas::{RawImage, Timestamp};
 use foxglove::protocol::v2::client::SubscribeChannel;
 use foxglove::protocol::v2::server::ServerMessage;
+use foxglove::schemas::{RawImage, Timestamp};
+use foxglove::{Encode, Schema};
 use livekit::{Room, RoomOptions};
 use remote_access_tests::livekit_token;
 use remote_access_tests::test_helpers::{TestGateway, ViewerConnection, poll_until};
@@ -835,13 +835,10 @@ async fn livekit_video_metadata_advertised_after_image_logged() -> Result<()> {
     // The session's run_sender loop will detect the metadata change and re-advertise.
     let deadline = tokio::time::Instant::now() + Duration::from_secs(10);
     let metadata = loop {
-        let msg = tokio::time::timeout_at(
-            deadline,
-            viewer.frame_reader.next_server_message(),
-        )
-        .await
-        .context("timeout waiting for re-advertisement with video metadata")?
-        .context("failed to read server message")?;
+        let msg = tokio::time::timeout_at(deadline, viewer.frame_reader.next_server_message())
+            .await
+            .context("timeout waiting for re-advertisement with video metadata")?
+            .context("failed to read server message")?;
 
         if let ServerMessage::Advertise(adv) = msg {
             if let Some(ch) = adv.channels.iter().find(|c| c.id == channel_id) {
@@ -854,7 +851,9 @@ async fn livekit_video_metadata_advertised_after_image_logged() -> Result<()> {
     };
 
     assert_eq!(
-        metadata.get("foxglove.videoSourceEncoding").map(|s| s.as_str()),
+        metadata
+            .get("foxglove.videoSourceEncoding")
+            .map(|s| s.as_str()),
         Some("rgb8"),
         "videoSourceEncoding should be rgb8"
     );
