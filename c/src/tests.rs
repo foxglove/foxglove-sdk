@@ -2,7 +2,7 @@ use std::pin::pin;
 
 use crate::{
     CircleAnnotation, FoxglovePointsAnnotationType, FoxgloveString, FoxgloveTimestamp,
-    ImageAnnotations, Point2, PointsAnnotation, TextAnnotation,
+    ImageAnnotations, KeyValuePair, Point2, PointsAnnotation, TextAnnotation,
     arena::{Arena, BorrowToNative},
     generated_types::{Color, Point3, Pose, Quaternion, TriangleListPrimitive, Vector3},
 };
@@ -176,7 +176,16 @@ fn test_image_annotations_borrow_to_native() {
                 b: 0.9,
                 a: 1.0,
             }),
-            metadata: vec![],
+            metadata: vec![
+                foxglove::messages::KeyValuePair {
+                    key: "label".to_string(),
+                    value: "obstacle".to_string(),
+                },
+                foxglove::messages::KeyValuePair {
+                    key: "confidence".to_string(),
+                    value: "0.95".to_string(),
+                },
+            ],
         }],
         points: vec![foxglove::messages::PointsAnnotation {
             timestamp: Some(foxglove::messages::Timestamp::new(1000000000, 500000000)),
@@ -253,6 +262,33 @@ fn test_image_annotations_borrow_to_native() {
         a: 1.0,
     };
 
+    let label_key = "label";
+    let label_value = "obstacle";
+    let confidence_key = "confidence";
+    let confidence_value = "0.95";
+    let circle_metadata = [
+        KeyValuePair {
+            key: FoxgloveString {
+                data: label_key.as_ptr() as *const c_char,
+                len: label_key.len(),
+            },
+            value: FoxgloveString {
+                data: label_value.as_ptr() as *const c_char,
+                len: label_value.len(),
+            },
+        },
+        KeyValuePair {
+            key: FoxgloveString {
+                data: confidence_key.as_ptr() as *const c_char,
+                len: confidence_key.len(),
+            },
+            value: FoxgloveString {
+                data: confidence_value.as_ptr() as *const c_char,
+                len: confidence_value.len(),
+            },
+        },
+    ];
+
     let circle = CircleAnnotation {
         timestamp: &raw const timestamp,
         position: &raw const circle_position,
@@ -260,8 +296,8 @@ fn test_image_annotations_borrow_to_native() {
         thickness: 2.0,
         fill_color: &raw const circle_fill_color,
         outline_color: &raw const circle_outline_color,
-        metadata: std::ptr::null(),
-        metadata_count: 0,
+        metadata: circle_metadata.as_ptr(),
+        metadata_count: circle_metadata.len(),
     };
 
     // Create points annotation
