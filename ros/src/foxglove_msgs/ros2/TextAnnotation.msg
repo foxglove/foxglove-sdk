@@ -21,3 +21,6 @@ foxglove_msgs/Color text_color
 
 # Background fill color
 foxglove_msgs/Color background_color
+
+# Additional user-provided metadata associated with this annotation. Keys must be unique.
+foxglove_msgs/KeyValuePair[] metadata

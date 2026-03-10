@@ -108,7 +108,7 @@ pub struct CameraCalibration {
 ///
 /// <https://docs.foxglove.dev/docs/visualization/message-schemas/circle-annotation>
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct CircleAnnotation {
     /// Timestamp of circle
     #[prost(message, optional, tag = "1")]
@@ -129,6 +129,9 @@ pub struct CircleAnnotation {
     /// Outline color
     #[prost(message, optional, tag = "6")]
     pub outline_color: ::core::option::Option<Color>,
+    /// Additional user-provided metadata associated with this annotation. Keys must be unique.
+    #[prost(message, repeated, tag = "7")]
+    pub metadata: ::prost::alloc::vec::Vec<KeyValuePair>,
 }
 /// A color in RGBA format
 ///
@@ -399,7 +402,7 @@ pub struct ImageAnnotations {
     /// Text annotations
     #[prost(message, repeated, tag = "3")]
     pub texts: ::prost::alloc::vec::Vec<TextAnnotation>,
-    /// Additional user-provided metadata associated with the image annotations. Keys must be unique.
+    /// Additional user-provided metadata associated with the image annotations. Keys must be unique within this object. Per-annotation metadata takes precedence over these values.
     #[prost(message, repeated, tag = "4")]
     pub metadata: ::prost::alloc::vec::Vec<KeyValuePair>,
 }
@@ -927,6 +930,9 @@ pub struct PointsAnnotation {
     /// Stroke thickness in pixels
     #[prost(double, tag = "7")]
     pub thickness: f64,
+    /// Additional user-provided metadata associated with this annotation. Keys must be unique.
+    #[prost(message, repeated, tag = "8")]
+    pub metadata: ::prost::alloc::vec::Vec<KeyValuePair>,
 }
 /// Nested message and enum types in `PointsAnnotation`.
 pub mod points_annotation {
@@ -1315,6 +1321,9 @@ pub struct TextAnnotation {
     /// Background fill color
     #[prost(message, optional, tag = "6")]
     pub background_color: ::core::option::Option<Color>,
+    /// Additional user-provided metadata associated with this annotation. Keys must be unique.
+    #[prost(message, repeated, tag = "7")]
+    pub metadata: ::prost::alloc::vec::Vec<KeyValuePair>,
 }
 /// A primitive representing a text label
 ///

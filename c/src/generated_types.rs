@@ -514,6 +514,10 @@ pub struct CircleAnnotation {
 
     /// Outline color
     pub outline_color: *const Color,
+
+    /// Additional user-provided metadata associated with this annotation. Keys must be unique.
+    pub metadata: *const KeyValuePair,
+    pub metadata_count: usize,
 }
 
 #[cfg(not(target_family = "wasm"))]
@@ -565,6 +569,7 @@ impl BorrowToNative for CircleAnnotation {
                 .map(|m| m.borrow_to_native(arena.as_mut()))
         }
         .transpose()?;
+        let metadata = unsafe { arena.as_mut().map(self.metadata, self.metadata_count)? };
 
         Ok(ManuallyDrop::new(foxglove::messages::CircleAnnotation {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
@@ -573,6 +578,7 @@ impl BorrowToNative for CircleAnnotation {
             thickness: self.thickness,
             fill_color: fill_color.map(ManuallyDrop::into_inner),
             outline_color: outline_color.map(ManuallyDrop::into_inner),
+            metadata: ManuallyDrop::into_inner(metadata),
         }))
     }
 }
@@ -2523,7 +2529,7 @@ pub struct ImageAnnotations {
     pub texts: *const TextAnnotation,
     pub texts_count: usize,
 
-    /// Additional user-provided metadata associated with the image annotations. Keys must be unique.
+    /// Additional user-provided metadata associated with the image annotations. Keys must be unique within this object. Per-annotation metadata takes precedence over these values.
     pub metadata: *const KeyValuePair,
     pub metadata_count: usize,
 }
@@ -5289,6 +5295,10 @@ pub struct PointsAnnotation {
 
     /// Stroke thickness in pixels
     pub thickness: f64,
+
+    /// Additional user-provided metadata associated with this annotation. Keys must be unique.
+    pub metadata: *const KeyValuePair,
+    pub metadata_count: usize,
 }
 
 #[cfg(not(target_family = "wasm"))]
@@ -5340,6 +5350,7 @@ impl BorrowToNative for PointsAnnotation {
                 .map(|m| m.borrow_to_native(arena.as_mut()))
         }
         .transpose()?;
+        let metadata = unsafe { arena.as_mut().map(self.metadata, self.metadata_count)? };
 
         Ok(ManuallyDrop::new(foxglove::messages::PointsAnnotation {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
@@ -5349,6 +5360,7 @@ impl BorrowToNative for PointsAnnotation {
             outline_colors: ManuallyDrop::into_inner(outline_colors),
             fill_color: fill_color.map(ManuallyDrop::into_inner),
             thickness: self.thickness,
+            metadata: ManuallyDrop::into_inner(metadata),
         }))
     }
 }
@@ -6696,6 +6708,10 @@ pub struct TextAnnotation {
 
     /// Background fill color
     pub background_color: *const Color,
+
+    /// Additional user-provided metadata associated with this annotation. Keys must be unique.
+    pub metadata: *const KeyValuePair,
+    pub metadata_count: usize,
 }
 
 #[cfg(not(target_family = "wasm"))]
@@ -6749,6 +6765,7 @@ impl BorrowToNative for TextAnnotation {
                 .map(|m| m.borrow_to_native(arena.as_mut()))
         }
         .transpose()?;
+        let metadata = unsafe { arena.as_mut().map(self.metadata, self.metadata_count)? };
 
         Ok(ManuallyDrop::new(foxglove::messages::TextAnnotation {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
@@ -6757,6 +6774,7 @@ impl BorrowToNative for TextAnnotation {
             font_size: self.font_size,
             text_color: text_color.map(ManuallyDrop::into_inner),
             background_color: background_color.map(ManuallyDrop::into_inner),
+            metadata: ManuallyDrop::into_inner(metadata),
         }))
     }
 }
