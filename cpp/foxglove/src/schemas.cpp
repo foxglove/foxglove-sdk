@@ -1612,6 +1612,8 @@ void circleAnnotationToC(
     src.fill_color ? reinterpret_cast<const foxglove_color*>(&*src.fill_color) : nullptr;
   dest.outline_color =
     src.outline_color ? reinterpret_cast<const foxglove_color*>(&*src.outline_color) : nullptr;
+  dest.metadata = arena.map<foxglove_key_value_pair>(src.metadata, keyValuePairToC);
+  dest.metadata_count = src.metadata.size();
 }
 
 void compressedImageToC(
@@ -1842,6 +1844,8 @@ void pointsAnnotationToC(
   dest.fill_color =
     src.fill_color ? reinterpret_cast<const foxglove_color*>(&*src.fill_color) : nullptr;
   dest.thickness = src.thickness;
+  dest.metadata = arena.map<foxglove_key_value_pair>(src.metadata, keyValuePairToC);
+  dest.metadata_count = src.metadata.size();
 }
 
 void poseToC(foxglove_pose& dest, const Pose& src, [[maybe_unused]] Arena& arena) {
@@ -1963,6 +1967,8 @@ void textAnnotationToC(
   dest.background_color = src.background_color
                             ? reinterpret_cast<const foxglove_color*>(&*src.background_color)
                             : nullptr;
+  dest.metadata = arena.map<foxglove_key_value_pair>(src.metadata, keyValuePairToC);
+  dest.metadata_count = src.metadata.size();
 }
 
 void textPrimitiveToC(
