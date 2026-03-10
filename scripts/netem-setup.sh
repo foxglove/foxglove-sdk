@@ -30,7 +30,7 @@ NETEM_ARGS="${NETEM_ARGS:-delay 80ms 20ms loss 2%}"
 # metacharacters (;, &, |, $, `, etc.) would be interpreted by the shell.
 validate_netem_args() {
     case "$2" in
-        *[';|&$`()\{\}\"'\''!'\\]* | *'>'* | *'<'*)
+        *[';|&$`()\{\}\"'\''!'\\*?]* | *'>'* | *'<'* | *'['*)
             echo "ERROR: $1 contains shell metacharacters: $2"
             echo "Only netem parameters are allowed (e.g. 'delay 200ms 50ms loss 5%')."
             exit 1
@@ -40,11 +40,12 @@ validate_netem_args() {
 
 validate_netem_args "NETEM_ARGS" "$NETEM_ARGS"
 
-# Track whether any per-link tc command fails on an interface that accepted the
-# HTB root. We continue past failures to apply rules on other interfaces, but
-# exit non-zero at the end so the container healthcheck can detect partial setup.
-# Flat-mode failures are logged but not tracked here since some interfaces
-# (e.g. lo) legitimately don't support netem.
+# Track whether any leaf tc command (class, qdisc, filter) fails on an
+# interface that accepted the HTB root. We continue past failures to apply
+# rules on other interfaces, but exit non-zero at the end so the container
+# healthcheck can detect partial setup. HTB root failures and flat-mode
+# failures are logged as warnings but not tracked here, since some interfaces
+# (e.g. lo) legitimately don't support these qdiscs.
 SETUP_ERRORS=0
 
 # ---------------------------------------------------------------------------
@@ -84,9 +85,10 @@ for iface in $(ls /sys/class/net/); do
         # HTB root qdisc. Unclassified traffic goes to default class 1:ff00.
         # Use a high class ID for the default to leave room for link classes.
         # Failure here (e.g. on lo) means we can't add child classes, so skip
-        # this interface but still track the error.
+        # this interface. This is not counted as a setup error — same as flat
+        # mode, some interfaces legitimately don't support HTB.
         tc qdisc replace dev "$iface" root handle 1: htb default ff00 2>/dev/null \
-            || { echo "  ERROR: failed to add HTB root qdisc on $iface"; SETUP_ERRORS=$((SETUP_ERRORS + 1)); continue; }
+            || { echo "  WARNING: failed to add HTB root qdisc on $iface (skipping)"; continue; }
 
         # Default class (unclassified traffic). Only log success if both
         # commands succeed; failures are already logged by the || clauses.
