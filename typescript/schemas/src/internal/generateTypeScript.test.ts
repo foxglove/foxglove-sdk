@@ -109,6 +109,15 @@ describe("generateTypeScript", () => {
          * description
          */
         field_nested_array: NestedMessage[];
+
+        /** An optional string field */
+        field_optional_string?: string;
+
+        /** An optional bool field */
+        field_optional_bool?: boolean;
+
+        /** An optional float64 field */
+        field_optional_float64?: number;
       };
       "
     `);
@@ -211,6 +220,15 @@ describe("generateTypeScript", () => {
          * description
          */
         field_nested_array: NestedMessage[];
+
+        /** An optional string field */
+        field_optional_string?: string;
+
+        /** An optional bool field */
+        field_optional_bool?: boolean;
+
+        /** An optional float64 field */
+        field_optional_float64?: number;
       };
       "
     `);

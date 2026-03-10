@@ -3,6 +3,8 @@
 #include <foxglove/channel.hpp>
 #include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
+#include <foxglove/playback_control_request.hpp>
+#include <foxglove/playback_state.hpp>
 #include <foxglove/server/connection_graph.hpp>
 #include <foxglove/server/fetch_asset.hpp>
 #include <foxglove/server/parameter.hpp>
@@ -52,6 +54,8 @@ struct ClientMetadata {
 /// A server may advertise certain capabilities to clients and provide related functionality
 /// in WebSocketServerCallbacks.
 enum class WebSocketServerCapabilities : uint8_t {
+  /// No capabilities.
+  None = 0,
   /// Allow clients to advertise channels to send data messages to the server.
   ClientPublish = 1 << 0,
   /// Allow clients to subscribe and make connection graph updates
@@ -69,6 +73,10 @@ enum class WebSocketServerCapabilities : uint8_t {
   /// Allow clients to request assets. If you supply an asset handler to the
   /// server, this capability will be advertised automatically.
   Assets = 1 << 5,
+  /// Indicates that the server is capable of responding to playback control requests from
+  /// controls in the Foxglove app. This requires the server to specify the `playback_time_range`
+  /// field in its `WebSocketServerOptions`.
+  PlaybackControl = 1 << 6,
 };
 
 /// @brief Level indicator for a server status message.
@@ -184,6 +192,25 @@ struct WebSocketServerCallbacks {
   ///
   /// Requires the capability WebSocketServerCapabilities::ConnectionGraph
   std::function<void()> onConnectionGraphUnsubscribe;
+
+  /// @brief Callback invoked when a client connects to the server.
+  std::function<void()> onClientConnect;
+
+  /// @brief Callback invoked when a client disconnects from the server.
+  std::function<void()> onClientDisconnect;
+  /// @brief Callback invoked when a playback control request is sent from the client.
+  ///
+  /// Requires the capability WebSocketServerCapabilities::PlaybackControl
+  ///
+  /// @param playback_control_request The playback control request.
+  /// @return The playback state to send back to the client.
+  ///
+  /// @note Since this playback state is in response to a specific request from the client, the
+  /// `request_id` field in the returned `PlaybackState` will be overwritten to match the request_id
+  /// in `playback_control_request`.
+  std::function<std::optional<PlaybackState>(const PlaybackControlRequest& playback_control_request
+  )>
+    onPlaybackControlRequest;
 };
 
 /// @cond foxglove_internal
@@ -211,9 +238,16 @@ struct WebSocketServerOptions {
   /// @brief The callbacks of the server.
   WebSocketServerCallbacks callbacks;
   /// @brief The capabilities of the server.
-  WebSocketServerCapabilities capabilities = WebSocketServerCapabilities(0);
+  WebSocketServerCapabilities capabilities = WebSocketServerCapabilities::None;
   /// @brief The supported encodings of the server.
   std::vector<std::string> supported_encodings;
+  /// @brief An optional session ID for the server.
+  ///
+  /// This allows the client to understand if the connection is a re-connection or if it is
+  /// connecting to a new server instance. This can for example be a timestamp or a UUID.
+  ///
+  /// By default, the server will generate a session ID based on the current time.
+  std::optional<std::string> session_id = std::nullopt;
   /// @brief A fetch asset handler callback.
   FetchAssetHandler fetch_asset;
   /// @brief A sink channel filter callback.
@@ -228,6 +262,12 @@ struct WebSocketServerOptions {
   /// This option is for internal use only and may change.
   std::optional<std::map<std::string, std::string>> server_info = std::nullopt;
   /// @endcond
+
+  /// @brief The time range for playback. This applies if the server is playing back a fixed time
+  /// range of data.
+  ///
+  /// @note Setting this option implies the PlaybackControl capability
+  std::optional<std::pair<uint64_t, uint64_t>> playback_time_range = std::nullopt;
 };
 
 /// @brief A WebSocket server for visualization in Foxglove.
@@ -247,6 +287,9 @@ public:
   /// Get the port on which the server is listening.
   [[nodiscard]] uint16_t port() const;
 
+  /// @brief Get the current number of connected clients.
+  [[nodiscard]] size_t clientCount() const;
+
   /// @brief Gracefully shut down the websocket server.
   FoxgloveError stop();
 
@@ -256,6 +299,13 @@ public:
   ///
   /// @param timestamp_nanos An epoch offset in nanoseconds.
   void broadcastTime(uint64_t timestamp_nanos) const noexcept;
+
+  /// @brief Publishes the current playback state to all clients.
+  ///
+  /// Requires the capability WebSocketServerCapabilities::PlaybackControl.
+  ///
+  /// @param playback_state The playback state to publish.
+  void broadcastPlaybackState(const PlaybackState& playback_state) const noexcept;
 
   /// @brief Sets a new session ID and notifies all clients, causing them to
   /// reset their state.

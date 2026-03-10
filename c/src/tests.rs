@@ -1,12 +1,12 @@
 use std::pin::pin;
 
 use crate::{
-    arena::{Arena, BorrowToNative},
-    generated_types::{Color, Point3, Pose, Quaternion, TriangleListPrimitive, Vector3},
     CircleAnnotation, FoxglovePointsAnnotationType, FoxgloveString, FoxgloveTimestamp,
     ImageAnnotations, Point2, PointsAnnotation, TextAnnotation,
+    arena::{Arena, BorrowToNative},
+    generated_types::{Color, Point3, Pose, Quaternion, TriangleListPrimitive, Vector3},
 };
-use foxglove::schemas::TriangleListPrimitive as NativeTriangleListPrimitive;
+use foxglove::messages::TriangleListPrimitive as NativeTriangleListPrimitive;
 use std::ffi::c_char;
 
 #[test]
@@ -29,13 +29,13 @@ fn test_foxglove_string_as_utf8_str() {
 #[test]
 fn test_triangle_list_primitive_borrow_to_native() {
     let reference = NativeTriangleListPrimitive {
-        pose: Some(foxglove::schemas::Pose {
-            position: Some(foxglove::schemas::Vector3 {
+        pose: Some(foxglove::messages::Pose {
+            position: Some(foxglove::messages::Vector3 {
                 x: 1.0,
                 y: 2.0,
                 z: 3.0,
             }),
-            orientation: Some(foxglove::schemas::Quaternion {
+            orientation: Some(foxglove::messages::Quaternion {
                 x: 0.0,
                 y: 0.0,
                 z: 0.0,
@@ -43,36 +43,36 @@ fn test_triangle_list_primitive_borrow_to_native() {
             }),
         }),
         points: vec![
-            foxglove::schemas::Point3 {
+            foxglove::messages::Point3 {
                 x: 0.0,
                 y: 0.0,
                 z: 0.0,
             },
-            foxglove::schemas::Point3 {
+            foxglove::messages::Point3 {
                 x: 1.0,
                 y: 0.0,
                 z: 0.0,
             },
-            foxglove::schemas::Point3 {
+            foxglove::messages::Point3 {
                 x: 0.0,
                 y: 1.0,
                 z: 0.0,
             },
         ],
-        color: Some(foxglove::schemas::Color {
+        color: Some(foxglove::messages::Color {
             r: 1.0,
             g: 0.0,
             b: 0.0,
             a: 1.0,
         }),
         colors: vec![
-            foxglove::schemas::Color {
+            foxglove::messages::Color {
                 r: 1.0,
                 g: 0.0,
                 b: 0.0,
                 a: 1.0,
             },
-            foxglove::schemas::Color {
+            foxglove::messages::Color {
                 r: 0.0,
                 g: 1.0,
                 b: 1.0,
@@ -158,46 +158,46 @@ fn test_triangle_list_primitive_borrow_to_native() {
 #[test]
 fn test_image_annotations_borrow_to_native() {
     // Create reference native ImageAnnotations struct
-    let reference = foxglove::schemas::ImageAnnotations {
-        circles: vec![foxglove::schemas::CircleAnnotation {
-            timestamp: Some(foxglove::schemas::Timestamp::new(1000000000, 500000000)),
-            position: Some(foxglove::schemas::Point2 { x: 10.0, y: 20.0 }),
+    let reference = foxglove::messages::ImageAnnotations {
+        circles: vec![foxglove::messages::CircleAnnotation {
+            timestamp: Some(foxglove::messages::Timestamp::new(1000000000, 500000000)),
+            position: Some(foxglove::messages::Point2 { x: 10.0, y: 20.0 }),
             diameter: 15.0,
             thickness: 2.0,
-            fill_color: Some(foxglove::schemas::Color {
+            fill_color: Some(foxglove::messages::Color {
                 r: 1.0,
                 g: 0.5,
                 b: 0.3,
                 a: 0.8,
             }),
-            outline_color: Some(foxglove::schemas::Color {
+            outline_color: Some(foxglove::messages::Color {
                 r: 0.1,
                 g: 0.2,
                 b: 0.9,
                 a: 1.0,
             }),
         }],
-        points: vec![foxglove::schemas::PointsAnnotation {
-            timestamp: Some(foxglove::schemas::Timestamp::new(1000000000, 500000000)),
-            r#type: foxglove::schemas::points_annotation::Type::LineStrip as i32,
+        points: vec![foxglove::messages::PointsAnnotation {
+            timestamp: Some(foxglove::messages::Timestamp::new(1000000000, 500000000)),
+            r#type: foxglove::messages::points_annotation::Type::LineStrip as i32,
             points: vec![
-                foxglove::schemas::Point2 { x: 5.0, y: 10.0 },
-                foxglove::schemas::Point2 { x: 15.0, y: 25.0 },
-                foxglove::schemas::Point2 { x: 30.0, y: 15.0 },
+                foxglove::messages::Point2 { x: 5.0, y: 10.0 },
+                foxglove::messages::Point2 { x: 15.0, y: 25.0 },
+                foxglove::messages::Point2 { x: 30.0, y: 15.0 },
             ],
-            outline_color: Some(foxglove::schemas::Color {
+            outline_color: Some(foxglove::messages::Color {
                 r: 0.8,
                 g: 0.2,
                 b: 0.3,
                 a: 1.0,
             }),
-            outline_colors: vec![foxglove::schemas::Color {
+            outline_colors: vec![foxglove::messages::Color {
                 r: 0.9,
                 g: 0.1,
                 b: 0.2,
                 a: 1.0,
             }],
-            fill_color: Some(foxglove::schemas::Color {
+            fill_color: Some(foxglove::messages::Color {
                 r: 0.2,
                 g: 0.8,
                 b: 0.3,
@@ -205,24 +205,26 @@ fn test_image_annotations_borrow_to_native() {
             }),
             thickness: 3.0,
         }],
-        texts: vec![foxglove::schemas::TextAnnotation {
-            timestamp: Some(foxglove::schemas::Timestamp::new(1000000000, 500000000)),
-            position: Some(foxglove::schemas::Point2 { x: 50.0, y: 60.0 }),
+        texts: vec![foxglove::messages::TextAnnotation {
+            timestamp: Some(foxglove::messages::Timestamp::new(1000000000, 500000000)),
+            position: Some(foxglove::messages::Point2 { x: 50.0, y: 60.0 }),
             text: "Sample text".to_string(),
             font_size: 14.0,
-            text_color: Some(foxglove::schemas::Color {
+            text_color: Some(foxglove::messages::Color {
                 r: 0.0,
                 g: 0.0,
                 b: 0.0,
                 a: 1.0,
             }),
-            background_color: Some(foxglove::schemas::Color {
+            background_color: Some(foxglove::messages::Color {
                 r: 1.0,
                 g: 1.0,
                 b: 1.0,
                 a: 0.7,
             }),
         }],
+        metadata: vec![],
+        timestamp: None,
     };
 
     // Create the timestamp value
@@ -342,6 +344,9 @@ fn test_image_annotations_borrow_to_native() {
         points_count: points_arr.len(),
         texts: texts.as_ptr(),
         texts_count: texts.len(),
+        metadata: std::ptr::null(),
+        metadata_count: 0,
+        timestamp: std::ptr::null(),
     };
 
     let mut arena = pin!(Arena::new());
@@ -349,4 +354,21 @@ fn test_image_annotations_borrow_to_native() {
     let borrowed = unsafe { c_type.borrow_to_native(arena_pin).unwrap() };
 
     assert_eq!(*borrowed, reference);
+}
+
+/// Verify that `foxglove_mcap_options_default()` produces `WriteOptions` matching
+/// `mcap::WriteOptions::default()`, since the upstream fields are private and
+/// our defaults are hardcoded.
+#[test]
+fn test_mcap_options_default_matches_write_options() {
+    let c_defaults = crate::channel::foxglove_mcap_options_default();
+    // Safety: the default struct contains valid (empty) strings.
+    let converted = unsafe { c_defaults.to_write_options() }.expect("to_write_options failed");
+    let canonical = mcap::WriteOptions::default();
+    assert_eq!(
+        format!("{converted:?}"),
+        format!("{canonical:?}"),
+        "FoxgloveMcapOptions defaults diverge from mcap::WriteOptions::default(). \
+         Update foxglove_mcap_options_default() in channel.rs to match."
+    );
 }

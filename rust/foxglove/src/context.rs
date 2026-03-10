@@ -1,5 +1,5 @@
-use std::collections::hash_map::Entry;
 use std::collections::HashMap;
+use std::collections::hash_map::Entry;
 use std::fmt::Debug;
 use std::sync::Arc;
 
@@ -7,7 +7,7 @@ use parking_lot::RwLock;
 use smallvec::SmallVec;
 use tracing::warn;
 
-use crate::{ChannelBuilder, ChannelId, McapWriter, RawChannel, Sink, SinkId};
+use crate::{ChannelBuilder, ChannelId, McapWriteOptions, McapWriter, RawChannel, Sink, SinkId};
 
 mod lazy_context;
 mod subscriptions;
@@ -256,8 +256,14 @@ impl Context {
         McapWriter::new().context(self)
     }
 
+    /// Returns a builder for an MCAP writer in this context with the provided
+    /// [`McapWriteOptions`].
+    pub fn mcap_writer_with_options(self: &Arc<Self>, options: McapWriteOptions) -> McapWriter {
+        McapWriter::with_options(options).context(self)
+    }
+
     /// Returns a builder for a websocket server in this context.
-    #[cfg(feature = "live_visualization")]
+    #[cfg(feature = "websocket")]
     pub fn websocket_server(self: &Arc<Self>) -> crate::WebSocketServer {
         crate::WebSocketServer::new().context(self)
     }
@@ -340,8 +346,8 @@ mod tests {
     use crate::context::*;
     use crate::log_sink_set::ERROR_LOGGING_MESSAGE;
     use crate::testutil::{ErrorSink, MockSink, RecordingSink};
-    use crate::{nanoseconds_since_epoch, PartialMetadata, RawChannel, Schema};
     use crate::{ChannelBuilder, FoxgloveError};
+    use crate::{PartialMetadata, RawChannel, Schema, nanoseconds_since_epoch};
     use std::sync::Arc;
     use tracing_test::traced_test;
 

@@ -70,6 +70,77 @@ export const Editor = forwardRef<EditorInterface, EditorProps>(
           };
         },
       });
+      // Provides hover tooltips
+      const hoverProvider = monaco.languages.registerHoverProvider("python", {
+        async provideHover(model, position, _token, _context) {
+          return (
+            (await runner.current?.getHover(
+              model.getValue(),
+              position.lineNumber,
+              position.column,
+            )) ?? {
+              contents: [],
+            }
+          );
+        },
+      });
+      // Provides highlight ranges to show other occurrences of a symbol in the document
+      const highlightProvider = monaco.languages.registerDocumentHighlightProvider("python", {
+        async provideDocumentHighlights(model, position, _token) {
+          return (
+            await runner.current?.getReferenceRanges(
+              model.getValue(),
+              position.lineNumber,
+              position.column,
+            )
+          )?.map((range) => ({ range }));
+        },
+      });
+      // Performs renaming of a symbol
+      const renameProvider = monaco.languages.registerRenameProvider("python", {
+        async resolveRenameLocation(model, position, _token) {
+          // Check that jedi is able to find a symbol to rename
+          const ranges =
+            (await runner.current?.getReferenceRanges(
+              model.getValue(),
+              position.lineNumber,
+              position.column,
+            )) ?? [];
+          if (ranges.length > 0) {
+            // allow rename to proceed
+            return undefined;
+          }
+          return {
+            rejectReason: "You cannot rename this element.",
+            range: { startLineNumber: 0, startColumn: 0, endLineNumber: 0, endColumn: 0 },
+            text: "",
+          };
+        },
+        async provideRenameEdits(
+          model,
+          position,
+          newName,
+          _token,
+        ): Promise<monaco.languages.WorkspaceEdit & monaco.languages.Rejection> {
+          const ranges = await runner.current?.getReferenceRanges(
+            model.getValue(),
+            position.lineNumber,
+            position.column,
+          );
+          return {
+            rejectReason: ranges ? undefined : "Rename operation failed.",
+            edits:
+              ranges?.map((item) => ({
+                resource: model.uri,
+                versionId: model.getVersionId(),
+                textEdit: {
+                  range: item,
+                  text: newName,
+                },
+              })) ?? [],
+          };
+        },
+      });
       editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
         latestProps.current.onSave?.();
       });
@@ -77,6 +148,9 @@ export const Editor = forwardRef<EditorInterface, EditorProps>(
       return () => {
         signatureProvider.dispose();
         completionProvider.dispose();
+        hoverProvider.dispose();
+        highlightProvider.dispose();
+        renameProvider.dispose();
         editor.dispose();
         editorRef.current = null;
       };

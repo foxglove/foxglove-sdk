@@ -2,7 +2,7 @@
 
 use std::ffi::c_uchar;
 use std::mem::ManuallyDrop;
-use std::pin::{pin, Pin};
+use std::pin::{Pin, pin};
 
 use foxglove::Encode;
 
@@ -10,8 +10,8 @@ use crate::arena::{Arena, BorrowToNative};
 use crate::util::{bytes_from_raw, string_from_raw, vec_from_raw};
 #[cfg(not(target_family = "wasm"))]
 use crate::{
-    do_foxglove_channel_create, log_msg_to_channel, result_to_c, FoxgloveChannel, FoxgloveContext,
-    FoxgloveSinkId,
+    FoxgloveChannel, FoxgloveContext, FoxgloveSinkId, do_foxglove_channel_create,
+    log_msg_to_channel, result_to_c,
 };
 use crate::{FoxgloveDuration, FoxgloveError, FoxgloveSchema, FoxgloveString, FoxgloveTimestamp};
 
@@ -114,14 +114,14 @@ impl ArrowPrimitive {
         }
         unsafe {
             let result =
-                do_foxglove_channel_create::<foxglove::schemas::ArrowPrimitive>(topic, context);
+                do_foxglove_channel_create::<foxglove::messages::ArrowPrimitive>(topic, context);
             result_to_c(result, channel)
         }
     }
 }
 
 impl BorrowToNative for ArrowPrimitive {
-    type NativeType = foxglove::schemas::ArrowPrimitive;
+    type NativeType = foxglove::messages::ArrowPrimitive;
 
     unsafe fn borrow_to_native(
         &self,
@@ -140,7 +140,7 @@ impl BorrowToNative for ArrowPrimitive {
         }
         .transpose()?;
 
-        Ok(ManuallyDrop::new(foxglove::schemas::ArrowPrimitive {
+        Ok(ManuallyDrop::new(foxglove::messages::ArrowPrimitive {
             pose: pose.map(ManuallyDrop::into_inner),
             shaft_length: self.shaft_length,
             shaft_diameter: self.shaft_diameter,
@@ -188,7 +188,7 @@ pub extern "C" fn foxglove_channel_log_arrow_primitive(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_arrow_primitive_schema() -> FoxgloveSchema {
     let native =
-        foxglove::schemas::ArrowPrimitive::get_schema().expect("ArrowPrimitive schema is Some");
+        foxglove::messages::ArrowPrimitive::get_schema().expect("ArrowPrimitive schema is Some");
     let name: &'static str = "foxglove.ArrowPrimitive";
     let encoding: &'static str = "protobuf";
     assert_eq!(name, &native.name);
@@ -229,7 +229,7 @@ pub unsafe extern "C" fn foxglove_arrow_primitive_encode(
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
-                        .expect("foxglove schemas return Some(len)");
+                        .expect("foxglove messages return Some(len)");
                 }
                 return FoxgloveError::BufferTooShort;
             }
@@ -288,6 +288,8 @@ pub struct CameraCalibration {
     ///     [ 0  0  1]
     /// ```
     ///
+    /// **Uncalibrated cameras:** Following ROS conventions for [CameraInfo](https://docs.ros.org/en/noetic/api/sensor_msgs/html/msg/CameraInfo.html), Foxglove also treats K[0] == 0.0 as indicating an uncalibrated camera, and calibration data will be ignored.
+    ///
     pub k: [f64; 9],
 
     /// Rectification matrix (stereo cameras only, 3x3 row-major matrix)
@@ -342,14 +344,14 @@ impl CameraCalibration {
         }
         unsafe {
             let result =
-                do_foxglove_channel_create::<foxglove::schemas::CameraCalibration>(topic, context);
+                do_foxglove_channel_create::<foxglove::messages::CameraCalibration>(topic, context);
             result_to_c(result, channel)
         }
     }
 }
 
 impl BorrowToNative for CameraCalibration {
-    type NativeType = foxglove::schemas::CameraCalibration;
+    type NativeType = foxglove::messages::CameraCalibration;
 
     unsafe fn borrow_to_native(
         &self,
@@ -370,7 +372,7 @@ impl BorrowToNative for CameraCalibration {
             )?
         };
 
-        Ok(ManuallyDrop::new(foxglove::schemas::CameraCalibration {
+        Ok(ManuallyDrop::new(foxglove::messages::CameraCalibration {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
             frame_id: ManuallyDrop::into_inner(frame_id),
             width: self.width,
@@ -426,7 +428,7 @@ pub extern "C" fn foxglove_channel_log_camera_calibration(
 )]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_camera_calibration_schema() -> FoxgloveSchema {
-    let native = foxglove::schemas::CameraCalibration::get_schema()
+    let native = foxglove::messages::CameraCalibration::get_schema()
         .expect("CameraCalibration schema is Some");
     let name: &'static str = "foxglove.CameraCalibration";
     let encoding: &'static str = "protobuf";
@@ -468,7 +470,7 @@ pub unsafe extern "C" fn foxglove_camera_calibration_encode(
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
-                        .expect("foxglove schemas return Some(len)");
+                        .expect("foxglove messages return Some(len)");
                 }
                 return FoxgloveError::BufferTooShort;
             }
@@ -532,14 +534,14 @@ impl CircleAnnotation {
         }
         unsafe {
             let result =
-                do_foxglove_channel_create::<foxglove::schemas::CircleAnnotation>(topic, context);
+                do_foxglove_channel_create::<foxglove::messages::CircleAnnotation>(topic, context);
             result_to_c(result, channel)
         }
     }
 }
 
 impl BorrowToNative for CircleAnnotation {
-    type NativeType = foxglove::schemas::CircleAnnotation;
+    type NativeType = foxglove::messages::CircleAnnotation;
 
     unsafe fn borrow_to_native(
         &self,
@@ -564,7 +566,7 @@ impl BorrowToNative for CircleAnnotation {
         }
         .transpose()?;
 
-        Ok(ManuallyDrop::new(foxglove::schemas::CircleAnnotation {
+        Ok(ManuallyDrop::new(foxglove::messages::CircleAnnotation {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
             position: position.map(ManuallyDrop::into_inner),
             diameter: self.diameter,
@@ -611,8 +613,8 @@ pub extern "C" fn foxglove_channel_log_circle_annotation(
 )]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_circle_annotation_schema() -> FoxgloveSchema {
-    let native =
-        foxglove::schemas::CircleAnnotation::get_schema().expect("CircleAnnotation schema is Some");
+    let native = foxglove::messages::CircleAnnotation::get_schema()
+        .expect("CircleAnnotation schema is Some");
     let name: &'static str = "foxglove.CircleAnnotation";
     let encoding: &'static str = "protobuf";
     assert_eq!(name, &native.name);
@@ -653,7 +655,7 @@ pub unsafe extern "C" fn foxglove_circle_annotation_encode(
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
-                        .expect("foxglove schemas return Some(len)");
+                        .expect("foxglove messages return Some(len)");
                 }
                 return FoxgloveError::BufferTooShort;
             }
@@ -709,20 +711,20 @@ impl Color {
             return FoxgloveError::ValueError;
         }
         unsafe {
-            let result = do_foxglove_channel_create::<foxglove::schemas::Color>(topic, context);
+            let result = do_foxglove_channel_create::<foxglove::messages::Color>(topic, context);
             result_to_c(result, channel)
         }
     }
 }
 
 impl BorrowToNative for Color {
-    type NativeType = foxglove::schemas::Color;
+    type NativeType = foxglove::messages::Color;
 
     unsafe fn borrow_to_native(
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
-        Ok(ManuallyDrop::new(foxglove::schemas::Color {
+        Ok(ManuallyDrop::new(foxglove::messages::Color {
             r: self.r,
             g: self.g,
             b: self.b,
@@ -767,7 +769,7 @@ pub extern "C" fn foxglove_channel_log_color(
 )]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_color_schema() -> FoxgloveSchema {
-    let native = foxglove::schemas::Color::get_schema().expect("Color schema is Some");
+    let native = foxglove::messages::Color::get_schema().expect("Color schema is Some");
     let name: &'static str = "foxglove.Color";
     let encoding: &'static str = "protobuf";
     assert_eq!(name, &native.name);
@@ -808,7 +810,7 @@ pub unsafe extern "C" fn foxglove_color_encode(
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
-                        .expect("foxglove schemas return Some(len)");
+                        .expect("foxglove messages return Some(len)");
                 }
                 return FoxgloveError::BufferTooShort;
             }
@@ -868,14 +870,14 @@ impl CompressedImage {
         }
         unsafe {
             let result =
-                do_foxglove_channel_create::<foxglove::schemas::CompressedImage>(topic, context);
+                do_foxglove_channel_create::<foxglove::messages::CompressedImage>(topic, context);
             result_to_c(result, channel)
         }
     }
 }
 
 impl BorrowToNative for CompressedImage {
-    type NativeType = foxglove::schemas::CompressedImage;
+    type NativeType = foxglove::messages::CompressedImage;
 
     unsafe fn borrow_to_native(
         &self,
@@ -896,7 +898,7 @@ impl BorrowToNative for CompressedImage {
             )?
         };
 
-        Ok(ManuallyDrop::new(foxglove::schemas::CompressedImage {
+        Ok(ManuallyDrop::new(foxglove::messages::CompressedImage {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
             frame_id: ManuallyDrop::into_inner(frame_id),
             data: ManuallyDrop::into_inner(unsafe { bytes_from_raw(self.data, self.data_len) }),
@@ -942,7 +944,7 @@ pub extern "C" fn foxglove_channel_log_compressed_image(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_compressed_image_schema() -> FoxgloveSchema {
     let native =
-        foxglove::schemas::CompressedImage::get_schema().expect("CompressedImage schema is Some");
+        foxglove::messages::CompressedImage::get_schema().expect("CompressedImage schema is Some");
     let name: &'static str = "foxglove.CompressedImage";
     let encoding: &'static str = "protobuf";
     assert_eq!(name, &native.name);
@@ -983,7 +985,7 @@ pub unsafe extern "C" fn foxglove_compressed_image_encode(
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
-                        .expect("foxglove schemas return Some(len)");
+                        .expect("foxglove messages return Some(len)");
                 }
                 return FoxgloveError::BufferTooShort;
             }
@@ -1069,14 +1071,14 @@ impl CompressedVideo {
         }
         unsafe {
             let result =
-                do_foxglove_channel_create::<foxglove::schemas::CompressedVideo>(topic, context);
+                do_foxglove_channel_create::<foxglove::messages::CompressedVideo>(topic, context);
             result_to_c(result, channel)
         }
     }
 }
 
 impl BorrowToNative for CompressedVideo {
-    type NativeType = foxglove::schemas::CompressedVideo;
+    type NativeType = foxglove::messages::CompressedVideo;
 
     unsafe fn borrow_to_native(
         &self,
@@ -1097,7 +1099,7 @@ impl BorrowToNative for CompressedVideo {
             )?
         };
 
-        Ok(ManuallyDrop::new(foxglove::schemas::CompressedVideo {
+        Ok(ManuallyDrop::new(foxglove::messages::CompressedVideo {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
             frame_id: ManuallyDrop::into_inner(frame_id),
             data: ManuallyDrop::into_inner(unsafe { bytes_from_raw(self.data, self.data_len) }),
@@ -1143,7 +1145,7 @@ pub extern "C" fn foxglove_channel_log_compressed_video(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_compressed_video_schema() -> FoxgloveSchema {
     let native =
-        foxglove::schemas::CompressedVideo::get_schema().expect("CompressedVideo schema is Some");
+        foxglove::messages::CompressedVideo::get_schema().expect("CompressedVideo schema is Some");
     let name: &'static str = "foxglove.CompressedVideo";
     let encoding: &'static str = "protobuf";
     assert_eq!(name, &native.name);
@@ -1184,7 +1186,7 @@ pub unsafe extern "C" fn foxglove_compressed_video_encode(
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
-                        .expect("foxglove schemas return Some(len)");
+                        .expect("foxglove messages return Some(len)");
                 }
                 return FoxgloveError::BufferTooShort;
             }
@@ -1244,14 +1246,14 @@ impl CylinderPrimitive {
         }
         unsafe {
             let result =
-                do_foxglove_channel_create::<foxglove::schemas::CylinderPrimitive>(topic, context);
+                do_foxglove_channel_create::<foxglove::messages::CylinderPrimitive>(topic, context);
             result_to_c(result, channel)
         }
     }
 }
 
 impl BorrowToNative for CylinderPrimitive {
-    type NativeType = foxglove::schemas::CylinderPrimitive;
+    type NativeType = foxglove::messages::CylinderPrimitive;
 
     unsafe fn borrow_to_native(
         &self,
@@ -1276,7 +1278,7 @@ impl BorrowToNative for CylinderPrimitive {
         }
         .transpose()?;
 
-        Ok(ManuallyDrop::new(foxglove::schemas::CylinderPrimitive {
+        Ok(ManuallyDrop::new(foxglove::messages::CylinderPrimitive {
             pose: pose.map(ManuallyDrop::into_inner),
             size: size.map(ManuallyDrop::into_inner),
             bottom_scale: self.bottom_scale,
@@ -1322,7 +1324,7 @@ pub extern "C" fn foxglove_channel_log_cylinder_primitive(
 )]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_cylinder_primitive_schema() -> FoxgloveSchema {
-    let native = foxglove::schemas::CylinderPrimitive::get_schema()
+    let native = foxglove::messages::CylinderPrimitive::get_schema()
         .expect("CylinderPrimitive schema is Some");
     let name: &'static str = "foxglove.CylinderPrimitive";
     let encoding: &'static str = "protobuf";
@@ -1364,7 +1366,7 @@ pub unsafe extern "C" fn foxglove_cylinder_primitive_encode(
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
-                        .expect("foxglove schemas return Some(len)");
+                        .expect("foxglove messages return Some(len)");
                 }
                 return FoxgloveError::BufferTooShort;
             }
@@ -1418,14 +1420,14 @@ impl CubePrimitive {
         }
         unsafe {
             let result =
-                do_foxglove_channel_create::<foxglove::schemas::CubePrimitive>(topic, context);
+                do_foxglove_channel_create::<foxglove::messages::CubePrimitive>(topic, context);
             result_to_c(result, channel)
         }
     }
 }
 
 impl BorrowToNative for CubePrimitive {
-    type NativeType = foxglove::schemas::CubePrimitive;
+    type NativeType = foxglove::messages::CubePrimitive;
 
     unsafe fn borrow_to_native(
         &self,
@@ -1450,7 +1452,7 @@ impl BorrowToNative for CubePrimitive {
         }
         .transpose()?;
 
-        Ok(ManuallyDrop::new(foxglove::schemas::CubePrimitive {
+        Ok(ManuallyDrop::new(foxglove::messages::CubePrimitive {
             pose: pose.map(ManuallyDrop::into_inner),
             size: size.map(ManuallyDrop::into_inner),
             color: color.map(ManuallyDrop::into_inner),
@@ -1495,7 +1497,7 @@ pub extern "C" fn foxglove_channel_log_cube_primitive(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_cube_primitive_schema() -> FoxgloveSchema {
     let native =
-        foxglove::schemas::CubePrimitive::get_schema().expect("CubePrimitive schema is Some");
+        foxglove::messages::CubePrimitive::get_schema().expect("CubePrimitive schema is Some");
     let name: &'static str = "foxglove.CubePrimitive";
     let encoding: &'static str = "protobuf";
     assert_eq!(name, &native.name);
@@ -1536,7 +1538,7 @@ pub unsafe extern "C" fn foxglove_cube_primitive_encode(
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
-                        .expect("foxglove schemas return Some(len)");
+                        .expect("foxglove messages return Some(len)");
                 }
                 return FoxgloveError::BufferTooShort;
             }
@@ -1559,7 +1561,13 @@ pub unsafe extern "C" fn foxglove_cube_primitive_encode(
     }
 }
 
-/// A transform between two reference frames in 3D space
+/// A transform between two reference frames in 3D space. The transform defines the position and orientation of a child frame within a parent frame. Translation moves the origin of the child frame relative to the parent origin. The rotation changes the orientiation of the child frame around its origin.
+///
+/// Examples:
+///
+/// - With translation (x=1, y=0, z=0) and identity rotation (x=0, y=0, z=0, w=1), a point at (x=0, y=0, z=0) in the child frame maps to (x=1, y=0, z=0) in the parent frame.
+///
+/// - With translation (x=1, y=2, z=0) and a 90-degree rotation around the z-axis (x=0, y=0, z=0.707, w=0.707), a point at (x=1, y=0, z=0) in the child frame maps to (x=-1, y=3, z=0) in the parent frame.
 #[repr(C)]
 pub struct FrameTransform {
     /// Timestamp of transform
@@ -1571,10 +1579,10 @@ pub struct FrameTransform {
     /// Name of the child frame
     pub child_frame_id: FoxgloveString,
 
-    /// Translation component of the transform
+    /// Translation component of the transform, representing the position of the child frame's origin in the parent frame.
     pub translation: *const Vector3,
 
-    /// Rotation component of the transform
+    /// Rotation component of the transform, representing the orientation of the child frame in the parent frame
     pub rotation: *const Quaternion,
 }
 
@@ -1596,14 +1604,14 @@ impl FrameTransform {
         }
         unsafe {
             let result =
-                do_foxglove_channel_create::<foxglove::schemas::FrameTransform>(topic, context);
+                do_foxglove_channel_create::<foxglove::messages::FrameTransform>(topic, context);
             result_to_c(result, channel)
         }
     }
 }
 
 impl BorrowToNative for FrameTransform {
-    type NativeType = foxglove::schemas::FrameTransform;
+    type NativeType = foxglove::messages::FrameTransform;
 
     unsafe fn borrow_to_native(
         &self,
@@ -1636,7 +1644,7 @@ impl BorrowToNative for FrameTransform {
         }
         .transpose()?;
 
-        Ok(ManuallyDrop::new(foxglove::schemas::FrameTransform {
+        Ok(ManuallyDrop::new(foxglove::messages::FrameTransform {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
             parent_frame_id: ManuallyDrop::into_inner(parent_frame_id),
             child_frame_id: ManuallyDrop::into_inner(child_frame_id),
@@ -1683,7 +1691,7 @@ pub extern "C" fn foxglove_channel_log_frame_transform(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_frame_transform_schema() -> FoxgloveSchema {
     let native =
-        foxglove::schemas::FrameTransform::get_schema().expect("FrameTransform schema is Some");
+        foxglove::messages::FrameTransform::get_schema().expect("FrameTransform schema is Some");
     let name: &'static str = "foxglove.FrameTransform";
     let encoding: &'static str = "protobuf";
     assert_eq!(name, &native.name);
@@ -1724,7 +1732,7 @@ pub unsafe extern "C" fn foxglove_frame_transform_encode(
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
-                        .expect("foxglove schemas return Some(len)");
+                        .expect("foxglove messages return Some(len)");
                 }
                 return FoxgloveError::BufferTooShort;
             }
@@ -1773,14 +1781,14 @@ impl FrameTransforms {
         }
         unsafe {
             let result =
-                do_foxglove_channel_create::<foxglove::schemas::FrameTransforms>(topic, context);
+                do_foxglove_channel_create::<foxglove::messages::FrameTransforms>(topic, context);
             result_to_c(result, channel)
         }
     }
 }
 
 impl BorrowToNative for FrameTransforms {
-    type NativeType = foxglove::schemas::FrameTransforms;
+    type NativeType = foxglove::messages::FrameTransforms;
 
     unsafe fn borrow_to_native(
         &self,
@@ -1788,7 +1796,7 @@ impl BorrowToNative for FrameTransforms {
     ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
         let transforms = unsafe { arena.as_mut().map(self.transforms, self.transforms_count)? };
 
-        Ok(ManuallyDrop::new(foxglove::schemas::FrameTransforms {
+        Ok(ManuallyDrop::new(foxglove::messages::FrameTransforms {
             transforms: ManuallyDrop::into_inner(transforms),
         }))
     }
@@ -1831,7 +1839,7 @@ pub extern "C" fn foxglove_channel_log_frame_transforms(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_frame_transforms_schema() -> FoxgloveSchema {
     let native =
-        foxglove::schemas::FrameTransforms::get_schema().expect("FrameTransforms schema is Some");
+        foxglove::messages::FrameTransforms::get_schema().expect("FrameTransforms schema is Some");
     let name: &'static str = "foxglove.FrameTransforms";
     let encoding: &'static str = "protobuf";
     assert_eq!(name, &native.name);
@@ -1872,7 +1880,7 @@ pub unsafe extern "C" fn foxglove_frame_transforms_encode(
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
-                        .expect("foxglove schemas return Some(len)");
+                        .expect("foxglove messages return Some(len)");
                 }
                 return FoxgloveError::BufferTooShort;
             }
@@ -1919,14 +1927,14 @@ impl GeoJson {
             return FoxgloveError::ValueError;
         }
         unsafe {
-            let result = do_foxglove_channel_create::<foxglove::schemas::GeoJson>(topic, context);
+            let result = do_foxglove_channel_create::<foxglove::messages::GeoJson>(topic, context);
             result_to_c(result, channel)
         }
     }
 }
 
 impl BorrowToNative for GeoJson {
-    type NativeType = foxglove::schemas::GeoJson;
+    type NativeType = foxglove::messages::GeoJson;
 
     unsafe fn borrow_to_native(
         &self,
@@ -1940,7 +1948,7 @@ impl BorrowToNative for GeoJson {
             )?
         };
 
-        Ok(ManuallyDrop::new(foxglove::schemas::GeoJson {
+        Ok(ManuallyDrop::new(foxglove::messages::GeoJson {
             geojson: ManuallyDrop::into_inner(geojson),
         }))
     }
@@ -1982,7 +1990,7 @@ pub extern "C" fn foxglove_channel_log_geo_json(
 )]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_geo_json_schema() -> FoxgloveSchema {
-    let native = foxglove::schemas::GeoJson::get_schema().expect("GeoJson schema is Some");
+    let native = foxglove::messages::GeoJson::get_schema().expect("GeoJson schema is Some");
     let name: &'static str = "foxglove.GeoJSON";
     let encoding: &'static str = "protobuf";
     assert_eq!(name, &native.name);
@@ -2023,7 +2031,7 @@ pub unsafe extern "C" fn foxglove_geo_json_encode(
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
-                        .expect("foxglove schemas return Some(len)");
+                        .expect("foxglove messages return Some(len)");
                 }
                 return FoxgloveError::BufferTooShort;
             }
@@ -2137,14 +2145,14 @@ impl Grid {
             return FoxgloveError::ValueError;
         }
         unsafe {
-            let result = do_foxglove_channel_create::<foxglove::schemas::Grid>(topic, context);
+            let result = do_foxglove_channel_create::<foxglove::messages::Grid>(topic, context);
             result_to_c(result, channel)
         }
     }
 }
 
 impl BorrowToNative for Grid {
-    type NativeType = foxglove::schemas::Grid;
+    type NativeType = foxglove::messages::Grid;
 
     unsafe fn borrow_to_native(
         &self,
@@ -2171,7 +2179,7 @@ impl BorrowToNative for Grid {
         .transpose()?;
         let fields = unsafe { arena.as_mut().map(self.fields, self.fields_count)? };
 
-        Ok(ManuallyDrop::new(foxglove::schemas::Grid {
+        Ok(ManuallyDrop::new(foxglove::messages::Grid {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
             frame_id: ManuallyDrop::into_inner(frame_id),
             pose: pose.map(ManuallyDrop::into_inner),
@@ -2221,7 +2229,7 @@ pub extern "C" fn foxglove_channel_log_grid(
 )]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_grid_schema() -> FoxgloveSchema {
-    let native = foxglove::schemas::Grid::get_schema().expect("Grid schema is Some");
+    let native = foxglove::messages::Grid::get_schema().expect("Grid schema is Some");
     let name: &'static str = "foxglove.Grid";
     let encoding: &'static str = "protobuf";
     assert_eq!(name, &native.name);
@@ -2262,7 +2270,7 @@ pub unsafe extern "C" fn foxglove_grid_encode(
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
-                        .expect("foxglove schemas return Some(len)");
+                        .expect("foxglove messages return Some(len)");
                 }
                 return FoxgloveError::BufferTooShort;
             }
@@ -2294,7 +2302,7 @@ pub struct VoxelGrid {
     /// Frame of reference
     pub frame_id: FoxgloveString,
 
-    /// Origin of grid's corner relative to frame of reference
+    /// Origin of the grid’s lower-front-left corner in the reference frame. The grid’s pose is defined relative to this corner, so an untransformed grid with an identity orientation has this corner at the origin.
     pub pose: *const Pose,
 
     /// Number of grid rows
@@ -2346,14 +2354,15 @@ impl VoxelGrid {
             return FoxgloveError::ValueError;
         }
         unsafe {
-            let result = do_foxglove_channel_create::<foxglove::schemas::VoxelGrid>(topic, context);
+            let result =
+                do_foxglove_channel_create::<foxglove::messages::VoxelGrid>(topic, context);
             result_to_c(result, channel)
         }
     }
 }
 
 impl BorrowToNative for VoxelGrid {
-    type NativeType = foxglove::schemas::VoxelGrid;
+    type NativeType = foxglove::messages::VoxelGrid;
 
     unsafe fn borrow_to_native(
         &self,
@@ -2380,7 +2389,7 @@ impl BorrowToNative for VoxelGrid {
         .transpose()?;
         let fields = unsafe { arena.as_mut().map(self.fields, self.fields_count)? };
 
-        Ok(ManuallyDrop::new(foxglove::schemas::VoxelGrid {
+        Ok(ManuallyDrop::new(foxglove::messages::VoxelGrid {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
             frame_id: ManuallyDrop::into_inner(frame_id),
             pose: pose.map(ManuallyDrop::into_inner),
@@ -2432,7 +2441,7 @@ pub extern "C" fn foxglove_channel_log_voxel_grid(
 )]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_voxel_grid_schema() -> FoxgloveSchema {
-    let native = foxglove::schemas::VoxelGrid::get_schema().expect("VoxelGrid schema is Some");
+    let native = foxglove::messages::VoxelGrid::get_schema().expect("VoxelGrid schema is Some");
     let name: &'static str = "foxglove.VoxelGrid";
     let encoding: &'static str = "protobuf";
     assert_eq!(name, &native.name);
@@ -2473,7 +2482,7 @@ pub unsafe extern "C" fn foxglove_voxel_grid_encode(
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
-                        .expect("foxglove schemas return Some(len)");
+                        .expect("foxglove messages return Some(len)");
                 }
                 return FoxgloveError::BufferTooShort;
             }
@@ -2499,6 +2508,9 @@ pub unsafe extern "C" fn foxglove_voxel_grid_encode(
 /// Array of annotations for a 2D image
 #[repr(C)]
 pub struct ImageAnnotations {
+    /// Timestamp of the image annotations. When set, individual annotation timestamps will be ignored.
+    pub timestamp: *const FoxgloveTimestamp,
+
     /// Circle annotations
     pub circles: *const CircleAnnotation,
     pub circles_count: usize,
@@ -2510,6 +2522,10 @@ pub struct ImageAnnotations {
     /// Text annotations
     pub texts: *const TextAnnotation,
     pub texts_count: usize,
+
+    /// Additional user-provided metadata associated with the image annotations. Keys must be unique.
+    pub metadata: *const KeyValuePair,
+    pub metadata_count: usize,
 }
 
 #[cfg(not(target_family = "wasm"))]
@@ -2530,14 +2546,14 @@ impl ImageAnnotations {
         }
         unsafe {
             let result =
-                do_foxglove_channel_create::<foxglove::schemas::ImageAnnotations>(topic, context);
+                do_foxglove_channel_create::<foxglove::messages::ImageAnnotations>(topic, context);
             result_to_c(result, channel)
         }
     }
 }
 
 impl BorrowToNative for ImageAnnotations {
-    type NativeType = foxglove::schemas::ImageAnnotations;
+    type NativeType = foxglove::messages::ImageAnnotations;
 
     unsafe fn borrow_to_native(
         &self,
@@ -2546,11 +2562,14 @@ impl BorrowToNative for ImageAnnotations {
         let circles = unsafe { arena.as_mut().map(self.circles, self.circles_count)? };
         let points = unsafe { arena.as_mut().map(self.points, self.points_count)? };
         let texts = unsafe { arena.as_mut().map(self.texts, self.texts_count)? };
+        let metadata = unsafe { arena.as_mut().map(self.metadata, self.metadata_count)? };
 
-        Ok(ManuallyDrop::new(foxglove::schemas::ImageAnnotations {
+        Ok(ManuallyDrop::new(foxglove::messages::ImageAnnotations {
+            timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
             circles: ManuallyDrop::into_inner(circles),
             points: ManuallyDrop::into_inner(points),
             texts: ManuallyDrop::into_inner(texts),
+            metadata: ManuallyDrop::into_inner(metadata),
         }))
     }
 }
@@ -2591,8 +2610,8 @@ pub extern "C" fn foxglove_channel_log_image_annotations(
 )]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_image_annotations_schema() -> FoxgloveSchema {
-    let native =
-        foxglove::schemas::ImageAnnotations::get_schema().expect("ImageAnnotations schema is Some");
+    let native = foxglove::messages::ImageAnnotations::get_schema()
+        .expect("ImageAnnotations schema is Some");
     let name: &'static str = "foxglove.ImageAnnotations";
     let encoding: &'static str = "protobuf";
     assert_eq!(name, &native.name);
@@ -2633,7 +2652,7 @@ pub unsafe extern "C" fn foxglove_image_annotations_encode(
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
-                        .expect("foxglove schemas return Some(len)");
+                        .expect("foxglove messages return Some(len)");
                 }
                 return FoxgloveError::BufferTooShort;
             }
@@ -2684,14 +2703,14 @@ impl KeyValuePair {
         }
         unsafe {
             let result =
-                do_foxglove_channel_create::<foxglove::schemas::KeyValuePair>(topic, context);
+                do_foxglove_channel_create::<foxglove::messages::KeyValuePair>(topic, context);
             result_to_c(result, channel)
         }
     }
 }
 
 impl BorrowToNative for KeyValuePair {
-    type NativeType = foxglove::schemas::KeyValuePair;
+    type NativeType = foxglove::messages::KeyValuePair;
 
     unsafe fn borrow_to_native(
         &self,
@@ -2701,7 +2720,7 @@ impl BorrowToNative for KeyValuePair {
         let value =
             unsafe { string_from_raw(self.value.as_ptr() as *const _, self.value.len(), "value")? };
 
-        Ok(ManuallyDrop::new(foxglove::schemas::KeyValuePair {
+        Ok(ManuallyDrop::new(foxglove::messages::KeyValuePair {
             key: ManuallyDrop::into_inner(key),
             value: ManuallyDrop::into_inner(value),
         }))
@@ -2745,7 +2764,7 @@ pub extern "C" fn foxglove_channel_log_key_value_pair(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_key_value_pair_schema() -> FoxgloveSchema {
     let native =
-        foxglove::schemas::KeyValuePair::get_schema().expect("KeyValuePair schema is Some");
+        foxglove::messages::KeyValuePair::get_schema().expect("KeyValuePair schema is Some");
     let name: &'static str = "foxglove.KeyValuePair";
     let encoding: &'static str = "protobuf";
     assert_eq!(name, &native.name);
@@ -2786,7 +2805,7 @@ pub unsafe extern "C" fn foxglove_key_value_pair_encode(
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
-                        .expect("foxglove schemas return Some(len)");
+                        .expect("foxglove messages return Some(len)");
                 }
                 return FoxgloveError::BufferTooShort;
             }
@@ -2853,14 +2872,15 @@ impl LaserScan {
             return FoxgloveError::ValueError;
         }
         unsafe {
-            let result = do_foxglove_channel_create::<foxglove::schemas::LaserScan>(topic, context);
+            let result =
+                do_foxglove_channel_create::<foxglove::messages::LaserScan>(topic, context);
             result_to_c(result, channel)
         }
     }
 }
 
 impl BorrowToNative for LaserScan {
-    type NativeType = foxglove::schemas::LaserScan;
+    type NativeType = foxglove::messages::LaserScan;
 
     unsafe fn borrow_to_native(
         &self,
@@ -2880,7 +2900,7 @@ impl BorrowToNative for LaserScan {
         }
         .transpose()?;
 
-        Ok(ManuallyDrop::new(foxglove::schemas::LaserScan {
+        Ok(ManuallyDrop::new(foxglove::messages::LaserScan {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
             frame_id: ManuallyDrop::into_inner(frame_id),
             pose: pose.map(ManuallyDrop::into_inner),
@@ -2932,7 +2952,7 @@ pub extern "C" fn foxglove_channel_log_laser_scan(
 )]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_laser_scan_schema() -> FoxgloveSchema {
-    let native = foxglove::schemas::LaserScan::get_schema().expect("LaserScan schema is Some");
+    let native = foxglove::messages::LaserScan::get_schema().expect("LaserScan schema is Some");
     let name: &'static str = "foxglove.LaserScan";
     let encoding: &'static str = "protobuf";
     assert_eq!(name, &native.name);
@@ -2973,7 +2993,7 @@ pub unsafe extern "C" fn foxglove_laser_scan_encode(
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
-                        .expect("foxglove schemas return Some(len)");
+                        .expect("foxglove messages return Some(len)");
                 }
                 return FoxgloveError::BufferTooShort;
             }
@@ -3047,14 +3067,14 @@ impl LinePrimitive {
         }
         unsafe {
             let result =
-                do_foxglove_channel_create::<foxglove::schemas::LinePrimitive>(topic, context);
+                do_foxglove_channel_create::<foxglove::messages::LinePrimitive>(topic, context);
             result_to_c(result, channel)
         }
     }
 }
 
 impl BorrowToNative for LinePrimitive {
-    type NativeType = foxglove::schemas::LinePrimitive;
+    type NativeType = foxglove::messages::LinePrimitive;
 
     unsafe fn borrow_to_native(
         &self,
@@ -3075,7 +3095,7 @@ impl BorrowToNative for LinePrimitive {
         .transpose()?;
         let colors = unsafe { arena.as_mut().map(self.colors, self.colors_count)? };
 
-        Ok(ManuallyDrop::new(foxglove::schemas::LinePrimitive {
+        Ok(ManuallyDrop::new(foxglove::messages::LinePrimitive {
             r#type: self.r#type as i32,
             pose: pose.map(ManuallyDrop::into_inner),
             thickness: self.thickness,
@@ -3127,7 +3147,7 @@ pub extern "C" fn foxglove_channel_log_line_primitive(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_line_primitive_schema() -> FoxgloveSchema {
     let native =
-        foxglove::schemas::LinePrimitive::get_schema().expect("LinePrimitive schema is Some");
+        foxglove::messages::LinePrimitive::get_schema().expect("LinePrimitive schema is Some");
     let name: &'static str = "foxglove.LinePrimitive";
     let encoding: &'static str = "protobuf";
     assert_eq!(name, &native.name);
@@ -3168,7 +3188,7 @@ pub unsafe extern "C" fn foxglove_line_primitive_encode(
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
-                        .expect("foxglove schemas return Some(len)");
+                        .expect("foxglove messages return Some(len)");
                 }
                 return FoxgloveError::BufferTooShort;
             }
@@ -3217,6 +3237,10 @@ pub struct LocationFix {
 
     /// Color used to visualize the location
     pub color: *const Color,
+
+    /// Additional user-provided metadata associated with the location fix. Keys must be unique.
+    pub metadata: *const KeyValuePair,
+    pub metadata_count: usize,
 }
 
 #[cfg(not(target_family = "wasm"))]
@@ -3237,14 +3261,14 @@ impl LocationFix {
         }
         unsafe {
             let result =
-                do_foxglove_channel_create::<foxglove::schemas::LocationFix>(topic, context);
+                do_foxglove_channel_create::<foxglove::messages::LocationFix>(topic, context);
             result_to_c(result, channel)
         }
     }
 }
 
 impl BorrowToNative for LocationFix {
-    type NativeType = foxglove::schemas::LocationFix;
+    type NativeType = foxglove::messages::LocationFix;
 
     unsafe fn borrow_to_native(
         &self,
@@ -3263,8 +3287,9 @@ impl BorrowToNative for LocationFix {
                 .map(|m| m.borrow_to_native(arena.as_mut()))
         }
         .transpose()?;
+        let metadata = unsafe { arena.as_mut().map(self.metadata, self.metadata_count)? };
 
-        Ok(ManuallyDrop::new(foxglove::schemas::LocationFix {
+        Ok(ManuallyDrop::new(foxglove::messages::LocationFix {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
             frame_id: ManuallyDrop::into_inner(frame_id),
             latitude: self.latitude,
@@ -3278,6 +3303,7 @@ impl BorrowToNative for LocationFix {
             }),
             position_covariance_type: self.position_covariance_type as i32,
             color: color.map(ManuallyDrop::into_inner),
+            metadata: ManuallyDrop::into_inner(metadata),
         }))
     }
 }
@@ -3318,7 +3344,7 @@ pub extern "C" fn foxglove_channel_log_location_fix(
 )]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_location_fix_schema() -> FoxgloveSchema {
-    let native = foxglove::schemas::LocationFix::get_schema().expect("LocationFix schema is Some");
+    let native = foxglove::messages::LocationFix::get_schema().expect("LocationFix schema is Some");
     let name: &'static str = "foxglove.LocationFix";
     let encoding: &'static str = "protobuf";
     assert_eq!(name, &native.name);
@@ -3359,7 +3385,7 @@ pub unsafe extern "C" fn foxglove_location_fix_encode(
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
-                        .expect("foxglove schemas return Some(len)");
+                        .expect("foxglove messages return Some(len)");
                 }
                 return FoxgloveError::BufferTooShort;
             }
@@ -3408,14 +3434,14 @@ impl LocationFixes {
         }
         unsafe {
             let result =
-                do_foxglove_channel_create::<foxglove::schemas::LocationFixes>(topic, context);
+                do_foxglove_channel_create::<foxglove::messages::LocationFixes>(topic, context);
             result_to_c(result, channel)
         }
     }
 }
 
 impl BorrowToNative for LocationFixes {
-    type NativeType = foxglove::schemas::LocationFixes;
+    type NativeType = foxglove::messages::LocationFixes;
 
     unsafe fn borrow_to_native(
         &self,
@@ -3423,7 +3449,7 @@ impl BorrowToNative for LocationFixes {
     ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
         let fixes = unsafe { arena.as_mut().map(self.fixes, self.fixes_count)? };
 
-        Ok(ManuallyDrop::new(foxglove::schemas::LocationFixes {
+        Ok(ManuallyDrop::new(foxglove::messages::LocationFixes {
             fixes: ManuallyDrop::into_inner(fixes),
         }))
     }
@@ -3466,7 +3492,7 @@ pub extern "C" fn foxglove_channel_log_location_fixes(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_location_fixes_schema() -> FoxgloveSchema {
     let native =
-        foxglove::schemas::LocationFixes::get_schema().expect("LocationFixes schema is Some");
+        foxglove::messages::LocationFixes::get_schema().expect("LocationFixes schema is Some");
     let name: &'static str = "foxglove.LocationFixes";
     let encoding: &'static str = "protobuf";
     assert_eq!(name, &native.name);
@@ -3507,7 +3533,7 @@ pub unsafe extern "C" fn foxglove_location_fixes_encode(
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
-                        .expect("foxglove schemas return Some(len)");
+                        .expect("foxglove messages return Some(len)");
                 }
                 return FoxgloveError::BufferTooShort;
             }
@@ -3569,14 +3595,14 @@ impl Log {
             return FoxgloveError::ValueError;
         }
         unsafe {
-            let result = do_foxglove_channel_create::<foxglove::schemas::Log>(topic, context);
+            let result = do_foxglove_channel_create::<foxglove::messages::Log>(topic, context);
             result_to_c(result, channel)
         }
     }
 }
 
 impl BorrowToNative for Log {
-    type NativeType = foxglove::schemas::Log;
+    type NativeType = foxglove::messages::Log;
 
     unsafe fn borrow_to_native(
         &self,
@@ -3594,7 +3620,7 @@ impl BorrowToNative for Log {
         let file =
             unsafe { string_from_raw(self.file.as_ptr() as *const _, self.file.len(), "file")? };
 
-        Ok(ManuallyDrop::new(foxglove::schemas::Log {
+        Ok(ManuallyDrop::new(foxglove::messages::Log {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
             level: self.level as i32,
             message: ManuallyDrop::into_inner(message),
@@ -3641,7 +3667,7 @@ pub extern "C" fn foxglove_channel_log_log(
 )]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_log_schema() -> FoxgloveSchema {
-    let native = foxglove::schemas::Log::get_schema().expect("Log schema is Some");
+    let native = foxglove::messages::Log::get_schema().expect("Log schema is Some");
     let name: &'static str = "foxglove.Log";
     let encoding: &'static str = "protobuf";
     assert_eq!(name, &native.name);
@@ -3682,7 +3708,7 @@ pub unsafe extern "C" fn foxglove_log_encode(
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
-                        .expect("foxglove schemas return Some(len)");
+                        .expect("foxglove messages return Some(len)");
                 }
                 return FoxgloveError::BufferTooShort;
             }
@@ -3735,7 +3761,7 @@ impl SceneEntityDeletion {
             return FoxgloveError::ValueError;
         }
         unsafe {
-            let result = do_foxglove_channel_create::<foxglove::schemas::SceneEntityDeletion>(
+            let result = do_foxglove_channel_create::<foxglove::messages::SceneEntityDeletion>(
                 topic, context,
             );
             result_to_c(result, channel)
@@ -3744,7 +3770,7 @@ impl SceneEntityDeletion {
 }
 
 impl BorrowToNative for SceneEntityDeletion {
-    type NativeType = foxglove::schemas::SceneEntityDeletion;
+    type NativeType = foxglove::messages::SceneEntityDeletion;
 
     unsafe fn borrow_to_native(
         &self,
@@ -3752,7 +3778,7 @@ impl BorrowToNative for SceneEntityDeletion {
     ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
         let id = unsafe { string_from_raw(self.id.as_ptr() as *const _, self.id.len(), "id")? };
 
-        Ok(ManuallyDrop::new(foxglove::schemas::SceneEntityDeletion {
+        Ok(ManuallyDrop::new(foxglove::messages::SceneEntityDeletion {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
             r#type: self.r#type as i32,
             id: ManuallyDrop::into_inner(id),
@@ -3796,7 +3822,7 @@ pub extern "C" fn foxglove_channel_log_scene_entity_deletion(
 )]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_scene_entity_deletion_schema() -> FoxgloveSchema {
-    let native = foxglove::schemas::SceneEntityDeletion::get_schema()
+    let native = foxglove::messages::SceneEntityDeletion::get_schema()
         .expect("SceneEntityDeletion schema is Some");
     let name: &'static str = "foxglove.SceneEntityDeletion";
     let encoding: &'static str = "protobuf";
@@ -3838,7 +3864,7 @@ pub unsafe extern "C" fn foxglove_scene_entity_deletion_encode(
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
-                        .expect("foxglove schemas return Some(len)");
+                        .expect("foxglove messages return Some(len)");
                 }
                 return FoxgloveError::BufferTooShort;
             }
@@ -3934,14 +3960,14 @@ impl SceneEntity {
         }
         unsafe {
             let result =
-                do_foxglove_channel_create::<foxglove::schemas::SceneEntity>(topic, context);
+                do_foxglove_channel_create::<foxglove::messages::SceneEntity>(topic, context);
             result_to_c(result, channel)
         }
     }
 }
 
 impl BorrowToNative for SceneEntity {
-    type NativeType = foxglove::schemas::SceneEntity;
+    type NativeType = foxglove::messages::SceneEntity;
 
     unsafe fn borrow_to_native(
         &self,
@@ -3965,7 +3991,7 @@ impl BorrowToNative for SceneEntity {
         let texts = unsafe { arena.as_mut().map(self.texts, self.texts_count)? };
         let models = unsafe { arena.as_mut().map(self.models, self.models_count)? };
 
-        Ok(ManuallyDrop::new(foxglove::schemas::SceneEntity {
+        Ok(ManuallyDrop::new(foxglove::messages::SceneEntity {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
             frame_id: ManuallyDrop::into_inner(frame_id),
             id: ManuallyDrop::into_inner(id),
@@ -4020,7 +4046,7 @@ pub extern "C" fn foxglove_channel_log_scene_entity(
 )]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_scene_entity_schema() -> FoxgloveSchema {
-    let native = foxglove::schemas::SceneEntity::get_schema().expect("SceneEntity schema is Some");
+    let native = foxglove::messages::SceneEntity::get_schema().expect("SceneEntity schema is Some");
     let name: &'static str = "foxglove.SceneEntity";
     let encoding: &'static str = "protobuf";
     assert_eq!(name, &native.name);
@@ -4061,7 +4087,7 @@ pub unsafe extern "C" fn foxglove_scene_entity_encode(
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
-                        .expect("foxglove schemas return Some(len)");
+                        .expect("foxglove messages return Some(len)");
                 }
                 return FoxgloveError::BufferTooShort;
             }
@@ -4114,14 +4140,14 @@ impl SceneUpdate {
         }
         unsafe {
             let result =
-                do_foxglove_channel_create::<foxglove::schemas::SceneUpdate>(topic, context);
+                do_foxglove_channel_create::<foxglove::messages::SceneUpdate>(topic, context);
             result_to_c(result, channel)
         }
     }
 }
 
 impl BorrowToNative for SceneUpdate {
-    type NativeType = foxglove::schemas::SceneUpdate;
+    type NativeType = foxglove::messages::SceneUpdate;
 
     unsafe fn borrow_to_native(
         &self,
@@ -4130,7 +4156,7 @@ impl BorrowToNative for SceneUpdate {
         let deletions = unsafe { arena.as_mut().map(self.deletions, self.deletions_count)? };
         let entities = unsafe { arena.as_mut().map(self.entities, self.entities_count)? };
 
-        Ok(ManuallyDrop::new(foxglove::schemas::SceneUpdate {
+        Ok(ManuallyDrop::new(foxglove::messages::SceneUpdate {
             deletions: ManuallyDrop::into_inner(deletions),
             entities: ManuallyDrop::into_inner(entities),
         }))
@@ -4173,7 +4199,7 @@ pub extern "C" fn foxglove_channel_log_scene_update(
 )]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_scene_update_schema() -> FoxgloveSchema {
-    let native = foxglove::schemas::SceneUpdate::get_schema().expect("SceneUpdate schema is Some");
+    let native = foxglove::messages::SceneUpdate::get_schema().expect("SceneUpdate schema is Some");
     let name: &'static str = "foxglove.SceneUpdate";
     let encoding: &'static str = "protobuf";
     assert_eq!(name, &native.name);
@@ -4214,7 +4240,7 @@ pub unsafe extern "C" fn foxglove_scene_update_encode(
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
-                        .expect("foxglove schemas return Some(len)");
+                        .expect("foxglove messages return Some(len)");
                 }
                 return FoxgloveError::BufferTooShort;
             }
@@ -4281,14 +4307,14 @@ impl ModelPrimitive {
         }
         unsafe {
             let result =
-                do_foxglove_channel_create::<foxglove::schemas::ModelPrimitive>(topic, context);
+                do_foxglove_channel_create::<foxglove::messages::ModelPrimitive>(topic, context);
             result_to_c(result, channel)
         }
     }
 }
 
 impl BorrowToNative for ModelPrimitive {
-    type NativeType = foxglove::schemas::ModelPrimitive;
+    type NativeType = foxglove::messages::ModelPrimitive;
 
     unsafe fn borrow_to_native(
         &self,
@@ -4321,7 +4347,7 @@ impl BorrowToNative for ModelPrimitive {
             )?
         };
 
-        Ok(ManuallyDrop::new(foxglove::schemas::ModelPrimitive {
+        Ok(ManuallyDrop::new(foxglove::messages::ModelPrimitive {
             pose: pose.map(ManuallyDrop::into_inner),
             scale: scale.map(ManuallyDrop::into_inner),
             color: color.map(ManuallyDrop::into_inner),
@@ -4370,7 +4396,7 @@ pub extern "C" fn foxglove_channel_log_model_primitive(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_model_primitive_schema() -> FoxgloveSchema {
     let native =
-        foxglove::schemas::ModelPrimitive::get_schema().expect("ModelPrimitive schema is Some");
+        foxglove::messages::ModelPrimitive::get_schema().expect("ModelPrimitive schema is Some");
     let name: &'static str = "foxglove.ModelPrimitive";
     let encoding: &'static str = "protobuf";
     assert_eq!(name, &native.name);
@@ -4411,7 +4437,7 @@ pub unsafe extern "C" fn foxglove_model_primitive_encode(
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
-                        .expect("foxglove schemas return Some(len)");
+                        .expect("foxglove messages return Some(len)");
                 }
                 return FoxgloveError::BufferTooShort;
             }
@@ -4464,15 +4490,16 @@ impl PackedElementField {
             return FoxgloveError::ValueError;
         }
         unsafe {
-            let result =
-                do_foxglove_channel_create::<foxglove::schemas::PackedElementField>(topic, context);
+            let result = do_foxglove_channel_create::<foxglove::messages::PackedElementField>(
+                topic, context,
+            );
             result_to_c(result, channel)
         }
     }
 }
 
 impl BorrowToNative for PackedElementField {
-    type NativeType = foxglove::schemas::PackedElementField;
+    type NativeType = foxglove::messages::PackedElementField;
 
     unsafe fn borrow_to_native(
         &self,
@@ -4481,7 +4508,7 @@ impl BorrowToNative for PackedElementField {
         let name =
             unsafe { string_from_raw(self.name.as_ptr() as *const _, self.name.len(), "name")? };
 
-        Ok(ManuallyDrop::new(foxglove::schemas::PackedElementField {
+        Ok(ManuallyDrop::new(foxglove::messages::PackedElementField {
             name: ManuallyDrop::into_inner(name),
             offset: self.offset,
             r#type: self.r#type as i32,
@@ -4525,7 +4552,7 @@ pub extern "C" fn foxglove_channel_log_packed_element_field(
 )]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_packed_element_field_schema() -> FoxgloveSchema {
-    let native = foxglove::schemas::PackedElementField::get_schema()
+    let native = foxglove::messages::PackedElementField::get_schema()
         .expect("PackedElementField schema is Some");
     let name: &'static str = "foxglove.PackedElementField";
     let encoding: &'static str = "protobuf";
@@ -4567,7 +4594,7 @@ pub unsafe extern "C" fn foxglove_packed_element_field_encode(
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
-                        .expect("foxglove schemas return Some(len)");
+                        .expect("foxglove messages return Some(len)");
                 }
                 return FoxgloveError::BufferTooShort;
             }
@@ -4617,20 +4644,20 @@ impl Point2 {
             return FoxgloveError::ValueError;
         }
         unsafe {
-            let result = do_foxglove_channel_create::<foxglove::schemas::Point2>(topic, context);
+            let result = do_foxglove_channel_create::<foxglove::messages::Point2>(topic, context);
             result_to_c(result, channel)
         }
     }
 }
 
 impl BorrowToNative for Point2 {
-    type NativeType = foxglove::schemas::Point2;
+    type NativeType = foxglove::messages::Point2;
 
     unsafe fn borrow_to_native(
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
-        Ok(ManuallyDrop::new(foxglove::schemas::Point2 {
+        Ok(ManuallyDrop::new(foxglove::messages::Point2 {
             x: self.x,
             y: self.y,
         }))
@@ -4673,7 +4700,7 @@ pub extern "C" fn foxglove_channel_log_point2(
 )]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_point2_schema() -> FoxgloveSchema {
-    let native = foxglove::schemas::Point2::get_schema().expect("Point2 schema is Some");
+    let native = foxglove::messages::Point2::get_schema().expect("Point2 schema is Some");
     let name: &'static str = "foxglove.Point2";
     let encoding: &'static str = "protobuf";
     assert_eq!(name, &native.name);
@@ -4714,7 +4741,7 @@ pub unsafe extern "C" fn foxglove_point2_encode(
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
-                        .expect("foxglove schemas return Some(len)");
+                        .expect("foxglove messages return Some(len)");
                 }
                 return FoxgloveError::BufferTooShort;
             }
@@ -4767,20 +4794,20 @@ impl Point3 {
             return FoxgloveError::ValueError;
         }
         unsafe {
-            let result = do_foxglove_channel_create::<foxglove::schemas::Point3>(topic, context);
+            let result = do_foxglove_channel_create::<foxglove::messages::Point3>(topic, context);
             result_to_c(result, channel)
         }
     }
 }
 
 impl BorrowToNative for Point3 {
-    type NativeType = foxglove::schemas::Point3;
+    type NativeType = foxglove::messages::Point3;
 
     unsafe fn borrow_to_native(
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
-        Ok(ManuallyDrop::new(foxglove::schemas::Point3 {
+        Ok(ManuallyDrop::new(foxglove::messages::Point3 {
             x: self.x,
             y: self.y,
             z: self.z,
@@ -4824,7 +4851,7 @@ pub extern "C" fn foxglove_channel_log_point3(
 )]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_point3_schema() -> FoxgloveSchema {
-    let native = foxglove::schemas::Point3::get_schema().expect("Point3 schema is Some");
+    let native = foxglove::messages::Point3::get_schema().expect("Point3 schema is Some");
     let name: &'static str = "foxglove.Point3";
     let encoding: &'static str = "protobuf";
     assert_eq!(name, &native.name);
@@ -4865,7 +4892,7 @@ pub unsafe extern "C" fn foxglove_point3_encode(
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
-                        .expect("foxglove schemas return Some(len)");
+                        .expect("foxglove messages return Some(len)");
                 }
                 return FoxgloveError::BufferTooShort;
             }
@@ -4883,6 +4910,173 @@ pub unsafe extern "C" fn foxglove_point3_encode(
         }
         Err(e) => {
             tracing::error!("Point3: {}", e);
+            FoxgloveError::EncodeError
+        }
+    }
+}
+
+/// A timestamped point for a position in 3D space
+#[repr(C)]
+pub struct Point3InFrame {
+    /// Timestamp of point
+    pub timestamp: *const FoxgloveTimestamp,
+
+    /// Frame of reference for point position
+    pub frame_id: FoxgloveString,
+
+    /// Point in 3D space
+    pub point: *const Point3,
+}
+
+#[cfg(not(target_family = "wasm"))]
+impl Point3InFrame {
+    /// Create a new typed channel, and return an owned raw channel pointer to it.
+    ///
+    /// # Safety
+    /// We're trusting the caller that the channel will only be used with this type T.
+    #[unsafe(no_mangle)]
+    pub unsafe extern "C" fn foxglove_channel_create_point3_in_frame(
+        topic: FoxgloveString,
+        context: *const FoxgloveContext,
+        channel: *mut *const FoxgloveChannel,
+    ) -> FoxgloveError {
+        if channel.is_null() {
+            tracing::error!("channel cannot be null");
+            return FoxgloveError::ValueError;
+        }
+        unsafe {
+            let result =
+                do_foxglove_channel_create::<foxglove::messages::Point3InFrame>(topic, context);
+            result_to_c(result, channel)
+        }
+    }
+}
+
+impl BorrowToNative for Point3InFrame {
+    type NativeType = foxglove::messages::Point3InFrame;
+
+    unsafe fn borrow_to_native(
+        &self,
+        #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
+    ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
+        let frame_id = unsafe {
+            string_from_raw(
+                self.frame_id.as_ptr() as *const _,
+                self.frame_id.len(),
+                "frame_id",
+            )?
+        };
+        let point = unsafe {
+            self.point
+                .as_ref()
+                .map(|m| m.borrow_to_native(arena.as_mut()))
+        }
+        .transpose()?;
+
+        Ok(ManuallyDrop::new(foxglove::messages::Point3InFrame {
+            timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
+            frame_id: ManuallyDrop::into_inner(frame_id),
+            point: point.map(ManuallyDrop::into_inner),
+        }))
+    }
+}
+
+/// Log a Point3InFrame message to a channel.
+///
+/// # Safety
+/// The channel must have been created for this type with foxglove_channel_create_point3_in_frame.
+#[cfg(not(target_family = "wasm"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn foxglove_channel_log_point3_in_frame(
+    channel: Option<&FoxgloveChannel>,
+    msg: Option<&Point3InFrame>,
+    log_time: Option<&u64>,
+    sink_id: FoxgloveSinkId,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { Point3InFrame::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
+            log_msg_to_channel(channel, &*msg, log_time, sink_id)
+        }
+        Err(e) => {
+            tracing::error!("Point3InFrame: {}", e);
+            e.into()
+        }
+    }
+}
+
+/// Get the Point3InFrame schema.
+///
+/// All buffers in the returned schema are statically allocated.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_point3_in_frame_schema() -> FoxgloveSchema {
+    let native =
+        foxglove::messages::Point3InFrame::get_schema().expect("Point3InFrame schema is Some");
+    let name: &'static str = "foxglove.Point3InFrame";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("Point3InFrame schema data is static");
+    };
+    FoxgloveSchema {
+        name: name.into(),
+        encoding: encoding.into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
+/// Encode a Point3InFrame message as protobuf to the buffer provided.
+///
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+/// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+/// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+///
+/// # Safety
+/// ptr must be a valid pointer to a memory region at least len bytes long.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_point3_in_frame_encode(
+    msg: Option<&Point3InFrame>,
+    ptr: *mut u8,
+    len: usize,
+    encoded_len: Option<&mut usize>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { Point3InFrame::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            if len == 0 || ptr.is_null() {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = msg
+                        .encoded_len()
+                        .expect("foxglove messages return Some(len)");
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
+            if let Err(encode_error) = msg.encode(&mut buf) {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
+            }
+            FoxgloveError::Ok
+        }
+        Err(e) => {
+            tracing::error!("Point3InFrame: {}", e);
             FoxgloveError::EncodeError
         }
     }
@@ -4930,14 +5124,14 @@ impl PointCloud {
         }
         unsafe {
             let result =
-                do_foxglove_channel_create::<foxglove::schemas::PointCloud>(topic, context);
+                do_foxglove_channel_create::<foxglove::messages::PointCloud>(topic, context);
             result_to_c(result, channel)
         }
     }
 }
 
 impl BorrowToNative for PointCloud {
-    type NativeType = foxglove::schemas::PointCloud;
+    type NativeType = foxglove::messages::PointCloud;
 
     unsafe fn borrow_to_native(
         &self,
@@ -4958,7 +5152,7 @@ impl BorrowToNative for PointCloud {
         .transpose()?;
         let fields = unsafe { arena.as_mut().map(self.fields, self.fields_count)? };
 
-        Ok(ManuallyDrop::new(foxglove::schemas::PointCloud {
+        Ok(ManuallyDrop::new(foxglove::messages::PointCloud {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
             frame_id: ManuallyDrop::into_inner(frame_id),
             pose: pose.map(ManuallyDrop::into_inner),
@@ -5005,7 +5199,7 @@ pub extern "C" fn foxglove_channel_log_point_cloud(
 )]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_point_cloud_schema() -> FoxgloveSchema {
-    let native = foxglove::schemas::PointCloud::get_schema().expect("PointCloud schema is Some");
+    let native = foxglove::messages::PointCloud::get_schema().expect("PointCloud schema is Some");
     let name: &'static str = "foxglove.PointCloud";
     let encoding: &'static str = "protobuf";
     assert_eq!(name, &native.name);
@@ -5046,7 +5240,7 @@ pub unsafe extern "C" fn foxglove_point_cloud_encode(
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
-                        .expect("foxglove schemas return Some(len)");
+                        .expect("foxglove messages return Some(len)");
                 }
                 return FoxgloveError::BufferTooShort;
             }
@@ -5115,14 +5309,14 @@ impl PointsAnnotation {
         }
         unsafe {
             let result =
-                do_foxglove_channel_create::<foxglove::schemas::PointsAnnotation>(topic, context);
+                do_foxglove_channel_create::<foxglove::messages::PointsAnnotation>(topic, context);
             result_to_c(result, channel)
         }
     }
 }
 
 impl BorrowToNative for PointsAnnotation {
-    type NativeType = foxglove::schemas::PointsAnnotation;
+    type NativeType = foxglove::messages::PointsAnnotation;
 
     unsafe fn borrow_to_native(
         &self,
@@ -5147,7 +5341,7 @@ impl BorrowToNative for PointsAnnotation {
         }
         .transpose()?;
 
-        Ok(ManuallyDrop::new(foxglove::schemas::PointsAnnotation {
+        Ok(ManuallyDrop::new(foxglove::messages::PointsAnnotation {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
             r#type: self.r#type as i32,
             points: ManuallyDrop::into_inner(points),
@@ -5195,8 +5389,8 @@ pub extern "C" fn foxglove_channel_log_points_annotation(
 )]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_points_annotation_schema() -> FoxgloveSchema {
-    let native =
-        foxglove::schemas::PointsAnnotation::get_schema().expect("PointsAnnotation schema is Some");
+    let native = foxglove::messages::PointsAnnotation::get_schema()
+        .expect("PointsAnnotation schema is Some");
     let name: &'static str = "foxglove.PointsAnnotation";
     let encoding: &'static str = "protobuf";
     assert_eq!(name, &native.name);
@@ -5237,7 +5431,7 @@ pub unsafe extern "C" fn foxglove_points_annotation_encode(
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
-                        .expect("foxglove schemas return Some(len)");
+                        .expect("foxglove messages return Some(len)");
                 }
                 return FoxgloveError::BufferTooShort;
             }
@@ -5287,14 +5481,14 @@ impl Pose {
             return FoxgloveError::ValueError;
         }
         unsafe {
-            let result = do_foxglove_channel_create::<foxglove::schemas::Pose>(topic, context);
+            let result = do_foxglove_channel_create::<foxglove::messages::Pose>(topic, context);
             result_to_c(result, channel)
         }
     }
 }
 
 impl BorrowToNative for Pose {
-    type NativeType = foxglove::schemas::Pose;
+    type NativeType = foxglove::messages::Pose;
 
     unsafe fn borrow_to_native(
         &self,
@@ -5313,7 +5507,7 @@ impl BorrowToNative for Pose {
         }
         .transpose()?;
 
-        Ok(ManuallyDrop::new(foxglove::schemas::Pose {
+        Ok(ManuallyDrop::new(foxglove::messages::Pose {
             position: position.map(ManuallyDrop::into_inner),
             orientation: orientation.map(ManuallyDrop::into_inner),
         }))
@@ -5356,7 +5550,7 @@ pub extern "C" fn foxglove_channel_log_pose(
 )]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_pose_schema() -> FoxgloveSchema {
-    let native = foxglove::schemas::Pose::get_schema().expect("Pose schema is Some");
+    let native = foxglove::messages::Pose::get_schema().expect("Pose schema is Some");
     let name: &'static str = "foxglove.Pose";
     let encoding: &'static str = "protobuf";
     assert_eq!(name, &native.name);
@@ -5397,7 +5591,7 @@ pub unsafe extern "C" fn foxglove_pose_encode(
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
-                        .expect("foxglove schemas return Some(len)");
+                        .expect("foxglove messages return Some(len)");
                 }
                 return FoxgloveError::BufferTooShort;
             }
@@ -5451,14 +5645,14 @@ impl PoseInFrame {
         }
         unsafe {
             let result =
-                do_foxglove_channel_create::<foxglove::schemas::PoseInFrame>(topic, context);
+                do_foxglove_channel_create::<foxglove::messages::PoseInFrame>(topic, context);
             result_to_c(result, channel)
         }
     }
 }
 
 impl BorrowToNative for PoseInFrame {
-    type NativeType = foxglove::schemas::PoseInFrame;
+    type NativeType = foxglove::messages::PoseInFrame;
 
     unsafe fn borrow_to_native(
         &self,
@@ -5478,7 +5672,7 @@ impl BorrowToNative for PoseInFrame {
         }
         .transpose()?;
 
-        Ok(ManuallyDrop::new(foxglove::schemas::PoseInFrame {
+        Ok(ManuallyDrop::new(foxglove::messages::PoseInFrame {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
             frame_id: ManuallyDrop::into_inner(frame_id),
             pose: pose.map(ManuallyDrop::into_inner),
@@ -5522,7 +5716,7 @@ pub extern "C" fn foxglove_channel_log_pose_in_frame(
 )]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_pose_in_frame_schema() -> FoxgloveSchema {
-    let native = foxglove::schemas::PoseInFrame::get_schema().expect("PoseInFrame schema is Some");
+    let native = foxglove::messages::PoseInFrame::get_schema().expect("PoseInFrame schema is Some");
     let name: &'static str = "foxglove.PoseInFrame";
     let encoding: &'static str = "protobuf";
     assert_eq!(name, &native.name);
@@ -5563,7 +5757,7 @@ pub unsafe extern "C" fn foxglove_pose_in_frame_encode(
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
-                        .expect("foxglove schemas return Some(len)");
+                        .expect("foxglove messages return Some(len)");
                 }
                 return FoxgloveError::BufferTooShort;
             }
@@ -5618,14 +5812,14 @@ impl PosesInFrame {
         }
         unsafe {
             let result =
-                do_foxglove_channel_create::<foxglove::schemas::PosesInFrame>(topic, context);
+                do_foxglove_channel_create::<foxglove::messages::PosesInFrame>(topic, context);
             result_to_c(result, channel)
         }
     }
 }
 
 impl BorrowToNative for PosesInFrame {
-    type NativeType = foxglove::schemas::PosesInFrame;
+    type NativeType = foxglove::messages::PosesInFrame;
 
     unsafe fn borrow_to_native(
         &self,
@@ -5640,7 +5834,7 @@ impl BorrowToNative for PosesInFrame {
         };
         let poses = unsafe { arena.as_mut().map(self.poses, self.poses_count)? };
 
-        Ok(ManuallyDrop::new(foxglove::schemas::PosesInFrame {
+        Ok(ManuallyDrop::new(foxglove::messages::PosesInFrame {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
             frame_id: ManuallyDrop::into_inner(frame_id),
             poses: ManuallyDrop::into_inner(poses),
@@ -5685,7 +5879,7 @@ pub extern "C" fn foxglove_channel_log_poses_in_frame(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_poses_in_frame_schema() -> FoxgloveSchema {
     let native =
-        foxglove::schemas::PosesInFrame::get_schema().expect("PosesInFrame schema is Some");
+        foxglove::messages::PosesInFrame::get_schema().expect("PosesInFrame schema is Some");
     let name: &'static str = "foxglove.PosesInFrame";
     let encoding: &'static str = "protobuf";
     assert_eq!(name, &native.name);
@@ -5726,7 +5920,7 @@ pub unsafe extern "C" fn foxglove_poses_in_frame_encode(
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
-                        .expect("foxglove schemas return Some(len)");
+                        .expect("foxglove messages return Some(len)");
                 }
                 return FoxgloveError::BufferTooShort;
             }
@@ -5783,20 +5977,20 @@ impl Quaternion {
         }
         unsafe {
             let result =
-                do_foxglove_channel_create::<foxglove::schemas::Quaternion>(topic, context);
+                do_foxglove_channel_create::<foxglove::messages::Quaternion>(topic, context);
             result_to_c(result, channel)
         }
     }
 }
 
 impl BorrowToNative for Quaternion {
-    type NativeType = foxglove::schemas::Quaternion;
+    type NativeType = foxglove::messages::Quaternion;
 
     unsafe fn borrow_to_native(
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
-        Ok(ManuallyDrop::new(foxglove::schemas::Quaternion {
+        Ok(ManuallyDrop::new(foxglove::messages::Quaternion {
             x: self.x,
             y: self.y,
             z: self.z,
@@ -5841,7 +6035,7 @@ pub extern "C" fn foxglove_channel_log_quaternion(
 )]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_quaternion_schema() -> FoxgloveSchema {
-    let native = foxglove::schemas::Quaternion::get_schema().expect("Quaternion schema is Some");
+    let native = foxglove::messages::Quaternion::get_schema().expect("Quaternion schema is Some");
     let name: &'static str = "foxglove.Quaternion";
     let encoding: &'static str = "protobuf";
     assert_eq!(name, &native.name);
@@ -5882,7 +6076,7 @@ pub unsafe extern "C" fn foxglove_quaternion_encode(
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
-                        .expect("foxglove schemas return Some(len)");
+                        .expect("foxglove messages return Some(len)");
                 }
                 return FoxgloveError::BufferTooShort;
             }
@@ -5942,14 +6136,14 @@ impl RawAudio {
             return FoxgloveError::ValueError;
         }
         unsafe {
-            let result = do_foxglove_channel_create::<foxglove::schemas::RawAudio>(topic, context);
+            let result = do_foxglove_channel_create::<foxglove::messages::RawAudio>(topic, context);
             result_to_c(result, channel)
         }
     }
 }
 
 impl BorrowToNative for RawAudio {
-    type NativeType = foxglove::schemas::RawAudio;
+    type NativeType = foxglove::messages::RawAudio;
 
     unsafe fn borrow_to_native(
         &self,
@@ -5963,7 +6157,7 @@ impl BorrowToNative for RawAudio {
             )?
         };
 
-        Ok(ManuallyDrop::new(foxglove::schemas::RawAudio {
+        Ok(ManuallyDrop::new(foxglove::messages::RawAudio {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
             data: ManuallyDrop::into_inner(unsafe { bytes_from_raw(self.data, self.data_len) }),
             format: ManuallyDrop::into_inner(format),
@@ -6009,7 +6203,7 @@ pub extern "C" fn foxglove_channel_log_raw_audio(
 )]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_raw_audio_schema() -> FoxgloveSchema {
-    let native = foxglove::schemas::RawAudio::get_schema().expect("RawAudio schema is Some");
+    let native = foxglove::messages::RawAudio::get_schema().expect("RawAudio schema is Some");
     let name: &'static str = "foxglove.RawAudio";
     let encoding: &'static str = "protobuf";
     assert_eq!(name, &native.name);
@@ -6050,7 +6244,7 @@ pub unsafe extern "C" fn foxglove_raw_audio_encode(
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
-                        .expect("foxglove schemas return Some(len)");
+                        .expect("foxglove messages return Some(len)");
                 }
                 return FoxgloveError::BufferTooShort;
             }
@@ -6169,14 +6363,14 @@ impl RawImage {
             return FoxgloveError::ValueError;
         }
         unsafe {
-            let result = do_foxglove_channel_create::<foxglove::schemas::RawImage>(topic, context);
+            let result = do_foxglove_channel_create::<foxglove::messages::RawImage>(topic, context);
             result_to_c(result, channel)
         }
     }
 }
 
 impl BorrowToNative for RawImage {
-    type NativeType = foxglove::schemas::RawImage;
+    type NativeType = foxglove::messages::RawImage;
 
     unsafe fn borrow_to_native(
         &self,
@@ -6197,7 +6391,7 @@ impl BorrowToNative for RawImage {
             )?
         };
 
-        Ok(ManuallyDrop::new(foxglove::schemas::RawImage {
+        Ok(ManuallyDrop::new(foxglove::messages::RawImage {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
             frame_id: ManuallyDrop::into_inner(frame_id),
             width: self.width,
@@ -6245,7 +6439,7 @@ pub extern "C" fn foxglove_channel_log_raw_image(
 )]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_raw_image_schema() -> FoxgloveSchema {
-    let native = foxglove::schemas::RawImage::get_schema().expect("RawImage schema is Some");
+    let native = foxglove::messages::RawImage::get_schema().expect("RawImage schema is Some");
     let name: &'static str = "foxglove.RawImage";
     let encoding: &'static str = "protobuf";
     assert_eq!(name, &native.name);
@@ -6286,7 +6480,7 @@ pub unsafe extern "C" fn foxglove_raw_image_encode(
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
-                        .expect("foxglove schemas return Some(len)");
+                        .expect("foxglove messages return Some(len)");
                 }
                 return FoxgloveError::BufferTooShort;
             }
@@ -6340,14 +6534,14 @@ impl SpherePrimitive {
         }
         unsafe {
             let result =
-                do_foxglove_channel_create::<foxglove::schemas::SpherePrimitive>(topic, context);
+                do_foxglove_channel_create::<foxglove::messages::SpherePrimitive>(topic, context);
             result_to_c(result, channel)
         }
     }
 }
 
 impl BorrowToNative for SpherePrimitive {
-    type NativeType = foxglove::schemas::SpherePrimitive;
+    type NativeType = foxglove::messages::SpherePrimitive;
 
     unsafe fn borrow_to_native(
         &self,
@@ -6372,7 +6566,7 @@ impl BorrowToNative for SpherePrimitive {
         }
         .transpose()?;
 
-        Ok(ManuallyDrop::new(foxglove::schemas::SpherePrimitive {
+        Ok(ManuallyDrop::new(foxglove::messages::SpherePrimitive {
             pose: pose.map(ManuallyDrop::into_inner),
             size: size.map(ManuallyDrop::into_inner),
             color: color.map(ManuallyDrop::into_inner),
@@ -6417,7 +6611,7 @@ pub extern "C" fn foxglove_channel_log_sphere_primitive(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_sphere_primitive_schema() -> FoxgloveSchema {
     let native =
-        foxglove::schemas::SpherePrimitive::get_schema().expect("SpherePrimitive schema is Some");
+        foxglove::messages::SpherePrimitive::get_schema().expect("SpherePrimitive schema is Some");
     let name: &'static str = "foxglove.SpherePrimitive";
     let encoding: &'static str = "protobuf";
     assert_eq!(name, &native.name);
@@ -6458,7 +6652,7 @@ pub unsafe extern "C" fn foxglove_sphere_primitive_encode(
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
-                        .expect("foxglove schemas return Some(len)");
+                        .expect("foxglove messages return Some(len)");
                 }
                 return FoxgloveError::BufferTooShort;
             }
@@ -6522,14 +6716,14 @@ impl TextAnnotation {
         }
         unsafe {
             let result =
-                do_foxglove_channel_create::<foxglove::schemas::TextAnnotation>(topic, context);
+                do_foxglove_channel_create::<foxglove::messages::TextAnnotation>(topic, context);
             result_to_c(result, channel)
         }
     }
 }
 
 impl BorrowToNative for TextAnnotation {
-    type NativeType = foxglove::schemas::TextAnnotation;
+    type NativeType = foxglove::messages::TextAnnotation;
 
     unsafe fn borrow_to_native(
         &self,
@@ -6556,7 +6750,7 @@ impl BorrowToNative for TextAnnotation {
         }
         .transpose()?;
 
-        Ok(ManuallyDrop::new(foxglove::schemas::TextAnnotation {
+        Ok(ManuallyDrop::new(foxglove::messages::TextAnnotation {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
             position: position.map(ManuallyDrop::into_inner),
             text: ManuallyDrop::into_inner(text),
@@ -6604,7 +6798,7 @@ pub extern "C" fn foxglove_channel_log_text_annotation(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_text_annotation_schema() -> FoxgloveSchema {
     let native =
-        foxglove::schemas::TextAnnotation::get_schema().expect("TextAnnotation schema is Some");
+        foxglove::messages::TextAnnotation::get_schema().expect("TextAnnotation schema is Some");
     let name: &'static str = "foxglove.TextAnnotation";
     let encoding: &'static str = "protobuf";
     assert_eq!(name, &native.name);
@@ -6645,7 +6839,7 @@ pub unsafe extern "C" fn foxglove_text_annotation_encode(
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
-                        .expect("foxglove schemas return Some(len)");
+                        .expect("foxglove messages return Some(len)");
                 }
                 return FoxgloveError::BufferTooShort;
             }
@@ -6708,14 +6902,14 @@ impl TextPrimitive {
         }
         unsafe {
             let result =
-                do_foxglove_channel_create::<foxglove::schemas::TextPrimitive>(topic, context);
+                do_foxglove_channel_create::<foxglove::messages::TextPrimitive>(topic, context);
             result_to_c(result, channel)
         }
     }
 }
 
 impl BorrowToNative for TextPrimitive {
-    type NativeType = foxglove::schemas::TextPrimitive;
+    type NativeType = foxglove::messages::TextPrimitive;
 
     unsafe fn borrow_to_native(
         &self,
@@ -6736,7 +6930,7 @@ impl BorrowToNative for TextPrimitive {
         let text =
             unsafe { string_from_raw(self.text.as_ptr() as *const _, self.text.len(), "text")? };
 
-        Ok(ManuallyDrop::new(foxglove::schemas::TextPrimitive {
+        Ok(ManuallyDrop::new(foxglove::messages::TextPrimitive {
             pose: pose.map(ManuallyDrop::into_inner),
             billboard: self.billboard,
             font_size: self.font_size,
@@ -6784,7 +6978,7 @@ pub extern "C" fn foxglove_channel_log_text_primitive(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_text_primitive_schema() -> FoxgloveSchema {
     let native =
-        foxglove::schemas::TextPrimitive::get_schema().expect("TextPrimitive schema is Some");
+        foxglove::messages::TextPrimitive::get_schema().expect("TextPrimitive schema is Some");
     let name: &'static str = "foxglove.TextPrimitive";
     let encoding: &'static str = "protobuf";
     assert_eq!(name, &native.name);
@@ -6825,7 +7019,7 @@ pub unsafe extern "C" fn foxglove_text_primitive_encode(
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
-                        .expect("foxglove schemas return Some(len)");
+                        .expect("foxglove messages return Some(len)");
                 }
                 return FoxgloveError::BufferTooShort;
             }
@@ -6889,7 +7083,7 @@ impl TriangleListPrimitive {
             return FoxgloveError::ValueError;
         }
         unsafe {
-            let result = do_foxglove_channel_create::<foxglove::schemas::TriangleListPrimitive>(
+            let result = do_foxglove_channel_create::<foxglove::messages::TriangleListPrimitive>(
                 topic, context,
             );
             result_to_c(result, channel)
@@ -6898,7 +7092,7 @@ impl TriangleListPrimitive {
 }
 
 impl BorrowToNative for TriangleListPrimitive {
-    type NativeType = foxglove::schemas::TriangleListPrimitive;
+    type NativeType = foxglove::messages::TriangleListPrimitive;
 
     unsafe fn borrow_to_native(
         &self,
@@ -6920,7 +7114,7 @@ impl BorrowToNative for TriangleListPrimitive {
         let colors = unsafe { arena.as_mut().map(self.colors, self.colors_count)? };
 
         Ok(ManuallyDrop::new(
-            foxglove::schemas::TriangleListPrimitive {
+            foxglove::messages::TriangleListPrimitive {
                 pose: pose.map(ManuallyDrop::into_inner),
                 points: ManuallyDrop::into_inner(points),
                 color: color.map(ManuallyDrop::into_inner),
@@ -6969,7 +7163,7 @@ pub extern "C" fn foxglove_channel_log_triangle_list_primitive(
 )]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_triangle_list_primitive_schema() -> FoxgloveSchema {
-    let native = foxglove::schemas::TriangleListPrimitive::get_schema()
+    let native = foxglove::messages::TriangleListPrimitive::get_schema()
         .expect("TriangleListPrimitive schema is Some");
     let name: &'static str = "foxglove.TriangleListPrimitive";
     let encoding: &'static str = "protobuf";
@@ -7011,7 +7205,7 @@ pub unsafe extern "C" fn foxglove_triangle_list_primitive_encode(
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
-                        .expect("foxglove schemas return Some(len)");
+                        .expect("foxglove messages return Some(len)");
                 }
                 return FoxgloveError::BufferTooShort;
             }
@@ -7061,20 +7255,20 @@ impl Vector2 {
             return FoxgloveError::ValueError;
         }
         unsafe {
-            let result = do_foxglove_channel_create::<foxglove::schemas::Vector2>(topic, context);
+            let result = do_foxglove_channel_create::<foxglove::messages::Vector2>(topic, context);
             result_to_c(result, channel)
         }
     }
 }
 
 impl BorrowToNative for Vector2 {
-    type NativeType = foxglove::schemas::Vector2;
+    type NativeType = foxglove::messages::Vector2;
 
     unsafe fn borrow_to_native(
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
-        Ok(ManuallyDrop::new(foxglove::schemas::Vector2 {
+        Ok(ManuallyDrop::new(foxglove::messages::Vector2 {
             x: self.x,
             y: self.y,
         }))
@@ -7117,7 +7311,7 @@ pub extern "C" fn foxglove_channel_log_vector2(
 )]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_vector2_schema() -> FoxgloveSchema {
-    let native = foxglove::schemas::Vector2::get_schema().expect("Vector2 schema is Some");
+    let native = foxglove::messages::Vector2::get_schema().expect("Vector2 schema is Some");
     let name: &'static str = "foxglove.Vector2";
     let encoding: &'static str = "protobuf";
     assert_eq!(name, &native.name);
@@ -7158,7 +7352,7 @@ pub unsafe extern "C" fn foxglove_vector2_encode(
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
-                        .expect("foxglove schemas return Some(len)");
+                        .expect("foxglove messages return Some(len)");
                 }
                 return FoxgloveError::BufferTooShort;
             }
@@ -7211,20 +7405,20 @@ impl Vector3 {
             return FoxgloveError::ValueError;
         }
         unsafe {
-            let result = do_foxglove_channel_create::<foxglove::schemas::Vector3>(topic, context);
+            let result = do_foxglove_channel_create::<foxglove::messages::Vector3>(topic, context);
             result_to_c(result, channel)
         }
     }
 }
 
 impl BorrowToNative for Vector3 {
-    type NativeType = foxglove::schemas::Vector3;
+    type NativeType = foxglove::messages::Vector3;
 
     unsafe fn borrow_to_native(
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
-        Ok(ManuallyDrop::new(foxglove::schemas::Vector3 {
+        Ok(ManuallyDrop::new(foxglove::messages::Vector3 {
             x: self.x,
             y: self.y,
             z: self.z,
@@ -7268,7 +7462,7 @@ pub extern "C" fn foxglove_channel_log_vector3(
 )]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_vector3_schema() -> FoxgloveSchema {
-    let native = foxglove::schemas::Vector3::get_schema().expect("Vector3 schema is Some");
+    let native = foxglove::messages::Vector3::get_schema().expect("Vector3 schema is Some");
     let name: &'static str = "foxglove.Vector3";
     let encoding: &'static str = "protobuf";
     assert_eq!(name, &native.name);
@@ -7309,7 +7503,7 @@ pub unsafe extern "C" fn foxglove_vector3_encode(
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
-                        .expect("foxglove schemas return Some(len)");
+                        .expect("foxglove messages return Some(len)");
                 }
                 return FoxgloveError::BufferTooShort;
             }

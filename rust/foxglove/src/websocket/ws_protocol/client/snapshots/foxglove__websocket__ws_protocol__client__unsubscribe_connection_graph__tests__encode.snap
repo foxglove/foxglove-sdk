@@ -1,7 +1,0 @@
----
-source: rust/foxglove/src/websocket/ws_protocol/client/unsubscribe_connection_graph.rs
-expression: "UnsubscribeConnectionGraph {}"
----
-{
-  "op": "unsubscribeConnectionGraph"
-}

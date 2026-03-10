@@ -5,12 +5,13 @@ use maplit::hashmap;
 #[cfg(feature = "tls")]
 use rcgen::{CertificateParams, Issuer, KeyPair};
 use std::borrow::Cow;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
+
+use indexmap::IndexSet;
 use std::sync::Arc;
-#[cfg(feature = "unstable")]
 use std::sync::Mutex;
 use std::time::Duration;
-use tokio_tungstenite::tungstenite::{self, http::HeaderValue, Message};
+use tokio_tungstenite::tungstenite::{self, Message, http::HeaderValue};
 use tracing_test::traced_test;
 use tungstenite::client::IntoClientRequest;
 
@@ -27,20 +28,19 @@ use super::ws_protocol::server::server_info::{
     Capability as ServerInfoCapability, SerializedTimestamp,
 };
 use super::ws_protocol::server::{
-    advertise_services, ConnectionGraphUpdate, FetchAssetResponse, ParameterValues, ServerInfo,
-    ServerMessage, ServiceCallFailure, ServiceCallResponse, Status,
+    ConnectionGraphUpdate, FetchAssetResponse, ParameterValues, ServerInfo, ServerMessage,
+    ServiceCallFailure, ServiceCallResponse, Status, advertise_services,
 };
 use crate::library_version::get_library_version;
-use crate::testutil::{assert_eventually, RecordingServerListener};
-use crate::websocket::handshake::SUBPROTOCOL;
-use crate::websocket::server::{create_server as do_create_server, ServerOptions};
-use crate::websocket::service::{CallId, Service, ServiceSchema};
+use crate::testutil::{RecordingServerListener, assert_eventually};
 #[cfg(feature = "tls")]
 use crate::websocket::TlsIdentity;
+use crate::websocket::handshake::SUBPROTOCOL;
+use crate::websocket::server::{ServerOptions, create_server as do_create_server};
+use crate::websocket::service::{CallId, Service, ServiceSchema};
 use crate::websocket::{
     BlockingAssetHandlerFn, Capability, ClientChannelId, ConnectionGraph, Parameter, Server,
 };
-#[cfg(feature = "unstable")]
 use crate::websocket::{
     PlaybackCommand, PlaybackControlRequest, PlaybackState, PlaybackStatus, ServerListener,
 };
@@ -724,7 +724,7 @@ async fn test_service_registration_missing_request_encoding() {
     let server = create_server(
         &ctx,
         ServerOptions {
-            capabilities: Some(HashSet::from([Capability::Services])),
+            capabilities: Some(IndexSet::from([Capability::Services])),
             ..Default::default()
         },
     );
@@ -743,9 +743,9 @@ async fn test_service_registration_duplicate_name() {
     let server = create_server(
         &ctx,
         ServerOptions {
-            capabilities: Some(HashSet::from([Capability::Services])),
+            capabilities: Some(IndexSet::from([Capability::Services])),
             services: HashMap::from([(sa1.name().to_string(), sa1)]),
-            supported_encodings: Some(HashSet::from(["ros1msg".into()])),
+            supported_encodings: Some(IndexSet::from(["ros1msg".into()])),
             ..Default::default()
         },
     );
@@ -829,8 +829,8 @@ async fn test_client_advertising() {
     let server = create_server(
         &ctx,
         ServerOptions {
-            capabilities: Some(HashSet::from([Capability::ClientPublish])),
-            supported_encodings: Some(HashSet::from(["json".to_string()])),
+            capabilities: Some(IndexSet::from([Capability::ClientPublish])),
+            supported_encodings: Some(IndexSet::from(["json".to_string()])),
             listener: Some(recording_listener.clone()),
             ..Default::default()
         },
@@ -946,7 +946,7 @@ async fn test_parameter_values_with_empty_values() {
     let server = create_server(
         &ctx,
         ServerOptions {
-            capabilities: Some(HashSet::from([Capability::Parameters])),
+            capabilities: Some(IndexSet::from([Capability::Parameters])),
             listener: Some(listener.clone()),
             ..Default::default()
         },
@@ -983,7 +983,7 @@ async fn test_parameter_values() {
     let server = create_server(
         &ctx,
         ServerOptions {
-            capabilities: Some(HashSet::from([Capability::Parameters])),
+            capabilities: Some(IndexSet::from([Capability::Parameters])),
             listener: Some(recording_listener.clone()),
             ..Default::default()
         },
@@ -1026,7 +1026,7 @@ async fn test_parameter_unsubscribe_no_updates() {
     let server = create_server(
         &ctx,
         ServerOptions {
-            capabilities: Some(HashSet::from([Capability::Parameters])),
+            capabilities: Some(IndexSet::from([Capability::Parameters])),
             listener: Some(recording_listener.clone()),
             ..Default::default()
         },
@@ -1097,7 +1097,7 @@ async fn test_set_parameters() {
     let server = create_server(
         &ctx,
         ServerOptions {
-            capabilities: Some(HashSet::from([Capability::Parameters])),
+            capabilities: Some(IndexSet::from([Capability::Parameters])),
             listener: Some(recording_listener.clone()),
             ..Default::default()
         },
@@ -1158,7 +1158,7 @@ async fn test_get_parameters() {
     let server = create_server(
         &ctx,
         ServerOptions {
-            capabilities: Some(HashSet::from([Capability::Parameters])),
+            capabilities: Some(IndexSet::from([Capability::Parameters])),
             listener: Some(recording_listener.clone()),
             ..Default::default()
         },
@@ -1212,7 +1212,7 @@ async fn test_services() {
                 .into_iter()
                 .map(|s| (s.name().to_string(), s))
                 .collect(),
-            supported_encodings: Some(HashSet::from(["raw".to_string()])),
+            supported_encodings: Some(IndexSet::from(["raw".to_string()])),
             ..Default::default()
         },
     );
@@ -1358,7 +1358,7 @@ async fn test_fetch_asset() {
     let server = create_server(
         &ctx,
         ServerOptions {
-            capabilities: Some(HashSet::from([Capability::Assets])),
+            capabilities: Some(IndexSet::from([Capability::Assets])),
             fetch_asset_handler: Some(Box::new(BlockingAssetHandlerFn(Arc::new(
                 |_client, uri: String| {
                     if uri.ends_with("error") {
@@ -1426,7 +1426,7 @@ async fn test_update_connection_graph() {
     let server = create_server(
         &ctx,
         ServerOptions {
-            capabilities: Some(HashSet::from([Capability::ConnectionGraph])),
+            capabilities: Some(IndexSet::from([Capability::ConnectionGraph])),
             listener: Some(recording_listener.clone()),
             ..Default::default()
         },
@@ -1581,7 +1581,7 @@ async fn test_broadcast_time() {
     let server = create_server(
         &ctx,
         ServerOptions {
-            capabilities: Some(HashSet::from([Capability::Time])),
+            capabilities: Some(IndexSet::from([Capability::Time])),
             ..Default::default()
         },
     );
@@ -1600,12 +1600,10 @@ async fn test_broadcast_time() {
     assert_eq!(msg.timestamp, 42);
 }
 
-#[cfg(feature = "unstable")]
 struct RecordingPlaybackControlListener {
     playback_request: Mutex<Option<PlaybackControlRequest>>,
 }
 
-#[cfg(feature = "unstable")]
 impl RecordingPlaybackControlListener {
     fn new() -> Self {
         Self {
@@ -1639,12 +1637,12 @@ impl RecordingPlaybackControlListener {
             status,
             current_time: request.seek_time.unwrap_or(0),
             playback_speed: request.playback_speed,
+            did_seek: false,
             request_id: Some(request.request_id.clone()),
         }
     }
 }
 
-#[cfg(feature = "unstable")]
 impl ServerListener for RecordingPlaybackControlListener {
     fn on_playback_control_request(
         &self,
@@ -1656,7 +1654,6 @@ impl ServerListener for RecordingPlaybackControlListener {
     }
 }
 
-#[cfg(feature = "unstable")]
 #[traced_test]
 #[tokio::test]
 async fn test_on_playback_control_request() {
@@ -1666,7 +1663,7 @@ async fn test_on_playback_control_request() {
     let server = create_server(
         &ctx,
         ServerOptions {
-            capabilities: Some(HashSet::from([Capability::RangedPlayback])),
+            capabilities: Some(IndexSet::from([Capability::PlaybackControl])),
             playback_time_range: Some((123_456_789, 234_567_890)),
             listener: Some(listener.clone()),
             ..Default::default()
@@ -1818,7 +1815,7 @@ async fn test_server_info_metadata_sent_to_client() {
 }
 
 #[tokio::test]
-async fn test_server_info_with_ranged_playback() {
+async fn test_server_info_with_playback_control() {
     let ctx = Context::new();
     let options = ServerOptions {
         playback_time_range: Some((123, 456)),
@@ -1846,11 +1843,12 @@ async fn test_server_info_with_ranged_playback() {
         Some(SerializedTimestamp { sec: 0, nsec: 456 })
     );
 
-    // By starting the server with a set playback_time_range, it should enable the RangedPlayback
+    // By starting the server with a set playback_time_range, it should enable the PlaybackControl
     // capability
-    assert!(msg
-        .capabilities
-        .contains(&ServerInfoCapability::RangedPlayback));
+    assert!(
+        msg.capabilities
+            .contains(&ServerInfoCapability::PlaybackControl)
+    );
 
     let _ = server.stop();
 }
@@ -1879,6 +1877,7 @@ async fn test_broadcast_playback_state() {
         status: PlaybackStatus::Playing,
         current_time: 250,
         playback_speed: 1.0,
+        did_seek: true,
         request_id: None,
     };
 
@@ -1893,10 +1892,10 @@ async fn test_broadcast_playback_state() {
 
 #[tokio::test]
 #[should_panic]
-async fn test_ranged_playback_without_time_range() {
+async fn test_playback_control_without_time_range() {
     let ctx = Context::new();
     let options = ServerOptions {
-        capabilities: Some(HashSet::from([Capability::RangedPlayback])),
+        capabilities: Some(IndexSet::from([Capability::PlaybackControl])),
         playback_time_range: None,
         ..Default::default()
     };

@@ -203,6 +203,31 @@ const Point3: FoxgloveMessageSchema = {
   ],
 };
 
+const Point3InFrame: FoxgloveMessageSchema = {
+  type: "message",
+  name: "Point3InFrame",
+  description: "A timestamped point for a position in 3D space",
+  rosEquivalent: "geometry_msgs/PointStamped",
+  ros2Equivalent: "geometry_msgs/PointStamped",
+  fields: [
+    {
+      name: "timestamp",
+      type: { type: "nested", schema: Timestamp },
+      description: "Timestamp of point",
+    },
+    {
+      name: "frame_id",
+      type: { type: "primitive", name: "string" },
+      description: "Frame of reference for point position",
+    },
+    {
+      name: "point",
+      type: { type: "nested", schema: Point3 },
+      description: "Point in 3D space",
+    },
+  ],
+};
+
 const Quaternion: FoxgloveMessageSchema = {
   type: "message",
   name: "Quaternion",
@@ -796,6 +821,8 @@ Projects 3D points in the camera coordinate frame to 2D pixel coordinates using 
 K = [ 0 fy cy]
     [ 0  0  1]
 \`\`\`
+
+**Uncalibrated cameras:** Following ROS conventions for [CameraInfo](https://docs.ros.org/en/noetic/api/sensor_msgs/html/msg/CameraInfo.html), Foxglove also treats K[0] == 0.0 as indicating an uncalibrated camera, and calibration data will be ignored.
 `,
     },
     {
@@ -1025,7 +1052,8 @@ For each \`encoding\` value, the \`data\` field contains image pixel data serial
 const FrameTransform: FoxgloveMessageSchema = {
   type: "message",
   name: "FrameTransform",
-  description: "A transform between two reference frames in 3D space",
+  description:
+    "A transform between two reference frames in 3D space. The transform defines the position and orientation of a child frame within a parent frame. Translation moves the origin of the child frame relative to the parent origin. The rotation changes the orientiation of the child frame around its origin.\n\nExamples:\n\n- With translation (x=1, y=0, z=0) and identity rotation (x=0, y=0, z=0, w=1), a point at (x=0, y=0, z=0) in the child frame maps to (x=1, y=0, z=0) in the parent frame.\n\n- With translation (x=1, y=2, z=0) and a 90-degree rotation around the z-axis (x=0, y=0, z=0.707, w=0.707), a point at (x=1, y=0, z=0) in the child frame maps to (x=-1, y=3, z=0) in the parent frame.",
   fields: [
     {
       name: "timestamp",
@@ -1045,12 +1073,14 @@ const FrameTransform: FoxgloveMessageSchema = {
     {
       name: "translation",
       type: { type: "nested", schema: Vector3 },
-      description: "Translation component of the transform",
+      description:
+        "Translation component of the transform, representing the position of the child frame's origin in the parent frame.",
     },
     {
       name: "rotation",
       type: { type: "nested", schema: Quaternion },
-      description: "Rotation component of the transform",
+      description:
+        "Rotation component of the transform, representing the orientation of the child frame in the parent frame",
     },
   ],
 };
@@ -1246,7 +1276,8 @@ const VoxelGrid: FoxgloveMessageSchema = {
     {
       name: "pose",
       type: { type: "nested", schema: Pose },
-      description: "Origin of grid's corner relative to frame of reference",
+      description:
+        "Origin of the grid’s lower-front-left corner in the reference frame. The grid’s pose is defined relative to this corner, so an untransformed grid with an identity orientation has this corner at the origin.",
     },
     {
       name: "row_count",
@@ -1445,22 +1476,47 @@ const ImageAnnotations: FoxgloveMessageSchema = {
   description: "Array of annotations for a 2D image",
   fields: [
     {
+      name: "timestamp",
+      type: { type: "nested", schema: Timestamp },
+      description:
+        "Timestamp of the image annotations. When set, individual annotation timestamps will be ignored.",
+      optional: true,
+      protobufFieldNumber: 5,
+      flatbuffersFieldNumber: 4,
+    },
+    {
       name: "circles",
       type: { type: "nested", schema: CircleAnnotation },
       description: "Circle annotations",
       array: true,
+      protobufFieldNumber: 1,
+      flatbuffersFieldNumber: 0,
     },
     {
       name: "points",
       type: { type: "nested", schema: PointsAnnotation },
       description: "Points annotations",
       array: true,
+      protobufFieldNumber: 2,
+      flatbuffersFieldNumber: 1,
     },
     {
       name: "texts",
       type: { type: "nested", schema: TextAnnotation },
       description: "Text annotations",
       array: true,
+      protobufFieldNumber: 3,
+      flatbuffersFieldNumber: 2,
+    },
+    {
+      name: "metadata",
+      type: { type: "nested", schema: KeyValuePair },
+      description:
+        "Additional user-provided metadata associated with the image annotations. Keys must be unique.",
+      array: true,
+      optional: true,
+      protobufFieldNumber: 4,
+      flatbuffersFieldNumber: 3,
     },
   ],
 };
@@ -1539,6 +1595,16 @@ const LocationFix: FoxgloveMessageSchema = {
       type: { type: "nested", schema: Color },
       description: "Color used to visualize the location",
       protobufFieldNumber: 8,
+      optional: true,
+    },
+    {
+      name: "metadata",
+      type: { type: "nested", schema: KeyValuePair },
+      array: true,
+      description:
+        "Additional user-provided metadata associated with the location fix. Keys must be unique.",
+      protobufFieldNumber: 9,
+      optional: true,
     },
   ],
 };
@@ -1728,6 +1794,7 @@ export const foxgloveMessageSchemas = {
   PackedElementField,
   Point2,
   Point3,
+  Point3InFrame,
   PointCloud,
   PointsAnnotation,
   Pose,

@@ -1,0 +1,9 @@
+---
+source: rust/foxglove/src/protocol/common/client/fetch_asset.rs
+expression: message()
+---
+{
+  "op": "fetchAsset",
+  "requestId": 42,
+  "uri": "package://foxglove/example.urdf"
+}

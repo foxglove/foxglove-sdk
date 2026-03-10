@@ -7,16 +7,15 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 
 use crate::sink_channel_filter::{SinkChannelFilter, SinkChannelFilterFn};
-use crate::websocket::service::Service;
-#[cfg(feature = "unstable")]
 use crate::websocket::PlaybackState;
 #[cfg(feature = "tls")]
 use crate::websocket::TlsIdentity;
+use crate::websocket::service::Service;
 use crate::websocket::{
-    create_server, AssetHandler, AsyncAssetHandlerFn, BlockingAssetHandlerFn, Capability, Client,
-    ConnectionGraph, Parameter, Server, ServerOptions, ShutdownHandle, Status,
+    AssetHandler, AsyncAssetHandlerFn, BlockingAssetHandlerFn, Capability, Client, ConnectionGraph,
+    Parameter, Server, ServerOptions, ShutdownHandle, Status, create_server,
 };
-use crate::{get_runtime_handle, AppUrl, ChannelDescriptor, Context, FoxgloveError};
+use crate::{AppUrl, ChannelDescriptor, Context, FoxgloveError, get_runtime_handle};
 
 /// A WebSocket server for live visualization in Foxglove.
 ///
@@ -127,7 +126,7 @@ impl WebSocketServer {
     }
 
     /// Declare the time range for playback, in absolute nanoseconds. This applies if the server is playing back a fixed time range of data.
-    /// This will add the RangedPlayback capability to the server.
+    /// This will add the PlaybackControl capability to the server.
     pub fn playback_time_range(mut self, start_time: u64, end_time: u64) -> Self {
         self.options.playback_time_range = Some((start_time, end_time));
         self
@@ -158,7 +157,6 @@ impl WebSocketServer {
             Some(Box::new(BlockingAssetHandlerFn(Arc::new(handler))));
         self
     }
-
     /// Configure an asynchronous function as a fetch asset handler.
     /// There can only be one asset handler, exclusive with the other fetch_asset_handler methods.
     pub fn fetch_asset_handler_async_fn<F, Fut, T, Err>(mut self, handler: F) -> Self
@@ -289,6 +287,11 @@ impl WebSocketServerHandle {
         self.1.port()
     }
 
+    /// Returns the number of currently connected clients.
+    pub fn client_count(&self) -> usize {
+        self.0.client_count()
+    }
+
     /// Returns an app URL to open the websocket as a data source.
     pub fn app_url(&self) -> AppUrl {
         let protocol = if self.0.is_tls_configured() {
@@ -326,9 +329,7 @@ impl WebSocketServerHandle {
 
     /// Publish the current playback state to all clients.
     ///
-    /// Requires the [`RangedPlayback`](crate::websocket::Capability::Time) capability.
-    #[cfg(feature = "unstable")]
-    #[doc(hidden)]
+    /// Requires the [`PlaybackControl`](crate::websocket::Capability::PlaybackControl) capability.
     pub fn broadcast_playback_state(&self, playback_state: PlaybackState) {
         self.0.broadcast_playback_state(playback_state);
     }

@@ -4,13 +4,30 @@ on:
   push:
     branches: [main]
     tags: ["**"]
-  pull_request: {}
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      wheels: ${{ github.event_name != 'pull_request' || steps.paths.outputs.wheels == 'true' || contains(github.event.pull_request.labels.*.name, 'ci:python') }}
+    steps:
+      - uses: dorny/paths-filter@v3
+        if: github.event_name == 'pull_request'
+        id: paths
+        with:
+          filters: |
+            wheels:
+              - 'python/**'
+              - '.github/workflows/python.yml'
+
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - uses: actions/setup-python@v6
         with:
@@ -22,7 +39,7 @@ jobs:
   lint-and-test-sdk:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions-rust-lang/setup-rust-toolchain@v1
 
       - name: Install common dependencies
@@ -41,7 +58,7 @@ jobs:
     needs: [sdist]
     steps:
       - name: Download sdist
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v8
         with:
           name: wheels-sdist
       - name: Unpack sdist
@@ -74,7 +91,7 @@ jobs:
           MATURIN_NO_MISSING_BUILD_BACKEND_WARNING: 1
 
       - name: Upload wheel
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: playground-wasm
           path: dist
@@ -88,14 +105,14 @@ jobs:
     permissions:
       deployments: write
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - run: corepack enable
       - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: yarn
       - name: Download wheel
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v8
         with:
           name: playground-wasm
           path: playground/public
@@ -119,7 +136,7 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - uses: actions/setup-python@v6
         with:
@@ -160,7 +177,8 @@ jobs:
 
   linux:
     runs-on: ${{ matrix.platform.runner }}
-    needs: [sdist]
+    needs: [changes, sdist]
+    if: needs.changes.outputs.wheels == 'true'
     strategy:
       matrix:
         platform:
@@ -181,7 +199,7 @@ jobs:
         with:
           python-version: "3.10"
       - name: Download sdist
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v8
         with:
           name: wheels-sdist
       - name: Unpack sdist
@@ -195,14 +213,15 @@ jobs:
           manylinux: auto
           docker-options: "--env MATURIN_NO_MISSING_BUILD_BACKEND_WARNING=1"
       - name: Upload wheels
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: wheels-linux-${{ matrix.platform.target }}
           path: dist
 
   musllinux:
     runs-on: ${{ matrix.platform.runner }}
-    needs: [sdist]
+    needs: [changes, sdist]
+    if: needs.changes.outputs.wheels == 'true'
     strategy:
       matrix:
         platform:
@@ -219,7 +238,7 @@ jobs:
         with:
           python-version: "3.10"
       - name: Download sdist
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v8
         with:
           name: wheels-sdist
       - name: Unpack sdist
@@ -233,14 +252,15 @@ jobs:
           manylinux: musllinux_1_2
           docker-options: "--env MATURIN_NO_MISSING_BUILD_BACKEND_WARNING=1"
       - name: Upload wheels
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: wheels-musllinux-${{ matrix.platform.target }}
           path: dist
 
   windows:
     runs-on: ${{ matrix.platform.runner }}
-    needs: [sdist]
+    needs: [changes, sdist]
+    if: needs.changes.outputs.wheels == 'true'
     strategy:
       matrix:
         platform:
@@ -267,7 +287,7 @@ jobs:
             3.10
 
       - name: Download sdist
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v8
         with:
           name: wheels-sdist
       - name: Unpack sdist
@@ -281,14 +301,15 @@ jobs:
           sccache: "false"
           docker-options: "--env MATURIN_NO_MISSING_BUILD_BACKEND_WARNING=1"
       - name: Upload wheels
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: wheels-windows-${{ matrix.platform.target }}
           path: dist
 
   macos:
     runs-on: ${{ matrix.platform.runner }}
-    needs: [sdist]
+    needs: [changes, sdist]
+    if: needs.changes.outputs.wheels == 'true'
     strategy:
       matrix:
         platform:
@@ -301,7 +322,7 @@ jobs:
         with:
           python-version: "3.10"
       - name: Download sdist
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v8
         with:
           name: wheels-sdist
       - name: Unpack sdist
@@ -314,7 +335,7 @@ jobs:
           sccache: "false"
           docker-options: "--env MATURIN_NO_MISSING_BUILD_BACKEND_WARNING=1"
       - name: Upload wheels
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: wheels-macos-${{ matrix.platform.target }}
           path: dist
@@ -322,7 +343,7 @@ jobs:
   sdist:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - uses: astral-sh/setup-uv@v7
       - run: corepack enable
@@ -333,8 +354,28 @@ jobs:
       - name: Build sdist
         run: uv build --sdist
         working-directory: python/foxglove-sdk
+      - name: Verify notebook widget asset in sdist
+        run: |
+          python - <<'PY'
+          import glob
+          import sys
+          import tarfile
+
+          paths = glob.glob("dist/foxglove_sdk-*.tar.gz")
+          if not paths:
+              sys.exit("No sdist artifact found to validate in dist/")
+
+          tar_path = paths[0]
+          expected_suffix = "python/foxglove/notebook/static/widget.js"
+          with tarfile.open(tar_path, "r:gz") as tar:
+              names = tar.getnames()
+
+          if not any(name.endswith(expected_suffix) for name in names):
+              sys.exit(f"Missing {expected_suffix} in {tar_path}")
+          PY
+        working-directory: python/foxglove-sdk
       - name: Upload sdist
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: wheels-sdist
           path: python/foxglove-sdk/dist
@@ -351,12 +392,12 @@ jobs:
       contents: write
       attestations: write
     steps:
-      - uses: actions/download-artifact@v6
+      - uses: actions/download-artifact@v8
         with:
           path: python/foxglove-sdk
       - run: find python/foxglove-sdk/wheels-*
       - name: Generate artifact attestation
-        uses: actions/attest-build-provenance@v3
+        uses: actions/attest-build-provenance@v4
         with:
           subject-path: "python/foxglove-sdk/wheels-*/*"
       - name: Publish to PyPI
@@ -372,7 +413,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - uses: actions/setup-python@v6
         with:
@@ -385,3 +426,16 @@ jobs:
           cache: yarn
       - run: yarn install
       - run: yarn run-python-sdk-examples
+
+  # Gate job for branch protection. Always posts a status so that the required
+  # check passes even when the other jobs are skipped. Configure your required
+  # status check to reference this job ("Python / python-status") instead of the
+  # individual matrix jobs.
+  python-status:
+    name: python-status
+    needs: [changes, lint, lint-and-test-sdk, schemas, sdist, linux, musllinux, windows, macos, playground-wasm, playground, test-sdk-examples]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1

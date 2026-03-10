@@ -1,7 +1,0 @@
----
-source: rust/foxglove/src/websocket/ws_protocol/client/subscribe_connection_graph.rs
-expression: "SubscribeConnectionGraph {}"
----
-{
-  "op": "subscribeConnectionGraph"
-}

@@ -3,6 +3,10 @@
 #include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
 
+#include <cerrno>
+#include <cstdint>
+#include <cstdio>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
@@ -15,10 +19,16 @@
 /// @cond foxglove_internal
 enum foxglove_error : uint8_t;
 struct foxglove_mcap_writer;
+struct FoxgloveCustomWriter;
+struct foxglove_mcap_attachment;
 
 foxglove_error foxglove_mcap_write_metadata(
   foxglove_mcap_writer* writer, const foxglove_string* name, const foxglove_key_value* metadata,
   size_t metadata_len
+);
+
+foxglove_error foxglove_mcap_attach(
+  foxglove_mcap_writer* writer, const foxglove_mcap_attachment* attachment
 );
 /// @endcond
 
@@ -26,6 +36,31 @@ foxglove_error foxglove_mcap_write_metadata(
 namespace foxglove {
 
 class Context;
+
+/// @brief Custom writer for writing MCAP data to arbitrary destinations.
+///
+/// This provides a simple function pointer interface that matches the C API.
+/// Users are responsible for managing the lifetime of user_data and ensuring
+/// thread safety if needed.
+struct CustomWriter {
+  /// @brief Write function: write data to the custom destination
+  /// @param data Pointer to data to write
+  /// @param len Number of bytes to write
+  /// @param error Pointer to error code (set to an error number defined in errno.h if write fails)
+  /// @return Number of bytes actually written
+  std::function<size_t(const uint8_t* data, size_t len, int* error)> write;
+
+  /// @brief Flush function: ensure all buffered data is written
+  /// @return 0 on success, an error number defined in errno.h if flush fails
+  std::function<int()> flush;
+
+  /// @brief Seek function: change the current position in the stream
+  /// @param pos Position offset
+  /// @param whence Seek origin (0=SEEK_SET, 1=SEEK_CUR, 2=SEEK_END)
+  /// @param new_pos Pointer to store the new absolute position
+  /// @return 0 on success, an error number defined in errno.h if seek fails
+  std::function<int(int64_t pos, int whence, uint64_t* new_pos)> seek;
+};
 
 /// @brief The compression algorithm to use for an MCAP file.
 enum class McapCompression : uint8_t {
@@ -37,14 +72,37 @@ enum class McapCompression : uint8_t {
   Lz4,
 };
 
+/// @brief An attachment to store in an MCAP file.
+///
+/// Attachments are arbitrary binary data that can be stored alongside messages.
+/// Common uses include storing configuration files, calibration data, or other
+/// reference material related to the recording.
+struct Attachment {
+  /// @brief Timestamp at which the attachment was recorded, in nanoseconds since epoch.
+  uint64_t log_time = 0;
+  /// @brief Timestamp at which the attachment was created, in nanoseconds since epoch.
+  /// If not available, set to 0.
+  uint64_t create_time = 0;
+  /// @brief Name of the attachment, e.g. "config.json".
+  std::string_view name;
+  /// @brief Media type of the attachment, e.g. "application/json".
+  std::string_view media_type;
+  /// @brief Pointer to the attachment data.
+  const std::byte* data = nullptr;
+  /// @brief Length of the attachment data in bytes.
+  size_t data_len = 0;
+};
+
 /// @brief Options for an MCAP writer.
 struct McapWriterOptions {
   friend class McapWriter;
 
   /// @brief The context to use for the MCAP writer.
   Context context;
-  /// @brief The path to the MCAP file.
+  /// @brief The path to the MCAP file. Ignored if custom_writer is set.
   std::string_view path;
+  /// @brief Custom writer for arbitrary destinations. If set, path is ignored.
+  std::optional<CustomWriter> custom_writer;
   /// @brief The profile to use for the MCAP file.
   std::string_view profile;
   /// @brief The size of each chunk in the MCAP file.
@@ -71,6 +129,20 @@ struct McapWriterOptions {
   bool repeat_channels = true;
   /// @brief Whether to repeat schemas in the MCAP file.
   bool repeat_schemas = true;
+  /// @brief Whether to calculate and write CRCs for chunk records.
+  bool calculate_chunk_crcs = true;
+  /// @brief Whether to calculate and write a data section CRC into the DataEnd record.
+  bool calculate_data_section_crc = true;
+  /// @brief Whether to calculate and write a summary section CRC into the Footer record.
+  bool calculate_summary_section_crc = true;
+  /// @brief Whether to calculate and write CRCs for attachment records.
+  bool calculate_attachment_crcs = true;
+  /// @brief Compression level passed to the underlying compressor (zstd or lz4).
+  /// A value of 0 instructs the compressor to use its default level.
+  uint32_t compression_level = 0;
+  /// @brief Number of threads for zstd compression. 0 disables multithreading.
+  /// The default (nullopt) uses the number of physical CPUs.
+  std::optional<uint32_t> compression_threads;
   /// @brief Whether to truncate the MCAP file.
   bool truncate = false;
   /// @brief Optional channel filter to use for the MCAP file.
@@ -105,6 +177,16 @@ public:
   template<typename Iterator>
   FoxgloveError writeMetadata(std::string_view name, Iterator begin, Iterator end);
 
+  /// @brief Write an attachment to the MCAP file.
+  ///
+  /// Attachments are arbitrary binary data that can be stored alongside messages.
+  /// Common uses include storing configuration files, calibration data, or other
+  /// reference material related to the recording.
+  ///
+  /// @param attachment The attachment to write
+  /// @return FoxgloveError::Ok on success, or an error code on failure
+  FoxgloveError attach(const Attachment& attachment);
+
   /// @brief Stops logging events and flushes buffered data.
   FoxgloveError close();
 
@@ -119,10 +201,13 @@ public:
 
 private:
   explicit McapWriter(
-    foxglove_mcap_writer* writer, std::unique_ptr<SinkChannelFilterFn> sink_channel_filter = nullptr
+    foxglove_mcap_writer* writer,
+    std::unique_ptr<SinkChannelFilterFn> sink_channel_filter = nullptr,
+    std::unique_ptr<CustomWriter> custom_writer = nullptr
   );
 
   std::unique_ptr<SinkChannelFilterFn> sink_channel_filter_;
+  std::unique_ptr<CustomWriter> custom_writer_;
   std::unique_ptr<foxglove_mcap_writer, foxglove_error (*)(foxglove_mcap_writer*)> impl_;
 };
 
@@ -147,6 +232,31 @@ FoxgloveError McapWriter::writeMetadata(std::string_view name, Iter begin, Iter 
     foxglove_mcap_write_metadata(impl_.get(), &c_name, c_metadata.data(), c_metadata.size());
 
   return FoxgloveError(error);
+}
+
+/// @brief The type of a seek function in a @ref CustomWriter.
+using SeekFunction = std::function<int(int64_t pos, int whence, uint64_t* new_pos)>;
+
+/// @brief Build a no-op seek function that only supports position queries.
+///
+/// Use with @ref McapWriterOptions::disable_seeking = true.
+///
+/// @param position Pointer to the current write position, which must be kept up to date by the
+///   caller's write function.
+/// @return A seek function suitable for @ref CustomWriter::seek.
+/// @note This function is used to build a @ref CustomWriter for non-seekable output destinations.
+inline SeekFunction no_seek_fn(uint64_t* position) {
+  return [position](int64_t pos, int whence, uint64_t* new_pos) -> int {
+    if (whence == SEEK_CUR && pos == 0) {
+      *new_pos = *position;
+      return 0;
+    }
+    if (whence == SEEK_SET && static_cast<uint64_t>(pos) == *position) {
+      *new_pos = *position;
+      return 0;
+    }
+    return EIO;
+  };
 }
 
 }  // namespace foxglove

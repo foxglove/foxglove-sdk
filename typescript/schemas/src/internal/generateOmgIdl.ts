@@ -43,7 +43,12 @@ export function generateOmgIdl(schema: FoxgloveSchema): string {
           return `// Value: ${value}\n  ${name}${separator}`;
         }
       });
-      definition = `// ${schema.description}\nenum ${schema.name} {\n  ${fields.join("\n\n  ")}\n};`;
+      const enumDescriptionLines = schema.description
+        .trim()
+        .split("\n")
+        .map((line) => `// ${line}`)
+        .join("\n");
+      definition = `${enumDescriptionLines}\nenum ${schema.name} {\n  ${fields.join("\n\n  ")}\n};`;
       break;
     }
 
@@ -94,10 +99,16 @@ export function generateOmgIdl(schema: FoxgloveSchema): string {
           defaultAnnotation = `@default(${field.defaultValue ? "TRUE" : "FALSE"})\n  `;
         }
 
-        return `${comment}\n  ${defaultAnnotation}${fieldType} ${field.name}${arraySize};`;
+        const optionalAnnotation = field.optional ? `@optional\n  ` : "";
+        return `${comment}\n  ${defaultAnnotation}${optionalAnnotation}${fieldType} ${field.name}${arraySize};`;
       });
 
-      definition = `// ${schema.description}\nstruct ${omgIdlMessageSchemaName(schema)} {\n  ${fields.join(
+      const structDescriptionLines = schema.description
+        .trim()
+        .split("\n")
+        .map((line) => `// ${line}`)
+        .join("\n");
+      definition = `${structDescriptionLines}\nstruct ${omgIdlMessageSchemaName(schema)} {\n  ${fields.join(
         "\n\n  ",
       )}\n};`;
       break;

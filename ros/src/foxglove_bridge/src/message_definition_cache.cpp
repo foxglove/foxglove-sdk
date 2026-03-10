@@ -10,9 +10,13 @@
 #include <unordered_set>
 #include <utility>
 
+#include <ament_index_cpp/version.h>
+#if AMENT_INDEX_CPP_VERSION_GTE(1, 13, 2)
+#include <ament_index_cpp/get_package_share_path.hpp>
+#else
 #include <ament_index_cpp/get_package_share_directory.hpp>
+#endif
 #include <ament_index_cpp/get_resource.hpp>
-#include <ament_index_cpp/get_resources.hpp>
 #include <rcutils/logging_macros.h>
 
 #include "foxglove_bridge/utils.hpp"
@@ -215,13 +219,27 @@ const MessageSpec& MessageDefinitionCache::load_message_spec(
   }
 
   // Get the package share directory, or throw a PackageNotFoundError
-  const std::string share_dir = ament_index_cpp::get_package_share_directory(package);
+  std::filesystem::path share_dir;
+#if AMENT_INDEX_CPP_VERSION_GTE(1, 13, 2)
+  share_dir = ament_index_cpp::get_package_share_path(package);
+#else
+  share_dir = ament_index_cpp::get_package_share_directory(package);
+#endif
 
   // Get the rosidl_interfaces index contents for this package
   std::string index_contents;
+#if AMENT_INDEX_CPP_VERSION_GTE(1, 13, 0)
+  ament_index_cpp::PathWithResource path_with_resource =
+    ament_index_cpp::get_resource("rosidl_interfaces", package);
+  if (path_with_resource.resourcePath == std::nullopt) {
+    throw DefinitionNotFoundError(definition_identifier.package_resource_name);
+  }
+  index_contents = path_with_resource.contents;
+#else
   if (!ament_index_cpp::get_resource("rosidl_interfaces", package, index_contents)) {
     throw DefinitionNotFoundError(definition_identifier.package_resource_name);
   }
+#endif
 
   // Find the first line that ends with the filename we're looking for
   const auto lines = split_string(index_contents);
@@ -234,7 +252,7 @@ const MessageSpec& MessageDefinitionCache::load_message_spec(
   }
 
   // Read the file
-  const std::string full_path = share_dir + std::filesystem::path::preferred_separator + *it;
+  const auto full_path = share_dir / *it;
   std::ifstream file{full_path};
   if (!file.good()) {
     throw DefinitionNotFoundError(definition_identifier.package_resource_name);
@@ -341,8 +359,8 @@ const MessageSpec& MessageDefinitionCache::load_message_spec(
 
 std::pair<MessageDefinitionFormat, const std::string&> MessageDefinitionCache::get_full_text(
   const std::string& root_package_resource_name) {
-  if (full_text_cache_.find(root_package_resource_name) != full_text_cache_.end()) {
-    return {MessageDefinitionFormat::MSG, full_text_cache_[root_package_resource_name]};
+  if (auto it = full_text_cache_.find(root_package_resource_name); it != full_text_cache_.end()) {
+    return it->second;
   }
 
   std::unordered_set<DefinitionIdentifier, DefinitionIdentifierHash> seen_deps;
@@ -376,8 +394,9 @@ std::pair<MessageDefinitionFormat, const std::string&> MessageDefinitionCache::g
     result = delimiter(root_definition_identifier) + append_recursive(root_definition_identifier);
   }
 
-  auto [it, _] = full_text_cache_.emplace(root_package_resource_name, result);
-  return {format, it->second};
+  auto [it, _] =
+    full_text_cache_.emplace(root_package_resource_name, std::make_pair(format, result));
+  return it->second;
 }
 
 }  // namespace foxglove_bridge

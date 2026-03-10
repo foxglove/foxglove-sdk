@@ -3,8 +3,8 @@
 #![allow(clippy::too_many_arguments)]
 #![allow(clippy::enum_variant_names)]
 #![allow(non_snake_case)]
-use crate::schemas_wkt::{Duration, Timestamp};
 use crate::PySchema;
+use crate::schemas_wkt::{Duration, Timestamp};
 use bytes::Bytes;
 use foxglove::Encode;
 use pyo3::prelude::*;
@@ -170,6 +170,8 @@ impl From<ArrowPrimitive> for foxglove::schemas::ArrowPrimitive {
 ///             [fx  0 cx]
 ///         K = [ 0 fy cy]
 ///             [ 0  0  1]
+///     
+///     **Uncalibrated cameras:** Following ROS conventions for `CameraInfo <https://docs.ros.org/en/noetic/api/sensor_msgs/html/msg/CameraInfo.html>`__, Foxglove also treats K[0] == 0.0 as indicating an uncalibrated camera, and calibration data will be ignored.
 ///     
 /// :param R: Rectification matrix (stereo cameras only, 3x3 row-major matrix)
 ///     
@@ -595,11 +597,7 @@ impl CylinderPrimitive {
     fn __repr__(&self) -> String {
         format!(
             "CylinderPrimitive(pose={:?}, size={:?}, bottom_scale={:?}, top_scale={:?}, color={:?})",
-            self.0.pose,
-            self.0.size,
-            self.0.bottom_scale,
-            self.0.top_scale,
-            self.0.color,
+            self.0.pose, self.0.size, self.0.bottom_scale, self.0.top_scale, self.0.color,
         )
     }
     /// Returns the CylinderPrimitive schema.
@@ -687,13 +685,19 @@ impl From<CubePrimitive> for foxglove::schemas::CubePrimitive {
     }
 }
 
-/// A transform between two reference frames in 3D space
+/// A transform between two reference frames in 3D space. The transform defines the position and orientation of a child frame within a parent frame. Translation moves the origin of the child frame relative to the parent origin. The rotation changes the orientiation of the child frame around its origin.
+///
+/// Examples:
+///
+/// - With translation (x=1, y=0, z=0) and identity rotation (x=0, y=0, z=0, w=1), a point at (x=0, y=0, z=0) in the child frame maps to (x=1, y=0, z=0) in the parent frame.
+///
+/// - With translation (x=1, y=2, z=0) and a 90-degree rotation around the z-axis (x=0, y=0, z=0.707, w=0.707), a point at (x=1, y=0, z=0) in the child frame maps to (x=-1, y=3, z=0) in the parent frame.
 ///
 /// :param timestamp: Timestamp of transform
 /// :param parent_frame_id: Name of the parent frame
 /// :param child_frame_id: Name of the child frame
-/// :param translation: Translation component of the transform
-/// :param rotation: Rotation component of the transform
+/// :param translation: Translation component of the transform, representing the position of the child frame's origin in the parent frame.
+/// :param rotation: Rotation component of the transform, representing the orientation of the child frame in the parent frame
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/frame-transform
 #[pyclass(module = "foxglove.schemas")]
@@ -992,7 +996,7 @@ impl From<Grid> for foxglove::schemas::Grid {
 ///
 /// :param timestamp: Timestamp of grid
 /// :param frame_id: Frame of reference
-/// :param pose: Origin of grid's corner relative to frame of reference
+/// :param pose: Origin of the grid’s lower-front-left corner in the reference frame. The grid’s pose is defined relative to this corner, so an untransformed grid with an identity orientation has this corner at the origin.
 /// :param row_count: Number of grid rows
 /// :param column_count: Number of grid columns
 /// :param cell_size: Size of single grid cell along x, y, and z axes, relative to `pose`
@@ -1093,9 +1097,11 @@ impl From<VoxelGrid> for foxglove::schemas::VoxelGrid {
 
 /// Array of annotations for a 2D image
 ///
+/// :param timestamp: Timestamp of the image annotations. When set, individual annotation timestamps will be ignored.
 /// :param circles: Circle annotations
 /// :param points: Points annotations
 /// :param texts: Text annotations
+/// :param metadata: Additional user-provided metadata associated with the image annotations. Keys must be unique.
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/image-annotations
 #[pyclass(module = "foxglove.schemas")]
@@ -1104,13 +1110,16 @@ pub(crate) struct ImageAnnotations(pub(crate) foxglove::schemas::ImageAnnotation
 #[pymethods]
 impl ImageAnnotations {
     #[new]
-    #[pyo3(signature = (*, circles=None, points=None, texts=None) )]
+    #[pyo3(signature = (*, timestamp=None, circles=None, points=None, texts=None, metadata=None) )]
     fn new(
+        timestamp: Option<Timestamp>,
         circles: Option<Vec<CircleAnnotation>>,
         points: Option<Vec<PointsAnnotation>>,
         texts: Option<Vec<TextAnnotation>>,
+        metadata: Option<Vec<KeyValuePair>>,
     ) -> Self {
         Self(foxglove::schemas::ImageAnnotations {
+            timestamp: timestamp.map(Into::into),
             circles: circles
                 .unwrap_or_default()
                 .into_iter()
@@ -1126,12 +1135,17 @@ impl ImageAnnotations {
                 .into_iter()
                 .map(|x| x.into())
                 .collect(),
+            metadata: metadata
+                .unwrap_or_default()
+                .into_iter()
+                .map(|x| x.into())
+                .collect(),
         })
     }
     fn __repr__(&self) -> String {
         format!(
-            "ImageAnnotations(circles={:?}, points={:?}, texts={:?})",
-            self.0.circles, self.0.points, self.0.texts,
+            "ImageAnnotations(timestamp={:?}, circles={:?}, points={:?}, texts={:?}, metadata={:?})",
+            self.0.timestamp, self.0.circles, self.0.points, self.0.texts, self.0.metadata,
         )
     }
     /// Returns the ImageAnnotations schema.
@@ -1395,6 +1409,7 @@ impl From<LinePrimitive> for foxglove::schemas::LinePrimitive {
 /// :param position_covariance: Position covariance (m^2) defined relative to a tangential plane through the reported position. The components are East, North, and Up (ENU), in row-major order.
 /// :param position_covariance_type: If `position_covariance` is available, `position_covariance_type` must be set to indicate the type of covariance.
 /// :param color: Color used to visualize the location
+/// :param metadata: Additional user-provided metadata associated with the location fix. Keys must be unique.
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/location-fix
 #[pyclass(module = "foxglove.schemas")]
@@ -1403,7 +1418,7 @@ pub(crate) struct LocationFix(pub(crate) foxglove::schemas::LocationFix);
 #[pymethods]
 impl LocationFix {
     #[new]
-    #[pyo3(signature = (*, timestamp=None, frame_id="", latitude=0.0, longitude=0.0, altitude=0.0, position_covariance=None, position_covariance_type=LocationFixPositionCovarianceType::Unknown, color=None) )]
+    #[pyo3(signature = (*, timestamp=None, frame_id="", latitude=0.0, longitude=0.0, altitude=0.0, position_covariance=None, position_covariance_type=LocationFixPositionCovarianceType::Unknown, color=None, metadata=None) )]
     fn new(
         timestamp: Option<Timestamp>,
         frame_id: &str,
@@ -1413,6 +1428,7 @@ impl LocationFix {
         position_covariance: Option<Vec<f64>>,
         position_covariance_type: LocationFixPositionCovarianceType,
         color: Option<Color>,
+        metadata: Option<Vec<KeyValuePair>>,
     ) -> Self {
         Self(foxglove::schemas::LocationFix {
             timestamp: timestamp.map(Into::into),
@@ -1423,11 +1439,16 @@ impl LocationFix {
             position_covariance: position_covariance.unwrap_or_default(),
             position_covariance_type: position_covariance_type as i32,
             color: color.map(Into::into),
+            metadata: metadata
+                .unwrap_or_default()
+                .into_iter()
+                .map(|x| x.into())
+                .collect(),
         })
     }
     fn __repr__(&self) -> String {
         format!(
-            "LocationFix(timestamp={:?}, frame_id={:?}, latitude={:?}, longitude={:?}, altitude={:?}, position_covariance={:?}, position_covariance_type={:?}, color={:?})",
+            "LocationFix(timestamp={:?}, frame_id={:?}, latitude={:?}, longitude={:?}, altitude={:?}, position_covariance={:?}, position_covariance_type={:?}, color={:?}, metadata={:?})",
             self.0.timestamp,
             self.0.frame_id,
             self.0.latitude,
@@ -1436,6 +1457,7 @@ impl LocationFix {
             self.0.position_covariance,
             self.0.position_covariance_type,
             self.0.color,
+            self.0.metadata,
         )
     }
     /// Returns the LocationFix schema.
@@ -2072,6 +2094,62 @@ impl Point3 {
 
 impl From<Point3> for foxglove::schemas::Point3 {
     fn from(value: Point3) -> Self {
+        value.0
+    }
+}
+
+/// A timestamped point for a position in 3D space
+///
+/// :param timestamp: Timestamp of point
+/// :param frame_id: Frame of reference for point position
+/// :param point: Point in 3D space
+///
+/// See https://docs.foxglove.dev/docs/visualization/message-schemas/point3-in-frame
+#[pyclass(module = "foxglove.schemas")]
+#[derive(Clone)]
+pub(crate) struct Point3InFrame(pub(crate) foxglove::schemas::Point3InFrame);
+#[pymethods]
+impl Point3InFrame {
+    #[new]
+    #[pyo3(signature = (*, timestamp=None, frame_id="", point=None) )]
+    fn new(timestamp: Option<Timestamp>, frame_id: &str, point: Option<Point3>) -> Self {
+        Self(foxglove::schemas::Point3InFrame {
+            timestamp: timestamp.map(Into::into),
+            frame_id: frame_id.to_string(),
+            point: point.map(Into::into),
+        })
+    }
+    fn __repr__(&self) -> String {
+        format!(
+            "Point3InFrame(timestamp={:?}, frame_id={:?}, point={:?})",
+            self.0.timestamp, self.0.frame_id, self.0.point,
+        )
+    }
+    /// Returns the Point3InFrame schema.
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::Point3InFrame::get_schema()
+            .unwrap()
+            .into()
+    }
+    /// Encodes the Point3InFrame as protobuf.
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("failed to allocate buffer for encoded message")
+    }
+}
+
+impl From<Point3InFrame> for foxglove::schemas::Point3InFrame {
+    fn from(value: Point3InFrame) -> Self {
         value.0
     }
 }
@@ -3073,6 +3151,7 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<PackedElementField>()?;
     module.add_class::<Point2>()?;
     module.add_class::<Point3>()?;
+    module.add_class::<Point3InFrame>()?;
     module.add_class::<PointCloud>()?;
     module.add_class::<PointsAnnotation>()?;
     module.add_class::<Pose>()?;

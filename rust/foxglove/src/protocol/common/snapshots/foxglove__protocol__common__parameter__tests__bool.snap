@@ -1,0 +1,8 @@
+---
+source: rust/foxglove/src/protocol/common/parameter.rs
+expression: "Parameter::bool(\"bool\", true)"
+---
+{
+  "name": "bool",
+  "value": true
+}

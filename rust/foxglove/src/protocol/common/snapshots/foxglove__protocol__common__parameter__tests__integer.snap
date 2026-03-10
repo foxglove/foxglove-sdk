@@ -1,0 +1,8 @@
+---
+source: rust/foxglove/src/protocol/common/parameter.rs
+expression: "Parameter::integer(\"i64\", 123)"
+---
+{
+  "name": "i64",
+  "value": 123
+}

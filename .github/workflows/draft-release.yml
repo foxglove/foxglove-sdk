@@ -19,6 +19,8 @@ concurrency:
 jobs:
   c-cpp:
     uses: ./.github/workflows/c_cpp.yml
+    permissions:
+      pull-requests: read
     with:
       sdk-version: ${{ github.event.inputs.version }}
   cpp-data-loader:
@@ -34,7 +36,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - run: corepack enable
 
@@ -67,7 +69,7 @@ jobs:
           git push -f origin "${{ env.SDK_BRANCH }}"
 
       - name: Download C/C++ artifacts
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v8
         with:
           pattern: "*.zip"
           path: ci_artifacts/

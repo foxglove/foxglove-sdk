@@ -2,13 +2,23 @@
 Changelog for package foxglove_msgs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+3.2.4 (2026-01-22)
+------------------
+* Clarify direction on FrameTransform
+* Contributors: Roman Shtylman
+
+3.2.3 (2026-01-12)
+------------------
+* Fixes to documentation and schema descriptions
+* Contributors: Jacob Bandes-Storch, jesse-foxglove
+
 3.2.2 (2025-10-24)
 ------------------
 * Update documentation for various schemas
 * Contributors: James Smith, Jeff Rouleau
 
 3.2.1 (2025-09-26)
------------
+------------------
 * No changes to foxglove_msgs
 
 3.2.0 (2025-09-22)

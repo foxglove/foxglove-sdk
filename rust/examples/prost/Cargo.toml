@@ -1,6 +1,6 @@
 [package]
 name = "example_prost"
-edition = "2021"
+edition = "2024"
 publish = false
 
 [lints]
@@ -8,7 +8,7 @@ workspace = true
 
 [dependencies]
 foxglove = { path = "../../foxglove", default-features = false }
-prost = "0.13.5"
+prost = "0.14"
 
 [build-dependencies]
-prost-build = "0.13.5"
+prost-build = "0.14"

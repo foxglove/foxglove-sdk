@@ -4,7 +4,8 @@ on:
   push:
     branches: [main]
     tags: ["**"]
-  pull_request: {}
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
   workflow_call:
     inputs:
       sdk-version:
@@ -16,10 +17,27 @@ on:
         value: ${{ jobs.build.outputs.artifact_pattern }}
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      build: ${{ github.event_name != 'pull_request' || steps.paths.outputs.c-cpp == 'true' || contains(github.event.pull_request.labels.*.name, 'ci:c-cpp') }}
+    steps:
+      - uses: dorny/paths-filter@v3
+        if: github.event_name == 'pull_request'
+        id: paths
+        with:
+          filters: |
+            c-cpp:
+              - 'c/**'
+              - 'cpp/**'
+              - '.github/workflows/c_cpp.yml'
+
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - run: |
           sudo apt install -y --no-install-recommends clang-format-19
           echo "/usr/lib/llvm-19/bin" >> $GITHUB_PATH
@@ -30,6 +48,8 @@ jobs:
         working-directory: cpp
 
   build:
+    needs: changes
+    if: needs.changes.outputs.build == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -137,7 +157,7 @@ jobs:
       CARGO_BUILD_TARGET: ${{ matrix.target }}
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           target: ${{ matrix.target }}
@@ -185,6 +205,15 @@ jobs:
         run: make test
         working-directory: cpp
 
+      - name: Run data provider conformance tests
+        if: ${{ !fromJson(matrix.cross) }}
+        env:
+          DATA_PROVIDER_CMD: ${{ runner.os == 'Windows' && 'cpp/build/RelWithDebInfo/example_data_provider.exe' || 'cpp/build/example_data_provider' }}
+          DATA_PROVIDER_URL: "http://127.0.0.1:8081/v1/manifest?flightId=TEST123&startTime=2024-01-01T00:00:00Z&endTime=2024-01-01T00:00:05Z"
+          DATA_PROVIDER_EXPECTED_STREAMED_SOURCE_COUNT: "1"
+          DATA_PROVIDER_EXPECTED_STATIC_FILE_SOURCE_COUNT: "0"
+        run: cargo run -p data_provider_conformance
+
       - name: Build & test (Debug mode)
         if: ${{ fromJson(matrix.test_debug) }}
         env:
@@ -221,7 +250,7 @@ jobs:
             foxglove/
 
       - name: Upload static & shared library to artifacts
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         if: ${{ !(matrix.skip_upload || false) }}
         with:
           name: foxglove-${{inputs.sdk-version || github.sha}}-cpp-${{ matrix.target }}.zip
@@ -229,12 +258,14 @@ jobs:
           if-no-files-found: error
 
   test-asan-ubsan:
+    needs: changes
+    if: needs.changes.outputs.build == 'true'
     runs-on: ubuntu-latest
     env:
       CC: clang
       CXX: clang++
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: nightly
@@ -242,3 +273,16 @@ jobs:
 
       - run: make SANITIZE=address,undefined test
         working-directory: cpp
+
+  # Gate job for branch protection. Always posts a status so that the required
+  # check passes even when the other jobs are skipped. Configure your required
+  # status check to reference this job ("C/C++ / c-cpp-status") instead of the
+  # individual matrix jobs.
+  c-cpp-status:
+    name: c-cpp-status
+    needs: [changes, lint, build, test-asan-ubsan]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1

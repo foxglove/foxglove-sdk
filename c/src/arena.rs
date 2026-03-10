@@ -2,7 +2,7 @@ use std::alloc::Layout;
 use std::cell::{Cell, RefCell, UnsafeCell};
 use std::marker::PhantomPinned;
 use std::mem::ManuallyDrop;
-use std::mem::{align_of, size_of, MaybeUninit};
+use std::mem::{MaybeUninit, align_of, size_of};
 use std::pin::Pin;
 
 use foxglove::FoxgloveError;
@@ -120,6 +120,48 @@ impl Arena {
         }
 
         unsafe { Ok(ManuallyDrop::new(Vec::from_raw_parts(result, len, len))) }
+    }
+
+    /// Maps an array of FoxgloveString to a Vec<String> allocated from the arena.
+    ///
+    /// # Safety
+    ///
+    /// If len > 0, src must be a valid pointer to len FoxgloveString elements.
+    /// The returned Vec must not outlive the source data or the arena.
+    #[allow(dead_code)]
+    pub unsafe fn map_strings(
+        mut self: Pin<&mut Self>,
+        src: *const crate::FoxgloveString,
+        len: usize,
+        field_name: &str,
+    ) -> Result<ManuallyDrop<Vec<String>>, FoxgloveError> {
+        if len == 0 {
+            return Ok(ManuallyDrop::new(Vec::new()));
+        }
+        let result = self.as_mut().alloc::<ManuallyDrop<String>>(len);
+        for i in 0..len {
+            // Safety: src points to len valid FoxgloveString elements
+            let foxglove_string = unsafe { &*src.add(i) };
+            // Safety: FoxgloveString data is valid for the lifetime of the arena
+            let s = unsafe {
+                crate::util::string_from_raw(
+                    foxglove_string.as_ptr() as *const _,
+                    foxglove_string.len(),
+                    field_name,
+                )?
+            };
+            // Safety: result + i is within the arena allocation
+            unsafe { result.add(i).write(s) };
+        }
+        // Safety: ManuallyDrop<String> has the same layout as String,
+        // and result points to len initialized elements
+        unsafe {
+            Ok(ManuallyDrop::new(Vec::from_raw_parts(
+                result as *mut String,
+                len,
+                len,
+            )))
+        }
     }
 
     /// Returns how many bytes are currently used in the arena.

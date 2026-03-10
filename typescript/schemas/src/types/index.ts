@@ -25,6 +25,7 @@ export * from "./NumericType";
 export * from "./PackedElementField";
 export * from "./Point2";
 export * from "./Point3";
+export * from "./Point3InFrame";
 export * from "./PointCloud";
 export * from "./PointsAnnotation";
 export * from "./PointsAnnotationType";

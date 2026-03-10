@@ -1,8 +1,10 @@
-use std::collections::hash_map::Entry;
 use std::collections::HashSet;
+use std::collections::hash_map::Entry;
 use std::sync::Weak;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use std::{collections::HashMap, net::SocketAddr, sync::Arc};
+
+use indexmap::IndexSet;
 
 use futures_util::SinkExt;
 use tokio::net::{TcpListener, TcpStream};
@@ -21,14 +23,13 @@ use crate::{Context, FoxgloveError};
 use super::connected_client::ConnectedClient;
 use super::cow_vec::CowVec;
 use super::service::{Service, ServiceId, ServiceMap};
-#[cfg(feature = "unstable")]
 use super::ws_protocol::server::PlaybackState;
 use super::ws_protocol::server::{
     AdvertiseServices, RemoveStatus, ServerInfo, UnadvertiseServices,
 };
 use super::{
-    advertise, handshake, AssetHandler, Capability, ClientId, ConnectionGraph, Parameter,
-    ServerListener, Status,
+    AssetHandler, Capability, ClientId, ConnectionGraph, Parameter, ServerListener, Status,
+    advertise, handshake,
 };
 
 // Queue up to 1024 messages per connected client before dropping messages
@@ -41,9 +42,9 @@ pub(crate) struct ServerOptions {
     pub name: Option<String>,
     pub message_backlog_size: Option<usize>,
     pub listener: Option<Arc<dyn ServerListener>>,
-    pub capabilities: Option<HashSet<Capability>>,
+    pub capabilities: Option<IndexSet<Capability>>,
     pub services: HashMap<String, Service>,
-    pub supported_encodings: Option<HashSet<String>>,
+    pub supported_encodings: Option<IndexSet<String>>,
     pub runtime: Option<Handle>,
     pub fetch_asset_handler: Option<Box<dyn AssetHandler>>,
     pub tls_identity: Option<TlsIdentity>,
@@ -147,11 +148,11 @@ pub(crate) struct Server {
     /// Callbacks for handling client messages, etc.
     listener: Option<Arc<dyn ServerListener>>,
     /// Capabilities advertised to clients
-    capabilities: HashSet<Capability>,
+    capabilities: IndexSet<Capability>,
     /// Parameters subscribed to by clients
     subscribed_parameters: parking_lot::RwLock<HashMap<String, HashSet<ClientId>>>,
     /// Encodings server can accept from clients. Ignored unless the "clientPublish" capability is set.
-    supported_encodings: HashSet<String>,
+    supported_encodings: IndexSet<String>,
     /// The current connection graph, unused unless the "connectionGraph" capability is set.
     connection_graph: parking_lot::Mutex<ConnectionGraph>,
     /// Token for cancelling all tasks
@@ -168,7 +169,7 @@ pub(crate) struct Server {
     /// Keys prefixed with "fg-" are reserved for internal use.
     server_info: HashMap<String, String>,
     /// Time range of data being played back, in absolute nanoseconds.
-    /// Implies the [`RangedPlayback`](crate::websocket::Capability::RangedPlayback) capability if set.
+    /// Implies the [`PlaybackControl`](crate::websocket::Capability::PlaybackControl) capability if set.
     playback_time_range: Option<(u64, u64)>,
 }
 
@@ -203,11 +204,13 @@ impl Server {
         }
 
         if opts.playback_time_range.is_some() {
-            capabilities.insert(Capability::RangedPlayback);
-        } else if capabilities.contains(&Capability::RangedPlayback) {
-            // The RangedPlayback capability requires a time range to be set using
+            capabilities.insert(Capability::PlaybackControl);
+        } else if capabilities.contains(&Capability::PlaybackControl) {
+            // The PlaybackControl capability requires a time range to be set using
             // ServerOptions::playback_time_range
-            panic!("Server declared the RangedPlayback capability but did not provide a playback time range");
+            panic!(
+                "Server declared the PlaybackControl capability but did not provide a playback time range"
+            );
         }
 
         // If the server was declared with fetch asset handler, automatically add the "assets" capability
@@ -351,6 +354,11 @@ impl Server {
         Some(ShutdownHandle::new(self.runtime.clone(), tasks))
     }
 
+    /// Returns the number of currently connected clients.
+    pub fn client_count(&self) -> usize {
+        self.clients.get().len()
+    }
+
     /// Publish the current timestamp to all clients.
     pub fn broadcast_time(&self, timestamp: u64) {
         use super::ws_protocol::server::Time;
@@ -368,11 +376,9 @@ impl Server {
     }
 
     /// Publish the current playback state to all clients.
-    #[cfg(feature = "unstable")]
-    #[doc(hidden)]
     pub fn broadcast_playback_state(&self, playback_state: PlaybackState) {
-        if !self.has_capability(Capability::RangedPlayback) {
-            tracing::error!("Server does not support the RangedPlayback capability");
+        if !self.has_capability(Capability::PlaybackControl) {
+            tracing::error!("Server does not support the PlaybackControl capability");
             return;
         }
 
@@ -625,6 +631,12 @@ impl Server {
 
         tracing::info!("Registered client {}", client.addr());
 
+        // Notify listener
+        if let Some(listener) = self.listener() {
+            tracing::debug!("Notifying listener of client connection");
+            listener.on_client_connect();
+        }
+
         // Add the client as a sink. This synchronously triggers advertisements for all channels
         // via the `Sink::add_channel` callback.
         if let Some(context) = self.context.upgrade() {
@@ -657,6 +669,7 @@ impl Server {
         }
 
         self.clients.retain(|c| c.id() != client.id());
+
         if self.has_capability(Capability::Parameters) {
             self.unsubscribe_all_parameters(client.id());
         }
@@ -664,6 +677,12 @@ impl Server {
             self.unsubscribe_connection_graph(client.id());
         }
         client.on_disconnect();
+
+        // Notify listener
+        if let Some(listener) = self.listener() {
+            listener.on_client_disconnect();
+        }
+
         tracing::info!("Unregistered client {}", client.addr());
     }
 

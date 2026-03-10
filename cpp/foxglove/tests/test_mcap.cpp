@@ -1,9 +1,7 @@
-#include <foxglove-c/foxglove-c.h>
 #include <foxglove/arena.hpp>
 #include <foxglove/channel.hpp>
 #include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
-#include <foxglove/mcap.hpp>
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
@@ -12,98 +10,101 @@
 #include <filesystem>
 #include <fstream>
 #include <optional>
+#include <random>
 
+#include "../src/mcap_internal.hpp"
 #include "common/file_cleanup.hpp"
 
 using Catch::Matchers::ContainsSubstring;
 using Catch::Matchers::Equals;
 using foxglove_tests::FileCleanup;
 
-TEST_CASE("Open new file and close mcap writer") {
-  FileCleanup cleanup("test.mcap");
+struct McapTestFile {
+  McapTestFile()
+      : cleanup_("test_mcap_" + std::to_string(std::random_device{}()) + ".mcap") {}
+  const std::string& path() const {
+    return cleanup_.path();
+  }
 
+private:
+  FileCleanup cleanup_;
+};
+
+TEST_CASE_METHOD(McapTestFile, "Open new file and close mcap writer") {
   foxglove::McapWriterOptions options = {};
-  options.path = "test.mcap";
+  options.path = path();
   auto writer = foxglove::McapWriter::create(options);
   REQUIRE(writer.has_value());
   writer->close();
 
-  // Check if test.mcap file exists
-  REQUIRE(std::filesystem::exists("test.mcap"));
+  // Check if file exists
+  REQUIRE(std::filesystem::exists(path()));
 }
 
-TEST_CASE("Open and truncate existing file") {
-  FileCleanup cleanup("test.mcap");
-
-  std::ofstream file("test.mcap", std::ios::binary);
-  REQUIRE(file.is_open());
-  // Write some dummy content
-  const char* data = "MCAP0000";
-  file.write(data, 8);
-  file.close();
+TEST_CASE_METHOD(McapTestFile, "Open and truncate existing file") {
+  {
+    std::ofstream ofs(path(), std::ios::binary);
+    REQUIRE(ofs.is_open());
+    // Write some dummy content
+    const char* data = "MCAP0000";
+    ofs.write(data, 8);
+  }
 
   foxglove::McapWriterOptions options = {};
-  options.path = "test.mcap";
+  options.path = path();
   options.truncate = true;
   auto writer = foxglove::McapWriter::create(options);
   REQUIRE(writer.has_value());
   writer->close();
 
-  // Check if test.mcap file exists
-  REQUIRE(std::filesystem::exists("test.mcap"));
+  // Check if file exists
+  REQUIRE(std::filesystem::exists(path()));
 }
 
-TEST_CASE("fail to open existing file if truncate=false") {
-  FileCleanup cleanup("test.mcap");
-
-  std::ofstream file("test.mcap", std::ios::binary);
-  REQUIRE(file.is_open());
-  // Write some dummy content
-  const char* data = "MCAP0000";
-  file.write(data, 8);
-  file.close();
+TEST_CASE_METHOD(McapTestFile, "fail to open existing file if truncate=false") {
+  {
+    std::ofstream ofs(path(), std::ios::binary);
+    REQUIRE(ofs.is_open());
+    // Write some dummy content
+    const char* data = "MCAP0000";
+    ofs.write(data, 8);
+  }
 
   foxglove::McapWriterOptions options = {};
-  options.path = "test.mcap";
+  options.path = path();
   auto writer = foxglove::McapWriter::create(options);
   REQUIRE(!writer.has_value());
   REQUIRE(writer.error() == foxglove::FoxgloveError::IoError);
 
-  // Check if test.mcap file exists
-  REQUIRE(std::filesystem::exists("test.mcap"));
+  // Check if file exists
+  REQUIRE(std::filesystem::exists(path()));
 }
 
-TEST_CASE("fail to open existing file if create=true and truncate=false") {
-  FileCleanup cleanup("test.mcap");
-
-  std::ofstream file("test.mcap", std::ios::binary);
-  REQUIRE(file.is_open());
-  // Write some dummy content
-  const char* data = "MCAP0000";
-  file.write(data, 8);
-  file.close();
+TEST_CASE_METHOD(McapTestFile, "fail to open existing file if create=true and truncate=false") {
+  {
+    std::ofstream ofs(path(), std::ios::binary);
+    REQUIRE(ofs.is_open());
+    // Write some dummy content
+    const char* data = "MCAP0000";
+    ofs.write(data, 8);
+  }
 
   foxglove::McapWriterOptions options = {};
-  options.path = "test.mcap";
+  options.path = path();
   auto writer = foxglove::McapWriter::create(options);
   REQUIRE(!writer.has_value());
   REQUIRE(writer.error() == foxglove::FoxgloveError::IoError);
 
-  // Check if test.mcap file exists
-  REQUIRE(std::filesystem::exists("test.mcap"));
+  // Check if file exists
+  REQUIRE(std::filesystem::exists(path()));
 }
 
 TEST_CASE("fail if file path is not valid utf-8") {
-  FileCleanup cleanup("test.mcap");
-
   foxglove::McapWriterOptions options = {};
   options.path = "\x80\x80\x80\x80";
   auto writer = foxglove::McapWriter::create(options);
   REQUIRE(!writer.has_value());
   REQUIRE(writer.error() == foxglove::FoxgloveError::Utf8Error);
-
-  // Check test.mcap file does not exist
-  REQUIRE(!std::filesystem::exists("test.mcap"));
 }
 
 std::string readFile(const std::string& path) {
@@ -112,15 +113,14 @@ std::string readFile(const std::string& path) {
   return {std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>()};
 }
 
-TEST_CASE("different contexts") {
-  FileCleanup cleanup("test.mcap");
+TEST_CASE_METHOD(McapTestFile, "different contexts") {
   auto context1 = foxglove::Context::create();
   auto context2 = foxglove::Context::create();
 
   // Create writer on context1
   foxglove::McapWriterOptions options;
   options.context = context1;
-  options.path = "test.mcap";
+  options.path = path();
 
   auto writer = foxglove::McapWriter::create(options);
   REQUIRE(writer.has_value());
@@ -136,21 +136,20 @@ TEST_CASE("different contexts") {
 
   writer->close();
 
-  // Check if test.mcap file exists
-  REQUIRE(std::filesystem::exists("test.mcap"));
+  // Check if file exists
+  REQUIRE(std::filesystem::exists(path()));
 
   // Check that it does not contain the message
-  std::string content = readFile("test.mcap");
+  std::string content = readFile(path());
   REQUIRE_THAT(content, !ContainsSubstring("Hello, world!"));
 }
 
-TEST_CASE("specify profile") {
-  FileCleanup cleanup("test.mcap");
+TEST_CASE_METHOD(McapTestFile, "specify profile") {
   auto context = foxglove::Context::create();
 
   foxglove::McapWriterOptions options;
   options.context = context;
-  options.path = "test.mcap";
+  options.path = path();
   options.profile = "test_profile";
   auto writer = foxglove::McapWriter::create(options);
   REQUIRE(writer.has_value());
@@ -166,21 +165,20 @@ TEST_CASE("specify profile") {
 
   writer->close();
 
-  // Check if test.mcap file exists
-  REQUIRE(std::filesystem::exists("test.mcap"));
+  // Check if file exists
+  REQUIRE(std::filesystem::exists(path()));
 
   // Check that it contains the profile and library
-  std::string content = readFile("test.mcap");
+  std::string content = readFile(path());
   REQUIRE_THAT(content, ContainsSubstring("test_profile"));
 }
 
-TEST_CASE("zstd compression") {
-  FileCleanup cleanup("test.mcap");
+TEST_CASE_METHOD(McapTestFile, "zstd compression") {
   auto context = foxglove::Context::create();
 
   foxglove::McapWriterOptions options;
   options.context = context;
-  options.path = "test.mcap";
+  options.path = path();
   options.compression = foxglove::McapCompression::Zstd;
   options.chunk_size = 10000;
   options.use_chunks = true;
@@ -198,21 +196,20 @@ TEST_CASE("zstd compression") {
 
   writer->close();
 
-  // Check if test.mcap file exists
-  REQUIRE(std::filesystem::exists("test.mcap"));
+  // Check if file exists
+  REQUIRE(std::filesystem::exists(path()));
 
   // Check that it contains the word "zstd"
-  std::string content = readFile("test.mcap");
+  std::string content = readFile(path());
   REQUIRE_THAT(content, ContainsSubstring("zstd"));
 }
 
-TEST_CASE("lz4 compression") {
-  FileCleanup cleanup("test.mcap");
+TEST_CASE_METHOD(McapTestFile, "lz4 compression") {
   auto context = foxglove::Context::create();
 
   foxglove::McapWriterOptions options;
   options.context = context;
-  options.path = "test.mcap";
+  options.path = path();
   options.compression = foxglove::McapCompression::Lz4;
   options.chunk_size = 10000;
   options.use_chunks = true;
@@ -231,21 +228,20 @@ TEST_CASE("lz4 compression") {
   auto error = writer->close();
   REQUIRE(error == foxglove::FoxgloveError::Ok);
 
-  // Check if test.mcap file exists
-  REQUIRE(std::filesystem::exists("test.mcap"));
+  // Check if file exists
+  REQUIRE(std::filesystem::exists(path()));
 
   // Check that it contains the word "lz4"
-  std::string content = readFile("test.mcap");
+  std::string content = readFile(path());
   REQUIRE_THAT(content, ContainsSubstring("lz4"));
 }
 
-TEST_CASE("Channel can outlive Schema") {
-  FileCleanup cleanup("test.mcap");
+TEST_CASE_METHOD(McapTestFile, "Channel can outlive Schema") {
   auto context = foxglove::Context::create();
 
   foxglove::McapWriterOptions options;
   options.context = context;
-  options.path = "test.mcap";
+  options.path = path();
   auto writer = foxglove::McapWriter::create(options);
   REQUIRE(writer.has_value());
 
@@ -272,9 +268,9 @@ TEST_CASE("Channel can outlive Schema") {
 
   writer->close();
 
-  REQUIRE(std::filesystem::exists("test.mcap"));
+  REQUIRE(std::filesystem::exists(path()));
 
-  std::string content = readFile("test.mcap");
+  std::string content = readFile(path());
   REQUIRE_THAT(content, !ContainsSubstring("FAILSCHEMA"));
   REQUIRE_THAT(content, ContainsSubstring("FAKESCHEMA"));
 }
@@ -356,13 +352,12 @@ void convertToCAndCheck(const foxglove::schemas::ImageAnnotations& msg) {
   REQUIRE(c_msg.texts[0].background_color->a == msg.texts[0].background_color->a);
 }
 
-TEST_CASE("ImageAnnotations channel") {
-  FileCleanup cleanup("test.mcap");
+TEST_CASE_METHOD(McapTestFile, "ImageAnnotations channel") {
   auto context = foxglove::Context::create();
 
   foxglove::McapWriterOptions options;
   options.context = context;
-  options.path = "test.mcap";
+  options.path = path();
   options.compression = foxglove::McapCompression::None;
   auto writer = foxglove::McapWriter::create(options);
   REQUIRE(writer.has_value());
@@ -413,23 +408,24 @@ TEST_CASE("ImageAnnotations channel") {
 
   writer->close();
 
-  REQUIRE(std::filesystem::exists("test.mcap"));
+  REQUIRE(std::filesystem::exists(path()));
 
   // Check that the file contains our annotations
-  std::string content = readFile("test.mcap");
+  std::string content = readFile(path());
   REQUIRE_THAT(content, ContainsSubstring("Sample text"));
   REQUIRE_THAT(content, ContainsSubstring("ImageAnnotations"));
 }
 
 TEST_CASE("MCAP Channel filtering") {
-  FileCleanup file_1("test-1.mcap");
-  FileCleanup file_2("test-2.mcap");
+  auto suffix = std::to_string(std::random_device{}());
+  FileCleanup file_1("test_filter_" + suffix + "-1.mcap");
+  FileCleanup file_2("test_filter_" + suffix + "-2.mcap");
   auto context = foxglove::Context::create();
 
   foxglove::McapWriterOptions opts_1;
   opts_1.context = context;
   opts_1.compression = foxglove::McapCompression::None;
-  opts_1.path = "test-1.mcap";
+  opts_1.path = file_1.path();
   opts_1.sink_channel_filter = [](foxglove::ChannelDescriptor&& channel) -> bool {
     return channel.topic() == "/1";
   };
@@ -443,7 +439,7 @@ TEST_CASE("MCAP Channel filtering") {
   foxglove::McapWriterOptions opts_2;
   opts_2.context = context;
   opts_2.compression = foxglove::McapCompression::None;
-  opts_2.path = "test-2.mcap";
+  opts_2.path = file_2.path();
   opts_2.sink_channel_filter = [](foxglove::ChannelDescriptor&& channel) -> bool {
     // Only log to topic /2, and validate the schema while we're at it
     if (channel.topic() == "/2") {
@@ -491,23 +487,21 @@ TEST_CASE("MCAP Channel filtering") {
   writer_2.close();
 
   // Check that the file contains the correct filtered messages
-  std::string content = readFile("test-1.mcap");
-  std::cerr << "test-1 content.length: " << content.length() << "\n";
+  std::string content = readFile(file_1.path());
   REQUIRE_THAT(content, ContainsSubstring("Topic 1 msg"));
   REQUIRE_THAT(content, !ContainsSubstring("Topic 2 msg"));
 
-  content = readFile("test-2.mcap");
+  content = readFile(file_2.path());
   REQUIRE_THAT(content, !ContainsSubstring("Topic 1 msg"));
   REQUIRE_THAT(content, ContainsSubstring("Topic 2 msg"));
 }
 
-TEST_CASE("Write metadata records to MCAP") {
-  FileCleanup cleanup("test.mcap");
+TEST_CASE_METHOD(McapTestFile, "Write metadata records to MCAP") {
   auto context = foxglove::Context::create();
 
   foxglove::McapWriterOptions options;
   options.context = context;
-  options.path = "test.mcap";
+  options.path = path();
   auto writer = foxglove::McapWriter::create(options);
   REQUIRE(writer.has_value());
 
@@ -523,10 +517,10 @@ TEST_CASE("Write metadata records to MCAP") {
 
   writer->close();
 
-  REQUIRE(std::filesystem::exists("test.mcap"));
+  REQUIRE(std::filesystem::exists(path()));
 
   // Verify both metadata records were written
-  std::string content = readFile("test.mcap");
+  std::string content = readFile(path());
   REQUIRE_THAT(content, ContainsSubstring("metadata_record_1"));
   REQUIRE_THAT(content, ContainsSubstring("key1"));
   REQUIRE_THAT(content, ContainsSubstring("value1"));
@@ -539,13 +533,12 @@ TEST_CASE("Write metadata records to MCAP") {
   REQUIRE_THAT(content, ContainsSubstring("value4"));
 }
 
-TEST_CASE("Write empty metadata") {
-  FileCleanup cleanup("test.mcap");
+TEST_CASE_METHOD(McapTestFile, "Write empty metadata") {
   auto context = foxglove::Context::create();
 
   foxglove::McapWriterOptions options;
   options.context = context;
-  options.path = "test.mcap";
+  options.path = path();
   auto writer = foxglove::McapWriter::create(options);
   REQUIRE(writer.has_value());
 
@@ -556,8 +549,214 @@ TEST_CASE("Write empty metadata") {
 
   writer->close();
 
-  REQUIRE(std::filesystem::exists("test.mcap"));
+  REQUIRE(std::filesystem::exists(path()));
 
-  std::string content = readFile("test.mcap");
+  std::string content = readFile(path());
   REQUIRE_THAT(content, !ContainsSubstring("empty_metadata"));
+}
+
+TEST_CASE("Custom writer basic functionality") {
+  auto context = foxglove::Context::create();
+
+  bool write_called = false;
+  bool flush_called = false;
+  bool seek_called = false;
+  size_t cursor = 0;
+  std::vector<uint8_t> buffer;
+  foxglove::CustomWriter custom_writer;
+  custom_writer.write =
+    [&buffer, &write_called, &cursor](const uint8_t* data, size_t len, int* error) -> size_t {
+    write_called = true;
+    *error = 0;
+    if (cursor != buffer.size()) {
+      REQUIRE(cursor + len < buffer.size());
+      std::memcpy(buffer.data() + cursor, data, len);
+      cursor += len;
+      return len;
+    }
+    buffer.insert(buffer.end(), data, data + len);
+    cursor += len;
+    return len;
+  };
+  custom_writer.flush = [&flush_called]() -> int {
+    flush_called = true;
+    return 0;
+  };
+  custom_writer.seek =
+    [&cursor, &buffer, &seek_called](int64_t pos, int whence, uint64_t* new_pos) -> int {
+    seek_called = true;
+    switch (whence) {
+      case SEEK_SET:
+        cursor = pos;
+        break;
+      case SEEK_CUR:
+        cursor += pos;
+        break;
+      case SEEK_END:
+        cursor = buffer.size() + pos;
+        break;
+      default:
+        assert(false);
+    }
+    *new_pos = cursor;
+    return 0;
+  };
+
+  foxglove::McapWriterOptions options;
+  options.custom_writer = custom_writer;
+  options.context = context;
+
+  auto custom_mcap = foxglove::McapWriter::create(options);
+  REQUIRE(custom_mcap.has_value());
+
+  auto channel_result = foxglove::schemas::Point2Channel::create("test_topic", context);
+  REQUIRE(channel_result.has_value());
+  auto channel = std::move(channel_result.value());
+  channel.log(foxglove::schemas::Point2{1.0, 2.0});
+  channel.log(foxglove::schemas::Point2{3.0, 4.0});
+  channel.close();
+  custom_mcap.value().close();
+
+  // Verify callbacks were called
+  REQUIRE(write_called);
+  REQUIRE(flush_called);
+  REQUIRE(seek_called);
+  // Verify MCAP data was written
+  std::string custom_content = std::string(buffer.begin(), buffer.end());
+  REQUIRE_THAT(custom_content, ContainsSubstring("Point2"));
+}
+
+TEST_CASE_METHOD(McapTestFile, "Write single attachment to MCAP") {
+  auto context = foxglove::Context::create();
+
+  foxglove::McapWriterOptions options;
+  options.context = context;
+  options.path = path();
+  auto writer = foxglove::McapWriter::create(options);
+  REQUIRE(writer.has_value());
+
+  // Write an attachment
+  std::string attachment_data = R"({"setting": true})";
+  foxglove::Attachment attachment;
+  attachment.log_time = 1000000000;
+  attachment.create_time = 900000000;
+  attachment.name = "config.json";
+  attachment.media_type = "application/json";
+  attachment.data = reinterpret_cast<const std::byte*>(attachment_data.data());
+  attachment.data_len = attachment_data.size();
+
+  auto error = writer->attach(attachment);
+  REQUIRE(error == foxglove::FoxgloveError::Ok);
+
+  writer->close();
+
+  REQUIRE(std::filesystem::exists(path()));
+
+  // Verify the attachment was written
+  std::string content = readFile(path());
+  REQUIRE_THAT(content, ContainsSubstring("config.json"));
+  REQUIRE_THAT(content, ContainsSubstring("application/json"));
+  REQUIRE_THAT(content, ContainsSubstring(R"({"setting": true})"));
+}
+
+TEST_CASE_METHOD(McapTestFile, "Write multiple attachments to MCAP") {
+  auto context = foxglove::Context::create();
+
+  foxglove::McapWriterOptions options;
+  options.context = context;
+  options.path = path();
+  auto writer = foxglove::McapWriter::create(options);
+  REQUIRE(writer.has_value());
+
+  // Write first attachment
+  std::string config_data = R"({"debug": false})";
+  foxglove::Attachment config_attachment;
+  config_attachment.log_time = 1000000000;
+  config_attachment.create_time = 900000000;
+  config_attachment.name = "config.yaml";
+  config_attachment.media_type = "application/yaml";
+  config_attachment.data = reinterpret_cast<const std::byte*>(config_data.data());
+  config_attachment.data_len = config_data.size();
+
+  auto error1 = writer->attach(config_attachment);
+  REQUIRE(error1 == foxglove::FoxgloveError::Ok);
+
+  // Write second attachment
+  std::string calibration_data = "calibration binary data here";
+  foxglove::Attachment calibration_attachment;
+  calibration_attachment.log_time = 2000000000;
+  calibration_attachment.create_time = 1800000000;
+  calibration_attachment.name = "calibration.bin";
+  calibration_attachment.media_type = "application/octet-stream";
+  calibration_attachment.data = reinterpret_cast<const std::byte*>(calibration_data.data());
+  calibration_attachment.data_len = calibration_data.size();
+
+  auto error2 = writer->attach(calibration_attachment);
+  REQUIRE(error2 == foxglove::FoxgloveError::Ok);
+
+  writer->close();
+
+  REQUIRE(std::filesystem::exists(path()));
+
+  // Verify both attachments were written
+  std::string content = readFile(path());
+  REQUIRE_THAT(content, ContainsSubstring("config.yaml"));
+  REQUIRE_THAT(content, ContainsSubstring("calibration.bin"));
+  REQUIRE_THAT(content, ContainsSubstring("calibration binary data here"));
+}
+
+TEST_CASE_METHOD(McapTestFile, "Write empty attachment data") {
+  auto context = foxglove::Context::create();
+
+  foxglove::McapWriterOptions options;
+  options.context = context;
+  options.path = path();
+  auto writer = foxglove::McapWriter::create(options);
+  REQUIRE(writer.has_value());
+
+  // Write an attachment with empty data
+  foxglove::Attachment attachment;
+  attachment.log_time = 1000000000;
+  attachment.create_time = 900000000;
+  attachment.name = "empty.txt";
+  attachment.media_type = "text/plain";
+  attachment.data = nullptr;
+  attachment.data_len = 0;
+
+  auto error = writer->attach(attachment);
+  REQUIRE(error == foxglove::FoxgloveError::Ok);
+
+  writer->close();
+
+  REQUIRE(std::filesystem::exists(path()));
+
+  // Verify the attachment name was written
+  std::string content = readFile(path());
+  REQUIRE_THAT(content, ContainsSubstring("empty.txt"));
+}
+
+TEST_CASE("McapWriterOptions defaults match C defaults") {
+  foxglove::McapWriterOptions defaults;
+  auto c = foxglove_mcap_options_default();
+  auto converted = foxglove::to_c_mcap_options(defaults);
+
+  CHECK(converted.chunk_size == c.chunk_size);
+  CHECK(converted.compression == c.compression);
+  CHECK(converted.use_chunks == c.use_chunks);
+  CHECK(converted.disable_seeking == c.disable_seeking);
+  CHECK(converted.emit_statistics == c.emit_statistics);
+  CHECK(converted.emit_summary_offsets == c.emit_summary_offsets);
+  CHECK(converted.emit_message_indexes == c.emit_message_indexes);
+  CHECK(converted.emit_chunk_indexes == c.emit_chunk_indexes);
+  CHECK(converted.emit_attachment_indexes == c.emit_attachment_indexes);
+  CHECK(converted.emit_metadata_indexes == c.emit_metadata_indexes);
+  CHECK(converted.repeat_channels == c.repeat_channels);
+  CHECK(converted.repeat_schemas == c.repeat_schemas);
+  CHECK(converted.calculate_chunk_crcs == c.calculate_chunk_crcs);
+  CHECK(converted.calculate_data_section_crc == c.calculate_data_section_crc);
+  CHECK(converted.calculate_summary_section_crc == c.calculate_summary_section_crc);
+  CHECK(converted.calculate_attachment_crcs == c.calculate_attachment_crcs);
+  CHECK(converted.compression_level == c.compression_level);
+  CHECK(converted.compression_threads == c.compression_threads);
+  CHECK(converted.truncate == c.truncate);
 }

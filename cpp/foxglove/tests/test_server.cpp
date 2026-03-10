@@ -2,6 +2,7 @@
 #include <foxglove/channel.hpp>
 #include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
+#include <foxglove/playback_control_request.hpp>
 #include <foxglove/server.hpp>
 
 #include <catch2/catch_test_macros.hpp>
@@ -12,6 +13,8 @@
 #include <websocketpp/config/asio_no_tls_client.hpp>
 
 #include <type_traits>
+
+#include "foxglove/playback_state.hpp"
 
 using Catch::Matchers::ContainsSubstring;
 using Catch::Matchers::Equals;
@@ -32,6 +35,8 @@ template<class T>
 constexpr std::underlying_type_t<T> toUnderlying(T e) noexcept {
   return static_cast<std::underlying_type_t<T>>(e);
 }
+
+constexpr auto kTestTimeout = std::chrono::seconds(5);
 
 class WebSocketClient {
 public:
@@ -85,7 +90,7 @@ public:
 
   void waitForConnection() {
     std::unique_lock lock{mutex_};
-    auto wait_result = cv_.wait_for(lock, std::chrono::seconds(1), [this] {
+    auto wait_result = cv_.wait_for(lock, kTestTimeout, [this] {
       return connection_opened_;
     });
     REQUIRE(wait_result);
@@ -93,7 +98,7 @@ public:
 
   std::string recv() {
     std::unique_lock lock{mutex_};
-    auto wait_result = cv_.wait_for(lock, std::chrono::seconds(1), [this] {
+    auto wait_result = cv_.wait_for(lock, kTestTimeout, [this] {
       return !rx_queue_.empty();
     });
     REQUIRE(wait_result);
@@ -182,7 +187,7 @@ foxglove::WebSocketServer startServer(foxglove::WebSocketServerOptions&& options
 
 foxglove::WebSocketServer startServer(
   foxglove::Context context,
-  foxglove::WebSocketServerCapabilities capabilities = foxglove::WebSocketServerCapabilities(0),
+  foxglove::WebSocketServerCapabilities capabilities = foxglove::WebSocketServerCapabilities::None,
   foxglove::WebSocketServerCallbacks&& callbacks = {},
   std::vector<std::string> supported_encodings = {}
 ) {
@@ -311,7 +316,7 @@ TEST_CASE("Subscribe and unsubscribe callbacks") {
       ]
     })"
   );
-  cv.wait_for(lock, std::chrono::seconds(1), [&] {
+  cv.wait_for(lock, kTestTimeout, [&] {
     return !subscribe_calls.empty();
   });
   REQUIRE_THAT(subscribe_calls, Equals(std::vector<uint64_t>{1}));
@@ -322,7 +327,7 @@ TEST_CASE("Subscribe and unsubscribe callbacks") {
       "subscriptionIds": [100]
     })"
   );
-  cv.wait_for(lock, std::chrono::seconds(1), [&] {
+  cv.wait_for(lock, kTestTimeout, [&] {
     return !unsubscribe_calls.empty();
   });
   REQUIRE_THAT(unsubscribe_calls, Equals(std::vector<uint64_t>{1}));
@@ -432,7 +437,7 @@ TEST_CASE("Client advertise/publish callbacks") {
       ]
     })"
   );
-  auto advertised_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
+  auto advertised_result = cv.wait_for(lock, kTestTimeout, [&] {
     return advertised;
   });
   REQUIRE(advertised_result);
@@ -440,7 +445,7 @@ TEST_CASE("Client advertise/publish callbacks") {
   // send ClientMessageData message
   std::array<char, 8> msg = {1, 100, 0, 0, 0, 'a', 'b', 'c'};
   client.send(msg.data(), msg.size());
-  auto received_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
+  auto received_result = cv.wait_for(lock, kTestTimeout, [&] {
     return received_message;
   });
   REQUIRE(received_result);
@@ -537,7 +542,7 @@ TEST_CASE("Parameter callbacks") {
   // Wait for the server to process the callback.
   {
     std::unique_lock lock{mutex};
-    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
+    auto wait_result = cv.wait_for(lock, kTestTimeout, [&] {
       if (server_get_parameters.has_value()) {
         auto request_id = (*server_get_parameters).first;
         auto param_names = (*server_get_parameters).second;
@@ -584,7 +589,7 @@ TEST_CASE("Parameter callbacks") {
   // Wait for the server to process the callback.
   {
     std::unique_lock lock{mutex};
-    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
+    auto wait_result = cv.wait_for(lock, kTestTimeout, [&] {
       if (server_set_parameters.has_value()) {
         auto [requestId, params] = *std::move(server_set_parameters);
         REQUIRE(requestId.has_value());
@@ -680,7 +685,7 @@ TEST_CASE("Parameter subscription callbacks") {
   // Wait for the server to process the callback.
   {
     std::unique_lock lock{mutex};
-    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
+    auto wait_result = cv.wait_for(lock, kTestTimeout, [&] {
       if (server_sub_names.has_value()) {
         auto names = *server_sub_names;
         REQUIRE_THAT(names, Equals(std::vector<std::string>{"foo", "beep"}));
@@ -746,11 +751,19 @@ foxglove::ServiceSchema makeServiceSchema(std::string_view name) {
   };
 }
 
-void writeUint32LE(std::vector<std::byte>& buffer, uint32_t value) {
-  buffer.push_back(static_cast<std::byte>(value & 0xffU));
-  buffer.push_back(static_cast<std::byte>((value >> 8) & 0xffU));
-  buffer.push_back(static_cast<std::byte>((value >> 16) & 0xffU));
-  buffer.push_back(static_cast<std::byte>((value >> 24) & 0xffU));
+template<typename T>
+void writeIntLE(std::vector<std::byte>& buffer, T value) {
+  static_assert(std::is_integral<T>());
+  for (size_t shift = 0; shift < 8 * sizeof(T); shift += 8) {
+    buffer.push_back(static_cast<std::byte>((value >> shift) & 0xffU));
+  }
+}
+
+void writeFloatLE(std::vector<std::byte>& buffer, float value) {
+  // Put the bits into a temporary uint32_t
+  uint32_t tmp = 0;
+  memcpy(&tmp, &value, sizeof(tmp));
+  writeIntLE(buffer, tmp);
 }
 
 uint32_t readUint32LE(const std::vector<std::byte>& buffer, size_t offset) {
@@ -768,9 +781,9 @@ std::vector<std::byte> makeServiceRequest(
   std::vector<std::byte> buffer;
   buffer.reserve(1 + 4 + 4 + 4 + encoding.size() + payload.size());
   buffer.emplace_back(static_cast<std::byte>(2));  // Service call request opcode
-  writeUint32LE(buffer, service_id);
-  writeUint32LE(buffer, call_id);
-  writeUint32LE(buffer, static_cast<uint32_t>(encoding.size()));
+  writeIntLE(buffer, service_id);
+  writeIntLE(buffer, call_id);
+  writeIntLE(buffer, static_cast<uint32_t>(encoding.size()));
   for (char c : encoding) {
     buffer.emplace_back(static_cast<std::byte>(c));
   }
@@ -902,7 +915,7 @@ TEST_CASE("Service callbacks") {
   // Wait for the server to process the callback.
   {
     std::unique_lock lock{mutex};
-    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
+    auto wait_result = cv.wait_for(lock, kTestTimeout, [&] {
       if (last_request.has_value()) {
         REQUIRE(last_request->service_name == "/echo");
         REQUIRE(last_request->call_id == 99);
@@ -927,7 +940,7 @@ TEST_CASE("Service callbacks") {
   // Wait for the server to process the callback.
   {
     std::unique_lock lock{mutex};
-    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
+    auto wait_result = cv.wait_for(lock, kTestTimeout, [&] {
       if (last_request.has_value()) {
         REQUIRE(last_request->service_name == "/error");
         REQUIRE(last_request->call_id == 123);
@@ -1023,7 +1036,7 @@ TEST_CASE("Fetch asset callback") {
   // Wait for the server to process the callback.
   {
     std::unique_lock lock{mutex};
-    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
+    auto wait_result = cv.wait_for(lock, kTestTimeout, [&] {
       if (last_uri.has_value()) {
         REQUIRE(last_uri == "package://foo/robot.urdf");
         last_uri.reset();
@@ -1093,7 +1106,7 @@ TEST_CASE("Fetch asset error") {
   // Wait for the server to process the callback.
   {
     std::unique_lock lock{mutex};
-    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
+    auto wait_result = cv.wait_for(lock, kTestTimeout, [&] {
       if (last_uri.has_value()) {
         REQUIRE(last_uri == "package://foo/robot.urdf");
         last_uri.reset();
@@ -1133,7 +1146,20 @@ void validateTimeMessage(const std::string_view msg, uint64_t timestamp) {
 
 TEST_CASE("Broadcast time") {
   auto context = foxglove::Context::create();
-  auto server = startServer(context, foxglove::WebSocketServerCapabilities::Time);
+
+  std::mutex mutex;
+  std::condition_variable cv;
+  bool client_connected = false;
+
+  foxglove::WebSocketServerOptions ws_options;
+  ws_options.context = context;
+  ws_options.capabilities = foxglove::WebSocketServerCapabilities::Time;
+  ws_options.callbacks.onClientConnect = [&]() {
+    std::scoped_lock lock{mutex};
+    client_connected = true;
+    cv.notify_one();
+  };
+  auto server = startServer(std::move(ws_options));
 
   WebSocketClient client;
   client.start(server.port());
@@ -1144,11 +1170,19 @@ TEST_CASE("Broadcast time") {
   REQUIRE(parsed.contains("op"));
   REQUIRE(parsed["op"] == "serverInfo");
 
+  // Wait for the server to register the client before broadcasting.
+  {
+    std::unique_lock lock{mutex};
+    auto wait_result = cv.wait_for(lock, kTestTimeout, [&] {
+      return client_connected;
+    });
+    REQUIRE(wait_result);
+  }
+
   server.broadcastTime(42);
 
-  // Wait for the time message.
-  payload = client.recv();
-  validateTimeMessage(payload, 42);
+  auto time_payload = client.recv();
+  validateTimeMessage(time_payload, 42);
 
   REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
 }
@@ -1198,6 +1232,31 @@ TEST_CASE("Clear session") {
   REQUIRE(parsed.contains("sessionId"));
   std::string session_id3 = parsed["sessionId"].get<std::string>();
   REQUIRE(session_id3 == "foo");
+
+  REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
+}
+
+TEST_CASE("Initial session id") {
+  auto context = foxglove::Context::create();
+
+  // Test with initial session_id set in options
+  foxglove::WebSocketServerOptions options;
+  options.context = context;
+  options.name = "unit-test";
+  options.session_id = "my-initial-session";
+  auto server = startServer(std::move(options));
+
+  WebSocketClient client;
+  client.start(server.port());
+  client.waitForConnection();
+
+  auto payload = client.recv();
+  auto parsed = Json::parse(payload);
+  REQUIRE(parsed.contains("op"));
+  REQUIRE(parsed["op"] == "serverInfo");
+  REQUIRE(parsed.contains("sessionId"));
+  std::string session_id = parsed["sessionId"].get<std::string>();
+  REQUIRE(session_id == "my-initial-session");
 
   REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
 }
@@ -1281,7 +1340,7 @@ TEST_CASE("Log message to websocket sinks") {
     cv.notify_one();
   };
 
-  auto server = startServer(context, foxglove::WebSocketServerCapabilities(0), std::move(cb));
+  auto server = startServer(context, foxglove::WebSocketServerCapabilities::None, std::move(cb));
 
   // Set up a few clients and connect them
   constexpr size_t num_clients = 3;
@@ -1323,7 +1382,7 @@ TEST_CASE("Log message to websocket sinks") {
   // Wait for subscriptions to set up
   {
     std::unique_lock lock{mutex};
-    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
+    auto wait_result = cv.wait_for(lock, kTestTimeout, [&] {
       return client_sink_ids.size() == num_clients;
     });
     REQUIRE(wait_result);
@@ -1448,7 +1507,7 @@ TEST_CASE("Server channel filtering") {
     })"
   );
 
-  cv.wait_for(lock, std::chrono::seconds(1), [&] {
+  cv.wait_for(lock, kTestTimeout, [&] {
     return !subscribe_calls.empty();
   });
   REQUIRE_THAT(subscribe_calls, Equals(std::vector<uint64_t>{1}));
@@ -1487,4 +1546,247 @@ TEST_CASE("Server info") {
   REQUIRE(*iterator == "value1");
 
   REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
+}
+
+std::vector<std::byte> playbackControlRequestToBinary(
+  const foxglove::PlaybackControlRequest& playback_control_request
+) {
+  size_t message_size = 1 + 4 + 1 + 8 + 4 + playback_control_request.request_id.size();
+  std::vector<std::byte> msg;
+  msg.reserve(message_size);
+
+  msg.emplace_back(std::byte{0x03});
+  msg.emplace_back(std::byte{static_cast<std::underlying_type_t<foxglove::PlaybackCommand>>(
+    playback_control_request.playback_command
+  )});
+
+  writeFloatLE(msg, playback_control_request.playback_speed);
+  msg.emplace_back(
+    playback_control_request.seek_time.has_value() ? std::byte{0x1} : std::byte{0x0}
+  );
+  writeIntLE(
+    msg, playback_control_request.seek_time.has_value() ? *playback_control_request.seek_time : 0x0
+  );
+  auto request_id_size = static_cast<uint32_t>(playback_control_request.request_id.size());
+  writeIntLE(msg, request_id_size);
+  for (char c : playback_control_request.request_id) {
+    msg.emplace_back(std::byte{static_cast<std::byte>(c)});
+  }
+
+  return msg;
+}
+
+std::optional<foxglove::PlaybackState> parseBinaryPlaybackState(const std::vector<std::byte>& msg) {
+  if (msg.size() < 1 + 1 + 8 + 4 + 1 + 4) {
+    return std::nullopt;
+  }
+
+  uint32_t offset = 0;
+
+  auto opcode = static_cast<uint8_t>(msg.at(offset));
+  offset += 1;
+  if (opcode != 0x05) {
+    return std::nullopt;
+  }
+
+  foxglove::PlaybackState playback_state;
+  playback_state.status = static_cast<foxglove::PlaybackStatus>(msg.at(offset));
+  offset += 1;
+  playback_state.current_time = readUint64LE(msg, offset);
+  offset += 8;
+  playback_state.playback_speed = static_cast<float>(readUint32LE(msg, offset));
+  offset += 4;
+  playback_state.did_seek = msg.at(offset) != std::byte{0x0};
+  offset += 1;
+
+  uint32_t request_id_length = readUint32LE(msg, offset);
+  offset += 4;
+
+  if (request_id_length == 0) {
+    playback_state.request_id = std::nullopt;
+  } else {
+    std::string request_id;
+    for (uint32_t i = 0; i < request_id_length; ++i) {
+      request_id += static_cast<char>(msg.at(offset + i));
+    }
+    playback_state.request_id = std::make_optional<std::string>(std::move(request_id));
+  }
+  return playback_state;
+}
+
+TEST_CASE("Playback control request callback") {
+  auto context = foxglove::Context::create();
+
+  std::optional<foxglove::PlaybackControlRequest> received_playback_control_request = std::nullopt;
+  std::mutex mutex;
+  std::condition_variable cv;
+
+  foxglove::WebSocketServerOptions ws_options;
+  ws_options.context = context;
+  ws_options.capabilities = foxglove::WebSocketServerCapabilities::PlaybackControl;
+  ws_options.playback_time_range = std::make_pair(0, 1000);
+  ws_options.callbacks.onPlaybackControlRequest =
+    [&]([[maybe_unused]] const foxglove::PlaybackControlRequest& playback_control_request
+    ) -> foxglove::PlaybackState {
+    {
+      std::unique_lock lock(mutex);
+      received_playback_control_request =
+        std::make_optional<foxglove::PlaybackControlRequest>(playback_control_request);
+    }
+    cv.notify_one();
+
+    // For the purposes of testing, the only field that matters here is the request_id. All other
+    // fields are set to dummy values since we're not playing back any actual data.
+    return foxglove::PlaybackState{
+      foxglove::PlaybackStatus::Paused,
+      0,
+      1.0,
+      false,
+      std::make_optional<std::string>("i have my own pls don't change it")
+    };
+  };
+
+  auto server = startServer(std::move(ws_options));
+
+  WebSocketClient client;
+  client.start(server.port());
+  client.waitForConnection();
+
+  auto payload = client.recv();
+  auto parsed = Json::parse(payload);
+  REQUIRE(parsed.contains("op"));
+  REQUIRE(parsed["op"] == "serverInfo");
+
+  foxglove::PlaybackControlRequest playback_control_request{
+    foxglove::PlaybackCommand::Pause,
+    1.0,
+    42,
+    "a_request_id",
+  };
+  std::vector<std::byte> msg = playbackControlRequestToBinary(playback_control_request);
+  client.send(msg);
+
+  {
+    std::unique_lock lock{mutex};
+    auto wait_result = cv.wait_for(lock, kTestTimeout, [&] {
+      return received_playback_control_request.has_value();
+    });
+    REQUIRE(wait_result);
+    REQUIRE(
+      received_playback_control_request->playback_command == foxglove::PlaybackCommand::Pause
+    );
+    REQUIRE(received_playback_control_request->playback_speed == 1.0);
+    REQUIRE(received_playback_control_request->seek_time.has_value());
+    REQUIRE(received_playback_control_request->seek_time.value() == 42);
+    REQUIRE(received_playback_control_request->request_id == "a_request_id");
+  }
+
+  std::vector<std::byte> received_binary_playback_state;
+  for (const unsigned char c : client.recv()) {
+    received_binary_playback_state.emplace_back(static_cast<std::byte>(c));
+  }
+  auto received_playback_state = parseBinaryPlaybackState(received_binary_playback_state);
+
+  REQUIRE(received_playback_state.has_value());
+  REQUIRE(received_playback_state->request_id.has_value());
+  REQUIRE(received_playback_state->request_id.value() == "a_request_id");
+  REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
+}
+
+TEST_CASE("Broadcast playback state") {
+  auto context = foxglove::Context::create();
+
+  std::mutex mutex;
+  std::condition_variable cv;
+  bool client_connected = false;
+
+  foxglove::WebSocketServerOptions ws_options;
+  ws_options.context = context;
+  ws_options.capabilities = foxglove::WebSocketServerCapabilities::PlaybackControl;
+  ws_options.playback_time_range = std::make_pair(0, 1000);
+  ws_options.callbacks.onClientConnect = [&]() {
+    std::scoped_lock lock{mutex};
+    client_connected = true;
+    cv.notify_one();
+  };
+  auto server = startServer(std::move(ws_options));
+
+  WebSocketClient client;
+  client.start(server.port());
+  client.waitForConnection();
+
+  auto payload = client.recv();
+  auto parsed = Json::parse(payload);
+  REQUIRE(parsed.contains("op"));
+  REQUIRE(parsed["op"] == "serverInfo");
+
+  // Wait for the server to register the client before broadcasting.
+  {
+    std::unique_lock lock{mutex};
+    auto wait_result = cv.wait_for(lock, kTestTimeout, [&] {
+      return client_connected;
+    });
+    REQUIRE(wait_result);
+  }
+
+  foxglove::PlaybackState playback_state{
+    foxglove::PlaybackStatus::Paused,
+    0,
+    1.0,
+    true,
+    std::nullopt,
+  };
+
+  server.broadcastPlaybackState(playback_state);
+
+  std::vector<std::byte> received_binary_playback_state;
+  for (const unsigned char c : client.recv()) {
+    received_binary_playback_state.emplace_back(static_cast<std::byte>(c));
+  }
+  auto received_playback_state = parseBinaryPlaybackState(received_binary_playback_state);
+
+  REQUIRE(received_playback_state.has_value());
+  REQUIRE(received_playback_state->request_id == std::nullopt);
+  REQUIRE(received_playback_state->did_seek);
+  REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
+}
+
+TEST_CASE("PlaybackControl capability") {
+  auto context = foxglove::Context::create();
+
+  const uint64_t start_time = 100000000000ULL;
+  const uint64_t end_time = 105000000000ULL;
+
+  foxglove::WebSocketServerOptions opt;
+  opt.context = std::move(context);
+  opt.playback_time_range = std::make_optional<std::pair<uint64_t, uint64_t>>(start_time, end_time);
+  auto server = startServer(std::move(opt));
+
+  WebSocketClient client;
+  client.start(server.port());
+  client.waitForConnection();
+
+  auto payload = client.recv();
+  auto parsed = Json::parse(payload);
+  REQUIRE(parsed.contains("op"));
+  REQUIRE(parsed["op"] == "serverInfo");
+
+  // Ensure that the playbackControl capability is enabled, since opt.playback_time_range is
+  // specified
+  REQUIRE(parsed.contains("capabilities"));
+  const auto& capabilities = parsed["capabilities"];
+  REQUIRE(std::count_if(capabilities.begin(), capabilities.end(), [](const auto& capability) {
+            return capability == "playbackControl";
+          }) == 1);
+
+  REQUIRE(parsed.contains("dataStartTime"));
+  REQUIRE(parsed["dataStartTime"].contains("sec"));
+  REQUIRE(parsed["dataStartTime"].contains("nsec"));
+  REQUIRE(parsed["dataStartTime"]["sec"] == 100);
+  REQUIRE(parsed["dataStartTime"]["nsec"] == 0);
+  REQUIRE(parsed.contains("dataEndTime"));
+  REQUIRE(parsed["dataEndTime"].contains("sec"));
+  REQUIRE(parsed["dataEndTime"].contains("nsec"));
+  REQUIRE(parsed["dataEndTime"]["sec"] == 105);
+  REQUIRE(parsed["dataEndTime"]["nsec"] == 0);
 }

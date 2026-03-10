@@ -261,7 +261,13 @@ class CylinderPrimitive:
 
 class FrameTransform:
     """
-    A transform between two reference frames in 3D space
+        A transform between two reference frames in 3D space. The transform defines the position and orientation of a child frame within a parent frame. Translation moves the origin of the child frame relative to the parent origin. The rotation changes the orientiation of the child frame around its origin.
+
+    Examples:
+
+    - With translation (x=1, y=0, z=0) and identity rotation (x=0, y=0, z=0, w=1), a point at (x=0, y=0, z=0) in the child frame maps to (x=1, y=0, z=0) in the parent frame.
+
+    - With translation (x=1, y=2, z=0) and a 90-degree rotation around the z-axis (x=0, y=0, z=0.707, w=0.707), a point at (x=1, y=0, z=0) in the child frame maps to (x=-1, y=3, z=0) in the parent frame.
     """
 
     def __init__(
@@ -347,9 +353,11 @@ class ImageAnnotations:
     def __init__(
         self,
         *,
+        timestamp: Timestamp | None = None,
         circles: list[CircleAnnotation] | None = None,
         points: list[PointsAnnotation] | None = None,
         texts: list[TextAnnotation] | None = None,
+        metadata: list[KeyValuePair] | None = None,
     ) -> None: ...
     @staticmethod
     def get_schema() -> Schema:
@@ -442,6 +450,7 @@ class LocationFix:
         position_covariance: list[float] | None = None,
         position_covariance_type: LocationFixPositionCovarianceType = LocationFixPositionCovarianceType.Unknown,
         color: Color | None = None,
+        metadata: list[KeyValuePair] | None = None,
     ) -> None: ...
     @staticmethod
     def get_schema() -> Schema:
@@ -565,6 +574,27 @@ class Point3:
 
     def encode(self) -> bytes:
         """Encodes the Point3."""
+        ...
+
+class Point3InFrame:
+    """
+    A timestamped point for a position in 3D space
+    """
+
+    def __init__(
+        self,
+        *,
+        timestamp: Timestamp | None = None,
+        frame_id: str = "",
+        point: Point3 | None = None,
+    ) -> None: ...
+    @staticmethod
+    def get_schema() -> Schema:
+        """Returns the Point3InFrame schema"""
+        ...
+
+    def encode(self) -> bytes:
+        """Encodes the Point3InFrame."""
         ...
 
 class PointCloud:
@@ -992,6 +1022,7 @@ FoxgloveSchema = Union[
     PackedElementField,
     Point2,
     Point3,
+    Point3InFrame,
     PointCloud,
     PointsAnnotation,
     Pose,

@@ -13,7 +13,7 @@ use super::{ChannelDescriptor, ChannelId};
 use crate::log_sink_set::LogSinkSet;
 use crate::sink::SmallSinkVec;
 use crate::throttler::Throttler;
-use crate::{nanoseconds_since_epoch, Context, Metadata, PartialMetadata, Schema, SinkId};
+use crate::{Context, Metadata, PartialMetadata, Schema, SinkId, nanoseconds_since_epoch};
 
 /// Interval for throttled warnings.
 static WARN_THROTTLER_INTERVAL: Duration = Duration::from_secs(10);
@@ -147,7 +147,7 @@ impl RawChannel {
     }
 
     /// Returns the count of sinks subscribed to this channel.
-    #[cfg(all(test, feature = "live_visualization"))]
+    #[cfg(all(test, feature = "websocket"))]
     pub(crate) fn num_sinks(&self) -> usize {
         self.sinks.len()
     }

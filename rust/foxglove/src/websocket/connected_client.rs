@@ -1,5 +1,5 @@
-use std::collections::hash_map::Entry;
 use std::collections::HashSet;
+use std::collections::hash_map::Entry;
 use std::sync::Weak;
 use std::{collections::HashMap, net::SocketAddr, sync::Arc};
 
@@ -8,13 +8,12 @@ use flume::TrySendError;
 use send_lossy::SendLossyResult;
 use tokio::net::TcpStream;
 use tokio::sync::oneshot;
-use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::WebSocketStream;
+use tokio_tungstenite::tungstenite::Message;
 
 use crate::sink_channel_filter::SinkChannelFilter;
-use crate::websocket::streams::ServerStream;
-#[cfg(feature = "unstable")]
 use crate::websocket::PlaybackControlRequest;
+use crate::websocket::streams::ServerStream;
 use crate::{ChannelId, Context, FoxgloveError, Metadata, RawChannel, Sink, SinkId};
 
 use self::ws_protocol::server::{
@@ -29,8 +28,8 @@ use super::ws_protocol::client::ClientMessage;
 use super::ws_protocol::server::MessageData;
 use super::ws_protocol::{self, ParseError};
 use super::{
-    advertise, AssetResponder, Capability, Client, ClientChannel, ClientChannelId, ClientId,
-    Parameter, Status, StatusLevel,
+    AssetResponder, Capability, Client, ClientChannel, ClientChannelId, ClientId, Parameter,
+    Status, StatusLevel, advertise,
 };
 
 mod poller;
@@ -265,7 +264,6 @@ impl ConnectedClient {
             ClientMessage::UnsubscribeConnectionGraph => {
                 self.on_connection_graph_unsubscribe(server)
             }
-            #[cfg(feature = "unstable")]
             ClientMessage::PlaybackControlRequest(msg) => {
                 self.on_playback_control_request(server, msg)
             }
@@ -677,10 +675,9 @@ impl ConnectedClient {
         }
     }
 
-    #[cfg(feature = "unstable")]
     fn on_playback_control_request(&self, server: Arc<Server>, msg: PlaybackControlRequest) {
-        if !server.has_capability(Capability::RangedPlayback) {
-            self.send_error("Server does not support ranged playback capability".to_string());
+        if !server.has_capability(Capability::PlaybackControl) {
+            self.send_error("Server does not support playback control capability".to_string());
             return;
         }
 
@@ -706,7 +703,7 @@ impl ConnectedClient {
             server.broadcast_playback_state(playback_state);
         } else {
             self.send_error(
-                "Server advertised ranged playback capability but didn't provide a listener"
+                "Server advertised playback control capability but didn't provide a listener"
                     .to_string(),
             );
         }

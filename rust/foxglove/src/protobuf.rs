@@ -1,4 +1,9 @@
 //! Interfaces for working with Protocol Buffers.
+
+#[cfg(feature = "chrono")]
+mod chrono;
+mod wkt;
+
 use prost_types::field_descriptor_proto::Type as ProstFieldType;
 
 /// Serializes a Protocol Buffers FileDescriptorSet to a byte vector.
@@ -97,6 +102,23 @@ pub trait ProtobufField {
         None
     }
 
+    /// Returns the file descriptor for types that need to be in their own package.
+    ///
+    /// This is used for well-known types like `google.protobuf.Timestamp` that need to be
+    /// included as separate files in the FileDescriptorSet rather than as nested types.
+    fn file_descriptor() -> Option<prost_types::FileDescriptorProto> {
+        None
+    }
+
+    /// Returns all file descriptors needed by this type, including from nested fields.
+    ///
+    /// For primitive types, this returns an empty vec. For well-known types, this returns
+    /// a vec containing the single file descriptor. For derived structs, this aggregates
+    /// file descriptors from all fields.
+    fn file_descriptors() -> Vec<prost_types::FileDescriptorProto> {
+        Self::file_descriptor().into_iter().collect()
+    }
+
     /// Indicates the type represents a repeated field (like a Vec).
     ///
     /// By default, fields are not repeated.
@@ -104,8 +126,18 @@ pub trait ProtobufField {
         false
     }
 
-    /// The length of the field to be written, in bytes.
+    /// The length of the field to be written, in bytes (not including the tag).
     fn encoded_len(&self) -> usize;
+
+    /// The length of the field including the tag, in bytes.
+    ///
+    /// For optional fields that are None, this returns 0 since nothing is written.
+    fn encoded_len_tagged(&self, field_number: u32) -> usize {
+        // The tag is a varint encoding (field_number << 3) | wire_type.
+        // See: https://protobuf.dev/programming-guides/encoding/#structure
+        let tag = ((field_number << 3) | Self::wire_type()) as u64;
+        encoded_len_varint(tag) + self.encoded_len()
+    }
 }
 
 impl ProtobufField for u64 {
@@ -125,6 +157,30 @@ impl ProtobufField for u64 {
         prost::encoding::encoded_len_varint(*self)
     }
 }
+
+impl ProtobufField for usize {
+    fn field_type() -> ProstFieldType {
+        ProstFieldType::Uint64
+    }
+
+    fn wire_type() -> u32 {
+        prost::encoding::WireType::Varint as u32
+    }
+
+    fn write(&self, buf: &mut impl bytes::BufMut) {
+        encode_varint(*self as u64, buf);
+    }
+
+    fn encoded_len(&self) -> usize {
+        prost::encoding::encoded_len_varint(*self as u64)
+    }
+}
+
+// Compile-time assertion that usize fits in u64
+const _: () = assert!(
+    usize::BITS <= u64::BITS,
+    "Target architecture has a usize larger than u64"
+);
 
 impl ProtobufField for u32 {
     fn field_type() -> ProstFieldType {
@@ -405,13 +461,10 @@ where
     }
 
     fn write_tagged(&self, field_number: u32, buf: &mut impl bytes::BufMut) {
-        // non-packed repeated fields are encoded as a record for each element
-        // https://protobuf.dev/programming-guides/encoding/#optional
+        // Non-packed repeated fields are encoded as a record for each element.
+        // https://protobuf.dev/programming-guides/encoding/#repeated
         for value in self {
-            let wire_type = T::wire_type();
-            let tag = (field_number << 3) | wire_type;
-            prost::encoding::encode_varint(tag as u64, buf);
-            value.write(buf);
+            value.write_tagged(field_number, buf);
         }
     }
 
@@ -423,6 +476,10 @@ where
         true
     }
 
+    fn enum_descriptor() -> Option<prost_types::EnumDescriptorProto> {
+        T::enum_descriptor()
+    }
+
     fn message_descriptor() -> Option<prost_types::DescriptorProto> {
         // The message descriptor of a vector is the message descriptor of the element type
         // the "repeating" property is set on the field that is repeating rather than the message
@@ -430,15 +487,155 @@ where
         T::message_descriptor()
     }
 
+    fn file_descriptor() -> Option<prost_types::FileDescriptorProto> {
+        T::file_descriptor()
+    }
+
+    fn file_descriptors() -> Vec<prost_types::FileDescriptorProto> {
+        T::file_descriptors()
+    }
+
     fn type_name() -> Option<String> {
         T::type_name()
     }
 
     fn encoded_len(&self) -> usize {
-        // non-packed repeated fields
-        let delim_len = prost::encoding::length_delimiter_len(self.len());
-        let data_len: usize = self.iter().map(|value| value.encoded_len()).sum();
-        delim_len + data_len
+        self.iter().map(|value| value.encoded_len()).sum()
+    }
+
+    fn encoded_len_tagged(&self, field_number: u32) -> usize {
+        // Each element is written with its own tag, so sum up the tagged lengths.
+        self.iter()
+            .map(|value| value.encoded_len_tagged(field_number))
+            .sum()
+    }
+}
+
+// implement a protobuf field for any array [T; N] where T implements ProtobufField
+impl<T, const N: usize> ProtobufField for [T; N]
+where
+    T: ProtobufField,
+{
+    fn field_type() -> ProstFieldType {
+        T::field_type()
+    }
+
+    fn wire_type() -> u32 {
+        prost::encoding::WireType::LengthDelimited as u32
+    }
+
+    fn write_tagged(&self, field_number: u32, buf: &mut impl bytes::BufMut) {
+        // Non-packed repeated fields are encoded as a record for each element.
+        // https://protobuf.dev/programming-guides/encoding/#repeated
+        for value in self {
+            value.write_tagged(field_number, buf);
+        }
+    }
+
+    fn write(&self, _buf: &mut impl bytes::BufMut) {
+        panic!("[T; N] should always be written using write_tagged");
+    }
+
+    fn repeating() -> bool {
+        true
+    }
+
+    fn enum_descriptor() -> Option<prost_types::EnumDescriptorProto> {
+        T::enum_descriptor()
+    }
+
+    fn message_descriptor() -> Option<prost_types::DescriptorProto> {
+        // The message descriptor of an array is the message descriptor of the element type
+        // the "repeating" property is set on the field that is repeating rather than the message
+        // descriptor
+        T::message_descriptor()
+    }
+
+    fn file_descriptor() -> Option<prost_types::FileDescriptorProto> {
+        T::file_descriptor()
+    }
+
+    fn file_descriptors() -> Vec<prost_types::FileDescriptorProto> {
+        T::file_descriptors()
+    }
+
+    fn type_name() -> Option<String> {
+        T::type_name()
+    }
+
+    fn encoded_len(&self) -> usize {
+        self.iter().map(|value| value.encoded_len()).sum()
+    }
+
+    fn encoded_len_tagged(&self, field_number: u32) -> usize {
+        // Each element is written with its own tag, so sum up the tagged lengths.
+        self.iter()
+            .map(|value| value.encoded_len_tagged(field_number))
+            .sum()
+    }
+}
+
+// Implement ProtobufField for Option<T> where T implements ProtobufField.
+// In proto3, all fields are implicitly optional. None means the field is not written.
+impl<T> ProtobufField for Option<T>
+where
+    T: ProtobufField,
+{
+    fn field_type() -> ProstFieldType {
+        T::field_type()
+    }
+
+    fn wire_type() -> u32 {
+        T::wire_type()
+    }
+
+    fn write_tagged(&self, field_number: u32, buf: &mut impl bytes::BufMut) {
+        if let Some(value) = self {
+            value.write_tagged(field_number, buf);
+        }
+        // None means don't write anything - field will take default value when decoded
+    }
+
+    fn write(&self, _buf: &mut impl bytes::BufMut) {
+        panic!("Option<T> should always be written using write_tagged");
+    }
+
+    fn message_descriptor() -> Option<prost_types::DescriptorProto> {
+        T::message_descriptor()
+    }
+
+    fn enum_descriptor() -> Option<prost_types::EnumDescriptorProto> {
+        T::enum_descriptor()
+    }
+
+    fn file_descriptor() -> Option<prost_types::FileDescriptorProto> {
+        T::file_descriptor()
+    }
+
+    fn file_descriptors() -> Vec<prost_types::FileDescriptorProto> {
+        T::file_descriptors()
+    }
+
+    fn type_name() -> Option<String> {
+        T::type_name()
+    }
+
+    fn repeating() -> bool {
+        T::repeating()
+    }
+
+    fn encoded_len(&self) -> usize {
+        match self {
+            Some(value) => value.encoded_len(),
+            None => 0,
+        }
+    }
+
+    fn encoded_len_tagged(&self, field_number: u32) -> usize {
+        match self {
+            Some(value) => value.encoded_len_tagged(field_number),
+            None => 0,
+        }
     }
 }
 
@@ -522,5 +719,89 @@ mod tests {
         let mut buf = bytes::BytesMut::new();
         bool::write_tagged(&true, 256, &mut buf);
         assert_eq!(&buf[..], &[0x80, 0x10, 0x01]);
+    }
+
+    #[test]
+    fn test_usize_field_type() {
+        assert_eq!(ProstFieldType::Uint64, usize::field_type());
+    }
+
+    #[test]
+    fn test_usize_encoded_len() {
+        // Small values
+        assert_eq!(1, usize::encoded_len(&0));
+        assert_eq!(1, usize::encoded_len(&127));
+        assert_eq!(2, usize::encoded_len(&128));
+
+        // Test with usize::MAX which is platform-specific
+        #[cfg(target_pointer_width = "64")]
+        {
+            // On 64-bit platforms, usize::MAX == u64::MAX
+            assert_eq!(10, usize::encoded_len(&usize::MAX));
+        }
+        #[cfg(target_pointer_width = "32")]
+        {
+            // On 32-bit platforms, usize::MAX == u32::MAX
+            assert_eq!(5, usize::encoded_len(&usize::MAX));
+        }
+    }
+
+    #[test]
+    fn test_usize_write() {
+        // Test small value
+        let mut buf = bytes::BytesMut::new();
+        usize::write(&42, &mut buf);
+        assert_eq!(&buf[..], &[42]);
+
+        // Test usize::MAX which is platform-specific
+        #[cfg(target_pointer_width = "64")]
+        {
+            // On 64-bit platforms, usize::MAX == u64::MAX
+            let mut buf = bytes::BytesMut::new();
+            usize::write(&usize::MAX, &mut buf);
+            assert_eq!(
+                &buf[..],
+                &[0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01]
+            );
+        }
+        #[cfg(target_pointer_width = "32")]
+        {
+            // On 32-bit platforms, usize::MAX == u32::MAX
+            let mut buf = bytes::BytesMut::new();
+            usize::write(&usize::MAX, &mut buf);
+            assert_eq!(&buf[..], &[0xff, 0xff, 0xff, 0xff, 0x0f]);
+        }
+    }
+
+    #[test]
+    fn test_usize_matches_u64() {
+        // usize should behave identically to u64 for values within u64 range
+        let test_values = vec![
+            0usize,
+            1,
+            127,
+            128,
+            255,
+            256,
+            65535,
+            65536,
+            u32::MAX as usize,
+        ];
+
+        for val in test_values {
+            let mut buf_usize = bytes::BytesMut::new();
+            usize::write(&val, &mut buf_usize);
+
+            let mut buf_u64 = bytes::BytesMut::new();
+            u64::write(&(val as u64), &mut buf_u64);
+
+            assert_eq!(
+                &buf_usize[..],
+                &buf_u64[..],
+                "usize and u64 should encode identically for value {}",
+                val
+            );
+            assert_eq!(usize::encoded_len(&val), u64::encoded_len(&(val as u64)));
+        }
     }
 }

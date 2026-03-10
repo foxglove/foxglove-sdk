@@ -1,8 +1,82 @@
 use crate::errors::PyFoxgloveError;
 use foxglove::{McapCompression, McapWriteOptions, McapWriterHandle};
 use pyo3::prelude::*;
+use pyo3::types::PyBytes;
 use std::fs::File;
-use std::io::BufWriter;
+use std::io::{BufWriter, SeekFrom, Write};
+
+/// Wraps a Python file-like object, implementing Write + Seek via Python calls.
+///
+/// The Python object must support `write(bytes)`, `seek(offset, whence)`, and `flush()` methods.
+pub(crate) struct PyFileLikeWriter(pub(crate) Py<PyAny>);
+
+impl Write for PyFileLikeWriter {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        Python::with_gil(|py| {
+            let bytes = PyBytes::new(py, buf);
+            self.0
+                .call_method1(py, "write", (bytes,))
+                .and_then(|result| result.extract::<usize>(py))
+                .map_err(std::io::Error::other)
+        })
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        Python::with_gil(|py| {
+            self.0
+                .call_method0(py, "flush")
+                .map(|_| ())
+                .map_err(std::io::Error::other)
+        })
+    }
+}
+
+impl std::io::Seek for PyFileLikeWriter {
+    fn seek(&mut self, pos: SeekFrom) -> std::io::Result<u64> {
+        Python::with_gil(|py| {
+            let (offset, whence): (i64, i32) = match pos {
+                SeekFrom::Start(n) => (n as i64, 0),
+                SeekFrom::Current(n) => (n, 1),
+                SeekFrom::End(n) => (n, 2),
+            };
+            self.0
+                .call_method1(py, "seek", (offset, whence))
+                .and_then(|result| result.extract::<u64>(py))
+                .map_err(std::io::Error::other)
+        })
+    }
+}
+
+/// Unified writer enum - dispatches to File or Python file-like object.
+pub(crate) enum WriterInner {
+    File(File),
+    FileLike(PyFileLikeWriter),
+}
+
+impl Write for WriterInner {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        match self {
+            Self::File(f) => f.write(buf),
+            Self::FileLike(f) => f.write(buf),
+        }
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        match self {
+            Self::File(f) => f.flush(),
+            Self::FileLike(f) => f.flush(),
+        }
+    }
+}
+
+impl std::io::Seek for WriterInner {
+    fn seek(&mut self, pos: SeekFrom) -> std::io::Result<u64> {
+        match self {
+            Self::File(f) => f.seek(pos),
+            Self::FileLike(f) => f.seek(pos),
+        }
+    }
+}
 
 /// Compression algorithm to use for MCAP writing.
 #[pyclass(eq, eq_int, name = "MCAPCompression", module = "foxglove.mcap")]
@@ -30,8 +104,9 @@ impl From<PyMcapCompression> for McapCompression {
 /// :type compression: MCAPCompression
 /// :param profile: Specifies the profile that should be written to the MCAP Header record.
 /// :type profile: str
-/// :param chunk_size: Specifies the target uncompressed size of each chunk.
-/// :type chunk_size: int
+/// :param chunk_size: Specifies the target uncompressed size of each chunk. Pass `None` to disable
+///     the chunk size limit.
+/// :type chunk_size: int | None
 /// :param use_chunks: Specifies whether to use chunks for storing messages.
 /// :type use_chunks: bool
 /// :param emit_statistics: Specifies whether to write a statistics record in the summary section.
@@ -52,7 +127,13 @@ impl From<PyMcapCompression> for McapCompression {
 /// :type calculate_data_section_crc: bool
 /// :param calculate_summary_section_crc: Specifies whether to calculate and write a summary section CRC into the Footer record.
 /// :type calculate_summary_section_crc: bool
-#[derive(Default, Clone)]
+/// :param calculate_attachment_crcs: Specifies whether to calculate and write CRCs for attachment records.
+/// :type calculate_attachment_crcs: bool
+/// :param compression_level: Specifies the compression level to use. 0 means use the compressor default.
+/// :type compression_level: int
+/// :param compression_threads: Specifies how many threads to use for zstd compression. None uses the number of physical CPUs. 0 disables multithreaded compression.
+/// :type compression_threads: int | None
+#[derive(Clone)]
 #[pyclass(name = "MCAPWriteOptions", module = "foxglove.mcap")]
 pub(crate) struct PyMcapWriteOptions(McapWriteOptions);
 
@@ -61,50 +142,66 @@ impl PyMcapWriteOptions {
     #[new]
     #[pyo3(signature = (
         *,
-        compression = None,
+        compression = PyMcapCompression::Zstd,
         profile = None,
-        chunk_size = None,
-        use_chunks = false,
+        chunk_size = 786432,
+        use_chunks = true,
         emit_statistics = true,
         emit_summary_offsets = true,
         emit_message_indexes = true,
         emit_chunk_indexes = true,
+        disable_seeking = false,
         repeat_channels = true,
         repeat_schemas = true,
         calculate_chunk_crcs = true,
         calculate_data_section_crc = true,
         calculate_summary_section_crc = true,
+        calculate_attachment_crcs = true,
+        compression_level = 0,
+        compression_threads = None,
     ))]
     #[allow(clippy::too_many_arguments)]
     fn new(
         compression: Option<PyMcapCompression>,
         profile: Option<String>,
         chunk_size: Option<u64>,
-        use_chunks: Option<bool>,
-        emit_statistics: Option<bool>,
-        emit_summary_offsets: Option<bool>,
-        emit_message_indexes: Option<bool>,
-        emit_chunk_indexes: Option<bool>,
-        repeat_channels: Option<bool>,
-        repeat_schemas: Option<bool>,
-        calculate_chunk_crcs: Option<bool>,
-        calculate_data_section_crc: Option<bool>,
-        calculate_summary_section_crc: Option<bool>,
+        use_chunks: bool,
+        emit_statistics: bool,
+        emit_summary_offsets: bool,
+        emit_message_indexes: bool,
+        emit_chunk_indexes: bool,
+        disable_seeking: bool,
+        repeat_channels: bool,
+        repeat_schemas: bool,
+        calculate_chunk_crcs: bool,
+        calculate_data_section_crc: bool,
+        calculate_summary_section_crc: bool,
+        calculate_attachment_crcs: bool,
+        compression_level: u32,
+        compression_threads: Option<u32>,
     ) -> Self {
-        let compression = compression.or(Some(PyMcapCompression::Zstd));
         let opts = McapWriteOptions::default()
             .compression(compression.map(Into::into))
             .chunk_size(chunk_size)
-            .use_chunks(use_chunks.unwrap_or(false))
-            .emit_statistics(emit_statistics.unwrap_or(true))
-            .emit_summary_offsets(emit_summary_offsets.unwrap_or(true))
-            .emit_message_indexes(emit_message_indexes.unwrap_or(true))
-            .emit_chunk_indexes(emit_chunk_indexes.unwrap_or(true))
-            .repeat_channels(repeat_channels.unwrap_or(true))
-            .repeat_schemas(repeat_schemas.unwrap_or(true))
-            .calculate_chunk_crcs(calculate_chunk_crcs.unwrap_or(true))
-            .calculate_data_section_crc(calculate_data_section_crc.unwrap_or(true))
-            .calculate_summary_section_crc(calculate_summary_section_crc.unwrap_or(true));
+            .use_chunks(use_chunks)
+            .emit_statistics(emit_statistics)
+            .emit_summary_offsets(emit_summary_offsets)
+            .emit_message_indexes(emit_message_indexes)
+            .emit_chunk_indexes(emit_chunk_indexes)
+            .repeat_channels(repeat_channels)
+            .repeat_schemas(repeat_schemas)
+            .calculate_chunk_crcs(calculate_chunk_crcs)
+            .calculate_data_section_crc(calculate_data_section_crc)
+            .calculate_summary_section_crc(calculate_summary_section_crc)
+            .calculate_attachment_crcs(calculate_attachment_crcs)
+            .compression_level(compression_level)
+            .disable_seeking(disable_seeking);
+
+        let opts = if let Some(threads) = compression_threads {
+            opts.compression_threads(threads)
+        } else {
+            opts
+        };
 
         let opts = if let Some(profile) = profile {
             opts.profile(profile)
@@ -132,7 +229,7 @@ impl From<PyMcapWriteOptions> for McapWriteOptions {
 /// If the writer is not closed by the time it is garbage collected, it will be
 /// closed automatically, and any errors will be logged.
 #[pyclass(name = "MCAPWriter", module = "foxglove.mcap")]
-pub(crate) struct PyMcapWriter(pub(crate) Option<McapWriterHandle<BufWriter<File>>>);
+pub(crate) struct PyMcapWriter(pub(crate) Option<McapWriterHandle<BufWriter<WriterInner>>>);
 
 impl Drop for PyMcapWriter {
     fn drop(&mut self) {
@@ -186,6 +283,42 @@ impl PyMcapWriter {
         }
         Ok(())
     }
+
+    /// Write an attachment to the MCAP file.
+    ///
+    /// Attachments are arbitrary binary data that can be stored alongside messages.
+    /// Common uses include storing configuration files, calibration data, or other
+    /// reference material related to the recording.
+    ///
+    /// :param log_time: Time at which the attachment was logged, in nanoseconds since epoch.
+    /// :param create_time: Time at which the attachment data was created, in nanoseconds since epoch.
+    /// :param name: Name of the attachment (e.g., "config.json").
+    /// :param media_type: MIME type of the attachment (e.g., "application/json").
+    /// :param data: Binary content of the attachment.
+    #[pyo3(signature = (*, log_time, create_time, name, media_type, data))]
+    fn attach(
+        &self,
+        log_time: u64,
+        create_time: u64,
+        name: String,
+        media_type: String,
+        data: Vec<u8>,
+    ) -> PyResult<()> {
+        if let Some(writer) = &self.0 {
+            writer
+                .attach(&foxglove::McapAttachment {
+                    log_time,
+                    create_time,
+                    name,
+                    media_type,
+                    data: std::borrow::Cow::Owned(data),
+                })
+                .map_err(PyFoxgloveError::from)?;
+        } else {
+            return Err(PyFoxgloveError::from(foxglove::FoxgloveError::SinkClosed).into());
+        }
+        Ok(())
+    }
 }
 
 pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
@@ -203,4 +336,40 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
         .set_item("foxglove._foxglove_py.mcap", &module)?;
 
     parent_module.add_submodule(&module)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::PyMcapWriteOptions;
+    use foxglove::McapWriteOptions;
+    use pyo3::prelude::*;
+
+    /// Verify that the hardcoded Python default values in [`PyMcapWriteOptions::new`] match the
+    /// upstream [`McapWriteOptions::default()`].
+    ///
+    /// This invokes the constructor through PyO3 with no arguments, exercising the
+    /// `#[pyo3(signature)]` default-value logic, and compares the result against
+    /// `McapWriteOptions::default()`.
+    ///
+    /// If this test fails, update the `#[pyo3(signature)]` defaults and the `.pyi` stub to match
+    /// the new Rust defaults.
+    #[test]
+    fn python_defaults_match_rust_defaults() {
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            let ty = py.get_type::<PyMcapWriteOptions>();
+            let obj = ty.call0().unwrap();
+            let cell = obj.downcast::<PyMcapWriteOptions>().unwrap();
+            let py_debug = format!("{:?}", cell.borrow().0);
+
+            let rust_default = McapWriteOptions::default();
+            let rust_debug = format!("{rust_default:?}");
+
+            assert_eq!(
+                rust_debug, py_debug,
+                "Python binding defaults have drifted from McapWriteOptions::default(). \
+                 Update the #[pyo3(signature)] defaults and the .pyi stub to match."
+            );
+        });
+    }
 }

@@ -85,7 +85,13 @@ export default (_env: unknown, argv: WebpackArgv): Configuration => {
         templateContent: /* html */ `
 <!doctype html>
 <html>
-  <head></head>
+  <head>
+    <title>Foxglove SDK Playground</title>
+    <meta name="description" content="Learn to use the Foxglove SDK to visualize data in a playground environment."/>
+    <meta property="og:title" content="Foxglove SDK Playground"/>
+    <meta property="og:description" content="Learn to use the Foxglove SDK to visualize data in a playground environment."/>
+    <meta property="og:type" content="website"/>
+  </head>
   <body>
     <div id="root"></div>
   </body>

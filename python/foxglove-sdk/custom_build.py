@@ -26,7 +26,8 @@ FRONTEND_TARGETS = ["python/foxglove/notebook/static/widget.js"]
 def _assert_frontend_targets_exist() -> None:
     for target in FRONTEND_TARGETS:
         path = Path.cwd() / target
-        assert path.exists(), f"{target} not found"
+        if not path.exists():
+            raise FileNotFoundError(f"{target} not found")
 
 
 def _frontend_codegen(editable: bool = False) -> None:

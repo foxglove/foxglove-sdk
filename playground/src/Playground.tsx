@@ -1,5 +1,5 @@
 import { PlayFilledAlt, DocumentDownload, Settings } from "@carbon/icons-react";
-import { DataSource, SelectLayoutParams } from "@foxglove/embed";
+import { DataSource, Layout, SelectLayoutParams } from "@foxglove/embed";
 import { FoxgloveViewer, FoxgloveViewerInterface } from "@foxglove/embed-react";
 import {
   Badge,
@@ -86,6 +86,9 @@ export function Playground(): React.JSX.Element {
   const viewerRef = useRef<FoxgloveViewerInterface>(null);
   const settingsButtonRef = useRef<HTMLButtonElement>(null);
   const { cx, classes } = useStyles();
+  const onViewerError = useCallback((msg: string) => {
+    toast.error(msg);
+  }, []);
 
   const [initialState] = useState(() => {
     try {
@@ -131,6 +134,17 @@ export function Playground(): React.JSX.Element {
     runner.on("run-completed", (value) => {
       setMcapFilename(value);
     });
+    runner.on("set-layout", (layoutJson) => {
+      try {
+        setSelectedLayout({
+          storageKey: LAYOUT_STORAGE_KEY,
+          layout: JSON.parse(layoutJson) as Layout,
+          force: true,
+        });
+      } catch (error) {
+        toast.error(`Error setting layout: ${String(error)}`);
+      }
+    });
     runnerRef.current = runner;
     return () => {
       runner.dispose();
@@ -171,14 +185,14 @@ export function Playground(): React.JSX.Element {
       .then((layout) => {
         setAndCopyUrlState({
           code: editor.getValue(),
-          layout: layout ?? selectedLayout.opaqueLayout,
           embedURL,
+          layout,
         });
       })
       .catch((err: unknown) => {
         toast.error(`Sharing failed: ${String(err)}`);
       });
-  }, [selectedLayout, embedURL]);
+  }, [embedURL]);
 
   const chooseLayout = useCallback(() => {
     layoutInputRef.current?.click();
@@ -351,6 +365,7 @@ export function Playground(): React.JSX.Element {
           style={{ width: "100%", height: "100%", overflow: "hidden" }}
           data={dataSource}
           layout={selectedLayout}
+          onError={onViewerError}
         />
       </Allotment.Pane>
     </Allotment>

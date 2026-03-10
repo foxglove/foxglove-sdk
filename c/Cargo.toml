@@ -19,11 +19,10 @@ foxglove = { path = "../rust/foxglove", default-features = false }
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 foxglove = { path = "../rust/foxglove", default-features = false, features = [
-  "live_visualization",
   "lz4",
   "tls",
+  "websocket",
   "zstd",
-  "agent",
 ] }
 base64 = "0.22.1"
 bitflags = "2.9.0"

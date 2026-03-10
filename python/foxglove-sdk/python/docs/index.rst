@@ -90,9 +90,28 @@ listens on ``127.0.0.1:8765``. Each client that connects to the websocket server
 sink. The sink is dynamically added to the :py:class:`.Context` associated with the server when the client
 connects, and removed from the context when the client disconnects.
 
+Notebook integration
+^^^^^^^^^^^^^^^^^^^^
+
+See :doc:`../notebook/index` for details on using Foxglove with Python/Jupyter notebooks.
+
+Playground
+^^^^^^^^^^
+
+The `Foxglove SDK Playground <https://playground.foxglove.dev/>`__ allows you to run Python code
+using the Foxglove SDK, and visualize the resulting data in Foxglove. Inside a playground, the
+following APIs are available:
+
+.. py:function:: playground.set_layout(layout: Layout, /) -> None
+
+   Update the layout used in the playground.
+
+Table of contents
+^^^^^^^^^^^^^^^^^
 
 .. toctree::
    :maxdepth: 3
 
    examples
    api/index
+   notebook/index

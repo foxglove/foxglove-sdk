@@ -3,10 +3,10 @@ use std::time::Duration;
 
 use parking_lot::Mutex;
 
+use crate::ChannelId;
 use crate::websocket::{
     ChannelView, Client, ClientChannel, ClientChannelId, ClientId, Parameter, ServerListener,
 };
-use crate::ChannelId;
 
 #[allow(dead_code)]
 pub(crate) struct ClientChannelInfo {

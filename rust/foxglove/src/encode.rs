@@ -10,10 +10,25 @@ mod schemars;
 /// Implementing this trait for your type `T` enables the use of [`Channel<T>`][crate::Channel],
 /// which offers a type-checked `log` method.
 ///
+/// # Deriving `Encode`
+///
 /// This trait may be derived for structs and unit-only enums by enabling the `derive` feature and
-/// using the `#[derive(Encode)]` attribute. Today, this will serialize messages using [protobuf].
-/// This means there are some limitations on the data that you can encode. Notably, enum variants
-/// should have a field with a 0-value, which indicates the default variant.
+/// using the `#[derive(Encode)]` attribute.
+///
+/// The derive macro is a **convenience** for getting data into Foxglove with minimal friction. It
+/// automatically generates a schema and serialization code based on your type's fields. The
+/// underlying serialization format is an implementation detail and may change across SDK versions.
+///
+/// This means the derived schema is **not suitable for schema evolution**. Reordering fields,
+/// adding fields in the middle, or removing fields will silently change the tag assignments and
+/// break compatibility with previously recorded data. There are no compile-time or runtime
+/// warnings when this happens.
+///
+/// If you need backwards-compatible schema evolution or want your data to be portable and
+/// durable across software versions, you should maintain an explicit schema using an established
+/// IDL like [protobuf]. You can then implement `Encode` manually for your generated types. See
+/// the [SDK documentation](https://docs.foxglove.dev/docs/sdk/logging-messages#logging-with-protobuf-schemas)
+/// for an example.
 ///
 /// [protobuf]: https://protobuf.dev/
 pub trait Encode {

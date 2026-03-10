@@ -1,6 +1,6 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::schemas::Timestamp;
+use crate::messages::Timestamp;
 
 /// A trait for converting a time value to a u64 nanoseconds since epoch.
 pub trait ToUnixNanos {
