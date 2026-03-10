@@ -622,8 +622,6 @@ fn test_mono32fle_yuv420_padded() {
     test_yuv420_padded("test.mono32fle.raw");
 }
 
-// ---- as_str / round-trip tests ----
-
 /// Verify that every canonical string from `as_str()` is accepted by `parse_endian()`.
 ///
 /// Note: this is not a true round-trip for `Mono16` and `Mono32F` because `as_str()` drops
