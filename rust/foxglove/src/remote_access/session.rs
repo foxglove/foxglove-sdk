@@ -681,8 +681,12 @@ impl RemoteAccessSession {
         // Update session state and build the re-advertise message.
         let advertise_msg = {
             let mut state = self.state.write();
+            // Only insert metadata for channels that still exist, guarding against
+            // a channel being removed between the read and write locks.
             for &channel_id in &changed {
-                if let Some(meta) = advertised.get(&channel_id) {
+                if let Some(meta) = advertised.get(&channel_id)
+                    && state.has_channel(&channel_id)
+                {
                     state.insert_video_metadata(channel_id, meta.clone());
                 }
             }

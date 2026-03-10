@@ -142,6 +142,11 @@ impl SessionState {
         self.channels.insert(channel.id(), channel.clone());
     }
 
+    /// Returns `true` if the channel is currently advertised.
+    pub fn has_channel(&self, channel_id: &ChannelId) -> bool {
+        self.channels.contains_key(channel_id)
+    }
+
     /// Removes an advertised channel. Returns `true` if it was present.
     pub fn remove_channel(&mut self, channel_id: ChannelId) -> bool {
         self.subscriptions.remove(&channel_id);
@@ -982,12 +987,16 @@ mod tests {
             msg.channels[0].metadata.get("foxglove.hasVideoTrack"),
             Some(&"true".to_string()),
         );
-        assert!(!msg.channels[0]
-            .metadata
-            .contains_key("foxglove.videoSourceEncoding"));
-        assert!(!msg.channels[0]
-            .metadata
-            .contains_key("foxglove.videoFrameId"));
+        assert!(
+            !msg.channels[0]
+                .metadata
+                .contains_key("foxglove.videoSourceEncoding")
+        );
+        assert!(
+            !msg.channels[0]
+                .metadata
+                .contains_key("foxglove.videoFrameId")
+        );
 
         // After inserting video metadata, encoding and frame_id should appear.
         state.insert_video_metadata(
@@ -1000,9 +1009,7 @@ mod tests {
         let mut msg = advertise::advertise_channels(std::iter::once(&ch)).into_owned();
         state.add_metadata_to_advertisement(&mut msg);
         assert_eq!(
-            msg.channels[0]
-                .metadata
-                .get("foxglove.videoSourceEncoding"),
+            msg.channels[0].metadata.get("foxglove.videoSourceEncoding"),
             Some(&"rgb8".to_string()),
         );
         assert_eq!(
@@ -1027,9 +1034,7 @@ mod tests {
         let mut msg = advertise::advertise_channels(std::iter::once(&ch)).into_owned();
         state.add_metadata_to_advertisement(&mut msg);
         assert_eq!(
-            msg.channels[0]
-                .metadata
-                .get("foxglove.videoSourceEncoding"),
+            msg.channels[0].metadata.get("foxglove.videoSourceEncoding"),
             Some(&"mono8".to_string()),
         );
         assert!(
@@ -1062,12 +1067,16 @@ mod tests {
             msg.channels[0].metadata.get("foxglove.hasVideoTrack"),
             Some(&"true".to_string()),
         );
-        assert!(!msg.channels[0]
-            .metadata
-            .contains_key("foxglove.videoSourceEncoding"));
-        assert!(!msg.channels[0]
-            .metadata
-            .contains_key("foxglove.videoFrameId"));
+        assert!(
+            !msg.channels[0]
+                .metadata
+                .contains_key("foxglove.videoSourceEncoding")
+        );
+        assert!(
+            !msg.channels[0]
+                .metadata
+                .contains_key("foxglove.videoFrameId")
+        );
     }
 
     #[test]
