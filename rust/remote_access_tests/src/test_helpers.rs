@@ -155,10 +155,21 @@ impl ViewerConnection {
         let outer_deadline = tokio::time::Instant::now() + timeout;
         loop {
             let token = livekit_token::generate_token(room_name, viewer_identity)?;
-            let (room, mut events) =
-                Room::connect(livekit_token::LIVEKIT_URL, &token, RoomOptions::default())
-                    .await
-                    .context("viewer failed to connect to LiveKit")?;
+            let connect_result =
+                Room::connect(livekit_token::LIVEKIT_URL, &token, RoomOptions::default()).await;
+            let (room, mut events) = match connect_result {
+                Ok(pair) => pair,
+                Err(err) => {
+                    // Transient failures (e.g. 401 while LiveKit is still
+                    // initializing) are retried until the outer deadline.
+                    if tokio::time::Instant::now() >= outer_deadline {
+                        return Err(err).context("viewer failed to connect to LiveKit");
+                    }
+                    info!("{viewer_identity} connect failed ({err:#}), retrying...");
+                    tokio::time::sleep(Duration::from_millis(500)).await;
+                    continue;
+                }
+            };
             info!("{viewer_identity} connected to room, waiting for byte stream");
 
             // Wait for a ByteStreamOpened event. Use a shorter inner timeout so
