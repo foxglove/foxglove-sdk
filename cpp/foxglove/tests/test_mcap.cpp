@@ -133,7 +133,6 @@ TEST_CASE_METHOD(McapTestFile, "different contexts") {
   foxglove::Schema schema;
   schema.name = "ExampleSchema";
   auto channel_result = foxglove::RawChannel::create("example1", "json", schema, context2);
-  REQUIRE(channel_result.has_value());
   auto channel = std::move(requireValue(channel_result));
   std::string data = "Hello, world!";
   channel.log(reinterpret_cast<const std::byte*>(data.data()), data.size());
@@ -162,7 +161,6 @@ TEST_CASE_METHOD(McapTestFile, "specify profile") {
   foxglove::Schema schema;
   schema.name = "ExampleSchema";
   auto channel_result = foxglove::RawChannel::create("example1", "json", schema, context);
-  REQUIRE(channel_result.has_value());
   auto& channel = requireValue(channel_result);
   std::string data = "Hello, world!";
   channel.log(reinterpret_cast<const std::byte*>(data.data()), data.size());
@@ -193,7 +191,6 @@ TEST_CASE_METHOD(McapTestFile, "zstd compression") {
   foxglove::Schema schema;
   schema.name = "ExampleSchema";
   auto channel_result = foxglove::RawChannel::create("example2", "json", schema, context);
-  REQUIRE(channel_result.has_value());
   auto channel = std::move(requireValue(channel_result));
   std::string data = "Hello, world!";
   channel.log(reinterpret_cast<const std::byte*>(data.data()), data.size());
@@ -224,7 +221,6 @@ TEST_CASE_METHOD(McapTestFile, "lz4 compression") {
   foxglove::Schema schema;
   schema.name = "ExampleSchema";
   auto channel_result = foxglove::RawChannel::create("example3", "json", schema, context);
-  REQUIRE(channel_result.has_value());
   auto& channel = requireValue(channel_result);
   std::string data = "Hello, world!";
   channel.log(reinterpret_cast<const std::byte*>(data.data()), data.size());
@@ -259,7 +255,6 @@ TEST_CASE_METHOD(McapTestFile, "Channel can outlive Schema") {
     schema.data = reinterpret_cast<const std::byte*>(data.data());
     schema.data_len = data.size();
     auto result = foxglove::RawChannel::create("example", "json", schema, context);
-    REQUIRE(result.has_value());
     // Channel should copy the schema, so this modification has no effect on the output
     data[2] = 'I';
     data[3] = 'L';
@@ -378,7 +373,6 @@ TEST_CASE_METHOD(McapTestFile, "ImageAnnotations channel") {
   REQUIRE(writer.has_value());
 
   auto channel_result = foxglove::schemas::ImageAnnotationsChannel::create("example", context);
-  REQUIRE(channel_result.has_value());
   auto channel = std::move(requireValue(channel_result));
 
   // Prepare ImageAnnotations message
@@ -448,7 +442,6 @@ TEST_CASE("MCAP Channel filtering") {
   if (!writer_res_1.has_value()) {
     std::cerr << "Failed to create writer: " << foxglove::strerror(writer_res_1.error()) << '\n';
   }
-  REQUIRE(writer_res_1.has_value());
   auto writer_1 = std::move(requireValue(writer_res_1));
 
   foxglove::McapWriterOptions opts_2;
@@ -459,11 +452,9 @@ TEST_CASE("MCAP Channel filtering") {
     // Only log to topic /2, and validate the schema while we're at it
     if (channel.topic() == "/2") {
       auto schema = channel.schema();
-      REQUIRE(schema.has_value());
       REQUIRE(requireValue(schema).name == "Topic2Schema");
       REQUIRE(requireValue(schema).encoding == "fake-encoding");
       auto metadata = channel.metadata();
-      REQUIRE(metadata.has_value());
       REQUIRE(requireValue(metadata).size() == 2);
       REQUIRE(requireValue(metadata).at("key1") == "value1");
       REQUIRE(requireValue(metadata).at("key2") == "value2");
@@ -472,12 +463,10 @@ TEST_CASE("MCAP Channel filtering") {
     return false;
   };
   auto writer_res_2 = foxglove::McapWriter::create(opts_2);
-  REQUIRE(writer_res_2.has_value());
   auto writer_2 = std::move(requireValue(writer_res_2));
 
   {
     auto result = foxglove::RawChannel::create("/1", "json", std::nullopt, context);
-    REQUIRE(result.has_value());
     auto channel = std::move(requireValue(result));
     std::string data = "Topic 1 msg";
     channel.log(reinterpret_cast<const std::byte*>(data.data()), data.size());
@@ -494,7 +483,6 @@ TEST_CASE("MCAP Channel filtering") {
 
     auto result =
       foxglove::RawChannel::create("/2", "json", std::move(topic2_schema), context, metadata);
-    REQUIRE(result.has_value());
     auto channel = std::move(requireValue(result));
     std::string data = "Topic 2 msg";
     channel.log(reinterpret_cast<const std::byte*>(data.data()), data.size());
@@ -624,10 +612,8 @@ TEST_CASE("Custom writer basic functionality") {
   options.context = context;
 
   auto custom_mcap = foxglove::McapWriter::create(options);
-  REQUIRE(custom_mcap.has_value());
 
   auto channel_result = foxglove::schemas::Point2Channel::create("test_topic", context);
-  REQUIRE(channel_result.has_value());
   auto channel = std::move(requireValue(channel_result));
   channel.log(foxglove::schemas::Point2{1.0, 2.0});
   channel.log(foxglove::schemas::Point2{3.0, 4.0});

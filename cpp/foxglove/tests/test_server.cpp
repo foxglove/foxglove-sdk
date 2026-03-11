@@ -251,7 +251,6 @@ foxglove::WebSocketServer startServer(foxglove::WebSocketServerOptions&& options
   // always select an available port
   options.port = 0;
   auto result = foxglove::WebSocketServer::create(std::move(options));
-  REQUIRE(result.has_value());
   auto server = std::move(requireValue(result));
   REQUIRE(server.port() != 0);
   return server;
@@ -325,7 +324,6 @@ TEST_CASE("Log a message with and without metadata") {
   auto server = startServer(context);
 
   auto channel_result = foxglove::RawChannel::create("example", "json", std::nullopt, context);
-  REQUIRE(channel_result.has_value());
   auto channel = std::move(requireValue(channel_result));
   const std::array<uint8_t, 3> data = {1, 2, 3};
   REQUIRE(
@@ -366,7 +364,6 @@ TEST_CASE("Subscribe and unsubscribe callbacks") {
   foxglove::Schema schema;
   schema.name = "ExampleSchema";
   auto channel_result = foxglove::RawChannel::create("example", "json", schema, context);
-  REQUIRE(channel_result.has_value());
   auto channel = std::move(requireValue(channel_result));
 
   WebSocketClient client;
@@ -677,7 +674,6 @@ TEST_CASE("Parameter callbacks") {
         REQUIRE(params[2].value().has_value());
         if (params[2].isByteArray()) {
           auto result = params[2].getByteArray();
-          REQUIRE(result.has_value());
           auto bytes = requireValue(result);
           REQUIRE(bytes.size() == 6);
           REQUIRE(memcmp(bytes.data(), "secret", 6) == 0);
@@ -1396,7 +1392,6 @@ TEST_CASE("Log message to websocket sinks") {
 
   std::vector<uint64_t> client_sink_ids;
   auto channel_result = foxglove::RawChannel::create("test", "json", std::nullopt, context);
-  REQUIRE(channel_result.has_value());
 
   foxglove::RawChannel channel = std::move(requireValue(channel_result));
 
@@ -1529,11 +1524,9 @@ TEST_CASE("Server channel filtering") {
   auto server = startServer(std::move(ws_options));
 
   auto channel_result_1 = foxglove::RawChannel::create("/1", "json", std::nullopt, context);
-  REQUIRE(channel_result_1.has_value());
   auto channel_1 = std::move(requireValue(channel_result_1));
 
   auto channel_result_2 = foxglove::RawChannel::create("/2", "json", std::nullopt, context);
-  REQUIRE(channel_result_2.has_value());
   auto channel_2 = std::move(requireValue(channel_result_2));
 
   WebSocketClient client;
@@ -1744,7 +1737,6 @@ TEST_CASE("Playback control request callback") {
     auto& req = requireValue(received_playback_control_request);
     REQUIRE(req.playback_command == foxglove::PlaybackCommand::Pause);
     REQUIRE(req.playback_speed == 1.0);
-    REQUIRE(req.seek_time.has_value());
     REQUIRE(requireValue(req.seek_time) == 42);
     REQUIRE(req.request_id == "a_request_id");
   }
@@ -1755,9 +1747,7 @@ TEST_CASE("Playback control request callback") {
   }
   auto received_playback_state = parseBinaryPlaybackState(received_binary_playback_state);
 
-  REQUIRE(received_playback_state.has_value());
   auto& state = requireValue(received_playback_state);
-  REQUIRE(state.request_id.has_value());
   REQUIRE(requireValue(state.request_id) == "a_request_id");
   REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
 }
@@ -1814,7 +1804,6 @@ TEST_CASE("Broadcast playback state") {
   }
   auto received_playback_state = parseBinaryPlaybackState(received_binary_playback_state);
 
-  REQUIRE(received_playback_state.has_value());
   auto& state = requireValue(received_playback_state);
   REQUIRE(state.request_id == std::nullopt);
   REQUIRE(state.did_seek);
