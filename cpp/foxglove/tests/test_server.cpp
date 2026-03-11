@@ -55,13 +55,13 @@ public:
 
   ~WebSocketClient() {
     running_ = false;
-    if (context_) {
+    if (context_ != nullptr) {
       lws_cancel_service(context_);
     }
     if (thread_.joinable()) {
       thread_.join();
     }
-    if (context_) {
+    if (context_ != nullptr) {
       lws_context_destroy(context_);
     }
   }
@@ -69,14 +69,16 @@ public:
   void start(uint16_t port) {
     port_ = port;
 
-    static const struct lws_protocols protocols[] = {
+    // NOLINTBEGIN(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
+    static const struct lws_protocols KProtocols[] = {
       {"foxglove.sdk.v1", &WebSocketClient::callback, 0, 65536, 0, nullptr, 0},
       LWS_PROTOCOL_LIST_TERM,
     };
+    // NOLINTEND(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
 
     struct lws_context_creation_info info = {};
     info.port = CONTEXT_PORT_NO_LISTEN;
-    info.protocols = protocols;
+    info.protocols = KProtocols;  // NOLINT(cppcoreguidelines-pro-bounds-array-to-pointer-decay,hicpp-no-array-decay)
     info.user = this;
 
     context_ = lws_create_context(&info);
@@ -154,7 +156,7 @@ public:
   }
 
   void send(void const* payload, size_t len) {
-    auto ptr = static_cast<const uint8_t*>(payload);
+    const auto* ptr = static_cast<const uint8_t*>(payload);
     {
       std::scoped_lock lock{tx_mutex_};
       tx_queue_.push({std::vector<uint8_t>(ptr, ptr + len), true});
@@ -177,7 +179,7 @@ private:
   ) {
     auto* context = lws_get_context(wsi);
     auto* self = static_cast<WebSocketClient*>(lws_context_user(context));
-    if (!self) {
+    if (self == nullptr) {
       return 0;
     }
 
@@ -190,9 +192,9 @@ private:
         break;
       }
       case LWS_CALLBACK_CLIENT_RECEIVE: {
-        auto* data = static_cast<const char*>(in);
+        const auto* data = static_cast<const char*>(in);
         self->rx_buffer_.append(data, len);
-        if (lws_is_final_fragment(wsi)) {
+        if (lws_is_final_fragment(wsi) != 0) {
           std::scoped_lock lock{self->mutex_};
           self->rx_queue_.push(std::move(self->rx_buffer_));
           self->rx_buffer_.clear();
@@ -216,7 +218,7 @@ private:
         break;
       }
       case LWS_CALLBACK_EVENT_WAIT_CANCELLED: {
-        if (self->wsi_) {
+        if (self->wsi_ != nullptr) {
           lws_callback_on_writable(self->wsi_);
         }
         break;
