@@ -317,8 +317,7 @@ impl RemoteAccessSession {
                 }
                 Ok(()) = video_metadata_rx.changed() => {
                     session
-                        .republish_video_metadata(&mut video_metadata)
-                        .await;
+                        .republish_video_metadata(&mut video_metadata);
                 }
                 msg = session.data_plane_rx.recv_async() => {
                     let Ok(msg) = msg else { break };
@@ -654,10 +653,10 @@ impl RemoteAccessSession {
 
     /// Check video publishers for metadata changes and re-advertise affected channels.
     ///
-    /// Called from `run_sender` when `video_metadata_rx` signals a change. Compares each publisher's
-    /// current metadata against what was last advertised, updates session state for any
-    /// changes, and sends re-advertise messages directly to participants.
-    async fn republish_video_metadata(&self, advertised: &mut HashMap<ChannelId, VideoMetadata>) {
+    /// Called from `run_sender` when `video_metadata_rx` signals a change. Compares each
+    /// publisher's current metadata against what was last advertised, updates session state for
+    /// any changes, and broadcasts re-advertise messages to participants.
+    fn republish_video_metadata(&self, advertised: &mut HashMap<ChannelId, VideoMetadata>) {
         // Collect channels whose video metadata has changed.
         let changed: SmallVec<[ChannelId; 4]> = {
             let state = self.state.read();
@@ -704,12 +703,7 @@ impl RemoteAccessSession {
 
         if let Some(Some(msg)) = advertise_msg {
             let framed = frame_text_message(msg.to_string().as_bytes());
-            let participants = self.state.read().collect_participants();
-            for participant in participants {
-                if let Err(e) = participant.send(&framed).await {
-                    error!("failed to send metadata re-advertise to {participant:?}: {e:?}");
-                }
-            }
+            self.broadcast_control(framed);
         }
     }
 
