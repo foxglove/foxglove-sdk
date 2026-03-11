@@ -8,16 +8,16 @@ table JointState {
   name:string (id: 0);
 
   /// Joint position. Radians for revolute joints, meters for prismatic joints. Use NaN to indicate that the value is not present if the message definition does not support optional fields.
-  position:double (id: 1);
+  position:double = null (id: 1);
 
   /// Joint velocity. Rad/s for revolute joints, m/s for prismatic joints. Use NaN to indicate that the value is not present if the message definition does not support optional fields.
-  velocity:double (id: 2);
+  velocity:double = null (id: 2);
 
   /// Joint acceleration. Rad/s² for revolute joints, m/s² for prismatic joints. Use NaN to indicate that the value is not present if the message definition does not support optional fields.
-  acceleration:double (id: 3);
+  acceleration:double = null (id: 3);
 
   /// Joint effort (force or torque). Nm for revolute joints, N for prismatic joints. Use NaN to indicate that the value is not present if the message definition does not support optional fields.
-  effort:double (id: 4);
+  effort:double = null (id: 4);
 }
 
 root_type JointState;
