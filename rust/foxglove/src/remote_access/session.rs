@@ -559,7 +559,7 @@ impl RemoteAccessSession {
     /// Add a participant to the server, if it hasn't already been added.
     ///
     /// The caller is responsible for ensuring that this method is not called concurrently for the
-    /// same partcipant identity.
+    /// same participant identity.
     ///
     /// When a participant is added, a ServerInfo message and channel Advertisement messages are
     /// immediately queued for transmission.
