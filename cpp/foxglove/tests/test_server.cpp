@@ -41,7 +41,7 @@ constexpr std::underlying_type_t<T> toUnderlying(T e) noexcept {
   return static_cast<std::underlying_type_t<T>>(e);
 }
 
-constexpr auto k_test_timeout = std::chrono::seconds(15);
+constexpr auto k_test_timeout = std::chrono::seconds(5);
 
 class WebSocketClient {
 public:
@@ -1327,8 +1327,20 @@ TEST_CASE("Initial session id") {
 }
 
 TEST_CASE("Publish status") {
+  std::mutex mutex;
+  std::condition_variable cv;
+  bool client_connected = false;
+
   auto context = foxglove::Context::create();
-  auto server = startServer(context);
+
+  foxglove::WebSocketServerOptions ws_options;
+  ws_options.context = std::move(context);
+  ws_options.callbacks.onClientConnect = [&]() {
+    std::scoped_lock lock{mutex};
+    client_connected = true;
+    cv.notify_one();
+  };
+  auto server = startServer(std::move(ws_options));
 
   WebSocketClient client;
   client.start(server.port());
@@ -1338,6 +1350,15 @@ TEST_CASE("Publish status") {
   auto parsed = Json::parse(payload);
   REQUIRE(parsed.contains("op"));
   REQUIRE(parsed["op"] == "serverInfo");
+
+  // Wait for the server to register the client before broadcasting.
+  {
+    std::unique_lock lock{mutex};
+    auto wait_result = cv.wait_for(lock, k_test_timeout, [&] {
+      return client_connected;
+    });
+    REQUIRE(wait_result);
+  }
 
   // Publish status without an ID.
   auto error = server.publishStatus(foxglove::WebSocketServerStatusLevel::Info, "hooray");
