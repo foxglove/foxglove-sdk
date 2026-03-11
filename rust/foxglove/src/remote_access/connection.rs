@@ -221,13 +221,11 @@ impl RemoteAccessConnection {
         // ParticipantConnected events only fire for participants joining after us.
         let server_info = self.create_server_info();
         for (identity, _) in session.room().remote_participants() {
-            match session.add_participant(identity.clone()).await {
-                Ok(participant) => {
-                    session.send_info_and_advertisements(participant, server_info.clone());
-                }
-                Err(e) => {
-                    error!("failed to add existing participant {identity}: {e:?}");
-                }
+            if let Err(e) = session
+                .add_participant(identity.clone(), server_info.clone())
+                .await
+            {
+                error!("failed to add existing participant {identity}: {e:?}");
             }
         }
 
@@ -304,17 +302,14 @@ impl RemoteAccessConnection {
             match event {
                 RoomEvent::ParticipantConnected(participant) => {
                     info!("entered the room: {:?}", participant.identity());
-                    let participant_id = match session.add_participant(participant.identity()).await
-                    {
-                        Ok(id) => id,
-                        Err(e) => {
-                            error!("failed to add participant: {e:?}");
-                            continue;
-                        }
-                    };
-
                     let server_info = self.create_server_info();
-                    session.send_info_and_advertisements(participant_id.clone(), server_info);
+                    if let Err(e) = session
+                        .add_participant(participant.identity(), server_info)
+                        .await
+                    {
+                        error!("failed to add participant: {e:?}");
+                        continue;
+                    }
                 }
                 RoomEvent::ParticipantDisconnected(participant) => {
                     session.remove_participant(&participant.identity());

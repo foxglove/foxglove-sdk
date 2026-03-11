@@ -557,15 +557,21 @@ impl RemoteAccessSession {
     }
 
     /// Add a participant to the server, if it hasn't already been added.
-    /// In either case, return the new or existing participant.
+    ///
+    /// The caller is responsible for ensuring that this method is not called concurrently for the
+    /// same partcipant identity.
+    ///
+    /// When a participant is added, a ServerInfo message and channel Advertisement messages are
+    /// immediately queued for transmission.
     pub(crate) async fn add_participant(
         &self,
         participant_id: ParticipantIdentity,
-    ) -> Result<Arc<Participant>, Box<RemoteAccessError>> {
+        server_info: ServerInfo,
+    ) -> Result<(), Box<RemoteAccessError>> {
         use crate::remote_access::participant::ParticipantWriter;
 
-        if let Some(existing) = self.state.read().get_participant(&participant_id) {
-            return Ok(existing);
+        if self.state.read().has_participant(&participant_id) {
+            return Ok(());
         }
 
         let stream = match self
@@ -590,10 +596,24 @@ impl RemoteAccessSession {
             ParticipantWriter::Livekit(stream),
         ));
 
-        Ok(self
+        // Send initial messages prior to adding the participant to the state map, to ensure that
+        // these are the first messages delivered to the participant. This is safe to do without
+        // holding the write lock, because this is a new participant - see below.
+        info!("sending server info and advertisements to participant {participant:?}");
+        let server_info_msg = frame_text_message(server_info.to_string().as_bytes());
+        self.send_control(participant.clone(), server_info_msg);
+        self.send_channel_advertisements(participant.clone());
+
+        // Add the participant to the state map. We assert that this is a new participant, because
+        // we validated that it did not exist in the map at the top of this function, and the
+        // caller is responsible for ensuring this function is not called concurrently for the same
+        // participant identity.
+        let did_insert = self
             .state
             .write()
-            .insert_participant(participant_id, participant))
+            .insert_participant(participant_id, participant);
+        assert!(did_insert);
+        Ok(())
     }
 
     /// Remove a participant from the session, cleaning up its subscriptions.
@@ -610,22 +630,6 @@ impl RemoteAccessSession {
         }
 
         self.stop_video_tracks(&removed.last_video_unsubscribed);
-    }
-
-    /// Enqueue server info and channel advertisements for delivery to a participant.
-    ///
-    /// Messages are routed through the control plane queue so that all writes to the
-    /// participant's ByteStreamWriter are serialized by the sender task. ByteStreamWriter::write
-    /// is not safe to call concurrently from multiple tasks.
-    pub(crate) fn send_info_and_advertisements(
-        &self,
-        participant: Arc<Participant>,
-        server_info: ServerInfo,
-    ) {
-        info!("sending server info and advertisements to participant {participant:?}");
-        let framed = frame_text_message(server_info.to_string().as_bytes());
-        self.send_control(participant.clone(), framed);
-        self.send_channel_advertisements(participant);
     }
 
     /// Enqueue all currently cached channel advertisements for delivery to a single participant.
