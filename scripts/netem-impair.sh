@@ -30,7 +30,15 @@ if [ $# -eq 0 ]; then
 fi
 
 ARGS="$*"
-updated=0
+
+# Reject shell metacharacters — same validation as netem-setup.sh.
+case "$ARGS" in
+    *[';|&$`()\{\}\"'\''!'\\*?]* | *'>'* | *'<'* | *'['*)
+        echo "ERROR: netem args contain shell metacharacters: $ARGS"
+        echo "Only netem parameters are allowed (e.g. 'delay 200ms 50ms loss 5%')."
+        exit 1
+        ;;
+esac
 
 for iface in $(ls /sys/class/net/); do
     # Parse netem qdiscs from tc output. Each line looks like:
