@@ -34,7 +34,6 @@ using foxglove_tests::requireValue;
 
 // NOLINTBEGIN(cppcoreguidelines-avoid-do-while)
 
-
 namespace {
 
 template<class T>
@@ -78,7 +77,8 @@ public:
 
     struct lws_context_creation_info info = {};
     info.port = CONTEXT_PORT_NO_LISTEN;
-    info.protocols = KProtocols;  // NOLINT(cppcoreguidelines-pro-bounds-array-to-pointer-decay,hicpp-no-array-decay)
+    info.protocols =
+      KProtocols;  // NOLINT(cppcoreguidelines-pro-bounds-array-to-pointer-decay,hicpp-no-array-decay)
     info.user = this;
 
     context_ = lws_create_context(&info);
