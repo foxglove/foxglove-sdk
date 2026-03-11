@@ -1,0 +1,110 @@
+# Compose override that runs LiveKit integration tests inside a Docker container
+# on the perlink network, so tc/netem rules can shape traffic between the test
+# runner and LiveKit by destination IP.
+#
+# Usage:
+#   docker compose \
+#     -f docker-compose.yaml \
+#     -f docker-compose.netem.yml \
+#     -f docker-compose.netem-livekit.yml \
+#     up -d --wait
+#
+# Then run tests inside the container:
+#   docker compose ... exec test-runner \
+#     cargo test -p remote_access_tests -- --ignored livekit_
+#
+# Or use the management script:
+#   scripts/netem-livekit.sh up
+#   scripts/netem-livekit.sh test
+#
+# Architecture:
+#   - LiveKit joins the perlink network at 10.99.0.2 with node-ip overridden so
+#     WebRTC ICE candidates point to the perlink address (not localhost).
+#   - test-runner (10.99.0.30): mounts the workspace source code and builds/runs
+#     tests inside the container, connecting to LiveKit at http://10.99.0.2:7880.
+#   - The netem sidecar classifies egress from LiveKit to the test runner using
+#     HTB + u32 filters, applying configurable impairment.
+#
+# Node IP:
+#   LiveKit's --node-ip controls the IP address advertised in WebRTC ICE
+#   candidates. The default (127.0.0.1) works for host-connected clients
+#   (e.g., Foxglove app in a browser). Override to 10.99.0.2 for container-
+#   based tests where the test runner is on the perlink network:
+#
+#     LIVEKIT_NODE_IP=10.99.0.2 scripts/netem-livekit.sh up
+
+networks:
+  perlink:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.99.0.0/24
+
+volumes:
+  # Persistent caches for Rust builds inside the test-runner container. These
+  # survive `docker compose down` so subsequent builds are incremental.
+  netem-cargo-registry:
+  netem-cargo-git:
+  netem-target:
+
+services:
+  livekit:
+    # Default node-ip is 127.0.0.1 for host-connected clients (live demos).
+    # Override with LIVEKIT_NODE_IP=10.99.0.2 for containerized tests.
+    command: --dev --bind 0.0.0.0 --node-ip ${LIVEKIT_NODE_IP:-127.0.0.1}
+    networks:
+      default:
+      perlink:
+        ipv4_address: 10.99.0.2
+
+  test-runner:
+    image: rust:1.93.0-bookworm
+    working_dir: /workspace
+    volumes:
+      - .:/workspace
+      - netem-cargo-registry:/usr/local/cargo/registry
+      - netem-cargo-git:/usr/local/cargo/git
+      - netem-target:/workspace/target-docker
+    environment:
+      CARGO_TARGET_DIR: /workspace/target-docker
+      LIVEKIT_URL: "http://10.99.0.2:7880"
+      # Colored test output inside Docker.
+      CARGO_TERM_COLOR: always
+      # The webrtc-sys crate compiles C++ code that requires Clang (uses
+      # -Wno-changes-meaning, which GCC does not support).
+      CXX: clang++
+      CC: clang
+    networks:
+      perlink:
+        ipv4_address: 10.99.0.30
+    # Install Clang on first start (needed for webrtc-sys C++ compilation),
+    # then keep the container alive for interactive test runs.
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        if ! command -v clang++ > /dev/null 2>&1; then
+          apt-get update -qq && apt-get install -y -qq clang > /dev/null 2>&1
+        fi
+        exec sleep infinity
+    healthcheck:
+      test: ["CMD-SHELL", "command -v clang++ && test -d /workspace/rust"]
+      interval: 5s
+      timeout: 10s
+      retries: 12
+      start_period: 30s
+    depends_on:
+      livekit:
+        condition: service_healthy
+
+  netem:
+    environment:
+      # Default class: moderate impairment for unclassified traffic.
+      NETEM_ARGS: "${NETEM_ARGS:-delay 80ms 20ms loss 2%}"
+      # Test runner: configurable impairment for LiveKit → test-runner traffic.
+      NETEM_LINK_RUNNER_DST: "10.99.0.30"
+      NETEM_LINK_RUNNER_ARGS: "${NETEM_LINK_RUNNER_ARGS:-delay 200ms 50ms loss 5%}"
+    depends_on:
+      livekit:
+        condition: service_started
+      test-runner:
+        condition: service_started

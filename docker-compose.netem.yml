@@ -60,6 +60,7 @@ services:
       NETEM_ARGS: "${NETEM_ARGS:-delay 80ms 20ms loss 2%}"
     volumes:
       - ./scripts/netem-setup.sh:/netem-setup.sh:ro
+      - ./scripts/netem-impair.sh:/netem-impair.sh:ro
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
