@@ -120,10 +120,10 @@ struct Manifest {
 /// The output conforms to the Foxglove remote data loader manifest JSON schema.
 inline std::string to_json_string(const Manifest& m) {
   // Use nlohmann/json internally without exposing it in the public API.
-  using json = nlohmann::json;
+  using Json = nlohmann::json;
 
-  auto topic_to_json = [](const Topic& t) -> json {
-    json j{
+  auto topic_to_json = [](const Topic& t) -> Json {
+    Json j{
       {"name", t.name},
       {"messageEncoding", t.message_encoding},
     };
@@ -133,8 +133,8 @@ inline std::string to_json_string(const Manifest& m) {
     return j;
   };
 
-  auto schema_to_json = [](const Schema& s) -> json {
-    return json{
+  auto schema_to_json = [](const Schema& s) -> Json {
+    return Json{
       {"id", s.id},
       {"name", s.name},
       {"encoding", s.encoding},
@@ -142,16 +142,16 @@ inline std::string to_json_string(const Manifest& m) {
     };
   };
 
-  auto source_to_json = [&](const StreamedSource& s) -> json {
-    json topics = json::array();
+  auto source_to_json = [&](const StreamedSource& s) -> Json {
+    Json topics = Json::array();
     for (const auto& t : s.topics) {
       topics.push_back(topic_to_json(t));
     }
-    json schemas = json::array();
+    Json schemas = Json::array();
     for (const auto& sc : s.schemas) {
       schemas.push_back(schema_to_json(sc));
     }
-    json j{
+    Json j{
       {"url", s.url},
       {"topics", topics},
       {"schemas", schemas},
@@ -164,11 +164,11 @@ inline std::string to_json_string(const Manifest& m) {
     return j;
   };
 
-  json sources = json::array();
+  Json sources = Json::array();
   for (const auto& s : m.sources) {
     sources.push_back(source_to_json(s));
   }
-  json j{
+  Json j{
     {"sources", sources},
   };
   if (m.name.has_value()) {

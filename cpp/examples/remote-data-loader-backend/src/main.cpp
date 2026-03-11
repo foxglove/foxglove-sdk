@@ -80,9 +80,9 @@ std::string format_iso8601(system_clock::time_point tp) {
 // ============================================================================
 
 // The specific route values are not part of the API; you can change them to whatever you want.
-static constexpr const char* MANIFEST_ROUTE = "/v1/manifest";
-static constexpr const char* DATA_ROUTE = "/v1/data";
-static constexpr int PORT = 8081;
+static constexpr const char* manifest_route = "/v1/manifest";
+static constexpr const char* data_route = "/v1/data";
+static constexpr int port = 8081;
 
 // ============================================================================
 // Flight parameters (parsed from query parameters)
@@ -172,7 +172,7 @@ void manifest_handler(const httplib::Request& req, httplib::Response& res) {
   rdl::StreamedSource source;
   // We're providing the data from this service in this example, but in principle this could
   // be any URL.
-  source.url = DATA_ROUTE + std::string("?") + query;
+  source.url = data_route + std::string("?") + query;
   // `id` must be unique to this data source. Otherwise, incorrect data may be served from cache.
   //
   // Here we reuse the query string to make sure we don't forget any parameters. We also
@@ -316,11 +316,11 @@ void data_handler(const httplib::Request& req, httplib::Response& res) {
 int main() {
   httplib::Server svr;
 
-  svr.Get(MANIFEST_ROUTE, manifest_handler);
-  svr.Get(DATA_ROUTE, data_handler);
+  svr.Get(manifest_route, manifest_handler);
+  svr.Get(data_route, data_handler);
 
-  std::cerr << "[remote_data_loader_backend] starting server on 0.0.0.0:" << PORT << "\n";
-  svr.listen("0.0.0.0", PORT);
+  std::cerr << "[remote_data_loader_backend] starting server on 0.0.0.0:" << port << "\n";
+  svr.listen("0.0.0.0", port);
 
   return 0;
 }

@@ -483,17 +483,17 @@ TEST_CASE("MCAP Channel filtering") {
     channel.log(reinterpret_cast<const std::byte*>(data.data()), data.size());
   }
   {
-    foxglove::Schema topic2Schema;
-    topic2Schema.name = "Topic2Schema";
-    topic2Schema.encoding = "fake-encoding";
-    std::string schemaData = "FAKESCHEMA";
-    topic2Schema.data = reinterpret_cast<const std::byte*>(schemaData.data());
-    topic2Schema.data_len = schemaData.size();
+    foxglove::Schema topic2_schema;
+    topic2_schema.name = "Topic2Schema";
+    topic2_schema.encoding = "fake-encoding";
+    std::string schema_data = "FAKESCHEMA";
+    topic2_schema.data = reinterpret_cast<const std::byte*>(schema_data.data());
+    topic2_schema.data_len = schema_data.size();
 
     std::map<std::string, std::string> metadata = {{"key1", "value1"}, {"key2", "value2"}};
 
     auto result =
-      foxglove::RawChannel::create("/2", "json", std::move(topic2Schema), context, metadata);
+      foxglove::RawChannel::create("/2", "json", std::move(topic2_schema), context, metadata);
     REQUIRE(result.has_value());
     auto channel = std::move(requireValue(result));
     std::string data = "Topic 2 msg";

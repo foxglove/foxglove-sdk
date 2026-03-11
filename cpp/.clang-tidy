@@ -32,6 +32,7 @@ CheckOptions:
   readability-identifier-naming.ClassConstantCase: CamelCase
   readability-identifier-naming.ClassMemberCase: lower_case
   readability-identifier-naming.ConceptCase: CamelCase
+  readability-identifier-naming.ConstexprMethodCase: camelBack
   readability-identifier-naming.ConstantMemberCase: lower_case
   readability-identifier-naming.ConstantParameterCase: lower_case
   readability-identifier-naming.ConstantPointerParameterCase: lower_case
@@ -41,10 +42,13 @@ CheckOptions:
   readability-identifier-naming.EnumIgnoredRegexp: foxglove_error
   readability-identifier-naming.MacroDefinitionCase: UPPER_CASE
   readability-identifier-naming.MemberCase: lower_case
-  readability-identifier-naming.MemberIgnoredRegexp: "^on[A-Z].*"
+  readability-identifier-naming.MemberIgnoredRegexp: "^on[A-Z].*" # std::function members of callback struct
   readability-identifier-naming.NamespaceCase: lower_case
   readability-identifier-naming.ParameterCase: lower_case
   readability-identifier-naming.PrivateMemberSuffix: _
   readability-identifier-naming.StaticConstantCase: CamelCase
+  readability-identifier-naming.StaticVariableCase: lower_case
   readability-identifier-naming.StructCase: CamelCase
+  readability-identifier-naming.TypeAliasCase: CamelCase
   readability-identifier-naming.TypedefCase: CamelCase
+  readability-identifier-naming.VariableCase: lower_case
