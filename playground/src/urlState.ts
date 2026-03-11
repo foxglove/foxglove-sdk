@@ -78,13 +78,9 @@ function deserializeState(serialized: string): UrlState | undefined {
   const layout = layoutJson ? (JSON.parse(layoutJson) as unknown) : undefined;
 
   let embedURL: URL | undefined;
-  try {
-    const embedStr = params.get("embed");
-    if (embedStr) {
-      embedURL = new URL(embedStr);
-    }
-  } catch {
-    // ignore
+  const embedStr = params.get("embed");
+  if (embedStr) {
+    embedURL = new URL(embedStr);
   }
 
   return { code, layout, embedURL };

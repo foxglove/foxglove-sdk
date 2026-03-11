@@ -85,7 +85,7 @@ export function Playground(): React.JSX.Element {
   const runnerRef = useRef<Runner>(undefined);
   const editorRef = useRef<EditorInterface>(null);
   const viewerRef = useRef<FoxgloveViewerInterface>(null);
-  const settingsButtonRef = useRef<HTMLButtonElement>(null);
+
   const { cx, classes } = useStyles();
   const onViewerError = useCallback((msg: string) => {
     toast.error(msg);
@@ -173,27 +173,21 @@ export function Playground(): React.JSX.Element {
   }, [classes, cx]);
 
   const share = useCallback(() => {
+    if (embedURLError) {
+      toast.error("Fix the embed URL before sharing");
+      return;
+    }
     const editor = editorRef.current;
     if (!editor) {
       return;
     }
-    const viewer = viewerRef.current;
-    if (!viewer) {
-      return;
-    }
-    viewer
-      .getLayout()
-      .then((layout) => {
-        setAndCopyUrlState({
-          code: editor.getValue(),
-          embedURL,
-          layout,
-        });
-      })
-      .catch((err: unknown) => {
-        toast.error(`Sharing failed: ${String(err)}`);
-      });
-  }, [embedURL]);
+    const code = editor.getValue();
+    const layoutPromise =
+      viewerRef.current?.getLayout().catch(() => undefined) ?? Promise.resolve(undefined);
+    void layoutPromise.then((layout) => {
+      setAndCopyUrlState({ code, embedURL, layout });
+    });
+  }, [embedURL, embedURLError]);
 
   const chooseLayout = useCallback(() => {
     layoutInputRef.current?.click();
@@ -308,11 +302,7 @@ export function Playground(): React.JSX.Element {
             <Button variant="outlined" onClick={share}>
               Share
             </Button>
-            <IconButton
-              ref={settingsButtonRef}
-              onClick={toggleSettings}
-              color={settingsOpen ? "primary" : "default"}
-            >
+            <IconButton onClick={toggleSettings} color={settingsOpen ? "primary" : "default"}>
               <Badge color="primary" variant="dot" invisible={!hasModifiedSettings}>
                 <Settings />
               </Badge>
@@ -323,7 +313,7 @@ export function Playground(): React.JSX.Element {
           <div className={classes.settings}>
             <TextField
               label="Embed URL"
-              defaultValue={embedURL}
+              defaultValue={embedURL?.href ?? ""}
               placeholder="https://embed.foxglove.dev"
               fullWidth
               onChange={(event) => {
@@ -346,6 +336,11 @@ export function Playground(): React.JSX.Element {
                   setEmbedURLError(undefined);
                 } catch (_err) {
                   setEmbedURLError("Invalid URL");
+                }
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  (event.target as HTMLInputElement).blur();
                 }
               }}
               error={!!embedURLError}
