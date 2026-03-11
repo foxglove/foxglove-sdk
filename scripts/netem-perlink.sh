@@ -91,6 +91,7 @@ case "${1:-}" in
         ;;
 
     test)
+        $COMPOSE up -d --wait
         case "${2:-}" in
             "")
                 cargo test -p remote_access_tests -- --ignored perlink_
