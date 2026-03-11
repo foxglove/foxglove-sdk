@@ -76,7 +76,7 @@ async fn camera_loop() {
 
     let calibration = CameraCalibration {
         timestamp: None,
-        frame_id: "".into(),
+        frame_id: "camera".into(),
         width: width as u32,
         height: height as u32,
         distortion_model: String::new(),
@@ -118,7 +118,7 @@ async fn camera_loop() {
         let mono_row = &mono_gradient[offset..offset + width];
         let mono_img = RawImage {
             timestamp: Some(Timestamp::now()),
-            frame_id: "".into(),
+            frame_id: "camera".into(),
             width: width as u32,
             height: height as u32,
             encoding: "mono8".into(),
@@ -131,7 +131,7 @@ async fn camera_loop() {
         let rgb_row = &rgb_gradient[offset * 3..(offset + width) * 3];
         let rgb_img = RawImage {
             timestamp: Some(Timestamp::now()),
-            frame_id: "".into(),
+            frame_id: "camera".into(),
             width: width as u32,
             height: height as u32,
             encoding: "rgb8".into(),

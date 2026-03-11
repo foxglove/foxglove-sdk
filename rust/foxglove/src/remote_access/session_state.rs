@@ -8,7 +8,7 @@ use tracing::{debug, info};
 use crate::protocol::v2::server::advertise;
 use crate::remote_access::channel_subscription::ChannelSubscription;
 use crate::remote_access::participant::Participant;
-use crate::remote_access::session::{VideoInputSchema, VideoPublisher};
+use crate::remote_access::session::{VideoInputSchema, VideoMetadata, VideoPublisher};
 use crate::{ChannelId, RawChannel};
 
 /// Channels that lost their last subscriber when a participant was removed.
@@ -44,6 +44,8 @@ pub(crate) struct SessionState {
     video_publishers: HashMap<ChannelId, Arc<VideoPublisher>>,
     /// Track SIDs for published video tracks.
     video_track_sids: HashMap<ChannelId, TrackSid>,
+    /// Video metadata last advertised for each video channel.
+    video_metadata: HashMap<ChannelId, VideoMetadata>,
 }
 
 impl SessionState {
@@ -57,6 +59,7 @@ impl SessionState {
             video_schemas: HashMap::new(),
             video_publishers: HashMap::new(),
             video_track_sids: HashMap::new(),
+            video_metadata: HashMap::new(),
         }
     }
 
@@ -139,11 +142,17 @@ impl SessionState {
         self.channels.insert(channel.id(), channel.clone());
     }
 
+    /// Returns `true` if the channel is currently advertised.
+    pub fn has_channel(&self, channel_id: &ChannelId) -> bool {
+        self.channels.contains_key(channel_id)
+    }
+
     /// Removes an advertised channel. Returns `true` if it was present.
     pub fn remove_channel(&mut self, channel_id: ChannelId) -> bool {
         self.subscriptions.remove(&channel_id);
         self.data_subscriptions.remove(&channel_id);
         self.video_subscribers.remove(&channel_id);
+        self.video_metadata.remove(&channel_id);
         self.channels.remove(&channel_id).is_some()
     }
 
@@ -170,9 +179,10 @@ impl SessionState {
         self.video_schemas.get(channel_id).copied()
     }
 
-    /// Removes the video input schema for a channel.
+    /// Removes the video input schema and associated video metadata for a channel.
     pub fn remove_video_schema(&mut self, channel_id: &ChannelId) {
         self.video_schemas.remove(channel_id);
+        self.video_metadata.remove(channel_id);
     }
 
     /// Inserts a video publisher for a channel.
@@ -204,13 +214,42 @@ impl SessionState {
         self.video_track_sids.remove(channel_id)
     }
 
-    /// Annotates channels in an advertise message with video track metadata
-    /// for channels that have a detected video schema.
-    pub fn inject_video_track_metadata(&self, advertise: &mut advertise::Advertise<'_>) {
+    /// Returns an iterator over video publishers keyed by channel ID.
+    pub fn iter_video_publishers(
+        &self,
+    ) -> impl Iterator<Item = (&ChannelId, &Arc<VideoPublisher>)> {
+        self.video_publishers.iter()
+    }
+
+    /// Stores video metadata for a video channel.
+    pub fn insert_video_metadata(&mut self, channel_id: ChannelId, metadata: VideoMetadata) {
+        self.video_metadata.insert(channel_id, metadata);
+    }
+
+    /// Removes video metadata for a video channel.
+    #[cfg(test)]
+    pub fn remove_video_metadata(&mut self, channel_id: &ChannelId) {
+        self.video_metadata.remove(channel_id);
+    }
+
+    /// Annotates channels in an advertise message with video metadata for channels that have a
+    /// detected video schema.
+    pub fn add_metadata_to_advertisement(&self, advertise: &mut advertise::Advertise<'_>) {
         for ch in &mut advertise.channels {
-            if self.video_schemas.contains_key(&ChannelId::new(ch.id)) {
+            let channel_id = ChannelId::new(ch.id);
+            if self.video_schemas.contains_key(&channel_id) {
                 ch.metadata
                     .insert("foxglove.hasVideoTrack".to_string(), "true".to_string());
+            }
+            if let Some(meta) = self.video_metadata.get(&channel_id) {
+                ch.metadata.insert(
+                    "foxglove.videoSourceEncoding".to_string(),
+                    meta.encoding.as_str().to_string(),
+                );
+                if !meta.frame_id.is_empty() {
+                    ch.metadata
+                        .insert("foxglove.videoFrameId".to_string(), meta.frame_id.clone());
+                }
             }
         }
     }
@@ -374,6 +413,7 @@ impl SessionState {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::img2yuv::{ImageEncoding, RawImageEncoding};
     use crate::remote_access::participant::ParticipantWriter;
 
     fn make_participant(name: &str) -> (ParticipantIdentity, Arc<Participant>) {
@@ -930,6 +970,113 @@ mod tests {
 
         // Bob is the only subscriber and he's a data subscriber.
         assert!(state.has_data_subscribers(&ch));
+    }
+
+    #[test]
+    fn add_metadata_to_advertisement_injects_video_metadata() {
+        let mut state = SessionState::new();
+        let ch = make_channel("/camera");
+        state.insert_channel(&ch);
+        state.insert_video_schema(ch.id(), VideoInputSchema::FoxgloveRawImage);
+
+        // Before any video metadata, only hasVideoTrack should be present.
+        let mut msg = advertise::advertise_channels(std::iter::once(&ch)).into_owned();
+        state.add_metadata_to_advertisement(&mut msg);
+        assert_eq!(msg.channels.len(), 1);
+        assert_eq!(
+            msg.channels[0].metadata.get("foxglove.hasVideoTrack"),
+            Some(&"true".to_string()),
+        );
+        assert!(
+            !msg.channels[0]
+                .metadata
+                .contains_key("foxglove.videoSourceEncoding")
+        );
+        assert!(
+            !msg.channels[0]
+                .metadata
+                .contains_key("foxglove.videoFrameId")
+        );
+
+        // After inserting video metadata, encoding and frame_id should appear.
+        state.insert_video_metadata(
+            ch.id(),
+            VideoMetadata {
+                encoding: ImageEncoding::Raw(RawImageEncoding::Rgb8),
+                frame_id: "camera_optical_frame".to_string(),
+            },
+        );
+        let mut msg = advertise::advertise_channels(std::iter::once(&ch)).into_owned();
+        state.add_metadata_to_advertisement(&mut msg);
+        assert_eq!(
+            msg.channels[0].metadata.get("foxglove.videoSourceEncoding"),
+            Some(&"rgb8".to_string()),
+        );
+        assert_eq!(
+            msg.channels[0].metadata.get("foxglove.videoFrameId"),
+            Some(&"camera_optical_frame".to_string()),
+        );
+    }
+
+    #[test]
+    fn add_metadata_to_advertisement_omits_empty_frame_id() {
+        let mut state = SessionState::new();
+        let ch = make_channel("/camera");
+        state.insert_channel(&ch);
+        state.insert_video_schema(ch.id(), VideoInputSchema::FoxgloveRawImage);
+        state.insert_video_metadata(
+            ch.id(),
+            VideoMetadata {
+                encoding: ImageEncoding::Raw(RawImageEncoding::Mono8),
+                frame_id: String::new(),
+            },
+        );
+        let mut msg = advertise::advertise_channels(std::iter::once(&ch)).into_owned();
+        state.add_metadata_to_advertisement(&mut msg);
+        assert_eq!(
+            msg.channels[0].metadata.get("foxglove.videoSourceEncoding"),
+            Some(&"mono8".to_string()),
+        );
+        assert!(
+            !msg.channels[0]
+                .metadata
+                .contains_key("foxglove.videoFrameId"),
+            "empty frame_id should not be advertised"
+        );
+    }
+
+    #[test]
+    fn remove_video_metadata_clears_from_advertisement() {
+        let mut state = SessionState::new();
+        let ch = make_channel("/camera");
+        state.insert_channel(&ch);
+        state.insert_video_schema(ch.id(), VideoInputSchema::FoxgloveRawImage);
+        state.insert_video_metadata(
+            ch.id(),
+            VideoMetadata {
+                encoding: ImageEncoding::Raw(RawImageEncoding::Rgb8),
+                frame_id: "frame".to_string(),
+            },
+        );
+        state.remove_video_metadata(&ch.id());
+
+        let mut msg = advertise::advertise_channels(std::iter::once(&ch)).into_owned();
+        state.add_metadata_to_advertisement(&mut msg);
+        // hasVideoTrack should still be present (schema persists), but metadata should be gone.
+        assert_eq!(
+            msg.channels[0].metadata.get("foxglove.hasVideoTrack"),
+            Some(&"true".to_string()),
+        );
+        assert!(
+            !msg.channels[0]
+                .metadata
+                .contains_key("foxglove.videoSourceEncoding")
+        );
+        assert!(
+            !msg.channels[0]
+                .metadata
+                .contains_key("foxglove.videoFrameId")
+        );
     }
 
     #[test]

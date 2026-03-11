@@ -2,7 +2,10 @@ use std::{collections::HashMap, path::PathBuf, sync::LazyLock};
 
 use assert_matches::assert_matches;
 
-use super::{BayerCfa, Endian, Error, Image, RawImage, RawImageEncoding, Yuv420Buffer, Yuv420Vec};
+use super::{
+    BayerCfa, Endian, Error, Image, ImageEncoding, RawImage, RawImageEncoding, Yuv420Buffer,
+    Yuv420Vec,
+};
 #[cfg(any(
     feature = "img2yuv-jpeg",
     feature = "img2yuv-png",
@@ -617,4 +620,96 @@ fn test_uyvy_yuv420_padded() {
 #[test]
 fn test_mono32fle_yuv420_padded() {
     test_yuv420_padded("test.mono32fle.raw");
+}
+
+/// Verify that every canonical string from `as_str()` is accepted by `parse_endian()`.
+///
+/// Note: this is not a true round-trip for `Mono16` and `Mono32F` because `as_str()` drops
+/// endianness information. The endianness of the parsed result comes from the `parse_endian`
+/// hint, not the string.
+#[test]
+fn test_raw_encoding_as_str_parses_back() {
+    let cases = [
+        RawImageEncoding::Rgb8,
+        RawImageEncoding::Rgba8,
+        RawImageEncoding::Bgr8,
+        RawImageEncoding::Bgra8,
+        RawImageEncoding::Uyvy,
+        RawImageEncoding::Yuyv,
+        RawImageEncoding::Mono8,
+        RawImageEncoding::Bayer8(BayerCfa::Bggr),
+        RawImageEncoding::Bayer8(BayerCfa::Gbrg),
+        RawImageEncoding::Bayer8(BayerCfa::Grbg),
+        RawImageEncoding::Bayer8(BayerCfa::Rggb),
+    ];
+    for encoding in cases {
+        let s = encoding.as_str();
+        let parsed = RawImageEncoding::parse_endian(s, Endian::Little)
+            .unwrap_or_else(|e| panic!("failed to parse canonical string {s:?}: {e}"));
+        assert_eq!(parsed, encoding, "parse failed for {s:?}");
+    }
+
+    // Mono16/Mono32F: as_str() drops endianness, so the parsed result uses the hint.
+    for endian in [Endian::Little, Endian::Big] {
+        let s = RawImageEncoding::Mono16(endian).as_str();
+        assert_eq!(s, "mono16");
+        let parsed = RawImageEncoding::parse_endian(s, endian).unwrap();
+        assert_eq!(parsed, RawImageEncoding::Mono16(endian));
+
+        let s = RawImageEncoding::Mono32F(endian).as_str();
+        assert_eq!(s, "32FC1");
+        let parsed = RawImageEncoding::parse_endian(s, endian).unwrap();
+        assert_eq!(parsed, RawImageEncoding::Mono32F(endian));
+    }
+}
+
+#[cfg(any(
+    feature = "img2yuv-jpeg",
+    feature = "img2yuv-png",
+    feature = "img2yuv-webp"
+))]
+#[test]
+fn test_compression_as_str_round_trip() {
+    let cases = [
+        #[cfg(feature = "img2yuv-png")]
+        Compression::Png,
+        #[cfg(feature = "img2yuv-jpeg")]
+        Compression::Jpeg,
+        #[cfg(feature = "img2yuv-webp")]
+        Compression::WebP,
+    ];
+    for compression in cases {
+        let s = compression.as_str();
+        let parsed: Compression = s
+            .parse()
+            .unwrap_or_else(|e| panic!("failed to parse canonical string {s:?}: {e}"));
+        assert_eq!(parsed, compression, "round-trip failed for {s:?}");
+    }
+}
+
+#[test]
+fn test_image_encoding_raw() {
+    let image = Image::Raw(RawImage {
+        encoding: RawImageEncoding::Rgb8,
+        width: 2,
+        height: 2,
+        stride: 6,
+        data: vec![0; 12].into(),
+    });
+    assert_eq!(image.encoding(), ImageEncoding::Raw(RawImageEncoding::Rgb8));
+    assert_eq!(image.encoding().as_str(), "rgb8");
+}
+
+#[cfg(feature = "img2yuv-jpeg")]
+#[test]
+fn test_image_encoding_compressed() {
+    let image = Image::Compressed(CompressedImage {
+        compression: Compression::Jpeg,
+        data: b""[..].into(),
+    });
+    assert_eq!(
+        image.encoding(),
+        ImageEncoding::Compressed(Compression::Jpeg)
+    );
+    assert_eq!(image.encoding().as_str(), "jpeg");
 }
