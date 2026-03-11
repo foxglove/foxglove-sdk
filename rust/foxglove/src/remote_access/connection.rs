@@ -347,6 +347,12 @@ impl RemoteAccessConnection {
                         });
                     }
                 }
+                RoomEvent::Reconnecting => {
+                    info!("connection interrupted, attempting to reconnect");
+                }
+                RoomEvent::Reconnected => {
+                    info!("reconnected successfully");
+                }
                 RoomEvent::Disconnected { reason } => {
                     info!(
                         "disconnected: {:?}, will attempt to reconnect",
