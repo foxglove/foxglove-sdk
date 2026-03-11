@@ -44,6 +44,7 @@ const useStyles = tss.create(({ theme }) => ({
   settings: {
     padding: theme.spacing(2),
     borderBottom: `1px solid ${theme.palette.divider}`,
+    backgroundColor: theme.palette.background.paper,
   },
   title: {
     "@container topBar (width < 480px)": {
@@ -324,6 +325,7 @@ export function Playground(): React.JSX.Element {
               label="Embed URL"
               defaultValue={embedURL}
               placeholder="https://embed.foxglove.dev"
+              fullWidth
               onChange={(event) => {
                 try {
                   if (event.target.value) {
