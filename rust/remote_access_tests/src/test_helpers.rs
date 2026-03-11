@@ -157,8 +157,12 @@ impl ViewerConnection {
         let outer_deadline = tokio::time::Instant::now() + timeout;
         loop {
             let token = livekit_token::generate_token(room_name, viewer_identity)?;
-            let connect_result =
-                Room::connect(livekit_token::LIVEKIT_URL, &token, RoomOptions::default()).await;
+            let connect_result = Room::connect(
+                &livekit_token::livekit_url(),
+                &token,
+                RoomOptions::default(),
+            )
+            .await;
             let (room, mut events) = match connect_result {
                 Ok(pair) => pair,
                 Err(err) => {

@@ -5,8 +5,11 @@ use livekit_api::access_token::{AccessToken, VideoGrants};
 const DEV_API_KEY: &str = "devkey";
 const DEV_API_SECRET: &str = "secret";
 
-/// URL of the local LiveKit dev server.
-pub const LIVEKIT_URL: &str = "http://localhost:7880";
+/// Returns the LiveKit dev server URL. Override via the `LIVEKIT_URL` env var
+/// when running inside a Docker container (e.g., on the perlink network).
+pub fn livekit_url() -> String {
+    std::env::var("LIVEKIT_URL").unwrap_or_else(|_| "http://localhost:7880".to_string())
+}
 
 /// Generates a LiveKit access token for the dev server.
 ///
