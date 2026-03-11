@@ -46,7 +46,7 @@ public:
 /// @param channel Information about the channel.
 /// @return false if the channel should not be logged to the given sink. By default, all channels
 /// are logged to a sink.
-using SinkChannelFilterFn = std::function<bool(ChannelDescriptor&& channel)>;
+using SinkChannelFilterFn = std::function<bool(const ChannelDescriptor& channel)>;
 
 /// @brief A channel for messages logged to a topic.
 ///
