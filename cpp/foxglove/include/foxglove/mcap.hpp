@@ -1,5 +1,6 @@
 #pragma once
 
+#include <foxglove-c/foxglove-c.h>
 #include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
 
