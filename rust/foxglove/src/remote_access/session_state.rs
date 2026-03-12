@@ -359,12 +359,6 @@ impl SessionState {
         self.video_track_sids.len()
     }
 
-    /// Returns the number of subscribers for a channel.
-    #[cfg(test)]
-    pub fn get_subscriber_count(&self, channel_id: &ChannelId) -> usize {
-        self.subscriptions.get(channel_id).map_or(0, |s| s.len())
-    }
-
     /// Adds a participant to video subscribers for the given channels.
     ///
     /// The caller is responsible for calling [`Self::subscribe`] separately, if necessary.
