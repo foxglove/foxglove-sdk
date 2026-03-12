@@ -21,8 +21,6 @@ using Catch::Matchers::Equals;
 using foxglove_tests::FileCleanup;
 using foxglove_tests::requireValue;
 
-// NOLINTBEGIN(cppcoreguidelines-avoid-do-while)
-
 struct McapTestFile {
   McapTestFile()
       : cleanup_("test_mcap_" + std::to_string(std::random_device{}()) + ".mcap") {}
@@ -763,5 +761,3 @@ TEST_CASE("McapWriterOptions defaults match C defaults") {
   CHECK(converted.compression_threads == c.compression_threads);
   CHECK(converted.truncate == c.truncate);
 }
-
-// NOLINTEND(cppcoreguidelines-avoid-do-while)

@@ -32,8 +32,6 @@ using namespace std::string_view_literals;
 
 using foxglove_tests::requireValue;
 
-// NOLINTBEGIN(cppcoreguidelines-avoid-do-while)
-
 namespace {
 
 template<class T>
@@ -1870,5 +1868,3 @@ TEST_CASE("PlaybackControl capability") {
   REQUIRE(parsed["dataEndTime"]["sec"] == 105);
   REQUIRE(parsed["dataEndTime"]["nsec"] == 0);
 }
-
-// NOLINTEND(cppcoreguidelines-avoid-do-while)

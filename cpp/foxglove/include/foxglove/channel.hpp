@@ -34,6 +34,7 @@ public:
 
   /// @brief Get the message encoding of the channel descriptor.
   [[nodiscard]] std::string_view messageEncoding() const noexcept;
+
   /// @brief Get the metadata for the channel descriptor.
   [[nodiscard]] std::optional<std::map<std::string, std::string>> metadata() const noexcept;
 

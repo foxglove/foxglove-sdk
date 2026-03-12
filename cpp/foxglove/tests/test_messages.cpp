@@ -9,8 +9,6 @@
 
 using namespace foxglove;
 
-// NOLINTBEGIN(cppcoreguidelines-avoid-do-while)
-
 TEST_CASE("messages alias types are identical to schemas types") {
   messages::Vector3 v{1.0, 2.0, 3.0};
   schemas::Vector3& v_ref = v;
@@ -37,5 +35,3 @@ TEST_CASE("messages alias provides schema access") {
   REQUIRE(schema.encoding == "protobuf");
   REQUIRE(schema.data_len > 0);
 }
-
-// NOLINTEND(cppcoreguidelines-avoid-do-while)

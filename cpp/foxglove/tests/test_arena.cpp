@@ -9,8 +9,6 @@
 using Catch::Matchers::ContainsSubstring;
 using Catch::Matchers::Equals;
 
-// NOLINTBEGIN(cppcoreguidelines-avoid-do-while)
-
 TEST_CASE("allocate different types from arena and verify alignment") {
   foxglove::Arena arena;
 
@@ -89,5 +87,3 @@ TEST_CASE("allocate from heap when arena capacity is exceeded") {
   REQUIRE(overflow1[0] == 1234567890);
   REQUIRE(overflow2[0] == 1234567890123456789);
 }
-
-// NOLINTEND(cppcoreguidelines-avoid-do-while)

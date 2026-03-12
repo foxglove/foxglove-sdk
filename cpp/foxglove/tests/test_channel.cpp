@@ -17,8 +17,6 @@ using Catch::Matchers::Equals;
 using foxglove_tests::FileCleanup;
 using foxglove_tests::requireValue;
 
-// NOLINTBEGIN(cppcoreguidelines-avoid-do-while)
-
 TEST_CASE("topic is not valid utf-8") {
   auto channel =
     foxglove::RawChannel::create(std::string("\x80\x80\x80\x80"), "json", std::nullopt);
@@ -137,5 +135,3 @@ TEST_CASE("channel with no metadata returns an empty value from metadata()") {
   auto chan_metadata = requireValue(channel).metadata();
   REQUIRE(requireValue(chan_metadata).empty());
 }
-
-// NOLINTEND(cppcoreguidelines-avoid-do-while)
