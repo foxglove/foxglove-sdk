@@ -38,7 +38,8 @@ CheckOptions:
   readability-identifier-naming.ConstantParameterCase: lower_case
   readability-identifier-naming.ConstantPointerParameterCase: lower_case
   readability-identifier-naming.ConstexprMethodCase: camelBack
-  readability-identifier-naming.ConstexprVariableCase: lower_case
+  readability-identifier-naming.ConstexprVariableCase: CamelCase
+  readability-identifier-naming.ConstexprVariablePrefix: k
   readability-identifier-naming.EnumCase: CamelCase
   readability-identifier-naming.EnumConstantCase: CamelCase
   readability-identifier-naming.FunctionCase: camelBack
@@ -52,6 +53,7 @@ CheckOptions:
   readability-identifier-naming.ParameterCase: lower_case
   readability-identifier-naming.PrivateMemberSuffix: _
   readability-identifier-naming.StaticConstantCase: CamelCase
+  readability-identifier-naming.StaticConstantPrefix: k
   readability-identifier-naming.StaticVariableCase: lower_case
   readability-identifier-naming.StructCase: CamelCase
   readability-identifier-naming.TypeAliasCase: CamelCase

@@ -49,27 +49,27 @@ TEST_CASE("allocate from heap when arena capacity is exceeded") {
   foxglove::Arena arena;
 
   // First, nearly fill the arena
-  constexpr size_t nearly_full_size = foxglove::Arena::size - 1024;
-  char* buffer = arena.alloc<char>(nearly_full_size);
+  constexpr size_t kNearlyFullSize = foxglove::Arena::kSize - 1024;
+  char* buffer = arena.alloc<char>(kNearlyFullSize);
   REQUIRE(buffer != nullptr);
 
   // Verify some data can be written to the arena allocation
   buffer[0] = 'A';
-  buffer[nearly_full_size - 1] = 'Z';
+  buffer[kNearlyFullSize - 1] = 'Z';
   REQUIRE(buffer[0] == 'A');
-  REQUIRE(buffer[nearly_full_size - 1] == 'Z');
+  REQUIRE(buffer[kNearlyFullSize - 1] == 'Z');
 
   // Check arena's reported space
-  REQUIRE(arena.used() >= nearly_full_size);
+  REQUIRE(arena.used() >= kNearlyFullSize);
   REQUIRE(arena.available() == 1024);
 
   // Now allocate more than what's left in the arena
-  constexpr size_t large_allocation_size = 8192;
-  auto* large_allocation = arena.alloc<int>(large_allocation_size / sizeof(int));
+  constexpr size_t kLargeAllocationSize = 8192;
+  auto* large_allocation = arena.alloc<int>(kLargeAllocationSize / sizeof(int));
   REQUIRE(large_allocation != nullptr);
 
   // Verify we can use the overflow allocation
-  for (size_t i = 0; i < large_allocation_size / sizeof(int); i++) {
+  for (size_t i = 0; i < kLargeAllocationSize / sizeof(int); i++) {
     large_allocation[i] = static_cast<int>(i);
   }
 

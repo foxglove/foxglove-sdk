@@ -112,10 +112,12 @@ public:
   /// @return The message encoding of the channel. The value is valid only for the lifetime of the
   /// channel.
   [[nodiscard]] std::string_view messageEncoding() const noexcept;
+
   /// @brief Find out if any sinks have been added to the channel.
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
   [[nodiscard]] bool hasSinks() const noexcept;
+
   /// @brief Get the schema of the channel.
   ///
   /// @return The schema of the channel. The value is valid only for the lifetime of the channel.

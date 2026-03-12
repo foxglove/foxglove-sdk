@@ -21,7 +21,7 @@ namespace foxglove {
 /// @cond foxglove_internal
 class Arena {
 public:
-  static constexpr std::size_t size = static_cast<std::size_t>(8) * 1024;  // 8 KB
+  static constexpr std::size_t kSize = static_cast<std::size_t>(8) * 1024;  // 8 KB
 
   Arena() = default;
 
@@ -112,7 +112,7 @@ public:
     }
 
     // Calculate the new offset
-    offset_ = size - space_left + bytes_needed;
+    offset_ = kSize - space_left + bytes_needed;
     return reinterpret_cast<T*>(aligned_ptr);
   }
 
@@ -123,7 +123,7 @@ public:
 
   /// Returns how many bytes are available in the arena.
   [[nodiscard]] size_t available() const {
-    return size - offset_;
+    return kSize - offset_;
   }
 
 private:
@@ -134,7 +134,7 @@ private:
     }
   };
 
-  std::array<uint8_t, size> buffer_{};
+  std::array<uint8_t, kSize> buffer_{};
   std::size_t offset_ = 0;
   std::vector<std::unique_ptr<char, Deleter>> overflow_;
 };

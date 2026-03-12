@@ -39,7 +39,7 @@ constexpr std::underlying_type_t<T> toUnderlying(T e) noexcept {
   return static_cast<std::underlying_type_t<T>>(e);
 }
 
-constexpr auto k_test_timeout = std::chrono::seconds(5);
+constexpr auto kTestTimeout = std::chrono::seconds(5);
 
 class WebSocketClient {
 public:
@@ -67,7 +67,7 @@ public:
     port_ = port;
 
     // NOLINTBEGIN(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
-    static const struct lws_protocols KProtocols[] = {
+    static const struct lws_protocols kProtocols[] = {
       {"foxglove.sdk.v1", &WebSocketClient::callback, 0, 65536, 0, nullptr, 0},
       LWS_PROTOCOL_LIST_TERM,
     };
@@ -76,7 +76,7 @@ public:
     struct lws_context_creation_info info = {};
     info.port = CONTEXT_PORT_NO_LISTEN;
     info.protocols =
-      KProtocols;  // NOLINT(cppcoreguidelines-pro-bounds-array-to-pointer-decay,hicpp-no-array-decay)
+      kProtocols;  // NOLINT(cppcoreguidelines-pro-bounds-array-to-pointer-decay,hicpp-no-array-decay)
     info.user = this;
 
     context_ = lws_create_context(&info);
@@ -104,7 +104,7 @@ public:
 
   void waitForConnection() {
     std::unique_lock lock{mutex_};
-    auto wait_result = cv_.wait_for(lock, k_test_timeout, [this] {
+    auto wait_result = cv_.wait_for(lock, kTestTimeout, [this] {
       return connection_opened_;
     });
     REQUIRE(wait_result);
@@ -112,7 +112,7 @@ public:
 
   std::string recv() {
     std::unique_lock lock{mutex_};
-    auto wait_result = cv_.wait_for(lock, k_test_timeout, [this] {
+    auto wait_result = cv_.wait_for(lock, kTestTimeout, [this] {
       return !rx_queue_.empty();
     });
     REQUIRE(wait_result);
@@ -128,10 +128,10 @@ public:
     std::unique_lock lock{mutex_};
     auto start_time = std::chrono::steady_clock::now();
 
-    constexpr std::chrono::milliseconds single_message_timeout = std::chrono::milliseconds(100);
+    constexpr std::chrono::milliseconds kSingleMessageTimeout = std::chrono::milliseconds(100);
 
     while (std::chrono::steady_clock::now() - start_time < timeout) {
-      auto wait_result = cv_.wait_for(lock, single_message_timeout, [this] {
+      auto wait_result = cv_.wait_for(lock, kSingleMessageTimeout, [this] {
         return !rx_queue_.empty();
       });
       if (wait_result) {
@@ -383,7 +383,7 @@ TEST_CASE("Subscribe and unsubscribe callbacks") {
       ]
     })"
   );
-  cv.wait_for(lock, k_test_timeout, [&] {
+  cv.wait_for(lock, kTestTimeout, [&] {
     return !subscribe_calls.empty();
   });
   REQUIRE_THAT(subscribe_calls, Equals(std::vector<uint64_t>{1}));
@@ -394,7 +394,7 @@ TEST_CASE("Subscribe and unsubscribe callbacks") {
       "subscriptionIds": [100]
     })"
   );
-  cv.wait_for(lock, k_test_timeout, [&] {
+  cv.wait_for(lock, kTestTimeout, [&] {
     return !unsubscribe_calls.empty();
   });
   REQUIRE_THAT(unsubscribe_calls, Equals(std::vector<uint64_t>{1}));
@@ -502,7 +502,7 @@ TEST_CASE("Client advertise/publish callbacks") {
       ]
     })"
   );
-  auto advertised_result = cv.wait_for(lock, k_test_timeout, [&] {
+  auto advertised_result = cv.wait_for(lock, kTestTimeout, [&] {
     return advertised;
   });
   REQUIRE(advertised_result);
@@ -510,7 +510,7 @@ TEST_CASE("Client advertise/publish callbacks") {
   // send ClientMessageData message
   std::array<char, 8> msg = {1, 100, 0, 0, 0, 'a', 'b', 'c'};
   client.send(msg.data(), msg.size());
-  auto received_result = cv.wait_for(lock, k_test_timeout, [&] {
+  auto received_result = cv.wait_for(lock, kTestTimeout, [&] {
     return received_message;
   });
   REQUIRE(received_result);
@@ -607,7 +607,7 @@ TEST_CASE("Parameter callbacks") {
   // Wait for the server to process the callback.
   {
     std::unique_lock lock{mutex};
-    auto wait_result = cv.wait_for(lock, k_test_timeout, [&] {
+    auto wait_result = cv.wait_for(lock, kTestTimeout, [&] {
       if (server_get_parameters.has_value()) {
         auto request_id = (*server_get_parameters).first;
         auto param_names = (*server_get_parameters).second;
@@ -654,7 +654,7 @@ TEST_CASE("Parameter callbacks") {
   // Wait for the server to process the callback.
   {
     std::unique_lock lock{mutex};
-    auto wait_result = cv.wait_for(lock, k_test_timeout, [&] {
+    auto wait_result = cv.wait_for(lock, kTestTimeout, [&] {
       if (server_set_parameters.has_value()) {
         auto [requestId, params] = *std::move(server_set_parameters);
         REQUIRE(requestId.has_value());
@@ -749,7 +749,7 @@ TEST_CASE("Parameter subscription callbacks") {
   // Wait for the server to process the callback.
   {
     std::unique_lock lock{mutex};
-    auto wait_result = cv.wait_for(lock, k_test_timeout, [&] {
+    auto wait_result = cv.wait_for(lock, kTestTimeout, [&] {
       if (server_sub_names.has_value()) {
         auto names = *server_sub_names;
         REQUIRE_THAT(names, Equals(std::vector<std::string>{"foo", "beep"}));
@@ -978,7 +978,7 @@ TEST_CASE("Service callbacks") {
   // Wait for the server to process the callback.
   {
     std::unique_lock lock{mutex};
-    auto wait_result = cv.wait_for(lock, k_test_timeout, [&] {
+    auto wait_result = cv.wait_for(lock, kTestTimeout, [&] {
       if (last_request.has_value()) {
         REQUIRE(last_request->service_name == "/echo");
         REQUIRE(last_request->call_id == 99);
@@ -1003,7 +1003,7 @@ TEST_CASE("Service callbacks") {
   // Wait for the server to process the callback.
   {
     std::unique_lock lock{mutex};
-    auto wait_result = cv.wait_for(lock, k_test_timeout, [&] {
+    auto wait_result = cv.wait_for(lock, kTestTimeout, [&] {
       if (last_request.has_value()) {
         REQUIRE(last_request->service_name == "/error");
         REQUIRE(last_request->call_id == 123);
@@ -1099,7 +1099,7 @@ TEST_CASE("Fetch asset callback") {
   // Wait for the server to process the callback.
   {
     std::unique_lock lock{mutex};
-    auto wait_result = cv.wait_for(lock, k_test_timeout, [&] {
+    auto wait_result = cv.wait_for(lock, kTestTimeout, [&] {
       if (last_uri.has_value()) {
         REQUIRE(last_uri == "package://foo/robot.urdf");
         last_uri.reset();
@@ -1169,7 +1169,7 @@ TEST_CASE("Fetch asset error") {
   // Wait for the server to process the callback.
   {
     std::unique_lock lock{mutex};
-    auto wait_result = cv.wait_for(lock, k_test_timeout, [&] {
+    auto wait_result = cv.wait_for(lock, kTestTimeout, [&] {
       if (last_uri.has_value()) {
         REQUIRE(last_uri == "package://foo/robot.urdf");
         last_uri.reset();
@@ -1236,7 +1236,7 @@ TEST_CASE("Broadcast time") {
   // Wait for the server to register the client before broadcasting.
   {
     std::unique_lock lock{mutex};
-    auto wait_result = cv.wait_for(lock, k_test_timeout, [&] {
+    auto wait_result = cv.wait_for(lock, kTestTimeout, [&] {
       return client_connected;
     });
     REQUIRE(wait_result);
@@ -1352,7 +1352,7 @@ TEST_CASE("Publish status") {
   // Wait for the server to register the client before broadcasting.
   {
     std::unique_lock lock{mutex};
-    auto wait_result = cv.wait_for(lock, k_test_timeout, [&] {
+    auto wait_result = cv.wait_for(lock, kTestTimeout, [&] {
       return client_connected;
     });
     REQUIRE(wait_result);
@@ -1426,9 +1426,9 @@ TEST_CASE("Log message to websocket sinks") {
   auto server = startServer(context, foxglove::WebSocketServerCapabilities::None, std::move(cb));
 
   // Set up a few clients and connect them
-  constexpr size_t num_clients = 3;
+  constexpr size_t kNumClients = 3;
   std::vector<std::unique_ptr<WebSocketClient>> clients;
-  for (size_t i = 0; i < num_clients; ++i) {
+  for (size_t i = 0; i < kNumClients; ++i) {
     clients.emplace_back(std::make_unique<WebSocketClient>());
     clients.back()->start(server.port());
     clients.back()->waitForConnection();
@@ -1465,8 +1465,8 @@ TEST_CASE("Log message to websocket sinks") {
   // Wait for subscriptions to set up
   {
     std::unique_lock lock{mutex};
-    auto wait_result = cv.wait_for(lock, k_test_timeout, [&] {
-      return client_sink_ids.size() == num_clients;
+    auto wait_result = cv.wait_for(lock, kTestTimeout, [&] {
+      return client_sink_ids.size() == kNumClients;
     });
     REQUIRE(wait_result);
   }
@@ -1512,7 +1512,7 @@ TEST_CASE("Log message to websocket sinks") {
       }
     }
 
-    REQUIRE(clients_received_message == num_clients);
+    REQUIRE(clients_received_message == kNumClients);
   }
 }
 
@@ -1588,7 +1588,7 @@ TEST_CASE("Server channel filtering") {
     })"
   );
 
-  cv.wait_for(lock, k_test_timeout, [&] {
+  cv.wait_for(lock, kTestTimeout, [&] {
     return !subscribe_calls.empty();
   });
   REQUIRE_THAT(subscribe_calls, Equals(std::vector<uint64_t>{1}));
@@ -1749,7 +1749,7 @@ TEST_CASE("Playback control request callback") {
 
   {
     std::unique_lock lock{mutex};
-    auto wait_result = cv.wait_for(lock, k_test_timeout, [&] {
+    auto wait_result = cv.wait_for(lock, kTestTimeout, [&] {
       return received_playback_control_request.has_value();
     });
     REQUIRE(wait_result);
@@ -1801,7 +1801,7 @@ TEST_CASE("Broadcast playback state") {
   // Wait for the server to register the client before broadcasting.
   {
     std::unique_lock lock{mutex};
-    auto wait_result = cv.wait_for(lock, k_test_timeout, [&] {
+    auto wait_result = cv.wait_for(lock, kTestTimeout, [&] {
       return client_connected;
     });
     REQUIRE(wait_result);
