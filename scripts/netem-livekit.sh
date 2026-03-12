@@ -119,7 +119,9 @@ case "${1:-}" in
         ;;
 
     down)
-        $COMPOSE down
+        # Include --profile perlink so gateway-runner and viewer-runner are
+        # also stopped. This is safe even when they aren't running.
+        $COMPOSE --profile perlink down
         ;;
 
     inspect)
