@@ -251,23 +251,6 @@ impl RemoteAccessConnection {
         // We can use spawn here because we're already running on self.options.runtime (if set)
         let sender_task = tokio::spawn(RemoteAccessSession::run_sender(session.clone()));
 
-        // Set remote_access_session_id as a participant attribute so other participants can see it.
-        if let Err(e) = session
-            .room()
-            .local_participant()
-            .set_attributes(HashMap::from([(
-                "remote_access_session_id".to_string(),
-                remote_access_session_id.clone(),
-            )]))
-            .await
-        {
-            warn!(
-                remote_access_session_id,
-                error = %e,
-                "failed to set remote_access_session_id participant attribute: {e}"
-            );
-        }
-
         // Send ServerInfo and channel advertisements to participants already in the room.
         // ParticipantConnected events only fire for participants joining after us.
         let server_info = self.create_server_info();
@@ -609,6 +592,7 @@ impl RemoteAccessConnection {
         });
 
         let mut info = ServerInfo::new(name)
+            .with_session_id(self.remote_access_session_id().to_string())
             .with_capabilities(
                 self.options
                     .capabilities
