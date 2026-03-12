@@ -8,7 +8,7 @@ use thiserror::Error;
 
 use crate::library_version::{get_sdk_language, get_sdk_version};
 
-use super::types::{DeviceResponse, ErrorResponse, RtcCredentials};
+use super::types::{DeviceResponse, ErrorResponse, RemoteAccessSessionRequest, RtcCredentials};
 
 const DEFAULT_API_URL: &str = "https://api.foxglove.dev";
 
@@ -232,7 +232,7 @@ impl FoxgloveApiClient<DeviceToken> {
 
     /// Authorizes a remote visualization session for the given device.
     ///
-    /// The `session_id` is included in the POST body so the API server can log it
+    /// The `remote_access_session_id` is included in the POST body so the API server can log it
     /// for cross-component debugging correlation.
     ///
     /// This endpoint is not intended for direct usage. Access may be blocked if suspicious
@@ -240,10 +240,12 @@ impl FoxgloveApiClient<DeviceToken> {
     pub async fn authorize_remote_viz(
         &self,
         device_id: &str,
-        session_id: &str,
+        remote_access_session_id: &str,
     ) -> Result<RtcCredentials, FoxgloveApiClientError> {
         let device_id = encode_uri_component(device_id);
-        let body = serde_json::json!({ "sessionId": session_id });
+        let body = RemoteAccessSessionRequest {
+            remote_access_session_id,
+        };
         let response = self
             .post(&format!(
                 "/internal/platform/v1/devices/{device_id}/remote-sessions"

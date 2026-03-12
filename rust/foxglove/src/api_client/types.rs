@@ -20,6 +20,12 @@ pub(crate) struct DeviceResponse {
     pub retain_recordings_seconds: Option<u64>,
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct RemoteAccessSessionRequest<'a> {
+    pub remote_access_session_id: &'a str,
+}
+
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct ErrorResponse {
