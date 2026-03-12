@@ -116,6 +116,6 @@ async fn authorize_handler(
     Ok(Json(RtcCredentials {
         token,
         url: livekit_token::LIVEKIT_URL.to_string(),
-        remote_access_session_id: format!("{device_id}:mock-session"),
+        remote_access_session_id: "ras_0000mockSession".into(),
     }))
 }
