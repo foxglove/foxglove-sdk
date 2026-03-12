@@ -1,7 +1,7 @@
-// Remote access example: streams synthetic camera feeds through the Foxglove
-// gateway. Produces a "test card" stream designed to make network degradation
-// (latency, packet loss, low bandwidth) visually obvious, plus a simple
-// scrolling gradient for a secondary feed.
+//! Remote access example: streams synthetic camera feeds through the Foxglove
+//! gateway. Produces a "test card" stream designed to make network degradation
+//! (latency, packet loss, low bandwidth) visually obvious, plus a simple
+//! scrolling gradient for a secondary feed.
 
 use foxglove::{
     ChannelDescriptor,
@@ -77,6 +77,7 @@ const FPS: u32 = 30;
 /// is reusable even though only a subset of glyphs are currently used.
 const GLYPH_W: usize = 5;
 const GLYPH_H: usize = 7;
+const GLYPH_KERNING: usize = 1;
 
 fn glyph_rows(ch: u8) -> [u8; GLYPH_H] {
     match ch {
@@ -170,7 +171,7 @@ fn set_pixel(buf: &mut [u8], x: i32, y: i32, color: Rgb) {
 /// Draw a string at (x, y) with a given scale factor into an RGB buffer.
 /// x is signed to support partially off-screen text (e.g., scrolling ticker).
 fn draw_text(buf: &mut [u8], text: &str, x: i32, y: i32, scale: usize, color: Rgb) {
-    let char_stride = (GLYPH_W + 1) * scale;
+    let char_stride = (GLYPH_W + GLYPH_KERNING) * scale;
     for (ci, ch) in text.bytes().enumerate() {
         let char_x = x + (ci * char_stride) as i32;
         if char_x + (GLYPH_W * scale) as i32 <= 0 {
@@ -246,15 +247,15 @@ fn fill_circle(buf: &mut [u8], cx: i32, cy: i32, radius: i32, color: Rgb) {
     }
 }
 
+/// Fill the entire buffer with a uniform gray level.
+fn clear_screen(buf: &mut [u8], gray: u8) {
+    buf.fill(gray);
+}
+
 /// Render one test card frame into an RGB buffer.
 fn render_test_card(buf: &mut [u8], frame_number: u64) {
-    // Background: dark gray.
-    let bg = Rgb(30, 30, 30);
-    for pixel in buf.chunks_exact_mut(3) {
-        pixel[0] = bg.0;
-        pixel[1] = bg.1;
-        pixel[2] = bg.2;
-    }
+    let background_gray = 30;
+    clear_screen(buf, background_gray);
 
     let now = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -308,7 +309,7 @@ fn render_test_card(buf: &mut [u8], frame_number: u64) {
     // Center dot.
     fill_circle(buf, clock_cx, clock_cy, 5, cyan);
 
-    // --- Info panel (top-right, starting at x=680) ---
+    // --- Info panel (top-right, starting at x=690) ---
     let panel_x = 690;
 
     // Frame counter.
@@ -350,7 +351,7 @@ fn render_test_card(buf: &mut [u8], frame_number: u64) {
         Frame counter gaps reveal dropped frames  :::  ";
 
     // Scroll speed: 3 pixels per frame.
-    let text_pixel_width = ticker_text.len() * (GLYPH_W + 1) * 3;
+    let text_pixel_width = ticker_text.len() * (GLYPH_W + GLYPH_KERNING) * 3;
     let scroll_offset = (frame_number as usize * 3) % text_pixel_width;
 
     // Draw ticker background.
@@ -384,8 +385,8 @@ fn render_test_card(buf: &mut [u8], frame_number: u64) {
 }
 
 /// Log RawImage messages that are encoded as video streams by the remote access
-/// gateway. Produces a test card on `/camera/rgb` and a scrolling gradient on
-/// `/camera/mono`.
+/// gateway. Produces a test card on `/video/test-card` and a scrolling gradient on
+/// `/video/gradient`.
 async fn camera_loop() {
     let mut interval = tokio::time::interval(Duration::from_millis(1000 / FPS as u64));
     let mut frame_number: u64 = 0;
@@ -447,7 +448,7 @@ async fn camera_loop() {
             step: (WIDTH * 3) as u32,
             data: Bytes::copy_from_slice(&rgb_buf),
         };
-        foxglove::log!("/camera/rgb", rgb_img);
+        foxglove::log!("/video/test-card", rgb_img);
 
         // Mono image: scrolling gradient (simple secondary stream).
         let offset = frame_number as usize % WIDTH;
@@ -464,9 +465,9 @@ async fn camera_loop() {
             step: WIDTH as u32,
             data: Bytes::copy_from_slice(&mono_buf),
         };
-        foxglove::log!("/camera/mono", mono_img);
+        foxglove::log!("/video/gradient", mono_img);
 
-        foxglove::log!("/camera/info", calibration.clone());
+        foxglove::log!("/video/calibration", calibration.clone());
 
         frame_number += 1;
     }
