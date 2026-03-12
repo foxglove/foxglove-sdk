@@ -260,12 +260,10 @@ fn perlink_link_a_has_higher_latency_than_link_b() -> Result<()> {
     let delay_a = netem_helpers::parse_delay_ms(&link_a_args);
     let delay_b = netem_helpers::parse_delay_ms(&link_b_args);
 
-    if delay_a.is_none() || delay_b.is_none() {
+    let (Some(delay_a_ms), Some(delay_b_ms)) = (delay_a, delay_b) else {
         info!("cannot compare latency — one or both links have no delay configured");
         return Ok(());
-    }
-    let delay_a_ms = delay_a.unwrap();
-    let delay_b_ms = delay_b.unwrap();
+    };
 
     anyhow::ensure!(
         delay_a_ms > delay_b_ms,

@@ -58,6 +58,7 @@ services:
         ipv4_address: 10.99.0.2
 
   test-runner:
+    # Keep in sync with the toolchain version used in CI (setup-rust-toolchain).
     image: rust:1.93.0-bookworm
     working_dir: /workspace
     volumes:

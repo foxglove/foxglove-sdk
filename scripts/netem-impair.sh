@@ -40,18 +40,28 @@ case "$ARGS" in
         ;;
 esac
 
+ERRORS=0
+
 for iface in $(ls /sys/class/net/); do
     # Parse netem qdiscs from tc output. Each line looks like:
     #   qdisc netem <handle> root ...
     #   qdisc netem <handle> parent <class> ...
-    tc qdisc show dev "$iface" 2>/dev/null | grep 'qdisc netem' | while IFS= read -r line; do
-        handle=$(echo "$line" | awk '{print $3}')
-        kind=$(echo "$line" | awk '{print $4}')
+    netem_lines=$(tc qdisc show dev "$iface" 2>/dev/null | grep 'qdisc netem' || true)
+    [ -z "$netem_lines" ] && continue
 
-        if [ "$kind" = "root" ]; then
+    # Use a here-doc to avoid a pipeline subshell, so failures propagate.
+    while IFS= read -r line; do
+        [ -z "$line" ] && continue
+
+        # Parse: "qdisc netem <handle> root ..." or "... parent <class> ..."
+        # shellcheck disable=SC2086
+        set -- $line
+        handle=$3; attachment=$4
+
+        if [ "$attachment" = "root" ]; then
             parent_arg="root"
         else
-            parent=$(echo "$line" | awk '{print $5}')
+            parent=$5
             parent_arg="parent $parent"
         fi
 
@@ -65,7 +75,15 @@ for iface in $(ls /sys/class/net/); do
         if tc qdisc change dev "$iface" $parent_arg handle "$handle" netem $ARGS; then
             echo "  $iface handle $handle: netem $ARGS"
         else
-            echo "  WARNING: failed to update $iface handle $handle" >&2
+            echo "  ERROR: failed to update $iface handle $handle" >&2
+            ERRORS=$((ERRORS + 1))
         fi
-    done
+    done <<EOF
+$netem_lines
+EOF
 done
+
+if [ "$ERRORS" -gt 0 ]; then
+    echo "ERROR: $ERRORS qdisc update(s) failed" >&2
+    exit 1
+fi
