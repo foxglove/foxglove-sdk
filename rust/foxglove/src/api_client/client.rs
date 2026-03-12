@@ -106,11 +106,6 @@ impl RequestBuilder {
         self
     }
 
-    pub fn json(mut self, body: &impl serde::Serialize) -> Self {
-        self.0 = self.0.json(body);
-        self
-    }
-
     pub async fn send(self) -> Result<reqwest::Response, RequestError> {
         let response = self.0.send().await.map_err(RequestError::SendRequest)?;
 
