@@ -53,7 +53,7 @@ async fn main() {
 //   +---------------------------+------------------+
 //   |                           |  Frame: 00042    |
 //   |    Sweeping clock hand    |  12:34:56.789    |
-//   |    (1 revolution/sec)     |                  |
+//   |    (1 revolution/min)     |                  |
 //   |                           +------------------+
 //   |                           |  ############### |
 //   |                           |  # Checkerboard# |
@@ -63,7 +63,7 @@ async fn main() {
 //
 // - Clock hand: smooth rotation makes frame drops visible as jumps.
 // - Frame counter: sequential numbers reveal dropped frames.
-// - Timestamp: compare with wall clock to see latency.
+// - Timestamp (UTC): compare with wall clock to estimate latency.
 // - Checkerboard: high-frequency edges reveal compression artifacts.
 // - Scrolling ticker: smooth motion becomes jerky with frame drops.
 // ---------------------------------------------------------------------------
@@ -73,7 +73,8 @@ const HEIGHT: usize = 540;
 const FPS: u32 = 30;
 
 /// 5x7 bitmap font. Each glyph is stored as 7 rows of 5-bit patterns
-/// (MSB = leftmost pixel).
+/// (MSB = leftmost pixel). The full alphabet is defined so the font table
+/// is reusable even though only a subset of glyphs are currently used.
 const GLYPH_W: usize = 5;
 const GLYPH_H: usize = 7;
 
@@ -293,9 +294,9 @@ fn render_test_card(buf: &mut [u8], frame_number: u64) {
         draw_line(buf, x0, y0, x1, y1, Rgb(100, 100, 100));
     }
 
-    // Clock hand: rotates once per second, with sub-second smoothness.
+    // Clock hand: rotates once per minute, with sub-second smoothness.
     let frac = seconds as f64 + millis as f64 / 1000.0;
-    let hand_angle = (frac * 6.0 - 90.0).to_radians(); // 6 degrees per second
+    let hand_angle = (frac * 6.0 - 90.0).to_radians(); // 6 degrees per second = 360 per minute
     let hand_len = clock_radius - 30;
     let hx = clock_cx + (hand_len as f64 * hand_angle.cos()) as i32;
     let hy = clock_cy + (hand_len as f64 * hand_angle.sin()) as i32;
@@ -312,7 +313,7 @@ fn render_test_card(buf: &mut [u8], frame_number: u64) {
     let frame_str = format!("Frame:{:06}", frame_number);
     draw_text(buf, &frame_str, panel_x, 30, 3, Rgb(255, 255, 255));
 
-    // Timestamp.
+    // Timestamp (UTC).
     let time_str = format!("{:02}:{:02}:{:02}.{:03}", hours, minutes, seconds, millis);
     draw_text(buf, &time_str, panel_x, 80, 3, Rgb(255, 200, 0));
 
@@ -327,7 +328,9 @@ fn render_test_card(buf: &mut [u8], frame_number: u64) {
         let row_start = (check_y + cy_off) * stride + check_x * 3;
         let row_cell = cy_off / cell_size;
         for cx_off in 0..check_w {
-            let is_white = ((cx_off / cell_size) + row_cell).is_multiple_of(2);
+            // TODO: replace with .is_multiple_of(2) when MSRV >= 1.93.
+            #[allow(clippy::manual_is_multiple_of)]
+            let is_white = ((cx_off / cell_size) + row_cell) % 2 == 0;
             let val = if is_white { 220u8 } else { 35u8 };
             let off = row_start + cx_off * 3;
             buf[off] = val;
