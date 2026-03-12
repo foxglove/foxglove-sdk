@@ -145,7 +145,7 @@ impl RemoteAccessConnection {
         let credentials = match provider.load_credentials().await {
             Ok(creds) => {
                 // Update the session ID on each successful fetch (may change on reconnect).
-                *self.remote_access_session_id.lock() = creds.remote_access_session_id.clone();
+                self.remote_access_session_id.lock().clone_from(&creds.remote_access_session_id);
                 creds
             }
             Err(e) => {
