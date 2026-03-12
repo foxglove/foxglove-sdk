@@ -104,7 +104,7 @@ impl Arena {
         src: *const S,
         len: usize,
     ) -> Result<ManuallyDrop<Vec<S::NativeType>>, FoxgloveError> {
-        if len == 0 {
+        if src.is_null() || len == 0 {
             return Ok(ManuallyDrop::new(Vec::new()));
         }
 
@@ -135,7 +135,7 @@ impl Arena {
         len: usize,
         field_name: &str,
     ) -> Result<ManuallyDrop<Vec<String>>, FoxgloveError> {
-        if len == 0 {
+        if src.is_null() || len == 0 {
             return Ok(ManuallyDrop::new(Vec::new()));
         }
         let result = self.as_mut().alloc::<ManuallyDrop<String>>(len);

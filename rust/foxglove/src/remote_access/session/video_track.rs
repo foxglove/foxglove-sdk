@@ -1,10 +1,14 @@
+use std::sync::Arc;
+
+use arc_swap::ArcSwapOption;
 use bytes::Bytes;
 use libwebrtc::prelude::*;
 use libwebrtc::video_source::native::NativeVideoSource;
+use tokio::sync::watch;
 use tracing::{debug, error, warn};
 
 use crate::RawChannel;
-use crate::img2yuv::{ImageMessage, Yuv420Buffer};
+use crate::img2yuv::{ImageEncoding, ImageMessage, Yuv420Buffer};
 
 /// The input schema type for a video-capable channel.
 ///
@@ -55,6 +59,18 @@ pub fn get_video_input_schema(channel: &RawChannel) -> Option<VideoInputSchema> 
     detect_video_schema(channel.message_encoding(), schema_name)
 }
 
+/// Metadata extracted from image messages on a video channel.
+///
+/// Used to populate `foxglove.videoSourceEncoding` and `foxglove.videoFrameId` channel metadata,
+/// which the app uses to reconstruct the original image format from the video track.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct VideoMetadata {
+    /// The image encoding (pixel format or compression codec).
+    pub encoding: ImageEncoding,
+    /// The coordinate frame ID of the image source (e.g. `"camera_optical_frame"`).
+    pub frame_id: String,
+}
+
 /// Newtype wrapping [`I420Buffer`] that implements [`Yuv420Buffer`].
 struct I420Yuv420(I420Buffer);
 
@@ -94,6 +110,8 @@ pub(crate) struct VideoPublisher {
     rx: flume::Receiver<(Bytes, u64)>,
     #[allow(dead_code)]
     video_source: NativeVideoSource,
+    /// The latest video metadata observed by the background transcoding task.
+    metadata: Arc<ArcSwapOption<VideoMetadata>>,
 }
 
 impl VideoPublisher {
@@ -101,11 +119,22 @@ impl VideoPublisher {
     const CHANNEL_CAPACITY: usize = 2;
 
     /// Creates a new video publisher and spawns the background processing task.
-    pub fn new(video_source: NativeVideoSource, input_schema: VideoInputSchema) -> Self {
+    ///
+    /// When the background task observes a change in video metadata (encoding or frame_id),
+    /// it updates `metadata` and signals via `video_metadata_tx` so the session's sender loop
+    /// can re-advertise the channel.
+    pub fn new(
+        video_source: NativeVideoSource,
+        input_schema: VideoInputSchema,
+        video_metadata_tx: watch::Sender<()>,
+    ) -> Self {
         let (tx, rx) = flume::bounded::<(Bytes, u64)>(Self::CHANNEL_CAPACITY);
+        let metadata: Arc<ArcSwapOption<VideoMetadata>> = Arc::new(ArcSwapOption::empty());
         let source = video_source.clone();
         let consumer_rx = rx.clone();
+        let task_metadata = metadata.clone();
         tokio::spawn(async move {
+            let mut last_metadata: Option<VideoMetadata> = None;
             while let Ok((data, log_time_ns)) = consumer_rx.recv_async().await {
                 let source = source.clone();
                 let result = tokio::task::spawn_blocking(move || {
@@ -113,7 +142,13 @@ impl VideoPublisher {
                 })
                 .await;
                 match result {
-                    Ok(Ok(())) => {}
+                    Ok(Ok(new_metadata)) => {
+                        if last_metadata.as_ref() != Some(&new_metadata) {
+                            last_metadata = Some(new_metadata.clone());
+                            task_metadata.store(Some(Arc::new(new_metadata)));
+                            video_metadata_tx.send_modify(|_| {});
+                        }
+                    }
                     Ok(Err(e)) => {
                         debug!("video encode error: {e}");
                     }
@@ -127,6 +162,7 @@ impl VideoPublisher {
             tx,
             rx,
             video_source,
+            metadata,
         }
     }
 
@@ -134,6 +170,11 @@ impl VideoPublisher {
     #[allow(dead_code)]
     pub fn video_source(&self) -> &NativeVideoSource {
         &self.video_source
+    }
+
+    /// Returns the latest video metadata observed by this publisher, if any.
+    pub fn metadata(&self) -> arc_swap::Guard<Option<Arc<VideoMetadata>>> {
+        self.metadata.load()
     }
 
     /// Send a frame for encoding. Non-blocking: if the channel is full, the oldest frame
@@ -158,15 +199,21 @@ impl VideoPublisher {
 
 /// Transcode the image message and publish it as a video frame.
 ///
-/// This function decodes the original image data, encodes it as YUV 4:2:0, and then publishes it
-/// to the video track.
+/// Decodes the original image data, extracts metadata (encoding, frame_id),
+/// encodes it as YUV 4:2:0, and publishes it to the video track.
+/// Returns the extracted metadata on success.
 fn transcode_and_publish(
     input_schema: VideoInputSchema,
     video_source: &NativeVideoSource,
     data: &[u8],
     log_time_ns: u64,
-) -> Result<(), VideoEncodeError> {
+) -> Result<VideoMetadata, VideoEncodeError> {
     let image_msg = decode_image_message(input_schema, data)?;
+
+    let metadata = VideoMetadata {
+        encoding: image_msg.image.encoding(),
+        frame_id: image_msg.frame_id.clone(),
+    };
 
     let (width, height) = image_msg
         .image
@@ -202,7 +249,7 @@ fn transcode_and_publish(
         buffer: buffer.0,
     };
     video_source.capture_frame(&frame);
-    Ok(())
+    Ok(metadata)
 }
 
 /// Decode raw message bytes into an [`ImageMessage`] based on the input schema.
