@@ -4,8 +4,8 @@
 //! a viewer on a good network).
 //!
 //! Each test function is run in its own container:
-//!   - `perlink_livekit_gateway`: runs in gateway-runner (10.99.0.31, high impairment)
-//!   - `perlink_livekit_viewer`:  runs in viewer-runner  (10.99.0.40, low impairment)
+//!   - `perlink_docker_gateway`: runs in gateway-runner (10.99.0.31, high impairment)
+//!   - `perlink_docker_viewer`:  runs in viewer-runner  (10.99.0.40, low impairment)
 //!
 //! Coordination between containers uses file-based signaling via a shared tmpfs
 //! volume (`COORDINATION_DIR`). The gateway writes the room name for the viewer
@@ -49,8 +49,8 @@ const BURST_COUNT: usize = 20;
 #[tokio::test]
 // Defensive: these tests run in separate containers, but serial prevents
 // accidental concurrent execution if both are run in a single process.
-#[serial(perlink_livekit)]
-async fn perlink_livekit_gateway() -> Result<()> {
+#[serial(perlink_docker)]
+async fn perlink_docker_gateway() -> Result<()> {
     coordination::clean()?;
 
     let ctx = foxglove::Context::new();
@@ -98,9 +98,9 @@ async fn perlink_livekit_gateway() -> Result<()> {
 #[traced_test]
 #[ignore]
 #[tokio::test]
-// Defensive: see comment on perlink_livekit_gateway.
-#[serial(perlink_livekit)]
-async fn perlink_livekit_viewer() -> Result<()> {
+// Defensive: see comment on perlink_docker_gateway.
+#[serial(perlink_docker)]
+async fn perlink_docker_viewer() -> Result<()> {
     info!("waiting for room name (timeout: {VIEWER_ROOM_NAME_TIMEOUT:?})...");
     let room_name = coordination::poll_room_name(VIEWER_ROOM_NAME_TIMEOUT).await?;
     info!("got room name: {room_name}");
