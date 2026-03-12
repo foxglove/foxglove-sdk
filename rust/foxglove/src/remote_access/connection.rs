@@ -534,7 +534,8 @@ impl RemoteAccessConnection {
         session: Arc<RemoteAccessSession>,
         remote_access_session_id: String,
     ) {
-        let mut interval = tokio::time::interval(Duration::from_secs(30));
+        let period = Duration::from_secs(30);
+        let mut interval = tokio::time::interval_at(tokio::time::Instant::now() + period, period);
         interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
         loop {
             interval.tick().await;
