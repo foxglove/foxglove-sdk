@@ -318,11 +318,25 @@ fn render_test_card(buf: &mut [u8], frame_number: u64) {
 
     // Frame counter.
     let frame_str = format!("Frame:{:06}", frame_number);
-    draw_text(buf, &frame_str, panel_x, 30, panel_text_scale, Rgb(255, 255, 255));
+    draw_text(
+        buf,
+        &frame_str,
+        panel_x,
+        30,
+        panel_text_scale,
+        Rgb(255, 255, 255),
+    );
 
     // Timestamp (UTC).
     let time_str = format!("{:02}:{:02}:{:02}.{:03}", hours, minutes, seconds, millis);
-    draw_text(buf, &time_str, panel_x, 80, panel_text_scale, Rgb(255, 200, 0));
+    draw_text(
+        buf,
+        &time_str,
+        panel_x,
+        80,
+        panel_text_scale,
+        Rgb(255, 200, 0),
+    );
 
     // --- Checkerboard (bottom-right, 260x270 starting at x=690, y=160) ---
     let check_x: usize = 690;
