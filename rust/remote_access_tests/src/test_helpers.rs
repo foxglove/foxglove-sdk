@@ -545,10 +545,15 @@ impl TestGateway {
 
 /// Polls `cond` until it returns true, or panics after [`EVENT_TIMEOUT`].
 pub async fn poll_until(cond: impl Fn() -> bool) {
-    let deadline = tokio::time::Instant::now() + EVENT_TIMEOUT;
+    poll_until_timeout(cond, EVENT_TIMEOUT).await;
+}
+
+/// Polls `cond` until it returns true, or panics after `timeout`.
+pub async fn poll_until_timeout(cond: impl Fn() -> bool, timeout: Duration) {
+    let deadline = tokio::time::Instant::now() + timeout;
     while !cond() {
         if tokio::time::Instant::now() >= deadline {
-            panic!("poll_until condition not met within {EVENT_TIMEOUT:?}");
+            panic!("poll_until condition not met within {timeout:?}");
         }
         tokio::time::sleep(POLL_INTERVAL).await;
     }
