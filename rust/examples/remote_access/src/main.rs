@@ -270,10 +270,12 @@ fn render_test_card(buf: &mut [u8], frame_number: u64) {
     let clock_cy = 230i32;
     let clock_radius = 190i32;
 
-    // Draw clock face circle outline.
+    // Draw clock face circle outline. Use enough steps to cover the full
+    // circumference so the outline appears solid rather than dotted.
     let dim = Rgb(80, 80, 80);
-    for angle_deg in 0..360 {
-        let angle = (angle_deg as f64).to_radians();
+    let circumference = (2.0 * std::f64::consts::PI * clock_radius as f64) as i32;
+    for step in 0..circumference {
+        let angle = step as f64 / clock_radius as f64; // step / radius ≈ radians
         let px = clock_cx + (clock_radius as f64 * angle.cos()) as i32;
         let py = clock_cy + (clock_radius as f64 * angle.sin()) as i32;
         set_pixel(buf, px, py, dim);
