@@ -744,7 +744,7 @@ struct PackedElementField {
   uint32_t offset = 0;
 
   /// @brief Type of data in the field. Integers are stored using little-endian byte order.
-  NumericType type;
+  NumericType type{};
 
   /// @brief Encoded the PackedElementField as protobuf to the provided buffer.
   ///
@@ -1155,7 +1155,7 @@ struct LinePrimitive {
     LINE_LIST = 2,
   };
   /// @brief Drawing primitive to use for lines
-  LineType type;
+  LineType type{};
 
   /// @brief Origin of lines relative to reference frame
   std::optional<Pose> pose;
@@ -1236,7 +1236,7 @@ struct LocationFix {
 
   /// @brief If `position_covariance` is available, `position_covariance_type` must be set to
   /// indicate the type of covariance.
-  PositionCovarianceType position_covariance_type;
+  PositionCovarianceType position_covariance_type{};
 
   /// @brief Color used to visualize the location
   std::optional<Color> color;
@@ -1356,7 +1356,7 @@ struct SceneEntityDeletion {
   std::optional<Timestamp> timestamp;
 
   /// @brief Type of deletion action to perform
-  SceneEntityDeletionType type;
+  SceneEntityDeletionType type{};
 
   /// @brief Identifier which must match if `type` is `MATCHING_ID`.
   std::string id;

@@ -59,7 +59,7 @@ public:
   ///
   /// @param topic The topic name. You should choose a unique topic name per channel for
   /// compatibility with the Foxglove app.
-  /// @param messageEncoding The encoding of messages logged to this channel.
+  /// @param message_encoding The encoding of messages logged to this channel.
   /// @param schema The schema of messages logged to this channel.
   /// @param context The context which associates logs to a sink. If omitted, the default context is
   /// used.
