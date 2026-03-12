@@ -149,10 +149,10 @@ case "${1:-}" in
             # shell job so we can wait on both and detect failures from either.
             echo "Starting gateway and viewer tests..."
             $COMPOSE_PERLINK exec gateway-runner \
-                cargo test -p remote_access_tests -- --ignored perlink_livekit_gateway --nocapture &
+                cargo test -p remote_access_tests -- --ignored perlink_docker_gateway --nocapture &
             gateway_pid=$!
             $COMPOSE_PERLINK exec viewer-runner \
-                cargo test -p remote_access_tests -- --ignored perlink_livekit_viewer --nocapture &
+                cargo test -p remote_access_tests -- --ignored perlink_docker_viewer --nocapture &
             viewer_pid=$!
             # Wait for both; capture exit statuses individually.
             gateway_rc=0; wait "$gateway_pid" || gateway_rc=$?
