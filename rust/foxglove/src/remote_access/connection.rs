@@ -91,8 +91,8 @@ impl std::fmt::Debug for RemoteAccessConnectionOptions {
 pub(crate) struct RemoteAccessConnection {
     options: RemoteAccessConnectionOptions,
     credentials_provider: OnceCell<CredentialsProvider>,
-    /// The session ID, received from the API server on the first successful credential fetch.
-    session_id: OnceCell<String>,
+    /// The remote access session ID, received from the API server on the first successful credential fetch.
+    remote_access_session_id: OnceCell<String>,
 }
 
 impl RemoteAccessConnection {
@@ -100,13 +100,16 @@ impl RemoteAccessConnection {
         Self {
             options,
             credentials_provider: OnceCell::new(),
-            session_id: OnceCell::new(),
+            remote_access_session_id: OnceCell::new(),
         }
     }
 
-    /// Returns the session ID, or an empty string if not yet initialized.
-    fn session_id(&self) -> &str {
-        self.session_id.get().map(|s| s.as_str()).unwrap_or("")
+    /// Returns the remote access session ID, or an empty string if not yet initialized.
+    fn remote_access_session_id(&self) -> &str {
+        self.remote_access_session_id
+            .get()
+            .map(|s| s.as_str())
+            .unwrap_or("")
     }
 
     /// Returns the credentials provider, initializing it on first call.
@@ -139,34 +142,29 @@ impl RemoteAccessConnection {
     ) -> Result<(Arc<RemoteAccessSession>, UnboundedReceiver<RoomEvent>)> {
         let provider = self.get_or_init_provider().await?;
 
-        info!(
-            session_id = self.session_id(),
-            "requesting LiveKit credentials from API server"
-        );
+        info!("requesting LiveKit credentials from API server");
         let credentials = match provider.load_credentials().await {
             Ok(creds) => {
                 // Store the server-generated session ID on first successful fetch.
-                self.session_id
+                self.remote_access_session_id
                     .set(creds.remote_access_session_id.clone())
                     .ok();
-                let session_id = self.session_id();
-                info!(
-                    session_id,
-                    url = creds.url.as_str(),
-                    "successfully obtained LiveKit credentials"
-                );
                 creds
             }
             Err(e) => {
                 error!(
-                    session_id = self.session_id(),
                     error = %e,
                     "failed to obtain LiveKit credentials from API server"
                 );
                 return Err(e.into());
             }
         };
-        let session_id = self.session_id();
+        let remote_access_session_id = self.remote_access_session_id();
+        info!(
+            remote_access_session_id,
+            url = credentials.url.as_str(),
+            "successfully obtained LiveKit credentials"
+        );
 
         let message_backlog_size = self
             .options
@@ -174,7 +172,7 @@ impl RemoteAccessConnection {
             .unwrap_or(DEFAULT_MESSAGE_BACKLOG_SIZE);
 
         info!(
-            session_id,
+            remote_access_session_id,
             url = credentials.url.as_str(),
             "connecting to LiveKit server"
         );
@@ -182,7 +180,7 @@ impl RemoteAccessConnection {
             match Room::connect(&credentials.url, &credentials.token, RoomOptions::default()).await
             {
                 Ok((room, room_events)) => {
-                    info!(session_id, "connected to LiveKit server");
+                    info!(remote_access_session_id, "connected to LiveKit server");
                     (
                         Arc::new(RemoteAccessSession::new(
                             room,
@@ -196,7 +194,7 @@ impl RemoteAccessConnection {
                 }
                 Err(e) => {
                     error!(
-                        session_id,
+                        remote_access_session_id,
                         error = %e,
                         "failed to connect to LiveKit server"
                     );
@@ -240,11 +238,13 @@ impl RemoteAccessConnection {
             return;
         };
 
+        let remote_access_session_id = self.remote_access_session_id().to_string();
+
         // Register the session as a sink so it receives channel notifications.
         // This synchronously triggers add_channels for all existing channels.
         let Some(context) = self.options.context.upgrade() else {
             info!(
-                session_id = self.session_id(),
+                remote_access_session_id,
                 "context has been dropped, stopping remote access connection"
             );
             return;
@@ -254,24 +254,17 @@ impl RemoteAccessConnection {
         // We can use spawn here because we're already running on self.options.runtime (if set)
         let sender_task = tokio::spawn(RemoteAccessSession::run_sender(session.clone()));
 
-        // Set session_id as a participant attribute so other participants can see it.
-        let session_id = self.session_id().to_string();
-        let identity = session.room().local_participant().identity();
+        // Set remote_access_session_id as a participant attribute so other participants can see it.
         if let Err(e) = session
             .room()
             .local_participant()
             .set_attributes(HashMap::from([(
-                "session_id".to_string(),
-                session_id.clone(),
+                "remote_access_session_id".to_string(),
+                remote_access_session_id.clone(),
             )]))
             .await
         {
-            warn!(session_id, error = %e, "failed to set session_id participant attribute");
-        } else {
-            info!(
-                session_id,
-                "set session_id attribute on participant {:?}", identity
-            );
+            warn!(remote_access_session_id, error = %e, "failed to set remote_access_session_id participant attribute");
         }
 
         // Send ServerInfo and channel advertisements to participants already in the room.
@@ -283,30 +276,29 @@ impl RemoteAccessConnection {
                 .await
             {
                 error!(
-                    session_id,
+                    remote_access_session_id,
                     error = %e,
                     "failed to add existing participant {identity}"
                 );
             }
         }
 
-        info!(session_id, "running remote access server");
+        info!(remote_access_session_id, "running remote access server");
         tokio::select! {
             () = self.cancellation_token().cancelled() => (),
             _ = self.listen_for_room_events(session.clone(), room_events) => {},
-            _ = Self::log_periodic_stats(session.clone(), session_id.clone()) => {},
+            _ = Self::log_periodic_stats(session.clone(), remote_access_session_id.clone()) => {},
         }
 
         // Remove the sink before closing the room.
         context.remove_sink(session.sink_id());
         sender_task.abort();
 
-        let session_id = self.session_id();
-        info!(session_id, "disconnecting from room");
+        info!(remote_access_session_id, "disconnecting from room");
         // Close the room (disconnect) on shutdown.
         // If we don't do that, there's a 15s delay before this device is removed from the participants
         if let Err(e) = session.room().close().await {
-            error!(session_id, error = %e, "failed to close room");
+            error!(remote_access_session_id, error = %e, "failed to close room");
         }
     }
 
@@ -336,18 +328,18 @@ impl RemoteAccessConnection {
                 result = self.connect_session() => result,
             };
 
-            let session_id = self.session_id();
+            let remote_access_session_id = self.remote_access_session_id();
             match result {
                 Ok((session, room_events)) => {
                     return Some((session, room_events));
                 }
                 Err(e) => {
-                    error!(session_id, error = %e, "connection attempt failed, will retry");
+                    error!(remote_access_session_id, error = %e, "connection attempt failed, will retry");
                     // Refresh credentials for auth-related errors, including room errors which
                     // may be caused by expired or invalid credentials.
                     if e.should_clear_credentials() {
                         if let Some(provider) = self.credentials_provider.get() {
-                            debug!(session_id, "clearing credentials");
+                            debug!(remote_access_session_id, "clearing credentials");
                             provider.clear().await;
                         }
                     }
@@ -361,14 +353,14 @@ impl RemoteAccessConnection {
         session: Arc<RemoteAccessSession>,
         mut room_events: UnboundedReceiver<RoomEvent>,
     ) {
-        let session_id = self.session_id();
+        let remote_access_session_id = self.remote_access_session_id();
         while let Some(event) = room_events.recv().await {
-            debug!(session_id, "room event: {:?}", event);
+            debug!(remote_access_session_id, "room event: {:?}", event);
             match event {
                 RoomEvent::ParticipantConnected(participant) => {
                     let participant_identity = participant.identity();
                     info!(
-                        session_id,
+                        remote_access_session_id,
                         participant_identity = %participant_identity,
                         "participant connected to room"
                     );
@@ -377,13 +369,13 @@ impl RemoteAccessConnection {
                         .add_participant(participant.identity(), server_info)
                         .await
                     {
-                        error!(session_id, error = %e, "failed to add participant");
+                        error!(remote_access_session_id, error = %e, "failed to add participant");
                         continue;
                     }
                 }
                 RoomEvent::ParticipantDisconnected(participant) => {
                     info!(
-                        session_id,
+                        remote_access_session_id,
                         participant_identity = %participant.identity(),
                         "participant disconnected from room"
                     );
@@ -395,7 +387,7 @@ impl RemoteAccessConnection {
                     kind: _,
                     participant: _,
                 } => {
-                    info!(session_id, "data received: {:?}", topic);
+                    info!(remote_access_session_id, "data received: {:?}", topic);
                 }
                 RoomEvent::ByteStreamOpened {
                     reader,
@@ -405,7 +397,7 @@ impl RemoteAccessConnection {
                     // This is how we handle incoming reliable messages from the client
                     // They open a byte stream to the device participant (us).
                     info!(
-                        session_id,
+                        remote_access_session_id,
                         participant_identity = %participant_identity,
                         "byte stream opened from participant"
                     );
@@ -420,23 +412,23 @@ impl RemoteAccessConnection {
                 }
                 RoomEvent::ConnectionStateChanged(state) => {
                     info!(
-                        session_id,
+                        remote_access_session_id,
                         state = ?state,
                         "connection state changed"
                     );
                 }
                 RoomEvent::Reconnecting => {
-                    info!(session_id, "reconnecting to room");
+                    info!(remote_access_session_id, "reconnecting to room");
                 }
                 RoomEvent::Reconnected => {
-                    info!(session_id, "reconnected to room");
+                    info!(remote_access_session_id, "reconnected to room");
                 }
                 RoomEvent::ConnectionQualityChanged {
                     quality,
                     participant,
                 } => {
                     info!(
-                        session_id,
+                        remote_access_session_id,
                         participant = %participant.identity(),
                         quality = ?quality,
                         "connection quality changed"
@@ -448,7 +440,7 @@ impl RemoteAccessConnection {
                     track_sid,
                 } => {
                     warn!(
-                        session_id,
+                        remote_access_session_id,
                         participant = %participant.identity(),
                         track_sid = %track_sid,
                         error = %error,
@@ -461,7 +453,7 @@ impl RemoteAccessConnection {
                     participant: _,
                 } => {
                     info!(
-                        session_id,
+                        remote_access_session_id,
                         track_sid = %publication.sid(),
                         track_name = %publication.name(),
                         "local track published"
@@ -472,7 +464,7 @@ impl RemoteAccessConnection {
                     participant: _,
                 } => {
                     info!(
-                        session_id,
+                        remote_access_session_id,
                         track_sid = %publication.sid(),
                         track_name = %publication.name(),
                         "local track unpublished"
@@ -484,7 +476,7 @@ impl RemoteAccessConnection {
                     participant,
                 } => {
                     info!(
-                        session_id,
+                        remote_access_session_id,
                         participant = %participant.identity(),
                         track_sid = %publication.sid(),
                         track_name = %publication.name(),
@@ -497,7 +489,7 @@ impl RemoteAccessConnection {
                     participant,
                 } => {
                     info!(
-                        session_id,
+                        remote_access_session_id,
                         participant = %participant.identity(),
                         track_sid = %publication.sid(),
                         track_name = %publication.name(),
@@ -509,7 +501,7 @@ impl RemoteAccessConnection {
                     publication,
                 } => {
                     info!(
-                        session_id,
+                        remote_access_session_id,
                         participant = %participant.identity(),
                         track_sid = %publication.sid(),
                         track_name = %publication.name(),
@@ -521,7 +513,7 @@ impl RemoteAccessConnection {
                     publication,
                 } => {
                     info!(
-                        session_id,
+                        remote_access_session_id,
                         participant = %participant.identity(),
                         track_sid = %publication.sid(),
                         track_name = %publication.name(),
@@ -530,7 +522,7 @@ impl RemoteAccessConnection {
                 }
                 RoomEvent::Disconnected { reason } => {
                     info!(
-                        session_id,
+                        remote_access_session_id,
                         reason = reason.as_str_name(),
                         "disconnected from room, will attempt to reconnect"
                     );
@@ -540,11 +532,17 @@ impl RemoteAccessConnection {
                 _ => {}
             }
         }
-        warn!(session_id, "stopped listening for room events");
+        warn!(
+            remote_access_session_id,
+            "stopped listening for room events"
+        );
     }
 
     /// Periodically logs session statistics for monitoring and debugging.
-    async fn log_periodic_stats(session: Arc<RemoteAccessSession>, session_id: String) {
+    async fn log_periodic_stats(
+        session: Arc<RemoteAccessSession>,
+        remote_access_session_id: String,
+    ) {
         let mut interval = tokio::time::interval(Duration::from_secs(30));
         interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
         loop {
@@ -565,12 +563,12 @@ impl RemoteAccessConnection {
                     })
                     .sum::<u64>(),
                 Err(e) => {
-                    warn!(session_id, error = %e, "failed to get room stats");
+                    warn!(remote_access_session_id, error = %e, "failed to get room stats");
                     0
                 }
             };
             info!(
-                session_id,
+                remote_access_session_id,
                 participants,
                 subscriptions,
                 video_tracks,
@@ -605,7 +603,6 @@ impl RemoteAccessConnection {
         });
 
         let mut info = ServerInfo::new(name)
-            .with_session_id(self.session_id().to_string())
             .with_capabilities(
                 self.options
                     .capabilities
