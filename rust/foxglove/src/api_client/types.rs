@@ -9,6 +9,8 @@ pub(crate) struct RtcCredentials {
     pub token: String,
     /// URL of the RTC server where these credentials are valid.
     pub url: String,
+    /// Server-generated session ID for log correlation across components.
+    pub remote_access_session_id: String,
 }
 
 #[derive(Deserialize, Serialize, Clone)]
@@ -18,12 +20,6 @@ pub(crate) struct DeviceResponse {
     pub name: String,
     pub project_id: String,
     pub retain_recordings_seconds: Option<u64>,
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct RemoteAccessSessionRequest<'a> {
-    pub remote_access_session_id: &'a str,
 }
 
 #[derive(Deserialize, Debug)]
