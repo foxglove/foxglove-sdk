@@ -28,7 +28,6 @@ remote_access = [
   "dep:libwebrtc",
   "dep:reqwest",
   "dep:percent-encoding",
-  "dep:uuid",
 ]
 lz4 = ["mcap/lz4"]
 tls = [

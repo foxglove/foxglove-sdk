@@ -107,5 +107,6 @@ async fn authorize_remote_viz_handler(
     Ok(Json(RtcCredentials {
         token: "rtc-token-abc123".into(),
         url: "wss://rtc.foxglove.dev".into(),
+        remote_access_session_id: format!("{device_id}:test-uuid"),
     }))
 }

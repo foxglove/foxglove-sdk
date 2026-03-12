@@ -27,14 +27,6 @@ type Result<T> = std::result::Result<T, Box<RemoteAccessError>>;
 const AUTH_RETRY_PERIOD: Duration = Duration::from_secs(30);
 const DEFAULT_MESSAGE_BACKLOG_SIZE: usize = 1024;
 
-/// Generate a session ID combining the device ID with a unique UUID.
-///
-/// The format is `{device_id}:{uuid}`, which allows correlating all log messages
-/// for a single device session across the SDK, API server, and app.
-fn generate_session_id(device_id: &str) -> String {
-    format!("{}:{}", device_id, uuid::Uuid::new_v4())
-}
-
 /// Options for the remote access connection.
 ///
 /// This should be constructed from the [`crate::remote_access::Gateway`] builder.
@@ -44,7 +36,6 @@ pub(crate) struct RemoteAccessConnectionOptions {
     pub device_token: String,
     pub foxglove_api_url: Option<String>,
     pub foxglove_api_timeout: Option<Duration>,
-    pub session_id: String,
     pub listener: Option<Arc<dyn super::Listener>>,
     pub capabilities: Vec<Capability>,
     pub supported_encodings: Option<IndexSet<String>>,
@@ -63,7 +54,6 @@ impl Default for RemoteAccessConnectionOptions {
             device_token: String::new(),
             foxglove_api_url: None,
             foxglove_api_timeout: None,
-            session_id: String::new(),
             listener: None,
             capabilities: Vec::new(),
             supported_encodings: None,
@@ -84,7 +74,6 @@ impl std::fmt::Debug for RemoteAccessConnectionOptions {
             .field("has_device_token", &!self.device_token.is_empty())
             .field("foxglove_api_url", &self.foxglove_api_url)
             .field("foxglove_api_timeout", &self.foxglove_api_timeout)
-            .field("session_id", &self.session_id)
             .field("has_listener", &self.listener.is_some())
             .field("capabilities", &self.capabilities)
             .field("supported_encodings", &self.supported_encodings)
@@ -102,23 +91,16 @@ impl std::fmt::Debug for RemoteAccessConnectionOptions {
 pub(crate) struct RemoteAccessConnection {
     options: RemoteAccessConnectionOptions,
     credentials_provider: OnceCell<CredentialsProvider>,
-    /// The session ID, generated after the device ID is known.
-    /// If the user provided a session ID via the builder, it is used as-is.
-    /// Otherwise, it is generated as `{device_id}:{uuid}` after credentials are fetched.
+    /// The session ID, received from the API server on the first successful credential fetch.
     session_id: OnceCell<String>,
 }
 
 impl RemoteAccessConnection {
     pub fn new(options: RemoteAccessConnectionOptions) -> Self {
-        let session_id = OnceCell::new();
-        // If the user explicitly set a session_id, use it immediately.
-        if !options.session_id.is_empty() {
-            session_id.set(options.session_id.clone()).ok();
-        }
         Self {
             options,
             credentials_provider: OnceCell::new(),
-            session_id,
+            session_id: OnceCell::new(),
         }
     }
 
@@ -131,7 +113,6 @@ impl RemoteAccessConnection {
     ///
     /// This fetches device info from the Foxglove API using the device token.
     /// If the call fails, the OnceCell remains empty and will retry on the next call.
-    /// On first success, also generates the session ID from the device ID.
     async fn get_or_init_provider(&self) -> Result<&CredentialsProvider> {
         self.credentials_provider
             .get_or_try_init(|| async {
@@ -146,16 +127,8 @@ impl RemoteAccessConnection {
                 }
                 let provider = CredentialsProvider::new(builder).await?;
 
-                // Generate the session ID now that we know the device ID.
                 let device_id = provider.device_id();
-                let session_id = generate_session_id(device_id);
-                // set() will be a no-op if the user already provided a session_id.
-                self.session_id.set(session_id).ok();
-
-                info!(
-                    session_id = self.session_id(),
-                    device_id, "credentials provider initialized"
-                );
+                info!(device_id, "credentials provider initialized");
                 Ok(provider)
             })
             .await
@@ -165,12 +138,18 @@ impl RemoteAccessConnection {
         &self,
     ) -> Result<(Arc<RemoteAccessSession>, UnboundedReceiver<RoomEvent>)> {
         let provider = self.get_or_init_provider().await?;
-        // Read session_id after provider init, which is where it gets generated.
-        let session_id = self.session_id();
 
-        info!(session_id, "requesting LiveKit credentials from API server");
-        let credentials = match provider.load_credentials(session_id).await {
+        info!(
+            session_id = self.session_id(),
+            "requesting LiveKit credentials from API server"
+        );
+        let credentials = match provider.load_credentials().await {
             Ok(creds) => {
+                // Store the server-generated session ID on first successful fetch.
+                self.session_id
+                    .set(creds.remote_access_session_id.clone())
+                    .ok();
+                let session_id = self.session_id();
                 info!(
                     session_id,
                     url = creds.url.as_str(),
@@ -180,13 +159,14 @@ impl RemoteAccessConnection {
             }
             Err(e) => {
                 error!(
-                    session_id,
+                    session_id = self.session_id(),
                     error = %e,
                     "failed to obtain LiveKit credentials from API server"
                 );
                 return Err(e.into());
             }
         };
+        let session_id = self.session_id();
 
         let message_backlog_size = self
             .options
