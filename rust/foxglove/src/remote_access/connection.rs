@@ -7,6 +7,7 @@ use std::{
 use indexmap::IndexSet;
 
 use livekit::{Room, RoomEvent, RoomOptions};
+use parking_lot::Mutex;
 use tokio::{runtime::Handle, sync::OnceCell, sync::mpsc::UnboundedReceiver, task::JoinHandle};
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info, warn};
@@ -91,8 +92,9 @@ impl std::fmt::Debug for RemoteAccessConnectionOptions {
 pub(crate) struct RemoteAccessConnection {
     options: RemoteAccessConnectionOptions,
     credentials_provider: OnceCell<CredentialsProvider>,
-    /// The remote access session ID, received from the API server on the first successful credential fetch.
-    remote_access_session_id: OnceCell<String>,
+    /// The remote access session ID, received from the API server on each successful credential fetch.
+    /// Updated on reconnect when a new session ID is issued.
+    remote_access_session_id: Mutex<String>,
 }
 
 impl RemoteAccessConnection {
@@ -100,16 +102,13 @@ impl RemoteAccessConnection {
         Self {
             options,
             credentials_provider: OnceCell::new(),
-            remote_access_session_id: OnceCell::new(),
+            remote_access_session_id: Mutex::new(String::new()),
         }
     }
 
     /// Returns the remote access session ID, or an empty string if not yet initialized.
-    fn remote_access_session_id(&self) -> &str {
-        self.remote_access_session_id
-            .get()
-            .map(|s| s.as_str())
-            .unwrap_or("")
+    fn remote_access_session_id(&self) -> String {
+        self.remote_access_session_id.lock().clone()
     }
 
     /// Returns the credentials provider, initializing it on first call.
@@ -145,10 +144,8 @@ impl RemoteAccessConnection {
         info!("requesting LiveKit credentials from API server");
         let credentials = match provider.load_credentials().await {
             Ok(creds) => {
-                // Store the server-generated session ID on first successful fetch.
-                self.remote_access_session_id
-                    .set(creds.remote_access_session_id.clone())
-                    .ok();
+                // Update the session ID on each successful fetch (may change on reconnect).
+                *self.remote_access_session_id.lock() = creds.remote_access_session_id.clone();
                 creds
             }
             Err(e) => {
@@ -237,7 +234,7 @@ impl RemoteAccessConnection {
             return;
         };
 
-        let remote_access_session_id = self.remote_access_session_id().to_string();
+        let remote_access_session_id = self.remote_access_session_id();
 
         // Register the session as a sink so it receives channel notifications.
         // This synchronously triggers add_channels for all existing channels.
@@ -595,7 +592,7 @@ impl RemoteAccessConnection {
         });
 
         let mut info = ServerInfo::new(name)
-            .with_session_id(self.remote_access_session_id().to_string())
+            .with_session_id(self.remote_access_session_id())
             .with_capabilities(
                 self.options
                     .capabilities
