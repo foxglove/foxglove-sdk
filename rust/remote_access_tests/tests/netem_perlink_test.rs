@@ -211,7 +211,7 @@ fn measure_udp_loss(container: &str, target_ip: &str, count: u32) -> Result<(u32
 #[traced_test]
 #[ignore]
 #[test]
-fn perlink_qdisc_hierarchy_is_installed() -> Result<()> {
+fn perlink_infra_qdisc_hierarchy_is_installed() -> Result<()> {
     let container = netem_container_id()?;
 
     let qdisc_output = docker_exec(&container, &["tc", "qdisc", "show"])?;
@@ -251,7 +251,7 @@ fn perlink_qdisc_hierarchy_is_installed() -> Result<()> {
 #[traced_test]
 #[ignore]
 #[test]
-fn perlink_link_a_has_higher_latency_than_link_b() -> Result<()> {
+fn perlink_infra_link_a_has_higher_latency_than_link_b() -> Result<()> {
     let link_a_args =
         std::env::var("NETEM_LINK_A_ARGS").unwrap_or_else(|_| DEFAULT_LINK_A_ARGS.into());
     let link_b_args =
@@ -301,7 +301,7 @@ fn perlink_link_a_has_higher_latency_than_link_b() -> Result<()> {
 #[traced_test]
 #[ignore]
 #[test]
-fn perlink_link_a_has_more_packet_loss_than_link_b() -> Result<()> {
+fn perlink_infra_link_a_has_more_packet_loss_than_link_b() -> Result<()> {
     let link_a_args =
         std::env::var("NETEM_LINK_A_ARGS").unwrap_or_else(|_| DEFAULT_LINK_A_ARGS.into());
     let link_b_args =
@@ -371,7 +371,7 @@ fn perlink_link_a_has_more_packet_loss_than_link_b() -> Result<()> {
 #[ignore]
 #[tokio::test]
 #[serial(netem)]
-async fn perlink_viewer_connects_under_classful_qdisc() -> Result<()> {
+async fn perlink_product_viewer_connects_under_classful_qdisc() -> Result<()> {
     let ctx = foxglove::Context::new();
     let gw = TestGateway::start(&ctx).await?;
 
@@ -398,7 +398,7 @@ async fn perlink_viewer_connects_under_classful_qdisc() -> Result<()> {
 #[ignore]
 #[tokio::test]
 #[serial(netem)]
-async fn perlink_burst_delivery_under_classful_qdisc() -> Result<()> {
+async fn perlink_product_burst_delivery_under_classful_qdisc() -> Result<()> {
     let ctx = foxglove::Context::new();
     let channel = ctx
         .channel_builder("/perlink-burst")
@@ -455,7 +455,7 @@ async fn perlink_burst_delivery_under_classful_qdisc() -> Result<()> {
 #[traced_test]
 #[ignore]
 #[test]
-fn perlink_default_class_catches_unclassified_traffic() -> Result<()> {
+fn perlink_infra_default_class_catches_unclassified_traffic() -> Result<()> {
     let container = netem_container_id()?;
 
     // Verify the qdisc hierarchy has a default class. Check all interfaces since

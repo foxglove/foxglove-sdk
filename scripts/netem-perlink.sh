@@ -97,10 +97,10 @@ case "${1:-}" in
                 cargo test -p remote_access_tests -- --ignored perlink_
                 ;;
             infra)
-                cargo test -p remote_access_tests -- --ignored 'perlink_qdisc_hierarchy|perlink_link_a|perlink_default_class'
+                cargo test -p remote_access_tests -- --ignored perlink_infra_
                 ;;
             product)
-                cargo test -p remote_access_tests -- --ignored 'perlink_viewer|perlink_burst'
+                cargo test -p remote_access_tests -- --ignored perlink_product_
                 ;;
             *)
                 echo "ERROR: unknown test category '$2'" >&2
