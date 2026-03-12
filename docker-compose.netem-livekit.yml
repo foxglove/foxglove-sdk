@@ -201,10 +201,13 @@ services:
       # Test runner (single-container mode): high impairment for LiveKit → 10.99.0.30.
       NETEM_LINK_RUNNER_DST: "10.99.0.30"
       NETEM_LINK_RUNNER_ARGS: "${NETEM_LINK_RUNNER_ARGS:-delay 200ms 50ms loss 5%}"
-      # Gateway and viewer links are set dynamically by the script (only in
-      # perlink mode) so that `digest` doesn't show phantom links during
-      # single-container use. See NETEM_LINK_GATEWAY_* and NETEM_LINK_VIEWER_*
-      # exports in scripts/netem-livekit.sh.
+      # Gateway and viewer links default to empty so single-container `digest`
+      # doesn't show phantom links. The script exports real values in perlink
+      # mode; Compose passes them through via these entries.
+      NETEM_LINK_GATEWAY_DST: "${NETEM_LINK_GATEWAY_DST:-}"
+      NETEM_LINK_GATEWAY_ARGS: "${NETEM_LINK_GATEWAY_ARGS:-}"
+      NETEM_LINK_VIEWER_DST: "${NETEM_LINK_VIEWER_DST:-}"
+      NETEM_LINK_VIEWER_ARGS: "${NETEM_LINK_VIEWER_ARGS:-}"
     depends_on:
       livekit:
         condition: service_started

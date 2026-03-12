@@ -53,8 +53,10 @@ SETUP_ERRORS=0
 # ---------------------------------------------------------------------------
 
 # Collect unique link names by scanning env vars for the NETEM_LINK_*_DST pattern.
+# The '.' after '=' requires a non-empty value, so empty-default entries from
+# Docker Compose (e.g. NETEM_LINK_GATEWAY_DST=) are skipped.
 LINK_NAMES=""
-for var in $(env | grep '^NETEM_LINK_.*_DST=' | sed 's/=.*//' | sort); do
+for var in $(env | grep '^NETEM_LINK_.*_DST=.' | sed 's/=.*//' | sort); do
     # Extract the link name: NETEM_LINK_<NAME>_DST -> <NAME>
     name=$(echo "$var" | sed 's/^NETEM_LINK_//;s/_DST$//')
     LINK_NAMES="$LINK_NAMES $name"
