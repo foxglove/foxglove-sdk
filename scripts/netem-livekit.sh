@@ -88,12 +88,23 @@ usage() {
     echo "  rate BANDWIDTH"
 }
 
+# Export netem link env vars for per-link mode. These are picked up by the
+# netem sidecar's NETEM_LINK_*_DST auto-discovery. Only exported in perlink
+# paths so that single-container `digest` doesn't show phantom links.
+export_perlink_netem_vars() {
+    export NETEM_LINK_GATEWAY_DST="10.99.0.31"
+    export NETEM_LINK_GATEWAY_ARGS="${NETEM_LINK_GATEWAY_ARGS:-delay 200ms 50ms loss 5%}"
+    export NETEM_LINK_VIEWER_DST="10.99.0.40"
+    export NETEM_LINK_VIEWER_ARGS="${NETEM_LINK_VIEWER_ARGS:-delay 10ms 2ms}"
+}
+
 case "${1:-}" in
     up)
         shift
         if [ "${1:-}" = "perlink" ]; then
             # Start the two-container per-link stack (gateway + viewer).
             export LIVEKIT_NODE_IP=10.99.0.2
+            export_perlink_netem_vars
             COMPOSE_PERLINK="$COMPOSE --profile perlink"
             $COMPOSE_PERLINK up -d --wait
             # Pre-build the test binary. The viewer-runner shares the same
@@ -140,6 +151,7 @@ case "${1:-}" in
         if [ "$filter" = "perlink" ]; then
             # Two-container per-link test orchestration. Starts the stack if
             # not already running, then runs gateway and viewer tests.
+            export_perlink_netem_vars
             COMPOSE_PERLINK="$COMPOSE --profile perlink"
             $COMPOSE_PERLINK up -d --wait
             # Clean coordination dir from any previous run.
@@ -150,6 +162,9 @@ case "${1:-}" in
             # Run both tests in foreground. The gateway runs in a background
             # shell job so we can wait on both and detect failures from either.
             echo "Starting gateway and viewer tests..."
+            # Kill background cargo processes on Ctrl-C so they don't linger
+            # until their coordination timeouts expire.
+            trap 'kill "$gateway_pid" "$viewer_pid" 2>/dev/null; wait "$gateway_pid" "$viewer_pid" 2>/dev/null' INT TERM
             $COMPOSE_PERLINK exec gateway-runner \
                 cargo test -p remote_access_tests -- --ignored perlink_docker_gateway --nocapture &
             gateway_pid=$!
