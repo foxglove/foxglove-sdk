@@ -152,10 +152,7 @@ impl RemoteAccessConnection {
                 creds
             }
             Err(e) => {
-                error!(
-                    error = %e,
-                    "failed to obtain LiveKit credentials from API server"
-                );
+                error!(error = %e, "failed to obtain LiveKit credentials from API server: {e}");
                 return Err(e.into());
             }
         };
@@ -196,7 +193,7 @@ impl RemoteAccessConnection {
                     error!(
                         remote_access_session_id,
                         error = %e,
-                        "failed to connect to LiveKit server"
+                        "failed to connect to LiveKit server: {e}"
                     );
                     return Err(e.into());
                 }
@@ -264,7 +261,11 @@ impl RemoteAccessConnection {
             )]))
             .await
         {
-            warn!(remote_access_session_id, error = %e, "failed to set remote_access_session_id participant attribute");
+            warn!(
+                remote_access_session_id,
+                error = %e,
+                "failed to set remote_access_session_id participant attribute: {e}"
+            );
         }
 
         // Send ServerInfo and channel advertisements to participants already in the room.
@@ -278,7 +279,7 @@ impl RemoteAccessConnection {
                 error!(
                     remote_access_session_id,
                     error = %e,
-                    "failed to add existing participant {identity}"
+                    "failed to add existing participant {identity}: {e}"
                 );
             }
         }
@@ -298,7 +299,7 @@ impl RemoteAccessConnection {
         // Close the room (disconnect) on shutdown.
         // If we don't do that, there's a 15s delay before this device is removed from the participants
         if let Err(e) = session.room().close().await {
-            error!(remote_access_session_id, error = %e, "failed to close room");
+            error!(remote_access_session_id, error = %e, "failed to close room: {e}");
         }
     }
 
@@ -334,7 +335,11 @@ impl RemoteAccessConnection {
                     return Some((session, room_events));
                 }
                 Err(e) => {
-                    error!(remote_access_session_id, error = %e, "connection attempt failed, will retry");
+                    error!(
+                        remote_access_session_id,
+                        error = %e,
+                        "connection attempt failed, will retry: {e}"
+                    );
                     // Refresh credentials for auth-related errors, including room errors which
                     // may be caused by expired or invalid credentials.
                     if e.should_clear_credentials() {
@@ -355,7 +360,6 @@ impl RemoteAccessConnection {
     ) {
         let remote_access_session_id = self.remote_access_session_id();
         while let Some(event) = room_events.recv().await {
-            debug!(remote_access_session_id, "room event: {:?}", event);
             match event {
                 RoomEvent::ParticipantConnected(participant) => {
                     let participant_identity = participant.identity();
@@ -369,7 +373,7 @@ impl RemoteAccessConnection {
                         .add_participant(participant.identity(), server_info)
                         .await
                     {
-                        error!(remote_access_session_id, error = %e, "failed to add participant");
+                        error!(remote_access_session_id, error = %e, "failed to add participant: {e}");
                         continue;
                     }
                 }
@@ -444,7 +448,7 @@ impl RemoteAccessConnection {
                         participant = %participant.identity(),
                         track_sid = %track_sid,
                         error = %error,
-                        "track subscription failed"
+                        "track subscription failed: {error}"
                     );
                 }
                 RoomEvent::LocalTrackPublished {
@@ -529,7 +533,9 @@ impl RemoteAccessConnection {
                     // Return from this function to trigger reconnection in run_until_cancelled
                     return;
                 }
-                _ => {}
+                _ => {
+                    debug!(remote_access_session_id, "room event: {:?}", event);
+                }
             }
         }
         warn!(
@@ -563,7 +569,7 @@ impl RemoteAccessConnection {
                     })
                     .sum::<u64>(),
                 Err(e) => {
-                    warn!(remote_access_session_id, error = %e, "failed to get room stats");
+                    warn!(remote_access_session_id, error = %e, "failed to get room stats: {e}");
                     0
                 }
             };
