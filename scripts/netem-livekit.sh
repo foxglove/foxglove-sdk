@@ -16,9 +16,10 @@
 #   scripts/netem-livekit.sh inspect         Show tc hierarchy inside the netem container
 #   scripts/netem-livekit.sh digest          Show human-readable netem digest summary
 #   scripts/netem-livekit.sh test [filter]   Run tests inside the test-runner container
-#   scripts/netem-livekit.sh test perlink    Run two-container per-link tests
 #   scripts/netem-livekit.sh shell           Open a shell in the test-runner container
 #   scripts/netem-livekit.sh build           Pre-build the test binary (no test run)
+#   scripts/netem-livekit.sh up perlink      Start two-container per-link stack (gateway + viewer)
+#   scripts/netem-livekit.sh test perlink    Run per-link tests (gateway + viewer)
 #
 # The 'up' and 'reup' commands accept inline netem args (order-independent):
 #   scripts/netem-livekit.sh up delay 200ms loss 5%
@@ -60,9 +61,12 @@ usage() {
     echo "  inspect           Show tc qdiscs, classes, and filters inside the netem container"
     echo "  digest            Show human-readable netem digest summary"
     echo "  test [filter]     Run tests inside the test-runner container"
-    echo "  test perlink      Run two-container per-link tests (gateway + viewer)"
     echo "  shell             Open a shell in the test-runner container"
     echo "  build             Pre-build the test binary without running tests"
+    echo ""
+    echo "Per-link mode (gateway + viewer in separate containers):"
+    echo "  up perlink        Start the two-container per-link stack"
+    echo "  test perlink      Run per-link tests (starts stack if needed)"
     echo ""
     echo "Examples:"
     echo "  $0 up                                  # start with default impairment"
@@ -74,6 +78,8 @@ usage() {
     echo "  $0 digest                              # verify current settings"
     echo "  $0 test livekit_                       # run all livekit_ tests"
     echo "  $0 test viewer_connects                # run a specific test"
+    echo "  $0 up perlink                          # start per-link stack"
+    echo "  $0 test perlink                        # run per-link tests"
     echo ""
     echo "Netem args are order-independent keywords: delay, loss, rate, duplicate,"
     echo "corrupt, reorder. Sub-args within a keyword are positional:"
@@ -85,12 +91,26 @@ usage() {
 case "${1:-}" in
     up)
         shift
-        if [ $# -gt 0 ]; then
-            export NETEM_ARGS="$*"
+        if [ "${1:-}" = "perlink" ]; then
+            # Start the two-container per-link stack (gateway + viewer).
+            export LIVEKIT_NODE_IP=10.99.0.2
+            COMPOSE_PERLINK="$COMPOSE --profile perlink"
+            $COMPOSE_PERLINK up -d --wait
+            # Pre-build the test binary. The viewer-runner shares the same
+            # target volume so it will reuse the build.
+            echo "Building test binary in gateway-runner..."
+            $COMPOSE_PERLINK exec gateway-runner \
+                cargo test -p remote_access_tests --no-run
+            echo ""
+            echo "Per-link stack is up. Run tests with: $0 test perlink"
+        else
+            if [ $# -gt 0 ]; then
+                export NETEM_ARGS="$*"
+            fi
+            $COMPOSE up -d --wait
+            echo ""
+            echo "Stack is up. Run tests with: $0 test livekit_"
         fi
-        $COMPOSE up -d --wait
-        echo ""
-        echo "Stack is up. Run tests with: $0 test livekit_"
         ;;
 
     reup)
@@ -116,16 +136,13 @@ case "${1:-}" in
         # Containerized tests need ICE candidates pointing to the perlink IP.
         export LIVEKIT_NODE_IP=10.99.0.2
         if [ "$filter" = "perlink" ]; then
-            # Two-container per-link test orchestration. The gateway and viewer
-            # run in separate containers with different IPs so netem can shape
-            # traffic independently.
+            # Two-container per-link test orchestration. Starts the stack if
+            # not already running, then runs gateway and viewer tests.
             COMPOSE_PERLINK="$COMPOSE --profile perlink"
             $COMPOSE_PERLINK up -d --wait
             # Clean coordination dir from any previous run.
             $COMPOSE_PERLINK exec gateway-runner sh -c 'rm -f /coordination/*'
-            # Build the test binary once in gateway-runner. The viewer-runner
-            # shares the same target volume so it will reuse the build.
-            echo "Building test binary in gateway-runner..."
+            # Build if needed (no-op if `up perlink` already built).
             $COMPOSE_PERLINK exec gateway-runner \
                 cargo test -p remote_access_tests --no-run
             # Run both tests in foreground. The gateway runs in a background
