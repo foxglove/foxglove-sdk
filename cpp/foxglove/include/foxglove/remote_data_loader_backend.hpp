@@ -33,7 +33,7 @@
 /// manifest.name = "Flight ABC123";
 /// manifest.sources = {std::move(source)};
 ///
-/// std::string json_str = rdl::to_json_string(manifest);
+/// std::string json_str = rdl::toJsonString(manifest);
 /// @endcode
 
 #include <foxglove/schema.hpp>
@@ -118,7 +118,7 @@ struct Manifest {
 /// @brief Serialize a Manifest to a JSON string.
 ///
 /// The output conforms to the Foxglove remote data loader manifest JSON schema.
-inline std::string to_json_string(const Manifest& m) {
+inline std::string toJsonString(const Manifest& m) {
   // Use nlohmann/json internally without exposing it in the public API.
   using Json = nlohmann::json;
 
@@ -209,7 +209,7 @@ struct ChannelSet {
   template<typename T>
   void insert(const std::string& topic) {
     auto schema = T::schema();
-    uint16_t schema_id = add_schema(schema);
+    uint16_t schema_id = addSchema(schema);
     topics.push_back(Topic{topic, "protobuf", schema_id});
   }
 
@@ -223,13 +223,13 @@ private:
   // Schema ID 0 is reserved by MCAP, so valid IDs are 1..65535.
   uint16_t next_schema_id_ = 1;
 
-  static std::string encode_schema_data(const foxglove::Schema& schema) {
+  static std::string encodeSchemaData(const foxglove::Schema& schema) {
     std::string_view sv(reinterpret_cast<const char*>(schema.data), schema.data_len);
     return base64::to_base64(sv);
   }
 
-  uint16_t add_schema(const foxglove::Schema& schema) {
-    auto encoded_data = encode_schema_data(schema);
+  uint16_t addSchema(const foxglove::Schema& schema) {
+    auto encoded_data = encodeSchemaData(schema);
 
     // Deduplicate: return existing ID if an identical schema was already added.
     for (const auto& existing : schemas) {

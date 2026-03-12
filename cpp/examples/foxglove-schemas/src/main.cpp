@@ -7,7 +7,7 @@
 #include <cmath>
 #include <iostream>
 
-void log_to_channels(
+void logToChannels(
   foxglove::schemas::SceneUpdateChannel& scene_update_channel,
   foxglove::schemas::FrameTransformChannel& frame_transform_channel, int counter
 ) {
@@ -103,7 +103,7 @@ int main() {
     std::move(frame_transform_result.value());
 
   for (int i = 0; i < 100; ++i) {
-    log_to_channels(scene_update_channel, frame_transform_channel, i);
+    logToChannels(scene_update_channel, frame_transform_channel, i);
   }
 
   // Optional, if you want to check for or handle errors

@@ -944,7 +944,7 @@ struct PointsAnnotation {
   std::optional<Timestamp> timestamp;
 
   /// @brief Type of points annotation to draw
-  PointsAnnotationType type;
+  PointsAnnotationType type{};
 
   /// @brief Points in 2D image coordinates (pixels).
   /// @brief These coordinates use the top-left corner of the top-left pixel of the image as the
@@ -1309,7 +1309,7 @@ struct Log {
   std::optional<Timestamp> timestamp;
 
   /// @brief Log level
-  LogLevel level;
+  LogLevel level{};
 
   /// @brief Log message
   std::string message;
@@ -1918,7 +1918,7 @@ struct ChannelDeleter {
   void operator()(const foxglove_channel* ptr) const noexcept;
 };
 /// @brief A unique pointer to a C foxglove_channel pointer. For internal use only.
-typedef std::unique_ptr<const foxglove_channel, ChannelDeleter> ChannelUniquePtr;
+using ChannelUniquePtr = std::unique_ptr<const foxglove_channel, ChannelDeleter>;
 
 /// @brief A channel for logging ArrowPrimitive messages to a topic.
 ///
@@ -1963,7 +1963,7 @@ public:
   /// @brief Find out if any sinks have been added to the channel.
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
-  [[nodiscard]] bool has_sinks() const noexcept;
+  [[nodiscard]] bool hasSinks() const noexcept;
 
   ArrowPrimitiveChannel(const ArrowPrimitiveChannel& other) noexcept = delete;
   ArrowPrimitiveChannel& operator=(const ArrowPrimitiveChannel& other) noexcept = delete;
@@ -2024,7 +2024,7 @@ public:
   /// @brief Find out if any sinks have been added to the channel.
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
-  [[nodiscard]] bool has_sinks() const noexcept;
+  [[nodiscard]] bool hasSinks() const noexcept;
 
   CameraCalibrationChannel(const CameraCalibrationChannel& other) noexcept = delete;
   CameraCalibrationChannel& operator=(const CameraCalibrationChannel& other) noexcept = delete;
@@ -2085,7 +2085,7 @@ public:
   /// @brief Find out if any sinks have been added to the channel.
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
-  [[nodiscard]] bool has_sinks() const noexcept;
+  [[nodiscard]] bool hasSinks() const noexcept;
 
   CircleAnnotationChannel(const CircleAnnotationChannel& other) noexcept = delete;
   CircleAnnotationChannel& operator=(const CircleAnnotationChannel& other) noexcept = delete;
@@ -2146,7 +2146,7 @@ public:
   /// @brief Find out if any sinks have been added to the channel.
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
-  [[nodiscard]] bool has_sinks() const noexcept;
+  [[nodiscard]] bool hasSinks() const noexcept;
 
   ColorChannel(const ColorChannel& other) noexcept = delete;
   ColorChannel& operator=(const ColorChannel& other) noexcept = delete;
@@ -2207,7 +2207,7 @@ public:
   /// @brief Find out if any sinks have been added to the channel.
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
-  [[nodiscard]] bool has_sinks() const noexcept;
+  [[nodiscard]] bool hasSinks() const noexcept;
 
   CompressedImageChannel(const CompressedImageChannel& other) noexcept = delete;
   CompressedImageChannel& operator=(const CompressedImageChannel& other) noexcept = delete;
@@ -2268,7 +2268,7 @@ public:
   /// @brief Find out if any sinks have been added to the channel.
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
-  [[nodiscard]] bool has_sinks() const noexcept;
+  [[nodiscard]] bool hasSinks() const noexcept;
 
   CompressedVideoChannel(const CompressedVideoChannel& other) noexcept = delete;
   CompressedVideoChannel& operator=(const CompressedVideoChannel& other) noexcept = delete;
@@ -2329,7 +2329,7 @@ public:
   /// @brief Find out if any sinks have been added to the channel.
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
-  [[nodiscard]] bool has_sinks() const noexcept;
+  [[nodiscard]] bool hasSinks() const noexcept;
 
   CylinderPrimitiveChannel(const CylinderPrimitiveChannel& other) noexcept = delete;
   CylinderPrimitiveChannel& operator=(const CylinderPrimitiveChannel& other) noexcept = delete;
@@ -2390,7 +2390,7 @@ public:
   /// @brief Find out if any sinks have been added to the channel.
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
-  [[nodiscard]] bool has_sinks() const noexcept;
+  [[nodiscard]] bool hasSinks() const noexcept;
 
   CubePrimitiveChannel(const CubePrimitiveChannel& other) noexcept = delete;
   CubePrimitiveChannel& operator=(const CubePrimitiveChannel& other) noexcept = delete;
@@ -2451,7 +2451,7 @@ public:
   /// @brief Find out if any sinks have been added to the channel.
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
-  [[nodiscard]] bool has_sinks() const noexcept;
+  [[nodiscard]] bool hasSinks() const noexcept;
 
   FrameTransformChannel(const FrameTransformChannel& other) noexcept = delete;
   FrameTransformChannel& operator=(const FrameTransformChannel& other) noexcept = delete;
@@ -2512,7 +2512,7 @@ public:
   /// @brief Find out if any sinks have been added to the channel.
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
-  [[nodiscard]] bool has_sinks() const noexcept;
+  [[nodiscard]] bool hasSinks() const noexcept;
 
   FrameTransformsChannel(const FrameTransformsChannel& other) noexcept = delete;
   FrameTransformsChannel& operator=(const FrameTransformsChannel& other) noexcept = delete;
@@ -2573,7 +2573,7 @@ public:
   /// @brief Find out if any sinks have been added to the channel.
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
-  [[nodiscard]] bool has_sinks() const noexcept;
+  [[nodiscard]] bool hasSinks() const noexcept;
 
   GeoJSONChannel(const GeoJSONChannel& other) noexcept = delete;
   GeoJSONChannel& operator=(const GeoJSONChannel& other) noexcept = delete;
@@ -2634,7 +2634,7 @@ public:
   /// @brief Find out if any sinks have been added to the channel.
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
-  [[nodiscard]] bool has_sinks() const noexcept;
+  [[nodiscard]] bool hasSinks() const noexcept;
 
   GridChannel(const GridChannel& other) noexcept = delete;
   GridChannel& operator=(const GridChannel& other) noexcept = delete;
@@ -2695,7 +2695,7 @@ public:
   /// @brief Find out if any sinks have been added to the channel.
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
-  [[nodiscard]] bool has_sinks() const noexcept;
+  [[nodiscard]] bool hasSinks() const noexcept;
 
   VoxelGridChannel(const VoxelGridChannel& other) noexcept = delete;
   VoxelGridChannel& operator=(const VoxelGridChannel& other) noexcept = delete;
@@ -2756,7 +2756,7 @@ public:
   /// @brief Find out if any sinks have been added to the channel.
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
-  [[nodiscard]] bool has_sinks() const noexcept;
+  [[nodiscard]] bool hasSinks() const noexcept;
 
   ImageAnnotationsChannel(const ImageAnnotationsChannel& other) noexcept = delete;
   ImageAnnotationsChannel& operator=(const ImageAnnotationsChannel& other) noexcept = delete;
@@ -2817,7 +2817,7 @@ public:
   /// @brief Find out if any sinks have been added to the channel.
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
-  [[nodiscard]] bool has_sinks() const noexcept;
+  [[nodiscard]] bool hasSinks() const noexcept;
 
   KeyValuePairChannel(const KeyValuePairChannel& other) noexcept = delete;
   KeyValuePairChannel& operator=(const KeyValuePairChannel& other) noexcept = delete;
@@ -2878,7 +2878,7 @@ public:
   /// @brief Find out if any sinks have been added to the channel.
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
-  [[nodiscard]] bool has_sinks() const noexcept;
+  [[nodiscard]] bool hasSinks() const noexcept;
 
   LaserScanChannel(const LaserScanChannel& other) noexcept = delete;
   LaserScanChannel& operator=(const LaserScanChannel& other) noexcept = delete;
@@ -2939,7 +2939,7 @@ public:
   /// @brief Find out if any sinks have been added to the channel.
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
-  [[nodiscard]] bool has_sinks() const noexcept;
+  [[nodiscard]] bool hasSinks() const noexcept;
 
   LinePrimitiveChannel(const LinePrimitiveChannel& other) noexcept = delete;
   LinePrimitiveChannel& operator=(const LinePrimitiveChannel& other) noexcept = delete;
@@ -3000,7 +3000,7 @@ public:
   /// @brief Find out if any sinks have been added to the channel.
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
-  [[nodiscard]] bool has_sinks() const noexcept;
+  [[nodiscard]] bool hasSinks() const noexcept;
 
   LocationFixChannel(const LocationFixChannel& other) noexcept = delete;
   LocationFixChannel& operator=(const LocationFixChannel& other) noexcept = delete;
@@ -3061,7 +3061,7 @@ public:
   /// @brief Find out if any sinks have been added to the channel.
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
-  [[nodiscard]] bool has_sinks() const noexcept;
+  [[nodiscard]] bool hasSinks() const noexcept;
 
   LocationFixesChannel(const LocationFixesChannel& other) noexcept = delete;
   LocationFixesChannel& operator=(const LocationFixesChannel& other) noexcept = delete;
@@ -3122,7 +3122,7 @@ public:
   /// @brief Find out if any sinks have been added to the channel.
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
-  [[nodiscard]] bool has_sinks() const noexcept;
+  [[nodiscard]] bool hasSinks() const noexcept;
 
   LogChannel(const LogChannel& other) noexcept = delete;
   LogChannel& operator=(const LogChannel& other) noexcept = delete;
@@ -3183,7 +3183,7 @@ public:
   /// @brief Find out if any sinks have been added to the channel.
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
-  [[nodiscard]] bool has_sinks() const noexcept;
+  [[nodiscard]] bool hasSinks() const noexcept;
 
   SceneEntityDeletionChannel(const SceneEntityDeletionChannel& other) noexcept = delete;
   SceneEntityDeletionChannel& operator=(const SceneEntityDeletionChannel& other) noexcept = delete;
@@ -3244,7 +3244,7 @@ public:
   /// @brief Find out if any sinks have been added to the channel.
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
-  [[nodiscard]] bool has_sinks() const noexcept;
+  [[nodiscard]] bool hasSinks() const noexcept;
 
   SceneEntityChannel(const SceneEntityChannel& other) noexcept = delete;
   SceneEntityChannel& operator=(const SceneEntityChannel& other) noexcept = delete;
@@ -3305,7 +3305,7 @@ public:
   /// @brief Find out if any sinks have been added to the channel.
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
-  [[nodiscard]] bool has_sinks() const noexcept;
+  [[nodiscard]] bool hasSinks() const noexcept;
 
   SceneUpdateChannel(const SceneUpdateChannel& other) noexcept = delete;
   SceneUpdateChannel& operator=(const SceneUpdateChannel& other) noexcept = delete;
@@ -3366,7 +3366,7 @@ public:
   /// @brief Find out if any sinks have been added to the channel.
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
-  [[nodiscard]] bool has_sinks() const noexcept;
+  [[nodiscard]] bool hasSinks() const noexcept;
 
   ModelPrimitiveChannel(const ModelPrimitiveChannel& other) noexcept = delete;
   ModelPrimitiveChannel& operator=(const ModelPrimitiveChannel& other) noexcept = delete;
@@ -3427,7 +3427,7 @@ public:
   /// @brief Find out if any sinks have been added to the channel.
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
-  [[nodiscard]] bool has_sinks() const noexcept;
+  [[nodiscard]] bool hasSinks() const noexcept;
 
   PackedElementFieldChannel(const PackedElementFieldChannel& other) noexcept = delete;
   PackedElementFieldChannel& operator=(const PackedElementFieldChannel& other) noexcept = delete;
@@ -3488,7 +3488,7 @@ public:
   /// @brief Find out if any sinks have been added to the channel.
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
-  [[nodiscard]] bool has_sinks() const noexcept;
+  [[nodiscard]] bool hasSinks() const noexcept;
 
   Point2Channel(const Point2Channel& other) noexcept = delete;
   Point2Channel& operator=(const Point2Channel& other) noexcept = delete;
@@ -3549,7 +3549,7 @@ public:
   /// @brief Find out if any sinks have been added to the channel.
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
-  [[nodiscard]] bool has_sinks() const noexcept;
+  [[nodiscard]] bool hasSinks() const noexcept;
 
   Point3Channel(const Point3Channel& other) noexcept = delete;
   Point3Channel& operator=(const Point3Channel& other) noexcept = delete;
@@ -3610,7 +3610,7 @@ public:
   /// @brief Find out if any sinks have been added to the channel.
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
-  [[nodiscard]] bool has_sinks() const noexcept;
+  [[nodiscard]] bool hasSinks() const noexcept;
 
   Point3InFrameChannel(const Point3InFrameChannel& other) noexcept = delete;
   Point3InFrameChannel& operator=(const Point3InFrameChannel& other) noexcept = delete;
@@ -3671,7 +3671,7 @@ public:
   /// @brief Find out if any sinks have been added to the channel.
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
-  [[nodiscard]] bool has_sinks() const noexcept;
+  [[nodiscard]] bool hasSinks() const noexcept;
 
   PointCloudChannel(const PointCloudChannel& other) noexcept = delete;
   PointCloudChannel& operator=(const PointCloudChannel& other) noexcept = delete;
@@ -3732,7 +3732,7 @@ public:
   /// @brief Find out if any sinks have been added to the channel.
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
-  [[nodiscard]] bool has_sinks() const noexcept;
+  [[nodiscard]] bool hasSinks() const noexcept;
 
   PointsAnnotationChannel(const PointsAnnotationChannel& other) noexcept = delete;
   PointsAnnotationChannel& operator=(const PointsAnnotationChannel& other) noexcept = delete;
@@ -3793,7 +3793,7 @@ public:
   /// @brief Find out if any sinks have been added to the channel.
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
-  [[nodiscard]] bool has_sinks() const noexcept;
+  [[nodiscard]] bool hasSinks() const noexcept;
 
   PoseChannel(const PoseChannel& other) noexcept = delete;
   PoseChannel& operator=(const PoseChannel& other) noexcept = delete;
@@ -3854,7 +3854,7 @@ public:
   /// @brief Find out if any sinks have been added to the channel.
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
-  [[nodiscard]] bool has_sinks() const noexcept;
+  [[nodiscard]] bool hasSinks() const noexcept;
 
   PoseInFrameChannel(const PoseInFrameChannel& other) noexcept = delete;
   PoseInFrameChannel& operator=(const PoseInFrameChannel& other) noexcept = delete;
@@ -3915,7 +3915,7 @@ public:
   /// @brief Find out if any sinks have been added to the channel.
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
-  [[nodiscard]] bool has_sinks() const noexcept;
+  [[nodiscard]] bool hasSinks() const noexcept;
 
   PosesInFrameChannel(const PosesInFrameChannel& other) noexcept = delete;
   PosesInFrameChannel& operator=(const PosesInFrameChannel& other) noexcept = delete;
@@ -3976,7 +3976,7 @@ public:
   /// @brief Find out if any sinks have been added to the channel.
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
-  [[nodiscard]] bool has_sinks() const noexcept;
+  [[nodiscard]] bool hasSinks() const noexcept;
 
   QuaternionChannel(const QuaternionChannel& other) noexcept = delete;
   QuaternionChannel& operator=(const QuaternionChannel& other) noexcept = delete;
@@ -4037,7 +4037,7 @@ public:
   /// @brief Find out if any sinks have been added to the channel.
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
-  [[nodiscard]] bool has_sinks() const noexcept;
+  [[nodiscard]] bool hasSinks() const noexcept;
 
   RawAudioChannel(const RawAudioChannel& other) noexcept = delete;
   RawAudioChannel& operator=(const RawAudioChannel& other) noexcept = delete;
@@ -4098,7 +4098,7 @@ public:
   /// @brief Find out if any sinks have been added to the channel.
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
-  [[nodiscard]] bool has_sinks() const noexcept;
+  [[nodiscard]] bool hasSinks() const noexcept;
 
   RawImageChannel(const RawImageChannel& other) noexcept = delete;
   RawImageChannel& operator=(const RawImageChannel& other) noexcept = delete;
@@ -4159,7 +4159,7 @@ public:
   /// @brief Find out if any sinks have been added to the channel.
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
-  [[nodiscard]] bool has_sinks() const noexcept;
+  [[nodiscard]] bool hasSinks() const noexcept;
 
   SpherePrimitiveChannel(const SpherePrimitiveChannel& other) noexcept = delete;
   SpherePrimitiveChannel& operator=(const SpherePrimitiveChannel& other) noexcept = delete;
@@ -4220,7 +4220,7 @@ public:
   /// @brief Find out if any sinks have been added to the channel.
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
-  [[nodiscard]] bool has_sinks() const noexcept;
+  [[nodiscard]] bool hasSinks() const noexcept;
 
   TextAnnotationChannel(const TextAnnotationChannel& other) noexcept = delete;
   TextAnnotationChannel& operator=(const TextAnnotationChannel& other) noexcept = delete;
@@ -4281,7 +4281,7 @@ public:
   /// @brief Find out if any sinks have been added to the channel.
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
-  [[nodiscard]] bool has_sinks() const noexcept;
+  [[nodiscard]] bool hasSinks() const noexcept;
 
   TextPrimitiveChannel(const TextPrimitiveChannel& other) noexcept = delete;
   TextPrimitiveChannel& operator=(const TextPrimitiveChannel& other) noexcept = delete;
@@ -4342,7 +4342,7 @@ public:
   /// @brief Find out if any sinks have been added to the channel.
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
-  [[nodiscard]] bool has_sinks() const noexcept;
+  [[nodiscard]] bool hasSinks() const noexcept;
 
   TriangleListPrimitiveChannel(const TriangleListPrimitiveChannel& other) noexcept = delete;
   TriangleListPrimitiveChannel& operator=(const TriangleListPrimitiveChannel& other
@@ -4404,7 +4404,7 @@ public:
   /// @brief Find out if any sinks have been added to the channel.
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
-  [[nodiscard]] bool has_sinks() const noexcept;
+  [[nodiscard]] bool hasSinks() const noexcept;
 
   Vector2Channel(const Vector2Channel& other) noexcept = delete;
   Vector2Channel& operator=(const Vector2Channel& other) noexcept = delete;
@@ -4465,7 +4465,7 @@ public:
   /// @brief Find out if any sinks have been added to the channel.
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
-  [[nodiscard]] bool has_sinks() const noexcept;
+  [[nodiscard]] bool hasSinks() const noexcept;
 
   Vector3Channel(const Vector3Channel& other) noexcept = delete;
   Vector3Channel& operator=(const Vector3Channel& other) noexcept = delete;

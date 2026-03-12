@@ -33,7 +33,7 @@ public:
   [[nodiscard]] std::string_view topic() const noexcept;
 
   /// @brief Get the message encoding of the channel descriptor.
-  [[nodiscard]] std::string_view message_encoding() const noexcept;
+  [[nodiscard]] std::string_view messageEncoding() const noexcept;
   /// @brief Get the metadata for the channel descriptor.
   [[nodiscard]] std::optional<std::map<std::string, std::string>> metadata() const noexcept;
 
@@ -59,7 +59,7 @@ public:
   ///
   /// @param topic The topic name. You should choose a unique topic name per channel for
   /// compatibility with the Foxglove app.
-  /// @param message_encoding The encoding of messages logged to this channel.
+  /// @param messageEncoding The encoding of messages logged to this channel.
   /// @param schema The schema of messages logged to this channel.
   /// @param context The context which associates logs to a sink. If omitted, the default context is
   /// used.
@@ -110,11 +110,11 @@ public:
   ///
   /// @return The message encoding of the channel. The value is valid only for the lifetime of the
   /// channel.
-  [[nodiscard]] std::string_view message_encoding() const noexcept;
+  [[nodiscard]] std::string_view messageEncoding() const noexcept;
   /// @brief Find out if any sinks have been added to the channel.
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
-  [[nodiscard]] bool has_sinks() const noexcept;
+  [[nodiscard]] bool hasSinks() const noexcept;
   /// @brief Get the schema of the channel.
   ///
   /// @return The schema of the channel. The value is valid only for the lifetime of the channel.

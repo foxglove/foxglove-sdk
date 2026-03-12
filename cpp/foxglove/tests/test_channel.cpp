@@ -41,19 +41,19 @@ TEST_CASE("channel.topic()") {
   REQUIRE(requireValue(channel).topic() == "/test-123");
 }
 
-TEST_CASE("channel.message_encoding()") {
+TEST_CASE("channel.messageEncoding()") {
   auto context = foxglove::Context::create();
   auto channel = foxglove::RawChannel::create("test", "json", std::nullopt, context);
-  REQUIRE(requireValue(channel).message_encoding() == "json");
+  REQUIRE(requireValue(channel).messageEncoding() == "json");
 }
 
-TEST_CASE("channel.has_sinks()") {
+TEST_CASE("channel.hasSinks()") {
   const auto* fname = "test-channel-has-sinks.mcap";
   FileCleanup cleanup(fname);
 
   auto context = foxglove::Context::create();
   auto channel = foxglove::RawChannel::create("test", "json", std::nullopt, context);
-  REQUIRE(!requireValue(channel).has_sinks());
+  REQUIRE(!requireValue(channel).hasSinks());
 
   foxglove::McapWriterOptions mcap_options = {};
   mcap_options.context = context;
@@ -62,7 +62,7 @@ TEST_CASE("channel.has_sinks()") {
   REQUIRE(writer.has_value());
 
   auto channel2 = foxglove::RawChannel::create("test2", "json", std::nullopt, context);
-  REQUIRE(requireValue(channel2).has_sinks());
+  REQUIRE(requireValue(channel2).hasSinks());
 }
 
 TEST_CASE("channel.close() disconnects sinks") {
@@ -78,16 +78,16 @@ TEST_CASE("channel.close() disconnects sinks") {
   REQUIRE(writer.has_value());
 
   auto raw_channel = foxglove::RawChannel::create("raw_test", "json", std::nullopt, context);
-  REQUIRE(requireValue(raw_channel).has_sinks());
+  REQUIRE(requireValue(raw_channel).hasSinks());
 
   requireValue(raw_channel).close();
-  REQUIRE(!requireValue(raw_channel).has_sinks());
+  REQUIRE(!requireValue(raw_channel).hasSinks());
 
   auto typed_channel = foxglove::schemas::LogChannel::create("test", context);
-  REQUIRE(requireValue(typed_channel).has_sinks());
+  REQUIRE(requireValue(typed_channel).hasSinks());
 
   requireValue(typed_channel).close();
-  REQUIRE(!requireValue(typed_channel).has_sinks());
+  REQUIRE(!requireValue(typed_channel).hasSinks());
 }
 
 TEST_CASE("channel.schema()") {

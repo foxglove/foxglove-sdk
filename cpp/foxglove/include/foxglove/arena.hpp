@@ -21,7 +21,7 @@ namespace foxglove {
 /// @cond foxglove_internal
 class Arena {
 public:
-  static constexpr std::size_t Size = static_cast<std::size_t>(8) * 1024;  // 8 KB
+  static constexpr std::size_t size = static_cast<std::size_t>(8) * 1024;  // 8 KB
 
   Arena() = default;
 
@@ -40,12 +40,14 @@ public:
   // NOLINTNEXTLINE(cppcoreguidelines-missing-std-forward)
   T* map(const std::vector<S>& src, Fn&& map_fn) {
     const size_t elements = src.size();
-    T* result = (elements > 0) ? alloc<T>(elements) : nullptr;
+    if (elements == 0) {
+      return nullptr;
+    }
+    T* result = alloc<T>(elements);
     T* current = result;
 
     // Convert the elements from S to T, placing them in the result array
     for (auto it = src.begin(); it != src.end(); ++it) {
-      // NOLINTNEXTLINE(clang-analyzer-core.NonNullParamChecker)
       map_fn(*current++, *it, *this);
     }
 
@@ -63,7 +65,7 @@ public:
   template<
     typename T, typename S, typename Fn,
     typename = std::enable_if_t<std::is_pod_v<T> && std::is_invocable_v<Fn, T&, const S&, Arena&>>>
-  T* map_one(const S& src, Fn&& map_fn) {
+  T* mapOne(const S& src, Fn&& map_fn) {
     T* result = alloc<T>(1);
     std::forward<Fn>(map_fn)(*result, src, *this);
     return result;
@@ -110,7 +112,7 @@ public:
     }
 
     // Calculate the new offset
-    offset_ = Size - space_left + bytes_needed;
+    offset_ = size - space_left + bytes_needed;
     return reinterpret_cast<T*>(aligned_ptr);
   }
 
@@ -121,7 +123,7 @@ public:
 
   /// Returns how many bytes are available in the arena.
   [[nodiscard]] size_t available() const {
-    return Size - offset_;
+    return size - offset_;
   }
 
 private:
@@ -132,7 +134,7 @@ private:
     }
   };
 
-  std::array<uint8_t, Size> buffer_{};
+  std::array<uint8_t, size> buffer_{};
   std::size_t offset_ = 0;
   std::vector<std::unique_ptr<char, Deleter>> overflow_;
 };

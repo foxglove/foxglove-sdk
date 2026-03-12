@@ -39,7 +39,7 @@ static std::function<void()> sigint_handler;
  *
  * Adapted from https://foxglove.dev/blog/visualizing-point-clouds-with-custom-colors
  */
-PointCloud make_point_cloud(const std::chrono::duration<double>& elapsed) {
+PointCloud makePointCloud(const std::chrono::duration<double>& elapsed) {
   const double t = elapsed.count();
   std::vector<std::tuple<float, float, float, uint8_t, uint8_t, uint8_t, uint8_t>> points;
 
@@ -126,7 +126,7 @@ PointCloud make_point_cloud(const std::chrono::duration<double>& elapsed) {
 /**
  * Create an MCAP writer with the specified channel filter.
  */
-std::optional<foxglove::McapWriter> create_mcap_writer(
+std::optional<foxglove::McapWriter> createMcapWriter(
   const std::string& path, foxglove::SinkChannelFilterFn channel_filter
 ) {
   foxglove::McapWriterOptions options = {};
@@ -179,7 +179,7 @@ int main() {
   auto point_cloud_tf_channel = std::move(point_cloud_tf_channel_result.value());
 
   // In one MCAP, drop all of our point_cloud (and related tf) messages
-  auto small_writer = create_mcap_writer(
+  auto small_writer = createMcapWriter(
     "example-topic-splitting-small.mcap",
     [](const foxglove::ChannelDescriptor& channel) -> bool {
       return channel.topic().find("/point_cloud") == std::string::npos;
@@ -190,7 +190,7 @@ int main() {
   }
 
   // In the other, log only the point_cloud (and related tf) messages
-  auto large_writer = create_mcap_writer(
+  auto large_writer = createMcapWriter(
     "example-topic-splitting-large.mcap",
     [](const foxglove::ChannelDescriptor& channel) -> bool {
       return channel.topic().find("/point_cloud") != std::string::npos;
@@ -252,7 +252,7 @@ int main() {
     );
 
     // Generate and log point cloud
-    const auto point_cloud = make_point_cloud(std::chrono::duration<double>(elapsed));
+    const auto point_cloud = makePointCloud(std::chrono::duration<double>(elapsed));
     point_cloud_channel.log(point_cloud, timestamp);
     point_cloud_tf_channel.log(point_cloud_tf, timestamp);
 

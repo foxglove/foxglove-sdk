@@ -230,7 +230,7 @@ using SeekFunction = std::function<int(int64_t pos, int whence, uint64_t* new_po
 ///   caller's write function.
 /// @return A seek function suitable for @ref CustomWriter::seek.
 /// @note This function is used to build a @ref CustomWriter for non-seekable output destinations.
-inline SeekFunction no_seek_fn(const uint64_t* position) {
+inline SeekFunction noSeekFn(const uint64_t* position) {
   return [position](int64_t pos, int whence, uint64_t* new_pos) -> int {
     if (whence == SEEK_CUR && pos == 0) {
       *new_pos = *position;

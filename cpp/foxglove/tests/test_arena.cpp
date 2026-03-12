@@ -51,7 +51,7 @@ TEST_CASE("allocate from heap when arena capacity is exceeded") {
   foxglove::Arena arena;
 
   // First, nearly fill the arena
-  constexpr size_t nearly_full_size = foxglove::Arena::Size - 1024;
+  constexpr size_t nearly_full_size = foxglove::Arena::size - 1024;
   char* buffer = arena.alloc<char>(nearly_full_size);
   REQUIRE(buffer != nullptr);
 

@@ -60,7 +60,7 @@ using std::chrono::system_clock;
 // ============================================================================
 
 /// Parse an ISO 8601 timestamp like "2024-01-01T00:00:00Z".
-std::optional<system_clock::time_point> parse_iso8601(const std::string& s) {
+std::optional<system_clock::time_point> parseIso8601(const std::string& s) {
   std::istringstream ss(s);
   system_clock::time_point tp;
   ss >> date::parse("%FT%TZ", tp);
@@ -71,7 +71,7 @@ std::optional<system_clock::time_point> parse_iso8601(const std::string& s) {
 }
 
 /// Format a time_point as ISO 8601.
-std::string format_iso8601(system_clock::time_point tp) {
+std::string formatIso8601(system_clock::time_point tp) {
   return date::format("%FT%TZ", date::floor<std::chrono::seconds>(tp));
 }
 
@@ -94,21 +94,21 @@ struct FlightParams {
   system_clock::time_point end_time;
 
   /// Build a query string for these parameters.
-  [[nodiscard]] std::string to_query_string() const {
+  [[nodiscard]] std::string toQueryString() const {
     std::string q;
     q += "flightId=";
     q += httplib::encode_uri_component(flight_id);
     q += "&startTime=";
-    q += httplib::encode_uri_component(format_iso8601(start_time));
+    q += httplib::encode_uri_component(formatIso8601(start_time));
     q += "&endTime=";
-    q += httplib::encode_uri_component(format_iso8601(end_time));
+    q += httplib::encode_uri_component(formatIso8601(end_time));
     return q;
   }
 };
 
 /// Parse flight parameters from the request query string.
 /// Returns the parsed parameters, or nullopt after setting a 400 response if invalid.
-std::optional<FlightParams> require_flight_params(
+std::optional<FlightParams> requireFlightParams(
   const httplib::Request& req, httplib::Response& res
 ) {
   if (!req.has_param("flightId") || !req.has_param("startTime") || !req.has_param("endTime")) {
@@ -116,8 +116,8 @@ std::optional<FlightParams> require_flight_params(
     res.set_content("Missing required query parameters", "text/plain");
     return std::nullopt;
   }
-  auto start = parse_iso8601(req.get_param_value("startTime"));
-  auto end = parse_iso8601(req.get_param_value("endTime"));
+  auto start = parseIso8601(req.get_param_value("startTime"));
+  auto end = parseIso8601(req.get_param_value("endTime"));
   if (!start || !end) {
     res.status = 400;
     res.set_content("Invalid timestamp format", "text/plain");
@@ -136,7 +136,7 @@ std::optional<FlightParams> require_flight_params(
 
 /// Check the bearer token to see if the user is authorized to access the flight.
 /// Returns true if the request is authorized; sets a 401 response and returns false otherwise.
-bool require_auth(
+bool requireAuth(
   const httplib::Request& /*req*/, const FlightParams& /*params*/, httplib::Response& /*res*/
 ) {
   // EXAMPLE ONLY: REPLACE THIS WITH A REAL AUTH CHECK.
@@ -153,13 +153,13 @@ bool require_auth(
 ///
 /// The user **MUST** be authorized to read all sources returned in the manifest. Do not rely
 /// on authorization checks on individual sources, because they may not be called for cached data.
-void manifest_handler(const httplib::Request& req, httplib::Response& res) {
-  auto params = require_flight_params(req, res);
+void manifestHandler(const httplib::Request& req, httplib::Response& res) {
+  auto params = requireFlightParams(req, res);
   if (!params) {
     return;
   }
 
-  if (!require_auth(req, *params, res)) {
+  if (!requireAuth(req, *params, res)) {
     return;
   }
 
@@ -167,7 +167,7 @@ void manifest_handler(const httplib::Request& req, httplib::Response& res) {
   rdl::ChannelSet channels;
   channels.insert<foxglove::schemas::Vector3>("/demo");
 
-  auto query = params->to_query_string();
+  auto query = params->toQueryString();
 
   rdl::StreamedSource source;
   // We're providing the data from this service in this example, but in principle this could
@@ -180,26 +180,26 @@ void manifest_handler(const httplib::Request& req, httplib::Response& res) {
   source.id = "flight-v1-" + query;
   source.topics = std::move(channels.topics);
   source.schemas = std::move(channels.schemas);
-  source.start_time = format_iso8601(params->start_time);
-  source.end_time = format_iso8601(params->end_time);
+  source.start_time = formatIso8601(params->start_time);
+  source.end_time = formatIso8601(params->end_time);
 
   rdl::Manifest manifest;
   manifest.name = "Flight " + params->flight_id;
   manifest.sources = {std::move(source)};
 
-  res.set_content(rdl::to_json_string(manifest), "application/json");
+  res.set_content(rdl::toJsonString(manifest), "application/json");
 }
 
 /// Handler for `GET /v1/data`.
 ///
 /// Streams MCAP data for the requested flight. The response body is a stream of MCAP bytes.
-void data_handler(const httplib::Request& req, httplib::Response& res) {
-  auto params = require_flight_params(req, res);
+void dataHandler(const httplib::Request& req, httplib::Response& res) {
+  auto params = requireFlightParams(req, res);
   if (!params) {
     return;
   }
 
-  if (!require_auth(req, *params, res)) {
+  if (!requireAuth(req, *params, res)) {
     return;
   }
 
@@ -230,7 +230,7 @@ void data_handler(const httplib::Request& req, httplib::Response& res) {
         // httplib manages flushing itself, so we don't do anything here.
         return 0;
       };
-      custom_writer.seek = foxglove::no_seek_fn(&position);
+      custom_writer.seek = foxglove::noSeekFn(&position);
 
       foxglove::McapWriterOptions options;
       options.context = context;
@@ -316,8 +316,8 @@ void data_handler(const httplib::Request& req, httplib::Response& res) {
 int main() {
   httplib::Server svr;
 
-  svr.Get(manifest_route, manifest_handler);
-  svr.Get(data_route, data_handler);
+  svr.Get(manifest_route, manifestHandler);
+  svr.Get(data_route, dataHandler);
 
   std::cerr << "[remote_data_loader_backend] starting server on 0.0.0.0:" << port << "\n";
   svr.listen("0.0.0.0", port);

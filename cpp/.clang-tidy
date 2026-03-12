@@ -2,7 +2,7 @@
 WarningsAsErrors: "*"
 UseColor: true
 HeaderFilterRegex: "\\/include\\/foxglove\\/"
-ExcludeHeaderFilterRegex: "expected\\.hpp|schemas\\.hpp"
+ExcludeHeaderFilterRegex: "expected\\.hpp"
 Checks:
   - -*
   - clang-analyzer-*
@@ -31,18 +31,23 @@ CheckOptions:
   readability-identifier-naming.ClassCase: CamelCase
   readability-identifier-naming.ClassConstantCase: CamelCase
   readability-identifier-naming.ClassMemberCase: lower_case
+  readability-identifier-naming.ClassMethodCase: camelBack
   readability-identifier-naming.ConceptCase: CamelCase
-  readability-identifier-naming.ConstexprMethodCase: camelBack
+  readability-identifier-naming.ConstantCase: lower_case
   readability-identifier-naming.ConstantMemberCase: lower_case
   readability-identifier-naming.ConstantParameterCase: lower_case
   readability-identifier-naming.ConstantPointerParameterCase: lower_case
+  readability-identifier-naming.ConstexprMethodCase: camelBack
+  readability-identifier-naming.ConstexprVariableCase: lower_case
   readability-identifier-naming.EnumCase: CamelCase
   readability-identifier-naming.EnumConstantCase: CamelCase
+  readability-identifier-naming.FunctionCase: camelBack
   readability-identifier-naming.EnumConstantIgnoredRegexp: "^[A-Z][A-Z0-9_]*$"
   readability-identifier-naming.EnumIgnoredRegexp: foxglove_error
   readability-identifier-naming.MacroDefinitionCase: UPPER_CASE
   readability-identifier-naming.MemberCase: lower_case
   readability-identifier-naming.MemberIgnoredRegexp: "^on[A-Z].*" # std::function members of callback struct
+  readability-identifier-naming.MethodCase: camelBack
   readability-identifier-naming.NamespaceCase: lower_case
   readability-identifier-naming.ParameterCase: lower_case
   readability-identifier-naming.PrivateMemberSuffix: _
