@@ -41,8 +41,10 @@ async fn main() {
         .start()
         .expect("Failed to start remote access gateway");
 
-    tokio::task::spawn(camera_loop());
-    _ = tokio::signal::ctrl_c().await;
+    tokio::select! {
+        _ = camera_loop() => {}
+        _ = tokio::signal::ctrl_c() => {}
+    }
     _ = handle.stop().await;
 }
 
