@@ -352,8 +352,9 @@ fn render_test_card(buf: &mut [u8], frame_number: u64) {
         Compression artifacts visible in checkerboard  :::  \
         Frame counter gaps reveal dropped frames  :::  ";
 
+    let text_scale = 3;
+    let text_pixel_width = ticker_text.len() * (GLYPH_W + GLYPH_KERNING) * text_scale;
     // Scroll speed: 3 pixels per frame.
-    let text_pixel_width = ticker_text.len() * (GLYPH_W + GLYPH_KERNING) * 3;
     let scroll_offset = (frame_number as usize * 3) % text_pixel_width;
 
     // Draw ticker background.
@@ -369,7 +370,6 @@ fn render_test_card(buf: &mut [u8], frame_number: u64) {
 
     // Draw ticker text twice (for seamless wrap) shifted by scroll offset.
     let ty = ticker_y + 25;
-    let text_scale = 3;
     let x_start = -(scroll_offset as i32);
     for pass in 0..2i32 {
         let base_x = x_start + pass * text_pixel_width as i32;
