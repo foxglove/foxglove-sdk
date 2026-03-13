@@ -6,7 +6,7 @@ use std::{
 
 use indexmap::IndexSet;
 
-use livekit::{Room, RoomEvent, RoomOptions};
+use livekit::{DataPacket, Room, RoomEvent, RoomOptions};
 use parking_lot::Mutex;
 use tokio::{runtime::Handle, sync::OnceCell, sync::mpsc::UnboundedReceiver, task::JoinHandle};
 use tokio_util::sync::CancellationToken;
@@ -372,12 +372,33 @@ impl RemoteAccessConnection {
                     session.remove_participant(&participant.identity());
                 }
                 RoomEvent::DataReceived {
-                    payload: _,
+                    payload,
                     topic,
                     kind: _,
-                    participant: _,
+                    participant,
                 } => {
-                    info!(remote_access_session_id, "data received: {:?}", topic);
+                    if topic.as_deref() == Some("rtt-ping") {
+                        let Some(participant) = participant else {
+                            continue;
+                        };
+                        let pong = DataPacket {
+                            payload: payload.to_vec(),
+                            topic: Some("rtt-pong".to_string()),
+                            reliable: false,
+                            destination_identities: vec![participant.identity()],
+                        };
+                        let session = session.clone();
+                        let remote_access_session_id = remote_access_session_id.clone();
+                        tokio::spawn(async move {
+                            if let Err(e) =
+                                session.room().local_participant().publish_data(pong).await
+                            {
+                                error!(remote_access_session_id, "failed to send rtt-pong: {e}");
+                            }
+                        });
+                    } else {
+                        info!(remote_access_session_id, "data received: {:?}", topic);
+                    }
                 }
                 RoomEvent::ByteStreamOpened {
                     reader,
