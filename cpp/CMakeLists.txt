@@ -70,9 +70,9 @@ FetchContent_Declare(base64
 set(BASE64_ENABLE_TESTING OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(base64)
 
-option(BUILD_DATA_PROVIDER_EXAMPLE "Build the data provider example (requires cpp-httplib and date)" ON)
+option(BUILD_REMOTE_DATA_LOADER_BACKEND_EXAMPLE "Build the remote data loader backend example (requires cpp-httplib and date)" ON)
 
-if(BUILD_DATA_PROVIDER_EXAMPLE)
+if(BUILD_REMOTE_DATA_LOADER_BACKEND_EXAMPLE)
   FetchContent_Declare(date
     GIT_REPOSITORY https://github.com/HowardHinnant/date.git
     GIT_TAG v3.0.4
@@ -282,12 +282,12 @@ target_compile_options(example_message_filtering PUBLIC ${SANITIZER_COMPILE_OPTI
 target_link_options(example_message_filtering PUBLIC ${SANITIZER_LINK_OPTIONS})
 target_link_libraries(example_message_filtering foxglove_cpp_static)
 
-if(BUILD_DATA_PROVIDER_EXAMPLE)
-  add_executable(example_data_provider examples/data-provider/src/main.cpp)
-  set_property(TARGET example_data_provider PROPERTY CXX_STANDARD 17)
-  set_property(TARGET example_data_provider PROPERTY CXX_STANDARD_REQUIRED True)
-  target_compile_options(example_data_provider PUBLIC ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
-  target_include_directories(example_data_provider SYSTEM PRIVATE ${json_SOURCE_DIR}/include)
-  target_link_options(example_data_provider PUBLIC ${SANITIZER_LINK_OPTIONS})
-  target_link_libraries(example_data_provider foxglove_cpp_static httplib::httplib base64 date::date)
+if(BUILD_REMOTE_DATA_LOADER_BACKEND_EXAMPLE)
+  add_executable(example_remote_data_loader_backend examples/remote-data-loader-backend/src/main.cpp)
+  set_property(TARGET example_remote_data_loader_backend PROPERTY CXX_STANDARD 17)
+  set_property(TARGET example_remote_data_loader_backend PROPERTY CXX_STANDARD_REQUIRED True)
+  target_compile_options(example_remote_data_loader_backend PUBLIC ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
+  target_include_directories(example_remote_data_loader_backend SYSTEM PRIVATE ${json_SOURCE_DIR}/include)
+  target_link_options(example_remote_data_loader_backend PUBLIC ${SANITIZER_LINK_OPTIONS})
+  target_link_libraries(example_remote_data_loader_backend foxglove_cpp_static httplib::httplib base64 date::date)
 endif()

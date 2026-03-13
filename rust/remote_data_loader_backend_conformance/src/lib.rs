@@ -31,9 +31,9 @@ use std::time::Duration;
 
 use foxglove::data_provider::{DataSource, Manifest};
 use libtest_mimic::{Arguments, Trial};
+use reqwest::blocking::Client;
 use reqwest::StatusCode;
 pub use reqwest::Url;
-use reqwest::blocking::Client;
 
 /// A guard that kills a child process when dropped.
 pub struct ServerGuard(Child);
@@ -160,7 +160,7 @@ pub fn build_tests(
 // ---------------------------------------------------------------------------
 
 fn test_manifest_matches_json_schema(json: &serde_json::Value) {
-    let schema = serde_json::from_str(include_str!("data_provider_manifest_schema.json"))
+    let schema = serde_json::from_str(include_str!("manifest_schema.json"))
         .expect("schema file should be valid JSON");
     let validator =
         jsonschema::draft7::new(&schema).expect("schema should compile into a validator");

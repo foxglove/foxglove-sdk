@@ -1,5 +1,5 @@
 /// @file
-/// Example showing how to implement a Foxglove data provider using cpp-httplib.
+/// Example showing how to implement a Foxglove remote data loader backend using cpp-httplib.
 ///
 /// This implements the two endpoints required by the HTTP API:
 /// - `GET /v1/manifest` - returns a JSON manifest describing the available data
@@ -14,7 +14,7 @@
 ///
 /// To run the example server (from the cpp build directory):
 /// @code{.sh}
-///   ./example_data_provider
+///   ./remote_data_loader_backend_example
 /// @endcode
 ///
 /// Get a manifest for a specific flight:
@@ -35,7 +35,7 @@
 /// @endcode
 
 #include <foxglove/context.hpp>
-#include <foxglove/data_provider.hpp>
+#include <foxglove/remote_data_loader_backend.hpp>
 #include <foxglove/error.hpp>
 #include <foxglove/mcap.hpp>
 #include <foxglove/schemas.hpp>
@@ -52,7 +52,7 @@
 #include <sstream>
 #include <string>
 
-namespace dp = foxglove::data_provider;
+namespace rdl = foxglove::remote_data_loader_backend;
 using std::chrono::system_clock;
 
 // ============================================================================
@@ -164,12 +164,12 @@ void manifest_handler(const httplib::Request& req, httplib::Response& res) {
   }
 
   // Declare a single channel of Foxglove `Vector3` messages on topic "/demo".
-  dp::ChannelSet channels;
+  rdl::ChannelSet channels;
   channels.insert<foxglove::schemas::Vector3>("/demo");
 
   auto query = params->to_query_string();
 
-  dp::StreamedSource source;
+  rdl::StreamedSource source;
   // We're providing the data from this service in this example, but in principle this could
   // be any URL.
   source.url = DATA_ROUTE + std::string("?") + query;
@@ -183,11 +183,11 @@ void manifest_handler(const httplib::Request& req, httplib::Response& res) {
   source.start_time = format_iso8601(params->start_time);
   source.end_time = format_iso8601(params->end_time);
 
-  dp::Manifest manifest;
+  rdl::Manifest manifest;
   manifest.name = "Flight " + params->flight_id;
   manifest.sources = {std::move(source)};
 
-  res.set_content(dp::to_json_string(manifest), "application/json");
+  res.set_content(rdl::to_json_string(manifest), "application/json");
 }
 
 /// Handler for `GET /v1/data`.
