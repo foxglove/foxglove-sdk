@@ -59,7 +59,8 @@ function isSameAsCType(schema: FoxgloveMessageSchema): boolean {
     (field) =>
       field.type.type === "primitive" &&
       field.type.name !== "bytes" &&
-      field.type.name !== "string",
+      field.type.name !== "string" &&
+      !field.optional,
   );
 }
 
@@ -332,6 +333,9 @@ function cppToC(schema: FoxgloveMessageSchema, copyTypes: Set<string>): string[]
           return `dest.${dstName} = {src.${srcName}.data(), src.${srcName}.size()};`;
         } else if (field.type.name === "bytes") {
           return `dest.${dstName} = reinterpret_cast<const unsigned char *>(src.${srcName}.data());\n    dest.${dstName}_len = src.${srcName}.size();`;
+        }
+        if (field.optional) {
+          return `dest.${dstName} = src.${dstName} ? &*src.${dstName} : nullptr;`;
         }
         return `dest.${dstName} = src.${srcName};`;
       case "enum":
