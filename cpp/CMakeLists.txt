@@ -87,12 +87,17 @@ if(NOT TARGET nlohmann_json::nlohmann_json)
   FetchContent_MakeAvailable(nlohmann_json)
 endif()
 
-FetchContent_Declare(base64
-  GIT_REPOSITORY https://github.com/tobiaslocker/base64.git
-  GIT_TAG 8d96a2a737ac1396304b1de289beb3a5ea0cb752
-)
-set(BASE64_ENABLE_TESTING OFF CACHE BOOL "" FORCE)
-FetchContent_MakeAvailable(base64)
+if(USE_PACKAGE_MANAGER_DEPENDENCIES)
+  find_package(base64 QUIET)
+endif()
+if(NOT TARGET base64::base64)
+  FetchContent_Declare(base64
+    GIT_REPOSITORY https://github.com/tobiaslocker/base64.git
+    GIT_TAG 8d96a2a737ac1396304b1de289beb3a5ea0cb752
+  )
+  set(BASE64_ENABLE_TESTING OFF CACHE BOOL "" FORCE)
+  FetchContent_MakeAvailable(base64)
+endif()
 
 option(BUILD_REMOTE_DATA_LOADER_BACKEND_EXAMPLE "Build the remote data loader backend example (requires cpp-httplib and date)" ON)
 
