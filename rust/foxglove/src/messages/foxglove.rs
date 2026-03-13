@@ -1280,6 +1280,46 @@ pub struct SceneUpdate {
     #[prost(message, repeated, tag = "2")]
     pub entities: ::prost::alloc::vec::Vec<SceneEntity>,
 }
+/// Information about a selected entity in a visualization panel
+///
+/// <https://docs.foxglove.dev/docs/visualization/message-schemas/selected-entity>
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct SelectedEntity {
+    /// Topic from which the entity originated
+    #[prost(string, tag = "1")]
+    pub source_topic: ::prost::alloc::string::String,
+    /// Schema name of the source message
+    #[prost(string, tag = "2")]
+    pub source_schema_name: ::prost::alloc::string::String,
+    /// Selected scene entity
+    #[prost(message, optional, tag = "3")]
+    pub scene_entity: ::core::option::Option<SceneEntity>,
+    /// Selected point cloud
+    #[prost(message, optional, tag = "4")]
+    pub point_cloud: ::core::option::Option<PointCloud>,
+    /// Selected laser scan
+    #[prost(message, optional, tag = "5")]
+    pub laser_scan: ::core::option::Option<LaserScan>,
+    /// Selected grid
+    #[prost(message, optional, tag = "6")]
+    pub grid: ::core::option::Option<Grid>,
+    /// Selected voxel grid
+    #[prost(message, optional, tag = "7")]
+    pub voxel_grid: ::core::option::Option<VoxelGrid>,
+    /// Selected camera calibration
+    #[prost(message, optional, tag = "8")]
+    pub camera_calibration: ::core::option::Option<CameraCalibration>,
+    /// Selected pose in frame
+    #[prost(message, optional, tag = "9")]
+    pub pose_in_frame: ::core::option::Option<PoseInFrame>,
+    /// Selected poses in frame
+    #[prost(message, optional, tag = "10")]
+    pub poses_in_frame: ::core::option::Option<PosesInFrame>,
+    /// Additional user-provided metadata associated with the selected entity.
+    #[prost(message, repeated, tag = "11")]
+    pub metadata: ::prost::alloc::vec::Vec<KeyValuePair>,
+}
 /// A primitive representing a sphere or ellipsoid
 ///
 /// <https://docs.foxglove.dev/docs/visualization/message-schemas/sphere-primitive>

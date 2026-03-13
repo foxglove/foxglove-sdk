@@ -4269,6 +4269,256 @@ pub unsafe extern "C" fn foxglove_scene_update_encode(
     }
 }
 
+/// Information about a selected entity in a visualization panel
+#[repr(C)]
+pub struct SelectedEntity {
+    /// Topic from which the entity originated
+    pub source_topic: FoxgloveString,
+
+    /// Schema name of the source message
+    pub source_schema_name: FoxgloveString,
+
+    /// Selected scene entity
+    pub scene_entity: *const SceneEntity,
+
+    /// Selected point cloud
+    pub point_cloud: *const PointCloud,
+
+    /// Selected laser scan
+    pub laser_scan: *const LaserScan,
+
+    /// Selected grid
+    pub grid: *const Grid,
+
+    /// Selected voxel grid
+    pub voxel_grid: *const VoxelGrid,
+
+    /// Selected camera calibration
+    pub camera_calibration: *const CameraCalibration,
+
+    /// Selected pose in frame
+    pub pose_in_frame: *const PoseInFrame,
+
+    /// Selected poses in frame
+    pub poses_in_frame: *const PosesInFrame,
+
+    /// Additional user-provided metadata associated with the selected entity.
+    pub metadata: *const KeyValuePair,
+    pub metadata_count: usize,
+}
+
+#[cfg(not(target_family = "wasm"))]
+impl SelectedEntity {
+    /// Create a new typed channel, and return an owned raw channel pointer to it.
+    ///
+    /// # Safety
+    /// We're trusting the caller that the channel will only be used with this type T.
+    #[unsafe(no_mangle)]
+    pub unsafe extern "C" fn foxglove_channel_create_selected_entity(
+        topic: FoxgloveString,
+        context: *const FoxgloveContext,
+        channel: *mut *const FoxgloveChannel,
+    ) -> FoxgloveError {
+        if channel.is_null() {
+            tracing::error!("channel cannot be null");
+            return FoxgloveError::ValueError;
+        }
+        unsafe {
+            let result =
+                do_foxglove_channel_create::<foxglove::messages::SelectedEntity>(topic, context);
+            result_to_c(result, channel)
+        }
+    }
+}
+
+impl BorrowToNative for SelectedEntity {
+    type NativeType = foxglove::messages::SelectedEntity;
+
+    unsafe fn borrow_to_native(
+        &self,
+        #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
+    ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
+        let source_topic = unsafe {
+            string_from_raw(
+                self.source_topic.as_ptr() as *const _,
+                self.source_topic.len(),
+                "source_topic",
+            )?
+        };
+        let source_schema_name = unsafe {
+            string_from_raw(
+                self.source_schema_name.as_ptr() as *const _,
+                self.source_schema_name.len(),
+                "source_schema_name",
+            )?
+        };
+        let scene_entity = unsafe {
+            self.scene_entity
+                .as_ref()
+                .map(|m| m.borrow_to_native(arena.as_mut()))
+        }
+        .transpose()?;
+        let point_cloud = unsafe {
+            self.point_cloud
+                .as_ref()
+                .map(|m| m.borrow_to_native(arena.as_mut()))
+        }
+        .transpose()?;
+        let laser_scan = unsafe {
+            self.laser_scan
+                .as_ref()
+                .map(|m| m.borrow_to_native(arena.as_mut()))
+        }
+        .transpose()?;
+        let grid = unsafe {
+            self.grid
+                .as_ref()
+                .map(|m| m.borrow_to_native(arena.as_mut()))
+        }
+        .transpose()?;
+        let voxel_grid = unsafe {
+            self.voxel_grid
+                .as_ref()
+                .map(|m| m.borrow_to_native(arena.as_mut()))
+        }
+        .transpose()?;
+        let camera_calibration = unsafe {
+            self.camera_calibration
+                .as_ref()
+                .map(|m| m.borrow_to_native(arena.as_mut()))
+        }
+        .transpose()?;
+        let pose_in_frame = unsafe {
+            self.pose_in_frame
+                .as_ref()
+                .map(|m| m.borrow_to_native(arena.as_mut()))
+        }
+        .transpose()?;
+        let poses_in_frame = unsafe {
+            self.poses_in_frame
+                .as_ref()
+                .map(|m| m.borrow_to_native(arena.as_mut()))
+        }
+        .transpose()?;
+        let metadata = unsafe { arena.as_mut().map(self.metadata, self.metadata_count)? };
+
+        Ok(ManuallyDrop::new(foxglove::messages::SelectedEntity {
+            source_topic: ManuallyDrop::into_inner(source_topic),
+            source_schema_name: ManuallyDrop::into_inner(source_schema_name),
+            scene_entity: scene_entity.map(ManuallyDrop::into_inner),
+            point_cloud: point_cloud.map(ManuallyDrop::into_inner),
+            laser_scan: laser_scan.map(ManuallyDrop::into_inner),
+            grid: grid.map(ManuallyDrop::into_inner),
+            voxel_grid: voxel_grid.map(ManuallyDrop::into_inner),
+            camera_calibration: camera_calibration.map(ManuallyDrop::into_inner),
+            pose_in_frame: pose_in_frame.map(ManuallyDrop::into_inner),
+            poses_in_frame: poses_in_frame.map(ManuallyDrop::into_inner),
+            metadata: ManuallyDrop::into_inner(metadata),
+        }))
+    }
+}
+
+/// Log a SelectedEntity message to a channel.
+///
+/// # Safety
+/// The channel must have been created for this type with foxglove_channel_create_selected_entity.
+#[cfg(not(target_family = "wasm"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn foxglove_channel_log_selected_entity(
+    channel: Option<&FoxgloveChannel>,
+    msg: Option<&SelectedEntity>,
+    log_time: Option<&u64>,
+    sink_id: FoxgloveSinkId,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { SelectedEntity::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
+            log_msg_to_channel(channel, &*msg, log_time, sink_id)
+        }
+        Err(e) => {
+            tracing::error!("SelectedEntity: {}", e);
+            e.into()
+        }
+    }
+}
+
+/// Get the SelectedEntity schema.
+///
+/// All buffers in the returned schema are statically allocated.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_selected_entity_schema() -> FoxgloveSchema {
+    let native =
+        foxglove::messages::SelectedEntity::get_schema().expect("SelectedEntity schema is Some");
+    let name: &'static str = "foxglove.SelectedEntity";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("SelectedEntity schema data is static");
+    };
+    FoxgloveSchema {
+        name: name.into(),
+        encoding: encoding.into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
+/// Encode a SelectedEntity message as protobuf to the buffer provided.
+///
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+/// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+/// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+///
+/// # Safety
+/// ptr must be a valid pointer to a memory region at least len bytes long.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_selected_entity_encode(
+    msg: Option<&SelectedEntity>,
+    ptr: *mut u8,
+    len: usize,
+    encoded_len: Option<&mut usize>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { SelectedEntity::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            if len == 0 || ptr.is_null() {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = msg
+                        .encoded_len()
+                        .expect("foxglove messages return Some(len)");
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
+            if let Err(encode_error) = msg.encode(&mut buf) {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
+            }
+            FoxgloveError::Ok
+        }
+        Err(e) => {
+            tracing::error!("SelectedEntity: {}", e);
+            FoxgloveError::EncodeError
+        }
+    }
+}
+
 /// A primitive representing a 3D model file loaded from an external URL or embedded data
 #[repr(C)]
 pub struct ModelPrimitive {

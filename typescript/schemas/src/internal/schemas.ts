@@ -1789,6 +1789,79 @@ const LaserScan: FoxgloveMessageSchema = {
   ],
 };
 
+const SelectedEntity: FoxgloveMessageSchema = {
+  type: "message",
+  name: "SelectedEntity",
+  description: "Information about a selected entity in a visualization panel",
+  fields: [
+    {
+      name: "source_topic",
+      type: { type: "primitive", name: "string" },
+      description: "Topic from which the entity originated",
+    },
+    {
+      name: "source_schema_name",
+      type: { type: "primitive", name: "string" },
+      description: "Schema name of the source message",
+    },
+    {
+      name: "scene_entity",
+      type: { type: "nested", schema: SceneEntity },
+      description: "Selected scene entity",
+      optional: true,
+    },
+    {
+      name: "point_cloud",
+      type: { type: "nested", schema: PointCloud },
+      description: "Selected point cloud",
+      optional: true,
+    },
+    {
+      name: "laser_scan",
+      type: { type: "nested", schema: LaserScan },
+      description: "Selected laser scan",
+      optional: true,
+    },
+    {
+      name: "grid",
+      type: { type: "nested", schema: Grid },
+      description: "Selected grid",
+      optional: true,
+    },
+    {
+      name: "voxel_grid",
+      type: { type: "nested", schema: VoxelGrid },
+      description: "Selected voxel grid",
+      optional: true,
+    },
+    {
+      name: "camera_calibration",
+      type: { type: "nested", schema: CameraCalibration },
+      description: "Selected camera calibration",
+      optional: true,
+    },
+    {
+      name: "pose_in_frame",
+      type: { type: "nested", schema: PoseInFrame },
+      description: "Selected pose in frame",
+      optional: true,
+    },
+    {
+      name: "poses_in_frame",
+      type: { type: "nested", schema: PosesInFrame },
+      description: "Selected poses in frame",
+      optional: true,
+    },
+    {
+      name: "metadata",
+      type: { type: "nested", schema: KeyValuePair },
+      description: "Additional user-provided metadata associated with the selected entity.",
+      array: true,
+      optional: true,
+    },
+  ],
+};
+
 export const foxgloveMessageSchemas = {
   ArrowPrimitive,
   CameraCalibration,
@@ -1814,6 +1887,7 @@ export const foxgloveMessageSchemas = {
   SceneEntityDeletion,
   SceneEntity,
   SceneUpdate,
+  SelectedEntity,
   ModelPrimitive,
   PackedElementField,
   Point2,

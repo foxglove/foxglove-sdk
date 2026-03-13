@@ -845,6 +845,35 @@ class SceneUpdate:
         """Encodes the SceneUpdate."""
         ...
 
+class SelectedEntity:
+    """
+    Information about a selected entity in a visualization panel
+    """
+
+    def __init__(
+        self,
+        *,
+        source_topic: str = "",
+        source_schema_name: str = "",
+        scene_entity: SceneEntity | None = None,
+        point_cloud: PointCloud | None = None,
+        laser_scan: LaserScan | None = None,
+        grid: Grid | None = None,
+        voxel_grid: VoxelGrid | None = None,
+        camera_calibration: CameraCalibration | None = None,
+        pose_in_frame: PoseInFrame | None = None,
+        poses_in_frame: PosesInFrame | None = None,
+        metadata: list[KeyValuePair] | None = None,
+    ) -> None: ...
+    @staticmethod
+    def get_schema() -> Schema:
+        """Returns the SelectedEntity schema"""
+        ...
+
+    def encode(self) -> bytes:
+        """Encodes the SelectedEntity."""
+        ...
+
 class SpherePrimitive:
     """
     A primitive representing a sphere or ellipsoid
@@ -1021,6 +1050,7 @@ FoxgloveSchema = Union[
     SceneEntityDeletion,
     SceneEntity,
     SceneUpdate,
+    SelectedEntity,
     ModelPrimitive,
     PackedElementField,
     Point2,

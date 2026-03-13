@@ -54,6 +54,7 @@ If the IDL does not support optional fields (e.g. ROS) you must specify a value 
 - [SceneEntity](#sceneentity)
 - [SceneEntityDeletion](#sceneentitydeletion)
 - [SceneUpdate](#sceneupdate)
+- [SelectedEntity](#selectedentity)
 - [SpherePrimitive](#sphereprimitive)
 - [TextAnnotation](#textannotation)
 - [TextPrimitive](#textprimitive)
@@ -3000,6 +3001,161 @@ Scene entities to delete
 <td>
 
 Scene entities to add or replace
+
+</td>
+</tr>
+</table>
+
+## SelectedEntity
+
+Information about a selected entity in a visualization panel
+
+<table>
+  <tr>
+    <th>field</th>
+    <th>type</th>
+    <th>description</th>
+  </tr>
+<tr>
+<td><code>source_topic</code></td>
+<td>
+
+string
+
+</td>
+<td>
+
+Topic from which the entity originated
+
+</td>
+</tr>
+<tr>
+<td><code>source_schema_name</code></td>
+<td>
+
+string
+
+</td>
+<td>
+
+Schema name of the source message
+
+</td>
+</tr>
+<tr>
+<td><code>scene_entity</code> (optional)</td>
+<td>
+
+[SceneEntity](#sceneentity)
+
+</td>
+<td>
+
+Selected scene entity
+
+</td>
+</tr>
+<tr>
+<td><code>point_cloud</code> (optional)</td>
+<td>
+
+[PointCloud](#pointcloud)
+
+</td>
+<td>
+
+Selected point cloud
+
+</td>
+</tr>
+<tr>
+<td><code>laser_scan</code> (optional)</td>
+<td>
+
+[LaserScan](#laserscan)
+
+</td>
+<td>
+
+Selected laser scan
+
+</td>
+</tr>
+<tr>
+<td><code>grid</code> (optional)</td>
+<td>
+
+[Grid](#grid)
+
+</td>
+<td>
+
+Selected grid
+
+</td>
+</tr>
+<tr>
+<td><code>voxel_grid</code> (optional)</td>
+<td>
+
+[VoxelGrid](#voxelgrid)
+
+</td>
+<td>
+
+Selected voxel grid
+
+</td>
+</tr>
+<tr>
+<td><code>camera_calibration</code> (optional)</td>
+<td>
+
+[CameraCalibration](#cameracalibration)
+
+</td>
+<td>
+
+Selected camera calibration
+
+</td>
+</tr>
+<tr>
+<td><code>pose_in_frame</code> (optional)</td>
+<td>
+
+[PoseInFrame](#poseinframe)
+
+</td>
+<td>
+
+Selected pose in frame
+
+</td>
+</tr>
+<tr>
+<td><code>poses_in_frame</code> (optional)</td>
+<td>
+
+[PosesInFrame](#posesinframe)
+
+</td>
+<td>
+
+Selected poses in frame
+
+</td>
+</tr>
+<tr>
+<td><code>metadata</code> (optional)</td>
+<td>
+
+[KeyValuePair](#keyvaluepair)[]
+
+</td>
+<td>
+
+Additional user-provided metadata associated with the selected entity.
 
 </td>
 </tr>

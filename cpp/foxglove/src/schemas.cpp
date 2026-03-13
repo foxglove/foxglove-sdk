@@ -59,6 +59,7 @@ void sceneEntityDeletionToC(
   foxglove_scene_entity_deletion& dest, const SceneEntityDeletion& src, Arena& arena
 );
 void sceneUpdateToC(foxglove_scene_update& dest, const SceneUpdate& src, Arena& arena);
+void selectedEntityToC(foxglove_selected_entity& dest, const SelectedEntity& src, Arena& arena);
 void spherePrimitiveToC(foxglove_sphere_primitive& dest, const SpherePrimitive& src, Arena& arena);
 void textAnnotationToC(foxglove_text_annotation& dest, const TextAnnotation& src, Arena& arena);
 void textPrimitiveToC(foxglove_text_primitive& dest, const TextPrimitive& src, Arena& arena);
@@ -1321,6 +1322,42 @@ bool SceneUpdateChannel::has_sinks() const noexcept {
   return foxglove_channel_has_sinks(impl_.get());
 }
 
+FoxgloveResult<SelectedEntityChannel> SelectedEntityChannel::create(
+  const std::string_view& topic, const Context& context
+) {
+  const foxglove_channel* channel = nullptr;
+  foxglove_error error = foxglove_channel_create_selected_entity(
+    {topic.data(), topic.size()}, context.getInner(), &channel
+  );
+  if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
+    return tl::unexpected(FoxgloveError(error));
+  }
+  return SelectedEntityChannel(ChannelUniquePtr(channel));
+}
+
+FoxgloveError SelectedEntityChannel::log(
+  const SelectedEntity& msg, std::optional<uint64_t> log_time, std::optional<uint64_t> sink_id
+) noexcept {
+  Arena arena;
+  foxglove_selected_entity c_msg;
+  selectedEntityToC(c_msg, msg, arena);
+  return FoxgloveError(foxglove_channel_log_selected_entity(
+    impl_.get(), &c_msg, log_time ? &*log_time : nullptr, sink_id ? *sink_id : 0
+  ));
+}
+
+void SelectedEntityChannel::close() noexcept {
+  foxglove_channel_close(impl_.get());
+}
+
+uint64_t SelectedEntityChannel::id() const noexcept {
+  return foxglove_channel_get_id(impl_.get());
+}
+
+bool SelectedEntityChannel::has_sinks() const noexcept {
+  return foxglove_channel_has_sinks(impl_.get());
+}
+
 FoxgloveResult<SpherePrimitiveChannel> SpherePrimitiveChannel::create(
   const std::string_view& topic, const Context& context
 ) {
@@ -1946,6 +1983,42 @@ void sceneUpdateToC(
   dest.entities_count = src.entities.size();
 }
 
+void selectedEntityToC(
+  foxglove_selected_entity& dest, const SelectedEntity& src, [[maybe_unused]] Arena& arena
+) {
+  dest.source_topic = {src.source_topic.data(), src.source_topic.size()};
+  dest.source_schema_name = {src.source_schema_name.data(), src.source_schema_name.size()};
+  dest.scene_entity =
+    src.scene_entity
+      ? arena.map_one<foxglove_scene_entity>(src.scene_entity.value(), sceneEntityToC)
+      : nullptr;
+  dest.point_cloud = src.point_cloud
+                       ? arena.map_one<foxglove_point_cloud>(src.point_cloud.value(), pointCloudToC)
+                       : nullptr;
+  dest.laser_scan = src.laser_scan
+                      ? arena.map_one<foxglove_laser_scan>(src.laser_scan.value(), laserScanToC)
+                      : nullptr;
+  dest.grid = src.grid ? arena.map_one<foxglove_grid>(src.grid.value(), gridToC) : nullptr;
+  dest.voxel_grid = src.voxel_grid
+                      ? arena.map_one<foxglove_voxel_grid>(src.voxel_grid.value(), voxelGridToC)
+                      : nullptr;
+  dest.camera_calibration = src.camera_calibration
+                              ? arena.map_one<foxglove_camera_calibration>(
+                                  src.camera_calibration.value(), cameraCalibrationToC
+                                )
+                              : nullptr;
+  dest.pose_in_frame =
+    src.pose_in_frame
+      ? arena.map_one<foxglove_pose_in_frame>(src.pose_in_frame.value(), poseInFrameToC)
+      : nullptr;
+  dest.poses_in_frame =
+    src.poses_in_frame
+      ? arena.map_one<foxglove_poses_in_frame>(src.poses_in_frame.value(), posesInFrameToC)
+      : nullptr;
+  dest.metadata = arena.map<foxglove_key_value_pair>(src.metadata, keyValuePairToC);
+  dest.metadata_count = src.metadata.size();
+}
+
 void spherePrimitiveToC(
   foxglove_sphere_primitive& dest, const SpherePrimitive& src, [[maybe_unused]] Arena& arena
 ) {
@@ -2253,6 +2326,13 @@ FoxgloveError SceneUpdate::encode(uint8_t* ptr, size_t len, size_t* encoded_len)
   foxglove_scene_update c_msg;
   sceneUpdateToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_scene_update_encode(&c_msg, ptr, len, encoded_len));
+}
+
+FoxgloveError SelectedEntity::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
+  Arena arena;
+  foxglove_selected_entity c_msg;
+  selectedEntityToC(c_msg, *this, arena);
+  return FoxgloveError(foxglove_selected_entity_encode(&c_msg, ptr, len, encoded_len));
 }
 
 FoxgloveError SpherePrimitive::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
@@ -2644,6 +2724,16 @@ Schema SceneEntityDeletion::schema() {
 
 Schema SceneUpdate::schema() {
   struct foxglove_schema c_schema = foxglove_scene_update_schema();
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data_len = c_schema.data_len;
+  return result;
+}
+
+Schema SelectedEntity::schema() {
+  struct foxglove_schema c_schema = foxglove_selected_entity_schema();
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
