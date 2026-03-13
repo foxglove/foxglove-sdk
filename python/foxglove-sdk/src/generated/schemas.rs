@@ -3321,5 +3321,70 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
         .getattr("modules")?
         .set_item("foxglove._foxglove_py.schemas", &module)?;
 
-    parent_module.add_submodule(&module)
+    parent_module.add_submodule(&module)?;
+
+    // Also register as "messages" — an alias for "schemas".
+    // Both modules share the same class objects.
+    let messages_module = PyModule::new(parent_module.py(), "messages")?;
+
+    messages_module.add_class::<LinePrimitiveLineType>()?;
+    messages_module.add_class::<LogLevel>()?;
+    messages_module.add_class::<SceneEntityDeletionType>()?;
+    messages_module.add_class::<PackedElementFieldNumericType>()?;
+    messages_module.add_class::<PointsAnnotationType>()?;
+    messages_module.add_class::<LocationFixPositionCovarianceType>()?;
+    messages_module.add_class::<ArrowPrimitive>()?;
+    messages_module.add_class::<CameraCalibration>()?;
+    messages_module.add_class::<CircleAnnotation>()?;
+    messages_module.add_class::<Color>()?;
+    messages_module.add_class::<CompressedImage>()?;
+    messages_module.add_class::<CompressedVideo>()?;
+    messages_module.add_class::<CylinderPrimitive>()?;
+    messages_module.add_class::<CubePrimitive>()?;
+    messages_module.add_class::<Duration>()?;
+    messages_module.add_class::<FrameTransform>()?;
+    messages_module.add_class::<FrameTransforms>()?;
+    messages_module.add_class::<GeoJson>()?;
+    messages_module.add_class::<Grid>()?;
+    messages_module.add_class::<VoxelGrid>()?;
+    messages_module.add_class::<ImageAnnotations>()?;
+    messages_module.add_class::<JointState>()?;
+    messages_module.add_class::<JointStates>()?;
+    messages_module.add_class::<KeyValuePair>()?;
+    messages_module.add_class::<LaserScan>()?;
+    messages_module.add_class::<LinePrimitive>()?;
+    messages_module.add_class::<LocationFix>()?;
+    messages_module.add_class::<LocationFixes>()?;
+    messages_module.add_class::<Log>()?;
+    messages_module.add_class::<SceneEntityDeletion>()?;
+    messages_module.add_class::<SceneEntity>()?;
+    messages_module.add_class::<SceneUpdate>()?;
+    messages_module.add_class::<ModelPrimitive>()?;
+    messages_module.add_class::<PackedElementField>()?;
+    messages_module.add_class::<Point2>()?;
+    messages_module.add_class::<Point3>()?;
+    messages_module.add_class::<Point3InFrame>()?;
+    messages_module.add_class::<PointCloud>()?;
+    messages_module.add_class::<PointsAnnotation>()?;
+    messages_module.add_class::<Pose>()?;
+    messages_module.add_class::<PoseInFrame>()?;
+    messages_module.add_class::<PosesInFrame>()?;
+    messages_module.add_class::<Quaternion>()?;
+    messages_module.add_class::<RawAudio>()?;
+    messages_module.add_class::<RawImage>()?;
+    messages_module.add_class::<SpherePrimitive>()?;
+    messages_module.add_class::<TextAnnotation>()?;
+    messages_module.add_class::<TextPrimitive>()?;
+    messages_module.add_class::<Timestamp>()?;
+    messages_module.add_class::<TriangleListPrimitive>()?;
+    messages_module.add_class::<Vector2>()?;
+    messages_module.add_class::<Vector3>()?;
+
+    py.import("sys")?
+        .getattr("modules")?
+        .set_item("foxglove._foxglove_py.messages", &messages_module)?;
+
+    parent_module.add_submodule(&messages_module)?;
+
+    Ok(())
 }
