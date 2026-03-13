@@ -1,8 +1,13 @@
+AGENTS.md
+.ai-tooling/
 .cargo/*
 !.cargo/config.toml
 .claude/
+.clinerules
 .catkin_tools
 .DS_Store
+.github/copilot-instructions.md
+.github/skills/
 .idea/
 .mypy_cache/
 .pytest_cache/
