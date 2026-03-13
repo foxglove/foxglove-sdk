@@ -1,5 +1,5 @@
 [package]
-name = "data_provider_conformance"
+name = "remote_data_loader_backend_conformance"
 edition = "2024"
 publish = false
 
@@ -7,7 +7,7 @@ publish = false
 workspace = true
 
 [dependencies]
-foxglove = { path = "../foxglove", features = ["data_provider"] }
+foxglove = { path = "../foxglove", features = ["remote_data_loader_backend"] }
 jsonschema = { version = "0.42", default-features = false }
 libtest-mimic = "0.8"
 mcap.workspace = true

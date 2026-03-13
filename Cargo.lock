@@ -887,18 +887,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2a2330da5de22e8a3cb63252ce2abb30116bf5265e89c0e01bc17015ce30a476"
 
 [[package]]
-name = "data_provider_conformance"
-version = "0.0.0"
-dependencies = [
- "foxglove 0.19.0",
- "jsonschema",
- "libtest-mimic",
- "mcap 0.24.0",
- "reqwest 0.13.2",
- "serde_json",
-]
-
-[[package]]
 name = "delegate"
 version = "0.13.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1093,22 +1081,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "example_data_provider"
-version = "0.0.0"
-dependencies = [
- "axum",
- "chrono",
- "data_provider_conformance",
- "foxglove 0.19.0",
- "futures",
- "serde",
- "serde_urlencoded",
- "tokio",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
 name = "example_mcap"
 version = "0.0.0"
 dependencies = [
@@ -1167,6 +1139,22 @@ dependencies = [
  "foxglove 0.19.0",
  "serde_json",
  "tokio",
+]
+
+[[package]]
+name = "example_remote_data_loader_backend"
+version = "0.0.0"
+dependencies = [
+ "axum",
+ "chrono",
+ "foxglove 0.19.0",
+ "futures",
+ "remote_data_loader_backend_conformance",
+ "serde",
+ "serde_urlencoded",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
@@ -3562,6 +3550,18 @@ dependencies = [
  "tokio",
  "tracing",
  "tracing-test",
+]
+
+[[package]]
+name = "remote_data_loader_backend_conformance"
+version = "0.0.0"
+dependencies = [
+ "foxglove 0.19.0",
+ "jsonschema",
+ "libtest-mimic",
+ "mcap 0.24.0",
+ "reqwest 0.13.2",
+ "serde_json",
 ]
 
 [[package]]

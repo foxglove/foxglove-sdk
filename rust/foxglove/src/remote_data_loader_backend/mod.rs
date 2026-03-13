@@ -7,7 +7,7 @@
 //!
 //! ```
 //! use chrono::{DateTime, Utc};
-//! use foxglove::data_provider::{ChannelSet, Manifest, StreamedSource, DataSource};
+//! use foxglove::remote_data_loader_backend::{ChannelSet, Manifest, StreamedSource, DataSource};
 //!
 //! #[derive(foxglove::Encode)]
 //! struct MyMessage {

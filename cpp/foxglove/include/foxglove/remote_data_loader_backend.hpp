@@ -3,8 +3,8 @@
 /// @file
 /// Types and utilities for building remote data loader manifests.
 ///
-/// Use @ref foxglove::data_provider::ChannelSet to declare channels, then construct a
-/// @ref foxglove::data_provider::StreamedSource with the resulting topics and schemas.
+/// Use @ref foxglove::remote_data_loader_backend::ChannelSet to declare channels, then construct a
+/// @ref foxglove::remote_data_loader_backend::StreamedSource with the resulting topics and schemas.
 ///
 /// @note This header requires [nlohmann/json](https://github.com/nlohmann/json) and
 /// [tobiaslocker/base64](https://github.com/tobiaslocker/base64) to be available on the include

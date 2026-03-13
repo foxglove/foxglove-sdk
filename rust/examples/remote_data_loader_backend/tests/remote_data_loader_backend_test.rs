@@ -1,17 +1,17 @@
-//! End-to-end tests for the data_provider example.
+//! End-to-end tests for the remote_data_loader_backend example.
 //!
 //! This is a thin wrapper that starts the example binary as a subprocess, and delegates all checks
-//! to the reusable test suite in [`data_provider_conformance`].
+//! to the reusable test suite in [`remote_data_loader_backend_conformance`].
 
 use std::process::ExitCode;
 
-use data_provider_conformance::DataProviderTestConfig;
+use remote_data_loader_backend_conformance::RemoteDataLoaderBackendTestConfig;
 
 const BIND_ADDR: &str = "127.0.0.1:8080";
 
 fn main() -> ExitCode {
-    let _guard = data_provider_conformance::spawn_server(
-        env!("CARGO_BIN_EXE_example_data_provider"),
+    let _guard = remote_data_loader_backend_conformance::spawn_server(
+        env!("CARGO_BIN_EXE_example_remote_data_loader_backend"),
         BIND_ADDR,
     );
 
@@ -24,7 +24,7 @@ fn main() -> ExitCode {
     .parse()
     .unwrap();
 
-    data_provider_conformance::run_tests(DataProviderTestConfig {
+    remote_data_loader_backend_conformance::run_tests(RemoteDataLoaderBackendTestConfig {
         manifest_url,
         expected_streamed_source_count: 1,
         expected_static_file_source_count: 0,
