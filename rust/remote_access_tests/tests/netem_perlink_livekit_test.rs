@@ -7,9 +7,9 @@
 //!   - `perlink_docker_gateway`: runs in gateway-runner (10.99.0.31, high impairment)
 //!   - `perlink_docker_viewer`:  runs in viewer-runner  (10.99.0.40, low impairment)
 //!
-//! Coordination between containers uses file-based signaling via a shared tmpfs
-//! volume (`COORDINATION_DIR`). The gateway writes the room name for the viewer
-//! to discover, and the viewer writes a done signal when it finishes.
+//! The room name is passed via the `PERLINK_ROOM_NAME` env var (set by the
+//! orchestrating script or CI workflow). The viewer signals completion via a
+//! done file on the shared `COORDINATION_DIR` tmpfs volume.
 //!
 //! Run with:
 //!   scripts/netem-livekit.sh test perlink
@@ -29,17 +29,14 @@ use tracing_test::traced_test;
 /// Timeout for the gateway to wait for the viewer's done signal.
 const GATEWAY_DONE_TIMEOUT: Duration = Duration::from_secs(120);
 
-/// Timeout for the viewer to wait for the gateway's room name.
-const VIEWER_ROOM_NAME_TIMEOUT: Duration = Duration::from_secs(60);
-
 /// Number of messages in the burst test.
 const BURST_COUNT: usize = 20;
 
 /// Gateway side of the two-container per-link test.
 ///
-/// 1. Cleans coordination dir.
-/// 2. Creates a context, registers a channel, starts the gateway.
-/// 3. Writes the room name to the coordination dir.
+/// 1. Reads the room name from `PERLINK_ROOM_NAME` env var.
+/// 2. Cleans coordination dir.
+/// 3. Creates a context, registers a channel, starts the gateway.
 /// 4. Waits for the viewer to subscribe (channel gets a sink).
 /// 5. Sends a burst of messages.
 /// 6. Polls for the done signal from the viewer.
@@ -51,6 +48,9 @@ const BURST_COUNT: usize = 20;
 // accidental concurrent execution if both are run in a single process.
 #[serial(perlink_docker)]
 async fn perlink_docker_gateway() -> Result<()> {
+    let room_name = coordination::room_name()?;
+    info!("using room name from env: {room_name}");
+
     coordination::clean()?;
 
     let ctx = foxglove::Context::new();
@@ -61,10 +61,10 @@ async fn perlink_docker_gateway() -> Result<()> {
         .context("create channel")?;
     info!("channel created: id={}", channel.id());
 
-    let gw = TestGateway::start(&ctx).await?;
+    let mock = remote_access_tests::mock_server::start_mock_server(&room_name).await;
+    info!("mock server started at {}", mock.url());
+    let gw = TestGateway::start_with_mock(&ctx, room_name, mock, None)?;
     info!("gateway started, room={}", gw.room_name);
-
-    coordination::write_room_name(&gw.room_name)?;
 
     // Wait for the viewer to subscribe — the channel gets a sink. Use the
     // netem timeout since the subscribe must traverse the impaired gateway link.
@@ -88,7 +88,7 @@ async fn perlink_docker_gateway() -> Result<()> {
 
 /// Viewer side of the two-container per-link test.
 ///
-/// 1. Polls for the room name from the coordination dir.
+/// 1. Reads the room name from `PERLINK_ROOM_NAME` env var.
 /// 2. Connects as a viewer to that room.
 /// 3. Expects ServerInfo and Advertise.
 /// 4. Subscribes and waits for the channel byte stream.
@@ -101,9 +101,8 @@ async fn perlink_docker_gateway() -> Result<()> {
 // Defensive: see comment on perlink_docker_gateway.
 #[serial(perlink_docker)]
 async fn perlink_docker_viewer() -> Result<()> {
-    info!("waiting for room name (timeout: {VIEWER_ROOM_NAME_TIMEOUT:?})...");
-    let room_name = coordination::poll_room_name(VIEWER_ROOM_NAME_TIMEOUT).await?;
-    info!("got room name: {room_name}");
+    let room_name = coordination::room_name()?;
+    info!("using room name from env: {room_name}");
 
     let mut viewer =
         ViewerConnection::connect_with_timeout(&room_name, "perlink-viewer", NETEM_EVENT_TIMEOUT)

@@ -98,6 +98,13 @@ export_perlink_netem_vars() {
     export NETEM_LINK_VIEWER_ARGS="${NETEM_LINK_VIEWER_ARGS:-delay 10ms 2ms}"
 }
 
+# Generate and export a unique room name for perlink tests. Both containers
+# read this from the PERLINK_ROOM_NAME env var instead of using file-based
+# coordination to discover the room name.
+export_perlink_room_name() {
+    export PERLINK_ROOM_NAME="test-room-$(cat /proc/sys/kernel/random/uuid 2>/dev/null || uuidgen)"
+}
+
 case "${1:-}" in
     up)
         shift
@@ -105,6 +112,7 @@ case "${1:-}" in
             # Start the two-container per-link stack (gateway + viewer).
             export LIVEKIT_NODE_IP=10.99.0.2
             export_perlink_netem_vars
+            export_perlink_room_name
             COMPOSE_PERLINK="$COMPOSE --profile perlink"
             $COMPOSE_PERLINK up -d --wait
             # Pre-build the test binary. The viewer-runner shares the same
@@ -152,6 +160,7 @@ case "${1:-}" in
             # Two-container per-link test orchestration. Starts the stack if
             # not already running, then runs gateway and viewer tests.
             export_perlink_netem_vars
+            export_perlink_room_name
             COMPOSE_PERLINK="$COMPOSE --profile perlink"
             $COMPOSE_PERLINK up -d --wait
             # Clean coordination dir from any previous run.
@@ -165,10 +174,10 @@ case "${1:-}" in
             # Kill background cargo processes on Ctrl-C so they don't linger
             # until their coordination timeouts expire.
             trap 'kill "$gateway_pid" "$viewer_pid" 2>/dev/null; wait "$gateway_pid" "$viewer_pid" 2>/dev/null' INT TERM
-            $COMPOSE_PERLINK exec gateway-runner \
+            $COMPOSE_PERLINK exec -T gateway-runner \
                 cargo test -p remote_access_tests -- --ignored perlink_docker_gateway --nocapture &
             gateway_pid=$!
-            $COMPOSE_PERLINK exec viewer-runner \
+            $COMPOSE_PERLINK exec -T viewer-runner \
                 cargo test -p remote_access_tests -- --ignored perlink_docker_viewer --nocapture &
             viewer_pid=$!
             # Wait for both; capture exit statuses individually.
