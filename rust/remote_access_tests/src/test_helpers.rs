@@ -13,8 +13,7 @@ use livekit::id::ParticipantIdentity;
 use livekit::{Room, RoomEvent, RoomOptions, StreamByteOptions, StreamWriter as _};
 use tracing::info;
 
-use foxglove::protocol::v2::BinaryMessage;
-use foxglove::protocol::v2::client::{Subscribe, Unsubscribe};
+use foxglove::protocol::v2::client::{Subscribe, SubscribeChannel, Unsubscribe};
 use foxglove::protocol::v2::server::ServerMessage;
 
 use crate::frame::{self, Frame, OpCode};
@@ -22,12 +21,17 @@ use crate::{livekit_token, mock_server};
 
 /// Default timeout for waiting for events or stream data.
 pub const EVENT_TIMEOUT: Duration = Duration::from_secs(15);
+/// Longer timeout for netem-impaired connections where gateway startup and
+/// WebRTC negotiation are significantly slower.
+pub const NETEM_EVENT_TIMEOUT: Duration = Duration::from_secs(30);
 /// Default timeout for reading frames from the byte stream.
 pub const READ_TIMEOUT: Duration = Duration::from_secs(10);
 /// Default timeout for gateway shutdown.
 pub const SHUTDOWN_TIMEOUT: Duration = Duration::from_secs(10);
 /// Polling interval for condition checks.
 pub const POLL_INTERVAL: Duration = Duration::from_millis(50);
+/// Per-attempt timeout when waiting for a byte stream during connection retries.
+pub const CONNECT_RETRY_TIMEOUT: Duration = Duration::from_secs(5);
 
 /// Type alias for a channel filter function passed to [`TestGateway::start_with_filter`].
 pub type ChannelFilterFn =
@@ -138,7 +142,17 @@ impl ViewerConnection {
     /// byte stream to open. Retries the connection if the gateway hasn't
     /// joined the room yet (no ByteStreamOpened within a short window).
     pub async fn connect(room_name: &str, viewer_identity: &str) -> Result<Self> {
-        let outer_deadline = tokio::time::Instant::now() + EVENT_TIMEOUT;
+        Self::connect_with_timeout(room_name, viewer_identity, EVENT_TIMEOUT).await
+    }
+
+    /// Like [`connect`](Self::connect), but with an explicit overall timeout.
+    /// Use [`NETEM_EVENT_TIMEOUT`] for tests running under network impairment.
+    pub async fn connect_with_timeout(
+        room_name: &str,
+        viewer_identity: &str,
+        timeout: Duration,
+    ) -> Result<Self> {
+        let outer_deadline = tokio::time::Instant::now() + timeout;
         loop {
             let token = livekit_token::generate_token(room_name, viewer_identity)?;
             let (room, mut events) =
@@ -147,9 +161,14 @@ impl ViewerConnection {
                     .context("viewer failed to connect to LiveKit")?;
             info!("{viewer_identity} connected to room, waiting for byte stream");
 
-            // Wait for a ByteStreamOpened event. Use a short inner timeout so we
-            // can retry the connection if the gateway hasn't joined yet.
-            let inner_deadline = tokio::time::Instant::now() + Duration::from_secs(3);
+            // Wait for a ByteStreamOpened event. Use a shorter inner timeout so
+            // we can retry the connection if the gateway hasn't joined yet.
+            // Cap to the outer deadline so the final attempt uses all remaining
+            // time.
+            let inner_deadline = std::cmp::min(
+                tokio::time::Instant::now() + CONNECT_RETRY_TIMEOUT,
+                outer_deadline,
+            );
             let reader = loop {
                 let event = tokio::time::timeout_at(inner_deadline, events.recv()).await;
                 match event {
@@ -205,6 +224,15 @@ impl ViewerConnection {
         }
     }
 
+    /// Reads and returns the next Status message.
+    pub async fn expect_status(&mut self) -> Result<foxglove::protocol::v2::server::Status> {
+        let msg = self.frame_reader.next_server_message().await?;
+        match msg {
+            ServerMessage::Status(status) => Ok(status),
+            other => anyhow::bail!("expected Status, got: {other:?}"),
+        }
+    }
+
     /// Reads and returns the next Unadvertise message.
     pub async fn expect_unadvertise(
         &mut self,
@@ -228,12 +256,25 @@ impl ViewerConnection {
     }
 
     /// Opens a byte stream back to the gateway participant and sends a
-    /// binary-framed Subscribe message. Polls `channel.has_sinks()` to confirm
-    /// the gateway has processed the subscription.
+    /// JSON-framed Subscribe message.
     pub async fn send_subscribe(&self, channel_ids: &[u64]) -> Result<()> {
-        let subscribe = Subscribe::new(channel_ids.iter().copied());
-        let inner = subscribe.to_bytes();
-        let framed = frame::frame_binary_message(&inner);
+        self.send_subscribe_channels(
+            channel_ids
+                .iter()
+                .map(|&id| SubscribeChannel {
+                    id,
+                    request_video_track: false,
+                })
+                .collect(),
+        )
+        .await
+    }
+
+    /// Opens a byte stream and sends a JSON-framed Subscribe with explicit channel options.
+    pub async fn send_subscribe_channels(&self, channels: Vec<SubscribeChannel>) -> Result<()> {
+        let subscribe = Subscribe { channels };
+        let json = serde_json::to_string(&subscribe)?;
+        let framed = frame::frame_text_message(json.as_bytes());
 
         let gateway_identity = ParticipantIdentity(mock_server::TEST_DEVICE_ID.to_string());
         let writer = self
@@ -266,11 +307,29 @@ impl ViewerConnection {
         Ok(())
     }
 
-    /// Sends a binary-framed Unsubscribe message to the gateway.
+    /// Sends a Subscribe with video requested and waits for the channel to have at least one sink.
+    pub async fn subscribe_video_and_wait(
+        &self,
+        channel_ids: &[u64],
+        channel: &foxglove::RawChannel,
+    ) -> Result<()> {
+        let channels = channel_ids
+            .iter()
+            .map(|&id| SubscribeChannel {
+                id,
+                request_video_track: true,
+            })
+            .collect();
+        self.send_subscribe_channels(channels).await?;
+        poll_until(|| channel.has_sinks()).await;
+        Ok(())
+    }
+
+    /// Sends a JSON-framed Unsubscribe message to the gateway.
     pub async fn send_unsubscribe(&self, channel_ids: &[u64]) -> Result<()> {
         let unsubscribe = Unsubscribe::new(channel_ids.iter().copied());
-        let inner = unsubscribe.to_bytes();
-        let framed = frame::frame_binary_message(&inner);
+        let json = serde_json::to_string(&unsubscribe)?;
+        let framed = frame::frame_text_message(json.as_bytes());
 
         let gateway_identity = ParticipantIdentity(mock_server::TEST_DEVICE_ID.to_string());
         let writer = self

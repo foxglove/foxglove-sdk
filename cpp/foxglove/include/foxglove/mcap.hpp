@@ -4,6 +4,7 @@
 #include <foxglove/error.hpp>
 
 #include <cerrno>
+#include <cstdint>
 #include <cstdio>
 #include <functional>
 #include <memory>
@@ -128,6 +129,20 @@ struct McapWriterOptions {
   bool repeat_channels = true;
   /// @brief Whether to repeat schemas in the MCAP file.
   bool repeat_schemas = true;
+  /// @brief Whether to calculate and write CRCs for chunk records.
+  bool calculate_chunk_crcs = true;
+  /// @brief Whether to calculate and write a data section CRC into the DataEnd record.
+  bool calculate_data_section_crc = true;
+  /// @brief Whether to calculate and write a summary section CRC into the Footer record.
+  bool calculate_summary_section_crc = true;
+  /// @brief Whether to calculate and write CRCs for attachment records.
+  bool calculate_attachment_crcs = true;
+  /// @brief Compression level passed to the underlying compressor (zstd or lz4).
+  /// A value of 0 instructs the compressor to use its default level.
+  uint32_t compression_level = 0;
+  /// @brief Number of threads for zstd compression. 0 disables multithreading.
+  /// The default (nullopt) uses the number of physical CPUs.
+  std::optional<uint32_t> compression_threads;
   /// @brief Whether to truncate the MCAP file.
   bool truncate = false;
   /// @brief Optional channel filter to use for the MCAP file.

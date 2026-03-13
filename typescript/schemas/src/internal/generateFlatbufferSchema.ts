@@ -57,6 +57,19 @@ function primitiveToFlatbuffers(type: Exclude<FoxglovePrimitive, "time" | "durat
   }
 }
 
+function isFlatbuffersScalarPrimitive(type: FoxglovePrimitive): boolean {
+  return type === "int32" || type === "uint32" || type === "boolean" || type === "float64";
+}
+
+function isOptionalFlatbuffersScalarField(field: FoxgloveMessageField): boolean {
+  return (
+    field.array == undefined &&
+    field.optional === true &&
+    ((field.type.type === "primitive" && isFlatbuffersScalarPrimitive(field.type.name)) ||
+      field.type.type === "enum")
+  );
+}
+
 /**
  * Time is used instead of Timestamp for backwards compatibility.
  */
@@ -174,6 +187,14 @@ export function generateFlatbuffers(
           // can't specify length of vector outside of struct, all of these are tables
           lengthComment = `  /// length ${field.array}\n`;
         }
+        const isOptionalScalarField = isOptionalFlatbuffersScalarField(field);
+
+        if (isOptionalScalarField && field.defaultValue != undefined) {
+          throw new Error(
+            `Field "${field.name}": optional FlatBuffer scalar fields cannot have a default value`,
+          );
+        }
+
         let defaultValue;
         if (field.defaultValue != undefined && !isArray) {
           if (field.type.type === "primitive") {
@@ -195,6 +216,8 @@ export function generateFlatbuffers(
             // ie: type numericType: NumericType = INT32;
             defaultValue = field.defaultValue as string;
           }
+        } else if (isOptionalScalarField) {
+          defaultValue = "null";
         }
         if (field.defaultValue != undefined && defaultValue == undefined) {
           throw new Error("Flatbuffers does not support non-scalar default values");

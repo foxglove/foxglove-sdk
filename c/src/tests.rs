@@ -2,7 +2,7 @@ use std::pin::pin;
 
 use crate::{
     CircleAnnotation, FoxglovePointsAnnotationType, FoxgloveString, FoxgloveTimestamp,
-    ImageAnnotations, Point2, PointsAnnotation, TextAnnotation,
+    ImageAnnotations, KeyValuePair, Point2, PointsAnnotation, TextAnnotation,
     arena::{Arena, BorrowToNative},
     generated_types::{Color, Point3, Pose, Quaternion, TriangleListPrimitive, Vector3},
 };
@@ -176,6 +176,16 @@ fn test_image_annotations_borrow_to_native() {
                 b: 0.9,
                 a: 1.0,
             }),
+            metadata: vec![
+                foxglove::messages::KeyValuePair {
+                    key: "label".to_string(),
+                    value: "obstacle".to_string(),
+                },
+                foxglove::messages::KeyValuePair {
+                    key: "confidence".to_string(),
+                    value: "0.95".to_string(),
+                },
+            ],
         }],
         points: vec![foxglove::messages::PointsAnnotation {
             timestamp: Some(foxglove::messages::Timestamp::new(1000000000, 500000000)),
@@ -204,6 +214,7 @@ fn test_image_annotations_borrow_to_native() {
                 a: 0.5,
             }),
             thickness: 3.0,
+            metadata: vec![],
         }],
         texts: vec![foxglove::messages::TextAnnotation {
             timestamp: Some(foxglove::messages::Timestamp::new(1000000000, 500000000)),
@@ -222,6 +233,7 @@ fn test_image_annotations_borrow_to_native() {
                 b: 1.0,
                 a: 0.7,
             }),
+            metadata: vec![],
         }],
         metadata: vec![],
         timestamp: None,
@@ -250,6 +262,33 @@ fn test_image_annotations_borrow_to_native() {
         a: 1.0,
     };
 
+    let label_key = "label";
+    let label_value = "obstacle";
+    let confidence_key = "confidence";
+    let confidence_value = "0.95";
+    let circle_metadata = [
+        KeyValuePair {
+            key: FoxgloveString {
+                data: label_key.as_ptr() as *const c_char,
+                len: label_key.len(),
+            },
+            value: FoxgloveString {
+                data: label_value.as_ptr() as *const c_char,
+                len: label_value.len(),
+            },
+        },
+        KeyValuePair {
+            key: FoxgloveString {
+                data: confidence_key.as_ptr() as *const c_char,
+                len: confidence_key.len(),
+            },
+            value: FoxgloveString {
+                data: confidence_value.as_ptr() as *const c_char,
+                len: confidence_value.len(),
+            },
+        },
+    ];
+
     let circle = CircleAnnotation {
         timestamp: &raw const timestamp,
         position: &raw const circle_position,
@@ -257,6 +296,8 @@ fn test_image_annotations_borrow_to_native() {
         thickness: 2.0,
         fill_color: &raw const circle_fill_color,
         outline_color: &raw const circle_outline_color,
+        metadata: circle_metadata.as_ptr(),
+        metadata_count: circle_metadata.len(),
     };
 
     // Create points annotation
@@ -297,6 +338,8 @@ fn test_image_annotations_borrow_to_native() {
         outline_colors_count: points_outline_colors.len(),
         fill_color: &raw const points_fill_color,
         thickness: 3.0,
+        metadata: std::ptr::null(),
+        metadata_count: 0,
     };
 
     // Create text annotation
@@ -330,6 +373,8 @@ fn test_image_annotations_borrow_to_native() {
         font_size: 14.0,
         text_color: &raw const text_color,
         background_color: &raw const background_color,
+        metadata: std::ptr::null(),
+        metadata_count: 0,
     };
 
     // Create ImageAnnotations struct
@@ -354,4 +399,21 @@ fn test_image_annotations_borrow_to_native() {
     let borrowed = unsafe { c_type.borrow_to_native(arena_pin).unwrap() };
 
     assert_eq!(*borrowed, reference);
+}
+
+/// Verify that `foxglove_mcap_options_default()` produces `WriteOptions` matching
+/// `mcap::WriteOptions::default()`, since the upstream fields are private and
+/// our defaults are hardcoded.
+#[test]
+fn test_mcap_options_default_matches_write_options() {
+    let c_defaults = crate::channel::foxglove_mcap_options_default();
+    // Safety: the default struct contains valid (empty) strings.
+    let converted = unsafe { c_defaults.to_write_options() }.expect("to_write_options failed");
+    let canonical = mcap::WriteOptions::default();
+    assert_eq!(
+        format!("{converted:?}"),
+        format!("{canonical:?}"),
+        "FoxgloveMcapOptions defaults diverge from mcap::WriteOptions::default(). \
+         Update foxglove_mcap_options_default() in channel.rs to match."
+    );
 }

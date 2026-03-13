@@ -1053,7 +1053,7 @@ const FrameTransform: FoxgloveMessageSchema = {
   type: "message",
   name: "FrameTransform",
   description:
-    "A transform between two reference frames in 3D space. The transform defines the position and orientation of a child frame within a parent frame. Translation moves the origin of the child frame relative to the parent origin. The rotation changes the orientiation of the child frame around its origin.\n\nExamples:\n\n- With translation (x=1, y=0, z=0) and identity rotation (x=0, y=0, z=0, w=1), a point at (x=0, y=0, z=0) in the child frame maps to (x=1, y=0, z=0) in the parent frame.\n\n- With translation (x=1, y=2, z=0) and a 90-degree rotation around the z-axis (x=0, y=0, z=0.707, w=0.707), a point at (x=1, y=0, z=0) in the child frame maps to (x=-1, y=3, z=0) in the parent frame.",
+    "A transform between two reference frames in 3D space. The transform defines the position and orientation of a child frame within a parent frame. Translation moves the origin of the child frame relative to the parent origin. The rotation changes the orientation of the child frame around its origin.\n\nExamples:\n\n- With translation (x=1, y=0, z=0) and identity rotation (x=0, y=0, z=0, w=1), a point at (x=0, y=0, z=0) in the child frame maps to (x=1, y=0, z=0) in the parent frame.\n\n- With translation (x=1, y=2, z=0) and a 90-degree rotation around the z-axis (x=0, y=0, z=0.707, w=0.707), a point at (x=1, y=0, z=0) in the child frame maps to (x=-1, y=3, z=0) in the parent frame.",
   fields: [
     {
       name: "timestamp",
@@ -1361,6 +1361,14 @@ const CircleAnnotation: FoxgloveMessageSchema = {
       type: { type: "nested", schema: Color },
       description: "Outline color",
     },
+    {
+      name: "metadata",
+      type: { type: "nested", schema: KeyValuePair },
+      array: true,
+      description:
+        "Additional user-provided metadata associated with this annotation. Keys must be unique.",
+      optional: true,
+    },
   ],
 };
 
@@ -1427,6 +1435,14 @@ const PointsAnnotation: FoxgloveMessageSchema = {
       type: { type: "primitive", name: "float64" },
       description: "Stroke thickness in pixels",
     },
+    {
+      name: "metadata",
+      type: { type: "nested", schema: KeyValuePair },
+      array: true,
+      description:
+        "Additional user-provided metadata associated with this annotation. Keys must be unique.",
+      optional: true,
+    },
   ],
 };
 
@@ -1466,6 +1482,14 @@ const TextAnnotation: FoxgloveMessageSchema = {
       name: "background_color",
       type: { type: "nested", schema: Color },
       description: "Background fill color",
+    },
+    {
+      name: "metadata",
+      type: { type: "nested", schema: KeyValuePair },
+      array: true,
+      description:
+        "Additional user-provided metadata associated with this annotation. Keys must be unique.",
+      optional: true,
     },
   ],
 };
@@ -1512,7 +1536,7 @@ const ImageAnnotations: FoxgloveMessageSchema = {
       name: "metadata",
       type: { type: "nested", schema: KeyValuePair },
       description:
-        "Additional user-provided metadata associated with the image annotations. Keys must be unique.",
+        "Additional user-provided metadata associated with the image annotations. Keys must be unique within this object. Per-annotation metadata takes precedence over these values.",
       array: true,
       optional: true,
       protobufFieldNumber: 4,
@@ -1765,6 +1789,66 @@ const LaserScan: FoxgloveMessageSchema = {
   ],
 };
 
+const JointState: FoxgloveMessageSchema = {
+  type: "message",
+  name: "JointState",
+  description: "The state of a single joint (revolute or prismatic).",
+  fields: [
+    {
+      name: "name",
+      type: { type: "primitive", name: "string" },
+      description: "Joint name",
+    },
+    {
+      name: "position",
+      type: { type: "primitive", name: "float64" },
+      description:
+        "Joint position. Radians for revolute joints, meters for prismatic joints. Use NaN to indicate that the value is not present if the message definition does not support optional fields.",
+      optional: true,
+    },
+    {
+      name: "velocity",
+      type: { type: "primitive", name: "float64" },
+      description:
+        "Joint velocity. Rad/s for revolute joints, m/s for prismatic joints. Use NaN to indicate that the value is not present if the message definition does not support optional fields.",
+      optional: true,
+    },
+    {
+      name: "acceleration",
+      type: { type: "primitive", name: "float64" },
+      description:
+        "Joint acceleration. Rad/s² for revolute joints, m/s² for prismatic joints. Use NaN to indicate that the value is not present if the message definition does not support optional fields.",
+      optional: true,
+    },
+    {
+      name: "effort",
+      type: { type: "primitive", name: "float64" },
+      description:
+        "Joint effort (force or torque). Nm for revolute joints, N for prismatic joints. Use NaN to indicate that the value is not present if the message definition does not support optional fields.",
+      optional: true,
+    },
+  ],
+};
+
+const JointStates: FoxgloveMessageSchema = {
+  type: "message",
+  name: "JointStates",
+  description: "The state of a set of joints at a given time.",
+  fields: [
+    {
+      name: "timestamp",
+      type: { type: "nested", schema: Timestamp },
+      description: "Timestamp of the joint states",
+    },
+    {
+      name: "joints",
+      type: { type: "nested", schema: JointState },
+      description: "Joint states",
+      array: true,
+    },
+  ],
+};
+
 export const foxgloveMessageSchemas = {
   ArrowPrimitive,
   CameraCalibration,
@@ -1781,6 +1865,8 @@ export const foxgloveMessageSchemas = {
   Grid,
   VoxelGrid,
   ImageAnnotations,
+  JointState,
+  JointStates,
   KeyValuePair,
   LaserScan,
   LinePrimitive,

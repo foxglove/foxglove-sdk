@@ -20,6 +20,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 include(CTest)
 include(FetchContent)
 
+# Suppress CMake deprecation warnings from vendored dependencies with older cmake_minimum_required
+set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
+set(CMAKE_WARN_DEPRECATED OFF CACHE BOOL "" FORCE)
+
 FetchContent_Declare(
   Catch2
   GIT_REPOSITORY https://github.com/catchorg/Catch2.git
@@ -40,29 +44,18 @@ if(CMAKE_GENERATOR MATCHES "Unix Makefiles|Ninja")
 endif()
 FetchContent_MakeAvailable(Corrosion)
 
-FetchContent_Declare(
-  websocketpp
-  GIT_REPOSITORY https://github.com/zaphoyd/websocketpp.git
-  GIT_TAG 0.8.2
-  OVERRIDE_FIND_PACKAGE
+FetchContent_Declare(libwebsockets
+  GIT_REPOSITORY https://github.com/warmcat/libwebsockets.git
+  GIT_TAG v4.3.3
 )
-# Set WebSocketPP CMake policy to suppress the warning
-set(FETCHCONTENT_TRY_FIND_PACKAGE_MODE NEVER)
-FetchContent_GetProperties(websocketpp)
-if(NOT websocketpp_POPULATED)
-  FetchContent_Populate(websocketpp)
-  # Don't call add_subdirectory to avoid running the original CMakeLists.txt
-  # Just set up the include directory
-  add_library(websocketpp INTERFACE)
-  target_include_directories(websocketpp INTERFACE ${websocketpp_SOURCE_DIR})
-endif()
-FetchContent_MakeAvailable(websocketpp)
-
-FetchContent_Declare(asio
-  GIT_REPOSITORY https://github.com/chriskohlhoff/asio.git
-  GIT_TAG asio-1-31-0
-)
-FetchContent_MakeAvailable(asio)
+set(LWS_WITH_SSL OFF CACHE BOOL "" FORCE)
+set(LWS_WITH_SHARED OFF CACHE BOOL "" FORCE)
+set(LWS_WITH_STATIC ON CACHE BOOL "" FORCE)
+set(LWS_WITHOUT_TESTAPPS ON CACHE BOOL "" FORCE)
+set(LWS_WITHOUT_TEST_SERVER ON CACHE BOOL "" FORCE)
+set(LWS_WITHOUT_TEST_PING ON CACHE BOOL "" FORCE)
+set(LWS_WITHOUT_TEST_CLIENT ON CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(libwebsockets)
 
 FetchContent_Declare(json
   GIT_REPOSITORY https://github.com/nlohmann/json.git
@@ -77,9 +70,9 @@ FetchContent_Declare(base64
 set(BASE64_ENABLE_TESTING OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(base64)
 
-option(BUILD_DATA_PROVIDER_EXAMPLE "Build the data provider example (requires cpp-httplib and date)" ON)
+option(BUILD_REMOTE_DATA_LOADER_BACKEND_EXAMPLE "Build the remote data loader backend example (requires cpp-httplib and date)" ON)
 
-if(BUILD_DATA_PROVIDER_EXAMPLE)
+if(BUILD_REMOTE_DATA_LOADER_BACKEND_EXAMPLE)
   FetchContent_Declare(date
     GIT_REPOSITORY https://github.com/HowardHinnant/date.git
     GIT_TAG v3.0.4
@@ -101,6 +94,8 @@ if(BUILD_DATA_PROVIDER_EXAMPLE)
   set(HTTPLIB_USE_NON_BLOCKING_GETADDRINFO OFF CACHE BOOL "" FORCE)
   FetchContent_MakeAvailable(httplib)
 endif()
+
+set(CMAKE_WARN_DEPRECATED ON CACHE BOOL "" FORCE)
 
 if(DEFINED SANITIZE)
   if(NOT CMAKE_CXX_COMPILER_ID MATCHES ".*Clang")
@@ -180,13 +175,13 @@ file(GLOB_RECURSE foxglove_test_srcs CONFIGURE_DEPENDS
 add_executable(tests "${foxglove_test_srcs}")
 set_property(TARGET tests PROPERTY CXX_STANDARD 17)
 set_property(TARGET tests PROPERTY CXX_STANDARD_REQUIRED True)
-target_compile_definitions(tests PRIVATE ASIO_STANDALONE)
 target_compile_options(tests PUBLIC ${SANITIZER_COMPILE_OPTIONS})
 target_link_options(tests PUBLIC ${SANITIZER_LINK_OPTIONS})
-target_include_directories(tests SYSTEM PRIVATE ${asio_SOURCE_DIR}/asio/include)
 target_include_directories(tests SYSTEM PRIVATE ${json_SOURCE_DIR}/include)
-target_include_directories(tests SYSTEM PRIVATE ${websocketpp_SOURCE_DIR})
-target_link_libraries(tests PRIVATE foxglove_cpp_static Catch2::Catch2WithMain)
+target_link_libraries(tests PRIVATE foxglove_cpp_static Catch2::Catch2WithMain websockets)
+# Suppress warnings from libwebsockets headers by treating them as system includes
+get_target_property(LWS_INCLUDE_DIRS websockets INTERFACE_INCLUDE_DIRECTORIES)
+target_include_directories(tests SYSTEM PRIVATE ${LWS_INCLUDE_DIRS})
 catch_discover_tests(tests)
 if(MSVC)
   # Auto-detection of C++11 support is not working on the windows-2025 runner with default settings
@@ -287,12 +282,12 @@ target_compile_options(example_message_filtering PUBLIC ${SANITIZER_COMPILE_OPTI
 target_link_options(example_message_filtering PUBLIC ${SANITIZER_LINK_OPTIONS})
 target_link_libraries(example_message_filtering foxglove_cpp_static)
 
-if(BUILD_DATA_PROVIDER_EXAMPLE)
-  add_executable(example_data_provider examples/data-provider/src/main.cpp)
-  set_property(TARGET example_data_provider PROPERTY CXX_STANDARD 17)
-  set_property(TARGET example_data_provider PROPERTY CXX_STANDARD_REQUIRED True)
-  target_compile_options(example_data_provider PUBLIC ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
-  target_include_directories(example_data_provider SYSTEM PRIVATE ${json_SOURCE_DIR}/include)
-  target_link_options(example_data_provider PUBLIC ${SANITIZER_LINK_OPTIONS})
-  target_link_libraries(example_data_provider foxglove_cpp_static httplib::httplib base64 date::date)
+if(BUILD_REMOTE_DATA_LOADER_BACKEND_EXAMPLE)
+  add_executable(example_remote_data_loader_backend examples/remote-data-loader-backend/src/main.cpp)
+  set_property(TARGET example_remote_data_loader_backend PROPERTY CXX_STANDARD 17)
+  set_property(TARGET example_remote_data_loader_backend PROPERTY CXX_STANDARD_REQUIRED True)
+  target_compile_options(example_remote_data_loader_backend PUBLIC ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
+  target_include_directories(example_remote_data_loader_backend SYSTEM PRIVATE ${json_SOURCE_DIR}/include)
+  target_link_options(example_remote_data_loader_backend PUBLIC ${SANITIZER_LINK_OPTIONS})
+  target_link_libraries(example_remote_data_loader_backend foxglove_cpp_static httplib::httplib base64 date::date)
 endif()

@@ -286,6 +286,7 @@ impl From<CameraCalibration> for foxglove::schemas::CameraCalibration {
 /// :param thickness: Line thickness in pixels
 /// :param fill_color: Fill color
 /// :param outline_color: Outline color
+/// :param metadata: Additional user-provided metadata associated with this annotation. Keys must be unique.
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/circle-annotation
 #[pyclass(module = "foxglove.schemas")]
@@ -294,7 +295,7 @@ pub(crate) struct CircleAnnotation(pub(crate) foxglove::schemas::CircleAnnotatio
 #[pymethods]
 impl CircleAnnotation {
     #[new]
-    #[pyo3(signature = (*, timestamp=None, position=None, diameter=0.0, thickness=0.0, fill_color=None, outline_color=None) )]
+    #[pyo3(signature = (*, timestamp=None, position=None, diameter=0.0, thickness=0.0, fill_color=None, outline_color=None, metadata=None) )]
     fn new(
         timestamp: Option<Timestamp>,
         position: Option<Point2>,
@@ -302,6 +303,7 @@ impl CircleAnnotation {
         thickness: f64,
         fill_color: Option<Color>,
         outline_color: Option<Color>,
+        metadata: Option<Vec<KeyValuePair>>,
     ) -> Self {
         Self(foxglove::schemas::CircleAnnotation {
             timestamp: timestamp.map(Into::into),
@@ -310,17 +312,23 @@ impl CircleAnnotation {
             thickness,
             fill_color: fill_color.map(Into::into),
             outline_color: outline_color.map(Into::into),
+            metadata: metadata
+                .unwrap_or_default()
+                .into_iter()
+                .map(|x| x.into())
+                .collect(),
         })
     }
     fn __repr__(&self) -> String {
         format!(
-            "CircleAnnotation(timestamp={:?}, position={:?}, diameter={:?}, thickness={:?}, fill_color={:?}, outline_color={:?})",
+            "CircleAnnotation(timestamp={:?}, position={:?}, diameter={:?}, thickness={:?}, fill_color={:?}, outline_color={:?}, metadata={:?})",
             self.0.timestamp,
             self.0.position,
             self.0.diameter,
             self.0.thickness,
             self.0.fill_color,
             self.0.outline_color,
+            self.0.metadata,
         )
     }
     /// Returns the CircleAnnotation schema.
@@ -685,7 +693,7 @@ impl From<CubePrimitive> for foxglove::schemas::CubePrimitive {
     }
 }
 
-/// A transform between two reference frames in 3D space. The transform defines the position and orientation of a child frame within a parent frame. Translation moves the origin of the child frame relative to the parent origin. The rotation changes the orientiation of the child frame around its origin.
+/// A transform between two reference frames in 3D space. The transform defines the position and orientation of a child frame within a parent frame. Translation moves the origin of the child frame relative to the parent origin. The rotation changes the orientation of the child frame around its origin.
 ///
 /// Examples:
 ///
@@ -1101,7 +1109,7 @@ impl From<VoxelGrid> for foxglove::schemas::VoxelGrid {
 /// :param circles: Circle annotations
 /// :param points: Points annotations
 /// :param texts: Text annotations
-/// :param metadata: Additional user-provided metadata associated with the image annotations. Keys must be unique.
+/// :param metadata: Additional user-provided metadata associated with the image annotations. Keys must be unique within this object. Per-annotation metadata takes precedence over these values.
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/image-annotations
 #[pyclass(module = "foxglove.schemas")]
@@ -1173,6 +1181,126 @@ impl ImageAnnotations {
 
 impl From<ImageAnnotations> for foxglove::schemas::ImageAnnotations {
     fn from(value: ImageAnnotations) -> Self {
+        value.0
+    }
+}
+
+/// The state of a single joint (revolute or prismatic).
+///
+/// :param name: Joint name
+/// :param position: Joint position. Radians for revolute joints, meters for prismatic joints. Use NaN to indicate that the value is not present if the message definition does not support optional fields.
+/// :param velocity: Joint velocity. Rad/s for revolute joints, m/s for prismatic joints. Use NaN to indicate that the value is not present if the message definition does not support optional fields.
+/// :param acceleration: Joint acceleration. Rad/s² for revolute joints, m/s² for prismatic joints. Use NaN to indicate that the value is not present if the message definition does not support optional fields.
+/// :param effort: Joint effort (force or torque). Nm for revolute joints, N for prismatic joints. Use NaN to indicate that the value is not present if the message definition does not support optional fields.
+///
+/// See https://docs.foxglove.dev/docs/visualization/message-schemas/joint-state
+#[pyclass(module = "foxglove.schemas")]
+#[derive(Clone)]
+pub(crate) struct JointState(pub(crate) foxglove::schemas::JointState);
+#[pymethods]
+impl JointState {
+    #[new]
+    #[pyo3(signature = (*, name="", position=None, velocity=None, acceleration=None, effort=None) )]
+    fn new(
+        name: &str,
+        position: Option<f64>,
+        velocity: Option<f64>,
+        acceleration: Option<f64>,
+        effort: Option<f64>,
+    ) -> Self {
+        Self(foxglove::schemas::JointState {
+            name: name.to_string(),
+            position,
+            velocity,
+            acceleration,
+            effort,
+        })
+    }
+    fn __repr__(&self) -> String {
+        format!(
+            "JointState(name={:?}, position={:?}, velocity={:?}, acceleration={:?}, effort={:?})",
+            self.0.name, self.0.position, self.0.velocity, self.0.acceleration, self.0.effort,
+        )
+    }
+    /// Returns the JointState schema.
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::JointState::get_schema().unwrap().into()
+    }
+    /// Encodes the JointState as protobuf.
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("failed to allocate buffer for encoded message")
+    }
+}
+
+impl From<JointState> for foxglove::schemas::JointState {
+    fn from(value: JointState) -> Self {
+        value.0
+    }
+}
+
+/// The state of a set of joints at a given time.
+///
+/// :param timestamp: Timestamp of the joint states
+/// :param joints: Joint states
+///
+/// See https://docs.foxglove.dev/docs/visualization/message-schemas/joint-states
+#[pyclass(module = "foxglove.schemas")]
+#[derive(Clone)]
+pub(crate) struct JointStates(pub(crate) foxglove::schemas::JointStates);
+#[pymethods]
+impl JointStates {
+    #[new]
+    #[pyo3(signature = (*, timestamp=None, joints=None) )]
+    fn new(timestamp: Option<Timestamp>, joints: Option<Vec<JointState>>) -> Self {
+        Self(foxglove::schemas::JointStates {
+            timestamp: timestamp.map(Into::into),
+            joints: joints
+                .unwrap_or_default()
+                .into_iter()
+                .map(|x| x.into())
+                .collect(),
+        })
+    }
+    fn __repr__(&self) -> String {
+        format!(
+            "JointStates(timestamp={:?}, joints={:?})",
+            self.0.timestamp, self.0.joints,
+        )
+    }
+    /// Returns the JointStates schema.
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::JointStates::get_schema().unwrap().into()
+    }
+    /// Encodes the JointStates as protobuf.
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("failed to allocate buffer for encoded message")
+    }
+}
+
+impl From<JointStates> for foxglove::schemas::JointStates {
+    fn from(value: JointStates) -> Self {
         value.0
     }
 }
@@ -2242,6 +2370,7 @@ impl From<PointCloud> for foxglove::schemas::PointCloud {
 /// :param outline_colors: Per-point colors, if `type` is `POINTS`, or per-segment stroke colors, if `type` is `LINE_LIST`, `LINE_STRIP` or `LINE_LOOP`.
 /// :param fill_color: Fill color
 /// :param thickness: Stroke thickness in pixels
+/// :param metadata: Additional user-provided metadata associated with this annotation. Keys must be unique.
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/points-annotation
 #[pyclass(module = "foxglove.schemas")]
@@ -2250,7 +2379,7 @@ pub(crate) struct PointsAnnotation(pub(crate) foxglove::schemas::PointsAnnotatio
 #[pymethods]
 impl PointsAnnotation {
     #[new]
-    #[pyo3(signature = (*, timestamp=None, r#type=PointsAnnotationType::Unknown, points=None, outline_color=None, outline_colors=None, fill_color=None, thickness=0.0) )]
+    #[pyo3(signature = (*, timestamp=None, r#type=PointsAnnotationType::Unknown, points=None, outline_color=None, outline_colors=None, fill_color=None, thickness=0.0, metadata=None) )]
     fn new(
         timestamp: Option<Timestamp>,
         r#type: PointsAnnotationType,
@@ -2259,6 +2388,7 @@ impl PointsAnnotation {
         outline_colors: Option<Vec<Color>>,
         fill_color: Option<Color>,
         thickness: f64,
+        metadata: Option<Vec<KeyValuePair>>,
     ) -> Self {
         Self(foxglove::schemas::PointsAnnotation {
             timestamp: timestamp.map(Into::into),
@@ -2276,11 +2406,16 @@ impl PointsAnnotation {
                 .collect(),
             fill_color: fill_color.map(Into::into),
             thickness,
+            metadata: metadata
+                .unwrap_or_default()
+                .into_iter()
+                .map(|x| x.into())
+                .collect(),
         })
     }
     fn __repr__(&self) -> String {
         format!(
-            "PointsAnnotation(timestamp={:?}, r#type={:?}, points={:?}, outline_color={:?}, outline_colors={:?}, fill_color={:?}, thickness={:?})",
+            "PointsAnnotation(timestamp={:?}, r#type={:?}, points={:?}, outline_color={:?}, outline_colors={:?}, fill_color={:?}, thickness={:?}, metadata={:?})",
             self.0.timestamp,
             self.0.r#type,
             self.0.points,
@@ -2288,6 +2423,7 @@ impl PointsAnnotation {
             self.0.outline_colors,
             self.0.fill_color,
             self.0.thickness,
+            self.0.metadata,
         )
     }
     /// Returns the PointsAnnotation schema.
@@ -2802,6 +2938,7 @@ impl From<SpherePrimitive> for foxglove::schemas::SpherePrimitive {
 /// :param font_size: Font size in pixels
 /// :param text_color: Text color
 /// :param background_color: Background fill color
+/// :param metadata: Additional user-provided metadata associated with this annotation. Keys must be unique.
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/text-annotation
 #[pyclass(module = "foxglove.schemas")]
@@ -2810,7 +2947,7 @@ pub(crate) struct TextAnnotation(pub(crate) foxglove::schemas::TextAnnotation);
 #[pymethods]
 impl TextAnnotation {
     #[new]
-    #[pyo3(signature = (*, timestamp=None, position=None, text="", font_size=0.0, text_color=None, background_color=None) )]
+    #[pyo3(signature = (*, timestamp=None, position=None, text="", font_size=0.0, text_color=None, background_color=None, metadata=None) )]
     fn new(
         timestamp: Option<Timestamp>,
         position: Option<Point2>,
@@ -2818,6 +2955,7 @@ impl TextAnnotation {
         font_size: f64,
         text_color: Option<Color>,
         background_color: Option<Color>,
+        metadata: Option<Vec<KeyValuePair>>,
     ) -> Self {
         Self(foxglove::schemas::TextAnnotation {
             timestamp: timestamp.map(Into::into),
@@ -2826,17 +2964,23 @@ impl TextAnnotation {
             font_size,
             text_color: text_color.map(Into::into),
             background_color: background_color.map(Into::into),
+            metadata: metadata
+                .unwrap_or_default()
+                .into_iter()
+                .map(|x| x.into())
+                .collect(),
         })
     }
     fn __repr__(&self) -> String {
         format!(
-            "TextAnnotation(timestamp={:?}, position={:?}, text={:?}, font_size={:?}, text_color={:?}, background_color={:?})",
+            "TextAnnotation(timestamp={:?}, position={:?}, text={:?}, font_size={:?}, text_color={:?}, background_color={:?}, metadata={:?})",
             self.0.timestamp,
             self.0.position,
             self.0.text,
             self.0.font_size,
             self.0.text_color,
             self.0.background_color,
+            self.0.metadata,
         )
     }
     /// Returns the TextAnnotation schema.
@@ -3138,6 +3282,8 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<Grid>()?;
     module.add_class::<VoxelGrid>()?;
     module.add_class::<ImageAnnotations>()?;
+    module.add_class::<JointState>()?;
+    module.add_class::<JointStates>()?;
     module.add_class::<KeyValuePair>()?;
     module.add_class::<LaserScan>()?;
     module.add_class::<LinePrimitive>()?;

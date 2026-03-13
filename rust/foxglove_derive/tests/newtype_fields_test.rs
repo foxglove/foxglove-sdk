@@ -47,6 +47,10 @@ struct MessageWithVecOfNewtypes {
     values: Vec<MyU64>,
 }
 
+/// A newtype wrapping an optional primitive.
+#[derive(Encode)]
+struct OptionalU64(Option<u64>);
+
 /// A struct with an optional newtype.
 #[derive(Encode)]
 struct MessageWithOptionalNewtype {
@@ -523,6 +527,44 @@ fn test_standalone_newtype_buffer_overflow() {
     assert_eq!(
         result.unwrap_err().to_string(),
         "Encoding error: insufficient buffer"
+    );
+}
+
+/// Verify that a newtype wrapping Option<T> gets proto3_optional and a synthetic oneof
+/// in its standalone descriptor (exercises the newtype codepath in derive_newtype_impl).
+#[test]
+fn test_optional_newtype_descriptor() {
+    let schema = OptionalU64::get_schema().expect("Failed to get schema");
+    let descriptor_set = prost_types::FileDescriptorSet::decode(schema.data.as_ref())
+        .expect("Failed to decode descriptor set");
+
+    let file = descriptor_set.file.last().expect("No file descriptors");
+    let message = &file.message_type[0];
+    assert_eq!(message.name.as_deref(), Some("OptionalU64"));
+    assert_eq!(message.field.len(), 1);
+
+    let field = &message.field[0];
+    assert_eq!(field.name.as_deref(), Some("value"));
+    assert_eq!(
+        field.label.unwrap(),
+        prost_types::field_descriptor_proto::Label::Optional as i32,
+    );
+    assert_eq!(
+        field.proto3_optional,
+        Some(true),
+        "Option<T> newtype field should have proto3_optional set"
+    );
+    assert!(
+        field.oneof_index.is_some(),
+        "Option<T> newtype field should have oneof_index pointing to synthetic oneof"
+    );
+
+    let oneof_index = field.oneof_index.unwrap() as usize;
+    assert!(oneof_index < message.oneof_decl.len());
+    assert_eq!(
+        message.oneof_decl[oneof_index].name.as_deref(),
+        Some("_value"),
+        "Synthetic oneof should be named _value"
     );
 }
 

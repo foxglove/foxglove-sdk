@@ -32,6 +32,8 @@ If the IDL does not support optional fields (e.g. ROS) you must specify a value 
 - [GeoJSON](#geojson)
 - [Grid](#grid)
 - [ImageAnnotations](#imageannotations)
+- [JointState](#jointstate)
+- [JointStates](#jointstates)
 - [KeyValuePair](#keyvaluepair)
 - [LaserScan](#laserscan)
 - [LinePrimitive](#lineprimitive)
@@ -498,6 +500,19 @@ Outline color
 
 </td>
 </tr>
+<tr>
+<td><code>metadata</code> (optional)</td>
+<td>
+
+[KeyValuePair](#keyvaluepair)[]
+
+</td>
+<td>
+
+Additional user-provided metadata associated with this annotation. Keys must be unique.
+
+</td>
+</tr>
 </table>
 
 ## Color
@@ -890,7 +905,7 @@ The number of nanoseconds in the positive direction
 
 ## FrameTransform
 
-A transform between two reference frames in 3D space. The transform defines the position and orientation of a child frame within a parent frame. Translation moves the origin of the child frame relative to the parent origin. The rotation changes the orientiation of the child frame around its origin.
+A transform between two reference frames in 3D space. The transform defines the position and orientation of a child frame within a parent frame. Translation moves the origin of the child frame relative to the parent origin. The rotation changes the orientation of the child frame around its origin.
 
 Examples:
 
@@ -1262,7 +1277,122 @@ Text annotations
 </td>
 <td>
 
-Additional user-provided metadata associated with the image annotations. Keys must be unique.
+Additional user-provided metadata associated with the image annotations. Keys must be unique within this object. Per-annotation metadata takes precedence over these values.
+
+</td>
+</tr>
+</table>
+
+## JointState
+
+The state of a single joint (revolute or prismatic).
+
+<table>
+  <tr>
+    <th>field</th>
+    <th>type</th>
+    <th>description</th>
+  </tr>
+<tr>
+<td><code>name</code></td>
+<td>
+
+string
+
+</td>
+<td>
+
+Joint name
+
+</td>
+</tr>
+<tr>
+<td><code>position</code> (optional)</td>
+<td>
+
+float64
+
+</td>
+<td>
+
+Joint position. Radians for revolute joints, meters for prismatic joints. Use NaN to indicate that the value is not present if the message definition does not support optional fields.
+
+</td>
+</tr>
+<tr>
+<td><code>velocity</code> (optional)</td>
+<td>
+
+float64
+
+</td>
+<td>
+
+Joint velocity. Rad/s for revolute joints, m/s for prismatic joints. Use NaN to indicate that the value is not present if the message definition does not support optional fields.
+
+</td>
+</tr>
+<tr>
+<td><code>acceleration</code> (optional)</td>
+<td>
+
+float64
+
+</td>
+<td>
+
+Joint acceleration. Rad/s² for revolute joints, m/s² for prismatic joints. Use NaN to indicate that the value is not present if the message definition does not support optional fields.
+
+</td>
+</tr>
+<tr>
+<td><code>effort</code> (optional)</td>
+<td>
+
+float64
+
+</td>
+<td>
+
+Joint effort (force or torque). Nm for revolute joints, N for prismatic joints. Use NaN to indicate that the value is not present if the message definition does not support optional fields.
+
+</td>
+</tr>
+</table>
+
+## JointStates
+
+The state of a set of joints at a given time.
+
+<table>
+  <tr>
+    <th>field</th>
+    <th>type</th>
+    <th>description</th>
+  </tr>
+<tr>
+<td><code>timestamp</code></td>
+<td>
+
+[Timestamp](#timestamp)
+
+</td>
+<td>
+
+Timestamp of the joint states
+
+</td>
+</tr>
+<tr>
+<td><code>joints</code></td>
+<td>
+
+[JointState](#jointstate)[]
+
+</td>
+<td>
+
+Joint states
 
 </td>
 </tr>
@@ -2257,6 +2387,19 @@ Stroke thickness in pixels
 
 </td>
 </tr>
+<tr>
+<td><code>metadata</code> (optional)</td>
+<td>
+
+[KeyValuePair](#keyvaluepair)[]
+
+</td>
+<td>
+
+Additional user-provided metadata associated with this annotation. Keys must be unique.
+
+</td>
+</tr>
 </table>
 
 ## Pose
@@ -3116,6 +3259,19 @@ Text color
 <td>
 
 Background fill color
+
+</td>
+</tr>
+<tr>
+<td><code>metadata</code> (optional)</td>
+<td>
+
+[KeyValuePair](#keyvaluepair)[]
+
+</td>
+<td>
+
+Additional user-provided metadata associated with this annotation. Keys must be unique.
 
 </td>
 </tr>

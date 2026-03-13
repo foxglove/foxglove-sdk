@@ -1,77 +1,85 @@
 //! Subscribe message types.
 
-use bytes::{Buf, BufMut};
 use serde::{Deserialize, Serialize};
 
-use crate::protocol::{BinaryPayload, ParseError};
+/// A channel subscription entry.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SubscribeChannel {
+    /// Channel ID to subscribe to.
+    pub id: u64,
+    /// Whether to request a video track for this channel.
+    #[serde(default)]
+    pub request_video_track: bool,
+}
 
-/// Subscribe to a channel.
+/// Subscribe to channels.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "op", rename = "subscribe", rename_all = "camelCase")]
 pub struct Subscribe {
-    /// Channel IDs to subscribe to.
-    pub channel_ids: Vec<u64>,
+    /// Channels to subscribe to.
+    pub channels: Vec<SubscribeChannel>,
 }
 
 impl Subscribe {
-    /// Creates a new subscribe message.
-    pub fn new(channel_ids: impl IntoIterator<Item = u64>) -> Self {
+    /// Creates a new subscribe message from subscribe channel entries.
+    pub fn new(channels: impl IntoIterator<Item = SubscribeChannel>) -> Self {
         Self {
-            channel_ids: channel_ids.into_iter().collect(),
+            channels: channels.into_iter().collect(),
         }
     }
-}
 
-impl BinaryPayload<'_> for Subscribe {
-    fn parse_payload(mut data: &[u8]) -> Result<Self, ParseError> {
-        if data.len() < 4 {
-            return Err(ParseError::BufferTooShort);
-        }
-        let count = data.get_u32_le() as usize;
-        let required_len = count.checked_mul(8).ok_or(ParseError::BufferTooShort)?;
-        if data.len() < required_len {
-            return Err(ParseError::BufferTooShort);
-        }
-        let mut channel_ids = Vec::with_capacity(count);
-        for _ in 0..count {
-            channel_ids.push(data.get_u64_le());
-        }
-        Ok(Self { channel_ids })
-    }
-
-    fn payload_size(&self) -> usize {
-        4 + self.channel_ids.len() * 8
-    }
-
-    fn write_payload(&self, buf: &mut impl BufMut) {
-        buf.put_u32_le(self.channel_ids.len() as u32);
-        for &channel_id in &self.channel_ids {
-            buf.put_u64_le(channel_id);
-        }
+    /// Returns the channel IDs in this subscribe message.
+    pub fn channel_ids(&self) -> Vec<u64> {
+        self.channels.iter().map(|ch| ch.id).collect()
     }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::protocol::v2::client::ClientMessage;
-    use crate::protocol::v2::message::BinaryMessage;
 
     use super::*;
 
-    fn message() -> Subscribe {
-        Subscribe::new([10, 20, 30])
+    #[test]
+    fn test_parse_json() {
+        let json = r#"{"op": "subscribe", "channels": [{"id": 10}, {"id": 20, "requestVideoTrack": true}]}"#;
+        let msg = ClientMessage::parse_json(json).unwrap();
+        assert_eq!(
+            msg,
+            ClientMessage::Subscribe(Subscribe::new([
+                SubscribeChannel {
+                    id: 10,
+                    request_video_track: false,
+                },
+                SubscribeChannel {
+                    id: 20,
+                    request_video_track: true,
+                },
+            ]))
+        );
     }
 
     #[test]
-    fn test_encode() {
-        insta::assert_snapshot!(format!("{:#04x?}", message().to_bytes()));
-    }
-
-    #[test]
-    fn test_roundtrip() {
-        let orig = message();
-        let buf = orig.to_bytes();
-        let msg = ClientMessage::parse_binary(&buf).unwrap();
-        assert_eq!(msg, ClientMessage::Subscribe(orig));
+    fn test_parse_json_simple() {
+        let json = r#"{"op": "subscribe", "channels": [{"id": 10}, {"id": 20}, {"id": 30}]}"#;
+        let msg = ClientMessage::parse_json(json).unwrap();
+        assert_eq!(
+            msg,
+            ClientMessage::Subscribe(Subscribe::new([
+                SubscribeChannel {
+                    id: 10,
+                    request_video_track: false,
+                },
+                SubscribeChannel {
+                    id: 20,
+                    request_video_track: false,
+                },
+                SubscribeChannel {
+                    id: 30,
+                    request_video_track: false,
+                },
+            ]))
+        );
     }
 }

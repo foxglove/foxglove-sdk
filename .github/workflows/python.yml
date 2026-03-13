@@ -58,7 +58,7 @@ jobs:
     needs: [sdist]
     steps:
       - name: Download sdist
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: wheels-sdist
       - name: Unpack sdist
@@ -91,7 +91,7 @@ jobs:
           MATURIN_NO_MISSING_BUILD_BACKEND_WARNING: 1
 
       - name: Upload wheel
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: playground-wasm
           path: dist
@@ -112,7 +112,7 @@ jobs:
           node-version: 22
           cache: yarn
       - name: Download wheel
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: playground-wasm
           path: playground/public
@@ -199,7 +199,7 @@ jobs:
         with:
           python-version: "3.10"
       - name: Download sdist
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: wheels-sdist
       - name: Unpack sdist
@@ -213,7 +213,7 @@ jobs:
           manylinux: auto
           docker-options: "--env MATURIN_NO_MISSING_BUILD_BACKEND_WARNING=1"
       - name: Upload wheels
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: wheels-linux-${{ matrix.platform.target }}
           path: dist
@@ -238,7 +238,7 @@ jobs:
         with:
           python-version: "3.10"
       - name: Download sdist
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: wheels-sdist
       - name: Unpack sdist
@@ -252,7 +252,7 @@ jobs:
           manylinux: musllinux_1_2
           docker-options: "--env MATURIN_NO_MISSING_BUILD_BACKEND_WARNING=1"
       - name: Upload wheels
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: wheels-musllinux-${{ matrix.platform.target }}
           path: dist
@@ -287,7 +287,7 @@ jobs:
             3.10
 
       - name: Download sdist
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: wheels-sdist
       - name: Unpack sdist
@@ -301,7 +301,7 @@ jobs:
           sccache: "false"
           docker-options: "--env MATURIN_NO_MISSING_BUILD_BACKEND_WARNING=1"
       - name: Upload wheels
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: wheels-windows-${{ matrix.platform.target }}
           path: dist
@@ -322,7 +322,7 @@ jobs:
         with:
           python-version: "3.10"
       - name: Download sdist
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: wheels-sdist
       - name: Unpack sdist
@@ -335,7 +335,7 @@ jobs:
           sccache: "false"
           docker-options: "--env MATURIN_NO_MISSING_BUILD_BACKEND_WARNING=1"
       - name: Upload wheels
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: wheels-macos-${{ matrix.platform.target }}
           path: dist
@@ -375,7 +375,7 @@ jobs:
           PY
         working-directory: python/foxglove-sdk
       - name: Upload sdist
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: wheels-sdist
           path: python/foxglove-sdk/dist
@@ -392,12 +392,12 @@ jobs:
       contents: write
       attestations: write
     steps:
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
         with:
           path: python/foxglove-sdk
       - run: find python/foxglove-sdk/wheels-*
       - name: Generate artifact attestation
-        uses: actions/attest-build-provenance@v3
+        uses: actions/attest-build-provenance@v4
         with:
           subject-path: "python/foxglove-sdk/wheels-*/*"
       - name: Publish to PyPI

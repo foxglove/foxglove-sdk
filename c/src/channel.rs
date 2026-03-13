@@ -117,6 +117,10 @@ impl Seek for CustomWriter {
     }
 }
 
+/// Sentinel value for `compression_threads` indicating the default behavior
+/// of using the number of physical CPUs.
+pub const FOXGLOVE_MCAP_COMPRESSION_THREADS_DEFAULT: u32 = u32::MAX;
+
 #[repr(C)]
 pub struct FoxgloveMcapOptions {
     /// `context` can be null, or a valid pointer to a context created via `foxglove_context_new`.
@@ -141,6 +145,17 @@ pub struct FoxgloveMcapOptions {
     pub emit_metadata_indexes: bool,
     pub repeat_channels: bool,
     pub repeat_schemas: bool,
+    /// Whether to calculate and include CRCs in the respective records.
+    pub calculate_chunk_crcs: bool,
+    pub calculate_data_section_crc: bool,
+    pub calculate_summary_section_crc: bool,
+    pub calculate_attachment_crcs: bool,
+    /// Compression level passed to the underlying compressor (zstd or lz4).
+    /// A value of 0 instructs the compressor to use its default level.
+    pub compression_level: u32,
+    /// Number of threads for zstd compression. 0 disables multithreading.
+    /// The default uses the number of physical CPUs.
+    pub compression_threads: u32,
     /// Context provided to the `sink_channel_filter` callback.
     pub sink_channel_filter_context: *const c_void,
     /// A filter for channels that can be used to subscribe to or unsubscribe from channels.
@@ -162,7 +177,7 @@ pub struct FoxgloveMcapOptions {
 }
 
 impl FoxgloveMcapOptions {
-    unsafe fn to_write_options(&self) -> Result<WriteOptions, foxglove::FoxgloveError> {
+    pub(crate) unsafe fn to_write_options(&self) -> Result<WriteOptions, foxglove::FoxgloveError> {
         let profile = unsafe { self.profile.as_utf8_str() }
             .map_err(|e| foxglove::FoxgloveError::ValueError(format!("profile is invalid: {e}")))?;
 
@@ -172,7 +187,7 @@ impl FoxgloveMcapOptions {
             _ => None,
         };
 
-        Ok(WriteOptions::default()
+        let mut opts = WriteOptions::default()
             .profile(profile)
             .compression(compression)
             .chunk_size(if self.chunk_size > 0 {
@@ -189,7 +204,50 @@ impl FoxgloveMcapOptions {
             .emit_attachment_indexes(self.emit_attachment_indexes)
             .emit_metadata_indexes(self.emit_metadata_indexes)
             .repeat_channels(self.repeat_channels)
-            .repeat_schemas(self.repeat_schemas))
+            .repeat_schemas(self.repeat_schemas)
+            .calculate_chunk_crcs(self.calculate_chunk_crcs)
+            .calculate_data_section_crc(self.calculate_data_section_crc)
+            .calculate_summary_section_crc(self.calculate_summary_section_crc)
+            .calculate_attachment_crcs(self.calculate_attachment_crcs)
+            .compression_level(self.compression_level);
+        if self.compression_threads != FOXGLOVE_MCAP_COMPRESSION_THREADS_DEFAULT {
+            opts = opts.compression_threads(self.compression_threads);
+        }
+        Ok(opts)
+    }
+}
+
+/// Returns a `FoxgloveMcapOptions` with defaults matching `mcap::WriteOptions::default()`.
+///
+/// The test `test_mcap_options_default_matches_write_options` verifies these stay in sync.
+#[unsafe(no_mangle)]
+pub extern "C" fn foxglove_mcap_options_default() -> FoxgloveMcapOptions {
+    FoxgloveMcapOptions {
+        context: std::ptr::null(),
+        path: FoxgloveString::default(),
+        truncate: false,
+        custom_writer: std::ptr::null(),
+        compression: FoxgloveMcapCompression::Zstd,
+        profile: FoxgloveString::default(),
+        chunk_size: 1024 * 768,
+        use_chunks: true,
+        disable_seeking: false,
+        emit_statistics: true,
+        emit_summary_offsets: true,
+        emit_message_indexes: true,
+        emit_chunk_indexes: true,
+        emit_attachment_indexes: true,
+        emit_metadata_indexes: true,
+        repeat_channels: true,
+        repeat_schemas: true,
+        calculate_chunk_crcs: true,
+        calculate_data_section_crc: true,
+        calculate_summary_section_crc: true,
+        calculate_attachment_crcs: true,
+        compression_level: 0,
+        compression_threads: FOXGLOVE_MCAP_COMPRESSION_THREADS_DEFAULT,
+        sink_channel_filter_context: std::ptr::null(),
+        sink_channel_filter: None,
     }
 }
 
