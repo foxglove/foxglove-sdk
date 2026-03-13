@@ -14,6 +14,10 @@ if(CCACHE_PROGRAM)
   message(STATUS "Using ccache: ${CCACHE_PROGRAM}")
 endif()
 
+option(USE_PACKAGE_MANAGER_DEPENDENCIES
+  "Try to find dependencies provided by the local package manager, and if not found, fall back to building them from source"
+  ON)
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
@@ -24,75 +28,110 @@ include(FetchContent)
 set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
 set(CMAKE_WARN_DEPRECATED OFF CACHE BOOL "" FORCE)
 
-FetchContent_Declare(
-  Catch2
-  GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-  GIT_TAG        v3.8.0
-)
-FetchContent_MakeAvailable(Catch2)
-list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
+if(USE_PACKAGE_MANAGER_DEPENDENCIES)
+  find_package(Catch2 QUIET 3)
+endif()
+if(NOT TARGET Catch2::Catch2WithMain)
+  FetchContent_Declare(
+    Catch2
+    GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+    GIT_TAG        v3.8.0
+  )
+  FetchContent_MakeAvailable(Catch2)
+  list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
+endif()
 include(Catch)
 
-FetchContent_Declare(
-  Corrosion
-  GIT_REPOSITORY https://github.com/corrosion-rs/corrosion.git
-  GIT_TAG v0.5.1
-)
-# Clear CMAKE_CONFIGURATION_TYPES before making Corrosion available
-if(CMAKE_GENERATOR MATCHES "Unix Makefiles|Ninja")
-  unset(CMAKE_CONFIGURATION_TYPES CACHE)
+if(USE_PACKAGE_MANAGER_DEPENDENCIES)
+  find_package(Corrosion QUIET 0.5.1)
 endif()
-FetchContent_MakeAvailable(Corrosion)
+if(NOT Corrosion_FOUND)
+  FetchContent_Declare(
+    Corrosion
+    GIT_REPOSITORY https://github.com/corrosion-rs/corrosion.git
+    GIT_TAG v0.5.1
+  )
+  # Clear CMAKE_CONFIGURATION_TYPES before making Corrosion available
+  if(CMAKE_GENERATOR MATCHES "Unix Makefiles|Ninja")
+    unset(CMAKE_CONFIGURATION_TYPES CACHE)
+  endif()
+  FetchContent_MakeAvailable(Corrosion)
+endif()
 
-FetchContent_Declare(libwebsockets
-  GIT_REPOSITORY https://github.com/warmcat/libwebsockets.git
-  GIT_TAG v4.3.3
-)
-set(LWS_WITH_SSL OFF CACHE BOOL "" FORCE)
-set(LWS_WITH_SHARED OFF CACHE BOOL "" FORCE)
-set(LWS_WITH_STATIC ON CACHE BOOL "" FORCE)
-set(LWS_WITHOUT_TESTAPPS ON CACHE BOOL "" FORCE)
-set(LWS_WITHOUT_TEST_SERVER ON CACHE BOOL "" FORCE)
-set(LWS_WITHOUT_TEST_PING ON CACHE BOOL "" FORCE)
-set(LWS_WITHOUT_TEST_CLIENT ON CACHE BOOL "" FORCE)
-FetchContent_MakeAvailable(libwebsockets)
+if(USE_PACKAGE_MANAGER_DEPENDENCIES)
+  find_package(libwebsockets QUIET)
+endif()
+if(NOT TARGET websockets_shared)
+  FetchContent_Declare(libwebsockets
+    GIT_REPOSITORY https://libwebsockets.org/repo/libwebsockets
+    GIT_TAG v4.3.3
+  )
+  set(LWS_WITH_SSL OFF CACHE BOOL "" FORCE)
+  set(LWS_WITH_SHARED ON CACHE BOOL "" FORCE)
+  set(LWS_WITH_STATIC OFF CACHE BOOL "" FORCE)
+  set(LWS_WITHOUT_TESTAPPS ON CACHE BOOL "" FORCE)
+  set(LWS_WITHOUT_TEST_SERVER ON CACHE BOOL "" FORCE)
+  set(LWS_WITHOUT_TEST_PING ON CACHE BOOL "" FORCE)
+  set(LWS_WITHOUT_TEST_CLIENT ON CACHE BOOL "" FORCE)
+  FetchContent_MakeAvailable(libwebsockets)
+endif()
 
-FetchContent_Declare(json
-  GIT_REPOSITORY https://github.com/nlohmann/json.git
-  GIT_TAG v3.12.0
-)
-FetchContent_MakeAvailable(json)
+if(USE_PACKAGE_MANAGER_DEPENDENCIES)
+  find_package(nlohmann_json QUIET)
+endif()
+if(NOT TARGET nlohmann_json::nlohmann_json)
+  FetchContent_Declare(nlohmann_json
+    GIT_REPOSITORY https://github.com/nlohmann/json.git
+    GIT_TAG v3.12.0
+  )
+  FetchContent_MakeAvailable(nlohmann_json)
+endif()
 
-FetchContent_Declare(base64
-  GIT_REPOSITORY https://github.com/tobiaslocker/base64.git
-  GIT_TAG 8d96a2a737ac1396304b1de289beb3a5ea0cb752
-)
-set(BASE64_ENABLE_TESTING OFF CACHE BOOL "" FORCE)
-FetchContent_MakeAvailable(base64)
+if(USE_PACKAGE_MANAGER_DEPENDENCIES)
+  find_package(base64 QUIET)
+endif()
+if(NOT TARGET base64::base64)
+  FetchContent_Declare(base64
+    GIT_REPOSITORY https://github.com/tobiaslocker/base64.git
+    GIT_TAG 8d96a2a737ac1396304b1de289beb3a5ea0cb752
+  )
+  set(BASE64_ENABLE_TESTING OFF CACHE BOOL "" FORCE)
+  FetchContent_MakeAvailable(base64)
+endif()
 
 option(BUILD_REMOTE_DATA_LOADER_BACKEND_EXAMPLE "Build the remote data loader backend example (requires cpp-httplib and date)" ON)
 
 if(BUILD_REMOTE_DATA_LOADER_BACKEND_EXAMPLE)
-  FetchContent_Declare(date
-    GIT_REPOSITORY https://github.com/HowardHinnant/date.git
-    GIT_TAG v3.0.4
-  )
-  set(ENABLE_DATE_TESTING OFF CACHE BOOL "" FORCE)
-  FetchContent_MakeAvailable(date)
+  if(USE_PACKAGE_MANAGER_DEPENDENCIES)
+    find_package(date QUIET)
+  endif()
+  if(NOT TARGET date::date)
+    FetchContent_Declare(date
+      GIT_REPOSITORY https://github.com/HowardHinnant/date.git
+      GIT_TAG v3.0.4
+    )
+    set(ENABLE_DATE_TESTING OFF CACHE BOOL "" FORCE)
+    FetchContent_MakeAvailable(date)
+  endif()
 
-  FetchContent_Declare(httplib
-    GIT_REPOSITORY https://github.com/yhirose/cpp-httplib.git
-    GIT_TAG v0.32.0
-  )
-  set(HTTPLIB_COMPILE OFF CACHE BOOL "" FORCE)
-  set(HTTPLIB_REQUIRE_OPENSSL OFF CACHE BOOL "" FORCE)
-  set(HTTPLIB_USE_OPENSSL_IF_AVAILABLE OFF CACHE BOOL "" FORCE)
-  set(HTTPLIB_REQUIRE_ZLIB OFF CACHE BOOL "" FORCE)
-  set(HTTPLIB_USE_ZLIB_IF_AVAILABLE OFF CACHE BOOL "" FORCE)
-  set(HTTPLIB_USE_BROTLI_IF_AVAILABLE OFF CACHE BOOL "" FORCE)
-  set(HTTPLIB_USE_ZSTD_IF_AVAILABLE OFF CACHE BOOL "" FORCE)
-  set(HTTPLIB_USE_NON_BLOCKING_GETADDRINFO OFF CACHE BOOL "" FORCE)
-  FetchContent_MakeAvailable(httplib)
+  if(USE_PACKAGE_MANAGER_DEPENDENCIES)
+    find_package(httplib QUIET)
+  endif()
+  if(NOT TARGET httplib::httplib)
+    FetchContent_Declare(httplib
+      GIT_REPOSITORY https://github.com/yhirose/cpp-httplib.git
+      GIT_TAG v0.32.0
+    )
+    set(HTTPLIB_COMPILE OFF CACHE BOOL "" FORCE)
+    set(HTTPLIB_REQUIRE_OPENSSL OFF CACHE BOOL "" FORCE)
+    set(HTTPLIB_USE_OPENSSL_IF_AVAILABLE OFF CACHE BOOL "" FORCE)
+    set(HTTPLIB_REQUIRE_ZLIB OFF CACHE BOOL "" FORCE)
+    set(HTTPLIB_USE_ZLIB_IF_AVAILABLE OFF CACHE BOOL "" FORCE)
+    set(HTTPLIB_USE_BROTLI_IF_AVAILABLE OFF CACHE BOOL "" FORCE)
+    set(HTTPLIB_USE_ZSTD_IF_AVAILABLE OFF CACHE BOOL "" FORCE)
+    set(HTTPLIB_USE_NON_BLOCKING_GETADDRINFO OFF CACHE BOOL "" FORCE)
+    FetchContent_MakeAvailable(httplib)
+  endif()
 endif()
 
 set(CMAKE_WARN_DEPRECATED ON CACHE BOOL "" FORCE)
@@ -177,10 +216,9 @@ set_property(TARGET tests PROPERTY CXX_STANDARD 17)
 set_property(TARGET tests PROPERTY CXX_STANDARD_REQUIRED True)
 target_compile_options(tests PUBLIC ${SANITIZER_COMPILE_OPTIONS})
 target_link_options(tests PUBLIC ${SANITIZER_LINK_OPTIONS})
-target_include_directories(tests SYSTEM PRIVATE ${json_SOURCE_DIR}/include)
-target_link_libraries(tests PRIVATE foxglove_cpp_static Catch2::Catch2WithMain websockets)
+target_link_libraries(tests PRIVATE foxglove_cpp_static Catch2::Catch2WithMain nlohmann_json::nlohmann_json websockets)
 # Suppress warnings from libwebsockets headers by treating them as system includes
-get_target_property(LWS_INCLUDE_DIRS websockets INTERFACE_INCLUDE_DIRECTORIES)
+get_target_property(LWS_INCLUDE_DIRS websockets_shared INTERFACE_INCLUDE_DIRECTORIES)
 target_include_directories(tests SYSTEM PRIVATE ${LWS_INCLUDE_DIRS})
 catch_discover_tests(tests)
 if(MSVC)
@@ -213,9 +251,8 @@ add_executable(example_services examples/ws-services/src/main.cpp)
 set_property(TARGET example_services PROPERTY CXX_STANDARD 17)
 set_property(TARGET example_services PROPERTY CXX_STANDARD_REQUIRED True)
 target_compile_options(example_services PUBLIC ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
-target_include_directories(example_services SYSTEM PRIVATE ${json_SOURCE_DIR}/include)
 target_link_options(example_services PUBLIC ${SANITIZER_LINK_OPTIONS})
-target_link_libraries(example_services foxglove_cpp_static)
+target_link_libraries(example_services foxglove_cpp_static nlohmann_json::nlohmann_json)
 
 add_executable(example_mcap examples/mcap/src/main.cpp)
 set_property(TARGET example_mcap PROPERTY CXX_STANDARD 17)
@@ -256,23 +293,19 @@ add_executable(example_auto_serialize examples/auto-serialize/src/main.cpp)
 set_property(TARGET example_auto_serialize PROPERTY CXX_STANDARD 17)
 set_property(TARGET example_auto_serialize PROPERTY CXX_STANDARD_REQUIRED True)
 target_compile_options(example_auto_serialize PUBLIC ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
-target_include_directories(example_auto_serialize SYSTEM PRIVATE ${json_SOURCE_DIR}/include)
 target_link_options(example_auto_serialize PUBLIC ${SANITIZER_LINK_OPTIONS})
-target_link_libraries(example_auto_serialize foxglove_cpp_static)
+target_link_libraries(example_auto_serialize foxglove_cpp_static nlohmann_json::nlohmann_json)
 
 option(BUILD_OPENCV_EXAMPLE "Build the RGB camera visualization example (requires OpenCV)" OFF)
 
 if(BUILD_OPENCV_EXAMPLE)
-  find_package(OpenCV REQUIRED)
-  include_directories(${OpenCV_INCLUDE_DIRS})
+  find_package(OpenCV REQUIRED COMPONENTS core videoio)
   add_executable(example_rgb_camera_visualization examples/rgb-camera-visualization/main.cpp)
-  set_property(TARGET example_rgb_camera_visualization PROPERTY EXCLUDE_FROM_ALL TRUE)
   set_property(TARGET example_rgb_camera_visualization PROPERTY CXX_STANDARD 17)
   set_property(TARGET example_rgb_camera_visualization PROPERTY CXX_STANDARD_REQUIRED True)
   target_compile_options(example_rgb_camera_visualization PUBLIC ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
   target_link_options(example_rgb_camera_visualization PUBLIC ${SANITIZER_LINK_OPTIONS})
-  target_include_directories(example_rgb_camera_visualization PRIVATE ${OpenCV_INCLUDE_DIRS})
-  target_link_libraries(example_rgb_camera_visualization foxglove_cpp_static ${OpenCV_LIBS})
+  target_link_libraries(example_rgb_camera_visualization foxglove_cpp_static opencv_core opencv_videoio)
 endif()
 
 add_executable(example_message_filtering examples/message-filtering/src/main.cpp)
