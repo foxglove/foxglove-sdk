@@ -44,10 +44,10 @@ use crate::websocket::{
 use crate::websocket::{
     PlaybackCommand, PlaybackControlRequest, PlaybackState, PlaybackStatus, ServerListener,
 };
-use crate::websocket_client::WebSocketClient;
+use crate::testutil::{WebSocketClient, WebSocketClientError};
 use crate::{
     ChannelBuilder, ChannelDescriptor, Context, FoxgloveError, PartialMetadata, RawChannel, Schema,
-    SinkChannelFilter, WebSocketClientError,
+    SinkChannelFilter,
 };
 
 macro_rules! expect_recv {
