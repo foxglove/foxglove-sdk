@@ -5,7 +5,7 @@
 //! 2. Serves MCAP data whose channels and schemas match the manifest.
 //! 3. Requires authentication.
 //!
-//! The checks are parameterized by [`DataProviderTestConfig`] so they can be
+//! The checks are parameterized by [`RemoteDataLoaderBackendTestConfig`] so they can be
 //! used against any implementation (Rust, C++, etc.) without modification.
 //!
 //! # Usage
