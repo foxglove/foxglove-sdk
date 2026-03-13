@@ -102,12 +102,17 @@ endif()
 option(BUILD_REMOTE_DATA_LOADER_BACKEND_EXAMPLE "Build the remote data loader backend example (requires cpp-httplib and date)" ON)
 
 if(BUILD_REMOTE_DATA_LOADER_BACKEND_EXAMPLE)
-  FetchContent_Declare(date
-    GIT_REPOSITORY https://github.com/HowardHinnant/date.git
-    GIT_TAG v3.0.4
-  )
-  set(ENABLE_DATE_TESTING OFF CACHE BOOL "" FORCE)
-  FetchContent_MakeAvailable(date)
+  if(USE_PACKAGE_MANAGER_DEPENDENCIES)
+    find_package(date QUIET)
+  endif()
+  if(NOT TARGET date::date)
+    FetchContent_Declare(date
+      GIT_REPOSITORY https://github.com/HowardHinnant/date.git
+      GIT_TAG v3.0.4
+    )
+    set(ENABLE_DATE_TESTING OFF CACHE BOOL "" FORCE)
+    FetchContent_MakeAvailable(date)
+  endif()
 
   FetchContent_Declare(httplib
     GIT_REPOSITORY https://github.com/yhirose/cpp-httplib.git
