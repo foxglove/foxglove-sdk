@@ -11,6 +11,8 @@
 # interfaces (not just eth0) is necessary because rootless Podman with pasta
 # networking forwards published-port traffic through the loopback interface.
 #
+# ## Flat mode (default)
+#
 # Configure via the NETEM_ARGS environment variable. It accepts any arguments
 # valid after `tc qdisc replace dev <iface> root netem`. Defaults to moderate
 # impairment (80ms delay, 20ms jitter, 2% packet loss).
@@ -27,6 +29,17 @@
 #
 #   # Packet reordering (common trigger for WebRTC jitter buffer issues)
 #   NETEM_ARGS="delay 50ms 10ms reorder 25% loss 1%" docker compose -f docker-compose.yaml -f docker-compose.netem.yml up -d --wait
+#
+# ## Per-link mode
+#
+# Apply separate impairment profiles to different destination IPs using classful
+# qdiscs (HTB root + netem leaf classes). Enabled automatically when any
+# NETEM_LINK_<NAME>_DST env var is set. See scripts/netem-setup.sh for details.
+#
+# Example:
+#   NETEM_LINK_SDK_DST="172.18.0.3" NETEM_LINK_SDK_ARGS="delay 300ms 100ms loss 10%" \
+#   NETEM_LINK_APP_DST="172.18.0.1" NETEM_LINK_APP_ARGS="delay 20ms 5ms" \
+#   docker compose -f docker-compose.yaml -f docker-compose.netem.yml up -d --wait
 #
 # Requirements:
 #   - Linux host: works natively.
@@ -45,6 +58,9 @@ services:
       - NET_ADMIN
     environment:
       NETEM_ARGS: "${NETEM_ARGS:-delay 80ms 20ms loss 2%}"
+    volumes:
+      - ./scripts/netem-setup.sh:/netem-setup.sh:ro
+      - ./scripts/netem-impair.sh:/netem-impair.sh:ro
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
@@ -52,14 +68,8 @@ services:
         # Start a UDP echo server for packet loss testing. Each received
         # datagram is echoed back through the netem-shaped egress path.
         socat UDP-RECVFROM:9999,fork EXEC:/bin/cat &
-        # Apply netem to all interfaces. This covers both Docker (eth0)
-        # and Podman rootless/pasta (lo) port forwarding paths.
-        # Use "replace" instead of "add" to handle pre-existing qdiscs.
-        for iface in $$(ls /sys/class/net/); do
-          tc qdisc replace dev "$$iface" root netem $${NETEM_ARGS} 2>/dev/null && \
-            echo "netem applied to $$iface: $${NETEM_ARGS}"
-        done
-        tc -s qdisc show
+        # Apply netem rules (flat or per-link depending on env vars).
+        /bin/sh /netem-setup.sh
         # Keep the container alive so the qdisc rules persist.
         exec sleep infinity
     healthcheck:

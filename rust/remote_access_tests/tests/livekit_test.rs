@@ -587,9 +587,13 @@ async fn livekit_existing_participant_receives_server_info_and_advertisement() -
 
     // Connect viewer to the room BEFORE the gateway joins.
     let token = livekit_token::generate_token(&room_name, "viewer-1")?;
-    let (room, events) = Room::connect(livekit_token::LIVEKIT_URL, &token, RoomOptions::default())
-        .await
-        .context("viewer failed to connect to LiveKit")?;
+    let (room, events) = Room::connect(
+        &livekit_token::livekit_url(),
+        &token,
+        RoomOptions::default(),
+    )
+    .await
+    .context("viewer failed to connect to LiveKit")?;
     info!("viewer connected to room before gateway");
 
     // Now start the gateway — it should discover the existing viewer participant.
