@@ -1,0 +1,42 @@
+---
+description: Cursor Cloud specific instructions for Foxglove SDK development
+alwaysApply: true
+---
+
+## Cursor Cloud specific instructions
+
+### Environment overview
+
+This is the Foxglove SDK monorepo. The core Rust SDK has bindings for Python (PyO3/maturin), C/C++ (CMake/cbindgen), TypeScript (schema definitions), and ROS 2. See `AGENTS.md` for repository layout, coding guidelines, and pre-commit checks.
+
+### Shell environment
+
+Every shell session must configure:
+```sh
+export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" && nvm use 23
+export PATH="$HOME/.local/bin:$PATH"
+export CXX=g++ CC=gcc
+export LIBRARY_PATH="/usr/lib/gcc/x86_64-linux-gnu/13:$LIBRARY_PATH"
+```
+- `nvm use 23` activates Node.js v23 (required for Yarn v4.12 / corepack).
+- `CXX=g++` and `CC=gcc` are needed because the default `c++` (clang-18) cannot find libstdc++ headers required by the `cxx` crate (LiveKit/WebRTC deps).
+- `LIBRARY_PATH` adds the gcc-13 lib dir so the linker can find `libstdc++.so` for crates that depend on LiveKit/remote-access features.
+
+### Running lint / test / build
+
+| Language   | Build                                                      | Test                                                                  | Lint                                                   |
+|------------|-------------------------------------------------------------|-----------------------------------------------------------------------|--------------------------------------------------------|
+| Rust       | `cargo build --workspace --exclude remote_access_tests --exclude example_remote_access --all-targets` | `cargo test --workspace --exclude remote_access_tests --exclude example_remote_access` | `cargo fmt --all --check` + `cargo clippy --no-deps --tests -- -D warnings` |
+| Python     | `cd python/foxglove-sdk && uv sync --all-extras && uv pip install --editable '.[notebook]'` | `cd python/foxglove-sdk && uv run pytest` | `uv run black python --check && uv run isort python --check && uv run flake8 python` (from repo root) |
+| TypeScript | `yarn build`                                               | `yarn test`                                                           | `yarn lint:ci`                                         |
+| C++        | `make -C cpp build`                                        | `make -C cpp test`                                                    | `make -C cpp lint`                                     |
+
+### Caveats
+
+- **`remote_access_tests` and `example_remote_access`**: These Rust crates require LiveKit (Docker Compose) and `libglib-2.0-dev`. Exclude them from local build/test unless you specifically need remote-access features.
+- **`--all-features` on the foxglove crate** enables `remote_access` which links to LiveKit/WebRTC C++ libs; the `img2yuv` snapshot tests may fail if the reference images differ from what the environment produces. Use default features for routine testing.
+- **Clippy on newer Rust**: The project CI uses Rust ~1.89. Running clippy on a newer toolchain may surface new lints not yet addressed upstream. This is not a sign of breakage.
+- **`yarn lint:ci` may report pre-existing prettier errors** in generated files (e.g. `typescript/schemas/src/jsonschema/index.ts`). This is a known upstream issue and not caused by agent setup.
+- **Schema generation** (`yarn generate`) requires `clang-format` for C++ schema formatting.
+- **Python SDK is a maturin/PyO3 project**: After Rust changes, reinstall with `uv pip install --editable .` in `python/foxglove-sdk` for Python tests to reflect changes.
+- **Port 8765**: The Foxglove WebSocket server binds to `127.0.0.1:8765` by default. Kill any lingering example processes before running new ones.
