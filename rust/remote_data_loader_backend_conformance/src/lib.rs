@@ -11,16 +11,16 @@
 //! # Usage
 //!
 //! ```no_run
-//! use data_provider_conformance::DataProviderTestConfig;
+//! use remote_data_loader_backend_conformance::RemoteDataLoaderBackendTestConfig;
 //! # fn start_my_server() -> () { }
 //!
 //! let _server = start_my_server();
-//! let config = DataProviderTestConfig {
+//! let config = RemoteDataLoaderBackendTestConfig {
 //!     manifest_url: "http://127.0.0.1:8080/v1/manifest?...".parse().unwrap(),
 //!     expected_streamed_source_count: 1,
 //!     expected_static_file_source_count: 0,
 //! };
-//! data_provider_conformance::run_tests(config);
+//! remote_data_loader_backend_conformance::run_tests(config);
 //! ```
 
 use std::collections::{HashMap, HashSet};
