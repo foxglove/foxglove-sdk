@@ -18,6 +18,8 @@
 #   scripts/netem-livekit.sh test [filter]   Run tests inside the test-runner container
 #   scripts/netem-livekit.sh shell           Open a shell in the test-runner container
 #   scripts/netem-livekit.sh build           Pre-build the test binary (no test run)
+#   scripts/netem-livekit.sh up perlink      Start two-container per-link stack (gateway + viewer)
+#   scripts/netem-livekit.sh test perlink    Run per-link tests (gateway + viewer)
 #
 # The 'up' and 'reup' commands accept inline netem args (order-independent):
 #   scripts/netem-livekit.sh up delay 200ms loss 5%
@@ -62,6 +64,10 @@ usage() {
     echo "  shell             Open a shell in the test-runner container"
     echo "  build             Pre-build the test binary without running tests"
     echo ""
+    echo "Per-link mode (gateway + viewer in separate containers):"
+    echo "  up perlink        Start the two-container per-link stack"
+    echo "  test perlink      Run per-link tests (starts stack if needed)"
+    echo ""
     echo "Examples:"
     echo "  $0 up                                  # start with default impairment"
     echo "  $0 up delay 200ms loss 5%              # start with custom impairment"
@@ -72,6 +78,8 @@ usage() {
     echo "  $0 digest                              # verify current settings"
     echo "  $0 test livekit_                       # run all livekit_ tests"
     echo "  $0 test viewer_connects                # run a specific test"
+    echo "  $0 up perlink                          # start per-link stack"
+    echo "  $0 test perlink                        # run per-link tests"
     echo ""
     echo "Netem args are order-independent keywords: delay, loss, rate, duplicate,"
     echo "corrupt, reorder. Sub-args within a keyword are positional:"
@@ -80,15 +88,40 @@ usage() {
     echo "  rate BANDWIDTH"
 }
 
+# Export netem link env vars for per-link mode. These are picked up by the
+# netem sidecar's NETEM_LINK_*_DST auto-discovery. Only exported in perlink
+# paths so that single-container `digest` doesn't show phantom links.
+export_perlink_netem_vars() {
+    export NETEM_LINK_GATEWAY_DST="10.99.0.31"
+    export NETEM_LINK_GATEWAY_ARGS="${NETEM_LINK_GATEWAY_ARGS:-delay 200ms 50ms loss 5%}"
+    export NETEM_LINK_VIEWER_DST="10.99.0.40"
+    export NETEM_LINK_VIEWER_ARGS="${NETEM_LINK_VIEWER_ARGS:-delay 10ms 2ms}"
+}
+
 case "${1:-}" in
     up)
         shift
-        if [ $# -gt 0 ]; then
-            export NETEM_ARGS="$*"
+        if [ "${1:-}" = "perlink" ]; then
+            # Start the two-container per-link stack (gateway + viewer).
+            export LIVEKIT_NODE_IP=10.99.0.2
+            export_perlink_netem_vars
+            COMPOSE_PERLINK="$COMPOSE --profile perlink"
+            $COMPOSE_PERLINK up -d --wait
+            # Pre-build the test binary. The viewer-runner shares the same
+            # target volume so it will reuse the build.
+            echo "Building test binary in gateway-runner..."
+            $COMPOSE_PERLINK exec gateway-runner \
+                cargo test -p remote_access_tests --no-run
+            echo ""
+            echo "Per-link stack is up. Run tests with: $0 test perlink"
+        else
+            if [ $# -gt 0 ]; then
+                export NETEM_ARGS="$*"
+            fi
+            $COMPOSE up -d --wait
+            echo ""
+            echo "Stack is up. Run tests with: $0 test livekit_"
         fi
-        $COMPOSE up -d --wait
-        echo ""
-        echo "Stack is up. Run tests with: $0 test livekit_"
         ;;
 
     reup)
@@ -97,7 +130,9 @@ case "${1:-}" in
         ;;
 
     down)
-        $COMPOSE down
+        # Include --profile perlink so gateway-runner and viewer-runner are
+        # also stopped. This is safe even when they aren't running.
+        $COMPOSE --profile perlink down
         ;;
 
     inspect)
@@ -113,10 +148,43 @@ case "${1:-}" in
         filter="${1:-livekit_}"
         # Containerized tests need ICE candidates pointing to the perlink IP.
         export LIVEKIT_NODE_IP=10.99.0.2
-        $COMPOSE up -d --wait
-        echo "Running tests matching '$filter' inside test-runner container..."
-        $COMPOSE exec test-runner \
-            cargo test -p remote_access_tests -- --ignored "$filter"
+        if [ "$filter" = "perlink" ]; then
+            # Two-container per-link test orchestration. Starts the stack if
+            # not already running, then runs gateway and viewer tests.
+            export_perlink_netem_vars
+            COMPOSE_PERLINK="$COMPOSE --profile perlink"
+            $COMPOSE_PERLINK up -d --wait
+            # Clean coordination dir from any previous run.
+            $COMPOSE_PERLINK exec gateway-runner sh -c 'rm -f /coordination/*'
+            # Build if needed (no-op if `up perlink` already built).
+            $COMPOSE_PERLINK exec gateway-runner \
+                cargo test -p remote_access_tests --no-run
+            # Run both tests in foreground. The gateway runs in a background
+            # shell job so we can wait on both and detect failures from either.
+            echo "Starting gateway and viewer tests..."
+            # Kill background cargo processes on Ctrl-C so they don't linger
+            # until their coordination timeouts expire.
+            trap 'kill "$gateway_pid" "$viewer_pid" 2>/dev/null; wait "$gateway_pid" "$viewer_pid" 2>/dev/null' INT TERM
+            $COMPOSE_PERLINK exec gateway-runner \
+                cargo test -p remote_access_tests -- --ignored perlink_docker_gateway --nocapture &
+            gateway_pid=$!
+            $COMPOSE_PERLINK exec viewer-runner \
+                cargo test -p remote_access_tests -- --ignored perlink_docker_viewer --nocapture &
+            viewer_pid=$!
+            # Wait for both; capture exit statuses individually.
+            gateway_rc=0; wait "$gateway_pid" || gateway_rc=$?
+            viewer_rc=0; wait "$viewer_pid" || viewer_rc=$?
+            if [ "$gateway_rc" -ne 0 ] || [ "$viewer_rc" -ne 0 ]; then
+                echo "Per-link test FAILED (gateway=$gateway_rc, viewer=$viewer_rc)." >&2
+                exit 1
+            fi
+            echo "Per-link test complete."
+        else
+            $COMPOSE up -d --wait
+            echo "Running tests matching '$filter' inside test-runner container..."
+            $COMPOSE exec test-runner \
+                cargo test -p remote_access_tests -- --ignored "$filter"
+        fi
         ;;
 
     shell)
