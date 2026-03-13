@@ -58,18 +58,23 @@ if(NOT Corrosion_FOUND)
   FetchContent_MakeAvailable(Corrosion)
 endif()
 
-FetchContent_Declare(libwebsockets
-  GIT_REPOSITORY https://github.com/warmcat/libwebsockets.git
-  GIT_TAG v4.3.3
-)
-set(LWS_WITH_SSL OFF CACHE BOOL "" FORCE)
-set(LWS_WITH_SHARED OFF CACHE BOOL "" FORCE)
-set(LWS_WITH_STATIC ON CACHE BOOL "" FORCE)
-set(LWS_WITHOUT_TESTAPPS ON CACHE BOOL "" FORCE)
-set(LWS_WITHOUT_TEST_SERVER ON CACHE BOOL "" FORCE)
-set(LWS_WITHOUT_TEST_PING ON CACHE BOOL "" FORCE)
-set(LWS_WITHOUT_TEST_CLIENT ON CACHE BOOL "" FORCE)
-FetchContent_MakeAvailable(libwebsockets)
+if(USE_PACKAGE_MANAGER_DEPENDENCIES)
+  find_package(libwebsockets QUIET)
+endif()
+if(NOT TARGET websockets_shared)
+  FetchContent_Declare(libwebsockets
+    GIT_REPOSITORY https://libwebsockets.org/repo/libwebsockets
+    GIT_TAG v4.3.3
+  )
+  set(LWS_WITH_SSL OFF CACHE BOOL "" FORCE)
+  set(LWS_WITH_SHARED ON CACHE BOOL "" FORCE)
+  set(LWS_WITH_STATIC OFF CACHE BOOL "" FORCE)
+  set(LWS_WITHOUT_TESTAPPS ON CACHE BOOL "" FORCE)
+  set(LWS_WITHOUT_TEST_SERVER ON CACHE BOOL "" FORCE)
+  set(LWS_WITHOUT_TEST_PING ON CACHE BOOL "" FORCE)
+  set(LWS_WITHOUT_TEST_CLIENT ON CACHE BOOL "" FORCE)
+  FetchContent_MakeAvailable(libwebsockets)
+endif()
 
 if(USE_PACKAGE_MANAGER_DEPENDENCIES)
   find_package(nlohmann_json QUIET)
@@ -198,7 +203,7 @@ target_compile_options(tests PUBLIC ${SANITIZER_COMPILE_OPTIONS})
 target_link_options(tests PUBLIC ${SANITIZER_LINK_OPTIONS})
 target_link_libraries(tests PRIVATE foxglove_cpp_static Catch2::Catch2WithMain nlohmann_json::nlohmann_json websockets)
 # Suppress warnings from libwebsockets headers by treating them as system includes
-get_target_property(LWS_INCLUDE_DIRS websockets INTERFACE_INCLUDE_DIRECTORIES)
+get_target_property(LWS_INCLUDE_DIRS websockets_shared INTERFACE_INCLUDE_DIRECTORIES)
 target_include_directories(tests SYSTEM PRIVATE ${LWS_INCLUDE_DIRS})
 catch_discover_tests(tests)
 if(MSVC)
