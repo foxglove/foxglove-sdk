@@ -44,7 +44,10 @@ impl CredentialsProvider {
         self.credentials.load_full()
     }
 
-    pub async fn load_credentials(&self) -> Result<Arc<RtcCredentials>, CredentialsError> {
+    pub async fn load_credentials(
+        &self,
+        generate_remote_access_session_id: bool,
+    ) -> Result<Arc<RtcCredentials>, CredentialsError> {
         if let Some(credentials) = self.current_credentials() {
             return Ok(credentials);
         }
@@ -55,7 +58,11 @@ impl CredentialsProvider {
         }
 
         tracing::info!("refreshing credentials");
-        let credentials = Arc::new(self.client.authorize_remote_viz(&self.device.id).await?);
+        let credentials = Arc::new(
+            self.client
+                .authorize_remote_viz(&self.device.id, generate_remote_access_session_id)
+                .await?,
+        );
         self.credentials.store(Some(credentials.clone()));
         Ok(credentials)
     }
@@ -112,7 +119,7 @@ mod tests {
         let provider = CredentialsProvider::new(builder).await.unwrap();
 
         let credentials = provider
-            .load_credentials()
+            .load_credentials(true)
             .await
             .expect("should fetch credentials");
 
@@ -127,7 +134,7 @@ mod tests {
         let builder = create_test_builder(server.url(), DeviceToken::new(TEST_DEVICE_TOKEN));
         let provider = CredentialsProvider::new(builder).await.unwrap();
 
-        provider.load_credentials().await.unwrap();
+        provider.load_credentials(true).await.unwrap();
         assert!(provider.current_credentials().is_some());
 
         provider.clear().await;

@@ -2,6 +2,12 @@
 
 use serde::{Deserialize, Serialize};
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct RemoteSessionRequest {
+    pub generate_remote_access_session_id: bool,
+}
+
 #[derive(Deserialize, Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct RtcCredentials {
@@ -10,7 +16,8 @@ pub(crate) struct RtcCredentials {
     /// URL of the RTC server where these credentials are valid.
     pub url: String,
     /// Server-generated session ID for log correlation across components.
-    pub remote_access_session_id: String,
+    /// Only present when `generate_remote_access_session_id` was set to `true` in the request.
+    pub remote_access_session_id: Option<String>,
 }
 
 #[derive(Deserialize, Serialize, Clone)]
