@@ -3,8 +3,8 @@
 /// @file
 /// Types and utilities for building remote data loader manifests.
 ///
-/// Use @ref foxglove::data_provider::ChannelSet to declare channels, then construct a
-/// @ref foxglove::data_provider::StreamedSource with the resulting topics and schemas.
+/// Use @ref foxglove::remote_data_loader_backend::ChannelSet to declare channels, then construct a
+/// @ref foxglove::remote_data_loader_backend::StreamedSource with the resulting topics and schemas.
 ///
 /// @note This header requires [nlohmann/json](https://github.com/nlohmann/json) and
 /// [tobiaslocker/base64](https://github.com/tobiaslocker/base64) to be available on the include
@@ -13,15 +13,15 @@
 /// ## Example
 ///
 /// @code{.cpp}
-/// #include <foxglove/data_provider.hpp>
+/// #include <foxglove/remote_data_loader_backend.hpp>
 /// #include <foxglove/schemas.hpp>
 ///
-/// namespace dp = foxglove::data_provider;
+/// namespace rdl = foxglove::remote_data_loader_backend;
 ///
-/// dp::ChannelSet channels;
+/// rdl::ChannelSet channels;
 /// channels.insert<foxglove::schemas::Vector3>("/demo");
 ///
-/// dp::StreamedSource source;
+/// rdl::StreamedSource source;
 /// source.url = "/v1/data?flightId=ABC123";
 /// source.id = "flight-v1-ABC123";
 /// source.topics = std::move(channels.topics);
@@ -29,11 +29,11 @@
 /// source.start_time = "2024-01-01T00:00:00Z";
 /// source.end_time = "2024-01-02T00:00:00Z";
 ///
-/// dp::Manifest manifest;
+/// rdl::Manifest manifest;
 /// manifest.name = "Flight ABC123";
 /// manifest.sources = {std::move(source)};
 ///
-/// std::string json_str = dp::to_json_string(manifest);
+/// std::string json_str = rdl::to_json_string(manifest);
 /// @endcode
 
 #include <foxglove/schema.hpp>
@@ -49,7 +49,7 @@
 #include <vector>
 
 /// The foxglove namespace.
-namespace foxglove::data_provider {
+namespace foxglove::remote_data_loader_backend {
 
 // ============================================================================
 // Manifest types
@@ -117,7 +117,7 @@ struct Manifest {
 
 /// @brief Serialize a Manifest to a JSON string.
 ///
-/// The output conforms to the Foxglove data provider manifest JSON schema.
+/// The output conforms to the Foxglove remote data loader manifest JSON schema.
 inline std::string to_json_string(const Manifest& m) {
   // Use nlohmann/json internally without exposing it in the public API.
   using json = nlohmann::json;
@@ -188,11 +188,11 @@ inline std::string to_json_string(const Manifest& m) {
 /// entry will be created.
 ///
 /// @code{.cpp}
-/// foxglove::data_provider::ChannelSet channels;
+/// foxglove::remote_data_loader_backend::ChannelSet channels;
 /// channels.insert<foxglove::schemas::Vector3>("/topic1");
 /// channels.insert<foxglove::schemas::Vector3>("/topic2"); // reuses schema ID
 ///
-/// foxglove::data_provider::StreamedSource source;
+/// foxglove::remote_data_loader_backend::StreamedSource source;
 /// source.topics = std::move(channels.topics);
 /// source.schemas = std::move(channels.schemas);
 /// @endcode
@@ -255,4 +255,4 @@ private:
   }
 };
 
-}  // namespace foxglove::data_provider
+}  // namespace foxglove::remote_data_loader_backend

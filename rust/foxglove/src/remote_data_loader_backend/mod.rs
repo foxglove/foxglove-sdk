@@ -7,7 +7,7 @@
 //!
 //! ```
 //! use chrono::{DateTime, Utc};
-//! use foxglove::data_provider::{ChannelSet, Manifest, StreamedSource, UpstreamSource};
+//! use foxglove::remote_data_loader_backend::{ChannelSet, Manifest, StreamedSource, DataSource};
 //!
 //! #[derive(foxglove::Encode)]
 //! struct MyMessage {
@@ -30,7 +30,7 @@
 //!
 //! let manifest = Manifest {
 //!     name: Some("Flight ABC123".into()),
-//!     sources: vec![UpstreamSource::Streamed(source)],
+//!     sources: vec![DataSource::Streamed(source)],
 //! };
 //! ```
 //!
@@ -39,6 +39,10 @@
 mod manifest;
 
 pub use manifest::*;
+
+/// A data source from a manifest.
+#[deprecated(since = "0.20.0", note = "Renamed to DataSource")]
+pub type UpstreamSource = DataSource;
 
 use std::num::NonZeroU16;
 
@@ -144,7 +148,7 @@ mod tests {
 
         let manifest = Manifest {
             name: Some("Test Source".into()),
-            sources: vec![UpstreamSource::Streamed(source)],
+            sources: vec![DataSource::Streamed(source)],
         };
 
         insta::assert_json_snapshot!(manifest);

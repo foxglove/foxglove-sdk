@@ -112,7 +112,7 @@ pub struct ${name} {
         }
         lines.push(`pub ${identName}_count: usize,`);
       } else {
-        if (field.type.type === "nested") {
+        if (field.type.type === "nested" || field.optional) {
           fieldType = `*const ${fieldType}`;
         }
         lines.push(`pub ${identName}: ${fieldType},`);
@@ -227,6 +227,9 @@ impl BorrowToNative for ${name} {
               return `${fieldName}: ManuallyDrop::into_inner(${fieldName})`;
             } else if (field.type.name === "bytes") {
               return `${fieldName}: ManuallyDrop::into_inner(unsafe { bytes_from_raw(self.${fieldName}, self.${fieldName}_len) })`;
+            }
+            if (field.optional) {
+              return `${fieldName}: unsafe { self.${fieldName}.as_ref().copied() }`;
             }
             return `${fieldName}: self.${fieldName}`;
           case "enum":

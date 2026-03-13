@@ -1,5 +1,5 @@
 [package]
-name = "example_data_provider"
+name = "example_remote_data_loader_backend"
 edition = "2024"
 publish = false
 
@@ -9,7 +9,12 @@ workspace = true
 [dependencies]
 axum = "0.8"
 chrono.workspace = true
-foxglove = { path = "../../foxglove", features = ["data_provider", "stream", "derive", "chrono"] }
+foxglove = { path = "../../foxglove", features = [
+  "remote_data_loader_backend",
+  "stream",
+  "derive",
+  "chrono",
+] }
 futures = "0.3"
 serde.workspace = true
 serde_urlencoded = "0.7"
@@ -18,9 +23,9 @@ tracing.workspace = true
 tracing-subscriber = "0.3"
 
 [dev-dependencies]
-data_provider_conformance = { path = "../../data_provider_conformance" }
+remote_data_loader_backend_conformance = { path = "../../remote_data_loader_backend_conformance" }
 tokio.workspace = true
 
 [[test]]
-name = "data_provider_test"
+name = "remote_data_loader_backend_test"
 harness = false

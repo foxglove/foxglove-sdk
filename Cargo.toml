@@ -6,18 +6,16 @@ members = [
   "rust/foxglove_derive",
   "rust/foxglove_proto_gen",
   "rust/foxglove_data_loader",
-  "rust/data_provider_conformance",
+  "rust/remote_data_loader_backend_conformance",
   "rust/examples/*",
   "python/foxglove-sdk",
   "rust/remote_access_tests",
 ]
 
-exclude = [
-  "rust/examples/rgb_camera_visualization"
-]
+exclude = ["rust/examples/rgb_camera_visualization"]
 
 [workspace.package]
-version = "0.19.0"
+version = "0.20.0"
 edition = "2024"
 rust-version = "1.85.0"
 repository = "https://github.com/foxglove/foxglove-sdk"
