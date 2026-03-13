@@ -41,7 +41,7 @@ mod manifest;
 pub use manifest::*;
 
 /// A data source from a manifest.
-#[deprecated(since = "0.19.0", note = "Renamed to DataSource")]
+#[deprecated(since = "0.20.0", note = "Renamed to DataSource")]
 pub type UpstreamSource = DataSource;
 
 use std::num::NonZeroU16;
