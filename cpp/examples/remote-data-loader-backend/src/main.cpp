@@ -14,7 +14,7 @@
 ///
 /// To run the example server (from the cpp build directory):
 /// @code{.sh}
-///   ./remote_data_loader_backend_example
+///   ./example_remote_data_loader_backend
 /// @endcode
 ///
 /// Get a manifest for a specific flight:
