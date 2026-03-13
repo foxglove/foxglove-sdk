@@ -72,6 +72,7 @@ async fn main() {
 
 const WIDTH: usize = 960;
 const HEIGHT: usize = 540;
+const BYTES_PER_PIXEL: usize = 3;
 const FPS: u32 = 30;
 
 /// 5x7 bitmap font. Each glyph is stored as 7 rows of 5-bit patterns
@@ -163,7 +164,7 @@ struct Rgb(u8, u8, u8);
 /// Set a single pixel in the buffer (bounds-checked).
 fn set_pixel(buf: &mut [u8], x: i32, y: i32, color: Rgb) {
     if x >= 0 && (x as usize) < WIDTH && y >= 0 && (y as usize) < HEIGHT {
-        let off = y as usize * (WIDTH * 3) + x as usize * 3;
+        let off = y as usize * (WIDTH * BYTES_PER_PIXEL) + x as usize * BYTES_PER_PIXEL;
         buf[off] = color.0;
         buf[off + 1] = color.1;
         buf[off + 2] = color.2;
@@ -313,14 +314,29 @@ fn render_test_card(buf: &mut [u8], frame_number: u64) {
 
     // --- Info panel (top-right, starting at x=690) ---
     let panel_x = 690;
+    let panel_text_scale = 3;
 
     // Frame counter.
     let frame_str = format!("Frame:{:06}", frame_number);
-    draw_text(buf, &frame_str, panel_x, 30, 3, Rgb(255, 255, 255));
+    draw_text(
+        buf,
+        &frame_str,
+        panel_x,
+        30,
+        panel_text_scale,
+        Rgb(255, 255, 255),
+    );
 
     // Timestamp (UTC).
     let time_str = format!("{:02}:{:02}:{:02}.{:03}", hours, minutes, seconds, millis);
-    draw_text(buf, &time_str, panel_x, 80, 3, Rgb(255, 200, 0));
+    draw_text(
+        buf,
+        &time_str,
+        panel_x,
+        80,
+        panel_text_scale,
+        Rgb(255, 200, 0),
+    );
 
     // --- Checkerboard (bottom-right, 260x270 starting at x=690, y=160) ---
     let check_x: usize = 690;
@@ -328,16 +344,16 @@ fn render_test_card(buf: &mut [u8], frame_number: u64) {
     let check_w: usize = 260;
     let check_h: usize = 270;
     let cell_size: usize = 10;
-    let stride = WIDTH * 3;
+    let stride = WIDTH * BYTES_PER_PIXEL;
     for cy_off in 0..check_h {
-        let row_start = (check_y + cy_off) * stride + check_x * 3;
+        let row_start = (check_y + cy_off) * stride + check_x * BYTES_PER_PIXEL;
         let row_cell = cy_off / cell_size;
         for cx_off in 0..check_w {
             // TODO: replace with .is_multiple_of(2) when MSRV >= 1.93.
             #[allow(clippy::manual_is_multiple_of)]
             let is_white = ((cx_off / cell_size) + row_cell) % 2 == 0;
             let val = if is_white { 220u8 } else { 35u8 };
-            let off = row_start + cx_off * 3;
+            let off = row_start + cx_off * BYTES_PER_PIXEL;
             buf[off] = val;
             buf[off + 1] = val;
             buf[off + 2] = val;
@@ -352,15 +368,16 @@ fn render_test_card(buf: &mut [u8], frame_number: u64) {
         Compression artifacts visible in checkerboard  :::  \
         Frame counter gaps reveal dropped frames  :::  ";
 
-    // Scroll speed: 3 pixels per frame.
-    let text_pixel_width = ticker_text.len() * (GLYPH_W + GLYPH_KERNING) * 3;
-    let scroll_offset = (frame_number as usize * 3) % text_pixel_width;
+    let text_scale = 3;
+    let text_pixel_width = ticker_text.len() * (GLYPH_W + GLYPH_KERNING) * text_scale;
+    let scroll_speed = 3; // pixels per frame
+    let scroll_offset = (frame_number as usize * scroll_speed) % text_pixel_width;
 
     // Draw ticker background.
     for y in ticker_y..HEIGHT {
         let row_start = y * stride;
         for x in 0..WIDTH {
-            let off = row_start + x * 3;
+            let off = row_start + x * BYTES_PER_PIXEL;
             buf[off] = 20;
             buf[off + 1] = 20;
             buf[off + 2] = 50;
@@ -369,7 +386,6 @@ fn render_test_card(buf: &mut [u8], frame_number: u64) {
 
     // Draw ticker text twice (for seamless wrap) shifted by scroll offset.
     let ty = ticker_y + 25;
-    let text_scale = 3;
     let x_start = -(scroll_offset as i32);
     for pass in 0..2i32 {
         let base_x = x_start + pass * text_pixel_width as i32;
@@ -392,7 +408,7 @@ fn render_test_card(buf: &mut [u8], frame_number: u64) {
 async fn camera_loop() {
     let mut interval = tokio::time::interval(Duration::from_millis(1000 / FPS as u64));
     let mut frame_number: u64 = 0;
-    let mut rgb_buf = vec![0u8; WIDTH * HEIGHT * 3];
+    let mut rgb_buf = vec![0u8; WIDTH * HEIGHT * BYTES_PER_PIXEL];
     let mut mono_buf = vec![0u8; WIDTH * HEIGHT];
 
     // Pre-compute a double-width gradient lookup table so we can take a
@@ -447,7 +463,7 @@ async fn camera_loop() {
             width: WIDTH as u32,
             height: HEIGHT as u32,
             encoding: "rgb8".into(),
-            step: (WIDTH * 3) as u32,
+            step: (WIDTH * BYTES_PER_PIXEL) as u32,
             data: Bytes::copy_from_slice(&rgb_buf),
         };
         foxglove::log!("/video/test-card", rgb_img);

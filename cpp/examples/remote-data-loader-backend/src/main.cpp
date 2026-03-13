@@ -1,5 +1,5 @@
 /// @file
-/// Example showing how to implement a Foxglove data provider using cpp-httplib.
+/// Example showing how to implement a Foxglove remote data loader backend using cpp-httplib.
 ///
 /// This implements the two endpoints required by the HTTP API:
 /// - `GET /v1/manifest` - returns a JSON manifest describing the available data
@@ -14,7 +14,7 @@
 ///
 /// To run the example server (from the cpp build directory):
 /// @code{.sh}
-///   ./example_data_provider
+///   ./example_remote_data_loader_backend
 /// @endcode
 ///
 /// Get a manifest for a specific flight:
@@ -35,9 +35,9 @@
 /// @endcode
 
 #include <foxglove/context.hpp>
-#include <foxglove/data_provider.hpp>
 #include <foxglove/error.hpp>
 #include <foxglove/mcap.hpp>
+#include <foxglove/remote_data_loader_backend.hpp>
 #include <foxglove/schemas.hpp>
 
 #include <date/date.h>
@@ -52,7 +52,7 @@
 #include <sstream>
 #include <string>
 
-namespace dp = foxglove::data_provider;
+namespace rdl = foxglove::remote_data_loader_backend;
 using std::chrono::system_clock;
 
 // ============================================================================
@@ -164,12 +164,12 @@ void manifest_handler(const httplib::Request& req, httplib::Response& res) {
   }
 
   // Declare a single channel of Foxglove `Vector3` messages on topic "/demo".
-  dp::ChannelSet channels;
+  rdl::ChannelSet channels;
   channels.insert<foxglove::schemas::Vector3>("/demo");
 
   auto query = params->to_query_string();
 
-  dp::StreamedSource source;
+  rdl::StreamedSource source;
   // We're providing the data from this service in this example, but in principle this could
   // be any URL.
   source.url = DATA_ROUTE + std::string("?") + query;
@@ -183,11 +183,11 @@ void manifest_handler(const httplib::Request& req, httplib::Response& res) {
   source.start_time = format_iso8601(params->start_time);
   source.end_time = format_iso8601(params->end_time);
 
-  dp::Manifest manifest;
+  rdl::Manifest manifest;
   manifest.name = "Flight " + params->flight_id;
   manifest.sources = {std::move(source)};
 
-  res.set_content(dp::to_json_string(manifest), "application/json");
+  res.set_content(rdl::to_json_string(manifest), "application/json");
 }
 
 /// Handler for `GET /v1/data`.
@@ -240,7 +240,7 @@ void data_handler(const httplib::Request& req, httplib::Response& res) {
 
       auto writer_result = foxglove::McapWriter::create(options);
       if (!writer_result.has_value()) {
-        std::cerr << "[data_provider] failed to create MCAP writer: "
+        std::cerr << "[remote_data_loader_backend] failed to create MCAP writer: "
                   << foxglove::strerror(writer_result.error()) << "\n";
         sink.done();
         return false;
@@ -249,7 +249,7 @@ void data_handler(const httplib::Request& req, httplib::Response& res) {
 
       auto channel_result = foxglove::schemas::Vector3Channel::create("/demo", context);
       if (!channel_result.has_value()) {
-        std::cerr << "[data_provider] failed to create channel: "
+        std::cerr << "[remote_data_loader_backend] failed to create channel: "
                   << foxglove::strerror(channel_result.error()) << "\n";
         sink.done();
         return false;
@@ -262,7 +262,8 @@ void data_handler(const httplib::Request& req, httplib::Response& res) {
       // data incrementally as MCAP chunks are flushed.
       //
       // This simulated dataset consists of messages emitted every second from the Unix epoch.
-      std::cerr << "[data_provider] streaming data for flight " << params.flight_id << "\n";
+      std::cerr << "[remote_data_loader_backend] streaming data for flight " << params.flight_id
+                << "\n";
 
       auto start = std::max(params.start_time, system_clock::time_point{});
       auto ts = date::ceil<std::chrono::seconds>(start);
@@ -290,15 +291,15 @@ void data_handler(const httplib::Request& req, httplib::Response& res) {
       }
 
       if (!write_ok) {
-        std::cerr << "[data_provider] client disconnected\n";
+        std::cerr << "[remote_data_loader_backend] client disconnected\n";
         return false;
       }
 
       // Finalize the MCAP file (writes header/footer via the CustomWriter to the socket).
       auto err = writer.close();
       if (err != foxglove::FoxgloveError::Ok) {
-        std::cerr << "[data_provider] error closing MCAP writer: " << foxglove::strerror(err)
-                  << "\n";
+        std::cerr << "[remote_data_loader_backend] error closing MCAP writer: "
+                  << foxglove::strerror(err) << "\n";
       }
 
       sink.done();
@@ -318,7 +319,7 @@ int main() {
   svr.Get(MANIFEST_ROUTE, manifest_handler);
   svr.Get(DATA_ROUTE, data_handler);
 
-  std::cerr << "[data_provider] starting server on 0.0.0.0:" << PORT << "\n";
+  std::cerr << "[remote_data_loader_backend] starting server on 0.0.0.0:" << PORT << "\n";
   svr.listen("0.0.0.0", PORT);
 
   return 0;
