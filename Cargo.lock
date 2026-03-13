@@ -2669,14 +2669,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "netem-digest"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "clap",
-]
-
-[[package]]
 name = "nix"
 version = "0.30.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
