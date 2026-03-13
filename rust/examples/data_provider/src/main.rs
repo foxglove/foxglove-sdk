@@ -45,7 +45,7 @@ use axum::{
 use chrono::{DateTime, DurationRound, Utc};
 use foxglove::stream::create_mcap_stream;
 use foxglove::{
-    data_provider::{ChannelSet, Manifest, StreamedSource, UpstreamSource},
+    data_provider::{ChannelSet, DataSource, Manifest, StreamedSource},
     schemas::Vector3,
 };
 use futures::StreamExt;
@@ -107,7 +107,7 @@ async fn manifest_handler(headers: HeaderMap, Query(params): Query<FlightParams>
 
     let manifest = Manifest {
         name: Some(format!("Flight {}", params.flight_id)),
-        sources: vec![UpstreamSource::Streamed(source)],
+        sources: vec![DataSource::Streamed(source)],
     };
 
     Json(manifest).into_response()

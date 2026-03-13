@@ -353,8 +353,11 @@ mod time;
 #[cfg(feature = "stream")]
 pub mod stream;
 
+#[cfg(any(feature = "data_provider", feature = "remote_data_loader_backend"))]
+pub mod remote_data_loader_backend;
 #[cfg(feature = "data_provider")]
-pub mod data_provider;
+// Alias for backward compatibility
+pub use remote_data_loader_backend as data_provider;
 
 #[cfg(feature = "img2yuv-core")]
 #[allow(unused)]
