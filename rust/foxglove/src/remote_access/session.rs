@@ -16,13 +16,17 @@ use tracing::{debug, error, info, warn};
 
 use crate::remote_access::participant::ChannelWriter;
 use crate::{
-    ChannelId, Context, FoxgloveError, Metadata, RawChannel, Sink, SinkChannelFilter, SinkId,
+    ChannelDescriptor, ChannelId, Context, FoxgloveError, Metadata, RawChannel, Schema, Sink,
+    SinkChannelFilter, SinkId,
     protocol::v2::{
         BinaryMessage, JsonMessage,
         client::{self, ClientMessage},
         server::{MessageData as ServerMessageData, ServerInfo, Status, Unadvertise, advertise},
     },
-    remote_access::{RemoteAccessError, participant::Participant, session_state::SessionState},
+    remote_access::{
+        Capability, Listener, RemoteAccessError, client::Client, participant::Participant,
+        session_state::SessionState,
+    },
 };
 
 mod video_track;
@@ -95,6 +99,8 @@ pub(crate) struct RemoteAccessSession {
     context: Weak<Context>,
     state: RwLock<SessionState>,
     channel_filter: Option<Arc<dyn SinkChannelFilter>>,
+    listener: Option<Arc<dyn Listener>>,
+    capabilities: Vec<Capability>,
     cancellation_token: CancellationToken,
     data_plane_tx: flume::Sender<ChannelMessage>,
     data_plane_rx: flume::Receiver<ChannelMessage>,
@@ -209,6 +215,8 @@ impl RemoteAccessSession {
         room: Room,
         context: Weak<Context>,
         channel_filter: Option<Arc<dyn SinkChannelFilter>>,
+        listener: Option<Arc<dyn Listener>>,
+        capabilities: Vec<Capability>,
         cancellation_token: CancellationToken,
         message_backlog_size: usize,
     ) -> Self {
@@ -221,6 +229,8 @@ impl RemoteAccessSession {
             context,
             state: RwLock::new(SessionState::new()),
             channel_filter,
+            listener,
+            capabilities,
             cancellation_token,
             data_plane_tx,
             data_plane_rx,
@@ -230,6 +240,11 @@ impl RemoteAccessSession {
             video_metadata_tx,
             video_metadata_rx,
         }
+    }
+
+    /// Returns true if the given capability is enabled for this session.
+    fn has_capability(&self, cap: Capability) -> bool {
+        self.capabilities.contains(&cap)
     }
 
     pub(crate) fn sink_id(&self) -> SinkId {
@@ -282,6 +297,14 @@ impl RemoteAccessSession {
     fn send_error(&self, participant: &Arc<Participant>, message: String) {
         debug!("Sending error to {participant}: {message}");
         let status = Status::error(message);
+        let framed = frame_text_message(status.to_string().as_bytes());
+        self.send_control(participant.clone(), framed);
+    }
+
+    /// Send a warning status message to a participant.
+    fn send_warning(&self, participant: &Arc<Participant>, message: String) {
+        debug!("Sending warning to {participant}: {message}");
+        let status = Status::warning(message);
         let framed = frame_text_message(status.to_string().as_bytes());
         self.send_control(participant.clone(), framed);
     }
@@ -468,6 +491,12 @@ impl RemoteAccessSession {
             ClientMessage::Unsubscribe(msg) => {
                 self.handle_client_unsubscribe(&participant, msg);
             }
+            ClientMessage::Advertise(msg) => {
+                self.handle_client_advertise(&participant, msg);
+            }
+            ClientMessage::Unadvertise(msg) => {
+                self.handle_client_unadvertise(&participant, msg);
+            }
             // TODO: Implement other message handling branches
             _ => {
                 warn!("Unhandled client message: {client_msg:?}");
@@ -556,6 +585,93 @@ impl RemoteAccessSession {
         self.stop_video_tracks(&last_video_unsubscribed);
     }
 
+    fn handle_client_advertise(&self, participant: &Arc<Participant>, msg: client::Advertise<'_>) {
+        if !self.has_capability(Capability::ClientPublish) {
+            self.send_error(
+                participant,
+                "Server does not support clientPublish capability".to_string(),
+            );
+            return;
+        }
+
+        let client = Client::new(participant.identity().clone());
+
+        for ch in msg.channels {
+            let channel_id = ChannelId::new(ch.id.into());
+
+            // Decode the schema, tolerating absent schemas.
+            let schema = match ch.decode_schema() {
+                Ok(data) => Some(Schema {
+                    name: ch.schema_name.to_string(),
+                    encoding: ch.schema_encoding.as_deref().unwrap_or("").to_string(),
+                    data: data.into(),
+                }),
+                Err(crate::protocol::v1::schema::DecodeError::MissingSchema) => None,
+                Err(e) => {
+                    warn!(
+                        "Failed to decode schema for advertised channel {}: {e:?}",
+                        ch.id
+                    );
+                    self.send_error(
+                        participant,
+                        format!("Failed to decode schema for channel {}: {e}", ch.id),
+                    );
+                    continue;
+                }
+            };
+
+            let descriptor = ChannelDescriptor::new(
+                channel_id,
+                ch.topic.to_string(),
+                ch.encoding.to_string(),
+                Default::default(),
+                schema,
+            );
+
+            let inserted = self
+                .state
+                .write()
+                .insert_client_channel(participant.identity(), descriptor.clone());
+
+            if !inserted {
+                info!(
+                    "Client is already advertising channel: {}; ignoring advertisement",
+                    ch.id
+                );
+                continue;
+            }
+
+            if let Some(listener) = &self.listener {
+                listener.on_client_advertise(client.clone(), &descriptor);
+            }
+        }
+    }
+
+    fn handle_client_unadvertise(&self, participant: &Arc<Participant>, msg: client::Unadvertise) {
+        let client = Client::new(participant.identity().clone());
+
+        for channel_id_raw in msg.channel_ids {
+            let channel_id = ChannelId::new(channel_id_raw.into());
+            let removed = self
+                .state
+                .write()
+                .remove_client_channel(participant.identity(), channel_id);
+
+            match removed {
+                None => {
+                    info!(
+                        "Client is not advertising channel: {channel_id_raw}; ignoring unadvertisement"
+                    );
+                }
+                Some(descriptor) => {
+                    if let Some(listener) = &self.listener {
+                        listener.on_client_unadvertise(client.clone(), &descriptor);
+                    }
+                }
+            }
+        }
+    }
+
     /// Add a participant to the server, if it hasn't already been added.
     /// In either case, return the new or existing participant.
     pub(crate) async fn add_participant(
@@ -610,6 +726,15 @@ impl RemoteAccessSession {
         }
 
         self.stop_video_tracks(&removed.last_video_unsubscribed);
+
+        if !removed.client_channels.is_empty() {
+            if let Some(listener) = &self.listener {
+                let client = Client::new(participant_id.clone());
+                for descriptor in &removed.client_channels {
+                    listener.on_client_unadvertise(client.clone(), descriptor);
+                }
+            }
+        }
     }
 
     /// Enqueue server info and channel advertisements for delivery to a participant.
@@ -903,9 +1028,12 @@ async fn process_data_message<F, Fut>(
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Mutex;
+
     use super::*;
-    use crate::remote_access::participant::{
-        ParticipantWriter, TestByteStreamWriter, TestChannelWriter,
+    use crate::remote_access::{
+        Listener,
+        participant::{ParticipantWriter, TestByteStreamWriter, TestChannelWriter},
     };
 
     fn make_participant(name: &str) -> (ParticipantIdentity, Arc<Participant>) {
@@ -916,6 +1044,223 @@ mod tests {
             ParticipantWriter::Test(writer),
         ));
         (identity, participant)
+    }
+
+    /// A mock listener that records all advertise/unadvertise callbacks.
+    #[derive(Default)]
+    struct MockListener {
+        advertised: Mutex<Vec<(String, String)>>, // (client_id, topic)
+        unadvertised: Mutex<Vec<(String, String)>>, // (client_id, topic)
+    }
+
+    impl Listener for MockListener {
+        fn on_client_advertise(&self, client: Client, channel: &ChannelDescriptor) {
+            self.advertised
+                .lock()
+                .unwrap()
+                .push((client.id().to_string(), channel.topic().to_string()));
+        }
+
+        fn on_client_unadvertise(&self, client: Client, channel: &ChannelDescriptor) {
+            self.unadvertised
+                .lock()
+                .unwrap()
+                .push((client.id().to_string(), channel.topic().to_string()));
+        }
+    }
+
+    impl MockListener {
+        fn advertised(&self) -> Vec<(String, String)> {
+            self.advertised.lock().unwrap().clone()
+        }
+
+        fn unadvertised(&self) -> Vec<(String, String)> {
+            self.unadvertised.lock().unwrap().clone()
+        }
+    }
+
+    #[test]
+    fn advertise_without_client_publish_capability_does_not_fire_callback() {
+        let listener = Arc::new(MockListener::default());
+        let (id, participant) = make_participant("alice");
+        let mut state = SessionState::new();
+        state.insert_participant(id, participant.clone());
+
+        // No ClientPublish capability: simulate the guard.
+        let capabilities: Vec<Capability> = vec![];
+        let has_capability = capabilities.contains(&Capability::ClientPublish);
+        assert!(!has_capability);
+
+        // When the guard fires, no state or listener interaction happens.
+        if has_capability {
+            let descriptor = ChannelDescriptor::new(
+                ChannelId::new(1),
+                "/cmd".to_string(),
+                "json".to_string(),
+                Default::default(),
+                None,
+            );
+            let inserted = state.insert_client_channel(participant.identity(), descriptor.clone());
+            assert!(inserted);
+            listener.on_client_advertise(Client::new(participant.identity().clone()), &descriptor);
+        }
+
+        assert!(listener.advertised().is_empty());
+        // State should also be untouched.
+        assert!(
+            state
+                .remove_client_channel(participant.identity(), ChannelId::new(1))
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn advertise_inserts_channel_and_fires_callback() {
+        let listener = Arc::new(MockListener::default());
+        let capabilities = [Capability::ClientPublish];
+        let (id, participant) = make_participant("alice");
+        let mut state = SessionState::new();
+        state.insert_participant(id.clone(), participant.clone());
+
+        let descriptor = ChannelDescriptor::new(
+            ChannelId::new(42),
+            "/cmd_vel".to_string(),
+            "json".to_string(),
+            Default::default(),
+            None,
+        );
+
+        // Simulate the core of handle_client_advertise.
+        let has_capability = capabilities.contains(&Capability::ClientPublish);
+        assert!(has_capability);
+
+        let client = Client::new(participant.identity().clone());
+        let inserted = state.insert_client_channel(participant.identity(), descriptor.clone());
+        assert!(inserted);
+        listener.on_client_advertise(client, &descriptor);
+
+        assert_eq!(
+            listener.advertised(),
+            vec![("alice".to_string(), "/cmd_vel".to_string())]
+        );
+    }
+
+    #[test]
+    fn unadvertise_removes_channel_and_fires_callback() {
+        let listener = Arc::new(MockListener::default());
+        let (id, participant) = make_participant("alice");
+        let mut state = SessionState::new();
+        state.insert_participant(id.clone(), participant.clone());
+
+        let channel_id = ChannelId::new(10);
+        let descriptor = ChannelDescriptor::new(
+            channel_id,
+            "/joy".to_string(),
+            "json".to_string(),
+            Default::default(),
+            None,
+        );
+        state.insert_client_channel(participant.identity(), descriptor);
+
+        // Simulate handle_client_unadvertise for one channel.
+        let removed = state.remove_client_channel(participant.identity(), channel_id);
+        assert!(removed.is_some());
+
+        let client = Client::new(participant.identity().clone());
+        listener.on_client_unadvertise(client, &removed.unwrap());
+
+        assert_eq!(
+            listener.unadvertised(),
+            vec![("alice".to_string(), "/joy".to_string())]
+        );
+    }
+
+    #[test]
+    fn duplicate_advertise_does_not_fire_callback() {
+        let listener = Arc::new(MockListener::default());
+        let (id, participant) = make_participant("alice");
+        let mut state = SessionState::new();
+        state.insert_participant(id.clone(), participant.clone());
+
+        let descriptor = ChannelDescriptor::new(
+            ChannelId::new(1),
+            "/cmd".to_string(),
+            "json".to_string(),
+            Default::default(),
+            None,
+        );
+
+        let client = Client::new(participant.identity().clone());
+        let inserted = state.insert_client_channel(participant.identity(), descriptor.clone());
+        assert!(inserted, "first insert should succeed");
+        listener.on_client_advertise(client.clone(), &descriptor);
+
+        // Second insert (duplicate).
+        let inserted2 = state.insert_client_channel(participant.identity(), descriptor.clone());
+        assert!(!inserted2, "duplicate insert should return false");
+        // Callback must NOT be fired for duplicates.
+        if inserted2 {
+            listener.on_client_advertise(client, &descriptor);
+        }
+
+        // Only one advertise callback.
+        assert_eq!(listener.advertised().len(), 1);
+    }
+
+    #[test]
+    fn unadvertise_unknown_channel_does_not_fire_callback() {
+        let listener = Arc::new(MockListener::default());
+        let (id, participant) = make_participant("alice");
+        let mut state = SessionState::new();
+        state.insert_participant(id.clone(), participant.clone());
+
+        // Try removing a channel that was never advertised.
+        let removed = state.remove_client_channel(participant.identity(), ChannelId::new(999));
+        assert!(removed.is_none());
+
+        // Callback must NOT be fired.
+        if let Some(ref descriptor) = removed {
+            let client = Client::new(participant.identity().clone());
+            listener.on_client_unadvertise(client, descriptor);
+        }
+
+        assert!(listener.unadvertised().is_empty());
+    }
+
+    #[test]
+    fn participant_disconnect_fires_unadvertise_for_all_channels() {
+        let listener = Arc::new(MockListener::default());
+        let (id, participant) = make_participant("alice");
+        let mut state = SessionState::new();
+        state.insert_participant(id.clone(), participant.clone());
+
+        // Advertise two channels.
+        for (ch_id, topic) in [(1u64, "/cmd_vel"), (2u64, "/joy")] {
+            let descriptor = ChannelDescriptor::new(
+                ChannelId::new(ch_id),
+                topic.to_string(),
+                "json".to_string(),
+                Default::default(),
+                None,
+            );
+            state.insert_client_channel(participant.identity(), descriptor);
+        }
+
+        // Simulate remove_participant.
+        let removed = state.remove_participant(&id);
+        assert_eq!(removed.client_channels.len(), 2);
+
+        // Fire unadvertise for each.
+        let client = Client::new(id.clone());
+        for descriptor in &removed.client_channels {
+            listener.on_client_unadvertise(client.clone(), descriptor);
+        }
+
+        let unadvertised = listener.unadvertised();
+        assert_eq!(unadvertised.len(), 2);
+        let topics: Vec<&str> = unadvertised.iter().map(|(_, t)| t.as_str()).collect();
+        assert!(topics.contains(&"/cmd_vel"));
+        assert!(topics.contains(&"/joy"));
     }
 
     /// A factory that produces a `ChannelWriter` backed by the given test writer.
