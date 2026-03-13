@@ -1,7 +1,11 @@
-// File-based coordination between gateway and viewer containers for per-link
-// netem tests. The gateway writes a room name for the viewer to discover, and
-// the viewer writes a done signal when it finishes. Both sides poll the shared
-// COORDINATION_DIR (a tmpfs volume mounted in both containers).
+// File-based done signal between gateway and viewer containers for per-link
+// netem tests. The viewer writes a done signal when it finishes receiving
+// messages so the gateway knows it can shut down. Both sides share a tmpfs
+// volume at COORDINATION_DIR.
+//
+// The room name is passed via the PERLINK_ROOM_NAME environment variable
+// (set by the orchestrating script), so no file-based coordination is needed
+// for discovery.
 
 use std::path::PathBuf;
 use std::time::Duration;
@@ -11,45 +15,20 @@ use tracing::info;
 
 const POLL_INTERVAL: Duration = Duration::from_millis(200);
 
-const ROOM_NAME_FILE: &str = "room-name.txt";
 const DONE_FILE: &str = "done.txt";
 
 /// Returns the coordination directory from the `COORDINATION_DIR` env var.
-pub fn coordination_dir() -> Result<PathBuf> {
+fn coordination_dir() -> Result<PathBuf> {
     let dir = std::env::var("COORDINATION_DIR")
         .context("COORDINATION_DIR not set — are you running inside a perlink container?")?;
     Ok(PathBuf::from(dir))
 }
 
-/// Gateway writes a room name for the viewer to discover.
-pub fn write_room_name(room_name: &str) -> Result<()> {
-    let path = coordination_dir()?.join(ROOM_NAME_FILE);
-    std::fs::write(&path, room_name)
-        .with_context(|| format!("failed to write room name to {}", path.display()))?;
-    info!("wrote room name to {}", path.display());
-    Ok(())
-}
-
-/// Viewer polls until `room-name.txt` appears and returns its contents.
-pub async fn poll_room_name(timeout: Duration) -> Result<String> {
-    let path = coordination_dir()?.join(ROOM_NAME_FILE);
-    let deadline = tokio::time::Instant::now() + timeout;
-    loop {
-        if let Ok(contents) = std::fs::read_to_string(&path) {
-            let name = contents.trim().to_string();
-            if !name.is_empty() {
-                info!("read room name from {}: {name}", path.display());
-                return Ok(name);
-            }
-        }
-        if tokio::time::Instant::now() >= deadline {
-            anyhow::bail!(
-                "timeout ({timeout:?}) waiting for room name at {}",
-                path.display()
-            );
-        }
-        tokio::time::sleep(POLL_INTERVAL).await;
-    }
+/// Returns the room name from the `PERLINK_ROOM_NAME` env var, set by the
+/// orchestrating script (or CI workflow).
+pub fn room_name() -> Result<String> {
+    std::env::var("PERLINK_ROOM_NAME")
+        .context("PERLINK_ROOM_NAME not set — are you running via the perlink orchestration?")
 }
 
 /// Signals completion by writing `done.txt`. The file's presence is the
@@ -84,14 +63,12 @@ pub async fn poll_done(timeout: Duration) -> Result<()> {
 /// Remove coordination files. Call at the start of each test run.
 pub fn clean() -> Result<()> {
     let dir = coordination_dir()?;
-    for name in [ROOM_NAME_FILE, DONE_FILE] {
-        let path = dir.join(name);
-        match std::fs::remove_file(&path) {
-            Ok(()) => {}
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
-            Err(e) => {
-                return Err(e).with_context(|| format!("failed to remove {}", path.display()));
-            }
+    let path = dir.join(DONE_FILE);
+    match std::fs::remove_file(&path) {
+        Ok(()) => {}
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+        Err(e) => {
+            return Err(e).with_context(|| format!("failed to remove {}", path.display()));
         }
     }
     info!("cleaned coordination dir {}", dir.display());

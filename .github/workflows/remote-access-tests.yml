@@ -118,6 +118,9 @@ jobs:
         with:
           lfs: true
 
+      - name: Generate room name for perlink tests
+        run: echo "PERLINK_ROOM_NAME=test-room-$(uuidgen)" >> "$GITHUB_ENV"
+
       - name: Start per-link netem stack with perlink profile
         run: >
           docker compose
@@ -150,10 +153,10 @@ jobs:
             -f docker-compose.yaml \
             -f docker-compose.netem.yml \
             -f docker-compose.netem-livekit.yml"
-          $COMPOSE exec gateway-runner \
+          $COMPOSE exec -T gateway-runner \
             cargo test -p remote_access_tests -- --ignored perlink_docker_gateway --nocapture &
           gateway_pid=$!
-          $COMPOSE exec viewer-runner \
+          $COMPOSE exec -T viewer-runner \
             cargo test -p remote_access_tests -- --ignored perlink_docker_viewer --nocapture &
           viewer_pid=$!
           gateway_rc=0; wait "$gateway_pid" || gateway_rc=$?

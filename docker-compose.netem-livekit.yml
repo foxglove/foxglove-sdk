@@ -25,7 +25,8 @@
 #   - gateway-runner (10.99.0.31) + viewer-runner (10.99.0.40): per-link mode
 #     (--profile perlink). Two containers on separate IPs so netem can apply
 #     different impairment to the gateway (high) and viewer (low) links.
-#     Coordinated via a shared tmpfs volume (/coordination).
+#     Room name passed via PERLINK_ROOM_NAME env var; viewer-done signal
+#     coordinated via a shared tmpfs volume (/coordination).
 #   - The netem sidecar classifies egress from LiveKit by destination IP using
 #     HTB + u32 filters, applying configurable impairment per link.
 #
@@ -95,13 +96,14 @@ services:
     networks:
       perlink:
         ipv4_address: 10.99.0.30
-    # Install Clang on first start (needed for webrtc-sys C++ compilation),
-    # then keep the container alive for interactive test runs.
+    # Install build dependencies on first start (Clang for webrtc-sys C++
+    # compilation, plus libs matching CI's common-deps), then keep the
+    # container alive for interactive test runs.
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
         if ! command -v clang++ > /dev/null 2>&1; then
-          apt-get update -qq && apt-get install -y -qq clang > /dev/null 2>&1
+          apt-get update -qq && apt-get install -y -qq clang libva-dev libprotobuf-dev protobuf-compiler libglib2.0-dev > /dev/null 2>&1
         fi
         exec sleep infinity
     healthcheck:
@@ -132,6 +134,7 @@ services:
       CXX: clang++
       CC: clang
       COORDINATION_DIR: /coordination
+      PERLINK_ROOM_NAME: "${PERLINK_ROOM_NAME:-}"
     networks:
       perlink:
         ipv4_address: 10.99.0.31
@@ -139,7 +142,7 @@ services:
     command:
       - |
         if ! command -v clang++ > /dev/null 2>&1; then
-          apt-get update -qq && apt-get install -y -qq clang > /dev/null 2>&1
+          apt-get update -qq && apt-get install -y -qq clang libva-dev libprotobuf-dev protobuf-compiler libglib2.0-dev > /dev/null 2>&1
         fi
         exec sleep infinity
     healthcheck:
@@ -172,6 +175,7 @@ services:
       CXX: clang++
       CC: clang
       COORDINATION_DIR: /coordination
+      PERLINK_ROOM_NAME: "${PERLINK_ROOM_NAME:-}"
     networks:
       perlink:
         ipv4_address: 10.99.0.40
@@ -179,7 +183,7 @@ services:
     command:
       - |
         if ! command -v clang++ > /dev/null 2>&1; then
-          apt-get update -qq && apt-get install -y -qq clang > /dev/null 2>&1
+          apt-get update -qq && apt-get install -y -qq clang libva-dev libprotobuf-dev protobuf-compiler libglib2.0-dev > /dev/null 2>&1
         fi
         exec sleep infinity
     healthcheck:
