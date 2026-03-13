@@ -1,26 +1,26 @@
-//! Reusable test suite for data provider HTTP API implementations.
+//! Reusable test suite for remote data loader backend HTTP API implementations.
 //!
-//! This module checks that a running data provider:
+//! This module checks that a running backend:
 //! 1. Returns a manifest that conforms to the JSON schema.
 //! 2. Serves MCAP data whose channels and schemas match the manifest.
 //! 3. Requires authentication.
 //!
-//! The checks are parameterized by [`DataProviderTestConfig`] so they can be
+//! The checks are parameterized by [`RemoteDataLoaderBackendTestConfig`] so they can be
 //! used against any implementation (Rust, C++, etc.) without modification.
 //!
 //! # Usage
 //!
 //! ```no_run
-//! use data_provider_conformance::DataProviderTestConfig;
+//! use remote_data_loader_backend_conformance::RemoteDataLoaderBackendTestConfig;
 //! # fn start_my_server() -> () { }
 //!
 //! let _server = start_my_server();
-//! let config = DataProviderTestConfig {
+//! let config = RemoteDataLoaderBackendTestConfig {
 //!     manifest_url: "http://127.0.0.1:8080/v1/manifest?...".parse().unwrap(),
 //!     expected_streamed_source_count: 1,
 //!     expected_static_file_source_count: 0,
 //! };
-//! data_provider_conformance::run_tests(config);
+//! remote_data_loader_backend_conformance::run_tests(config);
 //! ```
 
 use std::collections::{HashMap, HashSet};
@@ -29,7 +29,7 @@ use std::net::TcpStream;
 use std::process::{Child, Command, ExitCode, Stdio};
 use std::time::Duration;
 
-use foxglove::data_provider::{Manifest, UpstreamSource};
+use foxglove::remote_data_loader_backend::{DataSource, Manifest};
 use libtest_mimic::{Arguments, Trial};
 use reqwest::StatusCode;
 pub use reqwest::Url;
@@ -77,8 +77,8 @@ pub fn spawn_server(command: impl AsRef<OsStr>, addr: &str) -> ServerGuard {
     panic!("server should become ready within 5 s");
 }
 
-/// Configuration for running the data provider test suite.
-pub struct DataProviderTestConfig {
+/// Configuration for running the remote data loader backend test suite.
+pub struct RemoteDataLoaderBackendTestConfig {
     /// Full URL of the manifest endpoint, including query parameters.
     pub manifest_url: Url,
     /// Expected number of streamed sources in the manifest.
@@ -87,11 +87,11 @@ pub struct DataProviderTestConfig {
     pub expected_static_file_source_count: usize,
 }
 
-/// Run the full test suite against a running data provider, using [`libtest_mimic`] for output and
+/// Run the full test suite against a running backend, using [`libtest_mimic`] for output and
 /// command line argument handling.
 ///
 /// Returns the exit code of the test run.
-pub fn run_tests(config: DataProviderTestConfig) -> ExitCode {
+pub fn run_tests(config: RemoteDataLoaderBackendTestConfig) -> ExitCode {
     let args = Arguments::from_args();
     let trials = build_tests(config);
     libtest_mimic::run(&args, trials).exit_code()
@@ -101,11 +101,11 @@ pub fn run_tests(config: DataProviderTestConfig) -> ExitCode {
 ///
 /// Fetches the manifest once up front; each trial closes over the shared data.
 pub fn build_tests(
-    DataProviderTestConfig {
+    RemoteDataLoaderBackendTestConfig {
         manifest_url,
         expected_streamed_source_count,
         expected_static_file_source_count,
-    }: DataProviderTestConfig,
+    }: RemoteDataLoaderBackendTestConfig,
 ) -> Vec<Trial> {
     let client = Client::new();
 
@@ -123,8 +123,8 @@ pub fn build_tests(
     let mut static_file_source_count = 0;
     for source in &manifest.sources {
         match source {
-            UpstreamSource::Streamed(_) => streamed_source_count += 1,
-            UpstreamSource::StaticFile { .. } => static_file_source_count += 1,
+            DataSource::Streamed(_) => streamed_source_count += 1,
+            DataSource::StaticFile { .. } => static_file_source_count += 1,
         }
     }
 
@@ -160,7 +160,7 @@ pub fn build_tests(
 // ---------------------------------------------------------------------------
 
 fn test_manifest_matches_json_schema(json: &serde_json::Value) {
-    let schema = serde_json::from_str(include_str!("data_provider_manifest_schema.json"))
+    let schema = serde_json::from_str(include_str!("manifest_schema.json"))
         .expect("schema file should be valid JSON");
     let validator =
         jsonschema::draft7::new(&schema).expect("schema should compile into a validator");
@@ -172,8 +172,8 @@ fn test_manifest_matches_json_schema(json: &serde_json::Value) {
 fn test_manifest_and_mcap_agree(client: &Client, manifest_url: &Url, manifest: &Manifest) {
     for source in &manifest.sources {
         let (url, topics, schemas) = match source {
-            UpstreamSource::Streamed(s) => (&s.url, &s.topics, &s.schemas),
-            UpstreamSource::StaticFile { .. } => {
+            DataSource::Streamed(s) => (&s.url, &s.topics, &s.schemas),
+            DataSource::StaticFile { .. } => {
                 // Nothing to check for a static source.
                 continue;
             }
