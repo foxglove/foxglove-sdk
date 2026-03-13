@@ -35,9 +35,9 @@
 /// @endcode
 
 #include <foxglove/context.hpp>
-#include <foxglove/remote_data_loader_backend.hpp>
 #include <foxglove/error.hpp>
 #include <foxglove/mcap.hpp>
+#include <foxglove/remote_data_loader_backend.hpp>
 #include <foxglove/schemas.hpp>
 
 #include <date/date.h>
@@ -262,7 +262,8 @@ void data_handler(const httplib::Request& req, httplib::Response& res) {
       // data incrementally as MCAP chunks are flushed.
       //
       // This simulated dataset consists of messages emitted every second from the Unix epoch.
-      std::cerr << "[remote_data_loader_backend] streaming data for flight " << params.flight_id << "\n";
+      std::cerr << "[remote_data_loader_backend] streaming data for flight " << params.flight_id
+                << "\n";
 
       auto start = std::max(params.start_time, system_clock::time_point{});
       auto ts = date::ceil<std::chrono::seconds>(start);
@@ -297,8 +298,8 @@ void data_handler(const httplib::Request& req, httplib::Response& res) {
       // Finalize the MCAP file (writes header/footer via the CustomWriter to the socket).
       auto err = writer.close();
       if (err != foxglove::FoxgloveError::Ok) {
-        std::cerr << "[remote_data_loader_backend] error closing MCAP writer: " << foxglove::strerror(err)
-                  << "\n";
+        std::cerr << "[remote_data_loader_backend] error closing MCAP writer: "
+                  << foxglove::strerror(err) << "\n";
       }
 
       sink.done();
