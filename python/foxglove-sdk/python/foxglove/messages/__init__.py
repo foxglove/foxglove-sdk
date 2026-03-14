@@ -116,7 +116,7 @@ FoxgloveMessage = Union[
     VoxelGrid,
 ]
 
-#: Deprecated alias for :data:`FoxgloveMessage`.
+#: Deprecated alias for ``FoxgloveMessage``.
 FoxgloveSchema = FoxgloveMessage
 
 __all__ = [

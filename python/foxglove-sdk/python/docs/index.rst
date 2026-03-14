@@ -68,7 +68,7 @@ are currently immutable and do not expose getters and setters for their fields. 
 we plan to address in the future.
 
 .. deprecated::
-   The :py:mod:`foxglove.schemas` module is deprecated. Use :py:mod:`foxglove.messages` instead.
+   The ``foxglove.schemas`` module is deprecated. Use :py:mod:`foxglove.messages` instead.
 
 You can also log messages with arbitrary schemas and provide your own encoding, by instantiating a
 :py:class:`.Channel` class.
