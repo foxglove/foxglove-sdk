@@ -7,6 +7,9 @@ Note that the message classes are currently immutable and do not expose
 getters and setters for their fields. This is a limitation we plan to address in the future.
 """
 
+# This file mirrors the generated schemas/__init__.py. When updating the generator
+# to add or remove message types, update this file to match.
+
 from typing import Union
 
 from foxglove._foxglove_py.messages import (  # noqa: F401
@@ -64,7 +67,7 @@ from foxglove._foxglove_py.messages import (  # noqa: F401
     VoxelGrid,
 )
 
-FoxgloveSchema = Union[
+FoxgloveMessage = Union[
     ArrowPrimitive,
     CameraCalibration,
     CircleAnnotation,
@@ -113,7 +116,11 @@ FoxgloveSchema = Union[
     VoxelGrid,
 ]
 
+#: Deprecated alias for :data:`FoxgloveMessage`.
+FoxgloveSchema = FoxgloveMessage
+
 __all__ = [
+    "FoxgloveMessage",
     "FoxgloveSchema",
     "ArrowPrimitive",
     "CameraCalibration",

@@ -40,8 +40,8 @@ def test_schemas_reexports_same_types() -> None:
         import foxglove.schemas
 
     for name in foxglove.messages.__all__:
-        if name == "FoxgloveSchema":
-            # FoxgloveSchema is a Union type alias, separately constructed in each module.
+        if name in ("FoxgloveMessage", "FoxgloveSchema"):
+            # Union type aliases, separately constructed in each module.
             continue
         assert getattr(foxglove.messages, name) is getattr(
             foxglove.schemas, name
