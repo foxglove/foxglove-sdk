@@ -13,7 +13,7 @@ use livekit::id::ParticipantIdentity;
 use livekit::{Room, RoomEvent, RoomOptions, StreamByteOptions, StreamWriter as _};
 use tracing::info;
 
-use foxglove::protocol::v2::client::{Subscribe, SubscribeChannel, Unadvertise, Unsubscribe};
+use foxglove::protocol::v2::client::{Advertise, AdvertiseChannel, Subscribe, SubscribeChannel, Unadvertise, Unsubscribe};
 
 /// Describes a client-advertised channel for use in test helpers.
 pub struct ClientChannelDesc {
@@ -360,16 +360,15 @@ impl ViewerConnection {
 
     /// Sends a JSON-framed client Advertise message to the gateway.
     pub async fn send_client_advertise(&self, channels: &[ClientChannelDesc]) -> Result<()> {
-        let json = serde_json::json!({
-            "op": "advertise",
-            "channels": channels.iter().map(|c| serde_json::json!({
-                "id": c.id,
-                "topic": c.topic,
-                "encoding": c.encoding,
-                "schemaName": "",
-            })).collect::<Vec<_>>()
-        });
-        let json_str = serde_json::to_string(&json)?;
+        let advertise = Advertise::new(channels.iter().map(|c| AdvertiseChannel {
+            id: c.id,
+            topic: c.topic.as_str().into(),
+            encoding: c.encoding.as_str().into(),
+            schema_name: "".into(),
+            schema_encoding: None,
+            schema: None,
+        }));
+        let json_str = serde_json::to_string(&advertise)?;
         let framed = frame::frame_text_message(json_str.as_bytes());
 
         let gateway_identity = ParticipantIdentity(mock_server::TEST_DEVICE_ID.to_string());

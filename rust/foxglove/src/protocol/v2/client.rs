@@ -11,8 +11,8 @@ mod unsubscribe;
 #[doc(hidden)]
 pub use crate::protocol::common::client::PlaybackControlRequest;
 pub use crate::protocol::common::client::{
-    Advertise, FetchAsset, GetParameters, MessageData, ServiceCallRequest, SetParameters,
-    SubscribeParameterUpdates, Unadvertise, UnsubscribeParameterUpdates,
+    Advertise, AdvertiseChannel, FetchAsset, GetParameters, MessageData, ServiceCallRequest,
+    SetParameters, SubscribeParameterUpdates, Unadvertise, UnsubscribeParameterUpdates,
 };
 pub use subscribe::{Subscribe, SubscribeChannel};
 pub use unsubscribe::Unsubscribe;
