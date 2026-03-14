@@ -2,7 +2,7 @@
 
 An example from the Foxglove SDK.
 
-This example demonstrates publishing messages with different schemas on different topics, which can
+This example demonstrates publishing different message types on different topics, which can
 be viewed in the Foxglove app.
 
 ## Usage

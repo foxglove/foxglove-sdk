@@ -16,7 +16,7 @@ foxglove.set_log_level("DEBUG")
 
 # Our example logs data on a couple of different topics, so we'll create a
 # channel for each. We can use a channel like SceneUpdateChannel to log
-# Foxglove schemas, or a generic Channel to log custom data.
+# Foxglove message types, or a generic Channel to log custom data.
 scene_channel = SceneUpdateChannel("/scene")
 size_channel = Channel("/size", message_encoding="json")
 

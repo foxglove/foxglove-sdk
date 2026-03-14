@@ -17,7 +17,7 @@ struct Banana {
     picked_at: Option<DateTime<Utc>>,
 }
 
-// This channel logs images using Foxglove's image schema
+// This channel logs images using Foxglove's CompressedImage message type
 static IMG_CHANNEL: LazyChannel<messages::CompressedImage> = LazyChannel::new("/image");
 // This channel logs schemaless JSON
 static SCHEMALESS_CHANNEL: LazyRawChannel = LazyRawChannel::new("/schemaless", "json");
