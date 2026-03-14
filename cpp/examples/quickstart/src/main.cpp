@@ -3,7 +3,7 @@
 #include <foxglove/error.hpp>
 #include <foxglove/foxglove.hpp>
 #include <foxglove/mcap.hpp>
-#include <foxglove/schemas.hpp>
+#include <foxglove/messages.hpp>
 #include <foxglove/server.hpp>
 
 #include <atomic>
@@ -67,7 +67,7 @@ int main() {
   auto size_channel = std::move(channel_result.value());
 
   // Create a SceneUpdateChannel for logging changes to a 3d scene
-  auto scene_channel_result = foxglove::schemas::SceneUpdateChannel::create("/scene");
+  auto scene_channel_result = foxglove::messages::SceneUpdateChannel::create("/scene");
   if (!scene_channel_result.has_value()) {
     std::cerr << "Failed to create scene channel: "
               << foxglove::strerror(scene_channel_result.error()) << '\n';
@@ -89,15 +89,15 @@ int main() {
     std::string msg = "{\"size\": " + std::to_string(size) + "}";
     size_channel.log(reinterpret_cast<const std::byte*>(msg.data()), msg.size());
 
-    foxglove::schemas::CubePrimitive cube;
-    cube.size = foxglove::schemas::Vector3{size, size, size};
-    cube.color = foxglove::schemas::Color{1, 0, 0, 1};
+    foxglove::messages::CubePrimitive cube;
+    cube.size = foxglove::messages::Vector3{size, size, size};
+    cube.color = foxglove::messages::Color{1, 0, 0, 1};
 
-    foxglove::schemas::SceneEntity entity;
+    foxglove::messages::SceneEntity entity;
     entity.id = "box";
     entity.cubes.push_back(cube);
 
-    foxglove::schemas::SceneUpdate scene_update;
+    foxglove::messages::SceneUpdate scene_update;
     scene_update.entities.push_back(entity);
 
     scene_channel.log(scene_update);

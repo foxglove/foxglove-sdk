@@ -1,6 +1,6 @@
-from foxglove.schemas import Log, LogLevel, Timestamp
+from foxglove.messages import Log, LogLevel, Timestamp
 
-""" Asserts that foxglove schemas can be encoded as protobuf. """
+""" Asserts that foxglove message types can be encoded as protobuf. """
 
 
 def test_can_encode() -> None:

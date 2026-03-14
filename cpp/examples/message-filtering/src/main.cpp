@@ -12,6 +12,7 @@
 #include <foxglove/channel.hpp>
 #include <foxglove/foxglove.hpp>
 #include <foxglove/mcap.hpp>
+#include <foxglove/messages.hpp>
 #include <foxglove/server.hpp>
 
 #include <atomic>
@@ -25,11 +26,11 @@
 
 using namespace std::chrono_literals;
 
-using foxglove::schemas::PackedElementField;
-using foxglove::schemas::PointCloud;
-using foxglove::schemas::Pose;
-using foxglove::schemas::Quaternion;
-using foxglove::schemas::Vector3;
+using foxglove::messages::PackedElementField;
+using foxglove::messages::PointCloud;
+using foxglove::messages::Pose;
+using foxglove::messages::Quaternion;
+using foxglove::messages::Vector3;
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 static std::function<void()> sigint_handler;
@@ -161,7 +162,7 @@ int main() {
   }
   auto info_channel = std::move(info_channel_result.value());
 
-  auto point_cloud_channel_result = foxglove::schemas::PointCloudChannel::create("/point_cloud");
+  auto point_cloud_channel_result = foxglove::messages::PointCloudChannel::create("/point_cloud");
   if (!point_cloud_channel_result.has_value()) {
     std::cerr << "Failed to create point cloud channel: "
               << foxglove::strerror(point_cloud_channel_result.error()) << '\n';
@@ -170,7 +171,7 @@ int main() {
   auto point_cloud_channel = std::move(point_cloud_channel_result.value());
 
   auto point_cloud_tf_channel_result =
-    foxglove::schemas::FrameTransformsChannel::create("/point_cloud_tf");
+    foxglove::messages::FrameTransformsChannel::create("/point_cloud_tf");
   if (!point_cloud_tf_channel_result.has_value()) {
     std::cerr << "Failed to create point cloud tf channel: "
               << foxglove::strerror(point_cloud_tf_channel_result.error()) << '\n';
@@ -228,15 +229,15 @@ int main() {
   const auto start = std::chrono::system_clock::now();
 
   // Create a static transform for the point cloud
-  foxglove::schemas::FrameTransform tf;
+  foxglove::messages::FrameTransform tf;
   tf.parent_frame_id = "world";
   tf.child_frame_id = "points";
-  tf.translation = foxglove::schemas::Vector3{
+  tf.translation = foxglove::messages::Vector3{
     -10.0,
     -10.0,
     0.0,
   };
-  foxglove::schemas::FrameTransforms point_cloud_tf{{tf}};
+  foxglove::messages::FrameTransforms point_cloud_tf{{tf}};
 
   while (!done) {
     const auto now = std::chrono::system_clock::now();

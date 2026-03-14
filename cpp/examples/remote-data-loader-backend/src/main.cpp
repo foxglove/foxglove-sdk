@@ -37,8 +37,8 @@
 #include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
 #include <foxglove/mcap.hpp>
+#include <foxglove/messages.hpp>
 #include <foxglove/remote_data_loader_backend.hpp>
-#include <foxglove/schemas.hpp>
 
 #include <date/date.h>
 
@@ -165,7 +165,7 @@ void manifest_handler(const httplib::Request& req, httplib::Response& res) {
 
   // Declare a single channel of Foxglove `Vector3` messages on topic "/demo".
   rdl::ChannelSet channels;
-  channels.insert<foxglove::schemas::Vector3>("/demo");
+  channels.insert<foxglove::messages::Vector3>("/demo");
 
   auto query = params->to_query_string();
 
@@ -247,7 +247,7 @@ void data_handler(const httplib::Request& req, httplib::Response& res) {
       }
       auto writer = std::move(writer_result.value());
 
-      auto channel_result = foxglove::schemas::Vector3Channel::create("/demo", context);
+      auto channel_result = foxglove::messages::Vector3Channel::create("/demo", context);
       if (!channel_result.has_value()) {
         std::cerr << "[remote_data_loader_backend] failed to create channel: "
                   << foxglove::strerror(channel_result.error()) << "\n";
@@ -271,7 +271,7 @@ void data_handler(const httplib::Request& req, httplib::Response& res) {
       while (write_ok && ts <= params.end_time) {
         // Messages in the output MUST appear in ascending timestamp order. Otherwise, playback
         // will be incorrect.
-        foxglove::schemas::Vector3 msg;
+        foxglove::messages::Vector3 msg;
         msg.x = static_cast<double>(
           std::chrono::duration_cast<std::chrono::seconds>(ts.time_since_epoch()).count()
         );
