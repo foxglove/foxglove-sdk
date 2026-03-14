@@ -4,7 +4,7 @@ import time
 
 import foxglove
 from foxglove.channels import LogChannel
-from foxglove.schemas import Log, LogLevel
+from foxglove.messages import Log, LogLevel
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--path", type=str, default="output.mcap")

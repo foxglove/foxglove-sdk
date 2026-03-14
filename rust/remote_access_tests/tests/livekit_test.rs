@@ -7,9 +7,9 @@
 use std::time::Duration;
 
 use anyhow::{Context as _, Result};
+use foxglove::messages::{RawImage, Timestamp};
 use foxglove::protocol::v2::client::SubscribeChannel;
 use foxglove::protocol::v2::server::ServerMessage;
-use foxglove::schemas::{RawImage, Timestamp};
 use foxglove::{Encode, Schema};
 use livekit::{Room, RoomOptions};
 use remote_access_tests::livekit_token;

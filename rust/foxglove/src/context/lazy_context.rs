@@ -16,7 +16,7 @@ static DEFAULT_CONTEXT: LazyContext = LazyContext::new();
 ///
 /// # Example
 /// ```
-/// use foxglove::schemas::Log;
+/// use foxglove::messages::Log;
 /// use foxglove::{LazyChannel, LazyContext, LazyRawChannel};
 ///
 /// // Create two channels for the same topic, in different contexts.
