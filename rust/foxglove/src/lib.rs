@@ -327,7 +327,7 @@ pub mod library_version;
 pub mod log_macro;
 mod log_sink_set;
 mod mcap_writer;
-#[doc(hidden)]
+/// Types implementing well-known Foxglove message types.
 pub mod messages;
 mod messages_wkt;
 mod metadata;
@@ -336,7 +336,8 @@ mod metadata;
 pub mod protobuf;
 mod schema;
 
-/// Types implementing well-known Foxglove message types.
+/// Deprecated: Use [`messages`] instead.
+#[deprecated(since = "0.20.0", note = "Use foxglove::messages instead.")]
 pub mod schemas {
     pub use crate::messages::*;
 }
