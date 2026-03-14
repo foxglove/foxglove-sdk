@@ -1,20 +1,48 @@
-"""Verify that foxglove.messages re-exports everything from foxglove.schemas."""
+"""Verify that foxglove.messages is the canonical module for Foxglove message types."""
+
+import importlib
+import warnings
 
 import foxglove.messages
-import foxglove.schemas
 
 
-def test_all_schemas_exported_from_messages() -> None:
-    """Every name in foxglove.schemas.__all__ should be available in foxglove.messages."""
-    for name in foxglove.schemas.__all__:
+def test_all_message_types_exported() -> None:
+    """Every name in __all__ should be available in foxglove.messages."""
+    for name in foxglove.messages.__all__:
         assert hasattr(
             foxglove.messages, name
         ), f"{name} missing from foxglove.messages"
 
 
-def test_objects_are_identical() -> None:
-    """Exported objects should be the exact same objects, not copies."""
-    for name in foxglove.schemas.__all__:
+def test_schemas_emits_deprecation_warning() -> None:
+    """Importing foxglove.schemas should emit a DeprecationWarning."""
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+
+        # The module may already be cached, so force a reload to trigger the warning.
+        import foxglove.schemas  # noqa: F401
+
+        importlib.reload(foxglove.schemas)
+
+        deprecation_warnings = [
+            x for x in w if issubclass(x.category, DeprecationWarning)
+        ]
+        assert (
+            len(deprecation_warnings) > 0
+        ), "Expected a DeprecationWarning when importing foxglove.schemas"
+        assert "foxglove.messages" in str(deprecation_warnings[0].message)
+
+
+def test_schemas_reexports_same_types() -> None:
+    """foxglove.schemas should still provide the same types as foxglove.messages."""
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", DeprecationWarning)
+        import foxglove.schemas
+
+    for name in foxglove.messages.__all__:
+        if name == "FoxgloveSchema":
+            # FoxgloveSchema is a Union type alias, separately constructed in each module.
+            continue
         assert getattr(foxglove.messages, name) is getattr(
             foxglove.schemas, name
         ), f"{name} in foxglove.messages is not the same object as in foxglove.schemas"
