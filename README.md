@@ -6,7 +6,7 @@ The core SDK is written in Rust, with bindings for Python, and C++. We publish p
 
 - Stream live data to Foxglove over a local WebSocket
 - Log data to [MCAP](https://mcap.dev/) files for visualization or analysis
-- Leverage built-in [Foxglove schemas](https://docs.foxglove.dev/docs/sdk/schemas) for common visualizations, or your own custom messages using a supported serialization format
+- Leverage built-in [Foxglove message types](https://docs.foxglove.dev/docs/sdk/schemas) for common visualizations, or your own custom messages using a supported serialization format
 - ROS packages are available for all supported distributions (see our [ROS 2 tutorial](https://docs.foxglove.dev/docs/getting-started/frameworks/ros2))
 
 Visit [Foxglove SDK Docs](https://docs.foxglove.dev/sdk) to get started.

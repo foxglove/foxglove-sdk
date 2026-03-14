@@ -4,27 +4,27 @@ use foxglove::messages::{Log, Point3, Pose, Quaternion, Timestamp, Vector3};
 use prost::Message;
 use prost_reflect::DescriptorPool;
 
-/// Test nesting a simple foxglove schema type (Log).
+/// Test nesting a simple foxglove message type (Log).
 #[derive(Encode)]
 struct MessageWithLog {
     log: Log,
     value: u32,
 }
 
-/// Test nesting foxglove schema types that have their own nested types.
+/// Test nesting foxglove message types that have their own nested types.
 #[derive(Encode)]
 struct MessageWithPose {
     pose: Pose,
     name: String,
 }
 
-/// Test Vec of foxglove schema types.
+/// Test Vec of foxglove message types.
 #[derive(Encode)]
 struct MessageWithPoints {
     points: Vec<Point3>,
 }
 
-/// Test Option of foxglove schema type.
+/// Test Option of foxglove message type.
 #[derive(Encode)]
 struct MessageWithOptionalLog {
     log: Option<Log>,
