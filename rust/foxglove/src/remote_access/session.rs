@@ -305,7 +305,6 @@ impl RemoteAccessSession {
     }
 
     /// Send a warning status message to a participant.
-    #[expect(dead_code)]
     fn send_warning(&self, participant: &Arc<Participant>, message: String) {
         debug!("Sending warning to {participant}: {message}");
         let status = Status::warning(message);
@@ -666,8 +665,11 @@ impl RemoteAccessSession {
 
             match removed {
                 None => {
-                    debug!(
-                        "Client is not advertising channel: {channel_id_raw}; ignoring unadvertisement"
+                    self.send_warning(
+                        participant,
+                        format!(
+                            "Client is not advertising channel: {channel_id_raw}; ignoring unadvertisement"
+                        ),
                     );
                 }
                 Some(descriptor) => {
