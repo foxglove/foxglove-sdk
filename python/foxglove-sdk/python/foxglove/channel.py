@@ -145,7 +145,7 @@ _channels_by_id: dict[int, Channel] = {}
 
 def log(
     topic: str,
-    message: JsonMessage | list[Any] | bytes | str | _messages.FoxgloveSchema,
+    message: JsonMessage | list[Any] | bytes | str | _messages.FoxgloveMessage,
     *,
     log_time: int | None = None,
     sink_id: int | None = None,
