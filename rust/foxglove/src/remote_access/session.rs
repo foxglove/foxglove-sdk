@@ -302,7 +302,6 @@ impl RemoteAccessSession {
     }
 
     /// Send a warning status message to a participant.
-    #[expect(dead_code)]
     fn send_warning(&self, participant: &Arc<Participant>, message: String) {
         debug!("Sending warning to {participant}: {message}");
         let status = Status::warning(message);
@@ -635,9 +634,12 @@ impl RemoteAccessSession {
                 .insert_client_channel(participant.identity(), descriptor.clone());
 
             if !inserted {
-                info!(
-                    "Client is already advertising channel: {}; ignoring advertisement",
-                    ch.id
+                self.send_warning(
+                    participant,
+                    format!(
+                        "Client is already advertising channel: {}; ignoring advertisement",
+                        ch.id
+                    ),
                 );
                 continue;
             }
@@ -660,8 +662,11 @@ impl RemoteAccessSession {
 
             match removed {
                 None => {
-                    info!(
-                        "Client is not advertising channel: {channel_id_raw}; ignoring unadvertisement"
+                    self.send_warning(
+                        participant,
+                        format!(
+                            "Client is not advertising channel: {channel_id_raw}; ignoring unadvertisement"
+                        ),
                     );
                 }
                 Some(descriptor) => {
