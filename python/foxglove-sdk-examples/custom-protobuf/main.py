@@ -13,7 +13,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--path", type=str, default="output.mcap")
 args = parser.parse_args()
 
-# this channel logs images using Foxglove's image schema
+# this channel logs images using Foxglove's CompressedImage message type
 img_channel = CompressedImageChannel(topic="/image")
 
 # this channel logs schemaless JSON

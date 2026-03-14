@@ -1,5 +1,5 @@
 """
-This module defines channels to easily log messages conforming to well-known Foxglove schemas.
+This module defines channels to easily log messages conforming to well-known Foxglove message types.
 
 See the :py:mod:`foxglove.messages` module for available definitions.
 """

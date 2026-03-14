@@ -17,7 +17,7 @@ struct Banana {
     picked_at: Option<DateTime<Utc>>,
 }
 
-// This channel logs images using Foxglove's image schema
+// This channel logs images using Foxglove's CompressedImage message type
 static IMG_CHANNEL: LazyChannel<messages::CompressedImage> = LazyChannel::new("/image");
 // This channel logs schemaless JSON
 static SCHEMALESS_CHANNEL: LazyRawChannel = LazyRawChannel::new("/schemaless", "json");
@@ -49,7 +49,7 @@ fn main() {
         .create_new_buffered_file("example.mcap")
         .expect("Failed to start mcap writer");
 
-    // Using the Foxglove CompressedImage schema
+    // Using the Foxglove CompressedImage message type
     IMG_CHANNEL.log(&messages::CompressedImage {
         data: Bytes::from_static(IMG_DATA),
         format: "webp".to_string(),
