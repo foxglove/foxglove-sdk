@@ -49,7 +49,7 @@ fn main() {
         .create_new_buffered_file("example.mcap")
         .expect("Failed to start mcap writer");
 
-    // Using the Foxglove CompressedImage schema
+    // Using the Foxglove CompressedImage message type
     IMG_CHANNEL.log(&messages::CompressedImage {
         data: Bytes::from_static(IMG_DATA),
         format: "webp".to_string(),

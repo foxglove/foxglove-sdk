@@ -79,7 +79,7 @@ Visit [Foxglove SDK Docs](https://docs.foxglove.dev/sdk) to get started.
 [![ROS Rolling version](https://img.shields.io/ros/v/rolling/foxglove-sdk)](https://index.ros.org/p/foxglove_msgs#rolling)
 
 </td>
-<td>Foxglove schemas for ROS</td>
+<td>Foxglove message types for ROS</td>
 </tr>
 <tr>
 <td>
