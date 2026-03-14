@@ -7,7 +7,7 @@ use foxglove::{
     ChannelDescriptor,
     bytes::Bytes,
     remote_access::{Capability, Client, Gateway, Listener},
-    schemas::{CameraCalibration, RawImage, Timestamp},
+    messages::{CameraCalibration, RawImage, Timestamp},
 };
 use serde_json::Value;
 use std::{
