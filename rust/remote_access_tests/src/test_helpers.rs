@@ -13,7 +13,14 @@ use livekit::id::ParticipantIdentity;
 use livekit::{Room, RoomEvent, RoomOptions, StreamByteOptions, StreamWriter as _};
 use tracing::info;
 
-use foxglove::protocol::v2::client::{Subscribe, SubscribeChannel, Unsubscribe};
+use foxglove::protocol::v2::client::{Subscribe, SubscribeChannel, Unadvertise, Unsubscribe};
+
+/// Describes a client-advertised channel for use in test helpers.
+pub struct ClientChannelDesc {
+    pub id: u32,
+    pub topic: String,
+    pub encoding: String,
+}
 use foxglove::protocol::v2::server::ServerMessage;
 
 use crate::frame::{self, Frame, OpCode};
@@ -351,6 +358,66 @@ impl ViewerConnection {
         Ok(())
     }
 
+    /// Sends a JSON-framed client Advertise message to the gateway.
+    pub async fn send_client_advertise(&self, channels: &[ClientChannelDesc]) -> Result<()> {
+        let json = serde_json::json!({
+            "op": "advertise",
+            "channels": channels.iter().map(|c| serde_json::json!({
+                "id": c.id,
+                "topic": c.topic,
+                "encoding": c.encoding,
+                "schemaName": "",
+            })).collect::<Vec<_>>()
+        });
+        let json_str = serde_json::to_string(&json)?;
+        let framed = frame::frame_text_message(json_str.as_bytes());
+
+        let gateway_identity = ParticipantIdentity(mock_server::TEST_DEVICE_ID.to_string());
+        let writer = self
+            .room
+            .local_participant()
+            .stream_bytes(StreamByteOptions {
+                topic: "ws-protocol".to_string(),
+                destination_identities: vec![gateway_identity],
+                ..StreamByteOptions::default()
+            })
+            .await
+            .map_err(|e| anyhow::anyhow!("failed to open byte stream to gateway: {e}"))?;
+
+        writer
+            .write(&framed)
+            .await
+            .map_err(|e| anyhow::anyhow!("failed to write client advertise message: {e}"))?;
+
+        Ok(())
+    }
+
+    /// Sends a JSON-framed client Unadvertise message to the gateway.
+    pub async fn send_client_unadvertise(&self, channel_ids: &[u32]) -> Result<()> {
+        let unadvertise = Unadvertise::new(channel_ids.iter().copied());
+        let json = serde_json::to_string(&unadvertise)?;
+        let framed = frame::frame_text_message(json.as_bytes());
+
+        let gateway_identity = ParticipantIdentity(mock_server::TEST_DEVICE_ID.to_string());
+        let writer = self
+            .room
+            .local_participant()
+            .stream_bytes(StreamByteOptions {
+                topic: "ws-protocol".to_string(),
+                destination_identities: vec![gateway_identity],
+                ..StreamByteOptions::default()
+            })
+            .await
+            .map_err(|e| anyhow::anyhow!("failed to open byte stream to gateway: {e}"))?;
+
+        writer
+            .write(&framed)
+            .await
+            .map_err(|e| anyhow::anyhow!("failed to write client unadvertise message: {e}"))?;
+
+        Ok(())
+    }
+
     /// Waits for a `TrackSubscribed` room event and returns the track name.
     pub async fn expect_track_subscribed(&mut self) -> Result<String> {
         let deadline = tokio::time::Instant::now() + EVENT_TIMEOUT;
@@ -453,6 +520,14 @@ impl ViewerConnection {
 // TestGateway: starts a mock server + Gateway for integration tests.
 // ---------------------------------------------------------------------------
 
+/// Options for starting a [`TestGateway`].
+#[derive(Default)]
+pub struct TestGatewayOptions {
+    pub filter: Option<ChannelFilterFn>,
+    pub listener: Option<Arc<dyn foxglove::remote_access::Listener>>,
+    pub capabilities: Vec<foxglove::remote_access::Capability>,
+}
+
 /// A test gateway backed by a mock Foxglove API server and a LiveKit room.
 pub struct TestGateway {
     pub room_name: String,
@@ -472,7 +547,24 @@ impl TestGateway {
         filter: Option<ChannelFilterFn>,
     ) -> Result<Self> {
         let (room_name, mock) = Self::prepare().await;
-        Self::start_with_mock(ctx, room_name, mock, filter)
+        Self::start_with_mock(
+            ctx,
+            room_name,
+            mock,
+            TestGatewayOptions {
+                filter,
+                ..Default::default()
+            },
+        )
+    }
+
+    /// Starts a mock server + Gateway with the given context and options.
+    pub async fn start_with_options(
+        ctx: &Arc<foxglove::Context>,
+        options: TestGatewayOptions,
+    ) -> Result<Self> {
+        let (room_name, mock) = Self::prepare().await;
+        Self::start_with_mock(ctx, room_name, mock, options)
     }
 
     /// Creates a mock server and room name without starting the gateway.
@@ -485,12 +577,12 @@ impl TestGateway {
         (room_name, mock)
     }
 
-    /// Starts the gateway using a pre-created mock server and room name.
+    /// Starts the gateway using a pre-created mock server, room name, and options.
     pub fn start_with_mock(
         ctx: &Arc<foxglove::Context>,
         room_name: String,
         mock: mock_server::MockServerHandle,
-        filter: Option<ChannelFilterFn>,
+        options: TestGatewayOptions,
     ) -> Result<Self> {
         let mut gateway = foxglove::remote_access::Gateway::new()
             .name(format!("test-device-{}", unique_id()))
@@ -499,8 +591,14 @@ impl TestGateway {
             .supported_encodings(["json"])
             .context(ctx);
 
-        if let Some(f) = filter {
+        if let Some(f) = options.filter {
             gateway = gateway.channel_filter_fn(f);
+        }
+        if let Some(listener) = options.listener {
+            gateway = gateway.listener(listener);
+        }
+        if !options.capabilities.is_empty() {
+            gateway = gateway.capabilities(options.capabilities);
         }
 
         let handle = gateway.start().context("start Gateway")?;
