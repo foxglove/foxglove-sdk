@@ -14,12 +14,12 @@
 ///
 /// @code{.cpp}
 /// #include <foxglove/remote_data_loader_backend.hpp>
-/// #include <foxglove/schemas.hpp>
+/// #include <foxglove/messages.hpp>
 ///
 /// namespace rdl = foxglove::remote_data_loader_backend;
 ///
 /// rdl::ChannelSet channels;
-/// channels.insert<foxglove::schemas::Vector3>("/demo");
+/// channels.insert<foxglove::messages::Vector3>("/demo");
 ///
 /// rdl::StreamedSource source;
 /// source.url = "/v1/data?flightId=ABC123";
@@ -189,8 +189,8 @@ inline std::string toJsonString(const Manifest& m) {
 ///
 /// @code{.cpp}
 /// foxglove::remote_data_loader_backend::ChannelSet channels;
-/// channels.insert<foxglove::schemas::Vector3>("/topic1");
-/// channels.insert<foxglove::schemas::Vector3>("/topic2"); // reuses schema ID
+/// channels.insert<foxglove::messages::Vector3>("/topic1");
+/// channels.insert<foxglove::messages::Vector3>("/topic2"); // reuses schema ID
 ///
 /// foxglove::remote_data_loader_backend::StreamedSource source;
 /// source.topics = std::move(channels.topics);
@@ -200,10 +200,10 @@ struct ChannelSet {
   /// @brief Insert a channel for schema type `T` on the given topic.
   ///
   /// `T` must have a static `schema()` method returning `foxglove::Schema`
-  /// (all generated types in `foxglove::schemas` satisfy this).
+  /// (all generated types in `foxglove::messages` satisfy this).
   /// The message encoding is assumed to be "protobuf".
   ///
-  /// @tparam T A Foxglove schema type (e.g. `foxglove::schemas::Vector3`).
+  /// @tparam T A Foxglove schema type (e.g. `foxglove::messages::Vector3`).
   /// @param topic The topic name for this channel.
   /// @throws std::overflow_error if more than 65535 distinct schemas are added.
   template<typename T>

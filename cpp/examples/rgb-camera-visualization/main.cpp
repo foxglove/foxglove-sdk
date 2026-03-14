@@ -1,5 +1,5 @@
 #include <foxglove/foxglove.hpp>
-#include <foxglove/schemas.hpp>
+#include <foxglove/messages.hpp>
 #include <foxglove/server.hpp>
 
 #include <opencv2/opencv.hpp>
@@ -64,7 +64,7 @@ public:
   cv::VideoCapture cap_;
 };
 
-foxglove::schemas::RawImage create_raw_image_message(const cv::Mat& frame) {
+foxglove::messages::RawImage create_raw_image_message(const cv::Mat& frame) {
   int height = frame.rows;
   int width = frame.cols;
   int channels = frame.channels();
@@ -74,7 +74,7 @@ foxglove::schemas::RawImage create_raw_image_message(const cv::Mat& frame) {
   std::vector<std::byte> data(data_size);
   std::memcpy(data.data(), frame.data, data_size);
 
-  foxglove::schemas::RawImage msg;
+  foxglove::messages::RawImage msg;
   msg.width = width;
   msg.height = height;
   msg.step = width * channels;
@@ -89,7 +89,7 @@ foxglove::schemas::RawImage create_raw_image_message(const cv::Mat& frame) {
   auto nanoseconds =
     std::chrono::duration_cast<std::chrono::nanoseconds>(time_since_epoch - seconds);
 
-  foxglove::schemas::Timestamp timestamp;
+  foxglove::messages::Timestamp timestamp;
   timestamp.sec = static_cast<uint32_t>(seconds.count());
   timestamp.nsec = static_cast<uint32_t>(nanoseconds.count());
   msg.timestamp = timestamp;
@@ -117,7 +117,7 @@ int main(int argc, char** argv) {
   auto server = std::move(server_result.value());
   std::cout << "Foxglove server started on port " << server.port() << std::endl;
 
-  auto image_channel_result = foxglove::schemas::RawImageChannel::create("/camera/image");
+  auto image_channel_result = foxglove::messages::RawImageChannel::create("/camera/image");
   if (!image_channel_result.has_value()) {
     std::cerr << "Failed to create image channel: "
               << foxglove::strerror(image_channel_result.error()) << std::endl;

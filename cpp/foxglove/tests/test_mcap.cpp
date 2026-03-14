@@ -272,13 +272,13 @@ TEST_CASE_METHOD(McapTestFile, "Channel can outlive Schema") {
   REQUIRE_THAT(content, ContainsSubstring("FAKESCHEMA"));
 }
 
-namespace foxglove::schemas {
+namespace foxglove::messages {
 void imageAnnotationsToC(
   foxglove_image_annotations& dest, const ImageAnnotations& src, Arena& arena
 );
-}  // namespace foxglove::schemas
+}  // namespace foxglove::messages
 
-void convertToCAndCheck(const foxglove::schemas::ImageAnnotations& msg) {
+void convertToCAndCheck(const foxglove::messages::ImageAnnotations& msg) {
   // Convert to C struct and then compare them
   foxglove::Arena arena;
   foxglove_image_annotations c_msg;
@@ -370,43 +370,43 @@ TEST_CASE_METHOD(McapTestFile, "ImageAnnotations channel") {
   auto writer = foxglove::McapWriter::create(options);
   REQUIRE(writer.has_value());
 
-  auto channel_result = foxglove::schemas::ImageAnnotationsChannel::create("example", context);
+  auto channel_result = foxglove::messages::ImageAnnotationsChannel::create("example", context);
   auto channel = std::move(requireValue(channel_result));
 
   // Prepare ImageAnnotations message
-  foxglove::schemas::ImageAnnotations msg;
+  foxglove::messages::ImageAnnotations msg;
 
   // Add a circle annotation
-  foxglove::schemas::CircleAnnotation circle;
-  circle.timestamp = foxglove::schemas::Timestamp{1000000000, 500000000};
-  circle.position = foxglove::schemas::Point2{10.0, 20.0};
+  foxglove::messages::CircleAnnotation circle;
+  circle.timestamp = foxglove::messages::Timestamp{1000000000, 500000000};
+  circle.position = foxglove::messages::Point2{10.0, 20.0};
   circle.diameter = 15.0;
   circle.thickness = 2.0;
-  circle.fill_color = foxglove::schemas::Color{1.0, 0.5, 0.3, 0.8};
-  circle.outline_color = foxglove::schemas::Color{0.1, 0.2, 0.9, 1.0};
+  circle.fill_color = foxglove::messages::Color{1.0, 0.5, 0.3, 0.8};
+  circle.outline_color = foxglove::messages::Color{0.1, 0.2, 0.9, 1.0};
   msg.circles.push_back(circle);
 
   // Add a points annotation
-  foxglove::schemas::PointsAnnotation points;
-  points.timestamp = foxglove::schemas::Timestamp{1000000000, 500000000};
-  points.type = foxglove::schemas::PointsAnnotation::PointsAnnotationType::LINE_STRIP;
-  points.points.push_back(foxglove::schemas::Point2{5.0, 10.0});
-  points.points.push_back(foxglove::schemas::Point2{15.0, 25.0});
-  points.points.push_back(foxglove::schemas::Point2{30.0, 15.0});
-  points.outline_color = foxglove::schemas::Color{0.8, 0.2, 0.3, 1.0};
-  points.outline_colors.push_back(foxglove::schemas::Color{0.9, 0.1, 0.2, 1.0});
-  points.fill_color = foxglove::schemas::Color{0.2, 0.8, 0.3, 0.5};
+  foxglove::messages::PointsAnnotation points;
+  points.timestamp = foxglove::messages::Timestamp{1000000000, 500000000};
+  points.type = foxglove::messages::PointsAnnotation::PointsAnnotationType::LINE_STRIP;
+  points.points.push_back(foxglove::messages::Point2{5.0, 10.0});
+  points.points.push_back(foxglove::messages::Point2{15.0, 25.0});
+  points.points.push_back(foxglove::messages::Point2{30.0, 15.0});
+  points.outline_color = foxglove::messages::Color{0.8, 0.2, 0.3, 1.0};
+  points.outline_colors.push_back(foxglove::messages::Color{0.9, 0.1, 0.2, 1.0});
+  points.fill_color = foxglove::messages::Color{0.2, 0.8, 0.3, 0.5};
   points.thickness = 3.0;
   msg.points.push_back(points);
 
   // Add a text annotation
-  foxglove::schemas::TextAnnotation text;
-  text.timestamp = foxglove::schemas::Timestamp{1000000000, 500000000};
-  text.position = foxglove::schemas::Point2{50.0, 60.0};
+  foxglove::messages::TextAnnotation text;
+  text.timestamp = foxglove::messages::Timestamp{1000000000, 500000000};
+  text.position = foxglove::messages::Point2{50.0, 60.0};
   text.text = "Sample text";
   text.font_size = 14.0;
-  text.text_color = foxglove::schemas::Color{0.0, 0.0, 0.0, 1.0};
-  text.background_color = foxglove::schemas::Color{1.0, 1.0, 1.0, 0.7};
+  text.text_color = foxglove::messages::Color{0.0, 0.0, 0.0, 1.0};
+  text.background_color = foxglove::messages::Color{1.0, 1.0, 1.0, 0.7};
   msg.texts.push_back(text);
 
   convertToCAndCheck(msg);
@@ -611,10 +611,10 @@ TEST_CASE("Custom writer basic functionality") {
 
   auto custom_mcap = foxglove::McapWriter::create(options);
 
-  auto channel_result = foxglove::schemas::Point2Channel::create("test_topic", context);
+  auto channel_result = foxglove::messages::Point2Channel::create("test_topic", context);
   auto channel = std::move(requireValue(channel_result));
-  channel.log(foxglove::schemas::Point2{1.0, 2.0});
-  channel.log(foxglove::schemas::Point2{3.0, 4.0});
+  channel.log(foxglove::messages::Point2{1.0, 2.0});
+  channel.log(foxglove::messages::Point2{3.0, 4.0});
   channel.close();
   requireValue(custom_mcap).close();
 
