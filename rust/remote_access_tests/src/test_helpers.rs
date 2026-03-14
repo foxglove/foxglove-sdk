@@ -13,7 +13,9 @@ use livekit::id::ParticipantIdentity;
 use livekit::{Room, RoomEvent, RoomOptions, StreamByteOptions, StreamWriter as _};
 use tracing::info;
 
-use foxglove::protocol::v2::client::{Advertise, AdvertiseChannel, Subscribe, SubscribeChannel, Unadvertise, Unsubscribe};
+use foxglove::protocol::v2::client::{
+    Advertise, AdvertiseChannel, Subscribe, SubscribeChannel, Unadvertise, Unsubscribe,
+};
 
 /// Describes a client-advertised channel for use in test helpers.
 pub struct ClientChannelDesc {
