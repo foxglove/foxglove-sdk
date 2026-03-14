@@ -273,11 +273,11 @@ TEST_CASE_METHOD(McapTestFile, "Channel can outlive Schema") {
   REQUIRE_THAT(content, ContainsSubstring("FAKESCHEMA"));
 }
 
-namespace foxglove::schemas {
+namespace foxglove::messages {
 void imageAnnotationsToC(
   foxglove_image_annotations& dest, const ImageAnnotations& src, Arena& arena
 );
-}  // namespace foxglove::schemas
+}  // namespace foxglove::messages
 
 void convertToCAndCheck(const foxglove::messages::ImageAnnotations& msg) {
   // Convert to C struct and then compare them
