@@ -1,8 +1,8 @@
 //! Wrappers for protobuf well-known types
 //!
 //! For some reason, foxglove uses google's well-known types for representing Duration and
-//! Timestamp in protobuf, even though we schematize those types differently. This module provides
-//! an infallible translation from the foxglove schema to the underlying protobuf representation.
+//! Timestamp in protobuf, even though we define those types differently. This module provides
+//! an infallible translation from the foxglove message type to the underlying protobuf representation.
 //!
 //! This module lives outside `crate::messages`, because everything under the messages/ directory is
 //! generated.
