@@ -34,6 +34,9 @@ impl ChannelDescriptor {
     }
 
     /// Returns the channel ID.
+    /// Note that channel ids for SDK channels and remote client channels may overlap but don't refer to the same channel.
+    /// These are unique for all SDK channels in the process or all client channels in the session,
+    /// depending on which type of channel this ChannelDescriptor refers to.
     pub fn id(&self) -> ChannelId {
         self.0.id
     }
