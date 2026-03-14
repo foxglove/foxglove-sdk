@@ -1030,7 +1030,9 @@ async fn process_data_message<F, Fut>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::remote_access::participant::{ParticipantWriter, TestByteStreamWriter, TestChannelWriter};
+    use crate::remote_access::participant::{
+        ParticipantWriter, TestByteStreamWriter, TestChannelWriter,
+    };
 
     fn make_participant(name: &str) -> (ParticipantIdentity, Arc<Participant>) {
         let identity = ParticipantIdentity(name.to_string());
