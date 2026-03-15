@@ -30,16 +30,16 @@ public:
   /// @endcond
 
   /// @brief Get the topic of the channel descriptor.
-  [[nodiscard]] const std::string_view topic() const noexcept;
+  [[nodiscard]] std::string_view topic() const noexcept;
 
   /// @brief Get the message encoding of the channel descriptor.
-  [[nodiscard]] const std::string_view message_encoding() const noexcept;
+  [[nodiscard]] std::string_view messageEncoding() const noexcept;
 
   /// @brief Get the metadata for the channel descriptor.
-  [[nodiscard]] const std::optional<std::map<std::string, std::string>> metadata() const noexcept;
+  [[nodiscard]] std::optional<std::map<std::string, std::string>> metadata() const noexcept;
 
   /// @brief Get the schema of the channel descriptor.
-  [[nodiscard]] const std::optional<Schema> schema() const noexcept;
+  [[nodiscard]] std::optional<Schema> schema() const noexcept;
 };
 
 /// @brief A function that can be used to filter channels.
@@ -47,7 +47,7 @@ public:
 /// @param channel Information about the channel.
 /// @return false if the channel should not be logged to the given sink. By default, all channels
 /// are logged to a sink.
-using SinkChannelFilterFn = std::function<bool(ChannelDescriptor&& channel)>;
+using SinkChannelFilterFn = std::function<bool(const ChannelDescriptor& channel)>;
 
 /// @brief A channel for messages logged to a topic.
 ///
@@ -111,12 +111,12 @@ public:
   ///
   /// @return The message encoding of the channel. The value is valid only for the lifetime of the
   /// channel.
-  [[nodiscard]] std::string_view message_encoding() const noexcept;
+  [[nodiscard]] std::string_view messageEncoding() const noexcept;
 
   /// @brief Find out if any sinks have been added to the channel.
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
-  [[nodiscard]] bool has_sinks() const noexcept;
+  [[nodiscard]] bool hasSinks() const noexcept;
 
   /// @brief Get the schema of the channel.
   ///
@@ -126,7 +126,7 @@ public:
   /// @brief Get the metadata for the channel, set during creation.
   ///
   /// @return The metadata, or an empty map if it was not set.
-  std::optional<std::map<std::string, std::string>> metadata() const noexcept;
+  [[nodiscard]] std::optional<std::map<std::string, std::string>> metadata() const noexcept;
 
   RawChannel(const RawChannel&) = delete;
   RawChannel& operator=(const RawChannel&) = delete;

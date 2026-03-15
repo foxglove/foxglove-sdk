@@ -142,6 +142,7 @@ export function generateHppSchemas(
           switch (field.type.type) {
             case "enum":
               fieldType = field.type.enum.name;
+              defaultStr = "{}";
               break;
             case "nested":
               fieldType = field.type.schema.name;
@@ -232,7 +233,7 @@ export function generateHppSchemas(
         /// @brief Find out if any sinks have been added to the channel.
         ///
         /// @return True if sinks have been added to the channel, false otherwise.
-        [[nodiscard]] bool has_sinks() const noexcept;
+        [[nodiscard]] bool hasSinks() const noexcept;
 
         ${schema.name}Channel(const ${schema.name}Channel& other) noexcept = delete;
         ${schema.name}Channel& operator=(const ${schema.name}Channel& other) noexcept = delete;
@@ -274,7 +275,7 @@ export function generateHppSchemas(
     "  void operator()(const foxglove_channel* ptr) const noexcept;",
     "};",
     "/// @brief A unique pointer to a C foxglove_channel pointer. For internal use only.",
-    "typedef std::unique_ptr<const foxglove_channel, ChannelDeleter> ChannelUniquePtr;",
+    "using ChannelUniquePtr = std::unique_ptr<const foxglove_channel, ChannelDeleter>;",
   ];
 
   const outputSections = [
@@ -348,7 +349,7 @@ function cppToC(schema: FoxgloveMessageSchema, copyTypes: Set<string>): string[]
         } else if (copyTypes.has(field.type.schema.name)) {
           return `dest.${dstName} = src.${srcName} ? reinterpret_cast<const foxglove_${toSnakeCase(field.type.schema.name)}*>(&*src.${srcName}) : nullptr;`;
         } else {
-          return `dest.${dstName} = src.${srcName} ? arena.map_one<foxglove_${toSnakeCase(field.type.schema.name)}>(src.${srcName}.value(), ${toCamelCase(field.type.schema.name)}ToC) : nullptr;`;
+          return `dest.${dstName} = src.${srcName} ? arena.mapOne<foxglove_${toSnakeCase(field.type.schema.name)}>(src.${srcName}.value(), ${toCamelCase(field.type.schema.name)}ToC) : nullptr;`;
         }
     }
   });
@@ -410,7 +411,7 @@ export function generateCppSchemas(schemas: FoxgloveMessageSchema[]): string {
       `uint64_t ${schema.name}Channel::id() const noexcept {`,
       "    return foxglove_channel_get_id(impl_.get());",
       "}\n\n",
-      `bool ${schema.name}Channel::has_sinks() const noexcept {
+      `bool ${schema.name}Channel::hasSinks() const noexcept {
         return foxglove_channel_has_sinks(impl_.get());
       }
       `,
