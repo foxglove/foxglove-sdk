@@ -15,12 +15,18 @@
 #
 # Or use the management script:
 #   scripts/netem-livekit.sh up
+#   scripts/netem-livekit.sh test
 #
 # Architecture:
 #   - LiveKit joins the perlink network at 10.99.0.2 with node-ip overridden so
 #     WebRTC ICE candidates point to the perlink address (not localhost).
-#   - test-runner (10.99.0.30): mounts workspace source and builds/runs tests,
-#     connecting to LiveKit at http://10.99.0.2:7880.
+#   - test-runner (10.99.0.30): single-container mode. Mounts workspace source
+#     and builds/runs tests, connecting to LiveKit at http://10.99.0.2:7880.
+#   - gateway-runner (10.99.0.31) + viewer-runner (10.99.0.40): per-link mode
+#     (--profile perlink). Two containers on separate IPs so netem can apply
+#     different impairment to the gateway (high) and viewer (low) links.
+#     Room name passed via PERLINK_ROOM_NAME env var; viewer-done signal
+#     coordinated via a shared tmpfs volume (/coordination).
 #   - The netem sidecar classifies egress from LiveKit by destination IP using
 #     HTB + u32 filters, applying configurable impairment per link.
 #
@@ -45,6 +51,19 @@ volumes:
   netem-cargo-registry:
   netem-cargo-git:
   netem-target:
+  # Tmpfs volume for file-based coordination between gateway-runner and
+  # viewer-runner in per-link tests.
+  coordination:
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+
+# Note: gateway-runner and viewer-runner intentionally duplicate test-runner's
+# configuration rather than using a YAML anchor. Docker Compose's merge key
+# (<<: *anchor) replaces entire mappings for `volumes` and `environment`, so
+# an anchor would not actually deduplicate the fields that differ (coordination
+# volume, COORDINATION_DIR env var, IP address). Explicit definitions are
+# clearer about what each service actually gets.
 
 services:
   livekit:
@@ -97,15 +116,107 @@ services:
       livekit:
         condition: service_healthy
 
+  # Gateway runner for per-link tests. Runs the gateway side of the test at
+  # 10.99.0.31 (high impairment). See test-runner above for field documentation.
+  gateway-runner:
+    image: rust:1.93.0-bookworm
+    working_dir: /workspace
+    volumes:
+      - .:/workspace
+      - netem-cargo-registry:/usr/local/cargo/registry
+      - netem-cargo-git:/usr/local/cargo/git
+      - netem-target:/workspace/target-docker
+      - coordination:/coordination
+    environment:
+      CARGO_TARGET_DIR: /workspace/target-docker
+      LIVEKIT_URL: "http://10.99.0.2:7880"
+      CARGO_TERM_COLOR: always
+      CXX: clang++
+      CC: clang
+      COORDINATION_DIR: /coordination
+      PERLINK_ROOM_NAME: "${PERLINK_ROOM_NAME:-}"
+    networks:
+      perlink:
+        ipv4_address: 10.99.0.31
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        if ! command -v clang++ > /dev/null 2>&1; then
+          apt-get update -qq && apt-get install -y -qq clang libva-dev libprotobuf-dev protobuf-compiler libglib2.0-dev > /dev/null 2>&1
+        fi
+        exec sleep infinity
+    healthcheck:
+      test: ["CMD-SHELL", "command -v clang++ && test -d /workspace/rust"]
+      interval: 5s
+      timeout: 10s
+      retries: 12
+      start_period: 30s
+    depends_on:
+      livekit:
+        condition: service_healthy
+    profiles:
+      - perlink
+
+  # Viewer runner for per-link tests. Runs the viewer side of the test at
+  # 10.99.0.40 (low impairment). See test-runner above for field documentation.
+  viewer-runner:
+    image: rust:1.93.0-bookworm
+    working_dir: /workspace
+    volumes:
+      - .:/workspace
+      - netem-cargo-registry:/usr/local/cargo/registry
+      - netem-cargo-git:/usr/local/cargo/git
+      - netem-target:/workspace/target-docker
+      - coordination:/coordination
+    environment:
+      CARGO_TARGET_DIR: /workspace/target-docker
+      LIVEKIT_URL: "http://10.99.0.2:7880"
+      CARGO_TERM_COLOR: always
+      CXX: clang++
+      CC: clang
+      COORDINATION_DIR: /coordination
+      PERLINK_ROOM_NAME: "${PERLINK_ROOM_NAME:-}"
+    networks:
+      perlink:
+        ipv4_address: 10.99.0.40
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        if ! command -v clang++ > /dev/null 2>&1; then
+          apt-get update -qq && apt-get install -y -qq clang libva-dev libprotobuf-dev protobuf-compiler libglib2.0-dev > /dev/null 2>&1
+        fi
+        exec sleep infinity
+    healthcheck:
+      test: ["CMD-SHELL", "command -v clang++ && test -d /workspace/rust"]
+      interval: 5s
+      timeout: 10s
+      retries: 12
+      start_period: 30s
+    depends_on:
+      livekit:
+        condition: service_healthy
+    profiles:
+      - perlink
+
   netem:
     environment:
       # Default class: moderate impairment for unclassified traffic.
       NETEM_ARGS: "${NETEM_ARGS:-delay 80ms 20ms loss 2%}"
-      # Test runner: high impairment for LiveKit → 10.99.0.30.
+      # Test runner (single-container mode): high impairment for LiveKit → 10.99.0.30.
       NETEM_LINK_RUNNER_DST: "10.99.0.30"
       NETEM_LINK_RUNNER_ARGS: "${NETEM_LINK_RUNNER_ARGS:-delay 200ms 50ms loss 5%}"
+      # Gateway and viewer links default to empty so single-container `digest`
+      # doesn't show phantom links. The script exports real values in perlink
+      # mode; Compose passes them through via these entries.
+      NETEM_LINK_GATEWAY_DST: "${NETEM_LINK_GATEWAY_DST:-}"
+      NETEM_LINK_GATEWAY_ARGS: "${NETEM_LINK_GATEWAY_ARGS:-}"
+      NETEM_LINK_VIEWER_DST: "${NETEM_LINK_VIEWER_DST:-}"
+      NETEM_LINK_VIEWER_ARGS: "${NETEM_LINK_VIEWER_ARGS:-}"
     depends_on:
       livekit:
         condition: service_started
+      # test-runner is always started (no profile gate) even in perlink mode.
+      # This dependency ensures the netem sidecar waits for it; removing it
+      # would require conditional depends_on which Compose does not support.
       test-runner:
         condition: service_started
