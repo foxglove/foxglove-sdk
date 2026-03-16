@@ -3,13 +3,15 @@ from __future__ import annotations
 import os
 import uuid
 from tempfile import TemporaryDirectory
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
+
+if TYPE_CHECKING:
+    from .foxglove_widget import FoxgloveWidget
 
 from mcap.reader import make_reader
 
 from .._foxglove_py import Context, open_mcap
 from ..layouts import Layout
-from .foxglove_widget import FoxgloveWidget
 
 
 class NotebookBuffer:
@@ -44,13 +46,15 @@ class NotebookBuffer:
         src: str | None = None,
         layout: Layout | None = None,
         opaque_layout: dict[str, Any] | None = None,
-    ) -> FoxgloveWidget:
+    ) -> "FoxgloveWidget":
         """
         Show the Foxglove viewer. Call this method as the last step of a notebook cell
         to display the viewer.
 
         :param layout: An optional Layout to use as the initial layout for the viewer.
         """
+        from .foxglove_widget import FoxgloveWidget
+
         widget = FoxgloveWidget(
             buffer=self,
             width=width,

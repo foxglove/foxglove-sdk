@@ -27,6 +27,7 @@ from .channel import Channel, log
 from .mcap import MCAPWriter
 
 if TYPE_CHECKING:
+    from .marimo.marimo_buffer import MarimoBuffer
     from .notebook.notebook_buffer import NotebookBuffer
 
 atexit.register(_foxglove.shutdown)
@@ -194,6 +195,48 @@ def init_notebook_buffer(context: Context | None = None) -> NotebookBuffer:
     return NotebookBuffer(context=context)
 
 
+def init_marimo_buffer(context: Context | None = None) -> MarimoBuffer:
+    """
+    Create a MarimoBuffer object to manage data buffering and visualization in marimo notebooks.
+
+    The MarimoBuffer object will buffer all data logged to the provided context. When you are
+    ready to visualize the data, call the :meth:`~marimo.marimo_buffer.MarimoBuffer.show` method
+    to display a Foxglove visualization widget compatible with marimo's reactive execution model.
+
+    :param context: The Context used to log the messages. If no Context is provided, the global
+        context will be used. Logged messages will be buffered.
+
+    :returns: A MarimoBuffer object that can be used to manage the data buffering and
+        visualization.
+
+    :raises ImportError: If the marimo extra package is not installed. Install it with
+        ``pip install foxglove-sdk[marimo]``.
+
+    Example:
+
+    .. code-block:: python
+
+        import foxglove
+
+        buf = foxglove.init_marimo_buffer()
+
+        # ... log data as usual ...
+
+        # Display the widget in a marimo cell
+        buf.show()
+    """
+    try:
+        from .marimo.marimo_buffer import MarimoBuffer
+
+    except ImportError:
+        raise ImportError(
+            "MarimoBuffer dependencies are not installed. "
+            'Please install them with `pip install "foxglove-sdk[marimo]"`'
+        )
+
+    return MarimoBuffer(context=context)
+
+
 __all__ = [
     "Channel",
     "ChannelDescriptor",
@@ -206,4 +249,5 @@ __all__ = [
     "set_log_level",
     "start_server",
     "init_notebook_buffer",
+    "init_marimo_buffer",
 ]

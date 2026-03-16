@@ -15,6 +15,7 @@ documentation = "https://docs.foxglove.dev/"
 
 [project.optional-dependencies]
 notebook = ["anywidget", "mcap", "traitlets"]
+marimo = ["anywidget", "mcap", "traitlets", "marimo"]
 
 [dependency-groups]
 dev = [
