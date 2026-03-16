@@ -102,6 +102,104 @@ def _(JointState, JointStates, MarimoBuffer, Timestamp, foxglove, math):
 
 
 @app.cell
+def _(mo):
+    mo.md(
+        """
+        ## Interactive Joint Control
+
+        Use the sliders below to set each joint's position directly.
+        The Foxglove viewer will update reactively when any slider changes.
+        """
+    )
+    return
+
+
+@app.cell
+def _(mo):
+    slider_shoulder_pan = mo.ui.slider(
+        start=-180, stop=180, value=0, step=1, label="shoulder_pan (deg)"
+    )
+    slider_shoulder_lift = mo.ui.slider(
+        start=-90, stop=90, value=0, step=1, label="shoulder_lift (deg)"
+    )
+    slider_elbow = mo.ui.slider(
+        start=-120, stop=120, value=0, step=1, label="elbow (deg)"
+    )
+    slider_wrist_1 = mo.ui.slider(
+        start=-180, stop=180, value=0, step=1, label="wrist_1 (deg)"
+    )
+    slider_wrist_2 = mo.ui.slider(
+        start=-180, stop=180, value=0, step=1, label="wrist_2 (deg)"
+    )
+    slider_wrist_3 = mo.ui.slider(
+        start=-180, stop=180, value=0, step=1, label="wrist_3 (deg)"
+    )
+
+    mo.vstack(
+        [
+            slider_shoulder_pan,
+            slider_shoulder_lift,
+            slider_elbow,
+            slider_wrist_1,
+            slider_wrist_2,
+            slider_wrist_3,
+        ]
+    )
+    return (
+        slider_elbow,
+        slider_shoulder_lift,
+        slider_shoulder_pan,
+        slider_wrist_1,
+        slider_wrist_2,
+        slider_wrist_3,
+    )
+
+
+@app.cell
+def _(
+    JointState,
+    JointStates,
+    MarimoBuffer,
+    Timestamp,
+    foxglove,
+    math,
+    slider_elbow,
+    slider_shoulder_lift,
+    slider_shoulder_pan,
+    slider_wrist_1,
+    slider_wrist_2,
+    slider_wrist_3,
+):
+    # Map slider values (degrees) to joint positions (radians)
+    _joint_positions = {
+        "shoulder_pan": math.radians(slider_shoulder_pan.value),
+        "shoulder_lift": math.radians(slider_shoulder_lift.value),
+        "elbow": math.radians(slider_elbow.value),
+        "wrist_1": math.radians(slider_wrist_1.value),
+        "wrist_2": math.radians(slider_wrist_2.value),
+        "wrist_3": math.radians(slider_wrist_3.value),
+    }
+
+    interactive_buf = MarimoBuffer()
+
+    foxglove.log(
+        "/interactive_joint_states",
+        JointStates(
+            timestamp=Timestamp(0, 0),
+            joints=[
+                JointState(name=name, position=pos)
+                for name, pos in _joint_positions.items()
+            ],
+        ),
+        log_time=0,
+    )
+
+    interactive_widget = interactive_buf.show(height=600)
+    interactive_widget
+    return
+
+
+@app.cell
 def _():
     import marimo as mo
 
