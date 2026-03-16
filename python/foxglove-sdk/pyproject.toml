@@ -18,7 +18,7 @@ notebook = ["anywidget", "mcap", "traitlets"]
 
 [dependency-groups]
 dev = [
-  "black>=25.1.0,<26",
+  "black>=25.1.0,<27",
   "enum-tools[sphinx]>=0.13.0,<0.14",
   "flake8>=7.0.0,<8",
   "isort>=6.0.0,<7",
