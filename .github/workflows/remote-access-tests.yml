@@ -88,6 +88,8 @@ jobs:
           up -d --wait
 
       - name: Run per-link netem integration tests
+        # Run infra and product tests separately to avoid matching
+        # perlink_docker_* tests which require the two-container stack.
         run: |
           cargo test -p remote_access_tests -- --ignored perlink_infra_
           cargo test -p remote_access_tests -- --ignored perlink_product_
