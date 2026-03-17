@@ -13,8 +13,10 @@ use livekit::id::ParticipantIdentity;
 use livekit::{Room, RoomEvent, RoomOptions, StreamByteOptions, StreamWriter as _};
 use tracing::info;
 
+use foxglove::protocol::v2::BinaryMessage;
 use foxglove::protocol::v2::client::{
-    Advertise, AdvertiseChannel, Subscribe, SubscribeChannel, Unadvertise, Unsubscribe,
+    Advertise, AdvertiseChannel, ServiceCallRequest, Subscribe, SubscribeChannel, Unadvertise,
+    Unsubscribe,
 };
 
 /// Describes a client-advertised channel for use in test helpers.
@@ -24,6 +26,7 @@ pub struct ClientChannelDesc {
     pub encoding: String,
 }
 use foxglove::protocol::v2::server::ServerMessage;
+use foxglove::remote_access::Service;
 
 use crate::frame::{self, Frame, OpCode};
 use crate::{livekit_token, mock_server};
@@ -262,6 +265,64 @@ impl ViewerConnection {
             ServerMessage::MessageData(data) => Ok(data),
             other => anyhow::bail!("expected MessageData, got: {other:?}"),
         }
+    }
+
+    /// Reads and returns the next AdvertiseServices message.
+    pub async fn expect_advertise_services(
+        &mut self,
+    ) -> Result<foxglove::protocol::v2::server::AdvertiseServices<'static>> {
+        let msg = self.frame_reader.next_server_message().await?;
+        match msg {
+            ServerMessage::AdvertiseServices(adv) => Ok(adv),
+            other => anyhow::bail!("expected AdvertiseServices, got: {other:?}"),
+        }
+    }
+
+    /// Reads and returns the next ServiceCallResponse message.
+    pub async fn expect_service_call_response(
+        &mut self,
+    ) -> Result<foxglove::protocol::v2::server::ServiceCallResponse<'static>> {
+        let msg = self.frame_reader.next_server_message().await?;
+        match msg {
+            ServerMessage::ServiceCallResponse(resp) => Ok(resp),
+            other => anyhow::bail!("expected ServiceCallResponse, got: {other:?}"),
+        }
+    }
+
+    /// Reads and returns the next ServiceCallFailure message.
+    pub async fn expect_service_call_failure(
+        &mut self,
+    ) -> Result<foxglove::protocol::v2::server::ServiceCallFailure> {
+        let msg = self.frame_reader.next_server_message().await?;
+        match msg {
+            ServerMessage::ServiceCallFailure(fail) => Ok(fail),
+            other => anyhow::bail!("expected ServiceCallFailure, got: {other:?}"),
+        }
+    }
+
+    /// Sends a binary-framed ServiceCallRequest to the gateway.
+    pub async fn send_service_call_request(&self, req: &ServiceCallRequest<'_>) -> Result<()> {
+        let binary = req.to_bytes();
+        let framed = frame::frame_binary_message(&binary);
+
+        let gateway_identity = ParticipantIdentity(mock_server::TEST_DEVICE_ID.to_string());
+        let writer = self
+            .room
+            .local_participant()
+            .stream_bytes(StreamByteOptions {
+                topic: "ws-protocol".to_string(),
+                destination_identities: vec![gateway_identity],
+                ..StreamByteOptions::default()
+            })
+            .await
+            .map_err(|e| anyhow::anyhow!("failed to open byte stream to gateway: {e}"))?;
+
+        writer
+            .write(&framed)
+            .await
+            .map_err(|e| anyhow::anyhow!("failed to write service call request: {e}"))?;
+
+        Ok(())
     }
 
     /// Opens a byte stream back to the gateway participant and sends a
@@ -568,6 +629,15 @@ impl TestGateway {
         Self::start_with_mock(ctx, room_name, mock, options)
     }
 
+    /// Starts a mock server + Gateway with the given context and services.
+    pub async fn start_with_services(
+        ctx: &Arc<foxglove::Context>,
+        services: Vec<Service>,
+    ) -> Result<Self> {
+        let (room_name, mock) = Self::prepare().await;
+        Self::start_with_mock_and_services(ctx, room_name, mock, None, services)
+    }
+
     /// Creates a mock server and room name without starting the gateway.
     /// Use this when you need to perform setup (e.g., connecting a viewer)
     /// before the gateway joins the room.
@@ -585,6 +655,17 @@ impl TestGateway {
         mock: mock_server::MockServerHandle,
         options: TestGatewayOptions,
     ) -> Result<Self> {
+        Self::start_with_mock_and_services(ctx, room_name, mock, filter, Vec::new())
+    }
+
+    /// Starts the gateway using a pre-created mock server, room name, optional filter, and services.
+    pub fn start_with_mock_and_services(
+        ctx: &Arc<foxglove::Context>,
+        room_name: String,
+        mock: mock_server::MockServerHandle,
+        filter: Option<ChannelFilterFn>,
+        services: Vec<Service>,
+    ) -> Result<Self> {
         let mut gateway = foxglove::remote_access::Gateway::new()
             .name(format!("test-device-{}", unique_id()))
             .device_token(mock_server::TEST_DEVICE_TOKEN)
@@ -600,6 +681,10 @@ impl TestGateway {
         }
         if !options.capabilities.is_empty() {
             gateway = gateway.capabilities(options.capabilities);
+        }
+
+        if !services.is_empty() {
+            gateway = gateway.services(services);
         }
 
         let handle = gateway.start().context("start Gateway")?;

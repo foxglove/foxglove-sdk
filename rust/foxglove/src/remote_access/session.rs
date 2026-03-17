@@ -4,6 +4,7 @@ use std::time::Duration;
 
 use bytes::Bytes;
 use futures_util::StreamExt;
+use indexmap::IndexSet;
 use libwebrtc::video_source::{RtcVideoSource, native::NativeVideoSource};
 use livekit::options::TrackPublishOptions;
 use livekit::prelude::*;
@@ -15,14 +16,19 @@ use tokio_util::{io::StreamReader, sync::CancellationToken};
 use tracing::{debug, error, info, warn};
 
 use crate::protocol::v2::DecodeError;
+use crate::remote_access::connection::RemoteAccessConnectionOptions;
 use crate::remote_access::participant::ChannelWriter;
+use crate::remote_common::service::{CallId, ServiceId, ServiceMap};
 use crate::{
     ChannelDescriptor, ChannelId, Context, FoxgloveError, Metadata, RawChannel, Schema, Sink,
     SinkChannelFilter, SinkId,
     protocol::v2::{
         BinaryMessage, JsonMessage,
         client::{self, ClientMessage},
-        server::{MessageData as ServerMessageData, ServerInfo, Status, Unadvertise, advertise},
+        server::{
+            AdvertiseServices, MessageData as ServerMessageData, ServerInfo, ServiceCallFailure,
+            Status, Unadvertise, advertise, advertise_services,
+        },
     },
     remote_access::{
         Capability, Listener, RemoteAccessError, client::Client, participant::Participant,
@@ -47,10 +53,38 @@ struct ChannelMessage {
     data: Bytes,
 }
 
+impl ChannelMessage {
+    fn binary<'a>(channel_id: ChannelId, message: &impl BinaryMessage<'a>) -> Self {
+        Self {
+            channel_id,
+            data: encode_binary_message(message),
+        }
+    }
+}
+
 /// A control plane message queued for delivery to a specific participant.
-struct ControlPlaneMessage {
+pub(super) struct ControlPlaneMessage {
     participant: Arc<Participant>,
     data: Bytes,
+}
+
+impl ControlPlaneMessage {
+    pub(super) fn json(participant: Arc<Participant>, message: &impl JsonMessage) -> Self {
+        Self {
+            participant,
+            data: encode_json_message(message),
+        }
+    }
+
+    pub(super) fn binary<'a>(
+        participant: Arc<Participant>,
+        message: &impl BinaryMessage<'a>,
+    ) -> Self {
+        Self {
+            participant,
+            data: encode_binary_message(message),
+        }
+    }
 }
 
 /// The operation code for the message framing for protocol v2.
@@ -64,8 +98,10 @@ enum OpCode {
     Binary = 2,
 }
 
-/// Frames a text payload with the v2 message framing (1 byte opcode + 4 byte LE length + payload).
-fn frame_text_message(payload: &[u8]) -> Bytes {
+/// Encodes a JSON message with the v2 byte stream framing (1 byte opcode + 4 byte LE length + payload).
+fn encode_json_message(message: &impl JsonMessage) -> Bytes {
+    let payload = message.to_string();
+    let payload = payload.as_bytes();
     let mut buf = Vec::with_capacity(MESSAGE_FRAME_SIZE + payload.len());
     buf.push(OpCode::Text as u8);
     let len = u32::try_from(payload.len()).expect("message too large");
@@ -107,6 +143,8 @@ pub(crate) struct RemoteAccessSession {
     data_plane_rx: flume::Receiver<ChannelMessage>,
     control_plane_tx: flume::Sender<ControlPlaneMessage>,
     control_plane_rx: flume::Receiver<ControlPlaneMessage>,
+    services: Arc<ServiceMap>,
+    supported_encodings: IndexSet<String>,
     /// Serializes all participant-scoped state mutations: subscription changes, video track
     /// lifecycle operations, client channel advertise/unadvertise, and participant removal.
     /// This prevents TOCTOU races between byte-stream message handlers and room-event handlers,
@@ -142,8 +180,7 @@ impl Sink for RemoteAccessSession {
         if state.has_data_subscribers(&channel_id) {
             drop(state);
             let message = ServerMessageData::new(u64::from(channel_id), metadata.log_time, msg);
-            let data = encode_binary_message(&message);
-            self.send_data_lossy(ChannelMessage { channel_id, data });
+            self.send_data_lossy(ChannelMessage::binary(channel_id, &message));
         }
 
         Ok(())
@@ -186,8 +223,7 @@ impl Sink for RemoteAccessSession {
             state.add_metadata_to_advertisement(&mut advertise_msg);
         }
 
-        let framed = frame_text_message(advertise_msg.to_string().as_bytes());
-        self.broadcast_control(framed);
+        self.broadcast_control(encode_json_message(&advertise_msg));
 
         // Clients subscribe asynchronously.
         None
@@ -204,8 +240,7 @@ impl Sink for RemoteAccessSession {
         self.state.write().remove_video_schema(&channel_id);
 
         let unadvertise = Unadvertise::new([u64::from(channel_id)]);
-        let framed = frame_text_message(unadvertise.to_string().as_bytes());
-        self.broadcast_control(framed);
+        self.broadcast_control(encode_json_message(&unadvertise));
     }
 
     fn auto_subscribe(&self) -> bool {
@@ -215,13 +250,10 @@ impl Sink for RemoteAccessSession {
 
 impl RemoteAccessSession {
     pub(crate) fn new(
+        options: &RemoteAccessConnectionOptions,
         room: Room,
-        context: Weak<Context>,
-        channel_filter: Option<Arc<dyn SinkChannelFilter>>,
-        listener: Option<Arc<dyn Listener>>,
-        capabilities: Vec<Capability>,
-        cancellation_token: CancellationToken,
         message_backlog_size: usize,
+        services: Arc<ServiceMap>,
     ) -> Self {
         let (data_plane_tx, data_plane_rx) = flume::bounded(message_backlog_size);
         let (control_plane_tx, control_plane_rx) = flume::bounded(message_backlog_size);
@@ -229,12 +261,12 @@ impl RemoteAccessSession {
         Self {
             sink_id: SinkId::next(),
             room,
-            context,
+            context: options.context.clone(),
             state: RwLock::new(SessionState::new()),
-            channel_filter,
-            listener,
-            capabilities,
-            cancellation_token,
+            channel_filter: options.channel_filter.clone(),
+            listener: options.listener.clone(),
+            capabilities: options.capabilities.clone(),
+            cancellation_token: options.cancellation_token.clone(),
             data_plane_tx,
             data_plane_rx,
             control_plane_tx,
@@ -242,6 +274,8 @@ impl RemoteAccessSession {
             subscription_lock: parking_lot::Mutex::new(()),
             video_metadata_tx,
             video_metadata_rx,
+            services,
+            supported_encodings: options.supported_encodings.clone().unwrap_or_default(),
         }
     }
 
@@ -300,16 +334,14 @@ impl RemoteAccessSession {
     fn send_error(&self, participant: &Arc<Participant>, message: String) {
         debug!("Sending error to {participant}: {message}");
         let status = Status::error(message);
-        let framed = frame_text_message(status.to_string().as_bytes());
-        self.send_control(participant.clone(), framed);
+        self.send_control(participant.clone(), encode_json_message(&status));
     }
 
     /// Send a warning status message to a participant.
     fn send_warning(&self, participant: &Arc<Participant>, message: String) {
         debug!("Sending warning to {participant}: {message}");
         let status = Status::warning(message);
-        let framed = frame_text_message(status.to_string().as_bytes());
-        self.send_control(participant.clone(), framed);
+        self.send_control(participant.clone(), encode_json_message(&status));
     }
 
     /// Enqueue a control plane message for all currently connected participants.
@@ -499,6 +531,9 @@ impl RemoteAccessSession {
             }
             ClientMessage::Unadvertise(msg) => {
                 self.handle_client_unadvertise(&participant, msg);
+            }
+            ClientMessage::ServiceCallRequest(req) => {
+                self.handle_service_call(&participant, req);
             }
             // TODO: Implement other message handling branches
             _ => {
@@ -731,9 +766,9 @@ impl RemoteAccessSession {
         // these are the first messages delivered to the participant. This is safe to do without
         // holding the write lock, because this is a new participant - see below.
         info!("sending server info and advertisements to participant {participant:?}");
-        let server_info_msg = frame_text_message(server_info.to_string().as_bytes());
-        self.send_control(participant.clone(), server_info_msg);
+        self.send_control(participant.clone(), encode_json_message(&server_info));
         self.send_channel_advertisements(participant.clone());
+        self.send_service_advertisements(participant.clone());
 
         // Add the participant to the state map. We assert that this is a new participant, because
         // we validated that it did not exist in the map at the top of this function, and the
@@ -791,8 +826,102 @@ impl RemoteAccessSession {
             return;
         };
 
-        let framed = frame_text_message(advertise_msg.to_string().as_bytes());
-        self.send_control(participant, framed);
+        self.send_control(participant, encode_json_message(&advertise_msg));
+    }
+
+    /// Enqueue service advertisements for delivery to a single participant.
+    fn send_service_advertisements(&self, participant: Arc<Participant>) {
+        let services: Vec<_> = self.services.values().cloned().collect();
+        if services.is_empty() {
+            return;
+        }
+        let msg = AdvertiseServices::new(services.iter().filter_map(|s| {
+            advertise_services::Service::try_from(s.as_ref())
+                .inspect_err(|err| {
+                    error!(
+                        "Failed to encode service advertisement for {}: {err}",
+                        s.name()
+                    )
+                })
+                .ok()
+        }));
+        if msg.services.is_empty() {
+            return;
+        }
+        self.send_control(participant, encode_json_message(&msg));
+    }
+
+    /// Handle a service call request from a client.
+    fn handle_service_call(&self, participant: &Arc<Participant>, req: client::ServiceCallRequest) {
+        let service_id = ServiceId::new(req.service_id);
+        let call_id = CallId::new(req.call_id);
+
+        // Lookup the requested service handler.
+        let Some(service) = self.services.get_by_id(service_id) else {
+            self.send_service_call_failure(participant, service_id, call_id, "Unknown service");
+            return;
+        };
+
+        // If this service declared a request encoding, ensure that it matches. Otherwise, ensure
+        // that the request encoding is in the server's global list of supported encodings.
+        if !service
+            .request_encoding()
+            .map(|e| e == req.encoding.as_ref())
+            .unwrap_or_else(|| self.supported_encodings.contains(req.encoding.as_ref()))
+        {
+            self.send_service_call_failure(
+                participant,
+                service_id,
+                call_id,
+                "Unsupported encoding",
+            );
+            return;
+        }
+
+        // Acquire the semaphore, or reject if there are too many concurrent requests.
+        let Some(guard) = participant.service_call_sem().try_acquire() else {
+            self.send_service_call_failure(participant, service_id, call_id, "Too many requests");
+            return;
+        };
+
+        let encoding = service
+            .response_encoding()
+            .unwrap_or(req.encoding.as_ref())
+            .to_string();
+
+        let responder = super::service::new_responder(
+            participant.clone(),
+            service_id,
+            call_id,
+            encoding,
+            self.control_plane_tx.clone(),
+            guard,
+        );
+        let request = crate::remote_common::service::Request::new(
+            service.clone(),
+            participant.id(),
+            call_id,
+            req.encoding.into_owned(),
+            req.payload.into_owned().into(),
+        );
+
+        service.call(request, responder);
+    }
+
+    /// Sends a service call failure message to a participant.
+    fn send_service_call_failure(
+        &self,
+        participant: &Arc<Participant>,
+        service_id: ServiceId,
+        call_id: CallId,
+        message: &str,
+    ) {
+        let failure = ServiceCallFailure {
+            service_id: service_id.into(),
+            call_id: call_id.into(),
+            message: message.to_string(),
+        };
+        self.send_control(participant.clone(), encode_json_message(&failure));
     }
 
     /// Check video publishers for metadata changes and re-advertise affected channels.
@@ -846,8 +975,7 @@ impl RemoteAccessSession {
         };
 
         if let Some(Some(msg)) = advertise_msg {
-            let framed = frame_text_message(msg.to_string().as_bytes());
-            self.broadcast_control(framed);
+            self.broadcast_control(encode_json_message(&msg));
         }
     }
 

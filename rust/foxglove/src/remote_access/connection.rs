@@ -20,6 +20,7 @@ use crate::{
         Capability, RemoteAccessError, credentials_provider::CredentialsProvider,
         session::RemoteAccessSession,
     },
+    remote_common::service::{Service, ServiceMap},
 };
 
 type Result<T> = std::result::Result<T, Box<RemoteAccessError>>;
@@ -39,7 +40,6 @@ fn generate_session_id() -> String {
 /// Options for the remote access connection.
 ///
 /// This should be constructed from the [`crate::remote_access::Gateway`] builder.
-#[derive(Clone)]
 pub(crate) struct RemoteAccessConnectionOptions {
     pub name: Option<String>,
     pub device_token: String,
@@ -49,6 +49,7 @@ pub(crate) struct RemoteAccessConnectionOptions {
     pub listener: Option<Arc<dyn super::Listener>>,
     pub capabilities: Vec<Capability>,
     pub supported_encodings: Option<IndexSet<String>>,
+    pub services: HashMap<String, Service>,
     pub runtime: Option<Handle>,
     pub channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     pub server_info: Option<HashMap<String, String>>,
@@ -68,6 +69,7 @@ impl Default for RemoteAccessConnectionOptions {
             listener: None,
             capabilities: Vec::new(),
             supported_encodings: None,
+            services: HashMap::new(),
             runtime: None,
             channel_filter: None,
             server_info: None,
@@ -89,6 +91,7 @@ impl std::fmt::Debug for RemoteAccessConnectionOptions {
             .field("has_listener", &self.listener.is_some())
             .field("capabilities", &self.capabilities)
             .field("supported_encodings", &self.supported_encodings)
+            .field("num_services", &self.services.len())
             .field("has_runtime", &self.runtime.is_some())
             .field("has_channel_filter", &self.channel_filter.is_some())
             .field("server_info", &self.server_info)
@@ -102,13 +105,18 @@ impl std::fmt::Debug for RemoteAccessConnectionOptions {
 /// and holds the options and other state that outlive a session.
 pub(crate) struct RemoteAccessConnection {
     options: RemoteAccessConnectionOptions,
+    services: Arc<ServiceMap>,
     credentials_provider: OnceCell<CredentialsProvider>,
 }
 
 impl RemoteAccessConnection {
-    pub fn new(options: RemoteAccessConnectionOptions) -> Self {
+    pub fn new(mut options: RemoteAccessConnectionOptions) -> Self {
+        let services = Arc::new(ServiceMap::from_iter(
+            options.services.drain().map(|(_, s)| s),
+        ));
         Self {
             options,
+            services,
             credentials_provider: OnceCell::new(),
         }
     }
@@ -150,13 +158,10 @@ impl RemoteAccessConnection {
             {
                 Ok((room, room_events)) => (
                     Arc::new(RemoteAccessSession::new(
+                        &self.options,
                         room,
-                        self.options.context.clone(),
-                        self.options.channel_filter.clone(),
-                        self.options.listener.clone(),
-                        self.options.capabilities.clone(),
-                        self.options.cancellation_token.clone(),
                         message_backlog_size,
+                        self.services.clone(),
                     )),
                     room_events,
                 ),

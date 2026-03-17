@@ -5,12 +5,15 @@ use crate::protocol::v2::server::server_info;
 pub enum Capability {
     /// Allow clients to advertise channels to send data messages to the server.
     ClientPublish,
+    /// Allow clients to call services.
+    Services,
 }
 
 impl Capability {
     pub(crate) fn as_protocol_capabilities(&self) -> &'static [server_info::Capability] {
         match self {
             Self::ClientPublish => &[server_info::Capability::ClientPublish],
+            Self::Services => &[server_info::Capability::Services],
         }
     }
 }
