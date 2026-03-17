@@ -1,5 +1,4 @@
 import ReactRefreshPlugin from "@pmmmwh/react-refresh-webpack-plugin";
-import { PyodidePlugin } from "@pyodide/webpack-plugin";
 import CopyWebpackPlugin from "copy-webpack-plugin";
 import HtmlWebpackPlugin from "html-webpack-plugin";
 import MonacoWebpackPlugin from "monaco-editor-webpack-plugin";
@@ -10,6 +9,8 @@ import { version as pyodideVersion } from "pyodide";
 import reactRefreshTypescript from "react-refresh-typescript";
 import webpack from "webpack";
 import type { Compiler, Configuration } from "webpack";
+
+import { PyodidePlugin } from "./pyodidePlugin";
 
 const thisDirname = path.dirname(fileURLToPath(import.meta.url));
 
