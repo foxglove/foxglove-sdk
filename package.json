@@ -7,6 +7,9 @@
     "playground",
     "python/foxglove-sdk/notebook-frontend"
   ],
+  "resolutions": {
+    "@pyodide/webpack-plugin/copy-webpack-plugin": "14.0.0"
+  },
   "scripts": {
     "build": "tsc -b",
     "bump-sdk-version": "ts-node ./scripts/bumpSdkVersion.ts",
