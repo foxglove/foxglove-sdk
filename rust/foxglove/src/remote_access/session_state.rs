@@ -9,10 +9,13 @@ use crate::protocol::v2::server::advertise;
 use crate::remote_access::channel_subscription::ChannelSubscription;
 use crate::remote_access::participant::Participant;
 use crate::remote_access::session::{VideoInputSchema, VideoMetadata, VideoPublisher};
+use crate::remote_common::ClientId;
 use crate::{ChannelDescriptor, ChannelId, RawChannel};
 
 /// Channels that lost their last subscriber when a participant was removed.
 pub(crate) struct RemovedSubscriptions {
+    /// The locally-significant client ID of the removed participant.
+    pub client_id: Option<ClientId>,
     /// Channel IDs that lost their last subscriber (of any type).
     pub last_unsubscribed: SmallVec<[ChannelId; 4]>,
     /// Channel IDs that lost their last video subscriber.
@@ -92,13 +95,15 @@ impl SessionState {
     /// and any client channels that were advertised by the participant.
     #[must_use]
     pub fn remove_participant(&mut self, identity: &ParticipantIdentity) -> RemovedSubscriptions {
-        if self.participants.remove(identity).is_none() {
+        let Some(participant) = self.participants.remove(identity) else {
             return RemovedSubscriptions {
+                client_id: None,
                 last_unsubscribed: SmallVec::new(),
                 last_video_unsubscribed: SmallVec::new(),
                 client_channels: Vec::new(),
             };
-        }
+        };
+        let client_id = participant.id();
         info!("removed participant {identity:?}");
 
         let mut last_unsubscribed: SmallVec<[ChannelId; 4]> = SmallVec::new();
@@ -133,6 +138,7 @@ impl SessionState {
             .unwrap_or_default();
 
         RemovedSubscriptions {
+            client_id: Some(client_id),
             last_unsubscribed,
             last_video_unsubscribed,
             client_channels,

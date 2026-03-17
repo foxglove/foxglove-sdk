@@ -597,9 +597,9 @@ impl ConnectedClient {
         // Prepare the responder and the request. No failures past this point. If the responder is
         // dropped without sending a response, it will send a generic "internal server error" back
         // to the client.
-        let responder = service::Responder::new(
+        let responder = service::new_responder(
             self.arc(),
-            service.id(),
+            service_id,
             call_id,
             service.response_encoding().unwrap_or(&req.encoding),
             guard,

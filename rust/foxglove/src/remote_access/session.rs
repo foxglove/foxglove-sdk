@@ -598,7 +598,7 @@ impl RemoteAccessSession {
             return;
         }
 
-        let client = Client::new(participant.identity().clone());
+        let client = Client::new(participant.id(), participant.identity().clone());
 
         for ch in msg.channels {
             let channel_id = ChannelId::new(ch.id.into());
@@ -657,7 +657,7 @@ impl RemoteAccessSession {
 
     fn handle_client_unadvertise(&self, participant: &Arc<Participant>, msg: client::Unadvertise) {
         let _guard = self.subscription_lock.lock();
-        let client = Client::new(participant.identity().clone());
+        let client = Client::new(participant.id(), participant.identity().clone());
 
         for channel_id_raw in msg.channel_ids {
             let channel_id = ChannelId::new(channel_id_raw.into());
@@ -757,8 +757,8 @@ impl RemoteAccessSession {
         self.stop_video_tracks(&removed.last_video_unsubscribed);
 
         if !removed.client_channels.is_empty() {
-            if let Some(listener) = &self.listener {
-                let client = Client::new(participant_id.clone());
+            if let Some((listener, client_id)) = self.listener.as_ref().zip(removed.client_id) {
+                let client = Client::new(client_id, participant_id.clone());
                 for descriptor in &removed.client_channels {
                     listener.on_client_unadvertise(client.clone(), descriptor);
                 }

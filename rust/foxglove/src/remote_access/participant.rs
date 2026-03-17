@@ -6,6 +6,7 @@ use bytes::Bytes;
 use livekit::{ByteStreamWriter, StreamWriter, id::ParticipantIdentity};
 
 use crate::remote_access::RemoteAccessError;
+use crate::remote_common::ClientId;
 
 type Result<T> = std::result::Result<T, Box<RemoteAccessError>>;
 
@@ -15,6 +16,7 @@ type Result<T> = std::result::Result<T, Box<RemoteAccessError>>;
 ///
 /// This is a place to store state specific to the participant.
 pub(crate) struct Participant {
+    id: ClientId,
     identity: ParticipantIdentity,
     /// A reliable, ordered stream to send messages to just this participant
     writer: ParticipantWriter,
@@ -81,7 +83,16 @@ impl ChannelWriterInner {
 impl Participant {
     /// Creates a new participant.
     pub fn new(identity: ParticipantIdentity, writer: ParticipantWriter) -> Self {
-        Self { identity, writer }
+        Self {
+            id: ClientId::next(),
+            identity,
+            writer,
+        }
+    }
+
+    /// Returns the locally-significant client ID.
+    pub fn id(&self) -> ClientId {
+        self.id
     }
 
     /// Returns the participant's identity.
