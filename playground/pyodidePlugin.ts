@@ -1,3 +1,4 @@
+// Adapted from @pyodide/webpack-plugin 1.4.0 (MPL-2.0).
 import CopyWebpackPlugin from "copy-webpack-plugin";
 import assert from "node:assert";
 import fs from "node:fs";
@@ -32,73 +33,25 @@ type Pattern = {
   };
 };
 
-const PYODIDE_VERSION_FILE_MAP: Record<
-  string,
-  string[] | ((pkg: PyodidePackageMetadata) => string[])
-> = {
-  "0.21.3": [
-    "distutils.tar",
-    "package.json",
-    "pyodide_py.tar",
-    "pyodide.asm.js",
-    "pyodide.asm.js",
-    "pyodide.asm.data",
-    "pyodide.asm.wasm",
-    "repodata.json",
-  ],
-  "0.22.1": [
-    "package.json",
-    "pyodide_py.tar",
-    "pyodide.asm.js",
-    "pyodide.asm.data",
-    "pyodide.asm.wasm",
-    "repodata.json",
-  ],
-  "0.23.0": [
-    "package.json",
-    "pyodide.asm.js",
-    "pyodide.asm.wasm",
-    "repodata.json",
-    "python_stdlib.zip",
-  ],
-  "0.24.0": (pkg) => {
-    const files = pkg.files ?? [];
-    const ignore = [/^pyodide.m?js.*/, /.+\.d\.ts$/, /.+\.html$/];
-    const filtered = files.filter((file) => !ignore.some((pattern) => pattern.test(file)));
-    if (!filtered.includes("package.json")) {
-      filtered.push("package.json");
-    }
-    return filtered;
-  },
-};
+const MIN_SUPPORTED_PYODIDE_VERSION = "0.24.0";
 
-const SUPPORTED_PYODIDE_VERSIONS = Object.keys(PYODIDE_VERSION_FILE_MAP);
-const MIN_SUPPORTED_PYODIDE_VERSION = SUPPORTED_PYODIDE_VERSIONS[0] ?? "0.21.3";
-
-function choosePyodideFiles(
-  version = "0.0.0",
-): string[] | ((pkg: PyodidePackageMetadata) => string[]) {
-  let chosen: string[] | ((pkg: PyodidePackageMetadata) => string[]) = [];
-  for (const supportedVersion of SUPPORTED_PYODIDE_VERSIONS) {
-    if (version >= supportedVersion) {
-      chosen = PYODIDE_VERSION_FILE_MAP[supportedVersion];
-    }
+function choosePyodideFiles(pkg: PyodidePackageMetadata): string[] {
+  const files = pkg.files ?? [];
+  const ignore = [/^pyodide.m?js.*/, /.+\.d\.ts$/, /.+\.html$/];
+  const filtered = files.filter((file) => !ignore.some((pattern) => pattern.test(file)));
+  if (!filtered.includes("package.json")) {
+    filtered.push("package.json");
   }
-  return chosen;
+  return filtered;
 }
 
 function chooseAndTransformPatterns(
   pkg: PyodidePackageMetadata,
   packageIndexUrl?: string,
 ): Pattern[] {
-  let files = choosePyodideFiles(pkg.version);
-  if (typeof files === "function") {
-    files = files(pkg);
-  }
-
   const resolvedIndexUrl =
     packageIndexUrl ?? `https://cdn.jsdelivr.net/pyodide/v${pkg.version}/full/`;
-  return files.map((name) => {
+  return choosePyodideFiles(pkg).map((name) => {
     let transform: Pattern["transform"];
     if (packageIndexUrl && name === "pyodide.asm.js") {
       transform = {
@@ -174,13 +127,12 @@ function resolvePyodidePackageMetadata(
   pyodidePackagePath: string,
   version?: string,
 ): PyodidePackageMetadata {
-  if (version) {
-    return { version };
-  }
-
   const packageJsonPath = path.join(pyodidePackagePath, "package.json");
   try {
-    return JSON.parse(fs.readFileSync(packageJsonPath, "utf-8")) as PyodidePackageMetadata;
+    const packageJson = JSON.parse(
+      fs.readFileSync(packageJsonPath, "utf-8"),
+    ) as PyodidePackageMetadata;
+    return version == undefined ? packageJson : { ...packageJson, version };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     throw new Error(`Unable to read ${packageJsonPath}. ${message}`);

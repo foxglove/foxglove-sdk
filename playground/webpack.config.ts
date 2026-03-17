@@ -3,6 +3,7 @@ import CopyWebpackPlugin from "copy-webpack-plugin";
 import HtmlWebpackPlugin from "html-webpack-plugin";
 import MonacoWebpackPlugin from "monaco-editor-webpack-plugin";
 import fs from "node:fs";
+import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { version as pyodideVersion } from "pyodide";
@@ -10,9 +11,10 @@ import reactRefreshTypescript from "react-refresh-typescript";
 import webpack from "webpack";
 import type { Compiler, Configuration } from "webpack";
 
-import { PyodidePlugin } from "./pyodidePlugin";
-
 const thisDirname = path.dirname(fileURLToPath(import.meta.url));
+const { PyodidePlugin } = createRequire(import.meta.url)(
+  "./pyodidePlugin.ts",
+) as typeof import("./pyodidePlugin");
 
 type WebpackArgv = {
   mode?: string;

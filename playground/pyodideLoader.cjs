@@ -1,3 +1,4 @@
+// Adapted from @pyodide/webpack-plugin 1.4.0's loader (MPL-2.0).
 const { Parser } = require("acorn");
 const { importAssertions } = require("acorn-import-assertions");
 const walk = require("acorn-walk");
