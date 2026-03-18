@@ -354,7 +354,14 @@ async fn livekit_service_no_services_no_advertisement() -> Result<()> {
 #[serial(livekit)]
 async fn livekit_service_dynamic_add_sends_advertise() -> Result<()> {
     let ctx = foxglove::Context::new();
-    let gw = TestGateway::start_with_options(&ctx, TestGatewayOptions { capabilities: vec![Capability::Services], ..Default::default() }).await?;
+    let gw = TestGateway::start_with_options(
+        &ctx,
+        TestGatewayOptions {
+            capabilities: vec![Capability::Services],
+            ..Default::default()
+        },
+    )
+    .await?;
 
     let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
     let server_info = viewer.expect_server_info().await?;
@@ -389,7 +396,14 @@ async fn livekit_service_dynamic_add_sends_advertise() -> Result<()> {
 async fn livekit_service_dynamic_remove_sends_unadvertise() -> Result<()> {
     let ctx = foxglove::Context::new();
     let services = vec![echo_service()];
-    let gw = TestGateway::start_with_options(&ctx, TestGatewayOptions { services, ..Default::default() }).await?;
+    let gw = TestGateway::start_with_options(
+        &ctx,
+        TestGatewayOptions {
+            services,
+            ..Default::default()
+        },
+    )
+    .await?;
 
     let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
     let _server_info = viewer.expect_server_info().await?;
@@ -418,7 +432,14 @@ async fn livekit_service_dynamic_remove_sends_unadvertise() -> Result<()> {
 #[serial(livekit)]
 async fn livekit_service_dynamic_add_can_be_called() -> Result<()> {
     let ctx = foxglove::Context::new();
-    let gw = TestGateway::start_with_options(&ctx, TestGatewayOptions { capabilities: vec![Capability::Services], ..Default::default() }).await?;
+    let gw = TestGateway::start_with_options(
+        &ctx,
+        TestGatewayOptions {
+            capabilities: vec![Capability::Services],
+            ..Default::default()
+        },
+    )
+    .await?;
 
     let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
     let _server_info = viewer.expect_server_info().await?;
@@ -458,7 +479,14 @@ async fn livekit_service_dynamic_add_can_be_called() -> Result<()> {
 #[serial(livekit)]
 async fn livekit_service_dynamic_add_then_remove() -> Result<()> {
     let ctx = foxglove::Context::new();
-    let gw = TestGateway::start_with_options(&ctx, TestGatewayOptions { capabilities: vec![Capability::Services], ..Default::default() }).await?;
+    let gw = TestGateway::start_with_options(
+        &ctx,
+        TestGatewayOptions {
+            capabilities: vec![Capability::Services],
+            ..Default::default()
+        },
+    )
+    .await?;
 
     let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
     let _server_info = viewer.expect_server_info().await?;
@@ -505,7 +533,14 @@ async fn livekit_service_dynamic_add_then_remove() -> Result<()> {
 #[serial(livekit)]
 async fn livekit_service_dynamic_add_multiple() -> Result<()> {
     let ctx = foxglove::Context::new();
-    let gw = TestGateway::start_with_options(&ctx, TestGatewayOptions { capabilities: vec![Capability::Services], ..Default::default() }).await?;
+    let gw = TestGateway::start_with_options(
+        &ctx,
+        TestGatewayOptions {
+            capabilities: vec![Capability::Services],
+            ..Default::default()
+        },
+    )
+    .await?;
 
     let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
     let _server_info = viewer.expect_server_info().await?;
