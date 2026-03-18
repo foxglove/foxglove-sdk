@@ -201,7 +201,7 @@ pub struct CompressedPointCloud {
     pub data: ::prost::bytes::Bytes,
     /// Point cloud compression format.
     ///
-    /// Supported values: `cloudini` ([Cloudini](<https://github.com/facontidavide/cloudini>)), `draco` ([Google Draco](<https://google.github.io/draco/>)).
+    /// Supported values: `draco` ([Google Draco](<https://google.github.io/draco/>)).
     #[prost(string, tag = "7")]
     pub format: ::prost::alloc::string::String,
 }

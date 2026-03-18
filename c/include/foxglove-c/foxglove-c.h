@@ -765,7 +765,7 @@ typedef struct foxglove_compressed_point_cloud {
   /**
    * Point cloud compression format.
    *
-   * Supported values: `cloudini` ([Cloudini](https://github.com/facontidavide/cloudini)), `draco` ([Google Draco](https://google.github.io/draco/)).
+   * Supported values: `draco` ([Google Draco](https://google.github.io/draco/)).
    */
   struct foxglove_string format;
 } foxglove_compressed_point_cloud;

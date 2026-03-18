@@ -520,8 +520,7 @@ struct CompressedPointCloud {
 
   /// @brief Point cloud compression format.
   /// @brief
-  /// @brief Supported values: `cloudini` ([Cloudini](https://github.com/facontidavide/cloudini)),
-  /// `draco` ([Google Draco](https://google.github.io/draco/)).
+  /// @brief Supported values: `draco` ([Google Draco](https://google.github.io/draco/)).
   std::string format;
 
   /// @brief Encoded the CompressedPointCloud as protobuf to the provided buffer.

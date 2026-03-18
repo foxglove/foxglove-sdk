@@ -1039,7 +1039,7 @@ pub struct CompressedPointCloud {
 
     /// Point cloud compression format.
     ///
-    /// Supported values: `cloudini` ([Cloudini](https://github.com/facontidavide/cloudini)), `draco` ([Google Draco](https://google.github.io/draco/)).
+    /// Supported values: `draco` ([Google Draco](https://google.github.io/draco/)).
     pub format: FoxgloveString,
 }
 

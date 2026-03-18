@@ -608,7 +608,7 @@ export const CompressedPointCloud = {
     },
     "format": {
       "type": "string",
-      "description": "Point cloud compression format.\n\nSupported values: `cloudini` ([Cloudini](https://github.com/facontidavide/cloudini)), `draco` ([Google Draco](https://google.github.io/draco/))."
+      "description": "Point cloud compression format.\n\nSupported values: `draco` ([Google Draco](https://google.github.io/draco/))."
     }
   },
   "required": [
@@ -7504,4 +7504,3 @@ export const Vector3 = {
 };
 
 export const Time = Timestamp;
-
