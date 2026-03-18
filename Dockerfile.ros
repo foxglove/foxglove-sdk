@@ -20,7 +20,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 # That ensures that we have the latest versions of the
 # ROS packages in the underlay and for what is installed
 # by rosdep.
-RUN apt-get update && apt-get -y dist-upgrade
+RUN apt-get update && apt-get -y dist-upgrade && apt-get install -y git
 
 # create foxglove user (or use existing user if UID matches)
 ARG USERNAME=foxglove
@@ -44,4 +44,7 @@ RUN rosdep update --include-eol-distros
 
 WORKDIR /sdk/ros
 COPY --chown=$USER_UID:$USER_GID ./ros /sdk/ros
+RUN if [ "$ROS_DISTRIBUTION" = "rolling" ]; then \
+      git clone --depth=1 https://github.com/facontidavide/rosx_introspection.git /sdk/ros/src/rosx_introspection; \
+    fi
 RUN make deps
