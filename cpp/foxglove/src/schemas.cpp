@@ -571,7 +571,7 @@ uint64_t JointStateChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
-bool JointStateChannel::has_sinks() const noexcept {
+bool JointStateChannel::hasSinks() const noexcept {
   return foxglove_channel_has_sinks(impl_.get());
 }
 
@@ -607,7 +607,7 @@ uint64_t JointStatesChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
-bool JointStatesChannel::has_sinks() const noexcept {
+bool JointStatesChannel::hasSinks() const noexcept {
   return foxglove_channel_has_sinks(impl_.get());
 }
 

@@ -35,6 +35,12 @@ public:
   /// @brief Get the message encoding of the channel descriptor.
   [[nodiscard]] std::string_view messageEncoding() const noexcept;
 
+  /// @deprecated Use messageEncoding() instead.
+  [[deprecated("Use messageEncoding() instead")]]
+  [[nodiscard]] std::string_view message_encoding() const noexcept {
+    return messageEncoding();
+  }
+
   /// @brief Get the metadata for the channel descriptor.
   [[nodiscard]] std::optional<std::map<std::string, std::string>> metadata() const noexcept;
 
@@ -113,10 +119,22 @@ public:
   /// channel.
   [[nodiscard]] std::string_view messageEncoding() const noexcept;
 
+  /// @deprecated Use messageEncoding() instead.
+  [[deprecated("Use messageEncoding() instead")]]
+  [[nodiscard]] std::string_view message_encoding() const noexcept {
+    return messageEncoding();
+  }
+
   /// @brief Find out if any sinks have been added to the channel.
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
   [[nodiscard]] bool hasSinks() const noexcept;
+
+  /// @deprecated Use hasSinks() instead.
+  [[deprecated("Use hasSinks() instead")]]
+  [[nodiscard]] bool has_sinks() const noexcept {
+    return hasSinks();
+  }
 
   /// @brief Get the schema of the channel.
   ///

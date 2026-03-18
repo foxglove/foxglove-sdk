@@ -235,6 +235,12 @@ export function generateHppSchemas(
         /// @return True if sinks have been added to the channel, false otherwise.
         [[nodiscard]] bool hasSinks() const noexcept;
 
+        /// @deprecated Use hasSinks() instead.
+        [[deprecated("Use hasSinks() instead")]]
+        [[nodiscard]] bool has_sinks() const noexcept {
+          return hasSinks();
+        }
+
         ${schema.name}Channel(const ${schema.name}Channel& other) noexcept = delete;
         ${schema.name}Channel& operator=(const ${schema.name}Channel& other) noexcept = delete;
         /// @brief Default move constructor.

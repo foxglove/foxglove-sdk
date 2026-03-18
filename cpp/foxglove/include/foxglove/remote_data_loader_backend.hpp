@@ -254,4 +254,10 @@ private:
   }
 };
 
+/// @deprecated Use toJsonString() instead.
+[[deprecated("Use toJsonString() instead")]]
+inline std::string to_json_string(const Manifest& m) {
+  return toJsonString(m);
+}
+
 }  // namespace foxglove::remote_data_loader_backend

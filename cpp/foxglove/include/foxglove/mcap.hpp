@@ -244,4 +244,10 @@ inline SeekFunction noSeekFn(const uint64_t* position) {
   };
 }
 
+/// @deprecated Use noSeekFn() instead.
+[[deprecated("Use noSeekFn() instead")]]
+inline SeekFunction no_seek_fn(const uint64_t* position) {
+  return noSeekFn(position);
+}
+
 }  // namespace foxglove

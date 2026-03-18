@@ -2036,6 +2036,11 @@ public:
   /// @return True if sinks have been added to the channel, false otherwise.
   [[nodiscard]] bool hasSinks() const noexcept;
 
+  /// @deprecated Use hasSinks() instead.
+  [[deprecated("Use hasSinks() instead")]] [[nodiscard]] bool has_sinks() const noexcept {
+    return hasSinks();
+  }
+
   ArrowPrimitiveChannel(const ArrowPrimitiveChannel& other) noexcept = delete;
   ArrowPrimitiveChannel& operator=(const ArrowPrimitiveChannel& other) noexcept = delete;
   /// @brief Default move constructor.
@@ -2096,6 +2101,11 @@ public:
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
   [[nodiscard]] bool hasSinks() const noexcept;
+
+  /// @deprecated Use hasSinks() instead.
+  [[deprecated("Use hasSinks() instead")]] [[nodiscard]] bool has_sinks() const noexcept {
+    return hasSinks();
+  }
 
   CameraCalibrationChannel(const CameraCalibrationChannel& other) noexcept = delete;
   CameraCalibrationChannel& operator=(const CameraCalibrationChannel& other) noexcept = delete;
@@ -2158,6 +2168,11 @@ public:
   /// @return True if sinks have been added to the channel, false otherwise.
   [[nodiscard]] bool hasSinks() const noexcept;
 
+  /// @deprecated Use hasSinks() instead.
+  [[deprecated("Use hasSinks() instead")]] [[nodiscard]] bool has_sinks() const noexcept {
+    return hasSinks();
+  }
+
   CircleAnnotationChannel(const CircleAnnotationChannel& other) noexcept = delete;
   CircleAnnotationChannel& operator=(const CircleAnnotationChannel& other) noexcept = delete;
   /// @brief Default move constructor.
@@ -2218,6 +2233,11 @@ public:
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
   [[nodiscard]] bool hasSinks() const noexcept;
+
+  /// @deprecated Use hasSinks() instead.
+  [[deprecated("Use hasSinks() instead")]] [[nodiscard]] bool has_sinks() const noexcept {
+    return hasSinks();
+  }
 
   ColorChannel(const ColorChannel& other) noexcept = delete;
   ColorChannel& operator=(const ColorChannel& other) noexcept = delete;
@@ -2280,6 +2300,11 @@ public:
   /// @return True if sinks have been added to the channel, false otherwise.
   [[nodiscard]] bool hasSinks() const noexcept;
 
+  /// @deprecated Use hasSinks() instead.
+  [[deprecated("Use hasSinks() instead")]] [[nodiscard]] bool has_sinks() const noexcept {
+    return hasSinks();
+  }
+
   CompressedImageChannel(const CompressedImageChannel& other) noexcept = delete;
   CompressedImageChannel& operator=(const CompressedImageChannel& other) noexcept = delete;
   /// @brief Default move constructor.
@@ -2340,6 +2365,11 @@ public:
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
   [[nodiscard]] bool hasSinks() const noexcept;
+
+  /// @deprecated Use hasSinks() instead.
+  [[deprecated("Use hasSinks() instead")]] [[nodiscard]] bool has_sinks() const noexcept {
+    return hasSinks();
+  }
 
   CompressedVideoChannel(const CompressedVideoChannel& other) noexcept = delete;
   CompressedVideoChannel& operator=(const CompressedVideoChannel& other) noexcept = delete;
@@ -2402,6 +2432,11 @@ public:
   /// @return True if sinks have been added to the channel, false otherwise.
   [[nodiscard]] bool hasSinks() const noexcept;
 
+  /// @deprecated Use hasSinks() instead.
+  [[deprecated("Use hasSinks() instead")]] [[nodiscard]] bool has_sinks() const noexcept {
+    return hasSinks();
+  }
+
   CylinderPrimitiveChannel(const CylinderPrimitiveChannel& other) noexcept = delete;
   CylinderPrimitiveChannel& operator=(const CylinderPrimitiveChannel& other) noexcept = delete;
   /// @brief Default move constructor.
@@ -2462,6 +2497,11 @@ public:
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
   [[nodiscard]] bool hasSinks() const noexcept;
+
+  /// @deprecated Use hasSinks() instead.
+  [[deprecated("Use hasSinks() instead")]] [[nodiscard]] bool has_sinks() const noexcept {
+    return hasSinks();
+  }
 
   CubePrimitiveChannel(const CubePrimitiveChannel& other) noexcept = delete;
   CubePrimitiveChannel& operator=(const CubePrimitiveChannel& other) noexcept = delete;
@@ -2524,6 +2564,11 @@ public:
   /// @return True if sinks have been added to the channel, false otherwise.
   [[nodiscard]] bool hasSinks() const noexcept;
 
+  /// @deprecated Use hasSinks() instead.
+  [[deprecated("Use hasSinks() instead")]] [[nodiscard]] bool has_sinks() const noexcept {
+    return hasSinks();
+  }
+
   FrameTransformChannel(const FrameTransformChannel& other) noexcept = delete;
   FrameTransformChannel& operator=(const FrameTransformChannel& other) noexcept = delete;
   /// @brief Default move constructor.
@@ -2584,6 +2629,11 @@ public:
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
   [[nodiscard]] bool hasSinks() const noexcept;
+
+  /// @deprecated Use hasSinks() instead.
+  [[deprecated("Use hasSinks() instead")]] [[nodiscard]] bool has_sinks() const noexcept {
+    return hasSinks();
+  }
 
   FrameTransformsChannel(const FrameTransformsChannel& other) noexcept = delete;
   FrameTransformsChannel& operator=(const FrameTransformsChannel& other) noexcept = delete;
@@ -2646,6 +2696,11 @@ public:
   /// @return True if sinks have been added to the channel, false otherwise.
   [[nodiscard]] bool hasSinks() const noexcept;
 
+  /// @deprecated Use hasSinks() instead.
+  [[deprecated("Use hasSinks() instead")]] [[nodiscard]] bool has_sinks() const noexcept {
+    return hasSinks();
+  }
+
   GeoJSONChannel(const GeoJSONChannel& other) noexcept = delete;
   GeoJSONChannel& operator=(const GeoJSONChannel& other) noexcept = delete;
   /// @brief Default move constructor.
@@ -2706,6 +2761,11 @@ public:
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
   [[nodiscard]] bool hasSinks() const noexcept;
+
+  /// @deprecated Use hasSinks() instead.
+  [[deprecated("Use hasSinks() instead")]] [[nodiscard]] bool has_sinks() const noexcept {
+    return hasSinks();
+  }
 
   GridChannel(const GridChannel& other) noexcept = delete;
   GridChannel& operator=(const GridChannel& other) noexcept = delete;
@@ -2768,6 +2828,11 @@ public:
   /// @return True if sinks have been added to the channel, false otherwise.
   [[nodiscard]] bool hasSinks() const noexcept;
 
+  /// @deprecated Use hasSinks() instead.
+  [[deprecated("Use hasSinks() instead")]] [[nodiscard]] bool has_sinks() const noexcept {
+    return hasSinks();
+  }
+
   VoxelGridChannel(const VoxelGridChannel& other) noexcept = delete;
   VoxelGridChannel& operator=(const VoxelGridChannel& other) noexcept = delete;
   /// @brief Default move constructor.
@@ -2829,6 +2894,11 @@ public:
   /// @return True if sinks have been added to the channel, false otherwise.
   [[nodiscard]] bool hasSinks() const noexcept;
 
+  /// @deprecated Use hasSinks() instead.
+  [[deprecated("Use hasSinks() instead")]] [[nodiscard]] bool has_sinks() const noexcept {
+    return hasSinks();
+  }
+
   ImageAnnotationsChannel(const ImageAnnotationsChannel& other) noexcept = delete;
   ImageAnnotationsChannel& operator=(const ImageAnnotationsChannel& other) noexcept = delete;
   /// @brief Default move constructor.
@@ -2888,7 +2958,12 @@ public:
   /// @brief Find out if any sinks have been added to the channel.
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
-  [[nodiscard]] bool has_sinks() const noexcept;
+  [[nodiscard]] bool hasSinks() const noexcept;
+
+  /// @deprecated Use hasSinks() instead.
+  [[deprecated("Use hasSinks() instead")]] [[nodiscard]] bool has_sinks() const noexcept {
+    return hasSinks();
+  }
 
   JointStateChannel(const JointStateChannel& other) noexcept = delete;
   JointStateChannel& operator=(const JointStateChannel& other) noexcept = delete;
@@ -2949,7 +3024,12 @@ public:
   /// @brief Find out if any sinks have been added to the channel.
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
-  [[nodiscard]] bool has_sinks() const noexcept;
+  [[nodiscard]] bool hasSinks() const noexcept;
+
+  /// @deprecated Use hasSinks() instead.
+  [[deprecated("Use hasSinks() instead")]] [[nodiscard]] bool has_sinks() const noexcept {
+    return hasSinks();
+  }
 
   JointStatesChannel(const JointStatesChannel& other) noexcept = delete;
   JointStatesChannel& operator=(const JointStatesChannel& other) noexcept = delete;
@@ -3012,6 +3092,11 @@ public:
   /// @return True if sinks have been added to the channel, false otherwise.
   [[nodiscard]] bool hasSinks() const noexcept;
 
+  /// @deprecated Use hasSinks() instead.
+  [[deprecated("Use hasSinks() instead")]] [[nodiscard]] bool has_sinks() const noexcept {
+    return hasSinks();
+  }
+
   KeyValuePairChannel(const KeyValuePairChannel& other) noexcept = delete;
   KeyValuePairChannel& operator=(const KeyValuePairChannel& other) noexcept = delete;
   /// @brief Default move constructor.
@@ -3072,6 +3157,11 @@ public:
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
   [[nodiscard]] bool hasSinks() const noexcept;
+
+  /// @deprecated Use hasSinks() instead.
+  [[deprecated("Use hasSinks() instead")]] [[nodiscard]] bool has_sinks() const noexcept {
+    return hasSinks();
+  }
 
   LaserScanChannel(const LaserScanChannel& other) noexcept = delete;
   LaserScanChannel& operator=(const LaserScanChannel& other) noexcept = delete;
@@ -3134,6 +3224,11 @@ public:
   /// @return True if sinks have been added to the channel, false otherwise.
   [[nodiscard]] bool hasSinks() const noexcept;
 
+  /// @deprecated Use hasSinks() instead.
+  [[deprecated("Use hasSinks() instead")]] [[nodiscard]] bool has_sinks() const noexcept {
+    return hasSinks();
+  }
+
   LinePrimitiveChannel(const LinePrimitiveChannel& other) noexcept = delete;
   LinePrimitiveChannel& operator=(const LinePrimitiveChannel& other) noexcept = delete;
   /// @brief Default move constructor.
@@ -3194,6 +3289,11 @@ public:
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
   [[nodiscard]] bool hasSinks() const noexcept;
+
+  /// @deprecated Use hasSinks() instead.
+  [[deprecated("Use hasSinks() instead")]] [[nodiscard]] bool has_sinks() const noexcept {
+    return hasSinks();
+  }
 
   LocationFixChannel(const LocationFixChannel& other) noexcept = delete;
   LocationFixChannel& operator=(const LocationFixChannel& other) noexcept = delete;
@@ -3256,6 +3356,11 @@ public:
   /// @return True if sinks have been added to the channel, false otherwise.
   [[nodiscard]] bool hasSinks() const noexcept;
 
+  /// @deprecated Use hasSinks() instead.
+  [[deprecated("Use hasSinks() instead")]] [[nodiscard]] bool has_sinks() const noexcept {
+    return hasSinks();
+  }
+
   LocationFixesChannel(const LocationFixesChannel& other) noexcept = delete;
   LocationFixesChannel& operator=(const LocationFixesChannel& other) noexcept = delete;
   /// @brief Default move constructor.
@@ -3316,6 +3421,11 @@ public:
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
   [[nodiscard]] bool hasSinks() const noexcept;
+
+  /// @deprecated Use hasSinks() instead.
+  [[deprecated("Use hasSinks() instead")]] [[nodiscard]] bool has_sinks() const noexcept {
+    return hasSinks();
+  }
 
   LogChannel(const LogChannel& other) noexcept = delete;
   LogChannel& operator=(const LogChannel& other) noexcept = delete;
@@ -3378,6 +3488,11 @@ public:
   /// @return True if sinks have been added to the channel, false otherwise.
   [[nodiscard]] bool hasSinks() const noexcept;
 
+  /// @deprecated Use hasSinks() instead.
+  [[deprecated("Use hasSinks() instead")]] [[nodiscard]] bool has_sinks() const noexcept {
+    return hasSinks();
+  }
+
   SceneEntityDeletionChannel(const SceneEntityDeletionChannel& other) noexcept = delete;
   SceneEntityDeletionChannel& operator=(const SceneEntityDeletionChannel& other) noexcept = delete;
   /// @brief Default move constructor.
@@ -3438,6 +3553,11 @@ public:
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
   [[nodiscard]] bool hasSinks() const noexcept;
+
+  /// @deprecated Use hasSinks() instead.
+  [[deprecated("Use hasSinks() instead")]] [[nodiscard]] bool has_sinks() const noexcept {
+    return hasSinks();
+  }
 
   SceneEntityChannel(const SceneEntityChannel& other) noexcept = delete;
   SceneEntityChannel& operator=(const SceneEntityChannel& other) noexcept = delete;
@@ -3500,6 +3620,11 @@ public:
   /// @return True if sinks have been added to the channel, false otherwise.
   [[nodiscard]] bool hasSinks() const noexcept;
 
+  /// @deprecated Use hasSinks() instead.
+  [[deprecated("Use hasSinks() instead")]] [[nodiscard]] bool has_sinks() const noexcept {
+    return hasSinks();
+  }
+
   SceneUpdateChannel(const SceneUpdateChannel& other) noexcept = delete;
   SceneUpdateChannel& operator=(const SceneUpdateChannel& other) noexcept = delete;
   /// @brief Default move constructor.
@@ -3560,6 +3685,11 @@ public:
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
   [[nodiscard]] bool hasSinks() const noexcept;
+
+  /// @deprecated Use hasSinks() instead.
+  [[deprecated("Use hasSinks() instead")]] [[nodiscard]] bool has_sinks() const noexcept {
+    return hasSinks();
+  }
 
   ModelPrimitiveChannel(const ModelPrimitiveChannel& other) noexcept = delete;
   ModelPrimitiveChannel& operator=(const ModelPrimitiveChannel& other) noexcept = delete;
@@ -3622,6 +3752,11 @@ public:
   /// @return True if sinks have been added to the channel, false otherwise.
   [[nodiscard]] bool hasSinks() const noexcept;
 
+  /// @deprecated Use hasSinks() instead.
+  [[deprecated("Use hasSinks() instead")]] [[nodiscard]] bool has_sinks() const noexcept {
+    return hasSinks();
+  }
+
   PackedElementFieldChannel(const PackedElementFieldChannel& other) noexcept = delete;
   PackedElementFieldChannel& operator=(const PackedElementFieldChannel& other) noexcept = delete;
   /// @brief Default move constructor.
@@ -3682,6 +3817,11 @@ public:
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
   [[nodiscard]] bool hasSinks() const noexcept;
+
+  /// @deprecated Use hasSinks() instead.
+  [[deprecated("Use hasSinks() instead")]] [[nodiscard]] bool has_sinks() const noexcept {
+    return hasSinks();
+  }
 
   Point2Channel(const Point2Channel& other) noexcept = delete;
   Point2Channel& operator=(const Point2Channel& other) noexcept = delete;
@@ -3744,6 +3884,11 @@ public:
   /// @return True if sinks have been added to the channel, false otherwise.
   [[nodiscard]] bool hasSinks() const noexcept;
 
+  /// @deprecated Use hasSinks() instead.
+  [[deprecated("Use hasSinks() instead")]] [[nodiscard]] bool has_sinks() const noexcept {
+    return hasSinks();
+  }
+
   Point3Channel(const Point3Channel& other) noexcept = delete;
   Point3Channel& operator=(const Point3Channel& other) noexcept = delete;
   /// @brief Default move constructor.
@@ -3804,6 +3949,11 @@ public:
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
   [[nodiscard]] bool hasSinks() const noexcept;
+
+  /// @deprecated Use hasSinks() instead.
+  [[deprecated("Use hasSinks() instead")]] [[nodiscard]] bool has_sinks() const noexcept {
+    return hasSinks();
+  }
 
   Point3InFrameChannel(const Point3InFrameChannel& other) noexcept = delete;
   Point3InFrameChannel& operator=(const Point3InFrameChannel& other) noexcept = delete;
@@ -3866,6 +4016,11 @@ public:
   /// @return True if sinks have been added to the channel, false otherwise.
   [[nodiscard]] bool hasSinks() const noexcept;
 
+  /// @deprecated Use hasSinks() instead.
+  [[deprecated("Use hasSinks() instead")]] [[nodiscard]] bool has_sinks() const noexcept {
+    return hasSinks();
+  }
+
   PointCloudChannel(const PointCloudChannel& other) noexcept = delete;
   PointCloudChannel& operator=(const PointCloudChannel& other) noexcept = delete;
   /// @brief Default move constructor.
@@ -3926,6 +4081,11 @@ public:
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
   [[nodiscard]] bool hasSinks() const noexcept;
+
+  /// @deprecated Use hasSinks() instead.
+  [[deprecated("Use hasSinks() instead")]] [[nodiscard]] bool has_sinks() const noexcept {
+    return hasSinks();
+  }
 
   PointsAnnotationChannel(const PointsAnnotationChannel& other) noexcept = delete;
   PointsAnnotationChannel& operator=(const PointsAnnotationChannel& other) noexcept = delete;
@@ -3988,6 +4148,11 @@ public:
   /// @return True if sinks have been added to the channel, false otherwise.
   [[nodiscard]] bool hasSinks() const noexcept;
 
+  /// @deprecated Use hasSinks() instead.
+  [[deprecated("Use hasSinks() instead")]] [[nodiscard]] bool has_sinks() const noexcept {
+    return hasSinks();
+  }
+
   PoseChannel(const PoseChannel& other) noexcept = delete;
   PoseChannel& operator=(const PoseChannel& other) noexcept = delete;
   /// @brief Default move constructor.
@@ -4048,6 +4213,11 @@ public:
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
   [[nodiscard]] bool hasSinks() const noexcept;
+
+  /// @deprecated Use hasSinks() instead.
+  [[deprecated("Use hasSinks() instead")]] [[nodiscard]] bool has_sinks() const noexcept {
+    return hasSinks();
+  }
 
   PoseInFrameChannel(const PoseInFrameChannel& other) noexcept = delete;
   PoseInFrameChannel& operator=(const PoseInFrameChannel& other) noexcept = delete;
@@ -4110,6 +4280,11 @@ public:
   /// @return True if sinks have been added to the channel, false otherwise.
   [[nodiscard]] bool hasSinks() const noexcept;
 
+  /// @deprecated Use hasSinks() instead.
+  [[deprecated("Use hasSinks() instead")]] [[nodiscard]] bool has_sinks() const noexcept {
+    return hasSinks();
+  }
+
   PosesInFrameChannel(const PosesInFrameChannel& other) noexcept = delete;
   PosesInFrameChannel& operator=(const PosesInFrameChannel& other) noexcept = delete;
   /// @brief Default move constructor.
@@ -4170,6 +4345,11 @@ public:
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
   [[nodiscard]] bool hasSinks() const noexcept;
+
+  /// @deprecated Use hasSinks() instead.
+  [[deprecated("Use hasSinks() instead")]] [[nodiscard]] bool has_sinks() const noexcept {
+    return hasSinks();
+  }
 
   QuaternionChannel(const QuaternionChannel& other) noexcept = delete;
   QuaternionChannel& operator=(const QuaternionChannel& other) noexcept = delete;
@@ -4232,6 +4412,11 @@ public:
   /// @return True if sinks have been added to the channel, false otherwise.
   [[nodiscard]] bool hasSinks() const noexcept;
 
+  /// @deprecated Use hasSinks() instead.
+  [[deprecated("Use hasSinks() instead")]] [[nodiscard]] bool has_sinks() const noexcept {
+    return hasSinks();
+  }
+
   RawAudioChannel(const RawAudioChannel& other) noexcept = delete;
   RawAudioChannel& operator=(const RawAudioChannel& other) noexcept = delete;
   /// @brief Default move constructor.
@@ -4292,6 +4477,11 @@ public:
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
   [[nodiscard]] bool hasSinks() const noexcept;
+
+  /// @deprecated Use hasSinks() instead.
+  [[deprecated("Use hasSinks() instead")]] [[nodiscard]] bool has_sinks() const noexcept {
+    return hasSinks();
+  }
 
   RawImageChannel(const RawImageChannel& other) noexcept = delete;
   RawImageChannel& operator=(const RawImageChannel& other) noexcept = delete;
@@ -4354,6 +4544,11 @@ public:
   /// @return True if sinks have been added to the channel, false otherwise.
   [[nodiscard]] bool hasSinks() const noexcept;
 
+  /// @deprecated Use hasSinks() instead.
+  [[deprecated("Use hasSinks() instead")]] [[nodiscard]] bool has_sinks() const noexcept {
+    return hasSinks();
+  }
+
   SpherePrimitiveChannel(const SpherePrimitiveChannel& other) noexcept = delete;
   SpherePrimitiveChannel& operator=(const SpherePrimitiveChannel& other) noexcept = delete;
   /// @brief Default move constructor.
@@ -4414,6 +4609,11 @@ public:
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
   [[nodiscard]] bool hasSinks() const noexcept;
+
+  /// @deprecated Use hasSinks() instead.
+  [[deprecated("Use hasSinks() instead")]] [[nodiscard]] bool has_sinks() const noexcept {
+    return hasSinks();
+  }
 
   TextAnnotationChannel(const TextAnnotationChannel& other) noexcept = delete;
   TextAnnotationChannel& operator=(const TextAnnotationChannel& other) noexcept = delete;
@@ -4476,6 +4676,11 @@ public:
   /// @return True if sinks have been added to the channel, false otherwise.
   [[nodiscard]] bool hasSinks() const noexcept;
 
+  /// @deprecated Use hasSinks() instead.
+  [[deprecated("Use hasSinks() instead")]] [[nodiscard]] bool has_sinks() const noexcept {
+    return hasSinks();
+  }
+
   TextPrimitiveChannel(const TextPrimitiveChannel& other) noexcept = delete;
   TextPrimitiveChannel& operator=(const TextPrimitiveChannel& other) noexcept = delete;
   /// @brief Default move constructor.
@@ -4536,6 +4741,11 @@ public:
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
   [[nodiscard]] bool hasSinks() const noexcept;
+
+  /// @deprecated Use hasSinks() instead.
+  [[deprecated("Use hasSinks() instead")]] [[nodiscard]] bool has_sinks() const noexcept {
+    return hasSinks();
+  }
 
   TriangleListPrimitiveChannel(const TriangleListPrimitiveChannel& other) noexcept = delete;
   TriangleListPrimitiveChannel& operator=(const TriangleListPrimitiveChannel& other
@@ -4599,6 +4809,11 @@ public:
   /// @return True if sinks have been added to the channel, false otherwise.
   [[nodiscard]] bool hasSinks() const noexcept;
 
+  /// @deprecated Use hasSinks() instead.
+  [[deprecated("Use hasSinks() instead")]] [[nodiscard]] bool has_sinks() const noexcept {
+    return hasSinks();
+  }
+
   Vector2Channel(const Vector2Channel& other) noexcept = delete;
   Vector2Channel& operator=(const Vector2Channel& other) noexcept = delete;
   /// @brief Default move constructor.
@@ -4659,6 +4874,11 @@ public:
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
   [[nodiscard]] bool hasSinks() const noexcept;
+
+  /// @deprecated Use hasSinks() instead.
+  [[deprecated("Use hasSinks() instead")]] [[nodiscard]] bool has_sinks() const noexcept {
+    return hasSinks();
+  }
 
   Vector3Channel(const Vector3Channel& other) noexcept = delete;
   Vector3Channel& operator=(const Vector3Channel& other) noexcept = delete;
