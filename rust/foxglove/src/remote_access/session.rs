@@ -662,11 +662,8 @@ impl RemoteAccessSession {
 
             match removed {
                 None => {
-                    self.send_warning(
-                        participant,
-                        format!(
-                            "Client is not advertising channel: {channel_id_raw}; ignoring unadvertisement"
-                        ),
+                    debug!(
+                        "Client is not advertising channel: {channel_id_raw}; ignoring unadvertisement"
                     );
                 }
                 Some(descriptor) => {
