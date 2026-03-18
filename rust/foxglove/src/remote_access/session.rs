@@ -500,7 +500,9 @@ impl RemoteAccessSession {
             ClientMessage::Unadvertise(msg) => {
                 self.handle_client_unadvertise(&participant, msg);
             }
-            // TODO: Implement other message handling branches
+            ClientMessage::MessageData(msg) => {
+                self.handle_client_message_data(&participant, msg);
+            }
             _ => {
                 warn!("Unhandled client message: {client_msg:?}");
             }
@@ -678,6 +680,38 @@ impl RemoteAccessSession {
                     }
                 }
             }
+        }
+    }
+
+    fn handle_client_message_data(
+        &self,
+        participant: &Arc<Participant>,
+        msg: client::MessageData<'_>,
+    ) {
+        if !self.has_capability(Capability::ClientPublish) {
+            self.send_error(
+                participant,
+                "Server does not support clientPublish capability".to_string(),
+            );
+            return;
+        }
+        let channel_id = ChannelId::new(msg.channel_id.into());
+        let descriptor = {
+            let state = self.state.read();
+            state
+                .get_client_channel(participant.identity(), channel_id)
+                .cloned()
+        };
+        let Some(descriptor) = descriptor else {
+            self.send_error(
+                participant,
+                format!("Client has not advertised channel: {}", msg.channel_id),
+            );
+            return;
+        };
+        if let Some(listener) = &self.listener {
+            let client = Client::new(participant.identity().clone());
+            listener.on_message_data(client, &descriptor, &msg.data);
         }
     }
 

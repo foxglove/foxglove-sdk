@@ -174,6 +174,15 @@ impl SessionState {
         }
     }
 
+    /// Returns a client-advertised channel for a participant, if present.
+    pub fn get_client_channel(
+        &self,
+        identity: &ParticipantIdentity,
+        channel_id: ChannelId,
+    ) -> Option<&ChannelDescriptor> {
+        self.client_channels.get(identity)?.get(&channel_id)
+    }
+
     /// Removes and returns a client-advertised channel for a participant.
     pub fn remove_client_channel(
         &mut self,
@@ -1228,5 +1237,32 @@ mod tests {
 
         let removed = state.remove_participant(&id);
         assert!(removed.client_channels.is_empty());
+    }
+
+    #[test]
+    fn get_client_channel_returns_channel() {
+        let mut state = SessionState::new();
+        let (id, _) = make_participant("alice");
+        let ch = make_client_channel(1, "/cmd");
+
+        state.insert_client_channel(&id, ch);
+        let result = state.get_client_channel(&id, ChannelId::new(1));
+        assert!(result.is_some());
+        assert_eq!(result.unwrap().topic(), "/cmd");
+    }
+
+    #[test]
+    fn get_client_channel_returns_none_for_unknown_participant() {
+        let state = SessionState::new();
+        let id = ParticipantIdentity("nobody".to_string());
+        assert!(state.get_client_channel(&id, ChannelId::new(1)).is_none());
+    }
+
+    #[test]
+    fn get_client_channel_returns_none_for_unknown_channel() {
+        let mut state = SessionState::new();
+        let (id, _) = make_participant("alice");
+        state.insert_client_channel(&id, make_client_channel(1, "/cmd"));
+        assert!(state.get_client_channel(&id, ChannelId::new(99)).is_none());
     }
 }

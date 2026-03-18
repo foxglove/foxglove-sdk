@@ -13,8 +13,10 @@ use livekit::id::ParticipantIdentity;
 use livekit::{Room, RoomEvent, RoomOptions, StreamByteOptions, StreamWriter as _};
 use tracing::info;
 
+use foxglove::protocol::v2::BinaryMessage;
 use foxglove::protocol::v2::client::{
-    Advertise, AdvertiseChannel, Subscribe, SubscribeChannel, Unadvertise, Unsubscribe,
+    Advertise, AdvertiseChannel, MessageData as ClientMessageData, Subscribe, SubscribeChannel,
+    Unadvertise, Unsubscribe,
 };
 
 /// Describes a client-advertised channel for use in test helpers.
@@ -415,6 +417,67 @@ impl ViewerConnection {
             .write(&framed)
             .await
             .map_err(|e| anyhow::anyhow!("failed to write client unadvertise message: {e}"))?;
+
+        Ok(())
+    }
+
+    /// Sends a binary-framed `ClientMessageData` on the `"ws-protocol"` topic.
+    ///
+    /// This tests backward compatibility with the control-plane stream for
+    /// client publish message data.
+    pub async fn send_client_message_data(&self, channel_id: u32, data: &[u8]) -> Result<()> {
+        let msg = ClientMessageData::new(channel_id, data);
+        let inner = msg.to_bytes();
+        let framed = frame::frame_binary_message(&inner);
+
+        let gateway_identity = ParticipantIdentity(mock_server::TEST_DEVICE_ID.to_string());
+        let writer = self
+            .room
+            .local_participant()
+            .stream_bytes(StreamByteOptions {
+                topic: "ws-protocol".to_string(),
+                destination_identities: vec![gateway_identity],
+                ..StreamByteOptions::default()
+            })
+            .await
+            .map_err(|e| anyhow::anyhow!("failed to open byte stream to gateway: {e}"))?;
+
+        writer
+            .write(&framed)
+            .await
+            .map_err(|e| anyhow::anyhow!("failed to write client message data: {e}"))?;
+
+        Ok(())
+    }
+
+    /// Sends a binary-framed `ClientMessageData` on a per-channel topic `"ch-{channelId}"`.
+    ///
+    /// This tests the new per-channel delivery path for client publish message data.
+    pub async fn send_client_message_data_on_channel(
+        &self,
+        channel_id: u32,
+        data: &[u8],
+    ) -> Result<()> {
+        let msg = ClientMessageData::new(channel_id, data);
+        let inner = msg.to_bytes();
+        let framed = frame::frame_binary_message(&inner);
+
+        let gateway_identity = ParticipantIdentity(mock_server::TEST_DEVICE_ID.to_string());
+        let writer = self
+            .room
+            .local_participant()
+            .stream_bytes(StreamByteOptions {
+                topic: format!("ch-{channel_id}"),
+                destination_identities: vec![gateway_identity],
+                ..StreamByteOptions::default()
+            })
+            .await
+            .map_err(|e| anyhow::anyhow!("failed to open byte stream to gateway: {e}"))?;
+
+        writer
+            .write(&framed)
+            .await
+            .map_err(|e| anyhow::anyhow!("failed to write client message data on channel: {e}"))?;
 
         Ok(())
     }

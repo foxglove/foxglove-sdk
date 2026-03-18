@@ -326,14 +326,12 @@ impl RemoteAccessConnection {
                 }
                 RoomEvent::ByteStreamOpened {
                     reader,
-                    topic: _,
+                    topic,
                     participant_identity,
                 } => {
-                    // This is how we handle incoming reliable messages from the client
-                    // They open a byte stream to the device participant (us).
                     info!(
-                        "byte stream opened from participant: {:?}",
-                        participant_identity
+                        "byte stream opened from participant: {:?}, topic: {:?}",
+                        participant_identity, topic
                     );
                     if let Some(reader) = reader.take() {
                         let session2 = session.clone();

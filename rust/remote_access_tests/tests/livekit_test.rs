@@ -16,6 +16,7 @@ use remote_access_tests::livekit_token;
 use remote_access_tests::mock_listener::MockListener;
 use remote_access_tests::test_helpers::{
     ClientChannelDesc, TestGateway, TestGatewayOptions, ViewerConnection, poll_until,
+    EVENT_TIMEOUT,
 };
 use serial_test::serial;
 use tracing::info;
@@ -1041,6 +1042,206 @@ async fn livekit_client_disconnect_fires_unadvertise_for_advertised_channels() -
     );
     info!("disconnect unadvertise validated: {unadvertised:?}");
 
+    gw.stop().await?;
+    Ok(())
+}
+
+// ===========================================================================
+// Client publish / message data tests
+// ===========================================================================
+
+/// Test that sending a client MessageData on the ws-protocol (control-plane) stream
+/// fires `on_message_data` on the listener with the correct client, topic, and payload.
+#[traced_test]
+#[ignore]
+#[tokio::test]
+#[serial(livekit)]
+async fn livekit_client_message_data_fires_listener_callback() -> Result<()> {
+    use std::sync::Arc;
+    let ctx = foxglove::Context::new();
+    let listener = Arc::new(MockListener::default());
+
+    let gw = TestGateway::start_with_options(
+        &ctx,
+        TestGatewayOptions {
+            listener: Some(listener.clone()),
+            capabilities: vec![foxglove::remote_access::Capability::ClientPublish],
+            ..Default::default()
+        },
+    )
+    .await?;
+
+    let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+    let _server_info = viewer.expect_server_info().await?;
+
+    viewer
+        .send_client_advertise(&[ClientChannelDesc {
+            id: 1,
+            topic: "/cmd".to_string(),
+            encoding: "json".to_string(),
+        }])
+        .await?;
+    poll_until(|| listener.advertised().len() == 1).await;
+
+    let payload = b"{\"velocity\": 1.0}";
+    viewer.send_client_message_data(1, payload).await?;
+
+    poll_until(|| listener.message_data().len() == 1).await;
+
+    let messages = listener.message_data();
+    assert_eq!(messages.len(), 1);
+    assert_eq!(messages[0].0, "viewer-1", "client id should match");
+    assert_eq!(messages[0].1, "/cmd", "topic should match");
+    assert_eq!(messages[0].2, payload, "payload should match");
+    info!("on_message_data callback validated via ws-protocol stream");
+
+    viewer.close().await?;
+    gw.stop().await?;
+    Ok(())
+}
+
+/// Test that sending a client MessageData on a per-channel byte stream (`ch-{id}`)
+/// fires `on_message_data` on the listener.
+#[traced_test]
+#[ignore]
+#[tokio::test]
+#[serial(livekit)]
+async fn livekit_client_message_data_on_channel_stream_fires_listener_callback() -> Result<()> {
+    use std::sync::Arc;
+    let ctx = foxglove::Context::new();
+    let listener = Arc::new(MockListener::default());
+
+    let gw = TestGateway::start_with_options(
+        &ctx,
+        TestGatewayOptions {
+            listener: Some(listener.clone()),
+            capabilities: vec![foxglove::remote_access::Capability::ClientPublish],
+            ..Default::default()
+        },
+    )
+    .await?;
+
+    let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+    let _server_info = viewer.expect_server_info().await?;
+
+    viewer
+        .send_client_advertise(&[ClientChannelDesc {
+            id: 1,
+            topic: "/cmd".to_string(),
+            encoding: "json".to_string(),
+        }])
+        .await?;
+    poll_until(|| listener.advertised().len() == 1).await;
+
+    let payload = b"{\"velocity\": 2.0}";
+    viewer
+        .send_client_message_data_on_channel(1, payload)
+        .await?;
+
+    poll_until(|| listener.message_data().len() == 1).await;
+
+    let messages = listener.message_data();
+    assert_eq!(messages.len(), 1);
+    assert_eq!(messages[0].0, "viewer-1", "client id should match");
+    assert_eq!(messages[0].1, "/cmd", "topic should match");
+    assert_eq!(messages[0].2, payload, "payload should match");
+    info!("on_message_data callback validated via per-channel stream");
+
+    viewer.close().await?;
+    gw.stop().await?;
+    Ok(())
+}
+
+/// Test that sending MessageData for a channel that has not been advertised
+/// results in a Status error message.
+#[traced_test]
+#[ignore]
+#[tokio::test]
+#[serial(livekit)]
+async fn livekit_client_message_data_before_advertise_sends_error() -> Result<()> {
+    let ctx = foxglove::Context::new();
+
+    let gw = TestGateway::start_with_options(
+        &ctx,
+        TestGatewayOptions {
+            capabilities: vec![foxglove::remote_access::Capability::ClientPublish],
+            ..Default::default()
+        },
+    )
+    .await?;
+
+    let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+    let _server_info = viewer.expect_server_info().await?;
+
+    viewer.send_client_message_data(1, b"some data").await?;
+
+    let deadline = tokio::time::Instant::now() + EVENT_TIMEOUT;
+    let status = loop {
+        let msg = tokio::time::timeout_at(deadline, viewer.frame_reader.next_server_message())
+            .await
+            .context("timeout waiting for error status")?
+            .context("failed to read server message")?;
+        if let ServerMessage::Status(s) = msg {
+            break s;
+        }
+    };
+
+    assert_eq!(
+        status.level,
+        foxglove::protocol::v2::server::status::Level::Error
+    );
+    assert!(
+        status.message.contains("not advertised"),
+        "expected 'not advertised' in status message: {}",
+        status.message
+    );
+    info!("error status received: {}", status.message);
+
+    viewer.close().await?;
+    gw.stop().await?;
+    Ok(())
+}
+
+/// Test that sending MessageData when the gateway does not have the `ClientPublish`
+/// capability results in a Status error message.
+#[traced_test]
+#[ignore]
+#[tokio::test]
+#[serial(livekit)]
+async fn livekit_client_message_data_without_capability_sends_error() -> Result<()> {
+    let ctx = foxglove::Context::new();
+
+    let gw = TestGateway::start(&ctx).await?;
+
+    let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+    let _server_info = viewer.expect_server_info().await?;
+
+    viewer
+        .send_client_advertise(&[ClientChannelDesc {
+            id: 1,
+            topic: "/cmd".to_string(),
+            encoding: "json".to_string(),
+        }])
+        .await?;
+
+    let deadline = tokio::time::Instant::now() + EVENT_TIMEOUT;
+    let status = loop {
+        let msg = tokio::time::timeout_at(deadline, viewer.frame_reader.next_server_message())
+            .await
+            .context("timeout waiting for error status")?
+            .context("failed to read server message")?;
+        if let ServerMessage::Status(s) = msg {
+            break s;
+        }
+    };
+
+    assert_eq!(
+        status.level,
+        foxglove::protocol::v2::server::status::Level::Error
+    );
+    info!("error status received: {}", status.message);
+
+    viewer.close().await?;
     gw.stop().await?;
     Ok(())
 }
