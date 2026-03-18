@@ -1201,6 +1201,52 @@ const PackedElementField: FoxgloveMessageSchema = {
   ],
 };
 
+const CompressedPointCloud: FoxgloveMessageSchema = {
+  type: "message",
+  name: "CompressedPointCloud",
+  description: "A compressed point cloud",
+  fields: [
+    {
+      name: "timestamp",
+      type: { type: "nested", schema: Timestamp },
+      description: "Timestamp of point cloud",
+    },
+    {
+      name: "frame_id",
+      type: { type: "primitive", name: "string" },
+      description: "Frame of reference",
+    },
+    {
+      name: "pose",
+      type: { type: "nested", schema: Pose },
+      description: "The origin of the point cloud relative to the frame of reference",
+    },
+    {
+      name: "point_stride",
+      type: { type: "primitive", name: "uint32" },
+      description:
+        "Number of bytes between points in the decoded `data`. This matches the decoded layout described by `fields`, not the codec bitstream layout.",
+    },
+    {
+      name: "fields",
+      type: { type: "nested", schema: PackedElementField },
+      array: true,
+      description:
+        "Fields in the decoded `data`. At least 2 coordinate fields from `x`, `y`, and `z` are required for each point's position; `red`, `green`, `blue`, and `alpha` are optional for customizing each point's color.",
+    },
+    {
+      name: "data",
+      type: { type: "primitive", name: "bytes" },
+      description: "Compressed point cloud data for exactly one point cloud sample",
+    },
+    {
+      name: "format",
+      type: { type: "primitive", name: "string" },
+      description: "Point cloud compression format\n\nSupported values: `cloudini`, `draco`",
+    },
+  ],
+};
+
 const Grid: FoxgloveMessageSchema = {
   type: "message",
   name: "Grid",
@@ -1855,6 +1901,7 @@ export const foxgloveMessageSchemas = {
   CircleAnnotation,
   Color,
   CompressedImage,
+  CompressedPointCloud,
   CompressedVideo,
   CylinderPrimitive,
   CubePrimitive,

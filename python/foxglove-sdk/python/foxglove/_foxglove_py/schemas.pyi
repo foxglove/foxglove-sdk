@@ -194,6 +194,31 @@ class CompressedImage:
         """Encodes the CompressedImage."""
         ...
 
+class CompressedPointCloud:
+    """
+    A compressed point cloud
+    """
+
+    def __init__(
+        self,
+        *,
+        timestamp: Timestamp | None = None,
+        frame_id: str = "",
+        pose: Pose | None = None,
+        point_stride: int = 0,
+        fields: list[PackedElementField] | None = None,
+        data: bytes = b"",
+        format: str = "",
+    ) -> None: ...
+    @staticmethod
+    def get_schema() -> Schema:
+        """Returns the CompressedPointCloud schema"""
+        ...
+
+    def encode(self) -> bytes:
+        """Encodes the CompressedPointCloud."""
+        ...
+
 class CompressedVideo:
     """
     A single frame of a compressed video bitstream
@@ -1046,6 +1071,7 @@ FoxgloveSchema = Union[
     CircleAnnotation,
     Color,
     CompressedImage,
+    CompressedPointCloud,
     CompressedVideo,
     CylinderPrimitive,
     CubePrimitive,

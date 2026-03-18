@@ -1014,6 +1014,204 @@ pub unsafe extern "C" fn foxglove_compressed_image_encode(
     }
 }
 
+/// A compressed point cloud
+#[repr(C)]
+pub struct CompressedPointCloud {
+    /// Timestamp of point cloud
+    pub timestamp: *const FoxgloveTimestamp,
+
+    /// Frame of reference
+    pub frame_id: FoxgloveString,
+
+    /// The origin of the point cloud relative to the frame of reference
+    pub pose: *const Pose,
+
+    /// Number of bytes between points in the decoded `data`. This matches the decoded layout described by `fields`, not the codec bitstream layout.
+    pub point_stride: u32,
+
+    /// Fields in the decoded `data`. At least 2 coordinate fields from `x`, `y`, and `z` are required for each point's position; `red`, `green`, `blue`, and `alpha` are optional for customizing each point's color.
+    pub fields: *const PackedElementField,
+    pub fields_count: usize,
+
+    /// Compressed point cloud data for exactly one point cloud sample
+    pub data: *const c_uchar,
+    pub data_len: usize,
+
+    /// Point cloud compression format
+    ///
+    /// Supported values: `cloudini`, `draco`
+    pub format: FoxgloveString,
+}
+
+#[cfg(not(target_family = "wasm"))]
+impl CompressedPointCloud {
+    /// Create a new typed channel, and return an owned raw channel pointer to it.
+    ///
+    /// # Safety
+    /// We're trusting the caller that the channel will only be used with this type T.
+    #[unsafe(no_mangle)]
+    pub unsafe extern "C" fn foxglove_channel_create_compressed_point_cloud(
+        topic: FoxgloveString,
+        context: *const FoxgloveContext,
+        channel: *mut *const FoxgloveChannel,
+    ) -> FoxgloveError {
+        if channel.is_null() {
+            tracing::error!("channel cannot be null");
+            return FoxgloveError::ValueError;
+        }
+        unsafe {
+            let result = do_foxglove_channel_create::<foxglove::messages::CompressedPointCloud>(
+                topic, context,
+            );
+            result_to_c(result, channel)
+        }
+    }
+}
+
+impl BorrowToNative for CompressedPointCloud {
+    type NativeType = foxglove::messages::CompressedPointCloud;
+
+    unsafe fn borrow_to_native(
+        &self,
+        #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
+    ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
+        let frame_id = unsafe {
+            string_from_raw(
+                self.frame_id.as_ptr() as *const _,
+                self.frame_id.len(),
+                "frame_id",
+            )?
+        };
+        let pose = unsafe {
+            self.pose
+                .as_ref()
+                .map(|m| m.borrow_to_native(arena.as_mut()))
+        }
+        .transpose()?;
+        let fields = unsafe { arena.as_mut().map(self.fields, self.fields_count)? };
+        let format = unsafe {
+            string_from_raw(
+                self.format.as_ptr() as *const _,
+                self.format.len(),
+                "format",
+            )?
+        };
+
+        Ok(ManuallyDrop::new(
+            foxglove::messages::CompressedPointCloud {
+                timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
+                frame_id: ManuallyDrop::into_inner(frame_id),
+                pose: pose.map(ManuallyDrop::into_inner),
+                point_stride: self.point_stride,
+                fields: ManuallyDrop::into_inner(fields),
+                data: ManuallyDrop::into_inner(unsafe { bytes_from_raw(self.data, self.data_len) }),
+                format: ManuallyDrop::into_inner(format),
+            },
+        ))
+    }
+}
+
+/// Log a CompressedPointCloud message to a channel.
+///
+/// # Safety
+/// The channel must have been created for this type with foxglove_channel_create_compressed_point_cloud.
+#[cfg(not(target_family = "wasm"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn foxglove_channel_log_compressed_point_cloud(
+    channel: Option<&FoxgloveChannel>,
+    msg: Option<&CompressedPointCloud>,
+    log_time: Option<&u64>,
+    sink_id: FoxgloveSinkId,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { CompressedPointCloud::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
+            log_msg_to_channel(channel, &*msg, log_time, sink_id)
+        }
+        Err(e) => {
+            tracing::error!("CompressedPointCloud: {}", e);
+            e.into()
+        }
+    }
+}
+
+/// Get the CompressedPointCloud schema.
+///
+/// All buffers in the returned schema are statically allocated.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_compressed_point_cloud_schema() -> FoxgloveSchema {
+    let native = foxglove::messages::CompressedPointCloud::get_schema()
+        .expect("CompressedPointCloud schema is Some");
+    let name: &'static str = "foxglove.CompressedPointCloud";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("CompressedPointCloud schema data is static");
+    };
+    FoxgloveSchema {
+        name: name.into(),
+        encoding: encoding.into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
+/// Encode a CompressedPointCloud message as protobuf to the buffer provided.
+///
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+/// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+/// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+///
+/// # Safety
+/// ptr must be a valid pointer to a memory region at least len bytes long.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_compressed_point_cloud_encode(
+    msg: Option<&CompressedPointCloud>,
+    ptr: *mut u8,
+    len: usize,
+    encoded_len: Option<&mut usize>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { CompressedPointCloud::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            if len == 0 || ptr.is_null() {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = msg
+                        .encoded_len()
+                        .expect("foxglove messages return Some(len)");
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
+            if let Err(encode_error) = msg.encode(&mut buf) {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
+            }
+            FoxgloveError::Ok
+        }
+        Err(e) => {
+            tracing::error!("CompressedPointCloud: {}", e);
+            FoxgloveError::EncodeError
+        }
+    }
+}
+
 /// A single frame of a compressed video bitstream
 #[repr(C)]
 pub struct CompressedVideo {

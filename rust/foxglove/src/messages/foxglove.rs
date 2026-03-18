@@ -174,6 +174,37 @@ pub struct CompressedImage {
     #[prost(string, tag = "3")]
     pub format: ::prost::alloc::string::String,
 }
+/// A compressed point cloud
+///
+/// <https://docs.foxglove.dev/docs/visualization/message-schemas/compressed-point-cloud>
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct CompressedPointCloud {
+    /// Timestamp of point cloud
+    #[prost(message, optional, tag = "1")]
+    pub timestamp: ::core::option::Option<crate::messages::Timestamp>,
+    /// Frame of reference
+    #[prost(string, tag = "2")]
+    pub frame_id: ::prost::alloc::string::String,
+    /// The origin of the point cloud relative to the frame of reference
+    #[prost(message, optional, tag = "3")]
+    pub pose: ::core::option::Option<Pose>,
+    /// Number of bytes between points in the decoded `data`. This matches the decoded layout described by `fields`, not the codec bitstream layout.
+    #[prost(fixed32, tag = "4")]
+    pub point_stride: u32,
+    /// Fields in the decoded `data`. At least 2 coordinate fields from `x`, `y`, and `z` are required for each point's position; `red`, `green`, `blue`, and `alpha` are optional for customizing each point's color.
+    #[prost(message, repeated, tag = "5")]
+    pub fields: ::prost::alloc::vec::Vec<PackedElementField>,
+    /// Compressed point cloud data for exactly one point cloud sample
+    #[prost(bytes = "bytes", tag = "6")]
+    #[cfg_attr(feature = "serde", serde(with = "crate::messages::serde_bytes"))]
+    pub data: ::prost::bytes::Bytes,
+    /// Point cloud compression format
+    ///
+    /// Supported values: `cloudini`, `draco`
+    #[prost(string, tag = "7")]
+    pub format: ::prost::alloc::string::String,
+}
 /// A single frame of a compressed video bitstream
 ///
 /// <https://docs.foxglove.dev/docs/visualization/message-schemas/compressed-video>

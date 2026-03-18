@@ -478,6 +478,92 @@ impl From<CompressedImage> for foxglove::schemas::CompressedImage {
     }
 }
 
+/// A compressed point cloud
+///
+/// :param timestamp: Timestamp of point cloud
+/// :param frame_id: Frame of reference
+/// :param pose: The origin of the point cloud relative to the frame of reference
+/// :param point_stride: Number of bytes between points in the decoded `data`. This matches the decoded layout described by `fields`, not the codec bitstream layout.
+/// :param fields: Fields in the decoded `data`. At least 2 coordinate fields from `x`, `y`, and `z` are required for each point's position; `red`, `green`, `blue`, and `alpha` are optional for customizing each point's color.
+/// :param data: Compressed point cloud data for exactly one point cloud sample
+/// :param format: Point cloud compression format
+///     
+///     Supported values: `cloudini`, `draco`
+///
+/// See https://docs.foxglove.dev/docs/visualization/message-schemas/compressed-point-cloud
+#[pyclass(module = "foxglove.schemas")]
+#[derive(Clone)]
+pub(crate) struct CompressedPointCloud(pub(crate) foxglove::schemas::CompressedPointCloud);
+#[pymethods]
+impl CompressedPointCloud {
+    #[new]
+    #[pyo3(signature = (*, timestamp=None, frame_id="", pose=None, point_stride=0, fields=None, data=None, format="") )]
+    fn new(
+        timestamp: Option<Timestamp>,
+        frame_id: &str,
+        pose: Option<Pose>,
+        point_stride: u32,
+        fields: Option<Vec<PackedElementField>>,
+        data: Option<Bound<'_, PyBytes>>,
+        format: &str,
+    ) -> Self {
+        Self(foxglove::schemas::CompressedPointCloud {
+            timestamp: timestamp.map(Into::into),
+            frame_id: frame_id.to_string(),
+            pose: pose.map(Into::into),
+            point_stride,
+            fields: fields
+                .unwrap_or_default()
+                .into_iter()
+                .map(|x| x.into())
+                .collect(),
+            data: data
+                .map(|x| Bytes::copy_from_slice(x.as_bytes()))
+                .unwrap_or_default(),
+            format: format.to_string(),
+        })
+    }
+    fn __repr__(&self) -> String {
+        format!(
+            "CompressedPointCloud(timestamp={:?}, frame_id={:?}, pose={:?}, point_stride={:?}, fields={:?}, data={:?}, format={:?})",
+            self.0.timestamp,
+            self.0.frame_id,
+            self.0.pose,
+            self.0.point_stride,
+            self.0.fields,
+            self.0.data,
+            self.0.format,
+        )
+    }
+    /// Returns the CompressedPointCloud schema.
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::CompressedPointCloud::get_schema()
+            .unwrap()
+            .into()
+    }
+    /// Encodes the CompressedPointCloud as protobuf.
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("failed to allocate buffer for encoded message")
+    }
+}
+
+impl From<CompressedPointCloud> for foxglove::schemas::CompressedPointCloud {
+    fn from(value: CompressedPointCloud) -> Self {
+        value.0
+    }
+}
+
 /// A single frame of a compressed video bitstream
 ///
 /// :param timestamp: Timestamp of video frame
@@ -3272,6 +3358,7 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<CircleAnnotation>()?;
     module.add_class::<Color>()?;
     module.add_class::<CompressedImage>()?;
+    module.add_class::<CompressedPointCloud>()?;
     module.add_class::<CompressedVideo>()?;
     module.add_class::<CylinderPrimitive>()?;
     module.add_class::<CubePrimitive>()?;
@@ -3338,6 +3425,7 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     messages_module.add_class::<CircleAnnotation>()?;
     messages_module.add_class::<Color>()?;
     messages_module.add_class::<CompressedImage>()?;
+    messages_module.add_class::<CompressedPointCloud>()?;
     messages_module.add_class::<CompressedVideo>()?;
     messages_module.add_class::<CylinderPrimitive>()?;
     messages_module.add_class::<CubePrimitive>()?;

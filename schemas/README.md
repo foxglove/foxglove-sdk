@@ -23,6 +23,7 @@ If the IDL does not support optional fields (e.g. ROS) you must specify a value 
 - [CircleAnnotation](#circleannotation)
 - [Color](#color)
 - [CompressedImage](#compressedimage)
+- [CompressedPointCloud](#compressedpointcloud)
 - [CompressedVideo](#compressedvideo)
 - [CubePrimitive](#cubeprimitive)
 - [CylinderPrimitive](#cylinderprimitive)
@@ -640,6 +641,111 @@ string
 Image format
 
 Supported values: `jpeg`, `png`, `webp`, `avif`
+
+</td>
+</tr>
+</table>
+
+## CompressedPointCloud
+
+A compressed point cloud
+
+<table>
+  <tr>
+    <th>field</th>
+    <th>type</th>
+    <th>description</th>
+  </tr>
+<tr>
+<td><code>timestamp</code></td>
+<td>
+
+[Timestamp](#timestamp)
+
+</td>
+<td>
+
+Timestamp of point cloud
+
+</td>
+</tr>
+<tr>
+<td><code>frame_id</code></td>
+<td>
+
+string
+
+</td>
+<td>
+
+Frame of reference
+
+</td>
+</tr>
+<tr>
+<td><code>pose</code></td>
+<td>
+
+[Pose](#pose)
+
+</td>
+<td>
+
+The origin of the point cloud relative to the frame of reference
+
+</td>
+</tr>
+<tr>
+<td><code>point_stride</code></td>
+<td>
+
+uint32
+
+</td>
+<td>
+
+Number of bytes between points in the decoded `data`. This matches the decoded layout described by `fields`, not the codec bitstream layout.
+
+</td>
+</tr>
+<tr>
+<td><code>fields</code></td>
+<td>
+
+[PackedElementField](#packedelementfield)[]
+
+</td>
+<td>
+
+Fields in the decoded `data`. At least 2 coordinate fields from `x`, `y`, and `z` are required for each point's position; `red`, `green`, `blue`, and `alpha` are optional for customizing each point's color.
+
+</td>
+</tr>
+<tr>
+<td><code>data</code></td>
+<td>
+
+bytes
+
+</td>
+<td>
+
+Compressed point cloud data for exactly one point cloud sample
+
+</td>
+</tr>
+<tr>
+<td><code>format</code></td>
+<td>
+
+string
+
+</td>
+<td>
+
+Point cloud compression format
+
+Supported values: `cloudini`, `draco`
 
 </td>
 </tr>

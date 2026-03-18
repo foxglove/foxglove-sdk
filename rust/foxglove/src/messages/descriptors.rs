@@ -4,6 +4,7 @@ pub const CAMERA_CALIBRATION: &[u8] = include_bytes!("data/CameraCalibration.bin
 pub const CIRCLE_ANNOTATION: &[u8] = include_bytes!("data/CircleAnnotation.bin");
 pub const COLOR: &[u8] = include_bytes!("data/Color.bin");
 pub const COMPRESSED_IMAGE: &[u8] = include_bytes!("data/CompressedImage.bin");
+pub const COMPRESSED_POINT_CLOUD: &[u8] = include_bytes!("data/CompressedPointCloud.bin");
 pub const COMPRESSED_VIDEO: &[u8] = include_bytes!("data/CompressedVideo.bin");
 pub const CUBE_PRIMITIVE: &[u8] = include_bytes!("data/CubePrimitive.bin");
 pub const CYLINDER_PRIMITIVE: &[u8] = include_bytes!("data/CylinderPrimitive.bin");
