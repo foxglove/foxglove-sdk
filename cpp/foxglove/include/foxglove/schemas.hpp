@@ -490,7 +490,8 @@ struct PackedElementField {
   static Schema schema();
 };
 
-/// @brief A compressed point cloud
+/// @brief A compressed point cloud. After decompressing `data` using `format`, interpret the
+/// resulting bytes using `fields` and `point_stride` exactly as you would for `PointCloud.data`.
 struct CompressedPointCloud {
   /// @brief Timestamp of point cloud
   std::optional<Timestamp> timestamp;
@@ -501,21 +502,26 @@ struct CompressedPointCloud {
   /// @brief The origin of the point cloud relative to the frame of reference
   std::optional<Pose> pose;
 
-  /// @brief Number of bytes between points in the decoded `data`. This matches the decoded layout
-  /// described by `fields`, not the codec bitstream layout.
+  /// @brief Number of bytes between points in the decoded `data`. Together with `fields`, this
+  /// defines the authoritative decoded layout. Codec-specific metadata may be used during
+  /// decompression, but the resulting bytes must match this layout.
   uint32_t point_stride = 0;
 
-  /// @brief Fields in the decoded `data`. At least 2 coordinate fields from `x`, `y`, and `z` are
-  /// required for each point's position; `red`, `green`, `blue`, and `alpha` are optional for
-  /// customizing each point's color.
+  /// @brief Fields in the decoded `data`. Together with `point_stride`, this defines the
+  /// authoritative decoded layout regardless of how the codec stores attribute metadata internally.
+  /// At least 2 coordinate fields from `x`, `y`, and `z` are required for each point's position;
+  /// `red`, `green`, `blue`, and `alpha` are optional for customizing each point's color.
   std::vector<PackedElementField> fields;
 
-  /// @brief Compressed point cloud data for exactly one point cloud sample
+  /// @brief Compressed point cloud data for exactly one point cloud. The payload must contain
+  /// enough information for a decoder to determine the point count; consumers should not derive it
+  /// from `data.length / point_stride`.
   std::vector<std::byte> data;
 
-  /// @brief Point cloud compression format
+  /// @brief Point cloud compression format.
   /// @brief
-  /// @brief Supported values: `cloudini`, `draco`
+  /// @brief Supported values: `cloudini` ([Cloudini](https://github.com/facontidavide/cloudini)),
+  /// `draco` ([Google Draco](https://google.github.io/draco/)).
   std::string format;
 
   /// @brief Encoded the CompressedPointCloud as protobuf to the provided buffer.
@@ -2389,8 +2395,8 @@ public:
   [[nodiscard]] bool has_sinks() const noexcept;
 
   CompressedPointCloudChannel(const CompressedPointCloudChannel& other) noexcept = delete;
-  CompressedPointCloudChannel& operator=(const CompressedPointCloudChannel& other
-  ) noexcept = delete;
+  CompressedPointCloudChannel& operator=(const CompressedPointCloudChannel& other) noexcept =
+    delete;
   /// @brief Default move constructor.
   CompressedPointCloudChannel(CompressedPointCloudChannel&& other) noexcept = default;
   /// @brief Default move assignment.
@@ -4647,8 +4653,8 @@ public:
   [[nodiscard]] bool has_sinks() const noexcept;
 
   TriangleListPrimitiveChannel(const TriangleListPrimitiveChannel& other) noexcept = delete;
-  TriangleListPrimitiveChannel& operator=(const TriangleListPrimitiveChannel& other
-  ) noexcept = delete;
+  TriangleListPrimitiveChannel& operator=(const TriangleListPrimitiveChannel& other) noexcept =
+    delete;
   /// @brief Default move constructor.
   TriangleListPrimitiveChannel(TriangleListPrimitiveChannel&& other) noexcept = default;
   /// @brief Default move assignment.

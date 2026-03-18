@@ -648,7 +648,7 @@ Supported values: `jpeg`, `png`, `webp`, `avif`
 
 ## CompressedPointCloud
 
-A compressed point cloud
+A compressed point cloud. After decompressing `data` using `format`, interpret the resulting bytes using `fields` and `point_stride` exactly as you would for `PointCloud.data`.
 
 <table>
   <tr>
@@ -704,7 +704,7 @@ uint32
 </td>
 <td>
 
-Number of bytes between points in the decoded `data`. This matches the decoded layout described by `fields`, not the codec bitstream layout.
+Number of bytes between points in the decoded `data`. Together with `fields`, this defines the authoritative decoded layout. Codec-specific metadata may be used during decompression, but the resulting bytes must match this layout.
 
 </td>
 </tr>
@@ -717,7 +717,7 @@ Number of bytes between points in the decoded `data`. This matches the decoded l
 </td>
 <td>
 
-Fields in the decoded `data`. At least 2 coordinate fields from `x`, `y`, and `z` are required for each point's position; `red`, `green`, `blue`, and `alpha` are optional for customizing each point's color.
+Fields in the decoded `data`. Together with `point_stride`, this defines the authoritative decoded layout regardless of how the codec stores attribute metadata internally. At least 2 coordinate fields from `x`, `y`, and `z` are required for each point's position; `red`, `green`, `blue`, and `alpha` are optional for customizing each point's color.
 
 </td>
 </tr>
@@ -730,7 +730,7 @@ bytes
 </td>
 <td>
 
-Compressed point cloud data for exactly one point cloud sample
+Compressed point cloud data for exactly one point cloud. The payload must contain enough information for a decoder to determine the point count; consumers should not derive it from `data.length / point_stride`.
 
 </td>
 </tr>
@@ -743,9 +743,9 @@ string
 </td>
 <td>
 
-Point cloud compression format
+Point cloud compression format.
 
-Supported values: `cloudini`, `draco`
+Supported values: `cloudini` ([Cloudini](https://github.com/facontidavide/cloudini)), `draco` ([Google Draco](https://google.github.io/draco/)).
 
 </td>
 </tr>

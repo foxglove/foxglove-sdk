@@ -174,7 +174,7 @@ pub struct CompressedImage {
     #[prost(string, tag = "3")]
     pub format: ::prost::alloc::string::String,
 }
-/// A compressed point cloud
+/// A compressed point cloud. After decompressing `data` using `format`, interpret the resulting bytes using `fields` and `point_stride` exactly as you would for `PointCloud.data`.
 ///
 /// <https://docs.foxglove.dev/docs/visualization/message-schemas/compressed-point-cloud>
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
@@ -189,19 +189,19 @@ pub struct CompressedPointCloud {
     /// The origin of the point cloud relative to the frame of reference
     #[prost(message, optional, tag = "3")]
     pub pose: ::core::option::Option<Pose>,
-    /// Number of bytes between points in the decoded `data`. This matches the decoded layout described by `fields`, not the codec bitstream layout.
+    /// Number of bytes between points in the decoded `data`. Together with `fields`, this defines the authoritative decoded layout. Codec-specific metadata may be used during decompression, but the resulting bytes must match this layout.
     #[prost(fixed32, tag = "4")]
     pub point_stride: u32,
-    /// Fields in the decoded `data`. At least 2 coordinate fields from `x`, `y`, and `z` are required for each point's position; `red`, `green`, `blue`, and `alpha` are optional for customizing each point's color.
+    /// Fields in the decoded `data`. Together with `point_stride`, this defines the authoritative decoded layout regardless of how the codec stores attribute metadata internally. At least 2 coordinate fields from `x`, `y`, and `z` are required for each point's position; `red`, `green`, `blue`, and `alpha` are optional for customizing each point's color.
     #[prost(message, repeated, tag = "5")]
     pub fields: ::prost::alloc::vec::Vec<PackedElementField>,
-    /// Compressed point cloud data for exactly one point cloud sample
+    /// Compressed point cloud data for exactly one point cloud. The payload must contain enough information for a decoder to determine the point count; consumers should not derive it from `data.length / point_stride`.
     #[prost(bytes = "bytes", tag = "6")]
     #[cfg_attr(feature = "serde", serde(with = "crate::messages::serde_bytes"))]
     pub data: ::prost::bytes::Bytes,
-    /// Point cloud compression format
+    /// Point cloud compression format.
     ///
-    /// Supported values: `cloudini`, `draco`
+    /// Supported values: `cloudini` ([Cloudini](<https://github.com/facontidavide/cloudini>)), `draco` ([Google Draco](<https://google.github.io/draco/>)).
     #[prost(string, tag = "7")]
     pub format: ::prost::alloc::string::String,
 }

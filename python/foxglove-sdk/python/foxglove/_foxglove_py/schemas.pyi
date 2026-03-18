@@ -196,7 +196,7 @@ class CompressedImage:
 
 class CompressedPointCloud:
     """
-    A compressed point cloud
+    A compressed point cloud. After decompressing `data` using `format`, interpret the resulting bytes using `fields` and `point_stride` exactly as you would for `PointCloud.data`.
     """
 
     def __init__(

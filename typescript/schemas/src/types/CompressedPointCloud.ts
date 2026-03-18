@@ -5,7 +5,7 @@ import { PackedElementField } from "./PackedElementField";
 import { Pose } from "./Pose";
 import { Time } from "./Time";
 
-/** A compressed point cloud */
+/** A compressed point cloud. After decompressing `data` using `format`, interpret the resulting bytes using `fields` and `point_stride` exactly as you would for `PointCloud.data`. */
 export type CompressedPointCloud = {
   /** Timestamp of point cloud */
   timestamp: Time;
@@ -16,19 +16,19 @@ export type CompressedPointCloud = {
   /** The origin of the point cloud relative to the frame of reference */
   pose: Pose;
 
-  /** Number of bytes between points in the decoded `data`. This matches the decoded layout described by `fields`, not the codec bitstream layout. */
+  /** Number of bytes between points in the decoded `data`. Together with `fields`, this defines the authoritative decoded layout. Codec-specific metadata may be used during decompression, but the resulting bytes must match this layout. */
   point_stride: number;
 
-  /** Fields in the decoded `data`. At least 2 coordinate fields from `x`, `y`, and `z` are required for each point's position; `red`, `green`, `blue`, and `alpha` are optional for customizing each point's color. */
+  /** Fields in the decoded `data`. Together with `point_stride`, this defines the authoritative decoded layout regardless of how the codec stores attribute metadata internally. At least 2 coordinate fields from `x`, `y`, and `z` are required for each point's position; `red`, `green`, `blue`, and `alpha` are optional for customizing each point's color. */
   fields: PackedElementField[];
 
-  /** Compressed point cloud data for exactly one point cloud sample */
+  /** Compressed point cloud data for exactly one point cloud. The payload must contain enough information for a decoder to determine the point count; consumers should not derive it from `data.length / point_stride`. */
   data: Uint8Array;
 
   /**
-   * Point cloud compression format
+   * Point cloud compression format.
    * 
-   * Supported values: `cloudini`, `draco`
+   * Supported values: `cloudini` ([Cloudini](https://github.com/facontidavide/cloudini)), `draco` ([Google Draco](https://google.github.io/draco/)).
    */
   format: string;
 };

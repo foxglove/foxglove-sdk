@@ -1204,7 +1204,8 @@ const PackedElementField: FoxgloveMessageSchema = {
 const CompressedPointCloud: FoxgloveMessageSchema = {
   type: "message",
   name: "CompressedPointCloud",
-  description: "A compressed point cloud",
+  description:
+    "A compressed point cloud. After decompressing `data` using `format`, interpret the resulting bytes using `fields` and `point_stride` exactly as you would for `PointCloud.data`.",
   fields: [
     {
       name: "timestamp",
@@ -1225,24 +1226,26 @@ const CompressedPointCloud: FoxgloveMessageSchema = {
       name: "point_stride",
       type: { type: "primitive", name: "uint32" },
       description:
-        "Number of bytes between points in the decoded `data`. This matches the decoded layout described by `fields`, not the codec bitstream layout.",
+        "Number of bytes between points in the decoded `data`. Together with `fields`, this defines the authoritative decoded layout. Codec-specific metadata may be used during decompression, but the resulting bytes must match this layout.",
     },
     {
       name: "fields",
       type: { type: "nested", schema: PackedElementField },
       array: true,
       description:
-        "Fields in the decoded `data`. At least 2 coordinate fields from `x`, `y`, and `z` are required for each point's position; `red`, `green`, `blue`, and `alpha` are optional for customizing each point's color.",
+        "Fields in the decoded `data`. Together with `point_stride`, this defines the authoritative decoded layout regardless of how the codec stores attribute metadata internally. At least 2 coordinate fields from `x`, `y`, and `z` are required for each point's position; `red`, `green`, `blue`, and `alpha` are optional for customizing each point's color.",
     },
     {
       name: "data",
       type: { type: "primitive", name: "bytes" },
-      description: "Compressed point cloud data for exactly one point cloud sample",
+      description:
+        "Compressed point cloud data for exactly one point cloud. The payload must contain enough information for a decoder to determine the point count; consumers should not derive it from `data.length / point_stride`.",
     },
     {
       name: "format",
       type: { type: "primitive", name: "string" },
-      description: "Point cloud compression format\n\nSupported values: `cloudini`, `draco`",
+      description:
+        "Point cloud compression format.\n\nSupported values: `cloudini` ([Cloudini](https://github.com/facontidavide/cloudini)), `draco` ([Google Draco](https://google.github.io/draco/)).",
     },
   ],
 };
