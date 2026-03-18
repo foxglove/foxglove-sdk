@@ -38,8 +38,8 @@ public:
   [[nodiscard]] std::string_view messageEncoding() const noexcept;
 
   /// @deprecated Use messageEncoding() instead.
-  [[deprecated("Use messageEncoding() instead")]]
-  [[nodiscard]] std::string_view message_encoding() const noexcept {
+  [[deprecated("Use messageEncoding() instead")]] [[nodiscard]] std::string_view message_encoding(
+  ) const noexcept {
     return messageEncoding();
   }
 
@@ -64,12 +64,12 @@ public:
 
   /// @brief Construct from a callable that takes `const ChannelDescriptor&`.
   template<
-    typename F,
-    typename = std::enable_if_t<
-      std::is_invocable_r_v<bool, F, const ChannelDescriptor&> &&
-      !std::is_same_v<std::decay_t<F>, SinkChannelFilterFn>>>
+    typename F, typename = std::enable_if_t<
+                  std::is_invocable_r_v<bool, F, const ChannelDescriptor&> &&
+                  !std::is_same_v<std::decay_t<F>, SinkChannelFilterFn>>>
   // NOLINTNEXTLINE(google-explicit-constructor)
-  SinkChannelFilterFn(F&& fn) : fn_(std::forward<F>(fn)) {}
+  SinkChannelFilterFn(F&& fn)
+      : fn_(std::forward<F>(fn)) {}
 
   /// @deprecated Use a filter function taking `const ChannelDescriptor&` instead of
   /// `ChannelDescriptor&&`.
@@ -86,9 +86,9 @@ public:
   // NOLINTNEXTLINE(google-explicit-constructor)
   SinkChannelFilterFn(F&& fn)
       : fn_([f = std::forward<F>(fn)](const ChannelDescriptor& ch) mutable {
-          auto copy = ch;
-          return f(std::move(copy));
-        }) {}
+        auto copy = ch;
+        return f(std::move(copy));
+      }) {}
 
   /// @brief Check if a filter function has been set.
   explicit operator bool() const {
@@ -169,8 +169,8 @@ public:
   [[nodiscard]] std::string_view messageEncoding() const noexcept;
 
   /// @deprecated Use messageEncoding() instead.
-  [[deprecated("Use messageEncoding() instead")]]
-  [[nodiscard]] std::string_view message_encoding() const noexcept {
+  [[deprecated("Use messageEncoding() instead")]] [[nodiscard]] std::string_view message_encoding(
+  ) const noexcept {
     return messageEncoding();
   }
 
@@ -180,8 +180,7 @@ public:
   [[nodiscard]] bool hasSinks() const noexcept;
 
   /// @deprecated Use hasSinks() instead.
-  [[deprecated("Use hasSinks() instead")]]
-  [[nodiscard]] bool has_sinks() const noexcept {
+  [[deprecated("Use hasSinks() instead")]] [[nodiscard]] bool has_sinks() const noexcept {
     return hasSinks();
   }
 
