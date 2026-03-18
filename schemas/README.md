@@ -648,7 +648,7 @@ Supported values: `jpeg`, `png`, `webp`, `avif`
 
 ## CompressedPointCloud
 
-A compressed point cloud. After decompressing `data` using `format`, interpret the resulting bytes using `fields` and `point_stride` exactly as you would for `PointCloud.data`.
+A compressed point cloud. A decoder for `format` must decompress `data` and produce an interleaved byte buffer matching the layout described by `fields` and `point_stride`, which is then interpreted exactly as `PointCloud.data`.
 
 <table>
   <tr>
@@ -730,7 +730,7 @@ bytes
 </td>
 <td>
 
-Compressed point cloud data for exactly one point cloud. The payload must contain enough information for a decoder to determine the point count; consumers should not derive it from `data.length / point_stride`.
+Compressed point cloud data for exactly one point cloud. The payload must contain enough information for a decoder to determine the point count; consumers should not derive it from the byte length of `data` divided by `point_stride`.
 
 </td>
 </tr>

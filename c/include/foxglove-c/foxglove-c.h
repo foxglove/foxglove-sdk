@@ -733,7 +733,7 @@ typedef struct foxglove_packed_element_field {
 } foxglove_packed_element_field;
 
 /**
- * A compressed point cloud. After decompressing `data` using `format`, interpret the resulting bytes using `fields` and `point_stride` exactly as you would for `PointCloud.data`.
+ * A compressed point cloud. A decoder for `format` must decompress `data` and produce an interleaved byte buffer matching the layout described by `fields` and `point_stride`, which is then interpreted exactly as `PointCloud.data`.
  */
 typedef struct foxglove_compressed_point_cloud {
   /**
@@ -758,7 +758,7 @@ typedef struct foxglove_compressed_point_cloud {
   const struct foxglove_packed_element_field *fields;
   size_t fields_count;
   /**
-   * Compressed point cloud data for exactly one point cloud. The payload must contain enough information for a decoder to determine the point count; consumers should not derive it from `data.length / point_stride`.
+   * Compressed point cloud data for exactly one point cloud. The payload must contain enough information for a decoder to determine the point count; consumers should not derive it from the byte length of `data` divided by `point_stride`.
    */
   const unsigned char *data;
   size_t data_len;

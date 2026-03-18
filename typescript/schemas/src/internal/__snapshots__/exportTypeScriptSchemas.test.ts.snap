@@ -196,7 +196,7 @@ import { PackedElementField } from "./PackedElementField";
 import { Pose } from "./Pose";
 import { Time } from "./Time";
 
-/** A compressed point cloud. After decompressing \`data\` using \`format\`, interpret the resulting bytes using \`fields\` and \`point_stride\` exactly as you would for \`PointCloud.data\`. */
+/** A compressed point cloud. A decoder for \`format\` must decompress \`data\` and produce an interleaved byte buffer matching the layout described by \`fields\` and \`point_stride\`, which is then interpreted exactly as \`PointCloud.data\`. */
 export type CompressedPointCloud = {
   /** Timestamp of point cloud */
   timestamp: Time;
@@ -213,7 +213,7 @@ export type CompressedPointCloud = {
   /** Fields in the decoded \`data\`. Together with \`point_stride\`, this defines the authoritative decoded layout regardless of how the codec stores attribute metadata internally. At least 2 coordinate fields from \`x\`, \`y\`, and \`z\` are required for each point's position; \`red\`, \`green\`, \`blue\`, and \`alpha\` are optional for customizing each point's color. */
   fields: PackedElementField[];
 
-  /** Compressed point cloud data for exactly one point cloud. The payload must contain enough information for a decoder to determine the point count; consumers should not derive it from \`data.length / point_stride\`. */
+  /** Compressed point cloud data for exactly one point cloud. The payload must contain enough information for a decoder to determine the point count; consumers should not derive it from the byte length of \`data\` divided by \`point_stride\`. */
   data: Uint8Array;
 
   /**

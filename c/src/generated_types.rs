@@ -1014,7 +1014,7 @@ pub unsafe extern "C" fn foxglove_compressed_image_encode(
     }
 }
 
-/// A compressed point cloud. After decompressing `data` using `format`, interpret the resulting bytes using `fields` and `point_stride` exactly as you would for `PointCloud.data`.
+/// A compressed point cloud. A decoder for `format` must decompress `data` and produce an interleaved byte buffer matching the layout described by `fields` and `point_stride`, which is then interpreted exactly as `PointCloud.data`.
 #[repr(C)]
 pub struct CompressedPointCloud {
     /// Timestamp of point cloud
@@ -1033,7 +1033,7 @@ pub struct CompressedPointCloud {
     pub fields: *const PackedElementField,
     pub fields_count: usize,
 
-    /// Compressed point cloud data for exactly one point cloud. The payload must contain enough information for a decoder to determine the point count; consumers should not derive it from `data.length / point_stride`.
+    /// Compressed point cloud data for exactly one point cloud. The payload must contain enough information for a decoder to determine the point count; consumers should not derive it from the byte length of `data` divided by `point_stride`.
     pub data: *const c_uchar,
     pub data_len: usize,
 

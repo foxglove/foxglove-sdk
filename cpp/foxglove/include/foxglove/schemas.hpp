@@ -490,8 +490,9 @@ struct PackedElementField {
   static Schema schema();
 };
 
-/// @brief A compressed point cloud. After decompressing `data` using `format`, interpret the
-/// resulting bytes using `fields` and `point_stride` exactly as you would for `PointCloud.data`.
+/// @brief A compressed point cloud. A decoder for `format` must decompress `data` and produce an
+/// interleaved byte buffer matching the layout described by `fields` and `point_stride`, which is
+/// then interpreted exactly as `PointCloud.data`.
 struct CompressedPointCloud {
   /// @brief Timestamp of point cloud
   std::optional<Timestamp> timestamp;
@@ -515,7 +516,7 @@ struct CompressedPointCloud {
 
   /// @brief Compressed point cloud data for exactly one point cloud. The payload must contain
   /// enough information for a decoder to determine the point count; consumers should not derive it
-  /// from `data.length / point_stride`.
+  /// from the byte length of `data` divided by `point_stride`.
   std::vector<std::byte> data;
 
   /// @brief Point cloud compression format.

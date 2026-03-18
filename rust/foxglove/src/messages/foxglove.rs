@@ -174,7 +174,7 @@ pub struct CompressedImage {
     #[prost(string, tag = "3")]
     pub format: ::prost::alloc::string::String,
 }
-/// A compressed point cloud. After decompressing `data` using `format`, interpret the resulting bytes using `fields` and `point_stride` exactly as you would for `PointCloud.data`.
+/// A compressed point cloud. A decoder for `format` must decompress `data` and produce an interleaved byte buffer matching the layout described by `fields` and `point_stride`, which is then interpreted exactly as `PointCloud.data`.
 ///
 /// <https://docs.foxglove.dev/docs/visualization/message-schemas/compressed-point-cloud>
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
@@ -195,7 +195,7 @@ pub struct CompressedPointCloud {
     /// Fields in the decoded `data`. Together with `point_stride`, this defines the authoritative decoded layout regardless of how the codec stores attribute metadata internally. At least 2 coordinate fields from `x`, `y`, and `z` are required for each point's position; `red`, `green`, `blue`, and `alpha` are optional for customizing each point's color.
     #[prost(message, repeated, tag = "5")]
     pub fields: ::prost::alloc::vec::Vec<PackedElementField>,
-    /// Compressed point cloud data for exactly one point cloud. The payload must contain enough information for a decoder to determine the point count; consumers should not derive it from `data.length / point_stride`.
+    /// Compressed point cloud data for exactly one point cloud. The payload must contain enough information for a decoder to determine the point count; consumers should not derive it from the byte length of `data` divided by `point_stride`.
     #[prost(bytes = "bytes", tag = "6")]
     #[cfg_attr(feature = "serde", serde(with = "crate::messages::serde_bytes"))]
     pub data: ::prost::bytes::Bytes,
