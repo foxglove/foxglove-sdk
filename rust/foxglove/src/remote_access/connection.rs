@@ -141,12 +141,19 @@ impl RemoteAccessConnection {
     ) -> Result<(Arc<RemoteAccessSession>, UnboundedReceiver<RoomEvent>)> {
         let provider = self.get_or_init_provider().await?;
 
-        let needs_session_id = self.remote_access_session_id.lock().is_empty();
+        let existing_session_id = {
+            let id = self.remote_access_session_id.lock();
+            if id.is_empty() {
+                None
+            } else {
+                Some(id.clone())
+            }
+        };
         info!(
-            generate_remote_access_session_id = needs_session_id,
+            remote_access_session_id = existing_session_id.as_deref(),
             "requesting LiveKit credentials from API server"
         );
-        let credentials = match provider.load_credentials(needs_session_id).await {
+        let credentials = match provider.load_credentials(existing_session_id).await {
             Ok(creds) => {
                 // Update the session ID on each successful fetch (may change on reconnect).
                 if let Some(ref session_id) = creds.remote_access_session_id {

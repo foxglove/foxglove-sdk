@@ -232,19 +232,19 @@ impl FoxgloveApiClient<DeviceToken> {
 
     /// Authorizes a remote visualization session for the given device.
     ///
-    /// The server generates a `remote_access_session_id` and returns it in the response
-    /// for cross-component debugging correlation.
+    /// If `remote_access_session_id` is `Some`, the server uses the provided session ID.
+    /// If `None`, the server generates a new one.
     ///
     /// This endpoint is not intended for direct usage. Access may be blocked if suspicious
     /// activity is detected.
     pub async fn authorize_remote_viz(
         &self,
         device_id: &str,
-        generate_remote_access_session_id: bool,
+        remote_access_session_id: Option<String>,
     ) -> Result<RtcCredentials, FoxgloveApiClientError> {
         let device_id = encode_uri_component(device_id);
         let body = super::types::RemoteSessionRequest {
-            generate_remote_access_session_id,
+            remote_access_session_id,
         };
         let response = self
             .post(&format!(
@@ -351,7 +351,7 @@ mod tests {
         let client = create_test_api_client(server.url(), DeviceToken::new(TEST_DEVICE_TOKEN));
 
         let result = client
-            .authorize_remote_viz(TEST_DEVICE_ID, true)
+            .authorize_remote_viz(TEST_DEVICE_ID, None)
             .await
             .expect("could not authorize remote viz");
         assert_eq!(result.token, "rtc-token-abc123");
@@ -365,7 +365,7 @@ mod tests {
         let server = create_test_server().await;
         let client =
             create_test_api_client(server.url(), DeviceToken::new("some-bad-device-token"));
-        let result = client.authorize_remote_viz(TEST_DEVICE_ID, true).await;
+        let result = client.authorize_remote_viz(TEST_DEVICE_ID, None).await;
         assert!(result.is_err());
     }
 }
