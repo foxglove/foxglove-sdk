@@ -31,6 +31,24 @@ impl GatewayHandle {
         self.connection.status()
     }
 
+    /// Adds new services, and advertises them to all connected participants.
+    ///
+    /// This method will fail if the services capability was not declared, or if a service name is
+    /// not unique.
+    pub fn add_services(
+        &self,
+        services: impl IntoIterator<Item = Service>,
+    ) -> Result<(), FoxgloveError> {
+        self.connection.add_services(services.into_iter().collect())
+    }
+
+    /// Removes services that were previously advertised.
+    ///
+    /// Unrecognized service names are silently ignored.
+    pub fn remove_services(&self, names: impl IntoIterator<Item = impl AsRef<str>>) {
+        self.connection.remove_services(names);
+    }
+
     /// Gracefully disconnect from the remote access connection, if connected.
     ///
     /// Returns a JoinHandle that will allow waiting until the connection has been fully closed.

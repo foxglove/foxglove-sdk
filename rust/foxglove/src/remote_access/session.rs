@@ -27,7 +27,7 @@ use crate::{
         client::{self, ClientMessage},
         server::{
             AdvertiseServices, MessageData as ServerMessageData, ServerInfo, ServiceCallFailure,
-            Status, Unadvertise, advertise, advertise_services,
+            Status, Unadvertise, UnadvertiseServices, advertise, advertise_services,
         },
     },
     remote_access::{
@@ -150,7 +150,7 @@ pub(crate) struct RemoteAccessSession {
     data_plane_rx: flume::Receiver<ChannelMessage>,
     control_plane_tx: flume::Sender<ControlPlaneMessage>,
     control_plane_rx: flume::Receiver<ControlPlaneMessage>,
-    services: Arc<ServiceMap>,
+    services: Arc<parking_lot::RwLock<ServiceMap>>,
     supported_encodings: IndexSet<String>,
     /// Serializes all participant-scoped state mutations: subscription changes, video track
     /// lifecycle operations, client channel advertise/unadvertise, and participant removal.
@@ -260,7 +260,7 @@ impl RemoteAccessSession {
         options: &RemoteAccessConnectionOptions,
         room: Room,
         message_backlog_size: usize,
-        services: Arc<ServiceMap>,
+        services: Arc<parking_lot::RwLock<ServiceMap>>,
     ) -> Self {
         let (data_plane_tx, data_plane_rx) = flume::bounded(message_backlog_size);
         let (control_plane_tx, control_plane_rx) = flume::bounded(message_backlog_size);
@@ -847,7 +847,7 @@ impl RemoteAccessSession {
 
     /// Enqueue service advertisements for delivery to a single participant.
     fn send_service_advertisements(&self, participant: Arc<Participant>) {
-        let services: Vec<_> = self.services.values().cloned().collect();
+        let services: Vec<_> = self.services.read().values().cloned().collect();
         if services.is_empty() {
             return;
         }
@@ -867,6 +867,36 @@ impl RemoteAccessSession {
         self.send_control(participant, encode_json_message(&msg));
     }
 
+    /// Broadcasts service advertisements for the given service IDs to all connected participants.
+    pub(crate) fn advertise_new_services(&self, service_ids: &[ServiceId]) {
+        let services: Vec<_> = {
+            let services = self.services.read();
+            service_ids
+                .iter()
+                .filter_map(|id| services.get_by_id(*id))
+                .collect()
+        };
+        let msg = AdvertiseServices::new(services.iter().filter_map(|s| {
+            advertise_services::Service::try_from(s.as_ref())
+                .inspect_err(|err| {
+                    error!(
+                        "Failed to encode service advertisement for {}: {err}",
+                        s.name()
+                    )
+                })
+                .ok()
+        }));
+        if !msg.services.is_empty() {
+            self.broadcast_control(encode_json_message(&msg));
+        }
+    }
+
+    /// Broadcasts service unadvertisements for the given service IDs to all connected participants.
+    pub(crate) fn unadvertise_services(&self, service_ids: &[ServiceId]) {
+        let msg = UnadvertiseServices::new(service_ids.iter().copied().map(u32::from));
+        self.broadcast_control(encode_json_message(&msg));
+    }
+
     /// Handle a service call request from a client.
     fn handle_service_call(&self, participant: &Arc<Participant>, req: client::ServiceCallRequest) {
         let service_id = ServiceId::new(req.service_id);
@@ -883,7 +913,7 @@ impl RemoteAccessSession {
         }
 
         // Lookup the requested service handler.
-        let Some(service) = self.services.get_by_id(service_id) else {
+        let Some(service) = self.services.read().get_by_id(service_id) else {
             self.send_service_call_failure(participant, service_id, call_id, "Unknown service");
             return;
         };
