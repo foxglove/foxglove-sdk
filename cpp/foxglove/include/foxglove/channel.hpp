@@ -67,7 +67,7 @@ public:
     typename F, typename = std::enable_if_t<
                   std::is_invocable_r_v<bool, F, const ChannelDescriptor&> &&
                   !std::is_same_v<std::decay_t<F>, SinkChannelFilterFn>>>
-  // NOLINTNEXTLINE(google-explicit-constructor)
+  // NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)
   SinkChannelFilterFn(F&& fn)
       : fn_(std::forward<F>(fn)) {}
 
@@ -83,7 +83,7 @@ public:
   [[deprecated(
     "Use a filter function taking const ChannelDescriptor& instead of ChannelDescriptor&&"
   )]]
-  // NOLINTNEXTLINE(google-explicit-constructor)
+  // NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)
   SinkChannelFilterFn(F&& fn)
       : fn_([f = std::forward<F>(fn)](const ChannelDescriptor& ch) mutable {
         auto copy = ch;
