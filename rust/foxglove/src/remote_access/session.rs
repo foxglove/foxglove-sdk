@@ -606,7 +606,7 @@ impl RemoteAccessSession {
                     encoding: ch.schema_encoding.as_deref().unwrap_or("").to_string(),
                     data: data.into(),
                 }),
-                Err(crate::protocol::v1::schema::DecodeError::MissingSchema) => None,
+                Err(crate::protocol::v2::schema::DecodeError::MissingSchema) => None,
                 Err(e) => {
                     warn!(
                         "Failed to decode schema for advertised channel {}: {e:?}",
