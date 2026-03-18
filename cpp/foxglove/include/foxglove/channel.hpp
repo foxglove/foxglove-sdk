@@ -7,10 +7,12 @@
 #include <foxglove/schemas.hpp>
 
 #include <cstdint>
+#include <functional>
 #include <map>
 #include <memory>
 #include <optional>
 #include <string>
+#include <type_traits>
 
 struct foxglove_channel;
 struct foxglove_channel_descriptor;
@@ -50,10 +52,57 @@ public:
 
 /// @brief A function that can be used to filter channels.
 ///
-/// @param channel Information about the channel.
+/// Accepts any callable with signature `bool(const ChannelDescriptor&)`.
+/// Callables using the previous `bool(ChannelDescriptor&&)` signature are also accepted but
+/// deprecated.
+///
 /// @return false if the channel should not be logged to the given sink. By default, all channels
 /// are logged to a sink.
-using SinkChannelFilterFn = std::function<bool(const ChannelDescriptor& channel)>;
+class SinkChannelFilterFn {
+public:
+  SinkChannelFilterFn() = default;
+
+  /// @brief Construct from a callable that takes `const ChannelDescriptor&`.
+  template<
+    typename F,
+    typename = std::enable_if_t<
+      std::is_invocable_r_v<bool, F, const ChannelDescriptor&> &&
+      !std::is_same_v<std::decay_t<F>, SinkChannelFilterFn>>>
+  // NOLINTNEXTLINE(google-explicit-constructor)
+  SinkChannelFilterFn(F&& fn) : fn_(std::forward<F>(fn)) {}
+
+  /// @deprecated Use a filter function taking `const ChannelDescriptor&` instead of
+  /// `ChannelDescriptor&&`.
+  template<
+    typename F,
+    typename = std::enable_if_t<
+      std::is_invocable_r_v<bool, F, ChannelDescriptor&&> &&
+      !std::is_invocable_v<F, const ChannelDescriptor&> &&
+      !std::is_same_v<std::decay_t<F>, SinkChannelFilterFn>>,
+    typename /*Disambiguate*/ = void>
+  [[deprecated(
+    "Use a filter function taking const ChannelDescriptor& instead of ChannelDescriptor&&"
+  )]]
+  // NOLINTNEXTLINE(google-explicit-constructor)
+  SinkChannelFilterFn(F&& fn)
+      : fn_([f = std::forward<F>(fn)](const ChannelDescriptor& ch) mutable {
+          auto copy = ch;
+          return f(std::move(copy));
+        }) {}
+
+  /// @brief Check if a filter function has been set.
+  explicit operator bool() const {
+    return static_cast<bool>(fn_);
+  }
+
+  /// @brief Invoke the filter function.
+  bool operator()(const ChannelDescriptor& channel) const {
+    return fn_(channel);
+  }
+
+private:
+  std::function<bool(const ChannelDescriptor&)> fn_;
+};
 
 /// @brief A channel for messages logged to a topic.
 ///
