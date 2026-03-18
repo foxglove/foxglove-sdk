@@ -255,8 +255,8 @@ private:
 };
 
 /// @deprecated Use toJsonString() instead.
-[[deprecated("Use toJsonString() instead")]]
-inline std::string to_json_string(const Manifest& m) {
+// NOLINTNEXTLINE(readability-identifier-naming)
+[[deprecated("Use toJsonString() instead")]] inline std::string to_json_string(const Manifest& m) {
   return toJsonString(m);
 }
 

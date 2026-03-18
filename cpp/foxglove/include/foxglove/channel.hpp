@@ -38,6 +38,7 @@ public:
   [[nodiscard]] std::string_view messageEncoding() const noexcept;
 
   /// @deprecated Use messageEncoding() instead.
+  // NOLINTNEXTLINE(readability-identifier-naming)
   [[deprecated("Use messageEncoding() instead")]] [[nodiscard]] std::string_view message_encoding(
   ) const noexcept {
     return messageEncoding();
@@ -169,6 +170,7 @@ public:
   [[nodiscard]] std::string_view messageEncoding() const noexcept;
 
   /// @deprecated Use messageEncoding() instead.
+  // NOLINTNEXTLINE(readability-identifier-naming)
   [[deprecated("Use messageEncoding() instead")]] [[nodiscard]] std::string_view message_encoding(
   ) const noexcept {
     return messageEncoding();
@@ -180,6 +182,7 @@ public:
   [[nodiscard]] bool hasSinks() const noexcept;
 
   /// @deprecated Use hasSinks() instead.
+  // NOLINTNEXTLINE(readability-identifier-naming)
   [[deprecated("Use hasSinks() instead")]] [[nodiscard]] bool has_sinks() const noexcept {
     return hasSinks();
   }

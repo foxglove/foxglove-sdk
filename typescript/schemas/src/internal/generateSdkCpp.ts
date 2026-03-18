@@ -236,6 +236,7 @@ export function generateHppSchemas(
         [[nodiscard]] bool hasSinks() const noexcept;
 
         /// @deprecated Use hasSinks() instead.
+        // NOLINTNEXTLINE(readability-identifier-naming)
         [[deprecated("Use hasSinks() instead")]]
         [[nodiscard]] bool has_sinks() const noexcept {
           return hasSinks();
