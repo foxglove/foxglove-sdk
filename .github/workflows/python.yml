@@ -118,7 +118,7 @@ jobs:
           path: playground/public
       - run: yarn install
       - run: yarn build
-      - uses: cloudflare/pages-action@v1.5.0
+      - uses: cloudflare/wrangler-action@v3
         # Only run if not a fork, and not a dependabot PR, since we do not have
         # access to secrets in these environments.
         if: ${{ !github.event.pull_request.head.repo.fork && github.actor != 'dependabot[bot]' }}
@@ -127,9 +127,7 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           gitHubToken: ${{ secrets.FOXGLOVEBOT_GITHUB_TOKEN }}
-          branch: ${{ github.head_ref || github.ref_name }}
-          projectName: foxglove-sdk-playground
-          directory: playground/dist
+          command: pages deploy playground/dist --project-name=foxglove-sdk-playground --branch="${{ github.head_ref || github.ref_name }}"
 
   schemas:
     runs-on: ubuntu-latest
