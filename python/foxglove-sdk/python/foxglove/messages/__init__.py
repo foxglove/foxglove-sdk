@@ -7,8 +7,9 @@ Note that the message classes are currently immutable and do not expose
 getters and setters for their fields. This is a limitation we plan to address in the future.
 """
 
-# This file mirrors the generated schemas/__init__.py. When updating the generator
-# to add or remove message types, update this file to match.
+# This is the canonical module for Foxglove message types. The generated
+# schemas/__init__.py re-exports from here. When adding or removing message
+# types, update this file and re-run the generator.
 
 from typing import Union
 
