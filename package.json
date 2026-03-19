@@ -15,6 +15,7 @@
     "lint:ci": "eslint .",
     "lint": "eslint --fix .",
     "run-python-sdk-examples": "ts-node ./scripts/runPythonSdkExamples.ts --install-sdk-from-path",
+    "start-netem": "ts-node ./scripts/startNetem.ts",
     "test": "jest"
   },
   "devDependencies": {
