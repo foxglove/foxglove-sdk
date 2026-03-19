@@ -68,8 +68,8 @@ async fn perlink_docker_gateway() -> Result<()> {
 
     let mock = remote_access_tests::mock_server::start_mock_server(&room_name).await;
     info!("mock server started at {}", mock.url());
-    let no_filter = None;
-    let gw = TestGateway::start_with_mock(&ctx, room_name, mock, no_filter)?;
+    let default_options = Default::default();
+    let gw = TestGateway::start_with_mock(&ctx, room_name, mock, default_options)?;
     info!("gateway started, room={}", gw.room_name);
 
     // Wait for the viewer to subscribe — the channel gets a sink. Use the
