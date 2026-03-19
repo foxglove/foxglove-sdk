@@ -15,7 +15,7 @@ use tokio_util::{io::StreamReader, sync::CancellationToken};
 use tracing::{debug, error, info, warn};
 
 use crate::remote_access::participant::ChannelWriter;
-use crate::ws_protocol::schema::DecodeError;
+use crate::protocol::common::schema::DecodeError;
 use crate::{
     ChannelDescriptor, ChannelId, Context, FoxgloveError, Metadata, RawChannel, Schema, Sink,
     SinkChannelFilter, SinkId,
