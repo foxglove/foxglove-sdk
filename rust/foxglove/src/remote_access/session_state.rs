@@ -9,7 +9,7 @@ use crate::protocol::v2::server::advertise;
 use crate::remote_access::channel_subscription::ChannelSubscription;
 use crate::remote_access::participant::Participant;
 use crate::remote_access::session::{VideoInputSchema, VideoMetadata, VideoPublisher};
-use crate::{ChannelId, RawChannel};
+use crate::{ChannelDescriptor, ChannelId, RawChannel};
 
 /// Channels that lost their last subscriber when a participant was removed.
 pub(crate) struct RemovedSubscriptions {
@@ -17,6 +17,8 @@ pub(crate) struct RemovedSubscriptions {
     pub last_unsubscribed: SmallVec<[ChannelId; 4]>,
     /// Channel IDs that lost their last video subscriber.
     pub last_video_unsubscribed: SmallVec<[ChannelId; 4]>,
+    /// Client channels that were advertised by the removed participant.
+    pub client_channels: Vec<ChannelDescriptor>,
 }
 
 /// State machine for a remote access session.
@@ -46,6 +48,8 @@ pub(crate) struct SessionState {
     video_track_sids: HashMap<ChannelId, TrackSid>,
     /// Video metadata last advertised for each video channel.
     video_metadata: HashMap<ChannelId, VideoMetadata>,
+    /// Client-advertised channels, keyed by participant identity then client-assigned channel ID.
+    client_channels: HashMap<ParticipantIdentity, HashMap<ChannelId, ChannelDescriptor>>,
 }
 
 impl SessionState {
@@ -60,6 +64,7 @@ impl SessionState {
             video_publishers: HashMap::new(),
             video_track_sids: HashMap::new(),
             video_metadata: HashMap::new(),
+            client_channels: HashMap::new(),
         }
     }
 
@@ -83,13 +88,15 @@ impl SessionState {
 
     /// Removes a participant and all of its subscriptions.
     ///
-    /// Returns the channels that lost their last subscriber or video subscriber.
+    /// Returns the channels that lost their last subscriber or video subscriber,
+    /// and any client channels that were advertised by the participant.
     #[must_use]
     pub fn remove_participant(&mut self, identity: &ParticipantIdentity) -> RemovedSubscriptions {
         if self.participants.remove(identity).is_none() {
             return RemovedSubscriptions {
                 last_unsubscribed: SmallVec::new(),
                 last_video_unsubscribed: SmallVec::new(),
+                client_channels: Vec::new(),
             };
         }
         info!("removed participant {identity:?}");
@@ -119,9 +126,16 @@ impl SessionState {
             }
         });
 
+        let client_channels = self
+            .client_channels
+            .remove(identity)
+            .map(|map| map.into_values().collect())
+            .unwrap_or_default();
+
         RemovedSubscriptions {
             last_unsubscribed,
             last_video_unsubscribed,
+            client_channels,
         }
     }
 
@@ -138,6 +152,43 @@ impl SessionState {
     /// Collects and returns all current participants.
     pub fn collect_participants(&self) -> SmallVec<[Arc<Participant>; 8]> {
         self.participants.values().cloned().collect()
+    }
+
+    /// Records a client-advertised channel for a participant.
+    ///
+    /// Returns `true` if the channel was inserted, or `false` if the participant already
+    /// had a channel with the same ID advertised.
+    pub fn insert_client_channel(
+        &mut self,
+        identity: &ParticipantIdentity,
+        channel: ChannelDescriptor,
+    ) -> bool {
+        if !self.participants.contains_key(identity) {
+            return false;
+        }
+        use std::collections::hash_map::Entry;
+        let map = self.client_channels.entry(identity.clone()).or_default();
+        match map.entry(channel.id()) {
+            Entry::Occupied(_) => false,
+            Entry::Vacant(v) => {
+                v.insert(channel);
+                true
+            }
+        }
+    }
+
+    /// Removes and returns a client-advertised channel for a participant.
+    pub fn remove_client_channel(
+        &mut self,
+        identity: &ParticipantIdentity,
+        channel_id: ChannelId,
+    ) -> Option<ChannelDescriptor> {
+        let map = self.client_channels.get_mut(identity)?;
+        let descriptor = map.remove(&channel_id)?;
+        if map.is_empty() {
+            self.client_channels.remove(identity);
+        }
+        Some(descriptor)
     }
 
     /// Records a channel as advertised.
@@ -1098,5 +1149,109 @@ mod tests {
         assert!(removed.last_unsubscribed.is_empty());
         assert!(removed.last_video_unsubscribed.is_empty());
         assert!(!state.has_data_subscribers(&ch));
+    }
+
+    fn make_client_channel(channel_id: u64, topic: &str) -> ChannelDescriptor {
+        ChannelDescriptor::new(
+            ChannelId::new(channel_id),
+            topic.to_string(),
+            "json".to_string(),
+            Default::default(),
+            None,
+        )
+    }
+
+    #[test]
+    fn insert_client_channel_succeeds_for_new_channel() {
+        let mut state = SessionState::new();
+        let (id, p) = make_participant("alice");
+        state.insert_participant(id.clone(), p);
+        let ch = make_client_channel(1, "/cmd");
+
+        assert!(state.insert_client_channel(&id, ch));
+    }
+
+    #[test]
+    fn insert_client_channel_returns_false_for_unknown_participant() {
+        let mut state = SessionState::new();
+        // identity is never inserted into `participants`
+        let (id, _) = make_participant("alice");
+        let ch = make_client_channel(1, "/cmd");
+
+        assert!(
+            !state.insert_client_channel(&id, ch),
+            "should reject insert for a participant not in the participants map"
+        );
+        // No orphaned entry should exist.
+        assert!(
+            state
+                .remove_client_channel(&id, ChannelId::new(1))
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn insert_client_channel_returns_false_for_duplicate() {
+        let mut state = SessionState::new();
+        let (id, p) = make_participant("alice");
+        state.insert_participant(id.clone(), p);
+        let ch = make_client_channel(1, "/cmd");
+
+        assert!(state.insert_client_channel(&id, ch.clone()));
+        assert!(!state.insert_client_channel(&id, ch));
+    }
+
+    #[test]
+    fn remove_client_channel_returns_descriptor() {
+        let mut state = SessionState::new();
+        let (id, p) = make_participant("alice");
+        state.insert_participant(id.clone(), p);
+        let ch = make_client_channel(1, "/cmd");
+
+        state.insert_client_channel(&id, ch);
+        let removed = state.remove_client_channel(&id, ChannelId::new(1));
+        assert!(removed.is_some());
+        assert_eq!(removed.unwrap().topic(), "/cmd");
+    }
+
+    #[test]
+    fn remove_client_channel_returns_none_for_unknown_channel() {
+        let mut state = SessionState::new();
+        let (id, _) = make_participant("alice");
+
+        assert!(
+            state
+                .remove_client_channel(&id, ChannelId::new(99))
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn remove_participant_cleans_up_client_channels() {
+        let mut state = SessionState::new();
+        let (id, p) = make_participant("alice");
+        state.insert_participant(id.clone(), p);
+
+        state.insert_client_channel(&id, make_client_channel(1, "/cmd_vel"));
+        state.insert_client_channel(&id, make_client_channel(2, "/joy"));
+
+        let removed = state.remove_participant(&id);
+        assert_eq!(removed.client_channels.len(), 2);
+        // Channel map entry should be cleaned up.
+        assert!(
+            state
+                .remove_client_channel(&id, ChannelId::new(1))
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn remove_participant_with_no_client_channels_yields_empty_vec() {
+        let mut state = SessionState::new();
+        let (id, p) = make_participant("alice");
+        state.insert_participant(id.clone(), p);
+
+        let removed = state.remove_participant(&id);
+        assert!(removed.client_channels.is_empty());
     }
 }

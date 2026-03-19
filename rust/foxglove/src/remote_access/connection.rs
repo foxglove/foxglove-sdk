@@ -153,6 +153,8 @@ impl RemoteAccessConnection {
                         room,
                         self.options.context.clone(),
                         self.options.channel_filter.clone(),
+                        self.options.listener.clone(),
+                        self.options.capabilities.clone(),
                         self.options.cancellation_token.clone(),
                         message_backlog_size,
                     )),

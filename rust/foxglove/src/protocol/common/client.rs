@@ -13,7 +13,7 @@ mod unadvertise;
 mod unsubscribe_connection_graph;
 mod unsubscribe_parameter_updates;
 
-pub use advertise::Advertise;
+pub use advertise::{Advertise, Channel as AdvertiseChannel};
 pub use fetch_asset::FetchAsset;
 pub use get_parameters::GetParameters;
 pub use message_data::MessageData;
