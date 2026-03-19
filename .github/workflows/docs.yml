@@ -67,8 +67,7 @@ jobs:
             </ul>
           EOF
       - name: Deploy to CF Pages
-        uses: cloudflare/wrangler-action@v3
-        id: deploy
+        uses: cloudflare/pages-action@v1.5.0
         # Run preview deploys on PRs (but not for forks or dependabot PRs, since we do not have
         # access to secrets in these environments). Only run production deploys on release tags, not
         # the main branch.
@@ -82,39 +81,10 @@ jobs:
         with:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+          wranglerVersion: "3"
           # For PRs, use the PR head branch name. Otherwise we are running on a release tag, so use
           # "main" to trigger a "production" deploy in CF pages.
-          command: pages deploy artifacts --project-name=foxglove-sdk-api-docs --branch="${{ github.head_ref || 'main' }}"
-      - name: Create GitHub Deployment
-        if: steps.deploy.outcome == 'success'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          if [ -n "${{ github.head_ref }}" ]; then
-            ENV_NAME="foxglove-sdk-api-docs (Preview)"
-            TRANSIENT=true
-            PRODUCTION=false
-          else
-            ENV_NAME="foxglove-sdk-api-docs (Production)"
-            TRANSIENT=false
-            PRODUCTION=true
-          fi
-          DEPLOY_ID=$(gh api repos/${{ github.repository }}/deployments \
-            --input - --jq '.id' <<EOF
-          {
-            "ref": "${{ github.sha }}",
-            "environment": "$ENV_NAME",
-            "auto_merge": false,
-            "required_contexts": [],
-            "transient_environment": $TRANSIENT,
-            "production_environment": $PRODUCTION
-          }
-          EOF
-          )
-          gh api repos/${{ github.repository }}/deployments/$DEPLOY_ID/statuses \
-            --input - <<EOF
-          {
-            "state": "success",
-            "environment_url": "${{ steps.deploy.outputs.deployment-url }}"
-          }
-          EOF
+          branch: ${{ github.head_ref || 'main' }}
+          projectName: foxglove-sdk-api-docs
+          directory: artifacts

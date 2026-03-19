@@ -118,7 +118,7 @@ jobs:
           path: playground/public
       - run: yarn install
       - run: yarn build
-      - uses: cloudflare/wrangler-action@v3
+      - uses: cloudflare/pages-action@v1.5.0
         # Only run if not a fork, and not a dependabot PR, since we do not have
         # access to secrets in these environments.
         if: ${{ !github.event.pull_request.head.repo.fork && github.actor != 'dependabot[bot]' }}
@@ -126,40 +126,11 @@ jobs:
         with:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          command: pages deploy playground/dist --project-name=foxglove-sdk-playground --branch="${{ github.head_ref || github.ref_name }}"
-      - name: Create GitHub Deployment
-        if: steps.deploy.outcome == 'success'
-        env:
-          GH_TOKEN: ${{ secrets.FOXGLOVEBOT_GITHUB_TOKEN }}
-        run: |
-          if [ -n "${{ github.head_ref }}" ]; then
-            ENV_NAME="foxglove-sdk-playground (Preview)"
-            TRANSIENT=true
-            PRODUCTION=false
-          else
-            ENV_NAME="foxglove-sdk-playground (Production)"
-            TRANSIENT=false
-            PRODUCTION=true
-          fi
-          DEPLOY_ID=$(gh api repos/${{ github.repository }}/deployments \
-            --input - --jq '.id' <<EOF
-          {
-            "ref": "${{ github.sha }}",
-            "environment": "$ENV_NAME",
-            "auto_merge": false,
-            "required_contexts": [],
-            "transient_environment": $TRANSIENT,
-            "production_environment": $PRODUCTION
-          }
-          EOF
-          )
-          gh api repos/${{ github.repository }}/deployments/$DEPLOY_ID/statuses \
-            --input - <<EOF
-          {
-            "state": "success",
-            "environment_url": "${{ steps.deploy.outputs.deployment-url }}"
-          }
-          EOF
+          gitHubToken: ${{ secrets.FOXGLOVEBOT_GITHUB_TOKEN }}
+          wranglerVersion: "3"
+          branch: ${{ github.head_ref || github.ref_name }}
+          projectName: foxglove-sdk-playground
+          directory: playground/dist
 
   schemas:
     runs-on: ubuntu-latest
