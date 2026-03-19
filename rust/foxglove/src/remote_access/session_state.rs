@@ -1164,7 +1164,8 @@ mod tests {
     #[test]
     fn insert_client_channel_succeeds_for_new_channel() {
         let mut state = SessionState::new();
-        let (id, _) = make_participant("alice");
+        let (id, p) = make_participant("alice");
+        state.insert_participant(id.clone(), p);
         let ch = make_client_channel(1, "/cmd");
 
         assert!(state.insert_client_channel(&id, ch));
@@ -1190,7 +1191,8 @@ mod tests {
     #[test]
     fn insert_client_channel_returns_false_for_duplicate() {
         let mut state = SessionState::new();
-        let (id, _) = make_participant("alice");
+        let (id, p) = make_participant("alice");
+        state.insert_participant(id.clone(), p);
         let ch = make_client_channel(1, "/cmd");
 
         assert!(state.insert_client_channel(&id, ch.clone()));
@@ -1200,7 +1202,8 @@ mod tests {
     #[test]
     fn remove_client_channel_returns_descriptor() {
         let mut state = SessionState::new();
-        let (id, _) = make_participant("alice");
+        let (id, p) = make_participant("alice");
+        state.insert_participant(id.clone(), p);
         let ch = make_client_channel(1, "/cmd");
 
         state.insert_client_channel(&id, ch);
