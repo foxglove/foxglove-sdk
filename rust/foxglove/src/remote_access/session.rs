@@ -602,13 +602,15 @@ impl RemoteAccessSession {
         for ch in msg.channels {
             let channel_id = ChannelId::new(ch.id.into());
 
-            // Decode the schema. Note a missing schema is an error. Schema is required in the app.
+            // Decode the schema. A missing schema is valid for encodings that don't require one
+            // (e.g. "json"); only return an error for malformed schema data.
             let schema = match ch.decode_schema() {
                 Ok(data) => Some(Schema {
                     name: ch.schema_name.to_string(),
                     encoding: ch.schema_encoding.as_deref().unwrap_or("").to_string(),
                     data: data.into(),
                 }),
+                Err(crate::protocol::v1::schema::DecodeError::MissingSchema) => None,
                 Err(e) => {
                     warn!(
                         "Failed to decode schema for advertised channel {}: {e:?}",
