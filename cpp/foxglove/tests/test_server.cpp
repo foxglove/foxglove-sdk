@@ -1251,8 +1251,21 @@ TEST_CASE("Broadcast time") {
 }
 
 TEST_CASE("Clear session") {
+  std::mutex mutex;
+  std::condition_variable cv;
+  bool client_connected = false;
+
   auto context = foxglove::Context::create();
-  auto server = startServer(context);
+
+  foxglove::WebSocketServerOptions options;
+  options.context = context;
+  options.name = "unit-test";
+  options.callbacks.onClientConnect = [&]() {
+    std::scoped_lock lock{mutex};
+    client_connected = true;
+    cv.notify_one();
+  };
+  auto server = startServer(std::move(options));
 
   // Set an initial session ID.
   auto error = server.clearSession("initial");
@@ -1269,6 +1282,15 @@ TEST_CASE("Clear session") {
   REQUIRE(parsed.contains("sessionId"));
   std::string session_id1 = parsed["sessionId"].get<std::string>();
   REQUIRE(session_id1 == "initial");
+
+  // Wait for the server to register the client before broadcasting.
+  {
+    std::unique_lock lock{mutex};
+    auto wait_result = cv.wait_for(lock, kTestTimeout, [&] {
+      return client_connected;
+    });
+    REQUIRE(wait_result);
+  }
 
   // Reset the session without specifying a new session ID.
   error = server.clearSession();
