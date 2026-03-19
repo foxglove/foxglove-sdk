@@ -1,5 +1,5 @@
 ---
-source: rust/foxglove/src/data_provider/mod.rs
+source: rust/foxglove/src/remote_data_loader_backend/mod.rs
 expression: manifest
 ---
 {

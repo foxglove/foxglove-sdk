@@ -21,10 +21,9 @@ namespace foxglove {
 /// @cond foxglove_internal
 class Arena {
 public:
-  static constexpr std::size_t Size = 8 * 1024;  // 128 KB
+  static constexpr std::size_t kSize = static_cast<std::size_t>(8) * 1024;  // 8 KB
 
-  Arena()
-      : offset_(0) {}
+  Arena() = default;
 
   /// Maps elements from a vector to a new array allocated from the arena.
   ///
@@ -38,9 +37,13 @@ public:
   template<
     typename T, typename S, typename Fn,
     typename = std::enable_if_t<std::is_pod_v<T> && std::is_invocable_v<Fn, T&, const S&, Arena&>>>
+  // NOLINTNEXTLINE(cppcoreguidelines-missing-std-forward)
   T* map(const std::vector<S>& src, Fn&& map_fn) {
     const size_t elements = src.size();
-    T* result = (elements > 0) ? alloc<T>(elements) : nullptr;
+    if (elements == 0) {
+      return nullptr;
+    }
+    T* result = alloc<T>(elements);
     T* current = result;
 
     // Convert the elements from S to T, placing them in the result array
@@ -62,9 +65,9 @@ public:
   template<
     typename T, typename S, typename Fn,
     typename = std::enable_if_t<std::is_pod_v<T> && std::is_invocable_v<Fn, T&, const S&, Arena&>>>
-  T* map_one(const S& src, Fn&& map_fn) {
+  T* mapOne(const S& src, Fn&& map_fn) {
     T* result = alloc<T>(1);
-    map_fn(*result, src, *this);
+    std::forward<Fn>(map_fn)(*result, src, *this);
     return result;
   }
 
@@ -82,6 +85,7 @@ public:
 
     // Calculate space available in the buffer
     size_t space_left = available();
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
     void* buffer_ptr = &buffer_[offset_];
 
     // Align the pointer within the buffer
@@ -91,7 +95,9 @@ public:
     if (aligned_ptr == nullptr) {
       // We don't use aligned_alloc because it fails on some platforms for larger alignments
       size_t size_with_alignment = alignment + bytes_needed;
-      auto ptr = ::malloc(size_with_alignment);
+      // NOLINTBEGIN(cppcoreguidelines-no-malloc,hicpp-no-malloc,cppcoreguidelines-owning-memory)
+      auto* ptr = ::malloc(size_with_alignment);
+      // NOLINTNEXTLINE(clang-analyzer-unix.Malloc)
       aligned_ptr = std::align(alignment, bytes_needed, ptr, size_with_alignment);
       if (aligned_ptr == nullptr) {
 #ifndef __wasm32__
@@ -101,33 +107,35 @@ public:
 #endif
       }
       overflow_.emplace_back(static_cast<char*>(ptr));
+      // NOLINTEND(cppcoreguidelines-no-malloc,hicpp-no-malloc,cppcoreguidelines-owning-memory)
       return reinterpret_cast<T*>(aligned_ptr);
     }
 
     // Calculate the new offset
-    offset_ = Size - space_left + bytes_needed;
+    offset_ = kSize - space_left + bytes_needed;
     return reinterpret_cast<T*>(aligned_ptr);
   }
 
   /// Returns how many bytes are currently used in the arena.
-  size_t used() const {
+  [[nodiscard]] size_t used() const {
     return offset_;
   }
 
   /// Returns how many bytes are available in the arena.
-  size_t available() const {
-    return Size - offset_;
+  [[nodiscard]] size_t available() const {
+    return kSize - offset_;
   }
 
 private:
   struct Deleter {
     void operator()(char* ptr) const {
+      // NOLINTNEXTLINE(cppcoreguidelines-no-malloc,hicpp-no-malloc,cppcoreguidelines-owning-memory)
       free(ptr);
     }
   };
 
-  std::array<uint8_t, Size> buffer_;
-  std::size_t offset_;
+  std::array<uint8_t, kSize> buffer_{};
+  std::size_t offset_ = 0;
   std::vector<std::unique_ptr<char, Deleter>> overflow_;
 };
 /// @endcond

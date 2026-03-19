@@ -70,21 +70,19 @@ impl SessionState {
 
     /// Inserts a participant if not already present.
     ///
-    /// Returns the participant that is stored in the map — either the existing one
-    /// (on conflict) or the newly inserted one. This avoids a TOCTOU race where a
-    /// caller could receive a participant that isn't actually tracked by the session.
+    /// Returns true if this is a new participant, or false if there was already a participant
+    /// registered with this identity.
     pub fn insert_participant(
         &mut self,
         identity: ParticipantIdentity,
         participant: Arc<Participant>,
-    ) -> Arc<Participant> {
+    ) -> bool {
         use std::collections::hash_map::Entry;
-        match self.participants.entry(identity) {
-            Entry::Occupied(e) => e.get().clone(),
-            Entry::Vacant(v) => {
-                v.insert(participant.clone());
-                participant
-            }
+        if let Entry::Vacant(v) = self.participants.entry(identity) {
+            v.insert(participant);
+            true
+        } else {
+            false
         }
     }
 
@@ -144,6 +142,11 @@ impl SessionState {
     /// Returns the participant for the given identity, if present.
     pub fn get_participant(&self, identity: &ParticipantIdentity) -> Option<Arc<Participant>> {
         self.participants.get(identity).cloned()
+    }
+
+    /// Returns true if there is a participant for the given identity.
+    pub fn has_participant(&self, identity: &ParticipantIdentity) -> bool {
+        self.participants.contains_key(identity)
     }
 
     /// Collects and returns all current participants.
@@ -489,19 +492,16 @@ mod tests {
     fn insert_new_participant() {
         let mut state = SessionState::new();
         let (id, p) = make_participant("alice");
-        let stored = state.insert_participant(id.clone(), p);
-        assert_eq!(stored.identity(), &id);
-        assert!(Arc::ptr_eq(&stored, &state.get_participant(&id).unwrap()));
+        assert!(state.insert_participant(id.clone(), p));
     }
 
     #[test]
-    fn insert_duplicate_returns_existing() {
+    fn insert_existing_participant() {
         let mut state = SessionState::new();
         let (id, p1) = make_participant("alice");
-        let stored1 = state.insert_participant(id.clone(), p1);
-        let (_id2, p2) = make_participant("bob");
-        let stored2 = state.insert_participant(id, p2);
-        assert!(Arc::ptr_eq(&stored1, &stored2));
+        assert!(state.insert_participant(id.clone(), p1));
+        let (_, p2) = make_participant("bob");
+        assert!(!state.insert_participant(id, p2));
     }
 
     #[test]

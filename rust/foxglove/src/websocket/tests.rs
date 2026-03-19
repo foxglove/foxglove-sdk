@@ -33,6 +33,7 @@ use super::ws_protocol::server::{
 };
 use crate::library_version::get_library_version;
 use crate::testutil::{RecordingServerListener, assert_eventually};
+use crate::testutil::{WebSocketClient, WebSocketClientError};
 #[cfg(feature = "tls")]
 use crate::websocket::TlsIdentity;
 use crate::websocket::handshake::SUBPROTOCOL;
@@ -44,10 +45,9 @@ use crate::websocket::{
 use crate::websocket::{
     PlaybackCommand, PlaybackControlRequest, PlaybackState, PlaybackStatus, ServerListener,
 };
-use crate::websocket_client::WebSocketClient;
 use crate::{
     ChannelBuilder, ChannelDescriptor, Context, FoxgloveError, PartialMetadata, RawChannel, Schema,
-    SinkChannelFilter, WebSocketClientError,
+    SinkChannelFilter,
 };
 
 macro_rules! expect_recv {

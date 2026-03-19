@@ -5,6 +5,8 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <array>
+
 using namespace foxglove;
 
 TEST_CASE("messages alias types are identical to schemas types") {
@@ -20,9 +22,9 @@ TEST_CASE("messages alias supports construction and encoding") {
   log.message = "test message";
   log.level = messages::Log::LogLevel::INFO;
 
-  uint8_t buf[256];
+  std::array<uint8_t, 256> buf{};
   size_t encoded_len = 0;
-  auto err = log.encode(buf, sizeof(buf), &encoded_len);
+  auto err = log.encode(buf.data(), buf.size(), &encoded_len);
   REQUIRE(err == FoxgloveError::Ok);
   REQUIRE(encoded_len > 0);
 }

@@ -19,11 +19,7 @@ _remote_common = [
   "dep:serde_repr",
   "dep:serde_with",
 ]
-websocket = [
-  "_remote_common",
-  "dep:futures-util",
-  "dep:tokio-tungstenite",
-]
+websocket = ["_remote_common", "dep:futures-util", "dep:tokio-tungstenite"]
 live_visualization = ["websocket"]
 remote_access = [
   "_remote_common",
@@ -39,10 +35,10 @@ tls = [
   "tokio-tungstenite/rustls-tls-native-roots",
   "dep:aws-lc-rs",
   "dep:tokio-rustls",
-  "dep:rcgen",
 ]
 stream = ["dep:futures", "dep:tokio"]
-data_provider = ["dep:chrono", "chrono/serde", "dep:serde_with", "dep:serde-constant"]
+data_provider = ["remote_data_loader_backend"]
+remote_data_loader_backend = ["dep:chrono", "chrono/serde", "dep:serde_with", "dep:serde-constant"]
 schemars = ["dep:schemars"]
 schemars-chrono = ["schemars", "chrono", "schemars/chrono04"]
 serde = ["dep:base64"]
@@ -72,7 +68,7 @@ chrono = { workspace = true, optional = true }
 delegate = "0.13.2"
 flume = { version = "0.11.1", optional = true }
 indexmap = "2"
-foxglove_derive = { version = "0.19.0", path = "../foxglove_derive", optional = true }
+foxglove_derive = { version = "0.20.0", path = "../foxglove_derive", optional = true }
 futures = { version = "0.3.31", optional = true }
 futures-util = { version = "0.3.31", features = ["sink", "std"], optional = true }
 livekit = { version = "0.7.29", optional = true, features = ["rustls-tls-native-roots"] }
@@ -96,7 +92,6 @@ tokio-util = { workspace = true, optional = true }
 tokio = { workspace = true, optional = true }
 tracing.workspace = true
 urlencoding = "2.1.3"
-rcgen = { version = "0.14.3", features = ["crypto", "pem", "x509-parser"], optional = true }
 
 # img2yuv dependencies
 image = { version = "0.25.9", default-features = false, optional = true }
@@ -108,6 +103,7 @@ percent-encoding = { version = "2.3.2", optional = true }
 
 [dev-dependencies]
 assert_matches = "1.5.0"
+rcgen = { version = "0.14.3", features = ["crypto", "pem", "x509-parser"] }
 insta.workspace = true
 axum = "0.8.8"
 hexdump = "0.1.2"

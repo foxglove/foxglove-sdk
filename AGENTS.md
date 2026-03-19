@@ -21,27 +21,27 @@ The core SDK is written in Rust, with bindings for Python and C/C++, plus TypeSc
 
 ## Repository Layout
 
-| Directory                            | Purpose                                                         |
-| ------------------------------------ | --------------------------------------------------------------- |
-| `rust/foxglove`                      | Core Rust SDK crate                                             |
-| `rust/foxglove_derive`               | Derive macros for the Rust SDK                                  |
-| `rust/foxglove_proto_gen`            | Protobuf code generation for Rust                               |
-| `rust/foxglove_data_loader`          | Data loader crate (runs in app via WASM)                        |
-| `rust/data_provider_conformance`     | Conformance tests for data providers                            |
-| `rust/examples/`                     | Rust example programs                                           |
-| `c/`                                 | C SDK (FFI layer built on top of Rust)                          |
-| `cpp/foxglove`                       | C++ SDK                                                         |
-| `cpp/foxglove_data_loader`           | C++ data loader                                                 |
-| `cpp/examples/`                      | C++ example programs                                            |
-| `python/foxglove-sdk`                | Python SDK (PyO3 bindings to Rust core)                         |
-| `python/foxglove-sdk-examples`       | Python example programs                                         |
-| `python/foxglove-schemas-flatbuffer` | Flatbuffer schema definitions for Python                        |
-| `python/foxglove-schemas-protobuf`   | Protobuf schema definitions for Python                          |
-| `typescript/schemas`                 | TypeScript schema definitions                                   |
-| `schemas/`                           | Schema definitions (flatbuffer, jsonschema, omgidl, proto, ros) |
-| `ros/`                               | ROS message package                                             |
-| `scripts/`                           | Build and code generation scripts                               |
-| `playground/`                        | Interactive playground/examples                                 |
+| Directory                                     | Purpose                                                         |
+| --------------------------------------------- | --------------------------------------------------------------- |
+| `rust/foxglove`                               | Core Rust SDK crate                                             |
+| `rust/foxglove_derive`                        | Derive macros for the Rust SDK                                  |
+| `rust/foxglove_proto_gen`                     | Protobuf code generation for Rust                               |
+| `rust/foxglove_data_loader`                   | Data loader crate (runs in app via WASM)                        |
+| `rust/remote_data_loader_backend_conformance` | Conformance tests for remote data loader backends               |
+| `rust/examples/`                              | Rust example programs                                           |
+| `c/`                                          | C SDK (FFI layer built on top of Rust)                          |
+| `cpp/foxglove`                                | C++ SDK                                                         |
+| `cpp/foxglove_data_loader`                    | C++ data loader                                                 |
+| `cpp/examples/`                               | C++ example programs                                            |
+| `python/foxglove-sdk`                         | Python SDK (PyO3 bindings to Rust core)                         |
+| `python/foxglove-sdk-examples`                | Python example programs                                         |
+| `python/foxglove-schemas-flatbuffer`          | Flatbuffer schema definitions for Python                        |
+| `python/foxglove-schemas-protobuf`            | Protobuf schema definitions for Python                          |
+| `typescript/schemas`                          | TypeScript schema definitions                                   |
+| `schemas/`                                    | Schema definitions (flatbuffer, jsonschema, omgidl, proto, ros) |
+| `ros/`                                        | ROS message package                                             |
+| `scripts/`                                    | Build and code generation scripts                               |
+| `playground/`                                 | Interactive playground/examples                                 |
 
 ## Technology Stack
 

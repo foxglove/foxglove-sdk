@@ -353,8 +353,11 @@ mod time;
 #[cfg(feature = "stream")]
 pub mod stream;
 
+#[cfg(any(feature = "data_provider", feature = "remote_data_loader_backend"))]
+pub mod remote_data_loader_backend;
 #[cfg(feature = "data_provider")]
-pub mod data_provider;
+// Alias for backward compatibility
+pub use remote_data_loader_backend as data_provider;
 
 #[cfg(feature = "img2yuv-core")]
 #[allow(unused)]
@@ -393,8 +396,6 @@ mod runtime;
 #[cfg(feature = "websocket")]
 pub mod websocket;
 #[cfg(feature = "websocket")]
-mod websocket_client;
-#[cfg(feature = "websocket")]
 mod websocket_server;
 #[cfg(feature = "websocket")]
 pub(crate) use runtime::get_runtime_handle;
@@ -403,9 +404,6 @@ pub use runtime::shutdown_runtime;
 #[doc(hidden)]
 #[cfg(feature = "websocket")]
 pub use websocket::ws_protocol;
-#[doc(hidden)]
-#[cfg(feature = "websocket")]
-pub use websocket_client::{WebSocketClient, WebSocketClientError};
 #[cfg(feature = "websocket")]
 pub use websocket_server::{WebSocketServer, WebSocketServerHandle};
 

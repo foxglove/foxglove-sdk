@@ -1185,6 +1185,126 @@ impl From<ImageAnnotations> for foxglove::schemas::ImageAnnotations {
     }
 }
 
+/// The state of a single joint (revolute or prismatic).
+///
+/// :param name: Joint name
+/// :param position: Joint position. Radians for revolute joints, meters for prismatic joints. Use NaN to indicate that the value is not present if the message definition does not support optional fields.
+/// :param velocity: Joint velocity. Rad/s for revolute joints, m/s for prismatic joints. Use NaN to indicate that the value is not present if the message definition does not support optional fields.
+/// :param acceleration: Joint acceleration. Rad/s² for revolute joints, m/s² for prismatic joints. Use NaN to indicate that the value is not present if the message definition does not support optional fields.
+/// :param effort: Joint effort (force or torque). Nm for revolute joints, N for prismatic joints. Use NaN to indicate that the value is not present if the message definition does not support optional fields.
+///
+/// See https://docs.foxglove.dev/docs/visualization/message-schemas/joint-state
+#[pyclass(module = "foxglove.schemas")]
+#[derive(Clone)]
+pub(crate) struct JointState(pub(crate) foxglove::schemas::JointState);
+#[pymethods]
+impl JointState {
+    #[new]
+    #[pyo3(signature = (*, name="", position=None, velocity=None, acceleration=None, effort=None) )]
+    fn new(
+        name: &str,
+        position: Option<f64>,
+        velocity: Option<f64>,
+        acceleration: Option<f64>,
+        effort: Option<f64>,
+    ) -> Self {
+        Self(foxglove::schemas::JointState {
+            name: name.to_string(),
+            position,
+            velocity,
+            acceleration,
+            effort,
+        })
+    }
+    fn __repr__(&self) -> String {
+        format!(
+            "JointState(name={:?}, position={:?}, velocity={:?}, acceleration={:?}, effort={:?})",
+            self.0.name, self.0.position, self.0.velocity, self.0.acceleration, self.0.effort,
+        )
+    }
+    /// Returns the JointState schema.
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::JointState::get_schema().unwrap().into()
+    }
+    /// Encodes the JointState as protobuf.
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("failed to allocate buffer for encoded message")
+    }
+}
+
+impl From<JointState> for foxglove::schemas::JointState {
+    fn from(value: JointState) -> Self {
+        value.0
+    }
+}
+
+/// The state of a set of joints at a given time.
+///
+/// :param timestamp: Timestamp of the joint states
+/// :param joints: Joint states
+///
+/// See https://docs.foxglove.dev/docs/visualization/message-schemas/joint-states
+#[pyclass(module = "foxglove.schemas")]
+#[derive(Clone)]
+pub(crate) struct JointStates(pub(crate) foxglove::schemas::JointStates);
+#[pymethods]
+impl JointStates {
+    #[new]
+    #[pyo3(signature = (*, timestamp=None, joints=None) )]
+    fn new(timestamp: Option<Timestamp>, joints: Option<Vec<JointState>>) -> Self {
+        Self(foxglove::schemas::JointStates {
+            timestamp: timestamp.map(Into::into),
+            joints: joints
+                .unwrap_or_default()
+                .into_iter()
+                .map(|x| x.into())
+                .collect(),
+        })
+    }
+    fn __repr__(&self) -> String {
+        format!(
+            "JointStates(timestamp={:?}, joints={:?})",
+            self.0.timestamp, self.0.joints,
+        )
+    }
+    /// Returns the JointStates schema.
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::JointStates::get_schema().unwrap().into()
+    }
+    /// Encodes the JointStates as protobuf.
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("failed to allocate buffer for encoded message")
+    }
+}
+
+impl From<JointStates> for foxglove::schemas::JointStates {
+    fn from(value: JointStates) -> Self {
+        value.0
+    }
+}
+
 /// A key with its associated value
 ///
 /// :param key: Key
@@ -3162,6 +3282,8 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<Grid>()?;
     module.add_class::<VoxelGrid>()?;
     module.add_class::<ImageAnnotations>()?;
+    module.add_class::<JointState>()?;
+    module.add_class::<JointStates>()?;
     module.add_class::<KeyValuePair>()?;
     module.add_class::<LaserScan>()?;
     module.add_class::<LinePrimitive>()?;
@@ -3199,5 +3321,70 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
         .getattr("modules")?
         .set_item("foxglove._foxglove_py.schemas", &module)?;
 
-    parent_module.add_submodule(&module)
+    parent_module.add_submodule(&module)?;
+
+    // Also register as "messages" — an alias for "schemas".
+    // Both modules share the same class objects.
+    let messages_module = PyModule::new(parent_module.py(), "messages")?;
+
+    messages_module.add_class::<LinePrimitiveLineType>()?;
+    messages_module.add_class::<LogLevel>()?;
+    messages_module.add_class::<SceneEntityDeletionType>()?;
+    messages_module.add_class::<PackedElementFieldNumericType>()?;
+    messages_module.add_class::<PointsAnnotationType>()?;
+    messages_module.add_class::<LocationFixPositionCovarianceType>()?;
+    messages_module.add_class::<ArrowPrimitive>()?;
+    messages_module.add_class::<CameraCalibration>()?;
+    messages_module.add_class::<CircleAnnotation>()?;
+    messages_module.add_class::<Color>()?;
+    messages_module.add_class::<CompressedImage>()?;
+    messages_module.add_class::<CompressedVideo>()?;
+    messages_module.add_class::<CylinderPrimitive>()?;
+    messages_module.add_class::<CubePrimitive>()?;
+    messages_module.add_class::<Duration>()?;
+    messages_module.add_class::<FrameTransform>()?;
+    messages_module.add_class::<FrameTransforms>()?;
+    messages_module.add_class::<GeoJson>()?;
+    messages_module.add_class::<Grid>()?;
+    messages_module.add_class::<VoxelGrid>()?;
+    messages_module.add_class::<ImageAnnotations>()?;
+    messages_module.add_class::<JointState>()?;
+    messages_module.add_class::<JointStates>()?;
+    messages_module.add_class::<KeyValuePair>()?;
+    messages_module.add_class::<LaserScan>()?;
+    messages_module.add_class::<LinePrimitive>()?;
+    messages_module.add_class::<LocationFix>()?;
+    messages_module.add_class::<LocationFixes>()?;
+    messages_module.add_class::<Log>()?;
+    messages_module.add_class::<SceneEntityDeletion>()?;
+    messages_module.add_class::<SceneEntity>()?;
+    messages_module.add_class::<SceneUpdate>()?;
+    messages_module.add_class::<ModelPrimitive>()?;
+    messages_module.add_class::<PackedElementField>()?;
+    messages_module.add_class::<Point2>()?;
+    messages_module.add_class::<Point3>()?;
+    messages_module.add_class::<Point3InFrame>()?;
+    messages_module.add_class::<PointCloud>()?;
+    messages_module.add_class::<PointsAnnotation>()?;
+    messages_module.add_class::<Pose>()?;
+    messages_module.add_class::<PoseInFrame>()?;
+    messages_module.add_class::<PosesInFrame>()?;
+    messages_module.add_class::<Quaternion>()?;
+    messages_module.add_class::<RawAudio>()?;
+    messages_module.add_class::<RawImage>()?;
+    messages_module.add_class::<SpherePrimitive>()?;
+    messages_module.add_class::<TextAnnotation>()?;
+    messages_module.add_class::<TextPrimitive>()?;
+    messages_module.add_class::<Timestamp>()?;
+    messages_module.add_class::<TriangleListPrimitive>()?;
+    messages_module.add_class::<Vector2>()?;
+    messages_module.add_class::<Vector3>()?;
+
+    py.import("sys")?
+        .getattr("modules")?
+        .set_item("foxglove._foxglove_py.messages", &messages_module)?;
+
+    parent_module.add_submodule(&messages_module)?;
+
+    Ok(())
 }

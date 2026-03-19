@@ -15,7 +15,7 @@ jobs:
     outputs:
       should_run: ${{ github.event_name != 'pull_request' || steps.paths.outputs.ros == 'true' || contains(github.event.pull_request.labels.*.name, 'ci:ros') }}
     steps:
-      - uses: dorny/paths-filter@v3
+      - uses: dorny/paths-filter@v4
         if: github.event_name == 'pull_request'
         id: paths
         with:
@@ -50,7 +50,7 @@ jobs:
         working-directory: ros
 
       - name: Run make docker-build
-        run: make USE_LOCAL_SDK=ON docker-build-${{ matrix.ros_distribution }}
+        run: make USE_LOCAL_SDK=ON ${{ matrix.ros_distribution == 'rolling' && 'EXTRA_DOCKER_ARGS="--build-arg USE_ROS_TESTING=true"' || '' }} docker-build-${{ matrix.ros_distribution }}
         working-directory: ros
 
       - name: Run make docker-test

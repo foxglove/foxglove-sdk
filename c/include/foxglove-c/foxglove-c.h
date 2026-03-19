@@ -1145,6 +1145,47 @@ typedef struct foxglove_image_annotations {
 } foxglove_image_annotations;
 
 /**
+ * The state of a single joint (revolute or prismatic).
+ */
+typedef struct foxglove_joint_state {
+  /**
+   * Joint name
+   */
+  struct foxglove_string name;
+  /**
+   * Joint position. Radians for revolute joints, meters for prismatic joints. Use NaN to indicate that the value is not present if the message definition does not support optional fields.
+   */
+  const double *position;
+  /**
+   * Joint velocity. Rad/s for revolute joints, m/s for prismatic joints. Use NaN to indicate that the value is not present if the message definition does not support optional fields.
+   */
+  const double *velocity;
+  /**
+   * Joint acceleration. Rad/s² for revolute joints, m/s² for prismatic joints. Use NaN to indicate that the value is not present if the message definition does not support optional fields.
+   */
+  const double *acceleration;
+  /**
+   * Joint effort (force or torque). Nm for revolute joints, N for prismatic joints. Use NaN to indicate that the value is not present if the message definition does not support optional fields.
+   */
+  const double *effort;
+} foxglove_joint_state;
+
+/**
+ * The state of a set of joints at a given time.
+ */
+typedef struct foxglove_joint_states {
+  /**
+   * Timestamp of the joint states
+   */
+  const struct foxglove_timestamp *timestamp;
+  /**
+   * Joint states
+   */
+  const struct foxglove_joint_state *joints;
+  size_t joints_count;
+} foxglove_joint_states;
+
+/**
  * A single scan from a planar laser range-finder
  */
 typedef struct foxglove_laser_scan {
@@ -3115,6 +3156,98 @@ foxglove_error foxglove_image_annotations_encode(const struct foxglove_image_ann
                                                  uint8_t *ptr,
                                                  size_t len,
                                                  size_t *encoded_len);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_joint_state(struct foxglove_string topic,
+                                                   const struct foxglove_context *context,
+                                                   const struct foxglove_channel **channel);
+
+#if !defined(__wasm__)
+/**
+ * Log a JointState message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_joint_state.
+ */
+foxglove_error foxglove_channel_log_joint_state(const struct foxglove_channel *channel,
+                                                const struct foxglove_joint_state *msg,
+                                                const uint64_t *log_time,
+                                                FoxgloveSinkId sink_id);
+#endif
+
+/**
+ * Get the JointState schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_joint_state_schema(void);
+
+/**
+ * Encode a JointState message as protobuf to the buffer provided.
+ *
+ * On success, writes the encoded length to *encoded_len.
+ * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+ * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+ * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+ *
+ * # Safety
+ * ptr must be a valid pointer to a memory region at least len bytes long.
+ */
+foxglove_error foxglove_joint_state_encode(const struct foxglove_joint_state *msg,
+                                           uint8_t *ptr,
+                                           size_t len,
+                                           size_t *encoded_len);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_joint_states(struct foxglove_string topic,
+                                                    const struct foxglove_context *context,
+                                                    const struct foxglove_channel **channel);
+
+#if !defined(__wasm__)
+/**
+ * Log a JointStates message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_joint_states.
+ */
+foxglove_error foxglove_channel_log_joint_states(const struct foxglove_channel *channel,
+                                                 const struct foxglove_joint_states *msg,
+                                                 const uint64_t *log_time,
+                                                 FoxgloveSinkId sink_id);
+#endif
+
+/**
+ * Get the JointStates schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_joint_states_schema(void);
+
+/**
+ * Encode a JointStates message as protobuf to the buffer provided.
+ *
+ * On success, writes the encoded length to *encoded_len.
+ * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+ * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+ * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+ *
+ * # Safety
+ * ptr must be a valid pointer to a memory region at least len bytes long.
+ */
+foxglove_error foxglove_joint_states_encode(const struct foxglove_joint_states *msg,
+                                            uint8_t *ptr,
+                                            size_t len,
+                                            size_t *encoded_len);
 
 /**
  * Create a new typed channel, and return an owned raw channel pointer to it.
