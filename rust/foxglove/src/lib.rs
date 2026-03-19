@@ -383,21 +383,34 @@ pub use sink_channel_filter::SinkChannelFilter;
 pub use std::collections::BTreeMap;
 pub(crate) use time::nanoseconds_since_epoch;
 
-#[cfg(all(feature = "_remote_common", feature = "_protocol"))]
+// Common dependencies for remote-access & websocket, with docsrs attributes to ensure that the
+// feature gate badges in docs.rs render as the public features, as opposed to _remote-common. This
+// is only needed for modules that contain types which are publicly re-exported (Parameter,
+// Service, etc.).
+#[doc(hidden)]
+#[cfg(all(feature = "_remote-common", feature = "_protocol"))]
 pub mod protocol;
-#[cfg(all(feature = "_remote_common", not(feature = "_protocol")))]
+#[cfg(all(feature = "_remote-common", not(feature = "_protocol")))]
 mod protocol;
-#[cfg(feature = "_remote_common")]
+#[cfg(feature = "_remote-common")]
+#[cfg_attr(
+    docsrs,
+    doc(cfg(any(feature = "remote-access", feature = "websocket")))
+)]
 mod remote_common;
-#[cfg(feature = "_remote_common")]
+#[cfg(feature = "_remote-common")]
 mod runtime;
-#[cfg(feature = "_remote_common")]
+#[cfg(feature = "_remote-common")]
+#[cfg_attr(
+    docsrs,
+    doc(cfg(any(feature = "remote-access", feature = "websocket")))
+)]
 pub use runtime::shutdown_runtime;
 
-#[cfg(feature = "remote_access")]
+#[cfg(feature = "remote-access")]
 mod api_client;
 #[doc(hidden)]
-#[cfg(feature = "remote_access")]
+#[cfg(feature = "remote-access")]
 pub mod remote_access;
 
 #[cfg(feature = "websocket")]
