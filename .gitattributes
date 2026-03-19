@@ -5,8 +5,8 @@
 *.webp filter=lfs diff=lfs merge=lfs -text
 c/include/foxglove-c/foxglove-c.h linguist-generated
 c/src/generated_types.rs linguist-generated
-cpp/foxglove/include/foxglove/schemas.hpp linguist-generated
-cpp/foxglove/src/schemas.cpp linguist-generated
+cpp/foxglove/include/foxglove/messages.hpp linguist-generated
+cpp/foxglove/src/messages.cpp linguist-generated
 python/foxglove-sdk/python/foxglove/_foxglove_py/channels.pyi linguist-generated
 python/foxglove-sdk/python/foxglove/_foxglove_py/schemas.pyi linguist-generated
 python/foxglove-sdk/python/foxglove/channels/__init__.py linguist-generated
