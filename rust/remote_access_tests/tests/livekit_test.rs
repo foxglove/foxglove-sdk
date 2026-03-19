@@ -13,7 +13,10 @@ use foxglove::schemas::{RawImage, Timestamp};
 use foxglove::{Encode, Schema};
 use livekit::{Room, RoomOptions};
 use remote_access_tests::livekit_token;
-use remote_access_tests::test_helpers::{TestGateway, ViewerConnection, poll_until};
+use remote_access_tests::mock_listener::MockListener;
+use remote_access_tests::test_helpers::{
+    ClientChannelDesc, TestGateway, TestGatewayOptions, ViewerConnection, poll_until,
+};
 use serial_test::serial;
 use tracing::info;
 use tracing_test::traced_test;
@@ -597,8 +600,7 @@ async fn livekit_existing_participant_receives_server_info_and_advertisement() -
     info!("viewer connected to room before gateway");
 
     // Now start the gateway — it should discover the existing viewer participant.
-    let channel_filter = None;
-    let gw = TestGateway::start_with_mock(&ctx, room_name, mock, channel_filter)?;
+    let gw = TestGateway::start_with_mock(&ctx, room_name, mock, Default::default())?;
 
     // Wait for the gateway to open a byte stream to the viewer.
     let mut viewer = ViewerConnection::from_room(room, events).await?;
@@ -874,6 +876,175 @@ async fn livekit_video_metadata_advertised_after_image_logged() -> Result<()> {
     info!("video metadata re-advertisement validated: {metadata:?}");
 
     viewer.close().await?;
+    gw.stop().await?;
+    Ok(())
+}
+
+/// Test that when a viewer sends a client Advertise message the gateway fires
+/// `on_client_advertise` on the listener with the correct client identity and topic.
+#[traced_test]
+#[ignore]
+#[tokio::test]
+#[serial(livekit)]
+async fn livekit_client_advertise_fires_listener_callback() -> Result<()> {
+    use std::sync::Arc;
+    let ctx = foxglove::Context::new();
+    let listener = Arc::new(MockListener::default());
+
+    let gw = TestGateway::start_with_options(
+        &ctx,
+        TestGatewayOptions {
+            listener: Some(listener.clone()),
+            capabilities: vec![foxglove::remote_access::Capability::ClientPublish],
+            ..Default::default()
+        },
+    )
+    .await?;
+
+    let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+    let _server_info = viewer.frame_reader.next_server_message().await?;
+
+    // Send a client Advertise for one channel.
+    viewer
+        .send_client_advertise(&[ClientChannelDesc {
+            id: 1,
+            topic: "/cmd".to_string(),
+            encoding: "json".to_string(),
+        }])
+        .await?;
+
+    // Wait for the listener callback to fire.
+    poll_until(|| listener.advertised().len() == 1).await;
+
+    let advertised = listener.advertised();
+    assert_eq!(advertised.len(), 1);
+    assert_eq!(
+        advertised[0].0, "viewer-1",
+        "client id should be viewer identity"
+    );
+    assert_eq!(
+        advertised[0].1, "/cmd",
+        "topic should match advertised channel"
+    );
+    info!(
+        "on_client_advertise callback validated: {:?}",
+        advertised[0]
+    );
+
+    viewer.close().await?;
+    gw.stop().await?;
+    Ok(())
+}
+
+/// Test that a client Unadvertise message fires `on_client_unadvertise` on the listener.
+#[traced_test]
+#[ignore]
+#[tokio::test]
+#[serial(livekit)]
+async fn livekit_client_unadvertise_fires_listener_callback() -> Result<()> {
+    use std::sync::Arc;
+    let ctx = foxglove::Context::new();
+    let listener = Arc::new(MockListener::default());
+
+    let gw = TestGateway::start_with_options(
+        &ctx,
+        TestGatewayOptions {
+            listener: Some(listener.clone()),
+            capabilities: vec![foxglove::remote_access::Capability::ClientPublish],
+            ..Default::default()
+        },
+    )
+    .await?;
+
+    let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+    let _server_info = viewer.frame_reader.next_server_message().await?;
+
+    // Advertise a channel first.
+    viewer
+        .send_client_advertise(&[ClientChannelDesc {
+            id: 42,
+            topic: "/joy".to_string(),
+            encoding: "json".to_string(),
+        }])
+        .await?;
+    poll_until(|| listener.advertised().len() == 1).await;
+
+    // Now unadvertise it.
+    viewer.send_client_unadvertise(&[42]).await?;
+    poll_until(|| listener.unadvertised().len() == 1).await;
+
+    let unadvertised = listener.unadvertised();
+    assert_eq!(unadvertised.len(), 1);
+    assert_eq!(unadvertised[0].0, "viewer-1");
+    assert_eq!(unadvertised[0].1, "/joy");
+    info!(
+        "on_client_unadvertise callback validated: {:?}",
+        unadvertised[0]
+    );
+
+    viewer.close().await?;
+    gw.stop().await?;
+    Ok(())
+}
+
+/// Test that when a viewer disconnects, `on_client_unadvertise` fires for all channels
+/// the viewer had advertised.
+#[traced_test]
+#[ignore]
+#[tokio::test]
+#[serial(livekit)]
+async fn livekit_client_disconnect_fires_unadvertise_for_advertised_channels() -> Result<()> {
+    use std::sync::Arc;
+    let ctx = foxglove::Context::new();
+    let listener = Arc::new(MockListener::default());
+
+    let gw = TestGateway::start_with_options(
+        &ctx,
+        TestGatewayOptions {
+            listener: Some(listener.clone()),
+            capabilities: vec![foxglove::remote_access::Capability::ClientPublish],
+            ..Default::default()
+        },
+    )
+    .await?;
+
+    let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+    let _server_info = viewer.frame_reader.next_server_message().await?;
+
+    // Advertise two channels.
+    viewer
+        .send_client_advertise(&[
+            ClientChannelDesc {
+                id: 1,
+                topic: "/cmd_vel".to_string(),
+                encoding: "json".to_string(),
+            },
+            ClientChannelDesc {
+                id: 2,
+                topic: "/joy".to_string(),
+                encoding: "json".to_string(),
+            },
+        ])
+        .await?;
+    poll_until(|| listener.advertised().len() == 2).await;
+
+    // Disconnect the viewer — the gateway should fire on_client_unadvertise for both channels.
+    viewer.close().await?;
+    poll_until(|| listener.unadvertised().len() == 2).await;
+
+    let unadvertised = listener.unadvertised();
+    assert_eq!(unadvertised.len(), 2);
+    let topics: Vec<&str> = unadvertised.iter().map(|(_, t)| t.as_str()).collect();
+    assert!(
+        topics.contains(&"/cmd_vel"),
+        "expected /cmd_vel in unadvertised: {topics:?}"
+    );
+    assert!(
+        topics.contains(&"/joy"),
+        "expected /joy in unadvertised: {topics:?}"
+    );
+    info!("disconnect unadvertise validated: {unadvertised:?}");
+
     gw.stop().await?;
     Ok(())
 }

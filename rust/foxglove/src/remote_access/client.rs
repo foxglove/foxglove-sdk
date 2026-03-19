@@ -7,7 +7,6 @@ pub struct Client {
 }
 
 impl Client {
-    #[expect(dead_code)]
     pub(crate) fn new(id: ParticipantIdentity) -> Self {
         Self { id }
     }
