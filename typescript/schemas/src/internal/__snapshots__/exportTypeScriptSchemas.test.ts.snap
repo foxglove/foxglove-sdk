@@ -671,7 +671,7 @@ export type LocationFix = {
   speed?: number;
 
   /** Direction of travel for the reported speed, in radians clockwise from true north */
-  course_heading?: number;
+  course?: number;
 
   /** Color used to visualize the location */
   color?: Color;

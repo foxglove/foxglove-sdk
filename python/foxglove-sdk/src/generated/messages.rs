@@ -1541,7 +1541,7 @@ impl From<LinePrimitive> for foxglove::messages::LinePrimitive {
 /// :param heading: Compass heading in radians, measured clockwise from true north
 /// :param heading_variance: Heading variance in rad^2
 /// :param speed: Scalar speed in m/s
-/// :param course_heading: Direction of travel for the reported speed, in radians clockwise from true north
+/// :param course: Direction of travel for the reported speed, in radians clockwise from true north
 /// :param color: Color used to visualize the location
 /// :param metadata: Additional user-provided metadata associated with the location fix. Keys must be unique.
 ///
@@ -1552,7 +1552,7 @@ pub(crate) struct LocationFix(pub(crate) foxglove::messages::LocationFix);
 #[pymethods]
 impl LocationFix {
     #[new]
-    #[pyo3(signature = (*, timestamp=None, frame_id="", latitude=0.0, longitude=0.0, altitude=0.0, position_covariance=None, position_covariance_type=LocationFixPositionCovarianceType::Unknown, heading=None, heading_variance=None, speed=None, course_heading=None, color=None, metadata=None) )]
+    #[pyo3(signature = (*, timestamp=None, frame_id="", latitude=0.0, longitude=0.0, altitude=0.0, position_covariance=None, position_covariance_type=LocationFixPositionCovarianceType::Unknown, heading=None, heading_variance=None, speed=None, course=None, color=None, metadata=None) )]
     fn new(
         timestamp: Option<Timestamp>,
         frame_id: &str,
@@ -1564,7 +1564,7 @@ impl LocationFix {
         heading: Option<f64>,
         heading_variance: Option<f64>,
         speed: Option<f64>,
-        course_heading: Option<f64>,
+        course: Option<f64>,
         color: Option<Color>,
         metadata: Option<Vec<KeyValuePair>>,
     ) -> Self {
@@ -1579,7 +1579,7 @@ impl LocationFix {
             heading,
             heading_variance,
             speed,
-            course_heading,
+            course,
             color: color.map(Into::into),
             metadata: metadata
                 .unwrap_or_default()
@@ -1590,7 +1590,7 @@ impl LocationFix {
     }
     fn __repr__(&self) -> String {
         format!(
-            "LocationFix(timestamp={:?}, frame_id={:?}, latitude={:?}, longitude={:?}, altitude={:?}, position_covariance={:?}, position_covariance_type={:?}, heading={:?}, heading_variance={:?}, speed={:?}, course_heading={:?}, color={:?}, metadata={:?})",
+            "LocationFix(timestamp={:?}, frame_id={:?}, latitude={:?}, longitude={:?}, altitude={:?}, position_covariance={:?}, position_covariance_type={:?}, heading={:?}, heading_variance={:?}, speed={:?}, course={:?}, color={:?}, metadata={:?})",
             self.0.timestamp,
             self.0.frame_id,
             self.0.latitude,
@@ -1601,7 +1601,7 @@ impl LocationFix {
             self.0.heading,
             self.0.heading_variance,
             self.0.speed,
-            self.0.course_heading,
+            self.0.course,
             self.0.color,
             self.0.metadata,
         )

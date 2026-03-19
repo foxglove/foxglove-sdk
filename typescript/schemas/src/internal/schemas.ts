@@ -1628,6 +1628,7 @@ const LocationFix: FoxgloveMessageSchema = {
       type: { type: "primitive", name: "float64" },
       description: "Compass heading in radians, measured clockwise from true north",
       protobufFieldNumber: 10,
+      flatbuffersFieldNumber: 9,
       optional: true,
     },
     {
@@ -1635,6 +1636,7 @@ const LocationFix: FoxgloveMessageSchema = {
       type: { type: "primitive", name: "float64" },
       description: "Heading variance in rad^2",
       protobufFieldNumber: 11,
+      flatbuffersFieldNumber: 10,
       optional: true,
     },
     {
@@ -1642,14 +1644,16 @@ const LocationFix: FoxgloveMessageSchema = {
       type: { type: "primitive", name: "float64" },
       description: "Scalar speed in m/s",
       protobufFieldNumber: 12,
+      flatbuffersFieldNumber: 11,
       optional: true,
     },
     {
-      name: "course_heading",
+      name: "course",
       type: { type: "primitive", name: "float64" },
       description:
         "Direction of travel for the reported speed, in radians clockwise from true north",
       protobufFieldNumber: 13,
+      flatbuffersFieldNumber: 12,
       optional: true,
     },
     {

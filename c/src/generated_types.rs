@@ -3565,7 +3565,7 @@ pub struct LocationFix {
     pub speed: *const f64,
 
     /// Direction of travel for the reported speed, in radians clockwise from true north
-    pub course_heading: *const f64,
+    pub course: *const f64,
 
     /// Color used to visualize the location
     pub color: *const Color,
@@ -3637,7 +3637,7 @@ impl BorrowToNative for LocationFix {
             heading: unsafe { self.heading.as_ref().copied() },
             heading_variance: unsafe { self.heading_variance.as_ref().copied() },
             speed: unsafe { self.speed.as_ref().copied() },
-            course_heading: unsafe { self.course_heading.as_ref().copied() },
+            course: unsafe { self.course.as_ref().copied() },
             color: color.map(ManuallyDrop::into_inner),
             metadata: ManuallyDrop::into_inner(metadata),
         }))

@@ -606,7 +606,7 @@ pub struct LocationFix {
     pub speed: ::core::option::Option<f64>,
     /// Direction of travel for the reported speed, in radians clockwise from true north
     #[prost(double, optional, tag = "13")]
-    pub course_heading: ::core::option::Option<f64>,
+    pub course: ::core::option::Option<f64>,
     /// Color used to visualize the location
     #[prost(message, optional, tag = "8")]
     pub color: ::core::option::Option<Color>,

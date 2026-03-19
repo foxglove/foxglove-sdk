@@ -1858,7 +1858,7 @@ void locationFixToC(
   dest.heading = src.heading ? &*src.heading : nullptr;
   dest.heading_variance = src.heading_variance ? &*src.heading_variance : nullptr;
   dest.speed = src.speed ? &*src.speed : nullptr;
-  dest.course_heading = src.course_heading ? &*src.course_heading : nullptr;
+  dest.course = src.course ? &*src.course : nullptr;
   dest.color = src.color ? reinterpret_cast<const foxglove_color*>(&*src.color) : nullptr;
   dest.metadata = arena.map<foxglove_key_value_pair>(src.metadata, keyValuePairToC);
   dest.metadata_count = src.metadata.size();

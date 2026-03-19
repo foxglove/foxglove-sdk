@@ -46,7 +46,7 @@ float64 heading_variance
 float64 speed
 
 # Direction of travel for the reported speed, in radians clockwise from true north
-float64 course_heading
+float64 course
 
 # Color used to visualize the location
 foxglove_msgs/Color color

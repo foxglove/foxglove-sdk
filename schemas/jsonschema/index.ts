@@ -2521,7 +2521,7 @@ export const LocationFix = {
       "type": "number",
       "description": "Scalar speed in m/s"
     },
-    "course_heading": {
+    "course": {
       "type": "number",
       "description": "Direction of travel for the reported speed, in radians clockwise from true north"
     },
@@ -2681,7 +2681,7 @@ export const LocationFixes = {
             "type": "number",
             "description": "Scalar speed in m/s"
           },
-          "course_heading": {
+          "course": {
             "type": "number",
             "description": "Direction of travel for the reported speed, in radians clockwise from true north"
           },

@@ -1798,7 +1798,7 @@ Scalar speed in m/s
 </td>
 </tr>
 <tr>
-<td><code>course_heading</code> (optional)</td>
+<td><code>course</code> (optional)</td>
 <td>
 
 float64

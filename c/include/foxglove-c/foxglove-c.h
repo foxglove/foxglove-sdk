@@ -1329,7 +1329,7 @@ typedef struct foxglove_location_fix {
   /**
    * Direction of travel for the reported speed, in radians clockwise from true north
    */
-  const double *course_heading;
+  const double *course;
   /**
    * Color used to visualize the location
    */
