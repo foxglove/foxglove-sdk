@@ -1184,7 +1184,9 @@ mod tests {
         );
         // No orphaned entry should exist.
         assert!(
-            state.remove_client_channel(&id, ChannelId::new(1)).is_none()
+            state
+                .remove_client_channel(&id, ChannelId::new(1))
+                .is_none()
         );
     }
 
