@@ -28,6 +28,7 @@ import {
   generatePySchemaStub,
   generateChannelClasses,
   generatePyChannelStub,
+  generatePyMessageModule,
   generatePySchemaModule,
   generatePyChannelModule,
 } from "../typescript/schemas/src/internal/generatePyclass";
@@ -96,6 +97,7 @@ async function main({ clean }: { clean: boolean }) {
     await rimraf(pythonSdkGeneratedRoot);
     await rimraf(path.join(pythonSdkPyRoot, "_foxglove_py/schemas.pyi"));
     await rimraf(path.join(pythonSdkPyRoot, "schemas/__init__.py"));
+    await rimraf(path.join(pythonSdkPyRoot, "messages/__init__.py"));
     await rimraf(path.join(pythonSdkPyRoot, "_foxglove_py/channels.pyi"));
     await rimraf(path.join(pythonSdkPyRoot, "_foxglove_py/messages.pyi"));
     await rimraf(path.join(pythonSdkPyRoot, "channels/__init__.py"));
@@ -277,6 +279,8 @@ async function main({ clean }: { clean: boolean }) {
     const channelStubFile = path.join(pythonSdkPyRoot, "_foxglove_py/channels.pyi");
     const channelStubModule = path.join(pythonSdkPyRoot, "channels/__init__.py");
 
+    const messagesModule = path.join(pythonSdkPyRoot, "messages/__init__.py");
+
     await fs.writeFile(messagesStubFile, generatePySchemaStub(allSchemas));
     await fs.writeFile(
       schemasStubFile,
@@ -286,6 +290,7 @@ async function main({ clean }: { clean: boolean }) {
         "",
       ].join("\n"),
     );
+    await fs.writeFile(messagesModule, generatePyMessageModule(allSchemas));
     await fs.writeFile(schemasStubModule, generatePySchemaModule(allSchemas));
     await fs.writeFile(channelStubFile, generatePyChannelStub(messageSchemas));
     await fs.writeFile(channelStubModule, generatePyChannelModule(messageSchemas));
@@ -298,6 +303,7 @@ async function main({ clean }: { clean: boolean }) {
       path.resolve(schemasStubFile),
       path.resolve(messagesStubFile),
       path.resolve(channelStubFile),
+      path.resolve(messagesModule),
       path.resolve(schemasStubModule),
       path.resolve(channelStubModule),
     ];

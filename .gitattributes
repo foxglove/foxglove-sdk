@@ -12,6 +12,7 @@ python/foxglove-sdk/python/foxglove/_foxglove_py/messages.pyi linguist-generated
 python/foxglove-sdk/python/foxglove/_foxglove_py/schemas.pyi linguist-generated
 python/foxglove-sdk/python/foxglove/channels/__init__.py linguist-generated
 python/foxglove-sdk/python/foxglove/layouts/__init__.py linguist-generated
+python/foxglove-sdk/python/foxglove/messages/__init__.py linguist-generated
 python/foxglove-sdk/python/foxglove/schemas/__init__.py linguist-generated
 python/foxglove-sdk/src/generated/* linguist-generated
 rust/foxglove/src/schemas/descriptors.rs linguist-generated
