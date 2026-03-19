@@ -15,8 +15,7 @@ use livekit::{Room, RoomOptions};
 use remote_access_tests::livekit_token;
 use remote_access_tests::mock_listener::MockListener;
 use remote_access_tests::test_helpers::{
-    ClientChannelDesc, TestGateway, TestGatewayOptions, ViewerConnection, poll_until,
-    EVENT_TIMEOUT,
+    ClientChannelDesc, EVENT_TIMEOUT, TestGateway, TestGatewayOptions, ViewerConnection, poll_until,
 };
 use serial_test::serial;
 use tracing::info;

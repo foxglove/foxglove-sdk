@@ -17,8 +17,9 @@ use crate::{
     library_version::get_library_version,
     protocol::v2::server::ServerInfo,
     remote_access::{
-        Capability, RemoteAccessError, credentials_provider::CredentialsProvider,
-        session::RemoteAccessSession,
+        Capability, RemoteAccessError,
+        credentials_provider::CredentialsProvider,
+        session::{CLIENT_CHANNEL_TOPIC_PREFIX, RemoteAccessSession, WS_PROTOCOL_TOPIC},
     },
 };
 
@@ -333,13 +334,22 @@ impl RemoteAccessConnection {
                         "byte stream opened from participant: {:?}, topic: {:?}",
                         participant_identity, topic
                     );
-                    if let Some(reader) = reader.take() {
-                        let session2 = session.clone();
-                        tokio::spawn(async move {
-                            session2
-                                .handle_byte_stream_from_client(participant_identity, reader)
-                                .await;
-                        });
+                    let is_expected = topic == WS_PROTOCOL_TOPIC
+                        || topic.starts_with(CLIENT_CHANNEL_TOPIC_PREFIX);
+                    if is_expected {
+                        if let Some(reader) = reader.take() {
+                            let session2 = session.clone();
+                            tokio::spawn(async move {
+                                session2
+                                    .handle_byte_stream_from_client(participant_identity, reader)
+                                    .await;
+                            });
+                        }
+                    } else {
+                        warn!(
+                            "ignoring unexpected byte stream topic from {:?}: {:?}",
+                            participant_identity, topic
+                        );
                     }
                 }
                 RoomEvent::Disconnected { reason } => {

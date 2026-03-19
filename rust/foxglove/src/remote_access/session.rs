@@ -35,7 +35,8 @@ pub(crate) use video_track::{
     VideoInputSchema, VideoMetadata, VideoPublisher, get_video_input_schema,
 };
 
-const WS_PROTOCOL_TOPIC: &str = "ws-protocol";
+pub(crate) const WS_PROTOCOL_TOPIC: &str = "ws-protocol";
+pub(crate) const CLIENT_CHANNEL_TOPIC_PREFIX: &str = "client-";
 const CHANNEL_TOPIC_PREFIX: &str = "ch-";
 const MESSAGE_FRAME_SIZE: usize = 5; // 1 byte opcode + u32 LE length
 const MAX_MESSAGE_SIZE: usize = 16 * 1024 * 1024; // 16 MiB

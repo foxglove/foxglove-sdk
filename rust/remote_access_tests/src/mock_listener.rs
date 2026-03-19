@@ -45,9 +45,10 @@ impl Listener for MockListener {
     }
 
     fn on_message_data(&self, client: Client, channel: &ChannelDescriptor, payload: &[u8]) {
-        self.message_data
-            .lock()
-            .unwrap()
-            .push((client.id().to_string(), channel.topic().to_string(), payload.to_vec()));
+        self.message_data.lock().unwrap().push((
+            client.id().to_string(),
+            channel.topic().to_string(),
+            payload.to_vec(),
+        ));
     }
 }
