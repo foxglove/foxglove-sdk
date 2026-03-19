@@ -5,6 +5,7 @@
 
 #include <chrono>
 #include <cstddef>
+#include <cstdint>
 #include <iostream>
 #include <thread>
 
@@ -20,17 +21,19 @@ using namespace std::chrono_literals;
  * See https://json.nlohmann.me/features/arbitrary_types
  */
 namespace messages {
-enum MessageLevel {
+enum class MessageLevel : std::uint8_t {
   DEBUG,
   INFO,
 };
 
-NLOHMANN_JSON_SERIALIZE_ENUM(MessageLevel, {{DEBUG, "debug"}, {INFO, "info"}})
+NLOHMANN_JSON_SERIALIZE_ENUM(
+  MessageLevel, {{MessageLevel::DEBUG, "debug"}, {MessageLevel::INFO, "info"}}
+)
 
 struct Message {
-  MessageLevel level;
+  MessageLevel level{};
   std::string msg;
-  int count;
+  int count{};
 };
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Message, level, msg, count)
@@ -43,6 +46,7 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Message, level, msg, count)
  * Two channels are created: one with a derived JSON schema, and one using msgpack encoding (a
  * schemaless binary format).
  */
+// NOLINTNEXTLINE(bugprone-exception-escape)
 int main() {
   foxglove::McapWriterOptions mcap_options = {};
   mcap_options.path = "auto_serialized.mcap";

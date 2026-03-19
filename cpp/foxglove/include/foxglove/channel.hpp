@@ -7,10 +7,12 @@
 #include <foxglove/schemas.hpp>
 
 #include <cstdint>
+#include <functional>
 #include <map>
 #include <memory>
 #include <optional>
 #include <string>
+#include <type_traits>
 
 struct foxglove_channel;
 struct foxglove_channel_descriptor;
@@ -30,24 +32,78 @@ public:
   /// @endcond
 
   /// @brief Get the topic of the channel descriptor.
-  [[nodiscard]] const std::string_view topic() const noexcept;
+  [[nodiscard]] std::string_view topic() const noexcept;
 
   /// @brief Get the message encoding of the channel descriptor.
-  [[nodiscard]] const std::string_view message_encoding() const noexcept;
+  [[nodiscard]] std::string_view messageEncoding() const noexcept;
+
+  /// @deprecated Use messageEncoding() instead.
+  // NOLINTNEXTLINE(readability-identifier-naming)
+  [[deprecated("Use messageEncoding() instead")]] [[nodiscard]] std::string_view message_encoding(
+  ) const noexcept {
+    return messageEncoding();
+  }
 
   /// @brief Get the metadata for the channel descriptor.
-  [[nodiscard]] const std::optional<std::map<std::string, std::string>> metadata() const noexcept;
+  [[nodiscard]] std::optional<std::map<std::string, std::string>> metadata() const noexcept;
 
   /// @brief Get the schema of the channel descriptor.
-  [[nodiscard]] const std::optional<Schema> schema() const noexcept;
+  [[nodiscard]] std::optional<Schema> schema() const noexcept;
 };
 
 /// @brief A function that can be used to filter channels.
 ///
-/// @param channel Information about the channel.
+/// Accepts any callable with signature `bool(const ChannelDescriptor&)`.
+/// Callables using the previous `bool(ChannelDescriptor&&)` signature are also accepted but
+/// deprecated.
+///
 /// @return false if the channel should not be logged to the given sink. By default, all channels
 /// are logged to a sink.
-using SinkChannelFilterFn = std::function<bool(ChannelDescriptor&& channel)>;
+class SinkChannelFilterFn {
+public:
+  SinkChannelFilterFn() = default;
+
+  /// @brief Construct from a callable that takes `const ChannelDescriptor&`.
+  template<
+    typename F, typename = std::enable_if_t<
+                  std::is_invocable_r_v<bool, F, const ChannelDescriptor&> &&
+                  !std::is_same_v<std::decay_t<F>, SinkChannelFilterFn>>>
+  // NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)
+  SinkChannelFilterFn(F&& fn)
+      : fn_(std::forward<F>(fn)) {}
+
+  /// @deprecated Use a filter function taking `const ChannelDescriptor&` instead of
+  /// `ChannelDescriptor&&`.
+  template<
+    typename F,
+    typename = std::enable_if_t<
+      std::is_invocable_r_v<bool, F, ChannelDescriptor&&> &&
+      !std::is_invocable_v<F, const ChannelDescriptor&> &&
+      !std::is_same_v<std::decay_t<F>, SinkChannelFilterFn>>,
+    typename /*Disambiguate*/ = void>
+  [[deprecated(
+    "Use a filter function taking const ChannelDescriptor& instead of ChannelDescriptor&&"
+  )]]
+  // NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)
+  SinkChannelFilterFn(F&& fn)
+      : fn_([f = std::forward<F>(fn)](const ChannelDescriptor& ch) mutable {
+        auto copy = ch;
+        return f(std::move(copy));
+      }) {}
+
+  /// @brief Check if a filter function has been set.
+  explicit operator bool() const {
+    return static_cast<bool>(fn_);
+  }
+
+  /// @brief Invoke the filter function.
+  bool operator()(const ChannelDescriptor& channel) const {
+    return fn_(channel);
+  }
+
+private:
+  std::function<bool(const ChannelDescriptor&)> fn_;
+};
 
 /// @brief A channel for messages logged to a topic.
 ///
@@ -111,12 +167,25 @@ public:
   ///
   /// @return The message encoding of the channel. The value is valid only for the lifetime of the
   /// channel.
-  [[nodiscard]] std::string_view message_encoding() const noexcept;
+  [[nodiscard]] std::string_view messageEncoding() const noexcept;
+
+  /// @deprecated Use messageEncoding() instead.
+  // NOLINTNEXTLINE(readability-identifier-naming)
+  [[deprecated("Use messageEncoding() instead")]] [[nodiscard]] std::string_view message_encoding(
+  ) const noexcept {
+    return messageEncoding();
+  }
 
   /// @brief Find out if any sinks have been added to the channel.
   ///
   /// @return True if sinks have been added to the channel, false otherwise.
-  [[nodiscard]] bool has_sinks() const noexcept;
+  [[nodiscard]] bool hasSinks() const noexcept;
+
+  /// @deprecated Use hasSinks() instead.
+  // NOLINTNEXTLINE(readability-identifier-naming)
+  [[deprecated("Use hasSinks() instead")]] [[nodiscard]] bool has_sinks() const noexcept {
+    return hasSinks();
+  }
 
   /// @brief Get the schema of the channel.
   ///
@@ -126,7 +195,7 @@ public:
   /// @brief Get the metadata for the channel, set during creation.
   ///
   /// @return The metadata, or an empty map if it was not set.
-  std::optional<std::map<std::string, std::string>> metadata() const noexcept;
+  [[nodiscard]] std::optional<std::map<std::string, std::string>> metadata() const noexcept;
 
   RawChannel(const RawChannel&) = delete;
   RawChannel& operator=(const RawChannel&) = delete;

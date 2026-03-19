@@ -7,6 +7,7 @@ Checks:
   - -*
   - clang-analyzer-*
   - bugprone-*
+  - -bugprone-easily-swappable-parameters
   - concurrency-*
   - cppcoreguidelines-*
   - -cppcoreguidelines-avoid-magic-numbers
@@ -17,6 +18,7 @@ Checks:
   - -modernize-use-trailing-return-type
   - performance-*
   - portability-*
+  - -portability-avoid-pragma-once
   - readability-*
   - -readability-function-cognitive-complexity
   - -readability-identifier-length
@@ -36,11 +38,13 @@ CheckOptions:
   readability-identifier-naming.ConstantParameterCase: lower_case
   readability-identifier-naming.ConstantPointerParameterCase: lower_case
   readability-identifier-naming.ConstexprMethodCase: camelBack
-  readability-identifier-naming.ConstexprVariableCase: lower_case
+  readability-identifier-naming.ConstexprVariableCase: CamelCase
+  readability-identifier-naming.ConstexprVariablePrefix: k
   readability-identifier-naming.EnumCase: CamelCase
-  readability-identifier-naming.EnumIgnoredRegexp: foxglove_error
   readability-identifier-naming.EnumConstantCase: CamelCase
   readability-identifier-naming.FunctionCase: camelBack
+  readability-identifier-naming.EnumConstantIgnoredRegexp: "^[A-Z][A-Z0-9_]*$"
+  readability-identifier-naming.EnumIgnoredRegexp: foxglove_error
   readability-identifier-naming.MacroDefinitionCase: UPPER_CASE
   readability-identifier-naming.MemberCase: lower_case
   readability-identifier-naming.MemberIgnoredRegexp: "^on[A-Z].*" # std::function members of callback struct
@@ -49,6 +53,7 @@ CheckOptions:
   readability-identifier-naming.ParameterCase: lower_case
   readability-identifier-naming.PrivateMemberSuffix: _
   readability-identifier-naming.StaticConstantCase: CamelCase
+  readability-identifier-naming.StaticConstantPrefix: k
   readability-identifier-naming.StaticVariableCase: lower_case
   readability-identifier-naming.StructCase: CamelCase
   readability-identifier-naming.TypeAliasCase: CamelCase
