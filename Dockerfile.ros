@@ -5,6 +5,12 @@ FROM ros:$ROS_DISTRIBUTION-ros-base
 # See: http://askubuntu.com/questions/506158/unable-to-initialize-frontend-dialog-when-using-ssh
 ENV DEBIAN_FRONTEND=noninteractive
 
+ARG USE_ROS_TESTING=false
+RUN if [ "$USE_ROS_TESTING" = "true" ]; then \
+      sed -i 's|packages.ros.org/ros2/ubuntu|packages.ros.org/ros2-testing/ubuntu|g' \
+        /etc/apt/sources.list.d/ros2*.sources; \
+    fi
+
 # The ROS docker images are only updated when the underlying
 # Ubuntu layer changes; this is a limitation of being an
 # "official" docker image.  Additionally, ROS packages do
