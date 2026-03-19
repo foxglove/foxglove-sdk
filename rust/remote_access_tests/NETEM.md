@@ -135,13 +135,16 @@ COMPOSE="docker compose -f docker-compose.yaml -f docker-compose.netem.yml -f do
 # Degrade the gateway upload link
 $COMPOSE exec gateway-netem python3 /netem_impair.py delay 500ms loss 20%
 
-# Improve the viewer download (on the LiveKit sidecar, default class)
-$COMPOSE exec netem python3 /netem_impair.py default delay 2ms
-
-# Reset gateway to pristine (both directions)
+# Reset gateway upload to pristine
 $COMPOSE exec gateway-netem python3 /netem_impair.py delay 0ms
-$COMPOSE exec netem python3 /netem_impair.py default delay 0ms
+
+# Update ALL download links at once (changes every netem qdisc on the LiveKit sidecar)
+$COMPOSE exec netem python3 /netem_impair.py delay 100ms loss 3%
 ```
+
+> **Limitation:** Per-link download impairment cannot be updated independently
+> with `netem_impair.py`. It updates all netem qdiscs at once. To change a
+> single link's download, restart the stack with updated env vars.
 
 ## Scenarios
 

@@ -172,7 +172,7 @@ services:
       retries: 10
     depends_on:
       gateway-runner:
-        condition: service_started
+        condition: service_healthy
     profiles:
       - perlink
 
@@ -203,7 +203,7 @@ services:
       retries: 10
     depends_on:
       viewer-runner:
-        condition: service_started
+        condition: service_healthy
     profiles:
       - perlink
 
