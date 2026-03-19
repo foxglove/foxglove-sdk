@@ -1,0 +1,224 @@
+# Compose override that runs gateway and viewer in separate Docker containers
+# on a dedicated network, enabling per-link network impairment via tc/netem
+# classification by destination IP.
+#
+# Usage:
+#   See rust/remote_access_tests/NETEM.md for interactive testing instructions.
+#   For CI or scripted usage:
+#     yarn start-netem --perlink
+#   Or with custom impairment:
+#     NETEM_GATEWAY_UPLOAD="delay 200ms 50ms loss 5%" \
+#     NETEM_GATEWAY_DOWNLOAD="delay 200ms 50ms loss 5%" \
+#     NETEM_VIEWER_UPLOAD="delay 10ms 2ms" \
+#     NETEM_VIEWER_DOWNLOAD="delay 10ms 2ms" \
+#     yarn start-netem --perlink
+#
+# Then run tests in the containers:
+#   COMPOSE="docker compose -f docker-compose.yaml -f docker-compose.netem.yml -f docker-compose.netem-livekit.yml"
+#   $COMPOSE exec -T gateway-runner cargo test -p remote_access_tests -- --ignored perlink_docker_gateway --nocapture &
+#   $COMPOSE exec -T viewer-runner cargo test -p remote_access_tests -- --ignored perlink_docker_viewer --nocapture &
+#   wait
+#
+# Architecture:
+#   - LiveKit joins the perlink network at 10.99.0.2 with node-ip overridden so
+#     WebRTC ICE candidates point to the perlink address (not localhost).
+#   - gateway-runner (10.99.0.31): runs the gateway side of the test. High
+#     impairment simulates a device on a bad network (e.g., Starlink).
+#   - viewer-runner (10.99.0.40): runs the viewer side of the test. Low
+#     impairment simulates a user on a good network (e.g., fiber).
+#   - The netem sidecar classifies egress from LiveKit by destination IP using
+#     HTB + u32 filters, applying configurable impairment per link.
+#   - Room name is passed via PERLINK_ROOM_NAME env var. The viewer signals
+#     completion via a done file on the shared /coordination tmpfs volume.
+#
+# Node IP:
+#   LiveKit's --node-ip controls the IP address advertised in WebRTC ICE
+#   candidates. Override to 10.99.0.2 for container-based tests where the test
+#   runner is on the perlink network (instead of localhost which only works for
+#   host-connected clients).
+
+networks:
+  perlink:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.99.0.0/24
+
+volumes:
+  # Persistent caches for Rust builds inside the test containers. These
+  # survive `docker compose down` so subsequent builds are incremental.
+  netem-cargo-registry:
+  netem-cargo-git:
+  netem-target:
+  # Tmpfs volume for file-based coordination between gateway-runner and
+  # viewer-runner (done signal).
+  coordination:
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+
+services:
+  livekit:
+    # Do not set --node-ip so LiveKit auto-detects its IP from the network
+    # interfaces. This works for both host-connected clients (picks up the
+    # default network IP) and container-based tests (picks up the perlink IP).
+    command: --dev --bind 0.0.0.0
+    networks:
+      default:
+      perlink:
+        ipv4_address: 10.99.0.2
+
+  # Gateway runner for per-link tests. Runs the gateway side of the test at
+  # 10.99.0.31 (high impairment).
+  gateway-runner:
+    image: rust:1.93.0-bookworm
+    working_dir: /workspace
+    volumes:
+      - .:/workspace
+      - netem-cargo-registry:/usr/local/cargo/registry
+      - netem-cargo-git:/usr/local/cargo/git
+      - netem-target:/workspace/target-docker
+      - coordination:/coordination
+    environment:
+      CARGO_TARGET_DIR: /workspace/target-docker
+      LIVEKIT_URL: "http://10.99.0.2:7880"
+      CARGO_TERM_COLOR: always
+      # The webrtc-sys crate compiles C++ code that requires Clang.
+      CXX: clang++
+      CC: clang
+      COORDINATION_DIR: /coordination
+      PERLINK_ROOM_NAME: "${PERLINK_ROOM_NAME:-}"
+    networks:
+      perlink:
+        ipv4_address: 10.99.0.31
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        if ! command -v clang++ > /dev/null 2>&1; then
+          apt-get update -qq && apt-get install -y -qq clang libva-dev libprotobuf-dev protobuf-compiler libglib2.0-dev > /dev/null 2>&1
+        fi
+        exec sleep infinity
+    healthcheck:
+      test: ["CMD-SHELL", "command -v clang++ && test -d /workspace/rust"]
+      interval: 5s
+      timeout: 10s
+      retries: 12
+      start_period: 30s
+    depends_on:
+      livekit:
+        condition: service_healthy
+    profiles:
+      - perlink
+
+  # Viewer runner for per-link tests. Runs the viewer side of the test at
+  # 10.99.0.40 (low impairment).
+  viewer-runner:
+    image: rust:1.93.0-bookworm
+    working_dir: /workspace
+    volumes:
+      - .:/workspace
+      - netem-cargo-registry:/usr/local/cargo/registry
+      - netem-cargo-git:/usr/local/cargo/git
+      - netem-target:/workspace/target-docker
+      - coordination:/coordination
+    environment:
+      CARGO_TARGET_DIR: /workspace/target-docker
+      LIVEKIT_URL: "http://10.99.0.2:7880"
+      CARGO_TERM_COLOR: always
+      CXX: clang++
+      CC: clang
+      COORDINATION_DIR: /coordination
+      PERLINK_ROOM_NAME: "${PERLINK_ROOM_NAME:-}"
+    networks:
+      perlink:
+        ipv4_address: 10.99.0.40
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        if ! command -v clang++ > /dev/null 2>&1; then
+          apt-get update -qq && apt-get install -y -qq clang libva-dev libprotobuf-dev protobuf-compiler libglib2.0-dev > /dev/null 2>&1
+        fi
+        exec sleep infinity
+    healthcheck:
+      test: ["CMD-SHELL", "command -v clang++ && test -d /workspace/rust"]
+      interval: 5s
+      timeout: 10s
+      retries: 12
+      start_period: 30s
+    depends_on:
+      livekit:
+        condition: service_healthy
+    profiles:
+      - perlink
+
+  # Gateway upload sidecar. Shares gateway-runner's network namespace and
+  # shapes its egress (= upload to LiveKit).
+  gateway-netem:
+    image: python:3-alpine
+    network_mode: "service:gateway-runner"
+    cap_add:
+      - NET_ADMIN
+    environment:
+      NETEM_ARGS: "${NETEM_GATEWAY_UPLOAD:-delay 30ms 10ms loss 2% rate 15mbit}"
+      # Skip loopback — the WebRTC stack uses lo internally for ICE.
+      NETEM_SKIP_LOOPBACK: "1"
+    volumes:
+      - ./scripts/container/netem_setup.py:/netem_setup.py:ro
+      - ./scripts/container/netem_impair.py:/netem_impair.py:ro
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        apk add --no-cache iproute2 > /dev/null 2>&1
+        python3 /netem_setup.py || exit 1
+        exec sleep infinity
+    healthcheck:
+      test: ["CMD-SHELL", "tc qdisc show | grep -q netem"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+    depends_on:
+      gateway-runner:
+        condition: service_started
+    profiles:
+      - perlink
+
+  # Viewer upload sidecar. Shares viewer-runner's network namespace and
+  # shapes its egress (= upload to LiveKit).
+  viewer-netem:
+    image: python:3-alpine
+    network_mode: "service:viewer-runner"
+    cap_add:
+      - NET_ADMIN
+    environment:
+      NETEM_ARGS: "${NETEM_VIEWER_UPLOAD:-delay 5ms rate 100mbit}"
+      # Skip loopback — the WebRTC stack uses lo internally for ICE.
+      NETEM_SKIP_LOOPBACK: "1"
+    volumes:
+      - ./scripts/container/netem_setup.py:/netem_setup.py:ro
+      - ./scripts/container/netem_impair.py:/netem_impair.py:ro
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        apk add --no-cache iproute2 > /dev/null 2>&1
+        python3 /netem_setup.py || exit 1
+        exec sleep infinity
+    healthcheck:
+      test: ["CMD-SHELL", "tc qdisc show | grep -q netem"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+    depends_on:
+      viewer-runner:
+        condition: service_started
+    profiles:
+      - perlink
+
+  netem:
+    environment:
+      # Per-link download shaping: LiveKit netem sidecar classifies egress by
+      # destination IP. NETEM_GATEWAY_DOWNLOAD and NETEM_VIEWER_DOWNLOAD map
+      # to the HTB leaf classes for each runner's IP.
+      NETEM_LINK_GATEWAY_DST: "${NETEM_LINK_GATEWAY_DST:-}"
+      NETEM_LINK_GATEWAY_ARGS: "${NETEM_GATEWAY_DOWNLOAD:-}"
+      NETEM_LINK_VIEWER_DST: "${NETEM_LINK_VIEWER_DST:-}"
+      NETEM_LINK_VIEWER_ARGS: "${NETEM_VIEWER_DOWNLOAD:-}"
