@@ -107,8 +107,10 @@ pub(crate) struct RemoteAccessSession {
     data_plane_rx: flume::Receiver<ChannelMessage>,
     control_plane_tx: flume::Sender<ControlPlaneMessage>,
     control_plane_rx: flume::Receiver<ControlPlaneMessage>,
-    /// Serializes subscription changes and their associated video track lifecycle
-    /// operations, which must not interleave across participants.
+    /// Serializes all participant-scoped state mutations: subscription changes, video track
+    /// lifecycle operations, client channel advertise/unadvertise, and participant removal.
+    /// This prevents TOCTOU races between byte-stream message handlers and room-event handlers,
+    /// which run on separate tokio tasks.
     subscription_lock: parking_lot::Mutex<()>,
     /// Signaled by video publishers when video metadata changes, prompting
     /// the sender loop to re-advertise affected channels.
@@ -587,6 +589,7 @@ impl RemoteAccessSession {
     }
 
     fn handle_client_advertise(&self, participant: &Arc<Participant>, msg: client::Advertise<'_>) {
+        let _guard = self.subscription_lock.lock();
         if !self.has_capability(Capability::ClientPublish) {
             self.send_error(
                 participant,
@@ -652,6 +655,7 @@ impl RemoteAccessSession {
     }
 
     fn handle_client_unadvertise(&self, participant: &Arc<Participant>, msg: client::Unadvertise) {
+        let _guard = self.subscription_lock.lock();
         let client = Client::new(participant.identity().clone());
 
         for channel_id_raw in msg.channel_ids {

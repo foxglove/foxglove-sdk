@@ -163,6 +163,9 @@ impl SessionState {
         identity: &ParticipantIdentity,
         channel: ChannelDescriptor,
     ) -> bool {
+        if !self.participants.contains_key(identity) {
+            return false;
+        }
         use std::collections::hash_map::Entry;
         let map = self.client_channels.entry(identity.clone()).or_default();
         match map.entry(channel.id()) {
@@ -1165,6 +1168,23 @@ mod tests {
         let ch = make_client_channel(1, "/cmd");
 
         assert!(state.insert_client_channel(&id, ch));
+    }
+
+    #[test]
+    fn insert_client_channel_returns_false_for_unknown_participant() {
+        let mut state = SessionState::new();
+        // identity is never inserted into `participants`
+        let (id, _) = make_participant("alice");
+        let ch = make_client_channel(1, "/cmd");
+
+        assert!(
+            !state.insert_client_channel(&id, ch),
+            "should reject insert for a participant not in the participants map"
+        );
+        // No orphaned entry should exist.
+        assert!(
+            state.remove_client_channel(&id, ChannelId::new(1)).is_none()
+        );
     }
 
     #[test]
