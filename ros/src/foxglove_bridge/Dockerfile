@@ -9,7 +9,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get -y dist-upgrade && apt-get install -y git
 
 ARG ROSX_INTROSPECTION_REPO=https://github.com/facontidavide/rosx_introspection.git
-ARG ROSX_INTROSPECTION_REF=master
+ARG ROSX_INTROSPECTION_REF=cbbe9156fa0fa6c184917353dd4f52f21ead73e6
 
 # Create foxglove user
 ARG USERNAME=foxglove
