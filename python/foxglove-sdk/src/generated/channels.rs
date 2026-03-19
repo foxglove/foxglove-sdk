@@ -67,7 +67,7 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     parent_module.add_submodule(&module)
 }
 
-/// A channel for logging :py:class:`foxglove.schemas.ArrowPrimitive` messages.
+/// A channel for logging :py:class:`foxglove.messages.ArrowPrimitive` messages.
 #[pyclass(module = "foxglove.channels")]
 struct ArrowPrimitiveChannel(Channel<foxglove::schemas::ArrowPrimitive>);
 
@@ -151,7 +151,7 @@ impl ArrowPrimitiveChannel {
         self.0.close();
     }
 
-    /// Log a :py:class:`foxglove.schemas.ArrowPrimitive` message to the channel.
+    /// Log a :py:class:`foxglove.messages.ArrowPrimitive` message to the channel.
     ///
     /// :param msg: The message to log.
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
@@ -176,7 +176,7 @@ impl ArrowPrimitiveChannel {
     }
 }
 
-/// A channel for logging :py:class:`foxglove.schemas.CameraCalibration` messages.
+/// A channel for logging :py:class:`foxglove.messages.CameraCalibration` messages.
 #[pyclass(module = "foxglove.channels")]
 struct CameraCalibrationChannel(Channel<foxglove::schemas::CameraCalibration>);
 
@@ -260,7 +260,7 @@ impl CameraCalibrationChannel {
         self.0.close();
     }
 
-    /// Log a :py:class:`foxglove.schemas.CameraCalibration` message to the channel.
+    /// Log a :py:class:`foxglove.messages.CameraCalibration` message to the channel.
     ///
     /// :param msg: The message to log.
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
@@ -285,7 +285,7 @@ impl CameraCalibrationChannel {
     }
 }
 
-/// A channel for logging :py:class:`foxglove.schemas.CircleAnnotation` messages.
+/// A channel for logging :py:class:`foxglove.messages.CircleAnnotation` messages.
 #[pyclass(module = "foxglove.channels")]
 struct CircleAnnotationChannel(Channel<foxglove::schemas::CircleAnnotation>);
 
@@ -369,7 +369,7 @@ impl CircleAnnotationChannel {
         self.0.close();
     }
 
-    /// Log a :py:class:`foxglove.schemas.CircleAnnotation` message to the channel.
+    /// Log a :py:class:`foxglove.messages.CircleAnnotation` message to the channel.
     ///
     /// :param msg: The message to log.
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
@@ -394,7 +394,7 @@ impl CircleAnnotationChannel {
     }
 }
 
-/// A channel for logging :py:class:`foxglove.schemas.Color` messages.
+/// A channel for logging :py:class:`foxglove.messages.Color` messages.
 #[pyclass(module = "foxglove.channels")]
 struct ColorChannel(Channel<foxglove::schemas::Color>);
 
@@ -478,7 +478,7 @@ impl ColorChannel {
         self.0.close();
     }
 
-    /// Log a :py:class:`foxglove.schemas.Color` message to the channel.
+    /// Log a :py:class:`foxglove.messages.Color` message to the channel.
     ///
     /// :param msg: The message to log.
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
@@ -498,7 +498,7 @@ impl ColorChannel {
     }
 }
 
-/// A channel for logging :py:class:`foxglove.schemas.CompressedImage` messages.
+/// A channel for logging :py:class:`foxglove.messages.CompressedImage` messages.
 #[pyclass(module = "foxglove.channels")]
 struct CompressedImageChannel(Channel<foxglove::schemas::CompressedImage>);
 
@@ -582,7 +582,7 @@ impl CompressedImageChannel {
         self.0.close();
     }
 
-    /// Log a :py:class:`foxglove.schemas.CompressedImage` message to the channel.
+    /// Log a :py:class:`foxglove.messages.CompressedImage` message to the channel.
     ///
     /// :param msg: The message to log.
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
@@ -607,7 +607,7 @@ impl CompressedImageChannel {
     }
 }
 
-/// A channel for logging :py:class:`foxglove.schemas.CompressedVideo` messages.
+/// A channel for logging :py:class:`foxglove.messages.CompressedVideo` messages.
 #[pyclass(module = "foxglove.channels")]
 struct CompressedVideoChannel(Channel<foxglove::schemas::CompressedVideo>);
 
@@ -691,7 +691,7 @@ impl CompressedVideoChannel {
         self.0.close();
     }
 
-    /// Log a :py:class:`foxglove.schemas.CompressedVideo` message to the channel.
+    /// Log a :py:class:`foxglove.messages.CompressedVideo` message to the channel.
     ///
     /// :param msg: The message to log.
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
@@ -716,7 +716,7 @@ impl CompressedVideoChannel {
     }
 }
 
-/// A channel for logging :py:class:`foxglove.schemas.CylinderPrimitive` messages.
+/// A channel for logging :py:class:`foxglove.messages.CylinderPrimitive` messages.
 #[pyclass(module = "foxglove.channels")]
 struct CylinderPrimitiveChannel(Channel<foxglove::schemas::CylinderPrimitive>);
 
@@ -800,7 +800,7 @@ impl CylinderPrimitiveChannel {
         self.0.close();
     }
 
-    /// Log a :py:class:`foxglove.schemas.CylinderPrimitive` message to the channel.
+    /// Log a :py:class:`foxglove.messages.CylinderPrimitive` message to the channel.
     ///
     /// :param msg: The message to log.
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
@@ -825,7 +825,7 @@ impl CylinderPrimitiveChannel {
     }
 }
 
-/// A channel for logging :py:class:`foxglove.schemas.CubePrimitive` messages.
+/// A channel for logging :py:class:`foxglove.messages.CubePrimitive` messages.
 #[pyclass(module = "foxglove.channels")]
 struct CubePrimitiveChannel(Channel<foxglove::schemas::CubePrimitive>);
 
@@ -909,7 +909,7 @@ impl CubePrimitiveChannel {
         self.0.close();
     }
 
-    /// Log a :py:class:`foxglove.schemas.CubePrimitive` message to the channel.
+    /// Log a :py:class:`foxglove.messages.CubePrimitive` message to the channel.
     ///
     /// :param msg: The message to log.
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
@@ -934,7 +934,7 @@ impl CubePrimitiveChannel {
     }
 }
 
-/// A channel for logging :py:class:`foxglove.schemas.FrameTransform` messages.
+/// A channel for logging :py:class:`foxglove.messages.FrameTransform` messages.
 #[pyclass(module = "foxglove.channels")]
 struct FrameTransformChannel(Channel<foxglove::schemas::FrameTransform>);
 
@@ -1018,7 +1018,7 @@ impl FrameTransformChannel {
         self.0.close();
     }
 
-    /// Log a :py:class:`foxglove.schemas.FrameTransform` message to the channel.
+    /// Log a :py:class:`foxglove.messages.FrameTransform` message to the channel.
     ///
     /// :param msg: The message to log.
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
@@ -1043,7 +1043,7 @@ impl FrameTransformChannel {
     }
 }
 
-/// A channel for logging :py:class:`foxglove.schemas.FrameTransforms` messages.
+/// A channel for logging :py:class:`foxglove.messages.FrameTransforms` messages.
 #[pyclass(module = "foxglove.channels")]
 struct FrameTransformsChannel(Channel<foxglove::schemas::FrameTransforms>);
 
@@ -1127,7 +1127,7 @@ impl FrameTransformsChannel {
         self.0.close();
     }
 
-    /// Log a :py:class:`foxglove.schemas.FrameTransforms` message to the channel.
+    /// Log a :py:class:`foxglove.messages.FrameTransforms` message to the channel.
     ///
     /// :param msg: The message to log.
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
@@ -1152,7 +1152,7 @@ impl FrameTransformsChannel {
     }
 }
 
-/// A channel for logging :py:class:`foxglove.schemas.GeoJson` messages.
+/// A channel for logging :py:class:`foxglove.messages.GeoJson` messages.
 #[pyclass(module = "foxglove.channels")]
 struct GeoJsonChannel(Channel<foxglove::schemas::GeoJson>);
 
@@ -1236,7 +1236,7 @@ impl GeoJsonChannel {
         self.0.close();
     }
 
-    /// Log a :py:class:`foxglove.schemas.GeoJson` message to the channel.
+    /// Log a :py:class:`foxglove.messages.GeoJson` message to the channel.
     ///
     /// :param msg: The message to log.
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
@@ -1256,7 +1256,7 @@ impl GeoJsonChannel {
     }
 }
 
-/// A channel for logging :py:class:`foxglove.schemas.Grid` messages.
+/// A channel for logging :py:class:`foxglove.messages.Grid` messages.
 #[pyclass(module = "foxglove.channels")]
 struct GridChannel(Channel<foxglove::schemas::Grid>);
 
@@ -1340,7 +1340,7 @@ impl GridChannel {
         self.0.close();
     }
 
-    /// Log a :py:class:`foxglove.schemas.Grid` message to the channel.
+    /// Log a :py:class:`foxglove.messages.Grid` message to the channel.
     ///
     /// :param msg: The message to log.
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
@@ -1360,7 +1360,7 @@ impl GridChannel {
     }
 }
 
-/// A channel for logging :py:class:`foxglove.schemas.VoxelGrid` messages.
+/// A channel for logging :py:class:`foxglove.messages.VoxelGrid` messages.
 #[pyclass(module = "foxglove.channels")]
 struct VoxelGridChannel(Channel<foxglove::schemas::VoxelGrid>);
 
@@ -1444,7 +1444,7 @@ impl VoxelGridChannel {
         self.0.close();
     }
 
-    /// Log a :py:class:`foxglove.schemas.VoxelGrid` message to the channel.
+    /// Log a :py:class:`foxglove.messages.VoxelGrid` message to the channel.
     ///
     /// :param msg: The message to log.
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
@@ -1469,7 +1469,7 @@ impl VoxelGridChannel {
     }
 }
 
-/// A channel for logging :py:class:`foxglove.schemas.ImageAnnotations` messages.
+/// A channel for logging :py:class:`foxglove.messages.ImageAnnotations` messages.
 #[pyclass(module = "foxglove.channels")]
 struct ImageAnnotationsChannel(Channel<foxglove::schemas::ImageAnnotations>);
 
@@ -1553,7 +1553,7 @@ impl ImageAnnotationsChannel {
         self.0.close();
     }
 
-    /// Log a :py:class:`foxglove.schemas.ImageAnnotations` message to the channel.
+    /// Log a :py:class:`foxglove.messages.ImageAnnotations` message to the channel.
     ///
     /// :param msg: The message to log.
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
@@ -1578,7 +1578,7 @@ impl ImageAnnotationsChannel {
     }
 }
 
-/// A channel for logging :py:class:`foxglove.schemas.JointState` messages.
+/// A channel for logging :py:class:`foxglove.messages.JointState` messages.
 #[pyclass(module = "foxglove.channels")]
 struct JointStateChannel(Channel<foxglove::schemas::JointState>);
 
@@ -1662,7 +1662,7 @@ impl JointStateChannel {
         self.0.close();
     }
 
-    /// Log a :py:class:`foxglove.schemas.JointState` message to the channel.
+    /// Log a :py:class:`foxglove.messages.JointState` message to the channel.
     ///
     /// :param msg: The message to log.
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
@@ -1687,7 +1687,7 @@ impl JointStateChannel {
     }
 }
 
-/// A channel for logging :py:class:`foxglove.schemas.JointStates` messages.
+/// A channel for logging :py:class:`foxglove.messages.JointStates` messages.
 #[pyclass(module = "foxglove.channels")]
 struct JointStatesChannel(Channel<foxglove::schemas::JointStates>);
 
@@ -1771,7 +1771,7 @@ impl JointStatesChannel {
         self.0.close();
     }
 
-    /// Log a :py:class:`foxglove.schemas.JointStates` message to the channel.
+    /// Log a :py:class:`foxglove.messages.JointStates` message to the channel.
     ///
     /// :param msg: The message to log.
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
@@ -1796,7 +1796,7 @@ impl JointStatesChannel {
     }
 }
 
-/// A channel for logging :py:class:`foxglove.schemas.KeyValuePair` messages.
+/// A channel for logging :py:class:`foxglove.messages.KeyValuePair` messages.
 #[pyclass(module = "foxglove.channels")]
 struct KeyValuePairChannel(Channel<foxglove::schemas::KeyValuePair>);
 
@@ -1880,7 +1880,7 @@ impl KeyValuePairChannel {
         self.0.close();
     }
 
-    /// Log a :py:class:`foxglove.schemas.KeyValuePair` message to the channel.
+    /// Log a :py:class:`foxglove.messages.KeyValuePair` message to the channel.
     ///
     /// :param msg: The message to log.
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
@@ -1905,7 +1905,7 @@ impl KeyValuePairChannel {
     }
 }
 
-/// A channel for logging :py:class:`foxglove.schemas.LaserScan` messages.
+/// A channel for logging :py:class:`foxglove.messages.LaserScan` messages.
 #[pyclass(module = "foxglove.channels")]
 struct LaserScanChannel(Channel<foxglove::schemas::LaserScan>);
 
@@ -1989,7 +1989,7 @@ impl LaserScanChannel {
         self.0.close();
     }
 
-    /// Log a :py:class:`foxglove.schemas.LaserScan` message to the channel.
+    /// Log a :py:class:`foxglove.messages.LaserScan` message to the channel.
     ///
     /// :param msg: The message to log.
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
@@ -2014,7 +2014,7 @@ impl LaserScanChannel {
     }
 }
 
-/// A channel for logging :py:class:`foxglove.schemas.LinePrimitive` messages.
+/// A channel for logging :py:class:`foxglove.messages.LinePrimitive` messages.
 #[pyclass(module = "foxglove.channels")]
 struct LinePrimitiveChannel(Channel<foxglove::schemas::LinePrimitive>);
 
@@ -2098,7 +2098,7 @@ impl LinePrimitiveChannel {
         self.0.close();
     }
 
-    /// Log a :py:class:`foxglove.schemas.LinePrimitive` message to the channel.
+    /// Log a :py:class:`foxglove.messages.LinePrimitive` message to the channel.
     ///
     /// :param msg: The message to log.
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
@@ -2123,7 +2123,7 @@ impl LinePrimitiveChannel {
     }
 }
 
-/// A channel for logging :py:class:`foxglove.schemas.LocationFix` messages.
+/// A channel for logging :py:class:`foxglove.messages.LocationFix` messages.
 #[pyclass(module = "foxglove.channels")]
 struct LocationFixChannel(Channel<foxglove::schemas::LocationFix>);
 
@@ -2207,7 +2207,7 @@ impl LocationFixChannel {
         self.0.close();
     }
 
-    /// Log a :py:class:`foxglove.schemas.LocationFix` message to the channel.
+    /// Log a :py:class:`foxglove.messages.LocationFix` message to the channel.
     ///
     /// :param msg: The message to log.
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
@@ -2232,7 +2232,7 @@ impl LocationFixChannel {
     }
 }
 
-/// A channel for logging :py:class:`foxglove.schemas.LocationFixes` messages.
+/// A channel for logging :py:class:`foxglove.messages.LocationFixes` messages.
 #[pyclass(module = "foxglove.channels")]
 struct LocationFixesChannel(Channel<foxglove::schemas::LocationFixes>);
 
@@ -2316,7 +2316,7 @@ impl LocationFixesChannel {
         self.0.close();
     }
 
-    /// Log a :py:class:`foxglove.schemas.LocationFixes` message to the channel.
+    /// Log a :py:class:`foxglove.messages.LocationFixes` message to the channel.
     ///
     /// :param msg: The message to log.
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
@@ -2341,7 +2341,7 @@ impl LocationFixesChannel {
     }
 }
 
-/// A channel for logging :py:class:`foxglove.schemas.Log` messages.
+/// A channel for logging :py:class:`foxglove.messages.Log` messages.
 #[pyclass(module = "foxglove.channels")]
 struct LogChannel(Channel<foxglove::schemas::Log>);
 
@@ -2425,7 +2425,7 @@ impl LogChannel {
         self.0.close();
     }
 
-    /// Log a :py:class:`foxglove.schemas.Log` message to the channel.
+    /// Log a :py:class:`foxglove.messages.Log` message to the channel.
     ///
     /// :param msg: The message to log.
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
@@ -2445,7 +2445,7 @@ impl LogChannel {
     }
 }
 
-/// A channel for logging :py:class:`foxglove.schemas.SceneEntityDeletion` messages.
+/// A channel for logging :py:class:`foxglove.messages.SceneEntityDeletion` messages.
 #[pyclass(module = "foxglove.channels")]
 struct SceneEntityDeletionChannel(Channel<foxglove::schemas::SceneEntityDeletion>);
 
@@ -2529,7 +2529,7 @@ impl SceneEntityDeletionChannel {
         self.0.close();
     }
 
-    /// Log a :py:class:`foxglove.schemas.SceneEntityDeletion` message to the channel.
+    /// Log a :py:class:`foxglove.messages.SceneEntityDeletion` message to the channel.
     ///
     /// :param msg: The message to log.
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
@@ -2554,7 +2554,7 @@ impl SceneEntityDeletionChannel {
     }
 }
 
-/// A channel for logging :py:class:`foxglove.schemas.SceneEntity` messages.
+/// A channel for logging :py:class:`foxglove.messages.SceneEntity` messages.
 #[pyclass(module = "foxglove.channels")]
 struct SceneEntityChannel(Channel<foxglove::schemas::SceneEntity>);
 
@@ -2638,7 +2638,7 @@ impl SceneEntityChannel {
         self.0.close();
     }
 
-    /// Log a :py:class:`foxglove.schemas.SceneEntity` message to the channel.
+    /// Log a :py:class:`foxglove.messages.SceneEntity` message to the channel.
     ///
     /// :param msg: The message to log.
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
@@ -2663,7 +2663,7 @@ impl SceneEntityChannel {
     }
 }
 
-/// A channel for logging :py:class:`foxglove.schemas.SceneUpdate` messages.
+/// A channel for logging :py:class:`foxglove.messages.SceneUpdate` messages.
 #[pyclass(module = "foxglove.channels")]
 struct SceneUpdateChannel(Channel<foxglove::schemas::SceneUpdate>);
 
@@ -2747,7 +2747,7 @@ impl SceneUpdateChannel {
         self.0.close();
     }
 
-    /// Log a :py:class:`foxglove.schemas.SceneUpdate` message to the channel.
+    /// Log a :py:class:`foxglove.messages.SceneUpdate` message to the channel.
     ///
     /// :param msg: The message to log.
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
@@ -2772,7 +2772,7 @@ impl SceneUpdateChannel {
     }
 }
 
-/// A channel for logging :py:class:`foxglove.schemas.ModelPrimitive` messages.
+/// A channel for logging :py:class:`foxglove.messages.ModelPrimitive` messages.
 #[pyclass(module = "foxglove.channels")]
 struct ModelPrimitiveChannel(Channel<foxglove::schemas::ModelPrimitive>);
 
@@ -2856,7 +2856,7 @@ impl ModelPrimitiveChannel {
         self.0.close();
     }
 
-    /// Log a :py:class:`foxglove.schemas.ModelPrimitive` message to the channel.
+    /// Log a :py:class:`foxglove.messages.ModelPrimitive` message to the channel.
     ///
     /// :param msg: The message to log.
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
@@ -2881,7 +2881,7 @@ impl ModelPrimitiveChannel {
     }
 }
 
-/// A channel for logging :py:class:`foxglove.schemas.PackedElementField` messages.
+/// A channel for logging :py:class:`foxglove.messages.PackedElementField` messages.
 #[pyclass(module = "foxglove.channels")]
 struct PackedElementFieldChannel(Channel<foxglove::schemas::PackedElementField>);
 
@@ -2965,7 +2965,7 @@ impl PackedElementFieldChannel {
         self.0.close();
     }
 
-    /// Log a :py:class:`foxglove.schemas.PackedElementField` message to the channel.
+    /// Log a :py:class:`foxglove.messages.PackedElementField` message to the channel.
     ///
     /// :param msg: The message to log.
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
@@ -2990,7 +2990,7 @@ impl PackedElementFieldChannel {
     }
 }
 
-/// A channel for logging :py:class:`foxglove.schemas.Point2` messages.
+/// A channel for logging :py:class:`foxglove.messages.Point2` messages.
 #[pyclass(module = "foxglove.channels")]
 struct Point2Channel(Channel<foxglove::schemas::Point2>);
 
@@ -3074,7 +3074,7 @@ impl Point2Channel {
         self.0.close();
     }
 
-    /// Log a :py:class:`foxglove.schemas.Point2` message to the channel.
+    /// Log a :py:class:`foxglove.messages.Point2` message to the channel.
     ///
     /// :param msg: The message to log.
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
@@ -3094,7 +3094,7 @@ impl Point2Channel {
     }
 }
 
-/// A channel for logging :py:class:`foxglove.schemas.Point3` messages.
+/// A channel for logging :py:class:`foxglove.messages.Point3` messages.
 #[pyclass(module = "foxglove.channels")]
 struct Point3Channel(Channel<foxglove::schemas::Point3>);
 
@@ -3178,7 +3178,7 @@ impl Point3Channel {
         self.0.close();
     }
 
-    /// Log a :py:class:`foxglove.schemas.Point3` message to the channel.
+    /// Log a :py:class:`foxglove.messages.Point3` message to the channel.
     ///
     /// :param msg: The message to log.
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
@@ -3198,7 +3198,7 @@ impl Point3Channel {
     }
 }
 
-/// A channel for logging :py:class:`foxglove.schemas.Point3InFrame` messages.
+/// A channel for logging :py:class:`foxglove.messages.Point3InFrame` messages.
 #[pyclass(module = "foxglove.channels")]
 struct Point3InFrameChannel(Channel<foxglove::schemas::Point3InFrame>);
 
@@ -3282,7 +3282,7 @@ impl Point3InFrameChannel {
         self.0.close();
     }
 
-    /// Log a :py:class:`foxglove.schemas.Point3InFrame` message to the channel.
+    /// Log a :py:class:`foxglove.messages.Point3InFrame` message to the channel.
     ///
     /// :param msg: The message to log.
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
@@ -3307,7 +3307,7 @@ impl Point3InFrameChannel {
     }
 }
 
-/// A channel for logging :py:class:`foxglove.schemas.PointCloud` messages.
+/// A channel for logging :py:class:`foxglove.messages.PointCloud` messages.
 #[pyclass(module = "foxglove.channels")]
 struct PointCloudChannel(Channel<foxglove::schemas::PointCloud>);
 
@@ -3391,7 +3391,7 @@ impl PointCloudChannel {
         self.0.close();
     }
 
-    /// Log a :py:class:`foxglove.schemas.PointCloud` message to the channel.
+    /// Log a :py:class:`foxglove.messages.PointCloud` message to the channel.
     ///
     /// :param msg: The message to log.
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
@@ -3416,7 +3416,7 @@ impl PointCloudChannel {
     }
 }
 
-/// A channel for logging :py:class:`foxglove.schemas.PointsAnnotation` messages.
+/// A channel for logging :py:class:`foxglove.messages.PointsAnnotation` messages.
 #[pyclass(module = "foxglove.channels")]
 struct PointsAnnotationChannel(Channel<foxglove::schemas::PointsAnnotation>);
 
@@ -3500,7 +3500,7 @@ impl PointsAnnotationChannel {
         self.0.close();
     }
 
-    /// Log a :py:class:`foxglove.schemas.PointsAnnotation` message to the channel.
+    /// Log a :py:class:`foxglove.messages.PointsAnnotation` message to the channel.
     ///
     /// :param msg: The message to log.
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
@@ -3525,7 +3525,7 @@ impl PointsAnnotationChannel {
     }
 }
 
-/// A channel for logging :py:class:`foxglove.schemas.Pose` messages.
+/// A channel for logging :py:class:`foxglove.messages.Pose` messages.
 #[pyclass(module = "foxglove.channels")]
 struct PoseChannel(Channel<foxglove::schemas::Pose>);
 
@@ -3609,7 +3609,7 @@ impl PoseChannel {
         self.0.close();
     }
 
-    /// Log a :py:class:`foxglove.schemas.Pose` message to the channel.
+    /// Log a :py:class:`foxglove.messages.Pose` message to the channel.
     ///
     /// :param msg: The message to log.
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
@@ -3629,7 +3629,7 @@ impl PoseChannel {
     }
 }
 
-/// A channel for logging :py:class:`foxglove.schemas.PoseInFrame` messages.
+/// A channel for logging :py:class:`foxglove.messages.PoseInFrame` messages.
 #[pyclass(module = "foxglove.channels")]
 struct PoseInFrameChannel(Channel<foxglove::schemas::PoseInFrame>);
 
@@ -3713,7 +3713,7 @@ impl PoseInFrameChannel {
         self.0.close();
     }
 
-    /// Log a :py:class:`foxglove.schemas.PoseInFrame` message to the channel.
+    /// Log a :py:class:`foxglove.messages.PoseInFrame` message to the channel.
     ///
     /// :param msg: The message to log.
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
@@ -3738,7 +3738,7 @@ impl PoseInFrameChannel {
     }
 }
 
-/// A channel for logging :py:class:`foxglove.schemas.PosesInFrame` messages.
+/// A channel for logging :py:class:`foxglove.messages.PosesInFrame` messages.
 #[pyclass(module = "foxglove.channels")]
 struct PosesInFrameChannel(Channel<foxglove::schemas::PosesInFrame>);
 
@@ -3822,7 +3822,7 @@ impl PosesInFrameChannel {
         self.0.close();
     }
 
-    /// Log a :py:class:`foxglove.schemas.PosesInFrame` message to the channel.
+    /// Log a :py:class:`foxglove.messages.PosesInFrame` message to the channel.
     ///
     /// :param msg: The message to log.
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
@@ -3847,7 +3847,7 @@ impl PosesInFrameChannel {
     }
 }
 
-/// A channel for logging :py:class:`foxglove.schemas.Quaternion` messages.
+/// A channel for logging :py:class:`foxglove.messages.Quaternion` messages.
 #[pyclass(module = "foxglove.channels")]
 struct QuaternionChannel(Channel<foxglove::schemas::Quaternion>);
 
@@ -3931,7 +3931,7 @@ impl QuaternionChannel {
         self.0.close();
     }
 
-    /// Log a :py:class:`foxglove.schemas.Quaternion` message to the channel.
+    /// Log a :py:class:`foxglove.messages.Quaternion` message to the channel.
     ///
     /// :param msg: The message to log.
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
@@ -3956,7 +3956,7 @@ impl QuaternionChannel {
     }
 }
 
-/// A channel for logging :py:class:`foxglove.schemas.RawAudio` messages.
+/// A channel for logging :py:class:`foxglove.messages.RawAudio` messages.
 #[pyclass(module = "foxglove.channels")]
 struct RawAudioChannel(Channel<foxglove::schemas::RawAudio>);
 
@@ -4040,7 +4040,7 @@ impl RawAudioChannel {
         self.0.close();
     }
 
-    /// Log a :py:class:`foxglove.schemas.RawAudio` message to the channel.
+    /// Log a :py:class:`foxglove.messages.RawAudio` message to the channel.
     ///
     /// :param msg: The message to log.
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
@@ -4065,7 +4065,7 @@ impl RawAudioChannel {
     }
 }
 
-/// A channel for logging :py:class:`foxglove.schemas.RawImage` messages.
+/// A channel for logging :py:class:`foxglove.messages.RawImage` messages.
 #[pyclass(module = "foxglove.channels")]
 struct RawImageChannel(Channel<foxglove::schemas::RawImage>);
 
@@ -4149,7 +4149,7 @@ impl RawImageChannel {
         self.0.close();
     }
 
-    /// Log a :py:class:`foxglove.schemas.RawImage` message to the channel.
+    /// Log a :py:class:`foxglove.messages.RawImage` message to the channel.
     ///
     /// :param msg: The message to log.
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
@@ -4174,7 +4174,7 @@ impl RawImageChannel {
     }
 }
 
-/// A channel for logging :py:class:`foxglove.schemas.SpherePrimitive` messages.
+/// A channel for logging :py:class:`foxglove.messages.SpherePrimitive` messages.
 #[pyclass(module = "foxglove.channels")]
 struct SpherePrimitiveChannel(Channel<foxglove::schemas::SpherePrimitive>);
 
@@ -4258,7 +4258,7 @@ impl SpherePrimitiveChannel {
         self.0.close();
     }
 
-    /// Log a :py:class:`foxglove.schemas.SpherePrimitive` message to the channel.
+    /// Log a :py:class:`foxglove.messages.SpherePrimitive` message to the channel.
     ///
     /// :param msg: The message to log.
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
@@ -4283,7 +4283,7 @@ impl SpherePrimitiveChannel {
     }
 }
 
-/// A channel for logging :py:class:`foxglove.schemas.TextAnnotation` messages.
+/// A channel for logging :py:class:`foxglove.messages.TextAnnotation` messages.
 #[pyclass(module = "foxglove.channels")]
 struct TextAnnotationChannel(Channel<foxglove::schemas::TextAnnotation>);
 
@@ -4367,7 +4367,7 @@ impl TextAnnotationChannel {
         self.0.close();
     }
 
-    /// Log a :py:class:`foxglove.schemas.TextAnnotation` message to the channel.
+    /// Log a :py:class:`foxglove.messages.TextAnnotation` message to the channel.
     ///
     /// :param msg: The message to log.
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
@@ -4392,7 +4392,7 @@ impl TextAnnotationChannel {
     }
 }
 
-/// A channel for logging :py:class:`foxglove.schemas.TextPrimitive` messages.
+/// A channel for logging :py:class:`foxglove.messages.TextPrimitive` messages.
 #[pyclass(module = "foxglove.channels")]
 struct TextPrimitiveChannel(Channel<foxglove::schemas::TextPrimitive>);
 
@@ -4476,7 +4476,7 @@ impl TextPrimitiveChannel {
         self.0.close();
     }
 
-    /// Log a :py:class:`foxglove.schemas.TextPrimitive` message to the channel.
+    /// Log a :py:class:`foxglove.messages.TextPrimitive` message to the channel.
     ///
     /// :param msg: The message to log.
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
@@ -4501,7 +4501,7 @@ impl TextPrimitiveChannel {
     }
 }
 
-/// A channel for logging :py:class:`foxglove.schemas.TriangleListPrimitive` messages.
+/// A channel for logging :py:class:`foxglove.messages.TriangleListPrimitive` messages.
 #[pyclass(module = "foxglove.channels")]
 struct TriangleListPrimitiveChannel(Channel<foxglove::schemas::TriangleListPrimitive>);
 
@@ -4585,7 +4585,7 @@ impl TriangleListPrimitiveChannel {
         self.0.close();
     }
 
-    /// Log a :py:class:`foxglove.schemas.TriangleListPrimitive` message to the channel.
+    /// Log a :py:class:`foxglove.messages.TriangleListPrimitive` message to the channel.
     ///
     /// :param msg: The message to log.
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
@@ -4615,7 +4615,7 @@ impl TriangleListPrimitiveChannel {
     }
 }
 
-/// A channel for logging :py:class:`foxglove.schemas.Vector2` messages.
+/// A channel for logging :py:class:`foxglove.messages.Vector2` messages.
 #[pyclass(module = "foxglove.channels")]
 struct Vector2Channel(Channel<foxglove::schemas::Vector2>);
 
@@ -4699,7 +4699,7 @@ impl Vector2Channel {
         self.0.close();
     }
 
-    /// Log a :py:class:`foxglove.schemas.Vector2` message to the channel.
+    /// Log a :py:class:`foxglove.messages.Vector2` message to the channel.
     ///
     /// :param msg: The message to log.
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
@@ -4719,7 +4719,7 @@ impl Vector2Channel {
     }
 }
 
-/// A channel for logging :py:class:`foxglove.schemas.Vector3` messages.
+/// A channel for logging :py:class:`foxglove.messages.Vector3` messages.
 #[pyclass(module = "foxglove.channels")]
 struct Vector3Channel(Channel<foxglove::schemas::Vector3>);
 
@@ -4803,7 +4803,7 @@ impl Vector3Channel {
         self.0.close();
     }
 
-    /// Log a :py:class:`foxglove.schemas.Vector3` message to the channel.
+    /// Log a :py:class:`foxglove.messages.Vector3` message to the channel.
     ///
     /// :param msg: The message to log.
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the

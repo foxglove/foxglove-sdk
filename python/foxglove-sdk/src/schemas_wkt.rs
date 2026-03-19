@@ -8,7 +8,7 @@ use pyo3::types::{PyDateTime, PyTzInfo};
 ///
 /// :param sec: The number of seconds since a user-defined epoch.
 /// :param nsec: The number of nanoseconds since the sec value.
-#[pyclass(module = "foxglove.schemas", eq)]
+#[pyclass(module = "foxglove.messages", eq)]
 #[derive(Clone, PartialEq, Eq)]
 pub struct Timestamp(foxglove::messages::Timestamp);
 
@@ -123,7 +123,7 @@ impl From<Timestamp> for foxglove::messages::Timestamp {
 ///
 /// :param sec: The number of seconds in the duration.
 /// :param nsec: The number of nanoseconds in the positive direction.
-#[pyclass(module = "foxglove.schemas", eq)]
+#[pyclass(module = "foxglove.messages", eq)]
 #[derive(Clone, PartialEq, Eq)]
 pub struct Duration(foxglove::messages::Duration);
 

@@ -280,7 +280,7 @@ function generateMessageClass(schema: FoxgloveMessageSchema): string {
     ...schema.fields.map((field) => rustDoc(pythonParamDoc(field))),
     `///`,
     `/// See https://docs.foxglove.dev/docs/visualization/message-schemas/${constantToKebabCase(className)}`,
-    `#[pyclass(module = "foxglove.schemas")]`,
+    `#[pyclass(module = "foxglove.messages")]`,
     `#[derive(Clone)]`,
     `pub(crate) struct ${className}(pub(crate) foxglove::schemas::${className});`,
   ];
@@ -381,7 +381,7 @@ function generateMessageClass(schema: FoxgloveMessageSchema): string {
 function generateEnumClass(schema: FoxgloveEnumSchema): string {
   const enumLines = [
     rustDoc(schema.description),
-    `#[pyclass(eq, eq_int, module = "foxglove.schemas")]`,
+    `#[pyclass(eq, eq_int, module = "foxglove.messages")]`,
     `#[derive(PartialEq, Clone)]`,
     `pub(crate) enum ${enumName(schema)} {`,
     ...schema.values.map((value) => `    ${constantToTitleCase(value.name)} = ${value.value},`),
@@ -713,7 +713,7 @@ export function generateChannelClasses(messageSchemas: FoxgloveMessageSchema[]):
     const schemaClass = structName(schema.name);
     const channelClass = `${schemaClass}Channel`;
     return `
-/// A channel for logging :py:class:\`foxglove.schemas.${schemaClass}\` messages.
+/// A channel for logging :py:class:\`foxglove.messages.${schemaClass}\` messages.
 #[pyclass(module = "foxglove.channels")]
 struct ${channelClass}(Channel<foxglove::schemas::${schemaClass}>);
 
@@ -793,7 +793,7 @@ impl ${channelClass} {
         self.0.close();
     }
 
-    /// Log a :py:class:\`foxglove.schemas.${schemaClass}\` message to the channel.
+    /// Log a :py:class:\`foxglove.messages.${schemaClass}\` message to the channel.
     ///
     /// :param msg: The message to log.
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
