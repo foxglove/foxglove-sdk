@@ -1,13 +1,16 @@
 use crate::ChannelDescriptor;
 
 use super::client::Client;
+use super::connection::ConnectionStatus;
 
 /// Provides a mechanism for registering callbacks for handling client message events.
 ///
-/// These methods are invoked from the client's main poll loop and must not block. If blocking or
+/// These methods are invoked from time-sensitive contexts and must not block. If blocking or
 /// long-running behavior is required, the implementation should use [`tokio::task::spawn`] (or
 /// [`tokio::task::spawn_blocking`]).
 pub trait Listener: Send + Sync {
+    /// Callback invoked when the gateway connection status changes.
+    fn on_connection_status_changed(&self, _status: ConnectionStatus) {}
     /// Callback invoked when a client message is received.
     fn on_message_data(&self, _client: Client, _channel: &ChannelDescriptor, _payload: &[u8]) {}
     /// Callback invoked when a client subscribes to a channel.
