@@ -14,6 +14,7 @@ use tokio::io::AsyncReadExt;
 use tokio_util::{io::StreamReader, sync::CancellationToken};
 use tracing::{debug, error, info, warn};
 
+use crate::protocol::v2::DecodeError;
 use crate::remote_access::participant::ChannelWriter;
 use crate::{
     ChannelDescriptor, ChannelId, Context, FoxgloveError, Metadata, RawChannel, Schema, Sink,
@@ -610,7 +611,7 @@ impl RemoteAccessSession {
                     encoding: ch.schema_encoding.as_deref().unwrap_or("").to_string(),
                     data: data.into(),
                 }),
-                Err(crate::protocol::v1::schema::DecodeError::MissingSchema) => None,
+                Err(DecodeError::MissingSchema) => None,
                 Err(e) => {
                     warn!(
                         "Failed to decode schema for advertised channel {}: {e:?}",
