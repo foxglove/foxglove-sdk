@@ -124,7 +124,7 @@ export function generatePySchemaStub(schemas: FoxgloveSchema[]): string {
   const enumMarker = "#\n# Enums\n#\n";
   const classMarker = "#\n# Classes\n#\n";
 
-  const typeUnion = `\nFoxgloveSchema = Union[${allSchemas.join(", ")}];\n`;
+  const typeUnion = `\nFoxgloveSchema = Union[${allSchemas.join(", ")}]\n`;
 
   return [header, enumMarker, ...enumSources, classMarker, ...classSources, typeUnion].join("\n");
 }
@@ -163,7 +163,7 @@ export function generatePyMessageModule(schemas: FoxgloveSchema[]): string {
     ...classNames.map((name) => `    "${name}",`),
     "]",
   ];
-  const alias = `FoxgloveMessage = Union[${allSchemas.join(", ")}];\n`;
+  const alias = `FoxgloveMessage = Union[${allSchemas.join(", ")}]\n`;
 
   return [...headers, ...imports, alias, ...exports, ""].join("\n");
 }
@@ -211,7 +211,7 @@ export function generatePySchemaModule(schemas: FoxgloveSchema[]): string {
     ...classNames.map((name) => `    "${name}",`),
     "]",
   ];
-  const alias = `FoxgloveSchema = Union[${allSchemas.join(", ")}];\n`;
+  const alias = `FoxgloveSchema = Union[${allSchemas.join(", ")}]\n`;
 
   return [...headers, ...imports, alias, ...exports, ""].join("\n");
 }
