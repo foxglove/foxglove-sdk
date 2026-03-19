@@ -116,12 +116,8 @@ FoxgloveMessage = Union[
     VoxelGrid,
 ]
 
-#: Deprecated alias for ``FoxgloveMessage``.
-FoxgloveSchema = FoxgloveMessage
-
 __all__ = [
     "FoxgloveMessage",
-    "FoxgloveSchema",
     "ArrowPrimitive",
     "CameraCalibration",
     "CircleAnnotation",

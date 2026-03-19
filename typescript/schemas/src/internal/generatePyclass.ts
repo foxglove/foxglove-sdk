@@ -162,7 +162,7 @@ export function generatePySchemaModule(schemas: FoxgloveSchema[]): string {
     "",
   ];
   const imports = [
-    "from foxglove._foxglove_py.schemas import (  # noqa: E402",
+    "from foxglove.messages import (  # noqa: E402",
     ...classNames.map((name) => `    ${name},`),
     ")",
   ];

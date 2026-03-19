@@ -184,7 +184,7 @@ def log(
                 channel = channel_cls(topic)
         if channel is None:
             raise ValueError(
-                f"No Foxglove schema channel found for message type {schema_name}"
+                f"No Foxglove channel found for message type {schema_name}"
             )
 
         channel_id = channel.base.id() if hasattr(channel, "base") else channel.id()

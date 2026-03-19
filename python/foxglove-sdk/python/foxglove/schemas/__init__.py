@@ -20,7 +20,7 @@ _warnings.warn(
     stacklevel=2,
 )
 
-from foxglove._foxglove_py.schemas import (  # noqa: E402
+from foxglove.messages import (  # noqa: E402
     ArrowPrimitive,
     CameraCalibration,
     CircleAnnotation,
