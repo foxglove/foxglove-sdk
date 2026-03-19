@@ -3,6 +3,10 @@ USE_LOCAL_SDK := OFF
 EXTRA_DOCKER_ARGS :=
 DOCKER_USER_ARGS :=
 GTEST_REPEAT := 1
+ROSDEP_SKIP_KEYS :=
+ROSDEP_SKIP_KEYS_ARG := $(if $(strip $(ROSDEP_SKIP_KEYS)),--skip-keys "$(ROSDEP_SKIP_KEYS)")
+ROSX_INTROSPECTION_OVERLAY := /opt/rosx_introspection/install/setup.bash
+ROS_ENV_PREFIX := if [ -f "$(ROSX_INTROSPECTION_OVERLAY)" ]; then . "$(ROSX_INTROSPECTION_OVERLAY)"; fi;
 
 ifeq ($(shell uname -s), Linux)
 	DOCKER_USER_ARGS = --build-arg USER_UID=$(shell id -u) --build-arg USER_GID=$(shell id -g)
@@ -17,18 +21,15 @@ clean:
 
 .PHONY: deps
 deps:
-	rosdep install -y \
-		--from-paths src \
-		--ignore-src
+	rosdep install -y --from-paths src --ignore-src $(ROSDEP_SKIP_KEYS_ARG)
 
 .PHONY: build
 build:
-	colcon build --cmake-args -DUSE_LOCAL_SDK=$(USE_LOCAL_SDK)
+	bash -lc '$(ROS_ENV_PREFIX) colcon build --cmake-args -DUSE_LOCAL_SDK=$(USE_LOCAL_SDK)'
 
 .PHONY: test
 test:
-	GTEST_REPEAT=$(GTEST_REPEAT) colcon test
-	colcon test-result --all --verbose
+	bash -lc '$(ROS_ENV_PREFIX) GTEST_REPEAT=$(GTEST_REPEAT) colcon test && colcon test-result --all --verbose'
 
 define generate_ros_targets
 .PHONY: docker-build-image-$(1)

@@ -20,7 +20,11 @@ ENV DEBIAN_FRONTEND=noninteractive
 # That ensures that we have the latest versions of the
 # ROS packages in the underlay and for what is installed
 # by rosdep.
-RUN apt-get update && apt-get -y dist-upgrade
+RUN apt-get update && apt-get -y dist-upgrade && apt-get install -y git
+
+ARG ROSX_INTROSPECTION_REPO=https://github.com/facontidavide/rosx_introspection.git
+ARG ROSX_INTROSPECTION_REF=master
+ENV ROSX_INTROSPECTION_WS=/opt/rosx_introspection
 
 # create foxglove user (or use existing user if UID matches)
 ARG USERNAME=foxglove
@@ -42,6 +46,18 @@ USER $USER_UID
 # rosdep update must run as user
 RUN rosdep update --include-eol-distros
 
+RUN if [ "$ROS_DISTRIBUTION" = "rolling" ]; then \
+    mkdir -p "$ROSX_INTROSPECTION_WS/src" && \
+    git clone --depth 1 --branch "$ROSX_INTROSPECTION_REF" "$ROSX_INTROSPECTION_REPO" "$ROSX_INTROSPECTION_WS/src/rosx_introspection" && \
+    /bin/bash -lc ". /opt/ros/$ROS_DISTRO/setup.bash && cd $ROSX_INTROSPECTION_WS && rosdep install -y --from-paths src --ignore-src && colcon build --install-base $ROSX_INTROSPECTION_WS/install"; \
+  fi
+ENV AMENT_PREFIX_PATH=$ROSX_INTROSPECTION_WS/install:$AMENT_PREFIX_PATH
+ENV CMAKE_PREFIX_PATH=$ROSX_INTROSPECTION_WS/install:$CMAKE_PREFIX_PATH
+
 WORKDIR /sdk/ros
 COPY --chown=$USER_UID:$USER_GID ./ros /sdk/ros
-RUN make deps
+RUN if [ "$ROS_DISTRIBUTION" = "rolling" ]; then \
+    make ROSDEP_SKIP_KEYS=rosx_introspection deps; \
+  else \
+    make deps; \
+  fi

@@ -6,7 +6,10 @@ FROM ros:$ROS_DISTRIBUTION-ros-base
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Keep ROS rolling base packages in sync.
-RUN apt-get update && apt-get -y dist-upgrade
+RUN apt-get update && apt-get -y dist-upgrade && apt-get install -y git
+
+ARG ROSX_INTROSPECTION_REPO=https://github.com/facontidavide/rosx_introspection.git
+ARG ROSX_INTROSPECTION_REF=master
 
 # Create foxglove user
 ARG USERNAME=foxglove
@@ -24,6 +27,10 @@ RUN rosdep update --include-eol-distros
 # Set up the workspace
 WORKDIR /ros
 COPY --chown=$USER_UID:$USER_GID . /ros/src/foxglove_bridge
+
+RUN if [ "$ROS_DISTRIBUTION" = "rolling" ]; then \
+    git clone --depth 1 --branch "$ROSX_INTROSPECTION_REF" "$ROSX_INTROSPECTION_REPO" /ros/src/rosx_introspection; \
+  fi
 
 # Install ROS dependencies
 RUN rosdep install -y \
