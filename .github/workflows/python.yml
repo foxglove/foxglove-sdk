@@ -128,6 +128,7 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           gitHubToken: ${{ secrets.FOXGLOVEBOT_GITHUB_TOKEN }}
           command: pages deploy playground/dist --project-name=foxglove-sdk-playground --branch="${{ github.head_ref || github.ref_name }}"
+          deploymentName: foxglove-sdk-playground
 
   schemas:
     runs-on: ubuntu-latest

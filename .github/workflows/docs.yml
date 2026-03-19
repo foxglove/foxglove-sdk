@@ -85,3 +85,4 @@ jobs:
           # For PRs, use the PR head branch name. Otherwise we are running on a release tag, so use
           # "main" to trigger a "production" deploy in CF pages.
           command: pages deploy artifacts --project-name=foxglove-sdk-api-docs --branch="${{ github.head_ref || 'main' }}"
+          deploymentName: foxglove-sdk-api-docs
