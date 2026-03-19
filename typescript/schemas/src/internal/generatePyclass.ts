@@ -577,19 +577,16 @@ function structName(name: string): string {
 }
 
 /**
- * Generate a rust function to register the schemas in a submodule.
+ * Generate a rust function to register the message types in a submodule.
  * https://pyo3.rs/v0.23.4/module.html
  */
 export function generateSchemaModuleRegistration(schemas: FoxgloveSchema[]): string {
   const addClasses = schemas
     .map((schema) => `module.add_class::<${pyClassName(schema)}>()?;`)
     .join("\n    ");
-  const addClassesMessages = schemas
-    .map((schema) => `messages_module.add_class::<${pyClassName(schema)}>()?;`)
-    .join("\n    ");
   return `
 pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
-    let module = PyModule::new(parent_module.py(), "schemas")?;
+    let module = PyModule::new(parent_module.py(), "messages")?;
 
     ${addClasses}
 
@@ -598,21 +595,9 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = parent_module.py();
     py.import("sys")?
         .getattr("modules")?
-        .set_item("foxglove._foxglove_py.schemas", &module)?;
+        .set_item("foxglove._foxglove_py.messages", &module)?;
 
     parent_module.add_submodule(&module)?;
-
-    // Also register as "messages" — an alias for "schemas".
-    // Both modules share the same class objects.
-    let messages_module = PyModule::new(parent_module.py(), "messages")?;
-
-    ${addClassesMessages}
-
-    py.import("sys")?
-        .getattr("modules")?
-        .set_item("foxglove._foxglove_py.messages", &messages_module)?;
-
-    parent_module.add_submodule(&messages_module)?;
 
     Ok(())
 }
