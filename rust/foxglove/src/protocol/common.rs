@@ -8,4 +8,5 @@ pub mod schema;
 pub mod server;
 
 pub use message::{BinaryMessage, BinaryPayload, JsonMessage};
+pub use parameter::DecodeError;
 pub use parse_error::ParseError;
