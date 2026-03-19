@@ -2,6 +2,10 @@
   "name": "foxglove-sdk",
   "private": true,
   "packageManager": "yarn@4.12.0",
+  "resolutions": {
+    "minimatch": "^10.2.3",
+    "serialize-javascript": "^7.0.4"
+  },
   "workspaces": [
     "typescript/*",
     "playground",

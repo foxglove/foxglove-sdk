@@ -24,7 +24,7 @@ jobs:
     outputs:
       build: ${{ github.event_name != 'pull_request' || steps.paths.outputs.c-cpp == 'true' || contains(github.event.pull_request.labels.*.name, 'ci:c-cpp') }}
     steps:
-      - uses: dorny/paths-filter@v3
+      - uses: dorny/paths-filter@v4
         if: github.event_name == 'pull_request'
         id: paths
         with:
