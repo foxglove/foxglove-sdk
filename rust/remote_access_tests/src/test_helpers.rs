@@ -588,6 +588,7 @@ pub struct TestGatewayOptions {
     pub filter: Option<ChannelFilterFn>,
     pub listener: Option<Arc<dyn foxglove::remote_access::Listener>>,
     pub capabilities: Vec<foxglove::remote_access::Capability>,
+    pub services: Vec<Service>,
 }
 
 /// A test gateway backed by a mock Foxglove API server and a LiveKit room.
@@ -629,15 +630,6 @@ impl TestGateway {
         Self::start_with_mock(ctx, room_name, mock, options)
     }
 
-    /// Starts a mock server + Gateway with the given context and services.
-    pub async fn start_with_services(
-        ctx: &Arc<foxglove::Context>,
-        services: Vec<Service>,
-    ) -> Result<Self> {
-        let (room_name, mock) = Self::prepare().await;
-        Self::start_with_mock_and_services(ctx, room_name, mock, None, services)
-    }
-
     /// Creates a mock server and room name without starting the gateway.
     /// Use this when you need to perform setup (e.g., connecting a viewer)
     /// before the gateway joins the room.
@@ -655,17 +647,6 @@ impl TestGateway {
         mock: mock_server::MockServerHandle,
         options: TestGatewayOptions,
     ) -> Result<Self> {
-        Self::start_with_mock_and_services(ctx, room_name, mock, filter, Vec::new())
-    }
-
-    /// Starts the gateway using a pre-created mock server, room name, optional filter, and services.
-    pub fn start_with_mock_and_services(
-        ctx: &Arc<foxglove::Context>,
-        room_name: String,
-        mock: mock_server::MockServerHandle,
-        filter: Option<ChannelFilterFn>,
-        services: Vec<Service>,
-    ) -> Result<Self> {
         let mut gateway = foxglove::remote_access::Gateway::new()
             .name(format!("test-device-{}", unique_id()))
             .device_token(mock_server::TEST_DEVICE_TOKEN)
@@ -682,9 +663,8 @@ impl TestGateway {
         if !options.capabilities.is_empty() {
             gateway = gateway.capabilities(options.capabilities);
         }
-
-        if !services.is_empty() {
-            gateway = gateway.services(services);
+        if !options.services.is_empty() {
+            gateway = gateway.services(options.services);
         }
 
         let handle = gateway.start().context("start Gateway")?;

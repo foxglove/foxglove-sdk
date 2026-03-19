@@ -899,7 +899,7 @@ impl RemoteAccessSession {
         );
         let request = crate::remote_common::service::Request::new(
             service.clone(),
-            participant.id(),
+            participant.client_id(),
             call_id,
             req.encoding.into_owned(),
             req.payload.into_owned().into(),

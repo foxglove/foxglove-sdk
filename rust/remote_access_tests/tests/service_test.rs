@@ -11,7 +11,7 @@ use foxglove::Schema;
 use foxglove::protocol::v2::client::ServiceCallRequest;
 use foxglove::protocol::v2::server::{ServerMessage, server_info};
 use foxglove::remote_access::{Service, ServiceSchema};
-use remote_access_tests::test_helpers::{TestGateway, ViewerConnection};
+use remote_access_tests::test_helpers::{TestGateway, TestGatewayOptions, ViewerConnection};
 use serial_test::serial;
 use tracing::info;
 use tracing_test::traced_test;
@@ -49,7 +49,14 @@ fn failing_service() -> Service {
 async fn livekit_service_viewer_receives_advertise_services() -> Result<()> {
     let ctx = foxglove::Context::new();
     let services = vec![echo_service()];
-    let gw = TestGateway::start_with_services(&ctx, services).await?;
+    let gw = TestGateway::start_with_options(
+        &ctx,
+        TestGatewayOptions {
+            services,
+            ..Default::default()
+        },
+    )
+    .await?;
 
     let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
     let server_info = viewer.expect_server_info().await?;
@@ -85,7 +92,14 @@ async fn livekit_service_viewer_receives_advertise_services() -> Result<()> {
 async fn livekit_service_viewer_receives_multiple_services() -> Result<()> {
     let ctx = foxglove::Context::new();
     let services = vec![echo_service(), failing_service()];
-    let gw = TestGateway::start_with_services(&ctx, services).await?;
+    let gw = TestGateway::start_with_options(
+        &ctx,
+        TestGatewayOptions {
+            services,
+            ..Default::default()
+        },
+    )
+    .await?;
 
     let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
     let _server_info = viewer.expect_server_info().await?;
@@ -114,7 +128,14 @@ async fn livekit_service_viewer_receives_multiple_services() -> Result<()> {
 async fn livekit_service_call_returns_response() -> Result<()> {
     let ctx = foxglove::Context::new();
     let services = vec![echo_service()];
-    let gw = TestGateway::start_with_services(&ctx, services).await?;
+    let gw = TestGateway::start_with_options(
+        &ctx,
+        TestGatewayOptions {
+            services,
+            ..Default::default()
+        },
+    )
+    .await?;
 
     let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
     let _server_info = viewer.expect_server_info().await?;
@@ -153,7 +174,14 @@ async fn livekit_service_call_returns_response() -> Result<()> {
 async fn livekit_service_call_unknown_service_returns_failure() -> Result<()> {
     let ctx = foxglove::Context::new();
     let services = vec![echo_service()];
-    let gw = TestGateway::start_with_services(&ctx, services).await?;
+    let gw = TestGateway::start_with_options(
+        &ctx,
+        TestGatewayOptions {
+            services,
+            ..Default::default()
+        },
+    )
+    .await?;
 
     let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
     let _server_info = viewer.expect_server_info().await?;
@@ -191,7 +219,14 @@ async fn livekit_service_call_unknown_service_returns_failure() -> Result<()> {
 async fn livekit_service_call_unsupported_encoding_returns_failure() -> Result<()> {
     let ctx = foxglove::Context::new();
     let services = vec![echo_service()];
-    let gw = TestGateway::start_with_services(&ctx, services).await?;
+    let gw = TestGateway::start_with_options(
+        &ctx,
+        TestGatewayOptions {
+            services,
+            ..Default::default()
+        },
+    )
+    .await?;
 
     let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
     let _server_info = viewer.expect_server_info().await?;
@@ -230,7 +265,14 @@ async fn livekit_service_call_unsupported_encoding_returns_failure() -> Result<(
 async fn livekit_service_call_handler_error_returns_failure() -> Result<()> {
     let ctx = foxglove::Context::new();
     let services = vec![failing_service()];
-    let gw = TestGateway::start_with_services(&ctx, services).await?;
+    let gw = TestGateway::start_with_options(
+        &ctx,
+        TestGatewayOptions {
+            services,
+            ..Default::default()
+        },
+    )
+    .await?;
 
     let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
     let _server_info = viewer.expect_server_info().await?;
