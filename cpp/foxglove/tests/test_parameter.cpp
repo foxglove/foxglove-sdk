@@ -75,6 +75,7 @@ TEST_CASE("ParameterValue construction and access") {
   }
 }
 
+// NOLINTNEXTLINE(hicpp-function-size,readability-function-size)
 TEST_CASE("Parameter construction and access") {
   SECTION("parameter without value") {
     foxglove::Parameter param("test_param");

@@ -39,9 +39,10 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - run: |
-          sudo apt install -y --no-install-recommends clang-format-19
+          sudo apt install -y --no-install-recommends clang-format-19 clang-tidy-19
           echo "/usr/lib/llvm-19/bin" >> $GITHUB_PATH
       - run: clang-format --version
+      - run: clang-tidy --version
       - run: make lint
         working-directory: cpp
       - run: make CLANG_TIDY=true build
