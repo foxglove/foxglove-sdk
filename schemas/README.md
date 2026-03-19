@@ -704,7 +704,7 @@ uint32
 </td>
 <td>
 
-Number of bytes between points in the decoded `data`. Together with `fields`, this defines the authoritative decoded layout. Codec-specific metadata may be used during decompression, but the resulting bytes must match this layout.
+Number of bytes between points in the decoded output
 
 </td>
 </tr>
@@ -717,7 +717,7 @@ Number of bytes between points in the decoded `data`. Together with `fields`, th
 </td>
 <td>
 
-Fields in the decoded `data`. Together with `point_stride`, this defines the authoritative decoded layout regardless of how the codec stores attribute metadata internally. At least 2 coordinate fields from `x`, `y`, and `z` are required for each point's position; `red`, `green`, `blue`, and `alpha` are optional for customizing each point's color.
+Fields in the decoded output. At least 2 coordinate fields from `x`, `y`, and `z` are required for each point's position; `red`, `green`, `blue`, and `alpha` are optional for customizing each point's color.
 
 </td>
 </tr>
@@ -730,7 +730,7 @@ bytes
 </td>
 <td>
 
-Compressed point cloud data for exactly one point cloud. The payload must contain enough information for a decoder to determine the point count; consumers should not derive it from the byte length of `data` divided by `point_stride`.
+Compressed point cloud data for exactly one point cloud
 
 </td>
 </tr>

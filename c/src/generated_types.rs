@@ -1026,14 +1026,14 @@ pub struct CompressedPointCloud {
     /// The origin of the point cloud relative to the frame of reference
     pub pose: *const Pose,
 
-    /// Number of bytes between points in the decoded `data`. Together with `fields`, this defines the authoritative decoded layout. Codec-specific metadata may be used during decompression, but the resulting bytes must match this layout.
+    /// Number of bytes between points in the decoded output
     pub point_stride: u32,
 
-    /// Fields in the decoded `data`. Together with `point_stride`, this defines the authoritative decoded layout regardless of how the codec stores attribute metadata internally. At least 2 coordinate fields from `x`, `y`, and `z` are required for each point's position; `red`, `green`, `blue`, and `alpha` are optional for customizing each point's color.
+    /// Fields in the decoded output. At least 2 coordinate fields from `x`, `y`, and `z` are required for each point's position; `red`, `green`, `blue`, and `alpha` are optional for customizing each point's color.
     pub fields: *const PackedElementField,
     pub fields_count: usize,
 
-    /// Compressed point cloud data for exactly one point cloud. The payload must contain enough information for a decoder to determine the point count; consumers should not derive it from the byte length of `data` divided by `point_stride`.
+    /// Compressed point cloud data for exactly one point cloud
     pub data: *const c_uchar,
     pub data_len: usize,
 

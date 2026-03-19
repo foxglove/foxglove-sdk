@@ -749,16 +749,16 @@ typedef struct foxglove_compressed_point_cloud {
    */
   const struct foxglove_pose *pose;
   /**
-   * Number of bytes between points in the decoded `data`. Together with `fields`, this defines the authoritative decoded layout. Codec-specific metadata may be used during decompression, but the resulting bytes must match this layout.
+   * Number of bytes between points in the decoded output
    */
   uint32_t point_stride;
   /**
-   * Fields in the decoded `data`. Together with `point_stride`, this defines the authoritative decoded layout regardless of how the codec stores attribute metadata internally. At least 2 coordinate fields from `x`, `y`, and `z` are required for each point's position; `red`, `green`, `blue`, and `alpha` are optional for customizing each point's color.
+   * Fields in the decoded output. At least 2 coordinate fields from `x`, `y`, and `z` are required for each point's position; `red`, `green`, `blue`, and `alpha` are optional for customizing each point's color.
    */
   const struct foxglove_packed_element_field *fields;
   size_t fields_count;
   /**
-   * Compressed point cloud data for exactly one point cloud. The payload must contain enough information for a decoder to determine the point count; consumers should not derive it from the byte length of `data` divided by `point_stride`.
+   * Compressed point cloud data for exactly one point cloud
    */
   const unsigned char *data;
   size_t data_len;

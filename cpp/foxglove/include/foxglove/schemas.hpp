@@ -503,20 +503,15 @@ struct CompressedPointCloud {
   /// @brief The origin of the point cloud relative to the frame of reference
   std::optional<Pose> pose;
 
-  /// @brief Number of bytes between points in the decoded `data`. Together with `fields`, this
-  /// defines the authoritative decoded layout. Codec-specific metadata may be used during
-  /// decompression, but the resulting bytes must match this layout.
+  /// @brief Number of bytes between points in the decoded output
   uint32_t point_stride = 0;
 
-  /// @brief Fields in the decoded `data`. Together with `point_stride`, this defines the
-  /// authoritative decoded layout regardless of how the codec stores attribute metadata internally.
-  /// At least 2 coordinate fields from `x`, `y`, and `z` are required for each point's position;
-  /// `red`, `green`, `blue`, and `alpha` are optional for customizing each point's color.
+  /// @brief Fields in the decoded output. At least 2 coordinate fields from `x`, `y`, and `z` are
+  /// required for each point's position; `red`, `green`, `blue`, and `alpha` are optional for
+  /// customizing each point's color.
   std::vector<PackedElementField> fields;
 
-  /// @brief Compressed point cloud data for exactly one point cloud. The payload must contain
-  /// enough information for a decoder to determine the point count; consumers should not derive it
-  /// from the byte length of `data` divided by `point_stride`.
+  /// @brief Compressed point cloud data for exactly one point cloud
   std::vector<std::byte> data;
 
   /// @brief Point cloud compression format.
@@ -2395,8 +2390,8 @@ public:
   [[nodiscard]] bool has_sinks() const noexcept;
 
   CompressedPointCloudChannel(const CompressedPointCloudChannel& other) noexcept = delete;
-  CompressedPointCloudChannel& operator=(const CompressedPointCloudChannel& other
-  ) noexcept = delete;
+  CompressedPointCloudChannel& operator=(const CompressedPointCloudChannel& other) noexcept =
+    delete;
   /// @brief Default move constructor.
   CompressedPointCloudChannel(CompressedPointCloudChannel&& other) noexcept = default;
   /// @brief Default move assignment.
@@ -4653,8 +4648,8 @@ public:
   [[nodiscard]] bool has_sinks() const noexcept;
 
   TriangleListPrimitiveChannel(const TriangleListPrimitiveChannel& other) noexcept = delete;
-  TriangleListPrimitiveChannel& operator=(const TriangleListPrimitiveChannel& other
-  ) noexcept = delete;
+  TriangleListPrimitiveChannel& operator=(const TriangleListPrimitiveChannel& other) noexcept =
+    delete;
   /// @brief Default move constructor.
   TriangleListPrimitiveChannel(TriangleListPrimitiveChannel&& other) noexcept = default;
   /// @brief Default move assignment.
