@@ -5,7 +5,7 @@ use foxglove::remote_access::{Client, Listener};
 
 /// A mock [`Listener`] that records `on_client_advertise` and `on_client_unadvertise` callbacks.
 ///
-/// Each entry is stored as `(client_id, topic)`.
+/// Each entry is stored as `(client_key, topic)`.
 #[derive(Default)]
 pub struct MockListener {
     pub advertised: Mutex<Vec<(String, String)>>,
@@ -27,13 +27,13 @@ impl Listener for MockListener {
         self.advertised
             .lock()
             .unwrap()
-            .push((client.id().to_string(), channel.topic().to_string()));
+            .push((client.client_key().to_string(), channel.topic().to_string()));
     }
 
     fn on_client_unadvertise(&self, client: Client, channel: &ChannelDescriptor) {
         self.unadvertised
             .lock()
             .unwrap()
-            .push((client.id().to_string(), channel.topic().to_string()));
+            .push((client.client_key().to_string(), channel.topic().to_string()));
     }
 }
