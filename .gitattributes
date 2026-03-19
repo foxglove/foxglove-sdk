@@ -8,6 +8,7 @@ c/src/generated_types.rs linguist-generated
 cpp/foxglove/include/foxglove/messages.hpp linguist-generated
 cpp/foxglove/src/messages.cpp linguist-generated
 python/foxglove-sdk/python/foxglove/_foxglove_py/channels.pyi linguist-generated
+python/foxglove-sdk/python/foxglove/_foxglove_py/messages.pyi linguist-generated
 python/foxglove-sdk/python/foxglove/_foxglove_py/schemas.pyi linguist-generated
 python/foxglove-sdk/python/foxglove/channels/__init__.py linguist-generated
 python/foxglove-sdk/python/foxglove/layouts/__init__.py linguist-generated
