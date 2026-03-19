@@ -1759,6 +1759,58 @@ If `position_covariance` is available, `position_covariance_type` must be set to
 </td>
 </tr>
 <tr>
+<td><code>heading</code> (optional)</td>
+<td>
+
+float64
+
+</td>
+<td>
+
+Compass heading in radians, measured clockwise from true north
+
+</td>
+</tr>
+<tr>
+<td><code>heading_variance</code> (optional)</td>
+<td>
+
+float64
+
+</td>
+<td>
+
+Heading variance in rad^2
+
+</td>
+</tr>
+<tr>
+<td><code>speed</code> (optional)</td>
+<td>
+
+float64
+
+</td>
+<td>
+
+Scalar speed in m/s
+
+</td>
+</tr>
+<tr>
+<td><code>course_heading</code> (optional)</td>
+<td>
+
+float64
+
+</td>
+<td>
+
+Direction of travel for the reported speed, in radians clockwise from true north
+
+</td>
+</tr>
+<tr>
 <td><code>color</code> (optional)</td>
 <td>
 

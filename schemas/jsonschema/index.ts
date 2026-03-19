@@ -2509,6 +2509,22 @@ export const LocationFix = {
         }
       ]
     },
+    "heading": {
+      "type": "number",
+      "description": "Compass heading in radians, measured clockwise from true north"
+    },
+    "heading_variance": {
+      "type": "number",
+      "description": "Heading variance in rad^2"
+    },
+    "speed": {
+      "type": "number",
+      "description": "Scalar speed in m/s"
+    },
+    "course_heading": {
+      "type": "number",
+      "description": "Direction of travel for the reported speed, in radians clockwise from true north"
+    },
     "color": {
       "title": "foxglove.Color",
       "description": "Color used to visualize the location",
@@ -2652,6 +2668,22 @@ export const LocationFixes = {
                 "description": "Position covariance of the fix is known"
               }
             ]
+          },
+          "heading": {
+            "type": "number",
+            "description": "Compass heading in radians, measured clockwise from true north"
+          },
+          "heading_variance": {
+            "type": "number",
+            "description": "Heading variance in rad^2"
+          },
+          "speed": {
+            "type": "number",
+            "description": "Scalar speed in m/s"
+          },
+          "course_heading": {
+            "type": "number",
+            "description": "Direction of travel for the reported speed, in radians clockwise from true north"
           },
           "color": {
             "title": "foxglove.Color",

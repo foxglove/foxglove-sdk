@@ -661,6 +661,18 @@ export type LocationFix = {
   /** If \`position_covariance\` is available, \`position_covariance_type\` must be set to indicate the type of covariance. */
   position_covariance_type: PositionCovarianceType;
 
+  /** Compass heading in radians, measured clockwise from true north */
+  heading?: number;
+
+  /** Heading variance in rad^2 */
+  heading_variance?: number;
+
+  /** Scalar speed in m/s */
+  speed?: number;
+
+  /** Direction of travel for the reported speed, in radians clockwise from true north */
+  course_heading?: number;
+
   /** Color used to visualize the location */
   color?: Color;
 

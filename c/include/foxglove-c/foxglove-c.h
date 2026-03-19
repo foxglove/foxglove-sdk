@@ -1315,6 +1315,22 @@ typedef struct foxglove_location_fix {
    */
   foxglove_position_covariance_type position_covariance_type;
   /**
+   * Compass heading in radians, measured clockwise from true north
+   */
+  const double *heading;
+  /**
+   * Heading variance in rad^2
+   */
+  const double *heading_variance;
+  /**
+   * Scalar speed in m/s
+   */
+  const double *speed;
+  /**
+   * Direction of travel for the reported speed, in radians clockwise from true north
+   */
+  const double *course_heading;
+  /**
    * Color used to visualize the location
    */
   const struct foxglove_color *color;

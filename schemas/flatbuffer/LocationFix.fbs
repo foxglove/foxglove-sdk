@@ -44,11 +44,23 @@ table LocationFix {
   /// If `position_covariance` is available, `position_covariance_type` must be set to indicate the type of covariance.
   position_covariance_type:PositionCovarianceType (id: 6);
 
+  /// Compass heading in radians, measured clockwise from true north
+  heading:double = null (id: 7);
+
+  /// Heading variance in rad^2
+  heading_variance:double = null (id: 8);
+
+  /// Scalar speed in m/s
+  speed:double = null (id: 9);
+
+  /// Direction of travel for the reported speed, in radians clockwise from true north
+  course_heading:double = null (id: 10);
+
   /// Color used to visualize the location
-  color:foxglove.Color (id: 7);
+  color:foxglove.Color (id: 11);
 
   /// Additional user-provided metadata associated with the location fix. Keys must be unique.
-  metadata:[foxglove.KeyValuePair] (id: 8);
+  metadata:[foxglove.KeyValuePair] (id: 12);
 }
 
 root_type LocationFix;

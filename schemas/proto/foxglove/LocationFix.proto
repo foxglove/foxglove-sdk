@@ -45,6 +45,18 @@ message LocationFix {
   // If `position_covariance` is available, `position_covariance_type` must be set to indicate the type of covariance.
   PositionCovarianceType position_covariance_type = 5;
 
+  // Compass heading in radians, measured clockwise from true north
+  optional double heading = 10;
+
+  // Heading variance in rad^2
+  optional double heading_variance = 11;
+
+  // Scalar speed in m/s
+  optional double speed = 12;
+
+  // Direction of travel for the reported speed, in radians clockwise from true north
+  optional double course_heading = 13;
+
   // Color used to visualize the location
   optional foxglove.Color color = 8;
 

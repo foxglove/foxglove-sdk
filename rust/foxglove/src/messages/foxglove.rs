@@ -595,6 +595,18 @@ pub struct LocationFix {
         serde(with = "serde_enum::location_fix_position_covariance_type")
     )]
     pub position_covariance_type: i32,
+    /// Compass heading in radians, measured clockwise from true north
+    #[prost(double, optional, tag = "10")]
+    pub heading: ::core::option::Option<f64>,
+    /// Heading variance in rad^2
+    #[prost(double, optional, tag = "11")]
+    pub heading_variance: ::core::option::Option<f64>,
+    /// Scalar speed in m/s
+    #[prost(double, optional, tag = "12")]
+    pub speed: ::core::option::Option<f64>,
+    /// Direction of travel for the reported speed, in radians clockwise from true north
+    #[prost(double, optional, tag = "13")]
+    pub course_heading: ::core::option::Option<f64>,
     /// Color used to visualize the location
     #[prost(message, optional, tag = "8")]
     pub color: ::core::option::Option<Color>,

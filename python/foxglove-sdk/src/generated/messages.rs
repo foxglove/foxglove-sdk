@@ -1538,6 +1538,10 @@ impl From<LinePrimitive> for foxglove::messages::LinePrimitive {
 /// :param altitude: Altitude in meters
 /// :param position_covariance: Position covariance (m^2) defined relative to a tangential plane through the reported position. The components are East, North, and Up (ENU), in row-major order.
 /// :param position_covariance_type: If `position_covariance` is available, `position_covariance_type` must be set to indicate the type of covariance.
+/// :param heading: Compass heading in radians, measured clockwise from true north
+/// :param heading_variance: Heading variance in rad^2
+/// :param speed: Scalar speed in m/s
+/// :param course_heading: Direction of travel for the reported speed, in radians clockwise from true north
 /// :param color: Color used to visualize the location
 /// :param metadata: Additional user-provided metadata associated with the location fix. Keys must be unique.
 ///
@@ -1548,7 +1552,7 @@ pub(crate) struct LocationFix(pub(crate) foxglove::messages::LocationFix);
 #[pymethods]
 impl LocationFix {
     #[new]
-    #[pyo3(signature = (*, timestamp=None, frame_id="", latitude=0.0, longitude=0.0, altitude=0.0, position_covariance=None, position_covariance_type=LocationFixPositionCovarianceType::Unknown, color=None, metadata=None) )]
+    #[pyo3(signature = (*, timestamp=None, frame_id="", latitude=0.0, longitude=0.0, altitude=0.0, position_covariance=None, position_covariance_type=LocationFixPositionCovarianceType::Unknown, heading=None, heading_variance=None, speed=None, course_heading=None, color=None, metadata=None) )]
     fn new(
         timestamp: Option<Timestamp>,
         frame_id: &str,
@@ -1557,6 +1561,10 @@ impl LocationFix {
         altitude: f64,
         position_covariance: Option<Vec<f64>>,
         position_covariance_type: LocationFixPositionCovarianceType,
+        heading: Option<f64>,
+        heading_variance: Option<f64>,
+        speed: Option<f64>,
+        course_heading: Option<f64>,
         color: Option<Color>,
         metadata: Option<Vec<KeyValuePair>>,
     ) -> Self {
@@ -1568,6 +1576,10 @@ impl LocationFix {
             altitude,
             position_covariance: position_covariance.unwrap_or_default(),
             position_covariance_type: position_covariance_type as i32,
+            heading,
+            heading_variance,
+            speed,
+            course_heading,
             color: color.map(Into::into),
             metadata: metadata
                 .unwrap_or_default()
@@ -1578,7 +1590,7 @@ impl LocationFix {
     }
     fn __repr__(&self) -> String {
         format!(
-            "LocationFix(timestamp={:?}, frame_id={:?}, latitude={:?}, longitude={:?}, altitude={:?}, position_covariance={:?}, position_covariance_type={:?}, color={:?}, metadata={:?})",
+            "LocationFix(timestamp={:?}, frame_id={:?}, latitude={:?}, longitude={:?}, altitude={:?}, position_covariance={:?}, position_covariance_type={:?}, heading={:?}, heading_variance={:?}, speed={:?}, course_heading={:?}, color={:?}, metadata={:?})",
             self.0.timestamp,
             self.0.frame_id,
             self.0.latitude,
@@ -1586,6 +1598,10 @@ impl LocationFix {
             self.0.altitude,
             self.0.position_covariance,
             self.0.position_covariance_type,
+            self.0.heading,
+            self.0.heading_variance,
+            self.0.speed,
+            self.0.course_heading,
             self.0.color,
             self.0.metadata,
         )

@@ -36,6 +36,18 @@ uint8 KNOWN=3
 # If `position_covariance` is available, `position_covariance_type` must be set to indicate the type of covariance.
 uint8 position_covariance_type
 
+# Compass heading in radians, measured clockwise from true north
+float64 heading
+
+# Heading variance in rad^2
+float64 heading_variance
+
+# Scalar speed in m/s
+float64 speed
+
+# Direction of travel for the reported speed, in radians clockwise from true north
+float64 course_heading
+
 # Color used to visualize the location
 foxglove_msgs/Color color
 

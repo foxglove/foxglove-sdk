@@ -1647,7 +1647,8 @@ const LocationFix: FoxgloveMessageSchema = {
     {
       name: "course_heading",
       type: { type: "primitive", name: "float64" },
-      description: "Course heading in radians, measured clockwise from true north",
+      description:
+        "Direction of travel for the reported speed, in radians clockwise from true north",
       protobufFieldNumber: 13,
       optional: true,
     },
