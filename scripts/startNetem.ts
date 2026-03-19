@@ -64,8 +64,7 @@ function waitForInterrupt(files: string[], profileArgs: string[]): void {
 }
 
 function startPerlink(): void {
-  // Keep node-ip as 127.0.0.1 (the default) so ICE candidates are reachable
-  // from the host. The CI workflow overrides to 10.99.0.2 for in-container tests.
+  // LiveKit auto-detects its IP from the network interfaces (no --node-ip needed).
   process.env.NETEM_LINK_GATEWAY_DST = "10.99.0.31";
   process.env.NETEM_LINK_VIEWER_DST = "10.99.0.40";
 

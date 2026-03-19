@@ -20,8 +20,8 @@
 #   wait
 #
 # Architecture:
-#   - LiveKit joins the perlink network at 10.99.0.2 with node-ip overridden so
-#     WebRTC ICE candidates point to the perlink address (not localhost).
+#   - LiveKit joins the perlink network at 10.99.0.2. It auto-detects its IP
+#     for WebRTC ICE candidates (no --node-ip override needed).
 #   - gateway-runner (10.99.0.31): runs the gateway side of the test. High
 #     impairment simulates a device on a bad network (e.g., Starlink).
 #   - viewer-runner (10.99.0.40): runs the viewer side of the test. Low
@@ -30,12 +30,6 @@
 #     HTB + u32 filters, applying configurable impairment per link.
 #   - Room name is passed via PERLINK_ROOM_NAME env var. The viewer signals
 #     completion via a done file on the shared /coordination tmpfs volume.
-#
-# Node IP:
-#   LiveKit's --node-ip controls the IP address advertised in WebRTC ICE
-#   candidates. Override to 10.99.0.2 for container-based tests where the test
-#   runner is on the perlink network (instead of localhost which only works for
-#   host-connected clients).
 
 networks:
   perlink:
