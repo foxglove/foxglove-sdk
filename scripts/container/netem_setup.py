@@ -108,7 +108,7 @@ def apply_perlink(netem_args: list[str], links: dict[str, str]) -> int:
         if ok:
             print(f"  default class 1:ff00 -> netem {' '.join(netem_args)}")
 
-        # Per-link classes. Assign class IDs starting at 1:10, incrementing by 10.
+        # Per-link classes. Assign class IDs starting at 1:10, incrementing by 0x10.
         class_minor = 0x10
         for name, dst in links.items():
             link_args_str = os.environ.get(f"NETEM_LINK_{name}_ARGS", "")
