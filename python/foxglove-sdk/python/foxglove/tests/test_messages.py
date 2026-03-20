@@ -15,9 +15,7 @@ def test_all_message_types_available_via_schemas() -> None:
     for name in foxglove.messages.__all__:
         if name == "FoxgloveMessage":
             continue
-        assert hasattr(
-            foxglove.schemas, name
-        ), f"{name} missing from foxglove.schemas"
+        assert hasattr(foxglove.schemas, name), f"{name} missing from foxglove.schemas"
 
 
 def test_schemas_emits_deprecation_warning() -> None:
