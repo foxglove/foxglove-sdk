@@ -82,16 +82,27 @@ impl BaseChannel {
         signature = (topic, message_encoding, schema=None, metadata=None)
     )]
     fn new(
+        py: Python<'_>,
         topic: &str,
         message_encoding: &str,
         schema: Option<PySchema>,
         metadata: Option<BTreeMap<String, String>>,
     ) -> PyResult<Self> {
-        let channel = ChannelBuilder::new(topic)
-            .message_encoding(message_encoding)
-            .schema(schema.map(Schema::from))
-            .metadata(metadata.unwrap_or_default())
-            .build_raw()
+        // Release the GIL before calling build_raw(), which may invoke
+        // PySinkChannelFilter::should_subscribe() on registered sinks. That callback needs to
+        // re-acquire the GIL via Python::with_gil(); if we still hold it here, we deadlock.
+        let topic = topic.to_owned();
+        let message_encoding = message_encoding.to_owned();
+        let schema = schema.map(Schema::from);
+        let metadata = metadata.unwrap_or_default();
+        let channel = py
+            .allow_threads(move || {
+                ChannelBuilder::new(&topic)
+                    .message_encoding(&message_encoding)
+                    .schema(schema)
+                    .metadata(metadata)
+                    .build_raw()
+            })
             .map_err(PyFoxgloveError::from)?;
 
         Ok(BaseChannel(channel))
@@ -178,18 +189,29 @@ impl PyContext {
     #[pyo3(signature = (topic, *, message_encoding, schema=None, metadata=None))]
     fn _create_channel(
         &self,
+        py: Python<'_>,
         topic: &str,
         message_encoding: &str,
         schema: Option<PySchema>,
         metadata: Option<BTreeMap<String, String>>,
     ) -> PyResult<BaseChannel> {
-        let channel = self
-            .0
-            .channel_builder(topic)
-            .message_encoding(message_encoding)
-            .schema(schema.map(Schema::from))
-            .metadata(metadata.unwrap_or_default())
-            .build_raw()
+        // Release the GIL before calling build_raw(), which may invoke
+        // PySinkChannelFilter::should_subscribe() on registered sinks. That callback needs to
+        // re-acquire the GIL via Python::with_gil(); if we still hold it here, we deadlock.
+        let context = self.0.clone();
+        let topic = topic.to_owned();
+        let message_encoding = message_encoding.to_owned();
+        let schema = schema.map(Schema::from);
+        let metadata = metadata.unwrap_or_default();
+        let channel = py
+            .allow_threads(move || {
+                context
+                    .channel_builder(&topic)
+                    .message_encoding(&message_encoding)
+                    .schema(schema)
+                    .metadata(metadata)
+                    .build_raw()
+            })
             .map_err(PyFoxgloveError::from)?;
         Ok(BaseChannel(channel))
     }
@@ -223,6 +245,7 @@ enum PathOrFileLike {
 #[pyfunction]
 #[pyo3(signature = (path, *, allow_overwrite = false, context = None, channel_filter = None, writer_options = None))]
 fn open_mcap(
+    py: Python<'_>,
     path: PathOrFileLike,
     allow_overwrite: bool,
     context: Option<PyRef<PyContext>>,
@@ -251,7 +274,12 @@ fn open_mcap(
         handle
     };
 
-    let handle = handle.create(writer).map_err(PyFoxgloveError::from)?;
+    // Release the GIL before calling create(), which calls context.add_sink() and may invoke
+    // PySinkChannelFilter::should_subscribe() on existing channels. That callback needs to
+    // re-acquire the GIL via Python::with_gil(); if we still hold it here, we deadlock.
+    let handle = py
+        .allow_threads(move || handle.create(writer))
+        .map_err(PyFoxgloveError::from)?;
     Ok(PyMcapWriter(Some(handle)))
 }
 

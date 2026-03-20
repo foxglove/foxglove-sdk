@@ -688,14 +688,21 @@ impl ${channelClass} {
     ///     A type error is raised if any key or value is not a string.
     #[new]
     #[pyo3(signature = (topic, *, metadata=None, context=None))]
-    fn new(topic: &str, metadata: Option<BTreeMap<String, String>>, context: Option<&PyContext>) -> Self {
-        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
-        let builder = if let Some(context) = context {
-            builder.context(&context.0.clone())
-        } else {
-            builder
-        };
-        let base = builder.build();
+    fn new(py: Python<'_>, topic: &str, metadata: Option<BTreeMap<String, String>>, context: Option<&PyContext>) -> Self {
+        let topic = topic.to_owned();
+        let metadata = metadata.unwrap_or_default();
+        let context = context.map(|c| c.0.clone());
+        // Release the GIL before calling build(), which may invoke
+        // PySinkChannelFilter::should_subscribe() on registered sinks.
+        let base = py.allow_threads(move || {
+            let builder = ChannelBuilder::new(&topic).metadata(metadata);
+            let builder = if let Some(context) = context {
+                builder.context(&context)
+            } else {
+                builder
+            };
+            builder.build()
+        });
         Self(base)
     }
 
