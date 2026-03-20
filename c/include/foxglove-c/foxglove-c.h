@@ -1153,19 +1153,19 @@ typedef struct foxglove_joint_state {
    */
   struct foxglove_string name;
   /**
-   * Joint position. Radians for revolute joints, meters for prismatic joints. Use NaN to indicate that the value is not present if the message definition does not support optional fields.
+   * Joint position. Radians for revolute joints, meters for prismatic joints.
    */
   const double *position;
   /**
-   * Joint velocity. Rad/s for revolute joints, m/s for prismatic joints. Use NaN to indicate that the value is not present if the message definition does not support optional fields.
+   * Joint velocity. Rad/s for revolute joints, m/s for prismatic joints.
    */
   const double *velocity;
   /**
-   * Joint acceleration. Rad/s² for revolute joints, m/s² for prismatic joints. Use NaN to indicate that the value is not present if the message definition does not support optional fields.
+   * Joint acceleration. Rad/s² for revolute joints, m/s² for prismatic joints.
    */
   const double *acceleration;
   /**
-   * Joint effort (force or torque). Nm for revolute joints, N for prismatic joints. Use NaN to indicate that the value is not present if the message definition does not support optional fields.
+   * Joint effort (force or torque). Nm for revolute joints, N for prismatic joints.
    */
   const double *effort;
 } foxglove_joint_state;

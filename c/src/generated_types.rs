@@ -2687,16 +2687,16 @@ pub struct JointState {
     /// Joint name
     pub name: FoxgloveString,
 
-    /// Joint position. Radians for revolute joints, meters for prismatic joints. Use NaN to indicate that the value is not present if the message definition does not support optional fields.
+    /// Joint position. Radians for revolute joints, meters for prismatic joints.
     pub position: *const f64,
 
-    /// Joint velocity. Rad/s for revolute joints, m/s for prismatic joints. Use NaN to indicate that the value is not present if the message definition does not support optional fields.
+    /// Joint velocity. Rad/s for revolute joints, m/s for prismatic joints.
     pub velocity: *const f64,
 
-    /// Joint acceleration. Rad/s² for revolute joints, m/s² for prismatic joints. Use NaN to indicate that the value is not present if the message definition does not support optional fields.
+    /// Joint acceleration. Rad/s² for revolute joints, m/s² for prismatic joints.
     pub acceleration: *const f64,
 
-    /// Joint effort (force or torque). Nm for revolute joints, N for prismatic joints. Use NaN to indicate that the value is not present if the message definition does not support optional fields.
+    /// Joint effort (force or torque). Nm for revolute joints, N for prismatic joints.
     pub effort: *const f64,
 }
 
