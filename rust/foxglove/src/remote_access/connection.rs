@@ -141,14 +141,7 @@ impl RemoteAccessConnection {
     ) -> Result<(Arc<RemoteAccessSession>, UnboundedReceiver<RoomEvent>)> {
         let provider = self.get_or_init_provider().await?;
 
-        let existing_session_id = {
-            let id = self.remote_access_session_id.lock();
-            if id.is_empty() {
-                None
-            } else {
-                Some(id.clone())
-            }
-        };
+        let existing_session_id = Some(self.remote_access_session_id()).filter(|id| !id.is_empty());
         info!(
             remote_access_session_id = existing_session_id.as_deref(),
             "requesting LiveKit credentials from API server"
@@ -259,7 +252,7 @@ impl RemoteAccessConnection {
 
         // Send ServerInfo and channel advertisements to participants already in the room.
         // ParticipantConnected events only fire for participants joining after us.
-        let server_info = self.create_server_info();
+        let server_info = self.create_server_info(&remote_access_session_id);
         for (identity, _) in session.room().remote_participants() {
             if let Err(e) = session
                 .add_participant(identity.clone(), server_info.clone())
@@ -357,7 +350,7 @@ impl RemoteAccessConnection {
                         participant_identity = %participant_identity,
                         "participant connected to room"
                     );
-                    let server_info = self.create_server_info();
+                    let server_info = self.create_server_info(&remote_access_session_id);
                     if let Err(e) = session
                         .add_participant(participant.identity(), server_info)
                         .await
@@ -543,31 +536,33 @@ impl RemoteAccessConnection {
         interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
         loop {
             interval.tick().await;
-            let (participants, subscriptions, video_tracks) = session.stats();
+            let stats = session.stats();
             let connection_quality = session.room().local_participant().connection_quality();
             let total_video_bytes_sent = match session.room().get_stats().await {
-                Ok(stats) => stats
-                    .publisher_stats
-                    .iter()
-                    .filter_map(|s| match s {
-                        libwebrtc::stats::RtcStats::OutboundRtp(rtp)
-                            if rtp.stream.kind == "video" =>
-                        {
-                            Some(rtp.sent.bytes_sent)
-                        }
-                        _ => None,
-                    })
-                    .sum::<u64>(),
+                Ok(stats) => Some(
+                    stats
+                        .publisher_stats
+                        .iter()
+                        .filter_map(|s| match s {
+                            libwebrtc::stats::RtcStats::OutboundRtp(rtp)
+                                if rtp.stream.kind == "video" =>
+                            {
+                                Some(rtp.sent.bytes_sent)
+                            }
+                            _ => None,
+                        })
+                        .sum::<u64>(),
+                ),
                 Err(e) => {
                     warn!(remote_access_session_id, error = %e, "failed to get room stats: {e}");
-                    0
+                    None
                 }
             };
             info!(
                 remote_access_session_id,
-                participants,
-                subscriptions,
-                video_tracks,
+                participants = stats.participants,
+                subscriptions = stats.subscriptions,
+                video_tracks = stats.video_tracks,
                 total_video_bytes_sent,
                 connection_quality = ?connection_quality,
                 "periodic stats"
@@ -583,7 +578,7 @@ impl RemoteAccessConnection {
     /// and "ROS_DISTRO": "melodic" metadata.
     ///
     /// We always add our own fg-library metadata.
-    pub fn create_server_info(&self) -> ServerInfo {
+    fn create_server_info(&self, remote_access_session_id: &str) -> ServerInfo {
         let mut metadata = self.options.server_info.clone().unwrap_or_default();
         let supported_encodings = self.options.supported_encodings.clone();
         metadata.insert("fg-library".into(), get_library_version());
@@ -599,7 +594,7 @@ impl RemoteAccessConnection {
         });
 
         let mut info = ServerInfo::new(name)
-            .with_session_id(self.remote_access_session_id())
+            .with_session_id(remote_access_session_id)
             .with_capabilities(
                 self.options
                     .capabilities

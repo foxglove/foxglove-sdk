@@ -400,7 +400,7 @@ impl SessionState {
         self.participants.len()
     }
 
-    /// Returns the total number of active subscriptions across all channels.
+    /// Returns the total number of active participant subscriptions across all channels.
     pub fn subscription_count(&self) -> usize {
         self.subscriptions.values().map(|s| s.len()).sum()
     }
