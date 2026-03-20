@@ -76,6 +76,7 @@ FetchContent_MakeAvailable(libwebsockets)
 FetchContent_Declare(nlohmann_json
   GIT_REPOSITORY https://github.com/nlohmann/json.git
   GIT_TAG v3.12.0
+  SYSTEM
   FIND_PACKAGE_ARGS QUIET
 )
 FetchContent_MakeAvailable(nlohmann_json)
@@ -323,5 +324,5 @@ if(BUILD_REMOTE_DATA_LOADER_BACKEND_EXAMPLE)
   set_property(TARGET example_remote_data_loader_backend PROPERTY CXX_STANDARD_REQUIRED True)
   target_compile_options(example_remote_data_loader_backend PUBLIC ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
   target_link_options(example_remote_data_loader_backend PUBLIC ${SANITIZER_LINK_OPTIONS})
-  target_link_libraries(example_remote_data_loader_backend foxglove_cpp_static httplib::httplib base64 date::date)
+  target_link_libraries(example_remote_data_loader_backend foxglove_cpp_static nlohmann_json::nlohmann_json httplib::httplib base64 date::date)
 endif()
