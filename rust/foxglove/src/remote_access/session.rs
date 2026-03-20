@@ -598,7 +598,10 @@ impl RemoteAccessSession {
             return;
         }
 
-        let client = Client::new(participant.identity().clone());
+        let client = Client::new(
+            participant.client_id(),
+            participant.participant_id().clone(),
+        );
 
         for ch in msg.channels {
             let channel_id = ChannelId::new(ch.id.into());
@@ -636,7 +639,7 @@ impl RemoteAccessSession {
             let inserted = self
                 .state
                 .write()
-                .insert_client_channel(participant.identity(), descriptor.clone());
+                .insert_client_channel(participant.participant_id(), descriptor.clone());
 
             if !inserted {
                 self.send_warning(
@@ -657,14 +660,17 @@ impl RemoteAccessSession {
 
     fn handle_client_unadvertise(&self, participant: &Arc<Participant>, msg: client::Unadvertise) {
         let _guard = self.subscription_lock.lock();
-        let client = Client::new(participant.identity().clone());
+        let client = Client::new(
+            participant.client_id(),
+            participant.participant_id().clone(),
+        );
 
         for channel_id_raw in msg.channel_ids {
             let channel_id = ChannelId::new(channel_id_raw.into());
             let removed = self
                 .state
                 .write()
-                .remove_client_channel(participant.identity(), channel_id);
+                .remove_client_channel(participant.participant_id(), channel_id);
 
             match removed {
                 None => {
@@ -757,8 +763,8 @@ impl RemoteAccessSession {
         self.stop_video_tracks(&removed.last_video_unsubscribed);
 
         if !removed.client_channels.is_empty() {
-            if let Some(listener) = &self.listener {
-                let client = Client::new(participant_id.clone());
+            if let Some((listener, client_id)) = self.listener.as_ref().zip(removed.client_id) {
+                let client = Client::new(client_id, participant_id.clone());
                 for descriptor in &removed.client_channels {
                     listener.on_client_unadvertise(client.clone(), descriptor);
                 }

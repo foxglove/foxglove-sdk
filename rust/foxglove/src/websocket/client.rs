@@ -1,35 +1,9 @@
 use std::sync::Weak;
-use std::sync::atomic::AtomicU32;
-use std::sync::atomic::Ordering::Relaxed;
 
 use super::Status;
 use super::connected_client::ConnectedClient;
 use crate::SinkId;
-
-/// Identifies a client connection. Unique for the duration of the server's lifetime.
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
-pub struct ClientId(u32);
-
-impl ClientId {
-    /// Allocates the next client ID.
-    pub(crate) fn next() -> Self {
-        static NEXT_ID: AtomicU32 = AtomicU32::new(1);
-        let id = NEXT_ID.fetch_add(1, Relaxed);
-        Self(id)
-    }
-}
-
-impl From<ClientId> for u32 {
-    fn from(client: ClientId) -> Self {
-        client.0
-    }
-}
-
-impl std::fmt::Display for ClientId {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
+pub use crate::remote_common::ClientId;
 
 /// A connected client session with the websocket server.
 #[derive(Debug, Clone)]

@@ -391,6 +391,8 @@ mod protocol;
 #[doc(hidden)]
 #[cfg(feature = "remote_access")]
 pub mod remote_access;
+#[cfg(feature = "_remote_common")]
+mod remote_common;
 #[cfg(feature = "websocket")]
 mod runtime;
 #[cfg(feature = "websocket")]
