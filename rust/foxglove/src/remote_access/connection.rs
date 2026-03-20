@@ -1,13 +1,12 @@
 use std::{
     collections::HashMap,
-    sync::{Arc, Weak},
+    sync::{Arc, OnceLock, Weak},
     time::Duration,
 };
 
 use indexmap::IndexSet;
 
 use livekit::{Room, RoomEvent, RoomOptions};
-use parking_lot::Mutex;
 use tokio::{runtime::Handle, sync::OnceCell, sync::mpsc::UnboundedReceiver, task::JoinHandle};
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info, warn};
@@ -92,9 +91,9 @@ impl std::fmt::Debug for RemoteAccessConnectionOptions {
 pub(crate) struct RemoteAccessConnection {
     options: RemoteAccessConnectionOptions,
     credentials_provider: OnceCell<CredentialsProvider>,
-    /// The remote access session ID, received from the API server on each successful credential fetch.
-    /// Updated on reconnect when a new session ID is issued.
-    remote_access_session_id: Mutex<String>,
+    /// The remote access session ID, received from the API server on first successful credential fetch.
+    /// Set once and reused for all subsequent requests.
+    remote_access_session_id: OnceLock<String>,
 }
 
 impl RemoteAccessConnection {
@@ -102,13 +101,13 @@ impl RemoteAccessConnection {
         Self {
             options,
             credentials_provider: OnceCell::new(),
-            remote_access_session_id: Mutex::new(String::new()),
+            remote_access_session_id: OnceLock::new(),
         }
     }
 
-    /// Returns the remote access session ID, or an empty string if not yet initialized.
-    fn remote_access_session_id(&self) -> String {
-        self.remote_access_session_id.lock().clone()
+    /// Returns the remote access session ID, or `None` if not yet initialized.
+    fn remote_access_session_id(&self) -> Option<&str> {
+        self.remote_access_session_id.get().map(|s| s.as_str())
     }
 
     /// Returns the credentials provider, initializing it on first call.
@@ -141,16 +140,16 @@ impl RemoteAccessConnection {
     ) -> Result<(Arc<RemoteAccessSession>, UnboundedReceiver<RoomEvent>)> {
         let provider = self.get_or_init_provider().await?;
 
-        let existing_session_id = Some(self.remote_access_session_id()).filter(|id| !id.is_empty());
+        let existing_session_id = self.remote_access_session_id().map(str::to_owned);
         info!(
             remote_access_session_id = existing_session_id.as_deref(),
             "requesting LiveKit credentials from API server"
         );
         let credentials = match provider.load_credentials(existing_session_id).await {
             Ok(creds) => {
-                // Update the session ID on each successful fetch (may change on reconnect).
+                // Set the session ID on first successful fetch.
                 if let Some(ref session_id) = creds.remote_access_session_id {
-                    self.remote_access_session_id.lock().clone_from(session_id);
+                    let _ = self.remote_access_session_id.set(session_id.clone());
                 }
                 creds
             }
@@ -252,7 +251,7 @@ impl RemoteAccessConnection {
 
         // Send ServerInfo and channel advertisements to participants already in the room.
         // ParticipantConnected events only fire for participants joining after us.
-        let server_info = self.create_server_info(&remote_access_session_id);
+        let server_info = self.create_server_info(remote_access_session_id.unwrap_or(""));
         for (identity, _) in session.room().remote_participants() {
             if let Err(e) = session
                 .add_participant(identity.clone(), server_info.clone())
@@ -270,7 +269,7 @@ impl RemoteAccessConnection {
         tokio::select! {
             () = self.cancellation_token().cancelled() => (),
             _ = self.listen_for_room_events(session.clone(), room_events) => {},
-            _ = Self::log_periodic_stats(session.clone(), remote_access_session_id.clone()) => {},
+            _ = Self::log_periodic_stats(session.clone(), remote_access_session_id.unwrap_or("").to_owned()) => {},
         }
 
         // Remove the sink before closing the room.
@@ -350,7 +349,8 @@ impl RemoteAccessConnection {
                         participant_identity = %participant_identity,
                         "participant connected to room"
                     );
-                    let server_info = self.create_server_info(&remote_access_session_id);
+                    let server_info =
+                        self.create_server_info(remote_access_session_id.unwrap_or(""));
                     if let Err(e) = session
                         .add_participant(participant.identity(), server_info)
                         .await
