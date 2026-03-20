@@ -702,7 +702,7 @@ export function generateChannelClasses(messageSchemas: FoxgloveMessageSchema[]):
     `use foxglove::{Channel, ChannelBuilder, PartialMetadata, SinkId};`,
     `use pyo3::prelude::*;`,
     `use pyo3::types::PyDict;`,
-    `use super::schemas;`,
+    `use super::messages;`,
     `use std::collections::BTreeMap;`,
     `use std::num::NonZero;`,
   ].join("\n");
@@ -803,7 +803,7 @@ impl ${channelClass} {
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
     fn log(
         &self,
-        msg: &schemas::${schemaClass},
+        msg: &messages::${schemaClass},
         log_time: Option<u64>,
         sink_id: Option<u64>,
     ) {
