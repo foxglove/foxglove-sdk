@@ -3,7 +3,7 @@
 import importlib
 import warnings
 
-import foxglove.messages
+import foxglove.messages  # noqa: F401 — used via dotted name in test functions
 
 
 def test_all_message_types_available_via_schemas() -> None:
