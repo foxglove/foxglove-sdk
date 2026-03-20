@@ -238,7 +238,7 @@ describe("generateRosMsgDefinition", () => {
           },
           {
             "arrayLength": undefined,
-            "description": "An optional float64 field",
+            "description": "An optional float64 field (NaN indicates this value is not set)",
             "isArray": false,
             "isComplex": false,
             "name": "field_optional_float64",
@@ -480,7 +480,7 @@ describe("generateRosMsgDefinition", () => {
           },
           {
             "arrayLength": undefined,
-            "description": "An optional float64 field",
+            "description": "An optional float64 field (NaN indicates this value is not set)",
             "isArray": false,
             "isComplex": false,
             "name": "field_optional_float64",
@@ -597,7 +597,7 @@ describe("generateRosMsg", () => {
       # An optional bool field
       bool field_optional_bool
 
-      # An optional float64 field
+      # An optional float64 field (NaN indicates this value is not set)
       float64 field_optional_float64
       "
     `);
@@ -704,7 +704,7 @@ describe("generateRosMsg", () => {
       # An optional bool field
       bool field_optional_bool
 
-      # An optional float64 field
+      # An optional float64 field (NaN indicates this value is not set)
       float64 field_optional_float64
       "
     `);
@@ -808,7 +808,7 @@ describe("generateRosMsgMergedSchema", () => {
       # An optional bool field
       bool field_optional_bool
 
-      # An optional float64 field
+      # An optional float64 field (NaN indicates this value is not set)
       float64 field_optional_float64
       ================================================================================
       MSG: foxglove_msgs/NestedMessage
@@ -1115,7 +1115,7 @@ describe("generateRosMsgMergedSchema", () => {
       # An optional bool field
       bool field_optional_bool
 
-      # An optional float64 field
+      # An optional float64 field (NaN indicates this value is not set)
       float64 field_optional_float64
       ================================================================================
       MSG: foxglove_msgs/NestedMessage

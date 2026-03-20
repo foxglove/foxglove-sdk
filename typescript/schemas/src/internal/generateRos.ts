@@ -35,6 +35,13 @@ function timeDurationToRos(type: "time" | "duration", { rosVersion }: { rosVersi
   }
 }
 
+function getRosFieldDescription(field: FoxgloveMessageField): string {
+  if (field.optional === true && field.type.type === "primitive" && field.type.name === "float64") {
+    return `${field.description} (NaN indicates this value is not set)`;
+  }
+  return field.description;
+}
+
 export function generateRosMsg(
   def: RosMsgDefinitionWithDescription,
   { rosVersion }: { rosVersion: 1 | 2 },
@@ -212,7 +219,7 @@ export function generateRosMsgDefinition(
       isComplex: isComplex(field),
       isArray,
       arrayLength,
-      description: field.description,
+      description: getRosFieldDescription(field),
     });
   }
 
