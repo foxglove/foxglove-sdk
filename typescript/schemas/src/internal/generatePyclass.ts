@@ -282,7 +282,7 @@ function generateMessageClass(schema: FoxgloveMessageSchema): string {
     `/// See https://docs.foxglove.dev/docs/visualization/message-schemas/${constantToKebabCase(className)}`,
     `#[pyclass(module = "foxglove.messages")]`,
     `#[derive(Clone)]`,
-    `pub(crate) struct ${className}(pub(crate) foxglove::schemas::${className});`,
+    `pub(crate) struct ${className}(pub(crate) foxglove::messages::${className});`,
   ];
 
   function fieldValue(field: FoxgloveMessageField): string {
@@ -342,7 +342,7 @@ function generateMessageClass(schema: FoxgloveMessageSchema): string {
     `    fn new(`,
     ...schemaFields.map(({ argName, field }) => `        ${argName}: ${rustOutputType(field)},`),
     `    ) -> Self {`,
-    `        Self(foxglove::schemas::${className} {`,
+    `        Self(foxglove::messages::${className} {`,
     schemaFields.map(({ field }) => `            ${fieldAssignment(field)},`).join("\n"),
     `        })`,
     `    }`,
@@ -355,7 +355,7 @@ function generateMessageClass(schema: FoxgloveMessageSchema): string {
     `    /// Returns the ${className} schema.`,
     `    #[staticmethod]`,
     `    fn get_schema() -> PySchema {`,
-    `        foxglove::schemas::${className}::get_schema().unwrap().into()`,
+    `        foxglove::messages::${className}::get_schema().unwrap().into()`,
     `    }`,
     `    /// Encodes the ${className} as protobuf.`,
     `    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {`,
@@ -368,7 +368,7 @@ function generateMessageClass(schema: FoxgloveMessageSchema): string {
   ];
 
   const fromTrait = [
-    `impl From<${structName(schema.name)}> for foxglove::schemas::${structName(schema.name)} {`,
+    `impl From<${structName(schema.name)}> for foxglove::messages::${structName(schema.name)} {`,
     `    fn from(value: ${structName(schema.name)}) -> Self {`,
     `        value.0`,
     `    }`,
@@ -715,7 +715,7 @@ export function generateChannelClasses(messageSchemas: FoxgloveMessageSchema[]):
     return `
 /// A channel for logging :py:class:\`foxglove.messages.${schemaClass}\` messages.
 #[pyclass(module = "foxglove.channels")]
-struct ${channelClass}(Channel<foxglove::schemas::${schemaClass}>);
+struct ${channelClass}(Channel<foxglove::messages::${schemaClass}>);
 
 #[pymethods]
 impl ${channelClass} {

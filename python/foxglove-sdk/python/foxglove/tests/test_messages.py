@@ -6,12 +6,18 @@ import warnings
 import foxglove.messages
 
 
-def test_all_message_types_exported() -> None:
-    """Every name in __all__ should be available in foxglove.messages."""
+def test_all_message_types_available_via_schemas() -> None:
+    """Every name in foxglove.messages.__all__ should also be available in foxglove.schemas."""
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", DeprecationWarning)
+        import foxglove.schemas
+
     for name in foxglove.messages.__all__:
+        if name == "FoxgloveMessage":
+            continue
         assert hasattr(
-            foxglove.messages, name
-        ), f"{name} missing from foxglove.messages"
+            foxglove.schemas, name
+        ), f"{name} missing from foxglove.schemas"
 
 
 def test_schemas_emits_deprecation_warning() -> None:

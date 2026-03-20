@@ -243,8 +243,9 @@ async function main({ clean }: { clean: boolean }) {
   await logProgressLn("Generating Pyclass definitions", async () => {
     // Source files (.rs) are re-generated.
     // Stub file is placed into the existing hierarchy.
-    const schemasFile = path.join(pythonSdkGeneratedRoot, "schemas.rs");
+    const schemasFile = path.join(pythonSdkGeneratedRoot, "messages.rs");
     await fs.mkdir(pythonSdkGeneratedRoot, { recursive: true });
+    await fs.mkdir(path.join(pythonSdkPyRoot, "messages"), { recursive: true });
     await fs.mkdir(path.join(pythonSdkPyRoot, "schemas"), { recursive: true });
     await fs.mkdir(path.join(pythonSdkPyRoot, "channels"), { recursive: true });
 
@@ -279,7 +280,7 @@ async function main({ clean }: { clean: boolean }) {
     const channelStubFile = path.join(pythonSdkPyRoot, "_foxglove_py/channels.pyi");
     const channelStubModule = path.join(pythonSdkPyRoot, "channels/__init__.py");
 
-    const messagesModule = path.join(pythonSdkPyRoot, "messages/__init__.py");
+    const messagesStubModule = path.join(pythonSdkPyRoot, "messages/__init__.py");
 
     await fs.writeFile(messagesStubFile, generatePySchemaStub(allSchemas));
     await fs.writeFile(
@@ -290,7 +291,7 @@ async function main({ clean }: { clean: boolean }) {
         "",
       ].join("\n"),
     );
-    await fs.writeFile(messagesModule, generatePyMessageModule(allSchemas));
+    await fs.writeFile(messagesStubModule, generatePyMessageModule(allSchemas));
     await fs.writeFile(schemasStubModule, generatePySchemaModule(allSchemas));
     await fs.writeFile(channelStubFile, generatePyChannelStub(messageSchemas));
     await fs.writeFile(channelStubModule, generatePyChannelModule(messageSchemas));
@@ -303,7 +304,7 @@ async function main({ clean }: { clean: boolean }) {
       path.resolve(schemasStubFile),
       path.resolve(messagesStubFile),
       path.resolve(channelStubFile),
-      path.resolve(messagesModule),
+      path.resolve(messagesStubModule),
       path.resolve(schemasStubModule),
       path.resolve(channelStubModule),
     ];
