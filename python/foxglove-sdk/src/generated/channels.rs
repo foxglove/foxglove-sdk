@@ -81,17 +81,25 @@ impl ArrowPrimitiveChannel {
     #[new]
     #[pyo3(signature = (topic, *, metadata=None, context=None))]
     fn new(
+        py: Python<'_>,
         topic: &str,
         metadata: Option<BTreeMap<String, String>>,
         context: Option<&PyContext>,
     ) -> Self {
-        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
-        let builder = if let Some(context) = context {
-            builder.context(&context.0.clone())
-        } else {
-            builder
-        };
-        let base = builder.build();
+        let topic = topic.to_owned();
+        let metadata = metadata.unwrap_or_default();
+        let context = context.map(|c| c.0.clone());
+        // Release the GIL before calling build(), which may invoke
+        // PySinkChannelFilter::should_subscribe() on registered sinks.
+        let base = py.allow_threads(move || {
+            let builder = ChannelBuilder::new(&topic).metadata(metadata);
+            let builder = if let Some(context) = context {
+                builder.context(&context)
+            } else {
+                builder
+            };
+            builder.build()
+        });
         Self(base)
     }
 
@@ -190,17 +198,25 @@ impl CameraCalibrationChannel {
     #[new]
     #[pyo3(signature = (topic, *, metadata=None, context=None))]
     fn new(
+        py: Python<'_>,
         topic: &str,
         metadata: Option<BTreeMap<String, String>>,
         context: Option<&PyContext>,
     ) -> Self {
-        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
-        let builder = if let Some(context) = context {
-            builder.context(&context.0.clone())
-        } else {
-            builder
-        };
-        let base = builder.build();
+        let topic = topic.to_owned();
+        let metadata = metadata.unwrap_or_default();
+        let context = context.map(|c| c.0.clone());
+        // Release the GIL before calling build(), which may invoke
+        // PySinkChannelFilter::should_subscribe() on registered sinks.
+        let base = py.allow_threads(move || {
+            let builder = ChannelBuilder::new(&topic).metadata(metadata);
+            let builder = if let Some(context) = context {
+                builder.context(&context)
+            } else {
+                builder
+            };
+            builder.build()
+        });
         Self(base)
     }
 
@@ -299,17 +315,25 @@ impl CircleAnnotationChannel {
     #[new]
     #[pyo3(signature = (topic, *, metadata=None, context=None))]
     fn new(
+        py: Python<'_>,
         topic: &str,
         metadata: Option<BTreeMap<String, String>>,
         context: Option<&PyContext>,
     ) -> Self {
-        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
-        let builder = if let Some(context) = context {
-            builder.context(&context.0.clone())
-        } else {
-            builder
-        };
-        let base = builder.build();
+        let topic = topic.to_owned();
+        let metadata = metadata.unwrap_or_default();
+        let context = context.map(|c| c.0.clone());
+        // Release the GIL before calling build(), which may invoke
+        // PySinkChannelFilter::should_subscribe() on registered sinks.
+        let base = py.allow_threads(move || {
+            let builder = ChannelBuilder::new(&topic).metadata(metadata);
+            let builder = if let Some(context) = context {
+                builder.context(&context)
+            } else {
+                builder
+            };
+            builder.build()
+        });
         Self(base)
     }
 
@@ -408,17 +432,25 @@ impl ColorChannel {
     #[new]
     #[pyo3(signature = (topic, *, metadata=None, context=None))]
     fn new(
+        py: Python<'_>,
         topic: &str,
         metadata: Option<BTreeMap<String, String>>,
         context: Option<&PyContext>,
     ) -> Self {
-        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
-        let builder = if let Some(context) = context {
-            builder.context(&context.0.clone())
-        } else {
-            builder
-        };
-        let base = builder.build();
+        let topic = topic.to_owned();
+        let metadata = metadata.unwrap_or_default();
+        let context = context.map(|c| c.0.clone());
+        // Release the GIL before calling build(), which may invoke
+        // PySinkChannelFilter::should_subscribe() on registered sinks.
+        let base = py.allow_threads(move || {
+            let builder = ChannelBuilder::new(&topic).metadata(metadata);
+            let builder = if let Some(context) = context {
+                builder.context(&context)
+            } else {
+                builder
+            };
+            builder.build()
+        });
         Self(base)
     }
 
@@ -512,17 +544,25 @@ impl CompressedImageChannel {
     #[new]
     #[pyo3(signature = (topic, *, metadata=None, context=None))]
     fn new(
+        py: Python<'_>,
         topic: &str,
         metadata: Option<BTreeMap<String, String>>,
         context: Option<&PyContext>,
     ) -> Self {
-        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
-        let builder = if let Some(context) = context {
-            builder.context(&context.0.clone())
-        } else {
-            builder
-        };
-        let base = builder.build();
+        let topic = topic.to_owned();
+        let metadata = metadata.unwrap_or_default();
+        let context = context.map(|c| c.0.clone());
+        // Release the GIL before calling build(), which may invoke
+        // PySinkChannelFilter::should_subscribe() on registered sinks.
+        let base = py.allow_threads(move || {
+            let builder = ChannelBuilder::new(&topic).metadata(metadata);
+            let builder = if let Some(context) = context {
+                builder.context(&context)
+            } else {
+                builder
+            };
+            builder.build()
+        });
         Self(base)
     }
 
@@ -621,17 +661,25 @@ impl CompressedVideoChannel {
     #[new]
     #[pyo3(signature = (topic, *, metadata=None, context=None))]
     fn new(
+        py: Python<'_>,
         topic: &str,
         metadata: Option<BTreeMap<String, String>>,
         context: Option<&PyContext>,
     ) -> Self {
-        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
-        let builder = if let Some(context) = context {
-            builder.context(&context.0.clone())
-        } else {
-            builder
-        };
-        let base = builder.build();
+        let topic = topic.to_owned();
+        let metadata = metadata.unwrap_or_default();
+        let context = context.map(|c| c.0.clone());
+        // Release the GIL before calling build(), which may invoke
+        // PySinkChannelFilter::should_subscribe() on registered sinks.
+        let base = py.allow_threads(move || {
+            let builder = ChannelBuilder::new(&topic).metadata(metadata);
+            let builder = if let Some(context) = context {
+                builder.context(&context)
+            } else {
+                builder
+            };
+            builder.build()
+        });
         Self(base)
     }
 
@@ -730,17 +778,25 @@ impl CylinderPrimitiveChannel {
     #[new]
     #[pyo3(signature = (topic, *, metadata=None, context=None))]
     fn new(
+        py: Python<'_>,
         topic: &str,
         metadata: Option<BTreeMap<String, String>>,
         context: Option<&PyContext>,
     ) -> Self {
-        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
-        let builder = if let Some(context) = context {
-            builder.context(&context.0.clone())
-        } else {
-            builder
-        };
-        let base = builder.build();
+        let topic = topic.to_owned();
+        let metadata = metadata.unwrap_or_default();
+        let context = context.map(|c| c.0.clone());
+        // Release the GIL before calling build(), which may invoke
+        // PySinkChannelFilter::should_subscribe() on registered sinks.
+        let base = py.allow_threads(move || {
+            let builder = ChannelBuilder::new(&topic).metadata(metadata);
+            let builder = if let Some(context) = context {
+                builder.context(&context)
+            } else {
+                builder
+            };
+            builder.build()
+        });
         Self(base)
     }
 
@@ -839,17 +895,25 @@ impl CubePrimitiveChannel {
     #[new]
     #[pyo3(signature = (topic, *, metadata=None, context=None))]
     fn new(
+        py: Python<'_>,
         topic: &str,
         metadata: Option<BTreeMap<String, String>>,
         context: Option<&PyContext>,
     ) -> Self {
-        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
-        let builder = if let Some(context) = context {
-            builder.context(&context.0.clone())
-        } else {
-            builder
-        };
-        let base = builder.build();
+        let topic = topic.to_owned();
+        let metadata = metadata.unwrap_or_default();
+        let context = context.map(|c| c.0.clone());
+        // Release the GIL before calling build(), which may invoke
+        // PySinkChannelFilter::should_subscribe() on registered sinks.
+        let base = py.allow_threads(move || {
+            let builder = ChannelBuilder::new(&topic).metadata(metadata);
+            let builder = if let Some(context) = context {
+                builder.context(&context)
+            } else {
+                builder
+            };
+            builder.build()
+        });
         Self(base)
     }
 
@@ -948,17 +1012,25 @@ impl FrameTransformChannel {
     #[new]
     #[pyo3(signature = (topic, *, metadata=None, context=None))]
     fn new(
+        py: Python<'_>,
         topic: &str,
         metadata: Option<BTreeMap<String, String>>,
         context: Option<&PyContext>,
     ) -> Self {
-        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
-        let builder = if let Some(context) = context {
-            builder.context(&context.0.clone())
-        } else {
-            builder
-        };
-        let base = builder.build();
+        let topic = topic.to_owned();
+        let metadata = metadata.unwrap_or_default();
+        let context = context.map(|c| c.0.clone());
+        // Release the GIL before calling build(), which may invoke
+        // PySinkChannelFilter::should_subscribe() on registered sinks.
+        let base = py.allow_threads(move || {
+            let builder = ChannelBuilder::new(&topic).metadata(metadata);
+            let builder = if let Some(context) = context {
+                builder.context(&context)
+            } else {
+                builder
+            };
+            builder.build()
+        });
         Self(base)
     }
 
@@ -1057,17 +1129,25 @@ impl FrameTransformsChannel {
     #[new]
     #[pyo3(signature = (topic, *, metadata=None, context=None))]
     fn new(
+        py: Python<'_>,
         topic: &str,
         metadata: Option<BTreeMap<String, String>>,
         context: Option<&PyContext>,
     ) -> Self {
-        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
-        let builder = if let Some(context) = context {
-            builder.context(&context.0.clone())
-        } else {
-            builder
-        };
-        let base = builder.build();
+        let topic = topic.to_owned();
+        let metadata = metadata.unwrap_or_default();
+        let context = context.map(|c| c.0.clone());
+        // Release the GIL before calling build(), which may invoke
+        // PySinkChannelFilter::should_subscribe() on registered sinks.
+        let base = py.allow_threads(move || {
+            let builder = ChannelBuilder::new(&topic).metadata(metadata);
+            let builder = if let Some(context) = context {
+                builder.context(&context)
+            } else {
+                builder
+            };
+            builder.build()
+        });
         Self(base)
     }
 
@@ -1166,17 +1246,25 @@ impl GeoJsonChannel {
     #[new]
     #[pyo3(signature = (topic, *, metadata=None, context=None))]
     fn new(
+        py: Python<'_>,
         topic: &str,
         metadata: Option<BTreeMap<String, String>>,
         context: Option<&PyContext>,
     ) -> Self {
-        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
-        let builder = if let Some(context) = context {
-            builder.context(&context.0.clone())
-        } else {
-            builder
-        };
-        let base = builder.build();
+        let topic = topic.to_owned();
+        let metadata = metadata.unwrap_or_default();
+        let context = context.map(|c| c.0.clone());
+        // Release the GIL before calling build(), which may invoke
+        // PySinkChannelFilter::should_subscribe() on registered sinks.
+        let base = py.allow_threads(move || {
+            let builder = ChannelBuilder::new(&topic).metadata(metadata);
+            let builder = if let Some(context) = context {
+                builder.context(&context)
+            } else {
+                builder
+            };
+            builder.build()
+        });
         Self(base)
     }
 
@@ -1270,17 +1358,25 @@ impl GridChannel {
     #[new]
     #[pyo3(signature = (topic, *, metadata=None, context=None))]
     fn new(
+        py: Python<'_>,
         topic: &str,
         metadata: Option<BTreeMap<String, String>>,
         context: Option<&PyContext>,
     ) -> Self {
-        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
-        let builder = if let Some(context) = context {
-            builder.context(&context.0.clone())
-        } else {
-            builder
-        };
-        let base = builder.build();
+        let topic = topic.to_owned();
+        let metadata = metadata.unwrap_or_default();
+        let context = context.map(|c| c.0.clone());
+        // Release the GIL before calling build(), which may invoke
+        // PySinkChannelFilter::should_subscribe() on registered sinks.
+        let base = py.allow_threads(move || {
+            let builder = ChannelBuilder::new(&topic).metadata(metadata);
+            let builder = if let Some(context) = context {
+                builder.context(&context)
+            } else {
+                builder
+            };
+            builder.build()
+        });
         Self(base)
     }
 
@@ -1374,17 +1470,25 @@ impl VoxelGridChannel {
     #[new]
     #[pyo3(signature = (topic, *, metadata=None, context=None))]
     fn new(
+        py: Python<'_>,
         topic: &str,
         metadata: Option<BTreeMap<String, String>>,
         context: Option<&PyContext>,
     ) -> Self {
-        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
-        let builder = if let Some(context) = context {
-            builder.context(&context.0.clone())
-        } else {
-            builder
-        };
-        let base = builder.build();
+        let topic = topic.to_owned();
+        let metadata = metadata.unwrap_or_default();
+        let context = context.map(|c| c.0.clone());
+        // Release the GIL before calling build(), which may invoke
+        // PySinkChannelFilter::should_subscribe() on registered sinks.
+        let base = py.allow_threads(move || {
+            let builder = ChannelBuilder::new(&topic).metadata(metadata);
+            let builder = if let Some(context) = context {
+                builder.context(&context)
+            } else {
+                builder
+            };
+            builder.build()
+        });
         Self(base)
     }
 
@@ -1483,17 +1587,25 @@ impl ImageAnnotationsChannel {
     #[new]
     #[pyo3(signature = (topic, *, metadata=None, context=None))]
     fn new(
+        py: Python<'_>,
         topic: &str,
         metadata: Option<BTreeMap<String, String>>,
         context: Option<&PyContext>,
     ) -> Self {
-        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
-        let builder = if let Some(context) = context {
-            builder.context(&context.0.clone())
-        } else {
-            builder
-        };
-        let base = builder.build();
+        let topic = topic.to_owned();
+        let metadata = metadata.unwrap_or_default();
+        let context = context.map(|c| c.0.clone());
+        // Release the GIL before calling build(), which may invoke
+        // PySinkChannelFilter::should_subscribe() on registered sinks.
+        let base = py.allow_threads(move || {
+            let builder = ChannelBuilder::new(&topic).metadata(metadata);
+            let builder = if let Some(context) = context {
+                builder.context(&context)
+            } else {
+                builder
+            };
+            builder.build()
+        });
         Self(base)
     }
 
@@ -1592,17 +1704,25 @@ impl JointStateChannel {
     #[new]
     #[pyo3(signature = (topic, *, metadata=None, context=None))]
     fn new(
+        py: Python<'_>,
         topic: &str,
         metadata: Option<BTreeMap<String, String>>,
         context: Option<&PyContext>,
     ) -> Self {
-        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
-        let builder = if let Some(context) = context {
-            builder.context(&context.0.clone())
-        } else {
-            builder
-        };
-        let base = builder.build();
+        let topic = topic.to_owned();
+        let metadata = metadata.unwrap_or_default();
+        let context = context.map(|c| c.0.clone());
+        // Release the GIL before calling build(), which may invoke
+        // PySinkChannelFilter::should_subscribe() on registered sinks.
+        let base = py.allow_threads(move || {
+            let builder = ChannelBuilder::new(&topic).metadata(metadata);
+            let builder = if let Some(context) = context {
+                builder.context(&context)
+            } else {
+                builder
+            };
+            builder.build()
+        });
         Self(base)
     }
 
@@ -1701,17 +1821,25 @@ impl JointStatesChannel {
     #[new]
     #[pyo3(signature = (topic, *, metadata=None, context=None))]
     fn new(
+        py: Python<'_>,
         topic: &str,
         metadata: Option<BTreeMap<String, String>>,
         context: Option<&PyContext>,
     ) -> Self {
-        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
-        let builder = if let Some(context) = context {
-            builder.context(&context.0.clone())
-        } else {
-            builder
-        };
-        let base = builder.build();
+        let topic = topic.to_owned();
+        let metadata = metadata.unwrap_or_default();
+        let context = context.map(|c| c.0.clone());
+        // Release the GIL before calling build(), which may invoke
+        // PySinkChannelFilter::should_subscribe() on registered sinks.
+        let base = py.allow_threads(move || {
+            let builder = ChannelBuilder::new(&topic).metadata(metadata);
+            let builder = if let Some(context) = context {
+                builder.context(&context)
+            } else {
+                builder
+            };
+            builder.build()
+        });
         Self(base)
     }
 
@@ -1810,17 +1938,25 @@ impl KeyValuePairChannel {
     #[new]
     #[pyo3(signature = (topic, *, metadata=None, context=None))]
     fn new(
+        py: Python<'_>,
         topic: &str,
         metadata: Option<BTreeMap<String, String>>,
         context: Option<&PyContext>,
     ) -> Self {
-        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
-        let builder = if let Some(context) = context {
-            builder.context(&context.0.clone())
-        } else {
-            builder
-        };
-        let base = builder.build();
+        let topic = topic.to_owned();
+        let metadata = metadata.unwrap_or_default();
+        let context = context.map(|c| c.0.clone());
+        // Release the GIL before calling build(), which may invoke
+        // PySinkChannelFilter::should_subscribe() on registered sinks.
+        let base = py.allow_threads(move || {
+            let builder = ChannelBuilder::new(&topic).metadata(metadata);
+            let builder = if let Some(context) = context {
+                builder.context(&context)
+            } else {
+                builder
+            };
+            builder.build()
+        });
         Self(base)
     }
 
@@ -1919,17 +2055,25 @@ impl LaserScanChannel {
     #[new]
     #[pyo3(signature = (topic, *, metadata=None, context=None))]
     fn new(
+        py: Python<'_>,
         topic: &str,
         metadata: Option<BTreeMap<String, String>>,
         context: Option<&PyContext>,
     ) -> Self {
-        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
-        let builder = if let Some(context) = context {
-            builder.context(&context.0.clone())
-        } else {
-            builder
-        };
-        let base = builder.build();
+        let topic = topic.to_owned();
+        let metadata = metadata.unwrap_or_default();
+        let context = context.map(|c| c.0.clone());
+        // Release the GIL before calling build(), which may invoke
+        // PySinkChannelFilter::should_subscribe() on registered sinks.
+        let base = py.allow_threads(move || {
+            let builder = ChannelBuilder::new(&topic).metadata(metadata);
+            let builder = if let Some(context) = context {
+                builder.context(&context)
+            } else {
+                builder
+            };
+            builder.build()
+        });
         Self(base)
     }
 
@@ -2028,17 +2172,25 @@ impl LinePrimitiveChannel {
     #[new]
     #[pyo3(signature = (topic, *, metadata=None, context=None))]
     fn new(
+        py: Python<'_>,
         topic: &str,
         metadata: Option<BTreeMap<String, String>>,
         context: Option<&PyContext>,
     ) -> Self {
-        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
-        let builder = if let Some(context) = context {
-            builder.context(&context.0.clone())
-        } else {
-            builder
-        };
-        let base = builder.build();
+        let topic = topic.to_owned();
+        let metadata = metadata.unwrap_or_default();
+        let context = context.map(|c| c.0.clone());
+        // Release the GIL before calling build(), which may invoke
+        // PySinkChannelFilter::should_subscribe() on registered sinks.
+        let base = py.allow_threads(move || {
+            let builder = ChannelBuilder::new(&topic).metadata(metadata);
+            let builder = if let Some(context) = context {
+                builder.context(&context)
+            } else {
+                builder
+            };
+            builder.build()
+        });
         Self(base)
     }
 
@@ -2137,17 +2289,25 @@ impl LocationFixChannel {
     #[new]
     #[pyo3(signature = (topic, *, metadata=None, context=None))]
     fn new(
+        py: Python<'_>,
         topic: &str,
         metadata: Option<BTreeMap<String, String>>,
         context: Option<&PyContext>,
     ) -> Self {
-        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
-        let builder = if let Some(context) = context {
-            builder.context(&context.0.clone())
-        } else {
-            builder
-        };
-        let base = builder.build();
+        let topic = topic.to_owned();
+        let metadata = metadata.unwrap_or_default();
+        let context = context.map(|c| c.0.clone());
+        // Release the GIL before calling build(), which may invoke
+        // PySinkChannelFilter::should_subscribe() on registered sinks.
+        let base = py.allow_threads(move || {
+            let builder = ChannelBuilder::new(&topic).metadata(metadata);
+            let builder = if let Some(context) = context {
+                builder.context(&context)
+            } else {
+                builder
+            };
+            builder.build()
+        });
         Self(base)
     }
 
@@ -2246,17 +2406,25 @@ impl LocationFixesChannel {
     #[new]
     #[pyo3(signature = (topic, *, metadata=None, context=None))]
     fn new(
+        py: Python<'_>,
         topic: &str,
         metadata: Option<BTreeMap<String, String>>,
         context: Option<&PyContext>,
     ) -> Self {
-        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
-        let builder = if let Some(context) = context {
-            builder.context(&context.0.clone())
-        } else {
-            builder
-        };
-        let base = builder.build();
+        let topic = topic.to_owned();
+        let metadata = metadata.unwrap_or_default();
+        let context = context.map(|c| c.0.clone());
+        // Release the GIL before calling build(), which may invoke
+        // PySinkChannelFilter::should_subscribe() on registered sinks.
+        let base = py.allow_threads(move || {
+            let builder = ChannelBuilder::new(&topic).metadata(metadata);
+            let builder = if let Some(context) = context {
+                builder.context(&context)
+            } else {
+                builder
+            };
+            builder.build()
+        });
         Self(base)
     }
 
@@ -2355,17 +2523,25 @@ impl LogChannel {
     #[new]
     #[pyo3(signature = (topic, *, metadata=None, context=None))]
     fn new(
+        py: Python<'_>,
         topic: &str,
         metadata: Option<BTreeMap<String, String>>,
         context: Option<&PyContext>,
     ) -> Self {
-        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
-        let builder = if let Some(context) = context {
-            builder.context(&context.0.clone())
-        } else {
-            builder
-        };
-        let base = builder.build();
+        let topic = topic.to_owned();
+        let metadata = metadata.unwrap_or_default();
+        let context = context.map(|c| c.0.clone());
+        // Release the GIL before calling build(), which may invoke
+        // PySinkChannelFilter::should_subscribe() on registered sinks.
+        let base = py.allow_threads(move || {
+            let builder = ChannelBuilder::new(&topic).metadata(metadata);
+            let builder = if let Some(context) = context {
+                builder.context(&context)
+            } else {
+                builder
+            };
+            builder.build()
+        });
         Self(base)
     }
 
@@ -2459,17 +2635,25 @@ impl SceneEntityDeletionChannel {
     #[new]
     #[pyo3(signature = (topic, *, metadata=None, context=None))]
     fn new(
+        py: Python<'_>,
         topic: &str,
         metadata: Option<BTreeMap<String, String>>,
         context: Option<&PyContext>,
     ) -> Self {
-        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
-        let builder = if let Some(context) = context {
-            builder.context(&context.0.clone())
-        } else {
-            builder
-        };
-        let base = builder.build();
+        let topic = topic.to_owned();
+        let metadata = metadata.unwrap_or_default();
+        let context = context.map(|c| c.0.clone());
+        // Release the GIL before calling build(), which may invoke
+        // PySinkChannelFilter::should_subscribe() on registered sinks.
+        let base = py.allow_threads(move || {
+            let builder = ChannelBuilder::new(&topic).metadata(metadata);
+            let builder = if let Some(context) = context {
+                builder.context(&context)
+            } else {
+                builder
+            };
+            builder.build()
+        });
         Self(base)
     }
 
@@ -2568,17 +2752,25 @@ impl SceneEntityChannel {
     #[new]
     #[pyo3(signature = (topic, *, metadata=None, context=None))]
     fn new(
+        py: Python<'_>,
         topic: &str,
         metadata: Option<BTreeMap<String, String>>,
         context: Option<&PyContext>,
     ) -> Self {
-        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
-        let builder = if let Some(context) = context {
-            builder.context(&context.0.clone())
-        } else {
-            builder
-        };
-        let base = builder.build();
+        let topic = topic.to_owned();
+        let metadata = metadata.unwrap_or_default();
+        let context = context.map(|c| c.0.clone());
+        // Release the GIL before calling build(), which may invoke
+        // PySinkChannelFilter::should_subscribe() on registered sinks.
+        let base = py.allow_threads(move || {
+            let builder = ChannelBuilder::new(&topic).metadata(metadata);
+            let builder = if let Some(context) = context {
+                builder.context(&context)
+            } else {
+                builder
+            };
+            builder.build()
+        });
         Self(base)
     }
 
@@ -2677,17 +2869,25 @@ impl SceneUpdateChannel {
     #[new]
     #[pyo3(signature = (topic, *, metadata=None, context=None))]
     fn new(
+        py: Python<'_>,
         topic: &str,
         metadata: Option<BTreeMap<String, String>>,
         context: Option<&PyContext>,
     ) -> Self {
-        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
-        let builder = if let Some(context) = context {
-            builder.context(&context.0.clone())
-        } else {
-            builder
-        };
-        let base = builder.build();
+        let topic = topic.to_owned();
+        let metadata = metadata.unwrap_or_default();
+        let context = context.map(|c| c.0.clone());
+        // Release the GIL before calling build(), which may invoke
+        // PySinkChannelFilter::should_subscribe() on registered sinks.
+        let base = py.allow_threads(move || {
+            let builder = ChannelBuilder::new(&topic).metadata(metadata);
+            let builder = if let Some(context) = context {
+                builder.context(&context)
+            } else {
+                builder
+            };
+            builder.build()
+        });
         Self(base)
     }
 
@@ -2786,17 +2986,25 @@ impl ModelPrimitiveChannel {
     #[new]
     #[pyo3(signature = (topic, *, metadata=None, context=None))]
     fn new(
+        py: Python<'_>,
         topic: &str,
         metadata: Option<BTreeMap<String, String>>,
         context: Option<&PyContext>,
     ) -> Self {
-        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
-        let builder = if let Some(context) = context {
-            builder.context(&context.0.clone())
-        } else {
-            builder
-        };
-        let base = builder.build();
+        let topic = topic.to_owned();
+        let metadata = metadata.unwrap_or_default();
+        let context = context.map(|c| c.0.clone());
+        // Release the GIL before calling build(), which may invoke
+        // PySinkChannelFilter::should_subscribe() on registered sinks.
+        let base = py.allow_threads(move || {
+            let builder = ChannelBuilder::new(&topic).metadata(metadata);
+            let builder = if let Some(context) = context {
+                builder.context(&context)
+            } else {
+                builder
+            };
+            builder.build()
+        });
         Self(base)
     }
 
@@ -2895,17 +3103,25 @@ impl PackedElementFieldChannel {
     #[new]
     #[pyo3(signature = (topic, *, metadata=None, context=None))]
     fn new(
+        py: Python<'_>,
         topic: &str,
         metadata: Option<BTreeMap<String, String>>,
         context: Option<&PyContext>,
     ) -> Self {
-        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
-        let builder = if let Some(context) = context {
-            builder.context(&context.0.clone())
-        } else {
-            builder
-        };
-        let base = builder.build();
+        let topic = topic.to_owned();
+        let metadata = metadata.unwrap_or_default();
+        let context = context.map(|c| c.0.clone());
+        // Release the GIL before calling build(), which may invoke
+        // PySinkChannelFilter::should_subscribe() on registered sinks.
+        let base = py.allow_threads(move || {
+            let builder = ChannelBuilder::new(&topic).metadata(metadata);
+            let builder = if let Some(context) = context {
+                builder.context(&context)
+            } else {
+                builder
+            };
+            builder.build()
+        });
         Self(base)
     }
 
@@ -3004,17 +3220,25 @@ impl Point2Channel {
     #[new]
     #[pyo3(signature = (topic, *, metadata=None, context=None))]
     fn new(
+        py: Python<'_>,
         topic: &str,
         metadata: Option<BTreeMap<String, String>>,
         context: Option<&PyContext>,
     ) -> Self {
-        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
-        let builder = if let Some(context) = context {
-            builder.context(&context.0.clone())
-        } else {
-            builder
-        };
-        let base = builder.build();
+        let topic = topic.to_owned();
+        let metadata = metadata.unwrap_or_default();
+        let context = context.map(|c| c.0.clone());
+        // Release the GIL before calling build(), which may invoke
+        // PySinkChannelFilter::should_subscribe() on registered sinks.
+        let base = py.allow_threads(move || {
+            let builder = ChannelBuilder::new(&topic).metadata(metadata);
+            let builder = if let Some(context) = context {
+                builder.context(&context)
+            } else {
+                builder
+            };
+            builder.build()
+        });
         Self(base)
     }
 
@@ -3108,17 +3332,25 @@ impl Point3Channel {
     #[new]
     #[pyo3(signature = (topic, *, metadata=None, context=None))]
     fn new(
+        py: Python<'_>,
         topic: &str,
         metadata: Option<BTreeMap<String, String>>,
         context: Option<&PyContext>,
     ) -> Self {
-        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
-        let builder = if let Some(context) = context {
-            builder.context(&context.0.clone())
-        } else {
-            builder
-        };
-        let base = builder.build();
+        let topic = topic.to_owned();
+        let metadata = metadata.unwrap_or_default();
+        let context = context.map(|c| c.0.clone());
+        // Release the GIL before calling build(), which may invoke
+        // PySinkChannelFilter::should_subscribe() on registered sinks.
+        let base = py.allow_threads(move || {
+            let builder = ChannelBuilder::new(&topic).metadata(metadata);
+            let builder = if let Some(context) = context {
+                builder.context(&context)
+            } else {
+                builder
+            };
+            builder.build()
+        });
         Self(base)
     }
 
@@ -3212,17 +3444,25 @@ impl Point3InFrameChannel {
     #[new]
     #[pyo3(signature = (topic, *, metadata=None, context=None))]
     fn new(
+        py: Python<'_>,
         topic: &str,
         metadata: Option<BTreeMap<String, String>>,
         context: Option<&PyContext>,
     ) -> Self {
-        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
-        let builder = if let Some(context) = context {
-            builder.context(&context.0.clone())
-        } else {
-            builder
-        };
-        let base = builder.build();
+        let topic = topic.to_owned();
+        let metadata = metadata.unwrap_or_default();
+        let context = context.map(|c| c.0.clone());
+        // Release the GIL before calling build(), which may invoke
+        // PySinkChannelFilter::should_subscribe() on registered sinks.
+        let base = py.allow_threads(move || {
+            let builder = ChannelBuilder::new(&topic).metadata(metadata);
+            let builder = if let Some(context) = context {
+                builder.context(&context)
+            } else {
+                builder
+            };
+            builder.build()
+        });
         Self(base)
     }
 
@@ -3321,17 +3561,25 @@ impl PointCloudChannel {
     #[new]
     #[pyo3(signature = (topic, *, metadata=None, context=None))]
     fn new(
+        py: Python<'_>,
         topic: &str,
         metadata: Option<BTreeMap<String, String>>,
         context: Option<&PyContext>,
     ) -> Self {
-        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
-        let builder = if let Some(context) = context {
-            builder.context(&context.0.clone())
-        } else {
-            builder
-        };
-        let base = builder.build();
+        let topic = topic.to_owned();
+        let metadata = metadata.unwrap_or_default();
+        let context = context.map(|c| c.0.clone());
+        // Release the GIL before calling build(), which may invoke
+        // PySinkChannelFilter::should_subscribe() on registered sinks.
+        let base = py.allow_threads(move || {
+            let builder = ChannelBuilder::new(&topic).metadata(metadata);
+            let builder = if let Some(context) = context {
+                builder.context(&context)
+            } else {
+                builder
+            };
+            builder.build()
+        });
         Self(base)
     }
 
@@ -3430,17 +3678,25 @@ impl PointsAnnotationChannel {
     #[new]
     #[pyo3(signature = (topic, *, metadata=None, context=None))]
     fn new(
+        py: Python<'_>,
         topic: &str,
         metadata: Option<BTreeMap<String, String>>,
         context: Option<&PyContext>,
     ) -> Self {
-        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
-        let builder = if let Some(context) = context {
-            builder.context(&context.0.clone())
-        } else {
-            builder
-        };
-        let base = builder.build();
+        let topic = topic.to_owned();
+        let metadata = metadata.unwrap_or_default();
+        let context = context.map(|c| c.0.clone());
+        // Release the GIL before calling build(), which may invoke
+        // PySinkChannelFilter::should_subscribe() on registered sinks.
+        let base = py.allow_threads(move || {
+            let builder = ChannelBuilder::new(&topic).metadata(metadata);
+            let builder = if let Some(context) = context {
+                builder.context(&context)
+            } else {
+                builder
+            };
+            builder.build()
+        });
         Self(base)
     }
 
@@ -3539,17 +3795,25 @@ impl PoseChannel {
     #[new]
     #[pyo3(signature = (topic, *, metadata=None, context=None))]
     fn new(
+        py: Python<'_>,
         topic: &str,
         metadata: Option<BTreeMap<String, String>>,
         context: Option<&PyContext>,
     ) -> Self {
-        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
-        let builder = if let Some(context) = context {
-            builder.context(&context.0.clone())
-        } else {
-            builder
-        };
-        let base = builder.build();
+        let topic = topic.to_owned();
+        let metadata = metadata.unwrap_or_default();
+        let context = context.map(|c| c.0.clone());
+        // Release the GIL before calling build(), which may invoke
+        // PySinkChannelFilter::should_subscribe() on registered sinks.
+        let base = py.allow_threads(move || {
+            let builder = ChannelBuilder::new(&topic).metadata(metadata);
+            let builder = if let Some(context) = context {
+                builder.context(&context)
+            } else {
+                builder
+            };
+            builder.build()
+        });
         Self(base)
     }
 
@@ -3643,17 +3907,25 @@ impl PoseInFrameChannel {
     #[new]
     #[pyo3(signature = (topic, *, metadata=None, context=None))]
     fn new(
+        py: Python<'_>,
         topic: &str,
         metadata: Option<BTreeMap<String, String>>,
         context: Option<&PyContext>,
     ) -> Self {
-        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
-        let builder = if let Some(context) = context {
-            builder.context(&context.0.clone())
-        } else {
-            builder
-        };
-        let base = builder.build();
+        let topic = topic.to_owned();
+        let metadata = metadata.unwrap_or_default();
+        let context = context.map(|c| c.0.clone());
+        // Release the GIL before calling build(), which may invoke
+        // PySinkChannelFilter::should_subscribe() on registered sinks.
+        let base = py.allow_threads(move || {
+            let builder = ChannelBuilder::new(&topic).metadata(metadata);
+            let builder = if let Some(context) = context {
+                builder.context(&context)
+            } else {
+                builder
+            };
+            builder.build()
+        });
         Self(base)
     }
 
@@ -3752,17 +4024,25 @@ impl PosesInFrameChannel {
     #[new]
     #[pyo3(signature = (topic, *, metadata=None, context=None))]
     fn new(
+        py: Python<'_>,
         topic: &str,
         metadata: Option<BTreeMap<String, String>>,
         context: Option<&PyContext>,
     ) -> Self {
-        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
-        let builder = if let Some(context) = context {
-            builder.context(&context.0.clone())
-        } else {
-            builder
-        };
-        let base = builder.build();
+        let topic = topic.to_owned();
+        let metadata = metadata.unwrap_or_default();
+        let context = context.map(|c| c.0.clone());
+        // Release the GIL before calling build(), which may invoke
+        // PySinkChannelFilter::should_subscribe() on registered sinks.
+        let base = py.allow_threads(move || {
+            let builder = ChannelBuilder::new(&topic).metadata(metadata);
+            let builder = if let Some(context) = context {
+                builder.context(&context)
+            } else {
+                builder
+            };
+            builder.build()
+        });
         Self(base)
     }
 
@@ -3861,17 +4141,25 @@ impl QuaternionChannel {
     #[new]
     #[pyo3(signature = (topic, *, metadata=None, context=None))]
     fn new(
+        py: Python<'_>,
         topic: &str,
         metadata: Option<BTreeMap<String, String>>,
         context: Option<&PyContext>,
     ) -> Self {
-        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
-        let builder = if let Some(context) = context {
-            builder.context(&context.0.clone())
-        } else {
-            builder
-        };
-        let base = builder.build();
+        let topic = topic.to_owned();
+        let metadata = metadata.unwrap_or_default();
+        let context = context.map(|c| c.0.clone());
+        // Release the GIL before calling build(), which may invoke
+        // PySinkChannelFilter::should_subscribe() on registered sinks.
+        let base = py.allow_threads(move || {
+            let builder = ChannelBuilder::new(&topic).metadata(metadata);
+            let builder = if let Some(context) = context {
+                builder.context(&context)
+            } else {
+                builder
+            };
+            builder.build()
+        });
         Self(base)
     }
 
@@ -3970,17 +4258,25 @@ impl RawAudioChannel {
     #[new]
     #[pyo3(signature = (topic, *, metadata=None, context=None))]
     fn new(
+        py: Python<'_>,
         topic: &str,
         metadata: Option<BTreeMap<String, String>>,
         context: Option<&PyContext>,
     ) -> Self {
-        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
-        let builder = if let Some(context) = context {
-            builder.context(&context.0.clone())
-        } else {
-            builder
-        };
-        let base = builder.build();
+        let topic = topic.to_owned();
+        let metadata = metadata.unwrap_or_default();
+        let context = context.map(|c| c.0.clone());
+        // Release the GIL before calling build(), which may invoke
+        // PySinkChannelFilter::should_subscribe() on registered sinks.
+        let base = py.allow_threads(move || {
+            let builder = ChannelBuilder::new(&topic).metadata(metadata);
+            let builder = if let Some(context) = context {
+                builder.context(&context)
+            } else {
+                builder
+            };
+            builder.build()
+        });
         Self(base)
     }
 
@@ -4079,17 +4375,25 @@ impl RawImageChannel {
     #[new]
     #[pyo3(signature = (topic, *, metadata=None, context=None))]
     fn new(
+        py: Python<'_>,
         topic: &str,
         metadata: Option<BTreeMap<String, String>>,
         context: Option<&PyContext>,
     ) -> Self {
-        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
-        let builder = if let Some(context) = context {
-            builder.context(&context.0.clone())
-        } else {
-            builder
-        };
-        let base = builder.build();
+        let topic = topic.to_owned();
+        let metadata = metadata.unwrap_or_default();
+        let context = context.map(|c| c.0.clone());
+        // Release the GIL before calling build(), which may invoke
+        // PySinkChannelFilter::should_subscribe() on registered sinks.
+        let base = py.allow_threads(move || {
+            let builder = ChannelBuilder::new(&topic).metadata(metadata);
+            let builder = if let Some(context) = context {
+                builder.context(&context)
+            } else {
+                builder
+            };
+            builder.build()
+        });
         Self(base)
     }
 
@@ -4188,17 +4492,25 @@ impl SpherePrimitiveChannel {
     #[new]
     #[pyo3(signature = (topic, *, metadata=None, context=None))]
     fn new(
+        py: Python<'_>,
         topic: &str,
         metadata: Option<BTreeMap<String, String>>,
         context: Option<&PyContext>,
     ) -> Self {
-        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
-        let builder = if let Some(context) = context {
-            builder.context(&context.0.clone())
-        } else {
-            builder
-        };
-        let base = builder.build();
+        let topic = topic.to_owned();
+        let metadata = metadata.unwrap_or_default();
+        let context = context.map(|c| c.0.clone());
+        // Release the GIL before calling build(), which may invoke
+        // PySinkChannelFilter::should_subscribe() on registered sinks.
+        let base = py.allow_threads(move || {
+            let builder = ChannelBuilder::new(&topic).metadata(metadata);
+            let builder = if let Some(context) = context {
+                builder.context(&context)
+            } else {
+                builder
+            };
+            builder.build()
+        });
         Self(base)
     }
 
@@ -4297,17 +4609,25 @@ impl TextAnnotationChannel {
     #[new]
     #[pyo3(signature = (topic, *, metadata=None, context=None))]
     fn new(
+        py: Python<'_>,
         topic: &str,
         metadata: Option<BTreeMap<String, String>>,
         context: Option<&PyContext>,
     ) -> Self {
-        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
-        let builder = if let Some(context) = context {
-            builder.context(&context.0.clone())
-        } else {
-            builder
-        };
-        let base = builder.build();
+        let topic = topic.to_owned();
+        let metadata = metadata.unwrap_or_default();
+        let context = context.map(|c| c.0.clone());
+        // Release the GIL before calling build(), which may invoke
+        // PySinkChannelFilter::should_subscribe() on registered sinks.
+        let base = py.allow_threads(move || {
+            let builder = ChannelBuilder::new(&topic).metadata(metadata);
+            let builder = if let Some(context) = context {
+                builder.context(&context)
+            } else {
+                builder
+            };
+            builder.build()
+        });
         Self(base)
     }
 
@@ -4406,17 +4726,25 @@ impl TextPrimitiveChannel {
     #[new]
     #[pyo3(signature = (topic, *, metadata=None, context=None))]
     fn new(
+        py: Python<'_>,
         topic: &str,
         metadata: Option<BTreeMap<String, String>>,
         context: Option<&PyContext>,
     ) -> Self {
-        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
-        let builder = if let Some(context) = context {
-            builder.context(&context.0.clone())
-        } else {
-            builder
-        };
-        let base = builder.build();
+        let topic = topic.to_owned();
+        let metadata = metadata.unwrap_or_default();
+        let context = context.map(|c| c.0.clone());
+        // Release the GIL before calling build(), which may invoke
+        // PySinkChannelFilter::should_subscribe() on registered sinks.
+        let base = py.allow_threads(move || {
+            let builder = ChannelBuilder::new(&topic).metadata(metadata);
+            let builder = if let Some(context) = context {
+                builder.context(&context)
+            } else {
+                builder
+            };
+            builder.build()
+        });
         Self(base)
     }
 
@@ -4515,17 +4843,25 @@ impl TriangleListPrimitiveChannel {
     #[new]
     #[pyo3(signature = (topic, *, metadata=None, context=None))]
     fn new(
+        py: Python<'_>,
         topic: &str,
         metadata: Option<BTreeMap<String, String>>,
         context: Option<&PyContext>,
     ) -> Self {
-        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
-        let builder = if let Some(context) = context {
-            builder.context(&context.0.clone())
-        } else {
-            builder
-        };
-        let base = builder.build();
+        let topic = topic.to_owned();
+        let metadata = metadata.unwrap_or_default();
+        let context = context.map(|c| c.0.clone());
+        // Release the GIL before calling build(), which may invoke
+        // PySinkChannelFilter::should_subscribe() on registered sinks.
+        let base = py.allow_threads(move || {
+            let builder = ChannelBuilder::new(&topic).metadata(metadata);
+            let builder = if let Some(context) = context {
+                builder.context(&context)
+            } else {
+                builder
+            };
+            builder.build()
+        });
         Self(base)
     }
 
@@ -4629,17 +4965,25 @@ impl Vector2Channel {
     #[new]
     #[pyo3(signature = (topic, *, metadata=None, context=None))]
     fn new(
+        py: Python<'_>,
         topic: &str,
         metadata: Option<BTreeMap<String, String>>,
         context: Option<&PyContext>,
     ) -> Self {
-        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
-        let builder = if let Some(context) = context {
-            builder.context(&context.0.clone())
-        } else {
-            builder
-        };
-        let base = builder.build();
+        let topic = topic.to_owned();
+        let metadata = metadata.unwrap_or_default();
+        let context = context.map(|c| c.0.clone());
+        // Release the GIL before calling build(), which may invoke
+        // PySinkChannelFilter::should_subscribe() on registered sinks.
+        let base = py.allow_threads(move || {
+            let builder = ChannelBuilder::new(&topic).metadata(metadata);
+            let builder = if let Some(context) = context {
+                builder.context(&context)
+            } else {
+                builder
+            };
+            builder.build()
+        });
         Self(base)
     }
 
@@ -4733,17 +5077,25 @@ impl Vector3Channel {
     #[new]
     #[pyo3(signature = (topic, *, metadata=None, context=None))]
     fn new(
+        py: Python<'_>,
         topic: &str,
         metadata: Option<BTreeMap<String, String>>,
         context: Option<&PyContext>,
     ) -> Self {
-        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
-        let builder = if let Some(context) = context {
-            builder.context(&context.0.clone())
-        } else {
-            builder
-        };
-        let base = builder.build();
+        let topic = topic.to_owned();
+        let metadata = metadata.unwrap_or_default();
+        let context = context.map(|c| c.0.clone());
+        // Release the GIL before calling build(), which may invoke
+        // PySinkChannelFilter::should_subscribe() on registered sinks.
+        let base = py.allow_threads(move || {
+            let builder = ChannelBuilder::new(&topic).metadata(metadata);
+            let builder = if let Some(context) = context {
+                builder.context(&context)
+            } else {
+                builder
+            };
+            builder.build()
+        });
         Self(base)
     }
 
