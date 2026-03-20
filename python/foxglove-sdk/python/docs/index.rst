@@ -57,15 +57,18 @@ channel remains attached to the context until it is either explicitly closed wit
 `Channel.close`, or the context is dropped. Attempting to log a message on a closed channel
 will elicit a throttled warning.
 
-Schemas
-^^^^^^^
+Message Types
+^^^^^^^^^^^^^
 
-The SDK provides classes for well-known schemas. These can be used in conjunction with associated
+The SDK provides classes for well-known message types. These can be used in conjunction with associated
 channel classes for type-safe logging, which ensures at compile time that messages logged to a
 channel all share a common schema. For example, you may create a :py:class:`.channels.SceneUpdateChannel` on
-which you will log :py:class:`.schemas.SceneUpdate` messages. Note that the schema classes
+which you will log :py:class:`.messages.SceneUpdate` messages. Note that the message classes
 are currently immutable and do not expose getters and setters for their fields. This is a limitation
 we plan to address in the future.
+
+.. deprecated::
+   The ``foxglove.schemas`` module is deprecated. Use :py:mod:`foxglove.messages` instead.
 
 You can also log messages with arbitrary schemas and provide your own encoding, by instantiating a
 :py:class:`.Channel` class.

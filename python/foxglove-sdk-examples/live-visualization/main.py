@@ -8,7 +8,7 @@ import foxglove
 import numpy as np
 from foxglove import Channel, Schema
 from foxglove.channels import RawImageChannel
-from foxglove.schemas import (
+from foxglove.messages import (
     Color,
     CubePrimitive,
     Duration,

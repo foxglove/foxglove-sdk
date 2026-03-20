@@ -1,0 +1,2 @@
+.. automodule:: foxglove.messages
+   :members:

@@ -5,7 +5,7 @@ import random
 import pytest
 from foxglove import Channel, Context, Schema
 from foxglove.channels import LogChannel
-from foxglove.schemas import Log
+from foxglove.messages import Log
 
 
 @pytest.fixture

@@ -1,6 +1,6 @@
 use bytes::Bytes;
 use chrono::{DateTime, Utc};
-use foxglove::{Encode, LazyChannel, LazyRawChannel, McapWriteOptions, McapWriter, schemas};
+use foxglove::{Encode, LazyChannel, LazyRawChannel, McapWriteOptions, McapWriter, messages};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -17,8 +17,8 @@ struct Banana {
     picked_at: Option<DateTime<Utc>>,
 }
 
-// This channel logs images using Foxglove's image schema
-static IMG_CHANNEL: LazyChannel<schemas::CompressedImage> = LazyChannel::new("/image");
+// This channel logs images using Foxglove's CompressedImage message type
+static IMG_CHANNEL: LazyChannel<messages::CompressedImage> = LazyChannel::new("/image");
 // This channel logs schemaless JSON
 static SCHEMALESS_CHANNEL: LazyRawChannel = LazyRawChannel::new("/schemaless", "json");
 // This channel logs JSON with a jsonschema
@@ -49,8 +49,8 @@ fn main() {
         .create_new_buffered_file("example.mcap")
         .expect("Failed to start mcap writer");
 
-    // Using the Foxglove CompressedImage schema
-    IMG_CHANNEL.log(&schemas::CompressedImage {
+    // Using the Foxglove CompressedImage message type
+    IMG_CHANNEL.log(&messages::CompressedImage {
         data: Bytes::from_static(IMG_DATA),
         format: "webp".to_string(),
         ..Default::default()

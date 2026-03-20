@@ -1,7 +1,8 @@
 services:
   livekit:
     image: livekit/livekit-server:v1.9.11
-    command: --dev --bind 0.0.0.0 --node-ip 127.0.0.1
+    # Firefox won't connect to 127.0.0.1 for WebRTC, so set another IP here for Firefox
+    command: --dev --bind 0.0.0.0 --node-ip ${LIVEKIT_NODE_IP:-127.0.0.1}
     ports:
       - "7880:7880" # HTTP / WebSocket
       - "7881:7881" # RTC over TCP
