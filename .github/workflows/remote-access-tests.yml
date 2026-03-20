@@ -126,6 +126,16 @@ jobs:
             exit 1
           fi
 
+      - name: Dump container logs on failure
+        if: failure()
+        run: >
+          docker compose
+          -f docker-compose.yaml
+          -f docker-compose.netem.yml
+          -f docker-compose.netem-livekit.yml
+          --profile perlink
+          logs --tail=200
+
       - name: Stop per-link netem stack
         if: always()
         run: >
