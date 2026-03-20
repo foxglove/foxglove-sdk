@@ -1259,6 +1259,7 @@ dependencies = [
  "clap",
  "env_logger",
  "foxglove 0.20.0",
+ "log",
  "serde_json",
  "tokio",
 ]

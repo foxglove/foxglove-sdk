@@ -53,6 +53,17 @@ pub enum ConnectionStatus {
     Shutdown = 3,
 }
 
+impl std::fmt::Display for ConnectionStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            ConnectionStatus::Connecting => "connecting",
+            ConnectionStatus::Connected => "connected",
+            ConnectionStatus::ShuttingDown => "shutting down",
+            ConnectionStatus::Shutdown => "shutdown",
+        })
+    }
+}
+
 impl ConnectionStatus {
     fn from_u8(value: u8) -> Self {
         match value {
