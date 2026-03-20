@@ -41,6 +41,7 @@ const CHANNEL_TOPIC_PREFIX: &str = "ch-";
 const MESSAGE_FRAME_SIZE: usize = 5; // 1 byte opcode + u32 LE length
 const MAX_MESSAGE_SIZE: usize = 16 * 1024 * 1024; // 16 MiB
 const MAX_SEND_RETRIES: usize = 3;
+const PENDING_CLIENT_READER_TIMEOUT: Duration = Duration::from_secs(15);
 
 /// A data plane message queued for delivery to subscribed participants.
 struct ChannelMessage {
@@ -117,6 +118,11 @@ pub(crate) struct RemoteAccessSession {
     /// the sender loop to re-advertise affected channels.
     video_metadata_tx: tokio::sync::watch::Sender<()>,
     video_metadata_rx: tokio::sync::watch::Receiver<()>,
+    /// Byte stream readers for `client-{channelId}` streams that arrived before the
+    /// corresponding Client Advertise message. Keyed by participant identity then channel ID.
+    /// Drained when the advertise arrives; expired after [`PENDING_CLIENT_READER_TIMEOUT`].
+    pending_client_readers:
+        parking_lot::Mutex<HashMap<ParticipantIdentity, HashMap<ChannelId, ByteStreamReader>>>,
 }
 
 impl Sink for RemoteAccessSession {
@@ -243,6 +249,7 @@ impl RemoteAccessSession {
             subscription_lock: parking_lot::Mutex::new(()),
             video_metadata_tx,
             video_metadata_rx,
+            pending_client_readers: parking_lot::Mutex::new(HashMap::new()),
         }
     }
 
@@ -448,6 +455,74 @@ impl RemoteAccessSession {
         }
     }
 
+    /// Handle an incoming `client-{channelId}` byte stream.
+    ///
+    /// If the client has already advertised this channel, the stream is read immediately.
+    /// Otherwise the reader is stashed until the Client Advertise arrives (or a timeout
+    /// expires), letting LiveKit buffer the data in the meantime.
+    pub(crate) fn handle_client_channel_stream(
+        self: &Arc<Self>,
+        participant_identity: ParticipantIdentity,
+        channel_id: ChannelId,
+        reader: ByteStreamReader,
+    ) {
+        let has_channel = self
+            .state
+            .read()
+            .get_client_channel(&participant_identity, channel_id)
+            .is_some();
+
+        if has_channel {
+            let session = self.clone();
+            tokio::spawn(async move {
+                session
+                    .handle_byte_stream_from_client(participant_identity, reader)
+                    .await;
+            });
+            return;
+        }
+
+        {
+            let mut pending = self.pending_client_readers.lock();
+            pending
+                .entry(participant_identity.clone())
+                .or_default()
+                .insert(channel_id, reader);
+        }
+
+        let session = self.clone();
+        tokio::spawn(async move {
+            tokio::select! {
+                () = session.cancellation_token.cancelled() => {}
+                () = tokio::time::sleep(PENDING_CLIENT_READER_TIMEOUT) => {
+                    let removed = {
+                        let mut pending = session.pending_client_readers.lock();
+                        let reader = pending
+                            .get_mut(&participant_identity)
+                            .and_then(|map| map.remove(&channel_id));
+                        if pending.get(&participant_identity).is_some_and(|m| m.is_empty()) {
+                            pending.remove(&participant_identity);
+                        }
+                        reader
+                    };
+                    if removed.is_some() {
+                        if let Some(participant) =
+                            session.state.read().get_participant(&participant_identity)
+                        {
+                            session.send_error(
+                                &participant,
+                                format!(
+                                    "Client has not advertised channel: {}",
+                                    u64::from(channel_id),
+                                ),
+                            );
+                        }
+                    }
+                }
+            }
+        });
+    }
+
     /// Handle a single framed client message. Returns `false` if the byte stream
     /// should be closed (e.g. unrecognized opcode indicating a protocol mismatch).
     fn handle_client_message(
@@ -591,7 +666,11 @@ impl RemoteAccessSession {
         self.stop_video_tracks(&last_video_unsubscribed);
     }
 
-    fn handle_client_advertise(&self, participant: &Arc<Participant>, msg: client::Advertise<'_>) {
+    fn handle_client_advertise(
+        self: &Arc<Self>,
+        participant: &Arc<Participant>,
+        msg: client::Advertise<'_>,
+    ) {
         if !self.has_capability(Capability::ClientPublish) {
             self.send_error(
                 participant,
@@ -652,6 +731,22 @@ impl RemoteAccessSession {
 
             if let Some(listener) = &self.listener {
                 listener.on_client_advertise(client.clone(), &descriptor);
+            }
+
+            // Drain any pending byte stream reader that arrived before this advertise.
+            let pending_reader = self
+                .pending_client_readers
+                .lock()
+                .get_mut(participant.identity())
+                .and_then(|map| map.remove(&channel_id));
+            if let Some(reader) = pending_reader {
+                let session = self.clone();
+                let identity = participant.identity().clone();
+                tokio::spawn(async move {
+                    session
+                        .handle_byte_stream_from_client(identity, reader)
+                        .await;
+                });
             }
         }
     }
@@ -781,6 +876,9 @@ impl RemoteAccessSession {
     /// Channels that lose their last subscriber are unsubscribed from the context.
     pub(crate) fn remove_participant(self: &Arc<Self>, participant_id: &ParticipantIdentity) {
         let _guard = self.subscription_lock.lock();
+
+        self.pending_client_readers.lock().remove(participant_id);
+
         let removed = self.state.write().remove_participant(participant_id);
 
         if !removed.last_unsubscribed.is_empty() {

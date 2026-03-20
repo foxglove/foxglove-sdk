@@ -12,7 +12,7 @@ use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info, warn};
 
 use crate::{
-    Context, SinkChannelFilter,
+    ChannelId, Context, SinkChannelFilter,
     api_client::{DeviceToken, FoxgloveApiClientBuilder},
     library_version::get_library_version,
     protocol::v2::server::ServerInfo,
@@ -334,22 +334,38 @@ impl RemoteAccessConnection {
                         "byte stream opened from participant: {:?}, topic: {:?}",
                         participant_identity, topic
                     );
-                    let is_expected = topic == WS_PROTOCOL_TOPIC
-                        || topic.starts_with(CLIENT_CHANNEL_TOPIC_PREFIX);
-                    if is_expected {
-                        if let Some(reader) = reader.take() {
+                    if let Some(reader) = reader.take() {
+                        if topic == WS_PROTOCOL_TOPIC {
                             let session2 = session.clone();
                             tokio::spawn(async move {
                                 session2
-                                    .handle_byte_stream_from_client(participant_identity, reader)
+                                    .handle_byte_stream_from_client(
+                                        participant_identity,
+                                        reader,
+                                    )
                                     .await;
                             });
+                        } else if let Some(id_str) =
+                            topic.strip_prefix(CLIENT_CHANNEL_TOPIC_PREFIX)
+                        {
+                            if let Ok(id) = id_str.parse::<u64>() {
+                                session.handle_client_channel_stream(
+                                    participant_identity,
+                                    ChannelId::new(id),
+                                    reader,
+                                );
+                            } else {
+                                warn!(
+                                    "invalid channel id in topic {:?} from {:?}",
+                                    topic, participant_identity
+                                );
+                            }
+                        } else {
+                            warn!(
+                                "ignoring unexpected byte stream topic from {:?}: {:?}",
+                                participant_identity, topic
+                            );
                         }
-                    } else {
-                        warn!(
-                            "ignoring unexpected byte stream topic from {:?}: {:?}",
-                            participant_identity, topic
-                        );
                     }
                 }
                 RoomEvent::Disconnected { reason } => {

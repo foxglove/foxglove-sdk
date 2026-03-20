@@ -1149,18 +1149,21 @@ async fn livekit_client_message_data_on_channel_stream_fires_listener_callback()
     Ok(())
 }
 
-/// Test that sending MessageData for a channel that has not been advertised
-/// results in a Status error message.
+/// Test that sending MessageData before the Client Advertise still delivers the
+/// message once the advertise arrives (the server holds the byte stream until then).
 #[traced_test]
 #[ignore]
 #[tokio::test]
 #[serial(livekit)]
-async fn livekit_client_message_data_before_advertise_sends_error() -> Result<()> {
+async fn livekit_client_message_data_before_advertise_is_delivered() -> Result<()> {
+    use std::sync::Arc;
     let ctx = foxglove::Context::new();
+    let listener = Arc::new(MockListener::default());
 
     let gw = TestGateway::start_with_options(
         &ctx,
         TestGatewayOptions {
+            listener: Some(listener.clone()),
             capabilities: vec![foxglove::remote_access::Capability::ClientPublish],
             ..Default::default()
         },
@@ -1170,42 +1173,41 @@ async fn livekit_client_message_data_before_advertise_sends_error() -> Result<()
     let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
     let _server_info = viewer.expect_server_info().await?;
 
-    viewer.send_client_message_data(1, b"some data").await?;
+    let payload = b"early data";
+    viewer.send_client_message_data(1, payload).await?;
 
-    let deadline = tokio::time::Instant::now() + EVENT_TIMEOUT;
-    let status = loop {
-        let msg = tokio::time::timeout_at(deadline, viewer.frame_reader.next_server_message())
-            .await
-            .context("timeout waiting for error status")?
-            .context("failed to read server message")?;
-        if let ServerMessage::Status(s) = msg {
-            break s;
-        }
-    };
+    // Brief pause to make it likely the data stream arrives before the advertise.
+    tokio::time::sleep(Duration::from_millis(500)).await;
 
-    assert_eq!(
-        status.level,
-        foxglove::protocol::v2::server::status::Level::Error
-    );
-    assert!(
-        status.message.contains("not advertised"),
-        "expected 'not advertised' in status message: {}",
-        status.message
-    );
-    info!("error status received: {}", status.message);
+    viewer
+        .send_client_advertise(&[ClientChannelDesc {
+            id: 1,
+            topic: "/cmd".to_string(),
+            encoding: "json".to_string(),
+        }])
+        .await?;
+
+    poll_until(|| listener.message_data().len() == 1).await;
+
+    let messages = listener.message_data();
+    assert_eq!(messages.len(), 1);
+    assert_eq!(messages[0].0, "viewer-1", "client id should match");
+    assert_eq!(messages[0].1, "/cmd", "topic should match");
+    assert_eq!(messages[0].2, payload, "payload should match");
+    info!("message data delivered after late advertise");
 
     viewer.close().await?;
     gw.stop().await?;
     Ok(())
 }
 
-/// Test that sending MessageData when the gateway does not have the `ClientPublish`
+/// Test that sending client advertisement when the gateway does not have the `ClientPublish`
 /// capability results in a Status error message.
 #[traced_test]
 #[ignore]
 #[tokio::test]
 #[serial(livekit)]
-async fn livekit_client_message_data_without_capability_sends_error() -> Result<()> {
+async fn livekit_client_message_advertise_without_capability_sends_error() -> Result<()> {
     let ctx = foxglove::Context::new();
 
     let gw = TestGateway::start(&ctx).await?;
