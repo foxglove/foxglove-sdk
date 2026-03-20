@@ -832,7 +832,7 @@ export function generatePyChannelStub(messageSchemas: FoxgloveMessageSchema[]): 
 
   const imports = [
     "from . import Context, Schema",
-    ...schemas.map((schema) => `from .schemas import ${structName(schema.name)}`),
+    ...schemas.map((schema) => `from .messages import ${structName(schema.name)}`),
   ];
 
   const classes = schemas.map((schema) => {
