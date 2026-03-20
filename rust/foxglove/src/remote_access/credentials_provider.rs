@@ -57,7 +57,10 @@ impl CredentialsProvider {
             return Ok(credentials);
         }
 
-        tracing::info!("refreshing credentials");
+        tracing::info!(
+            remote_access_session_id = remote_access_session_id.as_deref(),
+            "refreshing credentials"
+        );
         let credentials = Arc::new(
             self.client
                 .authorize_remote_viz(&self.device.id, remote_access_session_id)
