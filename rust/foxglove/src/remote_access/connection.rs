@@ -162,7 +162,6 @@ impl RemoteAccessConnection {
                 creds
             }
             Err(e) => {
-                error!(error = %e, "failed to obtain LiveKit credentials from API server: {e}");
                 return Err(e.into());
             }
         };
@@ -202,11 +201,6 @@ impl RemoteAccessConnection {
                     )
                 }
                 Err(e) => {
-                    error!(
-                        remote_access_session_id,
-                        error = %e,
-                        "failed to connect to LiveKit server: {e}"
-                    );
                     return Err(e.into());
                 }
             };
