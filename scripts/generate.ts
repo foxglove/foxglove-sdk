@@ -243,14 +243,14 @@ async function main({ clean }: { clean: boolean }) {
   await logProgressLn("Generating Pyclass definitions", async () => {
     // Source files (.rs) are re-generated.
     // Stub file is placed into the existing hierarchy.
-    const schemasFile = path.join(pythonSdkGeneratedRoot, "messages.rs");
+    const messagesFile = path.join(pythonSdkGeneratedRoot, "messages.rs");
     await fs.mkdir(pythonSdkGeneratedRoot, { recursive: true });
     await fs.mkdir(path.join(pythonSdkPyRoot, "messages"), { recursive: true });
     await fs.mkdir(path.join(pythonSdkPyRoot, "schemas"), { recursive: true });
     await fs.mkdir(path.join(pythonSdkPyRoot, "channels"), { recursive: true });
 
-    // Schemas file
-    const writer = (await fs.open(schemasFile, "wx")).createWriteStream();
+    // Messages file (generated Rust bindings)
+    const writer = (await fs.open(messagesFile, "wx")).createWriteStream();
     writer.write(generateSchemaPrelude());
 
     const enumSchemas = Object.values(foxgloveEnumSchemas);
@@ -296,7 +296,7 @@ async function main({ clean }: { clean: boolean }) {
     await fs.writeFile(channelStubFile, generatePyChannelStub(messageSchemas));
     await fs.writeFile(channelStubModule, generatePyChannelModule(messageSchemas));
 
-    await exec("cargo", ["fmt", "--", path.resolve(channelClassesFile, schemasFile)], {
+    await exec("cargo", ["fmt", "--", path.resolve(channelClassesFile, messagesFile)], {
       cwd: repoRoot,
     });
 
