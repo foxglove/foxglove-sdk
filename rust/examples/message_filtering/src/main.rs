@@ -11,8 +11,8 @@
 //!
 //! In this example, we log some point cloud data to one MCAP file, and some minimal metadata to
 //! another.
-use foxglove::schemas::{FrameTransform, FrameTransforms};
-use foxglove::schemas::{
+use foxglove::messages::{FrameTransform, FrameTransforms};
+use foxglove::messages::{
     PackedElementField, PointCloud, Pose, Quaternion, Vector3, packed_element_field::NumericType,
 };
 use foxglove::{Encode, LazyChannel, McapWriter};

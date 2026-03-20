@@ -1,6 +1,6 @@
 use clap::Parser;
 use foxglove::convert::SaturatingInto;
-use foxglove::schemas::{
+use foxglove::messages::{
     Color, CubePrimitive, FrameTransform, Pose, Quaternion, SceneEntity, SceneUpdate, Vector3,
 };
 

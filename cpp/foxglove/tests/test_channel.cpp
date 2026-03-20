@@ -2,7 +2,7 @@
 #include <foxglove/channel.hpp>
 #include <foxglove/error.hpp>
 #include <foxglove/mcap.hpp>
-#include <foxglove/schemas.hpp>
+#include <foxglove/messages.hpp>
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
@@ -81,7 +81,7 @@ TEST_CASE("channel.close() disconnects sinks") {
   requireValue(raw_channel).close();
   REQUIRE(!requireValue(raw_channel).hasSinks());
 
-  auto typed_channel = foxglove::schemas::LogChannel::create("test", context);
+  auto typed_channel = foxglove::messages::LogChannel::create("test", context);
   REQUIRE(requireValue(typed_channel).hasSinks());
 
   requireValue(typed_channel).close();
