@@ -65,7 +65,7 @@ FetchContent_Declare(libwebsockets
   FIND_PACKAGE_ARGS QUIET
 )
 set(LWS_WITH_SSL OFF CACHE BOOL "" FORCE)
-set(LWS_WITH_SHARED ON CACHE BOOL "" FORCE)
+set(LWS_WITH_SHARED OFF CACHE BOOL "" FORCE)
 set(LWS_WITH_STATIC ON CACHE BOOL "" FORCE)
 set(LWS_WITHOUT_TESTAPPS ON CACHE BOOL "" FORCE)
 set(LWS_WITHOUT_TEST_SERVER ON CACHE BOOL "" FORCE)
@@ -221,7 +221,7 @@ target_link_options(tests PUBLIC ${SANITIZER_LINK_OPTIONS})
 target_link_libraries(tests PRIVATE foxglove_cpp_static Catch2::Catch2WithMain nlohmann_json::nlohmann_json websockets)
 # Suppress warnings from third-party headers by treating them as system includes.
 # We can't use SYSTEM on FetchContent_Declare due to a CMake 3.25 bug.
-get_target_property(LWS_INCLUDE_DIRS websockets_shared INTERFACE_INCLUDE_DIRECTORIES)
+get_target_property(LWS_INCLUDE_DIRS websockets INTERFACE_INCLUDE_DIRECTORIES)
 target_include_directories(tests SYSTEM PRIVATE ${LWS_INCLUDE_DIRS})
 get_target_property(NLOHMANN_INCLUDE_DIRS nlohmann_json::nlohmann_json INTERFACE_INCLUDE_DIRECTORIES)
 target_include_directories(tests SYSTEM PRIVATE ${NLOHMANN_INCLUDE_DIRS})
