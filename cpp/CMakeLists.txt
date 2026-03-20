@@ -168,8 +168,8 @@ endif()
 
 # Generated code (excluded from clang-tidy)
 set(foxglove_generated_srcs
-    "foxglove/include/foxglove/schemas.hpp"
-    "foxglove/src/schemas.cpp"
+    "foxglove/include/foxglove/messages.hpp"
+    "foxglove/src/messages.cpp"
 )
 add_library(foxglove_generated_obj OBJECT "${foxglove_generated_srcs}")
 set_property(TARGET foxglove_generated_obj PROPERTY POSITION_INDEPENDENT_CODE True)
@@ -187,8 +187,8 @@ file(GLOB_RECURSE foxglove_cpp_srcs CONFIGURE_DEPENDS
     "foxglove/src/*.cpp"
 )
 list(REMOVE_ITEM foxglove_cpp_srcs
-    "${CMAKE_CURRENT_SOURCE_DIR}/foxglove/include/foxglove/schemas.hpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/foxglove/src/schemas.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/foxglove/include/foxglove/messages.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/foxglove/src/messages.cpp"
 )
 
 add_library(foxglove_cpp_obj OBJECT "${foxglove_cpp_srcs}")

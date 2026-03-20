@@ -145,7 +145,7 @@ _channels_by_id: dict[int, Channel] = {}
 
 def log(
     topic: str,
-    message: JsonMessage | list[Any] | bytes | str | _messages.FoxgloveSchema,
+    message: JsonMessage | list[Any] | bytes | str | _messages.FoxgloveMessage,
     *,
     log_time: int | None = None,
     sink_id: int | None = None,
@@ -184,7 +184,7 @@ def log(
                 channel = channel_cls(topic)
         if channel is None:
             raise ValueError(
-                f"No Foxglove schema channel found for message type {schema_name}"
+                f"No Foxglove channel found for message type {schema_name}"
             )
 
         channel_id = channel.base.id() if hasattr(channel, "base") else channel.id()

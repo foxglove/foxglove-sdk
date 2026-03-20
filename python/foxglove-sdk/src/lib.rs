@@ -2,7 +2,7 @@ use errors::PyFoxgloveError;
 use foxglove::McapWriteOptions;
 use foxglove::{ChannelBuilder, Context, McapWriter, PartialMetadata, RawChannel, Schema};
 use generated::channels;
-use generated::schemas;
+use generated::messages;
 use log::LevelFilter;
 use logging::init_logging;
 use mcap::{PyFileLikeWriter, PyMcapWriteOptions, PyMcapWriter, WriterInner};
@@ -339,7 +339,7 @@ fn _foxglove_py(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PySinkChannelFilter>()?;
     m.add_class::<PyChannelDescriptor>()?;
     // Register nested modules.
-    schemas::register_submodule(m)?;
+    messages::register_submodule(m)?;
     channels::register_submodule(m)?;
     mcap::register_submodule(m)?;
     #[cfg(not(target_family = "wasm"))]

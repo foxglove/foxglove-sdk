@@ -303,7 +303,7 @@ const DEFAULT_CODE = `\
 import foxglove
 from foxglove import Channel
 from foxglove.channels import SceneUpdateChannel
-from foxglove.schemas import (
+from foxglove.messages import (
   Color,
   CubePrimitive,
   SceneEntity,

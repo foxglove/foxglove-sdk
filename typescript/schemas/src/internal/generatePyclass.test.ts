@@ -22,16 +22,16 @@ describe("generatePyclass", () => {
 
   it("generates an enum", () => {
     expect(generatePyclass(exampleEnum)).toMatchInlineSnapshot(`
-        "/// An example enum
-        #[pyclass(eq, eq_int, module = "foxglove.schemas")]
-        #[derive(PartialEq, Clone)]
-        pub(crate) enum ExampleMessageExampleEnum {
-            A = 0,
-            B = 1,
-        }
+     "/// An example enum
+     #[pyclass(eq, eq_int, module = "foxglove.messages")]
+     #[derive(PartialEq, Clone)]
+     pub(crate) enum ExampleMessageExampleEnum {
+         A = 0,
+         B = 1,
+     }
 
-        "
-        `);
+     "
+    `);
   });
 
   it("generates a struct from a message", () => {
@@ -73,9 +73,9 @@ describe("generatePyclass", () => {
      /// :param field_optional_float64: An optional float64 field
      ///
      /// See https://docs.foxglove.dev/docs/visualization/message-schemas/example-message
-     #[pyclass(module = "foxglove.schemas")]
+     #[pyclass(module = "foxglove.messages")]
      #[derive(Clone)]
-     pub(crate) struct ExampleMessage(pub(crate) foxglove::schemas::ExampleMessage);
+     pub(crate) struct ExampleMessage(pub(crate) foxglove::messages::ExampleMessage);
      #[pymethods]
      impl ExampleMessage {
          #[new]
@@ -110,7 +110,7 @@ describe("generatePyclass", () => {
              field_optional_bool: Option<bool>,
              field_optional_float64: Option<f64>,
          ) -> Self {
-             Self(foxglove::schemas::ExampleMessage {
+             Self(foxglove::messages::ExampleMessage {
                  field_duration: field_duration.map(Into::into),
                  field_time: field_time.map(Into::into),
                  field_boolean,
@@ -177,7 +177,7 @@ describe("generatePyclass", () => {
          /// Returns the ExampleMessage schema.
          #[staticmethod]
          fn get_schema() -> PySchema {
-             foxglove::schemas::ExampleMessage::get_schema().unwrap().into()
+             foxglove::messages::ExampleMessage::get_schema().unwrap().into()
          }
          /// Encodes the ExampleMessage as protobuf.
          fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
@@ -189,7 +189,7 @@ describe("generatePyclass", () => {
      }
 
 
-     impl From<ExampleMessage> for foxglove::schemas::ExampleMessage {
+     impl From<ExampleMessage> for foxglove::messages::ExampleMessage {
          fn from(value: ExampleMessage) -> Self {
              value.0
          }
