@@ -1073,24 +1073,16 @@ struct JointState {
   /// @brief Joint name
   std::string name;
 
-  /// @brief Joint position. Radians for revolute joints, meters for prismatic joints. Use NaN to
-  /// indicate that the value is not present if the message definition does not support optional
-  /// fields.
+  /// @brief Joint position. Radians for revolute joints, meters for prismatic joints.
   std::optional<double> position = std::nullopt;
 
-  /// @brief Joint velocity. Rad/s for revolute joints, m/s for prismatic joints. Use NaN to
-  /// indicate that the value is not present if the message definition does not support optional
-  /// fields.
+  /// @brief Joint velocity. Rad/s for revolute joints, m/s for prismatic joints.
   std::optional<double> velocity = std::nullopt;
 
-  /// @brief Joint acceleration. Rad/s² for revolute joints, m/s² for prismatic joints. Use NaN to
-  /// indicate that the value is not present if the message definition does not support optional
-  /// fields.
+  /// @brief Joint acceleration. Rad/s² for revolute joints, m/s² for prismatic joints.
   std::optional<double> acceleration = std::nullopt;
 
-  /// @brief Joint effort (force or torque). Nm for revolute joints, N for prismatic joints. Use NaN
-  /// to indicate that the value is not present if the message definition does not support optional
-  /// fields.
+  /// @brief Joint effort (force or torque). Nm for revolute joints, N for prismatic joints.
   std::optional<double> effort = std::nullopt;
 
   /// @brief Encoded the JointState as protobuf to the provided buffer.
@@ -4790,8 +4782,8 @@ public:
   }
 
   TriangleListPrimitiveChannel(const TriangleListPrimitiveChannel& other) noexcept = delete;
-  TriangleListPrimitiveChannel& operator=(const TriangleListPrimitiveChannel& other
-  ) noexcept = delete;
+  TriangleListPrimitiveChannel& operator=(const TriangleListPrimitiveChannel& other) noexcept =
+    delete;
   /// @brief Default move constructor.
   TriangleListPrimitiveChannel(TriangleListPrimitiveChannel&& other) noexcept = default;
   /// @brief Default move assignment.
