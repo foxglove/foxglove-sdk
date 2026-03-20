@@ -299,7 +299,7 @@ async function main({ clean }: { clean: boolean }) {
     await fs.writeFile(channelStubFile, generatePyChannelStub(messageSchemas));
     await fs.writeFile(channelStubModule, generatePyChannelModule(messageSchemas));
 
-    await exec("cargo", ["fmt", "--", path.resolve(channelClassesFile, messagesFile)], {
+    await exec("cargo", ["fmt", "--", channelClassesFile, messagesFile], {
       cwd: repoRoot,
     });
 
