@@ -1040,7 +1040,7 @@ class VoxelGrid:
         """Encodes the VoxelGrid."""
         ...
 
-FoxgloveSchema = Union[
+FoxgloveMessage = Union[
     ArrowPrimitive,
     CameraCalibration,
     CircleAnnotation,

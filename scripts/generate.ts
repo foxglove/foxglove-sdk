@@ -282,7 +282,10 @@ async function main({ clean }: { clean: boolean }) {
 
     const messagesStubModule = path.join(pythonSdkPyRoot, "messages/__init__.py");
 
-    await fs.writeFile(messagesStubFile, generatePySchemaStub(allSchemas));
+    await fs.writeFile(
+      messagesStubFile,
+      generatePySchemaStub(allSchemas, { unionName: "FoxgloveMessage" }),
+    );
     await fs.writeFile(
       schemasStubFile,
       [
