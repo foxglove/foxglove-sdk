@@ -2,6 +2,7 @@
 #include <foxglove/channel.hpp>
 #include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
+#include <foxglove/messages.hpp>
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
@@ -272,17 +273,17 @@ TEST_CASE_METHOD(McapTestFile, "Channel can outlive Schema") {
   REQUIRE_THAT(content, ContainsSubstring("FAKESCHEMA"));
 }
 
-namespace foxglove::messages {
+namespace foxglove::schemas {
 void imageAnnotationsToC(
   foxglove_image_annotations& dest, const ImageAnnotations& src, Arena& arena
 );
-}  // namespace foxglove::messages
+}  // namespace foxglove::schemas
 
 void convertToCAndCheck(const foxglove::messages::ImageAnnotations& msg) {
   // Convert to C struct and then compare them
   foxglove::Arena arena;
   foxglove_image_annotations c_msg;
-  imageAnnotationsToC(c_msg, msg, arena);
+  foxglove::schemas::imageAnnotationsToC(c_msg, msg, arena);
 
   // Compare the C struct with the original message
   REQUIRE(c_msg.circles_count == msg.circles.size());
