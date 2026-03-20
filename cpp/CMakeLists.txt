@@ -62,6 +62,7 @@ FetchContent_MakeAvailable(Corrosion)
 FetchContent_Declare(libwebsockets
   GIT_REPOSITORY https://libwebsockets.org/repo/libwebsockets
   GIT_TAG v4.3.3
+  SYSTEM
   FIND_PACKAGE_ARGS QUIET
 )
 set(LWS_WITH_SSL OFF CACHE BOOL "" FORCE)
