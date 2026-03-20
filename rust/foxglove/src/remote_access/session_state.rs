@@ -103,7 +103,7 @@ impl SessionState {
                 client_channels: Vec::new(),
             };
         };
-        let client_id = participant.id();
+        let client_id = participant.client_id();
         info!("removed participant {identity:?}");
 
         let mut last_unsubscribed: SmallVec<[ChannelId; 4]> = SmallVec::new();
@@ -326,12 +326,12 @@ impl SessionState {
         let mut first_subscribed: SmallVec<[ChannelId; 4]> = SmallVec::new();
         for &channel_id in channel_ids {
             let subscribers = self.subscriptions.entry(channel_id).or_default();
-            if subscribers.contains(participant.identity()) {
+            if subscribers.contains(participant.participant_id()) {
                 info!("{participant} is already subscribed to channel {channel_id:?}; ignoring");
                 continue;
             }
             let is_first = subscribers.is_empty();
-            subscribers.push(participant.identity().clone());
+            subscribers.push(participant.participant_id().clone());
             debug!("{participant} subscribed to channel {channel_id:?}");
             if is_first {
                 first_subscribed.push(channel_id);
@@ -357,7 +357,7 @@ impl SessionState {
             };
             let Some(pos) = subscribers
                 .iter()
-                .position(|id| id == participant.identity())
+                .position(|id| id == participant.participant_id())
             else {
                 info!("{participant} is not subscribed to channel {channel_id:?}; ignoring");
                 continue;
@@ -380,10 +380,10 @@ impl SessionState {
                 .data_subscriptions
                 .entry(channel_id)
                 .or_insert_with(ChannelSubscription::new);
-            if sub.subscribers().contains(participant.identity()) {
+            if sub.subscribers().contains(participant.participant_id()) {
                 continue;
             }
-            sub.add(participant.identity().clone());
+            sub.add(participant.participant_id().clone());
         }
     }
 
@@ -395,7 +395,7 @@ impl SessionState {
             let Some(sub) = self.data_subscriptions.get_mut(&channel_id) else {
                 continue;
             };
-            if !sub.remove(participant.identity()) {
+            if !sub.remove(participant.participant_id()) {
                 continue;
             }
         }
@@ -415,11 +415,11 @@ impl SessionState {
         let mut first_subscribed: SmallVec<[ChannelId; 4]> = SmallVec::new();
         for &channel_id in channel_ids {
             let subscribers = self.video_subscribers.entry(channel_id).or_default();
-            if subscribers.contains(participant.identity()) {
+            if subscribers.contains(participant.participant_id()) {
                 continue;
             }
             let is_first = subscribers.is_empty();
-            subscribers.push(participant.identity().clone());
+            subscribers.push(participant.participant_id().clone());
             if is_first {
                 first_subscribed.push(channel_id);
             }
@@ -445,7 +445,7 @@ impl SessionState {
             };
             let Some(pos) = subscribers
                 .iter()
-                .position(|id| id == participant.identity())
+                .position(|id| id == participant.participant_id())
             else {
                 continue;
             };

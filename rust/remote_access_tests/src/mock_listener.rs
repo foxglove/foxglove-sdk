@@ -24,16 +24,16 @@ impl MockListener {
 
 impl Listener for MockListener {
     fn on_client_advertise(&self, client: Client, channel: &ChannelDescriptor) {
-        self.advertised
-            .lock()
-            .unwrap()
-            .push((client.client_key().to_string(), channel.topic().to_string()));
+        self.advertised.lock().unwrap().push((
+            client.participant_id().to_string(),
+            channel.topic().to_string(),
+        ));
     }
 
     fn on_client_unadvertise(&self, client: Client, channel: &ChannelDescriptor) {
-        self.unadvertised
-            .lock()
-            .unwrap()
-            .push((client.client_key().to_string(), channel.topic().to_string()));
+        self.unadvertised.lock().unwrap().push((
+            client.participant_id().to_string(),
+            channel.topic().to_string(),
+        ));
     }
 }

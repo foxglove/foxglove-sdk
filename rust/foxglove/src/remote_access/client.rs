@@ -5,23 +5,31 @@ use crate::remote_common::ClientId;
 /// Represents a connected remote access client (LiveKit participant).
 #[derive(Debug, Clone)]
 pub struct Client {
-    id: ClientId,
-    identity: ParticipantIdentity,
+    /// Locally-significant identifier for this particular instance of this participant.
+    client_id: ClientId,
+    /// LiveKit participant ID.
+    participant_id: ParticipantIdentity,
 }
 
 impl Client {
-    pub(crate) fn new(id: ClientId, identity: ParticipantIdentity) -> Self {
-        Self { id, identity }
+    /// Instantiate a new client.
+    pub(crate) fn new(client_id: ClientId, participant_id: ParticipantIdentity) -> Self {
+        Self {
+            client_id,
+            participant_id,
+        }
     }
 
     /// Returns the locally-significant client ID.
     pub fn id(&self) -> ClientId {
-        self.id
+        self.client_id
     }
 
     /// Returns the client-provided identity.
+    ///
+    /// This is public for testing purposes, but not intended for end-users.
     #[doc(hidden)]
-    pub fn client_key(&self) -> &str {
-        &self.identity.0
+    pub fn participant_id(&self) -> &str {
+        &self.participant_id.0
     }
 }

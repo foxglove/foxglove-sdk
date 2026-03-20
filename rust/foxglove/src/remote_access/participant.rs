@@ -16,8 +16,10 @@ type Result<T> = std::result::Result<T, Box<RemoteAccessError>>;
 ///
 /// This is a place to store state specific to the participant.
 pub(crate) struct Participant {
-    id: ClientId,
-    identity: ParticipantIdentity,
+    /// Locally-significant identifier for this particular instance of this participant.
+    client_id: ClientId,
+    /// LiveKit participant ID.
+    participant_id: ParticipantIdentity,
     /// A reliable, ordered stream to send messages to just this participant
     writer: ParticipantWriter,
 }
@@ -84,20 +86,20 @@ impl Participant {
     /// Creates a new participant.
     pub fn new(identity: ParticipantIdentity, writer: ParticipantWriter) -> Self {
         Self {
-            id: ClientId::next(),
-            identity,
+            client_id: ClientId::next(),
+            participant_id: identity,
             writer,
         }
     }
 
     /// Returns the locally-significant client ID.
-    pub fn id(&self) -> ClientId {
-        self.id
+    pub fn client_id(&self) -> ClientId {
+        self.client_id
     }
 
     /// Returns the participant's identity.
-    pub fn identity(&self) -> &ParticipantIdentity {
-        &self.identity
+    pub fn participant_id(&self) -> &ParticipantIdentity {
+        &self.participant_id
     }
 
     /// Sends a message to the participant.
@@ -111,14 +113,14 @@ impl Participant {
 impl std::fmt::Debug for Participant {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Participant")
-            .field("identity", &self.identity)
+            .field("identity", &self.participant_id)
             .finish()
     }
 }
 
 impl std::fmt::Display for Participant {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Participant({})", self.identity)
+        write!(f, "Participant({})", self.participant_id)
     }
 }
 
