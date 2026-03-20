@@ -1820,7 +1820,8 @@ const JointState: FoxgloveMessageSchema = {
     {
       name: "effort",
       type: { type: "primitive", name: "float64" },
-      description: "Joint effort (force or torque). Nm for revolute joints, N for prismatic joints.",
+      description:
+        "Joint effort (force or torque). Nm for revolute joints, N for prismatic joints.",
       optional: true,
     },
   ],
