@@ -158,6 +158,8 @@ impl SessionState {
     ///
     /// Returns `true` if the channel was inserted, or `false` if the participant already
     /// had a channel with the same ID advertised.
+    /// 
+    /// Note: the caller is responsible for ensuring the participant exists in self.participants.
     pub fn insert_client_channel(
         &mut self,
         identity: &ParticipantIdentity,

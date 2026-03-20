@@ -1133,9 +1133,7 @@ async fn livekit_client_message_data_on_channel_stream_fires_listener_callback()
     poll_until(|| listener.advertised().len() == 1).await;
 
     let payload = b"{\"velocity\": 2.0}";
-    viewer
-        .send_client_message_data_on_channel(1, payload)
-        .await?;
+    viewer.send_client_message_data(1, payload).await?;
 
     poll_until(|| listener.message_data().len() == 1).await;
 
