@@ -254,6 +254,9 @@ impl RemoteAccessConnection {
         while !self.cancellation_token().is_cancelled() {
             self.run().await;
         }
+        // Always emit ShuttingDown before Shutdown. If run() already set ShuttingDown
+        // (e.g. cancelled while connected), this is a no-op since set_status deduplicates.
+        self.set_status(ConnectionStatus::ShuttingDown);
         self.set_status(ConnectionStatus::Shutdown);
     }
 
