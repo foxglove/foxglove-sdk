@@ -36,7 +36,11 @@ function timeDurationToRos(type: "time" | "duration", { rosVersion }: { rosVersi
 }
 
 function getRosFieldDescription(field: FoxgloveMessageField): string {
-  if (field.optional === true && field.type.type === "primitive" && field.type.name === "float64") {
+  if (
+    field.optional === true &&
+    field.type.type === "primitive" &&
+    field.type.name.startsWith("float")
+  ) {
     return `${field.description} (NaN indicates this value is not set)`;
   }
   return field.description;
