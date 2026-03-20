@@ -62,7 +62,6 @@ FetchContent_MakeAvailable(Corrosion)
 FetchContent_Declare(libwebsockets
   GIT_REPOSITORY https://libwebsockets.org/repo/libwebsockets
   GIT_TAG v4.3.3
-  SYSTEM
   FIND_PACKAGE_ARGS QUIET
 )
 set(LWS_WITH_SSL OFF CACHE BOOL "" FORCE)
@@ -77,7 +76,6 @@ FetchContent_MakeAvailable(libwebsockets)
 FetchContent_Declare(nlohmann_json
   GIT_REPOSITORY https://github.com/nlohmann/json.git
   GIT_TAG v3.12.0
-  SYSTEM
   FIND_PACKAGE_ARGS QUIET
 )
 FetchContent_MakeAvailable(nlohmann_json)
@@ -221,6 +219,12 @@ set_property(TARGET tests PROPERTY CXX_STANDARD_REQUIRED True)
 target_compile_options(tests PUBLIC ${SANITIZER_COMPILE_OPTIONS})
 target_link_options(tests PUBLIC ${SANITIZER_LINK_OPTIONS})
 target_link_libraries(tests PRIVATE foxglove_cpp_static Catch2::Catch2WithMain nlohmann_json::nlohmann_json websockets)
+# Suppress warnings from third-party headers by treating them as system includes.
+# We can't use SYSTEM on FetchContent_Declare due to a CMake 3.25 bug.
+get_target_property(LWS_INCLUDE_DIRS websockets_shared INTERFACE_INCLUDE_DIRECTORIES)
+target_include_directories(tests SYSTEM PRIVATE ${LWS_INCLUDE_DIRS})
+get_target_property(NLOHMANN_INCLUDE_DIRS nlohmann_json::nlohmann_json INTERFACE_INCLUDE_DIRECTORIES)
+target_include_directories(tests SYSTEM PRIVATE ${NLOHMANN_INCLUDE_DIRS})
 catch_discover_tests(tests)
 if(MSVC)
   # Auto-detection of C++11 support is not working on the windows-2025 runner with default settings
@@ -254,6 +258,7 @@ set_property(TARGET example_services PROPERTY CXX_STANDARD_REQUIRED True)
 target_compile_options(example_services PUBLIC ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
 target_link_options(example_services PUBLIC ${SANITIZER_LINK_OPTIONS})
 target_link_libraries(example_services foxglove_cpp_static nlohmann_json::nlohmann_json)
+target_include_directories(example_services SYSTEM PRIVATE ${NLOHMANN_INCLUDE_DIRS})
 
 add_executable(example_mcap examples/mcap/src/main.cpp)
 set_property(TARGET example_mcap PROPERTY CXX_STANDARD 17)
@@ -296,6 +301,7 @@ set_property(TARGET example_auto_serialize PROPERTY CXX_STANDARD_REQUIRED True)
 target_compile_options(example_auto_serialize PUBLIC ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
 target_link_options(example_auto_serialize PUBLIC ${SANITIZER_LINK_OPTIONS})
 target_link_libraries(example_auto_serialize foxglove_cpp_static nlohmann_json::nlohmann_json)
+target_include_directories(example_auto_serialize SYSTEM PRIVATE ${NLOHMANN_INCLUDE_DIRS})
 
 option(BUILD_OPENCV_EXAMPLE "Build the RGB camera visualization example (requires OpenCV)" OFF)
 
@@ -323,4 +329,5 @@ if(BUILD_REMOTE_DATA_LOADER_BACKEND_EXAMPLE)
   target_compile_options(example_remote_data_loader_backend PUBLIC ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
   target_link_options(example_remote_data_loader_backend PUBLIC ${SANITIZER_LINK_OPTIONS})
   target_link_libraries(example_remote_data_loader_backend foxglove_cpp_static nlohmann_json::nlohmann_json httplib::httplib base64 date::date)
+  target_include_directories(example_remote_data_loader_backend SYSTEM PRIVATE ${NLOHMANN_INCLUDE_DIRS})
 endif()
