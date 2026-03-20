@@ -35,6 +35,13 @@ pub(crate) use video_track::{
     VideoInputSchema, VideoMetadata, VideoPublisher, get_video_input_schema,
 };
 
+#[derive(Debug)]
+pub(crate) struct SessionStats {
+    pub participants: usize,
+    pub subscriptions: usize,
+    pub video_tracks: usize,
+}
+
 const WS_PROTOCOL_TOPIC: &str = "ws-protocol";
 const CHANNEL_TOPIC_PREFIX: &str = "ch-";
 const MESSAGE_FRAME_SIZE: usize = 5; // 1 byte opcode + u32 LE length
@@ -256,6 +263,15 @@ impl RemoteAccessSession {
 
     pub(crate) fn room(&self) -> &Room {
         &self.room
+    }
+
+    pub(crate) fn stats(&self) -> SessionStats {
+        let state = self.state.read();
+        SessionStats {
+            participants: state.participant_count(),
+            subscriptions: state.subscription_count(),
+            video_tracks: state.video_track_count(),
+        }
     }
 
     /// Enqueue a data plane message, dropping old messages if the queue is full.

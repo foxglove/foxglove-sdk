@@ -97,17 +97,6 @@ impl Gateway {
         self
     }
 
-    /// Set a session ID.
-    ///
-    /// This allows the client to understand if the connection is a re-connection or if it is
-    /// connecting to a new server instance. This can for example be a timestamp or a UUID.
-    ///
-    /// By default, this is set to the number of milliseconds since the unix epoch.
-    pub fn session_id(mut self, id: impl Into<String>) -> Self {
-        self.options.session_id = id.into();
-        self
-    }
-
     /// Sets metadata as reported via the ServerInfo message.
     #[doc(hidden)]
     pub fn server_info(mut self, info: HashMap<String, String>) -> Self {
