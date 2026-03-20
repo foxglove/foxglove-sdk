@@ -856,6 +856,16 @@ impl RemoteAccessSession {
         let service_id = ServiceId::new(req.service_id);
         let call_id = CallId::new(req.call_id);
 
+        if !self.has_capability(Capability::Services) {
+            self.send_service_call_failure(
+                participant,
+                service_id,
+                call_id,
+                "Server does not support services",
+            );
+            return;
+        }
+
         // Lookup the requested service handler.
         let Some(service) = self.services.get_by_id(service_id) else {
             self.send_service_call_failure(participant, service_id, call_id, "Unknown service");
