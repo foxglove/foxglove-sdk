@@ -19,7 +19,10 @@ use crate::{
     remote_access::{
         Capability, RemoteAccessError,
         credentials_provider::CredentialsProvider,
-        session::{CLIENT_CHANNEL_TOPIC_PREFIX, RemoteAccessSession, WS_PROTOCOL_TOPIC},
+        session::{
+            CLIENT_CHANNEL_TOPIC_PREFIX, DEFAULT_PENDING_CLIENT_READER_TIMEOUT,
+            RemoteAccessSession, WS_PROTOCOL_TOPIC,
+        },
     },
 };
 
@@ -44,6 +47,7 @@ pub(crate) struct RemoteAccessConnectionOptions {
     pub channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     pub server_info: Option<HashMap<String, String>>,
     pub message_backlog_size: Option<usize>,
+    pub pending_client_reader_timeout: Option<Duration>,
     pub cancellation_token: CancellationToken,
     pub context: Weak<Context>,
 }
@@ -62,6 +66,7 @@ impl Default for RemoteAccessConnectionOptions {
             channel_filter: None,
             server_info: None,
             message_backlog_size: None,
+            pending_client_reader_timeout: None,
             cancellation_token: CancellationToken::new(),
             context: Arc::downgrade(&Context::get_default()),
         }
@@ -189,6 +194,9 @@ impl RemoteAccessConnection {
                             self.options.capabilities.clone(),
                             self.options.cancellation_token.clone(),
                             message_backlog_size,
+                            self.options
+                                .pending_client_reader_timeout
+                                .unwrap_or(DEFAULT_PENDING_CLIENT_READER_TIMEOUT),
                         )),
                         room_events,
                     )

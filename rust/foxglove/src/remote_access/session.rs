@@ -48,7 +48,7 @@ const CHANNEL_TOPIC_PREFIX: &str = "ch-";
 const MESSAGE_FRAME_SIZE: usize = 5; // 1 byte opcode + u32 LE length
 const MAX_MESSAGE_SIZE: usize = 16 * 1024 * 1024; // 16 MiB
 const MAX_SEND_RETRIES: usize = 3;
-const PENDING_CLIENT_READER_TIMEOUT: Duration = Duration::from_secs(15);
+pub(crate) const DEFAULT_PENDING_CLIENT_READER_TIMEOUT: Duration = Duration::from_secs(15);
 
 /// A data plane message queued for delivery to subscribed participants.
 struct ChannelMessage {
@@ -127,9 +127,10 @@ pub(crate) struct RemoteAccessSession {
     video_metadata_rx: tokio::sync::watch::Receiver<()>,
     /// Byte stream readers for `client-{channelId}` streams that arrived before the
     /// corresponding Client Advertise message. Keyed by participant identity then channel ID.
-    /// Drained when the advertise arrives; expired after [`PENDING_CLIENT_READER_TIMEOUT`].
+    /// Drained when the advertise arrives; expired after `pending_client_reader_timeout`.
     pending_client_readers:
         parking_lot::Mutex<HashMap<ParticipantIdentity, HashMap<ChannelId, ByteStreamReader>>>,
+    pending_client_reader_timeout: Duration,
 }
 
 impl Sink for RemoteAccessSession {
@@ -228,6 +229,7 @@ impl Sink for RemoteAccessSession {
 }
 
 impl RemoteAccessSession {
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn new(
         room: Room,
         context: Weak<Context>,
@@ -236,6 +238,7 @@ impl RemoteAccessSession {
         capabilities: Vec<Capability>,
         cancellation_token: CancellationToken,
         message_backlog_size: usize,
+        pending_client_reader_timeout: Duration,
     ) -> Self {
         let (data_plane_tx, data_plane_rx) = flume::bounded(message_backlog_size);
         let (control_plane_tx, control_plane_rx) = flume::bounded(message_backlog_size);
@@ -257,6 +260,7 @@ impl RemoteAccessSession {
             video_metadata_tx,
             video_metadata_rx,
             pending_client_readers: parking_lot::Mutex::new(HashMap::new()),
+            pending_client_reader_timeout,
         }
     }
 
@@ -516,7 +520,7 @@ impl RemoteAccessSession {
         tokio::spawn(async move {
             tokio::select! {
                 () = session.cancellation_token.cancelled() => {}
-                () = tokio::time::sleep(PENDING_CLIENT_READER_TIMEOUT) => {
+                () = tokio::time::sleep(session.pending_client_reader_timeout) => {
                     let removed = {
                         let mut pending = session.pending_client_readers.lock();
                         let reader = pending

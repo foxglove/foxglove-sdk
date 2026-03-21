@@ -560,6 +560,7 @@ pub struct TestGatewayOptions {
     pub filter: Option<ChannelFilterFn>,
     pub listener: Option<Arc<dyn foxglove::remote_access::Listener>>,
     pub capabilities: Vec<foxglove::remote_access::Capability>,
+    pub pending_client_reader_timeout: Option<Duration>,
 }
 
 /// A test gateway backed by a mock Foxglove API server and a LiveKit room.
@@ -633,6 +634,9 @@ impl TestGateway {
         }
         if !options.capabilities.is_empty() {
             gateway = gateway.capabilities(options.capabilities);
+        }
+        if let Some(timeout) = options.pending_client_reader_timeout {
+            gateway = gateway.pending_client_reader_timeout(timeout);
         }
 
         let handle = gateway.start().context("start Gateway")?;

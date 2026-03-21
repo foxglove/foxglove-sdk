@@ -1155,6 +1155,69 @@ async fn livekit_client_message_data_before_advertise_is_delivered() -> Result<(
     Ok(())
 }
 
+/// Test that sending MessageData for a channel the client has not advertised produces an error.
+#[traced_test]
+#[ignore]
+#[tokio::test]
+#[serial(livekit)]
+async fn livekit_client_message_data_for_unadvertised_channel_sends_error() -> Result<()> {
+    use std::sync::Arc;
+    let ctx = foxglove::Context::new();
+    let listener = Arc::new(MockListener::default());
+
+    let gw = TestGateway::start_with_options(
+        &ctx,
+        TestGatewayOptions {
+            listener: Some(listener.clone()),
+            capabilities: vec![foxglove::remote_access::Capability::ClientPublish],
+            pending_client_reader_timeout: Some(Duration::from_secs(1)),
+            ..Default::default()
+        },
+    )
+    .await?;
+
+    let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+    let _server_info = viewer.expect_server_info().await?;
+
+    // Send MessageData for channel 999, which was never advertised by the client.
+    // The server stashes the byte stream waiting for a matching Client Advertise.
+    // With pending_client_reader_timeout set to 1s, the error arrives quickly.
+    let payload = b"rogue data";
+    viewer.send_client_message_data(999, payload).await?;
+
+    let deadline = tokio::time::Instant::now() + EVENT_TIMEOUT;
+    let status = loop {
+        let msg = tokio::time::timeout_at(deadline, viewer.frame_reader.next_server_message())
+            .await
+            .context("timeout waiting for error status")?
+            .context("failed to read server message")?;
+        if let ServerMessage::Status(s) = msg {
+            break s;
+        }
+    };
+
+    assert_eq!(
+        status.level,
+        foxglove::protocol::v2::server::status::Level::Error
+    );
+    assert!(
+        status.message.contains("not advertised channel"),
+        "unexpected status message: {}",
+        status.message
+    );
+    info!("error status received: {}", status.message);
+
+    // The listener should never have been called.
+    assert!(
+        listener.message_data().is_empty(),
+        "listener should not receive message data for unadvertised channel"
+    );
+
+    viewer.close().await?;
+    gw.stop().await?;
+    Ok(())
+}
+
 /// Test that sending client advertisement when the gateway does not have the `ClientPublish`
 /// capability results in a Status error message.
 #[traced_test]

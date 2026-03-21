@@ -167,6 +167,14 @@ impl Gateway {
         self
     }
 
+    /// How long to wait for a matching Client Advertise before rejecting a
+    /// `client-{channelId}` byte stream. Defaults to 15 seconds.
+    #[doc(hidden)]
+    pub fn pending_client_reader_timeout(mut self, timeout: Duration) -> Self {
+        self.options.pending_client_reader_timeout = Some(timeout);
+        self
+    }
+
     /// Sets a channel filter. See [`SinkChannelFilter`] for more information.
     pub fn channel_filter_fn(
         mut self,
