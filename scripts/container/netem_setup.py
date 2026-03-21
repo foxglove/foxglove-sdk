@@ -71,13 +71,19 @@ def discover_links() -> dict[str, str]:
     return links
 
 
-def apply_flat(netem_args: list[str]) -> None:
-    """Flat mode: apply a single root netem qdisc to all interfaces."""
+def apply_flat(netem_args: list[str]) -> int:
+    """Flat mode: apply a single root netem qdisc to all interfaces.
+
+    Returns the number of interfaces where netem was successfully applied.
+    """
+    applied = 0
     for iface in interfaces():
         if tc("qdisc", "replace", "dev", iface, "root", "netem", *netem_args):
             print(f"netem (flat) applied to {iface}: {' '.join(netem_args)}")
+            applied += 1
         else:
             print(f"  WARNING: failed to apply netem to {iface} (may be expected for lo)")
+    return applied
 
 
 def apply_perlink(netem_args: list[str], links: dict[str, str]) -> int:
@@ -153,15 +159,18 @@ def main() -> None:
 
     if links:
         errors = apply_perlink(netem_args, links)
+        if errors > 0:
+            dump_state()
+            print(f"\nERROR: {errors} tc command(s) failed during per-link setup.")
+            sys.exit(1)
     else:
-        apply_flat(netem_args)
-        errors = 0
+        applied = apply_flat(netem_args)
+        if applied == 0:
+            dump_state()
+            print("\nERROR: netem failed to apply on any interface.")
+            sys.exit(1)
 
     dump_state()
-
-    if errors > 0:
-        print(f"\nERROR: {errors} tc command(s) failed during per-link setup.")
-        sys.exit(1)
 
 
 if __name__ == "__main__":
