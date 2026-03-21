@@ -35,6 +35,15 @@ uint32 step
 #   - Pixel channel values are represented as unsigned 8-bit integers.
 #   - U and V values are shared between horizontal pairs of pixels. Each pair of output pixels is encoded as [Y1, U, Y2, V].
 #   - `step` must be greater than or equal to `width` * 2.
+# - `nv12`:
+#   - Pixel colors are decomposed into [Y'UV](https://en.wikipedia.org/wiki/Y%E2%80%B2UV) channels using 4:2:0 chroma subsampling. The data is stored in semi-planar layout with two planes: a Y plane followed by an interleaved UV plane.
+#   - All channel values are represented as unsigned 8-bit integers.
+#   - The Y plane contains one luma value per pixel, serialized in row-major order (`step` * `height` bytes). Each row of the Y plane is `step` bytes.
+#   - The UV plane contains interleaved U, V chroma values, subsampled by a factor of 2 in both dimensions. Each row is `step` bytes, with U and V interleaved as [U, V, U, V, ...] (`width`/2 pairs per row, `height`/2 rows).
+#   - Each U, V pair is shared by a 2x2 block of pixels.
+#   - `width` and `height` must be even.
+#   - `step` must be greater than or equal to `width`.
+#   - Total `data` length is `step` * `height` * 3/2 bytes.
 # - `rgb8`:
 #   - Pixel colors are decomposed into Red, Green, and Blue channels.
 #   - Pixel channel values are represented as unsigned 8-bit integers.

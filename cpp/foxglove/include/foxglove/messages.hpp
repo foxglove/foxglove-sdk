@@ -1907,6 +1907,20 @@ struct RawImage {
   /// @brief   - U and V values are shared between horizontal pairs of pixels. Each pair of output
   /// pixels is encoded as [Y1, U, Y2, V].
   /// @brief   - `step` must be greater than or equal to `width` * 2.
+  /// @brief - `nv12`:
+  /// @brief   - Pixel colors are decomposed into [Y'UV](https://en.wikipedia.org/wiki/Y%E2%80%B2UV)
+  /// channels using 4:2:0 chroma subsampling. The data is stored in semi-planar layout with two
+  /// planes: a Y plane followed by an interleaved UV plane.
+  /// @brief   - All channel values are represented as unsigned 8-bit integers.
+  /// @brief   - The Y plane contains one luma value per pixel, serialized in row-major order
+  /// (`step` * `height` bytes). Each row of the Y plane is `step` bytes.
+  /// @brief   - The UV plane contains interleaved U, V chroma values, subsampled by a factor of 2
+  /// in both dimensions. Each row is `step` bytes, with U and V interleaved as [U, V, U, V, ...]
+  /// (`width`/2 pairs per row, `height`/2 rows).
+  /// @brief   - Each U, V pair is shared by a 2x2 block of pixels.
+  /// @brief   - `width` and `height` must be even.
+  /// @brief   - `step` must be greater than or equal to `width`.
+  /// @brief   - Total `data` length is `step` * `height` * 3/2 bytes.
   /// @brief - `rgb8`:
   /// @brief   - Pixel colors are decomposed into Red, Green, and Blue channels.
   /// @brief   - Pixel channel values are represented as unsigned 8-bit integers.
