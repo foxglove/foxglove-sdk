@@ -722,6 +722,12 @@ impl RemoteAccessSession {
         participant: &Arc<Participant>,
         msg: client::Advertise<'_>,
     ) {
+        // Serialize with remove_participant, which also holds this lock. Without it,
+        // remove_participant can remove the participant from state between the point where
+        // handle_client_message resolves the participant and the point where
+        // insert_client_channel asserts its presence, causing a panic.
+        let _guard = self.subscription_lock.lock();
+
         if !self.has_capability(Capability::ClientPublish) {
             self.send_error(
                 participant,
@@ -807,6 +813,11 @@ impl RemoteAccessSession {
     }
 
     fn handle_client_unadvertise(&self, participant: &Arc<Participant>, msg: client::Unadvertise) {
+        // Serialize with remove_participant, which also holds this lock. Without it,
+        // remove_participant can race with this method and fire on_client_unadvertise for channels
+        // it already cleaned up, causing a double invocation of the listener callback.
+        let _guard = self.subscription_lock.lock();
+
         let client = Client::new(
             participant.client_id(),
             participant.participant_id().clone(),
