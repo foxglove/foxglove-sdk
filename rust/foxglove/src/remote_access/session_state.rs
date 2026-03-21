@@ -401,6 +401,21 @@ impl SessionState {
         }
     }
 
+    /// Returns the number of connected participants.
+    pub fn participant_count(&self) -> usize {
+        self.participants.len()
+    }
+
+    /// Returns the total number of active participant subscriptions across all channels.
+    pub fn subscription_count(&self) -> usize {
+        self.subscriptions.values().map(|s| s.len()).sum()
+    }
+
+    /// Returns the number of active video tracks being published.
+    pub fn video_track_count(&self) -> usize {
+        self.video_track_sids.len()
+    }
+
     /// Adds a participant to video subscribers for the given channels.
     ///
     /// The caller is responsible for calling [`Self::subscribe`] separately, if necessary.
