@@ -1116,7 +1116,7 @@ async fn livekit_client_message_data_fires_listener_callback() -> Result<()> {
     assert_eq!(messages[0].0, "viewer-1", "client id should match");
     assert_eq!(messages[0].1, "/cmd", "topic should match");
     assert_eq!(messages[0].2, payload, "payload should match");
-    info!("on_message_data callback validated via ws-protocol stream");
+    info!("on_message_data callback validated via per-channel stream");
 
     viewer.close().await?;
     gw.stop().await?;
