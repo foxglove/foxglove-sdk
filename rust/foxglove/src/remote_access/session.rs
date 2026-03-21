@@ -482,6 +482,13 @@ impl RemoteAccessSession {
         channel_id: ChannelId,
         reader: ByteStreamReader,
     ) {
+        // Hold the pending lock across the state check and potential insert to prevent a
+        // TOCTOU race with handle_client_advertise. The advertise path inserts the channel
+        // into state (releasing the state write lock) *then* acquires this lock to drain
+        // pending readers. By holding this lock while we check state, we guarantee that
+        // either we see the channel (and process immediately) or the advertise path will
+        // see our pending reader (and drain it).
+        let mut pending = self.pending_client_readers.lock();
         let has_channel = self
             .state
             .read()
@@ -489,6 +496,7 @@ impl RemoteAccessSession {
             .is_some();
 
         if has_channel {
+            drop(pending);
             let session = self.clone();
             tokio::spawn(async move {
                 session
@@ -498,13 +506,11 @@ impl RemoteAccessSession {
             return;
         }
 
-        {
-            let mut pending = self.pending_client_readers.lock();
-            pending
-                .entry(participant_identity.clone())
-                .or_default()
-                .insert(channel_id, reader);
-        }
+        pending
+            .entry(participant_identity.clone())
+            .or_default()
+            .insert(channel_id, reader);
+        drop(pending);
 
         let session = self.clone();
         tokio::spawn(async move {
