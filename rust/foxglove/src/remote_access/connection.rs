@@ -403,7 +403,7 @@ impl RemoteAccessConnection {
                                     .handle_byte_stream_from_client(
                                         participant_identity,
                                         reader,
-                                        false,
+                                        None,
                                     )
                                     .await;
                             });

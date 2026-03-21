@@ -414,11 +414,17 @@ impl RemoteAccessSession {
         }
     }
 
+    /// Read framed messages from a client byte stream.
+    ///
+    /// `expected_channel_id` identifies a `client-{channelId}` stream: the channel ID parsed from
+    /// the topic name. Every `MessageData` frame on this stream must carry the same channel ID;
+    /// mismatches are considered a protocol violation (debug-asserted). Pass `None` for the
+    /// `ws-protocol` control stream.
     pub(crate) async fn handle_byte_stream_from_client(
         self: &Arc<Self>,
         participant_identity: ParticipantIdentity,
         reader: ByteStreamReader,
-        is_channel_stream: bool,
+        expected_channel_id: Option<u32>,
     ) {
         let stream = reader.map(|result| result.map_err(std::io::Error::other));
         let mut reader = StreamReader::new(stream);
@@ -470,8 +476,13 @@ impl RemoteAccessSession {
                 }
             }
 
-            if is_channel_stream {
-                self.handle_channel_stream_message(&participant_identity, opcode, &payload);
+            if let Some(channel_id) = expected_channel_id {
+                self.handle_channel_stream_message(
+                    &participant_identity,
+                    channel_id,
+                    opcode,
+                    &payload,
+                );
             } else if !self.handle_client_message(
                 &participant_identity,
                 opcode,
@@ -509,9 +520,14 @@ impl RemoteAccessSession {
         if has_channel {
             drop(pending);
             let session = self.clone();
+            let expected_channel_id = u64::from(channel_id) as u32;
             tokio::spawn(async move {
                 session
-                    .handle_byte_stream_from_client(participant_identity, reader, true)
+                    .handle_byte_stream_from_client(
+                        participant_identity,
+                        reader,
+                        Some(expected_channel_id),
+                    )
                     .await;
             });
             return;
@@ -780,9 +796,10 @@ impl RemoteAccessSession {
             if let Some(reader) = pending_reader {
                 let session = self.clone();
                 let identity = participant.participant_id().clone();
+                let expected_channel_id = u64::from(channel_id) as u32;
                 tokio::spawn(async move {
                     session
-                        .handle_byte_stream_from_client(identity, reader, true)
+                        .handle_byte_stream_from_client(identity, reader, Some(expected_channel_id))
                         .await;
                 });
             }
@@ -820,11 +837,16 @@ impl RemoteAccessSession {
         }
     }
 
-    /// Handle a message from a channel-specific byte stream.
-    /// Only MessageData is expected on these streams.
+    /// Handle a message from a `client-{channelId}` byte stream.
+    ///
+    /// Only `MessageData` frames are expected. `expected_channel_id` is the channel ID parsed from
+    /// the stream topic and must match the `channel_id` field inside every `MessageData` frame.
+    /// A mismatch indicates a misbehaving client (the topic determines which stream carries the
+    /// data, but the channel ID inside the message determines which descriptor is used).
     fn handle_channel_stream_message(
         self: &Arc<Self>,
         participant_identity: &ParticipantIdentity,
+        expected_channel_id: u32,
         opcode: u8,
         payload: &[u8],
     ) {
@@ -846,6 +868,11 @@ impl RemoteAccessSession {
                 return;
             }
         };
+        assert_eq!(
+            expected_channel_id, msg.channel_id,
+            "MessageData channel_id ({}) does not match the stream topic channel_id ({})",
+            msg.channel_id, expected_channel_id,
+        );
         let Some(participant) = self.state.read().get_participant(participant_identity) else {
             error!("Unknown participant identity: {participant_identity:?}");
             return;
