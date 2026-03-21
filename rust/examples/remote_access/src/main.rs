@@ -18,13 +18,13 @@ use std::{
 struct MessageHandler;
 impl Listener for MessageHandler {
     fn on_connection_status_changed(&self, status: ConnectionStatus) {
-        log::info!("Connection status changed: {status}");
+        tracing::info!("Connection status changed: {status}");
     }
 
     /// Called when a connected app publishes a message, such as from the Teleop panel.
     fn on_message_data(&self, client: Client, channel: &ChannelDescriptor, message: &[u8]) {
         let json = serde_json::from_slice::<Value>(message).expect("Failed to parse message");
-        log::info!(
+        tracing::info!(
             "Teleop message from {} on topic {}: {json}",
             client.id(),
             channel.topic()
