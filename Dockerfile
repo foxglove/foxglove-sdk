@@ -1,6 +1,6 @@
 FROM rust:1.89-bookworm AS builder
 
-ARG MSRV_RUST_VERSION=1.85.0
+ARG MSRV_RUST_VERSION=1.88.0
 
 WORKDIR /app
 
