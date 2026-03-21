@@ -533,10 +533,10 @@ impl RemoteAccessSession {
             return;
         }
 
-        pending
-            .entry(participant_identity.clone())
-            .or_default()
-            .insert(channel_id, reader);
+        let map = pending.entry(participant_identity.clone()).or_default();
+        if let Some(_old) = map.insert(channel_id, reader) {
+            debug!("replacing pending reader for {participant_identity:?} channel {channel_id:?}");
+        }
         drop(pending);
 
         let session = self.clone();
