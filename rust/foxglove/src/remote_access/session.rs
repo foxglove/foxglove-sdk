@@ -756,11 +756,11 @@ impl RemoteAccessSession {
             let pending_reader = self
                 .pending_client_readers
                 .lock()
-                .get_mut(participant.identity())
+                .get_mut(participant.participant_id())
                 .and_then(|map| map.remove(&channel_id));
             if let Some(reader) = pending_reader {
                 let session = self.clone();
-                let identity = participant.identity().clone();
+                let identity = participant.participant_id().clone();
                 tokio::spawn(async move {
                     session
                         .handle_byte_stream_from_client(identity, reader)
@@ -818,7 +818,7 @@ impl RemoteAccessSession {
         let descriptor = {
             let state = self.state.read();
             state
-                .get_client_channel(participant.identity(), channel_id)
+                .get_client_channel(participant.participant_id(), channel_id)
                 .cloned()
         };
         let Some(descriptor) = descriptor else {
@@ -829,7 +829,10 @@ impl RemoteAccessSession {
             return;
         };
         if let Some(listener) = &self.listener {
-            let client = Client::new(participant.identity().clone());
+            let client = Client::new(
+                participant.client_id().clone(),
+                participant.participant_id().clone(),
+            );
             listener.on_message_data(client, &descriptor, &msg.data);
         }
     }

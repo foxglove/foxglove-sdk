@@ -1053,7 +1053,7 @@ async fn livekit_client_disconnect_fires_unadvertise_for_advertised_channels() -
 // Client publish / message data tests
 // ===========================================================================
 
-/// Test that sending a client MessageData on the ws-protocol (control-plane) stream
+/// Test that sending a client MessageData on the client-{channelId} stream
 /// fires `on_message_data` on the listener with the correct client, topic, and payload.
 #[traced_test]
 #[ignore]
