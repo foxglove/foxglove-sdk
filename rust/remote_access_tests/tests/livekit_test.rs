@@ -95,7 +95,8 @@ async fn livekit_viewer_receives_channel_advertisement() -> Result<()> {
 }
 
 /// Test the full subscribe-and-receive-data flow: after subscribing to a channel
-/// the viewer receives MessageData when the SDK logs to that channel.
+/// the viewer receives multiple sequential MessageData frames on the same
+/// per-channel byte stream.
 #[traced_test]
 #[ignore]
 #[tokio::test]
@@ -118,15 +119,34 @@ async fn livekit_viewer_receives_message_after_subscribe() -> Result<()> {
     // Subscribe to the channel.
     viewer.subscribe_and_wait(&[channel_id], &channel).await?;
 
-    // Log a message.
-    let payload = b"hello world";
-    channel.log(payload);
+    let payloads: &[&[u8]] = &[b"message-1", b"message-2", b"message-3"];
 
-    // Expect to receive the message.
-    let msg_data = viewer.expect_new_bytestream_and_message_data().await?;
-    assert_eq!(msg_data.channel_id, channel_id);
-    assert_eq!(msg_data.data.as_ref(), payload);
-    info!("MessageData validated: channel_id={channel_id}");
+    // Log the first message and wait for the per-channel byte stream to open.
+    channel.log(payloads[0]);
+    let mut ch_reader = viewer.expect_channel_byte_stream().await?;
+    let msg = ch_reader.next_server_message().await?;
+    match msg {
+        ServerMessage::MessageData(data) => {
+            assert_eq!(data.channel_id, channel_id);
+            assert_eq!(data.data.as_ref(), payloads[0]);
+        }
+        other => anyhow::bail!("expected MessageData, got: {other:?}"),
+    }
+    info!("received message 1/{}", payloads.len());
+
+    // Log remaining messages and read them from the same byte stream.
+    for (i, &payload) in payloads[1..].iter().enumerate() {
+        channel.log(payload);
+        let msg = ch_reader.next_server_message().await?;
+        match msg {
+            ServerMessage::MessageData(data) => {
+                assert_eq!(data.channel_id, channel_id);
+                assert_eq!(data.data.as_ref(), payload);
+            }
+            other => anyhow::bail!("expected MessageData, got: {other:?}"),
+        }
+        info!("received message {}/{}", i + 2, payloads.len());
+    }
 
     viewer.close().await?;
     gw.stop().await?;
