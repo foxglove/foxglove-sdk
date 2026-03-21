@@ -879,11 +879,22 @@ impl RemoteAccessSession {
                 return;
             }
         };
-        assert_eq!(
-            expected_channel_id, msg.channel_id,
-            "MessageData channel_id ({}) does not match the stream topic channel_id ({})",
-            msg.channel_id, expected_channel_id,
-        );
+        if expected_channel_id != msg.channel_id {
+            error!(
+                "MessageData channel_id ({}) does not match the stream topic channel_id ({})",
+                msg.channel_id, expected_channel_id,
+            );
+            if let Some(participant) = self.state.read().get_participant(participant_identity) {
+                self.send_error(
+                    &participant,
+                    format!(
+                        "MessageData channel_id ({}) does not match the stream topic ({})",
+                        msg.channel_id, expected_channel_id,
+                    ),
+                );
+            }
+            return;
+        }
         let Some(participant) = self.state.read().get_participant(participant_identity) else {
             error!("Unknown participant identity: {participant_identity:?}");
             return;
