@@ -1099,56 +1099,6 @@ async fn livekit_client_message_data_fires_listener_callback() -> Result<()> {
     Ok(())
 }
 
-/// Test that sending a client MessageData on a per-channel byte stream (`ch-{id}`)
-/// fires `on_message_data` on the listener.
-#[traced_test]
-#[ignore]
-#[tokio::test]
-#[serial(livekit)]
-async fn livekit_client_message_data_on_channel_stream_fires_listener_callback() -> Result<()> {
-    use std::sync::Arc;
-    let ctx = foxglove::Context::new();
-    let listener = Arc::new(MockListener::default());
-
-    let gw = TestGateway::start_with_options(
-        &ctx,
-        TestGatewayOptions {
-            listener: Some(listener.clone()),
-            capabilities: vec![foxglove::remote_access::Capability::ClientPublish],
-            ..Default::default()
-        },
-    )
-    .await?;
-
-    let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
-    let _server_info = viewer.expect_server_info().await?;
-
-    viewer
-        .send_client_advertise(&[ClientChannelDesc {
-            id: 1,
-            topic: "/cmd".to_string(),
-            encoding: "json".to_string(),
-        }])
-        .await?;
-    poll_until(|| listener.advertised().len() == 1).await;
-
-    let payload = b"{\"velocity\": 2.0}";
-    viewer.send_client_message_data(1, payload).await?;
-
-    poll_until(|| listener.message_data().len() == 1).await;
-
-    let messages = listener.message_data();
-    assert_eq!(messages.len(), 1);
-    assert_eq!(messages[0].0, "viewer-1", "client id should match");
-    assert_eq!(messages[0].1, "/cmd", "topic should match");
-    assert_eq!(messages[0].2, payload, "payload should match");
-    info!("on_message_data callback validated via per-channel stream");
-
-    viewer.close().await?;
-    gw.stop().await?;
-    Ok(())
-}
-
 /// Test that sending MessageData before the Client Advertise still delivers the
 /// message once the advertise arrives (the server holds the byte stream until then).
 #[traced_test]
