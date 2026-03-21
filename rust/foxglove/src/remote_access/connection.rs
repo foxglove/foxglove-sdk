@@ -400,7 +400,11 @@ impl RemoteAccessConnection {
                             let session2 = session.clone();
                             tokio::spawn(async move {
                                 session2
-                                    .handle_byte_stream_from_client(participant_identity, reader)
+                                    .handle_byte_stream_from_client(
+                                        participant_identity,
+                                        reader,
+                                        false,
+                                    )
                                     .await;
                             });
                         } else if let Some(id_str) = topic.strip_prefix(CLIENT_CHANNEL_TOPIC_PREFIX)

@@ -418,6 +418,7 @@ impl RemoteAccessSession {
         self: &Arc<Self>,
         participant_identity: ParticipantIdentity,
         reader: ByteStreamReader,
+        is_channel_stream: bool,
     ) {
         let stream = reader.map(|result| result.map_err(std::io::Error::other));
         let mut reader = StreamReader::new(stream);
@@ -469,7 +470,13 @@ impl RemoteAccessSession {
                 }
             }
 
-            if !self.handle_client_message(&participant_identity, opcode, Bytes::from(payload)) {
+            if is_channel_stream {
+                self.handle_channel_stream_message(&participant_identity, opcode, &payload);
+            } else if !self.handle_client_message(
+                &participant_identity,
+                opcode,
+                Bytes::from(payload),
+            ) {
                 return;
             }
         }
@@ -504,7 +511,7 @@ impl RemoteAccessSession {
             let session = self.clone();
             tokio::spawn(async move {
                 session
-                    .handle_byte_stream_from_client(participant_identity, reader)
+                    .handle_byte_stream_from_client(participant_identity, reader, true)
                     .await;
             });
             return;
@@ -549,7 +556,7 @@ impl RemoteAccessSession {
         });
     }
 
-    /// Handle a single framed client message. Returns `false` if the byte stream
+    /// Handle a single framed ws-protocol message. Returns `false` if the byte stream
     /// should be closed (e.g. unrecognized opcode indicating a protocol mismatch).
     fn handle_client_message(
         self: &Arc<Self>,
@@ -602,8 +609,10 @@ impl RemoteAccessSession {
             ClientMessage::Unadvertise(msg) => {
                 self.handle_client_unadvertise(&participant, msg);
             }
-            ClientMessage::MessageData(msg) => {
-                self.handle_client_message_data(&participant, msg);
+            ClientMessage::MessageData(_) => {
+                error!(
+                    "Received MessageData over ws-protocol; MessageData is only supported on channel-specific byte streams"
+                );
             }
             _ => {
                 warn!("Unhandled client message: {client_msg:?}");
@@ -773,7 +782,7 @@ impl RemoteAccessSession {
                 let identity = participant.participant_id().clone();
                 tokio::spawn(async move {
                     session
-                        .handle_byte_stream_from_client(identity, reader)
+                        .handle_byte_stream_from_client(identity, reader, true)
                         .await;
                 });
             }
@@ -809,6 +818,39 @@ impl RemoteAccessSession {
                 }
             }
         }
+    }
+
+    /// Handle a message from a channel-specific byte stream.
+    /// Only MessageData is expected on these streams.
+    fn handle_channel_stream_message(
+        self: &Arc<Self>,
+        participant_identity: &ParticipantIdentity,
+        opcode: u8,
+        payload: &[u8],
+    ) {
+        const BINARY: u8 = OpCode::Binary as u8;
+        if opcode != BINARY {
+            error!("Unexpected non-binary message on channel stream (opcode {opcode})");
+            return;
+        }
+        let msg = match ClientMessage::parse_binary(payload) {
+            Ok(ClientMessage::MessageData(msg)) => msg,
+            Ok(other) => {
+                error!(
+                    "Unexpected message on channel stream: {other:?}; only MessageData is supported"
+                );
+                return;
+            }
+            Err(e) => {
+                error!("Failed to parse channel stream message: {e:?}");
+                return;
+            }
+        };
+        let Some(participant) = self.state.read().get_participant(participant_identity) else {
+            error!("Unknown participant identity: {participant_identity:?}");
+            return;
+        };
+        self.handle_client_message_data(&participant, msg);
     }
 
     fn handle_client_message_data(
