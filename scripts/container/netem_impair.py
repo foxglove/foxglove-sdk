@@ -49,12 +49,12 @@ def main() -> None:
             if target == "default" and handle != "ff00:":
                 continue
 
-            result = subprocess.run(
+            change_result = subprocess.run(
                 ["tc", "qdisc", "change", "dev", iface, *parent_args,  # noqa: S603, S607
                  "handle", handle, "netem", *netem_args],
                 capture_output=True, text=True,
             )
-            if result.returncode == 0:
+            if change_result.returncode == 0:
                 print(f"  {iface} {handle}: netem {' '.join(netem_args)}")
             else:
                 print(f"  ERROR: {iface} {handle}", file=sys.stderr)
