@@ -9,10 +9,13 @@ use crate::protocol::v2::server::advertise;
 use crate::remote_access::channel_subscription::ChannelSubscription;
 use crate::remote_access::participant::Participant;
 use crate::remote_access::session::{VideoInputSchema, VideoMetadata, VideoPublisher};
+use crate::remote_common::ClientId;
 use crate::{ChannelDescriptor, ChannelId, RawChannel};
 
 /// Channels that lost their last subscriber when a participant was removed.
 pub(crate) struct RemovedSubscriptions {
+    /// The locally-significant client ID of the removed participant.
+    pub client_id: Option<ClientId>,
     /// Channel IDs that lost their last subscriber (of any type).
     pub last_unsubscribed: SmallVec<[ChannelId; 4]>,
     /// Channel IDs that lost their last video subscriber.
@@ -92,13 +95,15 @@ impl SessionState {
     /// and any client channels that were advertised by the participant.
     #[must_use]
     pub fn remove_participant(&mut self, identity: &ParticipantIdentity) -> RemovedSubscriptions {
-        if self.participants.remove(identity).is_none() {
+        let Some(participant) = self.participants.remove(identity) else {
             return RemovedSubscriptions {
+                client_id: None,
                 last_unsubscribed: SmallVec::new(),
                 last_video_unsubscribed: SmallVec::new(),
                 client_channels: Vec::new(),
             };
-        }
+        };
+        let client_id = participant.client_id();
         info!("removed participant {identity:?}");
 
         let mut last_unsubscribed: SmallVec<[ChannelId; 4]> = SmallVec::new();
@@ -133,6 +138,7 @@ impl SessionState {
             .unwrap_or_default();
 
         RemovedSubscriptions {
+            client_id: Some(client_id),
             last_unsubscribed,
             last_video_unsubscribed,
             client_channels,
@@ -328,12 +334,12 @@ impl SessionState {
         let mut first_subscribed: SmallVec<[ChannelId; 4]> = SmallVec::new();
         for &channel_id in channel_ids {
             let subscribers = self.subscriptions.entry(channel_id).or_default();
-            if subscribers.contains(participant.identity()) {
+            if subscribers.contains(participant.participant_id()) {
                 info!("{participant} is already subscribed to channel {channel_id:?}; ignoring");
                 continue;
             }
             let is_first = subscribers.is_empty();
-            subscribers.push(participant.identity().clone());
+            subscribers.push(participant.participant_id().clone());
             debug!("{participant} subscribed to channel {channel_id:?}");
             if is_first {
                 first_subscribed.push(channel_id);
@@ -359,7 +365,7 @@ impl SessionState {
             };
             let Some(pos) = subscribers
                 .iter()
-                .position(|id| id == participant.identity())
+                .position(|id| id == participant.participant_id())
             else {
                 info!("{participant} is not subscribed to channel {channel_id:?}; ignoring");
                 continue;
@@ -382,10 +388,10 @@ impl SessionState {
                 .data_subscriptions
                 .entry(channel_id)
                 .or_insert_with(ChannelSubscription::new);
-            if sub.subscribers().contains(participant.identity()) {
+            if sub.subscribers().contains(participant.participant_id()) {
                 continue;
             }
-            sub.add(participant.identity().clone());
+            sub.add(participant.participant_id().clone());
         }
     }
 
@@ -397,10 +403,25 @@ impl SessionState {
             let Some(sub) = self.data_subscriptions.get_mut(&channel_id) else {
                 continue;
             };
-            if !sub.remove(participant.identity()) {
+            if !sub.remove(participant.participant_id()) {
                 continue;
             }
         }
+    }
+
+    /// Returns the number of connected participants.
+    pub fn participant_count(&self) -> usize {
+        self.participants.len()
+    }
+
+    /// Returns the total number of active participant subscriptions across all channels.
+    pub fn subscription_count(&self) -> usize {
+        self.subscriptions.values().map(|s| s.len()).sum()
+    }
+
+    /// Returns the number of active video tracks being published.
+    pub fn video_track_count(&self) -> usize {
+        self.video_track_sids.len()
     }
 
     /// Adds a participant to video subscribers for the given channels.
@@ -417,11 +438,11 @@ impl SessionState {
         let mut first_subscribed: SmallVec<[ChannelId; 4]> = SmallVec::new();
         for &channel_id in channel_ids {
             let subscribers = self.video_subscribers.entry(channel_id).or_default();
-            if subscribers.contains(participant.identity()) {
+            if subscribers.contains(participant.participant_id()) {
                 continue;
             }
             let is_first = subscribers.is_empty();
-            subscribers.push(participant.identity().clone());
+            subscribers.push(participant.participant_id().clone());
             if is_first {
                 first_subscribed.push(channel_id);
             }
@@ -447,7 +468,7 @@ impl SessionState {
             };
             let Some(pos) = subscribers
                 .iter()
-                .position(|id| id == participant.identity())
+                .position(|id| id == participant.participant_id())
             else {
                 continue;
             };

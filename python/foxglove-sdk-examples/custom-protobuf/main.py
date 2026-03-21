@@ -6,14 +6,14 @@ import foxglove
 import fruit_pb2
 from foxglove import Channel, Schema
 from foxglove.channels import CompressedImageChannel
-from foxglove.schemas import CompressedImage
+from foxglove.messages import CompressedImage
 from google.protobuf import descriptor_pb2
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--path", type=str, default="output.mcap")
 args = parser.parse_args()
 
-# this channel logs images using Foxglove's image schema
+# this channel logs images using Foxglove's CompressedImage message type
 img_channel = CompressedImageChannel(topic="/image")
 
 # this channel logs schemaless JSON

@@ -2,9 +2,9 @@ use std::fmt::Display;
 use std::future::Future;
 use std::sync::Arc;
 
-use crate::websocket::service::{Request, Responder};
+use crate::remote_common::service::{Request, Responder};
 
-/// A websocket service call handler.
+/// A service call handler.
 pub trait Handler: Send + Sync {
     /// Handles a service call request from a client.
     ///

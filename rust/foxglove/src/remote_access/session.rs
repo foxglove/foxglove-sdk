@@ -35,6 +35,13 @@ pub(crate) use video_track::{
     VideoInputSchema, VideoMetadata, VideoPublisher, get_video_input_schema,
 };
 
+#[derive(Debug)]
+pub(crate) struct SessionStats {
+    pub participants: usize,
+    pub subscriptions: usize,
+    pub video_tracks: usize,
+}
+
 pub(crate) const WS_PROTOCOL_TOPIC: &str = "ws-protocol";
 pub(crate) const CLIENT_CHANNEL_TOPIC_PREFIX: &str = "client-";
 const CHANNEL_TOPIC_PREFIX: &str = "ch-";
@@ -264,6 +271,15 @@ impl RemoteAccessSession {
 
     pub(crate) fn room(&self) -> &Room {
         &self.room
+    }
+
+    pub(crate) fn stats(&self) -> SessionStats {
+        let state = self.state.read();
+        SessionStats {
+            participants: state.participant_count(),
+            subscriptions: state.subscription_count(),
+            video_tracks: state.video_track_count(),
+        }
     }
 
     /// Enqueue a data plane message, dropping old messages if the queue is full.
@@ -679,7 +695,10 @@ impl RemoteAccessSession {
             return;
         }
 
-        let client = Client::new(participant.identity().clone());
+        let client = Client::new(
+            participant.client_id(),
+            participant.participant_id().clone(),
+        );
 
         for ch in msg.channels {
             let channel_id = ChannelId::new(ch.id.into());
@@ -716,7 +735,7 @@ impl RemoteAccessSession {
             let inserted = self
                 .state
                 .write()
-                .insert_client_channel(participant.identity(), descriptor.clone());
+                .insert_client_channel(participant.participant_id(), descriptor.clone());
 
             if !inserted {
                 self.send_warning(
@@ -752,14 +771,18 @@ impl RemoteAccessSession {
     }
 
     fn handle_client_unadvertise(&self, participant: &Arc<Participant>, msg: client::Unadvertise) {
-        let client = Client::new(participant.identity().clone());
+        let _guard = self.subscription_lock.lock();
+        let client = Client::new(
+            participant.client_id(),
+            participant.participant_id().clone(),
+        );
 
         for channel_id_raw in msg.channel_ids {
             let channel_id = ChannelId::new(channel_id_raw.into());
             let removed = self
                 .state
                 .write()
-                .remove_client_channel(participant.identity(), channel_id);
+                .remove_client_channel(participant.participant_id(), channel_id);
 
             match removed {
                 None => {
@@ -890,8 +913,8 @@ impl RemoteAccessSession {
         self.stop_video_tracks(&removed.last_video_unsubscribed);
 
         if !removed.client_channels.is_empty() {
-            if let Some(listener) = &self.listener {
-                let client = Client::new(participant_id.clone());
+            if let Some((listener, client_id)) = self.listener.as_ref().zip(removed.client_id) {
+                let client = Client::new(client_id, participant_id.clone());
                 for descriptor in &removed.client_channels {
                     listener.on_client_unadvertise(client.clone(), descriptor);
                 }

@@ -6,7 +6,7 @@ use foxglove::remote_access::{Client, Listener};
 /// A mock [`Listener`] that records `on_client_advertise`, `on_client_unadvertise`,
 /// and `on_message_data` callbacks.
 ///
-/// Advertise/unadvertise entries are stored as `(client_id, topic)`.
+/// Advertise/unadvertise entries are stored as `(participant_id, topic)`.
 /// Message data entries are stored as `(client_id, topic, payload)`.
 #[derive(Default)]
 pub struct MockListener {
@@ -31,17 +31,17 @@ impl MockListener {
 
 impl Listener for MockListener {
     fn on_client_advertise(&self, client: Client, channel: &ChannelDescriptor) {
-        self.advertised
-            .lock()
-            .unwrap()
-            .push((client.id().to_string(), channel.topic().to_string()));
+        self.advertised.lock().unwrap().push((
+            client.participant_id().to_string(),
+            channel.topic().to_string(),
+        ));
     }
 
     fn on_client_unadvertise(&self, client: Client, channel: &ChannelDescriptor) {
-        self.unadvertised
-            .lock()
-            .unwrap()
-            .push((client.id().to_string(), channel.topic().to_string()));
+        self.unadvertised.lock().unwrap().push((
+            client.participant_id().to_string(),
+            channel.topic().to_string(),
+        ));
     }
 
     fn on_message_data(&self, client: Client, channel: &ChannelDescriptor, payload: &[u8]) {

@@ -9,7 +9,7 @@ from typing import Generator, List
 import pytest
 from foxglove import Channel, open_mcap
 from foxglove.channels import PointCloudChannel, SceneUpdateChannel
-from foxglove.schemas import (
+from foxglove.messages import (
     Color,
     CubePrimitive,
     Duration,

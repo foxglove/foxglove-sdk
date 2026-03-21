@@ -2,7 +2,7 @@ use foxglove::{
     ChannelBuilder, McapWriter,
     convert::SaturatingInto,
     log,
-    schemas::{
+    messages::{
         Color, CubePrimitive, Log, Pose, Quaternion, SceneEntity, SceneUpdate, Timestamp, Vector3,
     },
 };
@@ -22,7 +22,7 @@ fn main() {
         .create_new_buffered_file("example.mcap")
         .expect("Failed to start mcap writer");
 
-    // You can use log! with a topic name and any type that implements Encode, including foxglove schemas
+    // You can use log! with a topic name and any type that implements Encode, including foxglove message types
     // without having to create a channel first.
     log!(
         "/log",

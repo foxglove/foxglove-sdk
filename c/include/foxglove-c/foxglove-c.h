@@ -112,6 +112,40 @@ enum foxglove_error
 typedef uint8_t foxglove_error;
 #endif // __cplusplus
 
+enum foxglove_numeric_type
+#ifdef __cplusplus
+  : int32_t
+#endif // __cplusplus
+ {
+  FOXGLOVE_NUMERIC_TYPE_UNKNOWN = 0,
+  FOXGLOVE_NUMERIC_TYPE_UINT8 = 1,
+  FOXGLOVE_NUMERIC_TYPE_INT8 = 2,
+  FOXGLOVE_NUMERIC_TYPE_UINT16 = 3,
+  FOXGLOVE_NUMERIC_TYPE_INT16 = 4,
+  FOXGLOVE_NUMERIC_TYPE_UINT32 = 5,
+  FOXGLOVE_NUMERIC_TYPE_INT32 = 6,
+  FOXGLOVE_NUMERIC_TYPE_FLOAT32 = 7,
+  FOXGLOVE_NUMERIC_TYPE_FLOAT64 = 8,
+};
+#ifndef __cplusplus
+typedef int32_t foxglove_numeric_type;
+#endif // __cplusplus
+
+enum foxglove_points_annotation_type
+#ifdef __cplusplus
+  : int32_t
+#endif // __cplusplus
+ {
+  FOXGLOVE_POINTS_ANNOTATION_TYPE_UNKNOWN = 0,
+  FOXGLOVE_POINTS_ANNOTATION_TYPE_POINTS = 1,
+  FOXGLOVE_POINTS_ANNOTATION_TYPE_LINE_LOOP = 2,
+  FOXGLOVE_POINTS_ANNOTATION_TYPE_LINE_STRIP = 3,
+  FOXGLOVE_POINTS_ANNOTATION_TYPE_LINE_LIST = 4,
+};
+#ifndef __cplusplus
+typedef int32_t foxglove_points_annotation_type;
+#endif // __cplusplus
+
 enum foxglove_line_type
 #ifdef __cplusplus
   : int32_t
@@ -123,6 +157,20 @@ enum foxglove_line_type
 };
 #ifndef __cplusplus
 typedef int32_t foxglove_line_type;
+#endif // __cplusplus
+
+enum foxglove_position_covariance_type
+#ifdef __cplusplus
+  : int32_t
+#endif // __cplusplus
+ {
+  FOXGLOVE_POSITION_COVARIANCE_TYPE_UNKNOWN = 0,
+  FOXGLOVE_POSITION_COVARIANCE_TYPE_APPROXIMATED = 1,
+  FOXGLOVE_POSITION_COVARIANCE_TYPE_DIAGONAL_KNOWN = 2,
+  FOXGLOVE_POSITION_COVARIANCE_TYPE_KNOWN = 3,
+};
+#ifndef __cplusplus
+typedef int32_t foxglove_position_covariance_type;
 #endif // __cplusplus
 
 enum foxglove_log_level
@@ -140,6 +188,39 @@ enum foxglove_log_level
 #ifndef __cplusplus
 typedef int32_t foxglove_log_level;
 #endif // __cplusplus
+
+enum foxglove_scene_entity_deletion_type
+#ifdef __cplusplus
+  : int32_t
+#endif // __cplusplus
+ {
+  FOXGLOVE_SCENE_ENTITY_DELETION_TYPE_MATCHING_ID = 0,
+  FOXGLOVE_SCENE_ENTITY_DELETION_TYPE_ALL = 1,
+};
+#ifndef __cplusplus
+typedef int32_t foxglove_scene_entity_deletion_type;
+#endif // __cplusplus
+
+#if !defined(__wasm__)
+enum foxglove_mcap_compression
+#ifdef __cplusplus
+  : uint8_t
+#endif // __cplusplus
+ {
+#if !defined(__wasm__)
+  FOXGLOVE_MCAP_COMPRESSION_NONE,
+#endif
+#if !defined(__wasm__)
+  FOXGLOVE_MCAP_COMPRESSION_ZSTD,
+#endif
+#if !defined(__wasm__)
+  FOXGLOVE_MCAP_COMPRESSION_LZ4,
+#endif
+};
+#ifndef __cplusplus
+typedef uint8_t foxglove_mcap_compression;
+#endif // __cplusplus
+#endif
 
 #if !defined(__wasm__)
 /**
@@ -172,46 +253,6 @@ enum foxglove_logging_level
 typedef uint8_t foxglove_logging_level;
 #endif // __cplusplus
 #endif
-
-#if !defined(__wasm__)
-enum foxglove_mcap_compression
-#ifdef __cplusplus
-  : uint8_t
-#endif // __cplusplus
- {
-#if !defined(__wasm__)
-  FOXGLOVE_MCAP_COMPRESSION_NONE,
-#endif
-#if !defined(__wasm__)
-  FOXGLOVE_MCAP_COMPRESSION_ZSTD,
-#endif
-#if !defined(__wasm__)
-  FOXGLOVE_MCAP_COMPRESSION_LZ4,
-#endif
-};
-#ifndef __cplusplus
-typedef uint8_t foxglove_mcap_compression;
-#endif // __cplusplus
-#endif
-
-enum foxglove_numeric_type
-#ifdef __cplusplus
-  : int32_t
-#endif // __cplusplus
- {
-  FOXGLOVE_NUMERIC_TYPE_UNKNOWN = 0,
-  FOXGLOVE_NUMERIC_TYPE_UINT8 = 1,
-  FOXGLOVE_NUMERIC_TYPE_INT8 = 2,
-  FOXGLOVE_NUMERIC_TYPE_UINT16 = 3,
-  FOXGLOVE_NUMERIC_TYPE_INT16 = 4,
-  FOXGLOVE_NUMERIC_TYPE_UINT32 = 5,
-  FOXGLOVE_NUMERIC_TYPE_INT32 = 6,
-  FOXGLOVE_NUMERIC_TYPE_FLOAT32 = 7,
-  FOXGLOVE_NUMERIC_TYPE_FLOAT64 = 8,
-};
-#ifndef __cplusplus
-typedef int32_t foxglove_numeric_type;
-#endif // __cplusplus
 
 #if !defined(__wasm__)
 /**
@@ -287,47 +328,6 @@ enum foxglove_parameter_value_tag
 typedef uint8_t foxglove_parameter_value_tag;
 #endif // __cplusplus
 #endif
-
-enum foxglove_points_annotation_type
-#ifdef __cplusplus
-  : int32_t
-#endif // __cplusplus
- {
-  FOXGLOVE_POINTS_ANNOTATION_TYPE_UNKNOWN = 0,
-  FOXGLOVE_POINTS_ANNOTATION_TYPE_POINTS = 1,
-  FOXGLOVE_POINTS_ANNOTATION_TYPE_LINE_LOOP = 2,
-  FOXGLOVE_POINTS_ANNOTATION_TYPE_LINE_STRIP = 3,
-  FOXGLOVE_POINTS_ANNOTATION_TYPE_LINE_LIST = 4,
-};
-#ifndef __cplusplus
-typedef int32_t foxglove_points_annotation_type;
-#endif // __cplusplus
-
-enum foxglove_position_covariance_type
-#ifdef __cplusplus
-  : int32_t
-#endif // __cplusplus
- {
-  FOXGLOVE_POSITION_COVARIANCE_TYPE_UNKNOWN = 0,
-  FOXGLOVE_POSITION_COVARIANCE_TYPE_APPROXIMATED = 1,
-  FOXGLOVE_POSITION_COVARIANCE_TYPE_DIAGONAL_KNOWN = 2,
-  FOXGLOVE_POSITION_COVARIANCE_TYPE_KNOWN = 3,
-};
-#ifndef __cplusplus
-typedef int32_t foxglove_position_covariance_type;
-#endif // __cplusplus
-
-enum foxglove_scene_entity_deletion_type
-#ifdef __cplusplus
-  : int32_t
-#endif // __cplusplus
- {
-  FOXGLOVE_SCENE_ENTITY_DELETION_TYPE_MATCHING_ID = 0,
-  FOXGLOVE_SCENE_ENTITY_DELETION_TYPE_ALL = 1,
-};
-#ifndef __cplusplus
-typedef int32_t foxglove_scene_entity_deletion_type;
-#endif // __cplusplus
 
 #if !defined(__wasm__)
 /**
@@ -1153,19 +1153,19 @@ typedef struct foxglove_joint_state {
    */
   struct foxglove_string name;
   /**
-   * Joint position. Radians for revolute joints, meters for prismatic joints. Use NaN to indicate that the value is not present if the message definition does not support optional fields.
+   * Joint position. Radians for revolute joints, meters for prismatic joints.
    */
   const double *position;
   /**
-   * Joint velocity. Rad/s for revolute joints, m/s for prismatic joints. Use NaN to indicate that the value is not present if the message definition does not support optional fields.
+   * Joint velocity. Rad/s for revolute joints, m/s for prismatic joints.
    */
   const double *velocity;
   /**
-   * Joint acceleration. Rad/s² for revolute joints, m/s² for prismatic joints. Use NaN to indicate that the value is not present if the message definition does not support optional fields.
+   * Joint acceleration. Rad/s² for revolute joints, m/s² for prismatic joints.
    */
   const double *acceleration;
   /**
-   * Joint effort (force or torque). Nm for revolute joints, N for prismatic joints. Use NaN to indicate that the value is not present if the message definition does not support optional fields.
+   * Joint effort (force or torque). Nm for revolute joints, N for prismatic joints.
    */
   const double *effort;
 } foxglove_joint_state;

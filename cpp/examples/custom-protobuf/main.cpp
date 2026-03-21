@@ -1,7 +1,7 @@
 #include <foxglove/channel.hpp>
 #include <foxglove/foxglove.hpp>
 #include <foxglove/mcap.hpp>
-#include <foxglove/schemas.hpp>
+#include <foxglove/messages.hpp>
 
 #include <google/protobuf/descriptor.pb.h>
 

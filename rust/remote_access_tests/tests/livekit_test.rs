@@ -7,9 +7,9 @@
 use std::time::Duration;
 
 use anyhow::{Context as _, Result};
+use foxglove::messages::{RawImage, Timestamp};
 use foxglove::protocol::v2::client::SubscribeChannel;
 use foxglove::protocol::v2::server::ServerMessage;
-use foxglove::schemas::{RawImage, Timestamp};
 use foxglove::{Encode, Schema};
 use livekit::{Room, RoomOptions};
 use remote_access_tests::livekit_token;
@@ -590,9 +590,13 @@ async fn livekit_existing_participant_receives_server_info_and_advertisement() -
 
     // Connect viewer to the room BEFORE the gateway joins.
     let token = livekit_token::generate_token(&room_name, "viewer-1")?;
-    let (room, events) = Room::connect(livekit_token::LIVEKIT_URL, &token, RoomOptions::default())
-        .await
-        .context("viewer failed to connect to LiveKit")?;
+    let (room, events) = Room::connect(
+        &livekit_token::livekit_url(),
+        &token,
+        RoomOptions::default(),
+    )
+    .await
+    .context("viewer failed to connect to LiveKit")?;
     info!("viewer connected to room before gateway");
 
     // Now start the gateway — it should discover the existing viewer participant.

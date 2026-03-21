@@ -1,4 +1,4 @@
-// Verify that foxglove::messages is a working alias for foxglove::schemas.
+// Verify that foxglove::schemas is a working backward-compat alias for foxglove::messages.
 
 #include <foxglove/messages.hpp>
 #include <foxglove/schemas.hpp>
