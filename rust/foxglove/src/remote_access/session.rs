@@ -771,7 +771,6 @@ impl RemoteAccessSession {
     }
 
     fn handle_client_unadvertise(&self, participant: &Arc<Participant>, msg: client::Unadvertise) {
-        let _guard = self.subscription_lock.lock();
         let client = Client::new(
             participant.client_id(),
             participant.participant_id().clone(),
@@ -830,7 +829,7 @@ impl RemoteAccessSession {
         };
         if let Some(listener) = &self.listener {
             let client = Client::new(
-                participant.client_id().clone(),
+                participant.client_id(),
                 participant.participant_id().clone(),
             );
             listener.on_message_data(client, &descriptor, &msg.data);
