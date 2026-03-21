@@ -1,6 +1,7 @@
 use assert_matches::assert_matches;
 
 use super::{BayerCfa, BayerPixel, Endian, Error, RawImage, RawImageEncoding};
+use crate::img2yuv::{Yuv420Buffer, Yuv420Vec};
 
 #[test]
 fn test_validate_zero_sized() {
@@ -90,6 +91,107 @@ fn test_validate_dimensions_yuv422_must_be_even() {
         .unwrap_err();
         assert_matches!(err, Error::Yuv422WidthMustBeEven { width: 3 });
     }
+}
+
+#[test]
+fn test_validate_dimensions_nv12_must_be_even() {
+    for (width, height) in [(3, 4), (4, 3)] {
+        // NV12 buffer: stride * height * 3/2 (rounded up for odd cases)
+        let stride = width + 2;
+        let buf_size = stride as usize * height as usize * 2;
+        let err = RawImage {
+            encoding: RawImageEncoding::Nv12,
+            width,
+            height,
+            stride,
+            data: vec![0; buf_size].into(),
+        }
+        .validate_dimensions()
+        .unwrap_err();
+        assert_matches!(err, Error::Nv12DimensionsMustBeEven{ width: w, height: h } if w == width && h == height);
+    }
+}
+
+#[test]
+fn test_validate_dimensions_nv12_buffer_size() {
+    // NV12 needs stride * height * 3/2 bytes
+    let width = 4;
+    let height = 4;
+    let stride = 4;
+    let expected_size = stride as usize * height as usize * 3 / 2; // 24
+
+    // Buffer that's one byte too small.
+    let err = RawImage {
+        encoding: RawImageEncoding::Nv12,
+        width,
+        height,
+        stride,
+        data: vec![0; expected_size - 1].into(),
+    }
+    .validate_dimensions()
+    .unwrap_err();
+    assert_matches!(
+        err,
+        Error::BufferTooSmall {
+            actual,
+            expect,
+            ..
+        } if actual == expected_size - 1 && expect == expected_size
+    );
+
+    // Exact size should pass.
+    RawImage {
+        encoding: RawImageEncoding::Nv12,
+        width,
+        height,
+        stride,
+        data: vec![0; expected_size].into(),
+    }
+    .validate_dimensions()
+    .unwrap();
+}
+
+#[test]
+fn test_nv12_to_yuv420() {
+    // 4x4 NV12 image
+    let width: u32 = 4;
+    let height: u32 = 4;
+    let stride = width;
+
+    // Y plane: 4x4 = 16 bytes
+    #[rustfmt::skip]
+    let y_data: Vec<u8> = vec![
+        16, 35, 16, 35,
+        16, 35, 16, 35,
+        82, 82, 82, 82,
+        82, 82, 82, 82,
+    ];
+    // UV plane: 4x2 = 8 bytes (interleaved U,V pairs)
+    #[rustfmt::skip]
+    let uv_data: Vec<u8> = vec![
+        128, 128, 200, 50,
+        128, 128, 200, 50,
+    ];
+
+    let mut data = Vec::new();
+    data.extend_from_slice(&y_data);
+    data.extend_from_slice(&uv_data);
+
+    let img = RawImage {
+        encoding: RawImageEncoding::Nv12,
+        width,
+        height,
+        stride,
+        data: data.into(),
+    };
+
+    let mut buf = Yuv420Vec::new(width, height);
+    img.to_yuv420(&mut buf).unwrap();
+
+    let (y, u, v) = buf.yuv();
+    assert_eq!(y, &y_data);
+    assert_eq!(u, &[128, 200, 128, 200]);
+    assert_eq!(v, &[128, 50, 128, 50]);
 }
 
 #[test]
