@@ -15,7 +15,7 @@ See [docs.rs](https://docs.rs/foxglove).
 
 # Supported Rust Versions
 
-The current MSRV (minimum supported Rust version) is 1.88.0.
+The current MSRV (minimum supported Rust version) is 1.85.0.
 
 We aim to support Rust versions released within the past year. The MSRV may be
 bumped in minor releases. Cargo's MSRV-aware resolver will automatically use an
