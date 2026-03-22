@@ -477,12 +477,14 @@ impl RemoteAccessSession {
             }
 
             if let Some(channel_id) = expected_channel_id {
-                self.handle_channel_stream_message(
+                if !self.handle_channel_stream_message(
                     &participant_identity,
                     channel_id,
                     opcode,
                     &payload,
-                );
+                ) {
+                    return;
+                }
             } else if !self.handle_client_message(
                 &participant_identity,
                 opcode,
@@ -854,17 +856,20 @@ impl RemoteAccessSession {
     /// the stream topic and must match the `channel_id` field inside every `MessageData` frame.
     /// A mismatch indicates a misbehaving client (the topic determines which stream carries the
     /// data, but the channel ID inside the message determines which descriptor is used).
+    ///
+    /// Returns `false` if the stream should be closed (protocol violation that will repeat
+    /// for every subsequent frame), `true` to continue reading.
     fn handle_channel_stream_message(
         self: &Arc<Self>,
         participant_identity: &ParticipantIdentity,
         expected_channel_id: u32,
         opcode: u8,
         payload: &[u8],
-    ) {
+    ) -> bool {
         const BINARY: u8 = OpCode::Binary as u8;
         if opcode != BINARY {
             error!("Unexpected non-binary message on channel stream (opcode {opcode})");
-            return;
+            return true;
         }
         let msg = match ClientMessage::parse_binary(payload) {
             Ok(ClientMessage::MessageData(msg)) => msg,
@@ -872,11 +877,11 @@ impl RemoteAccessSession {
                 error!(
                     "Unexpected message on channel stream: {other:?}; only MessageData is supported"
                 );
-                return;
+                return true;
             }
             Err(e) => {
                 error!("Failed to parse channel stream message: {e:?}");
-                return;
+                return true;
             }
         };
         if expected_channel_id != msg.channel_id {
@@ -893,13 +898,14 @@ impl RemoteAccessSession {
                     ),
                 );
             }
-            return;
+            return false;
         }
         let Some(participant) = self.state.read().get_participant(participant_identity) else {
             error!("Unknown participant identity: {participant_identity:?}");
-            return;
+            return false;
         };
         self.handle_client_message_data(&participant, msg);
+        true
     }
 
     fn handle_client_message_data(
