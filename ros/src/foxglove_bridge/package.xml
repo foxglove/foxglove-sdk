@@ -15,6 +15,11 @@
     <depend>rclcpp</depend>
     <depend>rclcpp_components</depend>
     <depend>rosx_introspection</depend>
+    <!-- Workaround: rosx_introspection incorrectly exports sensor_msgs and
+         geometry_msgs as transitive dependencies. Remove once upstream
+         releases a fix (https://github.com/facontidavide/rosx_introspection/pull/39) -->
+    <build_depend>sensor_msgs</build_depend>
+    <build_depend>geometry_msgs</build_depend>
 
     <!-- Test dependencies -->
     <test_depend>ament_cmake_gtest</test_depend>
