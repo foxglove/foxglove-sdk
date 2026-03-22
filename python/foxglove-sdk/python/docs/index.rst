@@ -67,7 +67,7 @@ which you will log :py:class:`.messages.SceneUpdate` messages. Note that the mes
 are currently immutable and do not expose getters and setters for their fields. This is a limitation
 we plan to address in the future.
 
-.. deprecated::
+.. deprecated:: 0.21.0
    The ``foxglove.schemas`` module is deprecated. Use :py:mod:`foxglove.messages` instead.
 
 You can also log messages with arbitrary schemas and provide your own encoding, by instantiating a

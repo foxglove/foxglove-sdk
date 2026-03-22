@@ -337,7 +337,7 @@ pub mod protobuf;
 mod schema;
 
 /// Deprecated: Use [`messages`] instead.
-#[deprecated(since = "0.20.0", note = "Use foxglove::messages instead.")]
+#[deprecated(since = "0.21.0", note = "Use foxglove::messages instead.")]
 pub mod schemas {
     pub use crate::messages::*;
 }
