@@ -62,7 +62,7 @@ The following is a modified version of [bloom release instructions](https://wiki
 1. Manually update `package.xml` and `CHANGELOG.rst` with new version info
 2. Manually create a tag named `ros-vX.Y.Z` for the new version
 3. Push the newly created commit and tag
-4. Run `bloom-release foxglove_bridge --ros-distro humble`, for each distro you want to publish the release to. Follow the prompts, and the script will automatically make a PR to the [ros/rosdistro](https://github.com/ros/rosdistro) repo.
+4. Run `bloom-release foxglove-sdk --ros-distro humble`, for each distro you want to publish the release to. Follow the prompts, and the script will automatically make a PR to the [ros/rosdistro](https://github.com/ros/rosdistro) repo.
 
 Packages will be available via apt after the [next sync](https://discourse.ros.org/c/release/16). View package build status prior to the sync at:
 [humble](http://repo.ros2.org/status_page/ros_humble_default.html?q=foxglove),
