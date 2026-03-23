@@ -43,6 +43,22 @@ pub(crate) struct UnsubscribeResult {
     pub actually_unsubscribed: SmallVec<[ChannelId; 4]>,
 }
 
+/// Result of subscribing a participant to channels.
+pub(crate) struct SubscribeResult {
+    /// Channel IDs that gained their first subscriber.
+    pub first_subscribed: SmallVec<[ChannelId; 4]>,
+    /// All channel IDs where this participant was actually added.
+    pub newly_subscribed: SmallVec<[ChannelId; 4]>,
+}
+
+/// Result of unsubscribing a participant from channels.
+pub(crate) struct UnsubscribeResult {
+    /// Channel IDs that lost their last subscriber.
+    pub last_unsubscribed: SmallVec<[ChannelId; 4]>,
+    /// All channel IDs where this participant was actually removed.
+    pub actually_unsubscribed: SmallVec<[ChannelId; 4]>,
+}
+
 /// State machine for a remote access session.
 ///
 /// Tracks participants, advertised channels, and per-channel subscriptions.
