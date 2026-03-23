@@ -2,6 +2,10 @@
 Changelog for package foxglove_msgs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+3.2.5 (2026-03-22)
+------------------
+* Version bump for foxglove_bridge 3.2.5 release
+
 3.2.4 (2026-01-22)
 ------------------
 * Clarify direction on FrameTransform
