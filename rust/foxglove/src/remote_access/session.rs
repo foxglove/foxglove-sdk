@@ -123,6 +123,8 @@ pub(crate) struct RemoteAccessSession {
     /// the sender loop to re-advertise affected channels.
     video_metadata_tx: tokio::sync::watch::Sender<()>,
     video_metadata_rx: tokio::sync::watch::Receiver<()>,
+    /// Whether video transcoding should use blocking threads.
+    blocking_transcoding: bool,
 }
 
 impl Sink for RemoteAccessSession {
@@ -221,6 +223,7 @@ impl Sink for RemoteAccessSession {
 }
 
 impl RemoteAccessSession {
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn new(
         room: Room,
         context: Weak<Context>,
@@ -229,6 +232,7 @@ impl RemoteAccessSession {
         capabilities: Vec<Capability>,
         cancellation_token: CancellationToken,
         message_backlog_size: usize,
+        blocking_transcoding: bool,
     ) -> Self {
         let (data_plane_tx, data_plane_rx) = flume::bounded(message_backlog_size);
         let (control_plane_tx, control_plane_rx) = flume::bounded(message_backlog_size);
@@ -249,6 +253,7 @@ impl RemoteAccessSession {
             subscription_lock: parking_lot::Mutex::new(()),
             video_metadata_tx,
             video_metadata_rx,
+            blocking_transcoding,
         }
     }
 
@@ -897,6 +902,7 @@ impl RemoteAccessSession {
                 video_source.clone(),
                 input_schema,
                 self.video_metadata_tx.clone(),
+                self.blocking_transcoding,
             ));
             let expected_publisher = publisher.clone();
 

@@ -43,6 +43,7 @@ pub(crate) struct RemoteAccessConnectionOptions {
     pub channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     pub server_info: Option<HashMap<String, String>>,
     pub message_backlog_size: Option<usize>,
+    pub blocking_transcoding: bool,
     pub cancellation_token: CancellationToken,
     pub context: Weak<Context>,
 }
@@ -61,6 +62,7 @@ impl Default for RemoteAccessConnectionOptions {
             channel_filter: None,
             server_info: None,
             message_backlog_size: None,
+            blocking_transcoding: true,
             cancellation_token: CancellationToken::new(),
             context: Arc::downgrade(&Context::get_default()),
         }
@@ -81,6 +83,7 @@ impl std::fmt::Debug for RemoteAccessConnectionOptions {
             .field("has_channel_filter", &self.channel_filter.is_some())
             .field("server_info", &self.server_info)
             .field("message_backlog_size", &self.message_backlog_size)
+            .field("blocking_transcoding", &self.blocking_transcoding)
             .field("has_context", &(self.context.strong_count() > 0))
             .finish()
     }
@@ -188,6 +191,7 @@ impl RemoteAccessConnection {
                             self.options.capabilities.clone(),
                             self.options.cancellation_token.clone(),
                             message_backlog_size,
+                            self.options.blocking_transcoding,
                         )),
                         room_events,
                     )

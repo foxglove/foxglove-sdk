@@ -123,10 +123,18 @@ impl VideoPublisher {
     /// When the background task observes a change in video metadata (encoding or frame_id),
     /// it updates `metadata` and signals via `video_metadata_tx` so the session's sender loop
     /// can re-advertise the channel.
+    ///
+    /// When `blocking` is true, frame transcoding runs on Tokio's blocking thread pool
+    /// via [`tokio::task::spawn_blocking`]. This is appropriate for CPU-based transcoding.
+    ///
+    /// When `blocking` is false, transcoding runs directly on the async task. This is
+    /// suitable when GPU-accelerated processing (e.g. WebGPU) handles the heavy lifting,
+    /// avoiding unnecessary thread context switches.
     pub fn new(
         video_source: NativeVideoSource,
         input_schema: VideoInputSchema,
         video_metadata_tx: watch::Sender<()>,
+        blocking: bool,
     ) -> Self {
         let (tx, rx) = flume::bounded::<(Bytes, u64)>(Self::CHANNEL_CAPACITY);
         let metadata: Arc<ArcSwapOption<VideoMetadata>> = Arc::new(ArcSwapOption::empty());
@@ -136,24 +144,32 @@ impl VideoPublisher {
         tokio::spawn(async move {
             let mut last_metadata: Option<VideoMetadata> = None;
             while let Ok((data, log_time_ns)) = consumer_rx.recv_async().await {
-                let source = source.clone();
-                let result = tokio::task::spawn_blocking(move || {
+                let result = if blocking {
+                    let source = source.clone();
+                    match tokio::task::spawn_blocking(move || {
+                        transcode_and_publish(input_schema, &source, &data, log_time_ns)
+                    })
+                    .await
+                    {
+                        Ok(r) => r,
+                        Err(e) => {
+                            error!("video encode task panicked: {e}");
+                            continue;
+                        }
+                    }
+                } else {
                     transcode_and_publish(input_schema, &source, &data, log_time_ns)
-                })
-                .await;
+                };
                 match result {
-                    Ok(Ok(new_metadata)) => {
+                    Ok(new_metadata) => {
                         if last_metadata.as_ref() != Some(&new_metadata) {
                             last_metadata = Some(new_metadata.clone());
                             task_metadata.store(Some(Arc::new(new_metadata)));
                             video_metadata_tx.send_modify(|_| {});
                         }
                     }
-                    Ok(Err(e)) => {
-                        debug!("video encode error: {e}");
-                    }
                     Err(e) => {
-                        error!("video encode task panicked: {e}");
+                        debug!("video encode error: {e}");
                     }
                 }
             }

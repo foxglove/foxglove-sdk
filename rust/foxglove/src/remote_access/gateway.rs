@@ -176,6 +176,20 @@ impl Gateway {
         self
     }
 
+    /// Controls whether video transcoding uses a blocking thread pool.
+    ///
+    /// When `true` (default), image decoding and YUV conversion run on Tokio's blocking
+    /// thread pool via [`tokio::task::spawn_blocking`], keeping the async runtime responsive.
+    /// This is appropriate for CPU-based transcoding.
+    ///
+    /// When `false`, transcoding runs directly on the async task. This is suitable when
+    /// GPU-accelerated processing (e.g. WebGPU) handles the heavy lifting, avoiding
+    /// unnecessary thread context switches.
+    pub fn blocking_transcoding(mut self, blocking: bool) -> Self {
+        self.options.blocking_transcoding = blocking;
+        self
+    }
+
     /// Starts the remote access gateway, which will establish a connection in the background.
     ///
     /// Returns a handle that can optionally be used to manage the gateway.
