@@ -55,7 +55,7 @@ Note that bloom requires an EOL version of Python to work properly. You might co
 uvx --python 3.8 --from bloom bloom-release [...]
 ```
 
-Permissions to push to [ros2-gbp/ros_foxglove_bridge-release](https://github.com/ros2-gbp/ros_foxglove_bridge-release) are required. These permissions are managed [via Terraform](https://github.com/ros2-gbp/ros2-gbp-github-org/blob/latest/foxglove_bridge.tf).
+Permissions to push to [ros2-gbp/foxglove_bridge-release](https://github.com/ros2-gbp/foxglove_bridge-release) are required. These permissions are managed [via Terraform](https://github.com/ros2-gbp/ros2-gbp-github-org/blob/latest/foxglove_bridge.tf).
 
 The following is a modified version of [bloom release instructions](https://wiki.ros.org/bloom/Tutorials/ReleaseCatkinPackage) (because catkin_generate_changelog and catkin_prepare_release can't handle our custom tag format of `ros-vX.Y.Z`).
 
