@@ -221,6 +221,13 @@ private:
         }
         break;
       }
+      case LWS_CALLBACK_CLIENT_CLOSED:
+      case LWS_CALLBACK_WSI_DESTROY: {
+        if (wsi == self->wsi_) {
+          self->wsi_ = nullptr;
+        }
+        break;
+      }
       default:
         break;
     }
