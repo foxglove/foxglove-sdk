@@ -51,8 +51,8 @@ For first-time setup, follow the guides for [installing bloom](http://ros-infras
 
 Note that bloom requires an EOL version of Python to work properly. You might consider using uv to make this less painful:
 
-```console
-$ uvx --python 3.8 --from bloom bloom-release [...]
+```sh
+uvx --python 3.8 --from bloom bloom-release [...]
 ```
 
 Permissions to push to [ros2-gbp/ros_foxglove_bridge-release](https://github.com/ros2-gbp/ros_foxglove_bridge-release) are required. These permissions are managed [via Terraform](https://github.com/ros2-gbp/ros2-gbp-github-org/blob/latest/foxglove_bridge.tf).
