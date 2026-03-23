@@ -770,16 +770,16 @@ impl RemoteAccessSession {
         drop(state);
 
         let mut state = self.state.write();
-        let first_subscribed = state.subscribe(participant, &channel_ids);
+        let subscribe_result = state.subscribe(participant, &channel_ids);
         state.subscribe_data(participant, &data_channel_ids);
         state.unsubscribe_data(participant, &video_channel_ids);
         let first_video_subscribed = state.subscribe_video(participant, &video_channel_ids);
         let last_video_unsubscribed = state.unsubscribe_video(participant, &data_channel_ids);
         drop(state);
 
-        if !first_subscribed.is_empty() {
+        if !subscribe_result.first_subscribed.is_empty() {
             if let Some(context) = self.context.upgrade() {
-                context.subscribe_channels(self.sink_id, &first_subscribed);
+                context.subscribe_channels(self.sink_id, &subscribe_result.first_subscribed);
             }
         }
 
@@ -792,7 +792,7 @@ impl RemoteAccessSession {
                 participant.participant_id().clone(),
             );
             let state = self.state.read();
-            for &channel_id in &channel_ids {
+            for &channel_id in &subscribe_result.newly_subscribed {
                 if let Some(descriptor) = state.get_channel_descriptor(&channel_id) {
                     listener.on_subscribe(client.clone(), descriptor);
                 }
@@ -813,14 +813,14 @@ impl RemoteAccessSession {
             .collect();
 
         let mut state = self.state.write();
-        let last_unsubscribed = state.unsubscribe(participant, &channel_ids);
+        let unsubscribe_result = state.unsubscribe(participant, &channel_ids);
         state.unsubscribe_data(participant, &channel_ids);
         let last_video_unsubscribed = state.unsubscribe_video(participant, &channel_ids);
         drop(state);
 
-        if !last_unsubscribed.is_empty() {
+        if !unsubscribe_result.last_unsubscribed.is_empty() {
             if let Some(context) = self.context.upgrade() {
-                context.unsubscribe_channels(self.sink_id, &last_unsubscribed);
+                context.unsubscribe_channels(self.sink_id, &unsubscribe_result.last_unsubscribed);
             }
         }
 
@@ -832,34 +832,12 @@ impl RemoteAccessSession {
                 participant.participant_id().clone(),
             );
             let state = self.state.read();
-            for &channel_id in &channel_ids {
+            for &channel_id in &unsubscribe_result.actually_unsubscribed {
                 if let Some(descriptor) = state.get_channel_descriptor(&channel_id) {
                     listener.on_unsubscribe(client.clone(), descriptor);
                 }
             }
         }
-    }
-
-    fn handle_client_message_data(
-        &self,
-        participant: &Arc<Participant>,
-        participant_identity: &ParticipantIdentity,
-        msg: client::MessageData,
-    ) {
-        let Some(listener) = &self.listener else {
-            return;
-        };
-        let channel_id = ChannelId::new(msg.channel_id.into());
-        let state = self.state.read();
-        let Some(descriptor) = state.get_client_channel(participant_identity, channel_id) else {
-            warn!("Received MessageData for unknown client channel {channel_id:?}");
-            return;
-        };
-        let client = Client::new(
-            participant.client_id(),
-            participant.participant_id().clone(),
-        );
-        listener.on_message_data(client, &descriptor, &msg.data);
     }
 
     fn handle_client_advertise(
