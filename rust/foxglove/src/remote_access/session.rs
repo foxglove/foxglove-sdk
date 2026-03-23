@@ -785,6 +785,19 @@ impl RemoteAccessSession {
 
         self.start_video_tracks(&first_video_subscribed);
         self.stop_video_tracks(&last_video_unsubscribed);
+
+        if let Some(listener) = &self.listener {
+            let client = Client::new(
+                participant.client_id(),
+                participant.participant_id().clone(),
+            );
+            let state = self.state.read();
+            for &channel_id in &channel_ids {
+                if let Some(descriptor) = state.get_channel_descriptor(&channel_id) {
+                    listener.on_subscribe(client.clone(), descriptor);
+                }
+            }
+        }
     }
 
     fn handle_client_unsubscribe(
@@ -812,6 +825,41 @@ impl RemoteAccessSession {
         }
 
         self.stop_video_tracks(&last_video_unsubscribed);
+
+        if let Some(listener) = &self.listener {
+            let client = Client::new(
+                participant.client_id(),
+                participant.participant_id().clone(),
+            );
+            let state = self.state.read();
+            for &channel_id in &channel_ids {
+                if let Some(descriptor) = state.get_channel_descriptor(&channel_id) {
+                    listener.on_unsubscribe(client.clone(), descriptor);
+                }
+            }
+        }
+    }
+
+    fn handle_client_message_data(
+        &self,
+        participant: &Arc<Participant>,
+        participant_identity: &ParticipantIdentity,
+        msg: client::MessageData,
+    ) {
+        let Some(listener) = &self.listener else {
+            return;
+        };
+        let channel_id = ChannelId::new(msg.channel_id.into());
+        let state = self.state.read();
+        let Some(descriptor) = state.get_client_channel(participant_identity, channel_id) else {
+            warn!("Received MessageData for unknown client channel {channel_id:?}");
+            return;
+        };
+        let client = Client::new(
+            participant.client_id(),
+            participant.participant_id().clone(),
+        );
+        listener.on_message_data(client, &descriptor, &msg.data);
     }
 
     fn handle_client_advertise(
@@ -1101,6 +1149,9 @@ impl RemoteAccessSession {
 
         self.pending_client_readers.lock().remove(participant_id);
 
+        // Collect subscribed channel IDs before removal so we can fire on_unsubscribe callbacks.
+        let subscribed_channel_ids = self.state.read().subscribed_channel_ids(participant_id);
+
         let removed = self.state.write().remove_participant(participant_id);
 
         if !removed.last_unsubscribed.is_empty() {
@@ -1117,12 +1168,20 @@ impl RemoteAccessSession {
             }
         }
 
-        if !removed.client_channels.is_empty() {
-            if let Some((listener, client_id)) = self.listener.as_ref().zip(removed.client_id) {
-                let client = Client::new(client_id, participant_id.clone());
-                for descriptor in &removed.client_channels {
-                    listener.on_client_unadvertise(client.clone(), descriptor);
+        if let Some((listener, client_id)) = self.listener.as_ref().zip(removed.client_id) {
+            let client = Client::new(client_id, participant_id.clone());
+
+            if !subscribed_channel_ids.is_empty() {
+                let state = self.state.read();
+                for channel_id in &subscribed_channel_ids {
+                    if let Some(descriptor) = state.get_channel_descriptor(channel_id) {
+                        listener.on_unsubscribe(client.clone(), descriptor);
+                    }
                 }
+            }
+
+            for descriptor in &removed.client_channels {
+                listener.on_client_unadvertise(client.clone(), descriptor);
             }
         }
     }

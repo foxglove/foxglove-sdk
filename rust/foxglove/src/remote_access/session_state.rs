@@ -228,6 +228,40 @@ impl SessionState {
         Some(descriptor)
     }
 
+    /// Returns the descriptor for a client-advertised channel.
+    pub fn get_client_channel(
+        &self,
+        identity: &ParticipantIdentity,
+        channel_id: ChannelId,
+    ) -> Option<ChannelDescriptor> {
+        self.client_channels
+            .get(identity)?
+            .get(&channel_id)
+            .cloned()
+    }
+
+    /// Returns the descriptor for an advertised server channel.
+    pub fn get_channel_descriptor(&self, channel_id: &ChannelId) -> Option<&ChannelDescriptor> {
+        self.channels.get(channel_id).map(|ch| ch.descriptor())
+    }
+
+    /// Returns all channel IDs that the given participant is subscribed to.
+    pub fn subscribed_channel_ids(
+        &self,
+        identity: &ParticipantIdentity,
+    ) -> SmallVec<[ChannelId; 4]> {
+        self.subscriptions
+            .iter()
+            .filter_map(|(&channel_id, subscribers)| {
+                if subscribers.contains(identity) {
+                    Some(channel_id)
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+
     /// Records a channel as advertised.
     pub fn insert_channel(&mut self, channel: &Arc<RawChannel>) {
         self.channels.insert(channel.id(), channel.clone());
@@ -1340,6 +1374,7 @@ mod tests {
         let ch = make_client_channel(1, "/cmd");
 
         state.insert_client_channel(&id, ch);
+
         let result = state.get_client_channel(&id, ChannelId::new(1));
         assert!(result.is_some());
         assert_eq!(result.unwrap().topic(), "/cmd");
@@ -1359,5 +1394,61 @@ mod tests {
         state.insert_participant(id.clone(), p);
         state.insert_client_channel(&id, make_client_channel(1, "/cmd"));
         assert!(state.get_client_channel(&id, ChannelId::new(99)).is_none());
+    }
+
+    #[test]
+    fn get_channel_descriptor_returns_descriptor() {
+        let mut state = SessionState::new();
+        let ch = make_channel("/topic1");
+        let ch_id = ch.id();
+        state.insert_channel(&ch);
+
+        let result = state.get_channel_descriptor(&ch_id);
+        assert!(result.is_some());
+        assert_eq!(result.unwrap().topic(), "/topic1");
+    }
+
+    #[test]
+    fn get_channel_descriptor_returns_none_for_unknown() {
+        let state = SessionState::new();
+        assert!(state.get_channel_descriptor(&ChannelId::new(999)).is_none());
+    }
+
+    #[test]
+    fn subscribed_channel_ids_returns_all_subscriptions() {
+        let mut state = SessionState::new();
+        let (id, p) = make_participant("alice");
+        state.insert_participant(id.clone(), p.clone());
+
+        let ch1 = ChannelId::new(1);
+        let ch2 = ChannelId::new(2);
+        let _ = state.subscribe(&p, &[ch1, ch2]);
+
+        let ids = state.subscribed_channel_ids(&id);
+        assert_eq!(ids.len(), 2);
+        assert!(ids.contains(&ch1));
+        assert!(ids.contains(&ch2));
+    }
+
+    #[test]
+    fn subscribed_channel_ids_returns_empty_for_unknown_participant() {
+        let state = SessionState::new();
+        let id = ParticipantIdentity("nobody".to_string());
+        assert!(state.subscribed_channel_ids(&id).is_empty());
+    }
+
+    #[test]
+    fn subscribed_channel_ids_excludes_other_participants() {
+        let mut state = SessionState::new();
+        let (id_a, pa) = make_participant("alice");
+        let (_id_b, pb) = make_participant("bob");
+
+        let ch1 = ChannelId::new(1);
+        let ch2 = ChannelId::new(2);
+        let _ = state.subscribe(&pa, &[ch1]);
+        let _ = state.subscribe(&pb, &[ch2]);
+
+        let ids = state.subscribed_channel_ids(&id_a);
+        assert_eq!(ids.as_slice(), &[ch1]);
     }
 }
