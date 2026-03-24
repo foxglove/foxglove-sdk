@@ -1270,7 +1270,7 @@ version = "0.0.0"
 dependencies = [
  "anyhow",
  "env_logger",
- "foxglove 0.20.0",
+ "foxglove 0.21.0",
  "schemars 1.0.4",
  "serde",
  "serde_json",

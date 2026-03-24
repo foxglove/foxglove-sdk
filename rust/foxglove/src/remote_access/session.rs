@@ -18,7 +18,7 @@ use tracing::{debug, error, info, warn};
 use crate::protocol::v2::DecodeError;
 use crate::remote_access::connection::RemoteAccessConnectionOptions;
 use crate::remote_access::participant::ChannelWriter;
-use crate::remote_common::service::{CallId, ServiceId, ServiceMap};
+use crate::remote_common::service::{CallId, Service, ServiceId, ServiceMap};
 use crate::{
     ChannelDescriptor, ChannelId, Context, FoxgloveError, Metadata, RawChannel, Schema, Sink,
     SinkChannelFilter, SinkId,
@@ -128,6 +128,26 @@ fn encode_binary_message<'a>(message: &impl BinaryMessage<'a>) -> Bytes {
     );
     message.encode(&mut buf);
     Bytes::from(buf)
+}
+
+fn build_advertise_services_msg(services: &[Arc<Service>]) -> Option<AdvertiseServices> {
+    if services.is_empty() {
+        return None;
+    }
+    let msg = AdvertiseServices::new(services.iter().filter_map(|s| {
+        advertise_services::Service::try_from(s.as_ref())
+            .inspect_err(|err| {
+                error!(
+                    "Failed to encode service advertisement for {}: {err}",
+                    s.name()
+                )
+            })
+            .ok()
+    }));
+    if msg.services.is_empty() {
+        return None;
+    }
+    Some(msg)
 }
 
 /// RemoteAccessSession tracks a connected LiveKit session (the Room)
@@ -848,23 +868,9 @@ impl RemoteAccessSession {
     /// Enqueue service advertisements for delivery to a single participant.
     fn send_service_advertisements(&self, participant: Arc<Participant>) {
         let services: Vec<_> = self.services.read().values().cloned().collect();
-        if services.is_empty() {
-            return;
+        if let Some(msg) = build_advertise_services_msg(&services) {
+            self.send_control(participant, encode_json_message(&msg));
         }
-        let msg = AdvertiseServices::new(services.iter().filter_map(|s| {
-            advertise_services::Service::try_from(s.as_ref())
-                .inspect_err(|err| {
-                    error!(
-                        "Failed to encode service advertisement for {}: {err}",
-                        s.name()
-                    )
-                })
-                .ok()
-        }));
-        if msg.services.is_empty() {
-            return;
-        }
-        self.send_control(participant, encode_json_message(&msg));
     }
 
     /// Broadcasts service advertisements for the given service IDs to all connected participants.
@@ -876,17 +882,7 @@ impl RemoteAccessSession {
                 .filter_map(|id| services.get_by_id(*id))
                 .collect()
         };
-        let msg = AdvertiseServices::new(services.iter().filter_map(|s| {
-            advertise_services::Service::try_from(s.as_ref())
-                .inspect_err(|err| {
-                    error!(
-                        "Failed to encode service advertisement for {}: {err}",
-                        s.name()
-                    )
-                })
-                .ok()
-        }));
-        if !msg.services.is_empty() {
+        if let Some(msg) = build_advertise_services_msg(&services) {
             self.broadcast_control(encode_json_message(&msg));
         }
     }
