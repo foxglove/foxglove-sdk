@@ -42,6 +42,35 @@ Run example programs (note that a different `build` directory may be used depend
 ./build/example_server
 ```
 
+## Remote access
+
+The remote access distribution (`libfoxglove_ra`) is a superset of the base SDK that adds the `RemoteAccessGateway` class for live visualization and teleop via the Foxglove platform. It is distributed as a **shared library only** (no static library) due to the size and symbol visibility constraints of underlying dependencies.
+
+### Supported platforms
+
+| Platform | Compiler | C++ stdlib | Notes |
+|----------|----------|------------|-------|
+| Linux x86_64 | GCC 14+ | libstdc++ | Matches livekit upstream ABI |
+| Linux aarch64 | GCC 14+ | libstdc++ | |
+| macOS x86_64 | Clang | libc++ | |
+| macOS aarch64 | Clang | libc++ | |
+| Windows x86_64 | MSVC | MSVC STL | Static CRT (`/MT`) to match livekit prebuilt webrtc |
+| Windows aarch64 | MSVC | MSVC STL | Static CRT (`/MT`) |
+
+iOS is not supported (livekit only provides `aarch64-apple-ios-sim`, which is not useful for production).
+
+### Building locally
+
+```
+make build-ra
+```
+
+This uses a separate build directory (`build-ra/`) from the base SDK build.
+
+### Consuming the library
+
+Link against the shared library (`libfoxglove_ra.so`, `libfoxglove_ra.dylib`, or `foxglove_ra.dll`) and include the same C and C++ headers as the base SDK. Define `FOXGLOVE_REMOTE_ACCESS` before including `foxglove-c/foxglove-c.h` to expose the gateway C declarations. The C++ header `foxglove/remote_access.hpp` provides the `RemoteAccessGateway` class.
+
 ## Examples
 
 ### RGB Camera Visualization Example

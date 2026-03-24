@@ -394,15 +394,15 @@ mod protocol;
 pub mod remote_access;
 #[cfg(feature = "_remote_common")]
 mod remote_common;
-#[cfg(feature = "websocket")]
+#[cfg(any(feature = "websocket", feature = "remote_access"))]
 mod runtime;
 #[cfg(feature = "websocket")]
 pub mod websocket;
 #[cfg(feature = "websocket")]
 mod websocket_server;
-#[cfg(feature = "websocket")]
+#[cfg(any(feature = "websocket", feature = "remote_access"))]
 pub(crate) use runtime::get_runtime_handle;
-#[cfg(feature = "websocket")]
+#[cfg(any(feature = "websocket", feature = "remote_access"))]
 pub use runtime::shutdown_runtime;
 #[doc(hidden)]
 #[cfg(feature = "websocket")]

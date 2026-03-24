@@ -41,6 +41,24 @@ build:
 		-B $(BUILD_DIR)
 	cmake --build $(BUILD_DIR) -j 8 --config $(CMAKE_BUILD_TYPE)
 
+RA_BUILD_DIR=$(BUILD_DIR)-ra
+
+.PHONY: build-ra
+build-ra:
+	cmake \
+		-DCMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE) \
+		-DCMAKE_EXPORT_COMPILE_COMMANDS=true \
+		-DFOXGLOVE_BUILD_REMOTE_ACCESS=ON \
+		$(if $(SANITIZE),-DSANITIZE=$(SANITIZE) -DRust_TOOLCHAIN=nightly) \
+		$(if $(STRICT),-DSTRICT=$(STRICT)) \
+		$(if $(CLANG_TIDY),-DCLANG_TIDY=$(CLANG_TIDY)) \
+		-B $(RA_BUILD_DIR)
+	cmake --build $(RA_BUILD_DIR) -j 8 --config $(CMAKE_BUILD_TYPE) --target foxglove_ra_cpp_shared
+
+.PHONY: clean-ra
+clean-ra:
+	rm -rf $(RA_BUILD_DIR)
+
 .PHONY: test
 test: build
 	cd $(BUILD_DIR) && ctest --verbose

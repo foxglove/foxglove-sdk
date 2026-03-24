@@ -3,9 +3,11 @@ use std::{collections::HashMap, sync::Arc, time::Duration};
 use crate::{
     ChannelDescriptor, Context, FoxgloveError,
     remote_common::service::Service,
+    runtime::get_runtime_handle,
     sink_channel_filter::{SinkChannelFilter, SinkChannelFilterFn},
 };
 
+use tokio::runtime::Handle;
 use tokio::task::JoinHandle;
 
 use super::connection::{ConnectionStatus, RemoteAccessConnection, RemoteAccessConnectionOptions};
@@ -17,13 +19,23 @@ use super::{Capability, Listener};
 pub struct GatewayHandle {
     connection: Arc<RemoteAccessConnection>,
     runner: JoinHandle<()>,
+    runtime: Option<Handle>,
 }
 
 impl GatewayHandle {
     fn new(connection: Arc<RemoteAccessConnection>) -> Self {
         let runner = connection.clone().spawn_run_until_cancelled();
 
-        Self { connection, runner }
+        Self {
+            connection,
+            runner,
+            runtime: None,
+        }
+    }
+
+    fn with_runtime(mut self, runtime: Handle) -> Self {
+        self.runtime = Some(runtime);
+        self
     }
 
     /// Returns the current connection status.
@@ -37,6 +49,17 @@ impl GatewayHandle {
     pub fn stop(self) -> JoinHandle<()> {
         self.connection.shutdown();
         self.runner
+    }
+
+    /// Gracefully disconnect and wait for the connection to close from a blocking context.
+    ///
+    /// This method will panic if invoked from an asynchronous execution context. Use
+    /// [`GatewayHandle::stop`] instead.
+    pub fn stop_blocking(self) {
+        self.connection.shutdown();
+        if let Some(runtime) = &self.runtime {
+            let _ = runtime.block_on(self.runner);
+        }
     }
 }
 
@@ -192,6 +215,19 @@ impl Gateway {
             }
         }
         self
+    }
+
+    /// Starts the remote access gateway from a blocking (non-async) context.
+    ///
+    /// If no tokio runtime has been configured, the SDK's internal runtime will be used.
+    /// The returned handle supports [`GatewayHandle::stop_blocking`] for graceful shutdown.
+    pub fn start_blocking(mut self) -> Result<GatewayHandle, FoxgloveError> {
+        let runtime = self
+            .options
+            .runtime
+            .get_or_insert_with(get_runtime_handle)
+            .clone();
+        self.start().map(|handle| handle.with_runtime(runtime))
     }
 
     /// Starts the remote access gateway, which will establish a connection in the background.

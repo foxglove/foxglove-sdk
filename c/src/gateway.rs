@@ -1,0 +1,463 @@
+use std::ffi::c_void;
+use std::mem::ManuallyDrop;
+use std::sync::Arc;
+use std::time::Duration;
+
+use bitflags::bitflags;
+
+use crate::channel_descriptor::FoxgloveChannelDescriptor;
+use crate::service::FoxgloveService;
+use crate::sink_channel_filter::ChannelFilter;
+use crate::{FoxgloveContext, FoxgloveError, FoxgloveString, result_to_c};
+
+/// The status of the remote access gateway connection.
+#[repr(u8)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FoxgloveConnectionStatus {
+    /// The gateway is attempting to establish or re-establish a connection.
+    Connecting = 0,
+    /// The gateway is connected and handling events.
+    Connected = 1,
+    /// The gateway is shutting down. Listener callbacks may still be in progress.
+    ShuttingDown = 2,
+    /// The gateway has been shut down. No further listener callbacks will be invoked.
+    Shutdown = 3,
+}
+
+impl From<foxglove::remote_access::ConnectionStatus> for FoxgloveConnectionStatus {
+    fn from(status: foxglove::remote_access::ConnectionStatus) -> Self {
+        match status {
+            foxglove::remote_access::ConnectionStatus::Connecting => Self::Connecting,
+            foxglove::remote_access::ConnectionStatus::Connected => Self::Connected,
+            foxglove::remote_access::ConnectionStatus::ShuttingDown => Self::ShuttingDown,
+            foxglove::remote_access::ConnectionStatus::Shutdown => Self::Shutdown,
+        }
+    }
+}
+
+// Capabilities
+// ============
+
+/// Capabilities for the remote access gateway. These are advertised to clients.
+#[derive(Clone, Copy)]
+#[repr(transparent)]
+pub struct FoxgloveGatewayCapability {
+    pub flags: u8,
+}
+
+/// Allow clients to advertise channels to send data messages to the server.
+pub const FOXGLOVE_GATEWAY_CAPABILITY_CLIENT_PUBLISH: u8 = 1 << 0;
+/// Allow clients to call services.
+pub const FOXGLOVE_GATEWAY_CAPABILITY_SERVICES: u8 = 1 << 1;
+
+bitflags! {
+    #[derive(Clone, Copy, PartialEq, Eq)]
+    struct FoxgloveGatewayCapabilityBitFlags: u8 {
+        const ClientPublish = FOXGLOVE_GATEWAY_CAPABILITY_CLIENT_PUBLISH;
+        const Services = FOXGLOVE_GATEWAY_CAPABILITY_SERVICES;
+    }
+}
+
+impl FoxgloveGatewayCapabilityBitFlags {
+    fn iter_gateway_capabilities(
+        self,
+    ) -> impl Iterator<Item = foxglove::remote_access::Capability> {
+        self.iter_names().filter_map(|(_s, cap)| match cap {
+            FoxgloveGatewayCapabilityBitFlags::ClientPublish => {
+                Some(foxglove::remote_access::Capability::ClientPublish)
+            }
+            FoxgloveGatewayCapabilityBitFlags::Services => {
+                Some(foxglove::remote_access::Capability::Services)
+            }
+            _ => None,
+        })
+    }
+}
+
+impl From<FoxgloveGatewayCapability> for FoxgloveGatewayCapabilityBitFlags {
+    fn from(bits: FoxgloveGatewayCapability) -> Self {
+        Self::from_bits_retain(bits.flags)
+    }
+}
+
+// Callbacks
+// =========
+
+/// Callbacks for the remote access gateway.
+///
+/// These methods are invoked from time-sensitive contexts and must not block.
+#[repr(C)]
+#[derive(Clone)]
+pub struct FoxgloveGatewayCallbacks {
+    /// A user-defined value that will be passed to callback functions.
+    pub context: *const c_void,
+
+    /// Callback invoked when the gateway connection status changes.
+    pub on_connection_status_changed:
+        Option<unsafe extern "C" fn(context: *const c_void, status: FoxgloveConnectionStatus)>,
+
+    /// Callback invoked when a client subscribes to a channel.
+    pub on_subscribe: Option<
+        unsafe extern "C" fn(
+            context: *const c_void,
+            client_id: u32,
+            channel: *const FoxgloveChannelDescriptor,
+        ),
+    >,
+
+    /// Callback invoked when a client unsubscribes from a channel or disconnects.
+    pub on_unsubscribe: Option<
+        unsafe extern "C" fn(
+            context: *const c_void,
+            client_id: u32,
+            channel: *const FoxgloveChannelDescriptor,
+        ),
+    >,
+
+    /// Callback invoked when a client message is received.
+    pub on_message_data: Option<
+        unsafe extern "C" fn(
+            context: *const c_void,
+            client_id: u32,
+            channel: *const FoxgloveChannelDescriptor,
+            payload: *const u8,
+            payload_len: usize,
+        ),
+    >,
+
+    /// Callback invoked when a client advertises a client channel.
+    pub on_client_advertise: Option<
+        unsafe extern "C" fn(
+            context: *const c_void,
+            client_id: u32,
+            channel: *const FoxgloveChannelDescriptor,
+        ),
+    >,
+
+    /// Callback invoked when a client unadvertises a client channel.
+    pub on_client_unadvertise: Option<
+        unsafe extern "C" fn(
+            context: *const c_void,
+            client_id: u32,
+            channel: *const FoxgloveChannelDescriptor,
+        ),
+    >,
+}
+
+unsafe impl Send for FoxgloveGatewayCallbacks {}
+unsafe impl Sync for FoxgloveGatewayCallbacks {}
+
+impl foxglove::remote_access::Listener for FoxgloveGatewayCallbacks {
+    fn on_connection_status_changed(&self, status: foxglove::remote_access::ConnectionStatus) {
+        if let Some(cb) = self.on_connection_status_changed {
+            unsafe { cb(self.context, FoxgloveConnectionStatus::from(status)) };
+        }
+    }
+
+    fn on_subscribe(
+        &self,
+        client: foxglove::remote_access::Client,
+        channel: &foxglove::ChannelDescriptor,
+    ) {
+        if let Some(cb) = self.on_subscribe {
+            let c_channel = FoxgloveChannelDescriptor(channel.clone());
+            unsafe { cb(self.context, client.id().into(), &raw const c_channel) };
+        }
+    }
+
+    fn on_unsubscribe(
+        &self,
+        client: foxglove::remote_access::Client,
+        channel: &foxglove::ChannelDescriptor,
+    ) {
+        if let Some(cb) = self.on_unsubscribe {
+            let c_channel = FoxgloveChannelDescriptor(channel.clone());
+            unsafe { cb(self.context, client.id().into(), &raw const c_channel) };
+        }
+    }
+
+    fn on_message_data(
+        &self,
+        client: foxglove::remote_access::Client,
+        channel: &foxglove::ChannelDescriptor,
+        payload: &[u8],
+    ) {
+        if let Some(cb) = self.on_message_data {
+            let c_channel = FoxgloveChannelDescriptor(channel.clone());
+            unsafe {
+                cb(
+                    self.context,
+                    client.id().into(),
+                    &raw const c_channel,
+                    payload.as_ptr(),
+                    payload.len(),
+                )
+            };
+        }
+    }
+
+    fn on_client_advertise(
+        &self,
+        client: foxglove::remote_access::Client,
+        channel: &foxglove::ChannelDescriptor,
+    ) {
+        if let Some(cb) = self.on_client_advertise {
+            let c_channel = FoxgloveChannelDescriptor(channel.clone());
+            unsafe { cb(self.context, client.id().into(), &raw const c_channel) };
+        }
+    }
+
+    fn on_client_unadvertise(
+        &self,
+        client: foxglove::remote_access::Client,
+        channel: &foxglove::ChannelDescriptor,
+    ) {
+        if let Some(cb) = self.on_client_unadvertise {
+            let c_channel = FoxgloveChannelDescriptor(channel.clone());
+            unsafe { cb(self.context, client.id().into(), &raw const c_channel) };
+        }
+    }
+}
+
+// Options
+// =======
+
+/// Options for creating a remote access gateway.
+///
+/// # Safety
+/// - `context` can be null, or a valid pointer to a context created via `foxglove_context_new`.
+/// - `name` must be a valid pointer to a UTF-8 string.
+/// - `device_token` must be a valid pointer to a UTF-8 string, or empty to use the
+///   `FOXGLOVE_DEVICE_TOKEN` environment variable.
+/// - If `supported_encodings` is supplied, all entries must contain valid UTF-8, and
+///   `supported_encodings` must have length equal to `supported_encodings_count`.
+/// - If `services` is supplied, all entries must be valid pointers to services created via
+///   `foxglove_service_create`. Ownership of the services is transferred to the gateway.
+#[repr(C)]
+pub struct FoxgloveGatewayOptions<'a> {
+    /// `context` can be null, or a valid pointer to a context created via `foxglove_context_new`.
+    /// If it's null, the gateway will be created with the default context.
+    pub context: *const FoxgloveContext,
+    pub name: FoxgloveString,
+    pub device_token: FoxgloveString,
+    pub callbacks: Option<&'a FoxgloveGatewayCallbacks>,
+    pub capabilities: FoxgloveGatewayCapability,
+    pub supported_encodings: *const FoxgloveString,
+    pub supported_encodings_count: usize,
+
+    /// An array of pointers to services created via `foxglove_service_create`.
+    /// Ownership of the services is transferred to the gateway.
+    pub services: *const *mut FoxgloveService,
+    pub services_count: usize,
+
+    /// Context provided to the `sink_channel_filter` callback.
+    pub sink_channel_filter_context: *const c_void,
+
+    /// A filter for channels.
+    ///
+    /// Return false to disable logging of this channel.
+    /// This method is invoked from the client's main poll loop and must not block.
+    pub sink_channel_filter: Option<
+        unsafe extern "C" fn(
+            context: *const c_void,
+            channel: *const FoxgloveChannelDescriptor,
+        ) -> bool,
+    >,
+
+    /// Optional Foxglove API base URL override. Empty string uses the default.
+    pub foxglove_api_url: FoxgloveString,
+
+    /// Optional Foxglove API timeout in seconds.
+    pub foxglove_api_timeout_secs: Option<&'a u64>,
+
+    /// Optional message backlog size override.
+    pub message_backlog_size: Option<&'a usize>,
+}
+
+// Handle
+// ======
+
+pub struct FoxgloveGateway(Option<foxglove::remote_access::GatewayHandle>);
+
+impl FoxgloveGateway {
+    fn as_ref(&self) -> Option<&foxglove::remote_access::GatewayHandle> {
+        self.0.as_ref()
+    }
+
+    fn take(&mut self) -> Option<foxglove::remote_access::GatewayHandle> {
+        self.0.take()
+    }
+}
+
+// FFI functions
+// =============
+
+/// Start a remote access gateway with the given options.
+///
+/// On success, the `gateway` output parameter will be set to a valid pointer.
+/// On failure, an error code is returned.
+///
+/// # Safety
+/// - `options` must be a valid pointer to a `FoxgloveGatewayOptions` struct with all fields
+///   satisfying the documented safety requirements.
+/// - `gateway` must be a valid pointer to a `*mut FoxgloveGateway`.
+#[unsafe(no_mangle)]
+#[must_use]
+pub unsafe extern "C" fn foxglove_gateway_start(
+    options: &FoxgloveGatewayOptions,
+    gateway: *mut *mut FoxgloveGateway,
+) -> FoxgloveError {
+    unsafe {
+        let result = do_foxglove_gateway_start(options);
+        result_to_c(result, gateway)
+    }
+}
+
+unsafe fn do_foxglove_gateway_start(
+    options: &FoxgloveGatewayOptions,
+) -> Result<*mut FoxgloveGateway, foxglove::FoxgloveError> {
+    let name = unsafe { options.name.as_utf8_str() }
+        .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("name is invalid: {e}")))?;
+
+    let mut gateway = foxglove::remote_access::Gateway::new().capabilities(
+        FoxgloveGatewayCapabilityBitFlags::from(options.capabilities).iter_gateway_capabilities(),
+    );
+
+    if !name.is_empty() {
+        gateway = gateway.name(name);
+    }
+
+    // Device token
+    let device_token = unsafe { options.device_token.as_utf8_str() }
+        .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("device_token is invalid: {e}")))?;
+    if !device_token.is_empty() {
+        gateway = gateway.device_token(device_token);
+    }
+
+    // Supported encodings
+    if options.supported_encodings_count > 0 {
+        if options.supported_encodings.is_null() {
+            return Err(foxglove::FoxgloveError::ValueError(
+                "supported_encodings is null".to_string(),
+            ));
+        }
+        gateway = gateway.supported_encodings(
+            unsafe {
+                std::slice::from_raw_parts(
+                    options.supported_encodings,
+                    options.supported_encodings_count,
+                )
+            }
+            .iter()
+            .map(|enc| {
+                if enc.data.is_null() {
+                    return Err(foxglove::FoxgloveError::ValueError(
+                        "encoding in supported_encodings is null".to_string(),
+                    ));
+                }
+                unsafe { enc.as_utf8_str() }.map_err(|e| {
+                    foxglove::FoxgloveError::Utf8Error(format!(
+                        "encoding in supported_encodings is invalid: {e}"
+                    ))
+                })
+            })
+            .collect::<Result<Vec<_>, _>>()?,
+        );
+    }
+
+    // Callbacks
+    if let Some(callbacks) = options.callbacks {
+        gateway = gateway.listener(Arc::new(callbacks.clone()));
+    }
+
+    // Channel filter
+    if let Some(sink_channel_filter) = options.sink_channel_filter {
+        gateway = gateway.channel_filter(Arc::new(ChannelFilter::new(
+            options.sink_channel_filter_context,
+            sink_channel_filter,
+        )));
+    }
+
+    // Context
+    if !options.context.is_null() {
+        let context = ManuallyDrop::new(unsafe { Arc::from_raw(options.context) });
+        gateway = gateway.context(&context);
+    }
+
+    // Foxglove API URL
+    let api_url = unsafe { options.foxglove_api_url.as_utf8_str() }.map_err(|e| {
+        foxglove::FoxgloveError::Utf8Error(format!("foxglove_api_url is invalid: {e}"))
+    })?;
+    if !api_url.is_empty() {
+        gateway = gateway.foxglove_api_url(api_url);
+    }
+
+    // Foxglove API timeout
+    if let Some(&timeout_secs) = options.foxglove_api_timeout_secs {
+        gateway = gateway.foxglove_api_timeout(Duration::from_secs(timeout_secs));
+    }
+
+    // Message backlog size
+    if let Some(&backlog_size) = options.message_backlog_size {
+        gateway = gateway.message_backlog_size(backlog_size);
+    }
+
+    // Services
+    if options.services_count > 0 {
+        if options.services.is_null() {
+            return Err(foxglove::FoxgloveError::ValueError(
+                "services is null".to_string(),
+            ));
+        }
+        let service_ptrs =
+            unsafe { std::slice::from_raw_parts(options.services, options.services_count) };
+        let mut services = Vec::with_capacity(options.services_count);
+        for &service_ptr in service_ptrs {
+            if service_ptr.is_null() {
+                return Err(foxglove::FoxgloveError::ValueError(
+                    "null service in services array".to_string(),
+                ));
+            }
+            let service = unsafe { FoxgloveService::from_raw(service_ptr) };
+            services.push(service.into_inner());
+        }
+        gateway = gateway.services(services);
+    }
+
+    let handle = gateway.start_blocking()?;
+    Ok(Box::into_raw(Box::new(FoxgloveGateway(Some(handle)))))
+}
+
+/// Stop and shut down the gateway and free the resources associated with it.
+#[unsafe(no_mangle)]
+pub extern "C" fn foxglove_gateway_stop(gateway: Option<&mut FoxgloveGateway>) -> FoxgloveError {
+    let Some(gateway) = gateway else {
+        tracing::error!("foxglove_gateway_stop called with null gateway");
+        return FoxgloveError::ValueError;
+    };
+
+    // Safety: undo the Box::into_raw in foxglove_gateway_start, safe if this was created by that method
+    let mut gateway = unsafe { Box::from_raw(gateway) };
+    let Some(handle) = gateway.take() else {
+        tracing::error!("foxglove_gateway_stop called with closed gateway");
+        return FoxgloveError::SinkClosed;
+    };
+    handle.stop_blocking();
+    FoxgloveError::Ok
+}
+
+/// Get the current connection status of the gateway.
+///
+/// Returns `Shutdown` if the gateway pointer is null or the gateway has been stopped.
+#[unsafe(no_mangle)]
+pub extern "C" fn foxglove_gateway_connection_status(
+    gateway: Option<&FoxgloveGateway>,
+) -> FoxgloveConnectionStatus {
+    let Some(gateway) = gateway else {
+        return FoxgloveConnectionStatus::Shutdown;
+    };
+    let Some(handle) = gateway.as_ref() else {
+        return FoxgloveConnectionStatus::Shutdown;
+    };
+    FoxgloveConnectionStatus::from(handle.connection_status())
+}

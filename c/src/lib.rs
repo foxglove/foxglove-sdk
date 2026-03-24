@@ -21,6 +21,8 @@ mod channel_descriptor;
 mod connection_graph;
 #[cfg(not(target_family = "wasm"))]
 mod fetch_asset;
+#[cfg(feature = "remote_access")]
+mod gateway;
 #[cfg(not(target_family = "wasm"))]
 mod logging;
 #[cfg(not(target_family = "wasm"))]
@@ -267,6 +269,7 @@ pub enum FoxgloveError {
     EncodeError,
     BufferTooShort,
     Base64DecodeError,
+    ConfigurationError,
 }
 
 impl From<foxglove::FoxgloveError> for FoxgloveError {
@@ -292,6 +295,7 @@ impl From<foxglove::FoxgloveError> for FoxgloveError {
             foxglove::FoxgloveError::IoError(_) => FoxgloveError::IoError,
             foxglove::FoxgloveError::McapError(_) => FoxgloveError::McapError,
             foxglove::FoxgloveError::EncodeError(_) => FoxgloveError::EncodeError,
+            foxglove::FoxgloveError::ConfigurationError(_) => FoxgloveError::ConfigurationError,
             _ => FoxgloveError::Unspecified,
         }
     }
@@ -317,6 +321,7 @@ impl FoxgloveError {
             FoxgloveError::EncodeError => c"Encode Error",
             FoxgloveError::BufferTooShort => c"Buffer too short",
             FoxgloveError::Base64DecodeError => c"Base64 decode error",
+            FoxgloveError::ConfigurationError => c"Configuration Error",
             FoxgloveError::Unspecified => c"Unspecified Error",
         }
     }
