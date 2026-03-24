@@ -1921,7 +1921,8 @@ struct RawImage {
   /// @brief   data[]:
   /// @brief     byte:  0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23
   /// @brief           [Y  Y  Y  Y][Y  Y  Y  Y][Y  Y  Y  Y][Y  Y  Y  Y][U  V  U  V][U  V  U  V]
-  /// @brief           |---- step -|                                      row>>1 shares UV row
+  /// @brief           |---- step -|                                      each pair of Y rows shares
+  /// one UV row
   /// @brief           <------------- Y plane (step * height) -----------><- UV plane (step*h/2)->
   /// @brief
   /// @brief     Y00 Y01 Y02 Y03      U0 V0 U1 V1
@@ -1929,7 +1930,7 @@ struct RawImage {
   /// @brief     Y20 Y21 Y22 Y23
   /// @brief     Y30 Y31 Y32 Y33
   /// @brief
-  /// @brief     col&~1 groups:        2x2 Y blocks share one U,V pair:
+  /// @brief     Pixel-to-UV mapping:  2x2 Y blocks share one U,V pair:
   /// @brief     Y00 Y01 -> U0,V0     Y02 Y03 -> U1,V1
   /// @brief     Y10 Y11              Y12 Y13
   /// @brief   ```
