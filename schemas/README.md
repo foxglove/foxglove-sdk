@@ -1421,7 +1421,7 @@ float64
 </td>
 <td>
 
-Joint position. Radians for revolute joints, meters for prismatic joints. Use NaN to indicate that the value is not present if the message definition does not support optional fields.
+Joint position. Radians for revolute joints, meters for prismatic joints.
 
 </td>
 </tr>
@@ -1434,7 +1434,7 @@ float64
 </td>
 <td>
 
-Joint velocity. Rad/s for revolute joints, m/s for prismatic joints. Use NaN to indicate that the value is not present if the message definition does not support optional fields.
+Joint velocity. Rad/s for revolute joints, m/s for prismatic joints.
 
 </td>
 </tr>
@@ -1447,7 +1447,7 @@ float64
 </td>
 <td>
 
-Joint acceleration. Rad/s² for revolute joints, m/s² for prismatic joints. Use NaN to indicate that the value is not present if the message definition does not support optional fields.
+Joint acceleration. Rad/s² for revolute joints, m/s² for prismatic joints.
 
 </td>
 </tr>
@@ -1460,7 +1460,7 @@ float64
 </td>
 <td>
 
-Joint effort (force or torque). Nm for revolute joints, N for prismatic joints. Use NaN to indicate that the value is not present if the message definition does not support optional fields.
+Joint effort (force or torque). Nm for revolute joints, N for prismatic joints.
 
 </td>
 </tr>

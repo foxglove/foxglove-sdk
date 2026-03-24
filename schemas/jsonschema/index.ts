@@ -2190,19 +2190,19 @@ export const JointState = {
     },
     "position": {
       "type": "number",
-      "description": "Joint position. Radians for revolute joints, meters for prismatic joints. Use NaN to indicate that the value is not present if the message definition does not support optional fields."
+      "description": "Joint position. Radians for revolute joints, meters for prismatic joints."
     },
     "velocity": {
       "type": "number",
-      "description": "Joint velocity. Rad/s for revolute joints, m/s for prismatic joints. Use NaN to indicate that the value is not present if the message definition does not support optional fields."
+      "description": "Joint velocity. Rad/s for revolute joints, m/s for prismatic joints."
     },
     "acceleration": {
       "type": "number",
-      "description": "Joint acceleration. Rad/s² for revolute joints, m/s² for prismatic joints. Use NaN to indicate that the value is not present if the message definition does not support optional fields."
+      "description": "Joint acceleration. Rad/s² for revolute joints, m/s² for prismatic joints."
     },
     "effort": {
       "type": "number",
-      "description": "Joint effort (force or torque). Nm for revolute joints, N for prismatic joints. Use NaN to indicate that the value is not present if the message definition does not support optional fields."
+      "description": "Joint effort (force or torque). Nm for revolute joints, N for prismatic joints."
     }
   },
   "required": [
@@ -2245,19 +2245,19 @@ export const JointStates = {
           },
           "position": {
             "type": "number",
-            "description": "Joint position. Radians for revolute joints, meters for prismatic joints. Use NaN to indicate that the value is not present if the message definition does not support optional fields."
+            "description": "Joint position. Radians for revolute joints, meters for prismatic joints."
           },
           "velocity": {
             "type": "number",
-            "description": "Joint velocity. Rad/s for revolute joints, m/s for prismatic joints. Use NaN to indicate that the value is not present if the message definition does not support optional fields."
+            "description": "Joint velocity. Rad/s for revolute joints, m/s for prismatic joints."
           },
           "acceleration": {
             "type": "number",
-            "description": "Joint acceleration. Rad/s² for revolute joints, m/s² for prismatic joints. Use NaN to indicate that the value is not present if the message definition does not support optional fields."
+            "description": "Joint acceleration. Rad/s² for revolute joints, m/s² for prismatic joints."
           },
           "effort": {
             "type": "number",
-            "description": "Joint effort (force or torque). Nm for revolute joints, N for prismatic joints. Use NaN to indicate that the value is not present if the message definition does not support optional fields."
+            "description": "Joint effort (force or torque). Nm for revolute joints, N for prismatic joints."
           }
         },
         "required": [

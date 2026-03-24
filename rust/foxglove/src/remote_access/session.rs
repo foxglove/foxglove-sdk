@@ -14,21 +14,33 @@ use tokio::io::AsyncReadExt;
 use tokio_util::{io::StreamReader, sync::CancellationToken};
 use tracing::{debug, error, info, warn};
 
+use crate::protocol::v2::DecodeError;
 use crate::remote_access::participant::ChannelWriter;
 use crate::{
-    ChannelId, Context, FoxgloveError, Metadata, RawChannel, Sink, SinkChannelFilter, SinkId,
+    ChannelDescriptor, ChannelId, Context, FoxgloveError, Metadata, RawChannel, Schema, Sink,
+    SinkChannelFilter, SinkId,
     protocol::v2::{
         BinaryMessage, JsonMessage,
         client::{self, ClientMessage},
         server::{MessageData as ServerMessageData, ServerInfo, Status, Unadvertise, advertise},
     },
-    remote_access::{RemoteAccessError, participant::Participant, session_state::SessionState},
+    remote_access::{
+        Capability, Listener, RemoteAccessError, client::Client, participant::Participant,
+        session_state::SessionState,
+    },
 };
 
 mod video_track;
 pub(crate) use video_track::{
     VideoInputSchema, VideoMetadata, VideoPublisher, get_video_input_schema,
 };
+
+#[derive(Debug)]
+pub(crate) struct SessionStats {
+    pub participants: usize,
+    pub subscriptions: usize,
+    pub video_tracks: usize,
+}
 
 const WS_PROTOCOL_TOPIC: &str = "ws-protocol";
 const CHANNEL_TOPIC_PREFIX: &str = "ch-";
@@ -95,13 +107,17 @@ pub(crate) struct RemoteAccessSession {
     context: Weak<Context>,
     state: RwLock<SessionState>,
     channel_filter: Option<Arc<dyn SinkChannelFilter>>,
+    listener: Option<Arc<dyn Listener>>,
+    capabilities: Vec<Capability>,
     cancellation_token: CancellationToken,
     data_plane_tx: flume::Sender<ChannelMessage>,
     data_plane_rx: flume::Receiver<ChannelMessage>,
     control_plane_tx: flume::Sender<ControlPlaneMessage>,
     control_plane_rx: flume::Receiver<ControlPlaneMessage>,
-    /// Serializes subscription changes and their associated video track lifecycle
-    /// operations, which must not interleave across participants.
+    /// Serializes all participant-scoped state mutations: subscription changes, video track
+    /// lifecycle operations, client channel advertise/unadvertise, and participant removal.
+    /// This prevents TOCTOU races between byte-stream message handlers and room-event handlers,
+    /// which run on separate tokio tasks.
     subscription_lock: parking_lot::Mutex<()>,
     /// Signaled by video publishers when video metadata changes, prompting
     /// the sender loop to re-advertise affected channels.
@@ -209,6 +225,8 @@ impl RemoteAccessSession {
         room: Room,
         context: Weak<Context>,
         channel_filter: Option<Arc<dyn SinkChannelFilter>>,
+        listener: Option<Arc<dyn Listener>>,
+        capabilities: Vec<Capability>,
         cancellation_token: CancellationToken,
         message_backlog_size: usize,
     ) -> Self {
@@ -221,6 +239,8 @@ impl RemoteAccessSession {
             context,
             state: RwLock::new(SessionState::new()),
             channel_filter,
+            listener,
+            capabilities,
             cancellation_token,
             data_plane_tx,
             data_plane_rx,
@@ -232,12 +252,26 @@ impl RemoteAccessSession {
         }
     }
 
+    /// Returns true if the given capability is enabled for this session.
+    fn has_capability(&self, cap: Capability) -> bool {
+        self.capabilities.contains(&cap)
+    }
+
     pub(crate) fn sink_id(&self) -> SinkId {
         self.sink_id
     }
 
     pub(crate) fn room(&self) -> &Room {
         &self.room
+    }
+
+    pub(crate) fn stats(&self) -> SessionStats {
+        let state = self.state.read();
+        SessionStats {
+            participants: state.participant_count(),
+            subscriptions: state.subscription_count(),
+            video_tracks: state.video_track_count(),
+        }
     }
 
     /// Enqueue a data plane message, dropping old messages if the queue is full.
@@ -282,6 +316,14 @@ impl RemoteAccessSession {
     fn send_error(&self, participant: &Arc<Participant>, message: String) {
         debug!("Sending error to {participant}: {message}");
         let status = Status::error(message);
+        let framed = frame_text_message(status.to_string().as_bytes());
+        self.send_control(participant.clone(), framed);
+    }
+
+    /// Send a warning status message to a participant.
+    fn send_warning(&self, participant: &Arc<Participant>, message: String) {
+        debug!("Sending warning to {participant}: {message}");
+        let status = Status::warning(message);
         let framed = frame_text_message(status.to_string().as_bytes());
         self.send_control(participant.clone(), framed);
     }
@@ -468,6 +510,12 @@ impl RemoteAccessSession {
             ClientMessage::Unsubscribe(msg) => {
                 self.handle_client_unsubscribe(&participant, msg);
             }
+            ClientMessage::Advertise(msg) => {
+                self.handle_client_advertise(&participant, msg);
+            }
+            ClientMessage::Unadvertise(msg) => {
+                self.handle_client_unadvertise(&participant, msg);
+            }
             // TODO: Implement other message handling branches
             _ => {
                 warn!("Unhandled client message: {client_msg:?}");
@@ -556,6 +604,105 @@ impl RemoteAccessSession {
         self.stop_video_tracks(&last_video_unsubscribed);
     }
 
+    fn handle_client_advertise(&self, participant: &Arc<Participant>, msg: client::Advertise<'_>) {
+        let _guard = self.subscription_lock.lock();
+        if !self.has_capability(Capability::ClientPublish) {
+            self.send_error(
+                participant,
+                "Server does not support clientPublish capability".to_string(),
+            );
+            return;
+        }
+
+        let client = Client::new(
+            participant.client_id(),
+            participant.participant_id().clone(),
+        );
+
+        for ch in msg.channels {
+            let channel_id = ChannelId::new(ch.id.into());
+
+            // Decode the schema. A missing schema is valid for encodings that don't require one
+            // (e.g. "json"); only return an error for malformed schema data.
+            let schema = match ch.decode_schema() {
+                Ok(data) => Some(Schema {
+                    name: ch.schema_name.to_string(),
+                    encoding: ch.schema_encoding.as_deref().unwrap_or("").to_string(),
+                    data: data.into(),
+                }),
+                Err(DecodeError::MissingSchema) => None,
+                Err(e) => {
+                    warn!(
+                        "Failed to decode schema for advertised channel {}: {e:?}",
+                        ch.id
+                    );
+                    self.send_error(
+                        participant,
+                        format!("Failed to decode schema for channel {}: {e}", ch.id),
+                    );
+                    continue;
+                }
+            };
+
+            let descriptor = ChannelDescriptor::new(
+                channel_id,
+                ch.topic.to_string(),
+                ch.encoding.to_string(),
+                Default::default(),
+                schema,
+            );
+
+            let inserted = self
+                .state
+                .write()
+                .insert_client_channel(participant.participant_id(), descriptor.clone());
+
+            if !inserted {
+                self.send_warning(
+                    participant,
+                    format!(
+                        "Client is already advertising channel: {}; ignoring advertisement",
+                        ch.id
+                    ),
+                );
+                continue;
+            }
+
+            if let Some(listener) = &self.listener {
+                listener.on_client_advertise(client.clone(), &descriptor);
+            }
+        }
+    }
+
+    fn handle_client_unadvertise(&self, participant: &Arc<Participant>, msg: client::Unadvertise) {
+        let _guard = self.subscription_lock.lock();
+        let client = Client::new(
+            participant.client_id(),
+            participant.participant_id().clone(),
+        );
+
+        for channel_id_raw in msg.channel_ids {
+            let channel_id = ChannelId::new(channel_id_raw.into());
+            let removed = self
+                .state
+                .write()
+                .remove_client_channel(participant.participant_id(), channel_id);
+
+            match removed {
+                None => {
+                    debug!(
+                        "Client is not advertising channel: {channel_id_raw}; ignoring unadvertisement"
+                    );
+                }
+                Some(descriptor) => {
+                    if let Some(listener) = &self.listener {
+                        listener.on_client_unadvertise(client.clone(), &descriptor);
+                    }
+                }
+            }
+        }
+    }
+
     /// Add a participant to the server, if it hasn't already been added.
     ///
     /// The caller is responsible for ensuring that this method is not called concurrently for the
@@ -630,6 +777,15 @@ impl RemoteAccessSession {
         }
 
         self.stop_video_tracks(&removed.last_video_unsubscribed);
+
+        if !removed.client_channels.is_empty() {
+            if let Some((listener, client_id)) = self.listener.as_ref().zip(removed.client_id) {
+                let client = Client::new(client_id, participant_id.clone());
+                for descriptor in &removed.client_channels {
+                    listener.on_client_unadvertise(client.clone(), descriptor);
+                }
+            }
+        }
     }
 
     /// Enqueue all currently cached channel advertisements for delivery to a single participant.

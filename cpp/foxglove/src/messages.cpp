@@ -3,8 +3,8 @@
 #include <foxglove-c/foxglove-c.h>
 #include <foxglove/arena.hpp>
 #include <foxglove/error.hpp>
+#include <foxglove/messages.hpp>
 #include <foxglove/schema.hpp>
-#include <foxglove/schemas.hpp>
 #ifndef __wasm32__
 #include <foxglove/context.hpp>
 #endif
@@ -12,7 +12,7 @@
 #include <cstring>
 #include <optional>
 
-namespace foxglove::schemas {
+namespace foxglove::messages {
 
 void arrowPrimitiveToC(foxglove_arrow_primitive& dest, const ArrowPrimitive& src, Arena& arena);
 void cameraCalibrationToC(
@@ -110,7 +110,7 @@ uint64_t ArrowPrimitiveChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
-bool ArrowPrimitiveChannel::has_sinks() const noexcept {
+bool ArrowPrimitiveChannel::hasSinks() const noexcept {
   return foxglove_channel_has_sinks(impl_.get());
 }
 
@@ -146,7 +146,7 @@ uint64_t CameraCalibrationChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
-bool CameraCalibrationChannel::has_sinks() const noexcept {
+bool CameraCalibrationChannel::hasSinks() const noexcept {
   return foxglove_channel_has_sinks(impl_.get());
 }
 
@@ -182,7 +182,7 @@ uint64_t CircleAnnotationChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
-bool CircleAnnotationChannel::has_sinks() const noexcept {
+bool CircleAnnotationChannel::hasSinks() const noexcept {
   return foxglove_channel_has_sinks(impl_.get());
 }
 
@@ -217,7 +217,7 @@ uint64_t ColorChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
-bool ColorChannel::has_sinks() const noexcept {
+bool ColorChannel::hasSinks() const noexcept {
   return foxglove_channel_has_sinks(impl_.get());
 }
 
@@ -253,7 +253,7 @@ uint64_t CompressedImageChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
-bool CompressedImageChannel::has_sinks() const noexcept {
+bool CompressedImageChannel::hasSinks() const noexcept {
   return foxglove_channel_has_sinks(impl_.get());
 }
 
@@ -289,7 +289,7 @@ uint64_t CompressedPointCloudChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
-bool CompressedPointCloudChannel::has_sinks() const noexcept {
+bool CompressedPointCloudChannel::hasSinks() const noexcept {
   return foxglove_channel_has_sinks(impl_.get());
 }
 
@@ -325,7 +325,7 @@ uint64_t CompressedVideoChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
-bool CompressedVideoChannel::has_sinks() const noexcept {
+bool CompressedVideoChannel::hasSinks() const noexcept {
   return foxglove_channel_has_sinks(impl_.get());
 }
 
@@ -361,7 +361,7 @@ uint64_t CubePrimitiveChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
-bool CubePrimitiveChannel::has_sinks() const noexcept {
+bool CubePrimitiveChannel::hasSinks() const noexcept {
   return foxglove_channel_has_sinks(impl_.get());
 }
 
@@ -397,7 +397,7 @@ uint64_t CylinderPrimitiveChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
-bool CylinderPrimitiveChannel::has_sinks() const noexcept {
+bool CylinderPrimitiveChannel::hasSinks() const noexcept {
   return foxglove_channel_has_sinks(impl_.get());
 }
 
@@ -433,7 +433,7 @@ uint64_t FrameTransformChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
-bool FrameTransformChannel::has_sinks() const noexcept {
+bool FrameTransformChannel::hasSinks() const noexcept {
   return foxglove_channel_has_sinks(impl_.get());
 }
 
@@ -469,7 +469,7 @@ uint64_t FrameTransformsChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
-bool FrameTransformsChannel::has_sinks() const noexcept {
+bool FrameTransformsChannel::hasSinks() const noexcept {
   return foxglove_channel_has_sinks(impl_.get());
 }
 
@@ -504,7 +504,7 @@ uint64_t GeoJSONChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
-bool GeoJSONChannel::has_sinks() const noexcept {
+bool GeoJSONChannel::hasSinks() const noexcept {
   return foxglove_channel_has_sinks(impl_.get());
 }
 
@@ -539,7 +539,7 @@ uint64_t GridChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
-bool GridChannel::has_sinks() const noexcept {
+bool GridChannel::hasSinks() const noexcept {
   return foxglove_channel_has_sinks(impl_.get());
 }
 
@@ -575,7 +575,7 @@ uint64_t ImageAnnotationsChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
-bool ImageAnnotationsChannel::has_sinks() const noexcept {
+bool ImageAnnotationsChannel::hasSinks() const noexcept {
   return foxglove_channel_has_sinks(impl_.get());
 }
 
@@ -610,7 +610,7 @@ uint64_t JointStateChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
-bool JointStateChannel::has_sinks() const noexcept {
+bool JointStateChannel::hasSinks() const noexcept {
   return foxglove_channel_has_sinks(impl_.get());
 }
 
@@ -646,7 +646,7 @@ uint64_t JointStatesChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
-bool JointStatesChannel::has_sinks() const noexcept {
+bool JointStatesChannel::hasSinks() const noexcept {
   return foxglove_channel_has_sinks(impl_.get());
 }
 
@@ -682,7 +682,7 @@ uint64_t KeyValuePairChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
-bool KeyValuePairChannel::has_sinks() const noexcept {
+bool KeyValuePairChannel::hasSinks() const noexcept {
   return foxglove_channel_has_sinks(impl_.get());
 }
 
@@ -717,7 +717,7 @@ uint64_t LaserScanChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
-bool LaserScanChannel::has_sinks() const noexcept {
+bool LaserScanChannel::hasSinks() const noexcept {
   return foxglove_channel_has_sinks(impl_.get());
 }
 
@@ -753,7 +753,7 @@ uint64_t LinePrimitiveChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
-bool LinePrimitiveChannel::has_sinks() const noexcept {
+bool LinePrimitiveChannel::hasSinks() const noexcept {
   return foxglove_channel_has_sinks(impl_.get());
 }
 
@@ -789,7 +789,7 @@ uint64_t LocationFixChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
-bool LocationFixChannel::has_sinks() const noexcept {
+bool LocationFixChannel::hasSinks() const noexcept {
   return foxglove_channel_has_sinks(impl_.get());
 }
 
@@ -825,7 +825,7 @@ uint64_t LocationFixesChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
-bool LocationFixesChannel::has_sinks() const noexcept {
+bool LocationFixesChannel::hasSinks() const noexcept {
   return foxglove_channel_has_sinks(impl_.get());
 }
 
@@ -860,7 +860,7 @@ uint64_t LogChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
-bool LogChannel::has_sinks() const noexcept {
+bool LogChannel::hasSinks() const noexcept {
   return foxglove_channel_has_sinks(impl_.get());
 }
 
@@ -896,7 +896,7 @@ uint64_t ModelPrimitiveChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
-bool ModelPrimitiveChannel::has_sinks() const noexcept {
+bool ModelPrimitiveChannel::hasSinks() const noexcept {
   return foxglove_channel_has_sinks(impl_.get());
 }
 
@@ -932,7 +932,7 @@ uint64_t PackedElementFieldChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
-bool PackedElementFieldChannel::has_sinks() const noexcept {
+bool PackedElementFieldChannel::hasSinks() const noexcept {
   return foxglove_channel_has_sinks(impl_.get());
 }
 
@@ -967,7 +967,7 @@ uint64_t Point2Channel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
-bool Point2Channel::has_sinks() const noexcept {
+bool Point2Channel::hasSinks() const noexcept {
   return foxglove_channel_has_sinks(impl_.get());
 }
 
@@ -1002,7 +1002,7 @@ uint64_t Point3Channel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
-bool Point3Channel::has_sinks() const noexcept {
+bool Point3Channel::hasSinks() const noexcept {
   return foxglove_channel_has_sinks(impl_.get());
 }
 
@@ -1038,7 +1038,7 @@ uint64_t Point3InFrameChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
-bool Point3InFrameChannel::has_sinks() const noexcept {
+bool Point3InFrameChannel::hasSinks() const noexcept {
   return foxglove_channel_has_sinks(impl_.get());
 }
 
@@ -1073,7 +1073,7 @@ uint64_t PointCloudChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
-bool PointCloudChannel::has_sinks() const noexcept {
+bool PointCloudChannel::hasSinks() const noexcept {
   return foxglove_channel_has_sinks(impl_.get());
 }
 
@@ -1109,7 +1109,7 @@ uint64_t PointsAnnotationChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
-bool PointsAnnotationChannel::has_sinks() const noexcept {
+bool PointsAnnotationChannel::hasSinks() const noexcept {
   return foxglove_channel_has_sinks(impl_.get());
 }
 
@@ -1144,7 +1144,7 @@ uint64_t PoseChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
-bool PoseChannel::has_sinks() const noexcept {
+bool PoseChannel::hasSinks() const noexcept {
   return foxglove_channel_has_sinks(impl_.get());
 }
 
@@ -1180,7 +1180,7 @@ uint64_t PoseInFrameChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
-bool PoseInFrameChannel::has_sinks() const noexcept {
+bool PoseInFrameChannel::hasSinks() const noexcept {
   return foxglove_channel_has_sinks(impl_.get());
 }
 
@@ -1216,7 +1216,7 @@ uint64_t PosesInFrameChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
-bool PosesInFrameChannel::has_sinks() const noexcept {
+bool PosesInFrameChannel::hasSinks() const noexcept {
   return foxglove_channel_has_sinks(impl_.get());
 }
 
@@ -1251,7 +1251,7 @@ uint64_t QuaternionChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
-bool QuaternionChannel::has_sinks() const noexcept {
+bool QuaternionChannel::hasSinks() const noexcept {
   return foxglove_channel_has_sinks(impl_.get());
 }
 
@@ -1286,7 +1286,7 @@ uint64_t RawAudioChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
-bool RawAudioChannel::has_sinks() const noexcept {
+bool RawAudioChannel::hasSinks() const noexcept {
   return foxglove_channel_has_sinks(impl_.get());
 }
 
@@ -1321,7 +1321,7 @@ uint64_t RawImageChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
-bool RawImageChannel::has_sinks() const noexcept {
+bool RawImageChannel::hasSinks() const noexcept {
   return foxglove_channel_has_sinks(impl_.get());
 }
 
@@ -1357,7 +1357,7 @@ uint64_t SceneEntityChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
-bool SceneEntityChannel::has_sinks() const noexcept {
+bool SceneEntityChannel::hasSinks() const noexcept {
   return foxglove_channel_has_sinks(impl_.get());
 }
 
@@ -1393,7 +1393,7 @@ uint64_t SceneEntityDeletionChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
-bool SceneEntityDeletionChannel::has_sinks() const noexcept {
+bool SceneEntityDeletionChannel::hasSinks() const noexcept {
   return foxglove_channel_has_sinks(impl_.get());
 }
 
@@ -1429,7 +1429,7 @@ uint64_t SceneUpdateChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
-bool SceneUpdateChannel::has_sinks() const noexcept {
+bool SceneUpdateChannel::hasSinks() const noexcept {
   return foxglove_channel_has_sinks(impl_.get());
 }
 
@@ -1465,7 +1465,7 @@ uint64_t SpherePrimitiveChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
-bool SpherePrimitiveChannel::has_sinks() const noexcept {
+bool SpherePrimitiveChannel::hasSinks() const noexcept {
   return foxglove_channel_has_sinks(impl_.get());
 }
 
@@ -1501,7 +1501,7 @@ uint64_t TextAnnotationChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
-bool TextAnnotationChannel::has_sinks() const noexcept {
+bool TextAnnotationChannel::hasSinks() const noexcept {
   return foxglove_channel_has_sinks(impl_.get());
 }
 
@@ -1537,7 +1537,7 @@ uint64_t TextPrimitiveChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
-bool TextPrimitiveChannel::has_sinks() const noexcept {
+bool TextPrimitiveChannel::hasSinks() const noexcept {
   return foxglove_channel_has_sinks(impl_.get());
 }
 
@@ -1574,7 +1574,7 @@ uint64_t TriangleListPrimitiveChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
-bool TriangleListPrimitiveChannel::has_sinks() const noexcept {
+bool TriangleListPrimitiveChannel::hasSinks() const noexcept {
   return foxglove_channel_has_sinks(impl_.get());
 }
 
@@ -1609,7 +1609,7 @@ uint64_t Vector2Channel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
-bool Vector2Channel::has_sinks() const noexcept {
+bool Vector2Channel::hasSinks() const noexcept {
   return foxglove_channel_has_sinks(impl_.get());
 }
 
@@ -1644,7 +1644,7 @@ uint64_t Vector3Channel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
-bool Vector3Channel::has_sinks() const noexcept {
+bool Vector3Channel::hasSinks() const noexcept {
   return foxglove_channel_has_sinks(impl_.get());
 }
 
@@ -1679,7 +1679,7 @@ uint64_t VoxelGridChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
-bool VoxelGridChannel::has_sinks() const noexcept {
+bool VoxelGridChannel::hasSinks() const noexcept {
   return foxglove_channel_has_sinks(impl_.get());
 }
 
@@ -1688,7 +1688,7 @@ bool VoxelGridChannel::has_sinks() const noexcept {
 void arrowPrimitiveToC(
   foxglove_arrow_primitive& dest, const ArrowPrimitive& src, [[maybe_unused]] Arena& arena
 ) {
-  dest.pose = src.pose ? arena.map_one<foxglove_pose>(src.pose.value(), poseToC) : nullptr;
+  dest.pose = src.pose ? arena.mapOne<foxglove_pose>(src.pose.value(), poseToC) : nullptr;
   dest.shaft_length = src.shaft_length;
   dest.shaft_diameter = src.shaft_diameter;
   dest.head_length = src.head_length;
@@ -1746,7 +1746,7 @@ void compressedPointCloudToC(
   dest.timestamp =
     src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
   dest.frame_id = {src.frame_id.data(), src.frame_id.size()};
-  dest.pose = src.pose ? arena.map_one<foxglove_pose>(src.pose.value(), poseToC) : nullptr;
+  dest.pose = src.pose ? arena.mapOne<foxglove_pose>(src.pose.value(), poseToC) : nullptr;
   dest.point_stride = src.point_stride;
   dest.fields = arena.map<foxglove_packed_element_field>(src.fields, packedElementFieldToC);
   dest.fields_count = src.fields.size();
@@ -1769,7 +1769,7 @@ void compressedVideoToC(
 void cubePrimitiveToC(
   foxglove_cube_primitive& dest, const CubePrimitive& src, [[maybe_unused]] Arena& arena
 ) {
-  dest.pose = src.pose ? arena.map_one<foxglove_pose>(src.pose.value(), poseToC) : nullptr;
+  dest.pose = src.pose ? arena.mapOne<foxglove_pose>(src.pose.value(), poseToC) : nullptr;
   dest.size = src.size ? reinterpret_cast<const foxglove_vector3*>(&*src.size) : nullptr;
   dest.color = src.color ? reinterpret_cast<const foxglove_color*>(&*src.color) : nullptr;
 }
@@ -1777,7 +1777,7 @@ void cubePrimitiveToC(
 void cylinderPrimitiveToC(
   foxglove_cylinder_primitive& dest, const CylinderPrimitive& src, [[maybe_unused]] Arena& arena
 ) {
-  dest.pose = src.pose ? arena.map_one<foxglove_pose>(src.pose.value(), poseToC) : nullptr;
+  dest.pose = src.pose ? arena.mapOne<foxglove_pose>(src.pose.value(), poseToC) : nullptr;
   dest.size = src.size ? reinterpret_cast<const foxglove_vector3*>(&*src.size) : nullptr;
   dest.bottom_scale = src.bottom_scale;
   dest.top_scale = src.top_scale;
@@ -1812,7 +1812,7 @@ void gridToC(foxglove_grid& dest, const Grid& src, [[maybe_unused]] Arena& arena
   dest.timestamp =
     src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
   dest.frame_id = {src.frame_id.data(), src.frame_id.size()};
-  dest.pose = src.pose ? arena.map_one<foxglove_pose>(src.pose.value(), poseToC) : nullptr;
+  dest.pose = src.pose ? arena.mapOne<foxglove_pose>(src.pose.value(), poseToC) : nullptr;
   dest.column_count = src.column_count;
   dest.cell_size =
     src.cell_size ? reinterpret_cast<const foxglove_vector2*>(&*src.cell_size) : nullptr;
@@ -1869,7 +1869,7 @@ void laserScanToC(foxglove_laser_scan& dest, const LaserScan& src, [[maybe_unuse
   dest.timestamp =
     src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
   dest.frame_id = {src.frame_id.data(), src.frame_id.size()};
-  dest.pose = src.pose ? arena.map_one<foxglove_pose>(src.pose.value(), poseToC) : nullptr;
+  dest.pose = src.pose ? arena.mapOne<foxglove_pose>(src.pose.value(), poseToC) : nullptr;
   dest.start_angle = src.start_angle;
   dest.end_angle = src.end_angle;
   dest.ranges = src.ranges.data();
@@ -1882,7 +1882,7 @@ void linePrimitiveToC(
   foxglove_line_primitive& dest, const LinePrimitive& src, [[maybe_unused]] Arena& arena
 ) {
   dest.type = static_cast<foxglove_line_type>(src.type);
-  dest.pose = src.pose ? arena.map_one<foxglove_pose>(src.pose.value(), poseToC) : nullptr;
+  dest.pose = src.pose ? arena.mapOne<foxglove_pose>(src.pose.value(), poseToC) : nullptr;
   dest.thickness = src.thickness;
   dest.scale_invariant = src.scale_invariant;
   dest.points = reinterpret_cast<const foxglove_point3*>(src.points.data());
@@ -1935,7 +1935,7 @@ void logToC(foxglove_log& dest, const Log& src, [[maybe_unused]] Arena& arena) {
 void modelPrimitiveToC(
   foxglove_model_primitive& dest, const ModelPrimitive& src, [[maybe_unused]] Arena& arena
 ) {
-  dest.pose = src.pose ? arena.map_one<foxglove_pose>(src.pose.value(), poseToC) : nullptr;
+  dest.pose = src.pose ? arena.mapOne<foxglove_pose>(src.pose.value(), poseToC) : nullptr;
   dest.scale = src.scale ? reinterpret_cast<const foxglove_vector3*>(&*src.scale) : nullptr;
   dest.color = src.color ? reinterpret_cast<const foxglove_color*>(&*src.color) : nullptr;
   dest.override_color = src.override_color;
@@ -1968,7 +1968,7 @@ void pointCloudToC(
   dest.timestamp =
     src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
   dest.frame_id = {src.frame_id.data(), src.frame_id.size()};
-  dest.pose = src.pose ? arena.map_one<foxglove_pose>(src.pose.value(), poseToC) : nullptr;
+  dest.pose = src.pose ? arena.mapOne<foxglove_pose>(src.pose.value(), poseToC) : nullptr;
   dest.point_stride = src.point_stride;
   dest.fields = arena.map<foxglove_packed_element_field>(src.fields, packedElementFieldToC);
   dest.fields_count = src.fields.size();
@@ -2008,7 +2008,7 @@ void poseInFrameToC(
   dest.timestamp =
     src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
   dest.frame_id = {src.frame_id.data(), src.frame_id.size()};
-  dest.pose = src.pose ? arena.map_one<foxglove_pose>(src.pose.value(), poseToC) : nullptr;
+  dest.pose = src.pose ? arena.mapOne<foxglove_pose>(src.pose.value(), poseToC) : nullptr;
 }
 
 void posesInFrameToC(
@@ -2096,7 +2096,7 @@ void sceneUpdateToC(
 void spherePrimitiveToC(
   foxglove_sphere_primitive& dest, const SpherePrimitive& src, [[maybe_unused]] Arena& arena
 ) {
-  dest.pose = src.pose ? arena.map_one<foxglove_pose>(src.pose.value(), poseToC) : nullptr;
+  dest.pose = src.pose ? arena.mapOne<foxglove_pose>(src.pose.value(), poseToC) : nullptr;
   dest.size = src.size ? reinterpret_cast<const foxglove_vector3*>(&*src.size) : nullptr;
   dest.color = src.color ? reinterpret_cast<const foxglove_color*>(&*src.color) : nullptr;
 }
@@ -2121,7 +2121,7 @@ void textAnnotationToC(
 void textPrimitiveToC(
   foxglove_text_primitive& dest, const TextPrimitive& src, [[maybe_unused]] Arena& arena
 ) {
-  dest.pose = src.pose ? arena.map_one<foxglove_pose>(src.pose.value(), poseToC) : nullptr;
+  dest.pose = src.pose ? arena.mapOne<foxglove_pose>(src.pose.value(), poseToC) : nullptr;
   dest.billboard = src.billboard;
   dest.font_size = src.font_size;
   dest.scale_invariant = src.scale_invariant;
@@ -2133,7 +2133,7 @@ void triangleListPrimitiveToC(
   foxglove_triangle_list_primitive& dest, const TriangleListPrimitive& src,
   [[maybe_unused]] Arena& arena
 ) {
-  dest.pose = src.pose ? arena.map_one<foxglove_pose>(src.pose.value(), poseToC) : nullptr;
+  dest.pose = src.pose ? arena.mapOne<foxglove_pose>(src.pose.value(), poseToC) : nullptr;
   dest.points = reinterpret_cast<const foxglove_point3*>(src.points.data());
   dest.points_count = src.points.size();
   dest.color = src.color ? reinterpret_cast<const foxglove_color*>(&*src.color) : nullptr;
@@ -2147,7 +2147,7 @@ void voxelGridToC(foxglove_voxel_grid& dest, const VoxelGrid& src, [[maybe_unuse
   dest.timestamp =
     src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
   dest.frame_id = {src.frame_id.data(), src.frame_id.size()};
-  dest.pose = src.pose ? arena.map_one<foxglove_pose>(src.pose.value(), poseToC) : nullptr;
+  dest.pose = src.pose ? arena.mapOne<foxglove_pose>(src.pose.value(), poseToC) : nullptr;
   dest.row_count = src.row_count;
   dest.column_count = src.column_count;
   dest.cell_size =
@@ -2920,4 +2920,4 @@ Schema VoxelGrid::schema() {
   return result;
 }
 
-}  // namespace foxglove::schemas
+}  // namespace foxglove::messages

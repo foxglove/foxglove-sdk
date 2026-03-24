@@ -45,8 +45,8 @@ use axum::{
 use chrono::{DateTime, DurationRound, Utc};
 use foxglove::stream::create_mcap_stream;
 use foxglove::{
+    messages::Vector3,
     remote_data_loader_backend::{ChannelSet, DataSource, Manifest, StreamedSource},
-    schemas::Vector3,
 };
 use futures::StreamExt;
 use serde::{Deserialize, Serialize};

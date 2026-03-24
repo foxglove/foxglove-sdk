@@ -6,15 +6,15 @@ export type JointState = {
   /** Joint name */
   name: string;
 
-  /** Joint position. Radians for revolute joints, meters for prismatic joints. Use NaN to indicate that the value is not present if the message definition does not support optional fields. */
+  /** Joint position. Radians for revolute joints, meters for prismatic joints. */
   position?: number;
 
-  /** Joint velocity. Rad/s for revolute joints, m/s for prismatic joints. Use NaN to indicate that the value is not present if the message definition does not support optional fields. */
+  /** Joint velocity. Rad/s for revolute joints, m/s for prismatic joints. */
   velocity?: number;
 
-  /** Joint acceleration. Rad/s² for revolute joints, m/s² for prismatic joints. Use NaN to indicate that the value is not present if the message definition does not support optional fields. */
+  /** Joint acceleration. Rad/s² for revolute joints, m/s² for prismatic joints. */
   acceleration?: number;
 
-  /** Joint effort (force or torque). Nm for revolute joints, N for prismatic joints. Use NaN to indicate that the value is not present if the message definition does not support optional fields. */
+  /** Joint effort (force or torque). Nm for revolute joints, N for prismatic joints. */
   effort?: number;
 };

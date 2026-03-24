@@ -14,12 +14,12 @@
 ///
 /// @code{.cpp}
 /// #include <foxglove/remote_data_loader_backend.hpp>
-/// #include <foxglove/schemas.hpp>
+/// #include <foxglove/messages.hpp>
 ///
 /// namespace rdl = foxglove::remote_data_loader_backend;
 ///
 /// rdl::ChannelSet channels;
-/// channels.insert<foxglove::schemas::Vector3>("/demo");
+/// channels.insert<foxglove::messages::Vector3>("/demo");
 ///
 /// rdl::StreamedSource source;
 /// source.url = "/v1/data?flightId=ABC123";
@@ -33,7 +33,7 @@
 /// manifest.name = "Flight ABC123";
 /// manifest.sources = {std::move(source)};
 ///
-/// std::string json_str = rdl::to_json_string(manifest);
+/// std::string json_str = rdl::toJsonString(manifest);
 /// @endcode
 
 #include <foxglove/schema.hpp>
@@ -118,12 +118,12 @@ struct Manifest {
 /// @brief Serialize a Manifest to a JSON string.
 ///
 /// The output conforms to the Foxglove remote data loader manifest JSON schema.
-inline std::string to_json_string(const Manifest& m) {
+inline std::string toJsonString(const Manifest& m) {
   // Use nlohmann/json internally without exposing it in the public API.
-  using json = nlohmann::json;
+  using Json = nlohmann::json;
 
-  auto topic_to_json = [](const Topic& t) -> json {
-    json j{
+  auto topic_to_json = [](const Topic& t) -> Json {
+    Json j{
       {"name", t.name},
       {"messageEncoding", t.message_encoding},
     };
@@ -133,8 +133,8 @@ inline std::string to_json_string(const Manifest& m) {
     return j;
   };
 
-  auto schema_to_json = [](const Schema& s) -> json {
-    return json{
+  auto schema_to_json = [](const Schema& s) -> Json {
+    return Json{
       {"id", s.id},
       {"name", s.name},
       {"encoding", s.encoding},
@@ -142,16 +142,16 @@ inline std::string to_json_string(const Manifest& m) {
     };
   };
 
-  auto source_to_json = [&](const StreamedSource& s) -> json {
-    json topics = json::array();
+  auto source_to_json = [&](const StreamedSource& s) -> Json {
+    Json topics = Json::array();
     for (const auto& t : s.topics) {
       topics.push_back(topic_to_json(t));
     }
-    json schemas = json::array();
+    Json schemas = Json::array();
     for (const auto& sc : s.schemas) {
       schemas.push_back(schema_to_json(sc));
     }
-    json j{
+    Json j{
       {"url", s.url},
       {"topics", topics},
       {"schemas", schemas},
@@ -164,11 +164,11 @@ inline std::string to_json_string(const Manifest& m) {
     return j;
   };
 
-  json sources = json::array();
+  Json sources = Json::array();
   for (const auto& s : m.sources) {
     sources.push_back(source_to_json(s));
   }
-  json j{
+  Json j{
     {"sources", sources},
   };
   if (m.name.has_value()) {
@@ -189,48 +189,47 @@ inline std::string to_json_string(const Manifest& m) {
 ///
 /// @code{.cpp}
 /// foxglove::remote_data_loader_backend::ChannelSet channels;
-/// channels.insert<foxglove::schemas::Vector3>("/topic1");
-/// channels.insert<foxglove::schemas::Vector3>("/topic2"); // reuses schema ID
+/// channels.insert<foxglove::messages::Vector3>("/topic1");
+/// channels.insert<foxglove::messages::Vector3>("/topic2"); // reuses schema ID
 ///
 /// foxglove::remote_data_loader_backend::StreamedSource source;
 /// source.topics = std::move(channels.topics);
 /// source.schemas = std::move(channels.schemas);
 /// @endcode
-class ChannelSet {
-public:
+struct ChannelSet {
   /// @brief Insert a channel for schema type `T` on the given topic.
   ///
   /// `T` must have a static `schema()` method returning `foxglove::Schema`
-  /// (all generated types in `foxglove::schemas` satisfy this).
+  /// (all generated types in `foxglove::messages` satisfy this).
   /// The message encoding is assumed to be "protobuf".
   ///
-  /// @tparam T A Foxglove schema type (e.g. `foxglove::schemas::Vector3`).
+  /// @tparam T A Foxglove schema type (e.g. `foxglove::messages::Vector3`).
   /// @param topic The topic name for this channel.
   /// @throws std::overflow_error if more than 65535 distinct schemas are added.
   template<typename T>
   void insert(const std::string& topic) {
     auto schema = T::schema();
-    uint16_t schema_id = add_schema(schema);
+    uint16_t schema_id = addSchema(schema);
     topics.push_back(Topic{topic, "protobuf", schema_id});
   }
 
   /// @brief The accumulated topics.
-  std::vector<Topic> topics;
+  std::vector<Topic> topics;  // NOLINT(cppcoreguidelines-non-private-member-variables-in-classes)
   /// @brief The accumulated schemas (deduplicated).
-  std::vector<Schema> schemas;
+  std::vector<Schema> schemas;  // NOLINT(cppcoreguidelines-non-private-member-variables-in-classes)
 
 private:
   // Next schema ID to assign. 0 means we have exhausted all IDs.
   // Schema ID 0 is reserved by MCAP, so valid IDs are 1..65535.
   uint16_t next_schema_id_ = 1;
 
-  static std::string encode_schema_data(const foxglove::Schema& schema) {
+  static std::string encodeSchemaData(const foxglove::Schema& schema) {
     std::string_view sv(reinterpret_cast<const char*>(schema.data), schema.data_len);
     return base64::to_base64(sv);
   }
 
-  uint16_t add_schema(const foxglove::Schema& schema) {
-    auto encoded_data = encode_schema_data(schema);
+  uint16_t addSchema(const foxglove::Schema& schema) {
+    auto encoded_data = encodeSchemaData(schema);
 
     // Deduplicate: return existing ID if an identical schema was already added.
     for (const auto& existing : schemas) {
@@ -254,5 +253,11 @@ private:
     return id;
   }
 };
+
+/// @deprecated Use toJsonString() instead.
+// NOLINTNEXTLINE(readability-identifier-naming)
+[[deprecated("Use toJsonString() instead")]] inline std::string to_json_string(const Manifest& m) {
+  return toJsonString(m);
+}
 
 }  // namespace foxglove::remote_data_loader_backend

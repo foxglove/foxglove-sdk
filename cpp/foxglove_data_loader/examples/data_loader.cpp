@@ -4,7 +4,7 @@
 #include <memory>
 #include <sstream>
 
-#include "foxglove/schemas.hpp"
+#include "foxglove/messages.hpp"
 
 using namespace foxglove_data_loader;
 
@@ -70,7 +70,7 @@ class TextMessageIterator : public foxglove_data_loader::AbstractMessageIterator
   TextDataLoader* data_loader;
   MessageIteratorArgs args;
   size_t index;
-  foxglove::schemas::Log message;
+  foxglove::messages::Log message;
   std::vector<uint8_t> last_encoded_message;
 
 public:
@@ -125,7 +125,7 @@ Result<Initialization> TextDataLoader::initialize() {
       .message_count = line_count,
     });
   }
-  foxglove::Schema log_schema = foxglove::schemas::Log::schema();
+  foxglove::Schema log_schema = foxglove::messages::Log::schema();
   return Result<Initialization>{
     .value =
       Initialization{
@@ -163,7 +163,7 @@ TextMessageIterator::TextMessageIterator(TextDataLoader* loader, MessageIterator
   data_loader = loader;
   args = args_;
   index = 0;
-  message = foxglove::schemas::Log{};
+  message = foxglove::messages::Log{};
   last_encoded_message = std::vector<uint8_t>(1024);
 }
 
@@ -187,7 +187,7 @@ std::optional<Result<Message>> TextMessageIterator::next() {
     for (const ChannelId channel_id : args.channel_ids) {
       if (channel_id == line.file) {
         message.file = data_loader->paths[line.file];
-        message.level = foxglove::schemas::Log::LogLevel::INFO;
+        message.level = foxglove::messages::Log::LogLevel::INFO;
         message.name = "log line";
         message.line = index;
         message.message = std::string(

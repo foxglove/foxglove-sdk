@@ -446,16 +446,16 @@ pub struct JointState {
     /// Joint name
     #[prost(string, tag = "1")]
     pub name: ::prost::alloc::string::String,
-    /// Joint position. Radians for revolute joints, meters for prismatic joints. Use NaN to indicate that the value is not present if the message definition does not support optional fields.
+    /// Joint position. Radians for revolute joints, meters for prismatic joints.
     #[prost(double, optional, tag = "2")]
     pub position: ::core::option::Option<f64>,
-    /// Joint velocity. Rad/s for revolute joints, m/s for prismatic joints. Use NaN to indicate that the value is not present if the message definition does not support optional fields.
+    /// Joint velocity. Rad/s for revolute joints, m/s for prismatic joints.
     #[prost(double, optional, tag = "3")]
     pub velocity: ::core::option::Option<f64>,
-    /// Joint acceleration. Rad/s² for revolute joints, m/s² for prismatic joints. Use NaN to indicate that the value is not present if the message definition does not support optional fields.
+    /// Joint acceleration. Rad/s² for revolute joints, m/s² for prismatic joints.
     #[prost(double, optional, tag = "4")]
     pub acceleration: ::core::option::Option<f64>,
-    /// Joint effort (force or torque). Nm for revolute joints, N for prismatic joints. Use NaN to indicate that the value is not present if the message definition does not support optional fields.
+    /// Joint effort (force or torque). Nm for revolute joints, N for prismatic joints.
     #[prost(double, optional, tag = "5")]
     pub effort: ::core::option::Option<f64>,
 }

@@ -106,6 +106,11 @@ impl RequestBuilder {
         self
     }
 
+    pub fn json<T: serde::Serialize + ?Sized>(mut self, body: &T) -> Self {
+        self.0 = self.0.json(body);
+        self
+    }
+
     pub async fn send(self) -> Result<reqwest::Response, RequestError> {
         let response = self.0.send().await.map_err(RequestError::SendRequest)?;
 
@@ -227,18 +232,26 @@ impl FoxgloveApiClient<DeviceToken> {
 
     /// Authorizes a remote visualization session for the given device.
     ///
+    /// If `remote_access_session_id` is `Some`, the server uses the provided session ID.
+    /// If `None`, the server generates a new one.
+    ///
     /// This endpoint is not intended for direct usage. Access may be blocked if suspicious
     /// activity is detected.
     pub async fn authorize_remote_viz(
         &self,
         device_id: &str,
+        remote_access_session_id: Option<String>,
     ) -> Result<RtcCredentials, FoxgloveApiClientError> {
         let device_id = encode_uri_component(device_id);
+        let body = super::types::RemoteSessionRequest {
+            remote_access_session_id,
+        };
         let response = self
             .post(&format!(
                 "/internal/platform/v1/devices/{device_id}/remote-sessions"
             ))
             .device_token(&self.auth)
+            .json(&body)
             .send()
             .await?;
 
@@ -338,11 +351,13 @@ mod tests {
         let client = create_test_api_client(server.url(), DeviceToken::new(TEST_DEVICE_TOKEN));
 
         let result = client
-            .authorize_remote_viz(TEST_DEVICE_ID)
+            .authorize_remote_viz(TEST_DEVICE_ID, None)
             .await
             .expect("could not authorize remote viz");
         assert_eq!(result.token, "rtc-token-abc123");
         assert_eq!(result.url, "wss://rtc.foxglove.dev");
+        assert!(result.remote_access_session_id.is_some());
+        assert!(!result.remote_access_session_id.unwrap().is_empty());
     }
 
     #[tokio::test]
@@ -350,7 +365,7 @@ mod tests {
         let server = create_test_server().await;
         let client =
             create_test_api_client(server.url(), DeviceToken::new("some-bad-device-token"));
-        let result = client.authorize_remote_viz(TEST_DEVICE_ID).await;
+        let result = client.authorize_remote_viz(TEST_DEVICE_ID, None).await;
         assert!(result.is_err());
     }
 }

@@ -1,12 +1,10 @@
-//! Websocket service request.
+//! Service request.
 
 use std::sync::Arc;
 
 use bytes::Bytes;
 
-use crate::websocket::ClientId;
-
-use super::{CallId, Service};
+use super::{CallId, ClientId, Service};
 
 /// A service call request.
 #[derive(Clone)]
