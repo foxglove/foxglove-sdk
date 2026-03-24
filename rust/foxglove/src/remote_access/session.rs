@@ -101,9 +101,34 @@ fn encode_binary_message<'a>(message: &impl BinaryMessage<'a>) -> Bytes {
 ///
 /// The Sink impl is at the RemoteAccessSession level (not per-participant)
 /// so that it can deliver messages via multi-cast to multiple participants.
+/// Wrapper around a LiveKit `Room` that supports a test variant without a real connection.
+///
+/// Production code uses `RoomHandle::Livekit(room)`. Tests that exercise message handling
+/// (subscribe, unsubscribe, etc.) without a real LiveKit room use `RoomHandle::Test`.
+pub(crate) enum RoomHandle {
+    Livekit(Room),
+    #[cfg(test)]
+    Test,
+}
+
+impl RoomHandle {
+    /// Returns a reference to the inner `Room`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if called on `RoomHandle::Test`.
+    pub(crate) fn as_room(&self) -> &Room {
+        match self {
+            RoomHandle::Livekit(room) => room,
+            #[cfg(test)]
+            RoomHandle::Test => panic!("RoomHandle::Test has no real Room"),
+        }
+    }
+}
+
 pub(crate) struct RemoteAccessSession {
     sink_id: SinkId,
-    room: Room,
+    room: RoomHandle,
     context: Weak<Context>,
     state: RwLock<SessionState>,
     channel_filter: Option<Arc<dyn SinkChannelFilter>>,
@@ -235,7 +260,7 @@ impl RemoteAccessSession {
         let (video_metadata_tx, video_metadata_rx) = tokio::sync::watch::channel(());
         Self {
             sink_id: SinkId::next(),
-            room,
+            room: RoomHandle::Livekit(room),
             context,
             state: RwLock::new(SessionState::new()),
             channel_filter,
@@ -262,7 +287,7 @@ impl RemoteAccessSession {
     }
 
     pub(crate) fn room(&self) -> &Room {
-        &self.room
+        self.room.as_room()
     }
 
     pub(crate) fn stats(&self) -> SessionStats {
@@ -376,6 +401,7 @@ impl RemoteAccessSession {
                                 );
                                 match session
                                     .room
+                                    .as_room()
                                     .local_participant()
                                     .stream_bytes(StreamByteOptions {
                                         topic,
@@ -775,6 +801,7 @@ impl RemoteAccessSession {
 
         let stream = match self
             .room
+            .as_room()
             .local_participant()
             .stream_bytes(StreamByteOptions {
                 topic: WS_PROTOCOL_TOPIC.to_string(),
@@ -971,7 +998,7 @@ impl RemoteAccessSession {
             let track =
                 LocalVideoTrack::create_video_track(&topic, RtcVideoSource::Native(video_source));
 
-            let local_participant = self.room.local_participant().clone();
+            let local_participant = self.room.as_room().local_participant().clone();
             let session = self.clone();
             tokio::spawn(async move {
                 let local_track = LocalTrack::Video(track);
@@ -1036,7 +1063,7 @@ impl RemoteAccessSession {
         };
 
         if let Some(sid) = sid {
-            let local_participant = self.room.local_participant().clone();
+            let local_participant = self.room.as_room().local_participant().clone();
             tokio::spawn(async move {
                 if let Err(e) = local_participant.unpublish_track(&sid).await {
                     error!("failed to unpublish video track {sid}: {e:?}");
@@ -1122,6 +1149,41 @@ async fn process_data_message<F, Fut>(
             msg.channel_id
         );
         channel_writers.remove(&msg.channel_id);
+    }
+}
+
+#[cfg(test)]
+impl RemoteAccessSession {
+    /// Creates a `RemoteAccessSession` without a real LiveKit room.
+    ///
+    /// Suitable for testing message handling (subscribe, unsubscribe, message data, etc.)
+    /// that does not require a real room connection.
+    pub(crate) fn new_for_test(
+        context: Weak<Context>,
+        listener: Option<Arc<dyn Listener>>,
+        capabilities: Vec<Capability>,
+    ) -> Self {
+        let backlog = 1024;
+        let (data_plane_tx, data_plane_rx) = flume::bounded(backlog);
+        let (control_plane_tx, control_plane_rx) = flume::bounded(backlog);
+        let (video_metadata_tx, video_metadata_rx) = tokio::sync::watch::channel(());
+        Self {
+            sink_id: SinkId::next(),
+            room: RoomHandle::Test,
+            context,
+            state: RwLock::new(SessionState::new()),
+            channel_filter: None,
+            listener,
+            capabilities,
+            cancellation_token: CancellationToken::new(),
+            data_plane_tx,
+            data_plane_rx,
+            control_plane_tx,
+            control_plane_rx,
+            subscription_lock: parking_lot::Mutex::new(()),
+            video_metadata_tx,
+            video_metadata_rx,
+        }
     }
 }
 
@@ -1357,6 +1419,366 @@ mod tests {
         assert!(
             !writers.contains_key(&ch),
             "no writer should be cached when stream creation fails"
+        );
+    }
+
+    // --- Integration tests for Listener callbacks ---
+
+    /// A recorded listener event for test assertions.
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    enum ListenerEvent {
+        Subscribe { topic: String },
+        Unsubscribe { topic: String },
+        MessageData { topic: String, payload: Vec<u8> },
+        ClientAdvertise { topic: String },
+        ClientUnadvertise { topic: String },
+    }
+
+    /// A mock `Listener` that records all callback invocations.
+    struct RecordingListener {
+        events: parking_lot::Mutex<Vec<ListenerEvent>>,
+    }
+
+    impl RecordingListener {
+        fn new() -> Arc<Self> {
+            Arc::new(Self {
+                events: parking_lot::Mutex::new(Vec::new()),
+            })
+        }
+
+        fn take_events(&self) -> Vec<ListenerEvent> {
+            std::mem::take(&mut self.events.lock())
+        }
+    }
+
+    impl Listener for RecordingListener {
+        fn on_subscribe(
+            &self,
+            _client: crate::remote_access::client::Client,
+            channel: &ChannelDescriptor,
+        ) {
+            self.events.lock().push(ListenerEvent::Subscribe {
+                topic: channel.topic().to_string(),
+            });
+        }
+
+        fn on_unsubscribe(
+            &self,
+            _client: crate::remote_access::client::Client,
+            channel: &ChannelDescriptor,
+        ) {
+            self.events.lock().push(ListenerEvent::Unsubscribe {
+                topic: channel.topic().to_string(),
+            });
+        }
+
+        fn on_message_data(
+            &self,
+            _client: crate::remote_access::client::Client,
+            channel: &ChannelDescriptor,
+            payload: &[u8],
+        ) {
+            self.events.lock().push(ListenerEvent::MessageData {
+                topic: channel.topic().to_string(),
+                payload: payload.to_vec(),
+            });
+        }
+
+        fn on_client_advertise(
+            &self,
+            _client: crate::remote_access::client::Client,
+            channel: &ChannelDescriptor,
+        ) {
+            self.events.lock().push(ListenerEvent::ClientAdvertise {
+                topic: channel.topic().to_string(),
+            });
+        }
+
+        fn on_client_unadvertise(
+            &self,
+            _client: crate::remote_access::client::Client,
+            channel: &ChannelDescriptor,
+        ) {
+            self.events.lock().push(ListenerEvent::ClientUnadvertise {
+                topic: channel.topic().to_string(),
+            });
+        }
+    }
+
+    /// Creates a test session with a recording listener.
+    fn make_test_session(
+        listener: &Arc<RecordingListener>,
+        capabilities: Vec<Capability>,
+    ) -> Arc<RemoteAccessSession> {
+        let ctx = Context::new();
+        Arc::new(RemoteAccessSession::new_for_test(
+            Arc::downgrade(&ctx),
+            Some(listener.clone()),
+            capabilities,
+        ))
+    }
+
+    fn make_channel_for_session(topic: &str) -> Arc<RawChannel> {
+        use crate::{ChannelBuilder, Schema};
+        let ctx = Context::new();
+        ChannelBuilder::new(topic)
+            .context(&ctx)
+            .message_encoding("json")
+            .schema(Schema::new("S", "jsonschema", b"{}"))
+            .build_raw()
+            .unwrap()
+    }
+
+    /// Registers a participant and a server channel in the session, returning the channel ID.
+    fn setup_session_with_channel(
+        session: &Arc<RemoteAccessSession>,
+        participant_name: &str,
+        topic: &str,
+    ) -> (ParticipantIdentity, Arc<Participant>, ChannelId) {
+        let (identity, participant) = make_participant(participant_name);
+        session
+            .state
+            .write()
+            .insert_participant(identity.clone(), participant.clone());
+
+        let channel = make_channel_for_session(topic);
+        let channel_id = channel.id();
+        session.state.write().insert_channel(&channel);
+
+        (identity, participant, channel_id)
+    }
+
+    #[test]
+    fn listener_on_subscribe_fires_for_subscribed_channels() {
+        let listener = RecordingListener::new();
+        let session = make_test_session(&listener, vec![]);
+        let (_identity, participant, channel_id) =
+            setup_session_with_channel(&session, "alice", "/camera");
+
+        session.handle_client_subscribe(
+            &participant,
+            client::Subscribe::new([client::SubscribeChannel {
+                id: u64::from(channel_id),
+                request_video_track: false,
+            }]),
+        );
+
+        let events = listener.take_events();
+        assert_eq!(events.len(), 1);
+        assert_eq!(
+            events[0],
+            ListenerEvent::Subscribe {
+                topic: "/camera".to_string()
+            }
+        );
+    }
+
+    #[test]
+    fn listener_on_subscribe_skips_duplicate() {
+        let listener = RecordingListener::new();
+        let session = make_test_session(&listener, vec![]);
+        let (_identity, participant, channel_id) =
+            setup_session_with_channel(&session, "alice", "/camera");
+
+        let msg = client::Subscribe::new([client::SubscribeChannel {
+            id: u64::from(channel_id),
+            request_video_track: false,
+        }]);
+
+        session.handle_client_subscribe(&participant, msg.clone());
+        listener.take_events(); // drain first subscribe
+
+        // Re-subscribing should not fire the callback.
+        session.handle_client_subscribe(&participant, msg);
+        let events = listener.take_events();
+        assert!(
+            events.is_empty(),
+            "duplicate subscribe should not fire callback"
+        );
+    }
+
+    #[test]
+    fn listener_on_unsubscribe_fires_for_unsubscribed_channels() {
+        let listener = RecordingListener::new();
+        let session = make_test_session(&listener, vec![]);
+        let (_identity, participant, channel_id) =
+            setup_session_with_channel(&session, "alice", "/lidar");
+
+        // Subscribe first.
+        session.handle_client_subscribe(
+            &participant,
+            client::Subscribe::new([client::SubscribeChannel {
+                id: u64::from(channel_id),
+                request_video_track: false,
+            }]),
+        );
+        listener.take_events();
+
+        // Unsubscribe.
+        session.handle_client_unsubscribe(
+            &participant,
+            client::Unsubscribe {
+                channel_ids: vec![u64::from(channel_id)],
+            },
+        );
+
+        let events = listener.take_events();
+        assert_eq!(events.len(), 1);
+        assert_eq!(
+            events[0],
+            ListenerEvent::Unsubscribe {
+                topic: "/lidar".to_string()
+            }
+        );
+    }
+
+    #[test]
+    fn listener_on_unsubscribe_skips_not_subscribed() {
+        let listener = RecordingListener::new();
+        let session = make_test_session(&listener, vec![]);
+        let (_identity, participant, channel_id) =
+            setup_session_with_channel(&session, "alice", "/lidar");
+
+        // Unsubscribe without subscribing first.
+        session.handle_client_unsubscribe(
+            &participant,
+            client::Unsubscribe {
+                channel_ids: vec![u64::from(channel_id)],
+            },
+        );
+
+        let events = listener.take_events();
+        assert!(
+            events.is_empty(),
+            "unsubscribe of non-subscribed channel should not fire callback"
+        );
+    }
+
+    #[test]
+    fn listener_on_unsubscribe_fires_on_disconnect() {
+        let listener = RecordingListener::new();
+        let session = make_test_session(&listener, vec![]);
+        let (identity, participant, channel_id) =
+            setup_session_with_channel(&session, "alice", "/imu");
+
+        // Subscribe, then disconnect.
+        session.handle_client_subscribe(
+            &participant,
+            client::Subscribe::new([client::SubscribeChannel {
+                id: u64::from(channel_id),
+                request_video_track: false,
+            }]),
+        );
+        listener.take_events();
+
+        session.remove_participant(&identity);
+
+        let events = listener.take_events();
+        assert_eq!(events.len(), 1);
+        assert_eq!(
+            events[0],
+            ListenerEvent::Unsubscribe {
+                topic: "/imu".to_string()
+            }
+        );
+    }
+
+    #[test]
+    fn listener_on_message_data_fires_for_advertised_client_channel() {
+        let listener = RecordingListener::new();
+        let session = make_test_session(&listener, vec![Capability::ClientPublish]);
+        let (identity, _participant, _channel_id) =
+            setup_session_with_channel(&session, "alice", "/server_channel");
+
+        // Client advertises a channel.
+        let advertise_json = r#"{"op": "advertise", "channels": [{"id": 42, "topic": "/cmd_vel", "encoding": "json", "schemaName": "Twist"}]}"#;
+        session.handle_client_message(&identity, OpCode::Text as u8, Bytes::from(advertise_json));
+        listener.take_events(); // drain on_client_advertise
+
+        // Client sends message data on the advertised channel.
+        let msg = client::MessageData::new(42, b"hello world");
+        let payload = msg.to_bytes();
+        session.handle_client_message(&identity, OpCode::Binary as u8, payload.into());
+
+        let events = listener.take_events();
+        assert_eq!(events.len(), 1);
+        assert_eq!(
+            events[0],
+            ListenerEvent::MessageData {
+                topic: "/cmd_vel".to_string(),
+                payload: b"hello world".to_vec(),
+            }
+        );
+    }
+
+    #[test]
+    fn listener_full_lifecycle() {
+        let listener = RecordingListener::new();
+        let session = make_test_session(&listener, vec![Capability::ClientPublish]);
+        let (identity, participant, channel_id) =
+            setup_session_with_channel(&session, "alice", "/camera");
+
+        // 1. Subscribe to a server channel.
+        session.handle_client_subscribe(
+            &participant,
+            client::Subscribe::new([client::SubscribeChannel {
+                id: u64::from(channel_id),
+                request_video_track: false,
+            }]),
+        );
+
+        // 2. Client advertises a channel.
+        let advertise_json = r#"{"op": "advertise", "channels": [{"id": 10, "topic": "/joy", "encoding": "json", "schemaName": "Joy"}]}"#;
+        session.handle_client_message(&identity, OpCode::Text as u8, Bytes::from(advertise_json));
+
+        // 3. Client sends message data.
+        let msg = client::MessageData::new(10, b"button pressed");
+        let payload = msg.to_bytes();
+        session.handle_client_message(&identity, OpCode::Binary as u8, payload.into());
+
+        // 4. Unsubscribe from server channel.
+        session.handle_client_unsubscribe(
+            &participant,
+            client::Unsubscribe {
+                channel_ids: vec![u64::from(channel_id)],
+            },
+        );
+
+        // 5. Disconnect (fires on_client_unadvertise for the client channel).
+        session.remove_participant(&identity);
+
+        let events = listener.take_events();
+        assert_eq!(events.len(), 5);
+        assert_eq!(
+            events[0],
+            ListenerEvent::Subscribe {
+                topic: "/camera".to_string()
+            }
+        );
+        assert_eq!(
+            events[1],
+            ListenerEvent::ClientAdvertise {
+                topic: "/joy".to_string()
+            }
+        );
+        assert_eq!(
+            events[2],
+            ListenerEvent::MessageData {
+                topic: "/joy".to_string(),
+                payload: b"button pressed".to_vec()
+            }
+        );
+        assert_eq!(
+            events[3],
+            ListenerEvent::Unsubscribe {
+                topic: "/camera".to_string()
+            }
+        );
+        assert_eq!(
+            events[4],
+            ListenerEvent::ClientUnadvertise {
+                topic: "/joy".to_string()
+            }
         );
     }
 }
