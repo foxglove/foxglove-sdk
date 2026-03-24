@@ -787,15 +787,20 @@ impl RemoteAccessSession {
         self.stop_video_tracks(&last_video_unsubscribed);
 
         if let Some(listener) = &self.listener {
+            let descriptors: SmallVec<[ChannelDescriptor; 4]> = {
+                let state = self.state.read();
+                subscribe_result
+                    .newly_subscribed
+                    .iter()
+                    .filter_map(|id| state.get_channel_descriptor(id).cloned())
+                    .collect()
+            };
             let client = Client::new(
                 participant.client_id(),
                 participant.participant_id().clone(),
             );
-            let state = self.state.read();
-            for &channel_id in &subscribe_result.newly_subscribed {
-                if let Some(descriptor) = state.get_channel_descriptor(&channel_id) {
-                    listener.on_subscribe(client.clone(), descriptor);
-                }
+            for descriptor in &descriptors {
+                listener.on_subscribe(client.clone(), descriptor);
             }
         }
     }
@@ -827,15 +832,20 @@ impl RemoteAccessSession {
         self.stop_video_tracks(&last_video_unsubscribed);
 
         if let Some(listener) = &self.listener {
+            let descriptors: SmallVec<[ChannelDescriptor; 4]> = {
+                let state = self.state.read();
+                unsubscribe_result
+                    .actually_unsubscribed
+                    .iter()
+                    .filter_map(|id| state.get_channel_descriptor(id).cloned())
+                    .collect()
+            };
             let client = Client::new(
                 participant.client_id(),
                 participant.participant_id().clone(),
             );
-            let state = self.state.read();
-            for &channel_id in &unsubscribe_result.actually_unsubscribed {
-                if let Some(descriptor) = state.get_channel_descriptor(&channel_id) {
-                    listener.on_unsubscribe(client.clone(), descriptor);
-                }
+            for descriptor in &descriptors {
+                listener.on_unsubscribe(client.clone(), descriptor);
             }
         }
     }
@@ -1150,11 +1160,15 @@ impl RemoteAccessSession {
             let client = Client::new(client_id, participant_id.clone());
 
             if !subscribed_channel_ids.is_empty() {
-                let state = self.state.read();
-                for channel_id in &subscribed_channel_ids {
-                    if let Some(descriptor) = state.get_channel_descriptor(channel_id) {
-                        listener.on_unsubscribe(client.clone(), descriptor);
-                    }
+                let descriptors: SmallVec<[ChannelDescriptor; 4]> = {
+                    let state = self.state.read();
+                    subscribed_channel_ids
+                        .iter()
+                        .filter_map(|id| state.get_channel_descriptor(id).cloned())
+                        .collect()
+                };
+                for descriptor in &descriptors {
+                    listener.on_unsubscribe(client.clone(), descriptor);
                 }
             }
 
