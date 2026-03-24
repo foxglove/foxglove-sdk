@@ -256,22 +256,23 @@ function pythonParamDoc(field: FoxgloveMessageField): string {
   }
 
   let inCodeBlock = false;
+  let codeBlockBaseIndent = 0;
   for (const line of rest) {
     if (line.trimStart().startsWith("```")) {
       if (!inCodeBlock) {
-        // Start an RST literal block: blank line before ::, blank line after
+        codeBlockBaseIndent = line.length - line.trimStart().length;
+        const rstIndent = " ".repeat(4 + codeBlockBaseIndent);
         output.push("");
-        output.push("    ::");
+        output.push(`${rstIndent}::`);
         output.push("");
       } else {
-        // End of code block: blank line to resume normal content
         output.push("");
       }
       inCodeBlock = !inCodeBlock;
       continue;
     }
 
-    const indent = " ".repeat(inCodeBlock ? 8 : 4);
+    const indent = " ".repeat(inCodeBlock ? 4 + codeBlockBaseIndent + 4 : 4);
     const rst = inCodeBlock ? line : convertMarkdownLinksToRst(line);
     output.push(indent + rst);
   }
