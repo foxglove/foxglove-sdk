@@ -1909,8 +1909,10 @@ struct RawImage {
   /// @brief   - `step` must be greater than or equal to `width` * 2.
   /// @brief - `nv12`:
   /// @brief   - Pixel colors are decomposed into [Y'UV](https://en.wikipedia.org/wiki/Y%E2%80%B2UV)
-  /// channels using 4:2:0 chroma subsampling. The data is stored in semi-planar layout with two
-  /// contiguous planes: a Y (luma) plane followed by an interleaved UV (chroma) plane.
+  /// channels using 4:2:0 chroma subsampling. The data is stored in
+  /// [NV12](https://www.kernel.org/doc/html/v4.10/media/uapi/v4l/pixfmt-nv12.html) semi-planar
+  /// layout with two contiguous planes: a Y (luma) plane followed by an interleaved UV (chroma)
+  /// plane.
   /// @brief   - All channel values are represented as unsigned 8-bit integers.
   /// @brief   - Both planes use `step` as their row stride.
   /// @brief   - The Y plane contains one luma value per pixel (`step` * `height` bytes).
