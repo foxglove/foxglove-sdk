@@ -1,17 +1,12 @@
-/// A mock [`Listener`] that records all listener callbacks for test assertions.
-///
-/// Each entry is stored as `(participant_id, topic)`, except `message_data` which
-/// also includes the payload bytes.
 use std::sync::Mutex;
 
 use foxglove::ChannelDescriptor;
 use foxglove::remote_access::{Client, Listener};
 
-/// A mock [`Listener`] that records `on_client_advertise`, `on_client_unadvertise`,
-/// and `on_message_data` callbacks.
+/// A mock [`Listener`] that records all listener callbacks for test assertions.
 ///
-/// Advertise/unadvertise entries are stored as `(participant_id, topic)`.
-/// Message data entries are stored as `(client_id, topic, payload)`.
+/// Each entry is stored as `(participant_id, topic)`, except `message_data` which
+/// also includes the payload bytes.
 #[derive(Default)]
 pub struct MockListener {
     pub subscribed: Mutex<Vec<(String, String)>>,
