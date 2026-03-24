@@ -2780,22 +2780,22 @@ impl From<RawAudio> for foxglove::messages::RawAudio {
 ///       - Both planes use `step` as their row stride.
 ///       - The Y plane contains one luma value per pixel (`step` * `height` bytes).
 ///       - The UV plane contains interleaved U, V chroma pairs, subsampled by a factor of 2 in both dimensions (`width`/2 pairs per row, `height`/2 rows, `step` * `height`/2 bytes). Each U, V pair is shared by a 2x2 block of pixels.
-///       ```plaintext
-///       data[]:
-///         byte:  0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23
-///               [Y  Y  Y  Y][Y  Y  Y  Y][Y  Y  Y  Y][Y  Y  Y  Y][U  V  U  V][U  V  U  V]
-///               |---- step -|                                      row>>1 shares UV row
-///               <------------- Y plane (step * height) -----------><- UV plane (step*h/2)->
-///     
-///         Y00 Y01 Y02 Y03      U0 V0 U1 V1
-///         Y10 Y11 Y12 Y13      U2 V2 U3 V3
-///         Y20 Y21 Y22 Y23
-///         Y30 Y31 Y32 Y33
-///     
-///         col&~1 groups:        2x2 Y blocks share one U,V pair:
-///         Y00 Y01 -> U0,V0     Y02 Y03 -> U1,V1
-///         Y10 Y11              Y12 Y13
-///       ```
+///     ::
+///
+///           data[]:
+///             byte:  0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23
+///                   [Y  Y  Y  Y][Y  Y  Y  Y][Y  Y  Y  Y][Y  Y  Y  Y][U  V  U  V][U  V  U  V]
+///                   |---- step -|                                      row>>1 shares UV row
+///                   <------------- Y plane (step * height) -----------><- UV plane (step*h/2)->
+///         
+///             Y00 Y01 Y02 Y03      U0 V0 U1 V1
+///             Y10 Y11 Y12 Y13      U2 V2 U3 V3
+///             Y20 Y21 Y22 Y23
+///             Y30 Y31 Y32 Y33
+///         
+///             col&~1 groups:        2x2 Y blocks share one U,V pair:
+///             Y00 Y01 -> U0,V0     Y02 Y03 -> U1,V1
+///             Y10 Y11              Y12 Y13
 ///       - `width` and `height` must be even.
 ///       - `step` must be greater than or equal to `width`.
 ///       - Total `data` length is `step` * `height` * 3/2 bytes.
@@ -2826,11 +2826,11 @@ impl From<RawAudio> for foxglove::messages::RawAudio {
 ///       - Pixel colors are decomposed into Red, Blue and Green channels.
 ///       - Pixel channel values are represented as unsigned 8-bit integers, and serialized in a 2x2 bayer filter pattern.
 ///       - The order of the four letters after `bayer_` determine the layout, so for `bayer_wxyz8` the pattern is:
-///       ```plaintext
-///       w | x
-///       - + -
-///       y | z
-///       ```
+///     ::
+///
+///           w | x
+///           - + -
+///           y | z
 ///       - `step` must be greater than or equal to `width`.
 ///     - `mono8` or `8UC1`:
 ///       - Pixel brightness is represented as unsigned 8-bit integers.

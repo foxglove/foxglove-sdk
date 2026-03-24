@@ -257,7 +257,7 @@ function pythonParamDoc(field: FoxgloveMessageField): string {
 
   let inCodeBlock = false;
   for (const line of rest) {
-    if (line.startsWith("```")) {
+    if (line.trimStart().startsWith("```")) {
       if (!inCodeBlock) {
         // Start an RST code block, which requires a following blank line
         output.push("    ::");
