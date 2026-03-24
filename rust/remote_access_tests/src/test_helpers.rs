@@ -470,6 +470,32 @@ impl ViewerConnection {
         Ok(())
     }
 
+    /// Sends a binary-framed client MessageData message to the gateway.
+    pub async fn send_client_message_data(&self, channel_id: u32, payload: &[u8]) -> Result<()> {
+        let msg = MessageData::new(channel_id, payload);
+        let encoded = msg.to_bytes();
+        let framed = frame::frame_binary_message(&encoded);
+
+        let gateway_identity = ParticipantIdentity(mock_server::TEST_DEVICE_ID.to_string());
+        let writer = self
+            .room
+            .local_participant()
+            .stream_bytes(StreamByteOptions {
+                topic: "ws-protocol".to_string(),
+                destination_identities: vec![gateway_identity],
+                ..StreamByteOptions::default()
+            })
+            .await
+            .map_err(|e| anyhow::anyhow!("failed to open byte stream to gateway: {e}"))?;
+
+        writer
+            .write(&framed)
+            .await
+            .map_err(|e| anyhow::anyhow!("failed to write client message data: {e}"))?;
+
+        Ok(())
+    }
+
     /// Waits for a `TrackSubscribed` room event and returns the track name.
     pub async fn expect_track_subscribed(&mut self) -> Result<String> {
         let deadline = tokio::time::Instant::now() + EVENT_TIMEOUT;

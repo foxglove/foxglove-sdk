@@ -1072,6 +1072,157 @@ async fn livekit_client_disconnect_fires_unadvertise_for_advertised_channels() -
 }
 
 // ===========================================================================
+// Subscribe / unsubscribe listener callback tests
+// ===========================================================================
+
+/// Test that subscribing to a channel fires `on_subscribe` on the listener.
+#[traced_test]
+#[ignore]
+#[tokio::test]
+#[serial(livekit)]
+async fn livekit_subscribe_fires_listener_callback() -> Result<()> {
+    use std::sync::Arc;
+    let ctx = foxglove::Context::new();
+    let listener = Arc::new(MockListener::default());
+
+    let channel = ctx
+        .channel_builder("/camera")
+        .message_encoding("json")
+        .build_raw()
+        .context("create channel")?;
+
+    let gw = TestGateway::start_with_options(
+        &ctx,
+        TestGatewayOptions {
+            listener: Some(listener.clone()),
+            ..Default::default()
+        },
+    )
+    .await?;
+
+    let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+    let _server_info = viewer.expect_server_info().await?;
+    let advertise = viewer.expect_advertise().await?;
+    let channel_id = advertise.channels[0].id;
+
+    viewer.send_subscribe(&[channel_id]).await?;
+    poll_until(|| listener.subscribed().len() == 1).await;
+
+    let subscribed = listener.subscribed();
+    assert_eq!(subscribed.len(), 1);
+    assert_eq!(subscribed[0].0, "viewer-1");
+    assert_eq!(subscribed[0].1, "/camera");
+    info!("on_subscribe callback validated: {:?}", subscribed[0]);
+
+    viewer.close().await?;
+    // Wait for disconnect unsubscribe before stopping.
+    poll_until(|| listener.unsubscribed().len() == 1).await;
+    let _ = channel;
+    gw.stop().await?;
+    Ok(())
+}
+
+/// Test that unsubscribing from a channel fires `on_unsubscribe` on the listener.
+#[traced_test]
+#[ignore]
+#[tokio::test]
+#[serial(livekit)]
+async fn livekit_unsubscribe_fires_listener_callback() -> Result<()> {
+    use std::sync::Arc;
+    let ctx = foxglove::Context::new();
+    let listener = Arc::new(MockListener::default());
+
+    let channel = ctx
+        .channel_builder("/lidar")
+        .message_encoding("json")
+        .build_raw()
+        .context("create channel")?;
+
+    let gw = TestGateway::start_with_options(
+        &ctx,
+        TestGatewayOptions {
+            listener: Some(listener.clone()),
+            ..Default::default()
+        },
+    )
+    .await?;
+
+    let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+    let _server_info = viewer.expect_server_info().await?;
+    let advertise = viewer.expect_advertise().await?;
+    let channel_id = advertise.channels[0].id;
+
+    // Subscribe first, then unsubscribe.
+    viewer.subscribe_and_wait(&[channel_id], &channel).await?;
+    assert_eq!(listener.subscribed().len(), 1);
+
+    viewer.send_unsubscribe(&[channel_id]).await?;
+    poll_until(|| listener.unsubscribed().len() == 1).await;
+
+    let unsubscribed = listener.unsubscribed();
+    assert_eq!(unsubscribed.len(), 1);
+    assert_eq!(unsubscribed[0].0, "viewer-1");
+    assert_eq!(unsubscribed[0].1, "/lidar");
+    info!("on_unsubscribe callback validated: {:?}", unsubscribed[0]);
+
+    viewer.close().await?;
+    let _ = channel;
+    gw.stop().await?;
+    Ok(())
+}
+
+/// Test that disconnecting fires `on_unsubscribe` for all subscribed channels.
+#[traced_test]
+#[ignore]
+#[tokio::test]
+#[serial(livekit)]
+async fn livekit_disconnect_fires_unsubscribe_for_subscribed_channels() -> Result<()> {
+    use std::sync::Arc;
+    let ctx = foxglove::Context::new();
+    let listener = Arc::new(MockListener::default());
+
+    let channel = ctx
+        .channel_builder("/imu")
+        .message_encoding("json")
+        .build_raw()
+        .context("create channel")?;
+
+    let gw = TestGateway::start_with_options(
+        &ctx,
+        TestGatewayOptions {
+            listener: Some(listener.clone()),
+            ..Default::default()
+        },
+    )
+    .await?;
+
+    let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+    let _server_info = viewer.expect_server_info().await?;
+    let advertise = viewer.expect_advertise().await?;
+    let channel_id = advertise.channels[0].id;
+
+    viewer.subscribe_and_wait(&[channel_id], &channel).await?;
+    assert_eq!(listener.subscribed().len(), 1);
+
+    // Disconnect — should fire on_unsubscribe for the subscribed channel.
+    viewer.close().await?;
+    poll_until(|| listener.unsubscribed().len() == 1).await;
+
+    let unsubscribed = listener.unsubscribed();
+    assert_eq!(unsubscribed.len(), 1);
+    assert_eq!(unsubscribed[0].0, "viewer-1");
+    assert_eq!(unsubscribed[0].1, "/imu");
+    info!(
+        "disconnect on_unsubscribe callback validated: {:?}",
+        unsubscribed[0]
+    );
+
+    let _ = channel;
+    gw.stop().await?;
+    Ok(())
+}
+
+// ===========================================================================
 // Client publish / message data tests
 // ===========================================================================
 
