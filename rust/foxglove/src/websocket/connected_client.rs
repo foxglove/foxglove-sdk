@@ -20,7 +20,6 @@ use self::ws_protocol::server::{
     FetchAssetResponse, ParameterValues, ServiceCallFailure, Unadvertise,
 };
 
-use super::semaphore::Semaphore;
 use super::server::Server;
 use super::service::{self, CallId, ServiceId};
 use super::subscription::{Subscription, SubscriptionId};
@@ -31,6 +30,7 @@ use super::{
     AssetResponder, Capability, Client, ClientChannel, ClientChannelId, ClientId, Parameter,
     Status, StatusLevel, advertise,
 };
+use crate::remote_common::semaphore::Semaphore;
 
 mod poller;
 mod send_lossy;

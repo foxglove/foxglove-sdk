@@ -5,8 +5,8 @@ use std::sync::Arc;
 
 use tokio_tungstenite::tungstenite::Message;
 
+use crate::remote_common::semaphore::SemaphoreGuard;
 use crate::websocket::connected_client::ConnectedClient;
-use crate::websocket::semaphore::SemaphoreGuard;
 use crate::websocket::ws_protocol::server::{ServiceCallFailure, ServiceCallResponse};
 
 // Re-export all public types from the common service module.

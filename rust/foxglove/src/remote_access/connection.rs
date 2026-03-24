@@ -1,6 +1,9 @@
 use std::{
     collections::HashMap,
-    sync::{Arc, OnceLock, Weak},
+    sync::{
+        Arc, OnceLock, Weak,
+        atomic::{AtomicU8, Ordering},
+    },
     time::Duration,
 };
 
@@ -24,6 +27,7 @@ use crate::{
             RemoteAccessSession, WS_PROTOCOL_TOPIC,
         },
     },
+    remote_common::service::{Service, ServiceMap},
 };
 
 type Result<T> = std::result::Result<T, Box<RemoteAccessError>>;
@@ -31,10 +35,46 @@ type Result<T> = std::result::Result<T, Box<RemoteAccessError>>;
 const AUTH_RETRY_PERIOD: Duration = Duration::from_secs(30);
 const DEFAULT_MESSAGE_BACKLOG_SIZE: usize = 1024;
 
+/// The status of the remote access gateway connection.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u8)]
+pub enum ConnectionStatus {
+    /// The gateway is attempting to establish or re-establish a connection.
+    Connecting = 0,
+    /// The gateway is connected and handling events.
+    Connected = 1,
+    /// The gateway is shutting down. Listener callbacks may still be in progress.
+    ShuttingDown = 2,
+    /// The gateway has been shut down. No further listener callbacks will be invoked.
+    Shutdown = 3,
+}
+
+impl std::fmt::Display for ConnectionStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            ConnectionStatus::Connecting => "connecting",
+            ConnectionStatus::Connected => "connected",
+            ConnectionStatus::ShuttingDown => "shutting down",
+            ConnectionStatus::Shutdown => "shutdown",
+        })
+    }
+}
+
+impl ConnectionStatus {
+    fn from_u8(value: u8) -> Self {
+        match value {
+            0 => Self::Connecting,
+            1 => Self::Connected,
+            2 => Self::ShuttingDown,
+            3 => Self::Shutdown,
+            _ => unreachable!("invalid ConnectionStatus value: {value}"),
+        }
+    }
+}
+
 /// Options for the remote access connection.
 ///
 /// This should be constructed from the [`crate::remote_access::Gateway`] builder.
-#[derive(Clone)]
 pub(crate) struct RemoteAccessConnectionOptions {
     pub name: Option<String>,
     pub device_token: String,
@@ -43,6 +83,7 @@ pub(crate) struct RemoteAccessConnectionOptions {
     pub listener: Option<Arc<dyn super::Listener>>,
     pub capabilities: Vec<Capability>,
     pub supported_encodings: Option<IndexSet<String>>,
+    pub services: HashMap<String, Service>,
     pub runtime: Option<Handle>,
     pub channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     pub server_info: Option<HashMap<String, String>>,
@@ -62,6 +103,7 @@ impl Default for RemoteAccessConnectionOptions {
             listener: None,
             capabilities: Vec::new(),
             supported_encodings: None,
+            services: HashMap::new(),
             runtime: None,
             channel_filter: None,
             server_info: None,
@@ -83,6 +125,7 @@ impl std::fmt::Debug for RemoteAccessConnectionOptions {
             .field("has_listener", &self.listener.is_some())
             .field("capabilities", &self.capabilities)
             .field("supported_encodings", &self.supported_encodings)
+            .field("num_services", &self.services.len())
             .field("has_runtime", &self.runtime.is_some())
             .field("has_channel_filter", &self.channel_filter.is_some())
             .field("server_info", &self.server_info)
@@ -96,18 +139,40 @@ impl std::fmt::Debug for RemoteAccessConnectionOptions {
 /// and holds the options and other state that outlive a session.
 pub(crate) struct RemoteAccessConnection {
     options: RemoteAccessConnectionOptions,
+    services: Arc<ServiceMap>,
     credentials_provider: OnceCell<CredentialsProvider>,
+    status: AtomicU8,
     /// The remote access session ID, received from the API server on first successful credential fetch.
     /// Set once and reused for all subsequent requests.
     remote_access_session_id: OnceLock<String>,
 }
 
 impl RemoteAccessConnection {
-    pub fn new(options: RemoteAccessConnectionOptions) -> Self {
+    pub fn new(mut options: RemoteAccessConnectionOptions) -> Self {
+        let services = Arc::new(ServiceMap::from_iter(
+            options.services.drain().map(|(_, s)| s),
+        ));
         Self {
             options,
+            services,
             credentials_provider: OnceCell::new(),
+            status: AtomicU8::new(ConnectionStatus::Connecting as u8),
             remote_access_session_id: OnceLock::new(),
+        }
+    }
+
+    /// Returns the current connection status.
+    pub fn status(&self) -> ConnectionStatus {
+        ConnectionStatus::from_u8(self.status.load(Ordering::Relaxed))
+    }
+
+    /// Update the connection status, notifying the listener if it changed.
+    fn set_status(&self, status: ConnectionStatus) {
+        let prev = self.status.swap(status as u8, Ordering::Relaxed);
+        if prev != status as u8
+            && let Some(listener) = &self.options.listener
+        {
+            listener.on_connection_status_changed(status);
         }
     }
 
@@ -187,16 +252,13 @@ impl RemoteAccessConnection {
                     info!(remote_access_session_id, "connected to LiveKit server");
                     (
                         Arc::new(RemoteAccessSession::new(
+                            &self.options,
                             room,
-                            self.options.context.clone(),
-                            self.options.channel_filter.clone(),
-                            self.options.listener.clone(),
-                            self.options.capabilities.clone(),
-                            self.options.cancellation_token.clone(),
                             message_backlog_size,
                             self.options
                                 .pending_client_reader_timeout
                                 .unwrap_or(DEFAULT_PENDING_CLIENT_READER_TIMEOUT),
+                            self.services.clone(),
                         )),
                         room_events,
                     )
@@ -229,9 +291,19 @@ impl RemoteAccessConnection {
     ///
     /// If disconnected from the room, reset all state and attempt to restart the run loop.
     async fn run_until_cancelled(self: Arc<Self>) {
+        // Notify the listener of the initial Connecting status. The atomic is already
+        // initialized to Connecting, so call the listener directly rather than going
+        // through set_status (which would see no change and skip the notification).
+        if let Some(listener) = &self.options.listener {
+            listener.on_connection_status_changed(ConnectionStatus::Connecting);
+        }
         while !self.cancellation_token().is_cancelled() {
             self.run().await;
         }
+        // Always emit ShuttingDown before Shutdown. If run() already set ShuttingDown
+        // (e.g. cancelled while connected), this is a no-op since set_status deduplicates.
+        self.set_status(ConnectionStatus::ShuttingDown);
+        self.set_status(ConnectionStatus::Shutdown);
     }
 
     /// Connect to the room, and handle all events until cancelled or disconnected from the room.
@@ -242,6 +314,7 @@ impl RemoteAccessConnection {
             return;
         };
 
+        self.set_status(ConnectionStatus::Connected);
         let remote_access_session_id = self.remote_access_session_id();
 
         // Register the session as a sink so it receives channel notifications.
@@ -281,9 +354,18 @@ impl RemoteAccessConnection {
             _ = Self::log_periodic_stats(session.clone(), remote_access_session_id.unwrap_or("").to_owned()) => {},
         }
 
+        // Update status before cleanup so callers don't see Connected during teardown.
+        if self.cancellation_token().is_cancelled() {
+            self.set_status(ConnectionStatus::ShuttingDown);
+        } else {
+            self.set_status(ConnectionStatus::Connecting);
+        }
+
         // Remove the sink before closing the room.
         context.remove_sink(session.sink_id());
         sender_task.abort();
+        // Wait for the sender task to fully stop so no callbacks are in flight.
+        let _ = sender_task.await;
 
         info!(remote_access_session_id, "disconnecting from room");
         // Close the room (disconnect) on shutdown.

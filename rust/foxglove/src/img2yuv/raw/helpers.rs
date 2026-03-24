@@ -94,6 +94,48 @@ pub(crate) fn yuv422_to_yuv420<T: Yuv420Buffer>(
     conv(&mut wrapped(dst), &src).map_err(Error::ConvertToYuv420)
 }
 
+/// Converts a semi-planar NV12 image to a YUV 4:2:0 planar image.
+///
+/// NV12 layout: a full Y plane (stride × height), followed by an interleaved UV plane
+/// (stride × height/2) where U and V values alternate: U0, V0, U1, V1, ...
+pub(crate) fn nv12_to_yuv420<T: Yuv420Buffer>(
+    dst: &mut T,
+    data: &[u8],
+    stride: u32,
+) -> Result<(), Error> {
+    let (width, height) = dst.dimensions();
+    let (y_stride, u_stride, v_stride) = dst.yuv_strides();
+    let (y_dst, u_dst, v_dst) = dst.yuv_mut();
+
+    let stride = stride as usize;
+    let width = width as usize;
+    let height = height as usize;
+
+    // Copy Y plane, handling stride differences.
+    for row in 0..height {
+        let src_offset = row * stride;
+        let dst_offset = row * y_stride as usize;
+        y_dst[dst_offset..dst_offset + width]
+            .copy_from_slice(&data[src_offset..src_offset + width]);
+    }
+
+    // De-interleave UV plane into separate U and V planes.
+    let uv_src = &data[stride * height..];
+    let uv_height = height / 2;
+    let uv_width = width / 2;
+    for row in 0..uv_height {
+        let src_offset = row * stride;
+        let u_dst_offset = row * u_stride as usize;
+        let v_dst_offset = row * v_stride as usize;
+        for col in 0..uv_width {
+            u_dst[u_dst_offset + col] = uv_src[src_offset + col * 2];
+            v_dst[v_dst_offset + col] = uv_src[src_offset + col * 2 + 1];
+        }
+    }
+
+    Ok(())
+}
+
 /// Converts a mono image, represented as floating point luma values on the range [0.0, 1.0], to a
 /// YUV 4:2:0 planar image.
 ///

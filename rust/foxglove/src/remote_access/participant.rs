@@ -7,8 +7,11 @@ use livekit::{ByteStreamWriter, StreamWriter, id::ParticipantIdentity};
 
 use crate::remote_access::RemoteAccessError;
 use crate::remote_common::ClientId;
+use crate::remote_common::semaphore::Semaphore;
 
 type Result<T> = std::result::Result<T, Box<RemoteAccessError>>;
+
+const DEFAULT_SERVICE_CALLS_PER_PARTICIPANT: usize = 32;
 
 /// A participant in the remote access session.
 ///
@@ -22,6 +25,8 @@ pub(crate) struct Participant {
     participant_id: ParticipantIdentity,
     /// A reliable, ordered stream to send messages to just this participant
     writer: ParticipantWriter,
+    /// Limits concurrent service calls from this participant.
+    service_call_sem: Semaphore,
 }
 
 /// A per-channel writer for data plane messages.
@@ -89,12 +94,18 @@ impl Participant {
             client_id: ClientId::next(),
             participant_id: identity,
             writer,
+            service_call_sem: Semaphore::new(DEFAULT_SERVICE_CALLS_PER_PARTICIPANT),
         }
     }
 
     /// Returns the locally-significant client ID.
     pub fn client_id(&self) -> ClientId {
         self.client_id
+    }
+
+    /// Returns the service call semaphore for this participant.
+    pub fn service_call_sem(&self) -> &Semaphore {
+        &self.service_call_sem
     }
 
     /// Returns the participant's identity.

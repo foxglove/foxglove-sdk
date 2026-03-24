@@ -90,6 +90,14 @@ pub enum Error {
         /// The width of the image.
         width: u32,
     },
+    /// Both dimensions of the NV12 image must be even.
+    #[error("nv12 image dimensions must be even: {width}x{height}")]
+    Nv12DimensionsMustBeEven {
+        /// The width of the image.
+        width: u32,
+        /// The height of the image.
+        height: u32,
+    },
     /// Failed to read the image dimensions.
     #[error("failed to read image dimensions: {0}")]
     ReadDimensions(#[source] image::ImageError),

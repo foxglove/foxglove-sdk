@@ -3,7 +3,7 @@ use std::future::Future;
 use std::sync::Arc;
 
 use super::Client;
-use super::semaphore::SemaphoreGuard;
+use crate::remote_common::semaphore::SemaphoreGuard;
 
 /// A handler to respond to fetch asset requests.
 ///

@@ -8,13 +8,20 @@ mod credentials_provider;
 mod gateway;
 mod listener;
 mod participant;
+mod service;
 mod session;
 mod session_state;
 
 pub use capability::Capability;
 pub use client::Client;
+pub use connection::ConnectionStatus;
 pub use gateway::{Gateway, GatewayHandle};
 pub use listener::Listener;
+
+// Re-export service types so Gateway::services() callers can construct services.
+pub use crate::remote_common::service::{
+    Handler, Request, Responder, Service, ServiceSchema, SyncHandler,
+};
 
 use thiserror::Error;
 
