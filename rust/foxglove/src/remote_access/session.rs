@@ -734,6 +734,10 @@ impl RemoteAccessSession {
         true
     }
 
+    /// Subscribes the participant to the requested channels and notifies the listener.
+    ///
+    /// Channels the participant is already subscribed to are silently skipped.
+    /// The context is notified only for channels gaining their first subscriber.
     fn handle_client_subscribe(
         self: &Arc<Self>,
         participant: &Arc<Participant>,
@@ -805,6 +809,10 @@ impl RemoteAccessSession {
         }
     }
 
+    /// Unsubscribes the participant from the requested channels and notifies the listener.
+    ///
+    /// Channels the participant was not subscribed to are silently skipped.
+    /// The context is notified only for channels losing their last subscriber.
     fn handle_client_unsubscribe(
         self: &Arc<Self>,
         participant: &Participant,
@@ -1034,6 +1042,10 @@ impl RemoteAccessSession {
         true
     }
 
+    /// Dispatches a client `MessageData` message to the listener.
+    ///
+    /// Looks up the client-advertised channel by participant and channel ID,
+    /// then invokes `on_message_data` if a listener is configured.
     fn handle_client_message_data(
         &self,
         participant: &Arc<Participant>,
@@ -1137,7 +1149,7 @@ impl RemoteAccessSession {
 
         self.pending_client_readers.lock().remove(participant_id);
 
-        // Collect subscribed channel IDs before removal so we can fire on_unsubscribe callbacks.
+        // Collect subscribed channel IDs before removal so we can fire `on_unsubscribe` callbacks.
         let subscribed_channel_ids = self.state.read().subscribed_channel_ids(participant_id);
 
         let removed = self.state.write().remove_participant(participant_id);
