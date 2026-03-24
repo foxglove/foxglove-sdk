@@ -3,8 +3,8 @@
 #include <foxglove-c/foxglove-c.h>
 #include <foxglove/arena.hpp>
 #include <foxglove/error.hpp>
+#include <foxglove/messages.hpp>
 #include <foxglove/schema.hpp>
-#include <foxglove/schemas.hpp>
 #ifndef __wasm32__
 #include <foxglove/context.hpp>
 #endif
@@ -12,7 +12,7 @@
 #include <cstring>
 #include <optional>
 
-namespace foxglove::schemas {
+namespace foxglove::messages {
 
 void arrowPrimitiveToC(foxglove_arrow_primitive& dest, const ArrowPrimitive& src, Arena& arena);
 void cameraCalibrationToC(
@@ -2848,4 +2848,4 @@ Schema VoxelGrid::schema() {
   return result;
 }
 
-}  // namespace foxglove::schemas
+}  // namespace foxglove::messages

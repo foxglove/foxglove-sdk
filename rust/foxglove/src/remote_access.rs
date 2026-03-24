@@ -14,6 +14,7 @@ mod session_state;
 
 pub use capability::Capability;
 pub use client::Client;
+pub use connection::ConnectionStatus;
 pub use gateway::{Gateway, GatewayHandle};
 pub use listener::Listener;
 

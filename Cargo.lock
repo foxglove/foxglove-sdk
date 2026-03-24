@@ -199,9 +199,9 @@ checksum = "c08606f8c3cbf4ce6ec8e28fb0014a2c086708fe954eaa885384a6165172e7e8"
 
 [[package]]
 name = "aws-lc-fips-sys"
-version = "0.13.12"
+version = "0.13.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5ed8cd42adddefbdb8507fb7443fa9b666631078616b78f70ed22117b5c27d90"
+checksum = "f8bce4948d2520386c6d92a6ea2d472300257702242e5a1d01d6add52bd2e7c1"
 dependencies = [
  "bindgen",
  "cc",
@@ -213,9 +213,9 @@ dependencies = [
 
 [[package]]
 name = "aws-lc-rs"
-version = "1.16.1"
+version = "1.16.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "94bffc006df10ac2a68c83692d734a465f8ee6c5b384d8545a636f81d858f4bf"
+checksum = "a054912289d18629dc78375ba2c3726a3afe3ff71b4edba9dedfca0e3446d1fc"
 dependencies = [
  "aws-lc-fips-sys",
  "aws-lc-sys",
@@ -225,9 +225,9 @@ dependencies = [
 
 [[package]]
 name = "aws-lc-sys"
-version = "0.38.0"
+version = "0.39.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4321e568ed89bb5a7d291a7f37997c2c0df89809d7b6d12062c81ddb54aa782e"
+checksum = "1fa7e52a4c5c547c741610a2c6f123f3881e409b714cd27e6798ef020c514f0a"
 dependencies = [
  "bindgen",
  "cc",
@@ -1184,7 +1184,7 @@ name = "example_channelless"
 version = "0.0.0"
 dependencies = [
  "env_logger",
- "foxglove 0.20.0",
+ "foxglove 0.21.0",
  "mcap 0.24.0",
  "schemars 1.0.4",
  "serde",
@@ -1196,7 +1196,7 @@ version = "0.0.0"
 dependencies = [
  "clap",
  "env_logger",
- "foxglove 0.20.0",
+ "foxglove 0.21.0",
  "serde_json",
  "tokio",
  "tokio-util",
@@ -1209,7 +1209,7 @@ dependencies = [
  "clap",
  "ctrlc",
  "env_logger",
- "foxglove 0.20.0",
+ "foxglove 0.21.0",
  "schemars 1.0.4",
  "serde",
 ]
@@ -1220,7 +1220,7 @@ version = "0.0.0"
 dependencies = [
  "ctrlc",
  "env_logger",
- "foxglove 0.20.0",
+ "foxglove 0.21.0",
 ]
 
 [[package]]
@@ -1229,7 +1229,7 @@ version = "0.0.0"
 dependencies = [
  "clap",
  "env_logger",
- "foxglove 0.20.0",
+ "foxglove 0.21.0",
  "tokio",
  "tokio-util",
 ]
@@ -1238,7 +1238,7 @@ dependencies = [
 name = "example_prost"
 version = "0.0.0"
 dependencies = [
- "foxglove 0.20.0",
+ "foxglove 0.21.0",
  "prost 0.14.3",
  "prost-build 0.14.3",
 ]
@@ -1249,7 +1249,7 @@ version = "0.0.0"
 dependencies = [
  "ctrlc",
  "env_logger",
- "foxglove 0.20.0",
+ "foxglove 0.21.0",
 ]
 
 [[package]]
@@ -1258,9 +1258,10 @@ version = "0.0.0"
 dependencies = [
  "clap",
  "env_logger",
- "foxglove 0.20.0",
+ "foxglove 0.21.0",
  "serde_json",
  "tokio",
+ "tracing",
 ]
 
 [[package]]
@@ -1269,7 +1270,7 @@ version = "0.0.0"
 dependencies = [
  "axum",
  "chrono",
- "foxglove 0.20.0",
+ "foxglove 0.21.0",
  "futures",
  "remote_data_loader_backend_conformance",
  "serde",
@@ -1281,12 +1282,12 @@ dependencies = [
 
 [[package]]
 name = "example_structured_logging"
-version = "0.20.0"
+version = "0.21.0"
 dependencies = [
  "bytes",
  "chrono",
  "env_logger",
- "foxglove 0.20.0",
+ "foxglove 0.21.0",
  "schemars 1.0.4",
  "serde",
  "serde_json",
@@ -1298,7 +1299,7 @@ version = "0.0.0"
 dependencies = [
  "clap",
  "env_logger",
- "foxglove 0.20.0",
+ "foxglove 0.21.0",
  "quaternion",
  "tokio",
 ]
@@ -1310,7 +1311,7 @@ dependencies = [
  "clap",
  "ctrlc",
  "env_logger",
- "foxglove 0.20.0",
+ "foxglove 0.21.0",
 ]
 
 [[package]]
@@ -1319,7 +1320,7 @@ version = "0.0.0"
 dependencies = [
  "clap",
  "env_logger",
- "foxglove 0.20.0",
+ "foxglove 0.21.0",
  "tokio",
 ]
 
@@ -1331,7 +1332,7 @@ dependencies = [
  "bytes",
  "clap",
  "env_logger",
- "foxglove 0.20.0",
+ "foxglove 0.21.0",
  "futures",
  "parking_lot",
  "schemars 1.0.4",
@@ -1351,7 +1352,7 @@ dependencies = [
  "clap",
  "ctrlc",
  "env_logger",
- "foxglove 0.20.0",
+ "foxglove 0.21.0",
  "mcap 0.24.0",
  "tracing",
 ]
@@ -1496,7 +1497,7 @@ dependencies = [
 
 [[package]]
 name = "foxglove"
-version = "0.20.0"
+version = "0.21.0"
 dependencies = [
  "arc-swap",
  "assert_matches",
@@ -1509,7 +1510,7 @@ dependencies = [
  "chrono",
  "delegate",
  "flume",
- "foxglove_derive 0.20.0",
+ "foxglove_derive 0.21.0",
  "futures",
  "futures-util",
  "hexdump",
@@ -1550,11 +1551,11 @@ dependencies = [
 
 [[package]]
 name = "foxglove-sdk-python"
-version = "0.20.0"
+version = "0.21.0"
 dependencies = [
  "base64 0.22.1",
  "bytes",
- "foxglove 0.20.0",
+ "foxglove 0.21.0",
  "log",
  "maplit",
  "prost-types 0.13.5",
@@ -1570,13 +1571,13 @@ dependencies = [
 
 [[package]]
 name = "foxglove_c"
-version = "0.20.0"
+version = "0.21.0"
 dependencies = [
  "base64 0.22.1",
  "bitflags",
  "cbindgen",
  "env_logger",
- "foxglove 0.20.0",
+ "foxglove 0.21.0",
  "log",
  "maplit",
  "mcap 0.24.0",
@@ -1609,11 +1610,11 @@ dependencies = [
 
 [[package]]
 name = "foxglove_derive"
-version = "0.20.0"
+version = "0.21.0"
 dependencies = [
  "bytes",
  "chrono",
- "foxglove 0.20.0",
+ "foxglove 0.21.0",
  "proc-macro2",
  "prost 0.14.3",
  "prost-reflect",
@@ -3795,7 +3796,7 @@ dependencies = [
  "anyhow",
  "axum",
  "dotenvy",
- "foxglove 0.20.0",
+ "foxglove 0.21.0",
  "futures-util",
  "livekit",
  "livekit-api",
@@ -3812,7 +3813,7 @@ dependencies = [
 name = "remote_data_loader_backend_conformance"
 version = "0.0.0"
 dependencies = [
- "foxglove 0.20.0",
+ "foxglove 0.21.0",
  "jsonschema",
  "libtest-mimic",
  "mcap 0.24.0",
@@ -4012,7 +4013,7 @@ dependencies = [
  "once_cell",
  "ring",
  "rustls-pki-types",
- "rustls-webpki 0.103.4",
+ "rustls-webpki 0.103.10",
  "subtle",
  "zeroize",
 ]
@@ -4074,7 +4075,7 @@ dependencies = [
  "rustls 0.23.31",
  "rustls-native-certs 0.8.1",
  "rustls-platform-verifier-android",
- "rustls-webpki 0.103.4",
+ "rustls-webpki 0.103.10",
  "security-framework 3.6.0",
  "security-framework-sys",
  "webpki-root-certs",
@@ -4099,9 +4100,9 @@ dependencies = [
 
 [[package]]
 name = "rustls-webpki"
-version = "0.103.4"
+version = "0.103.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0a17884ae0c1b773f1ccd2bd4a8c72f16da897310a98b0e84bf349ad5ead92fc"
+checksum = "df33b2b81ac578cabaf06b89b0631153a3f416b0a886e8a7a1707fb51abbd1ef"
 dependencies = [
  "aws-lc-rs",
  "ring",

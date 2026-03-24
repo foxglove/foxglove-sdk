@@ -3,8 +3,8 @@
 #include <foxglove-c/foxglove-c.h>
 #include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
+#include <foxglove/messages.hpp>
 #include <foxglove/schema.hpp>
-#include <foxglove/schemas.hpp>
 
 #include <cstdint>
 #include <functional>
@@ -209,7 +209,7 @@ public:
 private:
   explicit RawChannel(const foxglove_channel* channel);
 
-  schemas::ChannelUniquePtr impl_;
+  messages::ChannelUniquePtr impl_;
 };
 
 }  // namespace foxglove

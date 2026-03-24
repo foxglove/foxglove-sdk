@@ -28,6 +28,16 @@
 #   # Packet reordering (common trigger for WebRTC jitter buffer issues)
 #   NETEM_ARGS="delay 50ms 10ms reorder 25% loss 1%" docker compose -f docker-compose.yaml -f docker-compose.netem.yml up -d --wait
 #
+# ## Per-link mode
+#
+# Apply separate impairment profiles to different destination IPs using classful
+# qdiscs (HTB root + netem leaf classes). Enabled automatically when any
+# NETEM_LINK_<NAME>_DST env var is set. See scripts/container/netem_setup.py for details.
+#
+# Per-link mode requires a network overlay (e.g. docker-compose.netem-livekit.yml)
+# that creates a bridge network with static IPs for the containers you want to
+# impair independently. The NETEM_LINK_*_DST env vars must match those IPs.
+#
 # Requirements:
 #   - Linux host: works natively.
 #   - macOS host: requires Docker Desktop >= 4.27 (sch_netem kernel module fix).
@@ -39,12 +49,15 @@ services:
       - "9999:9999/udp" # UDP echo for netem packet loss testing
 
   netem:
-    image: alpine:3
+    image: python:3-alpine
     network_mode: "service:livekit"
     cap_add:
       - NET_ADMIN
     environment:
       NETEM_ARGS: "${NETEM_ARGS:-delay 80ms 20ms loss 2%}"
+    volumes:
+      - ./scripts/container/netem_setup.py:/netem_setup.py:ro
+      - ./scripts/container/netem_impair.py:/netem_impair.py:ro
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
@@ -52,14 +65,9 @@ services:
         # Start a UDP echo server for packet loss testing. Each received
         # datagram is echoed back through the netem-shaped egress path.
         socat UDP-RECVFROM:9999,fork EXEC:/bin/cat &
-        # Apply netem to all interfaces. This covers both Docker (eth0)
-        # and Podman rootless/pasta (lo) port forwarding paths.
-        # Use "replace" instead of "add" to handle pre-existing qdiscs.
-        for iface in $$(ls /sys/class/net/); do
-          tc qdisc replace dev "$$iface" root netem $${NETEM_ARGS} 2>/dev/null && \
-            echo "netem applied to $$iface: $${NETEM_ARGS}"
-        done
-        tc -s qdisc show
+        # Apply netem rules (flat or per-link depending on env vars).
+        # Exit on failure so a broken tc hierarchy doesn't silently persist.
+        python3 /netem_setup.py || exit 1
         # Keep the container alive so the qdisc rules persist.
         exec sleep infinity
     healthcheck:

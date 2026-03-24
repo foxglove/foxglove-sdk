@@ -167,10 +167,13 @@ impl ViewerConnection {
         let outer_deadline = tokio::time::Instant::now() + timeout;
         loop {
             let token = livekit_token::generate_token(room_name, viewer_identity)?;
-            let (room, mut events) =
-                Room::connect(livekit_token::LIVEKIT_URL, &token, RoomOptions::default())
-                    .await
-                    .context("viewer failed to connect to LiveKit")?;
+            let (room, mut events) = Room::connect(
+                &livekit_token::livekit_url(),
+                &token,
+                RoomOptions::default(),
+            )
+            .await
+            .context("viewer failed to connect to LiveKit")?;
             info!("{viewer_identity} connected to room, waiting for byte stream");
 
             // Wait for a ByteStreamOpened event. Use a shorter inner timeout so
@@ -692,10 +695,15 @@ impl TestGateway {
 
 /// Polls `cond` until it returns true, or panics after [`EVENT_TIMEOUT`].
 pub async fn poll_until(cond: impl Fn() -> bool) {
-    let deadline = tokio::time::Instant::now() + EVENT_TIMEOUT;
+    poll_until_timeout(cond, EVENT_TIMEOUT).await;
+}
+
+/// Polls `cond` until it returns true, or panics after `timeout`.
+pub async fn poll_until_timeout(cond: impl Fn() -> bool, timeout: Duration) {
+    let deadline = tokio::time::Instant::now() + timeout;
     while !cond() {
         if tokio::time::Instant::now() >= deadline {
-            panic!("poll_until condition not met within {EVENT_TIMEOUT:?}");
+            panic!("poll_until condition not met within {timeout:?}");
         }
         tokio::time::sleep(POLL_INTERVAL).await;
     }

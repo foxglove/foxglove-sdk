@@ -2,7 +2,8 @@
 #include <foxglove/messages.hpp>
 #include <foxglove/server.hpp>
 
-#include <opencv2/opencv.hpp>
+#include <opencv2/core/mat.hpp>
+#include <opencv2/videoio.hpp>
 
 #include <chrono>
 #include <cstring>
