@@ -130,7 +130,7 @@ fn encode_binary_message<'a>(message: &impl BinaryMessage<'a>) -> Bytes {
     Bytes::from(buf)
 }
 
-fn build_advertise_services_msg(services: &[Arc<Service>]) -> Option<AdvertiseServices> {
+fn build_advertise_services_msg(services: &[Arc<Service>]) -> Option<AdvertiseServices<'_>> {
     if services.is_empty() {
         return None;
     }
