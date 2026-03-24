@@ -94,13 +94,6 @@ fn encode_binary_message<'a>(message: &impl BinaryMessage<'a>) -> Bytes {
     Bytes::from(buf)
 }
 
-/// RemoteAccessSession tracks a connected LiveKit session (the Room)
-/// and any state that is specific to that session.
-/// We discard this state if we close or lose the connection.
-/// [`super::connection::RemoteAccessConnection`] manages the current connected session (if any)
-///
-/// The Sink impl is at the RemoteAccessSession level (not per-participant)
-/// so that it can deliver messages via multi-cast to multiple participants.
 /// Wrapper around a LiveKit `Room` that supports a test variant without a real connection.
 ///
 /// Production code uses `RoomHandle::Livekit(room)`. Tests that exercise message handling
@@ -126,6 +119,13 @@ impl RoomHandle {
     }
 }
 
+/// Tracks a connected LiveKit session (the Room) and any state that is specific to that session.
+///
+/// We discard this state if we close or lose the connection.
+/// [`super::connection::RemoteAccessConnection`] manages the current connected session (if any).
+///
+/// The Sink impl is at the RemoteAccessSession level (not per-participant)
+/// so that it can deliver messages via multi-cast to multiple participants.
 pub(crate) struct RemoteAccessSession {
     sink_id: SinkId,
     room: RoomHandle,
@@ -1506,16 +1506,19 @@ mod tests {
     }
 
     /// Creates a test session with a recording listener.
+    ///
+    /// Returns the session and the `Context` that must be kept alive for the session's lifetime.
     fn make_test_session(
         listener: &Arc<RecordingListener>,
         capabilities: Vec<Capability>,
-    ) -> Arc<RemoteAccessSession> {
+    ) -> (Arc<RemoteAccessSession>, Arc<Context>) {
         let ctx = Context::new();
-        Arc::new(RemoteAccessSession::new_for_test(
+        let session = Arc::new(RemoteAccessSession::new_for_test(
             Arc::downgrade(&ctx),
             Some(listener.clone()),
             capabilities,
-        ))
+        ));
+        (session, ctx)
     }
 
     fn make_channel_for_session(topic: &str) -> Arc<RawChannel> {
@@ -1551,7 +1554,7 @@ mod tests {
     #[test]
     fn listener_on_subscribe_fires_for_subscribed_channels() {
         let listener = RecordingListener::new();
-        let session = make_test_session(&listener, vec![]);
+        let (session, _ctx) = make_test_session(&listener, vec![]);
         let (_identity, participant, channel_id) =
             setup_session_with_channel(&session, "alice", "/camera");
 
@@ -1576,7 +1579,7 @@ mod tests {
     #[test]
     fn listener_on_subscribe_skips_duplicate() {
         let listener = RecordingListener::new();
-        let session = make_test_session(&listener, vec![]);
+        let (session, _ctx) = make_test_session(&listener, vec![]);
         let (_identity, participant, channel_id) =
             setup_session_with_channel(&session, "alice", "/camera");
 
@@ -1600,7 +1603,7 @@ mod tests {
     #[test]
     fn listener_on_unsubscribe_fires_for_unsubscribed_channels() {
         let listener = RecordingListener::new();
-        let session = make_test_session(&listener, vec![]);
+        let (session, _ctx) = make_test_session(&listener, vec![]);
         let (_identity, participant, channel_id) =
             setup_session_with_channel(&session, "alice", "/lidar");
 
@@ -1635,7 +1638,7 @@ mod tests {
     #[test]
     fn listener_on_unsubscribe_skips_not_subscribed() {
         let listener = RecordingListener::new();
-        let session = make_test_session(&listener, vec![]);
+        let (session, _ctx) = make_test_session(&listener, vec![]);
         let (_identity, participant, channel_id) =
             setup_session_with_channel(&session, "alice", "/lidar");
 
@@ -1657,7 +1660,7 @@ mod tests {
     #[test]
     fn listener_on_unsubscribe_fires_on_disconnect() {
         let listener = RecordingListener::new();
-        let session = make_test_session(&listener, vec![]);
+        let (session, _ctx) = make_test_session(&listener, vec![]);
         let (identity, participant, channel_id) =
             setup_session_with_channel(&session, "alice", "/imu");
 
@@ -1686,7 +1689,7 @@ mod tests {
     #[test]
     fn listener_on_message_data_fires_for_advertised_client_channel() {
         let listener = RecordingListener::new();
-        let session = make_test_session(&listener, vec![Capability::ClientPublish]);
+        let (session, _ctx) = make_test_session(&listener, vec![Capability::ClientPublish]);
         let (identity, _participant, _channel_id) =
             setup_session_with_channel(&session, "alice", "/server_channel");
 
@@ -1714,7 +1717,7 @@ mod tests {
     #[test]
     fn listener_full_lifecycle() {
         let listener = RecordingListener::new();
-        let session = make_test_session(&listener, vec![Capability::ClientPublish]);
+        let (session, _ctx) = make_test_session(&listener, vec![Capability::ClientPublish]);
         let (identity, participant, channel_id) =
             setup_session_with_channel(&session, "alice", "/camera");
 
