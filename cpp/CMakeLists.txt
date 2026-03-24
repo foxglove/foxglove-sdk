@@ -135,7 +135,8 @@ if (STRICT)
   endif()
 endif()
 
-if(DEFINED CLANG_TIDY)
+option(CLANG_TIDY "Run clang-tidy static analysis" OFF)
+if(CLANG_TIDY)
   find_program(CLANG_TIDY_EXE NAMES clang-tidy REQUIRED)
   message(STATUS "Found clang-tidy: ${CLANG_TIDY_EXE}")
   set(CMAKE_CXX_CLANG_TIDY "${CLANG_TIDY_EXE}")
@@ -189,6 +190,8 @@ file(GLOB_RECURSE foxglove_cpp_srcs CONFIGURE_DEPENDS
 list(REMOVE_ITEM foxglove_cpp_srcs
     "${CMAKE_CURRENT_SOURCE_DIR}/foxglove/include/foxglove/messages.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/foxglove/src/messages.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/foxglove/include/foxglove/remote_access.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/foxglove/src/remote_access.cpp"
 )
 
 add_library(foxglove_cpp_obj OBJECT "${foxglove_cpp_srcs}")
@@ -207,6 +210,50 @@ target_link_libraries(foxglove_cpp_shared PUBLIC foxglove_cpp_obj foxglove_gener
 target_link_libraries(foxglove_cpp_shared PRIVATE foxglove-shared)
 
 
+### Remote Access (optional)
+
+option(FOXGLOVE_BUILD_REMOTE_ACCESS "Build the remote access gateway library" OFF)
+
+if(FOXGLOVE_BUILD_REMOTE_ACCESS)
+  corrosion_import_crate(
+    MANIFEST_PATH ../c/ra/Cargo.toml
+    CRATES foxglove_c_ra
+    FLAGS ${SANITIZER_CARGO_FLAGS}
+  )
+  add_library(foxglove_ra_cpp_obj OBJECT
+    "foxglove/include/foxglove/remote_access.hpp"
+    "foxglove/src/remote_access.cpp"
+  )
+  set_property(TARGET foxglove_ra_cpp_obj PROPERTY POSITION_INDEPENDENT_CODE True)
+  set_property(TARGET foxglove_ra_cpp_obj PROPERTY CXX_STANDARD 17)
+  set_property(TARGET foxglove_ra_cpp_obj PROPERTY CXX_STANDARD_REQUIRED True)
+  target_include_directories(foxglove_ra_cpp_obj PUBLIC
+    foxglove/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/../c/include
+  )
+  target_compile_options(foxglove_ra_cpp_obj PUBLIC ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
+  target_link_options(foxglove_ra_cpp_obj PUBLIC ${SANITIZER_LINK_OPTIONS})
+
+  add_library(foxglove_ra_cpp_shared SHARED)
+  target_compile_definitions(foxglove_ra_cpp_shared PUBLIC FOXGLOVE_REMOTE_ACCESS)
+  target_link_libraries(foxglove_ra_cpp_shared PUBLIC foxglove_cpp_obj foxglove_generated_obj foxglove_ra_cpp_obj)
+  target_link_libraries(foxglove_ra_cpp_shared PUBLIC foxglove_ra-shared)
+
+  add_executable(example_remote_access examples/remote-access/src/main.cpp)
+  set_property(TARGET example_remote_access PROPERTY CXX_STANDARD 17)
+  set_property(TARGET example_remote_access PROPERTY CXX_STANDARD_REQUIRED True)
+  target_compile_options(example_remote_access PUBLIC ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
+  target_link_options(example_remote_access PUBLIC ${SANITIZER_LINK_OPTIONS})
+  target_link_libraries(example_remote_access foxglove_ra_cpp_shared)
+  # Exclude generated headers (messages.hpp) from clang-tidy analysis to avoid
+  # diagnostics we can't fix without updating the codegen (FLE-370).
+  if(CLANG_TIDY)
+    set_property(TARGET example_remote_access PROPERTY
+      CXX_CLANG_TIDY "${CLANG_TIDY_EXE};--header-filter=foxglove/(remote_access|channel|context|error|server)")
+  endif()
+endif()
+
+
 ### Tests
 
 file(GLOB_RECURSE foxglove_test_srcs CONFIGURE_DEPENDS
@@ -218,7 +265,11 @@ set_property(TARGET tests PROPERTY CXX_STANDARD 17)
 set_property(TARGET tests PROPERTY CXX_STANDARD_REQUIRED True)
 target_compile_options(tests PUBLIC ${SANITIZER_COMPILE_OPTIONS})
 target_link_options(tests PUBLIC ${SANITIZER_LINK_OPTIONS})
-target_link_libraries(tests PRIVATE foxglove_cpp_static Catch2::Catch2WithMain nlohmann_json::nlohmann_json websockets)
+if(FOXGLOVE_BUILD_REMOTE_ACCESS)
+  target_link_libraries(tests PRIVATE foxglove_ra_cpp_shared Catch2::Catch2WithMain nlohmann_json::nlohmann_json websockets)
+else()
+  target_link_libraries(tests PRIVATE foxglove_cpp_static Catch2::Catch2WithMain nlohmann_json::nlohmann_json websockets)
+endif()
 # Suppress warnings from third-party headers by treating them as system includes.
 # We can't use SYSTEM on FetchContent_Declare due to a CMake 3.25 bug.
 get_target_property(LWS_INCLUDE_DIRS websockets INTERFACE_INCLUDE_DIRECTORIES)

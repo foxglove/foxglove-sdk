@@ -35,6 +35,7 @@ jobs:
               - '.github/workflows/c_cpp.yml'
 
   lint:
+    needs: changes
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -46,6 +47,20 @@ jobs:
       - run: make lint
         working-directory: cpp
       - run: make CLANG_TIDY=true build
+        working-directory: cpp
+
+  lint-ra:
+    needs: changes
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends clang-format-19 clang-tidy-19 \
+            gcc-14 g++-14 libglib2.0-dev libva-dev
+          echo "/usr/lib/llvm-19/bin" >> $GITHUB_PATH
+      - run: make CLANG_TIDY=true build-ra
         working-directory: cpp
 
   build:
@@ -258,6 +273,106 @@ jobs:
           path: artifacts/foxglove-${{inputs.sdk-version || github.sha}}-cpp-${{ matrix.target }}.zip
           if-no-files-found: error
 
+  build-ra:
+    needs: changes
+    if: needs.changes.outputs.build == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux (GCC 14 / libstdc++)
+          - runner: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+            cdylib_name: libfoxglove_ra.so
+            cross: false
+          - runner: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+            cdylib_name: libfoxglove_ra.so
+            cross: false
+
+          # macOS (Clang / libc++)
+          - runner: macos-15
+            target: aarch64-apple-darwin
+            cdylib_name: libfoxglove_ra.dylib
+            cross: false
+          - runner: macos-15
+            target: x86_64-apple-darwin
+            cdylib_name: libfoxglove_ra.dylib
+            cross: true
+
+          # Windows (MSVC STL / static CRT to match livekit prebuilt webrtc)
+          - runner: windows-2025
+            target: x86_64-pc-windows-msvc
+            cdylib_name: foxglove_ra.dll
+            cross: false
+          - runner: windows-2025
+            target: aarch64-pc-windows-msvc
+            cdylib_name: foxglove_ra.dll
+            cross: true
+
+    name: build-ra (${{ matrix.target }})
+    runs-on: ${{ matrix.runner }}
+
+    env:
+      CARGO_BUILD_TARGET: ${{ matrix.target }}
+
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          target: ${{ matrix.target }}
+
+      - name: Install GCC 14 (native)
+        if: runner.os == 'Linux' && !fromJson(matrix.cross)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-14 g++-14 libglib2.0-dev libva-dev
+          echo "CC=gcc-14" >> $GITHUB_ENV
+          echo "CXX=g++-14" >> $GITHUB_ENV
+      - if: contains(matrix.target, 'windows')
+        uses: ilammy/setup-nasm@v1
+      - name: Use static CRT on Windows (to match livekit prebuilt webrtc)
+        if: runner.os == 'Windows'
+        run: echo "RUSTFLAGS=-C target-feature=+crt-static" >> $env:GITHUB_ENV
+
+      - name: Build RA C library for ${{ matrix.target }}
+        run: cargo build --release
+        working-directory: c/ra
+
+      - name: Organize artifacts for zip
+        shell: bash
+        run: |
+          mkdir -p artifacts/foxglove_ra/lib
+          mkdir -p artifacts/foxglove_ra/include
+          mkdir -p artifacts/foxglove_ra/src
+          mv target/${{ matrix.target }}/release/${{ matrix.cdylib_name }} artifacts/foxglove_ra/lib/
+          cp -R c/include/foxglove-c artifacts/foxglove_ra/include/
+          cp -R cpp/foxglove/include/foxglove artifacts/foxglove_ra/include/
+          cp -R cpp/foxglove/src/* artifacts/foxglove_ra/src/
+
+      - name: Zip libraries for artifact
+        if: runner.os != 'Windows'
+        working-directory: artifacts
+        run: |
+          zip -r \
+            foxglove_ra-${{inputs.sdk-version || github.sha}}-cpp-${{ matrix.target }}.zip \
+            foxglove_ra/
+
+      - name: Zip libraries for artifact (Windows)
+        if: runner.os == 'Windows'
+        working-directory: artifacts
+        run: |
+          7z a -tzip -sse `
+            foxglove_ra-${{inputs.sdk-version || github.sha}}-cpp-${{ matrix.target }}.zip `
+            foxglove_ra/
+
+      - name: Upload shared library to artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: foxglove_ra-${{inputs.sdk-version || github.sha}}-cpp-${{ matrix.target }}.zip
+          path: artifacts/foxglove_ra-${{inputs.sdk-version || github.sha}}-cpp-${{ matrix.target }}.zip
+          if-no-files-found: error
+
   test-asan-ubsan:
     needs: changes
     if: needs.changes.outputs.build == 'true'
@@ -281,7 +396,7 @@ jobs:
   # individual matrix jobs.
   c-cpp-status:
     name: c-cpp-status
-    needs: [changes, lint, build, test-asan-ubsan]
+    needs: [changes, lint, lint-ra, build, build-ra, test-asan-ubsan]
     if: always()
     runs-on: ubuntu-latest
     steps:

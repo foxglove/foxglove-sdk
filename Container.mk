@@ -103,3 +103,15 @@ test-cpp:
 .PHONY: test-cpp-sanitize
 test-cpp-sanitize:
 	make -C cpp SANITIZE=address,undefined test
+
+.PHONY: build-cpp-ra
+build-cpp-ra:
+	make -C cpp build-ra
+
+.PHONY: test-cpp-ra
+test-cpp-ra:
+	make -C cpp test-ra
+
+.PHONY: build-cpp-ra-tidy
+build-cpp-ra-tidy:
+	make -C cpp CLANG_TIDY=true build-ra

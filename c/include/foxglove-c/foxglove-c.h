@@ -6,8 +6,8 @@
  */
 
 
-#ifndef FOXGLOVE_H
-#define FOXGLOVE_H
+#ifndef FOXGLOVE_C_H
+#define FOXGLOVE_C_H
 
 #include <stdarg.h>
 #include <stdbool.h>
@@ -26,6 +26,20 @@
  * of using the number of physical CPUs.
  */
 #define FOXGLOVE_MCAP_COMPRESSION_THREADS_DEFAULT UINT32_MAX
+#endif
+
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+/**
+ * Allow clients to advertise channels to send data messages to the server.
+ */
+#define FOXGLOVE_GATEWAY_CAPABILITY_CLIENT_PUBLISH (1 << 0)
+#endif
+
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+/**
+ * Allow clients to call services.
+ */
+#define FOXGLOVE_GATEWAY_CAPABILITY_SERVICES (1 << 1)
 #endif
 
 #if !defined(__wasm__)
@@ -84,6 +98,45 @@
 #define FOXGLOVE_SERVER_CAPABILITY_PLAYBACK_CONTROL (1 << 6)
 #endif
 
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+/**
+ * The status of the remote access gateway connection.
+ */
+enum foxglove_connection_status
+#ifdef __cplusplus
+  : uint8_t
+#endif // __cplusplus
+ {
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+  /**
+   * The gateway is attempting to establish or re-establish a connection.
+   */
+  FOXGLOVE_CONNECTION_STATUS_CONNECTING = 0,
+#endif
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+  /**
+   * The gateway is connected and handling events.
+   */
+  FOXGLOVE_CONNECTION_STATUS_CONNECTED = 1,
+#endif
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+  /**
+   * The gateway is shutting down. Listener callbacks may still be in progress.
+   */
+  FOXGLOVE_CONNECTION_STATUS_SHUTTING_DOWN = 2,
+#endif
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+  /**
+   * The gateway has been shut down. No further listener callbacks will be invoked.
+   */
+  FOXGLOVE_CONNECTION_STATUS_SHUTDOWN = 3,
+#endif
+};
+#ifndef __cplusplus
+typedef uint8_t foxglove_connection_status;
+#endif // __cplusplus
+#endif
+
 enum foxglove_error
 #ifdef __cplusplus
   : uint8_t
@@ -107,6 +160,7 @@ enum foxglove_error
   FOXGLOVE_ERROR_ENCODE_ERROR,
   FOXGLOVE_ERROR_BUFFER_TOO_SHORT,
   FOXGLOVE_ERROR_BASE64_DECODE_ERROR,
+  FOXGLOVE_ERROR_CONFIGURATION_ERROR,
 };
 #ifndef __cplusplus
 typedef uint8_t foxglove_error;
@@ -371,6 +425,10 @@ typedef struct foxglove_context foxglove_context;
 
 #if !defined(__wasm__)
 typedef struct foxglove_fetch_asset_responder foxglove_fetch_asset_responder;
+#endif
+
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+typedef struct foxglove_gateway foxglove_gateway;
 #endif
 
 #if !defined(__wasm__)
@@ -2040,6 +2098,115 @@ typedef struct foxglove_bytes {
    */
   size_t len;
 } foxglove_bytes;
+#endif
+
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+/**
+ * Callbacks for the remote access gateway.
+ *
+ * These methods are invoked from time-sensitive contexts and must not block.
+ */
+typedef struct foxglove_gateway_callbacks {
+  /**
+   * A user-defined value that will be passed to callback functions.
+   */
+  const void *context;
+  /**
+   * Callback invoked when the gateway connection status changes.
+   */
+  void (*on_connection_status_changed)(const void *context, foxglove_connection_status status);
+  /**
+   * Callback invoked when a client subscribes to a channel.
+   */
+  void (*on_subscribe)(const void *context,
+                       uint32_t client_id,
+                       const struct foxglove_channel_descriptor *channel);
+  /**
+   * Callback invoked when a client unsubscribes from a channel or disconnects.
+   */
+  void (*on_unsubscribe)(const void *context,
+                         uint32_t client_id,
+                         const struct foxglove_channel_descriptor *channel);
+  /**
+   * Callback invoked when a client message is received.
+   */
+  void (*on_message_data)(const void *context,
+                          uint32_t client_id,
+                          const struct foxglove_channel_descriptor *channel,
+                          const uint8_t *payload,
+                          size_t payload_len);
+  /**
+   * Callback invoked when a client advertises a client channel.
+   */
+  void (*on_client_advertise)(const void *context,
+                              uint32_t client_id,
+                              const struct foxglove_channel_descriptor *channel);
+  /**
+   * Callback invoked when a client unadvertises a client channel.
+   */
+  void (*on_client_unadvertise)(const void *context,
+                                uint32_t client_id,
+                                const struct foxglove_channel_descriptor *channel);
+} foxglove_gateway_callbacks;
+#endif
+
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+/**
+ * Capabilities for the remote access gateway. These are advertised to clients.
+ */
+typedef uint8_t foxglove_gateway_capability;
+#endif
+
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+/**
+ * Options for creating a remote access gateway.
+ *
+ * # Safety
+ * - `context` can be null, or a valid pointer to a context created via `foxglove_context_new`.
+ * - `name` must be a valid pointer to a UTF-8 string.
+ * - `device_token` must be a valid pointer to a UTF-8 string, or empty to use the
+ *   `FOXGLOVE_DEVICE_TOKEN` environment variable.
+ * - If `supported_encodings` is supplied, all entries must contain valid UTF-8, and
+ *   `supported_encodings` must have length equal to `supported_encodings_count`.
+ * - If `services` is supplied, all entries must be valid pointers to services created via
+ *   `foxglove_service_create`. Ownership of the services is transferred to the gateway.
+ */
+typedef struct foxglove_gateway_options {
+  /**
+   * `context` can be null, or a valid pointer to a context created via `foxglove_context_new`.
+   * If it's null, the gateway will be created with the default context.
+   */
+  const struct foxglove_context *context;
+  struct foxglove_string name;
+  struct foxglove_string device_token;
+  const struct foxglove_gateway_callbacks *callbacks;
+  foxglove_gateway_capability capabilities;
+  const struct foxglove_string *supported_encodings;
+  size_t supported_encodings_count;
+  /**
+   * Context provided to the `sink_channel_filter` callback.
+   */
+  const void *sink_channel_filter_context;
+  /**
+   * A filter for channels.
+   *
+   * Return false to disable logging of this channel.
+   * This method is invoked from the client's main poll loop and must not block.
+   */
+  bool (*sink_channel_filter)(const void *context, const struct foxglove_channel_descriptor *channel);
+  /**
+   * Optional Foxglove API base URL override. Empty string uses the default.
+   */
+  struct foxglove_string foxglove_api_url;
+  /**
+   * Optional Foxglove API timeout in seconds.
+   */
+  const uint64_t *foxglove_api_timeout_secs;
+  /**
+   * Optional message backlog size override.
+   */
+  const size_t *message_backlog_size;
+} foxglove_gateway_options;
 #endif
 
 #if !defined(__wasm__)
@@ -5088,6 +5255,63 @@ void foxglove_fetch_asset_respond_error(struct foxglove_fetch_asset_responder *r
                                         struct foxglove_string message);
 #endif
 
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+/**
+ * Start a remote access gateway with the given options.
+ *
+ * On success, the `gateway` output parameter will be set to a valid pointer.
+ * On failure, an error code is returned.
+ *
+ * # Safety
+ * - `options` must be a valid pointer to a `FoxgloveGatewayOptions` struct with all fields
+ *   satisfying the documented safety requirements.
+ * - `gateway` must be a valid pointer to a `*mut FoxgloveGateway`.
+ */
+foxglove_error foxglove_gateway_start(const struct foxglove_gateway_options *FOXGLOVE_NONNULL options,
+                                      struct foxglove_gateway **gateway);
+#endif
+
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+/**
+ * Stop and shut down the gateway and free the resources associated with it.
+ */
+foxglove_error foxglove_gateway_stop(struct foxglove_gateway *gateway);
+#endif
+
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+/**
+ * Get the current connection status of the gateway.
+ *
+ * Returns `Shutdown` if the gateway pointer is null or the gateway has been stopped.
+ */
+foxglove_connection_status foxglove_gateway_connection_status(const struct foxglove_gateway *gateway);
+#endif
+
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+/**
+ * Adds a service to the gateway and advertises it to connected clients.
+ *
+ * # Safety
+ * - `gateway` must be a valid pointer to a gateway started with `foxglove_gateway_start`.
+ * - `service` must be a valid pointer to a service allocated by `foxglove_service_create`. This
+ *   value is moved into this function, and must not be accessed afterwards.
+ */
+foxglove_error foxglove_gateway_add_service(const struct foxglove_gateway *gateway,
+                                            struct foxglove_service *service);
+#endif
+
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+/**
+ * Removes a service from the gateway.
+ *
+ * # Safety
+ * - `gateway` must be a valid pointer to a gateway started with `foxglove_gateway_start`.
+ * - `service_name` must be a valid pointer to a UTF-8 string.
+ */
+foxglove_error foxglove_gateway_remove_service(const struct foxglove_gateway *gateway,
+                                               struct foxglove_string service_name);
+#endif
+
 #if !defined(__wasm__)
 /**
  * Initialize SDK logging with the given severity level.
@@ -5789,4 +6013,4 @@ void foxglove_service_respond_error(struct foxglove_service_responder *responder
 }  // extern "C"
 #endif  // __cplusplus
 
-#endif  /* FOXGLOVE_H */
+#endif  /* FOXGLOVE_C_H */

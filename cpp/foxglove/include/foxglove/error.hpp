@@ -48,7 +48,9 @@ enum class FoxgloveError : uint8_t {
   /// The provided bufffer is too short.
   BufferTooShort,
   /// Failed to decode base64 data.
-  Base64DecodeError
+  Base64DecodeError,
+  /// A configuration error (e.g. missing required option).
+  ConfigurationError
 };
 
 /// @brief A result type for Foxglove operations.
