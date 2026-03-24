@@ -17,5 +17,5 @@ uint8[] data
 
 # Point cloud compression format.
 # 
-# Supported values: `draco` ([Google Draco](https://google.github.io/draco/)), `cloudini` ([Cloudini](https://github.com/facontidavide/cloudini)).
+# Supported values: `draco` ([Google Draco](https://google.github.io/draco/)).
 string format

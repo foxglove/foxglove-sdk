@@ -1232,7 +1232,7 @@ const CompressedPointCloud: FoxgloveMessageSchema = {
       name: "format",
       type: { type: "primitive", name: "string" },
       description:
-        "Point cloud compression format.\n\nSupported values: `draco` ([Google Draco](https://google.github.io/draco/)), `cloudini` ([Cloudini](https://github.com/facontidavide/cloudini)).",
+        "Point cloud compression format.\n\nSupported values: `draco` ([Google Draco](https://google.github.io/draco/)).",
     },
   ],
 };

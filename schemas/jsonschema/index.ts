@@ -527,7 +527,7 @@ export const CompressedPointCloud = {
     },
     "format": {
       "type": "string",
-      "description": "Point cloud compression format.\n\nSupported values: `draco` ([Google Draco](https://google.github.io/draco/)), `cloudini` ([Cloudini](https://github.com/facontidavide/cloudini))."
+      "description": "Point cloud compression format.\n\nSupported values: `draco` ([Google Draco](https://google.github.io/draco/))."
     }
   },
   "required": [

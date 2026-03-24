@@ -486,7 +486,7 @@ impl From<CompressedImage> for foxglove::messages::CompressedImage {
 /// :param data: Compressed point cloud data for exactly one point cloud, including any format-specific metadata needed to describe the decoded point attributes.
 /// :param format: Point cloud compression format.
 ///     
-///     Supported values: `draco` (`Google Draco <https://google.github.io/draco/>`__), `cloudini` (`Cloudini <https://github.com/facontidavide/cloudini>`__).
+///     Supported values: `draco` (`Google Draco <https://google.github.io/draco/>`__).
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/compressed-point-cloud
 #[pyclass(module = "foxglove.messages")]

@@ -21,7 +21,7 @@ export type CompressedPointCloud = {
   /**
    * Point cloud compression format.
    * 
-   * Supported values: `draco` ([Google Draco](https://google.github.io/draco/)), `cloudini` ([Cloudini](https://github.com/facontidavide/cloudini)).
+   * Supported values: `draco` ([Google Draco](https://google.github.io/draco/)).
    */
   format: string;
 };
