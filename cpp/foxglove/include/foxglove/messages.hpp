@@ -1917,23 +1917,6 @@ struct RawImage {
   /// @brief   - The UV plane contains interleaved U, V chroma pairs, subsampled by a factor of 2 in
   /// both dimensions (`width`/2 pairs per row, `height`/2 rows, `step` * `height`/2 bytes). Each U,
   /// V pair is shared by a 2x2 block of pixels.
-  /// @brief   ```plaintext
-  /// @brief   data[]:
-  /// @brief     byte:  0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23
-  /// @brief           [Y  Y  Y  Y][Y  Y  Y  Y][Y  Y  Y  Y][Y  Y  Y  Y][U  V  U  V][U  V  U  V]
-  /// @brief           |---- step -|                                      each pair of Y rows shares
-  /// one UV row
-  /// @brief           <------------- Y plane (step * height) -----------><- UV plane (step*h/2)->
-  /// @brief
-  /// @brief     Y00 Y01 Y02 Y03      U0 V0 U1 V1
-  /// @brief     Y10 Y11 Y12 Y13      U2 V2 U3 V3
-  /// @brief     Y20 Y21 Y22 Y23
-  /// @brief     Y30 Y31 Y32 Y33
-  /// @brief
-  /// @brief     Pixel-to-UV mapping:  2x2 Y blocks share one U,V pair:
-  /// @brief     Y00 Y01 -> U0,V0     Y02 Y03 -> U1,V1
-  /// @brief     Y10 Y11              Y12 Y13
-  /// @brief   ```
   /// @brief   - `width` and `height` must be even.
   /// @brief   - `step` must be greater than or equal to `width`.
   /// @brief   - Total `data` length is `step` * `height` * 3/2 bytes.

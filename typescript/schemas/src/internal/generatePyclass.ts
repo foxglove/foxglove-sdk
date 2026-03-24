@@ -256,23 +256,18 @@ function pythonParamDoc(field: FoxgloveMessageField): string {
   }
 
   let inCodeBlock = false;
-  let codeBlockBaseIndent = 0;
   for (const line of rest) {
-    if (line.trimStart().startsWith("```")) {
+    if (line.startsWith("```")) {
       if (!inCodeBlock) {
-        codeBlockBaseIndent = line.length - line.trimStart().length;
-        const rstIndent = " ".repeat(4 + codeBlockBaseIndent);
-        output.push("");
-        output.push(`${rstIndent}::`);
-        output.push("");
-      } else {
+        // Start an RST code block, which requires a following blank line
+        output.push("    ::");
         output.push("");
       }
       inCodeBlock = !inCodeBlock;
       continue;
     }
 
-    const indent = " ".repeat(inCodeBlock ? 4 + codeBlockBaseIndent + 4 : 4);
+    const indent = " ".repeat(inCodeBlock ? 8 : 4);
     const rst = inCodeBlock ? line : convertMarkdownLinksToRst(line);
     output.push(indent + rst);
   }
