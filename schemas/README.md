@@ -648,7 +648,7 @@ Supported values: `jpeg`, `png`, `webp`, `avif`
 
 ## CompressedPointCloud
 
-A compressed point cloud. A decoder for `format` must decompress `data` and produce an interleaved byte buffer matching the layout described by `fields` and `point_stride`, which is then interpreted exactly as `PointCloud.data`.
+A compressed point cloud. A decoder for `format` must decompress `data`, using metadata stored in the compressed payload to recover point positions and any additional per-point attributes. The decoded point cloud must include at least 2 coordinate fields from `x`, `y`, and `z`; `red`, `green`, `blue`, and `alpha` are optional for customizing each point's color.
 
 <table>
   <tr>
@@ -696,32 +696,6 @@ The origin of the point cloud relative to the frame of reference
 </td>
 </tr>
 <tr>
-<td><code>point_stride</code></td>
-<td>
-
-uint32
-
-</td>
-<td>
-
-Number of bytes between points in the decoded output
-
-</td>
-</tr>
-<tr>
-<td><code>fields</code></td>
-<td>
-
-[PackedElementField](#packedelementfield)[]
-
-</td>
-<td>
-
-Fields in the decoded output. At least 2 coordinate fields from `x`, `y`, and `z` are required for each point's position; `red`, `green`, `blue`, and `alpha` are optional for customizing each point's color.
-
-</td>
-</tr>
-<tr>
 <td><code>data</code></td>
 <td>
 
@@ -730,7 +704,7 @@ bytes
 </td>
 <td>
 
-Compressed point cloud data for exactly one point cloud
+Compressed point cloud data for exactly one point cloud, including any format-specific metadata needed to describe the decoded point attributes.
 
 </td>
 </tr>
@@ -745,7 +719,7 @@ string
 
 Point cloud compression format.
 
-Supported values: `draco` ([Google Draco](https://google.github.io/draco/)).
+Supported values: `draco` ([Google Draco](https://google.github.io/draco/)), `cloudini` ([Cloudini](https://github.com/facontidavide/cloudini)).
 
 </td>
 </tr>

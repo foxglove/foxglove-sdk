@@ -1747,9 +1747,6 @@ void compressedPointCloudToC(
     src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
   dest.frame_id = {src.frame_id.data(), src.frame_id.size()};
   dest.pose = src.pose ? arena.mapOne<foxglove_pose>(src.pose.value(), poseToC) : nullptr;
-  dest.point_stride = src.point_stride;
-  dest.fields = arena.map<foxglove_packed_element_field>(src.fields, packedElementFieldToC);
-  dest.fields_count = src.fields.size();
   dest.data = reinterpret_cast<const unsigned char*>(src.data.data());
   dest.data_len = src.data.size();
   dest.format = {src.format.data(), src.format.size()};

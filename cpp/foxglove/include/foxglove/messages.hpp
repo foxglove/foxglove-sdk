@@ -439,60 +439,10 @@ struct CompressedImage {
   static Schema schema();
 };
 
-/// @brief A field present within each element in a byte array of packed elements.
-struct PackedElementField {
-  /// @brief Numeric type
-  enum class NumericType : uint8_t {
-    /// @brief Unknown numeric type
-    UNKNOWN = 0,
-    /// @brief Unsigned 8-bit integer
-    UINT8 = 1,
-    /// @brief Signed 8-bit integer
-    INT8 = 2,
-    /// @brief Unsigned 16-bit integer
-    UINT16 = 3,
-    /// @brief Signed 16-bit integer
-    INT16 = 4,
-    /// @brief Unsigned 32-bit integer
-    UINT32 = 5,
-    /// @brief Signed 32-bit integer
-    INT32 = 6,
-    /// @brief 32-bit floating-point number
-    FLOAT32 = 7,
-    /// @brief 64-bit floating-point number
-    FLOAT64 = 8,
-  };
-  /// @brief Name of the field
-  std::string name;
-
-  /// @brief Byte offset from start of data buffer
-  uint32_t offset = 0;
-
-  /// @brief Type of data in the field. Integers are stored using little-endian byte order.
-  NumericType type{};
-
-  /// @brief Encoded the PackedElementField as protobuf to the provided buffer.
-  ///
-  /// On success, writes the serialized length to *encoded_len.
-  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
-  /// and returns FoxgloveError::BufferTooShort.
-  /// If the message cannot be encoded, writes the reason to stderr and returns
-  /// FoxgloveError::EncodeError.
-  ///
-  /// @param ptr the destination buffer. must point to at least len valid bytes.
-  /// @param len the length of the destination buffer.
-  /// @param encoded_len where the serialized length or required capacity will be written to.
-  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
-
-  /// @brief Get the PackedElementField schema.
-  ///
-  /// The schema data returned is statically allocated.
-  static Schema schema();
-};
-
-/// @brief A compressed point cloud. A decoder for `format` must decompress `data` and produce an
-/// interleaved byte buffer matching the layout described by `fields` and `point_stride`, which is
-/// then interpreted exactly as `PointCloud.data`.
+/// @brief A compressed point cloud. A decoder for `format` must decompress `data`, using metadata
+/// stored in the compressed payload to recover point positions and any additional per-point
+/// attributes. The decoded point cloud must include at least 2 coordinate fields from `x`, `y`, and
+/// `z`; `red`, `green`, `blue`, and `alpha` are optional for customizing each point's color.
 struct CompressedPointCloud {
   /// @brief Timestamp of point cloud
   std::optional<Timestamp> timestamp;
@@ -503,20 +453,14 @@ struct CompressedPointCloud {
   /// @brief The origin of the point cloud relative to the frame of reference
   std::optional<Pose> pose;
 
-  /// @brief Number of bytes between points in the decoded output
-  uint32_t point_stride = 0;
-
-  /// @brief Fields in the decoded output. At least 2 coordinate fields from `x`, `y`, and `z` are
-  /// required for each point's position; `red`, `green`, `blue`, and `alpha` are optional for
-  /// customizing each point's color.
-  std::vector<PackedElementField> fields;
-
-  /// @brief Compressed point cloud data for exactly one point cloud
+  /// @brief Compressed point cloud data for exactly one point cloud, including any format-specific
+  /// metadata needed to describe the decoded point attributes.
   std::vector<std::byte> data;
 
   /// @brief Point cloud compression format.
   /// @brief
-  /// @brief Supported values: `draco` ([Google Draco](https://google.github.io/draco/)).
+  /// @brief Supported values: `draco` ([Google Draco](https://google.github.io/draco/)), `cloudini`
+  /// ([Cloudini](https://github.com/facontidavide/cloudini)).
   std::string format;
 
   /// @brief Encoded the CompressedPointCloud as protobuf to the provided buffer.
@@ -808,6 +752,57 @@ struct Vector2 {
   FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 
   /// @brief Get the Vector2 schema.
+  ///
+  /// The schema data returned is statically allocated.
+  static Schema schema();
+};
+
+/// @brief A field present within each element in a byte array of packed elements.
+struct PackedElementField {
+  /// @brief Numeric type
+  enum class NumericType : uint8_t {
+    /// @brief Unknown numeric type
+    UNKNOWN = 0,
+    /// @brief Unsigned 8-bit integer
+    UINT8 = 1,
+    /// @brief Signed 8-bit integer
+    INT8 = 2,
+    /// @brief Unsigned 16-bit integer
+    UINT16 = 3,
+    /// @brief Signed 16-bit integer
+    INT16 = 4,
+    /// @brief Unsigned 32-bit integer
+    UINT32 = 5,
+    /// @brief Signed 32-bit integer
+    INT32 = 6,
+    /// @brief 32-bit floating-point number
+    FLOAT32 = 7,
+    /// @brief 64-bit floating-point number
+    FLOAT64 = 8,
+  };
+  /// @brief Name of the field
+  std::string name;
+
+  /// @brief Byte offset from start of data buffer
+  uint32_t offset = 0;
+
+  /// @brief Type of data in the field. Integers are stored using little-endian byte order.
+  NumericType type{};
+
+  /// @brief Encoded the PackedElementField as protobuf to the provided buffer.
+  ///
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
+  /// and returns FoxgloveError::BufferTooShort.
+  /// If the message cannot be encoded, writes the reason to stderr and returns
+  /// FoxgloveError::EncodeError.
+  ///
+  /// @param ptr the destination buffer. must point to at least len valid bytes.
+  /// @param len the length of the destination buffer.
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
+
+  /// @brief Get the PackedElementField schema.
   ///
   /// The schema data returned is statically allocated.
   static Schema schema();

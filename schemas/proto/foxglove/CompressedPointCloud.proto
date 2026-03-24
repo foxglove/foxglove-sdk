@@ -2,13 +2,12 @@
 
 syntax = "proto3";
 
-import "foxglove/PackedElementField.proto";
 import "foxglove/Pose.proto";
 import "google/protobuf/timestamp.proto";
 
 package foxglove;
 
-// A compressed point cloud. A decoder for `format` must decompress `data` and produce an interleaved byte buffer matching the layout described by `fields` and `point_stride`, which is then interpreted exactly as `PointCloud.data`.
+// A compressed point cloud. A decoder for `format` must decompress `data`, using metadata stored in the compressed payload to recover point positions and any additional per-point attributes. The decoded point cloud must include at least 2 coordinate fields from `x`, `y`, and `z`; `red`, `green`, `blue`, and `alpha` are optional for customizing each point's color.
 message CompressedPointCloud {
   // Timestamp of point cloud
   google.protobuf.Timestamp timestamp = 1;
@@ -19,17 +18,11 @@ message CompressedPointCloud {
   // The origin of the point cloud relative to the frame of reference
   foxglove.Pose pose = 3;
 
-  // Number of bytes between points in the decoded output
-  fixed32 point_stride = 4;
-
-  // Fields in the decoded output. At least 2 coordinate fields from `x`, `y`, and `z` are required for each point's position; `red`, `green`, `blue`, and `alpha` are optional for customizing each point's color.
-  repeated foxglove.PackedElementField fields = 5;
-
-  // Compressed point cloud data for exactly one point cloud
-  bytes data = 6;
+  // Compressed point cloud data for exactly one point cloud, including any format-specific metadata needed to describe the decoded point attributes.
+  bytes data = 4;
 
   // Point cloud compression format.
   // 
-  // Supported values: `draco` ([Google Draco](https://google.github.io/draco/)).
-  string format = 7;
+  // Supported values: `draco` ([Google Draco](https://google.github.io/draco/)), `cloudini` ([Cloudini](https://github.com/facontidavide/cloudini)).
+  string format = 5;
 }

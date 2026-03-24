@@ -196,7 +196,7 @@ class CompressedImage:
 
 class CompressedPointCloud:
     """
-    A compressed point cloud. A decoder for `format` must decompress `data` and produce an interleaved byte buffer matching the layout described by `fields` and `point_stride`, which is then interpreted exactly as `PointCloud.data`.
+    A compressed point cloud. A decoder for `format` must decompress `data`, using metadata stored in the compressed payload to recover point positions and any additional per-point attributes. The decoded point cloud must include at least 2 coordinate fields from `x`, `y`, and `z`; `red`, `green`, `blue`, and `alpha` are optional for customizing each point's color.
     """
 
     def __init__(
@@ -205,8 +205,6 @@ class CompressedPointCloud:
         timestamp: Timestamp | None = None,
         frame_id: str = "",
         pose: Pose | None = None,
-        point_stride: int = 0,
-        fields: list[PackedElementField] | None = None,
         data: bytes = b"",
         format: str = "",
     ) -> None: ...

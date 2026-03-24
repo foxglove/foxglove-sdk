@@ -1205,7 +1205,7 @@ const CompressedPointCloud: FoxgloveMessageSchema = {
   type: "message",
   name: "CompressedPointCloud",
   description:
-    "A compressed point cloud. A decoder for `format` must decompress `data` and produce an interleaved byte buffer matching the layout described by `fields` and `point_stride`, which is then interpreted exactly as `PointCloud.data`.",
+    "A compressed point cloud. A decoder for `format` must decompress `data`, using metadata stored in the compressed payload to recover point positions and any additional per-point attributes. The decoded point cloud must include at least 2 coordinate fields from `x`, `y`, and `z`; `red`, `green`, `blue`, and `alpha` are optional for customizing each point's color.",
   fields: [
     {
       name: "timestamp",
@@ -1223,27 +1223,16 @@ const CompressedPointCloud: FoxgloveMessageSchema = {
       description: "The origin of the point cloud relative to the frame of reference",
     },
     {
-      name: "point_stride",
-      type: { type: "primitive", name: "uint32" },
-      description: "Number of bytes between points in the decoded output",
-    },
-    {
-      name: "fields",
-      type: { type: "nested", schema: PackedElementField },
-      array: true,
-      description:
-        "Fields in the decoded output. At least 2 coordinate fields from `x`, `y`, and `z` are required for each point's position; `red`, `green`, `blue`, and `alpha` are optional for customizing each point's color.",
-    },
-    {
       name: "data",
       type: { type: "primitive", name: "bytes" },
-      description: "Compressed point cloud data for exactly one point cloud",
+      description:
+        "Compressed point cloud data for exactly one point cloud, including any format-specific metadata needed to describe the decoded point attributes.",
     },
     {
       name: "format",
       type: { type: "primitive", name: "string" },
       description:
-        "Point cloud compression format.\n\nSupported values: `draco` ([Google Draco](https://google.github.io/draco/)).",
+        "Point cloud compression format.\n\nSupported values: `draco` ([Google Draco](https://google.github.io/draco/)), `cloudini` ([Cloudini](https://github.com/facontidavide/cloudini)).",
     },
   ],
 };

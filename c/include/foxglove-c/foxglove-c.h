@@ -715,25 +715,7 @@ typedef struct foxglove_compressed_image {
 } foxglove_compressed_image;
 
 /**
- * A field present within each element in a byte array of packed elements.
- */
-typedef struct foxglove_packed_element_field {
-  /**
-   * Name of the field
-   */
-  struct foxglove_string name;
-  /**
-   * Byte offset from start of data buffer
-   */
-  uint32_t offset;
-  /**
-   * Type of data in the field. Integers are stored using little-endian byte order.
-   */
-  foxglove_numeric_type type;
-} foxglove_packed_element_field;
-
-/**
- * A compressed point cloud. A decoder for `format` must decompress `data` and produce an interleaved byte buffer matching the layout described by `fields` and `point_stride`, which is then interpreted exactly as `PointCloud.data`.
+ * A compressed point cloud. A decoder for `format` must decompress `data`, using metadata stored in the compressed payload to recover point positions and any additional per-point attributes. The decoded point cloud must include at least 2 coordinate fields from `x`, `y`, and `z`; `red`, `green`, `blue`, and `alpha` are optional for customizing each point's color.
  */
 typedef struct foxglove_compressed_point_cloud {
   /**
@@ -749,23 +731,14 @@ typedef struct foxglove_compressed_point_cloud {
    */
   const struct foxglove_pose *pose;
   /**
-   * Number of bytes between points in the decoded output
-   */
-  uint32_t point_stride;
-  /**
-   * Fields in the decoded output. At least 2 coordinate fields from `x`, `y`, and `z` are required for each point's position; `red`, `green`, `blue`, and `alpha` are optional for customizing each point's color.
-   */
-  const struct foxglove_packed_element_field *fields;
-  size_t fields_count;
-  /**
-   * Compressed point cloud data for exactly one point cloud
+   * Compressed point cloud data for exactly one point cloud, including any format-specific metadata needed to describe the decoded point attributes.
    */
   const unsigned char *data;
   size_t data_len;
   /**
    * Point cloud compression format.
    *
-   * Supported values: `draco` ([Google Draco](https://google.github.io/draco/)).
+   * Supported values: `draco` ([Google Draco](https://google.github.io/draco/)), `cloudini` ([Cloudini](https://github.com/facontidavide/cloudini)).
    */
   struct foxglove_string format;
 } foxglove_compressed_point_cloud;
@@ -931,6 +904,24 @@ typedef struct foxglove_vector2 {
    */
   double y;
 } foxglove_vector2;
+
+/**
+ * A field present within each element in a byte array of packed elements.
+ */
+typedef struct foxglove_packed_element_field {
+  /**
+   * Name of the field
+   */
+  struct foxglove_string name;
+  /**
+   * Byte offset from start of data buffer
+   */
+  uint32_t offset;
+  /**
+   * Type of data in the field. Integers are stored using little-endian byte order.
+   */
+  foxglove_numeric_type type;
+} foxglove_packed_element_field;
 
 /**
  * A 2D grid of data

@@ -1014,7 +1014,7 @@ pub unsafe extern "C" fn foxglove_compressed_image_encode(
     }
 }
 
-/// A compressed point cloud. A decoder for `format` must decompress `data` and produce an interleaved byte buffer matching the layout described by `fields` and `point_stride`, which is then interpreted exactly as `PointCloud.data`.
+/// A compressed point cloud. A decoder for `format` must decompress `data`, using metadata stored in the compressed payload to recover point positions and any additional per-point attributes. The decoded point cloud must include at least 2 coordinate fields from `x`, `y`, and `z`; `red`, `green`, `blue`, and `alpha` are optional for customizing each point's color.
 #[repr(C)]
 pub struct CompressedPointCloud {
     /// Timestamp of point cloud
@@ -1026,20 +1026,13 @@ pub struct CompressedPointCloud {
     /// The origin of the point cloud relative to the frame of reference
     pub pose: *const Pose,
 
-    /// Number of bytes between points in the decoded output
-    pub point_stride: u32,
-
-    /// Fields in the decoded output. At least 2 coordinate fields from `x`, `y`, and `z` are required for each point's position; `red`, `green`, `blue`, and `alpha` are optional for customizing each point's color.
-    pub fields: *const PackedElementField,
-    pub fields_count: usize,
-
-    /// Compressed point cloud data for exactly one point cloud
+    /// Compressed point cloud data for exactly one point cloud, including any format-specific metadata needed to describe the decoded point attributes.
     pub data: *const c_uchar,
     pub data_len: usize,
 
     /// Point cloud compression format.
     ///
-    /// Supported values: `draco` ([Google Draco](https://google.github.io/draco/)).
+    /// Supported values: `draco` ([Google Draco](https://google.github.io/draco/)), `cloudini` ([Cloudini](https://github.com/facontidavide/cloudini)).
     pub format: FoxgloveString,
 }
 
@@ -1088,7 +1081,6 @@ impl BorrowToNative for CompressedPointCloud {
                 .map(|m| m.borrow_to_native(arena.as_mut()))
         }
         .transpose()?;
-        let fields = unsafe { arena.as_mut().map(self.fields, self.fields_count)? };
         let format = unsafe {
             string_from_raw(
                 self.format.as_ptr() as *const _,
@@ -1102,8 +1094,6 @@ impl BorrowToNative for CompressedPointCloud {
                 timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
                 frame_id: ManuallyDrop::into_inner(frame_id),
                 pose: pose.map(ManuallyDrop::into_inner),
-                point_stride: self.point_stride,
-                fields: ManuallyDrop::into_inner(fields),
                 data: ManuallyDrop::into_inner(unsafe { bytes_from_raw(self.data, self.data_len) }),
                 format: ManuallyDrop::into_inner(format),
             },

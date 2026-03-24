@@ -478,17 +478,15 @@ impl From<CompressedImage> for foxglove::messages::CompressedImage {
     }
 }
 
-/// A compressed point cloud. A decoder for `format` must decompress `data` and produce an interleaved byte buffer matching the layout described by `fields` and `point_stride`, which is then interpreted exactly as `PointCloud.data`.
+/// A compressed point cloud. A decoder for `format` must decompress `data`, using metadata stored in the compressed payload to recover point positions and any additional per-point attributes. The decoded point cloud must include at least 2 coordinate fields from `x`, `y`, and `z`; `red`, `green`, `blue`, and `alpha` are optional for customizing each point's color.
 ///
 /// :param timestamp: Timestamp of point cloud
 /// :param frame_id: Frame of reference
 /// :param pose: The origin of the point cloud relative to the frame of reference
-/// :param point_stride: Number of bytes between points in the decoded output
-/// :param fields: Fields in the decoded output. At least 2 coordinate fields from `x`, `y`, and `z` are required for each point's position; `red`, `green`, `blue`, and `alpha` are optional for customizing each point's color.
-/// :param data: Compressed point cloud data for exactly one point cloud
+/// :param data: Compressed point cloud data for exactly one point cloud, including any format-specific metadata needed to describe the decoded point attributes.
 /// :param format: Point cloud compression format.
 ///     
-///     Supported values: `draco` (`Google Draco <https://google.github.io/draco/>`__).
+///     Supported values: `draco` (`Google Draco <https://google.github.io/draco/>`__), `cloudini` (`Cloudini <https://github.com/facontidavide/cloudini>`__).
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/compressed-point-cloud
 #[pyclass(module = "foxglove.messages")]
@@ -497,13 +495,11 @@ pub(crate) struct CompressedPointCloud(pub(crate) foxglove::messages::Compressed
 #[pymethods]
 impl CompressedPointCloud {
     #[new]
-    #[pyo3(signature = (*, timestamp=None, frame_id="", pose=None, point_stride=0, fields=None, data=None, format="") )]
+    #[pyo3(signature = (*, timestamp=None, frame_id="", pose=None, data=None, format="") )]
     fn new(
         timestamp: Option<Timestamp>,
         frame_id: &str,
         pose: Option<Pose>,
-        point_stride: u32,
-        fields: Option<Vec<PackedElementField>>,
         data: Option<Bound<'_, PyBytes>>,
         format: &str,
     ) -> Self {
@@ -511,12 +507,6 @@ impl CompressedPointCloud {
             timestamp: timestamp.map(Into::into),
             frame_id: frame_id.to_string(),
             pose: pose.map(Into::into),
-            point_stride,
-            fields: fields
-                .unwrap_or_default()
-                .into_iter()
-                .map(|x| x.into())
-                .collect(),
             data: data
                 .map(|x| Bytes::copy_from_slice(x.as_bytes()))
                 .unwrap_or_default(),
@@ -525,14 +515,8 @@ impl CompressedPointCloud {
     }
     fn __repr__(&self) -> String {
         format!(
-            "CompressedPointCloud(timestamp={:?}, frame_id={:?}, pose={:?}, point_stride={:?}, fields={:?}, data={:?}, format={:?})",
-            self.0.timestamp,
-            self.0.frame_id,
-            self.0.pose,
-            self.0.point_stride,
-            self.0.fields,
-            self.0.data,
-            self.0.format,
+            "CompressedPointCloud(timestamp={:?}, frame_id={:?}, pose={:?}, data={:?}, format={:?})",
+            self.0.timestamp, self.0.frame_id, self.0.pose, self.0.data, self.0.format,
         )
     }
     /// Returns the CompressedPointCloud schema.
