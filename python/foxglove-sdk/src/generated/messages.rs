@@ -165,11 +165,13 @@ impl From<ArrowPrimitive> for foxglove::messages::ArrowPrimitive {
 ///     
 ///     Projects 3D points in the camera coordinate frame to 2D pixel coordinates using the focal lengths (fx, fy) and principal point (cx, cy).
 ///     
+///
 ///     ::
 ///
 ///             [fx  0 cx]
 ///         K = [ 0 fy cy]
 ///             [ 0  0  1]
+///
 ///     
 ///     **Uncalibrated cameras:** Following ROS conventions for `CameraInfo <https://docs.ros.org/en/noetic/api/sensor_msgs/html/msg/CameraInfo.html>`__, Foxglove also treats K[0] == 0.0 as indicating an uncalibrated camera, and calibration data will be ignored.
 ///     
@@ -178,11 +180,13 @@ impl From<ArrowPrimitive> for foxglove::messages::ArrowPrimitive {
 ///     A rotation matrix aligning the camera coordinate system to the ideal stereo image plane so that epipolar lines in both stereo images are parallel.
 /// :param P: Projection/camera matrix (3x4 row-major matrix)
 ///     
+///
 ///     ::
 ///
 ///             [fx'  0  cx' Tx]
 ///         P = [ 0  fy' cy' Ty]
 ///             [ 0   0   1   0]
+///
 ///     
 ///     By convention, this matrix specifies the intrinsic (camera) matrix of the processed (rectified) image. That is, the left 3x3 portion is the normal camera intrinsic matrix for the rectified image.
 ///     
@@ -194,11 +198,13 @@ impl From<ArrowPrimitive> for foxglove::messages::ArrowPrimitive {
 ///     
 ///     Given a 3D point [X Y Z]', the projection (x, y) of the point onto the rectified image is given by:
 ///     
+///
 ///     ::
 ///
 ///         [u v w]' = P * [X Y Z 1]'
 ///                x = u / w
 ///                y = v / w
+///
 ///     
 ///     This holds for both images of a stereo pair.
 ///     
@@ -894,6 +900,7 @@ impl From<GeoJson> for foxglove::messages::GeoJson {
 ///     
 ///     **RGB color only:**
 ///     
+///
 ///     ::
 ///
 ///         fields: [
@@ -902,9 +909,11 @@ impl From<GeoJson> for foxglove::messages::GeoJson {
 ///          { name: "blue", offset: 2, type: NumericType.UINT8 },
 ///          { name: "alpha", offset: 3, type: NumericType.UINT8 },
 ///         ];
+///
 ///     
 ///     **RGB color with elevation (for 3D terrain visualization):**
 ///     
+///
 ///     ::
 ///
 ///         fields: [
@@ -914,6 +923,7 @@ impl From<GeoJson> for foxglove::messages::GeoJson {
 ///          { name: "alpha", offset: 3, type: NumericType.UINT8 },
 ///          { name: "elevation", offset: 4, type: NumericType.FLOAT32 },
 ///         ];
+///
 ///     
 ///     When these fields are present, the 3D panel will offer additional "Color Mode" options including "RGBA (separate fields)" to visualize the RGB data directly. For elevation visualization, set the "Elevation field" to your elevation layer name.
 /// :param data: Grid cell data, interpreted using `fields`, in row-major (y-major) order.
@@ -2780,6 +2790,7 @@ impl From<RawAudio> for foxglove::messages::RawAudio {
 ///       - Both planes use `step` as their row stride.
 ///       - The Y plane contains one luma value per pixel (`step` * `height` bytes).
 ///       - The UV plane contains interleaved U, V chroma pairs, subsampled by a factor of 2 in both dimensions (`width`/2 pairs per row, `height`/2 rows, `step` * `height`/2 bytes). Each U, V pair is shared by a 2x2 block of pixels.
+///
 ///     ::
 ///
 ///           data[]:
@@ -2796,6 +2807,7 @@ impl From<RawAudio> for foxglove::messages::RawAudio {
 ///             Pixel-to-UV mapping:  2x2 Y blocks share one U,V pair:
 ///             Y00 Y01 -> U0,V0     Y02 Y03 -> U1,V1
 ///             Y10 Y11              Y12 Y13
+///
 ///       - `width` and `height` must be even.
 ///       - `step` must be greater than or equal to `width`.
 ///       - Total `data` length is `step` * `height` * 3/2 bytes.
@@ -2826,11 +2838,13 @@ impl From<RawAudio> for foxglove::messages::RawAudio {
 ///       - Pixel colors are decomposed into Red, Blue and Green channels.
 ///       - Pixel channel values are represented as unsigned 8-bit integers, and serialized in a 2x2 bayer filter pattern.
 ///       - The order of the four letters after `bayer_` determine the layout, so for `bayer_wxyz8` the pattern is:
+///
 ///     ::
 ///
 ///           w | x
 ///           - + -
 ///           y | z
+///
 ///       - `step` must be greater than or equal to `width`.
 ///     - `mono8` or `8UC1`:
 ///       - Pixel brightness is represented as unsigned 8-bit integers.
