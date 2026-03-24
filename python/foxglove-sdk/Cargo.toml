@@ -8,6 +8,13 @@ publish = false
 name = "foxglove_py"
 crate-type = ["cdylib"]
 
+[features]
+# pyo3/extension-module is required for wheel builds but breaks cargo test.
+# It's configured in pyproject.toml for normal maturin builds. This bundled
+# feature is used by CI wheel builds where --features replaces pyproject.toml.
+remote_access_wheel = ["pyo3/extension-module", "remote_access"]
+remote_access = ["foxglove/remote_access"]
+
 [lints]
 workspace = true
 
