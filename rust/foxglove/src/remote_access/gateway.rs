@@ -7,13 +7,12 @@ use crate::{
 
 use tokio::task::JoinHandle;
 
-use super::connection::{RemoteAccessConnection, RemoteAccessConnectionOptions};
+use super::connection::{ConnectionStatus, RemoteAccessConnection, RemoteAccessConnectionOptions};
 use super::{Capability, Listener};
 
 /// A handle to the remote access gateway connection.
 ///
 /// This handle can safely be dropped and the connection will run forever.
-#[doc(hidden)]
 pub struct GatewayHandle {
     connection: Arc<RemoteAccessConnection>,
     runner: JoinHandle<()>,
@@ -24,6 +23,11 @@ impl GatewayHandle {
         let runner = connection.clone().spawn_run_until_cancelled();
 
         Self { connection, runner }
+    }
+
+    /// Returns the current connection status.
+    pub fn connection_status(&self) -> ConnectionStatus {
+        self.connection.status()
     }
 
     /// Gracefully disconnect from the remote access connection, if connected.
@@ -43,7 +47,6 @@ const FOXGLOVE_API_TIMEOUT_ENV: &str = "FOXGLOVE_API_TIMEOUT";
 ///
 /// You may only create one gateway at a time for the device.
 #[must_use]
-#[doc(hidden)]
 #[derive(Default)]
 pub struct Gateway {
     options: RemoteAccessConnectionOptions,

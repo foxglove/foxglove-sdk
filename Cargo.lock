@@ -1261,6 +1261,7 @@ dependencies = [
  "foxglove 0.21.0",
  "serde_json",
  "tokio",
+ "tracing",
 ]
 
 [[package]]
