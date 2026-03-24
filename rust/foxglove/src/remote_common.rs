@@ -2,6 +2,7 @@
 
 use std::sync::atomic::{AtomicU32, Ordering};
 
+pub(crate) mod semaphore;
 pub(crate) mod service;
 
 /// Identifies a client connection. Unique for the duration of the server's lifetime.
