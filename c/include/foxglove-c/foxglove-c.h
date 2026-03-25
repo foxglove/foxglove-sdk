@@ -1323,13 +1323,17 @@ typedef struct foxglove_location_fix {
    */
   const double *heading_variance;
   /**
-   * Scalar speed in m/s
+   * Velocity in the north direction (latitude axis) in m/s, positive north.
    */
-  const double *speed;
+  const double *velocity_x;
   /**
-   * Direction of travel for the reported speed, in radians clockwise from true north
+   * Velocity in the east direction (longitude axis) in m/s, positive east.
    */
-  const double *course;
+  const double *velocity_y;
+  /**
+   * Velocity in the vertical (altitude) direction in m/s, positive up.
+   */
+  const double *velocity_z;
   /**
    * Color used to visualize the location
    */

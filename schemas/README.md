@@ -1785,7 +1785,7 @@ Heading variance in rad^2
 </td>
 </tr>
 <tr>
-<td><code>speed</code> (optional)</td>
+<td><code>velocity_x</code> (optional)</td>
 <td>
 
 float64
@@ -1793,12 +1793,12 @@ float64
 </td>
 <td>
 
-Scalar speed in m/s
+Velocity in the north direction (latitude axis) in m/s, positive north.
 
 </td>
 </tr>
 <tr>
-<td><code>course</code> (optional)</td>
+<td><code>velocity_y</code> (optional)</td>
 <td>
 
 float64
@@ -1806,7 +1806,20 @@ float64
 </td>
 <td>
 
-Direction of travel for the reported speed, in radians clockwise from true north
+Velocity in the east direction (longitude axis) in m/s, positive east.
+
+</td>
+</tr>
+<tr>
+<td><code>velocity_z</code> (optional)</td>
+<td>
+
+float64
+
+</td>
+<td>
+
+Velocity in the vertical (altitude) direction in m/s, positive up.
 
 </td>
 </tr>

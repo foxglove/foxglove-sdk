@@ -50,11 +50,14 @@ table LocationFix {
   /// Heading variance in rad^2
   heading_variance:double = null (id: 10);
 
-  /// Scalar speed in m/s
-  speed:double = null (id: 11);
+  /// Velocity in the north direction (latitude axis) in m/s, positive north.
+  velocity_x:double = null (id: 11);
 
-  /// Direction of travel for the reported speed, in radians clockwise from true north
-  course:double = null (id: 12);
+  /// Velocity in the east direction (longitude axis) in m/s, positive east.
+  velocity_y:double = null (id: 12);
+
+  /// Velocity in the vertical (altitude) direction in m/s, positive up.
+  velocity_z:double = null (id: 13);
 
   /// Color used to visualize the location
   color:foxglove.Color (id: 7);

@@ -601,12 +601,15 @@ pub struct LocationFix {
     /// Heading variance in rad^2
     #[prost(double, optional, tag = "11")]
     pub heading_variance: ::core::option::Option<f64>,
-    /// Scalar speed in m/s
+    /// Velocity in the north direction (latitude axis) in m/s, positive north.
     #[prost(double, optional, tag = "12")]
-    pub speed: ::core::option::Option<f64>,
-    /// Direction of travel for the reported speed, in radians clockwise from true north
+    pub velocity_x: ::core::option::Option<f64>,
+    /// Velocity in the east direction (longitude axis) in m/s, positive east.
     #[prost(double, optional, tag = "13")]
-    pub course: ::core::option::Option<f64>,
+    pub velocity_y: ::core::option::Option<f64>,
+    /// Velocity in the vertical (altitude) direction in m/s, positive up.
+    #[prost(double, optional, tag = "14")]
+    pub velocity_z: ::core::option::Option<f64>,
     /// Color used to visualize the location
     #[prost(message, optional, tag = "8")]
     pub color: ::core::option::Option<Color>,

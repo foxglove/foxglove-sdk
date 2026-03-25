@@ -1640,20 +1640,27 @@ const LocationFix: FoxgloveMessageSchema = {
       optional: true,
     },
     {
-      name: "speed",
+      name: "velocity_x",
       type: { type: "primitive", name: "float64" },
-      description: "Scalar speed in m/s",
+      description: "Velocity in the north direction (latitude axis) in m/s, positive north.",
       protobufFieldNumber: 12,
       flatbuffersFieldNumber: 11,
       optional: true,
     },
     {
-      name: "course",
+      name: "velocity_y",
       type: { type: "primitive", name: "float64" },
-      description:
-        "Direction of travel for the reported speed, in radians clockwise from true north",
+      description: "Velocity in the east direction (longitude axis) in m/s, positive east.",
       protobufFieldNumber: 13,
       flatbuffersFieldNumber: 12,
+      optional: true,
+    },
+    {
+      name: "velocity_z",
+      type: { type: "primitive", name: "float64" },
+      description: "Velocity in the vertical (altitude) direction in m/s, positive up.",
+      protobufFieldNumber: 14,
+      flatbuffersFieldNumber: 13,
       optional: true,
     },
     {

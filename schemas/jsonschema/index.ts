@@ -2517,13 +2517,17 @@ export const LocationFix = {
       "type": "number",
       "description": "Heading variance in rad^2"
     },
-    "speed": {
+    "velocity_x": {
       "type": "number",
-      "description": "Scalar speed in m/s"
+      "description": "Velocity in the north direction (latitude axis) in m/s, positive north."
     },
-    "course": {
+    "velocity_y": {
       "type": "number",
-      "description": "Direction of travel for the reported speed, in radians clockwise from true north"
+      "description": "Velocity in the east direction (longitude axis) in m/s, positive east."
+    },
+    "velocity_z": {
+      "type": "number",
+      "description": "Velocity in the vertical (altitude) direction in m/s, positive up."
     },
     "color": {
       "title": "foxglove.Color",
@@ -2677,13 +2681,17 @@ export const LocationFixes = {
             "type": "number",
             "description": "Heading variance in rad^2"
           },
-          "speed": {
+          "velocity_x": {
             "type": "number",
-            "description": "Scalar speed in m/s"
+            "description": "Velocity in the north direction (latitude axis) in m/s, positive north."
           },
-          "course": {
+          "velocity_y": {
             "type": "number",
-            "description": "Direction of travel for the reported speed, in radians clockwise from true north"
+            "description": "Velocity in the east direction (longitude axis) in m/s, positive east."
+          },
+          "velocity_z": {
+            "type": "number",
+            "description": "Velocity in the vertical (altitude) direction in m/s, positive up."
           },
           "color": {
             "title": "foxglove.Color",

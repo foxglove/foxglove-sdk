@@ -493,6 +493,11 @@ class LocationFix:
         altitude: float = 0.0,
         position_covariance: list[float] | None = None,
         position_covariance_type: LocationFixPositionCovarianceType = LocationFixPositionCovarianceType.Unknown,
+        heading: float | None = None,
+        heading_variance: float | None = None,
+        velocity_x: float | None = None,
+        velocity_y: float | None = None,
+        velocity_z: float | None = None,
         color: Color | None = None,
         metadata: list[KeyValuePair] | None = None,
     ) -> None: ...

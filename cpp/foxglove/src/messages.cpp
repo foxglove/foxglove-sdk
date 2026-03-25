@@ -1857,8 +1857,9 @@ void locationFixToC(
     static_cast<foxglove_position_covariance_type>(src.position_covariance_type);
   dest.heading = src.heading ? &*src.heading : nullptr;
   dest.heading_variance = src.heading_variance ? &*src.heading_variance : nullptr;
-  dest.speed = src.speed ? &*src.speed : nullptr;
-  dest.course = src.course ? &*src.course : nullptr;
+  dest.velocity_x = src.velocity_x ? &*src.velocity_x : nullptr;
+  dest.velocity_y = src.velocity_y ? &*src.velocity_y : nullptr;
+  dest.velocity_z = src.velocity_z ? &*src.velocity_z : nullptr;
   dest.color = src.color ? reinterpret_cast<const foxglove_color*>(&*src.color) : nullptr;
   dest.metadata = arena.map<foxglove_key_value_pair>(src.metadata, keyValuePairToC);
   dest.metadata_count = src.metadata.size();

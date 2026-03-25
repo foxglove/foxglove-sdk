@@ -1301,6 +1301,21 @@ struct LocationFix {
   /// indicate the type of covariance.
   PositionCovarianceType position_covariance_type{};
 
+  /// @brief Compass heading in radians, measured clockwise from true north
+  std::optional<double> heading = std::nullopt;
+
+  /// @brief Heading variance in rad^2
+  std::optional<double> heading_variance = std::nullopt;
+
+  /// @brief Velocity in the north direction (latitude axis) in m/s, positive north.
+  std::optional<double> velocity_x = std::nullopt;
+
+  /// @brief Velocity in the east direction (longitude axis) in m/s, positive east.
+  std::optional<double> velocity_y = std::nullopt;
+
+  /// @brief Velocity in the vertical (altitude) direction in m/s, positive up.
+  std::optional<double> velocity_z = std::nullopt;
+
   /// @brief Color used to visualize the location
   std::optional<Color> color;
 

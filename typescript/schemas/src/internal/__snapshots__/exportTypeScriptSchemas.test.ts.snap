@@ -667,11 +667,14 @@ export type LocationFix = {
   /** Heading variance in rad^2 */
   heading_variance?: number;
 
-  /** Scalar speed in m/s */
-  speed?: number;
+  /** Velocity in the north direction (latitude axis) in m/s, positive north. */
+  velocity_x?: number;
 
-  /** Direction of travel for the reported speed, in radians clockwise from true north */
-  course?: number;
+  /** Velocity in the east direction (longitude axis) in m/s, positive east. */
+  velocity_y?: number;
+
+  /** Velocity in the vertical (altitude) direction in m/s, positive up. */
+  velocity_z?: number;
 
   /** Color used to visualize the location */
   color?: Color;
