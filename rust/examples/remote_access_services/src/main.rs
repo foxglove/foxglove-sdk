@@ -1,3 +1,15 @@
+//! An example to illustrate the use of services with the remote access gateway.
+//!
+//! This example exposes the following services:
+//! - /echo: Echoes the request as the response
+//! - /sleep/async: Sleeps for 1 second, and returns an empty response
+//! - /sleep/block: Sleeps for 1 second, and returns an empty response
+//! - /calc/{add,sub,mul,mod}: Performs simple integer arithmetic
+//! - /flag_a: Sets/resets flag A
+//! - /flag_b: Sets/resets flag B
+//!
+//! You can call these services from the Service Call panel in the Foxglove app.
+
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use std::time::Duration;
@@ -5,10 +17,9 @@ use std::time::Duration;
 use anyhow::{Context, Result};
 use foxglove::Schema;
 use foxglove::remote_access::{Capability, Gateway, Request, Service, ServiceSchema, SyncHandler};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use tracing::info;
-
-mod types;
-use types::{IntBinRequest, IntBinResponse, SetBoolRequest, SetBoolResponse};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -24,11 +35,8 @@ async fn main() -> Result<()> {
 
     // Simple services can be implemented with a closure.
     handle
-        .add_services([
-            Service::builder("/empty", empty_schema()).handler_fn(|_| anyhow::Ok(b"")),
-            Service::builder("/echo", echo_schema())
-                .handler_fn(|req| anyhow::Ok(req.into_payload())),
-        ])
+        .add_services([Service::builder("/echo", echo_schema())
+            .handler_fn(|req| anyhow::Ok(req.into_payload()))])
         .context("Failed to register services")?;
 
     // Services that need to do more heavy lifting should be handled asynchronously, either as an
@@ -36,18 +44,18 @@ async fn main() -> Result<()> {
     handle
         .add_services([
             // Async handlers will be spawned using `tokio::spawn`.
-            Service::builder("/sleep", empty_schema()).async_handler_fn(sleep_handler),
+            Service::builder("/sleep/async", empty_schema()).async_handler_fn(sleep_handler),
             // Blocking handlers will be spawned using `tokio::task::spawn_blocking`.
-            Service::builder("/blocking", empty_schema()).blocking_handler_fn(blocking_handler),
+            Service::builder("/sleep/block", empty_schema()).blocking_handler_fn(blocking_handler),
         ])
         .context("Failed to register services")?;
 
     // A single handler function can be shared by multiple services.
     handle
         .add_services(
-            ["/IntBin/add", "/IntBin/sub", "/IntBin/mul", "/IntBin/mod"]
+            ["/calc/add", "/calc/sub", "/calc/mul", "/calc/mod"]
                 .into_iter()
-                .map(|name| Service::builder(name, int_bin_schema()).handler_fn(int_bin_handler)),
+                .map(|name| Service::builder(name, calc_schema()).handler_fn(calc_handler)),
         )
         .context("Failed to register services")?;
 
@@ -80,48 +88,70 @@ fn echo_schema() -> ServiceSchema {
         .with_response("json", any_object)
 }
 
-fn int_bin_schema() -> ServiceSchema {
+async fn sleep_handler(_: Request) -> Result<&'static [u8], String> {
+    tokio::time::sleep(Duration::from_secs(1)).await;
+    Ok(b"{}")
+}
+
+fn blocking_handler(_: Request) -> Result<&'static [u8], String> {
+    std::thread::sleep(Duration::from_secs(1));
+    Ok(b"{}")
+}
+
+#[derive(Debug, Deserialize, Serialize, JsonSchema)]
+pub struct CalcRequest {
+    pub a: u64,
+    pub b: u64,
+}
+
+#[derive(Debug, Deserialize, Serialize, JsonSchema)]
+pub struct CalcResponse {
+    pub result: u64,
+}
+
+fn calc_schema() -> ServiceSchema {
     // Schemas can be derived from types that implement `JsonSchema` using the
     // `Schema::json_schema()` method.
-    ServiceSchema::new("/custom_srvs/IntBinOps")
-        .with_request("json", Schema::json_schema::<IntBinRequest>())
-        .with_response("json", Schema::json_schema::<IntBinResponse>())
+    ServiceSchema::new("/custom_srvs/Calc")
+        .with_request("json", Schema::json_schema::<CalcRequest>())
+        .with_response("json", Schema::json_schema::<CalcResponse>())
+}
+
+/// A stateless handler function.
+fn calc_handler(req: Request) -> Result<Vec<u8>> {
+    let service_name = req.service_name();
+    let req: CalcRequest = serde_json::from_slice(req.payload())?;
+    info!("{service_name}: {req:?}");
+
+    // Shared handlers can use `Request::service_name` to disambiguate the service endpoint.
+    // Service names are guaranteed to be unique.
+    let result = match service_name {
+        "/calc/add" => req.a.saturating_add(req.b),
+        "/calc/sub" => req.a.saturating_sub(req.b),
+        "/calc/mul" => req.a.saturating_mul(req.b),
+        "/calc/mod" => req.a.checked_rem(req.b).unwrap_or(0),
+        m => return Err(anyhow::anyhow!("unexpected service: {m}")),
+    };
+
+    let payload = serde_json::to_vec(&CalcResponse { result })?;
+    Ok(payload)
+}
+
+#[derive(Debug, Deserialize, Serialize, JsonSchema)]
+pub struct SetBoolRequest {
+    pub data: bool,
+}
+
+#[derive(Debug, Deserialize, Serialize, JsonSchema, Default)]
+pub struct SetBoolResponse {
+    pub success: bool,
+    pub message: String,
 }
 
 fn set_bool_schema() -> ServiceSchema {
     ServiceSchema::new("/std_srvs/SetBool")
         .with_request("json", Schema::json_schema::<SetBoolRequest>())
         .with_response("json", Schema::json_schema::<SetBoolResponse>())
-}
-
-async fn sleep_handler(_: Request) -> Result<&'static [u8], String> {
-    tokio::time::sleep(Duration::from_secs(1)).await;
-    Ok(b"")
-}
-
-fn blocking_handler(_: Request) -> Result<&'static [u8], String> {
-    std::thread::sleep(Duration::from_secs(1));
-    Ok(b"")
-}
-
-/// A stateless handler function.
-fn int_bin_handler(req: Request) -> Result<Vec<u8>> {
-    let service_name = req.service_name();
-    let req: IntBinRequest = serde_json::from_slice(req.payload())?;
-    info!("{service_name}: {req:?}");
-
-    // Shared handlers can use `Request::service_name` to disambiguate the service endpoint.
-    // Service names are guaranteed to be unique.
-    let result = match service_name {
-        "/IntBin/add" => req.a.saturating_add(req.b),
-        "/IntBin/sub" => req.a.saturating_sub(req.b),
-        "/IntBin/mul" => req.a.saturating_mul(req.b),
-        "/IntBin/mod" => req.a.checked_rem(req.b).unwrap_or(0),
-        m => return Err(anyhow::anyhow!("unexpected service: {m}")),
-    };
-
-    let payload = serde_json::to_vec(&IntBinResponse { result })?;
-    Ok(payload)
 }
 
 /// A stateful handler implements the `SyncHandler` trait.
