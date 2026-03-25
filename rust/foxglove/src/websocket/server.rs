@@ -224,7 +224,9 @@ impl Server {
             message_backlog_size: opts
                 .message_backlog_size
                 .unwrap_or(DEFAULT_MESSAGE_BACKLOG_SIZE) as u32,
-            runtime: opts.runtime.unwrap_or_else(crate::get_runtime_handle),
+            runtime: opts
+                .runtime
+                .unwrap_or_else(crate::runtime::get_runtime_handle),
             channel_filter: opts.channel_filter.clone(),
             listener: opts.listener,
             session_id: parking_lot::RwLock::new(

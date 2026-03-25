@@ -383,27 +383,27 @@ pub use sink_channel_filter::SinkChannelFilter;
 pub use std::collections::BTreeMap;
 pub(crate) use time::nanoseconds_since_epoch;
 
-#[cfg(feature = "remote_access")]
-mod api_client;
 #[cfg(all(feature = "_remote_common", feature = "_protocol"))]
 pub mod protocol;
 #[cfg(all(feature = "_remote_common", not(feature = "_protocol")))]
 mod protocol;
+#[cfg(feature = "_remote_common")]
+mod remote_common;
+#[cfg(feature = "_remote_common")]
+mod runtime;
+#[cfg(feature = "_remote_common")]
+pub use runtime::shutdown_runtime;
+
+#[cfg(feature = "remote_access")]
+mod api_client;
 #[doc(hidden)]
 #[cfg(feature = "remote_access")]
 pub mod remote_access;
-#[cfg(feature = "_remote_common")]
-mod remote_common;
-#[cfg(feature = "websocket")]
-mod runtime;
+
 #[cfg(feature = "websocket")]
 pub mod websocket;
 #[cfg(feature = "websocket")]
 mod websocket_server;
-#[cfg(feature = "websocket")]
-pub(crate) use runtime::get_runtime_handle;
-#[cfg(feature = "websocket")]
-pub use runtime::shutdown_runtime;
 #[doc(hidden)]
 #[cfg(feature = "websocket")]
 pub use websocket::ws_protocol;
