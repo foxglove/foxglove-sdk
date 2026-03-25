@@ -14,8 +14,8 @@ pub use crate::protocol::common::server::server_info;
 pub use crate::protocol::common::server::status;
 pub use crate::protocol::common::server::{
     Advertise, AdvertiseServices, ConnectionGraphUpdate, FetchAssetResponse, ParameterValues,
-    PlaybackState, RemoveStatus, ServerInfo, ServiceCallFailure, ServiceCallResponse, Status, Time,
-    Unadvertise, UnadvertiseServices,
+    PlaybackState, Pong, RemoveStatus, ServerInfo, ServiceCallFailure, ServiceCallResponse, Status,
+    Time, Unadvertise, UnadvertiseServices,
 };
 pub use message_data::MessageData;
 
@@ -28,6 +28,7 @@ pub(crate) enum BinaryOpcode {
     FetchAssetResponse = 4,
     #[doc(hidden)]
     PlaybackState = 5,
+    Pong = 6,
 }
 
 impl BinaryOpcode {
@@ -38,6 +39,7 @@ impl BinaryOpcode {
             3 => Some(Self::ServiceCallResponse),
             4 => Some(Self::FetchAssetResponse),
             5 => Some(Self::PlaybackState),
+            6 => Some(Self::Pong),
             _ => None,
         }
     }
@@ -45,6 +47,10 @@ impl BinaryOpcode {
 
 impl<'a> BinaryMessage<'a> for MessageData<'a> {
     const OPCODE: u8 = BinaryOpcode::MessageData as u8;
+}
+
+impl<'a> BinaryMessage<'a> for Pong<'a> {
+    const OPCODE: u8 = BinaryOpcode::Pong as u8;
 }
 
 /// A representation of a server message useful for deserializing.
@@ -66,6 +72,7 @@ pub enum ServerMessage<'a> {
     FetchAssetResponse(FetchAssetResponse<'a>),
     ServiceCallFailure(ServiceCallFailure),
     PlaybackState(PlaybackState),
+    Pong(Pong<'a>),
 }
 
 impl<'a> ServerMessage<'a> {
@@ -95,6 +102,7 @@ impl<'a> ServerMessage<'a> {
                 Some(BinaryOpcode::PlaybackState) => {
                     PlaybackState::parse_payload(data).map(ServerMessage::PlaybackState)
                 }
+                Some(BinaryOpcode::Pong) => Pong::parse_payload(data).map(ServerMessage::Pong),
                 None => Err(ParseError::InvalidOpcode(opcode)),
             }
         }
@@ -123,6 +131,7 @@ impl<'a> ServerMessage<'a> {
             }
             ServerMessage::ServiceCallFailure(m) => ServerMessage::ServiceCallFailure(m),
             ServerMessage::PlaybackState(m) => ServerMessage::PlaybackState(m),
+            ServerMessage::Pong(m) => ServerMessage::Pong(m.into_owned()),
         }
     }
 }
@@ -251,6 +260,24 @@ mod tests {
         insta::assert_snapshot!(format!("{:#04x?}", buf));
         let parsed = ServerMessage::parse_binary(&buf).unwrap();
         assert_eq!(parsed, ServerMessage::PlaybackState(message));
+    }
+
+    #[test]
+    fn test_pong_encode() {
+        let message = Pong::new(b"1234567890");
+        let buf = message.to_bytes();
+        insta::assert_snapshot!(format!("{:#04x?}", buf));
+        let parsed = ServerMessage::parse_binary(&buf).unwrap();
+        assert_eq!(parsed, ServerMessage::Pong(message));
+    }
+
+    #[test]
+    fn test_pong_encode_empty_payload() {
+        let message = Pong::new(b"");
+        let buf = message.to_bytes();
+        insta::assert_snapshot!(format!("{:#04x?}", buf));
+        let parsed = ServerMessage::parse_binary(&buf).unwrap();
+        assert_eq!(parsed, ServerMessage::Pong(message));
     }
 
     #[test]

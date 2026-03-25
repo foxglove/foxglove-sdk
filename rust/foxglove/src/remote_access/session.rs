@@ -27,8 +27,9 @@ use crate::{
         BinaryMessage, JsonMessage,
         client::{self, ClientMessage},
         server::{
-            AdvertiseServices, MessageData as ServerMessageData, ServerInfo, ServiceCallFailure,
-            Status, Unadvertise, UnadvertiseServices, advertise, advertise_services,
+            AdvertiseServices, MessageData as ServerMessageData, Pong, ServerInfo,
+            ServiceCallFailure, Status, Unadvertise, UnadvertiseServices, advertise,
+            advertise_services,
         },
     },
     remote_access::{
@@ -726,6 +727,11 @@ impl RemoteAccessSession {
             }
             ClientMessage::UnsubscribeParameterUpdates(msg) => {
                 self.handle_unsubscribe_parameter_updates(&participant, msg.parameter_names);
+            }
+            ClientMessage::Ping(msg) => {
+                let pong = Pong::new(&msg.payload);
+                let framed = encode_binary_message(&pong);
+                self.send_control(participant, framed);
             }
             _ => {
                 warn!("Unhandled client message: {client_msg:?}");
