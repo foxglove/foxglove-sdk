@@ -51,13 +51,13 @@ message LocationFix {
   // Heading variance in rad^2
   optional double heading_variance = 11;
 
-  // Velocity in the east direction (longitude axis) in m/s, positive east.
+  // Velocity east (longitude axis) in m/s.
   optional double velocity_x = 12;
 
-  // Velocity in the north direction (latitude axis) in m/s, positive north.
+  // Velocity north (latitude axis) in m/s.
   optional double velocity_y = 13;
 
-  // Velocity in the vertical (altitude) direction in m/s, positive up.
+  // Velocity up (altitude axis) in m/s.
   optional double velocity_z = 14;
 
   // Color used to visualize the location

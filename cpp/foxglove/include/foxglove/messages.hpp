@@ -1307,13 +1307,13 @@ struct LocationFix {
   /// @brief Heading variance in rad^2
   std::optional<double> heading_variance = std::nullopt;
 
-  /// @brief Velocity in the east direction (longitude axis) in m/s, positive east.
+  /// @brief Velocity east (longitude axis) in m/s.
   std::optional<double> velocity_x = std::nullopt;
 
-  /// @brief Velocity in the north direction (latitude axis) in m/s, positive north.
+  /// @brief Velocity north (latitude axis) in m/s.
   std::optional<double> velocity_y = std::nullopt;
 
-  /// @brief Velocity in the vertical (altitude) direction in m/s, positive up.
+  /// @brief Velocity up (altitude axis) in m/s.
   std::optional<double> velocity_z = std::nullopt;
 
   /// @brief Color used to visualize the location

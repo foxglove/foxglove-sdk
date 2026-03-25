@@ -1793,7 +1793,7 @@ float64
 </td>
 <td>
 
-Velocity in the east direction (longitude axis) in m/s, positive east.
+Velocity east (longitude axis) in m/s.
 
 </td>
 </tr>
@@ -1806,7 +1806,7 @@ float64
 </td>
 <td>
 
-Velocity in the north direction (latitude axis) in m/s, positive north.
+Velocity north (latitude axis) in m/s.
 
 </td>
 </tr>
@@ -1819,7 +1819,7 @@ float64
 </td>
 <td>
 
-Velocity in the vertical (altitude) direction in m/s, positive up.
+Velocity up (altitude axis) in m/s.
 
 </td>
 </tr>

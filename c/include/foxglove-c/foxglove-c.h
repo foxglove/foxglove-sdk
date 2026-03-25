@@ -1323,15 +1323,15 @@ typedef struct foxglove_location_fix {
    */
   const double *heading_variance;
   /**
-   * Velocity in the east direction (longitude axis) in m/s, positive east.
+   * Velocity east (longitude axis) in m/s.
    */
   const double *velocity_x;
   /**
-   * Velocity in the north direction (latitude axis) in m/s, positive north.
+   * Velocity north (latitude axis) in m/s.
    */
   const double *velocity_y;
   /**
-   * Velocity in the vertical (altitude) direction in m/s, positive up.
+   * Velocity up (altitude axis) in m/s.
    */
   const double *velocity_z;
   /**

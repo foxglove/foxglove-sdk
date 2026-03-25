@@ -50,13 +50,13 @@ table LocationFix {
   /// Heading variance in rad^2
   heading_variance:double = null (id: 10);
 
-  /// Velocity in the east direction (longitude axis) in m/s, positive east.
+  /// Velocity east (longitude axis) in m/s.
   velocity_x:double = null (id: 11);
 
-  /// Velocity in the north direction (latitude axis) in m/s, positive north.
+  /// Velocity north (latitude axis) in m/s.
   velocity_y:double = null (id: 12);
 
-  /// Velocity in the vertical (altitude) direction in m/s, positive up.
+  /// Velocity up (altitude axis) in m/s.
   velocity_z:double = null (id: 13);
 
   /// Color used to visualize the location

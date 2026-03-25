@@ -3561,13 +3561,13 @@ pub struct LocationFix {
     /// Heading variance in rad^2
     pub heading_variance: *const f64,
 
-    /// Velocity in the east direction (longitude axis) in m/s, positive east.
+    /// Velocity east (longitude axis) in m/s.
     pub velocity_x: *const f64,
 
-    /// Velocity in the north direction (latitude axis) in m/s, positive north.
+    /// Velocity north (latitude axis) in m/s.
     pub velocity_y: *const f64,
 
-    /// Velocity in the vertical (altitude) direction in m/s, positive up.
+    /// Velocity up (altitude axis) in m/s.
     pub velocity_z: *const f64,
 
     /// Color used to visualize the location
