@@ -545,6 +545,20 @@ impl RemoteAccessSession {
         channel_id: ChannelId,
         reader: ByteStreamReader,
     ) {
+        if !self.has_capability(Capability::ClientPublish) {
+            drop(reader);
+            warn!(
+                "Received client channel stream from {participant_identity:?} but clientPublish capability is not enabled"
+            );
+            if let Some(participant) = self.state.read().get_participant(&participant_identity) {
+                self.send_error(
+                    &participant,
+                    "Server does not support clientPublish capability".to_string(),
+                );
+            }
+            return;
+        }
+
         // Hold the pending lock across the state check and potential insert to prevent a
         // TOCTOU race with handle_client_advertise. The advertise path inserts the channel
         // into state (releasing the state write lock) *then* acquires this lock to drain
