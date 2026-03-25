@@ -6,8 +6,10 @@ use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 
 use crate::{
-    ChannelDescriptor, Context, FoxgloveError, SinkChannelFilter, remote_common::service::Service,
-    runtime::get_runtime_handle, sink_channel_filter::SinkChannelFilterFn,
+    ChannelDescriptor, Context, FoxgloveError, SinkChannelFilter,
+    remote_common::service::{Service, ServiceMap},
+    runtime::get_runtime_handle,
+    sink_channel_filter::SinkChannelFilterFn,
 };
 
 use super::connection::{ConnectionOptions, ConnectionStatus, RemoteAccessConnection};
@@ -302,6 +304,7 @@ impl Gateway {
             }
         }
         let runtime = self.runtime.unwrap_or_else(get_runtime_handle);
+        let services = Arc::new(ServiceMap::from_iter(self.services.into_values()));
         let options = ConnectionOptions {
             name: self.name,
             device_token,
@@ -310,7 +313,6 @@ impl Gateway {
             listener: self.listener,
             capabilities: self.capabilities,
             supported_encodings: self.supported_encodings,
-            services: self.services,
             runtime: runtime.clone(),
             channel_filter: self.channel_filter,
             server_info: self.server_info,
@@ -318,7 +320,7 @@ impl Gateway {
             cancellation_token: CancellationToken::new(),
             context: self.context,
         };
-        let connection = RemoteAccessConnection::new(options);
+        let connection = RemoteAccessConnection::new(options, services);
         Ok(GatewayHandle::new(Arc::new(connection), runtime))
     }
 }

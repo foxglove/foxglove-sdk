@@ -24,7 +24,7 @@ use crate::{
         credentials_provider::CredentialsProvider,
         session::{RemoteAccessSession, SessionOptions},
     },
-    remote_common::service::{Service, ServiceMap},
+    remote_common::service::ServiceMap,
 };
 
 type Result<T> = std::result::Result<T, Box<RemoteAccessError>>;
@@ -80,7 +80,6 @@ pub(crate) struct ConnectionOptions {
     pub listener: Option<Arc<dyn super::Listener>>,
     pub capabilities: Vec<Capability>,
     pub supported_encodings: Option<IndexSet<String>>,
-    pub services: HashMap<String, Service>,
     pub runtime: Handle,
     pub channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     pub server_info: Option<HashMap<String, String>>,
@@ -99,7 +98,6 @@ impl std::fmt::Debug for ConnectionOptions {
             .field("has_listener", &self.listener.is_some())
             .field("capabilities", &self.capabilities)
             .field("supported_encodings", &self.supported_encodings)
-            .field("num_services", &self.services.len())
             .field("has_channel_filter", &self.channel_filter.is_some())
             .field("server_info", &self.server_info)
             .field("message_backlog_size", &self.message_backlog_size)
@@ -121,10 +119,7 @@ pub(crate) struct RemoteAccessConnection {
 }
 
 impl RemoteAccessConnection {
-    pub fn new(mut options: ConnectionOptions) -> Self {
-        let services = Arc::new(ServiceMap::from_iter(
-            options.services.drain().map(|(_, s)| s),
-        ));
+    pub fn new(options: ConnectionOptions, services: Arc<ServiceMap>) -> Self {
         Self {
             options,
             services,
