@@ -237,6 +237,13 @@ if(FOXGLOVE_BUILD_REMOTE_ACCESS)
   target_compile_definitions(foxglove_ra_cpp_shared PUBLIC FOXGLOVE_REMOTE_ACCESS)
   target_link_libraries(foxglove_ra_cpp_shared PUBLIC foxglove_cpp_obj foxglove_generated_obj foxglove_ra_cpp_obj)
   target_link_libraries(foxglove_ra_cpp_shared PRIVATE foxglove_ra-shared)
+
+  add_executable(example_remote_access examples/remote-access/src/main.cpp)
+  set_property(TARGET example_remote_access PROPERTY CXX_STANDARD 17)
+  set_property(TARGET example_remote_access PROPERTY CXX_STANDARD_REQUIRED True)
+  target_compile_options(example_remote_access PUBLIC ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
+  target_link_options(example_remote_access PUBLIC ${SANITIZER_LINK_OPTIONS})
+  target_link_libraries(example_remote_access foxglove_ra_cpp_shared)
 endif()
 
 

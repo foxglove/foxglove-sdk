@@ -53,7 +53,9 @@ build-ra:
 		$(if $(STRICT),-DSTRICT=$(STRICT)) \
 		$(if $(CLANG_TIDY),-DCLANG_TIDY=$(CLANG_TIDY)) \
 		-B $(RA_BUILD_DIR)
-	cmake --build $(RA_BUILD_DIR) -j 8 --config $(CMAKE_BUILD_TYPE) --target foxglove_ra_cpp_shared
+	cmake --build $(RA_BUILD_DIR) -j 8 --config $(CMAKE_BUILD_TYPE) \
+		--target foxglove_ra_cpp_shared \
+		--target example_remote_access
 
 .PHONY: clean-ra
 clean-ra:
