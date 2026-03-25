@@ -2519,11 +2519,11 @@ export const LocationFix = {
     },
     "velocity_x": {
       "type": "number",
-      "description": "Velocity in the north direction (latitude axis) in m/s, positive north."
+      "description": "Velocity in the east direction (longitude axis) in m/s, positive east."
     },
     "velocity_y": {
       "type": "number",
-      "description": "Velocity in the east direction (longitude axis) in m/s, positive east."
+      "description": "Velocity in the north direction (latitude axis) in m/s, positive north."
     },
     "velocity_z": {
       "type": "number",
@@ -2683,11 +2683,11 @@ export const LocationFixes = {
           },
           "velocity_x": {
             "type": "number",
-            "description": "Velocity in the north direction (latitude axis) in m/s, positive north."
+            "description": "Velocity in the east direction (longitude axis) in m/s, positive east."
           },
           "velocity_y": {
             "type": "number",
-            "description": "Velocity in the east direction (longitude axis) in m/s, positive east."
+            "description": "Velocity in the north direction (latitude axis) in m/s, positive north."
           },
           "velocity_z": {
             "type": "number",

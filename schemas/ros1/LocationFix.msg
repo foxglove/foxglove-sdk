@@ -42,10 +42,10 @@ float64 heading
 # Heading variance in rad^2 (NaN indicates this value is not set)
 float64 heading_variance
 
-# Velocity in the north direction (latitude axis) in m/s, positive north. (NaN indicates this value is not set)
+# Velocity in the east direction (longitude axis) in m/s, positive east. (NaN indicates this value is not set)
 float64 velocity_x
 
-# Velocity in the east direction (longitude axis) in m/s, positive east. (NaN indicates this value is not set)
+# Velocity in the north direction (latitude axis) in m/s, positive north. (NaN indicates this value is not set)
 float64 velocity_y
 
 # Velocity in the vertical (altitude) direction in m/s, positive up. (NaN indicates this value is not set)

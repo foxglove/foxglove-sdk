@@ -51,10 +51,10 @@ message LocationFix {
   // Heading variance in rad^2
   optional double heading_variance = 11;
 
-  // Velocity in the north direction (latitude axis) in m/s, positive north.
+  // Velocity in the east direction (longitude axis) in m/s, positive east.
   optional double velocity_x = 12;
 
-  // Velocity in the east direction (longitude axis) in m/s, positive east.
+  // Velocity in the north direction (latitude axis) in m/s, positive north.
   optional double velocity_y = 13;
 
   // Velocity in the vertical (altitude) direction in m/s, positive up.

@@ -38,11 +38,11 @@ struct LocationFix {
   @optional
   double heading_variance;
 
-  // Velocity in the north direction (latitude axis) in m/s, positive north.
+  // Velocity in the east direction (longitude axis) in m/s, positive east.
   @optional
   double velocity_x;
 
-  // Velocity in the east direction (longitude axis) in m/s, positive east.
+  // Velocity in the north direction (latitude axis) in m/s, positive north.
   @optional
   double velocity_y;
 

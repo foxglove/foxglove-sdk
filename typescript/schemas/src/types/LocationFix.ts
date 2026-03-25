@@ -35,10 +35,10 @@ export type LocationFix = {
   /** Heading variance in rad^2 */
   heading_variance?: number;
 
-  /** Velocity in the north direction (latitude axis) in m/s, positive north. */
+  /** Velocity in the east direction (longitude axis) in m/s, positive east. */
   velocity_x?: number;
 
-  /** Velocity in the east direction (longitude axis) in m/s, positive east. */
+  /** Velocity in the north direction (latitude axis) in m/s, positive north. */
   velocity_y?: number;
 
   /** Velocity in the vertical (altitude) direction in m/s, positive up. */

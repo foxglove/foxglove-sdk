@@ -1540,8 +1540,8 @@ impl From<LinePrimitive> for foxglove::messages::LinePrimitive {
 /// :param position_covariance_type: If `position_covariance` is available, `position_covariance_type` must be set to indicate the type of covariance.
 /// :param heading: Compass heading in radians, measured clockwise from true north
 /// :param heading_variance: Heading variance in rad^2
-/// :param velocity_x: Velocity in the north direction (latitude axis) in m/s, positive north.
-/// :param velocity_y: Velocity in the east direction (longitude axis) in m/s, positive east.
+/// :param velocity_x: Velocity in the east direction (longitude axis) in m/s, positive east.
+/// :param velocity_y: Velocity in the north direction (latitude axis) in m/s, positive north.
 /// :param velocity_z: Velocity in the vertical (altitude) direction in m/s, positive up.
 /// :param color: Color used to visualize the location
 /// :param metadata: Additional user-provided metadata associated with the location fix. Keys must be unique.

@@ -1307,10 +1307,10 @@ struct LocationFix {
   /// @brief Heading variance in rad^2
   std::optional<double> heading_variance = std::nullopt;
 
-  /// @brief Velocity in the north direction (latitude axis) in m/s, positive north.
+  /// @brief Velocity in the east direction (longitude axis) in m/s, positive east.
   std::optional<double> velocity_x = std::nullopt;
 
-  /// @brief Velocity in the east direction (longitude axis) in m/s, positive east.
+  /// @brief Velocity in the north direction (latitude axis) in m/s, positive north.
   std::optional<double> velocity_y = std::nullopt;
 
   /// @brief Velocity in the vertical (altitude) direction in m/s, positive up.
