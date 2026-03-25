@@ -1,0 +1,43 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+
+# Set up the Rust/C static library as an imported target.
+# The exported targets reference "foxglove-static" (the corrosion target name used at build time),
+# so we must create a target with that exact name.
+if(NOT TARGET foxglove-static)
+  add_library(foxglove-static STATIC IMPORTED)
+  find_library(_foxglove_c_static_lib
+    NAMES foxglove
+    PATHS "${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@"
+    NO_DEFAULT_PATH
+  )
+  set_target_properties(foxglove-static PROPERTIES
+    IMPORTED_LOCATION "${_foxglove_c_static_lib}"
+  )
+  if(WIN32)
+    set_property(TARGET foxglove-static APPEND PROPERTY
+      INTERFACE_LINK_LIBRARIES Bcrypt SChannel Crypt32 Ncrypt ntdll userenv ws2_32)
+  elseif(APPLE)
+    set_property(TARGET foxglove-static APPEND PROPERTY
+      INTERFACE_LINK_LIBRARIES "-framework Security" "-framework CoreFoundation")
+  endif()
+endif()
+
+# Set up the Rust/C shared library as an imported target.
+# The exported targets reference "foxglove-shared" (the corrosion target name used at build time).
+if(NOT TARGET foxglove-shared)
+  add_library(foxglove-shared SHARED IMPORTED)
+  find_library(_foxglove_c_shared_lib
+    NAMES foxglove
+    PATHS "${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@"
+    NO_DEFAULT_PATH
+  )
+  set_target_properties(foxglove-shared PROPERTIES
+    IMPORTED_LOCATION "${_foxglove_c_shared_lib}"
+  )
+endif()
+
+include("${CMAKE_CURRENT_LIST_DIR}/foxglove-sdkTargets.cmake")
+
+check_required_components(foxglove-sdk)
