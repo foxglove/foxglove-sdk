@@ -165,17 +165,18 @@ impl SessionState {
     ///
     /// Returns `true` if the channel was inserted, or `false` if the participant already
     /// had a channel with the same ID advertised.
-    ///
-    /// Note: the caller is responsible for ensuring the participant exists in self.participants.
     pub fn insert_client_channel(
         &mut self,
         identity: &ParticipantIdentity,
         channel: ChannelDescriptor,
     ) -> bool {
-        assert!(
+        debug_assert!(
             self.participants.contains_key(identity),
             "Participant does not exist for identity: {identity:?}"
         );
+        if !self.participants.contains_key(identity) {
+            return false;
+        }
         let map = self.client_channels.entry(identity.clone()).or_default();
         match map.entry(channel.id()) {
             Entry::Occupied(_) => false,
