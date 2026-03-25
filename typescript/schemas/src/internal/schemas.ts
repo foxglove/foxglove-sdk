@@ -1642,7 +1642,7 @@ const LocationFix: FoxgloveMessageSchema = {
     {
       name: "velocity_x",
       type: { type: "primitive", name: "float64" },
-      description: "Velocity in the north direction (latitude axis) in m/s, positive north.",
+      description: "Velocity in the east direction (longitude axis) in m/s, positive east.",
       protobufFieldNumber: 12,
       flatbuffersFieldNumber: 11,
       optional: true,
@@ -1650,7 +1650,7 @@ const LocationFix: FoxgloveMessageSchema = {
     {
       name: "velocity_y",
       type: { type: "primitive", name: "float64" },
-      description: "Velocity in the east direction (longitude axis) in m/s, positive east.",
+      description: "Velocity in the north direction (latitude axis) in m/s, positive north.",
       protobufFieldNumber: 13,
       flatbuffersFieldNumber: 12,
       optional: true,
