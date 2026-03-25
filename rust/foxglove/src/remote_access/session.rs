@@ -10,6 +10,7 @@ use livekit::options::TrackPublishOptions;
 use livekit::prelude::*;
 use livekit::{ByteStreamReader, Room, StreamByteOptions, id::ParticipantIdentity};
 use parking_lot::RwLock;
+use semver::Version;
 use smallvec::SmallVec;
 use tokio::io::AsyncReadExt;
 use tokio_util::{io::StreamReader, sync::CancellationToken};
@@ -738,6 +739,60 @@ impl RemoteAccessSession {
         }
     }
 
+    /// Send an incompatible protocol version error to a participant that will not be added to the
+    /// session. Opens a one-shot byte stream, writes the error status, and closes it.
+    pub(crate) async fn send_incompatible_version_error(
+        &self,
+        participant_id: &ParticipantIdentity,
+        attributes: &std::collections::HashMap<String, String>,
+    ) {
+        use crate::remote_access::participant::ParticipantWriter;
+
+        let advertised = attributes
+            .get("protocolVersion")
+            .map(String::as_str)
+            .unwrap_or(crate::remote_access::protocol_version::DEFAULT_PROTOCOL_VERSION);
+        let message = format!(
+            "Remote access protocol version {} is not supported; minimum supported version is {}",
+            advertised,
+            crate::remote_access::protocol_version::REMOTE_ACCESS_MIN_SUPPORTED_PROTOCOL_VERSION,
+        );
+        error!("{}", message);
+
+        let stream = match self
+            .room
+            .local_participant()
+            .stream_bytes(StreamByteOptions {
+                topic: WS_PROTOCOL_TOPIC.to_string(),
+                destination_identities: vec![participant_id.clone()],
+                ..StreamByteOptions::default()
+            })
+            .await
+        {
+            Ok(s) => s,
+            Err(e) => {
+                error!(
+                    "failed to open error stream for incompatible participant {participant_id}: {e:?}"
+                );
+                return;
+            }
+        };
+
+        let min_version = semver::Version::parse(
+            crate::remote_access::protocol_version::REMOTE_ACCESS_MIN_SUPPORTED_PROTOCOL_VERSION,
+        )
+        .expect("REMOTE_ACCESS_MIN_SUPPORTED_PROTOCOL_VERSION is valid semver");
+        let participant = Arc::new(Participant::new(
+            participant_id.clone(),
+            min_version,
+            ParticipantWriter::Livekit(stream),
+        ));
+        let status = Status::error(message);
+        if let Err(e) = participant.send(&encode_json_message(&status)).await {
+            error!("failed to send incompatible version error to {participant_id}: {e:?}");
+        }
+    }
+
     /// Add a participant to the server, if it hasn't already been added.
     ///
     /// The caller is responsible for ensuring that this method is not called concurrently for the
@@ -748,6 +803,7 @@ impl RemoteAccessSession {
     pub(crate) async fn add_participant(
         &self,
         participant_id: ParticipantIdentity,
+        protocol_version: Version,
         server_info: ServerInfo,
     ) -> Result<(), Box<RemoteAccessError>> {
         use crate::remote_access::participant::ParticipantWriter;
@@ -775,6 +831,7 @@ impl RemoteAccessSession {
 
         let participant = Arc::new(Participant::new(
             participant_id.clone(),
+            protocol_version,
             ParticipantWriter::Livekit(stream),
         ));
 
@@ -1209,8 +1266,13 @@ mod tests {
     fn make_participant(name: &str) -> (ParticipantIdentity, Arc<Participant>) {
         let identity = ParticipantIdentity(name.to_string());
         let writer = Arc::new(TestByteStreamWriter::default());
+        let version = semver::Version::parse(
+            crate::remote_access::protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION,
+        )
+        .expect("REMOTE_ACCESS_PROTOCOL_VERSION is valid semver");
         let participant = Arc::new(Participant::new(
             identity.clone(),
+            version,
             ParticipantWriter::Test(writer),
         ));
         (identity, participant)

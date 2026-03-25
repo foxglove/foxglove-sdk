@@ -8,6 +8,7 @@ mod credentials_provider;
 mod gateway;
 mod listener;
 mod participant;
+pub(super) mod protocol_version;
 mod service;
 mod session;
 mod session_state;

@@ -4,6 +4,7 @@ use std::sync::Arc;
 #[cfg(test)]
 use bytes::Bytes;
 use livekit::{ByteStreamWriter, StreamWriter, id::ParticipantIdentity};
+use semver::Version;
 
 use crate::remote_access::RemoteAccessError;
 use crate::remote_common::ClientId;
@@ -23,6 +24,10 @@ pub(crate) struct Participant {
     client_id: ClientId,
     /// LiveKit participant ID.
     participant_id: ParticipantIdentity,
+    /// The remote access protocol version advertised by this participant.
+    /// Stored for future use when branching protocol behavior based on the participant's version.
+    #[allow(dead_code)]
+    protocol_version: Version,
     /// A reliable, ordered stream to send messages to just this participant
     writer: ParticipantWriter,
     /// Limits concurrent service calls from this participant.
@@ -89,10 +94,15 @@ impl ChannelWriterInner {
 
 impl Participant {
     /// Creates a new participant.
-    pub fn new(identity: ParticipantIdentity, writer: ParticipantWriter) -> Self {
+    pub fn new(
+        identity: ParticipantIdentity,
+        protocol_version: Version,
+        writer: ParticipantWriter,
+    ) -> Self {
         Self {
             client_id: ClientId::next(),
             participant_id: identity,
+            protocol_version,
             writer,
             service_call_sem: Semaphore::new(DEFAULT_SERVICE_CALLS_PER_PARTICIPANT),
         }
@@ -111,6 +121,12 @@ impl Participant {
     /// Returns the participant's identity.
     pub fn participant_id(&self) -> &ParticipantIdentity {
         &self.participant_id
+    }
+
+    /// Returns the remote access protocol version advertised by this participant.
+    #[allow(dead_code)]
+    pub fn protocol_version(&self) -> &Version {
+        &self.protocol_version
     }
 
     /// Sends a message to the participant.

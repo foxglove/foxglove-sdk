@@ -241,10 +241,12 @@ impl FoxgloveApiClient<DeviceToken> {
         &self,
         device_id: &str,
         remote_access_session_id: Option<String>,
+        protocol_version: Option<&str>,
     ) -> Result<RtcCredentials, FoxgloveApiClientError> {
         let device_id = encode_uri_component(device_id);
         let body = super::types::RemoteSessionRequest {
             remote_access_session_id,
+            protocol_version: protocol_version.map(str::to_owned),
         };
         let response = self
             .post(&format!(
@@ -351,7 +353,7 @@ mod tests {
         let client = create_test_api_client(server.url(), DeviceToken::new(TEST_DEVICE_TOKEN));
 
         let result = client
-            .authorize_remote_viz(TEST_DEVICE_ID, None)
+            .authorize_remote_viz(TEST_DEVICE_ID, None, None)
             .await
             .expect("could not authorize remote viz");
         assert_eq!(result.token, "rtc-token-abc123");
@@ -365,7 +367,9 @@ mod tests {
         let server = create_test_server().await;
         let client =
             create_test_api_client(server.url(), DeviceToken::new("some-bad-device-token"));
-        let result = client.authorize_remote_viz(TEST_DEVICE_ID, None).await;
+        let result = client
+            .authorize_remote_viz(TEST_DEVICE_ID, None, None)
+            .await;
         assert!(result.is_err());
     }
 }
