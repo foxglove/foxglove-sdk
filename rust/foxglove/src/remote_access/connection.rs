@@ -20,8 +20,9 @@ use crate::{
     library_version::get_library_version,
     protocol::v2::server::ServerInfo,
     remote_access::{
-        Capability, RemoteAccessError, credentials_provider::CredentialsProvider,
-        session::RemoteAccessSession,
+        Capability, RemoteAccessError,
+        credentials_provider::CredentialsProvider,
+        session::{RemoteAccessSession, SessionOptions},
     },
     remote_common::service::{Service, ServiceMap},
 };
@@ -80,33 +81,12 @@ pub(crate) struct RemoteAccessConnectionOptions {
     pub capabilities: Vec<Capability>,
     pub supported_encodings: Option<IndexSet<String>>,
     pub services: HashMap<String, Service>,
-    pub runtime: Option<Handle>,
+    pub runtime: Handle,
     pub channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     pub server_info: Option<HashMap<String, String>>,
     pub message_backlog_size: Option<usize>,
     pub cancellation_token: CancellationToken,
     pub context: Weak<Context>,
-}
-
-impl Default for RemoteAccessConnectionOptions {
-    fn default() -> Self {
-        Self {
-            name: None,
-            device_token: String::new(),
-            foxglove_api_url: None,
-            foxglove_api_timeout: None,
-            listener: None,
-            capabilities: Vec::new(),
-            supported_encodings: None,
-            services: HashMap::new(),
-            runtime: None,
-            channel_filter: None,
-            server_info: None,
-            message_backlog_size: None,
-            cancellation_token: CancellationToken::new(),
-            context: Arc::downgrade(&Context::get_default()),
-        }
-    }
 }
 
 impl std::fmt::Debug for RemoteAccessConnectionOptions {
@@ -120,7 +100,6 @@ impl std::fmt::Debug for RemoteAccessConnectionOptions {
             .field("capabilities", &self.capabilities)
             .field("supported_encodings", &self.supported_encodings)
             .field("num_services", &self.services.len())
-            .field("has_runtime", &self.runtime.is_some())
             .field("has_channel_filter", &self.channel_filter.is_some())
             .field("server_info", &self.server_info)
             .field("message_backlog_size", &self.message_backlog_size)
@@ -244,9 +223,21 @@ impl RemoteAccessConnection {
             {
                 Ok((room, room_events)) => {
                     info!(remote_access_session_id, "connected to LiveKit server");
+                    let session_options = SessionOptions {
+                        context: self.options.context.clone(),
+                        channel_filter: self.options.channel_filter.clone(),
+                        listener: self.options.listener.clone(),
+                        capabilities: self.options.capabilities.clone(),
+                        supported_encodings: self
+                            .options
+                            .supported_encodings
+                            .clone()
+                            .unwrap_or_default(),
+                        cancellation_token: self.options.cancellation_token.clone(),
+                    };
                     (
                         Arc::new(RemoteAccessSession::new(
-                            &self.options,
+                            session_options,
                             room,
                             message_backlog_size,
                             self.services.clone(),
@@ -271,11 +262,9 @@ impl RemoteAccessConnection {
     ///
     /// If disconnected from the room, reset all state and attempt to restart the run loop.
     pub fn spawn_run_until_cancelled(self: Arc<Self>) -> JoinHandle<()> {
-        if let Some(runtime) = self.options.runtime.as_ref() {
-            runtime.spawn(self.clone().run_until_cancelled())
-        } else {
-            tokio::spawn(self.run_until_cancelled())
-        }
+        self.options
+            .runtime
+            .spawn(self.clone().run_until_cancelled())
     }
 
     /// Run the server loop until cancelled.

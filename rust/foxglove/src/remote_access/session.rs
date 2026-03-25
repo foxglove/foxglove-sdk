@@ -16,7 +16,6 @@ use tokio_util::{io::StreamReader, sync::CancellationToken};
 use tracing::{debug, error, info, warn};
 
 use crate::protocol::v2::DecodeError;
-use crate::remote_access::connection::RemoteAccessConnectionOptions;
 use crate::remote_access::participant::ChannelWriter;
 use crate::remote_common::service::{CallId, ServiceId, ServiceMap};
 use crate::{
@@ -255,9 +254,18 @@ impl Sink for RemoteAccessSession {
     }
 }
 
+pub(crate) struct SessionOptions {
+    pub context: Weak<Context>,
+    pub channel_filter: Option<Arc<dyn SinkChannelFilter>>,
+    pub listener: Option<Arc<dyn Listener>>,
+    pub capabilities: Vec<Capability>,
+    pub supported_encodings: IndexSet<String>,
+    pub cancellation_token: CancellationToken,
+}
+
 impl RemoteAccessSession {
     pub(crate) fn new(
-        options: &RemoteAccessConnectionOptions,
+        options: SessionOptions,
         room: Room,
         message_backlog_size: usize,
         services: Arc<ServiceMap>,
@@ -268,12 +276,12 @@ impl RemoteAccessSession {
         Self {
             sink_id: SinkId::next(),
             room,
-            context: options.context.clone(),
+            context: options.context,
             state: RwLock::new(SessionState::new()),
-            channel_filter: options.channel_filter.clone(),
-            listener: options.listener.clone(),
-            capabilities: options.capabilities.clone(),
-            cancellation_token: options.cancellation_token.clone(),
+            channel_filter: options.channel_filter,
+            listener: options.listener,
+            capabilities: options.capabilities,
+            cancellation_token: options.cancellation_token,
             data_plane_tx,
             data_plane_rx,
             control_plane_tx,
@@ -282,7 +290,7 @@ impl RemoteAccessSession {
             video_metadata_tx,
             video_metadata_rx,
             services,
-            supported_encodings: options.supported_encodings.clone().unwrap_or_default(),
+            supported_encodings: options.supported_encodings,
         }
     }
 

@@ -1,14 +1,14 @@
 use std::{collections::HashMap, sync::Arc, time::Duration};
 
-use crate::{
-    ChannelDescriptor, Context, FoxgloveError,
-    remote_common::service::Service,
-    runtime::get_runtime_handle,
-    sink_channel_filter::{SinkChannelFilter, SinkChannelFilterFn},
-};
-
+use indexmap::IndexSet;
 use tokio::runtime::Handle;
 use tokio::task::JoinHandle;
+use tokio_util::sync::CancellationToken;
+
+use crate::{
+    ChannelDescriptor, Context, FoxgloveError, SinkChannelFilter, remote_common::service::Service,
+    runtime::get_runtime_handle, sink_channel_filter::SinkChannelFilterFn,
+};
 
 use super::connection::{ConnectionStatus, RemoteAccessConnection, RemoteAccessConnectionOptions};
 use super::{Capability, Listener};
@@ -76,18 +76,58 @@ const FOXGLOVE_API_TIMEOUT_ENV: &str = "FOXGLOVE_API_TIMEOUT";
 ///
 /// You may only create one gateway at a time for the device.
 #[must_use]
-#[derive(Default)]
 pub struct Gateway {
-    options: RemoteAccessConnectionOptions,
+    name: Option<String>,
     device_token: Option<String>,
     foxglove_api_url: Option<String>,
     foxglove_api_timeout: Option<Duration>,
+    listener: Option<Arc<dyn Listener>>,
+    capabilities: Vec<Capability>,
+    supported_encodings: Option<IndexSet<String>>,
+    services: HashMap<String, Service>,
+    runtime: Option<Handle>,
+    channel_filter: Option<Arc<dyn SinkChannelFilter>>,
+    server_info: Option<HashMap<String, String>>,
+    message_backlog_size: Option<usize>,
+    context: std::sync::Weak<Context>,
+}
+
+impl Default for Gateway {
+    fn default() -> Self {
+        Self {
+            name: None,
+            device_token: None,
+            foxglove_api_url: None,
+            foxglove_api_timeout: None,
+            listener: None,
+            capabilities: Vec::new(),
+            supported_encodings: None,
+            services: HashMap::new(),
+            runtime: None,
+            channel_filter: None,
+            server_info: None,
+            message_backlog_size: None,
+            context: Arc::downgrade(&Context::get_default()),
+        }
+    }
 }
 
 impl std::fmt::Debug for Gateway {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Gateway")
-            .field("options", &self.options)
+            .field("name", &self.name)
+            .field("has_device_token", &self.device_token.is_some())
+            .field("foxglove_api_url", &self.foxglove_api_url)
+            .field("foxglove_api_timeout", &self.foxglove_api_timeout)
+            .field("has_listener", &self.listener.is_some())
+            .field("capabilities", &self.capabilities)
+            .field("supported_encodings", &self.supported_encodings)
+            .field("num_services", &self.services.len())
+            .field("has_runtime", &self.runtime.is_some())
+            .field("has_channel_filter", &self.channel_filter.is_some())
+            .field("server_info", &self.server_info)
+            .field("message_backlog_size", &self.message_backlog_size)
+            .field("has_context", &(self.context.strong_count() > 0))
             .finish()
     }
 }
@@ -102,19 +142,19 @@ impl Gateway {
     ///
     /// If not set, the device name from the Foxglove platform is used.
     pub fn name(mut self, name: impl Into<String>) -> Self {
-        self.options.name = Some(name.into());
+        self.name = Some(name.into());
         self
     }
 
     /// Configure an event listener to receive client message events.
     pub fn listener(mut self, listener: Arc<dyn Listener>) -> Self {
-        self.options.listener = Some(listener);
+        self.listener = Some(listener);
         self
     }
 
     /// Sets capabilities to advertise in the server info message.
     pub fn capabilities(mut self, capabilities: impl IntoIterator<Item = Capability>) -> Self {
-        self.options.capabilities = capabilities.into_iter().collect();
+        self.capabilities = capabilities.into_iter().collect();
         self
     }
 
@@ -125,20 +165,20 @@ impl Gateway {
         mut self,
         encodings: impl IntoIterator<Item = impl Into<String>>,
     ) -> Self {
-        self.options.supported_encodings = Some(encodings.into_iter().map(|e| e.into()).collect());
+        self.supported_encodings = Some(encodings.into_iter().map(|e| e.into()).collect());
         self
     }
 
     /// Sets metadata as reported via the ServerInfo message.
     #[doc(hidden)]
     pub fn server_info(mut self, info: HashMap<String, String>) -> Self {
-        self.options.server_info = Some(info);
+        self.server_info = Some(info);
         self
     }
 
     /// Sets the context for this sink.
     pub fn context(mut self, ctx: &Arc<Context>) -> Self {
-        self.options.context = Arc::downgrade(ctx);
+        self.context = Arc::downgrade(ctx);
         self
     }
 
@@ -147,7 +187,7 @@ impl Gateway {
     /// By default, the gateway will use either the current runtime, or spawn its own internal runtime.
     #[doc(hidden)]
     pub fn tokio_runtime(mut self, handle: &tokio::runtime::Handle) -> Self {
-        self.options.runtime = Some(handle.clone());
+        self.runtime = Some(handle.clone());
         self
     }
 
@@ -156,7 +196,7 @@ impl Gateway {
     /// The filter is a function that takes a channel and returns a boolean indicating whether the
     /// channel should be logged.
     pub fn channel_filter(mut self, filter: Arc<dyn SinkChannelFilter>) -> Self {
-        self.options.channel_filter = Some(filter);
+        self.channel_filter = Some(filter);
         self
     }
 
@@ -193,7 +233,7 @@ impl Gateway {
     ///
     /// By default, the sink will buffer 1024 messages.
     pub fn message_backlog_size(mut self, size: usize) -> Self {
-        self.options.message_backlog_size = Some(size);
+        self.message_backlog_size = Some(size);
         self
     }
 
@@ -202,7 +242,7 @@ impl Gateway {
         mut self,
         filter: impl Fn(&ChannelDescriptor) -> bool + Sync + Send + 'static,
     ) -> Self {
-        self.options.channel_filter = Some(Arc::new(SinkChannelFilterFn(filter)));
+        self.channel_filter = Some(Arc::new(SinkChannelFilterFn(filter)));
         self
     }
 
@@ -210,10 +250,10 @@ impl Gateway {
     ///
     /// Automatically adds [`Capability::Services`] to the set of advertised capabilities.
     pub fn services(mut self, services: impl IntoIterator<Item = Service>) -> Self {
-        self.options.services.clear();
+        self.services.clear();
         for service in services {
             let name = service.name().to_string();
-            if let Some(s) = self.options.services.insert(name, service) {
+            if let Some(s) = self.services.insert(name, service) {
                 tracing::warn!("Redefining service {}", s.name());
             }
         }
@@ -229,7 +269,7 @@ impl Gateway {
     /// Returns an error if no device token is provided and the `FOXGLOVE_DEVICE_TOKEN`
     /// environment variable is not set.
     pub fn start(mut self) -> Result<GatewayHandle, FoxgloveError> {
-        self.options.device_token = self
+        let device_token = self
             .device_token
             .or_else(|| std::env::var(FOXGLOVE_DEVICE_TOKEN_ENV).ok())
             .ok_or_else(|| {
@@ -237,10 +277,10 @@ impl Gateway {
                     "No device token provided. Set the {FOXGLOVE_DEVICE_TOKEN_ENV} environment variable or call .device_token() on the builder."
                 ))
             })?;
-        self.options.foxglove_api_url = self
+        let foxglove_api_url = self
             .foxglove_api_url
             .or_else(|| std::env::var(FOXGLOVE_API_URL_ENV).ok());
-        self.options.foxglove_api_timeout = self.foxglove_api_timeout.or_else(|| {
+        let foxglove_api_timeout = self.foxglove_api_timeout.or_else(|| {
             std::env::var(FOXGLOVE_API_TIMEOUT_ENV)
                 .ok()
                 .and_then(|s| s.parse::<u64>().ok())
@@ -248,26 +288,37 @@ impl Gateway {
         });
         // If the gateway was declared with services, automatically add the "services" capability
         // and the set of supported request encodings.
-        if !self.options.services.is_empty() {
-            if !self.options.capabilities.contains(&Capability::Services) {
-                self.options.capabilities.push(Capability::Services);
+        if !self.services.is_empty() {
+            if !self.capabilities.contains(&Capability::Services) {
+                self.capabilities.push(Capability::Services);
             }
             let encodings = self
-                .options
                 .supported_encodings
                 .get_or_insert_with(Default::default);
-            for svc in self.options.services.values() {
+            for svc in self.services.values() {
                 if let Some(encoding) = svc.request_encoding() {
                     encodings.insert(encoding.to_string());
                 }
             }
         }
-        let runtime = self
-            .options
-            .runtime
-            .get_or_insert_with(get_runtime_handle)
-            .clone();
-        let connection = RemoteAccessConnection::new(self.options);
+        let runtime = self.runtime.unwrap_or_else(get_runtime_handle);
+        let options = RemoteAccessConnectionOptions {
+            name: self.name,
+            device_token,
+            foxglove_api_url,
+            foxglove_api_timeout,
+            listener: self.listener,
+            capabilities: self.capabilities,
+            supported_encodings: self.supported_encodings,
+            services: self.services,
+            runtime: runtime.clone(),
+            channel_filter: self.channel_filter,
+            server_info: self.server_info,
+            message_backlog_size: self.message_backlog_size,
+            cancellation_token: CancellationToken::new(),
+            context: self.context,
+        };
+        let connection = RemoteAccessConnection::new(options);
         Ok(GatewayHandle::new(Arc::new(connection), runtime))
     }
 }
