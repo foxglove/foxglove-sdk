@@ -1315,7 +1315,7 @@ typedef struct foxglove_location_fix {
    */
   foxglove_position_covariance_type position_covariance_type;
   /**
-   * Compass heading in radians, measured clockwise from true north
+   * Heading (yaw angle), in radians, measured clockwise from true north
    */
   const double *heading;
   /**

@@ -595,7 +595,7 @@ pub struct LocationFix {
         serde(with = "serde_enum::location_fix_position_covariance_type")
     )]
     pub position_covariance_type: i32,
-    /// Compass heading in radians, measured clockwise from true north
+    /// Heading (yaw angle), in radians, measured clockwise from true north
     #[prost(double, optional, tag = "10")]
     pub heading: ::core::option::Option<f64>,
     /// Heading variance in rad^2

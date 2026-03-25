@@ -3555,7 +3555,7 @@ pub struct LocationFix {
     /// If `position_covariance` is available, `position_covariance_type` must be set to indicate the type of covariance.
     pub position_covariance_type: FoxglovePositionCovarianceType,
 
-    /// Compass heading in radians, measured clockwise from true north
+    /// Heading (yaw angle), in radians, measured clockwise from true north
     pub heading: *const f64,
 
     /// Heading variance in rad^2

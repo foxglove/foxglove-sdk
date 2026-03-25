@@ -1767,7 +1767,7 @@ float64
 </td>
 <td>
 
-Compass heading in radians, measured clockwise from true north
+Heading (yaw angle), in radians, measured clockwise from true north
 
 </td>
 </tr>

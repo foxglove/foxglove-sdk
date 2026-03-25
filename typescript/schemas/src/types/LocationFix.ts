@@ -29,7 +29,7 @@ export type LocationFix = {
   /** If `position_covariance` is available, `position_covariance_type` must be set to indicate the type of covariance. */
   position_covariance_type: PositionCovarianceType;
 
-  /** Compass heading in radians, measured clockwise from true north */
+  /** Heading (yaw angle), in radians, measured clockwise from true north */
   heading?: number;
 
   /** Heading variance in rad^2 */

@@ -1301,7 +1301,7 @@ struct LocationFix {
   /// indicate the type of covariance.
   PositionCovarianceType position_covariance_type{};
 
-  /// @brief Compass heading in radians, measured clockwise from true north
+  /// @brief Heading (yaw angle), in radians, measured clockwise from true north
   std::optional<double> heading = std::nullopt;
 
   /// @brief Heading variance in rad^2

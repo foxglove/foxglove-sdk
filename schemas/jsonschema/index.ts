@@ -2511,7 +2511,7 @@ export const LocationFix = {
     },
     "heading": {
       "type": "number",
-      "description": "Compass heading in radians, measured clockwise from true north"
+      "description": "Heading (yaw angle), in radians, measured clockwise from true north"
     },
     "heading_variance": {
       "type": "number",
@@ -2675,7 +2675,7 @@ export const LocationFixes = {
           },
           "heading": {
             "type": "number",
-            "description": "Compass heading in radians, measured clockwise from true north"
+            "description": "Heading (yaw angle), in radians, measured clockwise from true north"
           },
           "heading_variance": {
             "type": "number",
