@@ -72,7 +72,7 @@ impl ConnectionStatus {
 /// Options for the remote access connection.
 ///
 /// This should be constructed from the [`crate::remote_access::Gateway`] builder.
-pub(crate) struct RemoteAccessConnectionOptions {
+pub(crate) struct ConnectionOptions {
     pub name: Option<String>,
     pub device_token: String,
     pub foxglove_api_url: Option<String>,
@@ -89,9 +89,9 @@ pub(crate) struct RemoteAccessConnectionOptions {
     pub context: Weak<Context>,
 }
 
-impl std::fmt::Debug for RemoteAccessConnectionOptions {
+impl std::fmt::Debug for ConnectionOptions {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("RemoteAccessConnectionOptions")
+        f.debug_struct("ConnectionOptions")
             .field("name", &self.name)
             .field("has_device_token", &!self.device_token.is_empty())
             .field("foxglove_api_url", &self.foxglove_api_url)
@@ -111,7 +111,7 @@ impl std::fmt::Debug for RemoteAccessConnectionOptions {
 /// RemoteAccessConnection manages the connected [`RemoteAccessSession`] to the LiveKit server,
 /// and holds the options and other state that outlive a session.
 pub(crate) struct RemoteAccessConnection {
-    options: RemoteAccessConnectionOptions,
+    options: ConnectionOptions,
     services: Arc<ServiceMap>,
     credentials_provider: OnceCell<CredentialsProvider>,
     status: AtomicU8,
@@ -121,7 +121,7 @@ pub(crate) struct RemoteAccessConnection {
 }
 
 impl RemoteAccessConnection {
-    pub fn new(mut options: RemoteAccessConnectionOptions) -> Self {
+    pub fn new(mut options: ConnectionOptions) -> Self {
         let services = Arc::new(ServiceMap::from_iter(
             options.services.drain().map(|(_, s)| s),
         ));
@@ -637,7 +637,7 @@ impl RemoteAccessConnection {
         }
     }
 
-    /// Create and serialize ServerInfo message based on the RemoteAccessConnectionOptions.
+    /// Create and serialize ServerInfo message based on the ConnectionOptions.
     ///
     /// The metadata and supported_encodings are important for the ClientPublish capability,
     /// as some app components will use this information to determine publish formats (ROS1 vs. JSON).

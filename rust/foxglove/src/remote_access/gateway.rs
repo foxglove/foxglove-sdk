@@ -10,7 +10,7 @@ use crate::{
     runtime::get_runtime_handle, sink_channel_filter::SinkChannelFilterFn,
 };
 
-use super::connection::{ConnectionStatus, RemoteAccessConnection, RemoteAccessConnectionOptions};
+use super::connection::{ConnectionOptions, ConnectionStatus, RemoteAccessConnection};
 use super::{Capability, Listener};
 
 /// A handle to the remote access gateway connection.
@@ -302,7 +302,7 @@ impl Gateway {
             }
         }
         let runtime = self.runtime.unwrap_or_else(get_runtime_handle);
-        let options = RemoteAccessConnectionOptions {
+        let options = ConnectionOptions {
             name: self.name,
             device_token,
             foxglove_api_url,
