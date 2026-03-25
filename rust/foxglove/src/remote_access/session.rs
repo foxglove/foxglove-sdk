@@ -255,27 +255,25 @@ impl Sink for RemoteAccessSession {
 }
 
 pub(crate) struct SessionOptions {
+    pub room: Room,
     pub context: Weak<Context>,
     pub channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     pub listener: Option<Arc<dyn Listener>>,
     pub capabilities: Vec<Capability>,
     pub supported_encodings: IndexSet<String>,
     pub cancellation_token: CancellationToken,
+    pub message_backlog_size: usize,
+    pub services: Arc<ServiceMap>,
 }
 
 impl RemoteAccessSession {
-    pub(crate) fn new(
-        options: SessionOptions,
-        room: Room,
-        message_backlog_size: usize,
-        services: Arc<ServiceMap>,
-    ) -> Self {
-        let (data_plane_tx, data_plane_rx) = flume::bounded(message_backlog_size);
-        let (control_plane_tx, control_plane_rx) = flume::bounded(message_backlog_size);
+    pub(crate) fn new(options: SessionOptions) -> Self {
+        let (data_plane_tx, data_plane_rx) = flume::bounded(options.message_backlog_size);
+        let (control_plane_tx, control_plane_rx) = flume::bounded(options.message_backlog_size);
         let (video_metadata_tx, video_metadata_rx) = tokio::sync::watch::channel(());
         Self {
             sink_id: SinkId::next(),
-            room,
+            room: options.room,
             context: options.context,
             state: RwLock::new(SessionState::new()),
             channel_filter: options.channel_filter,
@@ -289,7 +287,7 @@ impl RemoteAccessSession {
             subscription_lock: parking_lot::Mutex::new(()),
             video_metadata_tx,
             video_metadata_rx,
-            services,
+            services: options.services,
             supported_encodings: options.supported_encodings,
         }
     }

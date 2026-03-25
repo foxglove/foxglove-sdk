@@ -208,11 +208,6 @@ impl RemoteAccessConnection {
             "successfully obtained LiveKit credentials"
         );
 
-        let message_backlog_size = self
-            .options
-            .message_backlog_size
-            .unwrap_or(DEFAULT_MESSAGE_BACKLOG_SIZE);
-
         info!(
             remote_access_session_id,
             url = credentials.url.as_str(),
@@ -224,6 +219,7 @@ impl RemoteAccessConnection {
                 Ok((room, room_events)) => {
                     info!(remote_access_session_id, "connected to LiveKit server");
                     let session_options = SessionOptions {
+                        room,
                         context: self.options.context.clone(),
                         channel_filter: self.options.channel_filter.clone(),
                         listener: self.options.listener.clone(),
@@ -234,14 +230,14 @@ impl RemoteAccessConnection {
                             .clone()
                             .unwrap_or_default(),
                         cancellation_token: self.options.cancellation_token.clone(),
+                        message_backlog_size: self
+                            .options
+                            .message_backlog_size
+                            .unwrap_or(DEFAULT_MESSAGE_BACKLOG_SIZE),
+                        services: self.services.clone(),
                     };
                     (
-                        Arc::new(RemoteAccessSession::new(
-                            session_options,
-                            room,
-                            message_backlog_size,
-                            self.services.clone(),
-                        )),
+                        Arc::new(RemoteAccessSession::new(session_options)),
                         room_events,
                     )
                 }
