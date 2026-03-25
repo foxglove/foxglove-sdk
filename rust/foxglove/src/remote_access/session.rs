@@ -517,7 +517,7 @@ impl RemoteAccessSession {
                 ) {
                     return;
                 }
-            } else if !self.handle_client_message(
+            } else if !self.handle_client_control_message(
                 &participant_identity,
                 opcode,
                 Bytes::from(payload),
@@ -608,7 +608,7 @@ impl RemoteAccessSession {
 
     /// Handle a single framed ws-protocol message. Returns `false` if the byte stream
     /// should be closed (e.g. unrecognized opcode indicating a protocol mismatch).
-    fn handle_client_message(
+    fn handle_client_control_message(
         self: &Arc<Self>,
         participant_identity: &ParticipantIdentity,
         opcode: u8,
