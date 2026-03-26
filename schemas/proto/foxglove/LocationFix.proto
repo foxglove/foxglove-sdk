@@ -45,7 +45,7 @@ message LocationFix {
   // If `position_covariance` is available, `position_covariance_type` must be set to indicate the type of covariance.
   PositionCovarianceType position_covariance_type = 5;
 
-  // Heading (yaw angle), in radians, measured clockwise from true north
+  // Heading (yaw angle), in radians, measured clockwise from north
   optional double heading = 10;
 
   // Heading variance in rad^2

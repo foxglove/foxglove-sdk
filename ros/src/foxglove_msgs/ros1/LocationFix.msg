@@ -36,7 +36,7 @@ uint8 KNOWN=3
 # If `position_covariance` is available, `position_covariance_type` must be set to indicate the type of covariance.
 uint8 position_covariance_type
 
-# Heading (yaw angle), in radians, measured clockwise from true north (NaN indicates this value is not set)
+# Heading (yaw angle), in radians, measured clockwise from north (NaN indicates this value is not set)
 float64 heading
 
 # Heading variance in rad^2 (NaN indicates this value is not set)

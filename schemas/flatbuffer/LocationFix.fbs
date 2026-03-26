@@ -44,7 +44,7 @@ table LocationFix {
   /// If `position_covariance` is available, `position_covariance_type` must be set to indicate the type of covariance.
   position_covariance_type:PositionCovarianceType (id: 6);
 
-  /// Heading (yaw angle), in radians, measured clockwise from true north
+  /// Heading (yaw angle), in radians, measured clockwise from north
   heading:double = null (id: 9);
 
   /// Heading variance in rad^2

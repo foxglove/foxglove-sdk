@@ -1767,7 +1767,7 @@ float64
 </td>
 <td>
 
-Heading (yaw angle), in radians, measured clockwise from true north
+Heading (yaw angle), in radians, measured clockwise from north
 
 </td>
 </tr>

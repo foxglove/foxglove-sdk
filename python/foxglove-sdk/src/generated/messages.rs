@@ -1538,7 +1538,7 @@ impl From<LinePrimitive> for foxglove::messages::LinePrimitive {
 /// :param altitude: Altitude in meters
 /// :param position_covariance: Position covariance (m^2) defined relative to a tangential plane through the reported position. The components are East, North, and Up (ENU), in row-major order.
 /// :param position_covariance_type: If `position_covariance` is available, `position_covariance_type` must be set to indicate the type of covariance.
-/// :param heading: Heading (yaw angle), in radians, measured clockwise from true north
+/// :param heading: Heading (yaw angle), in radians, measured clockwise from north
 /// :param heading_variance: Heading variance in rad^2
 /// :param velocity_x: Velocity east (longitude axis) in m/s.
 /// :param velocity_y: Velocity north (latitude axis) in m/s.

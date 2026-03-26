@@ -30,7 +30,7 @@ struct LocationFix {
   // If `position_covariance` is available, `position_covariance_type` must be set to indicate the type of covariance.
   PositionCovarianceType position_covariance_type;
 
-  // Heading (yaw angle), in radians, measured clockwise from true north
+  // Heading (yaw angle), in radians, measured clockwise from north
   @optional
   double heading;
 
