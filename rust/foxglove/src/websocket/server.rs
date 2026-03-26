@@ -120,6 +120,30 @@ pub(crate) fn create_server(
     ctx: &Arc<Context>,
     opts: ServerOptions,
 ) -> Result<Arc<Server>, FoxgloveError> {
+    // Validate that services without a request encoding have at least one supported
+    // encoding available (either configured globally or from another service).
+    if !opts.services.is_empty() {
+        let has_encodings = opts
+            .supported_encodings
+            .as_ref()
+            .is_some_and(|e| !e.is_empty())
+            || opts
+                .services
+                .values()
+                .any(|s| s.request_encoding().is_some());
+        if !has_encodings {
+            if let Some(svc) = opts
+                .services
+                .values()
+                .find(|s| s.request_encoding().is_none())
+            {
+                return Err(FoxgloveError::MissingRequestEncoding(
+                    svc.name().to_string(),
+                ));
+            }
+        }
+    }
+
     // TLS configuration is fallible, so build it prior to allocating the Arc with the weak ref
     let stream_config = StreamConfiguration::new(opts.tls_identity.as_ref())?;
 

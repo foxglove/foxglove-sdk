@@ -256,8 +256,43 @@ impl Gateway {
                     encodings.insert(encoding.to_string());
                 }
             }
+            if encodings.is_empty() {
+                if let Some(svc) = self
+                    .options
+                    .services
+                    .values()
+                    .find(|s| s.request_encoding().is_none())
+                {
+                    return Err(FoxgloveError::MissingRequestEncoding(
+                        svc.name().to_string(),
+                    ));
+                }
+            }
         }
         let connection = RemoteAccessConnection::new(self.options);
         Ok(GatewayHandle::new(Arc::new(connection)))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::FoxgloveError;
+    use crate::remote_common::service::{Service, ServiceSchema};
+
+    use super::Gateway;
+
+    #[test]
+    fn test_initial_service_missing_request_encoding() {
+        // Services configured at creation time are also validated for request encodings.
+        let svc =
+            Service::builder("/s", ServiceSchema::new("")).handler_fn(|_| Ok::<_, String>(b""));
+        let result = Gateway::new()
+            .device_token("test-token")
+            .services([svc])
+            .start();
+        assert!(matches!(
+            result,
+            Err(FoxgloveError::MissingRequestEncoding(_))
+        ));
     }
 }
