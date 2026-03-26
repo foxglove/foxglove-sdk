@@ -274,7 +274,7 @@ impl Sink for RemoteAccessSession {
     }
 }
 
-pub(crate) struct SessionOptions {
+pub(crate) struct SessionParams {
     pub room: Room,
     pub context: Weak<Context>,
     pub channel_filter: Option<Arc<dyn SinkChannelFilter>>,
@@ -287,7 +287,7 @@ pub(crate) struct SessionOptions {
 }
 
 impl RemoteAccessSession {
-    pub(crate) fn new(options: SessionOptions) -> Self {
+    pub(crate) fn new(options: SessionParams) -> Self {
         let (data_plane_tx, data_plane_rx) = flume::bounded(options.message_backlog_size);
         let (control_plane_tx, control_plane_rx) = flume::bounded(options.message_backlog_size);
         let (video_metadata_tx, video_metadata_rx) = tokio::sync::watch::channel(());
