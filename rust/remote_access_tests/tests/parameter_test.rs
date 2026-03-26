@@ -6,7 +6,7 @@
 
 use std::sync::{Arc, Mutex};
 
-use anyhow::{Context as _, Result};
+use anyhow::Result;
 use foxglove::protocol::v2::server::server_info;
 use foxglove::remote_access::{Capability, Listener, Parameter};
 use remote_access_tests::test_helpers::{TestGateway, TestGatewayOptions, ViewerConnection};
@@ -42,6 +42,7 @@ impl ParameterListener {
         std::mem::take(&mut *self.subscribed.lock().unwrap())
     }
 
+    #[allow(dead_code)]
     fn take_unsubscribed(&self) -> Vec<Vec<String>> {
         std::mem::take(&mut *self.unsubscribed.lock().unwrap())
     }
