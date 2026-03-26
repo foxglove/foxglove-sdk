@@ -54,6 +54,10 @@ class McapPlayer(PlaybackSource):
         ] = None
         self._closed = False
 
+    def _ensure_open(self) -> None:
+        if self._closed:
+            raise RuntimeError("McapPlayer is closed")
+
     def close(self) -> None:
         """Release the open MCAP file handle."""
         if self._closed:
@@ -71,8 +75,7 @@ class McapPlayer(PlaybackSource):
 
     def _reset_reader(self, start_time: int) -> None:
         """Re-open the MCAP reader starting from the given time."""
-        if self._closed:
-            raise RuntimeError("McapPlayer is closed")
+        self._ensure_open()
         self._file.close()
         self._file = open(self._path, "rb")
         self._reader = mcap.reader.make_reader(self._file)
@@ -91,6 +94,7 @@ class McapPlayer(PlaybackSource):
         ]
     ]:
         """Returns the next message, consuming any buffered pending message first."""
+        self._ensure_open()
         if self._pending is not None:
             msg = self._pending
             self._pending = None
@@ -164,6 +168,7 @@ class McapPlayer(PlaybackSource):
             self._status = PlaybackStatus.Paused
 
     def log_next_message(self, server: WebSocketServer) -> float | None:
+        self._ensure_open()
         if self._status != PlaybackStatus.Playing:
             return None
 

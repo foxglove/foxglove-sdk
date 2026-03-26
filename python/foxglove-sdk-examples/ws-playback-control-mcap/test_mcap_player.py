@@ -10,13 +10,13 @@ from mcap_player import _MIN_PLAYBACK_SPEED, McapPlayer, TimeTracker, _clamp_spe
 def _write_test_mcap(path: Path) -> None:
     with path.open("wb") as file_handle:
         writer = mcap.writer.Writer(file_handle)
+        writer.start()
         schema_id = writer.register_schema("TestSchema", "jsonschema", b"{}")
         channel_id = writer.register_channel(
             topic="/test",
             message_encoding="json",
             schema_id=schema_id,
         )
-        writer.start()
         writer.add_message(
             channel_id=channel_id,
             log_time=10,
