@@ -16,6 +16,10 @@ if(NOT TARGET foxglove-static)
   elseif(APPLE)
     set_property(TARGET foxglove-static APPEND PROPERTY
       INTERFACE_LINK_LIBRARIES "-framework Security" "-framework CoreFoundation")
+  elseif(UNIX)
+    # Required for the Rust standard library on older glibc (< 2.34) where these are separate libraries.
+    set_property(TARGET foxglove-static APPEND PROPERTY
+      INTERFACE_LINK_LIBRARIES pthread dl m)
   endif()
 endif()
 

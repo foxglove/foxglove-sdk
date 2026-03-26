@@ -188,6 +188,9 @@ if(WIN32)
   target_link_libraries(foxglove-static INTERFACE Bcrypt SChannel Crypt32 Ncrypt)
 elseif(APPLE)
   target_link_libraries(foxglove-static INTERFACE "-framework Security" "-framework CoreFoundation")
+elseif(UNIX)
+  # Required for the Rust standard library on older glibc (< 2.34) where these are separate libraries.
+  target_link_libraries(foxglove-static INTERFACE pthread dl m)
 endif()
 
 
