@@ -1626,7 +1626,7 @@ const LocationFix: FoxgloveMessageSchema = {
     {
       name: "heading",
       type: { type: "primitive", name: "float64" },
-      description: "Heading (yaw angle), in radians, measured clockwise from true north",
+      description: "Heading (yaw angle), in radians, measured clockwise from north",
       protobufFieldNumber: 10,
       flatbuffersFieldNumber: 9,
       optional: true,
