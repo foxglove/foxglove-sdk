@@ -15,7 +15,7 @@ use crate::websocket::{
     AssetHandler, AsyncAssetHandlerFn, BlockingAssetHandlerFn, Capability, Client, ConnectionGraph,
     Parameter, Server, ServerOptions, ShutdownHandle, Status, create_server,
 };
-use crate::{AppUrl, ChannelDescriptor, Context, FoxgloveError, get_runtime_handle};
+use crate::{AppUrl, ChannelDescriptor, Context, FoxgloveError, runtime::get_runtime_handle};
 
 /// A WebSocket server for live visualization in Foxglove.
 ///

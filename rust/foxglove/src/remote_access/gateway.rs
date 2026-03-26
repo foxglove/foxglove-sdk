@@ -3,9 +3,11 @@ use std::{collections::HashMap, sync::Arc, time::Duration};
 use crate::{
     ChannelDescriptor, Context, FoxgloveError,
     remote_common::service::Service,
+    runtime::get_runtime_handle,
     sink_channel_filter::{SinkChannelFilter, SinkChannelFilterFn},
 };
 
+use tokio::runtime::Handle;
 use tokio::task::JoinHandle;
 
 use super::connection::{ConnectionStatus, RemoteAccessConnection, RemoteAccessConnectionOptions};
@@ -17,13 +19,18 @@ use super::{Capability, Listener};
 pub struct GatewayHandle {
     connection: Arc<RemoteAccessConnection>,
     runner: JoinHandle<()>,
+    runtime: Handle,
 }
 
 impl GatewayHandle {
-    fn new(connection: Arc<RemoteAccessConnection>) -> Self {
+    fn new(connection: Arc<RemoteAccessConnection>, runtime: Handle) -> Self {
         let runner = connection.clone().spawn_run_until_cancelled();
 
-        Self { connection, runner }
+        Self {
+            connection,
+            runner,
+            runtime,
+        }
     }
 
     /// Returns the current connection status.
@@ -37,6 +44,27 @@ impl GatewayHandle {
     pub fn stop(self) -> JoinHandle<()> {
         self.connection.shutdown();
         self.runner
+    }
+
+    #[cfg(test)]
+    fn with_runner(runner: JoinHandle<()>, runtime: Handle) -> Self {
+        let connection = RemoteAccessConnection::new(RemoteAccessConnectionOptions::default());
+        Self {
+            connection: Arc::new(connection),
+            runner,
+            runtime,
+        }
+    }
+
+    /// Gracefully disconnect and wait for the connection to close from a blocking context.
+    ///
+    /// This method will panic if invoked from an asynchronous execution context. Use
+    /// [`GatewayHandle::stop`] instead.
+    pub fn stop_blocking(self) {
+        self.connection.shutdown();
+        if let Err(e) = self.runtime.block_on(self.runner) {
+            tracing::warn!("Gateway connection task panicked: {e}");
+        }
     }
 }
 
@@ -116,9 +144,7 @@ impl Gateway {
 
     /// Configure the tokio runtime for the gateway to use for async tasks.
     ///
-    /// By default, the gateway will use either the current runtime (if started with
-    /// [`Gateway::start`]), or spawn its own internal runtime (if started with
-    /// [`Gateway::start_blocking`]).
+    /// By default, the gateway will use either the current runtime, or spawn its own internal runtime.
     #[doc(hidden)]
     pub fn tokio_runtime(mut self, handle: &tokio::runtime::Handle) -> Self {
         self.options.runtime = Some(handle.clone());
@@ -236,7 +262,36 @@ impl Gateway {
                 }
             }
         }
+        let runtime = self
+            .options
+            .runtime
+            .get_or_insert_with(get_runtime_handle)
+            .clone();
         let connection = RemoteAccessConnection::new(self.options);
-        Ok(GatewayHandle::new(Arc::new(connection)))
+        Ok(GatewayHandle::new(Arc::new(connection), runtime))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn stop_blocking_clean_shutdown() {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let runner = rt.spawn(async {});
+        let handle = GatewayHandle::with_runner(runner, rt.handle().clone());
+        handle.stop_blocking();
+    }
+
+    #[test]
+    fn stop_blocking_logs_panic() {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let runner = rt.spawn(async { panic!("test panic") });
+        // Allow the task to run and panic.
+        std::thread::sleep(std::time::Duration::from_millis(10));
+        let handle = GatewayHandle::with_runner(runner, rt.handle().clone());
+        // Should not panic; should log a warning.
+        handle.stop_blocking();
     }
 }
