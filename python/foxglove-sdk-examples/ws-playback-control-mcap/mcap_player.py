@@ -15,6 +15,7 @@ from foxglove.websocket import PlaybackStatus, WebSocketServer
 from playback_source import PlaybackSource
 
 _MIN_PLAYBACK_SPEED = 0.01
+_MAX_PLAYBACK_SPEED = 100.0
 
 
 class McapPlayer(PlaybackSource):
@@ -210,9 +211,11 @@ class McapPlayer(PlaybackSource):
 
 
 def _clamp_speed(speed: float) -> float:
-    if not math.isfinite(speed) or speed < _MIN_PLAYBACK_SPEED:
+    if math.isnan(speed) or speed < _MIN_PLAYBACK_SPEED:
         return _MIN_PLAYBACK_SPEED
-    return speed
+    if speed == math.inf:
+        return _MAX_PLAYBACK_SPEED
+    return min(speed, _MAX_PLAYBACK_SPEED)
 
 
 class TimeTracker:
