@@ -46,6 +46,16 @@ impl GatewayHandle {
         self.runner
     }
 
+    #[cfg(test)]
+    fn with_runner(runner: JoinHandle<()>, runtime: Handle) -> Self {
+        let connection = RemoteAccessConnection::new(RemoteAccessConnectionOptions::default());
+        Self {
+            connection: Arc::new(connection),
+            runner,
+            runtime,
+        }
+    }
+
     /// Gracefully disconnect and wait for the connection to close from a blocking context.
     ///
     /// This method will panic if invoked from an asynchronous execution context. Use
@@ -259,5 +269,29 @@ impl Gateway {
             .clone();
         let connection = RemoteAccessConnection::new(self.options);
         Ok(GatewayHandle::new(Arc::new(connection), runtime))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn stop_blocking_clean_shutdown() {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let runner = rt.spawn(async {});
+        let handle = GatewayHandle::with_runner(runner, rt.handle().clone());
+        handle.stop_blocking();
+    }
+
+    #[test]
+    fn stop_blocking_logs_panic() {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let runner = rt.spawn(async { panic!("test panic") });
+        // Allow the task to run and panic.
+        std::thread::sleep(std::time::Duration::from_millis(10));
+        let handle = GatewayHandle::with_runner(runner, rt.handle().clone());
+        // Should not panic; should log a warning.
+        handle.stop_blocking();
     }
 }
