@@ -707,8 +707,9 @@ impl RemoteAccessConnection {
 
     /// Adds new services, and advertises them to all connected participants.
     ///
-    /// This method will fail if the services capability was not declared, or if a service name is
-    /// not unique.
+    /// This method will fail if the services capability was not declared, if a service name is
+    /// not unique, or if a service has no request encoding and the connection has no supported
+    /// encodings.
     pub(crate) fn add_services(
         &self,
         new_services: Vec<Service>,

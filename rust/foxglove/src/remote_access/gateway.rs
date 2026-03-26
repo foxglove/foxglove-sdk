@@ -33,8 +33,11 @@ impl GatewayHandle {
 
     /// Adds new services, and advertises them to all connected participants.
     ///
-    /// This method will fail if the services capability was not declared, or if a service name is
-    /// not unique.
+    /// This method will fail if the services capability was not declared
+    /// ([`ServicesNotSupported`](FoxgloveError::ServicesNotSupported)), if a service name is
+    /// not unique ([`DuplicateService`](FoxgloveError::DuplicateService)), or if a service has
+    /// no request encoding and the gateway has no supported encodings
+    /// ([`MissingRequestEncoding`](FoxgloveError::MissingRequestEncoding)).
     pub fn add_services(
         &self,
         services: impl IntoIterator<Item = Service>,

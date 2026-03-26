@@ -688,8 +688,9 @@ impl Server {
 
     /// Adds new services, and advertises them to all clients.
     ///
-    /// This method will fail if the services capability was not declared, or if a service name is
-    /// not unique.
+    /// This method will fail if the services capability was not declared, if a service name is
+    /// not unique, or if a service has no request encoding and the server has no supported
+    /// encodings.
     pub fn add_services(&self, new_services: Vec<Service>) -> Result<(), FoxgloveError> {
         // Make sure that the server supports services.
         if !self.has_capability(Capability::Services) {
