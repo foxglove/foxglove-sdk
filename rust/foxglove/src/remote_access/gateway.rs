@@ -3,7 +3,6 @@ use std::{collections::HashMap, sync::Arc, time::Duration};
 use indexmap::IndexSet;
 use tokio::runtime::Handle;
 use tokio::task::JoinHandle;
-use tokio_util::sync::CancellationToken;
 
 use crate::{
     ChannelDescriptor, Context, FoxgloveError, SinkChannelFilter,
@@ -12,7 +11,7 @@ use crate::{
     sink_channel_filter::SinkChannelFilterFn,
 };
 
-use super::connection::{ConnectionOptions, ConnectionStatus, RemoteAccessConnection};
+use super::connection::{ConnectionParams, ConnectionStatus, RemoteAccessConnection};
 use super::{Capability, Listener};
 
 /// A handle to the remote access gateway connection.
@@ -71,7 +70,7 @@ impl GatewayHandle {
 
     #[cfg(test)]
     fn with_runner(runner: JoinHandle<()>, runtime: Handle) -> Self {
-        let options = ConnectionOptions {
+        let params = ConnectionParams {
             name: None,
             device_token: String::new(),
             foxglove_api_url: None,
@@ -83,11 +82,10 @@ impl GatewayHandle {
             channel_filter: None,
             server_info: None,
             message_backlog_size: None,
-            cancellation_token: CancellationToken::new(),
             context: std::sync::Weak::new(),
         };
         let services = Arc::new(parking_lot::RwLock::new(ServiceMap::default()));
-        let connection = RemoteAccessConnection::new(options, services);
+        let connection = RemoteAccessConnection::new(params, services);
         Self {
             connection: Arc::new(connection),
             runner,
@@ -355,7 +353,7 @@ impl Gateway {
         let services = Arc::new(parking_lot::RwLock::new(ServiceMap::from_iter(
             self.services.into_values(),
         )));
-        let options = ConnectionOptions {
+        let params = ConnectionParams {
             name: self.name,
             device_token,
             foxglove_api_url,
@@ -367,10 +365,9 @@ impl Gateway {
             channel_filter: self.channel_filter,
             server_info: self.server_info,
             message_backlog_size: self.message_backlog_size,
-            cancellation_token: CancellationToken::new(),
             context: self.context,
         };
-        let connection = RemoteAccessConnection::new(options, services);
+        let connection = RemoteAccessConnection::new(params, services);
         Ok(GatewayHandle::new(Arc::new(connection), runtime))
     }
 }

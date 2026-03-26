@@ -22,7 +22,7 @@ use crate::{
     remote_access::{
         Capability, RemoteAccessError,
         credentials_provider::CredentialsProvider,
-        session::{RemoteAccessSession, SessionOptions},
+        session::{RemoteAccessSession, SessionParams},
     },
     remote_common::service::{Service, ServiceId, ServiceMap},
 };
@@ -69,10 +69,10 @@ impl ConnectionStatus {
     }
 }
 
-/// Options for the remote access connection.
+/// Parameters for constructing a [`RemoteAccessConnection`].
 ///
 /// This should be constructed from the [`crate::remote_access::Gateway`] builder.
-pub(crate) struct ConnectionOptions {
+pub(crate) struct ConnectionParams {
     pub name: Option<String>,
     pub device_token: String,
     pub foxglove_api_url: Option<String>,
@@ -84,32 +84,25 @@ pub(crate) struct ConnectionOptions {
     pub channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     pub server_info: Option<HashMap<String, String>>,
     pub message_backlog_size: Option<usize>,
-    pub cancellation_token: CancellationToken,
     pub context: Weak<Context>,
 }
 
-impl std::fmt::Debug for ConnectionOptions {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("ConnectionOptions")
-            .field("name", &self.name)
-            .field("has_device_token", &!self.device_token.is_empty())
-            .field("foxglove_api_url", &self.foxglove_api_url)
-            .field("foxglove_api_timeout", &self.foxglove_api_timeout)
-            .field("has_listener", &self.listener.is_some())
-            .field("capabilities", &self.capabilities)
-            .field("supported_encodings", &self.supported_encodings)
-            .field("has_channel_filter", &self.channel_filter.is_some())
-            .field("server_info", &self.server_info)
-            .field("message_backlog_size", &self.message_backlog_size)
-            .field("has_context", &(self.context.strong_count() > 0))
-            .finish()
-    }
-}
-
 /// RemoteAccessConnection manages the connected [`RemoteAccessSession`] to the LiveKit server,
-/// and holds the options and other state that outlive a session.
+/// and holds the parameters and other state that outlive a session.
 pub(crate) struct RemoteAccessConnection {
-    options: ConnectionOptions,
+    name: Option<String>,
+    device_token: String,
+    foxglove_api_url: Option<String>,
+    foxglove_api_timeout: Option<Duration>,
+    listener: Option<Arc<dyn super::Listener>>,
+    capabilities: Vec<Capability>,
+    supported_encodings: Option<IndexSet<String>>,
+    runtime: Handle,
+    channel_filter: Option<Arc<dyn SinkChannelFilter>>,
+    server_info: Option<HashMap<String, String>>,
+    message_backlog_size: Option<usize>,
+    context: Weak<Context>,
+    cancellation_token: CancellationToken,
     services: Arc<parking_lot::RwLock<ServiceMap>>,
     session: parking_lot::Mutex<Option<Arc<RemoteAccessSession>>>,
     credentials_provider: OnceCell<CredentialsProvider>,
@@ -120,9 +113,21 @@ pub(crate) struct RemoteAccessConnection {
 }
 
 impl RemoteAccessConnection {
-    pub fn new(options: ConnectionOptions, services: Arc<parking_lot::RwLock<ServiceMap>>) -> Self {
+    pub fn new(params: ConnectionParams, services: Arc<parking_lot::RwLock<ServiceMap>>) -> Self {
         Self {
-            options,
+            name: params.name,
+            device_token: params.device_token,
+            foxglove_api_url: params.foxglove_api_url,
+            foxglove_api_timeout: params.foxglove_api_timeout,
+            listener: params.listener,
+            capabilities: params.capabilities,
+            supported_encodings: params.supported_encodings,
+            runtime: params.runtime,
+            channel_filter: params.channel_filter,
+            server_info: params.server_info,
+            message_backlog_size: params.message_backlog_size,
+            context: params.context,
+            cancellation_token: CancellationToken::new(),
             services,
             session: parking_lot::Mutex::new(None),
             credentials_provider: OnceCell::new(),
@@ -140,7 +145,7 @@ impl RemoteAccessConnection {
     fn set_status(&self, status: ConnectionStatus) {
         let prev = self.status.swap(status as u8, Ordering::Relaxed);
         if prev != status as u8
-            && let Some(listener) = &self.options.listener
+            && let Some(listener) = &self.listener
         {
             listener.on_connection_status_changed(status);
         }
@@ -158,13 +163,12 @@ impl RemoteAccessConnection {
     async fn get_or_init_provider(&self) -> Result<&CredentialsProvider> {
         self.credentials_provider
             .get_or_try_init(|| async {
-                let mut builder = FoxgloveApiClientBuilder::new(DeviceToken::new(
-                    self.options.device_token.clone(),
-                ));
-                if let Some(url) = &self.options.foxglove_api_url {
+                let mut builder =
+                    FoxgloveApiClientBuilder::new(DeviceToken::new(self.device_token.clone()));
+                if let Some(url) = &self.foxglove_api_url {
                     builder = builder.base_url(url);
                 }
-                if let Some(timeout) = self.options.foxglove_api_timeout {
+                if let Some(timeout) = self.foxglove_api_timeout {
                     builder = builder.timeout(timeout);
                 }
                 let provider = CredentialsProvider::new(builder).await?;
@@ -215,26 +219,21 @@ impl RemoteAccessConnection {
             {
                 Ok((room, room_events)) => {
                     info!(remote_access_session_id, "connected to LiveKit server");
-                    let session_options = SessionOptions {
+                    let session_params = SessionParams {
                         room,
-                        context: self.options.context.clone(),
-                        channel_filter: self.options.channel_filter.clone(),
-                        listener: self.options.listener.clone(),
-                        capabilities: self.options.capabilities.clone(),
-                        supported_encodings: self
-                            .options
-                            .supported_encodings
-                            .clone()
-                            .unwrap_or_default(),
-                        cancellation_token: self.options.cancellation_token.clone(),
+                        context: self.context.clone(),
+                        channel_filter: self.channel_filter.clone(),
+                        listener: self.listener.clone(),
+                        capabilities: self.capabilities.clone(),
+                        supported_encodings: self.supported_encodings.clone().unwrap_or_default(),
+                        cancellation_token: self.cancellation_token.clone(),
                         message_backlog_size: self
-                            .options
                             .message_backlog_size
                             .unwrap_or(DEFAULT_MESSAGE_BACKLOG_SIZE),
                         services: self.services.clone(),
                     };
                     (
-                        Arc::new(RemoteAccessSession::new(session_options)),
+                        Arc::new(RemoteAccessSession::new(session_params)),
                         room_events,
                     )
                 }
@@ -246,18 +245,11 @@ impl RemoteAccessConnection {
         Ok((session, room_events))
     }
 
-    /// Returns the cancellation token for the [`RemoteAccessConnection`]`.
-    fn cancellation_token(&self) -> &CancellationToken {
-        &self.options.cancellation_token
-    }
-
     /// Run the server loop until cancelled in a new tokio task.
     ///
     /// If disconnected from the room, reset all state and attempt to restart the run loop.
     pub fn spawn_run_until_cancelled(self: Arc<Self>) -> JoinHandle<()> {
-        self.options
-            .runtime
-            .spawn(self.clone().run_until_cancelled())
+        self.runtime.spawn(self.clone().run_until_cancelled())
     }
 
     /// Run the server loop until cancelled.
@@ -267,10 +259,10 @@ impl RemoteAccessConnection {
         // Notify the listener of the initial Connecting status. The atomic is already
         // initialized to Connecting, so call the listener directly rather than going
         // through set_status (which would see no change and skip the notification).
-        if let Some(listener) = &self.options.listener {
+        if let Some(listener) = &self.listener {
             listener.on_connection_status_changed(ConnectionStatus::Connecting);
         }
-        while !self.cancellation_token().is_cancelled() {
+        while !self.cancellation_token.is_cancelled() {
             self.run().await;
         }
         // Always emit ShuttingDown before Shutdown. If run() already set ShuttingDown
@@ -283,7 +275,7 @@ impl RemoteAccessConnection {
     async fn run(&self) {
         let Some((session, room_events)) = self.connect_session_until_ok().await else {
             // Cancelled/shutting down
-            debug_assert!(self.cancellation_token().is_cancelled());
+            debug_assert!(self.cancellation_token.is_cancelled());
             return;
         };
 
@@ -295,7 +287,7 @@ impl RemoteAccessConnection {
 
         // Register the session as a sink so it receives channel notifications.
         // This synchronously triggers add_channels for all existing channels.
-        let Some(context) = self.options.context.upgrade() else {
+        let Some(context) = self.context.upgrade() else {
             info!(
                 remote_access_session_id,
                 "context has been dropped, stopping remote access connection"
@@ -305,7 +297,7 @@ impl RemoteAccessConnection {
         };
         context.add_sink(session.clone());
 
-        // We can use spawn here because we're already running on self.options.runtime (if set)
+        // We can use spawn here because we're already running on self.runtime
         let sender_task = tokio::spawn(RemoteAccessSession::run_sender(session.clone()));
 
         // Send ServerInfo and channel advertisements to participants already in the room.
@@ -326,13 +318,13 @@ impl RemoteAccessConnection {
 
         info!(remote_access_session_id, "running remote access server");
         tokio::select! {
-            () = self.cancellation_token().cancelled() => (),
+            () = self.cancellation_token.cancelled() => (),
             _ = self.listen_for_room_events(session.clone(), room_events) => {},
             _ = Self::log_periodic_stats(session.clone(), remote_access_session_id.unwrap_or("").to_owned()) => {},
         }
 
         // Update status before cleanup so callers don't see Connected during teardown.
-        if self.cancellation_token().is_cancelled() {
+        if self.cancellation_token.is_cancelled() {
             self.set_status(ConnectionStatus::ShuttingDown);
         } else {
             self.set_status(ConnectionStatus::Connecting);
@@ -367,13 +359,13 @@ impl RemoteAccessConnection {
         loop {
             tokio::select! {
                 _ = interval.tick() => {}
-                () = self.cancellation_token().cancelled() => {
+                () = self.cancellation_token.cancelled() => {
                     return None;
                 }
             };
 
             let result = tokio::select! {
-                () = self.cancellation_token().cancelled() => {
+                () = self.cancellation_token.cancelled() => {
                     return None;
                 }
                 result = self.connect_session() => result,
@@ -639,7 +631,7 @@ impl RemoteAccessConnection {
         }
     }
 
-    /// Create and serialize ServerInfo message based on the ConnectionOptions.
+    /// Create and serialize ServerInfo message based on the [`ConnectionParams`].
     ///
     /// The metadata and supported_encodings are important for the ClientPublish capability,
     /// as some app components will use this information to determine publish formats (ROS1 vs. JSON).
@@ -648,14 +640,14 @@ impl RemoteAccessConnection {
     ///
     /// We always add our own fg-library metadata.
     fn create_server_info(&self, remote_access_session_id: &str) -> ServerInfo {
-        let mut metadata = self.options.server_info.clone().unwrap_or_default();
-        let supported_encodings = self.options.supported_encodings.clone();
+        let mut metadata = self.server_info.clone().unwrap_or_default();
+        let supported_encodings = self.supported_encodings.clone();
         metadata.insert("fg-library".into(), get_library_version());
 
         // The credentials provider is always initialized before this method is called,
         // since we must successfully connect (which initializes the provider) before we
         // can receive room events that trigger server info creation.
-        let name = self.options.name.clone().unwrap_or_else(|| {
+        let name = self.name.clone().unwrap_or_else(|| {
             self.credentials_provider
                 .get()
                 .map(|p| p.device_name().to_string())
@@ -665,8 +657,7 @@ impl RemoteAccessConnection {
         let mut info = ServerInfo::new(name)
             .with_session_id(remote_access_session_id)
             .with_capabilities(
-                self.options
-                    .capabilities
+                self.capabilities
                     .iter()
                     .flat_map(|c| c.as_protocol_capabilities())
                     .copied(),
@@ -682,7 +673,7 @@ impl RemoteAccessConnection {
 
     /// Returns true if the given capability was declared.
     fn has_capability(&self, cap: Capability) -> bool {
-        self.options.capabilities.contains(&cap)
+        self.capabilities.contains(&cap)
     }
 
     /// Adds new services, and advertises them to all connected participants.
@@ -703,7 +694,6 @@ impl RemoteAccessConnection {
 
         // Validate uniqueness within the batch.
         let has_supported_encodings = self
-            .options
             .supported_encodings
             .as_ref()
             .is_some_and(|e| !e.is_empty());
@@ -766,6 +756,6 @@ impl RemoteAccessConnection {
     }
 
     pub(crate) fn shutdown(&self) {
-        self.cancellation_token().cancel();
+        self.cancellation_token.cancel();
     }
 }

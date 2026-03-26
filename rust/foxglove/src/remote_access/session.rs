@@ -274,7 +274,7 @@ impl Sink for RemoteAccessSession {
     }
 }
 
-pub(crate) struct SessionOptions {
+pub(crate) struct SessionParams {
     pub room: Room,
     pub context: Weak<Context>,
     pub channel_filter: Option<Arc<dyn SinkChannelFilter>>,
@@ -287,19 +287,19 @@ pub(crate) struct SessionOptions {
 }
 
 impl RemoteAccessSession {
-    pub(crate) fn new(options: SessionOptions) -> Self {
-        let (data_plane_tx, data_plane_rx) = flume::bounded(options.message_backlog_size);
-        let (control_plane_tx, control_plane_rx) = flume::bounded(options.message_backlog_size);
+    pub(crate) fn new(params: SessionParams) -> Self {
+        let (data_plane_tx, data_plane_rx) = flume::bounded(params.message_backlog_size);
+        let (control_plane_tx, control_plane_rx) = flume::bounded(params.message_backlog_size);
         let (video_metadata_tx, video_metadata_rx) = tokio::sync::watch::channel(());
         Self {
             sink_id: SinkId::next(),
-            room: options.room,
-            context: options.context,
+            room: params.room,
+            context: params.context,
             state: RwLock::new(SessionState::new()),
-            channel_filter: options.channel_filter,
-            listener: options.listener,
-            capabilities: options.capabilities,
-            cancellation_token: options.cancellation_token,
+            channel_filter: params.channel_filter,
+            listener: params.listener,
+            capabilities: params.capabilities,
+            cancellation_token: params.cancellation_token,
             data_plane_tx,
             data_plane_rx,
             control_plane_tx,
@@ -307,8 +307,8 @@ impl RemoteAccessSession {
             subscription_lock: parking_lot::Mutex::new(()),
             video_metadata_tx,
             video_metadata_rx,
-            services: options.services,
-            supported_encodings: options.supported_encodings,
+            services: params.services,
+            supported_encodings: params.supported_encodings,
         }
     }
 
