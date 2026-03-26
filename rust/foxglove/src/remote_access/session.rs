@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::sync::{Arc, Weak};
 use std::time::Duration;
 
@@ -176,8 +176,6 @@ pub(crate) struct RemoteAccessSession {
     control_plane_rx: flume::Receiver<ControlPlaneMessage>,
     services: Arc<parking_lot::RwLock<ServiceMap>>,
     supported_encodings: IndexSet<String>,
-    /// Parameters subscribed to by participants, keyed by parameter name.
-    subscribed_parameters: RwLock<HashMap<String, HashSet<ParticipantIdentity>>>,
     /// Serializes all participant-scoped state mutations: subscription changes, video track
     /// lifecycle operations, client channel advertise/unadvertise, and participant removal.
     /// This prevents TOCTOU races between byte-stream message handlers and room-event handlers,
@@ -320,7 +318,6 @@ impl RemoteAccessSession {
             data_plane_rx,
             control_plane_tx,
             control_plane_rx,
-            subscribed_parameters: RwLock::default(),
             subscription_lock: parking_lot::Mutex::new(()),
             video_metadata_tx,
             video_metadata_rx,
@@ -1114,8 +1111,10 @@ impl RemoteAccessSession {
 
         self.stop_video_tracks(&removed.last_video_unsubscribed);
 
-        if self.has_capability(Capability::Parameters) {
-            self.unsubscribe_all_parameters(participant_id);
+        if !removed.last_param_unsubscribed.is_empty() {
+            if let Some(listener) = &self.listener {
+                listener.on_parameters_unsubscribe(removed.last_param_unsubscribed);
+            }
         }
 
         if !removed.client_channels.is_empty() {
@@ -1590,7 +1589,16 @@ impl RemoteAccessSession {
             );
             return;
         }
-        self.subscribe_parameters(participant.participant_id(), names);
+        let _guard = self.subscription_lock.lock();
+        let new_names = self
+            .state
+            .write()
+            .subscribe_parameters(participant.participant_id(), names);
+        if !new_names.is_empty() {
+            if let Some(listener) = &self.listener {
+                listener.on_parameters_subscribe(new_names);
+            }
+        }
     }
 
     /// Handle an `UnsubscribeParameterUpdates` request from a client.
@@ -1606,7 +1614,16 @@ impl RemoteAccessSession {
             );
             return;
         }
-        self.unsubscribe_parameters(participant.participant_id(), names);
+        let _guard = self.subscription_lock.lock();
+        let old_names = self
+            .state
+            .write()
+            .unsubscribe_parameters(participant.participant_id(), names);
+        if !old_names.is_empty() {
+            if let Some(listener) = &self.listener {
+                listener.on_parameters_unsubscribe(old_names);
+            }
+        }
     }
 
     /// Send a `ParameterValues` message to a specific participant.
@@ -1630,93 +1647,23 @@ impl RemoteAccessSession {
             return;
         }
 
-        let participants = self.state.read().collect_participants();
+        let state = self.state.read();
+        let participants = state.collect_participants();
         for participant in &participants {
             // Filter parameters by this participant's subscriptions.
-            let filtered: Vec<_> = {
-                let subs = self.subscribed_parameters.read();
-                parameters
-                    .iter()
-                    .filter(|p| {
-                        subs.get(&p.name)
-                            .is_some_and(|ids| ids.contains(participant.participant_id()))
-                    })
-                    .cloned()
-                    .collect()
-            };
+            let filtered: Vec<_> = parameters
+                .iter()
+                .filter(|p| {
+                    state
+                        .parameter_subscribers(&p.name)
+                        .is_some_and(|ids| ids.contains(participant.participant_id()))
+                })
+                .cloned()
+                .collect();
 
             if !filtered.is_empty() {
                 let no_request_id = None;
                 self.send_parameter_values(participant, filtered, no_request_id);
-            }
-        }
-    }
-
-    /// Add parameter subscriptions for a participant.
-    fn subscribe_parameters(&self, identity: &ParticipantIdentity, names: Vec<String>) {
-        let mut subs = self.subscribed_parameters.write();
-
-        let mut new_names = vec![];
-        for name in names {
-            let subscribers = subs.entry(name.clone()).or_default();
-            if subscribers.insert(identity.clone()) && subscribers.len() == 1 {
-                new_names.push(name);
-            }
-        }
-
-        drop(subs);
-
-        if !new_names.is_empty() {
-            if let Some(listener) = &self.listener {
-                listener.on_parameters_subscribe(new_names);
-            }
-        }
-    }
-
-    /// Remove parameter subscriptions for a participant.
-    fn unsubscribe_parameters(&self, identity: &ParticipantIdentity, names: Vec<String>) {
-        let mut subs = self.subscribed_parameters.write();
-
-        let mut old_names = vec![];
-        for name in names {
-            if let Some(subscribers) = subs.get_mut(&name) {
-                subscribers.remove(identity);
-                if subscribers.is_empty() {
-                    subs.remove(&name);
-                    old_names.push(name);
-                }
-            }
-        }
-
-        drop(subs);
-
-        if !old_names.is_empty() {
-            if let Some(listener) = &self.listener {
-                listener.on_parameters_unsubscribe(old_names);
-            }
-        }
-    }
-
-    /// Remove all parameter subscriptions for a participant.
-    fn unsubscribe_all_parameters(&self, identity: &ParticipantIdentity) {
-        let mut subs = self.subscribed_parameters.write();
-
-        let mut old_names = vec![];
-        subs.retain(|name, subscribers| {
-            subscribers.remove(identity);
-            if subscribers.is_empty() {
-                old_names.push(name.clone());
-                false
-            } else {
-                true
-            }
-        });
-
-        drop(subs);
-
-        if !old_names.is_empty() {
-            if let Some(listener) = &self.listener {
-                listener.on_parameters_unsubscribe(old_names);
             }
         }
     }
