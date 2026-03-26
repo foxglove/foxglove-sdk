@@ -52,7 +52,9 @@ impl GatewayHandle {
     /// [`GatewayHandle::stop`] instead.
     pub fn stop_blocking(self) {
         self.connection.shutdown();
-        let _ = self.runtime.block_on(self.runner);
+        if let Err(e) = self.runtime.block_on(self.runner) {
+            tracing::warn!("Gateway connection task panicked: {e}");
+        }
     }
 }
 
