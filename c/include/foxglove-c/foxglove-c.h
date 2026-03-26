@@ -1824,7 +1824,7 @@ typedef struct foxglove_raw_image {
    *   - Pixel colors are decomposed into Red, Blue and Green channels.
    *   - Pixel channel values are represented as unsigned 8-bit integers, and serialized in a 2x2 bayer filter pattern.
    *   - The order of the four letters after `bayer_` determine the layout, so for `bayer_wxyz8` the pattern is:
-   *   ```plaintext
+   *   ```text
    *   w | x
    *   - + -
    *   y | z

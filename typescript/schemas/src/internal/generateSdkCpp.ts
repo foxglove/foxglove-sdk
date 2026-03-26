@@ -36,9 +36,19 @@ function primitiveDefaultValue(type: FoxglovePrimitive) {
 
 function formatComment(comment: string, indent: number) {
   const spaces = " ".repeat(indent);
+  let inCodeBlock = false;
   return comment
     .split("\n")
-    .map((line) => `${spaces}/// @brief ${line}`)
+    .map((rawLine, i) => {
+      let line = rawLine;
+      if (line.trimStart().startsWith("```")) {
+        if (!inCodeBlock && line.trimStart() === "```") {
+          line = line.replace("```", "```text");
+        }
+        inCodeBlock = !inCodeBlock;
+      }
+      return i === 0 ? `${spaces}/// @brief ${line}` : `${spaces}/// ${line}`;
+    })
     .join("\n");
 }
 
