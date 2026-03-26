@@ -327,7 +327,6 @@ pub mod library_version;
 pub mod log_macro;
 mod log_sink_set;
 mod mcap_writer;
-/// Types implementing well-known Foxglove message types.
 pub mod messages;
 mod messages_wkt;
 mod metadata;
@@ -383,27 +382,40 @@ pub use sink_channel_filter::SinkChannelFilter;
 pub use std::collections::BTreeMap;
 pub(crate) use time::nanoseconds_since_epoch;
 
-#[cfg(feature = "remote_access")]
-mod api_client;
-#[cfg(all(feature = "_remote_common", feature = "_protocol"))]
-pub mod protocol;
-#[cfg(all(feature = "_remote_common", not(feature = "_protocol")))]
-mod protocol;
+// Common dependencies for remote-access & websocket, with docsrs attributes to ensure that the
+// feature gate badges in docs.rs render as the public features, as opposed to _remote-common. This
+// is only needed for modules that contain types which are publicly re-exported (Parameter,
+// Service, etc.).
 #[doc(hidden)]
-#[cfg(feature = "remote_access")]
-pub mod remote_access;
-#[cfg(feature = "_remote_common")]
+#[cfg(all(feature = "_remote-common", feature = "_protocol"))]
+pub mod protocol;
+#[cfg(all(feature = "_remote-common", not(feature = "_protocol")))]
+mod protocol;
+#[cfg(feature = "_remote-common")]
+#[cfg_attr(
+    docsrs,
+    doc(cfg(any(feature = "remote-access", feature = "websocket")))
+)]
 mod remote_common;
-#[cfg(feature = "websocket")]
+#[cfg(feature = "_remote-common")]
 mod runtime;
+#[cfg(feature = "_remote-common")]
+#[cfg_attr(
+    docsrs,
+    doc(cfg(any(feature = "remote-access", feature = "websocket")))
+)]
+pub use runtime::shutdown_runtime;
+
+#[cfg(feature = "remote-access")]
+mod api_client;
+#[doc(hidden)]
+#[cfg(feature = "remote-access")]
+pub mod remote_access;
+
 #[cfg(feature = "websocket")]
 pub mod websocket;
 #[cfg(feature = "websocket")]
 mod websocket_server;
-#[cfg(feature = "websocket")]
-pub(crate) use runtime::get_runtime_handle;
-#[cfg(feature = "websocket")]
-pub use runtime::shutdown_runtime;
 #[doc(hidden)]
 #[cfg(feature = "websocket")]
 pub use websocket::ws_protocol;

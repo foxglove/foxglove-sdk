@@ -209,13 +209,12 @@ struct CameraCalibration {
   uint32_t height = 0;
 
   /// @brief Name of distortion model
-  /// @brief
-  /// @brief Supported parameters: `plumb_bob` (k1, k2, p1, p2, k3), `rational_polynomial` (k1, k2,
-  /// p1, p2, k3, k4, k5, k6), and `kannala_brandt` (k1, k2, k3, k4), and `fisheye62` (k0, k1, k2,
-  /// k3, p0, p1, crit_theta [optional]). `plumb_bob` and `rational_polynomial` models are based on
-  /// the pinhole model [OpenCV's](https://docs.opencv.org/4.11.0/d9/d0c/group__calib3d.html)
-  /// [pinhole camera
-  /// model](https://en.wikipedia.org/wiki/Distortion_%28optics%29#Software_correction). The
+  ///
+  /// Supported parameters: `plumb_bob` (k1, k2, p1, p2, k3), `rational_polynomial` (k1, k2, p1, p2,
+  /// k3, k4, k5, k6), and `kannala_brandt` (k1, k2, k3, k4), and `fisheye62` (k0, k1, k2, k3, p0,
+  /// p1, crit_theta [optional]). `plumb_bob` and `rational_polynomial` models are based on the
+  /// pinhole model [OpenCV's](https://docs.opencv.org/4.11.0/d9/d0c/group__calib3d.html) [pinhole
+  /// camera model](https://en.wikipedia.org/wiki/Distortion_%28optics%29#Software_correction). The
   /// `kannala_brandt` model matches the [OpenvCV
   /// fisheye](https://docs.opencv.org/4.11.0/db/d58/group__calib3d__fisheye.html) model. The
   /// `fisheye62` model matches the [Project Aria's Fisheye62
@@ -226,63 +225,62 @@ struct CameraCalibration {
   std::vector<double> d;
 
   /// @brief Intrinsic camera matrix (3x3 row-major matrix)
-  /// @brief
-  /// @brief A 3x3 row-major matrix for the raw (distorted) image.
-  /// @brief
-  /// @brief Projects 3D points in the camera coordinate frame to 2D pixel coordinates using the
-  /// focal lengths (fx, fy) and principal point (cx, cy).
-  /// @brief
-  /// @brief ```
-  /// @brief     [fx  0 cx]
-  /// @brief K = [ 0 fy cy]
-  /// @brief     [ 0  0  1]
-  /// @brief ```
-  /// @brief
-  /// @brief **Uncalibrated cameras:** Following ROS conventions for
+  ///
+  /// A 3x3 row-major matrix for the raw (distorted) image.
+  ///
+  /// Projects 3D points in the camera coordinate frame to 2D pixel coordinates using the focal
+  /// lengths (fx, fy) and principal point (cx, cy).
+  ///
+  /// ```text
+  ///     [fx  0 cx]
+  /// K = [ 0 fy cy]
+  ///     [ 0  0  1]
+  /// ```
+  ///
+  /// **Uncalibrated cameras:** Following ROS conventions for
   /// [CameraInfo](https://docs.ros.org/en/noetic/api/sensor_msgs/html/msg/CameraInfo.html),
   /// Foxglove also treats K[0] == 0.0 as indicating an uncalibrated camera, and calibration data
   /// will be ignored.
-  /// @brief
+  ///
   std::array<double, 9> k;
 
   /// @brief Rectification matrix (stereo cameras only, 3x3 row-major matrix)
-  /// @brief
-  /// @brief A rotation matrix aligning the camera coordinate system to the ideal stereo image plane
-  /// so that epipolar lines in both stereo images are parallel.
+  ///
+  /// A rotation matrix aligning the camera coordinate system to the ideal stereo image plane so
+  /// that epipolar lines in both stereo images are parallel.
   std::array<double, 9> r;
 
   /// @brief Projection/camera matrix (3x4 row-major matrix)
-  /// @brief
-  /// @brief ```
-  /// @brief     [fx'  0  cx' Tx]
-  /// @brief P = [ 0  fy' cy' Ty]
-  /// @brief     [ 0   0   1   0]
-  /// @brief ```
-  /// @brief
-  /// @brief By convention, this matrix specifies the intrinsic (camera) matrix of the processed
+  ///
+  /// ```text
+  ///     [fx'  0  cx' Tx]
+  /// P = [ 0  fy' cy' Ty]
+  ///     [ 0   0   1   0]
+  /// ```
+  ///
+  /// By convention, this matrix specifies the intrinsic (camera) matrix of the processed
   /// (rectified) image. That is, the left 3x3 portion is the normal camera intrinsic matrix for the
   /// rectified image.
-  /// @brief
-  /// @brief It projects 3D points in the camera coordinate frame to 2D pixel coordinates using the
-  /// focal lengths (fx', fy') and principal point (cx', cy') - these may differ from the values in
-  /// K.
-  /// @brief
-  /// @brief For monocular cameras, Tx = Ty = 0. Normally, monocular cameras will also have R = the
+  ///
+  /// It projects 3D points in the camera coordinate frame to 2D pixel coordinates using the focal
+  /// lengths (fx', fy') and principal point (cx', cy') - these may differ from the values in K.
+  ///
+  /// For monocular cameras, Tx = Ty = 0. Normally, monocular cameras will also have R = the
   /// identity and P[1:3,1:3] = K.
-  /// @brief
-  /// @brief Foxglove currently does not support displaying stereo images, so Tx and Ty are ignored.
-  /// @brief
-  /// @brief Given a 3D point [X Y Z]', the projection (x, y) of the point onto the rectified image
-  /// is given by:
-  /// @brief
-  /// @brief ```
-  /// @brief [u v w]' = P * [X Y Z 1]'
-  /// @brief        x = u / w
-  /// @brief        y = v / w
-  /// @brief ```
-  /// @brief
-  /// @brief This holds for both images of a stereo pair.
-  /// @brief
+  ///
+  /// Foxglove currently does not support displaying stereo images, so Tx and Ty are ignored.
+  ///
+  /// Given a 3D point [X Y Z]', the projection (x, y) of the point onto the rectified image is
+  /// given by:
+  ///
+  /// ```text
+  /// [u v w]' = P * [X Y Z 1]'
+  ///        x = u / w
+  ///        y = v / w
+  /// ```
+  ///
+  /// This holds for both images of a stereo pair.
+  ///
   std::array<double, 12> p;
 
   /// @brief Encoded the CameraCalibration as protobuf to the provided buffer.
@@ -364,8 +362,7 @@ struct CircleAnnotation {
   std::optional<Timestamp> timestamp;
 
   /// @brief Center of the circle in 2D image coordinates (pixels).
-  /// @brief The coordinate uses the top-left corner of the top-left pixel of the image as the
-  /// origin.
+  /// The coordinate uses the top-left corner of the top-left pixel of the image as the origin.
   std::optional<Point2> position;
 
   /// @brief Circle diameter in pixels
@@ -416,8 +413,8 @@ struct CompressedImage {
   std::vector<std::byte> data;
 
   /// @brief Image format
-  /// @brief
-  /// @brief Supported values: `jpeg`, `png`, `webp`, `avif`
+  ///
+  /// Supported values: `jpeg`, `png`, `webp`, `avif`
   std::string format;
 
   /// @brief Encoded the CompressedImage as protobuf to the provided buffer.
@@ -445,49 +442,48 @@ struct CompressedVideo {
   std::optional<Timestamp> timestamp;
 
   /// @brief Frame of reference for the video.
-  /// @brief
-  /// @brief The origin of the frame is the optical center of the camera. +x points to the right in
-  /// the video, +y points down, and +z points into the plane of the video.
+  ///
+  /// The origin of the frame is the optical center of the camera. +x points to the right in the
+  /// video, +y points down, and +z points into the plane of the video.
   std::string frame_id;
 
   /// @brief Compressed video frame data.
-  /// @brief
-  /// @brief For packet-based video codecs this data must begin and end on packet boundaries (no
-  /// partial packets), and must contain enough video packets to decode exactly one image (either a
-  /// keyframe or delta frame). Note: Foxglove does not support video streams that include B frames
-  /// because they require lookahead.
-  /// @brief
-  /// @brief Specifically, the requirements for different `format` values are:
-  /// @brief
-  /// @brief - `h264`
-  /// @brief   - Use Annex B formatted data
-  /// @brief   - Each CompressedVideo message should contain enough NAL units to decode exactly one
-  /// video frame
-  /// @brief   - Each message containing a key frame (IDR) must also include a SPS NAL unit
-  /// @brief
-  /// @brief - `h265` (HEVC)
-  /// @brief   - Use Annex B formatted data
-  /// @brief   - Each CompressedVideo message should contain enough NAL units to decode exactly one
-  /// video frame
-  /// @brief   - Each message containing a key frame (IRAP) must also include relevant VPS/SPS/PPS
-  /// NAL units
-  /// @brief
-  /// @brief - `vp9`
-  /// @brief   - Each CompressedVideo message should contain exactly one video frame
-  /// @brief
-  /// @brief - `av1`
-  /// @brief   - Use the "Low overhead bitstream format" (section 5.2)
-  /// @brief   - Each CompressedVideo message should contain enough OBUs to decode exactly one video
-  /// frame
-  /// @brief   - Each message containing a key frame must also include a Sequence Header OBU
+  ///
+  /// For packet-based video codecs this data must begin and end on packet boundaries (no partial
+  /// packets), and must contain enough video packets to decode exactly one image (either a keyframe
+  /// or delta frame). Note: Foxglove does not support video streams that include B frames because
+  /// they require lookahead.
+  ///
+  /// Specifically, the requirements for different `format` values are:
+  ///
+  /// - `h264`
+  ///   - Use Annex B formatted data
+  ///   - Each CompressedVideo message should contain enough NAL units to decode exactly one video
+  ///   frame
+  ///   - Each message containing a key frame (IDR) must also include a SPS NAL unit
+  ///
+  /// - `h265` (HEVC)
+  ///   - Use Annex B formatted data
+  ///   - Each CompressedVideo message should contain enough NAL units to decode exactly one video
+  ///   frame
+  ///   - Each message containing a key frame (IRAP) must also include relevant VPS/SPS/PPS NAL
+  ///   units
+  ///
+  /// - `vp9`
+  ///   - Each CompressedVideo message should contain exactly one video frame
+  ///
+  /// - `av1`
+  ///   - Use the "Low overhead bitstream format" (section 5.2)
+  ///   - Each CompressedVideo message should contain enough OBUs to decode exactly one video frame
+  ///   - Each message containing a key frame must also include a Sequence Header OBU
   std::vector<std::byte> data;
 
   /// @brief Video format.
-  /// @brief
-  /// @brief Supported values: `h264`, `h265`, `vp9`, `av1`.
-  /// @brief
-  /// @brief Note: compressed video support is subject to hardware limitations and patent licensing,
-  /// so not all encodings may be supported on all platforms. See more about [H.265
+  ///
+  /// Supported values: `h264`, `h265`, `vp9`, `av1`.
+  ///
+  /// Note: compressed video support is subject to hardware limitations and patent licensing, so not
+  /// all encodings may be supported on all platforms. See more about [H.265
   /// support](https://caniuse.com/hevc), [VP9 support](https://caniuse.com/webm), and [AV1
   /// support](https://caniuse.com/av1).
   std::string format;
@@ -593,13 +589,13 @@ struct Duration {
 /// and orientation of a child frame within a parent frame. Translation moves the origin of the
 /// child frame relative to the parent origin. The rotation changes the orientation of the child
 /// frame around its origin.
-/// @brief
-/// @brief Examples:
-/// @brief
-/// @brief - With translation (x=1, y=0, z=0) and identity rotation (x=0, y=0, z=0, w=1), a point at
-/// (x=0, y=0, z=0) in the child frame maps to (x=1, y=0, z=0) in the parent frame.
-/// @brief
-/// @brief - With translation (x=1, y=2, z=0) and a 90-degree rotation around the z-axis (x=0, y=0,
+///
+/// Examples:
+///
+/// - With translation (x=1, y=0, z=0) and identity rotation (x=0, y=0, z=0, w=1), a point at (x=0,
+/// y=0, z=0) in the child frame maps to (x=1, y=0, z=0) in the parent frame.
+///
+/// - With translation (x=1, y=2, z=0) and a 90-degree rotation around the z-axis (x=0, y=0,
 /// z=0.707, w=0.707), a point at (x=1, y=0, z=0) in the child frame maps to (x=-1, y=3, z=0) in the
 /// parent frame.
 struct FrameTransform {
@@ -790,57 +786,56 @@ struct Grid {
   uint32_t cell_stride = 0;
 
   /// @brief Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the
-  /// grid's color.
-  /// @brief To enable RGB color visualization in the [3D
+  /// grid's color. To enable RGB color visualization in the [3D
   /// panel](https://docs.foxglove.dev/docs/visualization/panels/3d#rgba-separate-fields-color-mode),
   /// include **all four** of these fields in your `fields` array:
-  /// @brief
-  /// @brief - `red` - Red channel value
-  /// @brief - `green` - Green channel value
-  /// @brief - `blue` - Blue channel value
-  /// @brief - `alpha` - Alpha/transparency channel value
-  /// @brief
-  /// @brief **note:** All four fields must be present with these exact names for RGB visualization
-  /// to work. The order of fields doesn't matter, but the names must match exactly.
-  /// @brief
-  /// @brief Recommended type: `UINT8` (0-255 range) for standard 8-bit color channels.
-  /// @brief
-  /// @brief Example field definitions:
-  /// @brief
-  /// @brief **RGB color only:**
-  /// @brief
-  /// @brief ```javascript
-  /// @brief fields: [
-  /// @brief  { name: "red", offset: 0, type: NumericType.UINT8 },
-  /// @brief  { name: "green", offset: 1, type: NumericType.UINT8 },
-  /// @brief  { name: "blue", offset: 2, type: NumericType.UINT8 },
-  /// @brief  { name: "alpha", offset: 3, type: NumericType.UINT8 },
-  /// @brief ];
-  /// @brief ```
-  /// @brief
-  /// @brief **RGB color with elevation (for 3D terrain visualization):**
-  /// @brief
-  /// @brief ```javascript
-  /// @brief fields: [
-  /// @brief  { name: "red", offset: 0, type: NumericType.UINT8 },
-  /// @brief  { name: "green", offset: 1, type: NumericType.UINT8 },
-  /// @brief  { name: "blue", offset: 2, type: NumericType.UINT8 },
-  /// @brief  { name: "alpha", offset: 3, type: NumericType.UINT8 },
-  /// @brief  { name: "elevation", offset: 4, type: NumericType.FLOAT32 },
-  /// @brief ];
-  /// @brief ```
-  /// @brief
-  /// @brief When these fields are present, the 3D panel will offer additional "Color Mode" options
+  ///
+  /// - `red` - Red channel value
+  /// - `green` - Green channel value
+  /// - `blue` - Blue channel value
+  /// - `alpha` - Alpha/transparency channel value
+  ///
+  /// **note:** All four fields must be present with these exact names for RGB visualization to
+  /// work. The order of fields doesn't matter, but the names must match exactly.
+  ///
+  /// Recommended type: `UINT8` (0-255 range) for standard 8-bit color channels.
+  ///
+  /// Example field definitions:
+  ///
+  /// **RGB color only:**
+  ///
+  /// ```javascript
+  /// fields: [
+  ///  { name: "red", offset: 0, type: NumericType.UINT8 },
+  ///  { name: "green", offset: 1, type: NumericType.UINT8 },
+  ///  { name: "blue", offset: 2, type: NumericType.UINT8 },
+  ///  { name: "alpha", offset: 3, type: NumericType.UINT8 },
+  /// ];
+  /// ```
+  ///
+  /// **RGB color with elevation (for 3D terrain visualization):**
+  ///
+  /// ```javascript
+  /// fields: [
+  ///  { name: "red", offset: 0, type: NumericType.UINT8 },
+  ///  { name: "green", offset: 1, type: NumericType.UINT8 },
+  ///  { name: "blue", offset: 2, type: NumericType.UINT8 },
+  ///  { name: "alpha", offset: 3, type: NumericType.UINT8 },
+  ///  { name: "elevation", offset: 4, type: NumericType.FLOAT32 },
+  /// ];
+  /// ```
+  ///
+  /// When these fields are present, the 3D panel will offer additional "Color Mode" options
   /// including "RGBA (separate fields)" to visualize the RGB data directly. For elevation
   /// visualization, set the "Elevation field" to your elevation layer name.
   std::vector<PackedElementField> fields;
 
   /// @brief Grid cell data, interpreted using `fields`, in row-major (y-major) order.
-  /// @brief For the data element starting at byte offset i, the coordinates of its corner closest
-  /// to the origin will be:
-  /// @brief
-  /// @brief - y = i / row_stride * cell_size.y
-  /// @brief - x = (i % row_stride) / cell_stride * cell_size.x
+  /// For the data element starting at byte offset i, the coordinates of its corner closest to the
+  /// origin will be:
+  ///
+  /// - y = i / row_stride * cell_size.y
+  /// - x = (i % row_stride) / cell_stride * cell_size.x
   std::vector<std::byte> data;
 
   /// @brief Encoded the Grid as protobuf to the provided buffer.
@@ -898,12 +893,12 @@ struct VoxelGrid {
   std::vector<PackedElementField> fields;
 
   /// @brief Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.
-  /// @brief For the data element starting at byte offset i, the coordinates of its corner closest
-  /// to the origin will be:
-  /// @brief
-  /// @brief - z = i / slice_stride * cell_size.z
-  /// @brief - y = (i % slice_stride) / row_stride * cell_size.y
-  /// @brief - x = (i % row_stride) / cell_stride * cell_size.x
+  /// For the data element starting at byte offset i, the coordinates of its corner closest to the
+  /// origin will be:
+  ///
+  /// - z = i / slice_stride * cell_size.z
+  /// - y = (i % slice_stride) / row_stride * cell_size.y
+  /// - x = (i % row_stride) / cell_stride * cell_size.x
   std::vector<std::byte> data;
 
   /// @brief Encoded the VoxelGrid as protobuf to the provided buffer.
@@ -947,8 +942,7 @@ struct PointsAnnotation {
   PointsAnnotationType type{};
 
   /// @brief Points in 2D image coordinates (pixels).
-  /// @brief These coordinates use the top-left corner of the top-left pixel of the image as the
-  /// origin.
+  /// These coordinates use the top-left corner of the top-left pixel of the image as the origin.
   std::vector<Point2> points;
 
   /// @brief Outline color
@@ -992,8 +986,7 @@ struct TextAnnotation {
   std::optional<Timestamp> timestamp;
 
   /// @brief Bottom-left origin of the text label in 2D image coordinates (pixels).
-  /// @brief The coordinate uses the top-left corner of the top-left pixel of the image as the
-  /// origin.
+  /// The coordinate uses the top-left corner of the top-left pixel of the image as the origin.
   std::optional<Point2> position;
 
   /// @brief Text to display
@@ -1241,8 +1234,8 @@ struct LinePrimitive {
 
   /// @brief Indices into the `points` and `colors` attribute arrays, which can be used to avoid
   /// duplicating attribute data.
-  /// @brief
-  /// @brief If omitted or empty, indexing will not be used. This default behavior is equivalent to
+  ///
+  /// If omitted or empty, indexing will not be used. This default behavior is equivalent to
   /// specifying [0, 1, ..., N-1] for the indices (where N is the number of `points` provided).
   std::vector<uint32_t> indices;
 
@@ -1489,8 +1482,8 @@ struct TriangleListPrimitive {
 
   /// @brief Indices into the `points` and `colors` attribute arrays, which can be used to avoid
   /// duplicating attribute data.
-  /// @brief
-  /// @brief If omitted or empty, indexing will not be used. This default behavior is equivalent to
+  ///
+  /// If omitted or empty, indexing will not be used. This default behavior is equivalent to
   /// specifying [0, 1, ..., N-1] for the indices (where N is the number of `points` provided).
   std::vector<uint32_t> indices;
 
@@ -1889,84 +1882,83 @@ struct RawImage {
   uint32_t step = 0;
 
   /// @brief Raw image data.
-  /// @brief
-  /// @brief For each `encoding` value, the `data` field contains image pixel data serialized as
-  /// follows:
-  /// @brief
-  /// @brief - `yuv422` or `uyvy`:
-  /// @brief   - Pixel colors are decomposed into [Y'UV](https://en.wikipedia.org/wiki/Y%E2%80%B2UV)
-  /// channels.
-  /// @brief   - Pixel channel values are represented as unsigned 8-bit integers.
-  /// @brief   - U and V values are shared between horizontal pairs of pixels. Each pair of output
-  /// pixels is serialized as [U, Y1, V, Y2].
-  /// @brief   - `step` must be greater than or equal to `width` * 2.
-  /// @brief - `yuv422_yuy2` or  `yuyv`:
-  /// @brief   - Pixel colors are decomposed into [Y'UV](https://en.wikipedia.org/wiki/Y%E2%80%B2UV)
-  /// channels.
-  /// @brief   - Pixel channel values are represented as unsigned 8-bit integers.
-  /// @brief   - U and V values are shared between horizontal pairs of pixels. Each pair of output
-  /// pixels is encoded as [Y1, U, Y2, V].
-  /// @brief   - `step` must be greater than or equal to `width` * 2.
-  /// @brief - `nv12`:
-  /// @brief   - Pixel colors are decomposed into [Y'UV](https://en.wikipedia.org/wiki/Y%E2%80%B2UV)
-  /// channels using 4:2:0 chroma subsampling. The data is stored in
-  /// [NV12](https://www.kernel.org/doc/html/v4.10/media/uapi/v4l/pixfmt-nv12.html) semi-planar
-  /// layout with two contiguous planes: a Y (luma) plane followed by an interleaved UV (chroma)
-  /// plane.
-  /// @brief   - All channel values are represented as unsigned 8-bit integers.
-  /// @brief   - Both planes use `step` as their row stride.
-  /// @brief   - The Y plane contains one luma value per pixel (`step` * `height` bytes).
-  /// @brief   - The UV plane contains interleaved U, V chroma pairs, subsampled by a factor of 2 in
-  /// both dimensions (`width`/2 pairs per row, `height`/2 rows, `step` * `height`/2 bytes). Each U,
-  /// V pair is shared by a 2x2 block of pixels.
-  /// @brief   - `width` and `height` must be even.
-  /// @brief   - `step` must be greater than or equal to `width`.
-  /// @brief   - Total `data` length is `step` * `height` * 3/2 bytes.
-  /// @brief - `rgb8`:
-  /// @brief   - Pixel colors are decomposed into Red, Green, and Blue channels.
-  /// @brief   - Pixel channel values are represented as unsigned 8-bit integers.
-  /// @brief   - Each output pixel is serialized as [R, G, B].
-  /// @brief   - `step` must be greater than or equal to `width` * 3.
-  /// @brief - `rgba8`:
-  /// @brief   - Pixel colors are decomposed into Red, Green, Blue, and Alpha channels.
-  /// @brief   - Pixel channel values are represented as unsigned 8-bit integers.
-  /// @brief   - Each output pixel is serialized as [R, G, B, Alpha].
-  /// @brief   - `step` must be greater than or equal to `width` * 4.
-  /// @brief - `bgr8` or `8UC3`:
-  /// @brief   - Pixel colors are decomposed into Blue, Green, and Red channels.
-  /// @brief   - Pixel channel values are represented as unsigned 8-bit integers.
-  /// @brief   - Each output pixel is serialized as [B, G, R].
-  /// @brief   - `step` must be greater than or equal to `width` * 3.
-  /// @brief - `bgra8`:
-  /// @brief   - Pixel colors are decomposed into Blue, Green, Red, and Alpha channels.
-  /// @brief   - Pixel channel values are represented as unsigned 8-bit integers.
-  /// @brief   - Each output pixel is encoded as [B, G, R, Alpha].
-  /// @brief   - `step` must be greater than or equal to `width` * 4.
-  /// @brief - `32FC1`:
-  /// @brief   - Pixel brightness is represented as a single-channel, 32-bit little-endian IEEE 754
-  /// floating-point value, ranging from 0.0 (black) to 1.0 (white).
-  /// @brief   - `step` must be greater than or equal to `width` * 4.
-  /// @brief - `bayer_rggb8`, `bayer_bggr8`, `bayer_gbrg8`, or `bayer_grbg8`:
-  /// @brief   - Pixel colors are decomposed into Red, Blue and Green channels.
-  /// @brief   - Pixel channel values are represented as unsigned 8-bit integers, and serialized in
-  /// a 2x2 bayer filter pattern.
-  /// @brief   - The order of the four letters after `bayer_` determine the layout, so for
-  /// `bayer_wxyz8` the pattern is:
-  /// @brief   ```plaintext
-  /// @brief   w | x
-  /// @brief   - + -
-  /// @brief   y | z
-  /// @brief   ```
-  /// @brief   - `step` must be greater than or equal to `width`.
-  /// @brief - `mono8` or `8UC1`:
-  /// @brief   - Pixel brightness is represented as unsigned 8-bit integers.
-  /// @brief   - `step` must be greater than or equal to `width`.
-  /// @brief - `mono16` or `16UC1`:
-  /// @brief   - Pixel brightness is represented as 16-bit unsigned little-endian integers.
-  /// Rendering of these values is controlled in [Image panel color mode
-  /// settings](https://docs.foxglove.dev/docs/visualization/panels/image#general).
-  /// @brief   - `step` must be greater than or equal to `width` * 2.
-  /// @brief
+  ///
+  /// For each `encoding` value, the `data` field contains image pixel data serialized as follows:
+  ///
+  /// - `yuv422` or `uyvy`:
+  ///   - Pixel colors are decomposed into [Y'UV](https://en.wikipedia.org/wiki/Y%E2%80%B2UV)
+  ///   channels.
+  ///   - Pixel channel values are represented as unsigned 8-bit integers.
+  ///   - U and V values are shared between horizontal pairs of pixels. Each pair of output pixels
+  ///   is serialized as [U, Y1, V, Y2].
+  ///   - `step` must be greater than or equal to `width` * 2.
+  /// - `yuv422_yuy2` or  `yuyv`:
+  ///   - Pixel colors are decomposed into [Y'UV](https://en.wikipedia.org/wiki/Y%E2%80%B2UV)
+  ///   channels.
+  ///   - Pixel channel values are represented as unsigned 8-bit integers.
+  ///   - U and V values are shared between horizontal pairs of pixels. Each pair of output pixels
+  ///   is encoded as [Y1, U, Y2, V].
+  ///   - `step` must be greater than or equal to `width` * 2.
+  /// - `nv12`:
+  ///   - Pixel colors are decomposed into [Y'UV](https://en.wikipedia.org/wiki/Y%E2%80%B2UV)
+  ///   channels using 4:2:0 chroma subsampling. The data is stored in
+  ///   [NV12](https://www.kernel.org/doc/html/v4.10/media/uapi/v4l/pixfmt-nv12.html) semi-planar
+  ///   layout with two contiguous planes: a Y (luma) plane followed by an interleaved UV (chroma)
+  ///   plane.
+  ///   - All channel values are represented as unsigned 8-bit integers.
+  ///   - Both planes use `step` as their row stride.
+  ///   - The Y plane contains one luma value per pixel (`step` * `height` bytes).
+  ///   - The UV plane contains interleaved U, V chroma pairs, subsampled by a factor of 2 in both
+  ///   dimensions (`width`/2 pairs per row, `height`/2 rows, `step` * `height`/2 bytes). Each U, V
+  ///   pair is shared by a 2x2 block of pixels.
+  ///   - `width` and `height` must be even.
+  ///   - `step` must be greater than or equal to `width`.
+  ///   - Total `data` length is `step` * `height` * 3/2 bytes.
+  /// - `rgb8`:
+  ///   - Pixel colors are decomposed into Red, Green, and Blue channels.
+  ///   - Pixel channel values are represented as unsigned 8-bit integers.
+  ///   - Each output pixel is serialized as [R, G, B].
+  ///   - `step` must be greater than or equal to `width` * 3.
+  /// - `rgba8`:
+  ///   - Pixel colors are decomposed into Red, Green, Blue, and Alpha channels.
+  ///   - Pixel channel values are represented as unsigned 8-bit integers.
+  ///   - Each output pixel is serialized as [R, G, B, Alpha].
+  ///   - `step` must be greater than or equal to `width` * 4.
+  /// - `bgr8` or `8UC3`:
+  ///   - Pixel colors are decomposed into Blue, Green, and Red channels.
+  ///   - Pixel channel values are represented as unsigned 8-bit integers.
+  ///   - Each output pixel is serialized as [B, G, R].
+  ///   - `step` must be greater than or equal to `width` * 3.
+  /// - `bgra8`:
+  ///   - Pixel colors are decomposed into Blue, Green, Red, and Alpha channels.
+  ///   - Pixel channel values are represented as unsigned 8-bit integers.
+  ///   - Each output pixel is encoded as [B, G, R, Alpha].
+  ///   - `step` must be greater than or equal to `width` * 4.
+  /// - `32FC1`:
+  ///   - Pixel brightness is represented as a single-channel, 32-bit little-endian IEEE 754
+  ///   floating-point value, ranging from 0.0 (black) to 1.0 (white).
+  ///   - `step` must be greater than or equal to `width` * 4.
+  /// - `bayer_rggb8`, `bayer_bggr8`, `bayer_gbrg8`, or `bayer_grbg8`:
+  ///   - Pixel colors are decomposed into Red, Blue and Green channels.
+  ///   - Pixel channel values are represented as unsigned 8-bit integers, and serialized in a 2x2
+  ///   bayer filter pattern.
+  ///   - The order of the four letters after `bayer_` determine the layout, so for `bayer_wxyz8`
+  ///   the pattern is:
+  ///   ```text
+  ///   w | x
+  ///   - + -
+  ///   y | z
+  ///   ```
+  ///   - `step` must be greater than or equal to `width`.
+  /// - `mono8` or `8UC1`:
+  ///   - Pixel brightness is represented as unsigned 8-bit integers.
+  ///   - `step` must be greater than or equal to `width`.
+  /// - `mono16` or `16UC1`:
+  ///   - Pixel brightness is represented as 16-bit unsigned little-endian integers. Rendering of
+  ///   these values is controlled in [Image panel color mode
+  ///   settings](https://docs.foxglove.dev/docs/visualization/panels/image#general).
+  ///   - `step` must be greater than or equal to `width` * 2.
+  ///
   std::vector<std::byte> data;
 
   /// @brief Encoded the RawImage as protobuf to the provided buffer.

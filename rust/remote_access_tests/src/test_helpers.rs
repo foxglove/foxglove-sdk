@@ -281,6 +281,17 @@ impl ViewerConnection {
         }
     }
 
+    /// Reads and returns the next UnadvertiseServices message.
+    pub async fn expect_unadvertise_services(
+        &mut self,
+    ) -> Result<foxglove::protocol::v2::server::UnadvertiseServices> {
+        let msg = self.frame_reader.next_server_message().await?;
+        match msg {
+            ServerMessage::UnadvertiseServices(unadv) => Ok(unadv),
+            other => anyhow::bail!("expected UnadvertiseServices, got: {other:?}"),
+        }
+    }
+
     /// Reads and returns the next ServiceCallResponse message.
     pub async fn expect_service_call_response(
         &mut self,

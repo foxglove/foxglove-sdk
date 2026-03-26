@@ -1,5 +1,5 @@
 [package]
-name = "example_remote_access"
+name = "example_remote_access_services"
 edition = "2024"
 publish = false
 
@@ -7,9 +7,11 @@ publish = false
 workspace = true
 
 [dependencies]
+anyhow = "1.0"
+env_logger = "0.11"
 foxglove = { path = "../../foxglove", features = ["schemars", "remote-access"] }
+schemars = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
 tokio = { version = "1.47", features = ["full"] }
-clap = { version = "4.5", features = ["derive"] }
-env_logger = "0.11.5"
-serde_json = "1.0.142"
 tracing = "0.1"

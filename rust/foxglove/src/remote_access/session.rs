@@ -16,9 +16,8 @@ use tokio_util::{io::StreamReader, sync::CancellationToken};
 use tracing::{debug, error, info, warn};
 
 use crate::protocol::v2::DecodeError;
-use crate::remote_access::connection::RemoteAccessConnectionOptions;
 use crate::remote_access::participant::ChannelWriter;
-use crate::remote_common::service::{CallId, ServiceId, ServiceMap};
+use crate::remote_common::service::{CallId, Service, ServiceId, ServiceMap};
 use crate::{
     ChannelDescriptor, ChannelId, Context, FoxgloveError, Metadata, RawChannel, Schema, Sink,
     SinkChannelFilter, SinkId,
@@ -27,7 +26,7 @@ use crate::{
         client::{self, ClientMessage},
         server::{
             AdvertiseServices, MessageData as ServerMessageData, ServerInfo, ServiceCallFailure,
-            Status, Unadvertise, advertise, advertise_services,
+            Status, Unadvertise, UnadvertiseServices, advertise, advertise_services,
         },
     },
     remote_access::{
@@ -132,6 +131,26 @@ fn encode_binary_message<'a>(message: &impl BinaryMessage<'a>) -> Bytes {
     Bytes::from(buf)
 }
 
+fn build_advertise_services_msg(services: &[Arc<Service>]) -> Option<AdvertiseServices<'_>> {
+    if services.is_empty() {
+        return None;
+    }
+    let msg = AdvertiseServices::new(services.iter().filter_map(|s| {
+        advertise_services::Service::try_from(s.as_ref())
+            .inspect_err(|err| {
+                error!(
+                    "Failed to encode service advertisement for {}: {err}",
+                    s.name()
+                )
+            })
+            .ok()
+    }));
+    if msg.services.is_empty() {
+        return None;
+    }
+    Some(msg)
+}
+
 /// RemoteAccessSession tracks a connected LiveKit session (the Room)
 /// and any state that is specific to that session.
 /// We discard this state if we close or lose the connection.
@@ -153,7 +172,7 @@ pub(crate) struct RemoteAccessSession {
     data_plane_rx: flume::Receiver<ChannelMessage>,
     control_plane_tx: flume::Sender<ControlPlaneMessage>,
     control_plane_rx: flume::Receiver<ControlPlaneMessage>,
-    services: Arc<ServiceMap>,
+    services: Arc<parking_lot::RwLock<ServiceMap>>,
     supported_encodings: IndexSet<String>,
     /// Serializes all participant-scoped state mutations: subscription changes, video track
     /// lifecycle operations, client channel advertise/unadvertise, and participant removal.
@@ -264,29 +283,35 @@ impl Sink for RemoteAccessSession {
     }
 }
 
+pub(crate) struct SessionParams {
+    pub room: Room,
+    pub context: Weak<Context>,
+    pub channel_filter: Option<Arc<dyn SinkChannelFilter>>,
+    pub listener: Option<Arc<dyn Listener>>,
+    pub capabilities: Vec<Capability>,
+    pub supported_encodings: IndexSet<String>,
+    pub cancellation_token: CancellationToken,
+    pub message_backlog_size: usize,
+    pub services: Arc<parking_lot::RwLock<ServiceMap>>,
+    pub pending_client_reader_timeout: Duration,
+    pub remote_access_session_id: Option<String>,
+}
+
 impl RemoteAccessSession {
-    #[allow(clippy::too_many_arguments)]
-    pub(crate) fn new(
-        options: &RemoteAccessConnectionOptions,
-        room: Room,
-        message_backlog_size: usize,
-        pending_client_reader_timeout: Duration,
-        services: Arc<ServiceMap>,
-        remote_access_session_id: Option<String>,
-    ) -> Self {
-        let (data_plane_tx, data_plane_rx) = flume::bounded(message_backlog_size);
-        let (control_plane_tx, control_plane_rx) = flume::bounded(message_backlog_size);
+    pub(crate) fn new(params: SessionParams) -> Self {
+        let (data_plane_tx, data_plane_rx) = flume::bounded(params.message_backlog_size);
+        let (control_plane_tx, control_plane_rx) = flume::bounded(params.message_backlog_size);
         let (video_metadata_tx, video_metadata_rx) = tokio::sync::watch::channel(());
         Self {
             sink_id: SinkId::next(),
-            room,
-            context: options.context.clone(),
-            remote_access_session_id,
+            room: params.room,
+            context: params.context,
+            remote_access_session_id: params.remote_access_session_id,
             state: RwLock::new(SessionState::new()),
-            channel_filter: options.channel_filter.clone(),
-            listener: options.listener.clone(),
-            capabilities: options.capabilities.clone(),
-            cancellation_token: options.cancellation_token.clone(),
+            channel_filter: params.channel_filter,
+            listener: params.listener,
+            capabilities: params.capabilities,
+            cancellation_token: params.cancellation_token,
             data_plane_tx,
             data_plane_rx,
             control_plane_tx,
@@ -295,9 +320,9 @@ impl RemoteAccessSession {
             video_metadata_tx,
             video_metadata_rx,
             pending_client_readers: parking_lot::Mutex::new(HashMap::new()),
-            pending_client_reader_timeout,
-            services,
-            supported_encodings: options.supported_encodings.clone().unwrap_or_default(),
+            pending_client_reader_timeout: params.pending_client_reader_timeout,
+            services: params.services,
+            supported_encodings: params.supported_encodings,
         }
     }
 
@@ -1369,24 +1394,30 @@ impl RemoteAccessSession {
 
     /// Enqueue service advertisements for delivery to a single participant.
     fn send_service_advertisements(&self, participant: Arc<Participant>) {
-        let services: Vec<_> = self.services.values().cloned().collect();
-        if services.is_empty() {
-            return;
+        let services: Vec<_> = self.services.read().values().cloned().collect();
+        if let Some(msg) = build_advertise_services_msg(&services) {
+            self.send_control(participant, encode_json_message(&msg));
         }
-        let msg = AdvertiseServices::new(services.iter().filter_map(|s| {
-            advertise_services::Service::try_from(s.as_ref())
-                .inspect_err(|err| {
-                    error!(
-                        "Failed to encode service advertisement for {}: {err}",
-                        s.name()
-                    )
-                })
-                .ok()
-        }));
-        if msg.services.is_empty() {
-            return;
+    }
+
+    /// Broadcasts service advertisements for the given service IDs to all connected participants.
+    pub(crate) fn advertise_new_services(&self, service_ids: &[ServiceId]) {
+        let services: Vec<_> = {
+            let services = self.services.read();
+            service_ids
+                .iter()
+                .filter_map(|id| services.get_by_id(*id))
+                .collect()
+        };
+        if let Some(msg) = build_advertise_services_msg(&services) {
+            self.broadcast_control(encode_json_message(&msg));
         }
-        self.send_control(participant, encode_json_message(&msg));
+    }
+
+    /// Broadcasts service unadvertisements for the given service IDs to all connected participants.
+    pub(crate) fn unadvertise_services(&self, service_ids: &[ServiceId]) {
+        let msg = UnadvertiseServices::new(service_ids.iter().copied().map(u32::from));
+        self.broadcast_control(encode_json_message(&msg));
     }
 
     /// Handle a service call request from a client.
@@ -1405,7 +1436,7 @@ impl RemoteAccessSession {
         }
 
         // Lookup the requested service handler.
-        let Some(service) = self.services.get_by_id(service_id) else {
+        let Some(service) = self.services.read().get_by_id(service_id) else {
             self.send_service_call_failure(participant, service_id, call_id, "Unknown service");
             return;
         };
