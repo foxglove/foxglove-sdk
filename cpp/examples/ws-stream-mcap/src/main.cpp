@@ -164,7 +164,7 @@ int main(int argc, char* argv[]) {
     last_status = current_status;
 
     if (current_status != foxglove::PlaybackStatus::Playing) {
-      std::this_thread::sleep_for(10ms);
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
       continue;
     }
 
