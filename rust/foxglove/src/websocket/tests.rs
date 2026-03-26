@@ -736,6 +736,24 @@ async fn test_service_registration_missing_request_encoding() {
 }
 
 #[tokio::test]
+async fn test_initial_service_missing_request_encoding() {
+    // Services configured at creation time are also validated for request encodings.
+    let ctx = Context::new();
+    let svc = Service::builder("/s", ServiceSchema::new("")).handler_fn(svc_unreachable);
+    let result = do_create_server(
+        &ctx,
+        ServerOptions {
+            services: HashMap::from([(svc.name().to_string(), svc)]),
+            ..Default::default()
+        },
+    );
+    assert!(matches!(
+        result,
+        Err(FoxgloveError::MissingRequestEncoding(_))
+    ));
+}
+
+#[tokio::test]
 async fn test_service_registration_duplicate_name() {
     // Can't register a service with no encoding unless we declare global encodings.
     let ctx = Context::new();

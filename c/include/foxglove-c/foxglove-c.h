@@ -5522,6 +5522,10 @@ foxglove_error foxglove_server_clear_session(const struct foxglove_websocket_ser
 /**
  * Adds a service to the server.
  *
+ * This function will fail if the server was not configured with the `services` capability,
+ * if a service with the same name is already registered, or if the service has no request
+ * encoding and the server has no supported encodings.
+ *
  * # Safety
  * - `server` must be a valid pointer to a server started with `foxglove_server_start`.
  * - `service` must be a valid pointer to a service allocated by `foxglove_service_create`. This

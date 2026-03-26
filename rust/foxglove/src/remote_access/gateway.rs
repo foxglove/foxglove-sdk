@@ -40,6 +40,27 @@ impl GatewayHandle {
         self.connection.status()
     }
 
+    /// Adds new services, and advertises them to all connected participants.
+    ///
+    /// This method will fail if the services capability was not declared
+    /// ([`ServicesNotSupported`](FoxgloveError::ServicesNotSupported)), if a service name is
+    /// not unique ([`DuplicateService`](FoxgloveError::DuplicateService)), or if a service has
+    /// no request encoding and the gateway has no supported encodings
+    /// ([`MissingRequestEncoding`](FoxgloveError::MissingRequestEncoding)).
+    pub fn add_services(
+        &self,
+        services: impl IntoIterator<Item = Service>,
+    ) -> Result<(), FoxgloveError> {
+        self.connection.add_services(services.into_iter().collect())
+    }
+
+    /// Removes services that were previously advertised.
+    ///
+    /// Unrecognized service names are silently ignored.
+    pub fn remove_services(&self, names: impl IntoIterator<Item = impl AsRef<str>>) {
+        self.connection.remove_services(names);
+    }
+
     /// Gracefully disconnect from the remote access connection, if connected.
     ///
     /// Returns a JoinHandle that will allow waiting until the connection has been fully closed.
@@ -50,7 +71,23 @@ impl GatewayHandle {
 
     #[cfg(test)]
     fn with_runner(runner: JoinHandle<()>, runtime: Handle) -> Self {
-        let connection = RemoteAccessConnection::new(RemoteAccessConnectionOptions::default());
+        let options = ConnectionOptions {
+            name: None,
+            device_token: String::new(),
+            foxglove_api_url: None,
+            foxglove_api_timeout: None,
+            listener: None,
+            capabilities: Vec::new(),
+            supported_encodings: None,
+            runtime: runtime.clone(),
+            channel_filter: None,
+            server_info: None,
+            message_backlog_size: None,
+            cancellation_token: CancellationToken::new(),
+            context: std::sync::Weak::new(),
+        };
+        let services = Arc::new(parking_lot::RwLock::new(ServiceMap::default()));
+        let connection = RemoteAccessConnection::new(options, services);
         Self {
             connection: Arc::new(connection),
             runner,
@@ -302,9 +339,22 @@ impl Gateway {
                     encodings.insert(encoding.to_string());
                 }
             }
+            if encodings.is_empty() {
+                if let Some(svc) = self
+                    .services
+                    .values()
+                    .find(|s| s.request_encoding().is_none())
+                {
+                    return Err(FoxgloveError::MissingRequestEncoding(
+                        svc.name().to_string(),
+                    ));
+                }
+            }
         }
         let runtime = self.runtime.unwrap_or_else(get_runtime_handle);
-        let services = Arc::new(ServiceMap::from_iter(self.services.into_values()));
+        let services = Arc::new(parking_lot::RwLock::new(ServiceMap::from_iter(
+            self.services.into_values(),
+        )));
         let options = ConnectionOptions {
             name: self.name,
             device_token,
@@ -328,6 +378,8 @@ impl Gateway {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::FoxgloveError;
+    use crate::remote_common::service::{Service, ServiceSchema};
 
     #[test]
     fn stop_blocking_clean_shutdown() {
@@ -346,5 +398,20 @@ mod tests {
         let handle = GatewayHandle::with_runner(runner, rt.handle().clone());
         // Should not panic; should log a warning.
         handle.stop_blocking();
+    }
+
+    #[test]
+    fn test_initial_service_missing_request_encoding() {
+        // Services configured at creation time are also validated for request encodings.
+        let svc =
+            Service::builder("/s", ServiceSchema::new("")).handler_fn(|_| Ok::<_, String>(b""));
+        let result = Gateway::new()
+            .device_token("test-token")
+            .services([svc])
+            .start();
+        assert!(matches!(
+            result,
+            Err(FoxgloveError::MissingRequestEncoding(_))
+        ));
     }
 }
