@@ -2,18 +2,18 @@ use std::{collections::HashMap, sync::Arc, time::Duration};
 
 use crate::{
     ChannelDescriptor, Context, FoxgloveError,
+    remote_common::service::Service,
     sink_channel_filter::{SinkChannelFilter, SinkChannelFilterFn},
 };
 
 use tokio::task::JoinHandle;
 
-use super::connection::{RemoteAccessConnection, RemoteAccessConnectionOptions};
+use super::connection::{ConnectionStatus, RemoteAccessConnection, RemoteAccessConnectionOptions};
 use super::{Capability, Listener};
 
 /// A handle to the remote access gateway connection.
 ///
 /// This handle can safely be dropped and the connection will run forever.
-#[doc(hidden)]
 pub struct GatewayHandle {
     connection: Arc<RemoteAccessConnection>,
     runner: JoinHandle<()>,
@@ -24,6 +24,11 @@ impl GatewayHandle {
         let runner = connection.clone().spawn_run_until_cancelled();
 
         Self { connection, runner }
+    }
+
+    /// Returns the current connection status.
+    pub fn connection_status(&self) -> ConnectionStatus {
+        self.connection.status()
     }
 
     /// Gracefully disconnect from the remote access connection, if connected.
@@ -43,7 +48,6 @@ const FOXGLOVE_API_TIMEOUT_ENV: &str = "FOXGLOVE_API_TIMEOUT";
 ///
 /// You may only create one gateway at a time for the device.
 #[must_use]
-#[doc(hidden)]
 #[derive(Default)]
 pub struct Gateway {
     options: RemoteAccessConnectionOptions,
@@ -176,6 +180,20 @@ impl Gateway {
         self
     }
 
+    /// Configure the set of services to advertise to clients.
+    ///
+    /// Automatically adds [`Capability::Services`] to the set of advertised capabilities.
+    pub fn services(mut self, services: impl IntoIterator<Item = Service>) -> Self {
+        self.options.services.clear();
+        for service in services {
+            let name = service.name().to_string();
+            if let Some(s) = self.options.services.insert(name, service) {
+                tracing::warn!("Redefining service {}", s.name());
+            }
+        }
+        self
+    }
+
     /// Starts the remote access gateway, which will establish a connection in the background.
     ///
     /// Returns a handle that can optionally be used to manage the gateway.
@@ -202,6 +220,22 @@ impl Gateway {
                 .and_then(|s| s.parse::<u64>().ok())
                 .map(Duration::from_secs)
         });
+        // If the gateway was declared with services, automatically add the "services" capability
+        // and the set of supported request encodings.
+        if !self.options.services.is_empty() {
+            if !self.options.capabilities.contains(&Capability::Services) {
+                self.options.capabilities.push(Capability::Services);
+            }
+            let encodings = self
+                .options
+                .supported_encodings
+                .get_or_insert_with(Default::default);
+            for svc in self.options.services.values() {
+                if let Some(encoding) = svc.request_encoding() {
+                    encodings.insert(encoding.to_string());
+                }
+            }
+        }
         let connection = RemoteAccessConnection::new(self.options);
         Ok(GatewayHandle::new(Arc::new(connection)))
     }

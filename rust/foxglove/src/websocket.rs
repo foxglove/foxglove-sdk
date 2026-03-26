@@ -10,7 +10,6 @@ mod connection_graph;
 mod cow_vec;
 mod fetch_asset;
 pub(crate) mod handshake;
-mod semaphore;
 mod server;
 mod server_listener;
 pub mod service;

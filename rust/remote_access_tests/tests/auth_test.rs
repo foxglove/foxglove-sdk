@@ -3,12 +3,15 @@
 //! Requires `FOXGLOVE_API_KEY` to be set (e.g. via `.env`).
 //! Run with: `cargo test -p remote_access_tests -- --ignored auth_`
 
+use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::{Context, Result};
+use foxglove::remote_access::{ConnectionStatus, Listener};
 use remote_access_tests::config::Config;
 use reqwest::header::{AUTHORIZATION, CONTENT_TYPE};
 use serde::Deserialize;
+use tokio::sync::Notify;
 use tracing::{info, warn};
 use tracing_test::traced_test;
 
@@ -114,13 +117,7 @@ async fn delete_device(
 }
 
 /// Test that we can provision a device and device token, then start a Gateway
-/// that successfully authenticates and begins running.
-///
-/// TODO: This test currently only validates that the auth + connect flow doesn't panic or
-/// hang. It cannot verify that the LiveKit connection actually succeeded because the
-/// Foxglove platform controls room creation and token issuance — there's no way to
-/// independently join the room from the test. Once Gateway exposes a connection
-/// status callback or similar API, this test should assert on successful connection.
+/// that successfully authenticates and connects.
 #[traced_test]
 #[ignore]
 #[tokio::test]
@@ -193,25 +190,43 @@ async fn auth_remote_access_connection() -> Result<()> {
     Ok(())
 }
 
+struct StatusListener {
+    connected: Notify,
+}
+
+impl Listener for StatusListener {
+    fn on_connection_status_changed(&self, status: ConnectionStatus) {
+        if status == ConnectionStatus::Connected {
+            self.connected.notify_one();
+        }
+    }
+}
+
 async fn run_auth_test(config: &Config, token: &str) -> Result<()> {
+    let listener = Arc::new(StatusListener {
+        connected: Notify::new(),
+    });
+
     let handle = foxglove::remote_access::Gateway::new()
         .name("auth-integration-test")
         .device_token(token)
         .foxglove_api_url(&config.foxglove_api_url)
+        .listener(listener.clone())
         .start()
         .context("start Gateway")?;
 
-    // Give it time to connect and authenticate.
-    // The sink authenticates via device-info, then fetches RTC credentials.
-    // We wait long enough for the auth flow to complete.
-    tokio::time::sleep(Duration::from_secs(10)).await;
-    info!("stopping remote access sink after auth test window");
+    // Wait for the gateway to authenticate and connect.
+    tokio::time::timeout(Duration::from_secs(30), listener.connected.notified())
+        .await
+        .context("timeout waiting for gateway to connect")?;
+    assert_eq!(handle.connection_status(), ConnectionStatus::Connected);
+    info!("gateway connected, stopping");
 
     let runner = handle.stop();
     tokio::time::timeout(Duration::from_secs(10), runner)
         .await
-        .context("timeout waiting for sink to stop")?
-        .context("sink runner panicked")?;
+        .context("timeout waiting for gateway to stop")?
+        .context("gateway runner panicked")?;
 
     Ok(())
 }

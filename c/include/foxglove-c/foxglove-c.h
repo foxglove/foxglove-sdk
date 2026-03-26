@@ -1788,6 +1788,15 @@ typedef struct foxglove_raw_image {
    *   - Pixel channel values are represented as unsigned 8-bit integers.
    *   - U and V values are shared between horizontal pairs of pixels. Each pair of output pixels is encoded as [Y1, U, Y2, V].
    *   - `step` must be greater than or equal to `width` * 2.
+   * - `nv12`:
+   *   - Pixel colors are decomposed into [Y'UV](https://en.wikipedia.org/wiki/Y%E2%80%B2UV) channels using 4:2:0 chroma subsampling. The data is stored in [NV12](https://www.kernel.org/doc/html/v4.10/media/uapi/v4l/pixfmt-nv12.html) semi-planar layout with two contiguous planes: a Y (luma) plane followed by an interleaved UV (chroma) plane.
+   *   - All channel values are represented as unsigned 8-bit integers.
+   *   - Both planes use `step` as their row stride.
+   *   - The Y plane contains one luma value per pixel (`step` * `height` bytes).
+   *   - The UV plane contains interleaved U, V chroma pairs, subsampled by a factor of 2 in both dimensions (`width`/2 pairs per row, `height`/2 rows, `step` * `height`/2 bytes). Each U, V pair is shared by a 2x2 block of pixels.
+   *   - `width` and `height` must be even.
+   *   - `step` must be greater than or equal to `width`.
+   *   - Total `data` length is `step` * `height` * 3/2 bytes.
    * - `rgb8`:
    *   - Pixel colors are decomposed into Red, Green, and Blue channels.
    *   - Pixel channel values are represented as unsigned 8-bit integers.

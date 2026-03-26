@@ -4,12 +4,14 @@
 //! Requires a local LiveKit server via `docker compose up -d`.
 //! Run with: `cargo test -p remote_access_tests -- --ignored livekit_`
 
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use anyhow::{Context as _, Result};
 use foxglove::messages::{RawImage, Timestamp};
 use foxglove::protocol::v2::client::SubscribeChannel;
 use foxglove::protocol::v2::server::ServerMessage;
+use foxglove::remote_access::ConnectionStatus;
 use foxglove::{Encode, Schema};
 use livekit::{Room, RoomOptions};
 use remote_access_tests::livekit_token;
@@ -1046,5 +1048,123 @@ async fn livekit_client_disconnect_fires_unadvertise_for_advertised_channels() -
     info!("disconnect unadvertise validated: {unadvertised:?}");
 
     gw.stop().await?;
+    Ok(())
+}
+
+/// Test that connection status transitions occur in the correct order
+/// (Connecting → Connected → ShuttingDown → Shutdown) and that no
+/// listener callbacks fire after Shutdown.
+#[traced_test]
+#[ignore]
+#[tokio::test]
+#[serial(livekit)]
+async fn livekit_connection_status_lifecycle() -> Result<()> {
+    /// A listener that records connection status transitions and detects
+    /// any callbacks that arrive after Shutdown.
+    struct StatusTracker {
+        statuses: Mutex<Vec<ConnectionStatus>>,
+        callback_after_shutdown: Mutex<bool>,
+    }
+
+    impl foxglove::remote_access::Listener for StatusTracker {
+        fn on_connection_status_changed(&self, status: ConnectionStatus) {
+            let mut statuses = self.statuses.lock().unwrap();
+            statuses.push(status);
+        }
+
+        fn on_subscribe(
+            &self,
+            _client: foxglove::remote_access::Client,
+            _channel: &foxglove::ChannelDescriptor,
+        ) {
+            let statuses = self.statuses.lock().unwrap();
+            if statuses.last() == Some(&ConnectionStatus::Shutdown) {
+                *self.callback_after_shutdown.lock().unwrap() = true;
+            }
+        }
+
+        fn on_message_data(
+            &self,
+            _client: foxglove::remote_access::Client,
+            _channel: &foxglove::ChannelDescriptor,
+            _payload: &[u8],
+        ) {
+            let statuses = self.statuses.lock().unwrap();
+            if statuses.last() == Some(&ConnectionStatus::Shutdown) {
+                *self.callback_after_shutdown.lock().unwrap() = true;
+            }
+        }
+    }
+
+    let tracker = Arc::new(StatusTracker {
+        statuses: Mutex::new(Vec::new()),
+        callback_after_shutdown: Mutex::new(false),
+    });
+
+    let ctx = foxglove::Context::new();
+
+    // Create a channel so we can verify subscribe callbacks.
+    let channel = ctx
+        .channel_builder("/status-test")
+        .message_encoding("json")
+        .build_raw()
+        .context("create channel")?;
+
+    let gw = TestGateway::start_with_options(
+        &ctx,
+        TestGatewayOptions {
+            listener: Some(tracker.clone()),
+            ..Default::default()
+        },
+    )
+    .await?;
+
+    // Wait for Connected status.
+    poll_until(|| {
+        tracker
+            .statuses
+            .lock()
+            .unwrap()
+            .contains(&ConnectionStatus::Connected)
+    })
+    .await;
+    assert_eq!(gw.handle.connection_status(), ConnectionStatus::Connected);
+
+    // Connect a viewer and subscribe to trigger a listener callback while connected.
+    let viewer = ViewerConnection::connect(&gw.room_name, "viewer-status").await?;
+    viewer
+        .subscribe_and_wait(&[u64::from(channel.id())], &channel)
+        .await?;
+
+    // Disconnect the viewer before stopping.
+    viewer.close().await?;
+
+    // Stop the gateway and wait for full shutdown.
+    let runner = gw.handle.stop();
+    tokio::time::timeout(remote_access_tests::test_helpers::SHUTDOWN_TIMEOUT, runner)
+        .await
+        .context("timeout waiting for gateway to stop")?
+        .context("gateway runner panicked")?;
+
+    // Validate status transitions.
+    let statuses = tracker.statuses.lock().unwrap().clone();
+    info!("recorded status transitions: {statuses:?}");
+
+    assert_eq!(
+        statuses,
+        vec![
+            ConnectionStatus::Connecting,
+            ConnectionStatus::Connected,
+            ConnectionStatus::ShuttingDown,
+            ConnectionStatus::Shutdown,
+        ],
+    );
+
+    // Verify no callbacks fired after Shutdown.
+    assert!(
+        !*tracker.callback_after_shutdown.lock().unwrap(),
+        "listener callback fired after Shutdown"
+    );
+
     Ok(())
 }
