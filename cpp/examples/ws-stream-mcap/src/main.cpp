@@ -2,6 +2,7 @@
 #include <foxglove/server.hpp>
 
 #include <atomic>
+#include <chrono>
 #include <csignal>
 #include <functional>
 #include <iostream>
