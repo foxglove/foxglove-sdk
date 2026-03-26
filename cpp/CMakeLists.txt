@@ -203,12 +203,12 @@ set_property(TARGET foxglove_generated_obj PROPERTY POSITION_INDEPENDENT_CODE Tr
 set_property(TARGET foxglove_generated_obj PROPERTY CXX_STANDARD 17)
 set_property(TARGET foxglove_generated_obj PROPERTY CXX_STANDARD_REQUIRED True)
 set_property(TARGET foxglove_generated_obj PROPERTY CXX_CLANG_TIDY "")
-target_include_directories(foxglove_generated_obj PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/foxglove/include>
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../c/include>
+target_include_directories(foxglove_generated_obj PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/foxglove/include
+  ${CMAKE_CURRENT_SOURCE_DIR}/../c/include
 )
-target_compile_options(foxglove_generated_obj PUBLIC ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
-target_link_options(foxglove_generated_obj PUBLIC ${SANITIZER_LINK_OPTIONS})
+target_compile_options(foxglove_generated_obj PRIVATE ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
+target_link_options(foxglove_generated_obj PRIVATE ${SANITIZER_LINK_OPTIONS})
 
 # Hand-written C++ code
 file(GLOB_RECURSE foxglove_cpp_srcs CONFIGURE_DEPENDS
@@ -225,12 +225,12 @@ add_library(foxglove_cpp_obj OBJECT "${foxglove_cpp_srcs}")
 set_property(TARGET foxglove_cpp_obj PROPERTY POSITION_INDEPENDENT_CODE True)
 set_property(TARGET foxglove_cpp_obj PROPERTY CXX_STANDARD 17)
 set_property(TARGET foxglove_cpp_obj PROPERTY CXX_STANDARD_REQUIRED True)
-target_include_directories(foxglove_cpp_obj PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/foxglove/include>
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../c/include>
+target_include_directories(foxglove_cpp_obj PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/foxglove/include
+  ${CMAKE_CURRENT_SOURCE_DIR}/../c/include
 )
-target_compile_options(foxglove_cpp_obj PUBLIC ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
-target_link_options(foxglove_cpp_obj PUBLIC ${SANITIZER_LINK_OPTIONS})
+target_compile_options(foxglove_cpp_obj PRIVATE ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
+target_link_options(foxglove_cpp_obj PRIVATE ${SANITIZER_LINK_OPTIONS})
 
 add_library(foxglove_cpp_static STATIC
   $<TARGET_OBJECTS:foxglove_cpp_obj>
@@ -423,11 +423,13 @@ install(FILES $<TARGET_FILE:foxglove-shared>
 # Install C++ headers
 install(DIRECTORY foxglove/include/
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+  FILES_MATCHING PATTERN "*.hpp"
 )
 
 # Install C headers
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../c/include/
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+  FILES_MATCHING PATTERN "*.h"
 )
 
 # Generate and install CMake package config files
