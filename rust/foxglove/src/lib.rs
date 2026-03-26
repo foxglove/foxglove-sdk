@@ -327,7 +327,6 @@ pub mod library_version;
 pub mod log_macro;
 mod log_sink_set;
 mod mcap_writer;
-/// Types implementing well-known Foxglove message types.
 pub mod messages;
 mod messages_wkt;
 mod metadata;
