@@ -15,7 +15,7 @@ use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info, warn};
 
 use crate::{
-    Context, SinkChannelFilter,
+    Context, FoxgloveError, SinkChannelFilter,
     api_client::{DeviceToken, FoxgloveApiClientBuilder},
     library_version::get_library_version,
     protocol::v2::server::ServerInfo,
@@ -23,7 +23,7 @@ use crate::{
         Capability, RemoteAccessError, credentials_provider::CredentialsProvider,
         session::RemoteAccessSession,
     },
-    remote_common::service::{Service, ServiceMap},
+    remote_common::service::{Service, ServiceId, ServiceMap},
 };
 
 type Result<T> = std::result::Result<T, Box<RemoteAccessError>>;
@@ -133,7 +133,8 @@ impl std::fmt::Debug for RemoteAccessConnectionOptions {
 /// and holds the options and other state that outlive a session.
 pub(crate) struct RemoteAccessConnection {
     options: RemoteAccessConnectionOptions,
-    services: Arc<ServiceMap>,
+    services: Arc<parking_lot::RwLock<ServiceMap>>,
+    session: parking_lot::Mutex<Option<Arc<RemoteAccessSession>>>,
     credentials_provider: OnceCell<CredentialsProvider>,
     status: AtomicU8,
     /// The remote access session ID, received from the API server on first successful credential fetch.
@@ -143,12 +144,13 @@ pub(crate) struct RemoteAccessConnection {
 
 impl RemoteAccessConnection {
     pub fn new(mut options: RemoteAccessConnectionOptions) -> Self {
-        let services = Arc::new(ServiceMap::from_iter(
+        let services = Arc::new(parking_lot::RwLock::new(ServiceMap::from_iter(
             options.services.drain().map(|(_, s)| s),
-        ));
+        )));
         Self {
             options,
             services,
+            session: parking_lot::Mutex::new(None),
             credentials_provider: OnceCell::new(),
             status: AtomicU8::new(ConnectionStatus::Connecting as u8),
             remote_access_session_id: OnceLock::new(),
@@ -308,6 +310,9 @@ impl RemoteAccessConnection {
         self.set_status(ConnectionStatus::Connected);
         let remote_access_session_id = self.remote_access_session_id();
 
+        // Store the active session so that external callers can reach it.
+        *self.session.lock() = Some(session.clone());
+
         // Register the session as a sink so it receives channel notifications.
         // This synchronously triggers add_channels for all existing channels.
         let Some(context) = self.options.context.upgrade() else {
@@ -315,6 +320,7 @@ impl RemoteAccessConnection {
                 remote_access_session_id,
                 "context has been dropped, stopping remote access connection"
             );
+            *self.session.lock() = None;
             return;
         };
         context.add_sink(session.clone());
@@ -352,7 +358,8 @@ impl RemoteAccessConnection {
             self.set_status(ConnectionStatus::Connecting);
         }
 
-        // Remove the sink before closing the room.
+        // Clear the active session and remove the sink before closing the room.
+        *self.session.lock() = None;
         context.remove_sink(session.sink_id());
         sender_task.abort();
         // Wait for the sender task to fully stop so no callbacks are in flight.
@@ -691,6 +698,91 @@ impl RemoteAccessConnection {
         }
 
         info
+    }
+
+    /// Returns true if the given capability was declared.
+    fn has_capability(&self, cap: Capability) -> bool {
+        self.options.capabilities.contains(&cap)
+    }
+
+    /// Adds new services, and advertises them to all connected participants.
+    ///
+    /// This method will fail if the services capability was not declared, if a service name is
+    /// not unique, or if a service has no request encoding and the connection has no supported
+    /// encodings.
+    pub(crate) fn add_services(
+        &self,
+        new_services: Vec<Service>,
+    ) -> std::result::Result<(), FoxgloveError> {
+        if !self.has_capability(Capability::Services) {
+            return Err(FoxgloveError::ServicesNotSupported);
+        }
+        if new_services.is_empty() {
+            return Ok(());
+        }
+
+        // Validate uniqueness within the batch.
+        let has_supported_encodings = self
+            .options
+            .supported_encodings
+            .as_ref()
+            .is_some_and(|e| !e.is_empty());
+        let mut new_names = HashMap::with_capacity(new_services.len());
+        for service in &new_services {
+            if new_names
+                .insert(service.name().to_string(), service.id())
+                .is_some()
+            {
+                return Err(FoxgloveError::DuplicateService(service.name().to_string()));
+            }
+            if service.request_encoding().is_none() && !has_supported_encodings {
+                return Err(FoxgloveError::MissingRequestEncoding(
+                    service.name().to_string(),
+                ));
+            }
+        }
+
+        // Insert into the shared service map, checking for duplicates against existing services.
+        let new_service_ids: Vec<ServiceId> = {
+            let mut services = self.services.write();
+            for service in &new_services {
+                if services.contains_name(service.name()) || services.contains_id(service.id()) {
+                    return Err(FoxgloveError::DuplicateService(service.name().to_string()));
+                }
+            }
+            let ids = new_services.iter().map(|s| s.id()).collect();
+            for service in new_services {
+                services.insert(service);
+            }
+            ids
+        };
+
+        // Notify the active session (if any) to broadcast advertisements.
+        if let Some(session) = self.session.lock().as_ref() {
+            session.advertise_new_services(&new_service_ids);
+        }
+
+        Ok(())
+    }
+
+    /// Removes services by name.
+    ///
+    /// Unrecognized service names are silently ignored.
+    pub(crate) fn remove_services(&self, names: impl IntoIterator<Item = impl AsRef<str>>) {
+        let removed_ids: Vec<ServiceId> = {
+            let mut services = self.services.write();
+            names
+                .into_iter()
+                .filter_map(|name| services.remove_by_name(name).map(|s| s.id()))
+                .collect()
+        };
+        if removed_ids.is_empty() {
+            return;
+        }
+        // Notify the active session (if any) to broadcast unadvertisements.
+        if let Some(session) = self.session.lock().as_ref() {
+            session.unadvertise_services(&removed_ids);
+        }
     }
 
     pub(crate) fn shutdown(&self) {

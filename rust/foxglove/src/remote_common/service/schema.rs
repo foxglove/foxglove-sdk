@@ -8,6 +8,20 @@ pub(crate) struct MessageSchema {
 }
 
 /// A service schema.
+///
+/// A service schema optionally includes request and response message schemas, each of which
+/// specifies an encoding and a [`Schema`].
+///
+/// # Request encoding
+///
+/// If the service schema includes a request encoding, clients are required to use that encoding
+/// when calling the service. If it does not, clients may use any of the supported encodings
+/// advertised by the [`WebSocketServer`](crate::WebSocketServer) or remote access
+/// [`Gateway`](crate::remote_access::Gateway).
+///
+/// At least one request encoding must be available: either the service schema must declare one,
+/// or the server must advertise supported encodings. Attempting to add a service without either
+/// will return [`FoxgloveError::MissingRequestEncoding`](crate::FoxgloveError::MissingRequestEncoding).
 #[derive(Debug, Clone)]
 pub struct ServiceSchema {
     name: String,
