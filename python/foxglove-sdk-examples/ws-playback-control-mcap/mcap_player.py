@@ -4,6 +4,7 @@ Reads an MCAP file and plays back its messages with timing, supporting
 play/pause, seek, and variable playback speed.
 """
 
+import math
 import time
 from typing import Iterator, Optional
 
@@ -51,9 +52,27 @@ class McapPlayer(PlaybackSource):
                 mcap.records.Message,
             ]
         ] = None
+        self._closed = False
+
+    def close(self) -> None:
+        """Release the open MCAP file handle."""
+        if self._closed:
+            return
+        self._file.close()
+        self._closed = True
+
+    def __enter__(self) -> "McapPlayer":
+        return self
+
+    def __exit__(
+        self, _exc_type: object, _exc_value: object, _traceback: object
+    ) -> None:
+        self.close()
 
     def _reset_reader(self, start_time: int) -> None:
         """Re-open the MCAP reader starting from the given time."""
+        if self._closed:
+            raise RuntimeError("McapPlayer is closed")
         self._file.close()
         self._file = open(self._path, "rb")
         self._reader = mcap.reader.make_reader(self._file)
@@ -186,7 +205,7 @@ class McapPlayer(PlaybackSource):
 
 
 def _clamp_speed(speed: float) -> float:
-    if not (speed >= _MIN_PLAYBACK_SPEED):  # handles NaN/inf
+    if not math.isfinite(speed) or speed < _MIN_PLAYBACK_SPEED:
         return _MIN_PLAYBACK_SPEED
     return speed
 

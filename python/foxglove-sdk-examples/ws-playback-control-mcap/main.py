@@ -89,60 +89,60 @@ def main() -> None:
     args = parser.parse_args()
 
     logger.info("Loading MCAP summary")
-    player = McapPlayer(args.file)
-    start_time, end_time = player.time_range()
+    with McapPlayer(args.file) as player:
+        start_time, end_time = player.time_range()
 
-    lock = threading.Lock()
-    listener = Listener(player, lock)
+        lock = threading.Lock()
+        listener = Listener(player, lock)
 
-    server = foxglove.start_server(
-        name=args.file,
-        host=args.host,
-        port=args.port,
-        capabilities=[Capability.PlaybackControl, Capability.Time],
-        playback_time_range=(start_time, end_time),
-        server_listener=listener,
-    )
+        server = foxglove.start_server(
+            name=args.file,
+            host=args.host,
+            port=args.port,
+            capabilities=[Capability.PlaybackControl, Capability.Time],
+            playback_time_range=(start_time, end_time),
+            server_listener=listener,
+        )
 
-    logger.info("Server started, waiting for client")
+        logger.info("Server started, waiting for client")
 
-    try:
-        last_status = PlaybackStatus.Paused
-        while True:
-            # Check status and broadcast Ended state change
-            with lock:
-                status = player.status()
-                if (
-                    status == PlaybackStatus.Ended
-                    and last_status != PlaybackStatus.Ended
-                ):
-                    server.broadcast_playback_state(
-                        PlaybackState(
-                            current_time=player.current_time(),
-                            playback_speed=player.playback_speed(),
-                            status=status,
-                            did_seek=False,
-                            request_id=None,
+        try:
+            last_status = PlaybackStatus.Paused
+            while True:
+                # Check status and broadcast Ended state change
+                with lock:
+                    status = player.status()
+                    if (
+                        status == PlaybackStatus.Ended
+                        and last_status != PlaybackStatus.Ended
+                    ):
+                        server.broadcast_playback_state(
+                            PlaybackState(
+                                current_time=player.current_time(),
+                                playback_speed=player.playback_speed(),
+                                status=status,
+                                did_seek=False,
+                                request_id=None,
+                            )
                         )
-                    )
-            last_status = status
+                last_status = status
 
-            if status != PlaybackStatus.Playing:
-                time.sleep(0.01)
-                continue
+                if status != PlaybackStatus.Playing:
+                    time.sleep(0.01)
+                    continue
 
-            # Log next message, sleeping outside the lock if needed
-            with lock:
-                sleep_duration = player.log_next_message(server)
+                # Log next message, sleeping outside the lock if needed
+                with lock:
+                    sleep_duration = player.log_next_message(server)
 
-            if sleep_duration is not None:
-                # Cap sleep to 1 second to keep the player responsive
-                time.sleep(min(sleep_duration, 1.0))
+                if sleep_duration is not None:
+                    # Cap sleep to 1 second to keep the player responsive
+                    time.sleep(min(sleep_duration, 1.0))
 
-    except KeyboardInterrupt:
-        pass
-
-    server.stop()
+        except KeyboardInterrupt:
+            pass
+        finally:
+            server.stop()
 
 
 if __name__ == "__main__":
