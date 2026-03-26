@@ -78,10 +78,9 @@ int main(int argc, char* argv[]) {
   options.host = host;
   options.port = port;
   // Explicitly advertise capabilities used by this example.
-  // Advertise playback time range (inclusive start/end, in nanoseconds since epoch) and
-  // enable Time + PlaybackControl so the Foxglove playback bar can control replay.
-  options.capabilities = foxglove::WebSocketServerCapabilities::PlaybackControl |
-                         foxglove::WebSocketServerCapabilities::Time;
+  // Advertise Time updates and playback time range (inclusive start/end, in nanoseconds
+  // since epoch). Setting playback_time_range implies PlaybackControl capability.
+  options.capabilities = foxglove::WebSocketServerCapabilities::Time;
   options.playback_time_range = time_range;
 
   // Capture shared objects by value so callback and main loop coordinate the same state safely.
