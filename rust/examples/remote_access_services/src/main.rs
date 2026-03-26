@@ -7,16 +7,20 @@
 //! - /calc/{add,sub,mul,mod}: Performs simple integer arithmetic
 //! - /flag_a: Sets/resets flag A
 //! - /flag_b: Sets/resets flag B
+//! - /remove: Removes a service endpoint by name
 //!
 //! You can call these services from the Service Call panel in the Foxglove app.
 
 use std::sync::Arc;
+use std::sync::Weak;
 use std::sync::atomic::AtomicBool;
 use std::time::Duration;
 
 use anyhow::{Context, Result};
 use foxglove::Schema;
-use foxglove::remote_access::{Capability, Gateway, Request, Service, ServiceSchema, SyncHandler};
+use foxglove::remote_access::{
+    Capability, Gateway, GatewayHandle, Request, Service, ServiceSchema, SyncHandler,
+};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use tracing::info;
@@ -69,9 +73,21 @@ async fn main() -> Result<()> {
         ])
         .context("Failed to register services")?;
 
+    // A service that dynamically removes other services by name. The handler holds a weak
+    // reference to the gateway handle so it can call `remove_services` without preventing
+    // graceful shutdown.
+    let handle = Arc::new(handle);
+    let weak_handle = Arc::downgrade(&handle);
+    handle
+        .add_services([Service::builder("/remove", remove_service_schema())
+            .handler_fn(move |req: Request| remove_handler(req, &weak_handle))])
+        .context("Failed to register services")?;
+
     tokio::signal::ctrl_c().await?;
 
-    _ = handle.stop().await;
+    if let Ok(handle) = Arc::try_unwrap(handle) {
+        _ = handle.stop().await;
+    }
     Ok(())
 }
 
@@ -152,6 +168,31 @@ fn set_bool_schema() -> ServiceSchema {
     ServiceSchema::new("/std_srvs/SetBool")
         .with_request("json", Schema::json_schema::<SetBoolRequest>())
         .with_response("json", Schema::json_schema::<SetBoolResponse>())
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct RemoveServiceRequest {
+    pub name: String,
+}
+
+#[derive(Debug, Serialize, JsonSchema)]
+pub struct RemoveServiceResponse {
+    pub success: bool,
+}
+
+fn remove_service_schema() -> ServiceSchema {
+    ServiceSchema::new("/custom_srvs/RemoveService")
+        .with_request("json", Schema::json_schema::<RemoveServiceRequest>())
+        .with_response("json", Schema::json_schema::<RemoveServiceResponse>())
+}
+
+fn remove_handler(req: Request, handle: &Weak<GatewayHandle>) -> Result<Vec<u8>> {
+    let req: RemoveServiceRequest = serde_json::from_slice(req.payload())?;
+    info!("removing service: {}", req.name);
+    let handle = handle.upgrade().context("gateway is shutting down")?;
+    handle.remove_services([&req.name]);
+    let payload = serde_json::to_vec(&RemoveServiceResponse { success: true })?;
+    Ok(payload)
 }
 
 /// A stateful handler implements the `SyncHandler` trait.
