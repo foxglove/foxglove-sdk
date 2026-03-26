@@ -681,7 +681,9 @@ impl PyWebSocketServer {
     /// These services will be available for clients to use until they are removed with
     /// :py:meth:`remove_services`.
     ///
-    /// This method will fail if the server was not configured with :py:attr:`Capability.Services`.
+    /// This method will fail if the server was not configured with :py:attr:`Capability.Services`,
+    /// if a service name is not unique, or if a service has no request encoding and the server
+    /// has no supported encodings.
     ///
     /// :param services: Services to add.
     pub fn add_services(&self, py: Python<'_>, services: Vec<PyService>) -> PyResult<()> {

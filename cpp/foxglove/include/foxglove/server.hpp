@@ -326,10 +326,10 @@ public:
   /// This method will fail for various reasons, with the following error codes:
   ///
   /// - `DuplicateService`: A service with the same name is already registered.
-  /// - `MissingRequestedEncoding`: The service didn't declare a request
+  /// - `MissingRequestEncoding`: The service didn't declare a request
   ///   encoding, and the server was not configured with a global list of
   ///   supported encodings.
-  /// - `ServicesNotSupported`: The server was not convfigured with the
+  /// - `ServicesNotSupported`: The server was not configured with the
   ///   `Services` capability.
   ///
   /// @param service The service to add.
