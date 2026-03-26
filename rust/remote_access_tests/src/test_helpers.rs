@@ -15,8 +15,9 @@ use tracing::info;
 
 use foxglove::protocol::v2::BinaryMessage;
 use foxglove::protocol::v2::client::{
-    Advertise, AdvertiseChannel, MessageData as ClientMessageData, ServiceCallRequest, Subscribe,
-    SubscribeChannel, Unadvertise, Unsubscribe,
+    Advertise, AdvertiseChannel, GetParameters, MessageData as ClientMessageData,
+    ServiceCallRequest, SetParameters, Subscribe, SubscribeChannel, SubscribeParameterUpdates,
+    Unadvertise, Unsubscribe, UnsubscribeParameterUpdates,
 };
 
 /// Describes a client-advertised channel for use in test helpers.
@@ -611,6 +612,81 @@ impl ViewerConnection {
                 }
             }
         }
+    }
+
+    /// Reads and returns the next ParameterValues message.
+    pub async fn expect_parameter_values(
+        &mut self,
+    ) -> Result<foxglove::protocol::v2::server::ParameterValues> {
+        let msg = self.frame_reader.next_server_message().await?;
+        match msg {
+            ServerMessage::ParameterValues(params) => Ok(params),
+            other => anyhow::bail!("expected ParameterValues, got: {other:?}"),
+        }
+    }
+
+    /// Sends a JSON-framed message to the gateway.
+    async fn send_json_message(&self, json: &str) -> Result<()> {
+        let framed = frame::frame_text_message(json.as_bytes());
+        let gateway_identity = ParticipantIdentity(mock_server::TEST_DEVICE_ID.to_string());
+        let writer = self
+            .room
+            .local_participant()
+            .stream_bytes(StreamByteOptions {
+                topic: "ws-protocol".to_string(),
+                destination_identities: vec![gateway_identity],
+                ..StreamByteOptions::default()
+            })
+            .await
+            .map_err(|e| anyhow::anyhow!("failed to open byte stream to gateway: {e}"))?;
+        writer
+            .write(&framed)
+            .await
+            .map_err(|e| anyhow::anyhow!("failed to write JSON message: {e}"))?;
+        Ok(())
+    }
+
+    /// Sends a GetParameters request to the gateway.
+    pub async fn send_get_parameters(&self, names: &[&str]) -> Result<()> {
+        let msg = GetParameters::new(names.iter().copied());
+        self.send_json_message(&serde_json::to_string(&msg)?).await
+    }
+
+    /// Sends a GetParameters request with a request ID to the gateway.
+    pub async fn send_get_parameters_with_id(&self, names: &[&str], id: &str) -> Result<()> {
+        let msg = GetParameters::new(names.iter().copied()).with_id(id);
+        self.send_json_message(&serde_json::to_string(&msg)?).await
+    }
+
+    /// Sends a SetParameters request to the gateway.
+    pub async fn send_set_parameters(
+        &self,
+        parameters: Vec<foxglove::remote_access::Parameter>,
+    ) -> Result<()> {
+        let msg = SetParameters::new(parameters);
+        self.send_json_message(&serde_json::to_string(&msg)?).await
+    }
+
+    /// Sends a SetParameters request with a request ID to the gateway.
+    pub async fn send_set_parameters_with_id(
+        &self,
+        parameters: Vec<foxglove::remote_access::Parameter>,
+        id: &str,
+    ) -> Result<()> {
+        let msg = SetParameters::new(parameters).with_id(id);
+        self.send_json_message(&serde_json::to_string(&msg)?).await
+    }
+
+    /// Sends a SubscribeParameterUpdates request to the gateway.
+    pub async fn send_subscribe_parameter_updates(&self, names: &[&str]) -> Result<()> {
+        let msg = SubscribeParameterUpdates::new(names.iter().copied());
+        self.send_json_message(&serde_json::to_string(&msg)?).await
+    }
+
+    /// Sends an UnsubscribeParameterUpdates request to the gateway.
+    pub async fn send_unsubscribe_parameter_updates(&self, names: &[&str]) -> Result<()> {
+        let msg = UnsubscribeParameterUpdates::new(names.iter().copied());
+        self.send_json_message(&serde_json::to_string(&msg)?).await
     }
 
     pub async fn close(self) -> Result<()> {
