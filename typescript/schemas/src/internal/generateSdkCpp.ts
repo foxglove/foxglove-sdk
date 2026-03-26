@@ -39,7 +39,8 @@ function formatComment(comment: string, indent: number) {
   let inCodeBlock = false;
   return comment
     .split("\n")
-    .map((line, i) => {
+    .map((rawLine, i) => {
+      let line = rawLine;
       if (line.trimStart().startsWith("```")) {
         if (!inCodeBlock && line.trimStart() === "```") {
           line = line.replace("```", "```text");
