@@ -455,8 +455,8 @@ struct CompressedPointCloud {
   std::vector<std::byte> data;
 
   /// @brief Point cloud compression format.
-  /// @brief
-  /// @brief Supported values: `draco` ([Google Draco](https://google.github.io/draco/)).
+  ///
+  /// Supported values: `draco` ([Google Draco](https://google.github.io/draco/)).
   std::string format;
 
   /// @brief Encoded the CompressedPointCloud as protobuf to the provided buffer.
