@@ -88,7 +88,7 @@ pub(crate) struct ConnectionParams {
 }
 
 /// RemoteAccessConnection manages the connected [`RemoteAccessSession`] to the LiveKit server,
-/// and holds the options and other state that outlive a session.
+/// and holds the parameters and other state that outlive a session.
 pub(crate) struct RemoteAccessConnection {
     name: Option<String>,
     device_token: String,
@@ -631,7 +631,7 @@ impl RemoteAccessConnection {
         }
     }
 
-    /// Create and serialize ServerInfo message based on the ConnectionOptions.
+    /// Create and serialize ServerInfo message based on the [`ConnectionParams`].
     ///
     /// The metadata and supported_encodings are important for the ClientPublish capability,
     /// as some app components will use this information to determine publish formats (ROS1 vs. JSON).
