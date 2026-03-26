@@ -132,9 +132,7 @@ impl Gateway {
 
     /// Configure the tokio runtime for the gateway to use for async tasks.
     ///
-    /// By default, the gateway will use either the current runtime (if started with
-    /// [`Gateway::start`]), or spawn its own internal runtime (if started with
-    /// [`Gateway::start_blocking`]).
+    /// By default, the gateway will use either the current runtime, or spawn its own internal runtime.
     #[doc(hidden)]
     pub fn tokio_runtime(mut self, handle: &tokio::runtime::Handle) -> Self {
         self.options.runtime = Some(handle.clone());
