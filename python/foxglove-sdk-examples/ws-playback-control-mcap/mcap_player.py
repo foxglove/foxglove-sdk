@@ -4,6 +4,7 @@ Reads an MCAP file and plays back its messages with timing, supporting
 play/pause, seek, and variable playback speed.
 """
 
+import math
 import time
 from typing import Iterator, Optional
 
@@ -14,6 +15,7 @@ from foxglove.websocket import PlaybackStatus, WebSocketServer
 from playback_source import PlaybackSource
 
 _MIN_PLAYBACK_SPEED = 0.01
+_MAX_PLAYBACK_SPEED = 100.0
 
 
 class McapPlayer(PlaybackSource):
@@ -51,9 +53,30 @@ class McapPlayer(PlaybackSource):
                 mcap.records.Message,
             ]
         ] = None
+        self._closed = False
+
+    def _ensure_open(self) -> None:
+        if self._closed:
+            raise RuntimeError("McapPlayer is closed")
+
+    def close(self) -> None:
+        """Release the open MCAP file handle."""
+        if self._closed:
+            return
+        self._file.close()
+        self._closed = True
+
+    def __enter__(self) -> "McapPlayer":
+        return self
+
+    def __exit__(
+        self, _exc_type: object, _exc_value: object, _traceback: object
+    ) -> None:
+        self.close()
 
     def _reset_reader(self, start_time: int) -> None:
         """Re-open the MCAP reader starting from the given time."""
+        self._ensure_open()
         self._file.close()
         self._file = open(self._path, "rb")
         self._reader = mcap.reader.make_reader(self._file)
@@ -72,6 +95,7 @@ class McapPlayer(PlaybackSource):
         ]
     ]:
         """Returns the next message, consuming any buffered pending message first."""
+        self._ensure_open()
         if self._pending is not None:
             msg = self._pending
             self._pending = None
@@ -145,6 +169,7 @@ class McapPlayer(PlaybackSource):
             self._status = PlaybackStatus.Paused
 
     def log_next_message(self, server: WebSocketServer) -> float | None:
+        self._ensure_open()
         if self._status != PlaybackStatus.Playing:
             return None
 
@@ -186,9 +211,11 @@ class McapPlayer(PlaybackSource):
 
 
 def _clamp_speed(speed: float) -> float:
-    if not (speed >= _MIN_PLAYBACK_SPEED):  # handles NaN/inf
+    if math.isnan(speed) or speed < _MIN_PLAYBACK_SPEED:
         return _MIN_PLAYBACK_SPEED
-    return speed
+    if speed == math.inf:
+        return _MAX_PLAYBACK_SPEED
+    return min(speed, _MAX_PLAYBACK_SPEED)
 
 
 class TimeTracker:
