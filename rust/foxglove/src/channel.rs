@@ -1,13 +1,13 @@
 use std::collections::BTreeMap;
+use std::sync::Arc;
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering::Relaxed;
-use std::sync::Arc;
 
 use delegate::delegate;
 use serde::{Deserialize, Serialize};
 use smallbytes::SmallBytes;
 
-use crate::{metadata::ToUnixNanos, ChannelBuilder, Encode, PartialMetadata, Schema, SinkId};
+use crate::{ChannelBuilder, Encode, PartialMetadata, Schema, SinkId, metadata::ToUnixNanos};
 
 mod channel_descriptor;
 mod lazy_channel;
@@ -177,7 +177,7 @@ impl<T: Encode> Channel<T> {
     }
 
     /// Encodes the message and logs it on the channel with the given `timestamp`.
-    /// `timestamp` can be a u64 (nanoseconds since epoch), a foxglove [`Timestamp`][crate::schemas::Timestamp],
+    /// `timestamp` can be a u64 (nanoseconds since epoch), a foxglove [`Timestamp`][crate::messages::Timestamp],
     /// a [`SystemTime`][std::time::SystemTime], or anything else that implements [`ToUnixNanos`][crate::ToUnixNanos].
     ///
     /// The buffering behavior depends on the log sink; see [`McapWriter`][crate::McapWriter] and

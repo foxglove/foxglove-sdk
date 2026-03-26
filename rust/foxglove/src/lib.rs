@@ -23,11 +23,11 @@
 //!
 //! To record messages, you need to initialize either an MCAP file writer or a WebSocket server for
 //! live visualization. In this example, we create an MCAP writer, and record a
-//! [`Log`](`crate::schemas::Log`) message on a topic called `/log`. We write one log message and
+//! [`Log`](`crate::messages::Log`) message on a topic called `/log`. We write one log message and
 //! close the file.
 //!
 //! ```no_run
-//! use foxglove::schemas::Log;
+//! use foxglove::messages::Log;
 //! use foxglove::{log, McapWriter};
 //!
 //! // Create a new MCAP file named 'test.mcap'.
@@ -64,7 +64,7 @@
 //! If we wanted to use an explicit context instead, we'd write:
 //!
 //! ```no_run
-//! use foxglove::schemas::Log;
+//! use foxglove::messages::Log;
 //! use foxglove::Context;
 //!
 //! // Create a new context.
@@ -104,7 +104,7 @@
 //! the first call. The example could be equivalently written as:
 //!
 //! ```no_run
-//! use foxglove::schemas::Log;
+//! use foxglove::messages::Log;
 //! use foxglove::{Channel, McapWriter};
 //!
 //! // Create a new MCAP file named 'test.mcap'.
@@ -128,7 +128,7 @@
 //!
 //! ### Well-known types
 //!
-//! The SDK provides [structs for well-known message types](schemas). These can be used in conjunction
+//! The SDK provides [structs for well-known message types](messages). These can be used in conjunction
 //! with [`Channel`] for type-safe logging, which ensures at compile time that messages logged to a
 //! channel all share a common schema.
 //!
@@ -184,7 +184,7 @@
 //! In this example, we create two lazy channels on the default context:
 //!
 //! ```
-//! use foxglove::schemas::SceneUpdate;
+//! use foxglove::messages::SceneUpdate;
 //! use foxglove::{LazyChannel, LazyRawChannel};
 //!
 //! static BOXES: LazyChannel<SceneUpdate> = LazyChannel::new("/boxes");
@@ -194,7 +194,7 @@
 //! It is also possible to bind lazy channels to an explicit [`LazyContext`]:
 //!
 //! ```
-//! use foxglove::schemas::SceneUpdate;
+//! use foxglove::messages::SceneUpdate;
 //! use foxglove::{LazyChannel, LazyContext, LazyRawChannel};
 //!
 //! static CTX: LazyContext = LazyContext::new();
@@ -281,8 +281,8 @@
 //!
 //! The Foxglove SDK defines the following feature flags:
 //!
-//! - `chrono`: enables [chrono] conversions for [`Duration`][crate::schemas::Duration] and
-//!   [`Timestamp`][crate::schemas::Timestamp].
+//! - `chrono`: enables [chrono] conversions for [`Duration`][crate::messages::Duration] and
+//!   [`Timestamp`][crate::messages::Timestamp].
 //! - `derive`: enables the use of `#[derive(Encode)]` to derive the [`Encode`] trait for logging
 //!   custom structs. Enabled by default.
 //! - `live_visualization`: deprecated alias for `websocket`.
@@ -290,7 +290,7 @@
 //! - `schemars`: provides a blanket implementation of the [`Encode`] trait for types that
 //!   implement [`Serialize`](serde::Serialize) and [`JsonSchema`][jsonschema-trait].
 //! - `serde`: derives [`Serialize`](serde::Serialize) and [`Deserialize`](serde::Deserialize) for
-//!   all [message types](crate::schemas).
+//!   all [message types](crate::messages).
 //! - `unstable`: features which are under active development and likely to change in an upcoming
 //!   version.
 //! - `websocket`: enables the websocket server and client for live visualization. Enabled by
@@ -327,7 +327,6 @@ pub mod library_version;
 pub mod log_macro;
 mod log_sink_set;
 mod mcap_writer;
-#[doc(hidden)]
 pub mod messages;
 mod messages_wkt;
 mod metadata;
@@ -336,7 +335,8 @@ mod metadata;
 pub mod protobuf;
 mod schema;
 
-/// Types implementing well-known Foxglove message types.
+/// Deprecated: Use [`messages`] instead.
+#[deprecated(since = "0.20.0", note = "Use foxglove::messages instead.")]
 pub mod schemas {
     pub use crate::messages::*;
 }
@@ -353,8 +353,11 @@ mod time;
 #[cfg(feature = "stream")]
 pub mod stream;
 
+#[cfg(any(feature = "data_provider", feature = "remote_data_loader_backend"))]
+pub mod remote_data_loader_backend;
 #[cfg(feature = "data_provider")]
-pub mod data_provider;
+// Alias for backward compatibility
+pub use remote_data_loader_backend as data_provider;
 
 #[cfg(feature = "img2yuv-core")]
 #[allow(unused)]
@@ -379,33 +382,43 @@ pub use sink_channel_filter::SinkChannelFilter;
 pub use std::collections::BTreeMap;
 pub(crate) use time::nanoseconds_since_epoch;
 
-#[cfg(feature = "remote_access")]
-mod api_client;
-#[cfg(all(feature = "_remote_common", feature = "_protocol"))]
-pub mod protocol;
-#[cfg(all(feature = "_remote_common", not(feature = "_protocol")))]
-mod protocol;
+// Common dependencies for remote-access & websocket, with docsrs attributes to ensure that the
+// feature gate badges in docs.rs render as the public features, as opposed to _remote-common. This
+// is only needed for modules that contain types which are publicly re-exported (Parameter,
+// Service, etc.).
 #[doc(hidden)]
-#[cfg(feature = "remote_access")]
-pub mod remote_access;
-#[cfg(feature = "websocket")]
+#[cfg(all(feature = "_remote-common", feature = "_protocol"))]
+pub mod protocol;
+#[cfg(all(feature = "_remote-common", not(feature = "_protocol")))]
+mod protocol;
+#[cfg(feature = "_remote-common")]
+#[cfg_attr(
+    docsrs,
+    doc(cfg(any(feature = "remote-access", feature = "websocket")))
+)]
+mod remote_common;
+#[cfg(feature = "_remote-common")]
 mod runtime;
+#[cfg(feature = "_remote-common")]
+#[cfg_attr(
+    docsrs,
+    doc(cfg(any(feature = "remote-access", feature = "websocket")))
+)]
+pub use runtime::shutdown_runtime;
+
+#[cfg(feature = "remote-access")]
+mod api_client;
+#[doc(hidden)]
+#[cfg(feature = "remote-access")]
+pub mod remote_access;
+
 #[cfg(feature = "websocket")]
 pub mod websocket;
 #[cfg(feature = "websocket")]
-mod websocket_client;
-#[cfg(feature = "websocket")]
 mod websocket_server;
-#[cfg(feature = "websocket")]
-pub(crate) use runtime::get_runtime_handle;
-#[cfg(feature = "websocket")]
-pub use runtime::shutdown_runtime;
 #[doc(hidden)]
 #[cfg(feature = "websocket")]
 pub use websocket::ws_protocol;
-#[doc(hidden)]
-#[cfg(feature = "websocket")]
-pub use websocket_client::{WebSocketClient, WebSocketClientError};
 #[cfg(feature = "websocket")]
 pub use websocket_server::{WebSocketServer, WebSocketServerHandle};
 

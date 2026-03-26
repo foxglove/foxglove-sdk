@@ -4,11 +4,16 @@
 #include "foxglove/KeyValuePair.idl"
 #include "foxglove/PointsAnnotation.idl"
 #include "foxglove/TextAnnotation.idl"
+#include "foxglove/Time.idl"
 
 module foxglove {
 
 // Array of annotations for a 2D image
 struct ImageAnnotations {
+  // Timestamp of the image annotations. When set, individual annotation timestamps will be ignored.
+  @optional
+  Time timestamp;
+
   // Circle annotations
   sequence<CircleAnnotation> circles;
 
@@ -18,7 +23,8 @@ struct ImageAnnotations {
   // Text annotations
   sequence<TextAnnotation> texts;
 
-  // Additional user-provided metadata associated with the image annotations. Keys must be unique.
+  // Additional user-provided metadata associated with the image annotations. Keys must be unique within this object. Per-annotation metadata takes precedence over these values.
+  @optional
   sequence<KeyValuePair> metadata;
 };
 

@@ -1,6 +1,6 @@
 use std::{collections::BTreeMap, sync::Arc};
 
-use crate::{channel::ChannelId, Schema};
+use crate::{Schema, channel::ChannelId};
 
 /// Information about a Channel.
 ///
@@ -34,6 +34,14 @@ impl ChannelDescriptor {
     }
 
     /// Returns the channel ID.
+    ///
+    /// A channel ID is unique within the scope of its publisher.
+    ///
+    /// For channels published by the SDK, the ID is guaranteed to be unique among all
+    /// channels published by the SDK in the same process.
+    ///
+    /// For channels published by a remote client, the ID is guaranteed to be unique
+    /// among all channels published by that client.
     pub fn id(&self) -> ChannelId {
         self.0.id
     }

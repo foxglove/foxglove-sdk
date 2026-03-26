@@ -15,7 +15,7 @@ jobs:
     outputs:
       should_run: ${{ github.event_name != 'pull_request' || steps.paths.outputs.ros == 'true' || contains(github.event.pull_request.labels.*.name, 'ci:ros') }}
     steps:
-      - uses: dorny/paths-filter@v3
+      - uses: dorny/paths-filter@v4
         if: github.event_name == 'pull_request'
         id: paths
         with:
@@ -26,8 +26,28 @@ jobs:
               - 'ros/**'
               - '.github/workflows/ros.yml'
 
-  ros:
+  build-cpp:
     needs: changes
+    if: needs.changes.outputs.should_run == 'true'
+    # Pinned to 22.04 so libfoxglove.a is compatible with ROS Humble (glibc 2.35)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - name: Build C++ SDK
+        run: make build
+        working-directory: cpp
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: cpp-build
+          path: |
+            cpp/build/libfoxglove.a
+            cpp/build/libfoxglove_cpp_static.a
+          retention-days: 1
+
+  ros:
+    needs: [changes, build-cpp]
     if: needs.changes.outputs.should_run == 'true'
     runs-on: ubuntu-latest
     strategy:
@@ -42,15 +62,18 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Build Foxglove C++ SDK
-        run: make build-cpp
+      - name: Download C++ SDK build
+        uses: actions/download-artifact@v7
+        with:
+          name: cpp-build
+          path: cpp/build
 
       - name: Run make lint
         run: make lint
         working-directory: ros
 
       - name: Run make docker-build
-        run: make USE_LOCAL_SDK=ON docker-build-${{ matrix.ros_distribution }}
+        run: make USE_LOCAL_SDK=ON ${{ matrix.ros_distribution == 'rolling' && 'EXTRA_DOCKER_ARGS="--build-arg USE_ROS_TESTING=true"' || '' }} docker-build-${{ matrix.ros_distribution }}
         working-directory: ros
 
       - name: Run make docker-test
@@ -63,7 +86,7 @@ jobs:
   # individual matrix jobs.
   ros-status:
     name: ros-status
-    needs: [changes, ros]
+    needs: [changes, build-cpp, ros]
     if: always()
     runs-on: ubuntu-latest
     steps:

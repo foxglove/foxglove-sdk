@@ -1,35 +1,33 @@
 #include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
 #include <foxglove/mcap.hpp>
-#include <foxglove/schemas.hpp>
+#include <foxglove/messages.hpp>
 
 #include <chrono>
 #include <cmath>
 #include <iostream>
 
-foxglove::schemas::SceneUpdateChannel SCENE_UPDATE_CHANNEL =
-  foxglove::schemas::SceneUpdateChannel::create("/boxes").value();
-foxglove::schemas::FrameTransformChannel FRAME_TRANSFORM_CHANNEL =
-  foxglove::schemas::FrameTransformChannel::create("/tf").value();
-
-void log_to_channels(int counter) {
+void logToChannels(
+  foxglove::messages::SceneUpdateChannel& scene_update_channel,
+  foxglove::messages::FrameTransformChannel& frame_transform_channel, int counter
+) {
   // Create a SceneUpdate message for the box
-  foxglove::schemas::SceneUpdate scene_update;
-  foxglove::schemas::SceneEntity entity;
+  foxglove::messages::SceneUpdate scene_update;
+  foxglove::messages::SceneEntity entity;
   entity.frame_id = "box";
   entity.id = "box_1";
-  entity.lifetime = foxglove::schemas::Duration{10, 10000000};
+  entity.lifetime = foxglove::messages::Duration{10, 10000000};
 
   // Create a cube primitive
-  foxglove::schemas::CubePrimitive cube;
-  foxglove::schemas::Pose pose;
-  foxglove::schemas::Vector3 position;
+  foxglove::messages::CubePrimitive cube;
+  foxglove::messages::Pose pose;
+  foxglove::messages::Vector3 position;
   position.x = 0.0;
   position.y = 0.0;
   position.z = 3.0;
   pose.position = position;
 
-  foxglove::schemas::Quaternion orientation;
+  foxglove::messages::Quaternion orientation;
   double yaw = -0.1 * counter;
   orientation.x = 0.0;
   orientation.y = 0.0;
@@ -39,14 +37,14 @@ void log_to_channels(int counter) {
   cube.pose = pose;
 
   // Set cube size
-  foxglove::schemas::Vector3 size;
+  foxglove::messages::Vector3 size;
   size.x = 1.0;
   size.y = 1.0;
   size.z = 1.0;
   cube.size = size;
 
   // Set cube color (red)
-  foxglove::schemas::Color color;
+  foxglove::messages::Color color;
   color.r = 1.0;
   color.g = 0.0;
   color.b = 0.0;
@@ -55,14 +53,14 @@ void log_to_channels(int counter) {
 
   entity.cubes.push_back(cube);
   scene_update.entities.push_back(entity);
-  SCENE_UPDATE_CHANNEL.log(scene_update);
+  scene_update_channel.log(scene_update);
 
   // Create a FrameTransform message
-  foxglove::schemas::FrameTransform transform;
+  foxglove::messages::FrameTransform transform;
   transform.parent_frame_id = "world";
   transform.child_frame_id = "box";
 
-  foxglove::schemas::Quaternion rotation;
+  foxglove::messages::Quaternion rotation;
   double yaw2 = 0.1 * counter;
   double roll = 1.0;
   rotation.x = std::sin(roll / 2.0);
@@ -71,7 +69,7 @@ void log_to_channels(int counter) {
   rotation.w = std::cos(yaw2 / 2.0);
   transform.rotation = rotation;
 
-  FRAME_TRANSFORM_CHANNEL.log(transform);
+  frame_transform_channel.log(transform);
 }
 
 // NOLINTNEXTLINE(bugprone-exception-escape)
@@ -86,8 +84,26 @@ int main() {
   }
   auto writer = std::move(writer_result.value());
 
+  auto scene_update_result = foxglove::messages::SceneUpdateChannel::create("/boxes");
+  if (!scene_update_result.has_value()) {
+    std::cerr << "Failed to create scene update channel: "
+              << foxglove::strerror(scene_update_result.error()) << '\n';
+    return 1;
+  }
+  foxglove::messages::SceneUpdateChannel scene_update_channel =
+    std::move(scene_update_result.value());
+
+  auto frame_transform_result = foxglove::messages::FrameTransformChannel::create("/tf");
+  if (!frame_transform_result.has_value()) {
+    std::cerr << "Failed to create frame transform channel: "
+              << foxglove::strerror(frame_transform_result.error()) << '\n';
+    return 1;
+  }
+  foxglove::messages::FrameTransformChannel frame_transform_channel =
+    std::move(frame_transform_result.value());
+
   for (int i = 0; i < 100; ++i) {
-    log_to_channels(i);
+    logToChannels(scene_update_channel, frame_transform_channel, i);
   }
 
   // Optional, if you want to check for or handle errors

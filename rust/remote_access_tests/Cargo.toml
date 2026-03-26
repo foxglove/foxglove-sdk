@@ -1,12 +1,11 @@
 [package]
 name = "remote_access_tests"
-version = "0.0.0"
 edition.workspace = true
 rust-version.workspace = true
 publish = false
 
 [dependencies]
-foxglove = { path = "../foxglove", features = ["remote_access", "_protocol"] }
+foxglove = { path = "../foxglove", features = ["remote-access", "_protocol"] }
 livekit = { version = "0.7.29", features = ["rustls-tls-native-roots"] }
 livekit-api = { version = "0.4", default-features = false, features = ["access-token"] }
 axum = "0.8"
@@ -20,6 +19,7 @@ futures-util = "0.3"
 dotenvy = "0.15"
 
 [dev-dependencies]
+serial_test = "3"
 tracing-test.workspace = true
 
 [lints]

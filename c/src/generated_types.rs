@@ -2,7 +2,7 @@
 
 use std::ffi::c_uchar;
 use std::mem::ManuallyDrop;
-use std::pin::{pin, Pin};
+use std::pin::{Pin, pin};
 
 use foxglove::Encode;
 
@@ -10,8 +10,8 @@ use crate::arena::{Arena, BorrowToNative};
 use crate::util::{bytes_from_raw, string_from_raw, vec_from_raw};
 #[cfg(not(target_family = "wasm"))]
 use crate::{
-    do_foxglove_channel_create, log_msg_to_channel, result_to_c, FoxgloveChannel, FoxgloveContext,
-    FoxgloveSinkId,
+    FoxgloveChannel, FoxgloveContext, FoxgloveSinkId, do_foxglove_channel_create,
+    log_msg_to_channel, result_to_c,
 };
 use crate::{FoxgloveDuration, FoxgloveError, FoxgloveSchema, FoxgloveString, FoxgloveTimestamp};
 
@@ -514,6 +514,10 @@ pub struct CircleAnnotation {
 
     /// Outline color
     pub outline_color: *const Color,
+
+    /// Additional user-provided metadata associated with this annotation. Keys must be unique.
+    pub metadata: *const KeyValuePair,
+    pub metadata_count: usize,
 }
 
 #[cfg(not(target_family = "wasm"))]
@@ -565,6 +569,7 @@ impl BorrowToNative for CircleAnnotation {
                 .map(|m| m.borrow_to_native(arena.as_mut()))
         }
         .transpose()?;
+        let metadata = unsafe { arena.as_mut().map(self.metadata, self.metadata_count)? };
 
         Ok(ManuallyDrop::new(foxglove::messages::CircleAnnotation {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
@@ -573,6 +578,7 @@ impl BorrowToNative for CircleAnnotation {
             thickness: self.thickness,
             fill_color: fill_color.map(ManuallyDrop::into_inner),
             outline_color: outline_color.map(ManuallyDrop::into_inner),
+            metadata: ManuallyDrop::into_inner(metadata),
         }))
     }
 }
@@ -1561,7 +1567,7 @@ pub unsafe extern "C" fn foxglove_cube_primitive_encode(
     }
 }
 
-/// A transform between two reference frames in 3D space. The transform defines the position and orientation of a child frame within a parent frame. Translation moves the origin of the child frame relative to the parent origin. The rotation changes the orientiation of the child frame around its origin.
+/// A transform between two reference frames in 3D space. The transform defines the position and orientation of a child frame within a parent frame. Translation moves the origin of the child frame relative to the parent origin. The rotation changes the orientation of the child frame around its origin.
 ///
 /// Examples:
 ///
@@ -2508,6 +2514,9 @@ pub unsafe extern "C" fn foxglove_voxel_grid_encode(
 /// Array of annotations for a 2D image
 #[repr(C)]
 pub struct ImageAnnotations {
+    /// Timestamp of the image annotations. When set, individual annotation timestamps will be ignored.
+    pub timestamp: *const FoxgloveTimestamp,
+
     /// Circle annotations
     pub circles: *const CircleAnnotation,
     pub circles_count: usize,
@@ -2520,7 +2529,7 @@ pub struct ImageAnnotations {
     pub texts: *const TextAnnotation,
     pub texts_count: usize,
 
-    /// Additional user-provided metadata associated with the image annotations. Keys must be unique.
+    /// Additional user-provided metadata associated with the image annotations. Keys must be unique within this object. Per-annotation metadata takes precedence over these values.
     pub metadata: *const KeyValuePair,
     pub metadata_count: usize,
 }
@@ -2562,6 +2571,7 @@ impl BorrowToNative for ImageAnnotations {
         let metadata = unsafe { arena.as_mut().map(self.metadata, self.metadata_count)? };
 
         Ok(ManuallyDrop::new(foxglove::messages::ImageAnnotations {
+            timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
             circles: ManuallyDrop::into_inner(circles),
             points: ManuallyDrop::into_inner(points),
             texts: ManuallyDrop::into_inner(texts),
@@ -2666,6 +2676,320 @@ pub unsafe extern "C" fn foxglove_image_annotations_encode(
         }
         Err(e) => {
             tracing::error!("ImageAnnotations: {}", e);
+            FoxgloveError::EncodeError
+        }
+    }
+}
+
+/// The state of a single joint (revolute or prismatic).
+#[repr(C)]
+pub struct JointState {
+    /// Joint name
+    pub name: FoxgloveString,
+
+    /// Joint position. Radians for revolute joints, meters for prismatic joints.
+    pub position: *const f64,
+
+    /// Joint velocity. Rad/s for revolute joints, m/s for prismatic joints.
+    pub velocity: *const f64,
+
+    /// Joint acceleration. Rad/s² for revolute joints, m/s² for prismatic joints.
+    pub acceleration: *const f64,
+
+    /// Joint effort (force or torque). Nm for revolute joints, N for prismatic joints.
+    pub effort: *const f64,
+}
+
+#[cfg(not(target_family = "wasm"))]
+impl JointState {
+    /// Create a new typed channel, and return an owned raw channel pointer to it.
+    ///
+    /// # Safety
+    /// We're trusting the caller that the channel will only be used with this type T.
+    #[unsafe(no_mangle)]
+    pub unsafe extern "C" fn foxglove_channel_create_joint_state(
+        topic: FoxgloveString,
+        context: *const FoxgloveContext,
+        channel: *mut *const FoxgloveChannel,
+    ) -> FoxgloveError {
+        if channel.is_null() {
+            tracing::error!("channel cannot be null");
+            return FoxgloveError::ValueError;
+        }
+        unsafe {
+            let result =
+                do_foxglove_channel_create::<foxglove::messages::JointState>(topic, context);
+            result_to_c(result, channel)
+        }
+    }
+}
+
+impl BorrowToNative for JointState {
+    type NativeType = foxglove::messages::JointState;
+
+    unsafe fn borrow_to_native(
+        &self,
+        #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
+    ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
+        let name =
+            unsafe { string_from_raw(self.name.as_ptr() as *const _, self.name.len(), "name")? };
+
+        Ok(ManuallyDrop::new(foxglove::messages::JointState {
+            name: ManuallyDrop::into_inner(name),
+            position: unsafe { self.position.as_ref().copied() },
+            velocity: unsafe { self.velocity.as_ref().copied() },
+            acceleration: unsafe { self.acceleration.as_ref().copied() },
+            effort: unsafe { self.effort.as_ref().copied() },
+        }))
+    }
+}
+
+/// Log a JointState message to a channel.
+///
+/// # Safety
+/// The channel must have been created for this type with foxglove_channel_create_joint_state.
+#[cfg(not(target_family = "wasm"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn foxglove_channel_log_joint_state(
+    channel: Option<&FoxgloveChannel>,
+    msg: Option<&JointState>,
+    log_time: Option<&u64>,
+    sink_id: FoxgloveSinkId,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { JointState::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
+            log_msg_to_channel(channel, &*msg, log_time, sink_id)
+        }
+        Err(e) => {
+            tracing::error!("JointState: {}", e);
+            e.into()
+        }
+    }
+}
+
+/// Get the JointState schema.
+///
+/// All buffers in the returned schema are statically allocated.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_joint_state_schema() -> FoxgloveSchema {
+    let native = foxglove::messages::JointState::get_schema().expect("JointState schema is Some");
+    let name: &'static str = "foxglove.JointState";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("JointState schema data is static");
+    };
+    FoxgloveSchema {
+        name: name.into(),
+        encoding: encoding.into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
+/// Encode a JointState message as protobuf to the buffer provided.
+///
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+/// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+/// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+///
+/// # Safety
+/// ptr must be a valid pointer to a memory region at least len bytes long.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_joint_state_encode(
+    msg: Option<&JointState>,
+    ptr: *mut u8,
+    len: usize,
+    encoded_len: Option<&mut usize>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { JointState::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            if len == 0 || ptr.is_null() {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = msg
+                        .encoded_len()
+                        .expect("foxglove messages return Some(len)");
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
+            if let Err(encode_error) = msg.encode(&mut buf) {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
+            }
+            FoxgloveError::Ok
+        }
+        Err(e) => {
+            tracing::error!("JointState: {}", e);
+            FoxgloveError::EncodeError
+        }
+    }
+}
+
+/// The state of a set of joints at a given time.
+#[repr(C)]
+pub struct JointStates {
+    /// Timestamp of the joint states
+    pub timestamp: *const FoxgloveTimestamp,
+
+    /// Joint states
+    pub joints: *const JointState,
+    pub joints_count: usize,
+}
+
+#[cfg(not(target_family = "wasm"))]
+impl JointStates {
+    /// Create a new typed channel, and return an owned raw channel pointer to it.
+    ///
+    /// # Safety
+    /// We're trusting the caller that the channel will only be used with this type T.
+    #[unsafe(no_mangle)]
+    pub unsafe extern "C" fn foxglove_channel_create_joint_states(
+        topic: FoxgloveString,
+        context: *const FoxgloveContext,
+        channel: *mut *const FoxgloveChannel,
+    ) -> FoxgloveError {
+        if channel.is_null() {
+            tracing::error!("channel cannot be null");
+            return FoxgloveError::ValueError;
+        }
+        unsafe {
+            let result =
+                do_foxglove_channel_create::<foxglove::messages::JointStates>(topic, context);
+            result_to_c(result, channel)
+        }
+    }
+}
+
+impl BorrowToNative for JointStates {
+    type NativeType = foxglove::messages::JointStates;
+
+    unsafe fn borrow_to_native(
+        &self,
+        #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
+    ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
+        let joints = unsafe { arena.as_mut().map(self.joints, self.joints_count)? };
+
+        Ok(ManuallyDrop::new(foxglove::messages::JointStates {
+            timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
+            joints: ManuallyDrop::into_inner(joints),
+        }))
+    }
+}
+
+/// Log a JointStates message to a channel.
+///
+/// # Safety
+/// The channel must have been created for this type with foxglove_channel_create_joint_states.
+#[cfg(not(target_family = "wasm"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn foxglove_channel_log_joint_states(
+    channel: Option<&FoxgloveChannel>,
+    msg: Option<&JointStates>,
+    log_time: Option<&u64>,
+    sink_id: FoxgloveSinkId,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { JointStates::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
+            log_msg_to_channel(channel, &*msg, log_time, sink_id)
+        }
+        Err(e) => {
+            tracing::error!("JointStates: {}", e);
+            e.into()
+        }
+    }
+}
+
+/// Get the JointStates schema.
+///
+/// All buffers in the returned schema are statically allocated.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_joint_states_schema() -> FoxgloveSchema {
+    let native = foxglove::messages::JointStates::get_schema().expect("JointStates schema is Some");
+    let name: &'static str = "foxglove.JointStates";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("JointStates schema data is static");
+    };
+    FoxgloveSchema {
+        name: name.into(),
+        encoding: encoding.into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
+/// Encode a JointStates message as protobuf to the buffer provided.
+///
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+/// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+/// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+///
+/// # Safety
+/// ptr must be a valid pointer to a memory region at least len bytes long.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_joint_states_encode(
+    msg: Option<&JointStates>,
+    ptr: *mut u8,
+    len: usize,
+    encoded_len: Option<&mut usize>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { JointStates::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            if len == 0 || ptr.is_null() {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = msg
+                        .encoded_len()
+                        .expect("foxglove messages return Some(len)");
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
+            if let Err(encode_error) = msg.encode(&mut buf) {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
+            }
+            FoxgloveError::Ok
+        }
+        Err(e) => {
+            tracing::error!("JointStates: {}", e);
             FoxgloveError::EncodeError
         }
     }
@@ -5285,6 +5609,10 @@ pub struct PointsAnnotation {
 
     /// Stroke thickness in pixels
     pub thickness: f64,
+
+    /// Additional user-provided metadata associated with this annotation. Keys must be unique.
+    pub metadata: *const KeyValuePair,
+    pub metadata_count: usize,
 }
 
 #[cfg(not(target_family = "wasm"))]
@@ -5336,6 +5664,7 @@ impl BorrowToNative for PointsAnnotation {
                 .map(|m| m.borrow_to_native(arena.as_mut()))
         }
         .transpose()?;
+        let metadata = unsafe { arena.as_mut().map(self.metadata, self.metadata_count)? };
 
         Ok(ManuallyDrop::new(foxglove::messages::PointsAnnotation {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
@@ -5345,6 +5674,7 @@ impl BorrowToNative for PointsAnnotation {
             outline_colors: ManuallyDrop::into_inner(outline_colors),
             fill_color: fill_color.map(ManuallyDrop::into_inner),
             thickness: self.thickness,
+            metadata: ManuallyDrop::into_inner(metadata),
         }))
     }
 }
@@ -6298,6 +6628,15 @@ pub struct RawImage {
     ///   - Pixel channel values are represented as unsigned 8-bit integers.
     ///   - U and V values are shared between horizontal pairs of pixels. Each pair of output pixels is encoded as [Y1, U, Y2, V].
     ///   - `step` must be greater than or equal to `width` * 2.
+    /// - `nv12`:
+    ///   - Pixel colors are decomposed into [Y'UV](https://en.wikipedia.org/wiki/Y%E2%80%B2UV) channels using 4:2:0 chroma subsampling. The data is stored in [NV12](https://www.kernel.org/doc/html/v4.10/media/uapi/v4l/pixfmt-nv12.html) semi-planar layout with two contiguous planes: a Y (luma) plane followed by an interleaved UV (chroma) plane.
+    ///   - All channel values are represented as unsigned 8-bit integers.
+    ///   - Both planes use `step` as their row stride.
+    ///   - The Y plane contains one luma value per pixel (`step` * `height` bytes).
+    ///   - The UV plane contains interleaved U, V chroma pairs, subsampled by a factor of 2 in both dimensions (`width`/2 pairs per row, `height`/2 rows, `step` * `height`/2 bytes). Each U, V pair is shared by a 2x2 block of pixels.
+    ///   - `width` and `height` must be even.
+    ///   - `step` must be greater than or equal to `width`.
+    ///   - Total `data` length is `step` * `height` * 3/2 bytes.
     /// - `rgb8`:
     ///   - Pixel colors are decomposed into Red, Green, and Blue channels.
     ///   - Pixel channel values are represented as unsigned 8-bit integers.
@@ -6325,7 +6664,7 @@ pub struct RawImage {
     ///   - Pixel colors are decomposed into Red, Blue and Green channels.
     ///   - Pixel channel values are represented as unsigned 8-bit integers, and serialized in a 2x2 bayer filter pattern.
     ///   - The order of the four letters after `bayer_` determine the layout, so for `bayer_wxyz8` the pattern is:
-    ///   ```plaintext
+    ///   ```text
     ///   w | x
     ///   - + -
     ///   y | z
@@ -6692,6 +7031,10 @@ pub struct TextAnnotation {
 
     /// Background fill color
     pub background_color: *const Color,
+
+    /// Additional user-provided metadata associated with this annotation. Keys must be unique.
+    pub metadata: *const KeyValuePair,
+    pub metadata_count: usize,
 }
 
 #[cfg(not(target_family = "wasm"))]
@@ -6745,6 +7088,7 @@ impl BorrowToNative for TextAnnotation {
                 .map(|m| m.borrow_to_native(arena.as_mut()))
         }
         .transpose()?;
+        let metadata = unsafe { arena.as_mut().map(self.metadata, self.metadata_count)? };
 
         Ok(ManuallyDrop::new(foxglove::messages::TextAnnotation {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
@@ -6753,6 +7097,7 @@ impl BorrowToNative for TextAnnotation {
             font_size: self.font_size,
             text_color: text_color.map(ManuallyDrop::into_inner),
             background_color: background_color.map(ManuallyDrop::into_inner),
+            metadata: ManuallyDrop::into_inner(metadata),
         }))
     }
 }

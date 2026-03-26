@@ -39,3 +39,6 @@ foxglove_msgs/Color fill_color
 
 # Stroke thickness in pixels
 float64 thickness
+
+# Additional user-provided metadata associated with this annotation. Keys must be unique.
+foxglove_msgs/KeyValuePair[] metadata

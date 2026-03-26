@@ -5,8 +5,8 @@ use std::convert::TryFrom;
 
 use serde::{Deserialize, Serialize};
 
-use crate::protocol::schema::{self, Schema};
 use crate::protocol::JsonMessage;
+use crate::protocol::schema::{self, Schema};
 
 /// Advertise services message.
 ///
@@ -204,6 +204,22 @@ impl<'a> MessageSchema<'a> {
             schema_encoding: self.schema_encoding.into_owned().into(),
             schema: Cow::Owned(self.schema.into_owned()),
         }
+    }
+}
+
+impl<'a> TryFrom<&'a crate::remote_common::service::Service> for Service<'a> {
+    type Error = schema::EncodeError;
+
+    fn try_from(s: &'a crate::remote_common::service::Service) -> Result<Self, Self::Error> {
+        let svc_schema = s.schema();
+        let mut service = Self::new(s.id().into(), s.name(), svc_schema.name());
+        if let Some(request) = svc_schema.request() {
+            service = service.with_request(&request.encoding, (&request.schema).into())?;
+        }
+        if let Some(response) = svc_schema.response() {
+            service = service.with_response(&response.encoding, (&response.schema).into())?;
+        }
+        Ok(service)
     }
 }
 

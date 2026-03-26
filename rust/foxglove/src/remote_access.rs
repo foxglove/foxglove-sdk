@@ -1,19 +1,27 @@
 //! Remote access implementation.
 
 mod capability;
+mod channel_subscription;
 mod client;
 mod connection;
 mod credentials_provider;
 mod gateway;
 mod listener;
 mod participant;
+mod service;
 mod session;
 mod session_state;
 
 pub use capability::Capability;
 pub use client::Client;
+pub use connection::ConnectionStatus;
 pub use gateway::{Gateway, GatewayHandle};
 pub use listener::Listener;
+
+// Re-export service types so Gateway::services() callers can construct services.
+pub use crate::remote_common::service::{
+    Handler, Request, Responder, Service, ServiceSchema, SyncHandler,
+};
 
 use thiserror::Error;
 
@@ -67,6 +75,36 @@ impl From<CredentialsError> for RemoteAccessError {
         match error {
             CredentialsError::FetchFailed(e) => RemoteAccessError::Auth(e),
         }
+    }
+}
+
+impl From<livekit::StreamError> for Box<RemoteAccessError> {
+    fn from(e: livekit::StreamError) -> Self {
+        Box::new(RemoteAccessError::from(e))
+    }
+}
+
+impl From<livekit::RoomError> for Box<RemoteAccessError> {
+    fn from(e: livekit::RoomError) -> Self {
+        Box::new(RemoteAccessError::from(e))
+    }
+}
+
+impl From<FoxgloveApiClientError> for Box<RemoteAccessError> {
+    fn from(e: FoxgloveApiClientError) -> Self {
+        Box::new(RemoteAccessError::from(e))
+    }
+}
+
+impl From<CredentialsError> for Box<RemoteAccessError> {
+    fn from(e: CredentialsError) -> Self {
+        Box::new(RemoteAccessError::from(e))
+    }
+}
+
+impl From<std::io::Error> for Box<RemoteAccessError> {
+    fn from(e: std::io::Error) -> Self {
+        Box::new(RemoteAccessError::from(e))
     }
 }
 

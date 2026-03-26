@@ -2,7 +2,7 @@ use std::fmt::Display;
 use std::time::Duration;
 
 use percent_encoding::AsciiSet;
-use reqwest::header::{HeaderMap, AUTHORIZATION, USER_AGENT};
+use reqwest::header::{AUTHORIZATION, HeaderMap, USER_AGENT};
 use reqwest::{Method, StatusCode};
 use thiserror::Error;
 
@@ -11,6 +11,8 @@ use crate::library_version::{get_sdk_language, get_sdk_version};
 use super::types::{DeviceResponse, ErrorResponse, RtcCredentials};
 
 const DEFAULT_API_URL: &str = "https://api.foxglove.dev";
+
+const MAX_ERROR_RESPONSE_LEN: u64 = 16_384;
 
 const PATH_ENCODING: AsciiSet = percent_encoding::NON_ALPHANUMERIC
     .remove(b'-')
@@ -58,6 +60,12 @@ pub(crate) enum RequestError {
         headers: Box<HeaderMap>,
     },
 
+    #[error("error response {status} too large")]
+    ErrorResponseTooLarge {
+        status: StatusCode,
+        headers: Box<HeaderMap>,
+    },
+
     #[error("failed to parse response: {0}")]
     ParseResponse(#[source] serde_json::Error),
 }
@@ -77,7 +85,8 @@ impl FoxgloveApiClientError {
         match self {
             Self::Request(
                 RequestError::MalformedErrorResponse { status, .. }
-                | RequestError::ErrorResponse { status, .. },
+                | RequestError::ErrorResponse { status, .. }
+                | RequestError::ErrorResponseTooLarge { status, .. },
             ) => Some(*status),
             _ => None,
         }
@@ -97,16 +106,30 @@ impl RequestBuilder {
         self
     }
 
+    pub fn json<T: serde::Serialize + ?Sized>(mut self, body: &T) -> Self {
+        self.0 = self.0.json(body);
+        self
+    }
+
     pub async fn send(self) -> Result<reqwest::Response, RequestError> {
         let response = self.0.send().await.map_err(RequestError::SendRequest)?;
 
         let status = response.status();
         if status.is_client_error() || status.is_server_error() {
             let headers = Box::new(response.headers().clone());
+            if response
+                .content_length()
+                .is_some_and(|len| len > MAX_ERROR_RESPONSE_LEN)
+            {
+                return Err(RequestError::ErrorResponseTooLarge { status, headers });
+            }
             let body = response
                 .bytes()
                 .await
                 .map_err(RequestError::LoadResponseBytes)?;
+            if body.len() as u64 > MAX_ERROR_RESPONSE_LEN {
+                return Err(RequestError::ErrorResponseTooLarge { status, headers });
+            }
             match serde_json::from_slice::<ErrorResponse>(&body) {
                 Ok(error) => {
                     return Err(RequestError::ErrorResponse {
@@ -209,18 +232,26 @@ impl FoxgloveApiClient<DeviceToken> {
 
     /// Authorizes a remote visualization session for the given device.
     ///
+    /// If `remote_access_session_id` is `Some`, the server uses the provided session ID.
+    /// If `None`, the server generates a new one.
+    ///
     /// This endpoint is not intended for direct usage. Access may be blocked if suspicious
     /// activity is detected.
     pub async fn authorize_remote_viz(
         &self,
         device_id: &str,
+        remote_access_session_id: Option<String>,
     ) -> Result<RtcCredentials, FoxgloveApiClientError> {
         let device_id = encode_uri_component(device_id);
+        let body = super::types::RemoteSessionRequest {
+            remote_access_session_id,
+        };
         let response = self
             .post(&format!(
                 "/internal/platform/v1/devices/{device_id}/remote-sessions"
             ))
             .device_token(&self.auth)
+            .json(&body)
             .send()
             .await?;
 
@@ -283,8 +314,8 @@ impl<A> FoxgloveApiClientBuilder<A> {
 #[cfg(test)]
 mod tests {
     use crate::api_client::test_utils::{
-        create_test_api_client, create_test_server, TEST_DEVICE_ID, TEST_DEVICE_TOKEN,
-        TEST_PROJECT_ID,
+        TEST_DEVICE_ID, TEST_DEVICE_TOKEN, TEST_PROJECT_ID, create_test_api_client,
+        create_test_server,
     };
 
     use super::DeviceToken;
@@ -320,11 +351,13 @@ mod tests {
         let client = create_test_api_client(server.url(), DeviceToken::new(TEST_DEVICE_TOKEN));
 
         let result = client
-            .authorize_remote_viz(TEST_DEVICE_ID)
+            .authorize_remote_viz(TEST_DEVICE_ID, None)
             .await
             .expect("could not authorize remote viz");
         assert_eq!(result.token, "rtc-token-abc123");
         assert_eq!(result.url, "wss://rtc.foxglove.dev");
+        assert!(result.remote_access_session_id.is_some());
+        assert!(!result.remote_access_session_id.unwrap().is_empty());
     }
 
     #[tokio::test]
@@ -332,7 +365,7 @@ mod tests {
         let server = create_test_server().await;
         let client =
             create_test_api_client(server.url(), DeviceToken::new("some-bad-device-token"));
-        let result = client.authorize_remote_viz(TEST_DEVICE_ID).await;
+        let result = client.authorize_remote_viz(TEST_DEVICE_ID, None).await;
         assert!(result.is_err());
     }
 }

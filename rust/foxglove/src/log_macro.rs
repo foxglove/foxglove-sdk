@@ -46,7 +46,7 @@ pub fn create_channel<T: Encode>(
 ///
 /// Optional keyword arguments:
 /// - `log_time`: timestamp when the message was logged. It can be a u64 (nanoseconds since epoch),
-///   a foxglove [`Timestamp`][crate::schemas::Timestamp], a [`SystemTime`][std::time::SystemTime],
+///   a foxglove [`Timestamp`][crate::messages::Timestamp], a [`SystemTime`][std::time::SystemTime],
 ///   or anything else that implements [`ToUnixNanos`][crate::ToUnixNanos].
 ///
 /// If a channel for the topic already exists in the default Context, it will be used.
@@ -64,9 +64,7 @@ pub fn create_channel<T: Encode>(
 /// Panics if a channel can't be created for `$msg`.
 #[macro_export]
 macro_rules! log {
-    ($topic:literal, $msg:expr $(,)? ) => {{
-        $crate::log_with_meta!($topic, $msg, $crate::PartialMetadata::default())
-    }};
+    ($topic:literal, $msg:expr $(,)? ) => {{ $crate::log_with_meta!($topic, $msg, $crate::PartialMetadata::default()) }};
 
     ($topic:literal, $msg:expr, log_time = $log_time:expr $(,)? ) => {{
         $crate::log_with_meta!(
@@ -106,7 +104,7 @@ mod tests {
 
     use crate::messages::{Color, LaserScan, Log, Timestamp};
     use crate::nanoseconds_since_epoch;
-    use crate::{testutil::RecordingSink, Context};
+    use crate::{Context, testutil::RecordingSink};
     use crate::{FoxgloveError, Schema};
 
     use super::*;

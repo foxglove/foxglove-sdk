@@ -44,7 +44,10 @@ impl CredentialsProvider {
         self.credentials.load_full()
     }
 
-    pub async fn load_credentials(&self) -> Result<Arc<RtcCredentials>, CredentialsError> {
+    pub async fn load_credentials(
+        &self,
+        remote_access_session_id: Option<String>,
+    ) -> Result<Arc<RtcCredentials>, CredentialsError> {
         if let Some(credentials) = self.current_credentials() {
             return Ok(credentials);
         }
@@ -54,10 +57,21 @@ impl CredentialsProvider {
             return Ok(credentials);
         }
 
-        tracing::info!("refreshing credentials");
-        let credentials = Arc::new(self.client.authorize_remote_viz(&self.device.id).await?);
+        tracing::info!(
+            remote_access_session_id = remote_access_session_id.as_deref(),
+            "refreshing credentials"
+        );
+        let credentials = Arc::new(
+            self.client
+                .authorize_remote_viz(&self.device.id, remote_access_session_id)
+                .await?,
+        );
         self.credentials.store(Some(credentials.clone()));
         Ok(credentials)
+    }
+
+    pub fn device_id(&self) -> &str {
+        &self.device.id
     }
 
     pub fn device_name(&self) -> &str {
@@ -73,7 +87,7 @@ impl CredentialsProvider {
 #[cfg(test)]
 mod tests {
     use crate::api_client::test_utils::{
-        create_test_builder, create_test_server, TEST_DEVICE_TOKEN,
+        TEST_DEVICE_TOKEN, create_test_builder, create_test_server,
     };
 
     use crate::api_client::DeviceToken;
@@ -108,7 +122,7 @@ mod tests {
         let provider = CredentialsProvider::new(builder).await.unwrap();
 
         let credentials = provider
-            .load_credentials()
+            .load_credentials(None)
             .await
             .expect("should fetch credentials");
 
@@ -123,7 +137,7 @@ mod tests {
         let builder = create_test_builder(server.url(), DeviceToken::new(TEST_DEVICE_TOKEN));
         let provider = CredentialsProvider::new(builder).await.unwrap();
 
-        provider.load_credentials().await.unwrap();
+        provider.load_credentials(None).await.unwrap();
         assert!(provider.current_credentials().is_some());
 
         provider.clear().await;

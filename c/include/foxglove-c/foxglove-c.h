@@ -22,6 +22,14 @@
 
 #if !defined(__wasm__)
 /**
+ * Sentinel value for `compression_threads` indicating the default behavior
+ * of using the number of physical CPUs.
+ */
+#define FOXGLOVE_MCAP_COMPRESSION_THREADS_DEFAULT UINT32_MAX
+#endif
+
+#if !defined(__wasm__)
+/**
  * Allow clients to advertise channels to send data messages to the server.
  */
 #define FOXGLOVE_SERVER_CAPABILITY_CLIENT_PUBLISH (1 << 0)
@@ -632,6 +640,20 @@ typedef struct foxglove_point2 {
 } foxglove_point2;
 
 /**
+ * A key with its associated value
+ */
+typedef struct foxglove_key_value_pair {
+  /**
+   * Key
+   */
+  struct foxglove_string key;
+  /**
+   * Value
+   */
+  struct foxglove_string value;
+} foxglove_key_value_pair;
+
+/**
  * A circle annotation on a 2D image
  */
 typedef struct foxglove_circle_annotation {
@@ -660,6 +682,11 @@ typedef struct foxglove_circle_annotation {
    * Outline color
    */
   const struct foxglove_color *outline_color;
+  /**
+   * Additional user-provided metadata associated with this annotation. Keys must be unique.
+   */
+  const struct foxglove_key_value_pair *metadata;
+  size_t metadata_count;
 } foxglove_circle_annotation;
 
 /**
@@ -783,7 +810,7 @@ typedef struct foxglove_cube_primitive {
 } foxglove_cube_primitive;
 
 /**
- * A transform between two reference frames in 3D space. The transform defines the position and orientation of a child frame within a parent frame. Translation moves the origin of the child frame relative to the parent origin. The rotation changes the orientiation of the child frame around its origin.
+ * A transform between two reference frames in 3D space. The transform defines the position and orientation of a child frame within a parent frame. Translation moves the origin of the child frame relative to the parent origin. The rotation changes the orientation of the child frame around its origin.
  *
  * Examples:
  *
@@ -1044,6 +1071,11 @@ typedef struct foxglove_points_annotation {
    * Stroke thickness in pixels
    */
   double thickness;
+  /**
+   * Additional user-provided metadata associated with this annotation. Keys must be unique.
+   */
+  const struct foxglove_key_value_pair *metadata;
+  size_t metadata_count;
 } foxglove_points_annotation;
 
 /**
@@ -1075,26 +1107,21 @@ typedef struct foxglove_text_annotation {
    * Background fill color
    */
   const struct foxglove_color *background_color;
+  /**
+   * Additional user-provided metadata associated with this annotation. Keys must be unique.
+   */
+  const struct foxglove_key_value_pair *metadata;
+  size_t metadata_count;
 } foxglove_text_annotation;
-
-/**
- * A key with its associated value
- */
-typedef struct foxglove_key_value_pair {
-  /**
-   * Key
-   */
-  struct foxglove_string key;
-  /**
-   * Value
-   */
-  struct foxglove_string value;
-} foxglove_key_value_pair;
 
 /**
  * Array of annotations for a 2D image
  */
 typedef struct foxglove_image_annotations {
+  /**
+   * Timestamp of the image annotations. When set, individual annotation timestamps will be ignored.
+   */
+  const struct foxglove_timestamp *timestamp;
   /**
    * Circle annotations
    */
@@ -1111,11 +1138,52 @@ typedef struct foxglove_image_annotations {
   const struct foxglove_text_annotation *texts;
   size_t texts_count;
   /**
-   * Additional user-provided metadata associated with the image annotations. Keys must be unique.
+   * Additional user-provided metadata associated with the image annotations. Keys must be unique within this object. Per-annotation metadata takes precedence over these values.
    */
   const struct foxglove_key_value_pair *metadata;
   size_t metadata_count;
 } foxglove_image_annotations;
+
+/**
+ * The state of a single joint (revolute or prismatic).
+ */
+typedef struct foxglove_joint_state {
+  /**
+   * Joint name
+   */
+  struct foxglove_string name;
+  /**
+   * Joint position. Radians for revolute joints, meters for prismatic joints.
+   */
+  const double *position;
+  /**
+   * Joint velocity. Rad/s for revolute joints, m/s for prismatic joints.
+   */
+  const double *velocity;
+  /**
+   * Joint acceleration. Rad/s² for revolute joints, m/s² for prismatic joints.
+   */
+  const double *acceleration;
+  /**
+   * Joint effort (force or torque). Nm for revolute joints, N for prismatic joints.
+   */
+  const double *effort;
+} foxglove_joint_state;
+
+/**
+ * The state of a set of joints at a given time.
+ */
+typedef struct foxglove_joint_states {
+  /**
+   * Timestamp of the joint states
+   */
+  const struct foxglove_timestamp *timestamp;
+  /**
+   * Joint states
+   */
+  const struct foxglove_joint_state *joints;
+  size_t joints_count;
+} foxglove_joint_states;
 
 /**
  * A single scan from a planar laser range-finder
@@ -1691,6 +1759,15 @@ typedef struct foxglove_raw_image {
    *   - Pixel channel values are represented as unsigned 8-bit integers.
    *   - U and V values are shared between horizontal pairs of pixels. Each pair of output pixels is encoded as [Y1, U, Y2, V].
    *   - `step` must be greater than or equal to `width` * 2.
+   * - `nv12`:
+   *   - Pixel colors are decomposed into [Y'UV](https://en.wikipedia.org/wiki/Y%E2%80%B2UV) channels using 4:2:0 chroma subsampling. The data is stored in [NV12](https://www.kernel.org/doc/html/v4.10/media/uapi/v4l/pixfmt-nv12.html) semi-planar layout with two contiguous planes: a Y (luma) plane followed by an interleaved UV (chroma) plane.
+   *   - All channel values are represented as unsigned 8-bit integers.
+   *   - Both planes use `step` as their row stride.
+   *   - The Y plane contains one luma value per pixel (`step` * `height` bytes).
+   *   - The UV plane contains interleaved U, V chroma pairs, subsampled by a factor of 2 in both dimensions (`width`/2 pairs per row, `height`/2 rows, `step` * `height`/2 bytes). Each U, V pair is shared by a 2x2 block of pixels.
+   *   - `width` and `height` must be even.
+   *   - `step` must be greater than or equal to `width`.
+   *   - Total `data` length is `step` * `height` * 3/2 bytes.
    * - `rgb8`:
    *   - Pixel colors are decomposed into Red, Green, and Blue channels.
    *   - Pixel channel values are represented as unsigned 8-bit integers.
@@ -1718,7 +1795,7 @@ typedef struct foxglove_raw_image {
    *   - Pixel colors are decomposed into Red, Blue and Green channels.
    *   - Pixel channel values are represented as unsigned 8-bit integers, and serialized in a 2x2 bayer filter pattern.
    *   - The order of the four letters after `bayer_` determine the layout, so for `bayer_wxyz8` the pattern is:
-   *   ```plaintext
+   *   ```text
    *   w | x
    *   - + -
    *   y | z
@@ -1795,6 +1872,23 @@ typedef struct foxglove_mcap_options {
   bool emit_metadata_indexes;
   bool repeat_channels;
   bool repeat_schemas;
+  /**
+   * Whether to calculate and include CRCs in the respective records.
+   */
+  bool calculate_chunk_crcs;
+  bool calculate_data_section_crc;
+  bool calculate_summary_section_crc;
+  bool calculate_attachment_crcs;
+  /**
+   * Compression level passed to the underlying compressor (zstd or lz4).
+   * A value of 0 instructs the compressor to use its default level.
+   */
+  uint32_t compression_level;
+  /**
+   * Number of threads for zstd compression. 0 disables multithreading.
+   * The default uses the number of physical CPUs.
+   */
+  uint32_t compression_threads;
   /**
    * Context provided to the `sink_channel_filter` callback.
    */
@@ -3071,6 +3165,98 @@ foxglove_error foxglove_image_annotations_encode(const struct foxglove_image_ann
                                                  uint8_t *ptr,
                                                  size_t len,
                                                  size_t *encoded_len);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_joint_state(struct foxglove_string topic,
+                                                   const struct foxglove_context *context,
+                                                   const struct foxglove_channel **channel);
+
+#if !defined(__wasm__)
+/**
+ * Log a JointState message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_joint_state.
+ */
+foxglove_error foxglove_channel_log_joint_state(const struct foxglove_channel *channel,
+                                                const struct foxglove_joint_state *msg,
+                                                const uint64_t *log_time,
+                                                FoxgloveSinkId sink_id);
+#endif
+
+/**
+ * Get the JointState schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_joint_state_schema(void);
+
+/**
+ * Encode a JointState message as protobuf to the buffer provided.
+ *
+ * On success, writes the encoded length to *encoded_len.
+ * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+ * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+ * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+ *
+ * # Safety
+ * ptr must be a valid pointer to a memory region at least len bytes long.
+ */
+foxglove_error foxglove_joint_state_encode(const struct foxglove_joint_state *msg,
+                                           uint8_t *ptr,
+                                           size_t len,
+                                           size_t *encoded_len);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_joint_states(struct foxglove_string topic,
+                                                    const struct foxglove_context *context,
+                                                    const struct foxglove_channel **channel);
+
+#if !defined(__wasm__)
+/**
+ * Log a JointStates message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_joint_states.
+ */
+foxglove_error foxglove_channel_log_joint_states(const struct foxglove_channel *channel,
+                                                 const struct foxglove_joint_states *msg,
+                                                 const uint64_t *log_time,
+                                                 FoxgloveSinkId sink_id);
+#endif
+
+/**
+ * Get the JointStates schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_joint_states_schema(void);
+
+/**
+ * Encode a JointStates message as protobuf to the buffer provided.
+ *
+ * On success, writes the encoded length to *encoded_len.
+ * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+ * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+ * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+ *
+ * # Safety
+ * ptr must be a valid pointer to a memory region at least len bytes long.
+ */
+foxglove_error foxglove_joint_states_encode(const struct foxglove_joint_states *msg,
+                                            uint8_t *ptr,
+                                            size_t len,
+                                            size_t *encoded_len);
 
 /**
  * Create a new typed channel, and return an owned raw channel pointer to it.
@@ -4362,6 +4548,15 @@ foxglove_error foxglove_vector3_encode(const struct foxglove_vector3 *msg,
 
 #if !defined(__wasm__)
 /**
+ * Returns a `FoxgloveMcapOptions` with defaults matching `mcap::WriteOptions::default()`.
+ *
+ * The test `test_mcap_options_default_matches_write_options` verifies these stay in sync.
+ */
+struct foxglove_mcap_options foxglove_mcap_options_default(void);
+#endif
+
+#if !defined(__wasm__)
+/**
  * Create or open an MCAP writer for writing to a file or custom destination.
  * Resources must later be freed with `foxglove_mcap_close`.
  *
@@ -5326,6 +5521,10 @@ foxglove_error foxglove_server_clear_session(const struct foxglove_websocket_ser
 #if !defined(__wasm__)
 /**
  * Adds a service to the server.
+ *
+ * This function will fail if the server was not configured with the `services` capability,
+ * if a service with the same name is already registered, or if the service has no request
+ * encoding and the server has no supported encodings.
  *
  * # Safety
  * - `server` must be a valid pointer to a server started with `foxglove_server_start`.

@@ -5,13 +5,13 @@ use tempfile::NamedTempFile;
 
 #[cfg(feature = "websocket")]
 use crate::{
+    Channel, ChannelBuilder, Context, McapWriter, WebSocketServer,
     messages::Log,
     testutil::{assert_eventually, read_summary},
     websocket::ws_protocol::{
-        client::{subscribe::Subscription, Subscribe},
+        client::{Subscribe, subscribe::Subscription},
         server::ServerMessage,
     },
-    Channel, ChannelBuilder, Context, McapWriter, WebSocketServer,
 };
 
 #[cfg(feature = "websocket")]
@@ -28,7 +28,7 @@ macro_rules! expect_recv {
 #[cfg(feature = "websocket")]
 #[tokio::test(flavor = "multi_thread")]
 async fn test_sink_channel_filtering_on_mcap_and_ws() {
-    use crate::WebSocketClient;
+    use crate::testutil::WebSocketClient;
 
     let ctx = Context::new();
 

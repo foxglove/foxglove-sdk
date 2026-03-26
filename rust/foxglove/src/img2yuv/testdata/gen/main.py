@@ -115,6 +115,18 @@ def write_raw_formats(dir: Path, stem: str, rgb, rgba):
     write_padded(dir, f"{stem}.yuyv.pad.raw", yuyv)
     write_padded(dir, f"{stem}.uyvy.pad.raw", uyvy)
 
+    # NV12: semi-planar YUV 4:2:0.
+    # Y plane at full resolution, followed by interleaved UV plane at half resolution.
+    u_420 = u[::2, ::2]
+    v_420 = v[::2, ::2]
+    uv_plane = np.zeros((H // 2, W), dtype=np.uint8)
+    uv_plane[:, 0::2] = u_420
+    uv_plane[:, 1::2] = v_420
+    nv12 = np.vstack([y, uv_plane])
+    nv12.tofile(dir / f"{stem}.nv12.raw")
+    nv12_pad = np.pad(nv12, pad_width=((0, 0), (0, PAD)), mode="constant", constant_values=0)
+    nv12_pad.tofile(dir / f"{stem}.nv12.pad.raw")
+
     # Rescale Y from the limited [16, 235] range to [0.0, 1.0].
     mono32 = (y.astype(np.float32) - 16.0) / 219.0
     mono32fbe = mono32.astype(">f4")

@@ -4,8 +4,8 @@ use proc_macro::TokenStream;
 use quote::quote;
 use std::collections::HashMap;
 use syn::{
-    parse_macro_input, parse_quote, Data, DataEnum, DataStruct, DeriveInput, Fields,
-    GenericArgument, GenericParam, Generics, PathArguments, Type,
+    Data, DataEnum, DataStruct, DeriveInput, Fields, GenericArgument, GenericParam, Generics,
+    PathArguments, Type, parse_macro_input, parse_quote,
 };
 
 /// Extract the inner type from a wrapper type like `Vec<T>` or `Option<T>`.
@@ -104,14 +104,38 @@ type TypeCheck = (fn(&Type) -> bool, &'static str);
 /// Returns `Some(compile_error!(...))` if the type is invalid, `None` if valid.
 fn validate_field_type(ty: &Type) -> Option<TokenStream> {
     let checks: &[TypeCheck] = &[
-        (is_vec_of_option, "Vec<Option<T>> is not supported. Protobuf repeated fields cannot represent null/missing elements."),
-        (is_option_of_vec, "Option<Vec<T>> is not supported. Protobuf cannot distinguish between absent and empty repeated fields."),
-        (is_vec_of_vec, "Vec<Vec<T>> is not supported. Protobuf does not support nested repeated fields."),
-        (is_array_of_option, "[Option<T>; N] is not supported. Protobuf repeated fields cannot represent null/missing elements."),
-        (is_option_of_array, "Option<[T; N]> is not supported. Protobuf cannot distinguish between absent and empty repeated fields."),
-        (is_array_of_array, "[[T; M]; N] is not supported. Protobuf does not support nested repeated fields."),
-        (is_array_of_vec, "[Vec<T>; N] is not supported. Protobuf does not support nested repeated fields."),
-        (is_vec_of_array, "Vec<[T; N]> is not supported. Protobuf does not support nested repeated fields."),
+        (
+            is_vec_of_option,
+            "Vec<Option<T>> is not supported. Protobuf repeated fields cannot represent null/missing elements.",
+        ),
+        (
+            is_option_of_vec,
+            "Option<Vec<T>> is not supported. Protobuf cannot distinguish between absent and empty repeated fields.",
+        ),
+        (
+            is_vec_of_vec,
+            "Vec<Vec<T>> is not supported. Protobuf does not support nested repeated fields.",
+        ),
+        (
+            is_array_of_option,
+            "[Option<T>; N] is not supported. Protobuf repeated fields cannot represent null/missing elements.",
+        ),
+        (
+            is_option_of_array,
+            "Option<[T; N]> is not supported. Protobuf cannot distinguish between absent and empty repeated fields.",
+        ),
+        (
+            is_array_of_array,
+            "[[T; M]; N] is not supported. Protobuf does not support nested repeated fields.",
+        ),
+        (
+            is_array_of_vec,
+            "[Vec<T>; N] is not supported. Protobuf does not support nested repeated fields.",
+        ),
+        (
+            is_vec_of_array,
+            "Vec<[T; N]> is not supported. Protobuf does not support nested repeated fields.",
+        ),
     ];
     for &(check, msg) in checks {
         if check(ty) {
@@ -259,6 +283,21 @@ fn derive_newtype_impl(input: &DeriveInput, field: &syn::Field) -> TokenStream {
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
     let has_generics = !input.generics.params.is_empty();
 
+    // Proto3 explicit presence for optional newtypes. See the matching comment
+    // in derive_named_struct_impl for a full explanation of proto3_optional and
+    // synthetic oneofs.
+    let optional_oneof = if is_option(inner_type) {
+        quote! {
+            field_desc.proto3_optional = Some(true);
+            let mut oneof = ::foxglove::prost_types::OneofDescriptorProto::default();
+            oneof.name = Some(String::from("_value"));
+            field_desc.oneof_index = Some(message.oneof_decl.len() as i32);
+            message.oneof_decl.push(oneof);
+        }
+    } else {
+        quote! {}
+    };
+
     // Extract the schema computation body so we can conditionally wrap it
     // with OnceLock caching. For generic types, static items inside generic
     // functions are shared across all monomorphizations, so we must not cache.
@@ -298,15 +337,17 @@ fn derive_newtype_impl(input: &DeriveInput, field: &syn::Field) -> TokenStream {
         field_desc.name = Some(String::from("value"));
         field_desc.number = Some(1);
 
+        // In proto3, singular fields always use Label::Optional in the descriptor
+        // (implicit presence). See derive_named_struct_impl for details.
         if <#inner_type as ::foxglove::protobuf::ProtobufField>::repeating() {
             field_desc.label = Some(::foxglove::prost_types::field_descriptor_proto::Label::Repeated as i32);
-        } else if <#inner_type as ::foxglove::protobuf::ProtobufField>::optional() {
-            field_desc.label = Some(::foxglove::prost_types::field_descriptor_proto::Label::Optional as i32);
         } else {
-            field_desc.label = Some(::foxglove::prost_types::field_descriptor_proto::Label::Required as i32);
+            field_desc.label = Some(::foxglove::prost_types::field_descriptor_proto::Label::Optional as i32);
         }
         field_desc.r#type = Some(<#inner_type as ::foxglove::protobuf::ProtobufField>::field_type() as i32);
         field_desc.type_name = <#inner_type as ::foxglove::protobuf::ProtobufField>::type_name();
+
+        #optional_oneof
 
         message.field.push(field_desc);
 
@@ -388,10 +429,6 @@ fn derive_newtype_impl(input: &DeriveInput, field: &syn::Field) -> TokenStream {
 
             fn repeating() -> bool {
                 <#inner_type as ::foxglove::protobuf::ProtobufField>::repeating()
-            }
-
-            fn optional() -> bool {
-                <#inner_type as ::foxglove::protobuf::ProtobufField>::optional()
             }
 
             fn encoded_len(&self) -> usize {
@@ -501,21 +538,47 @@ fn derive_named_struct_impl(
             }
         });
 
+        // In proto3, fields that map to Rust `Option<T>` need explicit presence tracking
+        // in the descriptor. This matches how protoc represents `optional` fields: it
+        // sets `proto3_optional = true` and creates a synthetic oneof named
+        // `_<field_name>`. The synthetic oneof is not a real oneof in the schema — it's
+        // a descriptor-level mechanism that signals to consumers that this field tracks
+        // presence (i.e., can distinguish "not set" from "set to default value").
+        //
+        // See: https://protobuf.dev/programming-guides/field_presence/
+        // See: https://github.com/protocolbuffers/protobuf/blob/main/docs/field_presence.md
+        let optional_oneof = if is_option(field_type) {
+            let oneof_name = format!("_{}", field_name);
+            quote! {
+                field.proto3_optional = Some(true);
+                let mut oneof = ::foxglove::prost_types::OneofDescriptorProto::default();
+                oneof.name = Some(String::from(#oneof_name));
+                field.oneof_index = Some(message.oneof_decl.len() as i32);
+                message.oneof_decl.push(oneof);
+            }
+        } else {
+            quote! {}
+        };
+
         field_defs.push(quote! {
             let mut field = ::foxglove::prost_types::FieldDescriptorProto::default();
             field.name = Some(String::from(stringify!(#field_name)));
             field.number = Some(#field_number as i32);
 
+            // In proto3, all singular fields use Label::Optional in the descriptor.
+            // This does NOT mean the field is "optional" in the Rust sense — it means
+            // the field has implicit presence (omitted when equal to the default value).
+            // Truly optional fields (Rust `Option<T>`) are additionally marked with
+            // `proto3_optional` and a synthetic oneof above.
             if <#field_type as ::foxglove::protobuf::ProtobufField>::repeating() {
                 field.label = Some(::foxglove::prost_types::field_descriptor_proto::Label::Repeated as i32);
-            } else if <#field_type as ::foxglove::protobuf::ProtobufField>::optional() {
-                field.label = Some(::foxglove::prost_types::field_descriptor_proto::Label::Optional as i32);
             } else {
-                field.label = Some(::foxglove::prost_types::field_descriptor_proto::Label::Required as i32);
+                field.label = Some(::foxglove::prost_types::field_descriptor_proto::Label::Optional as i32);
             }
             field.r#type = Some(<#field_type as ::foxglove::protobuf::ProtobufField>::field_type() as i32);
-
             field.type_name = <#field_type as ::foxglove::protobuf::ProtobufField>::type_name();
+
+            #optional_oneof
 
             message.field.push(field);
         });

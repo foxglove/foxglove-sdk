@@ -108,7 +108,7 @@ pub struct CameraCalibration {
 ///
 /// <https://docs.foxglove.dev/docs/visualization/message-schemas/circle-annotation>
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct CircleAnnotation {
     /// Timestamp of circle
     #[prost(message, optional, tag = "1")]
@@ -129,6 +129,9 @@ pub struct CircleAnnotation {
     /// Outline color
     #[prost(message, optional, tag = "6")]
     pub outline_color: ::core::option::Option<Color>,
+    /// Additional user-provided metadata associated with this annotation. Keys must be unique.
+    #[prost(message, repeated, tag = "7")]
+    pub metadata: ::prost::alloc::vec::Vec<KeyValuePair>,
 }
 /// A color in RGBA format
 ///
@@ -257,7 +260,7 @@ pub struct CylinderPrimitive {
     #[prost(message, optional, tag = "5")]
     pub color: ::core::option::Option<Color>,
 }
-/// A transform between two reference frames in 3D space. The transform defines the position and orientation of a child frame within a parent frame. Translation moves the origin of the child frame relative to the parent origin. The rotation changes the orientiation of the child frame around its origin.
+/// A transform between two reference frames in 3D space. The transform defines the position and orientation of a child frame within a parent frame. Translation moves the origin of the child frame relative to the parent origin. The rotation changes the orientation of the child frame around its origin.
 ///
 /// Examples:
 ///
@@ -387,6 +390,9 @@ pub struct Grid {
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ImageAnnotations {
+    /// Timestamp of the image annotations. When set, individual annotation timestamps will be ignored.
+    #[prost(message, optional, tag = "5")]
+    pub timestamp: ::core::option::Option<crate::messages::Timestamp>,
     /// Circle annotations
     #[prost(message, repeated, tag = "1")]
     pub circles: ::prost::alloc::vec::Vec<CircleAnnotation>,
@@ -396,9 +402,44 @@ pub struct ImageAnnotations {
     /// Text annotations
     #[prost(message, repeated, tag = "3")]
     pub texts: ::prost::alloc::vec::Vec<TextAnnotation>,
-    /// Additional user-provided metadata associated with the image annotations. Keys must be unique.
+    /// Additional user-provided metadata associated with the image annotations. Keys must be unique within this object. Per-annotation metadata takes precedence over these values.
     #[prost(message, repeated, tag = "4")]
     pub metadata: ::prost::alloc::vec::Vec<KeyValuePair>,
+}
+/// The state of a single joint (revolute or prismatic).
+///
+/// <https://docs.foxglove.dev/docs/visualization/message-schemas/joint-state>
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct JointState {
+    /// Joint name
+    #[prost(string, tag = "1")]
+    pub name: ::prost::alloc::string::String,
+    /// Joint position. Radians for revolute joints, meters for prismatic joints.
+    #[prost(double, optional, tag = "2")]
+    pub position: ::core::option::Option<f64>,
+    /// Joint velocity. Rad/s for revolute joints, m/s for prismatic joints.
+    #[prost(double, optional, tag = "3")]
+    pub velocity: ::core::option::Option<f64>,
+    /// Joint acceleration. Rad/s² for revolute joints, m/s² for prismatic joints.
+    #[prost(double, optional, tag = "4")]
+    pub acceleration: ::core::option::Option<f64>,
+    /// Joint effort (force or torque). Nm for revolute joints, N for prismatic joints.
+    #[prost(double, optional, tag = "5")]
+    pub effort: ::core::option::Option<f64>,
+}
+/// The state of a set of joints at a given time.
+///
+/// <https://docs.foxglove.dev/docs/visualization/message-schemas/joint-states>
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct JointStates {
+    /// Timestamp of the joint states
+    #[prost(message, optional, tag = "1")]
+    pub timestamp: ::core::option::Option<crate::messages::Timestamp>,
+    /// Joint states
+    #[prost(message, repeated, tag = "2")]
+    pub joints: ::prost::alloc::vec::Vec<JointState>,
 }
 /// A key with its associated value
 ///
@@ -924,6 +965,9 @@ pub struct PointsAnnotation {
     /// Stroke thickness in pixels
     #[prost(double, tag = "7")]
     pub thickness: f64,
+    /// Additional user-provided metadata associated with this annotation. Keys must be unique.
+    #[prost(message, repeated, tag = "8")]
+    pub metadata: ::prost::alloc::vec::Vec<KeyValuePair>,
 }
 /// Nested message and enum types in `PointsAnnotation`.
 pub mod points_annotation {
@@ -1104,6 +1148,15 @@ pub struct RawImage {
     ///    - Pixel channel values are represented as unsigned 8-bit integers.
     ///    - U and V values are shared between horizontal pairs of pixels. Each pair of output pixels is encoded as \[Y1, U, Y2, V\].
     ///    - `step` must be greater than or equal to `width` * 2.
+    /// - `nv12`:
+    ///    - Pixel colors are decomposed into [Y'UV](<https://en.wikipedia.org/wiki/Y%E2%80%B2UV>) channels using 4:2:0 chroma subsampling. The data is stored in [NV12](<https://www.kernel.org/doc/html/v4.10/media/uapi/v4l/pixfmt-nv12.html>) semi-planar layout with two contiguous planes: a Y (luma) plane followed by an interleaved UV (chroma) plane.
+    ///    - All channel values are represented as unsigned 8-bit integers.
+    ///    - Both planes use `step` as their row stride.
+    ///    - The Y plane contains one luma value per pixel (`step` * `height` bytes).
+    ///    - The UV plane contains interleaved U, V chroma pairs, subsampled by a factor of 2 in both dimensions (`width`/2 pairs per row, `height`/2 rows, `step` * `height`/2 bytes). Each U, V pair is shared by a 2x2 block of pixels.
+    ///    - `width` and `height` must be even.
+    ///    - `step` must be greater than or equal to `width`.
+    ///    - Total `data` length is `step` * `height` * 3/2 bytes.
     /// - `rgb8`:
     ///    - Pixel colors are decomposed into Red, Green, and Blue channels.
     ///    - Pixel channel values are represented as unsigned 8-bit integers.
@@ -1131,7 +1184,7 @@ pub struct RawImage {
     ///    - Pixel colors are decomposed into Red, Blue and Green channels.
     ///    - Pixel channel values are represented as unsigned 8-bit integers, and serialized in a 2x2 bayer filter pattern.
     ///    - The order of the four letters after `bayer_` determine the layout, so for `bayer_wxyz8` the pattern is:
-    ///    ```plaintext
+    ///    ```text
     ///    w | x
     ///    - + -
     ///    y | z
@@ -1312,6 +1365,9 @@ pub struct TextAnnotation {
     /// Background fill color
     #[prost(message, optional, tag = "6")]
     pub background_color: ::core::option::Option<Color>,
+    /// Additional user-provided metadata associated with this annotation. Keys must be unique.
+    #[prost(message, repeated, tag = "7")]
+    pub metadata: ::prost::alloc::vec::Vec<KeyValuePair>,
 }
 /// A primitive representing a text label
 ///

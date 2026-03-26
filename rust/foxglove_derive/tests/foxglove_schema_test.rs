@@ -1,30 +1,30 @@
 use bytes::BytesMut;
-use foxglove::schemas::{Log, Point3, Pose, Quaternion, Timestamp, Vector3};
 use foxglove::Encode;
+use foxglove::messages::{Log, Point3, Pose, Quaternion, Timestamp, Vector3};
 use prost::Message;
 use prost_reflect::DescriptorPool;
 
-/// Test nesting a simple foxglove schema type (Log).
+/// Test nesting a simple foxglove message type (Log).
 #[derive(Encode)]
 struct MessageWithLog {
     log: Log,
     value: u32,
 }
 
-/// Test nesting foxglove schema types that have their own nested types.
+/// Test nesting foxglove message types that have their own nested types.
 #[derive(Encode)]
 struct MessageWithPose {
     pose: Pose,
     name: String,
 }
 
-/// Test Vec of foxglove schema types.
+/// Test Vec of foxglove message types.
 #[derive(Encode)]
 struct MessageWithPoints {
     points: Vec<Point3>,
 }
 
-/// Test Option of foxglove schema type.
+/// Test Option of foxglove message type.
 #[derive(Encode)]
 struct MessageWithOptionalLog {
     log: Option<Log>,
@@ -35,7 +35,7 @@ fn test_nested_foxglove_log() {
     let test_struct = MessageWithLog {
         log: Log {
             timestamp: Some(Timestamp::new(1234567890, 123456789)),
-            level: foxglove::schemas::log::Level::Info as i32,
+            level: foxglove::messages::log::Level::Info as i32,
             message: "Hello from nested log".to_string(),
             name: "test".to_string(),
             file: "test.rs".to_string(),
@@ -151,7 +151,7 @@ fn test_optional_foxglove_log() {
     let test_struct = MessageWithOptionalLog {
         log: Some(Log {
             timestamp: None,
-            level: foxglove::schemas::log::Level::Warning as i32,
+            level: foxglove::messages::log::Level::Warning as i32,
             message: "Warning!".to_string(),
             name: "".to_string(),
             file: "".to_string(),

@@ -3,11 +3,11 @@ use std::io::{BufReader, BufWriter, Read, Seek};
 use serde_json::json;
 use tempfile::NamedTempFile;
 
+use crate::testutil::WebSocketClient;
 use crate::testutil::assert_eventually;
-use crate::websocket::ws_protocol::client::subscribe::Subscription;
 use crate::websocket::ws_protocol::client::Subscribe;
+use crate::websocket::ws_protocol::client::subscribe::Subscription;
 use crate::websocket::ws_protocol::server::ServerMessage;
-use crate::websocket_client::WebSocketClient;
 use crate::{ChannelBuilder, Context, McapWriter, Schema, WebSocketServer};
 
 macro_rules! expect_recv {

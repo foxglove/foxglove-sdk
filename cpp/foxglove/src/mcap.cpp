@@ -1,48 +1,32 @@
-#include <foxglove-c/foxglove-c.h>
 #include <foxglove/channel.hpp>
 #include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
-#include <foxglove/mcap.hpp>
+
+#include "mcap_internal.hpp"
 
 namespace foxglove {
 
-static int custom_flush(void* fn) {
+static int customFlush(void* fn) {
   auto* writer = static_cast<CustomWriter*>(fn);
   return writer->flush();
 }
 
-static int custom_seek(void* fn, int64_t pos, int whence, uint64_t* new_pos) {
+static int customSeek(void* fn, int64_t pos, int whence, uint64_t* new_pos) {
   auto* writer = static_cast<CustomWriter*>(fn);
   return writer->seek(pos, whence, new_pos);
 }
 
-static size_t custom_write(void* fn, const uint8_t* data, size_t len, int32_t* error) {
+static size_t customWrite(void* fn, const uint8_t* data, size_t len, int32_t* error) {
   auto* writer = static_cast<CustomWriter*>(fn);
   return writer->write(data, len, error);
 }
 
-FoxgloveResult<McapWriter> McapWriter::create(const McapWriterOptions& options) {
-  foxglove_internal_register_cpp_wrapper();
-
-  foxglove_mcap_options c_options = {};
+/// @cond foxglove_internal
+foxglove_mcap_options to_c_mcap_options(const McapWriterOptions& options) {
+  foxglove_mcap_options c_options = foxglove_mcap_options_default();
   c_options.context = options.context.getInner();
   c_options.path = {options.path.data(), options.path.length()};
   c_options.profile = {options.profile.data(), options.profile.length()};
-
-  // Handle custom writer if provided
-  std::unique_ptr<CustomWriter> custom_writer;
-  foxglove_custom_writer c_custom_writer;
-  if (options.custom_writer.has_value()) {
-    custom_writer = std::make_unique<CustomWriter>(options.custom_writer.value());
-    c_custom_writer.context = custom_writer.get();
-    c_custom_writer.write_fn = custom_write;
-    c_custom_writer.flush_fn = custom_flush;
-    c_custom_writer.seek_fn = custom_seek;
-    c_options.custom_writer = &c_custom_writer;
-  } else {
-    c_options.custom_writer = nullptr;
-  }
-
   // TODO FG-11215: generate the enum for C++ from the C enum
   // so this is guaranteed to never get out of sync
   c_options.compression = static_cast<foxglove_mcap_compression>(options.compression);
@@ -57,7 +41,34 @@ FoxgloveResult<McapWriter> McapWriter::create(const McapWriterOptions& options) 
   c_options.emit_metadata_indexes = options.emit_metadata_indexes;
   c_options.repeat_channels = options.repeat_channels;
   c_options.repeat_schemas = options.repeat_schemas;
+  c_options.calculate_chunk_crcs = options.calculate_chunk_crcs;
+  c_options.calculate_data_section_crc = options.calculate_data_section_crc;
+  c_options.calculate_summary_section_crc = options.calculate_summary_section_crc;
+  c_options.calculate_attachment_crcs = options.calculate_attachment_crcs;
+  c_options.compression_level = options.compression_level;
+  c_options.compression_threads =
+    options.compression_threads.value_or(FOXGLOVE_MCAP_COMPRESSION_THREADS_DEFAULT);
   c_options.truncate = options.truncate;
+  return c_options;
+}
+/// @endcond
+
+FoxgloveResult<McapWriter> McapWriter::create(const McapWriterOptions& options) {
+  foxglove_internal_register_cpp_wrapper();
+
+  foxglove_mcap_options c_options = to_c_mcap_options(options);
+
+  // Handle custom writer if provided
+  std::unique_ptr<CustomWriter> custom_writer;
+  foxglove_custom_writer c_custom_writer;
+  if (options.custom_writer.has_value()) {
+    custom_writer = std::make_unique<CustomWriter>(options.custom_writer.value());
+    c_custom_writer.context = custom_writer.get();
+    c_custom_writer.write_fn = customWrite;
+    c_custom_writer.flush_fn = customFlush;
+    c_custom_writer.seek_fn = customSeek;
+    c_options.custom_writer = &c_custom_writer;
+  }
 
   // Handle sink channel filter with context
   std::unique_ptr<SinkChannelFilterFn> sink_channel_filter;
@@ -72,9 +83,9 @@ FoxgloveResult<McapWriter> McapWriter::create(const McapWriterOptions& options) 
         if (!context) {
           return true;
         }
-        auto* filter_func = static_cast<const SinkChannelFilterFn*>(context);
+        const auto* filter_func = static_cast<const SinkChannelFilterFn*>(context);
         auto cpp_channel = ChannelDescriptor(channel);
-        return (*filter_func)(std::move(cpp_channel));
+        return (*filter_func)(cpp_channel);
       } catch (const std::exception& exc) {
         warn() << "Sink channel filter failed: " << exc.what();
         return false;

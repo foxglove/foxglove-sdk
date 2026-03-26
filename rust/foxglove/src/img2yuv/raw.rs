@@ -6,7 +6,7 @@ mod helpers;
 #[cfg(test)]
 mod tests;
 
-pub(crate) use self::helpers::{mono_to_yuv420, rgb_to_yuv420, yuv422_to_yuv420};
+pub(crate) use self::helpers::{mono_to_yuv420, nv12_to_yuv420, rgb_to_yuv420, yuv422_to_yuv420};
 
 /// Unknown raw image encoding.
 #[derive(Debug, thiserror::Error)]
@@ -14,7 +14,7 @@ pub(crate) use self::helpers::{mono_to_yuv420, rgb_to_yuv420, yuv422_to_yuv420};
 pub struct UnknownEncodingError(String);
 
 /// Endianness for multi-byte numbers.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Endian {
     /// Little-endian.
     Little,
@@ -23,7 +23,7 @@ pub enum Endian {
 }
 
 /// Supported encodings for raw images.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RawImageEncoding {
     /// Pixel colors decomposed into R, G, and B channels.
     Rgb8,
@@ -43,12 +43,39 @@ pub enum RawImageEncoding {
     Uyvy,
     /// Packed YUV 4:2:2 with channels ordered as Y1, U, Y2, V.
     Yuyv,
+    /// Semi-planar YUV 4:2:0: a full-resolution Y plane followed by an interleaved UV plane at
+    /// half resolution in each dimension.
+    Nv12,
     /// A Bayer filter mosaic. Each 2x2 region in the image is encoded by a combination of R, B,
     /// and two G channels. The order in which the channels are laid out is specified by the inner
     /// [`BayerCfa`] variant.
     Bayer8(BayerCfa),
 }
 impl RawImageEncoding {
+    /// Returns a canonical encoding string for this format.
+    ///
+    /// Returns the preferred (non-aliased) name for each encoding. Note that endianness
+    /// information is not preserved: both `Mono16(BigEndian)` and `Mono16(LittleEndian)`
+    /// produce `"mono16"`.
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Rgb8 => "rgb8",
+            Self::Rgba8 => "rgba8",
+            Self::Bgr8 => "bgr8",
+            Self::Bgra8 => "bgra8",
+            Self::Uyvy => "uyvy",
+            Self::Yuyv => "yuyv",
+            Self::Nv12 => "nv12",
+            Self::Mono8 => "mono8",
+            Self::Mono16(_) => "mono16",
+            Self::Mono32F(_) => "32FC1",
+            Self::Bayer8(BayerCfa::Bggr) => "bayer_bggr8",
+            Self::Bayer8(BayerCfa::Gbrg) => "bayer_gbrg8",
+            Self::Bayer8(BayerCfa::Grbg) => "bayer_grbg8",
+            Self::Bayer8(BayerCfa::Rggb) => "bayer_rggb8",
+        }
+    }
+
     /// Parses an encoding string, with a hint about endian-ness for multi-byte values.
     ///
     /// Note that endianness does not affect channel ordering.
@@ -60,6 +87,7 @@ impl RawImageEncoding {
             "bgra8" => Ok(Self::Bgra8),
             "yuv422" | "uyvy" => Ok(Self::Uyvy),
             "yuv422_yuy2" | "yuyv" => Ok(Self::Yuyv),
+            "nv12" => Ok(Self::Nv12),
             "mono8" | "8UC1" => Ok(Self::Mono8),
             "mono16" | "16UC1" => Ok(Self::Mono16(endian)),
             "32FC1" => Ok(Self::Mono32F(endian)),
@@ -78,7 +106,7 @@ impl RawImageEncoding {
     /// bayer and packed YUV 4:2:2.
     pub(crate) fn bytes_per_pixel(self) -> u8 {
         match self {
-            Self::Mono8 | Self::Bayer8(_) => 1,
+            Self::Mono8 | Self::Bayer8(_) | Self::Nv12 => 1,
             Self::Yuyv | Self::Uyvy | Self::Mono16(_) => 2,
             Self::Rgb8 | Self::Bgr8 => 3,
             Self::Rgba8 | Self::Bgra8 | Self::Mono32F(_) => 4,
@@ -87,12 +115,12 @@ impl RawImageEncoding {
 
     /// Returns true if this is a subsampled format.
     fn is_subsampled(self) -> bool {
-        matches!(self, Self::Bayer8(_) | Self::Uyvy | Self::Yuyv)
+        matches!(self, Self::Bayer8(_) | Self::Uyvy | Self::Yuyv | Self::Nv12)
     }
 }
 
 /// Bayer color filter array format.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BayerCfa {
     /// ```text
     /// B | G
@@ -167,6 +195,9 @@ impl RawImage<'_> {
             RawImageEncoding::Uyvy | RawImageEncoding::Yuyv => {
                 yuv422_to_yuv420(dst, self.encoding, &self.data, self.stride)
             }
+
+            // Semi-planar YUV 4:2:0
+            RawImageEncoding::Nv12 => nv12_to_yuv420(dst, &self.data, self.stride),
 
             // For mono formats, convert to [0.0, 1.0], then rescale into the limited Y range.
             RawImageEncoding::Mono8 => {
@@ -247,18 +278,8 @@ impl RawImage<'_> {
             });
         }
 
-        // Ensure that the buffer is large enough for the specified dimensions.
-        let expect = self.height as usize * self.stride as usize;
-        if self.data.len() < expect {
-            return Err(Error::BufferTooSmall {
-                which: "RawImage".to_string(),
-                actual: self.data.len(),
-                expect,
-            });
-        }
-
-        // For Bayer and YUV 4:2:2 formats, some image dimensions must be even. We could handle odd
-        // dimensions by synthesizing subpixels, but it's probably not worth the effort.
+        // For Bayer, YUV 4:2:2, and NV12 formats, some image dimensions must be even. We could
+        // handle odd dimensions by synthesizing subpixels, but it's probably not worth the effort.
         match (self.encoding, self.width % 2 == 0, self.height % 2 == 0) {
             (RawImageEncoding::Bayer8(_), w, h) if !(w && h) => {
                 return Err(Error::BayerDimensionsMustBeEven {
@@ -269,7 +290,31 @@ impl RawImage<'_> {
             (RawImageEncoding::Uyvy | RawImageEncoding::Yuyv, false, _) => {
                 return Err(Error::Yuv422WidthMustBeEven { width: self.width });
             }
+            (RawImageEncoding::Nv12, w, h) if !(w && h) => {
+                return Err(Error::Nv12DimensionsMustBeEven {
+                    width: self.width,
+                    height: self.height,
+                });
+            }
             _ => (),
+        }
+
+        // Ensure that the buffer is large enough for the specified dimensions.
+        // NV12 has a Y plane (stride * height) followed by a UV plane (stride * height/2).
+        let expect = match self.encoding {
+            RawImageEncoding::Nv12 => {
+                let y_size = self.stride as usize * self.height as usize;
+                let uv_size = self.stride as usize * (self.height as usize / 2);
+                y_size + uv_size
+            }
+            _ => self.height as usize * self.stride as usize,
+        };
+        if self.data.len() < expect {
+            return Err(Error::BufferTooSmall {
+                which: "RawImage".to_string(),
+                actual: self.data.len(),
+                expect,
+            });
         }
 
         Ok(())

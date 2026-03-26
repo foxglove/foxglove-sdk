@@ -22,16 +22,16 @@ describe("generatePyclass", () => {
 
   it("generates an enum", () => {
     expect(generatePyclass(exampleEnum)).toMatchInlineSnapshot(`
-        "/// An example enum
-        #[pyclass(eq, eq_int, module = "foxglove.schemas")]
-        #[derive(PartialEq, Clone)]
-        pub(crate) enum ExampleMessageExampleEnum {
-            A = 0,
-            B = 1,
-        }
+     "/// An example enum
+     #[pyclass(eq, eq_int, module = "foxglove.messages")]
+     #[derive(PartialEq, Clone)]
+     pub(crate) enum ExampleMessageExampleEnum {
+         A = 0,
+         B = 1,
+     }
 
-        "
-        `);
+     "
+    `);
   });
 
   it("generates a struct from a message", () => {
@@ -73,9 +73,9 @@ describe("generatePyclass", () => {
      /// :param field_optional_float64: An optional float64 field
      ///
      /// See https://docs.foxglove.dev/docs/visualization/message-schemas/example-message
-     #[pyclass(module = "foxglove.schemas")]
+     #[pyclass(module = "foxglove.messages")]
      #[derive(Clone)]
-     pub(crate) struct ExampleMessage(pub(crate) foxglove::schemas::ExampleMessage);
+     pub(crate) struct ExampleMessage(pub(crate) foxglove::messages::ExampleMessage);
      #[pymethods]
      impl ExampleMessage {
          #[new]
@@ -94,14 +94,14 @@ describe("generatePyclass", () => {
              field_bytes_array: Option<Bound<'_, PyBytes>>,
              field_float64_array: Option<Vec<f64>>,
              field_uint32_array: Option<Vec<u32>>,
-             field_string_array: Option<Vec<&str>>,
+             field_string_array: Option<Vec<String>>,
              field_duration_fixed_array: Option<Vec<Duration>>,
              field_time_fixed_array: Option<Vec<Timestamp>>,
              field_boolean_fixed_array: Option<Vec<bool>>,
              field_bytes_fixed_array: Option<Bound<'_, PyBytes>>,
              field_float64_fixed_array: Option<Vec<f64>>,
              field_uint32_fixed_array: Option<Vec<u32>>,
-             field_string_fixed_array: Option<Vec<&str>>,
+             field_string_fixed_array: Option<Vec<String>>,
              field_enum: ExampleMessageExampleEnum,
              field_enum_array: Option<Vec<ExampleMessageExampleEnum>>,
              field_nested: Option<NestedMessage>,
@@ -110,7 +110,7 @@ describe("generatePyclass", () => {
              field_optional_bool: Option<bool>,
              field_optional_float64: Option<f64>,
          ) -> Self {
-             Self(foxglove::schemas::ExampleMessage {
+             Self(foxglove::messages::ExampleMessage {
                  field_duration: field_duration.map(Into::into),
                  field_time: field_time.map(Into::into),
                  field_boolean,
@@ -124,14 +124,14 @@ describe("generatePyclass", () => {
                  field_bytes_array: field_bytes_array.map(|x| Bytes::copy_from_slice(x.as_bytes())).unwrap_or_default(),
                  field_float64_array: field_float64_array.unwrap_or_default(),
                  field_uint32_array: field_uint32_array.unwrap_or_default(),
-                 field_string_array: field_string_array.unwrap_or_default().into_iter().map(String::from).collect(),
+                 field_string_array: field_string_array.unwrap_or_default(),
                  field_duration_fixed_array: field_duration_fixed_array.unwrap_or_default().into_iter().map(|x| x.into()).collect(),
                  field_time_fixed_array: field_time_fixed_array.unwrap_or_default().into_iter().map(|x| x.into()).collect(),
                  field_boolean_fixed_array: field_boolean_fixed_array.unwrap_or_default(),
                  field_bytes_fixed_array: field_bytes_fixed_array.map(|x| Bytes::copy_from_slice(x.as_bytes())).unwrap_or_default(),
                  field_float64_fixed_array: field_float64_fixed_array.unwrap_or_default(),
                  field_uint32_fixed_array: field_uint32_fixed_array.unwrap_or_default(),
-                 field_string_fixed_array: field_string_fixed_array.unwrap_or_default().into_iter().map(String::from).collect(),
+                 field_string_fixed_array: field_string_fixed_array.unwrap_or_default(),
                  field_enum: field_enum as i32,
                  field_enum_array: field_enum_array.unwrap_or_default().into_iter().map(|x| x as i32).collect(),
                  field_nested: field_nested.map(Into::into),
@@ -177,7 +177,7 @@ describe("generatePyclass", () => {
          /// Returns the ExampleMessage schema.
          #[staticmethod]
          fn get_schema() -> PySchema {
-             foxglove::schemas::ExampleMessage::get_schema().unwrap().into()
+             foxglove::messages::ExampleMessage::get_schema().unwrap().into()
          }
          /// Encodes the ExampleMessage as protobuf.
          fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
@@ -189,7 +189,7 @@ describe("generatePyclass", () => {
      }
 
 
-     impl From<ExampleMessage> for foxglove::schemas::ExampleMessage {
+     impl From<ExampleMessage> for foxglove::messages::ExampleMessage {
          fn from(value: ExampleMessage) -> Self {
              value.0
          }

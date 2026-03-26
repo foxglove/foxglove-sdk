@@ -1,5 +1,5 @@
-use std::collections::hash_map::Entry;
 use std::collections::HashSet;
+use std::collections::hash_map::Entry;
 use std::sync::Weak;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use std::{collections::HashMap, net::SocketAddr, sync::Arc};
@@ -28,8 +28,8 @@ use super::ws_protocol::server::{
     AdvertiseServices, RemoveStatus, ServerInfo, UnadvertiseServices,
 };
 use super::{
-    advertise, handshake, AssetHandler, Capability, ClientId, ConnectionGraph, Parameter,
-    ServerListener, Status,
+    AssetHandler, Capability, ClientId, ConnectionGraph, Parameter, ServerListener, Status,
+    advertise, handshake,
 };
 
 // Queue up to 1024 messages per connected client before dropping messages
@@ -120,6 +120,30 @@ pub(crate) fn create_server(
     ctx: &Arc<Context>,
     opts: ServerOptions,
 ) -> Result<Arc<Server>, FoxgloveError> {
+    // Validate that services without a request encoding have at least one supported
+    // encoding available (either configured globally or from another service).
+    if !opts.services.is_empty() {
+        let has_encodings = opts
+            .supported_encodings
+            .as_ref()
+            .is_some_and(|e| !e.is_empty())
+            || opts
+                .services
+                .values()
+                .any(|s| s.request_encoding().is_some());
+        if !has_encodings {
+            if let Some(svc) = opts
+                .services
+                .values()
+                .find(|s| s.request_encoding().is_none())
+            {
+                return Err(FoxgloveError::MissingRequestEncoding(
+                    svc.name().to_string(),
+                ));
+            }
+        }
+    }
+
     // TLS configuration is fallible, so build it prior to allocating the Arc with the weak ref
     let stream_config = StreamConfiguration::new(opts.tls_identity.as_ref())?;
 
@@ -208,7 +232,9 @@ impl Server {
         } else if capabilities.contains(&Capability::PlaybackControl) {
             // The PlaybackControl capability requires a time range to be set using
             // ServerOptions::playback_time_range
-            panic!("Server declared the PlaybackControl capability but did not provide a playback time range");
+            panic!(
+                "Server declared the PlaybackControl capability but did not provide a playback time range"
+            );
         }
 
         // If the server was declared with fetch asset handler, automatically add the "assets" capability
@@ -222,7 +248,9 @@ impl Server {
             message_backlog_size: opts
                 .message_backlog_size
                 .unwrap_or(DEFAULT_MESSAGE_BACKLOG_SIZE) as u32,
-            runtime: opts.runtime.unwrap_or_else(crate::get_runtime_handle),
+            runtime: opts
+                .runtime
+                .unwrap_or_else(crate::runtime::get_runtime_handle),
             channel_filter: opts.channel_filter.clone(),
             listener: opts.listener,
             session_id: parking_lot::RwLock::new(
@@ -686,8 +714,9 @@ impl Server {
 
     /// Adds new services, and advertises them to all clients.
     ///
-    /// This method will fail if the services capability was not declared, or if a service name is
-    /// not unique.
+    /// This method will fail if the services capability was not declared, if a service name is
+    /// not unique, or if a service has no request encoding and the server has no supported
+    /// encodings.
     pub fn add_services(&self, new_services: Vec<Service>) -> Result<(), FoxgloveError> {
         // Make sure that the server supports services.
         if !self.has_capability(Capability::Services) {

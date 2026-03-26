@@ -1,5 +1,5 @@
-use std::collections::hash_map::Entry;
 use std::collections::HashSet;
+use std::collections::hash_map::Entry;
 use std::sync::Weak;
 use std::{collections::HashMap, net::SocketAddr, sync::Arc};
 
@@ -8,19 +8,18 @@ use flume::TrySendError;
 use send_lossy::SendLossyResult;
 use tokio::net::TcpStream;
 use tokio::sync::oneshot;
-use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::WebSocketStream;
+use tokio_tungstenite::tungstenite::Message;
 
 use crate::sink_channel_filter::SinkChannelFilter;
-use crate::websocket::streams::ServerStream;
 use crate::websocket::PlaybackControlRequest;
+use crate::websocket::streams::ServerStream;
 use crate::{ChannelId, Context, FoxgloveError, Metadata, RawChannel, Sink, SinkId};
 
 use self::ws_protocol::server::{
     FetchAssetResponse, ParameterValues, ServiceCallFailure, Unadvertise,
 };
 
-use super::semaphore::Semaphore;
 use super::server::Server;
 use super::service::{self, CallId, ServiceId};
 use super::subscription::{Subscription, SubscriptionId};
@@ -28,9 +27,10 @@ use super::ws_protocol::client::ClientMessage;
 use super::ws_protocol::server::MessageData;
 use super::ws_protocol::{self, ParseError};
 use super::{
-    advertise, AssetResponder, Capability, Client, ClientChannel, ClientChannelId, ClientId,
-    Parameter, Status, StatusLevel,
+    AssetResponder, Capability, Client, ClientChannel, ClientChannelId, ClientId, Parameter,
+    Status, StatusLevel, advertise,
 };
+use crate::remote_common::semaphore::Semaphore;
 
 mod poller;
 mod send_lossy;
@@ -597,9 +597,9 @@ impl ConnectedClient {
         // Prepare the responder and the request. No failures past this point. If the responder is
         // dropped without sending a response, it will send a generic "internal server error" back
         // to the client.
-        let responder = service::Responder::new(
+        let responder = service::new_responder(
             self.arc(),
-            service.id(),
+            service_id,
             call_id,
             service.response_encoding().unwrap_or(&req.encoding),
             guard,

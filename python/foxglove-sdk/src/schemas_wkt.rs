@@ -8,16 +8,16 @@ use pyo3::types::{PyDateTime, PyTzInfo};
 ///
 /// :param sec: The number of seconds since a user-defined epoch.
 /// :param nsec: The number of nanoseconds since the sec value.
-#[pyclass(module = "foxglove.schemas", eq)]
+#[pyclass(module = "foxglove.messages", eq)]
 #[derive(Clone, PartialEq, Eq)]
-pub struct Timestamp(foxglove::schemas::Timestamp);
+pub struct Timestamp(foxglove::messages::Timestamp);
 
 #[pymethods]
 impl Timestamp {
     #[new]
     #[pyo3(signature = (sec, nsec=None))]
     fn new(sec: u32, nsec: Option<u32>) -> PyResult<Self> {
-        let timestamp = foxglove::schemas::Timestamp::new_checked(sec, nsec.unwrap_or(0))
+        let timestamp = foxglove::messages::Timestamp::new_checked(sec, nsec.unwrap_or(0))
             .ok_or_else(|| PyOverflowError::new_err("timestamp out of range"))?;
         Ok(Self(timestamp))
     }
@@ -47,7 +47,7 @@ impl Timestamp {
     #[pyo3(signature = ())]
     fn now() -> PyResult<Self> {
         let now = std::time::SystemTime::now();
-        Ok(Self(foxglove::schemas::Timestamp::try_from(now).map_err(
+        Ok(Self(foxglove::messages::Timestamp::try_from(now).map_err(
             |_| PyOverflowError::new_err("timestamp out of range"),
         )?))
     }
@@ -62,7 +62,7 @@ impl Timestamp {
     #[staticmethod]
     #[pyo3(signature = (timestamp))]
     fn from_epoch_secs(timestamp: f64) -> PyResult<Self> {
-        foxglove::schemas::Timestamp::try_from_epoch_secs_f64(timestamp)
+        foxglove::messages::Timestamp::try_from_epoch_secs_f64(timestamp)
             .map(Self)
             .map_err(|_| PyOverflowError::new_err("timestamp out of range"))
     }
@@ -113,7 +113,7 @@ impl Timestamp {
     }
 }
 
-impl From<Timestamp> for foxglove::schemas::Timestamp {
+impl From<Timestamp> for foxglove::messages::Timestamp {
     fn from(value: Timestamp) -> Self {
         value.0
     }
@@ -123,16 +123,16 @@ impl From<Timestamp> for foxglove::schemas::Timestamp {
 ///
 /// :param sec: The number of seconds in the duration.
 /// :param nsec: The number of nanoseconds in the positive direction.
-#[pyclass(module = "foxglove.schemas", eq)]
+#[pyclass(module = "foxglove.messages", eq)]
 #[derive(Clone, PartialEq, Eq)]
-pub struct Duration(foxglove::schemas::Duration);
+pub struct Duration(foxglove::messages::Duration);
 
 #[pymethods]
 impl Duration {
     #[new]
     #[pyo3(signature = (sec, nsec=None))]
     fn new(sec: i32, nsec: Option<u32>) -> PyResult<Self> {
-        let duration = foxglove::schemas::Duration::new_checked(sec, nsec.unwrap_or(0))
+        let duration = foxglove::messages::Duration::new_checked(sec, nsec.unwrap_or(0))
             .ok_or_else(|| PyOverflowError::new_err("duration out of range"))?;
         Ok(Self(duration))
     }
@@ -162,7 +162,7 @@ impl Duration {
     #[staticmethod]
     #[pyo3(signature = (secs))]
     fn from_secs(secs: f64) -> PyResult<Self> {
-        foxglove::schemas::Duration::try_from_secs_f64(secs)
+        foxglove::messages::Duration::try_from_secs_f64(secs)
             .map(Self)
             .map_err(|_| PyOverflowError::new_err("duration out of range"))
     }
@@ -196,7 +196,7 @@ impl Duration {
     }
 }
 
-impl From<Duration> for foxglove::schemas::Duration {
+impl From<Duration> for foxglove::messages::Duration {
     fn from(value: Duration) -> Self {
         value.0
     }

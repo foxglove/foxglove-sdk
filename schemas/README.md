@@ -32,6 +32,8 @@ If the IDL does not support optional fields (e.g. ROS) you must specify a value 
 - [GeoJSON](#geojson)
 - [Grid](#grid)
 - [ImageAnnotations](#imageannotations)
+- [JointState](#jointstate)
+- [JointStates](#jointstates)
 - [KeyValuePair](#keyvaluepair)
 - [LaserScan](#laserscan)
 - [LinePrimitive](#lineprimitive)
@@ -498,6 +500,19 @@ Outline color
 
 </td>
 </tr>
+<tr>
+<td><code>metadata</code> (optional)</td>
+<td>
+
+[KeyValuePair](#keyvaluepair)[]
+
+</td>
+<td>
+
+Additional user-provided metadata associated with this annotation. Keys must be unique.
+
+</td>
+</tr>
 </table>
 
 ## Color
@@ -890,7 +905,7 @@ The number of nanoseconds in the positive direction
 
 ## FrameTransform
 
-A transform between two reference frames in 3D space. The transform defines the position and orientation of a child frame within a parent frame. Translation moves the origin of the child frame relative to the parent origin. The rotation changes the orientiation of the child frame around its origin.
+A transform between two reference frames in 3D space. The transform defines the position and orientation of a child frame within a parent frame. Translation moves the origin of the child frame relative to the parent origin. The rotation changes the orientation of the child frame around its origin.
 
 Examples:
 
@@ -1202,6 +1217,19 @@ Array of annotations for a 2D image
     <th>description</th>
   </tr>
 <tr>
+<td><code>timestamp</code> (optional)</td>
+<td>
+
+[Timestamp](#timestamp)
+
+</td>
+<td>
+
+Timestamp of the image annotations. When set, individual annotation timestamps will be ignored.
+
+</td>
+</tr>
+<tr>
 <td><code>circles</code></td>
 <td>
 
@@ -1241,7 +1269,7 @@ Text annotations
 </td>
 </tr>
 <tr>
-<td><code>metadata</code></td>
+<td><code>metadata</code> (optional)</td>
 <td>
 
 [KeyValuePair](#keyvaluepair)[]
@@ -1249,7 +1277,122 @@ Text annotations
 </td>
 <td>
 
-Additional user-provided metadata associated with the image annotations. Keys must be unique.
+Additional user-provided metadata associated with the image annotations. Keys must be unique within this object. Per-annotation metadata takes precedence over these values.
+
+</td>
+</tr>
+</table>
+
+## JointState
+
+The state of a single joint (revolute or prismatic).
+
+<table>
+  <tr>
+    <th>field</th>
+    <th>type</th>
+    <th>description</th>
+  </tr>
+<tr>
+<td><code>name</code></td>
+<td>
+
+string
+
+</td>
+<td>
+
+Joint name
+
+</td>
+</tr>
+<tr>
+<td><code>position</code> (optional)</td>
+<td>
+
+float64
+
+</td>
+<td>
+
+Joint position. Radians for revolute joints, meters for prismatic joints.
+
+</td>
+</tr>
+<tr>
+<td><code>velocity</code> (optional)</td>
+<td>
+
+float64
+
+</td>
+<td>
+
+Joint velocity. Rad/s for revolute joints, m/s for prismatic joints.
+
+</td>
+</tr>
+<tr>
+<td><code>acceleration</code> (optional)</td>
+<td>
+
+float64
+
+</td>
+<td>
+
+Joint acceleration. Rad/s² for revolute joints, m/s² for prismatic joints.
+
+</td>
+</tr>
+<tr>
+<td><code>effort</code> (optional)</td>
+<td>
+
+float64
+
+</td>
+<td>
+
+Joint effort (force or torque). Nm for revolute joints, N for prismatic joints.
+
+</td>
+</tr>
+</table>
+
+## JointStates
+
+The state of a set of joints at a given time.
+
+<table>
+  <tr>
+    <th>field</th>
+    <th>type</th>
+    <th>description</th>
+  </tr>
+<tr>
+<td><code>timestamp</code></td>
+<td>
+
+[Timestamp](#timestamp)
+
+</td>
+<td>
+
+Timestamp of the joint states
+
+</td>
+</tr>
+<tr>
+<td><code>joints</code></td>
+<td>
+
+[JointState](#jointstate)[]
+
+</td>
+<td>
+
+Joint states
 
 </td>
 </tr>
@@ -1629,7 +1772,7 @@ Color used to visualize the location
 </td>
 </tr>
 <tr>
-<td><code>metadata</code></td>
+<td><code>metadata</code> (optional)</td>
 <td>
 
 [KeyValuePair](#keyvaluepair)[]
@@ -2244,6 +2387,19 @@ Stroke thickness in pixels
 
 </td>
 </tr>
+<tr>
+<td><code>metadata</code> (optional)</td>
+<td>
+
+[KeyValuePair](#keyvaluepair)[]
+
+</td>
+<td>
+
+Additional user-provided metadata associated with this annotation. Keys must be unique.
+
+</td>
+</tr>
 </table>
 
 ## Pose
@@ -2638,6 +2794,15 @@ For each `encoding` value, the `data` field contains image pixel data serialized
   - Pixel channel values are represented as unsigned 8-bit integers.
   - U and V values are shared between horizontal pairs of pixels. Each pair of output pixels is encoded as [Y1, U, Y2, V].
   - `step` must be greater than or equal to `width` * 2.
+- `nv12`:
+  - Pixel colors are decomposed into [Y'UV](https://en.wikipedia.org/wiki/Y%E2%80%B2UV) channels using 4:2:0 chroma subsampling. The data is stored in [NV12](https://www.kernel.org/doc/html/v4.10/media/uapi/v4l/pixfmt-nv12.html) semi-planar layout with two contiguous planes: a Y (luma) plane followed by an interleaved UV (chroma) plane.
+  - All channel values are represented as unsigned 8-bit integers.
+  - Both planes use `step` as their row stride.
+  - The Y plane contains one luma value per pixel (`step` * `height` bytes).
+  - The UV plane contains interleaved U, V chroma pairs, subsampled by a factor of 2 in both dimensions (`width`/2 pairs per row, `height`/2 rows, `step` * `height`/2 bytes). Each U, V pair is shared by a 2x2 block of pixels.
+  - `width` and `height` must be even.
+  - `step` must be greater than or equal to `width`.
+  - Total `data` length is `step` * `height` * 3/2 bytes.
 - `rgb8`:
   - Pixel colors are decomposed into Red, Green, and Blue channels.
   - Pixel channel values are represented as unsigned 8-bit integers.
@@ -2665,7 +2830,7 @@ For each `encoding` value, the `data` field contains image pixel data serialized
   - Pixel colors are decomposed into Red, Blue and Green channels.
   - Pixel channel values are represented as unsigned 8-bit integers, and serialized in a 2x2 bayer filter pattern.
   - The order of the four letters after `bayer_` determine the layout, so for `bayer_wxyz8` the pattern is:
-  ```plaintext
+  ```text
   w | x
   - + -
   y | z
@@ -3103,6 +3268,19 @@ Text color
 <td>
 
 Background fill color
+
+</td>
+</tr>
+<tr>
+<td><code>metadata</code> (optional)</td>
+<td>
+
+[KeyValuePair](#keyvaluepair)[]
+
+</td>
+<td>
+
+Additional user-provided metadata associated with this annotation. Keys must be unique.
 
 </td>
 </tr>

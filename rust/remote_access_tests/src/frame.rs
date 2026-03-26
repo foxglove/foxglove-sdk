@@ -1,4 +1,4 @@
-use anyhow::{bail, ensure, Result};
+use anyhow::{Result, bail, ensure};
 
 /// Operation code for ws-protocol byte stream framing.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -29,6 +29,19 @@ pub struct Frame {
 
 /// Header size: 1 byte opcode + 4 byte LE u32 length.
 pub const HEADER_SIZE: usize = 5;
+
+/// Frames a JSON text message for sending over the ws-protocol byte stream.
+///
+/// `inner` is the JSON payload bytes. The result is wrapped in the ws-protocol
+/// frame format: `[Text opcode (1)] [length: u32 LE] [inner]`.
+pub fn frame_text_message(inner: &[u8]) -> Vec<u8> {
+    let len = inner.len() as u32;
+    let mut buf = Vec::with_capacity(HEADER_SIZE + inner.len());
+    buf.push(OpCode::Text as u8);
+    buf.extend_from_slice(&len.to_le_bytes());
+    buf.extend_from_slice(inner);
+    buf
+}
 
 /// Frames a binary protocol message for sending over the ws-protocol byte stream.
 ///

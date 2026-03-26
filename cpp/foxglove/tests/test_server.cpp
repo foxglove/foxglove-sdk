@@ -9,11 +9,17 @@
 #include <catch2/matchers/catch_matchers_string.hpp>
 #include <catch2/matchers/catch_matchers_vector.hpp>
 #include <nlohmann/json.hpp>
-#include <websocketpp/client.hpp>
-#include <websocketpp/config/asio_no_tls_client.hpp>
 
+#include <atomic>
+#include <condition_variable>
+#include <cstring>
+#include <libwebsockets.h>
+#include <mutex>
+#include <queue>
+#include <thread>
 #include <type_traits>
 
+#include "common/test_helpers.hpp"
 #include "foxglove/playback_state.hpp"
 
 using Catch::Matchers::ContainsSubstring;
@@ -24,10 +30,7 @@ using Json = nlohmann::json;
 using namespace std::string_literals;
 using namespace std::string_view_literals;
 
-using WebSocketClientInner = websocketpp::client<websocketpp::config::asio_client>;
-using WebSocketConnection =
-  std::shared_ptr<websocketpp::connection<websocketpp::config::asio_client>>;
-using WebSocketMessage = websocketpp::config::asio_client::message_type::ptr;
+using foxglove_tests::requireValue;
 
 namespace {
 
@@ -40,23 +43,7 @@ constexpr auto kTestTimeout = std::chrono::seconds(5);
 
 class WebSocketClient {
 public:
-  explicit WebSocketClient() {
-    client_.clear_access_channels(websocketpp::log::alevel::all);
-    client_.clear_error_channels(websocketpp::log::elevel::all);
-    client_.init_asio();
-    client_.set_open_handler([this](const auto& hdl [[maybe_unused]]) {
-      std::scoped_lock lock{mutex_};
-      connection_opened_ = true;
-      cv_.notify_one();
-    });
-    client_.set_message_handler(
-      [this](const websocketpp::connection_hdl&, const WebSocketMessage& msg) {
-        std::scoped_lock lock{mutex_};
-        rx_queue_.push(msg->get_payload());
-        cv_.notify_one();
-      }
-    );
-  }
+  explicit WebSocketClient() = default;
 
   WebSocketClient(const WebSocketClient&) = delete;
   WebSocketClient(WebSocketClient&&) = delete;
@@ -64,28 +51,55 @@ public:
   WebSocketClient& operator=(WebSocketClient&&) = delete;
 
   ~WebSocketClient() {
-    if (!started_ || !thread_.joinable()) {
-      return;
+    running_ = false;
+    if (context_ != nullptr) {
+      lws_cancel_service(context_);
     }
-    if (!closed_) {
-      std::error_code ec;
-      client_.close(connection_, websocketpp::close::status::normal, "", ec);
-      UNSCOPED_INFO(ec.message());
+    if (thread_.joinable()) {
+      thread_.join();
     }
-    client_.stop();
-    std::error_code ec;
-    thread_.join();
+    if (context_ != nullptr) {
+      lws_context_destroy(context_);
+    }
   }
 
   void start(uint16_t port) {
-    std::error_code ec;
-    connection_ = client_.get_connection("ws://127.0.0.1:" + std::to_string(port), ec);
-    connection_->add_subprotocol("foxglove.sdk.v1");
-    UNSCOPED_INFO(ec.message());
-    REQUIRE(!ec);
-    client_.connect(connection_);
-    started_ = true;
-    thread_ = std::thread{&WebSocketClientInner::run, std::ref(client_)};
+    port_ = port;
+
+    // NOLINTBEGIN(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
+    static const struct lws_protocols kProtocols[] = {
+      {"foxglove.sdk.v1", &WebSocketClient::callback, 0, 65536, 0, nullptr, 0},
+      LWS_PROTOCOL_LIST_TERM,
+    };
+    // NOLINTEND(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
+
+    struct lws_context_creation_info info = {};
+    info.port = CONTEXT_PORT_NO_LISTEN;
+    info.protocols =
+      kProtocols;  // NOLINT(cppcoreguidelines-pro-bounds-array-to-pointer-decay,hicpp-no-array-decay)
+    info.user = this;
+
+    context_ = lws_create_context(&info);
+    REQUIRE(context_ != nullptr);
+
+    struct lws_client_connect_info connect_info = {};
+    connect_info.context = context_;
+    connect_info.address = "127.0.0.1";
+    connect_info.port = port_;
+    connect_info.path = "/";
+    connect_info.host = connect_info.address;
+    connect_info.origin = connect_info.address;
+    connect_info.protocol = "foxglove.sdk.v1";
+
+    wsi_ = lws_client_connect_via_info(&connect_info);
+    REQUIRE(wsi_ != nullptr);
+
+    running_ = true;
+    thread_ = std::thread([this] {
+      while (running_) {
+        lws_service(context_, 50);
+      }
+    });
   }
 
   void waitForConnection() {
@@ -114,10 +128,10 @@ public:
     std::unique_lock lock{mutex_};
     auto start_time = std::chrono::steady_clock::now();
 
-    constexpr std::chrono::milliseconds single_message_timeout = std::chrono::milliseconds(100);
+    constexpr std::chrono::milliseconds kSingleMessageTimeout = std::chrono::milliseconds(100);
 
     while (std::chrono::steady_clock::now() - start_time < timeout) {
-      auto wait_result = cv_.wait_for(lock, single_message_timeout, [this] {
+      auto wait_result = cv_.wait_for(lock, kSingleMessageTimeout, [this] {
         return !rx_queue_.empty();
       });
       if (wait_result) {
@@ -132,41 +146,104 @@ public:
   }
 
   void send(std::string const& payload) {
-    std::error_code ec;
-    client_.send(connection_, payload, websocketpp::frame::opcode::text, ec);
-    UNSCOPED_INFO(ec.message());
-    REQUIRE(!ec);
+    {
+      std::scoped_lock lock{tx_mutex_};
+      tx_queue_.push({std::vector<uint8_t>(payload.begin(), payload.end()), false});
+    }
+    lws_cancel_service(context_);
   }
 
   void send(void const* payload, size_t len) {
-    std::error_code ec;
-    client_.send(connection_, payload, len, websocketpp::frame::opcode::binary, ec);
-    UNSCOPED_INFO(ec.message());
-    REQUIRE(!ec);
+    const auto* ptr = static_cast<const uint8_t*>(payload);
+    {
+      std::scoped_lock lock{tx_mutex_};
+      tx_queue_.push({std::vector<uint8_t>(ptr, ptr + len), true});
+    }
+    lws_cancel_service(context_);
   }
 
   void send(std::vector<std::byte>& payload) {
     this->send(payload.data(), payload.size());
   }
 
-  void close() {
-    closed_ = true;
-    std::error_code ec;
-    client_.close(connection_, websocketpp::close::status::normal, "", ec);
-    UNSCOPED_INFO(ec.message());
-    REQUIRE(!ec);
-  }
-
-  WebSocketClientInner& inner() {
-    return client_;
-  }
-
 private:
-  WebSocketClientInner client_;
-  WebSocketConnection connection_;
+  struct TxMessage {
+    std::vector<uint8_t> data;
+    bool binary;
+  };
+
+  static int callback(
+    struct lws* wsi, enum lws_callback_reasons reason, void* /*user*/, void* in, size_t len
+  ) {
+    auto* context = lws_get_context(wsi);
+    auto* self = static_cast<WebSocketClient*>(lws_context_user(context));
+    if (self == nullptr) {
+      return 0;
+    }
+
+    switch (reason) {
+      case LWS_CALLBACK_CLIENT_ESTABLISHED: {
+        std::scoped_lock lock{self->mutex_};
+        self->connection_opened_ = true;
+        self->cv_.notify_one();
+        lws_callback_on_writable(wsi);
+        break;
+      }
+      case LWS_CALLBACK_CLIENT_RECEIVE: {
+        const auto* data = static_cast<const char*>(in);
+        self->rx_buffer_.append(data, len);
+        if (lws_is_final_fragment(wsi) != 0) {
+          std::scoped_lock lock{self->mutex_};
+          self->rx_queue_.push(std::move(self->rx_buffer_));
+          self->rx_buffer_.clear();
+          self->cv_.notify_one();
+        }
+        break;
+      }
+      case LWS_CALLBACK_CLIENT_WRITEABLE: {
+        std::scoped_lock lock{self->tx_mutex_};
+        if (!self->tx_queue_.empty()) {
+          auto& msg = self->tx_queue_.front();
+          std::vector<uint8_t> buf(LWS_PRE + msg.data.size());
+          std::memcpy(buf.data() + LWS_PRE, msg.data.data(), msg.data.size());
+          auto protocol = msg.binary ? LWS_WRITE_BINARY : LWS_WRITE_TEXT;
+          lws_write(wsi, buf.data() + LWS_PRE, msg.data.size(), protocol);
+          self->tx_queue_.pop();
+          if (!self->tx_queue_.empty()) {
+            lws_callback_on_writable(wsi);
+          }
+        }
+        break;
+      }
+      case LWS_CALLBACK_EVENT_WAIT_CANCELLED: {
+        if (self->wsi_ != nullptr) {
+          lws_callback_on_writable(self->wsi_);
+        }
+        break;
+      }
+      case LWS_CALLBACK_CLIENT_CLOSED:
+      case LWS_CALLBACK_WSI_DESTROY: {
+        if (wsi == self->wsi_) {
+          self->wsi_ = nullptr;
+        }
+        break;
+      }
+      default:
+        break;
+    }
+    return 0;
+  }
+
+  struct lws_context* context_ = nullptr;
+  struct lws* wsi_ = nullptr;
+  uint16_t port_ = 0;
   std::thread thread_;
-  bool started_{};
-  bool closed_{};
+  std::atomic<bool> running_{false};
+
+  std::mutex tx_mutex_;
+  std::queue<TxMessage> tx_queue_;
+
+  std::string rx_buffer_;
 
   std::mutex mutex_;
   std::condition_variable cv_;
@@ -179,15 +256,14 @@ foxglove::WebSocketServer startServer(foxglove::WebSocketServerOptions&& options
   // always select an available port
   options.port = 0;
   auto result = foxglove::WebSocketServer::create(std::move(options));
-  REQUIRE(result.has_value());
-  auto server = std::move(result.value());
+  auto server = std::move(requireValue(result));
   REQUIRE(server.port() != 0);
   return server;
 }
 
 foxglove::WebSocketServer startServer(
   foxglove::Context context,
-  foxglove::WebSocketServerCapabilities capabilities = foxglove::WebSocketServerCapabilities(0),
+  foxglove::WebSocketServerCapabilities capabilities = foxglove::WebSocketServerCapabilities::None,
   foxglove::WebSocketServerCallbacks&& callbacks = {},
   std::vector<std::string> supported_encodings = {}
 ) {
@@ -253,8 +329,7 @@ TEST_CASE("Log a message with and without metadata") {
   auto server = startServer(context);
 
   auto channel_result = foxglove::RawChannel::create("example", "json", std::nullopt, context);
-  REQUIRE(channel_result.has_value());
-  auto channel = std::move(channel_result.value());
+  auto channel = std::move(requireValue(channel_result));
   const std::array<uint8_t, 3> data = {1, 2, 3};
   REQUIRE(
     channel.log(reinterpret_cast<const std::byte*>(data.data()), data.size()) ==
@@ -294,8 +369,7 @@ TEST_CASE("Subscribe and unsubscribe callbacks") {
   foxglove::Schema schema;
   schema.name = "ExampleSchema";
   auto channel_result = foxglove::RawChannel::create("example", "json", schema, context);
-  REQUIRE(channel_result.has_value());
-  auto channel = std::move(channel_result.value());
+  auto channel = std::move(requireValue(channel_result));
 
   WebSocketClient client;
   client.start(server.port());
@@ -383,22 +457,20 @@ TEST_CASE("Client advertise/publish callbacks") {
     );
     cv.notify_all();
   };
-  callbacks.onMessageData =
-    // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
-    [&](
-      uint32_t client_id [[maybe_unused]],
-      uint32_t client_channel_id [[maybe_unused]],
-      const std::byte* data,
-      size_t data_len
-    ) {
-      std::scoped_lock lock{mutex};
-      received_message = true;
-      REQUIRE(data_len == 3);
-      REQUIRE(char(data[0]) == 'a');
-      REQUIRE(char(data[1]) == 'b');
-      REQUIRE(char(data[2]) == 'c');
-      cv.notify_all();
-    };
+  callbacks.onMessageData = [&](
+                              uint32_t client_id [[maybe_unused]],
+                              uint32_t client_channel_id [[maybe_unused]],
+                              const std::byte* data,
+                              size_t data_len
+                            ) {
+    std::scoped_lock lock{mutex};
+    received_message = true;
+    REQUIRE(data_len == 3);
+    REQUIRE(char(data[0]) == 'a');
+    REQUIRE(char(data[1]) == 'b');
+    REQUIRE(char(data[2]) == 'c');
+    cv.notify_all();
+  };
   callbacks.onClientUnadvertise = [&](uint32_t client_id, uint32_t client_channel_id) {
     std::scoped_lock lock{mutex};
     advertised = false;
@@ -607,8 +679,7 @@ TEST_CASE("Parameter callbacks") {
         REQUIRE(params[2].value().has_value());
         if (params[2].isByteArray()) {
           auto result = params[2].getByteArray();
-          REQUIRE(result.has_value());
-          auto bytes = result.value();
+          auto bytes = requireValue(result);
           REQUIRE(bytes.size() == 6);
           REQUIRE(memcmp(bytes.data(), "secret", 6) == 0);
         }
@@ -794,7 +865,6 @@ std::vector<std::byte> makeServiceRequest(
 }
 
 void validateServiceResponse(
-  // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
   const std::string_view response, uint32_t service_id, uint32_t call_id, std::string_view encoding,
   const std::vector<std::byte>& payload
 ) {
@@ -866,11 +936,11 @@ TEST_CASE("Service callbacks") {
   REQUIRE(parsed["op"] == "advertiseServices");
   REQUIRE(parsed.contains("services"));
   std::map<std::string, uint32_t> service_ids;
-  for (const auto& parsedService : parsed["services"]) {
-    REQUIRE(parsedService.contains("id"));
-    REQUIRE(parsedService.contains("name"));
-    uint8_t id(parsedService["id"]);
-    std::string name(parsedService["name"]);
+  for (const auto& parsed_service : parsed["services"]) {
+    REQUIRE(parsed_service.contains("id"));
+    REQUIRE(parsed_service.contains("name"));
+    uint8_t id(parsed_service["id"]);
+    std::string name(parsed_service["name"]);
     service_ids[name] = id;
     Json expected;
     if (name == "/echo") {
@@ -902,7 +972,7 @@ TEST_CASE("Service callbacks") {
     } else {
     }
     expected["id"] = id;
-    REQUIRE(parsedService == expected);
+    REQUIRE(parsed_service == expected);
   }
   REQUIRE(service_ids.count("/echo") == 1);
   REQUIRE(service_ids.count("/error") == 1);
@@ -1188,8 +1258,21 @@ TEST_CASE("Broadcast time") {
 }
 
 TEST_CASE("Clear session") {
+  std::mutex mutex;
+  std::condition_variable cv;
+  bool client_connected = false;
+
   auto context = foxglove::Context::create();
-  auto server = startServer(context);
+
+  foxglove::WebSocketServerOptions options;
+  options.context = context;
+  options.name = "unit-test";
+  options.callbacks.onClientConnect = [&]() {
+    std::scoped_lock lock{mutex};
+    client_connected = true;
+    cv.notify_one();
+  };
+  auto server = startServer(std::move(options));
 
   // Set an initial session ID.
   auto error = server.clearSession("initial");
@@ -1206,6 +1289,15 @@ TEST_CASE("Clear session") {
   REQUIRE(parsed.contains("sessionId"));
   std::string session_id1 = parsed["sessionId"].get<std::string>();
   REQUIRE(session_id1 == "initial");
+
+  // Wait for the server to register the client before broadcasting.
+  {
+    std::unique_lock lock{mutex};
+    auto wait_result = cv.wait_for(lock, kTestTimeout, [&] {
+      return client_connected;
+    });
+    REQUIRE(wait_result);
+  }
 
   // Reset the session without specifying a new session ID.
   error = server.clearSession();
@@ -1262,8 +1354,20 @@ TEST_CASE("Initial session id") {
 }
 
 TEST_CASE("Publish status") {
+  std::mutex mutex;
+  std::condition_variable cv;
+  bool client_connected = false;
+
   auto context = foxglove::Context::create();
-  auto server = startServer(context);
+
+  foxglove::WebSocketServerOptions ws_options;
+  ws_options.context = std::move(context);
+  ws_options.callbacks.onClientConnect = [&]() {
+    std::scoped_lock lock{mutex};
+    client_connected = true;
+    cv.notify_one();
+  };
+  auto server = startServer(std::move(ws_options));
 
   WebSocketClient client;
   client.start(server.port());
@@ -1273,6 +1377,15 @@ TEST_CASE("Publish status") {
   auto parsed = Json::parse(payload);
   REQUIRE(parsed.contains("op"));
   REQUIRE(parsed["op"] == "serverInfo");
+
+  // Wait for the server to register the client before broadcasting.
+  {
+    std::unique_lock lock{mutex};
+    auto wait_result = cv.wait_for(lock, kTestTimeout, [&] {
+      return client_connected;
+    });
+    REQUIRE(wait_result);
+  }
 
   // Publish status without an ID.
   auto error = server.publishStatus(foxglove::WebSocketServerStatusLevel::Info, "hooray");
@@ -1327,25 +1440,24 @@ TEST_CASE("Log message to websocket sinks") {
 
   std::vector<uint64_t> client_sink_ids;
   auto channel_result = foxglove::RawChannel::create("test", "json", std::nullopt, context);
-  REQUIRE(channel_result.has_value());
 
-  foxglove::RawChannel channel = std::move(channel_result.value());
+  foxglove::RawChannel channel = std::move(requireValue(channel_result));
 
   foxglove::WebSocketServerCallbacks cb;
   cb.onSubscribe = [&](uint64_t subscribed_channel_id, const foxglove::ClientMetadata& metadata) {
     std::scoped_lock lock{mutex};
     if (subscribed_channel_id == channel.id() && metadata.sink_id.has_value()) {
-      client_sink_ids.push_back(metadata.sink_id.value());
+      client_sink_ids.push_back(requireValue(metadata.sink_id));
     }
     cv.notify_one();
   };
 
-  auto server = startServer(context, foxglove::WebSocketServerCapabilities(0), std::move(cb));
+  auto server = startServer(context, foxglove::WebSocketServerCapabilities::None, std::move(cb));
 
   // Set up a few clients and connect them
-  constexpr size_t num_clients = 3;
+  constexpr size_t kNumClients = 3;
   std::vector<std::unique_ptr<WebSocketClient>> clients;
-  for (size_t i = 0; i < num_clients; ++i) {
+  for (size_t i = 0; i < kNumClients; ++i) {
     clients.emplace_back(std::make_unique<WebSocketClient>());
     clients.back()->start(server.port());
     clients.back()->waitForConnection();
@@ -1383,14 +1495,14 @@ TEST_CASE("Log message to websocket sinks") {
   {
     std::unique_lock lock{mutex};
     auto wait_result = cv.wait_for(lock, kTestTimeout, [&] {
-      return client_sink_ids.size() == num_clients;
+      return client_sink_ids.size() == kNumClients;
     });
     REQUIRE(wait_result);
   }
 
   uint64_t clients_received_message = 0;
   std::string message = R"({"data": "foxglove"})";
-  auto messageDataPredicate = [](const std::string& payload) {
+  auto message_data_predicate = [](const std::string& payload) {
     // Only count messages that start with opcode 1 (MessageData)
     return payload[0] == '\x01';
   };
@@ -1407,7 +1519,7 @@ TEST_CASE("Log message to websocket sinks") {
     );
 
     for (auto& client : clients) {
-      auto message_response = client->filterRecv(messageDataPredicate);
+      auto message_response = client->filterRecv(message_data_predicate);
 
       if (message_response.has_value()) {
         ++clients_received_message;
@@ -1422,14 +1534,14 @@ TEST_CASE("Log message to websocket sinks") {
     channel.log(reinterpret_cast<const std::byte*>(message.data()), message.size());
 
     for (auto& client : clients) {
-      auto message_response = client->filterRecv(messageDataPredicate);
+      auto message_response = client->filterRecv(message_data_predicate);
 
       if (message_response.has_value()) {
         ++clients_received_message;
       }
     }
 
-    REQUIRE(clients_received_message == num_clients);
+    REQUIRE(clients_received_message == kNumClients);
   }
 }
 
@@ -1445,7 +1557,7 @@ TEST_CASE("Server channel filtering") {
   callbacks.onSubscribe =
     [&](uint64_t channel_id, const foxglove::ClientMetadata& _ [[maybe_unused]]) {
       std::scoped_lock lock{mutex};
-      std::cerr << "onSubscribe: " << channel_id << std::endl;
+      std::cerr << "onSubscribe: " << channel_id << '\n';
       subscribe_calls.push_back(channel_id);
       cv.notify_all();
     };
@@ -1453,19 +1565,17 @@ TEST_CASE("Server channel filtering") {
   foxglove::WebSocketServerOptions ws_options;
   ws_options.context = context;
   ws_options.callbacks = std::move(callbacks);
-  ws_options.sink_channel_filter = [](foxglove::ChannelDescriptor&& channel) -> bool {
+  ws_options.sink_channel_filter = [](const foxglove::ChannelDescriptor& channel) -> bool {
     return channel.topic() == "/1";
   };
 
   auto server = startServer(std::move(ws_options));
 
   auto channel_result_1 = foxglove::RawChannel::create("/1", "json", std::nullopt, context);
-  REQUIRE(channel_result_1.has_value());
-  auto channel_1 = std::move(channel_result_1.value());
+  auto channel_1 = std::move(requireValue(channel_result_1));
 
   auto channel_result_2 = foxglove::RawChannel::create("/2", "json", std::nullopt, context);
-  REQUIRE(channel_result_2.has_value());
-  auto channel_2 = std::move(channel_result_2.value());
+  auto channel_2 = std::move(requireValue(channel_result_2));
 
   WebSocketClient client;
   client.start(server.port());
@@ -1477,7 +1587,7 @@ TEST_CASE("Server channel filtering") {
   REQUIRE(parsed["op"] == "serverInfo");
 
   payload = client.recv();
-  std::cerr << "payload: " << payload << std::endl;
+  std::cerr << "payload: " << payload << '\n';
   parsed = Json::parse(payload);
   REQUIRE(parsed.contains("op"));
   REQUIRE(parsed["op"] == "advertise");
@@ -1672,13 +1782,11 @@ TEST_CASE("Playback control request callback") {
       return received_playback_control_request.has_value();
     });
     REQUIRE(wait_result);
-    REQUIRE(
-      received_playback_control_request->playback_command == foxglove::PlaybackCommand::Pause
-    );
-    REQUIRE(received_playback_control_request->playback_speed == 1.0);
-    REQUIRE(received_playback_control_request->seek_time.has_value());
-    REQUIRE(received_playback_control_request->seek_time.value() == 42);
-    REQUIRE(received_playback_control_request->request_id == "a_request_id");
+    auto& req = requireValue(received_playback_control_request);
+    REQUIRE(req.playback_command == foxglove::PlaybackCommand::Pause);
+    REQUIRE(req.playback_speed == 1.0);
+    REQUIRE(requireValue(req.seek_time) == 42);
+    REQUIRE(req.request_id == "a_request_id");
   }
 
   std::vector<std::byte> received_binary_playback_state;
@@ -1687,9 +1795,8 @@ TEST_CASE("Playback control request callback") {
   }
   auto received_playback_state = parseBinaryPlaybackState(received_binary_playback_state);
 
-  REQUIRE(received_playback_state.has_value());
-  REQUIRE(received_playback_state->request_id.has_value());
-  REQUIRE(received_playback_state->request_id.value() == "a_request_id");
+  auto& state = requireValue(received_playback_state);
+  REQUIRE(requireValue(state.request_id) == "a_request_id");
   REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
 }
 
@@ -1745,9 +1852,9 @@ TEST_CASE("Broadcast playback state") {
   }
   auto received_playback_state = parseBinaryPlaybackState(received_binary_playback_state);
 
-  REQUIRE(received_playback_state.has_value());
-  REQUIRE(received_playback_state->request_id == std::nullopt);
-  REQUIRE(received_playback_state->did_seek);
+  auto& state = requireValue(received_playback_state);
+  REQUIRE(state.request_id == std::nullopt);
+  REQUIRE(state.did_seek);
   REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
 }
 

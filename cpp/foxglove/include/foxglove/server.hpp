@@ -44,7 +44,7 @@ struct ClientChannel {
 /// @brief A client connected to the server.
 struct ClientMetadata {
   /// @brief The ID of the client.
-  uint32_t id;
+  uint32_t id{};
   /// @brief The sink ID associated with the client.
   std::optional<uint64_t> sink_id;
 };
@@ -54,6 +54,8 @@ struct ClientMetadata {
 /// A server may advertise certain capabilities to clients and provide related functionality
 /// in WebSocketServerCallbacks.
 enum class WebSocketServerCapabilities : uint8_t {
+  /// No capabilities.
+  None = 0,
   /// Allow clients to advertise channels to send data messages to the server.
   ClientPublish = 1 << 0,
   /// Allow clients to subscribe and make connection graph updates
@@ -236,7 +238,7 @@ struct WebSocketServerOptions {
   /// @brief The callbacks of the server.
   WebSocketServerCallbacks callbacks;
   /// @brief The capabilities of the server.
-  WebSocketServerCapabilities capabilities = WebSocketServerCapabilities(0);
+  WebSocketServerCapabilities capabilities = WebSocketServerCapabilities::None;
   /// @brief The supported encodings of the server.
   std::vector<std::string> supported_encodings;
   /// @brief An optional session ID for the server.
@@ -324,10 +326,10 @@ public:
   /// This method will fail for various reasons, with the following error codes:
   ///
   /// - `DuplicateService`: A service with the same name is already registered.
-  /// - `MissingRequestedEncoding`: The service didn't declare a request
+  /// - `MissingRequestEncoding`: The service didn't declare a request
   ///   encoding, and the server was not configured with a global list of
   ///   supported encodings.
-  /// - `ServicesNotSupported`: The server was not convfigured with the
+  /// - `ServicesNotSupported`: The server was not configured with the
   ///   `Services` capability.
   ///
   /// @param service The service to add.

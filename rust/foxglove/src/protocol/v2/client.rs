@@ -11,10 +11,10 @@ mod unsubscribe;
 #[doc(hidden)]
 pub use crate::protocol::common::client::PlaybackControlRequest;
 pub use crate::protocol::common::client::{
-    Advertise, FetchAsset, GetParameters, MessageData, ServiceCallRequest, SetParameters,
-    SubscribeParameterUpdates, Unadvertise, UnsubscribeParameterUpdates,
+    Advertise, AdvertiseChannel, FetchAsset, GetParameters, MessageData, ServiceCallRequest,
+    SetParameters, SubscribeParameterUpdates, Unadvertise, UnsubscribeParameterUpdates,
 };
-pub use subscribe::Subscribe;
+pub use subscribe::{Subscribe, SubscribeChannel};
 pub use unsubscribe::Unsubscribe;
 
 /// Binary opcodes for v2 client messages.
@@ -24,8 +24,6 @@ pub(crate) enum BinaryOpcode {
     ServiceCallRequest = 2,
     #[doc(hidden)]
     PlaybackControlRequest = 3,
-    Subscribe = 4,
-    Unsubscribe = 5,
 }
 
 impl BinaryOpcode {
@@ -34,19 +32,9 @@ impl BinaryOpcode {
             1 => Some(Self::MessageData),
             2 => Some(Self::ServiceCallRequest),
             3 => Some(Self::PlaybackControlRequest),
-            4 => Some(Self::Subscribe),
-            5 => Some(Self::Unsubscribe),
             _ => None,
         }
     }
-}
-
-impl<'a> BinaryMessage<'a> for Subscribe {
-    const OPCODE: u8 = BinaryOpcode::Subscribe as u8;
-}
-
-impl<'a> BinaryMessage<'a> for Unsubscribe {
-    const OPCODE: u8 = BinaryOpcode::Unsubscribe as u8;
 }
 
 /// A representation of a client message useful for deserializing.
@@ -93,12 +81,6 @@ impl<'a> ClientMessage<'a> {
                 Some(BinaryOpcode::PlaybackControlRequest) => {
                     PlaybackControlRequest::parse_payload(data)
                         .map(ClientMessage::PlaybackControlRequest)
-                }
-                Some(BinaryOpcode::Subscribe) => {
-                    Subscribe::parse_payload(data).map(ClientMessage::Subscribe)
-                }
-                Some(BinaryOpcode::Unsubscribe) => {
-                    Unsubscribe::parse_payload(data).map(ClientMessage::Unsubscribe)
                 }
                 None => Err(ParseError::InvalidOpcode(opcode)),
             }
@@ -165,5 +147,93 @@ impl<'a> From<JsonMessage<'a>> for ClientMessage<'a> {
             JsonMessage::UnsubscribeConnectionGraph => Self::UnsubscribeConnectionGraph,
             JsonMessage::FetchAsset(m) => Self::FetchAsset(m),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::protocol::common::client::PlaybackCommand;
+    use assert_matches::assert_matches;
+
+    #[test]
+    fn test_message_data_encode() {
+        let message = MessageData::new(30, br#"{"key": "value"}"#);
+        let buf = message.to_bytes();
+        insta::assert_snapshot!(format!("{:#04x?}", buf));
+        let parsed = ClientMessage::parse_binary(&buf).unwrap();
+        assert_eq!(parsed, ClientMessage::MessageData(message));
+    }
+
+    #[test]
+    fn test_service_call_request_encode() {
+        let message = ServiceCallRequest {
+            service_id: 10,
+            call_id: 12,
+            encoding: "json".into(),
+            payload: br#"{"key": "value"}"#.into(),
+        };
+        let buf = message.to_bytes();
+        insta::assert_snapshot!(format!("{:#04x?}", buf));
+        let parsed = ClientMessage::parse_binary(&buf).unwrap();
+        assert_eq!(parsed, ClientMessage::ServiceCallRequest(message));
+    }
+
+    #[test]
+    fn test_playback_control_request_encode() {
+        let message = PlaybackControlRequest {
+            playback_command: PlaybackCommand::Play,
+            playback_speed: 1.0,
+            seek_time: None,
+            request_id: "some-id".to_string(),
+        };
+        let buf = message.to_bytes();
+        insta::assert_snapshot!(format!("{:#04x?}", buf));
+        let parsed = ClientMessage::parse_binary(&buf).unwrap();
+        assert_eq!(parsed, ClientMessage::PlaybackControlRequest(message));
+    }
+
+    #[test]
+    fn test_playback_control_request_encode_play_with_seek() {
+        let message = PlaybackControlRequest {
+            playback_command: PlaybackCommand::Play,
+            playback_speed: 1.0,
+            seek_time: Some(123_456_789),
+            request_id: "some-id".to_string(),
+        };
+        let buf = message.to_bytes();
+        insta::assert_snapshot!(format!("{:#04x?}", buf));
+        let parsed = ClientMessage::parse_binary(&buf).unwrap();
+        assert_eq!(parsed, ClientMessage::PlaybackControlRequest(message));
+    }
+
+    #[test]
+    fn test_playback_control_request_encode_pause() {
+        let message = PlaybackControlRequest {
+            playback_command: PlaybackCommand::Pause,
+            playback_speed: 1.0,
+            seek_time: None,
+            request_id: "some-id".to_string(),
+        };
+        let buf = message.to_bytes();
+        insta::assert_snapshot!(format!("{:#04x?}", buf));
+        let parsed = ClientMessage::parse_binary(&buf).unwrap();
+        assert_eq!(parsed, ClientMessage::PlaybackControlRequest(message));
+    }
+
+    #[test]
+    fn test_parse_binary_empty() {
+        assert_matches!(
+            ClientMessage::parse_binary(b""),
+            Err(ParseError::EmptyBinaryMessage)
+        );
+    }
+
+    #[test]
+    fn test_parse_binary_invalid_opcode() {
+        assert_matches!(
+            ClientMessage::parse_binary(&[0xff]),
+            Err(ParseError::InvalidOpcode(0xff))
+        );
     }
 }

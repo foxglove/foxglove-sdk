@@ -91,7 +91,6 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
     if (callbacks->onMessageData) {
       c_callbacks.on_message_data = [](
                                       const void* context,
-                                      // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
                                       uint32_t client_id,
                                       uint32_t client_channel_id,
                                       const uint8_t* payload,
@@ -109,7 +108,6 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
     }
     if (callbacks->onClientUnadvertise) {
       c_callbacks.on_client_unadvertise =
-        // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
         [](uint32_t client_id, uint32_t client_channel_id, const void* context) {
           try {
             (static_cast<const WebSocketServerCallbacks*>(context))
@@ -123,7 +121,6 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
       c_callbacks.on_get_parameters = [](
                                         const void* context,
                                         uint32_t client_id,
-                                        // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
                                         const struct foxglove_string* c_request_id,
                                         const struct foxglove_string* c_param_names,
                                         size_t param_names_len
@@ -343,9 +340,9 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
         if (!context) {
           return true;  // Default to allowing if no filter
         }
-        auto* filter_func = static_cast<const SinkChannelFilterFn*>(context);
+        const auto* filter_func = static_cast<const SinkChannelFilterFn*>(context);
         auto cpp_channel = ChannelDescriptor(channel);
-        return (*filter_func)(std::move(cpp_channel));
+        return (*filter_func)(cpp_channel);
       } catch (const std::exception& exc) {
         warn() << "Sink channel filter failed: " << exc.what();
         return false;

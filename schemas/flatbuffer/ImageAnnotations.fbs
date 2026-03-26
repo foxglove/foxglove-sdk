@@ -4,11 +4,15 @@ include "CircleAnnotation.fbs";
 include "KeyValuePair.fbs";
 include "PointsAnnotation.fbs";
 include "TextAnnotation.fbs";
+include "Time.fbs";
 
 namespace foxglove;
 
 /// Array of annotations for a 2D image
 table ImageAnnotations {
+  /// Timestamp of the image annotations. When set, individual annotation timestamps will be ignored.
+  timestamp:Time (id: 4);
+
   /// Circle annotations
   circles:[foxglove.CircleAnnotation] (id: 0);
 
@@ -18,7 +22,7 @@ table ImageAnnotations {
   /// Text annotations
   texts:[foxglove.TextAnnotation] (id: 2);
 
-  /// Additional user-provided metadata associated with the image annotations. Keys must be unique.
+  /// Additional user-provided metadata associated with the image annotations. Keys must be unique within this object. Per-annotation metadata takes precedence over these values.
   metadata:[foxglove.KeyValuePair] (id: 3);
 }
 

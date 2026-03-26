@@ -27,6 +27,16 @@ expression: message()
       "schemaName": "t3-schema",
       "schemaEncoding": "protobuf",
       "schema": "3q2+7w=="
+    },
+    {
+      "id": 40,
+      "topic": "/t4",
+      "encoding": "json",
+      "schemaName": "",
+      "schema": "",
+      "metadata": {
+        "foxglove.hasVideoTrack": "true"
+      }
     }
   ]
 }

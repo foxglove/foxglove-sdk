@@ -1,6 +1,7 @@
-FROM rust:1.89-bookworm AS builder
+# Local development image. See Makefile for usage.
+FROM rust:1.89-trixie AS builder
 
-ARG MSRV_RUST_VERSION=1.83.0
+ARG MSRV_RUST_VERSION=1.85.0
 
 WORKDIR /app
 
@@ -8,19 +9,18 @@ RUN rustup toolchain install nightly --component rust-src
 RUN rustup toolchain install ${MSRV_RUST_VERSION}
 RUN rustup component add rustfmt clippy
 
-RUN curl -fsSL https://deb.nodesource.com/setup_23.x -o nodesource_setup.sh
-RUN bash nodesource_setup.sh
-
 RUN apt-get update \
     && apt-get install -y \
-        clang-19=1:19.1.7-3~deb12u1 \
-        clang-format-19=1:19.1.7-3~deb12u1 \
-        clang-tidy-19=1:19.1.7-3~deb12u1 \
-        cmake=3.25.1-1 \
-        doxygen=1.9.4-4 \
-        nodejs=23.11.1-1nodesource1 \
-        protobuf-compiler=3.21.12-3 \
-        python3.11-dev=3.11.2-6+deb12u6 \
+        clang-19 \
+        clang-format-19 \
+        clang-tidy-19 \
+        cmake \
+        doxygen \
+        libva-dev \
+        nodejs \
+        npm \
+        protobuf-compiler \
+        python3-dev \
     && rm -rf /var/lib/apt/lists/*
 
 RUN corepack enable yarn
