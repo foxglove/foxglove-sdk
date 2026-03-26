@@ -1,4 +1,4 @@
-"""Abstract base class for a data source that supports ranged playback.
+"""Abstract base class for a data source that supports playback control.
 
 Implement this with your own data format, then reuse the ServerListener
 and main-loop structure from main.py in your own player application.
@@ -10,7 +10,7 @@ from foxglove.websocket import PlaybackStatus, WebSocketServer
 
 
 class PlaybackSource(ABC):
-    """A data source that supports ranged playback with play/pause, seek, and variable speed.
+    """A data source that supports playback control with play/pause, seek, and variable speed.
 
     Implementations are responsible for:
     - Tracking playback state (playing/paused/ended) and current position

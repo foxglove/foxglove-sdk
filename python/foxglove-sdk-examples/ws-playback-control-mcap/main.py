@@ -1,6 +1,6 @@
-"""Streams an MCAP file over a WebSocket with ranged playback support.
+"""Streams an MCAP file over a WebSocket with playback control support.
 
-This example demonstrates how to implement ranged playback using the Foxglove SDK.
+This example demonstrates how to implement playback control using the Foxglove SDK.
 The PlaybackSource ABC lets you swap in your own data format while reusing the
 ServerListener and main-loop structure below.
 """
@@ -79,7 +79,7 @@ def main() -> None:
     logging.basicConfig(level=logging.INFO)
 
     parser = argparse.ArgumentParser(
-        description="Stream an MCAP file with ranged playback"
+        description="Stream an MCAP file with playback control"
     )
     parser.add_argument("--file", type=str, required=True, help="MCAP file to read")
     parser.add_argument("--port", type=int, default=8765, help="Server TCP port")
@@ -99,7 +99,7 @@ def main() -> None:
         name=args.file,
         host=args.host,
         port=args.port,
-        capabilities=[Capability.RangedPlayback, Capability.Time],
+        capabilities=[Capability.PlaybackControl, Capability.Time],
         playback_time_range=(start_time, end_time),
         server_listener=listener,
     )
