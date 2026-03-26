@@ -2,7 +2,6 @@
 #include <foxglove/server.hpp>
 
 #include <atomic>
-#include <chrono>
 #include <csignal>
 #include <functional>
 #include <iostream>
@@ -12,8 +11,6 @@
 #include <thread>
 
 #include "mcap_player.hpp"
-
-using namespace std::chrono_literals;
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 static std::function<void()> sigint_handler;
@@ -73,7 +70,7 @@ int main(int argc, char* argv[]) {
   }
 
   auto time_range = player->timeRange();
-  auto shared_player = std::make_shared<std::mutex>();
+  auto player_mutex = std::make_shared<std::mutex>();
   auto player_ptr = std::shared_ptr<McapPlayer>(std::move(player));
 
   foxglove::WebSocketServerOptions options = {};
@@ -87,7 +84,8 @@ int main(int argc, char* argv[]) {
                          foxglove::WebSocketServerCapabilities::Time;
   options.playback_time_range = time_range;
 
-  const auto& mtx = shared_player;
+  // Capture shared objects by value so callback and main loop coordinate the same state safely.
+  const auto& mtx = player_mutex;
   const auto& player_ref = player_ptr;
   // Handle playback control requests from Foxglove and return the updated playback state.
   options.callbacks.onPlaybackControlRequest = [mtx, player_ref](
@@ -141,9 +139,7 @@ int main(int argc, char* argv[]) {
     done = true;
   };
 
-  std::cerr << "Server listening on " << host << ":" << port << '\n';
-  std::cerr << "Waiting for client\n";
-  std::this_thread::sleep_for(1s);
+  std::cerr << "Server ready on " << host << ":" << port << '\n';
 
   std::cerr << "Starting stream\n";
   auto last_status = foxglove::PlaybackStatus::Paused;
