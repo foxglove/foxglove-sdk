@@ -1781,7 +1781,7 @@ Heading (yaw angle), in radians, measured clockwise from north
 </td>
 <td>
 
-Velocity in local East-North-Up (ENU) frame in m/s (x=longitude, y=latitude, z=altitude)
+Velocity in local East-North-Up (ENU) frame in m/s
 
 </td>
 </tr>

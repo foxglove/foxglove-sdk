@@ -1539,7 +1539,7 @@ impl From<LinePrimitive> for foxglove::messages::LinePrimitive {
 /// :param position_covariance: Position covariance (m^2) defined relative to a tangential plane through the reported position. The components are East, North, and Up (ENU), in row-major order.
 /// :param position_covariance_type: If `position_covariance` is available, `position_covariance_type` must be set to indicate the type of covariance.
 /// :param heading: Heading (yaw angle), in radians, measured clockwise from north
-/// :param velocity: Velocity in local East-North-Up (ENU) frame in m/s (x=longitude, y=latitude, z=altitude)
+/// :param velocity: Velocity in local East-North-Up (ENU) frame in m/s
 /// :param color: Color used to visualize the location
 /// :param metadata: Additional user-provided metadata associated with the location fix. Keys must be unique.
 ///

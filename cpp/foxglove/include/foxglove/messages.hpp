@@ -1327,8 +1327,7 @@ struct LocationFix {
   /// @brief Heading (yaw angle), in radians, measured clockwise from north
   std::optional<double> heading = std::nullopt;
 
-  /// @brief Velocity in local East-North-Up (ENU) frame in m/s (x=longitude, y=latitude,
-  /// z=altitude)
+  /// @brief Velocity in local East-North-Up (ENU) frame in m/s
   std::optional<Velocity3> velocity;
 
   /// @brief Color used to visualize the location

@@ -2515,7 +2515,7 @@ export const LocationFix = {
     },
     "velocity": {
       "title": "foxglove.Velocity3",
-      "description": "Velocity in local East-North-Up (ENU) frame in m/s (x=longitude, y=latitude, z=altitude)",
+      "description": "Velocity in local East-North-Up (ENU) frame in m/s",
       "type": "object",
       "properties": {
         "x": {
@@ -2687,7 +2687,7 @@ export const LocationFixes = {
           },
           "velocity": {
             "title": "foxglove.Velocity3",
-            "description": "Velocity in local East-North-Up (ENU) frame in m/s (x=longitude, y=latitude, z=altitude)",
+            "description": "Velocity in local East-North-Up (ENU) frame in m/s",
             "type": "object",
             "properties": {
               "x": {
