@@ -244,18 +244,6 @@ impl SessionState {
         Some(descriptor)
     }
 
-    /// Returns the descriptor for a client-advertised channel.
-    pub fn get_client_channel(
-        &self,
-        identity: &ParticipantIdentity,
-        channel_id: ChannelId,
-    ) -> Option<ChannelDescriptor> {
-        self.client_channels
-            .get(identity)?
-            .get(&channel_id)
-            .cloned()
-    }
-
     /// Returns the descriptor for an advertised server channel.
     pub fn get_channel_descriptor(&self, channel_id: &ChannelId) -> Option<&ChannelDescriptor> {
         self.channels.get(channel_id).map(|ch| ch.descriptor())

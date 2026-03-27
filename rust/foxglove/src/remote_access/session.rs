@@ -1042,10 +1042,6 @@ impl RemoteAccessSession {
         true
     }
 
-    /// Dispatches a client `MessageData` message to the listener.
-    ///
-    /// Looks up the client-advertised channel by participant and channel ID,
-    /// then invokes `on_message_data` if a listener is configured.
     fn handle_client_message_data(
         &self,
         participant: &Arc<Participant>,
