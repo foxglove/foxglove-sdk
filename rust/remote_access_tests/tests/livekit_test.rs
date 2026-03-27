@@ -1,4 +1,4 @@
-//! Integration tests that validate the ws-protocol byte stream framing, channel
+//! Integration tests that validate the byte stream framing, channel
 //! advertisements, subscriptions, and message delivery using a local LiveKit dev server.
 //!
 //! Requires a local LiveKit server via `docker compose up -d`.
@@ -650,7 +650,7 @@ async fn livekit_existing_participant_receives_server_info_and_advertisement() -
 }
 
 /// Test that subscribing to a video-capable channel WITHOUT requestVideoTrack delivers
-/// data via the ws-protocol data plane (MessageData frames) instead of a video track.
+/// data via the device-ch data plane (MessageData frames) instead of a video track.
 #[traced_test]
 #[ignore]
 #[tokio::test]
@@ -1075,7 +1075,7 @@ async fn livekit_client_disconnect_fires_unadvertise_for_advertised_channels() -
 // Client publish / message data tests
 // ===========================================================================
 
-/// Test that sending a client MessageData on the client-{channelId} stream
+/// Test that sending a client MessageData on the client-ch-{channelId} stream
 /// fires `on_message_data` on the listener with the correct client, topic, and payload.
 #[traced_test]
 #[ignore]
