@@ -86,10 +86,10 @@ struct Quaternion {
 /// @brief A position and orientation for an object or reference frame in 3D space
 struct Pose {
   /// @brief Point denoting position in 3D space
-  std::optional<Vector3> position = {};
+  std::optional<Vector3> position;
 
   /// @brief Quaternion denoting orientation in 3D space
-  std::optional<Quaternion> orientation = {};
+  std::optional<Quaternion> orientation;
 
   /// @brief Encoded the Pose as protobuf to the provided buffer.
   ///
@@ -147,7 +147,7 @@ struct Color {
 struct ArrowPrimitive {
   /// @brief Position of the arrow's tail and orientation of the arrow. Identity orientation means
   /// the arrow points in the +x direction.
-  std::optional<Pose> pose = {};
+  std::optional<Pose> pose;
 
   /// @brief Length of the arrow shaft
   double shaft_length = 0;
@@ -162,7 +162,7 @@ struct ArrowPrimitive {
   double head_diameter = 0;
 
   /// @brief Color of the arrow
-  std::optional<Color> color = {};
+  std::optional<Color> color;
 
   /// @brief Encoded the ArrowPrimitive as protobuf to the provided buffer.
   ///
@@ -195,7 +195,7 @@ struct Timestamp {
 /// @brief Camera calibration parameters
 struct CameraCalibration {
   /// @brief Timestamp of calibration data
-  std::optional<Timestamp> timestamp = {};
+  std::optional<Timestamp> timestamp;
 
   /// @brief Frame of reference for the camera. The origin of the frame is the optical center of the
   /// camera. +x points to the right in the image, +y points down, and +z points into the plane of
@@ -359,11 +359,11 @@ struct KeyValuePair {
 /// @brief A circle annotation on a 2D image
 struct CircleAnnotation {
   /// @brief Timestamp of circle
-  std::optional<Timestamp> timestamp = {};
+  std::optional<Timestamp> timestamp;
 
   /// @brief Center of the circle in 2D image coordinates (pixels).
   /// The coordinate uses the top-left corner of the top-left pixel of the image as the origin.
-  std::optional<Point2> position = {};
+  std::optional<Point2> position;
 
   /// @brief Circle diameter in pixels
   double diameter = 0;
@@ -372,10 +372,10 @@ struct CircleAnnotation {
   double thickness = 0;
 
   /// @brief Fill color
-  std::optional<Color> fill_color = {};
+  std::optional<Color> fill_color;
 
   /// @brief Outline color
-  std::optional<Color> outline_color = {};
+  std::optional<Color> outline_color;
 
   /// @brief Additional user-provided metadata associated with this annotation. Keys must be unique.
   std::vector<KeyValuePair> metadata;
@@ -402,7 +402,7 @@ struct CircleAnnotation {
 /// @brief A compressed image
 struct CompressedImage {
   /// @brief Timestamp of image
-  std::optional<Timestamp> timestamp = {};
+  std::optional<Timestamp> timestamp;
 
   /// @brief Frame of reference for the image. The origin of the frame is the optical center of the
   /// camera. +x points to the right in the image, +y points down, and +z points into the plane of
@@ -439,7 +439,7 @@ struct CompressedImage {
 /// @brief A single frame of a compressed video bitstream
 struct CompressedVideo {
   /// @brief Timestamp of video frame
-  std::optional<Timestamp> timestamp = {};
+  std::optional<Timestamp> timestamp;
 
   /// @brief Frame of reference for the video.
   ///
@@ -511,10 +511,10 @@ struct CompressedVideo {
 struct CylinderPrimitive {
   /// @brief Position of the center of the cylinder and orientation of the cylinder. The flat
   /// face(s) are perpendicular to the z-axis.
-  std::optional<Pose> pose = {};
+  std::optional<Pose> pose;
 
   /// @brief Size of the cylinder's bounding box
-  std::optional<Vector3> size = {};
+  std::optional<Vector3> size;
 
   /// @brief 0-1, ratio of the diameter of the cylinder's bottom face (min z) to the bottom of the
   /// bounding box
@@ -525,7 +525,7 @@ struct CylinderPrimitive {
   double top_scale = 0;
 
   /// @brief Color of the cylinder
-  std::optional<Color> color = {};
+  std::optional<Color> color;
 
   /// @brief Encoded the CylinderPrimitive as protobuf to the provided buffer.
   ///
@@ -549,13 +549,13 @@ struct CylinderPrimitive {
 /// @brief A primitive representing a cube or rectangular prism
 struct CubePrimitive {
   /// @brief Position of the center of the cube and orientation of the cube
-  std::optional<Pose> pose = {};
+  std::optional<Pose> pose;
 
   /// @brief Size of the cube along each axis
-  std::optional<Vector3> size = {};
+  std::optional<Vector3> size;
 
   /// @brief Color of the cube
-  std::optional<Color> color = {};
+  std::optional<Color> color;
 
   /// @brief Encoded the CubePrimitive as protobuf to the provided buffer.
   ///
@@ -600,7 +600,7 @@ struct Duration {
 /// parent frame.
 struct FrameTransform {
   /// @brief Timestamp of transform
-  std::optional<Timestamp> timestamp = {};
+  std::optional<Timestamp> timestamp;
 
   /// @brief Name of the parent frame
   std::string parent_frame_id;
@@ -610,11 +610,11 @@ struct FrameTransform {
 
   /// @brief Translation component of the transform, representing the position of the child frame's
   /// origin in the parent frame.
-  std::optional<Vector3> translation = {};
+  std::optional<Vector3> translation;
 
   /// @brief Rotation component of the transform, representing the orientation of the child frame in
   /// the parent frame
-  std::optional<Quaternion> rotation = {};
+  std::optional<Quaternion> rotation;
 
   /// @brief Encoded the FrameTransform as protobuf to the provided buffer.
   ///
@@ -764,20 +764,20 @@ struct PackedElementField {
 /// @brief A 2D grid of data
 struct Grid {
   /// @brief Timestamp of grid
-  std::optional<Timestamp> timestamp = {};
+  std::optional<Timestamp> timestamp;
 
   /// @brief Frame of reference
   std::string frame_id;
 
   /// @brief Origin of grid's corner relative to frame of reference; grid is positioned in the x-y
   /// plane relative to this origin
-  std::optional<Pose> pose = {};
+  std::optional<Pose> pose;
 
   /// @brief Number of grid columns
   uint32_t column_count = 0;
 
   /// @brief Size of single grid cell along x and y axes, relative to `pose`
-  std::optional<Vector2> cell_size = {};
+  std::optional<Vector2> cell_size;
 
   /// @brief Number of bytes between rows in `data`
   uint32_t row_stride = 0;
@@ -860,7 +860,7 @@ struct Grid {
 /// @brief A 3D grid of data
 struct VoxelGrid {
   /// @brief Timestamp of grid
-  std::optional<Timestamp> timestamp = {};
+  std::optional<Timestamp> timestamp;
 
   /// @brief Frame of reference
   std::string frame_id;
@@ -868,7 +868,7 @@ struct VoxelGrid {
   /// @brief Origin of the grid’s lower-front-left corner in the reference frame. The grid’s pose is
   /// defined relative to this corner, so an untransformed grid with an identity orientation has
   /// this corner at the origin.
-  std::optional<Pose> pose = {};
+  std::optional<Pose> pose;
 
   /// @brief Number of grid rows
   uint32_t row_count = 0;
@@ -877,7 +877,7 @@ struct VoxelGrid {
   uint32_t column_count = 0;
 
   /// @brief Size of single grid cell along x, y, and z axes, relative to `pose`
-  std::optional<Vector3> cell_size = {};
+  std::optional<Vector3> cell_size;
 
   /// @brief Number of bytes between depth slices in `data`
   uint32_t slice_stride = 0;
@@ -936,7 +936,7 @@ struct PointsAnnotation {
     LINE_LIST = 4,
   };
   /// @brief Timestamp of annotation
-  std::optional<Timestamp> timestamp = {};
+  std::optional<Timestamp> timestamp;
 
   /// @brief Type of points annotation to draw
   PointsAnnotationType type{};
@@ -946,14 +946,14 @@ struct PointsAnnotation {
   std::vector<Point2> points;
 
   /// @brief Outline color
-  std::optional<Color> outline_color = {};
+  std::optional<Color> outline_color;
 
   /// @brief Per-point colors, if `type` is `POINTS`, or per-segment stroke colors, if `type` is
   /// `LINE_LIST`, `LINE_STRIP` or `LINE_LOOP`.
   std::vector<Color> outline_colors;
 
   /// @brief Fill color
-  std::optional<Color> fill_color = {};
+  std::optional<Color> fill_color;
 
   /// @brief Stroke thickness in pixels
   double thickness = 0;
@@ -983,11 +983,11 @@ struct PointsAnnotation {
 /// @brief A text label on a 2D image
 struct TextAnnotation {
   /// @brief Timestamp of annotation
-  std::optional<Timestamp> timestamp = {};
+  std::optional<Timestamp> timestamp;
 
   /// @brief Bottom-left origin of the text label in 2D image coordinates (pixels).
   /// The coordinate uses the top-left corner of the top-left pixel of the image as the origin.
-  std::optional<Point2> position = {};
+  std::optional<Point2> position;
 
   /// @brief Text to display
   std::string text;
@@ -996,10 +996,10 @@ struct TextAnnotation {
   double font_size = 0;
 
   /// @brief Text color
-  std::optional<Color> text_color = {};
+  std::optional<Color> text_color;
 
   /// @brief Background fill color
-  std::optional<Color> background_color = {};
+  std::optional<Color> background_color;
 
   /// @brief Additional user-provided metadata associated with this annotation. Keys must be unique.
   std::vector<KeyValuePair> metadata;
@@ -1027,7 +1027,7 @@ struct TextAnnotation {
 struct ImageAnnotations {
   /// @brief Timestamp of the image annotations. When set, individual annotation timestamps will be
   /// ignored.
-  std::optional<Timestamp> timestamp = {};
+  std::optional<Timestamp> timestamp;
 
   /// @brief Circle annotations
   std::vector<CircleAnnotation> circles;
@@ -1067,16 +1067,16 @@ struct JointState {
   std::string name;
 
   /// @brief Joint position. Radians for revolute joints, meters for prismatic joints.
-  std::optional<double> position = {};
+  std::optional<double> position = std::nullopt;
 
   /// @brief Joint velocity. Rad/s for revolute joints, m/s for prismatic joints.
-  std::optional<double> velocity = {};
+  std::optional<double> velocity = std::nullopt;
 
   /// @brief Joint acceleration. Rad/s² for revolute joints, m/s² for prismatic joints.
-  std::optional<double> acceleration = {};
+  std::optional<double> acceleration = std::nullopt;
 
   /// @brief Joint effort (force or torque). Nm for revolute joints, N for prismatic joints.
-  std::optional<double> effort = {};
+  std::optional<double> effort = std::nullopt;
 
   /// @brief Encoded the JointState as protobuf to the provided buffer.
   ///
@@ -1100,7 +1100,7 @@ struct JointState {
 /// @brief The state of a set of joints at a given time.
 struct JointStates {
   /// @brief Timestamp of the joint states
-  std::optional<Timestamp> timestamp = {};
+  std::optional<Timestamp> timestamp;
 
   /// @brief Joint states
   std::vector<JointState> joints;
@@ -1127,7 +1127,7 @@ struct JointStates {
 /// @brief A single scan from a planar laser range-finder
 struct LaserScan {
   /// @brief Timestamp of scan
-  std::optional<Timestamp> timestamp = {};
+  std::optional<Timestamp> timestamp;
 
   /// @brief Frame of reference
   std::string frame_id;
@@ -1135,7 +1135,7 @@ struct LaserScan {
   /// @brief Origin of scan relative to frame of reference; points are positioned in the x-y plane
   /// relative to this origin; angles are interpreted as counterclockwise rotations around the z
   /// axis with 0 rad being in the +x direction
-  std::optional<Pose> pose = {};
+  std::optional<Pose> pose;
 
   /// @brief Bearing of first point, in radians
   double start_angle = 0;
@@ -1214,7 +1214,7 @@ struct LinePrimitive {
   LineType type{};
 
   /// @brief Origin of lines relative to reference frame
-  std::optional<Pose> pose = {};
+  std::optional<Pose> pose;
 
   /// @brief Line thickness
   double thickness = 0;
@@ -1227,7 +1227,7 @@ struct LinePrimitive {
   std::vector<Point3> points;
 
   /// @brief Solid color to use for the whole line. Ignored if `colors` is non-empty.
-  std::optional<Color> color = {};
+  std::optional<Color> color;
 
   /// @brief Per-point colors (if non-empty, must have the same length as `points`).
   std::vector<Color> colors;
@@ -1302,7 +1302,7 @@ struct LocationFix {
     KNOWN = 3,
   };
   /// @brief Timestamp of the message
-  std::optional<Timestamp> timestamp = {};
+  std::optional<Timestamp> timestamp;
 
   /// @brief Frame for the sensor. Latitude and longitude readings are at the origin of the frame.
   std::string frame_id;
@@ -1325,13 +1325,13 @@ struct LocationFix {
   PositionCovarianceType position_covariance_type{};
 
   /// @brief Heading (yaw angle), in radians, measured clockwise from north
-  std::optional<double> heading = {};
+  std::optional<double> heading = std::nullopt;
 
   /// @brief Velocity in local East-North-Up (ENU) frame in m/s
-  std::optional<Velocity3> velocity = {};
+  std::optional<Velocity3> velocity;
 
   /// @brief Color used to visualize the location
-  std::optional<Color> color = {};
+  std::optional<Color> color;
 
   /// @brief Additional user-provided metadata associated with the location fix. Keys must be
   /// unique.
@@ -1398,7 +1398,7 @@ struct Log {
     FATAL = 5,
   };
   /// @brief Timestamp of log message
-  std::optional<Timestamp> timestamp = {};
+  std::optional<Timestamp> timestamp;
 
   /// @brief Log level
   LogLevel level{};
@@ -1445,7 +1445,7 @@ struct SceneEntityDeletion {
   };
   /// @brief Timestamp of the deletion. Only matching entities earlier than this timestamp will be
   /// deleted.
-  std::optional<Timestamp> timestamp = {};
+  std::optional<Timestamp> timestamp;
 
   /// @brief Type of deletion action to perform
   SceneEntityDeletionType type{};
@@ -1475,13 +1475,13 @@ struct SceneEntityDeletion {
 /// @brief A primitive representing a sphere or ellipsoid
 struct SpherePrimitive {
   /// @brief Position of the center of the sphere and orientation of the sphere
-  std::optional<Pose> pose = {};
+  std::optional<Pose> pose;
 
   /// @brief Size (diameter) of the sphere along each axis
-  std::optional<Vector3> size = {};
+  std::optional<Vector3> size;
 
   /// @brief Color of the sphere
-  std::optional<Color> color = {};
+  std::optional<Color> color;
 
   /// @brief Encoded the SpherePrimitive as protobuf to the provided buffer.
   ///
@@ -1505,13 +1505,13 @@ struct SpherePrimitive {
 /// @brief A primitive representing a set of triangles or a surface tiled by triangles
 struct TriangleListPrimitive {
   /// @brief Origin of triangles relative to reference frame
-  std::optional<Pose> pose = {};
+  std::optional<Pose> pose;
 
   /// @brief Vertices to use for triangles, interpreted as a list of triples (0-1-2, 3-4-5, ...)
   std::vector<Point3> points;
 
   /// @brief Solid color to use for the whole shape. Ignored if `colors` is non-empty.
-  std::optional<Color> color = {};
+  std::optional<Color> color;
 
   /// @brief Per-vertex colors (if specified, must have the same length as `points`).
   std::vector<Color> colors;
@@ -1546,7 +1546,7 @@ struct TriangleListPrimitive {
 struct TextPrimitive {
   /// @brief Position of the center of the text box and orientation of the text. Identity
   /// orientation means the text is oriented in the xy-plane and flows from -x to +x.
-  std::optional<Pose> pose = {};
+  std::optional<Pose> pose;
 
   /// @brief Whether the text should respect `pose.orientation` (false) or always face the camera
   /// (true)
@@ -1560,7 +1560,7 @@ struct TextPrimitive {
   bool scale_invariant = false;
 
   /// @brief Color of the text
-  std::optional<Color> color = {};
+  std::optional<Color> color;
 
   /// @brief Text
   std::string text;
@@ -1587,13 +1587,13 @@ struct TextPrimitive {
 /// @brief A primitive representing a 3D model file loaded from an external URL or embedded data
 struct ModelPrimitive {
   /// @brief Origin of model relative to reference frame
-  std::optional<Pose> pose = {};
+  std::optional<Pose> pose;
 
   /// @brief Scale factor to apply to the model along each axis
-  std::optional<Vector3> scale = {};
+  std::optional<Vector3> scale;
 
   /// @brief Solid color to use for the whole model if `override_color` is true.
-  std::optional<Color> color = {};
+  std::optional<Color> color;
 
   /// @brief Whether to use the color specified in `color` instead of any materials embedded in the
   /// original model.
@@ -1635,7 +1635,7 @@ struct ModelPrimitive {
 /// all share the same frame of reference.
 struct SceneEntity {
   /// @brief Timestamp of the entity
-  std::optional<Timestamp> timestamp = {};
+  std::optional<Timestamp> timestamp;
 
   /// @brief Frame of reference
   std::string frame_id;
@@ -1647,7 +1647,7 @@ struct SceneEntity {
   /// @brief Length of time (relative to `timestamp`) after which the entity should be automatically
   /// removed. Zero value indicates the entity should remain visible until it is replaced or
   /// deleted.
-  std::optional<Duration> lifetime = {};
+  std::optional<Duration> lifetime;
 
   /// @brief Whether the entity should keep its location in the fixed frame (false) or follow the
   /// frame specified in `frame_id` as it moves relative to the fixed frame (true)
@@ -1729,13 +1729,13 @@ struct SceneUpdate {
 /// @brief A timestamped point for a position in 3D space
 struct Point3InFrame {
   /// @brief Timestamp of point
-  std::optional<Timestamp> timestamp = {};
+  std::optional<Timestamp> timestamp;
 
   /// @brief Frame of reference for point position
   std::string frame_id;
 
   /// @brief Point in 3D space
-  std::optional<Point3> point = {};
+  std::optional<Point3> point;
 
   /// @brief Encoded the Point3InFrame as protobuf to the provided buffer.
   ///
@@ -1760,13 +1760,13 @@ struct Point3InFrame {
 /// information like normals, intensity, etc.
 struct PointCloud {
   /// @brief Timestamp of point cloud
-  std::optional<Timestamp> timestamp = {};
+  std::optional<Timestamp> timestamp;
 
   /// @brief Frame of reference
   std::string frame_id;
 
   /// @brief The origin of the point cloud relative to the frame of reference
-  std::optional<Pose> pose = {};
+  std::optional<Pose> pose;
 
   /// @brief Number of bytes between points in the `data`
   uint32_t point_stride = 0;
@@ -1801,13 +1801,13 @@ struct PointCloud {
 /// @brief A timestamped pose for an object or reference frame in 3D space
 struct PoseInFrame {
   /// @brief Timestamp of pose
-  std::optional<Timestamp> timestamp = {};
+  std::optional<Timestamp> timestamp;
 
   /// @brief Frame of reference for pose position and orientation
   std::string frame_id;
 
   /// @brief Pose in 3D space
-  std::optional<Pose> pose = {};
+  std::optional<Pose> pose;
 
   /// @brief Encoded the PoseInFrame as protobuf to the provided buffer.
   ///
@@ -1831,7 +1831,7 @@ struct PoseInFrame {
 /// @brief An array of timestamped poses for an object or reference frame in 3D space
 struct PosesInFrame {
   /// @brief Timestamp of pose
-  std::optional<Timestamp> timestamp = {};
+  std::optional<Timestamp> timestamp;
 
   /// @brief Frame of reference for pose position and orientation
   std::string frame_id;
@@ -1861,7 +1861,7 @@ struct PosesInFrame {
 /// @brief A single block of an audio bitstream
 struct RawAudio {
   /// @brief Timestamp of the start of the audio block
-  std::optional<Timestamp> timestamp = {};
+  std::optional<Timestamp> timestamp;
 
   /// @brief Audio data. The samples in the data must be interleaved and little-endian
   std::vector<std::byte> data;
@@ -1897,7 +1897,7 @@ struct RawAudio {
 /// @brief A raw image
 struct RawImage {
   /// @brief Timestamp of image
-  std::optional<Timestamp> timestamp = {};
+  std::optional<Timestamp> timestamp;
 
   /// @brief Frame of reference for the image. The origin of the frame is the optical center of the
   /// camera. +x points to the right in the image, +y points down, and +z points into the plane of
