@@ -5,6 +5,7 @@ const EWMA_ALPHA: f64 = 0.3;
 
 /// Tracks round-trip time measurements with an EWMA, mirroring the app-side approach.
 pub(crate) struct RttTracker {
+    label: &'static str,
     first_sample_excluded: bool,
     latest_ms: Option<f64>,
     ewma_ms: Option<f64>,
@@ -12,8 +13,9 @@ pub(crate) struct RttTracker {
 }
 
 impl RttTracker {
-    pub fn new() -> Self {
+    pub fn new(label: &'static str) -> Self {
         Self {
+            label,
             first_sample_excluded: false,
             latest_ms: None,
             ewma_ms: None,
@@ -23,11 +25,12 @@ impl RttTracker {
 
     /// The first sample is excluded from the EWMA.
     pub fn record_sample(&mut self, rtt_ms: f64) {
+        let label = self.label;
         self.latest_ms = Some(rtt_ms);
 
         if !self.first_sample_excluded {
             self.first_sample_excluded = true;
-            debug!("RTT (first, excluded from average): {rtt_ms:.1}ms");
+            debug!("{label} RTT (first, excluded from average): {rtt_ms:.1}ms");
             return;
         }
 
@@ -46,7 +49,7 @@ impl RttTracker {
             }
         };
 
-        debug!("RTT: {rtt_ms:.1}ms | ewma: {ewma:.1}ms | stddev: {std_dev:.1}ms");
+        debug!("{label} RTT: {rtt_ms:.1}ms | ewma: {ewma:.1}ms | stddev: {std_dev:.1}ms");
     }
 }
 
@@ -56,7 +59,7 @@ mod tests {
 
     #[test]
     fn test_first_sample_excluded() {
-        let mut tracker = RttTracker::new();
+        let mut tracker = RttTracker::new("test");
         tracker.record_sample(100.0);
         assert_eq!(tracker.latest_ms, Some(100.0));
         assert_eq!(tracker.ewma_ms, None);
@@ -64,7 +67,7 @@ mod tests {
 
     #[test]
     fn test_ewma_initialized_on_second_sample() {
-        let mut tracker = RttTracker::new();
+        let mut tracker = RttTracker::new("test");
         tracker.record_sample(999.0); // excluded
         tracker.record_sample(100.0);
 
@@ -74,7 +77,7 @@ mod tests {
 
     #[test]
     fn test_ewma_reacts_to_spike() {
-        let mut tracker = RttTracker::new();
+        let mut tracker = RttTracker::new("test");
         tracker.record_sample(0.0); // excluded
 
         // Steady state

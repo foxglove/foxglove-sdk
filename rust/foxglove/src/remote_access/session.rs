@@ -194,6 +194,7 @@ pub(crate) struct RemoteAccessSession {
         parking_lot::Mutex<HashMap<ParticipantIdentity, HashMap<ChannelId, ByteStreamReader>>>,
     pending_client_reader_timeout: Duration,
     rtt_tracker: parking_lot::Mutex<RttTracker>,
+    ice_rtt_tracker: parking_lot::Mutex<RttTracker>,
 }
 
 impl Sink for RemoteAccessSession {
@@ -328,7 +329,8 @@ impl RemoteAccessSession {
             pending_client_reader_timeout: params.pending_client_reader_timeout,
             services: params.services,
             supported_encodings: params.supported_encodings,
-            rtt_tracker: parking_lot::Mutex::new(RttTracker::new()),
+            rtt_tracker: parking_lot::Mutex::new(RttTracker::new("ping/pong")),
+            ice_rtt_tracker: parking_lot::Mutex::new(RttTracker::new("ICE")),
         }
     }
 
@@ -1436,9 +1438,9 @@ impl RemoteAccessSession {
             interval.tick().await;
             let stats = self.stats();
             let connection_quality = self.room.local_participant().connection_quality();
-            let total_video_bytes_sent = match self.room.get_stats().await {
-                Ok(stats) => Some(
-                    stats
+            let (total_video_bytes_sent, ice_rtt_ms) = match self.room.get_stats().await {
+                Ok(stats) => {
+                    let total_video_bytes_sent = stats
                         .publisher_stats
                         .iter()
                         .filter_map(|s| match s {
@@ -1449,13 +1451,29 @@ impl RemoteAccessSession {
                             }
                             _ => None,
                         })
-                        .sum::<u64>(),
-                ),
+                        .sum::<u64>();
+                    let ice_rtt_ms = stats
+                        .publisher_stats
+                        .iter()
+                        .filter_map(|s| match s {
+                            libwebrtc::stats::RtcStats::CandidatePair(cp)
+                                if cp.candidate_pair.nominated =>
+                            {
+                                Some(cp.candidate_pair.current_round_trip_time * 1000.0)
+                            }
+                            _ => None,
+                        })
+                        .next();
+                    (Some(total_video_bytes_sent), ice_rtt_ms)
+                }
                 Err(e) => {
                     warn!(remote_access_session_id, error = %e, "failed to get room stats: {e}");
-                    None
+                    (None, None)
                 }
             };
+            if let Some(rtt_ms) = ice_rtt_ms {
+                self.ice_rtt_tracker.lock().record_sample(rtt_ms);
+            }
             info!(
                 remote_access_session_id,
                 participants = stats.participants,
