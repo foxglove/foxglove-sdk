@@ -633,7 +633,7 @@ impl ViewerConnection {
             .room
             .local_participant()
             .stream_bytes(StreamByteOptions {
-                topic: "ws-protocol".to_string(),
+                topic: "control".to_string(),
                 destination_identities: vec![gateway_identity],
                 ..StreamByteOptions::default()
             })
