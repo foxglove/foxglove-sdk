@@ -82,15 +82,15 @@
       "properties": {
         "x": {
           "type": "number",
-          "description": "x velocity in m/s"
+          "description": "x component"
         },
         "y": {
           "type": "number",
-          "description": "y velocity in m/s"
+          "description": "y component"
         },
         "z": {
           "type": "number",
-          "description": "z velocity in m/s"
+          "description": "z component"
         }
       },
       "required": [

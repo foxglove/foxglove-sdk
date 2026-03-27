@@ -3,12 +3,12 @@
 
 /** A velocity vector in 3D space */
 export type Velocity3 = {
-  /** x velocity in m/s */
+  /** x component */
   x: number;
 
-  /** y velocity in m/s */
+  /** y component */
   y: number;
 
-  /** z velocity in m/s */
+  /** z component */
   z: number;
 };

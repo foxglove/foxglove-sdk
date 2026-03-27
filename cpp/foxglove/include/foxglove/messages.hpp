@@ -1260,13 +1260,13 @@ struct LinePrimitive {
 
 /// @brief A velocity vector in 3D space
 struct Velocity3 {
-  /// @brief x velocity in m/s
+  /// @brief x component
   double x = 0;
 
-  /// @brief y velocity in m/s
+  /// @brief y component
   double y = 0;
 
-  /// @brief z velocity in m/s
+  /// @brief z component
   double z = 0;
 
   /// @brief Encoded the Velocity3 as protobuf to the provided buffer.
@@ -4842,73 +4842,6 @@ private:
   ChannelUniquePtr impl_;
 };
 
-/// @brief A channel for logging Velocity3 messages to a topic.
-///
-/// @note While channels are fully thread-safe, the Velocity3 struct is not thread-safe.
-/// Avoid modifying it concurrently or during a log operation.
-class Velocity3Channel {
-public:
-  /// @brief Create a new channel.
-  ///
-  /// @param topic The topic name. You should choose a unique topic name per channel for
-  /// compatibility with the Foxglove app.
-  /// @param context The context which associates logs to a sink. If omitted, the default context is
-  /// used.
-  static FoxgloveResult<Velocity3Channel> create(
-    const std::string_view& topic, const Context& context = Context()
-  );
-
-  /// @brief Log a message to the channel.
-  ///
-  /// @param msg The Velocity3 message to log.
-  /// @param log_time The timestamp of the message, as nanoseconds since epoch. If omitted, the
-  /// current time is used.
-  /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
-  FoxgloveError log(
-    const Velocity3& msg, std::optional<uint64_t> log_time = std::nullopt,
-    std::optional<uint64_t> sink_id = std::nullopt
-  ) noexcept;
-
-  /// @brief Close the channel.
-  ///
-  /// You can use this to explicitly unadvertise the channel to sinks that subscribe to channels
-  /// dynamically, such as the WebSocketServer.
-  ///
-  /// Attempts to log on a closed channel will elicit a throttled warning message.
-  void close() noexcept;
-
-  /// @brief Uniquely identifies a channel in the context of this program.
-  ///
-  /// @return The ID of the channel.
-  [[nodiscard]] uint64_t id() const noexcept;
-
-  /// @brief Find out if any sinks have been added to the channel.
-  ///
-  /// @return True if sinks have been added to the channel, false otherwise.
-  [[nodiscard]] bool hasSinks() const noexcept;
-
-  /// @deprecated Use hasSinks() instead.
-  // NOLINTNEXTLINE(readability-identifier-naming)
-  [[deprecated("Use hasSinks() instead")]] [[nodiscard]] bool has_sinks() const noexcept {
-    return hasSinks();
-  }
-
-  Velocity3Channel(const Velocity3Channel& other) noexcept = delete;
-  Velocity3Channel& operator=(const Velocity3Channel& other) noexcept = delete;
-  /// @brief Default move constructor.
-  Velocity3Channel(Velocity3Channel&& other) noexcept = default;
-  /// @brief Default move assignment.
-  Velocity3Channel& operator=(Velocity3Channel&& other) noexcept = default;
-  /// @brief Default destructor.
-  ~Velocity3Channel() = default;
-
-private:
-  explicit Velocity3Channel(ChannelUniquePtr&& channel)
-      : impl_(std::move(channel)) {}
-
-  ChannelUniquePtr impl_;
-};
-
 /// @brief A channel for logging Vector2 messages to a topic.
 ///
 /// @note While channels are fully thread-safe, the Vector2 struct is not thread-safe.
@@ -5038,6 +4971,73 @@ public:
 
 private:
   explicit Vector3Channel(ChannelUniquePtr&& channel)
+      : impl_(std::move(channel)) {}
+
+  ChannelUniquePtr impl_;
+};
+
+/// @brief A channel for logging Velocity3 messages to a topic.
+///
+/// @note While channels are fully thread-safe, the Velocity3 struct is not thread-safe.
+/// Avoid modifying it concurrently or during a log operation.
+class Velocity3Channel {
+public:
+  /// @brief Create a new channel.
+  ///
+  /// @param topic The topic name. You should choose a unique topic name per channel for
+  /// compatibility with the Foxglove app.
+  /// @param context The context which associates logs to a sink. If omitted, the default context is
+  /// used.
+  static FoxgloveResult<Velocity3Channel> create(
+    const std::string_view& topic, const Context& context = Context()
+  );
+
+  /// @brief Log a message to the channel.
+  ///
+  /// @param msg The Velocity3 message to log.
+  /// @param log_time The timestamp of the message, as nanoseconds since epoch. If omitted, the
+  /// current time is used.
+  /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
+  FoxgloveError log(
+    const Velocity3& msg, std::optional<uint64_t> log_time = std::nullopt,
+    std::optional<uint64_t> sink_id = std::nullopt
+  ) noexcept;
+
+  /// @brief Close the channel.
+  ///
+  /// You can use this to explicitly unadvertise the channel to sinks that subscribe to channels
+  /// dynamically, such as the WebSocketServer.
+  ///
+  /// Attempts to log on a closed channel will elicit a throttled warning message.
+  void close() noexcept;
+
+  /// @brief Uniquely identifies a channel in the context of this program.
+  ///
+  /// @return The ID of the channel.
+  [[nodiscard]] uint64_t id() const noexcept;
+
+  /// @brief Find out if any sinks have been added to the channel.
+  ///
+  /// @return True if sinks have been added to the channel, false otherwise.
+  [[nodiscard]] bool hasSinks() const noexcept;
+
+  /// @deprecated Use hasSinks() instead.
+  // NOLINTNEXTLINE(readability-identifier-naming)
+  [[deprecated("Use hasSinks() instead")]] [[nodiscard]] bool has_sinks() const noexcept {
+    return hasSinks();
+  }
+
+  Velocity3Channel(const Velocity3Channel& other) noexcept = delete;
+  Velocity3Channel& operator=(const Velocity3Channel& other) noexcept = delete;
+  /// @brief Default move constructor.
+  Velocity3Channel(Velocity3Channel&& other) noexcept = default;
+  /// @brief Default move assignment.
+  Velocity3Channel& operator=(Velocity3Channel&& other) noexcept = default;
+  /// @brief Default destructor.
+  ~Velocity3Channel() = default;
+
+private:
+  explicit Velocity3Channel(ChannelUniquePtr&& channel)
       : impl_(std::move(channel)) {}
 
   ChannelUniquePtr impl_;

@@ -1100,7 +1100,7 @@ FoxgloveMessage = Union[
     TextAnnotation,
     TextPrimitive,
     TriangleListPrimitive,
-    Velocity3,
     Vector2,
     Vector3,
+    Velocity3,
 ]

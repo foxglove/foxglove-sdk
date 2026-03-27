@@ -3628,7 +3628,7 @@ float64
 </td>
 <td>
 
-x velocity in m/s
+x component
 
 </td>
 </tr>
@@ -3641,7 +3641,7 @@ float64
 </td>
 <td>
 
-y velocity in m/s
+y component
 
 </td>
 </tr>
@@ -3654,7 +3654,7 @@ float64
 </td>
 <td>
 
-z velocity in m/s
+z component
 
 </td>
 </tr>

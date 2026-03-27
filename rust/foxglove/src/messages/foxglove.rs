@@ -1459,13 +1459,13 @@ pub struct Vector3 {
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 #[derive(Clone, Copy, PartialEq, ::prost::Message)]
 pub struct Velocity3 {
-    /// x velocity in m/s
+    /// x component
     #[prost(double, tag = "1")]
     pub x: f64,
-    /// y velocity in m/s
+    /// y component
     #[prost(double, tag = "2")]
     pub y: f64,
-    /// z velocity in m/s
+    /// z component
     #[prost(double, tag = "3")]
     pub z: f64,
 }

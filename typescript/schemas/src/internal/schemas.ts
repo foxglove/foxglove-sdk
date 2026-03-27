@@ -168,19 +168,19 @@ const Velocity3: FoxgloveMessageSchema = {
     {
       name: "x",
       type: { type: "primitive", name: "float64" },
-      description: "x velocity in m/s",
+      description: "x component",
       defaultValue: 0,
     },
     {
       name: "y",
       type: { type: "primitive", name: "float64" },
-      description: "y velocity in m/s",
+      description: "y component",
       defaultValue: 0,
     },
     {
       name: "z",
       type: { type: "primitive", name: "float64" },
-      description: "z velocity in m/s",
+      description: "z component",
       defaultValue: 0,
     },
   ],
@@ -1943,9 +1943,9 @@ export const foxgloveMessageSchemas = {
   TextPrimitive,
   Timestamp,
   TriangleListPrimitive,
-  Velocity3,
   Vector2,
   Vector3,
+  Velocity3,
 };
 
 export const foxgloveEnumSchemas = {

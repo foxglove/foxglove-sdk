@@ -6,12 +6,12 @@ package foxglove;
 
 // A velocity vector in 3D space
 message Velocity3 {
-  // x velocity in m/s
+  // x component
   double x = 1;
 
-  // y velocity in m/s
+  // y component
   double y = 2;
 
-  // z velocity in m/s
+  // z component
   double z = 3;
 }
