@@ -1,4 +1,5 @@
 use crate::ChannelDescriptor;
+use crate::protocol::v2::parameter::Parameter;
 
 use super::client::Client;
 use super::connection::ConnectionStatus;
@@ -21,4 +22,38 @@ pub trait Listener: Send + Sync {
     fn on_client_advertise(&self, _client: Client, _channel: &ChannelDescriptor) {}
     /// Callback invoked when a client unadvertises a client channel.
     fn on_client_unadvertise(&self, _client: Client, _channel: &ChannelDescriptor) {}
+    /// Callback invoked when a client requests parameters. Requires
+    /// [`Capability::Parameters`][super::Capability::Parameters]. Should return the named
+    /// parameters, or all parameters if `param_names` is empty.
+    fn on_get_parameters(
+        &self,
+        _client: Client,
+        _param_names: Vec<String>,
+        _request_id: Option<&str>,
+    ) -> Vec<Parameter> {
+        Vec::new()
+    }
+    /// Callback invoked when a client sets parameters. Requires
+    /// [`Capability::Parameters`][super::Capability::Parameters].
+    /// Should return the updated parameters for the passed parameters.
+    /// All clients subscribed to updates for the _returned_ parameters will be notified.
+    /// If this callback returns parameters that are unset (i.e. have a `None` value),
+    /// the unset parameters will not be published to clients.
+    ///
+    /// Note that only `parameters` which have changed are included in the callback, but the return
+    /// value must include all parameters.
+    fn on_set_parameters(
+        &self,
+        _client: Client,
+        parameters: Vec<Parameter>,
+        _request_id: Option<&str>,
+    ) -> Vec<Parameter> {
+        parameters
+    }
+    /// Callback invoked when a client subscribes to the named parameters for the first time.
+    /// Requires [`Capability::Parameters`][super::Capability::Parameters].
+    fn on_parameters_subscribe(&self, _param_names: Vec<String>) {}
+    /// Callback invoked when the last client unsubscribes from the named parameters.
+    /// Requires [`Capability::Parameters`][super::Capability::Parameters].
+    fn on_parameters_unsubscribe(&self, _param_names: Vec<String>) {}
 }
