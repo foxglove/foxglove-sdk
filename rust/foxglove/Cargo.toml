@@ -11,18 +11,19 @@ license.workspace = true
 default = ["derive", "websocket", "lz4", "zstd"]
 chrono = ["dep:chrono"]
 derive = ["dep:foxglove_derive"]
-_remote_common = [
+_remote-common = [
   "dep:base64",
   "dep:flume",
+  "dep:futures-util",
   "dep:tokio",
   "dep:tokio-util",
   "dep:serde_repr",
   "dep:serde_with",
 ]
-websocket = ["_remote_common", "dep:futures-util", "dep:tokio-tungstenite"]
+websocket = ["_remote-common", "dep:tokio-tungstenite"]
 live_visualization = ["websocket"]
-remote_access = [
-  "_remote_common",
+remote-access = [
+  "_remote-common",
   "img2yuv",
   "dep:livekit",
   "dep:libwebrtc",
@@ -43,7 +44,7 @@ schemars = ["dep:schemars"]
 schemars-chrono = ["schemars", "chrono", "schemars/chrono04"]
 serde = ["dep:base64"]
 unstable = []
-_protocol = ["_remote_common"]
+_protocol = ["_remote-common"]
 zstd = ["mcap/zstd"]
 
 # img2yuv feature and sub-features

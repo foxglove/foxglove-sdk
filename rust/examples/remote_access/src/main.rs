@@ -30,6 +30,22 @@ impl Listener for MessageHandler {
             channel.topic()
         );
     }
+
+    fn on_client_advertise(&self, client: Client, channel: &ChannelDescriptor) {
+        tracing::info!(
+            "Client {} advertised channel: {}",
+            client.id(),
+            channel.topic()
+        );
+    }
+
+    fn on_client_unadvertise(&self, client: Client, channel: &ChannelDescriptor) {
+        tracing::info!(
+            "Client {} unadvertised channel: {}",
+            client.id(),
+            channel.topic()
+        );
+    }
 }
 
 #[tokio::main]
