@@ -167,13 +167,17 @@ export function generateHppSchemas(
           }
           if (typeof field.array === "number") {
             fieldType = `std::array<${fieldType}, ${field.array}>`;
+            // std::array has no user-provided default constructor; explicit
+            // init required for clang-tidy cppcoreguidelines-pro-type-member-init.
+            defaultStr = " = {}";
           } else if (field.array) {
             fieldType = `std::vector<${fieldType}>`;
           } else if (field.optional || field.type.type === "nested") {
             fieldType = `std::optional<${fieldType}>`;
-            if (field.optional && defaultStr !== "") {
-              defaultStr = " = std::nullopt";
-            }
+            // Default-initialize to disengaged (equivalent to std::nullopt).
+            // If the inner type had a default (e.g. uint32_t's `= 0`), override
+            // it so the optional isn't unexpectedly engaged.
+            defaultStr = " = {}";
           }
           return `${formatComment(field.description, 2)}\n  ${fieldType} ${toSnakeCase(field.name)}${defaultStr};`;
         })
