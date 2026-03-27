@@ -1662,7 +1662,7 @@ const LocationFix: FoxgloveMessageSchema = {
       type: { type: "nested", schema: Velocity3 },
       description: "Velocity in local East-North-Up frame in m/s.",
       protobufFieldNumber: 12,
-      flatbuffersFieldNumber: 11,
+      flatbuffersFieldNumber: 10,
       optional: true,
     },
     {
