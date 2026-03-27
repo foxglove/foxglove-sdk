@@ -343,6 +343,12 @@ impl RemoteAccessConnection {
                     .await;
                 continue;
             };
+            info!(
+                remote_access_session_id,
+                participant_identity = %identity,
+                version = %version,
+                "adding existing participant"
+            );
             if let Err(e) = session
                 .add_participant(identity.clone(), version, server_info.clone())
                 .await
@@ -443,11 +449,6 @@ impl RemoteAccessConnection {
             match event {
                 RoomEvent::ParticipantConnected(participant) => {
                     let participant_identity = participant.identity();
-                    info!(
-                        remote_access_session_id,
-                        participant_identity = %participant_identity,
-                        "participant connected to room"
-                    );
                     let Some(version) = Self::check_participant_protocol_version(
                         &participant_identity,
                         &participant.attributes(),
@@ -461,6 +462,12 @@ impl RemoteAccessConnection {
                             .await;
                         continue;
                     };
+                    info!(
+                        remote_access_session_id,
+                        participant_identity = %participant_identity,
+                        version = %version,
+                        "participant connected to room"
+                    );
                     let server_info =
                         self.create_server_info(remote_access_session_id.unwrap_or(""));
                     if let Err(e) = session
