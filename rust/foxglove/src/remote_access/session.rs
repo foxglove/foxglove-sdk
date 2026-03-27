@@ -47,9 +47,9 @@ pub(crate) struct SessionStats {
     pub video_tracks: usize,
 }
 
-pub(crate) const CONTROL_CHANNEL_TOPIC: &str = "control";
-pub(crate) const CLIENT_CHANNEL_TOPIC_PREFIX: &str = "client-ch-";
+const CONTROL_CHANNEL_TOPIC: &str = "control";
 const CHANNEL_TOPIC_PREFIX: &str = "device-ch-";
+const CLIENT_CHANNEL_TOPIC_PREFIX: &str = "client-ch-";
 const MESSAGE_FRAME_SIZE: usize = 5; // 1 byte opcode + u32 LE length
 const MAX_MESSAGE_SIZE: usize = 16 * 1024 * 1024; // 16 MiB
 const MAX_SEND_RETRIES: usize = 3;
