@@ -44,7 +44,11 @@ pub(crate) fn parse_participant_protocol_version(
     }
 }
 
-/// Check whether a participant's protocol version meets the minimum supported version.
+/// Check whether a participant's protocol version is compatible.
+///
+/// A version is compatible if it is at or above the minimum supported version and its major
+/// version matches ours. A higher major version indicates breaking changes that this build does
+/// not understand, so it is rejected just as an older-than-minimum version would be.
 ///
 /// Returns the parsed version if compatible, or `None` if the participant should be rejected.
 pub(crate) fn check_participant_protocol_version(
@@ -55,6 +59,8 @@ pub(crate) fn check_participant_protocol_version(
     let version = parse_participant_protocol_version(attributes)?;
     let min = semver::Version::parse(REMOTE_ACCESS_MIN_SUPPORTED_PROTOCOL_VERSION)
         .expect("REMOTE_ACCESS_MIN_SUPPORTED_PROTOCOL_VERSION is a valid semver");
+    let our_version = semver::Version::parse(REMOTE_ACCESS_PROTOCOL_VERSION)
+        .expect("REMOTE_ACCESS_PROTOCOL_VERSION is a valid semver");
     if version < min {
         error!(
             remote_access_session_id,
@@ -62,6 +68,16 @@ pub(crate) fn check_participant_protocol_version(
             participant_version = %version,
             min_supported_version = %min,
             "participant protocol version is below minimum supported; ignoring participant"
+        );
+        return None;
+    }
+    if version.major != our_version.major {
+        error!(
+            remote_access_session_id,
+            participant_identity = %participant_identity,
+            participant_version = %version,
+            our_version = %our_version,
+            "participant protocol version has incompatible major version; ignoring participant"
         );
         return None;
     }
@@ -130,6 +146,12 @@ mod tests {
     #[test]
     fn check_version_below_minimum_returns_none() {
         let result = check_participant_protocol_version(&identity(), &attrs("1.9.9"), None);
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn check_future_major_version_returns_none() {
+        let result = check_participant_protocol_version(&identity(), &attrs("3.0.0"), None);
         assert_eq!(result, None);
     }
 
