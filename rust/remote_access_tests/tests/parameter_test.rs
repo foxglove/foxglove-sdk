@@ -42,7 +42,6 @@ impl ParameterListener {
         std::mem::take(&mut *self.subscribed.lock().unwrap())
     }
 
-    #[allow(dead_code)]
     fn take_unsubscribed(&self) -> Vec<Vec<String>> {
         std::mem::take(&mut *self.unsubscribed.lock().unwrap())
     }
