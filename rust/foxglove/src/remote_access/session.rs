@@ -7,8 +7,8 @@ use futures_util::StreamExt;
 use indexmap::IndexSet;
 use libwebrtc::video_source::{RtcVideoSource, native::NativeVideoSource};
 use livekit::options::TrackPublishOptions;
-use livekit::prelude::*;
 use livekit::{ByteStreamReader, Room, StreamByteOptions, id::ParticipantIdentity};
+use livekit::{StreamWriter, prelude::*};
 use parking_lot::RwLock;
 use semver::Version;
 use smallvec::SmallVec;
@@ -32,7 +32,7 @@ use crate::{
     },
     remote_access::{
         Capability, Listener, RemoteAccessError, client::Client, participant::Participant,
-        session_state::SessionState,
+        protocol_version, session_state::SessionState,
     },
 };
 
@@ -934,16 +934,14 @@ impl RemoteAccessSession {
         participant_id: &ParticipantIdentity,
         attributes: &std::collections::HashMap<String, String>,
     ) {
-        use crate::remote_access::participant::ParticipantWriter;
-
         let advertised = attributes
-            .get("protocolVersion")
+            .get(protocol_version::PROTOCOL_VERSION_ATTRIBUTE)
             .map(String::as_str)
-            .unwrap_or(crate::remote_access::protocol_version::DEFAULT_PROTOCOL_VERSION);
+            .unwrap_or(protocol_version::DEFAULT_PROTOCOL_VERSION);
         let message = format!(
             "Remote access protocol version {} is not supported; minimum supported version is {}",
             advertised,
-            crate::remote_access::protocol_version::REMOTE_ACCESS_MIN_SUPPORTED_PROTOCOL_VERSION,
+            protocol_version::REMOTE_ACCESS_MIN_SUPPORTED_PROTOCOL_VERSION,
         );
         error!("{}", message);
 
@@ -966,17 +964,8 @@ impl RemoteAccessSession {
             }
         };
 
-        let min_version = semver::Version::parse(
-            crate::remote_access::protocol_version::REMOTE_ACCESS_MIN_SUPPORTED_PROTOCOL_VERSION,
-        )
-        .expect("REMOTE_ACCESS_MIN_SUPPORTED_PROTOCOL_VERSION is valid semver");
-        let participant = Arc::new(Participant::new(
-            participant_id.clone(),
-            min_version,
-            ParticipantWriter::Livekit(stream),
-        ));
         let status = Status::error(message);
-        if let Err(e) = participant.send(&encode_json_message(&status)).await {
+        if let Err(e) = stream.write(&encode_json_message(&status)).await {
             error!("failed to send incompatible version error to {participant_id}: {e:?}");
         }
     }
@@ -1072,57 +1061,6 @@ impl RemoteAccessSession {
             );
             listener.on_message_data(client, &descriptor, &msg.data);
         }
-    }
-
-    /// Parse the remote access protocol version from a LiveKit participant's attributes.
-    ///
-    /// If the attribute is absent the participant is assumed to be running a pre-advertisement
-    /// build, so we default to [`crate::remote_access::protocol_version::DEFAULT_PROTOCOL_VERSION`].
-    ///
-    /// Returns `None` if the attribute value is present but cannot be parsed as a semver triple.
-    fn parse_participant_protocol_version(
-        attributes: &HashMap<String, String>,
-    ) -> Option<semver::Version> {
-        let version_str = attributes
-            .get("protocolVersion")
-            .map(String::as_str)
-            .unwrap_or(crate::remote_access::protocol_version::DEFAULT_PROTOCOL_VERSION);
-        match semver::Version::parse(version_str) {
-            Ok(v) => Some(v),
-            Err(e) => {
-                error!(
-                    version = version_str,
-                    "failed to parse participant protocol version: {e}"
-                );
-                None
-            }
-        }
-    }
-
-    /// Check whether a participant's protocol version meets the minimum supported version.
-    ///
-    /// Returns the parsed version if compatible, or `None` if the participant should be rejected.
-    fn check_participant_protocol_version(
-        participant_identity: &ParticipantIdentity,
-        attributes: &HashMap<String, String>,
-        remote_access_session_id: Option<&str>,
-    ) -> Option<semver::Version> {
-        let version = Self::parse_participant_protocol_version(attributes)?;
-        let min = semver::Version::parse(
-            crate::remote_access::protocol_version::REMOTE_ACCESS_MIN_SUPPORTED_PROTOCOL_VERSION,
-        )
-        .expect("REMOTE_ACCESS_MIN_SUPPORTED_PROTOCOL_VERSION is a valid semver");
-        if version < min {
-            error!(
-                remote_access_session_id,
-                participant_identity = %participant_identity,
-                participant_version = %version,
-                min_supported_version = %min,
-                "participant protocol version is below minimum supported; ignoring participant"
-            );
-            return None;
-        }
-        Some(version)
     }
 
     /// Add a participant to the server, if it hasn't already been added.
@@ -1228,7 +1166,7 @@ impl RemoteAccessSession {
             match event {
                 RoomEvent::ParticipantConnected(participant) => {
                     let participant_identity = participant.identity();
-                    let Some(version) = Self::check_participant_protocol_version(
+                    let Some(version) = protocol_version::check_participant_protocol_version(
                         &participant_identity,
                         &participant.attributes(),
                         remote_access_session_id,
@@ -1878,10 +1816,8 @@ mod tests {
     fn make_participant(name: &str) -> (ParticipantIdentity, Arc<Participant>) {
         let identity = ParticipantIdentity(name.to_string());
         let writer = Arc::new(TestByteStreamWriter::default());
-        let version = semver::Version::parse(
-            crate::remote_access::protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION,
-        )
-        .expect("REMOTE_ACCESS_PROTOCOL_VERSION is valid semver");
+        let version = semver::Version::parse(protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION)
+            .expect("REMOTE_ACCESS_PROTOCOL_VERSION is valid semver");
         let participant = Arc::new(Participant::new(
             identity.clone(),
             version,

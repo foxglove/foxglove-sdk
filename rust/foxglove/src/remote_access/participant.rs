@@ -26,7 +26,6 @@ pub(crate) struct Participant {
     participant_id: ParticipantIdentity,
     /// The remote access protocol version advertised by this participant.
     /// Stored for future use when branching protocol behavior based on the participant's version.
-    #[allow(dead_code)]
     protocol_version: Version,
     /// A reliable, ordered stream to send messages to just this participant
     writer: ParticipantWriter,
