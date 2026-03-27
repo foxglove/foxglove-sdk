@@ -114,9 +114,11 @@ FoxgloveResult<RemoteAccessGateway> RemoteAccessGateway::create(
     }
     if (callbacks->onGetParameters) {
       c_callbacks.on_get_parameters = [](
-                                        const void* context, uint32_t client_id,
+                                        const void* context,
+                                        uint32_t client_id,
                                         const foxglove_string* c_request_id,
-                                        const foxglove_string* c_param_names, size_t param_names_len
+                                        const foxglove_string* c_param_names,
+                                        size_t param_names_len
                                       ) -> foxglove_parameter_array* {
         std::optional<std::string_view> request_id;
         if (c_request_id != nullptr) {
@@ -142,7 +144,8 @@ FoxgloveResult<RemoteAccessGateway> RemoteAccessGateway::create(
     }
     if (callbacks->onSetParameters) {
       c_callbacks.on_set_parameters = [](
-                                        const void* context, uint32_t client_id,
+                                        const void* context,
+                                        uint32_t client_id,
                                         const foxglove_string* c_request_id,
                                         const foxglove_parameter_array* c_params
                                       ) -> foxglove_parameter_array* {
@@ -155,10 +158,9 @@ FoxgloveResult<RemoteAccessGateway> RemoteAccessGateway::create(
         }
         std::vector<foxglove::Parameter> params;
         try {
-          params = (static_cast<const RemoteAccessGatewayCallbacks*>(context))
-                     ->onSetParameters(
-                       client_id, request_id, ParameterArrayView(c_params).parameters()
-                     );
+          params =
+            (static_cast<const RemoteAccessGatewayCallbacks*>(context))
+              ->onSetParameters(client_id, request_id, ParameterArrayView(c_params).parameters());
         } catch (const std::exception& exc) {
           warn() << "onSetParameters callback failed: " << exc.what();
         }
@@ -167,20 +169,22 @@ FoxgloveResult<RemoteAccessGateway> RemoteAccessGateway::create(
       };
     }
     if (callbacks->onParametersSubscribe) {
-      c_callbacks.on_parameters_subscribe =
-        [](const void* context, const foxglove_string* c_names, size_t names_len) {
-          std::vector<std::string_view> names;
-          names.reserve(names_len);
-          for (size_t i = 0; i < names_len; ++i) {
-            names.emplace_back(c_names[i].data, c_names[i].len);
-          }
-          try {
-            (static_cast<const RemoteAccessGatewayCallbacks*>(context))
-              ->onParametersSubscribe(names);
-          } catch (const std::exception& exc) {
-            warn() << "onParametersSubscribe callback failed: " << exc.what();
-          }
-        };
+      c_callbacks.on_parameters_subscribe = [](
+                                              const void* context,
+                                              const foxglove_string* c_names,
+                                              size_t names_len
+                                            ) {
+        std::vector<std::string_view> names;
+        names.reserve(names_len);
+        for (size_t i = 0; i < names_len; ++i) {
+          names.emplace_back(c_names[i].data, c_names[i].len);
+        }
+        try {
+          (static_cast<const RemoteAccessGatewayCallbacks*>(context))->onParametersSubscribe(names);
+        } catch (const std::exception& exc) {
+          warn() << "onParametersSubscribe callback failed: " << exc.what();
+        }
+      };
     }
     if (callbacks->onParametersUnsubscribe) {
       c_callbacks.on_parameters_unsubscribe =
