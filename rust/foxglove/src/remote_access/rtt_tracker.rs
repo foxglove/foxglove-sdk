@@ -43,7 +43,8 @@ impl RttTracker {
             Some(prev_ewma) => {
                 let diff = rtt_ms - prev_ewma;
                 let ewma = prev_ewma + EWMA_ALPHA * diff;
-                self.ewma_variance = (1.0 - EWMA_ALPHA) * (self.ewma_variance + EWMA_ALPHA * diff * diff);
+                self.ewma_variance =
+                    (1.0 - EWMA_ALPHA) * (self.ewma_variance + EWMA_ALPHA * diff * diff);
                 self.ewma_ms = Some(ewma);
                 (ewma, self.ewma_variance.sqrt())
             }
