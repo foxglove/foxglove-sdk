@@ -494,10 +494,7 @@ class LocationFix:
         position_covariance: list[float] | None = None,
         position_covariance_type: LocationFixPositionCovarianceType = LocationFixPositionCovarianceType.Unknown,
         heading: float | None = None,
-        heading_variance: float | None = None,
-        velocity_x: float | None = None,
-        velocity_y: float | None = None,
-        velocity_z: float | None = None,
+        velocity: Velocity3 | None = None,
         color: Color | None = None,
         metadata: list[KeyValuePair] | None = None,
     ) -> None: ...
@@ -1016,6 +1013,21 @@ class Vector3:
         """Encodes the Vector3."""
         ...
 
+class Velocity3:
+    """
+    A velocity vector in 3D space
+    """
+
+    def __init__(self, *, x: float = 0.0, y: float = 0.0, z: float = 0.0) -> None: ...
+    @staticmethod
+    def get_schema() -> Schema:
+        """Returns the Velocity3 schema"""
+        ...
+
+    def encode(self) -> bytes:
+        """Encodes the Velocity3."""
+        ...
+
 class VoxelGrid:
     """
     A 3D grid of data
@@ -1088,6 +1100,7 @@ FoxgloveMessage = Union[
     TextAnnotation,
     TextPrimitive,
     TriangleListPrimitive,
+    Velocity3,
     Vector2,
     Vector3,
 ]

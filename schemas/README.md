@@ -63,6 +63,7 @@ If the IDL does not support optional fields (e.g. ROS) you must specify a value 
 - [TriangleListPrimitive](#trianglelistprimitive)
 - [Vector2](#vector2)
 - [Vector3](#vector3)
+- [Velocity3](#velocity3)
 - [VoxelGrid](#voxelgrid)
 
 ----
@@ -1772,54 +1773,15 @@ Heading (yaw angle), in radians, measured clockwise from north
 </td>
 </tr>
 <tr>
-<td><code>heading_variance</code> (optional)</td>
+<td><code>velocity</code> (optional)</td>
 <td>
 
-float64
+[Velocity3](#velocity3)
 
 </td>
 <td>
 
-Heading variance in rad^2
-
-</td>
-</tr>
-<tr>
-<td><code>velocity_x</code> (optional)</td>
-<td>
-
-float64
-
-</td>
-<td>
-
-Velocity east (longitude axis) in m/s.
-
-</td>
-</tr>
-<tr>
-<td><code>velocity_y</code> (optional)</td>
-<td>
-
-float64
-
-</td>
-<td>
-
-Velocity north (latitude axis) in m/s.
-
-</td>
-</tr>
-<tr>
-<td><code>velocity_z</code> (optional)</td>
-<td>
-
-float64
-
-</td>
-<td>
-
-Velocity up (altitude axis) in m/s.
+Velocity in local East-North-Up frame in m/s.
 
 </td>
 </tr>
@@ -3642,6 +3604,57 @@ float64
 <td>
 
 z coordinate length
+
+</td>
+</tr>
+</table>
+
+## Velocity3
+
+A velocity vector in 3D space
+
+<table>
+  <tr>
+    <th>field</th>
+    <th>type</th>
+    <th>description</th>
+  </tr>
+<tr>
+<td><code>x</code></td>
+<td>
+
+float64
+
+</td>
+<td>
+
+Velocity east (longitude axis) in m/s.
+
+</td>
+</tr>
+<tr>
+<td><code>y</code></td>
+<td>
+
+float64
+
+</td>
+<td>
+
+Velocity north (latitude axis) in m/s.
+
+</td>
+</tr>
+<tr>
+<td><code>z</code></td>
+<td>
+
+float64
+
+</td>
+<td>
+
+Velocity up (altitude axis) in m/s.
 
 </td>
 </tr>

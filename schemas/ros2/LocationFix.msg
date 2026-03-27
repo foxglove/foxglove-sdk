@@ -39,17 +39,8 @@ uint8 position_covariance_type
 # Heading (yaw angle), in radians, measured clockwise from north (NaN indicates this value is not set)
 float64 heading
 
-# Heading variance in rad^2 (NaN indicates this value is not set)
-float64 heading_variance
-
-# Velocity east (longitude axis) in m/s. (NaN indicates this value is not set)
-float64 velocity_x
-
-# Velocity north (latitude axis) in m/s. (NaN indicates this value is not set)
-float64 velocity_y
-
-# Velocity up (altitude axis) in m/s. (NaN indicates this value is not set)
-float64 velocity_z
+# Velocity in local East-North-Up frame in m/s.
+foxglove_msgs/Velocity3 velocity
 
 # Color used to visualize the location
 foxglove_msgs/Color color

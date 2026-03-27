@@ -160,6 +160,32 @@ const Vector3: FoxgloveMessageSchema = {
   ],
 };
 
+const Velocity3: FoxgloveMessageSchema = {
+  type: "message",
+  name: "Velocity3",
+  description: "A velocity vector in 3D space",
+  fields: [
+    {
+      name: "x",
+      type: { type: "primitive", name: "float64" },
+      description: "Velocity east (longitude axis) in m/s.",
+      defaultValue: 0,
+    },
+    {
+      name: "y",
+      type: { type: "primitive", name: "float64" },
+      description: "Velocity north (latitude axis) in m/s.",
+      defaultValue: 0,
+    },
+    {
+      name: "z",
+      type: { type: "primitive", name: "float64" },
+      description: "Velocity up (altitude axis) in m/s.",
+      defaultValue: 0,
+    },
+  ],
+};
+
 const Point2: FoxgloveMessageSchema = {
   type: "message",
   name: "Point2",
@@ -1632,35 +1658,11 @@ const LocationFix: FoxgloveMessageSchema = {
       optional: true,
     },
     {
-      name: "heading_variance",
-      type: { type: "primitive", name: "float64" },
-      description: "Heading variance in rad^2",
-      protobufFieldNumber: 11,
-      flatbuffersFieldNumber: 10,
-      optional: true,
-    },
-    {
-      name: "velocity_x",
-      type: { type: "primitive", name: "float64" },
-      description: "Velocity east (longitude axis) in m/s.",
+      name: "velocity",
+      type: { type: "nested", schema: Velocity3 },
+      description: "Velocity in local East-North-Up frame in m/s.",
       protobufFieldNumber: 12,
       flatbuffersFieldNumber: 11,
-      optional: true,
-    },
-    {
-      name: "velocity_y",
-      type: { type: "primitive", name: "float64" },
-      description: "Velocity north (latitude axis) in m/s.",
-      protobufFieldNumber: 13,
-      flatbuffersFieldNumber: 12,
-      optional: true,
-    },
-    {
-      name: "velocity_z",
-      type: { type: "primitive", name: "float64" },
-      description: "Velocity up (altitude axis) in m/s.",
-      protobufFieldNumber: 14,
-      flatbuffersFieldNumber: 13,
       optional: true,
     },
     {
@@ -1940,6 +1942,7 @@ export const foxgloveMessageSchemas = {
   TextPrimitive,
   Timestamp,
   TriangleListPrimitive,
+  Velocity3,
   Vector2,
   Vector3,
 };

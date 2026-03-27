@@ -3,6 +3,7 @@
 include "Color.fbs";
 include "KeyValuePair.fbs";
 include "Time.fbs";
+include "Velocity3.fbs";
 
 namespace foxglove;
 
@@ -47,17 +48,8 @@ table LocationFix {
   /// Heading (yaw angle), in radians, measured clockwise from north
   heading:double = null (id: 9);
 
-  /// Heading variance in rad^2
-  heading_variance:double = null (id: 10);
-
-  /// Velocity east (longitude axis) in m/s.
-  velocity_x:double = null (id: 11);
-
-  /// Velocity north (latitude axis) in m/s.
-  velocity_y:double = null (id: 12);
-
-  /// Velocity up (altitude axis) in m/s.
-  velocity_z:double = null (id: 13);
+  /// Velocity in local East-North-Up frame in m/s.
+  velocity:foxglove.Velocity3 (id: 11);
 
   /// Color used to visualize the location
   color:foxglove.Color (id: 7);

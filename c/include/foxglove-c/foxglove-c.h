@@ -1283,6 +1283,24 @@ typedef struct foxglove_line_primitive {
 } foxglove_line_primitive;
 
 /**
+ * A velocity vector in 3D space
+ */
+typedef struct foxglove_velocity3 {
+  /**
+   * Velocity east (longitude axis) in m/s.
+   */
+  double x;
+  /**
+   * Velocity north (latitude axis) in m/s.
+   */
+  double y;
+  /**
+   * Velocity up (altitude axis) in m/s.
+   */
+  double z;
+} foxglove_velocity3;
+
+/**
  * A navigation satellite fix for any Global Navigation Satellite System
  */
 typedef struct foxglove_location_fix {
@@ -1319,21 +1337,9 @@ typedef struct foxglove_location_fix {
    */
   const double *heading;
   /**
-   * Heading variance in rad^2
+   * Velocity in local East-North-Up frame in m/s.
    */
-  const double *heading_variance;
-  /**
-   * Velocity east (longitude axis) in m/s.
-   */
-  const double *velocity_x;
-  /**
-   * Velocity north (latitude axis) in m/s.
-   */
-  const double *velocity_y;
-  /**
-   * Velocity up (altitude axis) in m/s.
-   */
-  const double *velocity_z;
+  const struct foxglove_velocity3 *velocity;
   /**
    * Color used to visualize the location
    */
@@ -4473,6 +4479,52 @@ foxglove_error foxglove_triangle_list_primitive_encode(const struct foxglove_tri
                                                        uint8_t *ptr,
                                                        size_t len,
                                                        size_t *encoded_len);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_velocity3(struct foxglove_string topic,
+                                                 const struct foxglove_context *context,
+                                                 const struct foxglove_channel **channel);
+
+#if !defined(__wasm__)
+/**
+ * Log a Velocity3 message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_velocity3.
+ */
+foxglove_error foxglove_channel_log_velocity3(const struct foxglove_channel *channel,
+                                              const struct foxglove_velocity3 *msg,
+                                              const uint64_t *log_time,
+                                              FoxgloveSinkId sink_id);
+#endif
+
+/**
+ * Get the Velocity3 schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_velocity3_schema(void);
+
+/**
+ * Encode a Velocity3 message as protobuf to the buffer provided.
+ *
+ * On success, writes the encoded length to *encoded_len.
+ * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+ * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+ * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+ *
+ * # Safety
+ * ptr must be a valid pointer to a memory region at least len bytes long.
+ */
+foxglove_error foxglove_velocity3_encode(const struct foxglove_velocity3 *msg,
+                                         uint8_t *ptr,
+                                         size_t len,
+                                         size_t *encoded_len);
 
 /**
  * Create a new typed channel, and return an owned raw channel pointer to it.

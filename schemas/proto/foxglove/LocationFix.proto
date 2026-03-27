@@ -4,6 +4,7 @@ syntax = "proto3";
 
 import "foxglove/Color.proto";
 import "foxglove/KeyValuePair.proto";
+import "foxglove/Velocity3.proto";
 import "google/protobuf/timestamp.proto";
 
 package foxglove;
@@ -48,17 +49,8 @@ message LocationFix {
   // Heading (yaw angle), in radians, measured clockwise from north
   optional double heading = 10;
 
-  // Heading variance in rad^2
-  optional double heading_variance = 11;
-
-  // Velocity east (longitude axis) in m/s.
-  optional double velocity_x = 12;
-
-  // Velocity north (latitude axis) in m/s.
-  optional double velocity_y = 13;
-
-  // Velocity up (altitude axis) in m/s.
-  optional double velocity_z = 14;
+  // Velocity in local East-North-Up frame in m/s.
+  optional foxglove.Velocity3 velocity = 12;
 
   // Color used to visualize the location
   optional foxglove.Color color = 8;

@@ -4,6 +4,7 @@
 #include "foxglove/KeyValuePair.idl"
 #include "foxglove/PositionCovarianceType.idl"
 #include "foxglove/Time.idl"
+#include "foxglove/Velocity3.idl"
 
 module foxglove {
 
@@ -34,21 +35,9 @@ struct LocationFix {
   @optional
   double heading;
 
-  // Heading variance in rad^2
+  // Velocity in local East-North-Up frame in m/s.
   @optional
-  double heading_variance;
-
-  // Velocity east (longitude axis) in m/s.
-  @optional
-  double velocity_x;
-
-  // Velocity north (latitude axis) in m/s.
-  @optional
-  double velocity_y;
-
-  // Velocity up (altitude axis) in m/s.
-  @optional
-  double velocity_z;
+  Velocity3 velocity;
 
   // Color used to visualize the location
   @optional

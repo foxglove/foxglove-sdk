@@ -5,6 +5,7 @@ import { Color } from "./Color";
 import { KeyValuePair } from "./KeyValuePair";
 import { PositionCovarianceType } from "./PositionCovarianceType";
 import { Time } from "./Time";
+import { Velocity3 } from "./Velocity3";
 
 /** A navigation satellite fix for any Global Navigation Satellite System */
 export type LocationFix = {
@@ -32,17 +33,8 @@ export type LocationFix = {
   /** Heading (yaw angle), in radians, measured clockwise from north */
   heading?: number;
 
-  /** Heading variance in rad^2 */
-  heading_variance?: number;
-
-  /** Velocity east (longitude axis) in m/s. */
-  velocity_x?: number;
-
-  /** Velocity north (latitude axis) in m/s. */
-  velocity_y?: number;
-
-  /** Velocity up (altitude axis) in m/s. */
-  velocity_z?: number;
+  /** Velocity in local East-North-Up frame in m/s. */
+  velocity?: Velocity3;
 
   /** Color used to visualize the location */
   color?: Color;

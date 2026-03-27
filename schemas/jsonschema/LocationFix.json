@@ -75,21 +75,29 @@
       "type": "number",
       "description": "Heading (yaw angle), in radians, measured clockwise from north"
     },
-    "heading_variance": {
-      "type": "number",
-      "description": "Heading variance in rad^2"
-    },
-    "velocity_x": {
-      "type": "number",
-      "description": "Velocity east (longitude axis) in m/s."
-    },
-    "velocity_y": {
-      "type": "number",
-      "description": "Velocity north (latitude axis) in m/s."
-    },
-    "velocity_z": {
-      "type": "number",
-      "description": "Velocity up (altitude axis) in m/s."
+    "velocity": {
+      "title": "foxglove.Velocity3",
+      "description": "Velocity in local East-North-Up frame in m/s.",
+      "type": "object",
+      "properties": {
+        "x": {
+          "type": "number",
+          "description": "Velocity east (longitude axis) in m/s."
+        },
+        "y": {
+          "type": "number",
+          "description": "Velocity north (latitude axis) in m/s."
+        },
+        "z": {
+          "type": "number",
+          "description": "Velocity up (altitude axis) in m/s."
+        }
+      },
+      "required": [
+        "x",
+        "y",
+        "z"
+      ]
     },
     "color": {
       "title": "foxglove.Color",
