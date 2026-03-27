@@ -1287,15 +1287,15 @@ typedef struct foxglove_line_primitive {
  */
 typedef struct foxglove_velocity3 {
   /**
-   * Velocity east (longitude axis) in m/s.
+   * x velocity in m/s
    */
   double x;
   /**
-   * Velocity north (latitude axis) in m/s.
+   * y velocity in m/s
    */
   double y;
   /**
-   * Velocity up (altitude axis) in m/s.
+   * z velocity in m/s
    */
   double z;
 } foxglove_velocity3;
@@ -1337,7 +1337,7 @@ typedef struct foxglove_location_fix {
    */
   const double *heading;
   /**
-   * Velocity in local East-North-Up frame in m/s.
+   * Velocity in local East-North-Up (ENU) frame in m/s (x=longitude, y=latitude, z=altitude)
    */
   const struct foxglove_velocity3 *velocity;
   /**

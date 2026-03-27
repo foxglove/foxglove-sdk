@@ -665,7 +665,7 @@ export type LocationFix = {
   /** Heading (yaw angle), in radians, measured clockwise from north */
   heading?: number;
 
-  /** Velocity in local East-North-Up frame in m/s. */
+  /** Velocity in local East-North-Up (ENU) frame in m/s (x=longitude, y=latitude, z=altitude) */
   velocity?: Velocity3;
 
   /** Color used to visualize the location */
@@ -1265,13 +1265,13 @@ export type TriangleListPrimitive = {
 
 /** A velocity vector in 3D space */
 export type Velocity3 = {
-  /** Velocity east (longitude axis) in m/s. */
+  /** x velocity in m/s */
   x: number;
 
-  /** Velocity north (latitude axis) in m/s. */
+  /** y velocity in m/s */
   y: number;
 
-  /** Velocity up (altitude axis) in m/s. */
+  /** z velocity in m/s */
   z: number;
 };
 ",

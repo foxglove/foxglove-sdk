@@ -6,15 +6,15 @@
   "properties": {
     "x": {
       "type": "number",
-      "description": "Velocity east (longitude axis) in m/s."
+      "description": "x velocity in m/s"
     },
     "y": {
       "type": "number",
-      "description": "Velocity north (latitude axis) in m/s."
+      "description": "y velocity in m/s"
     },
     "z": {
       "type": "number",
-      "description": "Velocity up (altitude axis) in m/s."
+      "description": "z velocity in m/s"
     }
   },
   "required": [

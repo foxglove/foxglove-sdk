@@ -4,13 +4,13 @@ namespace foxglove;
 
 /// A velocity vector in 3D space
 table Velocity3 {
-  /// Velocity east (longitude axis) in m/s.
+  /// x velocity in m/s
   x:double = 0.0 (id: 0);
 
-  /// Velocity north (latitude axis) in m/s.
+  /// y velocity in m/s
   y:double = 0.0 (id: 1);
 
-  /// Velocity up (altitude axis) in m/s.
+  /// z velocity in m/s
   z:double = 0.0 (id: 2);
 }
 

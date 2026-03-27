@@ -598,7 +598,7 @@ pub struct LocationFix {
     /// Heading (yaw angle), in radians, measured clockwise from north
     #[prost(double, optional, tag = "10")]
     pub heading: ::core::option::Option<f64>,
-    /// Velocity in local East-North-Up frame in m/s.
+    /// Velocity in local East-North-Up (ENU) frame in m/s (x=longitude, y=latitude, z=altitude)
     #[prost(message, optional, tag = "11")]
     pub velocity: ::core::option::Option<Velocity3>,
     /// Color used to visualize the location
@@ -1459,13 +1459,13 @@ pub struct Vector3 {
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 #[derive(Clone, Copy, PartialEq, ::prost::Message)]
 pub struct Velocity3 {
-    /// Velocity east (longitude axis) in m/s.
+    /// x velocity in m/s
     #[prost(double, tag = "1")]
     pub x: f64,
-    /// Velocity north (latitude axis) in m/s.
+    /// y velocity in m/s
     #[prost(double, tag = "2")]
     pub y: f64,
-    /// Velocity up (altitude axis) in m/s.
+    /// z velocity in m/s
     #[prost(double, tag = "3")]
     pub z: f64,
 }

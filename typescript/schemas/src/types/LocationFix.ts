@@ -33,7 +33,7 @@ export type LocationFix = {
   /** Heading (yaw angle), in radians, measured clockwise from north */
   heading?: number;
 
-  /** Velocity in local East-North-Up frame in m/s. */
+  /** Velocity in local East-North-Up (ENU) frame in m/s (x=longitude, y=latitude, z=altitude) */
   velocity?: Velocity3;
 
   /** Color used to visualize the location */

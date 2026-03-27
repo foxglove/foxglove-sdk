@@ -49,7 +49,7 @@ message LocationFix {
   // Heading (yaw angle), in radians, measured clockwise from north
   optional double heading = 10;
 
-  // Velocity in local East-North-Up frame in m/s.
+  // Velocity in local East-North-Up (ENU) frame in m/s (x=longitude, y=latitude, z=altitude)
   optional foxglove.Velocity3 velocity = 11;
 
   // Color used to visualize the location

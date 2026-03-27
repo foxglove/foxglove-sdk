@@ -1260,13 +1260,13 @@ struct LinePrimitive {
 
 /// @brief A velocity vector in 3D space
 struct Velocity3 {
-  /// @brief Velocity east (longitude axis) in m/s.
+  /// @brief x velocity in m/s
   double x = 0;
 
-  /// @brief Velocity north (latitude axis) in m/s.
+  /// @brief y velocity in m/s
   double y = 0;
 
-  /// @brief Velocity up (altitude axis) in m/s.
+  /// @brief z velocity in m/s
   double z = 0;
 
   /// @brief Encoded the Velocity3 as protobuf to the provided buffer.
@@ -1327,7 +1327,8 @@ struct LocationFix {
   /// @brief Heading (yaw angle), in radians, measured clockwise from north
   std::optional<double> heading = std::nullopt;
 
-  /// @brief Velocity in local East-North-Up frame in m/s.
+  /// @brief Velocity in local East-North-Up (ENU) frame in m/s (x=longitude, y=latitude,
+  /// z=altitude)
   std::optional<Velocity3> velocity;
 
   /// @brief Color used to visualize the location

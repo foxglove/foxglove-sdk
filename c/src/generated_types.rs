@@ -3558,7 +3558,7 @@ pub struct LocationFix {
     /// Heading (yaw angle), in radians, measured clockwise from north
     pub heading: *const f64,
 
-    /// Velocity in local East-North-Up frame in m/s.
+    /// Velocity in local East-North-Up (ENU) frame in m/s (x=longitude, y=latitude, z=altitude)
     pub velocity: *const Velocity3,
 
     /// Color used to visualize the location
@@ -7586,13 +7586,13 @@ pub unsafe extern "C" fn foxglove_triangle_list_primitive_encode(
 /// A velocity vector in 3D space
 #[repr(C)]
 pub struct Velocity3 {
-    /// Velocity east (longitude axis) in m/s.
+    /// x velocity in m/s
     pub x: f64,
 
-    /// Velocity north (latitude axis) in m/s.
+    /// y velocity in m/s
     pub y: f64,
 
-    /// Velocity up (altitude axis) in m/s.
+    /// z velocity in m/s
     pub z: f64,
 }
 

@@ -3,12 +3,12 @@
 
 /** A velocity vector in 3D space */
 export type Velocity3 = {
-  /** Velocity east (longitude axis) in m/s. */
+  /** x velocity in m/s */
   x: number;
 
-  /** Velocity north (latitude axis) in m/s. */
+  /** y velocity in m/s */
   y: number;
 
-  /** Velocity up (altitude axis) in m/s. */
+  /** z velocity in m/s */
   z: number;
 };
