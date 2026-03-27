@@ -1607,6 +1607,7 @@ dependencies = [
  "env_logger",
  "foxglove 0.21.0",
  "log",
+ "maplit",
  "mcap 0.24.0",
  "tracing",
 ]
