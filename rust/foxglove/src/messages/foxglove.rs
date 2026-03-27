@@ -599,7 +599,7 @@ pub struct LocationFix {
     #[prost(double, optional, tag = "10")]
     pub heading: ::core::option::Option<f64>,
     /// Velocity in local East-North-Up frame in m/s.
-    #[prost(message, optional, tag = "12")]
+    #[prost(message, optional, tag = "11")]
     pub velocity: ::core::option::Option<Velocity3>,
     /// Color used to visualize the location
     #[prost(message, optional, tag = "8")]

@@ -50,7 +50,7 @@ message LocationFix {
   optional double heading = 10;
 
   // Velocity in local East-North-Up frame in m/s.
-  optional foxglove.Velocity3 velocity = 12;
+  optional foxglove.Velocity3 velocity = 11;
 
   // Color used to visualize the location
   optional foxglove.Color color = 8;
