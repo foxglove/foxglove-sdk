@@ -24,6 +24,7 @@ export * from "./Log";
 export * from "./LogLevel";
 export * from "./ModelPrimitive";
 export * from "./NumericType";
+export * from "./Odometry";
 export * from "./PackedElementField";
 export * from "./Point2";
 export * from "./Point3";

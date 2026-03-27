@@ -77,7 +77,7 @@
     },
     "velocity": {
       "title": "foxglove.Velocity3",
-      "description": "Velocity in local East-North-Up (ENU) frame in m/s",
+      "description": "Velocity in local East-North-Up (ENU) frame in m/s (x=longitude, y=latitude, z=altitude)",
       "type": "object",
       "properties": {
         "x": {

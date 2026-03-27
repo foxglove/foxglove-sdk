@@ -571,6 +571,32 @@ class ModelPrimitive:
         """Encodes the ModelPrimitive."""
         ...
 
+class Odometry:
+    """
+    An estimate of position, orientation, and velocity for an object or reference frame in 3D space
+    """
+
+    def __init__(
+        self,
+        *,
+        timestamp: Timestamp | None = None,
+        frame_id: str = "",
+        child_frame_id: str = "",
+        pose: Pose | None = None,
+        linear_velocity: Velocity3 | None = None,
+        angular_velocity: Velocity3 | None = None,
+        pose_covariance: list[float] | None = None,
+        velocity_covariance: list[float] | None = None,
+    ) -> None: ...
+    @staticmethod
+    def get_schema() -> Schema:
+        """Returns the Odometry schema"""
+        ...
+
+    def encode(self) -> bytes:
+        """Encodes the Odometry."""
+        ...
+
 class PackedElementField:
     """
     A field present within each element in a byte array of packed elements.
@@ -1084,6 +1110,7 @@ FoxgloveMessage = Union[
     SceneEntity,
     SceneUpdate,
     ModelPrimitive,
+    Odometry,
     PackedElementField,
     Point2,
     Point3,

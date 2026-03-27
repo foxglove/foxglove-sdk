@@ -1660,7 +1660,8 @@ const LocationFix: FoxgloveMessageSchema = {
     {
       name: "velocity",
       type: { type: "nested", schema: Velocity3 },
-      description: "Velocity in local East-North-Up (ENU) frame in m/s",
+      description:
+        "Velocity in local East-North-Up (ENU) frame in m/s (x=longitude, y=latitude, z=altitude)",
       protobufFieldNumber: 11,
       flatbuffersFieldNumber: 10,
       optional: true,
@@ -1694,6 +1695,64 @@ const LocationFixes: FoxgloveMessageSchema = {
       type: { type: "nested", schema: LocationFix },
       array: true,
       description: "An array of location fixes",
+    },
+  ],
+};
+
+const Odometry: FoxgloveMessageSchema = {
+  type: "message",
+  name: "Odometry",
+  description:
+    "An estimate of position, orientation, and velocity for an object or reference frame in 3D space",
+  fields: [
+    {
+      name: "timestamp",
+      type: { type: "nested", schema: Timestamp },
+      description: "Timestamp of the message",
+    },
+    {
+      name: "frame_id",
+      type: { type: "primitive", name: "string" },
+      description: "Coordinate frame for pose data (e.g. `map` or `odom`)",
+    },
+    {
+      name: "child_frame_id",
+      type: { type: "primitive", name: "string" },
+      description: "Coordinate frame for velocity data (e.g. `base_link`)",
+    },
+    {
+      name: "pose",
+      type: { type: "nested", schema: Pose },
+      description: "Position and orientation of child_frame_id in frame_id",
+      optional: true,
+    },
+    {
+      name: "linear_velocity",
+      type: { type: "nested", schema: Velocity3 },
+      description: "Linear velocity in m/s in child_frame_id",
+      optional: true,
+    },
+    {
+      name: "angular_velocity",
+      type: { type: "nested", schema: Velocity3 },
+      description: "Angular velocity in rad/s in child_frame_id",
+      optional: true,
+    },
+    {
+      name: "pose_covariance",
+      type: { type: "primitive", name: "float64" },
+      description:
+        "Row-major 6x6 covariance matrix (x, y, z, rotation about x, rotation about y, rotation about z). Set to zero if unknown.",
+      array: 36,
+      optional: true,
+    },
+    {
+      name: "velocity_covariance",
+      type: { type: "primitive", name: "float64" },
+      description:
+        "Row-major 6x6 covariance matrix (vx, vy, vz, angular rate about x, angular rate about y, angular rate about z). Set to zero if unknown.",
+      array: 36,
+      optional: true,
     },
   ],
 };
@@ -1925,6 +1984,7 @@ export const foxgloveMessageSchemas = {
   SceneEntity,
   SceneUpdate,
   ModelPrimitive,
+  Odometry,
   PackedElementField,
   Point2,
   Point3,

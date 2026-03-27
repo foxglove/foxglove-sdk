@@ -1337,7 +1337,7 @@ typedef struct foxglove_location_fix {
    */
   const double *heading;
   /**
-   * Velocity in local East-North-Up (ENU) frame in m/s
+   * Velocity in local East-North-Up (ENU) frame in m/s (x=longitude, y=latitude, z=altitude)
    */
   const struct foxglove_velocity3 *velocity;
   /**
@@ -1627,6 +1627,44 @@ typedef struct foxglove_scene_update {
   const struct foxglove_scene_entity *entities;
   size_t entities_count;
 } foxglove_scene_update;
+
+/**
+ * An estimate of position, orientation, and velocity for an object or reference frame in 3D space
+ */
+typedef struct foxglove_odometry {
+  /**
+   * Timestamp of the message
+   */
+  const struct foxglove_timestamp *timestamp;
+  /**
+   * Coordinate frame for pose data (e.g. `map` or `odom`)
+   */
+  struct foxglove_string frame_id;
+  /**
+   * Coordinate frame for velocity data (e.g. `base_link`)
+   */
+  struct foxglove_string child_frame_id;
+  /**
+   * Position and orientation of child_frame_id in frame_id
+   */
+  const struct foxglove_pose *pose;
+  /**
+   * Linear velocity in m/s in child_frame_id
+   */
+  const struct foxglove_velocity3 *linear_velocity;
+  /**
+   * Angular velocity in rad/s in child_frame_id
+   */
+  const struct foxglove_velocity3 *angular_velocity;
+  /**
+   * Row-major 6x6 covariance matrix (x, y, z, rotation about x, rotation about y, rotation about z). Set to zero if unknown.
+   */
+  double pose_covariance[36];
+  /**
+   * Row-major 6x6 covariance matrix (vx, vy, vz, angular rate about x, angular rate about y, angular rate about z). Set to zero if unknown.
+   */
+  double velocity_covariance[36];
+} foxglove_odometry;
 
 /**
  * A timestamped point for a position in 3D space
@@ -3743,6 +3781,52 @@ foxglove_error foxglove_model_primitive_encode(const struct foxglove_model_primi
                                                uint8_t *ptr,
                                                size_t len,
                                                size_t *encoded_len);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_odometry(struct foxglove_string topic,
+                                                const struct foxglove_context *context,
+                                                const struct foxglove_channel **channel);
+
+#if !defined(__wasm__)
+/**
+ * Log a Odometry message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_odometry.
+ */
+foxglove_error foxglove_channel_log_odometry(const struct foxglove_channel *channel,
+                                             const struct foxglove_odometry *msg,
+                                             const uint64_t *log_time,
+                                             FoxgloveSinkId sink_id);
+#endif
+
+/**
+ * Get the Odometry schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_odometry_schema(void);
+
+/**
+ * Encode a Odometry message as protobuf to the buffer provided.
+ *
+ * On success, writes the encoded length to *encoded_len.
+ * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+ * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+ * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+ *
+ * # Safety
+ * ptr must be a valid pointer to a memory region at least len bytes long.
+ */
+foxglove_error foxglove_odometry_encode(const struct foxglove_odometry *msg,
+                                        uint8_t *ptr,
+                                        size_t len,
+                                        size_t *encoded_len);
 
 /**
  * Create a new typed channel, and return an owned raw channel pointer to it.

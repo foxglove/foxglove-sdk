@@ -48,7 +48,7 @@ table LocationFix {
   /// Heading (yaw angle), in radians, measured clockwise from north
   heading:double = null (id: 9);
 
-  /// Velocity in local East-North-Up (ENU) frame in m/s
+  /// Velocity in local East-North-Up (ENU) frame in m/s (x=longitude, y=latitude, z=altitude)
   velocity:foxglove.Velocity3 (id: 10);
 
   /// Color used to visualize the location

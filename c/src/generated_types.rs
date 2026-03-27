@@ -3558,7 +3558,7 @@ pub struct LocationFix {
     /// Heading (yaw angle), in radians, measured clockwise from north
     pub heading: *const f64,
 
-    /// Velocity in local East-North-Up (ENU) frame in m/s
+    /// Velocity in local East-North-Up (ENU) frame in m/s (x=longitude, y=latitude, z=altitude)
     pub velocity: *const Velocity3,
 
     /// Color used to visualize the location
@@ -4789,6 +4789,220 @@ pub unsafe extern "C" fn foxglove_model_primitive_encode(
         }
         Err(e) => {
             tracing::error!("ModelPrimitive: {}", e);
+            FoxgloveError::EncodeError
+        }
+    }
+}
+
+/// An estimate of position, orientation, and velocity for an object or reference frame in 3D space
+#[repr(C)]
+pub struct Odometry {
+    /// Timestamp of the message
+    pub timestamp: *const FoxgloveTimestamp,
+
+    /// Coordinate frame for pose data (e.g. `map` or `odom`)
+    pub frame_id: FoxgloveString,
+
+    /// Coordinate frame for velocity data (e.g. `base_link`)
+    pub child_frame_id: FoxgloveString,
+
+    /// Position and orientation of child_frame_id in frame_id
+    pub pose: *const Pose,
+
+    /// Linear velocity in m/s in child_frame_id
+    pub linear_velocity: *const Velocity3,
+
+    /// Angular velocity in rad/s in child_frame_id
+    pub angular_velocity: *const Velocity3,
+
+    /// Row-major 6x6 covariance matrix (x, y, z, rotation about x, rotation about y, rotation about z). Set to zero if unknown.
+    pub pose_covariance: [f64; 36],
+
+    /// Row-major 6x6 covariance matrix (vx, vy, vz, angular rate about x, angular rate about y, angular rate about z). Set to zero if unknown.
+    pub velocity_covariance: [f64; 36],
+}
+
+#[cfg(not(target_family = "wasm"))]
+impl Odometry {
+    /// Create a new typed channel, and return an owned raw channel pointer to it.
+    ///
+    /// # Safety
+    /// We're trusting the caller that the channel will only be used with this type T.
+    #[unsafe(no_mangle)]
+    pub unsafe extern "C" fn foxglove_channel_create_odometry(
+        topic: FoxgloveString,
+        context: *const FoxgloveContext,
+        channel: *mut *const FoxgloveChannel,
+    ) -> FoxgloveError {
+        if channel.is_null() {
+            tracing::error!("channel cannot be null");
+            return FoxgloveError::ValueError;
+        }
+        unsafe {
+            let result = do_foxglove_channel_create::<foxglove::messages::Odometry>(topic, context);
+            result_to_c(result, channel)
+        }
+    }
+}
+
+impl BorrowToNative for Odometry {
+    type NativeType = foxglove::messages::Odometry;
+
+    unsafe fn borrow_to_native(
+        &self,
+        #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
+    ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
+        let frame_id = unsafe {
+            string_from_raw(
+                self.frame_id.as_ptr() as *const _,
+                self.frame_id.len(),
+                "frame_id",
+            )?
+        };
+        let child_frame_id = unsafe {
+            string_from_raw(
+                self.child_frame_id.as_ptr() as *const _,
+                self.child_frame_id.len(),
+                "child_frame_id",
+            )?
+        };
+        let pose = unsafe {
+            self.pose
+                .as_ref()
+                .map(|m| m.borrow_to_native(arena.as_mut()))
+        }
+        .transpose()?;
+        let linear_velocity = unsafe {
+            self.linear_velocity
+                .as_ref()
+                .map(|m| m.borrow_to_native(arena.as_mut()))
+        }
+        .transpose()?;
+        let angular_velocity = unsafe {
+            self.angular_velocity
+                .as_ref()
+                .map(|m| m.borrow_to_native(arena.as_mut()))
+        }
+        .transpose()?;
+
+        Ok(ManuallyDrop::new(foxglove::messages::Odometry {
+            timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
+            frame_id: ManuallyDrop::into_inner(frame_id),
+            child_frame_id: ManuallyDrop::into_inner(child_frame_id),
+            pose: pose.map(ManuallyDrop::into_inner),
+            linear_velocity: linear_velocity.map(ManuallyDrop::into_inner),
+            angular_velocity: angular_velocity.map(ManuallyDrop::into_inner),
+            pose_covariance: ManuallyDrop::into_inner(unsafe {
+                vec_from_raw(
+                    self.pose_covariance.as_ptr() as *mut f64,
+                    self.pose_covariance.len(),
+                )
+            }),
+            velocity_covariance: ManuallyDrop::into_inner(unsafe {
+                vec_from_raw(
+                    self.velocity_covariance.as_ptr() as *mut f64,
+                    self.velocity_covariance.len(),
+                )
+            }),
+        }))
+    }
+}
+
+/// Log a Odometry message to a channel.
+///
+/// # Safety
+/// The channel must have been created for this type with foxglove_channel_create_odometry.
+#[cfg(not(target_family = "wasm"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn foxglove_channel_log_odometry(
+    channel: Option<&FoxgloveChannel>,
+    msg: Option<&Odometry>,
+    log_time: Option<&u64>,
+    sink_id: FoxgloveSinkId,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { Odometry::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
+            log_msg_to_channel(channel, &*msg, log_time, sink_id)
+        }
+        Err(e) => {
+            tracing::error!("Odometry: {}", e);
+            e.into()
+        }
+    }
+}
+
+/// Get the Odometry schema.
+///
+/// All buffers in the returned schema are statically allocated.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_odometry_schema() -> FoxgloveSchema {
+    let native = foxglove::messages::Odometry::get_schema().expect("Odometry schema is Some");
+    let name: &'static str = "foxglove.Odometry";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("Odometry schema data is static");
+    };
+    FoxgloveSchema {
+        name: name.into(),
+        encoding: encoding.into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
+/// Encode a Odometry message as protobuf to the buffer provided.
+///
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+/// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+/// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+///
+/// # Safety
+/// ptr must be a valid pointer to a memory region at least len bytes long.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_odometry_encode(
+    msg: Option<&Odometry>,
+    ptr: *mut u8,
+    len: usize,
+    encoded_len: Option<&mut usize>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { Odometry::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            if len == 0 || ptr.is_null() {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = msg
+                        .encoded_len()
+                        .expect("foxglove messages return Some(len)");
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
+            if let Err(encode_error) = msg.encode(&mut buf) {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
+            }
+            FoxgloveError::Ok
+        }
+        Err(e) => {
+            tracing::error!("Odometry: {}", e);
             FoxgloveError::EncodeError
         }
     }
