@@ -914,14 +914,9 @@ impl RemoteAccessSession {
                 .remove_client_channel(participant.participant_id(), channel_id);
 
             match removed {
-                None => {
-                    self.send_warning(
-                        participant,
-                        format!(
-                            "Client is not advertising channel: {channel_id_raw}; ignoring unadvertisement"
-                        ),
-                    );
-                }
+                None => debug!(
+                    "Client is not advertising channel: {channel_id_raw}; ignoring unadvertisement"
+                ),
                 Some(descriptor) => {
                     if let Some(listener) = &self.listener {
                         listener.on_client_unadvertise(client.clone(), &descriptor);
