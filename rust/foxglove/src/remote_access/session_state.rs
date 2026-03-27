@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use std::collections::hash_map::Entry;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use livekit::id::{ParticipantIdentity, TrackSid};
@@ -13,7 +13,7 @@ use crate::remote_access::session::{VideoInputSchema, VideoMetadata, VideoPublis
 use crate::remote_common::ClientId;
 use crate::{ChannelDescriptor, ChannelId, RawChannel};
 
-/// Channels that lost their last subscriber when a participant was removed.
+/// Channels and parameters that lost their last subscriber when a participant was removed.
 pub(crate) struct RemovedSubscriptions {
     /// The locally-significant client ID of the removed participant.
     pub client_id: Option<ClientId>,
@@ -23,6 +23,8 @@ pub(crate) struct RemovedSubscriptions {
     pub last_video_unsubscribed: SmallVec<[ChannelId; 4]>,
     /// Client channels that were advertised by the removed participant.
     pub client_channels: Vec<ChannelDescriptor>,
+    /// Parameter names that lost their last subscriber.
+    pub last_param_unsubscribed: Vec<String>,
 }
 
 /// State machine for a remote access session.
@@ -54,6 +56,8 @@ pub(crate) struct SessionState {
     video_metadata: HashMap<ChannelId, VideoMetadata>,
     /// Client-advertised channels, keyed by participant identity then client-assigned channel ID.
     client_channels: HashMap<ParticipantIdentity, HashMap<ChannelId, ChannelDescriptor>>,
+    /// Parameters subscribed to by participants, keyed by parameter name.
+    subscribed_parameters: HashMap<String, HashSet<ParticipantIdentity>>,
 }
 
 impl SessionState {
@@ -69,6 +73,7 @@ impl SessionState {
             video_track_sids: HashMap::new(),
             video_metadata: HashMap::new(),
             client_channels: HashMap::new(),
+            subscribed_parameters: HashMap::new(),
         }
     }
 
@@ -102,6 +107,7 @@ impl SessionState {
                 last_unsubscribed: SmallVec::new(),
                 last_video_unsubscribed: SmallVec::new(),
                 client_channels: Vec::new(),
+                last_param_unsubscribed: Vec::new(),
             };
         };
         let client_id = participant.client_id();
@@ -138,11 +144,23 @@ impl SessionState {
             .map(|map| map.into_values().collect())
             .unwrap_or_default();
 
+        let mut last_param_unsubscribed = Vec::new();
+        self.subscribed_parameters.retain(|name, subscribers| {
+            subscribers.remove(identity);
+            if subscribers.is_empty() {
+                last_param_unsubscribed.push(name.clone());
+                false
+            } else {
+                true
+            }
+        });
+
         RemovedSubscriptions {
             client_id: Some(client_id),
             last_unsubscribed,
             last_video_unsubscribed,
             client_channels,
+            last_param_unsubscribed,
         }
     }
 
@@ -495,6 +513,50 @@ impl SessionState {
     pub fn get_data_subscription(&self, channel_id: &ChannelId) -> Option<&ChannelSubscription> {
         let sub = self.data_subscriptions.get(channel_id)?;
         if sub.is_empty() { None } else { Some(sub) }
+    }
+
+    /// Add parameter subscriptions for a participant.
+    ///
+    /// Returns parameter names that are newly subscribed (i.e. had no prior subscribers).
+    pub fn subscribe_parameters(
+        &mut self,
+        identity: &ParticipantIdentity,
+        names: Vec<String>,
+    ) -> Vec<String> {
+        let mut new_names = Vec::new();
+        for name in names {
+            let subscribers = self.subscribed_parameters.entry(name.clone()).or_default();
+            if subscribers.insert(identity.clone()) && subscribers.len() == 1 {
+                new_names.push(name);
+            }
+        }
+        new_names
+    }
+
+    /// Remove parameter subscriptions for a participant.
+    ///
+    /// Returns parameter names that lost their last subscriber.
+    pub fn unsubscribe_parameters(
+        &mut self,
+        identity: &ParticipantIdentity,
+        names: Vec<String>,
+    ) -> Vec<String> {
+        let mut old_names = Vec::new();
+        for name in names {
+            if let Some(subscribers) = self.subscribed_parameters.get_mut(&name) {
+                subscribers.remove(identity);
+                if subscribers.is_empty() {
+                    self.subscribed_parameters.remove(&name);
+                    old_names.push(name);
+                }
+            }
+        }
+        old_names
+    }
+
+    /// Returns the set of participant identities subscribed to a parameter.
+    pub fn parameter_subscribers(&self, name: &str) -> Option<&HashSet<ParticipantIdentity>> {
+        self.subscribed_parameters.get(name)
     }
 }
 

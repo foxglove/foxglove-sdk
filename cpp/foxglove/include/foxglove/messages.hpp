@@ -242,13 +242,13 @@ struct CameraCalibration {
   /// Foxglove also treats K[0] == 0.0 as indicating an uncalibrated camera, and calibration data
   /// will be ignored.
   ///
-  std::array<double, 9> k;
+  std::array<double, 9> k = {};
 
   /// @brief Rectification matrix (stereo cameras only, 3x3 row-major matrix)
   ///
   /// A rotation matrix aligning the camera coordinate system to the ideal stereo image plane so
   /// that epipolar lines in both stereo images are parallel.
-  std::array<double, 9> r;
+  std::array<double, 9> r = {};
 
   /// @brief Projection/camera matrix (3x4 row-major matrix)
   ///
@@ -281,7 +281,7 @@ struct CameraCalibration {
   ///
   /// This holds for both images of a stereo pair.
   ///
-  std::array<double, 12> p;
+  std::array<double, 12> p = {};
 
   /// @brief Encoded the CameraCalibration as protobuf to the provided buffer.
   ///
@@ -1318,7 +1318,7 @@ struct LocationFix {
 
   /// @brief Position covariance (m^2) defined relative to a tangential plane through the reported
   /// position. The components are East, North, and Up (ENU), in row-major order.
-  std::array<double, 9> position_covariance;
+  std::array<double, 9> position_covariance = {};
 
   /// @brief If `position_covariance` is available, `position_covariance_type` must be set to
   /// indicate the type of covariance.

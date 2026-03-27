@@ -16,6 +16,8 @@ use tokio_util::{io::StreamReader, sync::CancellationToken};
 use tracing::{debug, error, info, warn};
 
 use crate::protocol::v2::DecodeError;
+use crate::protocol::v2::parameter::Parameter;
+use crate::protocol::v2::server::ParameterValues;
 use crate::remote_access::participant::ChannelWriter;
 use crate::remote_common::service::{CallId, Service, ServiceId, ServiceMap};
 use crate::{
@@ -713,6 +715,18 @@ impl RemoteAccessSession {
             ClientMessage::ServiceCallRequest(req) => {
                 self.handle_service_call(&participant, req);
             }
+            ClientMessage::GetParameters(msg) => {
+                self.handle_get_parameters(&participant, msg.parameter_names, msg.id);
+            }
+            ClientMessage::SetParameters(msg) => {
+                self.handle_set_parameters(&participant, msg.parameters, msg.id);
+            }
+            ClientMessage::SubscribeParameterUpdates(msg) => {
+                self.handle_subscribe_parameter_updates(&participant, msg.parameter_names);
+            }
+            ClientMessage::UnsubscribeParameterUpdates(msg) => {
+                self.handle_unsubscribe_parameter_updates(&participant, msg.parameter_names);
+            }
             _ => {
                 warn!("Unhandled client message: {client_msg:?}");
             }
@@ -1096,6 +1110,12 @@ impl RemoteAccessSession {
         }
 
         self.stop_video_tracks(&removed.last_video_unsubscribed);
+
+        if !removed.last_param_unsubscribed.is_empty() {
+            if let Some(listener) = &self.listener {
+                listener.on_parameters_unsubscribe(removed.last_param_unsubscribed);
+            }
+        }
 
         if !removed.client_channels.is_empty() {
             if let Some((listener, client_id)) = self.listener.as_ref().zip(removed.client_id) {
@@ -1496,6 +1516,156 @@ impl RemoteAccessSession {
             message: message.to_string(),
         };
         self.send_control(participant.clone(), encode_json_message(&failure));
+    }
+
+    /// Handle a `GetParameters` request from a client.
+    fn handle_get_parameters(
+        &self,
+        participant: &Arc<Participant>,
+        param_names: Vec<String>,
+        request_id: Option<String>,
+    ) {
+        if !self.has_capability(Capability::Parameters) {
+            self.send_error(
+                participant,
+                "Server does not support parameters capability".into(),
+            );
+            return;
+        }
+
+        if let Some(listener) = self.listener.as_ref() {
+            let client = Client::new(
+                participant.client_id(),
+                participant.participant_id().clone(),
+            );
+            let parameters = listener.on_get_parameters(client, param_names, request_id.as_deref());
+            self.send_parameter_values(participant, parameters, request_id);
+        }
+    }
+
+    /// Handle a `SetParameters` request from a client.
+    fn handle_set_parameters(
+        &self,
+        participant: &Arc<Participant>,
+        parameters: Vec<Parameter>,
+        request_id: Option<String>,
+    ) {
+        if !self.has_capability(Capability::Parameters) {
+            self.send_error(
+                participant,
+                "Server does not support parameters capability".into(),
+            );
+            return;
+        }
+
+        let updated_parameters = if let Some(listener) = self.listener.as_ref() {
+            let client = Client::new(
+                participant.client_id(),
+                participant.participant_id().clone(),
+            );
+            let updated = listener.on_set_parameters(client, parameters, request_id.as_deref());
+
+            // Send the updated parameters back to the requesting client if `request_id` is set.
+            if request_id.is_some() {
+                self.send_parameter_values(participant, updated.clone(), request_id);
+            }
+            updated
+        } else {
+            parameters
+        };
+        self.publish_parameter_values(updated_parameters);
+    }
+
+    /// Handle a `SubscribeParameterUpdates` request from a client.
+    fn handle_subscribe_parameter_updates(
+        &self,
+        participant: &Arc<Participant>,
+        names: Vec<String>,
+    ) {
+        if !self.has_capability(Capability::Parameters) {
+            self.send_error(
+                participant,
+                "Server does not support parametersSubscribe capability".into(),
+            );
+            return;
+        }
+        let _guard = self.subscription_lock.lock();
+        let new_names = self
+            .state
+            .write()
+            .subscribe_parameters(participant.participant_id(), names);
+        if !new_names.is_empty() {
+            if let Some(listener) = &self.listener {
+                listener.on_parameters_subscribe(new_names);
+            }
+        }
+    }
+
+    /// Handle an `UnsubscribeParameterUpdates` request from a client.
+    fn handle_unsubscribe_parameter_updates(
+        &self,
+        participant: &Arc<Participant>,
+        names: Vec<String>,
+    ) {
+        if !self.has_capability(Capability::Parameters) {
+            self.send_error(
+                participant,
+                "Server does not support parametersSubscribe capability".into(),
+            );
+            return;
+        }
+        let _guard = self.subscription_lock.lock();
+        let old_names = self
+            .state
+            .write()
+            .unsubscribe_parameters(participant.participant_id(), names);
+        if !old_names.is_empty() {
+            if let Some(listener) = &self.listener {
+                listener.on_parameters_unsubscribe(old_names);
+            }
+        }
+    }
+
+    /// Send a `ParameterValues` message to a specific participant.
+    fn send_parameter_values(
+        &self,
+        participant: &Arc<Participant>,
+        parameters: Vec<Parameter>,
+        request_id: Option<String>,
+    ) {
+        let mut msg = ParameterValues::new(parameters.into_iter().filter(|p| p.value.is_some()));
+        if let Some(id) = request_id {
+            msg = msg.with_id(id);
+        }
+        self.send_control(participant.clone(), encode_json_message(&msg));
+    }
+
+    /// Publish parameter values to all participants subscribed to those parameters.
+    pub(crate) fn publish_parameter_values(&self, parameters: Vec<Parameter>) {
+        if !self.has_capability(Capability::Parameters) {
+            error!("Server does not support parameters capability");
+            return;
+        }
+
+        let state = self.state.read();
+        let participants = state.collect_participants();
+        for participant in &participants {
+            // Filter parameters by this participant's subscriptions.
+            let filtered: Vec<_> = parameters
+                .iter()
+                .filter(|p| {
+                    state
+                        .parameter_subscribers(&p.name)
+                        .is_some_and(|ids| ids.contains(participant.participant_id()))
+                })
+                .cloned()
+                .collect();
+
+            if !filtered.is_empty() {
+                let no_request_id = None;
+                self.send_parameter_values(participant, filtered, no_request_id);
+            }
+        }
     }
 
     /// Check video publishers for metadata changes and re-advertise affected channels.
