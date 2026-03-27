@@ -5,6 +5,9 @@ use std::collections::HashMap;
 use livekit::id::ParticipantIdentity;
 use tracing::error;
 
+/// The LiveKit participant attribute key used to advertise the remote access protocol version.
+pub(crate) const PROTOCOL_VERSION_ATTRIBUTE: &str = "protocolVersion";
+
 /// The remote access protocol version supported by this SDK build.
 pub(crate) const REMOTE_ACCESS_PROTOCOL_VERSION: &str = "2.0.1";
 
@@ -26,7 +29,7 @@ pub(crate) fn parse_participant_protocol_version(
     attributes: &HashMap<String, String>,
 ) -> Option<semver::Version> {
     let version_str = attributes
-        .get("protocolVersion")
+        .get(PROTOCOL_VERSION_ATTRIBUTE)
         .map(String::as_str)
         .unwrap_or(DEFAULT_PROTOCOL_VERSION);
     match semver::Version::parse(version_str) {
@@ -70,7 +73,7 @@ mod tests {
     use super::*;
 
     fn attrs(version: &str) -> HashMap<String, String> {
-        HashMap::from([("protocolVersion".to_string(), version.to_string())])
+        HashMap::from([(PROTOCOL_VERSION_ATTRIBUTE.to_string(), version.to_string())])
     }
 
     fn identity() -> ParticipantIdentity {
