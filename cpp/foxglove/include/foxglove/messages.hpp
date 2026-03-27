@@ -242,13 +242,13 @@ struct CameraCalibration {
   /// Foxglove also treats K[0] == 0.0 as indicating an uncalibrated camera, and calibration data
   /// will be ignored.
   ///
-  std::array<double, 9> k;
+  std::array<double, 9> k = {};
 
   /// @brief Rectification matrix (stereo cameras only, 3x3 row-major matrix)
   ///
   /// A rotation matrix aligning the camera coordinate system to the ideal stereo image plane so
   /// that epipolar lines in both stereo images are parallel.
-  std::array<double, 9> r;
+  std::array<double, 9> r = {};
 
   /// @brief Projection/camera matrix (3x4 row-major matrix)
   ///
@@ -281,7 +281,7 @@ struct CameraCalibration {
   ///
   /// This holds for both images of a stereo pair.
   ///
-  std::array<double, 12> p;
+  std::array<double, 12> p = {};
 
   /// @brief Encoded the CameraCalibration as protobuf to the provided buffer.
   ///
@@ -1258,6 +1258,36 @@ struct LinePrimitive {
   static Schema schema();
 };
 
+/// @brief A velocity vector in 3D space
+struct Velocity3 {
+  /// @brief x component
+  double x = 0;
+
+  /// @brief y component
+  double y = 0;
+
+  /// @brief z component
+  double z = 0;
+
+  /// @brief Encoded the Velocity3 as protobuf to the provided buffer.
+  ///
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
+  /// and returns FoxgloveError::BufferTooShort.
+  /// If the message cannot be encoded, writes the reason to stderr and returns
+  /// FoxgloveError::EncodeError.
+  ///
+  /// @param ptr the destination buffer. must point to at least len valid bytes.
+  /// @param len the length of the destination buffer.
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
+
+  /// @brief Get the Velocity3 schema.
+  ///
+  /// The schema data returned is statically allocated.
+  static Schema schema();
+};
+
 /// @brief A navigation satellite fix for any Global Navigation Satellite System
 struct LocationFix {
   /// @brief Type of position covariance
@@ -1288,11 +1318,17 @@ struct LocationFix {
 
   /// @brief Position covariance (m^2) defined relative to a tangential plane through the reported
   /// position. The components are East, North, and Up (ENU), in row-major order.
-  std::array<double, 9> position_covariance;
+  std::array<double, 9> position_covariance = {};
 
   /// @brief If `position_covariance` is available, `position_covariance_type` must be set to
   /// indicate the type of covariance.
   PositionCovarianceType position_covariance_type{};
+
+  /// @brief Heading (yaw angle), in radians, measured clockwise from north
+  std::optional<double> heading = std::nullopt;
+
+  /// @brief Velocity in local East-North-Up (ENU) frame in m/s
+  std::optional<Velocity3> velocity;
 
   /// @brief Color used to visualize the location
   std::optional<Color> color;
@@ -4934,6 +4970,73 @@ public:
 
 private:
   explicit Vector3Channel(ChannelUniquePtr&& channel)
+      : impl_(std::move(channel)) {}
+
+  ChannelUniquePtr impl_;
+};
+
+/// @brief A channel for logging Velocity3 messages to a topic.
+///
+/// @note While channels are fully thread-safe, the Velocity3 struct is not thread-safe.
+/// Avoid modifying it concurrently or during a log operation.
+class Velocity3Channel {
+public:
+  /// @brief Create a new channel.
+  ///
+  /// @param topic The topic name. You should choose a unique topic name per channel for
+  /// compatibility with the Foxglove app.
+  /// @param context The context which associates logs to a sink. If omitted, the default context is
+  /// used.
+  static FoxgloveResult<Velocity3Channel> create(
+    const std::string_view& topic, const Context& context = Context()
+  );
+
+  /// @brief Log a message to the channel.
+  ///
+  /// @param msg The Velocity3 message to log.
+  /// @param log_time The timestamp of the message, as nanoseconds since epoch. If omitted, the
+  /// current time is used.
+  /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
+  FoxgloveError log(
+    const Velocity3& msg, std::optional<uint64_t> log_time = std::nullopt,
+    std::optional<uint64_t> sink_id = std::nullopt
+  ) noexcept;
+
+  /// @brief Close the channel.
+  ///
+  /// You can use this to explicitly unadvertise the channel to sinks that subscribe to channels
+  /// dynamically, such as the WebSocketServer.
+  ///
+  /// Attempts to log on a closed channel will elicit a throttled warning message.
+  void close() noexcept;
+
+  /// @brief Uniquely identifies a channel in the context of this program.
+  ///
+  /// @return The ID of the channel.
+  [[nodiscard]] uint64_t id() const noexcept;
+
+  /// @brief Find out if any sinks have been added to the channel.
+  ///
+  /// @return True if sinks have been added to the channel, false otherwise.
+  [[nodiscard]] bool hasSinks() const noexcept;
+
+  /// @deprecated Use hasSinks() instead.
+  // NOLINTNEXTLINE(readability-identifier-naming)
+  [[deprecated("Use hasSinks() instead")]] [[nodiscard]] bool has_sinks() const noexcept {
+    return hasSinks();
+  }
+
+  Velocity3Channel(const Velocity3Channel& other) noexcept = delete;
+  Velocity3Channel& operator=(const Velocity3Channel& other) noexcept = delete;
+  /// @brief Default move constructor.
+  Velocity3Channel(Velocity3Channel&& other) noexcept = default;
+  /// @brief Default move assignment.
+  Velocity3Channel& operator=(Velocity3Channel&& other) noexcept = default;
+  /// @brief Default destructor.
+  ~Velocity3Channel() = default;
+
+private:
+  explicit Velocity3Channel(ChannelUniquePtr&& channel)
       : impl_(std::move(channel)) {}
 
   ChannelUniquePtr impl_;

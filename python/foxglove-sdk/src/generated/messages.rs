@@ -1538,6 +1538,8 @@ impl From<LinePrimitive> for foxglove::messages::LinePrimitive {
 /// :param altitude: Altitude in meters
 /// :param position_covariance: Position covariance (m^2) defined relative to a tangential plane through the reported position. The components are East, North, and Up (ENU), in row-major order.
 /// :param position_covariance_type: If `position_covariance` is available, `position_covariance_type` must be set to indicate the type of covariance.
+/// :param heading: Heading (yaw angle), in radians, measured clockwise from north
+/// :param velocity: Velocity in local East-North-Up (ENU) frame in m/s
 /// :param color: Color used to visualize the location
 /// :param metadata: Additional user-provided metadata associated with the location fix. Keys must be unique.
 ///
@@ -1548,7 +1550,7 @@ pub(crate) struct LocationFix(pub(crate) foxglove::messages::LocationFix);
 #[pymethods]
 impl LocationFix {
     #[new]
-    #[pyo3(signature = (*, timestamp=None, frame_id="", latitude=0.0, longitude=0.0, altitude=0.0, position_covariance=None, position_covariance_type=LocationFixPositionCovarianceType::Unknown, color=None, metadata=None) )]
+    #[pyo3(signature = (*, timestamp=None, frame_id="", latitude=0.0, longitude=0.0, altitude=0.0, position_covariance=None, position_covariance_type=LocationFixPositionCovarianceType::Unknown, heading=None, velocity=None, color=None, metadata=None) )]
     fn new(
         timestamp: Option<Timestamp>,
         frame_id: &str,
@@ -1557,6 +1559,8 @@ impl LocationFix {
         altitude: f64,
         position_covariance: Option<Vec<f64>>,
         position_covariance_type: LocationFixPositionCovarianceType,
+        heading: Option<f64>,
+        velocity: Option<Velocity3>,
         color: Option<Color>,
         metadata: Option<Vec<KeyValuePair>>,
     ) -> Self {
@@ -1568,6 +1572,8 @@ impl LocationFix {
             altitude,
             position_covariance: position_covariance.unwrap_or_default(),
             position_covariance_type: position_covariance_type as i32,
+            heading,
+            velocity: velocity.map(Into::into),
             color: color.map(Into::into),
             metadata: metadata
                 .unwrap_or_default()
@@ -1578,7 +1584,7 @@ impl LocationFix {
     }
     fn __repr__(&self) -> String {
         format!(
-            "LocationFix(timestamp={:?}, frame_id={:?}, latitude={:?}, longitude={:?}, altitude={:?}, position_covariance={:?}, position_covariance_type={:?}, color={:?}, metadata={:?})",
+            "LocationFix(timestamp={:?}, frame_id={:?}, latitude={:?}, longitude={:?}, altitude={:?}, position_covariance={:?}, position_covariance_type={:?}, heading={:?}, velocity={:?}, color={:?}, metadata={:?})",
             self.0.timestamp,
             self.0.frame_id,
             self.0.latitude,
@@ -1586,6 +1592,8 @@ impl LocationFix {
             self.0.altitude,
             self.0.position_covariance,
             self.0.position_covariance_type,
+            self.0.heading,
+            self.0.velocity,
             self.0.color,
             self.0.metadata,
         )
@@ -3277,6 +3285,56 @@ impl From<Vector3> for foxglove::messages::Vector3 {
     }
 }
 
+/// A velocity vector in 3D space
+///
+/// :param x: x component
+/// :param y: y component
+/// :param z: z component
+///
+/// See https://docs.foxglove.dev/docs/visualization/message-schemas/velocity3
+#[pyclass(module = "foxglove.messages")]
+#[derive(Clone)]
+pub(crate) struct Velocity3(pub(crate) foxglove::messages::Velocity3);
+#[pymethods]
+impl Velocity3 {
+    #[new]
+    #[pyo3(signature = (*, x=0.0, y=0.0, z=0.0) )]
+    fn new(x: f64, y: f64, z: f64) -> Self {
+        Self(foxglove::messages::Velocity3 { x, y, z })
+    }
+    fn __repr__(&self) -> String {
+        format!(
+            "Velocity3(x={:?}, y={:?}, z={:?})",
+            self.0.x, self.0.y, self.0.z,
+        )
+    }
+    /// Returns the Velocity3 schema.
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::messages::Velocity3::get_schema().unwrap().into()
+    }
+    /// Encodes the Velocity3 as protobuf.
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("failed to allocate buffer for encoded message")
+    }
+}
+
+impl From<Velocity3> for foxglove::messages::Velocity3 {
+    fn from(value: Velocity3) -> Self {
+        value.0
+    }
+}
+
 pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     let module = PyModule::new(parent_module.py(), "messages")?;
 
@@ -3332,6 +3390,7 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<TriangleListPrimitive>()?;
     module.add_class::<Vector2>()?;
     module.add_class::<Vector3>()?;
+    module.add_class::<Velocity3>()?;
 
     // Define as a package
     // https://github.com/PyO3/pyo3/issues/759

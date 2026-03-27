@@ -63,6 +63,7 @@ If the IDL does not support optional fields (e.g. ROS) you must specify a value 
 - [TriangleListPrimitive](#trianglelistprimitive)
 - [Vector2](#vector2)
 - [Vector3](#vector3)
+- [Velocity3](#velocity3)
 - [VoxelGrid](#voxelgrid)
 
 ----
@@ -1755,6 +1756,32 @@ Position covariance (m^2) defined relative to a tangential plane through the rep
 <td>
 
 If `position_covariance` is available, `position_covariance_type` must be set to indicate the type of covariance.
+
+</td>
+</tr>
+<tr>
+<td><code>heading</code> (optional)</td>
+<td>
+
+float64
+
+</td>
+<td>
+
+Heading (yaw angle), in radians, measured clockwise from north
+
+</td>
+</tr>
+<tr>
+<td><code>velocity</code> (optional)</td>
+<td>
+
+[Velocity3](#velocity3)
+
+</td>
+<td>
+
+Velocity in local East-North-Up (ENU) frame in m/s
 
 </td>
 </tr>
@@ -3577,6 +3604,57 @@ float64
 <td>
 
 z coordinate length
+
+</td>
+</tr>
+</table>
+
+## Velocity3
+
+A velocity vector in 3D space
+
+<table>
+  <tr>
+    <th>field</th>
+    <th>type</th>
+    <th>description</th>
+  </tr>
+<tr>
+<td><code>x</code></td>
+<td>
+
+float64
+
+</td>
+<td>
+
+x component
+
+</td>
+</tr>
+<tr>
+<td><code>y</code></td>
+<td>
+
+float64
+
+</td>
+<td>
+
+y component
+
+</td>
+</tr>
+<tr>
+<td><code>z</code></td>
+<td>
+
+float64
+
+</td>
+<td>
+
+z component
 
 </td>
 </tr>

@@ -595,6 +595,12 @@ pub struct LocationFix {
         serde(with = "serde_enum::location_fix_position_covariance_type")
     )]
     pub position_covariance_type: i32,
+    /// Heading (yaw angle), in radians, measured clockwise from north
+    #[prost(double, optional, tag = "10")]
+    pub heading: ::core::option::Option<f64>,
+    /// Velocity in local East-North-Up (ENU) frame in m/s
+    #[prost(message, optional, tag = "11")]
+    pub velocity: ::core::option::Option<Velocity3>,
     /// Color used to visualize the location
     #[prost(message, optional, tag = "8")]
     pub color: ::core::option::Option<Color>,
@@ -1444,6 +1450,22 @@ pub struct Vector3 {
     #[prost(double, tag = "2")]
     pub y: f64,
     /// z coordinate length
+    #[prost(double, tag = "3")]
+    pub z: f64,
+}
+/// A velocity vector in 3D space
+///
+/// <https://docs.foxglove.dev/docs/visualization/message-schemas/velocity3>
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+pub struct Velocity3 {
+    /// x component
+    #[prost(double, tag = "1")]
+    pub x: f64,
+    /// y component
+    #[prost(double, tag = "2")]
+    pub y: f64,
+    /// z component
     #[prost(double, tag = "3")]
     pub z: f64,
 }

@@ -1,6 +1,6 @@
 //! Shared test infrastructure for remote access integration tests.
 //!
-//! Provides helpers for connecting to LiveKit rooms, reading ws-protocol frames,
+//! Provides helpers for connecting to LiveKit rooms, reading control channel frames,
 //! managing test gateway instances, and common utilities. Used across test suites
 //! such as `livekit_test` and `netem_test`.
 
@@ -10,13 +10,17 @@ use std::time::Duration;
 use anyhow::{Context as _, Result};
 use futures_util::StreamExt;
 use livekit::id::ParticipantIdentity;
-use livekit::{Room, RoomEvent, RoomOptions, StreamByteOptions, StreamWriter as _};
+use livekit::{
+    ByteStreamWriter, Room, RoomEvent, RoomOptions, StreamByteOptions, StreamWriter as _,
+};
+use tokio::sync::Mutex;
 use tracing::info;
 
 use foxglove::protocol::v2::BinaryMessage;
 use foxglove::protocol::v2::client::{
-    Advertise, AdvertiseChannel, MessageData as ClientMessageData, ServiceCallRequest, Subscribe,
-    SubscribeChannel, Unadvertise, Unsubscribe,
+    Advertise, AdvertiseChannel, GetParameters, MessageData as ClientMessageData,
+    ServiceCallRequest, SetParameters, Subscribe, SubscribeChannel, SubscribeParameterUpdates,
+    Unadvertise, Unsubscribe, UnsubscribeParameterUpdates,
 };
 
 /// Describes a client-advertised channel for use in test helpers.
@@ -51,10 +55,10 @@ pub type ChannelFilterFn =
 
 // ---------------------------------------------------------------------------
 // FrameReader: accumulates bytes from a LiveKit byte stream reader and
-// parses successive ws-protocol frames.
+// parses successive byte stream frames.
 // ---------------------------------------------------------------------------
 
-/// Reads chunks from a LiveKit byte stream and parses ws-protocol frames.
+/// Reads chunks from a LiveKit byte stream and parses byte stream frames.
 pub struct FrameReader {
     reader: livekit::ByteStreamReader,
     buf: Vec<u8>,
@@ -107,19 +111,25 @@ impl FrameReader {
 
 // ---------------------------------------------------------------------------
 // ViewerConnection: connects to a LiveKit room and provides helpers for
-// reading ws-protocol messages.
+// reading control channel messages.
 // ---------------------------------------------------------------------------
 
-/// A viewer connected to a LiveKit room with an open ws-protocol byte stream.
+/// A viewer connected to a LiveKit room with an open control channel byte stream.
+///
+/// Maintains a persistent `ByteStreamWriter` for sending control messages to the gateway,
+/// reusing a single stream rather than opening a new one per message.
 pub struct ViewerConnection {
     pub room: Room,
     pub events: tokio::sync::mpsc::UnboundedReceiver<RoomEvent>,
     pub frame_reader: FrameReader,
+    /// Cached writer for the control channel byte stream to the gateway.
+    /// Lazily opened on first send, reused for all subsequent messages.
+    control_writer: Mutex<Option<ByteStreamWriter>>,
 }
 
 impl ViewerConnection {
     /// Constructs a `ViewerConnection` from a pre-connected room by waiting for the
-    /// gateway to open a ws-protocol byte stream. Unlike [`connect`], this does not
+    /// gateway to open a control channel byte stream. Unlike [`connect`], this does not
     /// retry the room connection — useful when the viewer must remain in the room while
     /// the gateway joins (e.g., testing advertisement to existing participants).
     pub async fn from_room(
@@ -138,7 +148,7 @@ impl ViewerConnection {
                 ..
             } = event
             {
-                if topic == "ws-protocol" {
+                if topic == "control" {
                     break stream_reader.take().context("reader already taken")?;
                 }
             }
@@ -147,10 +157,11 @@ impl ViewerConnection {
             room,
             events,
             frame_reader: FrameReader::new(reader),
+            control_writer: Mutex::new(None),
         })
     }
 
-    /// Connects a viewer to the LiveKit room and waits for the ws-protocol
+    /// Connects a viewer to the LiveKit room and waits for the control channel
     /// byte stream to open. Retries the connection if the gateway hasn't
     /// joined the room yet (no ByteStreamOpened within a short window).
     pub async fn connect(room_name: &str, viewer_identity: &str) -> Result<Self> {
@@ -193,7 +204,7 @@ impl ViewerConnection {
                         reader: stream_reader,
                         topic,
                         ..
-                    })) if topic == "ws-protocol" => {
+                    })) if topic == "control" => {
                         break Some(stream_reader.take().context("reader already taken")?);
                     }
                     Ok(Some(_)) => continue,
@@ -205,6 +216,7 @@ impl ViewerConnection {
                     room,
                     events,
                     frame_reader: FrameReader::new(reader),
+                    control_writer: Mutex::new(None),
                 });
             }
 
@@ -314,33 +326,41 @@ impl ViewerConnection {
         }
     }
 
+    /// Sends a pre-framed message to the gateway over the persistent control channel byte stream.
+    /// Opens the stream lazily on first call and reuses it for all subsequent messages.
+    async fn send_framed_message(&self, framed: &[u8]) -> Result<()> {
+        let mut guard = self.control_writer.lock().await;
+        if guard.is_none() {
+            let gateway_identity = ParticipantIdentity(mock_server::TEST_DEVICE_ID.to_string());
+            let writer = self
+                .room
+                .local_participant()
+                .stream_bytes(StreamByteOptions {
+                    topic: "control".to_string(),
+                    destination_identities: vec![gateway_identity],
+                    ..StreamByteOptions::default()
+                })
+                .await
+                .map_err(|e| anyhow::anyhow!("failed to open byte stream to gateway: {e}"))?;
+            *guard = Some(writer);
+        }
+        guard
+            .as_ref()
+            .unwrap()
+            .write(framed)
+            .await
+            .map_err(|e| anyhow::anyhow!("failed to write message to gateway: {e}"))?;
+        Ok(())
+    }
+
     /// Sends a binary-framed ServiceCallRequest to the gateway.
     pub async fn send_service_call_request(&self, req: &ServiceCallRequest<'_>) -> Result<()> {
         let binary = req.to_bytes();
         let framed = frame::frame_binary_message(&binary);
-
-        let gateway_identity = ParticipantIdentity(mock_server::TEST_DEVICE_ID.to_string());
-        let writer = self
-            .room
-            .local_participant()
-            .stream_bytes(StreamByteOptions {
-                topic: "ws-protocol".to_string(),
-                destination_identities: vec![gateway_identity],
-                ..StreamByteOptions::default()
-            })
-            .await
-            .map_err(|e| anyhow::anyhow!("failed to open byte stream to gateway: {e}"))?;
-
-        writer
-            .write(&framed)
-            .await
-            .map_err(|e| anyhow::anyhow!("failed to write service call request: {e}"))?;
-
-        Ok(())
+        self.send_framed_message(&framed).await
     }
 
-    /// Opens a byte stream back to the gateway participant and sends a
-    /// JSON-framed Subscribe message.
+    /// Sends a JSON-framed Subscribe message to the gateway.
     pub async fn send_subscribe(&self, channel_ids: &[u64]) -> Result<()> {
         self.send_subscribe_channels(
             channel_ids
@@ -354,30 +374,12 @@ impl ViewerConnection {
         .await
     }
 
-    /// Opens a byte stream and sends a JSON-framed Subscribe with explicit channel options.
+    /// Sends a JSON-framed Subscribe with explicit channel options.
     pub async fn send_subscribe_channels(&self, channels: Vec<SubscribeChannel>) -> Result<()> {
         let subscribe = Subscribe { channels };
         let json = serde_json::to_string(&subscribe)?;
         let framed = frame::frame_text_message(json.as_bytes());
-
-        let gateway_identity = ParticipantIdentity(mock_server::TEST_DEVICE_ID.to_string());
-        let writer = self
-            .room
-            .local_participant()
-            .stream_bytes(StreamByteOptions {
-                topic: "ws-protocol".to_string(),
-                destination_identities: vec![gateway_identity],
-                ..StreamByteOptions::default()
-            })
-            .await
-            .map_err(|e| anyhow::anyhow!("failed to open byte stream to gateway: {e}"))?;
-
-        writer
-            .write(&framed)
-            .await
-            .map_err(|e| anyhow::anyhow!("failed to write subscribe message: {e}"))?;
-
-        Ok(())
+        self.send_framed_message(&framed).await
     }
 
     /// Sends a Subscribe and waits for the channel to have at least one sink.
@@ -414,25 +416,7 @@ impl ViewerConnection {
         let unsubscribe = Unsubscribe::new(channel_ids.iter().copied());
         let json = serde_json::to_string(&unsubscribe)?;
         let framed = frame::frame_text_message(json.as_bytes());
-
-        let gateway_identity = ParticipantIdentity(mock_server::TEST_DEVICE_ID.to_string());
-        let writer = self
-            .room
-            .local_participant()
-            .stream_bytes(StreamByteOptions {
-                topic: "ws-protocol".to_string(),
-                destination_identities: vec![gateway_identity],
-                ..StreamByteOptions::default()
-            })
-            .await
-            .map_err(|e| anyhow::anyhow!("failed to open byte stream to gateway: {e}"))?;
-
-        writer
-            .write(&framed)
-            .await
-            .map_err(|e| anyhow::anyhow!("failed to write unsubscribe message: {e}"))?;
-
-        Ok(())
+        self.send_framed_message(&framed).await
     }
 
     /// Sends a JSON-framed client Advertise message to the gateway.
@@ -447,25 +431,7 @@ impl ViewerConnection {
         }));
         let json_str = serde_json::to_string(&advertise)?;
         let framed = frame::frame_text_message(json_str.as_bytes());
-
-        let gateway_identity = ParticipantIdentity(mock_server::TEST_DEVICE_ID.to_string());
-        let writer = self
-            .room
-            .local_participant()
-            .stream_bytes(StreamByteOptions {
-                topic: "ws-protocol".to_string(),
-                destination_identities: vec![gateway_identity],
-                ..StreamByteOptions::default()
-            })
-            .await
-            .map_err(|e| anyhow::anyhow!("failed to open byte stream to gateway: {e}"))?;
-
-        writer
-            .write(&framed)
-            .await
-            .map_err(|e| anyhow::anyhow!("failed to write client advertise message: {e}"))?;
-
-        Ok(())
+        self.send_framed_message(&framed).await
     }
 
     /// Sends a JSON-framed client Unadvertise message to the gateway.
@@ -473,28 +439,10 @@ impl ViewerConnection {
         let unadvertise = Unadvertise::new(channel_ids.iter().copied());
         let json = serde_json::to_string(&unadvertise)?;
         let framed = frame::frame_text_message(json.as_bytes());
-
-        let gateway_identity = ParticipantIdentity(mock_server::TEST_DEVICE_ID.to_string());
-        let writer = self
-            .room
-            .local_participant()
-            .stream_bytes(StreamByteOptions {
-                topic: "ws-protocol".to_string(),
-                destination_identities: vec![gateway_identity],
-                ..StreamByteOptions::default()
-            })
-            .await
-            .map_err(|e| anyhow::anyhow!("failed to open byte stream to gateway: {e}"))?;
-
-        writer
-            .write(&framed)
-            .await
-            .map_err(|e| anyhow::anyhow!("failed to write client unadvertise message: {e}"))?;
-
-        Ok(())
+        self.send_framed_message(&framed).await
     }
 
-    /// Sends a binary-framed `ClientMessageData` on a per-channel topic `"client-{channelId}"`.
+    /// Sends a binary-framed `ClientMessageData` on a per-channel topic `"client-ch-{channelId}"`.
     ///
     /// This tests the new per-channel delivery path for client publish message data.
     pub async fn send_client_message_data(&self, channel_id: u32, data: &[u8]) -> Result<()> {
@@ -507,7 +455,7 @@ impl ViewerConnection {
             .room
             .local_participant()
             .stream_bytes(StreamByteOptions {
-                topic: format!("client-{channel_id}"),
+                topic: format!("client-ch-{channel_id}"),
                 destination_identities: vec![gateway_identity],
                 ..StreamByteOptions::default()
             })
@@ -553,8 +501,8 @@ impl ViewerConnection {
     /// Waits for a per-channel byte stream to open and returns a [`FrameReader`]
     /// for it.
     ///
-    /// Data plane messages are delivered on per-channel byte streams (topic `"ch-{id}"`)
-    /// rather than the control-plane `"ws-protocol"` stream. Each time the subscriber
+    /// Data plane messages are delivered on per-channel byte streams (topic `"device-ch-{id}"`)
+    /// rather than the control plane `"control"` stream. Each time the subscriber
     /// set changes the gateway opens a new byte stream, so this method waits for the
     /// corresponding `ByteStreamOpened` event.
     pub async fn expect_channel_byte_stream(&mut self) -> Result<FrameReader> {
@@ -565,7 +513,9 @@ impl ViewerConnection {
                 .context("timeout waiting for channel byte stream")?
                 .context("room events channel closed")?;
             match event {
-                RoomEvent::ByteStreamOpened { reader, topic, .. } if topic.starts_with("ch-") => {
+                RoomEvent::ByteStreamOpened { reader, topic, .. }
+                    if topic.starts_with("device-ch-") =>
+                {
                     let stream_reader = reader.take().context("reader already taken")?;
                     return Ok(FrameReader::new(stream_reader));
                 }
@@ -609,6 +559,66 @@ impl ViewerConnection {
                 }
             }
         }
+    }
+
+    /// Reads and returns the next ParameterValues message.
+    pub async fn expect_parameter_values(
+        &mut self,
+    ) -> Result<foxglove::protocol::v2::server::ParameterValues> {
+        let msg = self.frame_reader.next_server_message().await?;
+        match msg {
+            ServerMessage::ParameterValues(params) => Ok(params),
+            other => anyhow::bail!("expected ParameterValues, got: {other:?}"),
+        }
+    }
+
+    /// Sends a JSON-framed message to the gateway.
+    async fn send_json_message(&self, json: &str) -> Result<()> {
+        let framed = frame::frame_text_message(json.as_bytes());
+        self.send_framed_message(&framed).await
+    }
+
+    /// Sends a GetParameters request to the gateway.
+    pub async fn send_get_parameters(&self, names: &[&str]) -> Result<()> {
+        let msg = GetParameters::new(names.iter().copied());
+        self.send_json_message(&serde_json::to_string(&msg)?).await
+    }
+
+    /// Sends a GetParameters request with a request ID to the gateway.
+    pub async fn send_get_parameters_with_id(&self, names: &[&str], id: &str) -> Result<()> {
+        let msg = GetParameters::new(names.iter().copied()).with_id(id);
+        self.send_json_message(&serde_json::to_string(&msg)?).await
+    }
+
+    /// Sends a SetParameters request to the gateway.
+    pub async fn send_set_parameters(
+        &self,
+        parameters: Vec<foxglove::remote_access::Parameter>,
+    ) -> Result<()> {
+        let msg = SetParameters::new(parameters);
+        self.send_json_message(&serde_json::to_string(&msg)?).await
+    }
+
+    /// Sends a SetParameters request with a request ID to the gateway.
+    pub async fn send_set_parameters_with_id(
+        &self,
+        parameters: Vec<foxglove::remote_access::Parameter>,
+        id: &str,
+    ) -> Result<()> {
+        let msg = SetParameters::new(parameters).with_id(id);
+        self.send_json_message(&serde_json::to_string(&msg)?).await
+    }
+
+    /// Sends a SubscribeParameterUpdates request to the gateway.
+    pub async fn send_subscribe_parameter_updates(&self, names: &[&str]) -> Result<()> {
+        let msg = SubscribeParameterUpdates::new(names.iter().copied());
+        self.send_json_message(&serde_json::to_string(&msg)?).await
+    }
+
+    /// Sends an UnsubscribeParameterUpdates request to the gateway.
+    pub async fn send_unsubscribe_parameter_updates(&self, names: &[&str]) -> Result<()> {
+        let msg = UnsubscribeParameterUpdates::new(names.iter().copied());
+        self.send_json_message(&serde_json::to_string(&msg)?).await
     }
 
     pub async fn close(self) -> Result<()> {

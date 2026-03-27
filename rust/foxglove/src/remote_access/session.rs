@@ -16,6 +16,8 @@ use tokio_util::{io::StreamReader, sync::CancellationToken};
 use tracing::{debug, error, info, warn};
 
 use crate::protocol::v2::DecodeError;
+use crate::protocol::v2::parameter::Parameter;
+use crate::protocol::v2::server::ParameterValues;
 use crate::remote_access::participant::ChannelWriter;
 use crate::remote_common::service::{CallId, Service, ServiceId, ServiceMap};
 use crate::{
@@ -47,9 +49,9 @@ pub(crate) struct SessionStats {
     pub video_tracks: usize,
 }
 
-pub(crate) const WS_PROTOCOL_TOPIC: &str = "ws-protocol";
-pub(crate) const CLIENT_CHANNEL_TOPIC_PREFIX: &str = "client-";
-const CHANNEL_TOPIC_PREFIX: &str = "ch-";
+const CONTROL_CHANNEL_TOPIC: &str = "control";
+const CHANNEL_TOPIC_PREFIX: &str = "device-ch-";
+const CLIENT_CHANNEL_TOPIC_PREFIX: &str = "client-ch-";
 const MESSAGE_FRAME_SIZE: usize = 5; // 1 byte opcode + u32 LE length
 const MAX_MESSAGE_SIZE: usize = 16 * 1024 * 1024; // 16 MiB
 const MAX_SEND_RETRIES: usize = 3;
@@ -183,7 +185,7 @@ pub(crate) struct RemoteAccessSession {
     /// the sender loop to re-advertise affected channels.
     video_metadata_tx: tokio::sync::watch::Sender<()>,
     video_metadata_rx: tokio::sync::watch::Receiver<()>,
-    /// Byte stream readers for `client-{channelId}` streams that arrived before the
+    /// Byte stream readers for `client-ch-{channelId}` streams that arrived before the
     /// corresponding Client Advertise message. Keyed by participant identity then channel ID.
     /// Drained when the advertise arrives; expired after `pending_client_reader_timeout`.
     pending_client_readers:
@@ -480,10 +482,10 @@ impl RemoteAccessSession {
 
     /// Read framed messages from a client byte stream.
     ///
-    /// `expected_channel_id` identifies a `client-{channelId}` stream: the channel ID parsed from
+    /// `expected_channel_id` identifies a `client-ch-{channelId}` stream: the channel ID parsed from
     /// the topic name. Every `MessageData` frame on this stream must carry the same channel ID;
     /// mismatches are considered a protocol violation (debug-asserted). Pass `None` for the
-    /// `ws-protocol` control stream.
+    /// `"control"` control stream.
     pub(crate) async fn handle_byte_stream_from_client(
         self: &Arc<Self>,
         participant_identity: ParticipantIdentity,
@@ -559,7 +561,7 @@ impl RemoteAccessSession {
         }
     }
 
-    /// Handle an incoming `client-{channelId}` byte stream.
+    /// Handle an incoming `client-ch-{channelId}` byte stream.
     ///
     /// If the client has already advertised this channel, the stream is read immediately.
     /// Otherwise the reader is stashed until the Client Advertise arrives (or a timeout
@@ -652,7 +654,7 @@ impl RemoteAccessSession {
         });
     }
 
-    /// Handle a single framed ws-protocol message. Returns `false` if the byte stream
+    /// Handle a single framed control channel message. Returns `false` if the byte stream
     /// should be closed (e.g. unrecognized opcode indicating a protocol mismatch).
     fn handle_client_control_message(
         self: &Arc<Self>,
@@ -707,11 +709,23 @@ impl RemoteAccessSession {
             }
             ClientMessage::MessageData(_) => {
                 error!(
-                    "Received MessageData over ws-protocol; MessageData is only supported on channel-specific byte streams"
+                    "Received MessageData over control channel; MessageData is only supported on channel-specific byte streams"
                 );
             }
             ClientMessage::ServiceCallRequest(req) => {
                 self.handle_service_call(&participant, req);
+            }
+            ClientMessage::GetParameters(msg) => {
+                self.handle_get_parameters(&participant, msg.parameter_names, msg.id);
+            }
+            ClientMessage::SetParameters(msg) => {
+                self.handle_set_parameters(&participant, msg.parameters, msg.id);
+            }
+            ClientMessage::SubscribeParameterUpdates(msg) => {
+                self.handle_subscribe_parameter_updates(&participant, msg.parameter_names);
+            }
+            ClientMessage::UnsubscribeParameterUpdates(msg) => {
+                self.handle_unsubscribe_parameter_updates(&participant, msg.parameter_names);
             }
             _ => {
                 warn!("Unhandled client message: {client_msg:?}");
@@ -926,7 +940,7 @@ impl RemoteAccessSession {
         }
     }
 
-    /// Handle a message from a `client-{channelId}` byte stream.
+    /// Handle a message from a `client-ch-{channelId}` byte stream.
     ///
     /// Only `MessageData` frames are expected. `expected_channel_id` is the channel ID parsed from
     /// the stream topic and must match the `channel_id` field inside every `MessageData` frame.
@@ -1041,7 +1055,7 @@ impl RemoteAccessSession {
             .room
             .local_participant()
             .stream_bytes(StreamByteOptions {
-                topic: WS_PROTOCOL_TOPIC.to_string(),
+                topic: CONTROL_CHANNEL_TOPIC.to_string(),
                 destination_identities: vec![participant_id.clone()],
                 ..StreamByteOptions::default()
             })
@@ -1096,6 +1110,12 @@ impl RemoteAccessSession {
         }
 
         self.stop_video_tracks(&removed.last_video_unsubscribed);
+
+        if !removed.last_param_unsubscribed.is_empty() {
+            if let Some(listener) = &self.listener {
+                listener.on_parameters_unsubscribe(removed.last_param_unsubscribed);
+            }
+        }
 
         if !removed.client_channels.is_empty() {
             if let Some((listener, client_id)) = self.listener.as_ref().zip(removed.client_id) {
@@ -1161,7 +1181,7 @@ impl RemoteAccessSession {
                         "byte stream opened from participant"
                     );
                     if let Some(reader) = reader.take() {
-                        if topic == WS_PROTOCOL_TOPIC {
+                        if topic == CONTROL_CHANNEL_TOPIC {
                             let session = self.clone();
                             tokio::spawn(async move {
                                 session
@@ -1496,6 +1516,156 @@ impl RemoteAccessSession {
             message: message.to_string(),
         };
         self.send_control(participant.clone(), encode_json_message(&failure));
+    }
+
+    /// Handle a `GetParameters` request from a client.
+    fn handle_get_parameters(
+        &self,
+        participant: &Arc<Participant>,
+        param_names: Vec<String>,
+        request_id: Option<String>,
+    ) {
+        if !self.has_capability(Capability::Parameters) {
+            self.send_error(
+                participant,
+                "Server does not support parameters capability".into(),
+            );
+            return;
+        }
+
+        if let Some(listener) = self.listener.as_ref() {
+            let client = Client::new(
+                participant.client_id(),
+                participant.participant_id().clone(),
+            );
+            let parameters = listener.on_get_parameters(client, param_names, request_id.as_deref());
+            self.send_parameter_values(participant, parameters, request_id);
+        }
+    }
+
+    /// Handle a `SetParameters` request from a client.
+    fn handle_set_parameters(
+        &self,
+        participant: &Arc<Participant>,
+        parameters: Vec<Parameter>,
+        request_id: Option<String>,
+    ) {
+        if !self.has_capability(Capability::Parameters) {
+            self.send_error(
+                participant,
+                "Server does not support parameters capability".into(),
+            );
+            return;
+        }
+
+        let updated_parameters = if let Some(listener) = self.listener.as_ref() {
+            let client = Client::new(
+                participant.client_id(),
+                participant.participant_id().clone(),
+            );
+            let updated = listener.on_set_parameters(client, parameters, request_id.as_deref());
+
+            // Send the updated parameters back to the requesting client if `request_id` is set.
+            if request_id.is_some() {
+                self.send_parameter_values(participant, updated.clone(), request_id);
+            }
+            updated
+        } else {
+            parameters
+        };
+        self.publish_parameter_values(updated_parameters);
+    }
+
+    /// Handle a `SubscribeParameterUpdates` request from a client.
+    fn handle_subscribe_parameter_updates(
+        &self,
+        participant: &Arc<Participant>,
+        names: Vec<String>,
+    ) {
+        if !self.has_capability(Capability::Parameters) {
+            self.send_error(
+                participant,
+                "Server does not support parametersSubscribe capability".into(),
+            );
+            return;
+        }
+        let _guard = self.subscription_lock.lock();
+        let new_names = self
+            .state
+            .write()
+            .subscribe_parameters(participant.participant_id(), names);
+        if !new_names.is_empty() {
+            if let Some(listener) = &self.listener {
+                listener.on_parameters_subscribe(new_names);
+            }
+        }
+    }
+
+    /// Handle an `UnsubscribeParameterUpdates` request from a client.
+    fn handle_unsubscribe_parameter_updates(
+        &self,
+        participant: &Arc<Participant>,
+        names: Vec<String>,
+    ) {
+        if !self.has_capability(Capability::Parameters) {
+            self.send_error(
+                participant,
+                "Server does not support parametersSubscribe capability".into(),
+            );
+            return;
+        }
+        let _guard = self.subscription_lock.lock();
+        let old_names = self
+            .state
+            .write()
+            .unsubscribe_parameters(participant.participant_id(), names);
+        if !old_names.is_empty() {
+            if let Some(listener) = &self.listener {
+                listener.on_parameters_unsubscribe(old_names);
+            }
+        }
+    }
+
+    /// Send a `ParameterValues` message to a specific participant.
+    fn send_parameter_values(
+        &self,
+        participant: &Arc<Participant>,
+        parameters: Vec<Parameter>,
+        request_id: Option<String>,
+    ) {
+        let mut msg = ParameterValues::new(parameters.into_iter().filter(|p| p.value.is_some()));
+        if let Some(id) = request_id {
+            msg = msg.with_id(id);
+        }
+        self.send_control(participant.clone(), encode_json_message(&msg));
+    }
+
+    /// Publish parameter values to all participants subscribed to those parameters.
+    pub(crate) fn publish_parameter_values(&self, parameters: Vec<Parameter>) {
+        if !self.has_capability(Capability::Parameters) {
+            error!("Server does not support parameters capability");
+            return;
+        }
+
+        let state = self.state.read();
+        let participants = state.collect_participants();
+        for participant in &participants {
+            // Filter parameters by this participant's subscriptions.
+            let filtered: Vec<_> = parameters
+                .iter()
+                .filter(|p| {
+                    state
+                        .parameter_subscribers(&p.name)
+                        .is_some_and(|ids| ids.contains(participant.participant_id()))
+                })
+                .cloned()
+                .collect();
+
+            if !filtered.is_empty() {
+                let no_request_id = None;
+                self.send_parameter_values(participant, filtered, no_request_id);
+            }
+        }
     }
 
     /// Check video publishers for metadata changes and re-advertise affected channels.
