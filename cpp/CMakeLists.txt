@@ -245,12 +245,6 @@ if(FOXGLOVE_BUILD_REMOTE_ACCESS)
   target_compile_options(example_remote_access PUBLIC ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
   target_link_options(example_remote_access PUBLIC ${SANITIZER_LINK_OPTIONS})
   target_link_libraries(example_remote_access foxglove_ra_cpp_shared)
-  # Exclude generated headers (messages.hpp) from clang-tidy analysis to avoid
-  # diagnostics we can't fix without updating the codegen (FLE-370).
-  if(CLANG_TIDY)
-    set_property(TARGET example_remote_access PROPERTY
-      CXX_CLANG_TIDY "${CLANG_TIDY_EXE};--header-filter=foxglove/(remote_access|channel|context|error|server)")
-  endif()
 endif()
 
 
