@@ -7,7 +7,7 @@ use crate::PySchema;
 
 /// Information about a Channel.
 #[pyclass(name = "ChannelDescriptor", module = "foxglove")]
-pub struct PyChannelDescriptor(ChannelDescriptor);
+pub struct PyChannelDescriptor(pub(crate) ChannelDescriptor);
 
 #[pymethods]
 impl PyChannelDescriptor {

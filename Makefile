@@ -25,6 +25,7 @@ $(TARGETS): image
 	docker run -v $(shell pwd):/app \
 		-e CARGO_HOME=/app/.cargo \
 		-e UV_CACHE_DIR=/app/.uv_cache \
+		-e PYTHON_REMOTE_ACCESS \
 		-t $(IMAGE_NAME) \
 		make -f $(CONTAINER_MAKEFILE) \
 		MSRV_RUST_VERSION=$(MSRV_RUST_VERSION) \
