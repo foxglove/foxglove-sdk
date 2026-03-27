@@ -2168,8 +2168,6 @@ typedef uint8_t foxglove_gateway_capability;
  *   `FOXGLOVE_DEVICE_TOKEN` environment variable.
  * - If `supported_encodings` is supplied, all entries must contain valid UTF-8, and
  *   `supported_encodings` must have length equal to `supported_encodings_count`.
- * - If `services` is supplied, all entries must be valid pointers to services created via
- *   `foxglove_service_create`. Ownership of the services is transferred to the gateway.
  */
 typedef struct foxglove_gateway_options {
   /**

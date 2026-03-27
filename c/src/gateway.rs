@@ -234,8 +234,6 @@ impl foxglove::remote_access::Listener for FoxgloveGatewayCallbacks {
 ///   `FOXGLOVE_DEVICE_TOKEN` environment variable.
 /// - If `supported_encodings` is supplied, all entries must contain valid UTF-8, and
 ///   `supported_encodings` must have length equal to `supported_encodings_count`.
-/// - If `services` is supplied, all entries must be valid pointers to services created via
-///   `foxglove_service_create`. Ownership of the services is transferred to the gateway.
 #[repr(C)]
 pub struct FoxgloveGatewayOptions<'a> {
     /// `context` can be null, or a valid pointer to a context created via `foxglove_context_new`.
