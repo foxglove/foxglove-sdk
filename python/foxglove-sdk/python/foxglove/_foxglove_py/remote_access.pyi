@@ -1,6 +1,9 @@
 from enum import Enum
 
 from .websocket import MessageSchema as MessageSchema
+from .websocket import Parameter as Parameter
+from .websocket import ParameterType as ParameterType
+from .websocket import ParameterValue as ParameterValue
 from .websocket import Service as Service
 from .websocket import ServiceRequest as ServiceRequest
 from .websocket import ServiceSchema as ServiceSchema
@@ -12,6 +15,9 @@ class Capability(Enum):
 
     ClientPublish = ...
     """Allow clients to advertise channels to send data messages to the server."""
+
+    Parameters = ...
+    """Allow clients to get, set, and subscribe to parameter updates."""
 
     Services = ...
     """Allow clients to call services."""
@@ -55,6 +61,10 @@ class RemoteAccessGateway:
 
     def remove_services(self, names: list[str]) -> None:
         """Removes services that were previously advertised."""
+        ...
+
+    def publish_parameter_values(self, parameters: list[Parameter]) -> None:
+        """Publishes parameter values to all subscribed clients."""
         ...
 
     def stop(self) -> None:

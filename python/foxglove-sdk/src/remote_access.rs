@@ -11,7 +11,10 @@ use pyo3::types::PyBytes;
 use crate::PyContext;
 use crate::errors::PyFoxgloveError;
 use crate::sink_channel_filter::{PyChannelDescriptor, PySinkChannelFilter};
-use crate::websocket::{PyMessageSchema, PyService, PyServiceRequest, PyServiceSchema};
+use crate::websocket::{
+    PyMessageSchema, PyParameter, PyParameterType, PyParameterValue, PyService, PyServiceRequest,
+    PyServiceSchema,
+};
 
 /// A client connected to a running remote access gateway.
 #[pyclass(name = "Client", module = "foxglove.remote_access")]
@@ -72,6 +75,8 @@ impl From<ConnectionStatus> for PyConnectionStatus {
 pub enum PyRemoteAccessCapability {
     /// Allow clients to advertise channels to send data messages to the server.
     ClientPublish,
+    /// Allow clients to get, set, and subscribe to parameter updates.
+    Parameters,
     /// Allow clients to call services.
     Services,
 }
@@ -80,6 +85,7 @@ impl From<PyRemoteAccessCapability> for Capability {
     fn from(value: PyRemoteAccessCapability) -> Self {
         match value {
             PyRemoteAccessCapability::ClientPublish => Capability::ClientPublish,
+            PyRemoteAccessCapability::Parameters => Capability::Parameters,
             PyRemoteAccessCapability::Services => Capability::Services,
         }
     }
@@ -145,6 +151,84 @@ impl Listener for PyRemoteAccessListener {
             tracing::error!("Callback failed: {}", err);
         }
     }
+
+    fn on_get_parameters(
+        &self,
+        client: remote_access::Client,
+        param_names: Vec<String>,
+        request_id: Option<&str>,
+    ) -> Vec<foxglove::remote_access::Parameter> {
+        let py_client = PyRemoteAccessClient::from(client);
+        let result: PyResult<Vec<foxglove::remote_access::Parameter>> =
+            Python::with_gil(|py| {
+                let args = (py_client, param_names, request_id);
+                let result = self
+                    .listener
+                    .bind(py)
+                    .call_method("on_get_parameters", args, None)?;
+                let parameters = result.extract::<Vec<PyParameter>>()?;
+                Ok(parameters.into_iter().map(Into::into).collect())
+            });
+        match result {
+            Ok(parameters) => parameters,
+            Err(err) => {
+                tracing::error!("Callback failed: {}", err);
+                vec![]
+            }
+        }
+    }
+
+    fn on_set_parameters(
+        &self,
+        client: remote_access::Client,
+        parameters: Vec<foxglove::remote_access::Parameter>,
+        request_id: Option<&str>,
+    ) -> Vec<foxglove::remote_access::Parameter> {
+        let py_client = PyRemoteAccessClient::from(client);
+        let result: PyResult<Vec<foxglove::remote_access::Parameter>> =
+            Python::with_gil(|py| {
+                let parameters: Vec<PyParameter> =
+                    parameters.into_iter().map(Into::into).collect();
+                let args = (py_client, parameters, request_id);
+                let result = self
+                    .listener
+                    .bind(py)
+                    .call_method("on_set_parameters", args, None)?;
+                let parameters = result.extract::<Vec<PyParameter>>()?;
+                Ok(parameters.into_iter().map(Into::into).collect())
+            });
+        match result {
+            Ok(parameters) => parameters,
+            Err(err) => {
+                tracing::error!("Callback failed: {}", err);
+                vec![]
+            }
+        }
+    }
+
+    fn on_parameters_subscribe(&self, param_names: Vec<String>) {
+        let result: PyResult<()> = Python::with_gil(|py| {
+            self.listener
+                .bind(py)
+                .call_method("on_parameters_subscribe", (param_names,), None)?;
+            Ok(())
+        });
+        if let Err(err) = result {
+            tracing::error!("Callback failed: {}", err);
+        }
+    }
+
+    fn on_parameters_unsubscribe(&self, param_names: Vec<String>) {
+        let result: PyResult<()> = Python::with_gil(|py| {
+            self.listener
+                .bind(py)
+                .call_method("on_parameters_unsubscribe", (param_names,), None)?;
+            Ok(())
+        });
+        if let Err(err) = result {
+            tracing::error!("Callback failed: {}", err);
+        }
+    }
 }
 
 impl PyRemoteAccessListener {
@@ -204,6 +288,16 @@ impl PyRemoteAccessGateway {
     pub fn remove_services(&self, py: Python<'_>, names: Vec<String>) {
         if let Some(handle) = &self.0 {
             py.allow_threads(move || handle.remove_services(names));
+        }
+    }
+
+    /// Publishes parameter values to all subscribed clients.
+    ///
+    /// :param parameters: The parameters to publish.
+    /// :type parameters: list[:py:class:`Parameter`]
+    pub fn publish_parameter_values(&self, parameters: Vec<PyParameter>) {
+        if let Some(handle) = &self.0 {
+            handle.publish_parameter_values(parameters.into_iter().map(Into::into).collect());
         }
     }
 
@@ -300,12 +394,15 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<PyRemoteAccessClient>()?;
     module.add_class::<PyConnectionStatus>()?;
 
-    // Re-export shared service types from the websocket module, since
-    // remote_access and websocket share the same underlying service types.
+    // Re-export shared service and parameter types from the websocket module,
+    // since remote_access and websocket share the same underlying types.
     module.add_class::<PyService>()?;
     module.add_class::<PyServiceRequest>()?;
     module.add_class::<PyServiceSchema>()?;
     module.add_class::<PyMessageSchema>()?;
+    module.add_class::<PyParameter>()?;
+    module.add_class::<PyParameterType>()?;
+    module.add_class::<PyParameterValue>()?;
 
     let py = parent_module.py();
     py.import("sys")?
