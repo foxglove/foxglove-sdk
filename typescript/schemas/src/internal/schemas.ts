@@ -160,6 +160,32 @@ const Vector3: FoxgloveMessageSchema = {
   ],
 };
 
+const Velocity3: FoxgloveMessageSchema = {
+  type: "message",
+  name: "Velocity3",
+  description: "A velocity vector in 3D space",
+  fields: [
+    {
+      name: "x",
+      type: { type: "primitive", name: "float64" },
+      description: "x component",
+      defaultValue: 0,
+    },
+    {
+      name: "y",
+      type: { type: "primitive", name: "float64" },
+      description: "y component",
+      defaultValue: 0,
+    },
+    {
+      name: "z",
+      type: { type: "primitive", name: "float64" },
+      description: "z component",
+      defaultValue: 0,
+    },
+  ],
+};
+
 const Point2: FoxgloveMessageSchema = {
   type: "message",
   name: "Point2",
@@ -1624,6 +1650,22 @@ const LocationFix: FoxgloveMessageSchema = {
       protobufFieldNumber: 5,
     },
     {
+      name: "heading",
+      type: { type: "primitive", name: "float64" },
+      description: "Heading (yaw angle), in radians, measured clockwise from north",
+      protobufFieldNumber: 10,
+      flatbuffersFieldNumber: 9,
+      optional: true,
+    },
+    {
+      name: "velocity",
+      type: { type: "nested", schema: Velocity3 },
+      description: "Velocity in local East-North-Up (ENU) frame in m/s",
+      protobufFieldNumber: 11,
+      flatbuffersFieldNumber: 10,
+      optional: true,
+    },
+    {
       name: "color",
       type: { type: "nested", schema: Color },
       description: "Color used to visualize the location",
@@ -1902,6 +1944,7 @@ export const foxgloveMessageSchemas = {
   TriangleListPrimitive,
   Vector2,
   Vector3,
+  Velocity3,
 };
 
 export const foxgloveEnumSchemas = {

@@ -1,6 +1,6 @@
 use anyhow::{Result, bail, ensure};
 
-/// Operation code for ws-protocol byte stream framing.
+/// Operation code for byte stream framing.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum OpCode {
@@ -20,7 +20,7 @@ impl OpCode {
     }
 }
 
-/// A parsed frame from the ws-protocol byte stream.
+/// A parsed frame from the byte stream.
 #[derive(Debug)]
 pub struct Frame {
     pub op_code: OpCode,
@@ -30,9 +30,9 @@ pub struct Frame {
 /// Header size: 1 byte opcode + 4 byte LE u32 length.
 pub const HEADER_SIZE: usize = 5;
 
-/// Frames a JSON text message for sending over the ws-protocol byte stream.
+/// Frames a JSON text message for sending over the byte stream.
 ///
-/// `inner` is the JSON payload bytes. The result is wrapped in the ws-protocol
+/// `inner` is the JSON payload bytes. The result is wrapped in the
 /// frame format: `[Text opcode (1)] [length: u32 LE] [inner]`.
 pub fn frame_text_message(inner: &[u8]) -> Vec<u8> {
     let len = inner.len() as u32;
@@ -43,10 +43,10 @@ pub fn frame_text_message(inner: &[u8]) -> Vec<u8> {
     buf
 }
 
-/// Frames a binary protocol message for sending over the ws-protocol byte stream.
+/// Frames a binary protocol message for sending over the byte stream.
 ///
 /// `inner` is the encoded protocol message (opcode + payload, as produced by
-/// `BinaryMessage::to_bytes()`). The result is wrapped in the ws-protocol frame
+/// `BinaryMessage::to_bytes()`). The result is wrapped in the frame
 /// format: `[Binary opcode (2)] [length: u32 LE] [inner]`.
 pub fn frame_binary_message(inner: &[u8]) -> Vec<u8> {
     let len = inner.len() as u32;

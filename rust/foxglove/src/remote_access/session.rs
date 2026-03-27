@@ -48,9 +48,9 @@ pub(crate) struct SessionStats {
     pub video_tracks: usize,
 }
 
-pub(crate) const WS_PROTOCOL_TOPIC: &str = "ws-protocol";
-pub(crate) const CLIENT_CHANNEL_TOPIC_PREFIX: &str = "client-";
-const CHANNEL_TOPIC_PREFIX: &str = "ch-";
+const CONTROL_CHANNEL_TOPIC: &str = "control";
+const CHANNEL_TOPIC_PREFIX: &str = "device-ch-";
+const CLIENT_CHANNEL_TOPIC_PREFIX: &str = "client-ch-";
 const MESSAGE_FRAME_SIZE: usize = 5; // 1 byte opcode + u32 LE length
 const MAX_MESSAGE_SIZE: usize = 16 * 1024 * 1024; // 16 MiB
 const MAX_SEND_RETRIES: usize = 3;
@@ -184,7 +184,7 @@ pub(crate) struct RemoteAccessSession {
     /// the sender loop to re-advertise affected channels.
     video_metadata_tx: tokio::sync::watch::Sender<()>,
     video_metadata_rx: tokio::sync::watch::Receiver<()>,
-    /// Byte stream readers for `client-{channelId}` streams that arrived before the
+    /// Byte stream readers for `client-ch-{channelId}` streams that arrived before the
     /// corresponding Client Advertise message. Keyed by participant identity then channel ID.
     /// Drained when the advertise arrives; expired after `pending_client_reader_timeout`.
     pending_client_readers:
@@ -481,10 +481,10 @@ impl RemoteAccessSession {
 
     /// Read framed messages from a client byte stream.
     ///
-    /// `expected_channel_id` identifies a `client-{channelId}` stream: the channel ID parsed from
+    /// `expected_channel_id` identifies a `client-ch-{channelId}` stream: the channel ID parsed from
     /// the topic name. Every `MessageData` frame on this stream must carry the same channel ID;
     /// mismatches are considered a protocol violation (debug-asserted). Pass `None` for the
-    /// `ws-protocol` control stream.
+    /// `"control"` control stream.
     pub(crate) async fn handle_byte_stream_from_client(
         self: &Arc<Self>,
         participant_identity: ParticipantIdentity,
@@ -560,7 +560,7 @@ impl RemoteAccessSession {
         }
     }
 
-    /// Handle an incoming `client-{channelId}` byte stream.
+    /// Handle an incoming `client-ch-{channelId}` byte stream.
     ///
     /// If the client has already advertised this channel, the stream is read immediately.
     /// Otherwise the reader is stashed until the Client Advertise arrives (or a timeout
@@ -653,7 +653,7 @@ impl RemoteAccessSession {
         });
     }
 
-    /// Handle a single framed ws-protocol message. Returns `false` if the byte stream
+    /// Handle a single framed control channel message. Returns `false` if the byte stream
     /// should be closed (e.g. unrecognized opcode indicating a protocol mismatch).
     fn handle_client_control_message(
         self: &Arc<Self>,
@@ -708,7 +708,7 @@ impl RemoteAccessSession {
             }
             ClientMessage::MessageData(_) => {
                 error!(
-                    "Received MessageData over ws-protocol; MessageData is only supported on channel-specific byte streams"
+                    "Received MessageData over control channel; MessageData is only supported on channel-specific byte streams"
                 );
             }
             ClientMessage::ServiceCallRequest(req) => {
@@ -915,14 +915,9 @@ impl RemoteAccessSession {
                 .remove_client_channel(participant.participant_id(), channel_id);
 
             match removed {
-                None => {
-                    self.send_warning(
-                        participant,
-                        format!(
-                            "Client is not advertising channel: {channel_id_raw}; ignoring unadvertisement"
-                        ),
-                    );
-                }
+                None => debug!(
+                    "Client is not advertising channel: {channel_id_raw}; ignoring unadvertisement"
+                ),
                 Some(descriptor) => {
                     if let Some(listener) = &self.listener {
                         listener.on_client_unadvertise(client.clone(), &descriptor);
@@ -956,7 +951,7 @@ impl RemoteAccessSession {
             .room
             .local_participant()
             .stream_bytes(StreamByteOptions {
-                topic: WS_PROTOCOL_TOPIC.to_string(),
+                topic: CONTROL_CHANNEL_TOPIC.to_string(),
                 destination_identities: vec![participant_id.clone()],
                 ..StreamByteOptions::default()
             })
@@ -986,7 +981,7 @@ impl RemoteAccessSession {
         }
     }
 
-    /// Handle a message from a `client-{channelId}` byte stream.
+    /// Handle a message from a `client-ch-{channelId}` byte stream.
     ///
     /// Only `MessageData` frames are expected. `expected_channel_id` is the channel ID parsed from
     /// the stream topic and must match the `channel_id` field inside every `MessageData` frame.
@@ -1153,7 +1148,7 @@ impl RemoteAccessSession {
             .room
             .local_participant()
             .stream_bytes(StreamByteOptions {
-                topic: WS_PROTOCOL_TOPIC.to_string(),
+                topic: CONTROL_CHANNEL_TOPIC.to_string(),
                 destination_identities: vec![participant_id.clone()],
                 ..StreamByteOptions::default()
             })
@@ -1287,7 +1282,7 @@ impl RemoteAccessSession {
                         "byte stream opened from participant"
                     );
                     if let Some(reader) = reader.take() {
-                        if topic == WS_PROTOCOL_TOPIC {
+                        if topic == CONTROL_CHANNEL_TOPIC {
                             let session = self.clone();
                             tokio::spawn(async move {
                                 session

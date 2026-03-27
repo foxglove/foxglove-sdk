@@ -3555,6 +3555,12 @@ pub struct LocationFix {
     /// If `position_covariance` is available, `position_covariance_type` must be set to indicate the type of covariance.
     pub position_covariance_type: FoxglovePositionCovarianceType,
 
+    /// Heading (yaw angle), in radians, measured clockwise from north
+    pub heading: *const f64,
+
+    /// Velocity in local East-North-Up (ENU) frame in m/s
+    pub velocity: *const Velocity3,
+
     /// Color used to visualize the location
     pub color: *const Color,
 
@@ -3601,6 +3607,12 @@ impl BorrowToNative for LocationFix {
                 "frame_id",
             )?
         };
+        let velocity = unsafe {
+            self.velocity
+                .as_ref()
+                .map(|m| m.borrow_to_native(arena.as_mut()))
+        }
+        .transpose()?;
         let color = unsafe {
             self.color
                 .as_ref()
@@ -3622,6 +3634,8 @@ impl BorrowToNative for LocationFix {
                 )
             }),
             position_covariance_type: self.position_covariance_type as i32,
+            heading: unsafe { self.heading.as_ref().copied() },
+            velocity: velocity.map(ManuallyDrop::into_inner),
             color: color.map(ManuallyDrop::into_inner),
             metadata: ManuallyDrop::into_inner(metadata),
         }))
@@ -7862,6 +7876,158 @@ pub unsafe extern "C" fn foxglove_vector3_encode(
         }
         Err(e) => {
             tracing::error!("Vector3: {}", e);
+            FoxgloveError::EncodeError
+        }
+    }
+}
+
+/// A velocity vector in 3D space
+#[repr(C)]
+pub struct Velocity3 {
+    /// x component
+    pub x: f64,
+
+    /// y component
+    pub y: f64,
+
+    /// z component
+    pub z: f64,
+}
+
+#[cfg(not(target_family = "wasm"))]
+impl Velocity3 {
+    /// Create a new typed channel, and return an owned raw channel pointer to it.
+    ///
+    /// # Safety
+    /// We're trusting the caller that the channel will only be used with this type T.
+    #[unsafe(no_mangle)]
+    pub unsafe extern "C" fn foxglove_channel_create_velocity3(
+        topic: FoxgloveString,
+        context: *const FoxgloveContext,
+        channel: *mut *const FoxgloveChannel,
+    ) -> FoxgloveError {
+        if channel.is_null() {
+            tracing::error!("channel cannot be null");
+            return FoxgloveError::ValueError;
+        }
+        unsafe {
+            let result =
+                do_foxglove_channel_create::<foxglove::messages::Velocity3>(topic, context);
+            result_to_c(result, channel)
+        }
+    }
+}
+
+impl BorrowToNative for Velocity3 {
+    type NativeType = foxglove::messages::Velocity3;
+
+    unsafe fn borrow_to_native(
+        &self,
+        #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
+    ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
+        Ok(ManuallyDrop::new(foxglove::messages::Velocity3 {
+            x: self.x,
+            y: self.y,
+            z: self.z,
+        }))
+    }
+}
+
+/// Log a Velocity3 message to a channel.
+///
+/// # Safety
+/// The channel must have been created for this type with foxglove_channel_create_velocity3.
+#[cfg(not(target_family = "wasm"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn foxglove_channel_log_velocity3(
+    channel: Option<&FoxgloveChannel>,
+    msg: Option<&Velocity3>,
+    log_time: Option<&u64>,
+    sink_id: FoxgloveSinkId,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { Velocity3::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
+            log_msg_to_channel(channel, &*msg, log_time, sink_id)
+        }
+        Err(e) => {
+            tracing::error!("Velocity3: {}", e);
+            e.into()
+        }
+    }
+}
+
+/// Get the Velocity3 schema.
+///
+/// All buffers in the returned schema are statically allocated.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_velocity3_schema() -> FoxgloveSchema {
+    let native = foxglove::messages::Velocity3::get_schema().expect("Velocity3 schema is Some");
+    let name: &'static str = "foxglove.Velocity3";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("Velocity3 schema data is static");
+    };
+    FoxgloveSchema {
+        name: name.into(),
+        encoding: encoding.into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
+/// Encode a Velocity3 message as protobuf to the buffer provided.
+///
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+/// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+/// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+///
+/// # Safety
+/// ptr must be a valid pointer to a memory region at least len bytes long.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_velocity3_encode(
+    msg: Option<&Velocity3>,
+    ptr: *mut u8,
+    len: usize,
+    encoded_len: Option<&mut usize>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { Velocity3::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            if len == 0 || ptr.is_null() {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = msg
+                        .encoded_len()
+                        .expect("foxglove messages return Some(len)");
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
+            if let Err(encode_error) = msg.encode(&mut buf) {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
+            }
+            FoxgloveError::Ok
+        }
+        Err(e) => {
+            tracing::error!("Velocity3: {}", e);
             FoxgloveError::EncodeError
         }
     }

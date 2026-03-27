@@ -1,6 +1,6 @@
 //! Shared test infrastructure for remote access integration tests.
 //!
-//! Provides helpers for connecting to LiveKit rooms, reading ws-protocol frames,
+//! Provides helpers for connecting to LiveKit rooms, reading control channel frames,
 //! managing test gateway instances, and common utilities. Used across test suites
 //! such as `livekit_test` and `netem_test`.
 
@@ -51,10 +51,10 @@ pub type ChannelFilterFn =
 
 // ---------------------------------------------------------------------------
 // FrameReader: accumulates bytes from a LiveKit byte stream reader and
-// parses successive ws-protocol frames.
+// parses successive byte stream frames.
 // ---------------------------------------------------------------------------
 
-/// Reads chunks from a LiveKit byte stream and parses ws-protocol frames.
+/// Reads chunks from a LiveKit byte stream and parses byte stream frames.
 pub struct FrameReader {
     reader: livekit::ByteStreamReader,
     buf: Vec<u8>,
@@ -107,10 +107,10 @@ impl FrameReader {
 
 // ---------------------------------------------------------------------------
 // ViewerConnection: connects to a LiveKit room and provides helpers for
-// reading ws-protocol messages.
+// reading control channel messages.
 // ---------------------------------------------------------------------------
 
-/// A viewer connected to a LiveKit room with an open ws-protocol byte stream.
+/// A viewer connected to a LiveKit room with an open control channel byte stream.
 pub struct ViewerConnection {
     pub room: Room,
     pub events: tokio::sync::mpsc::UnboundedReceiver<RoomEvent>,
@@ -119,7 +119,7 @@ pub struct ViewerConnection {
 
 impl ViewerConnection {
     /// Constructs a `ViewerConnection` from a pre-connected room by waiting for the
-    /// gateway to open a ws-protocol byte stream. Unlike [`connect`], this does not
+    /// gateway to open a control channel byte stream. Unlike [`connect`], this does not
     /// retry the room connection — useful when the viewer must remain in the room while
     /// the gateway joins (e.g., testing advertisement to existing participants).
     pub async fn from_room(
@@ -138,7 +138,7 @@ impl ViewerConnection {
                 ..
             } = event
             {
-                if topic == "ws-protocol" {
+                if topic == "control" {
                     break stream_reader.take().context("reader already taken")?;
                 }
             }
@@ -150,7 +150,7 @@ impl ViewerConnection {
         })
     }
 
-    /// Connects a viewer to the LiveKit room and waits for the ws-protocol
+    /// Connects a viewer to the LiveKit room and waits for the control channel
     /// byte stream to open. Retries the connection if the gateway hasn't
     /// joined the room yet (no ByteStreamOpened within a short window).
     pub async fn connect(room_name: &str, viewer_identity: &str) -> Result<Self> {
@@ -193,7 +193,7 @@ impl ViewerConnection {
                         reader: stream_reader,
                         topic,
                         ..
-                    })) if topic == "ws-protocol" => {
+                    })) if topic == "control" => {
                         break Some(stream_reader.take().context("reader already taken")?);
                     }
                     Ok(Some(_)) => continue,
@@ -324,7 +324,7 @@ impl ViewerConnection {
             .room
             .local_participant()
             .stream_bytes(StreamByteOptions {
-                topic: "ws-protocol".to_string(),
+                topic: "control".to_string(),
                 destination_identities: vec![gateway_identity],
                 ..StreamByteOptions::default()
             })
@@ -365,7 +365,7 @@ impl ViewerConnection {
             .room
             .local_participant()
             .stream_bytes(StreamByteOptions {
-                topic: "ws-protocol".to_string(),
+                topic: "control".to_string(),
                 destination_identities: vec![gateway_identity],
                 ..StreamByteOptions::default()
             })
@@ -420,7 +420,7 @@ impl ViewerConnection {
             .room
             .local_participant()
             .stream_bytes(StreamByteOptions {
-                topic: "ws-protocol".to_string(),
+                topic: "control".to_string(),
                 destination_identities: vec![gateway_identity],
                 ..StreamByteOptions::default()
             })
@@ -453,7 +453,7 @@ impl ViewerConnection {
             .room
             .local_participant()
             .stream_bytes(StreamByteOptions {
-                topic: "ws-protocol".to_string(),
+                topic: "control".to_string(),
                 destination_identities: vec![gateway_identity],
                 ..StreamByteOptions::default()
             })
@@ -479,7 +479,7 @@ impl ViewerConnection {
             .room
             .local_participant()
             .stream_bytes(StreamByteOptions {
-                topic: "ws-protocol".to_string(),
+                topic: "control".to_string(),
                 destination_identities: vec![gateway_identity],
                 ..StreamByteOptions::default()
             })
@@ -494,7 +494,7 @@ impl ViewerConnection {
         Ok(())
     }
 
-    /// Sends a binary-framed `ClientMessageData` on a per-channel topic `"client-{channelId}"`.
+    /// Sends a binary-framed `ClientMessageData` on a per-channel topic `"client-ch-{channelId}"`.
     ///
     /// This tests the new per-channel delivery path for client publish message data.
     pub async fn send_client_message_data(&self, channel_id: u32, data: &[u8]) -> Result<()> {
@@ -507,7 +507,7 @@ impl ViewerConnection {
             .room
             .local_participant()
             .stream_bytes(StreamByteOptions {
-                topic: format!("client-{channel_id}"),
+                topic: format!("client-ch-{channel_id}"),
                 destination_identities: vec![gateway_identity],
                 ..StreamByteOptions::default()
             })
@@ -553,8 +553,8 @@ impl ViewerConnection {
     /// Waits for a per-channel byte stream to open and returns a [`FrameReader`]
     /// for it.
     ///
-    /// Data plane messages are delivered on per-channel byte streams (topic `"ch-{id}"`)
-    /// rather than the control-plane `"ws-protocol"` stream. Each time the subscriber
+    /// Data plane messages are delivered on per-channel byte streams (topic `"device-ch-{id}"`)
+    /// rather than the control plane `"control"` stream. Each time the subscriber
     /// set changes the gateway opens a new byte stream, so this method waits for the
     /// corresponding `ByteStreamOpened` event.
     pub async fn expect_channel_byte_stream(&mut self) -> Result<FrameReader> {
@@ -565,7 +565,9 @@ impl ViewerConnection {
                 .context("timeout waiting for channel byte stream")?
                 .context("room events channel closed")?;
             match event {
-                RoomEvent::ByteStreamOpened { reader, topic, .. } if topic.starts_with("ch-") => {
+                RoomEvent::ByteStreamOpened { reader, topic, .. }
+                    if topic.starts_with("device-ch-") =>
+                {
                     let stream_reader = reader.take().context("reader already taken")?;
                     return Ok(FrameReader::new(stream_reader));
                 }

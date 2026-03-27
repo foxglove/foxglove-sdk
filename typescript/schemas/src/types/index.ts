@@ -49,4 +49,5 @@ export * from "./Time";
 export * from "./TriangleListPrimitive";
 export * from "./Vector2";
 export * from "./Vector3";
+export * from "./Velocity3";
 export * from "./VoxelGrid";
