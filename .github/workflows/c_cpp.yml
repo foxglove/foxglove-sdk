@@ -245,6 +245,10 @@ jobs:
           mkdir -p artifacts/foxglove/src
           mv target/${{ matrix.target }}/release/${{ matrix.staticlib_name }} artifacts/foxglove/lib/
           mv target/${{ matrix.target }}/release/${{ matrix.cdylib_name }} artifacts/foxglove/lib/
+          # Include the MSVC import library on Windows (needed for link-time binding)
+          if [ -f "target/${{ matrix.target }}/release/${{ matrix.cdylib_name }}.lib" ]; then
+            mv "target/${{ matrix.target }}/release/${{ matrix.cdylib_name }}.lib" artifacts/foxglove/lib/
+          fi
           cp -R c/include/foxglove-c artifacts/foxglove/include/
           cp -R cpp/foxglove/include/foxglove artifacts/foxglove/include/
           cp -R cpp/foxglove/src/* artifacts/foxglove/src/
@@ -346,6 +350,10 @@ jobs:
           mkdir -p artifacts/foxglove_ra/include
           mkdir -p artifacts/foxglove_ra/src
           mv target/${{ matrix.target }}/release/${{ matrix.cdylib_name }} artifacts/foxglove_ra/lib/
+          # Include the MSVC import library on Windows (needed for link-time binding)
+          if [ -f "target/${{ matrix.target }}/release/${{ matrix.cdylib_name }}.lib" ]; then
+            mv "target/${{ matrix.target }}/release/${{ matrix.cdylib_name }}.lib" artifacts/foxglove_ra/lib/
+          fi
           cp -R c/include/foxglove-c artifacts/foxglove_ra/include/
           cp -R cpp/foxglove/include/foxglove artifacts/foxglove_ra/include/
           cp -R cpp/foxglove/src/* artifacts/foxglove_ra/src/
