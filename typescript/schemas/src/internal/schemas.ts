@@ -168,19 +168,19 @@ const Velocity3: FoxgloveMessageSchema = {
     {
       name: "x",
       type: { type: "primitive", name: "float64" },
-      description: "Velocity east (longitude axis) in m/s.",
+      description: "x velocity in m/s",
       defaultValue: 0,
     },
     {
       name: "y",
       type: { type: "primitive", name: "float64" },
-      description: "Velocity north (latitude axis) in m/s.",
+      description: "y velocity in m/s",
       defaultValue: 0,
     },
     {
       name: "z",
       type: { type: "primitive", name: "float64" },
-      description: "Velocity up (altitude axis) in m/s.",
+      description: "z velocity in m/s",
       defaultValue: 0,
     },
   ],
@@ -1660,7 +1660,8 @@ const LocationFix: FoxgloveMessageSchema = {
     {
       name: "velocity",
       type: { type: "nested", schema: Velocity3 },
-      description: "Velocity in local East-North-Up frame in m/s.",
+      description:
+        "Velocity in local East-North-Up (ENU) frame in m/s (x=longitude, y=latitude, z=altitude)",
       protobufFieldNumber: 11,
       flatbuffersFieldNumber: 10,
       optional: true,
