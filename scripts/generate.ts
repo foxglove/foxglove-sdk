@@ -326,7 +326,6 @@ async function main({ clean }: { clean: boolean }) {
       Object.values(foxgloveMessageSchemas),
       Object.values(foxgloveEnumSchemas),
       path.join(repoRoot, "c/cbindgen.prelude.toml"),
-      "foxglove-c.h",
     );
     const bindgenConfigFile = path.join(repoRoot, "c/cbindgen.toml");
     await fs.writeFile(bindgenConfigFile, bindgenConfig);

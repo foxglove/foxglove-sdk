@@ -6,8 +6,8 @@
  */
 
 
-#ifndef FOXGLOVE_C_H
-#define FOXGLOVE_C_H
+#ifndef FOXGLOVE_H
+#define FOXGLOVE_H
 
 #include <stdarg.h>
 #include <stdbool.h>
@@ -6011,4 +6011,4 @@ void foxglove_service_respond_error(struct foxglove_service_responder *responder
 }  // extern "C"
 #endif  // __cplusplus
 
-#endif  /* FOXGLOVE_C_H */
+#endif  /* FOXGLOVE_H */
