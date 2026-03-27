@@ -15,7 +15,7 @@ use crate::websocket::{
     AssetHandler, AsyncAssetHandlerFn, BlockingAssetHandlerFn, Capability, Client, ConnectionGraph,
     Parameter, Server, ServerOptions, ShutdownHandle, Status, create_server,
 };
-use crate::{AppUrl, ChannelDescriptor, Context, FoxgloveError, get_runtime_handle};
+use crate::{AppUrl, ChannelDescriptor, Context, FoxgloveError, runtime::get_runtime_handle};
 
 /// A WebSocket server for live visualization in Foxglove.
 ///
@@ -307,7 +307,11 @@ impl WebSocketServerHandle {
     /// These services will be available for clients to use until they are removed with
     /// [`remove_services`][WebSocketServerHandle::remove_services].
     ///
-    /// This method will fail if the server was not configured with [`Capability::Services`].
+    /// This method will fail if the server was not configured with [`Capability::Services`]
+    /// ([`ServicesNotSupported`](FoxgloveError::ServicesNotSupported)), if a service name is
+    /// not unique ([`DuplicateService`](FoxgloveError::DuplicateService)), or if a service has
+    /// no request encoding and the server has no supported encodings
+    /// ([`MissingRequestEncoding`](FoxgloveError::MissingRequestEncoding)).
     pub fn add_services(
         &self,
         services: impl IntoIterator<Item = Service>,

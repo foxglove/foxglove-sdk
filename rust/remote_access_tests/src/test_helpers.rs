@@ -15,8 +15,8 @@ use tracing::info;
 
 use foxglove::protocol::v2::BinaryMessage;
 use foxglove::protocol::v2::client::{
-    Advertise, AdvertiseChannel, ServiceCallRequest, Subscribe, SubscribeChannel, Unadvertise,
-    Unsubscribe,
+    Advertise, AdvertiseChannel, MessageData as ClientMessageData, ServiceCallRequest, Subscribe,
+    SubscribeChannel, Unadvertise, Unsubscribe,
 };
 
 /// Describes a client-advertised channel for use in test helpers.
@@ -281,6 +281,17 @@ impl ViewerConnection {
         }
     }
 
+    /// Reads and returns the next UnadvertiseServices message.
+    pub async fn expect_unadvertise_services(
+        &mut self,
+    ) -> Result<foxglove::protocol::v2::server::UnadvertiseServices> {
+        let msg = self.frame_reader.next_server_message().await?;
+        match msg {
+            ServerMessage::UnadvertiseServices(unadv) => Ok(unadv),
+            other => anyhow::bail!("expected UnadvertiseServices, got: {other:?}"),
+        }
+    }
+
     /// Reads and returns the next ServiceCallResponse message.
     pub async fn expect_service_call_response(
         &mut self,
@@ -483,6 +494,34 @@ impl ViewerConnection {
         Ok(())
     }
 
+    /// Sends a binary-framed `ClientMessageData` on a per-channel topic `"client-{channelId}"`.
+    ///
+    /// This tests the new per-channel delivery path for client publish message data.
+    pub async fn send_client_message_data(&self, channel_id: u32, data: &[u8]) -> Result<()> {
+        let msg = ClientMessageData::new(channel_id, data);
+        let inner = msg.to_bytes();
+        let framed = frame::frame_binary_message(&inner);
+
+        let gateway_identity = ParticipantIdentity(mock_server::TEST_DEVICE_ID.to_string());
+        let writer = self
+            .room
+            .local_participant()
+            .stream_bytes(StreamByteOptions {
+                topic: format!("client-{channel_id}"),
+                destination_identities: vec![gateway_identity],
+                ..StreamByteOptions::default()
+            })
+            .await
+            .map_err(|e| anyhow::anyhow!("failed to open byte stream to gateway: {e}"))?;
+
+        writer
+            .write(&framed)
+            .await
+            .map_err(|e| anyhow::anyhow!("failed to write client message data on channel: {e}"))?;
+
+        Ok(())
+    }
+
     /// Waits for a `TrackSubscribed` room event and returns the track name.
     pub async fn expect_track_subscribed(&mut self) -> Result<String> {
         let deadline = tokio::time::Instant::now() + EVENT_TIMEOUT;
@@ -591,6 +630,7 @@ pub struct TestGatewayOptions {
     pub filter: Option<ChannelFilterFn>,
     pub listener: Option<Arc<dyn foxglove::remote_access::Listener>>,
     pub capabilities: Vec<foxglove::remote_access::Capability>,
+    pub pending_client_reader_timeout: Option<Duration>,
     pub services: Vec<Service>,
 }
 
@@ -665,6 +705,9 @@ impl TestGateway {
         }
         if !options.capabilities.is_empty() {
             gateway = gateway.capabilities(options.capabilities);
+        }
+        if let Some(timeout) = options.pending_client_reader_timeout {
+            gateway = gateway.pending_client_reader_timeout(timeout);
         }
         if !options.services.is_empty() {
             gateway = gateway.services(options.services);

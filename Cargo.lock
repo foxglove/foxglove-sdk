@@ -1265,6 +1265,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "example_remote_access_services"
+version = "0.0.0"
+dependencies = [
+ "anyhow",
+ "env_logger",
+ "foxglove 0.21.0",
+ "schemars 1.0.4",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "example_remote_data_loader_backend"
 version = "0.0.0"
 dependencies = [

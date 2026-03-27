@@ -1795,7 +1795,7 @@ typedef struct foxglove_raw_image {
    *   - Pixel colors are decomposed into Red, Blue and Green channels.
    *   - Pixel channel values are represented as unsigned 8-bit integers, and serialized in a 2x2 bayer filter pattern.
    *   - The order of the four letters after `bayer_` determine the layout, so for `bayer_wxyz8` the pattern is:
-   *   ```plaintext
+   *   ```text
    *   w | x
    *   - + -
    *   y | z
@@ -5521,6 +5521,10 @@ foxglove_error foxglove_server_clear_session(const struct foxglove_websocket_ser
 #if !defined(__wasm__)
 /**
  * Adds a service to the server.
+ *
+ * This function will fail if the server was not configured with the `services` capability,
+ * if a service with the same name is already registered, or if the service has no request
+ * encoding and the server has no supported encodings.
  *
  * # Safety
  * - `server` must be a valid pointer to a server started with `foxglove_server_start`.

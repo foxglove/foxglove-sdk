@@ -10,7 +10,7 @@ use anyhow::{Context as _, Result};
 use foxglove::Schema;
 use foxglove::protocol::v2::client::ServiceCallRequest;
 use foxglove::protocol::v2::server::{ServerMessage, server_info};
-use foxglove::remote_access::{Service, ServiceSchema};
+use foxglove::remote_access::{Capability, Service, ServiceSchema};
 use remote_access_tests::test_helpers::{TestGateway, TestGatewayOptions, ViewerConnection};
 use serial_test::serial;
 use tracing::info;
@@ -336,6 +336,229 @@ async fn livekit_service_no_services_no_advertisement() -> Result<()> {
         matches!(msg, ServerMessage::Advertise(_)),
         "expected Advertise, got: {msg:?}"
     );
+
+    viewer.close().await?;
+    gw.stop().await?;
+    Ok(())
+}
+
+// ===========================================================================
+// Dynamic add/remove service tests
+// ===========================================================================
+
+/// Test that dynamically adding a service sends an AdvertiseServices message to
+/// a connected viewer.
+#[traced_test]
+#[ignore]
+#[tokio::test]
+#[serial(livekit)]
+async fn livekit_service_dynamic_add_sends_advertise() -> Result<()> {
+    let ctx = foxglove::Context::new();
+    let gw = TestGateway::start_with_options(
+        &ctx,
+        TestGatewayOptions {
+            capabilities: vec![Capability::Services],
+            ..Default::default()
+        },
+    )
+    .await?;
+
+    let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+    let server_info = viewer.expect_server_info().await?;
+    assert!(
+        server_info
+            .capabilities
+            .iter()
+            .any(|c| c == &server_info::Capability::Services),
+        "server_info should include 'services' capability"
+    );
+
+    // Dynamically add a service after the viewer is connected.
+    gw.handle.add_services([echo_service()])?;
+
+    let adv_services = viewer.expect_advertise_services().await?;
+    info!("AdvertiseServices: {adv_services:?}");
+
+    assert_eq!(adv_services.services.len(), 1);
+    assert_eq!(adv_services.services[0].name, "echo");
+    assert_eq!(adv_services.services[0].r#type, "EchoService");
+
+    viewer.close().await?;
+    gw.stop().await?;
+    Ok(())
+}
+
+/// Test that dynamically removing a service sends an UnadvertiseServices message.
+#[traced_test]
+#[ignore]
+#[tokio::test]
+#[serial(livekit)]
+async fn livekit_service_dynamic_remove_sends_unadvertise() -> Result<()> {
+    let ctx = foxglove::Context::new();
+    let services = vec![echo_service()];
+    let gw = TestGateway::start_with_options(
+        &ctx,
+        TestGatewayOptions {
+            services,
+            ..Default::default()
+        },
+    )
+    .await?;
+
+    let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+    let _server_info = viewer.expect_server_info().await?;
+    let adv_services = viewer.expect_advertise_services().await?;
+    assert_eq!(adv_services.services.len(), 1);
+    let service_id = adv_services.services[0].id;
+
+    // Dynamically remove the service.
+    gw.handle.remove_services(["echo"]);
+
+    let unadv = viewer.expect_unadvertise_services().await?;
+    info!("UnadvertiseServices: {unadv:?}");
+
+    assert_eq!(unadv.service_ids.len(), 1);
+    assert_eq!(unadv.service_ids[0], service_id);
+
+    viewer.close().await?;
+    gw.stop().await?;
+    Ok(())
+}
+
+/// Test that a dynamically added service can handle calls.
+#[traced_test]
+#[ignore]
+#[tokio::test]
+#[serial(livekit)]
+async fn livekit_service_dynamic_add_can_be_called() -> Result<()> {
+    let ctx = foxglove::Context::new();
+    let gw = TestGateway::start_with_options(
+        &ctx,
+        TestGatewayOptions {
+            capabilities: vec![Capability::Services],
+            ..Default::default()
+        },
+    )
+    .await?;
+
+    let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+    let _server_info = viewer.expect_server_info().await?;
+
+    gw.handle.add_services([echo_service()])?;
+
+    let adv_services = viewer.expect_advertise_services().await?;
+    let service_id = adv_services.services[0].id;
+
+    let payload = br#"{"dynamic":"call"}"#;
+    let req = ServiceCallRequest {
+        service_id,
+        call_id: 100,
+        encoding: Cow::Borrowed("json"),
+        payload: Cow::Borrowed(payload),
+    };
+    viewer.send_service_call_request(&req).await?;
+
+    let response = viewer.expect_service_call_response().await?;
+    info!("ServiceCallResponse: {response:?}");
+
+    assert_eq!(response.service_id, service_id);
+    assert_eq!(response.call_id, 100);
+    assert_eq!(response.encoding, "json");
+    assert_eq!(response.payload.as_ref(), payload);
+
+    viewer.close().await?;
+    gw.stop().await?;
+    Ok(())
+}
+
+/// Test dynamic add followed by remove, then verify the removed service cannot
+/// be called.
+#[traced_test]
+#[ignore]
+#[tokio::test]
+#[serial(livekit)]
+async fn livekit_service_dynamic_add_then_remove() -> Result<()> {
+    let ctx = foxglove::Context::new();
+    let gw = TestGateway::start_with_options(
+        &ctx,
+        TestGatewayOptions {
+            capabilities: vec![Capability::Services],
+            ..Default::default()
+        },
+    )
+    .await?;
+
+    let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+    let _server_info = viewer.expect_server_info().await?;
+
+    // Add a service.
+    gw.handle.add_services([echo_service()])?;
+    let adv_services = viewer.expect_advertise_services().await?;
+    let service_id = adv_services.services[0].id;
+
+    // Remove it.
+    gw.handle.remove_services(["echo"]);
+    let unadv = viewer.expect_unadvertise_services().await?;
+    assert_eq!(unadv.service_ids, vec![service_id]);
+
+    // Calling the removed service should fail.
+    let req = ServiceCallRequest {
+        service_id,
+        call_id: 200,
+        encoding: Cow::Borrowed("json"),
+        payload: Cow::Borrowed(b"{}"),
+    };
+    viewer.send_service_call_request(&req).await?;
+
+    let failure = viewer.expect_service_call_failure().await?;
+    info!("ServiceCallFailure: {failure:?}");
+
+    assert_eq!(failure.service_id, service_id);
+    assert_eq!(failure.call_id, 200);
+    assert!(
+        failure.message.contains("Unknown service"),
+        "expected 'Unknown service' message, got: {}",
+        failure.message
+    );
+
+    viewer.close().await?;
+    gw.stop().await?;
+    Ok(())
+}
+
+/// Test adding multiple services dynamically in a single call.
+#[traced_test]
+#[ignore]
+#[tokio::test]
+#[serial(livekit)]
+async fn livekit_service_dynamic_add_multiple() -> Result<()> {
+    let ctx = foxglove::Context::new();
+    let gw = TestGateway::start_with_options(
+        &ctx,
+        TestGatewayOptions {
+            capabilities: vec![Capability::Services],
+            ..Default::default()
+        },
+    )
+    .await?;
+
+    let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+    let _server_info = viewer.expect_server_info().await?;
+
+    gw.handle
+        .add_services([echo_service(), failing_service()])?;
+
+    let adv_services = viewer.expect_advertise_services().await?;
+    info!("AdvertiseServices: {adv_services:?}");
+
+    assert_eq!(adv_services.services.len(), 2);
+    let names: Vec<&str> = adv_services
+        .services
+        .iter()
+        .map(|s| s.name.as_ref())
+        .collect();
+    assert!(names.contains(&"echo"), "expected 'echo' service");
+    assert!(names.contains(&"fail"), "expected 'fail' service");
 
     viewer.close().await?;
     gw.stop().await?;
