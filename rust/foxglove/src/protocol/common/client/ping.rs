@@ -14,7 +14,6 @@ pub struct Ping<'a> {
 }
 
 impl<'a> Ping<'a> {
-    /// Returns an owned version with a `'static` lifetime.
     pub fn into_owned(self) -> Ping<'static> {
         Ping {
             payload: Cow::Owned(self.payload.into_owned()),

@@ -20,6 +20,7 @@ use crate::protocol::v2::parameter::Parameter;
 use crate::protocol::v2::server::ParameterValues;
 use crate::remote_access::participant::ChannelWriter;
 use crate::remote_common::service::{CallId, Service, ServiceId, ServiceMap};
+use crate::time::millis_since_epoch;
 use crate::{
     ChannelDescriptor, ChannelId, Context, FoxgloveError, Metadata, RawChannel, Schema, Sink,
     SinkChannelFilter, SinkId,
@@ -34,7 +35,7 @@ use crate::{
     },
     remote_access::{
         Capability, Listener, RemoteAccessError, client::Client, participant::Participant,
-        session_state::SessionState,
+        rtt_tracker::RttTracker, session_state::SessionState,
     },
 };
 
@@ -192,6 +193,7 @@ pub(crate) struct RemoteAccessSession {
     pending_client_readers:
         parking_lot::Mutex<HashMap<ParticipantIdentity, HashMap<ChannelId, ByteStreamReader>>>,
     pending_client_reader_timeout: Duration,
+    rtt_tracker: parking_lot::Mutex<RttTracker>,
 }
 
 impl Sink for RemoteAccessSession {
@@ -326,6 +328,7 @@ impl RemoteAccessSession {
             pending_client_reader_timeout: params.pending_client_reader_timeout,
             services: params.services,
             supported_encodings: params.supported_encodings,
+            rtt_tracker: parking_lot::Mutex::new(RttTracker::new()),
         }
     }
 
@@ -729,9 +732,24 @@ impl RemoteAccessSession {
                 self.handle_unsubscribe_parameter_updates(&participant, msg.parameter_names);
             }
             ClientMessage::Ping(msg) => {
-                let pong = Pong::new(&msg.payload);
-                let framed = encode_binary_message(&pong);
-                self.send_control(participant, framed);
+                if msg.payload.len() < 8 {
+                    warn!(
+                        "Ping payload too short ({} bytes), ignoring",
+                        msg.payload.len()
+                    );
+                } else {
+                    // Build pong payload: [appTimestamp: u64 LE][deviceTimestamp: u64 LE]
+                    let mut pong_payload = Vec::with_capacity(16);
+                    pong_payload.extend_from_slice(&msg.payload[..8]);
+                    pong_payload.extend_from_slice(&millis_since_epoch().to_le_bytes());
+                    let pong = Pong::new(&pong_payload);
+                    let framed = encode_binary_message(&pong);
+                    self.send_control(participant, framed);
+                }
+            }
+            ClientMessage::PingAck(ack) => {
+                let rtt_ms = millis_since_epoch().saturating_sub(ack.device_timestamp) as f64;
+                self.rtt_tracker.lock().record_sample(rtt_ms);
             }
             _ => {
                 warn!("Unhandled client message: {client_msg:?}");
