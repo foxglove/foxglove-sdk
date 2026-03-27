@@ -6,6 +6,7 @@ use std::time::Duration;
 use bitflags::bitflags;
 
 use crate::channel_descriptor::FoxgloveChannelDescriptor;
+use crate::parameter::FoxgloveParameterArray;
 use crate::service::FoxgloveService;
 use crate::sink_channel_filter::ChannelFilter;
 use crate::{FoxgloveContext, FoxgloveError, FoxgloveString, result_to_c};
@@ -47,13 +48,16 @@ pub struct FoxgloveGatewayCapability {
 
 /// Allow clients to advertise channels to send data messages to the server.
 pub const FOXGLOVE_GATEWAY_CAPABILITY_CLIENT_PUBLISH: u8 = 1 << 0;
+/// Allow clients to get, set, and subscribe to parameter updates.
+pub const FOXGLOVE_GATEWAY_CAPABILITY_PARAMETERS: u8 = 1 << 1;
 /// Allow clients to call services.
-pub const FOXGLOVE_GATEWAY_CAPABILITY_SERVICES: u8 = 1 << 1;
+pub const FOXGLOVE_GATEWAY_CAPABILITY_SERVICES: u8 = 1 << 2;
 
 bitflags! {
     #[derive(Clone, Copy, PartialEq, Eq)]
     struct FoxgloveGatewayCapabilityBitFlags: u8 {
         const ClientPublish = FOXGLOVE_GATEWAY_CAPABILITY_CLIENT_PUBLISH;
+        const Parameters = FOXGLOVE_GATEWAY_CAPABILITY_PARAMETERS;
         const Services = FOXGLOVE_GATEWAY_CAPABILITY_SERVICES;
     }
 }
@@ -65,6 +69,9 @@ impl FoxgloveGatewayCapabilityBitFlags {
         self.iter_names().filter_map(|(_s, cap)| match cap {
             FoxgloveGatewayCapabilityBitFlags::ClientPublish => {
                 Some(foxglove::remote_access::Capability::ClientPublish)
+            }
+            FoxgloveGatewayCapabilityBitFlags::Parameters => {
+                Some(foxglove::remote_access::Capability::Parameters)
             }
             FoxgloveGatewayCapabilityBitFlags::Services => {
                 Some(foxglove::remote_access::Capability::Services)
@@ -140,6 +147,67 @@ pub struct FoxgloveGatewayCallbacks {
             context: *const c_void,
             client_id: u32,
             channel: *const FoxgloveChannelDescriptor,
+        ),
+    >,
+
+    /// Callback invoked when a client requests parameters.
+    ///
+    /// Requires `FOXGLOVE_GATEWAY_CAPABILITY_PARAMETERS`.
+    ///
+    /// The `request_id` argument may be NULL. The `param_names` argument is guaranteed to be
+    /// non-NULL. These arguments point to buffers that are valid and immutable for the duration
+    /// of the call.
+    ///
+    /// This function should return the named parameters, or all parameters if `param_names` is
+    /// empty. The return value must be allocated with `foxglove_parameter_array_create`. Ownership
+    /// of this value is transferred to the callee. A NULL return value is treated as empty.
+    pub on_get_parameters: Option<
+        unsafe extern "C" fn(
+            context: *const c_void,
+            client_id: u32,
+            request_id: *const FoxgloveString,
+            param_names: *const FoxgloveString,
+            param_names_len: usize,
+        ) -> *mut FoxgloveParameterArray,
+    >,
+
+    /// Callback invoked when a client sets parameters.
+    ///
+    /// Requires `FOXGLOVE_GATEWAY_CAPABILITY_PARAMETERS`.
+    ///
+    /// The `request_id` argument may be NULL. The `params` argument is guaranteed to be non-NULL.
+    ///
+    /// This function should return the updated parameters. The return value must be allocated with
+    /// `foxglove_parameter_array_create`. Ownership is transferred to the callee. A NULL return
+    /// value is treated as empty.
+    pub on_set_parameters: Option<
+        unsafe extern "C" fn(
+            context: *const c_void,
+            client_id: u32,
+            request_id: *const FoxgloveString,
+            params: *const FoxgloveParameterArray,
+        ) -> *mut FoxgloveParameterArray,
+    >,
+
+    /// Callback invoked when a client subscribes to the named parameters for the first time.
+    ///
+    /// Requires `FOXGLOVE_GATEWAY_CAPABILITY_PARAMETERS`.
+    pub on_parameters_subscribe: Option<
+        unsafe extern "C" fn(
+            context: *const c_void,
+            param_names: *const FoxgloveString,
+            param_names_len: usize,
+        ),
+    >,
+
+    /// Callback invoked when the last client unsubscribes from the named parameters.
+    ///
+    /// Requires `FOXGLOVE_GATEWAY_CAPABILITY_PARAMETERS`.
+    pub on_parameters_unsubscribe: Option<
+        unsafe extern "C" fn(
+            context: *const c_void,
+            param_names: *const FoxgloveString,
+            param_names_len: usize,
         ),
     >,
 }
@@ -219,6 +287,92 @@ impl foxglove::remote_access::Listener for FoxgloveGatewayCallbacks {
             let c_channel = FoxgloveChannelDescriptor(channel.clone());
             unsafe { cb(self.context, client.id().into(), &raw const c_channel) };
         }
+    }
+
+    fn on_get_parameters(
+        &self,
+        client: foxglove::remote_access::Client,
+        param_names: Vec<String>,
+        request_id: Option<&str>,
+    ) -> Vec<foxglove::remote_access::Parameter> {
+        let Some(on_get_parameters) = self.on_get_parameters else {
+            return vec![];
+        };
+        let c_request_id = request_id.map(FoxgloveString::from);
+        let c_param_names: Vec<_> = param_names.iter().map(FoxgloveString::from).collect();
+        let raw = unsafe {
+            on_get_parameters(
+                self.context,
+                client.id().into(),
+                c_request_id
+                    .as_ref()
+                    .map(|id| id as *const _)
+                    .unwrap_or_else(std::ptr::null),
+                c_param_names.as_ptr(),
+                c_param_names.len(),
+            )
+        };
+        if raw.is_null() {
+            vec![]
+        } else {
+            // SAFETY: The caller must return a valid pointer to an array allocated by
+            // `foxglove_parameter_array_create`.
+            unsafe { FoxgloveParameterArray::from_raw(raw).into_native() }
+        }
+    }
+
+    fn on_set_parameters(
+        &self,
+        client: foxglove::remote_access::Client,
+        parameters: Vec<foxglove::remote_access::Parameter>,
+        request_id: Option<&str>,
+    ) -> Vec<foxglove::remote_access::Parameter> {
+        let Some(on_set_parameters) = self.on_set_parameters else {
+            return vec![];
+        };
+        let c_request_id = request_id.map(FoxgloveString::from);
+        let params: FoxgloveParameterArray = parameters.into_iter().collect();
+        let c_params = params.into_raw();
+        let raw = unsafe {
+            on_set_parameters(
+                self.context,
+                client.id().into(),
+                c_request_id
+                    .as_ref()
+                    .map(|id| id as *const _)
+                    .unwrap_or_else(std::ptr::null),
+                c_params,
+            )
+        };
+        // SAFETY: This is the same pointer we just converted into raw.
+        drop(unsafe { FoxgloveParameterArray::from_raw(c_params) });
+        if raw.is_null() {
+            vec![]
+        } else {
+            // SAFETY: The caller must return a valid pointer to an array allocated by
+            // `foxglove_parameter_array_create`.
+            unsafe { FoxgloveParameterArray::from_raw(raw).into_native() }
+        }
+    }
+
+    fn on_parameters_subscribe(&self, param_names: Vec<String>) {
+        let Some(on_parameters_subscribe) = self.on_parameters_subscribe else {
+            return;
+        };
+        let c_param_names: Vec<_> = param_names.iter().map(FoxgloveString::from).collect();
+        unsafe {
+            on_parameters_subscribe(self.context, c_param_names.as_ptr(), c_param_names.len())
+        };
+    }
+
+    fn on_parameters_unsubscribe(&self, param_names: Vec<String>) {
+        let Some(on_parameters_unsubscribe) = self.on_parameters_unsubscribe else {
+            return;
+        };
+        let c_param_names: Vec<_> = param_names.iter().map(FoxgloveString::from).collect();
+        unsafe {
+            on_parameters_unsubscribe(self.context, c_param_names.as_ptr(), c_param_names.len())
+        };
     }
 }
 
@@ -485,5 +639,33 @@ pub unsafe extern "C" fn foxglove_gateway_remove_service(
         return FoxgloveError::Utf8Error;
     };
     handle.remove_services([service_name]);
+    FoxgloveError::Ok
+}
+
+/// Publish parameter values to all subscribed clients.
+///
+/// # Safety
+/// - `gateway` must be a valid pointer to a gateway started with `foxglove_gateway_start`.
+/// - `params` must be a valid pointer to a value allocated by `foxglove_parameter_array_create`.
+///   This value is moved into this function, and must not be accessed afterwards.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_gateway_publish_parameter_values(
+    gateway: Option<&FoxgloveGateway>,
+    params: *mut FoxgloveParameterArray,
+) -> FoxgloveError {
+    if params.is_null() {
+        tracing::error!("foxglove_gateway_publish_parameter_values called with null params");
+        return FoxgloveError::ValueError;
+    }
+    let params = unsafe { FoxgloveParameterArray::from_raw(params) };
+    let Some(gateway) = gateway else {
+        tracing::error!("foxglove_gateway_publish_parameter_values called with null gateway");
+        return FoxgloveError::ValueError;
+    };
+    let Some(handle) = gateway.as_ref() else {
+        tracing::error!("foxglove_gateway_publish_parameter_values called with closed gateway");
+        return FoxgloveError::SinkClosed;
+    };
+    handle.publish_parameter_values(params.into_native());
     FoxgloveError::Ok
 }

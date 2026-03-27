@@ -37,9 +37,16 @@
 
 #if defined(FOXGLOVE_REMOTE_ACCESS)
 /**
+ * Allow clients to get, set, and subscribe to parameter updates.
+ */
+#define FOXGLOVE_GATEWAY_CAPABILITY_PARAMETERS (1 << 1)
+#endif
+
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+/**
  * Allow clients to call services.
  */
-#define FOXGLOVE_GATEWAY_CAPABILITY_SERVICES (1 << 1)
+#define FOXGLOVE_GATEWAY_CAPABILITY_SERVICES (1 << 2)
 #endif
 
 #if !defined(__wasm__)
@@ -2100,113 +2107,6 @@ typedef struct foxglove_bytes {
 } foxglove_bytes;
 #endif
 
-#if defined(FOXGLOVE_REMOTE_ACCESS)
-/**
- * Callbacks for the remote access gateway.
- *
- * These methods are invoked from time-sensitive contexts and must not block.
- */
-typedef struct foxglove_gateway_callbacks {
-  /**
-   * A user-defined value that will be passed to callback functions.
-   */
-  const void *context;
-  /**
-   * Callback invoked when the gateway connection status changes.
-   */
-  void (*on_connection_status_changed)(const void *context, foxglove_connection_status status);
-  /**
-   * Callback invoked when a client subscribes to a channel.
-   */
-  void (*on_subscribe)(const void *context,
-                       uint32_t client_id,
-                       const struct foxglove_channel_descriptor *channel);
-  /**
-   * Callback invoked when a client unsubscribes from a channel or disconnects.
-   */
-  void (*on_unsubscribe)(const void *context,
-                         uint32_t client_id,
-                         const struct foxglove_channel_descriptor *channel);
-  /**
-   * Callback invoked when a client message is received.
-   */
-  void (*on_message_data)(const void *context,
-                          uint32_t client_id,
-                          const struct foxglove_channel_descriptor *channel,
-                          const uint8_t *payload,
-                          size_t payload_len);
-  /**
-   * Callback invoked when a client advertises a client channel.
-   */
-  void (*on_client_advertise)(const void *context,
-                              uint32_t client_id,
-                              const struct foxglove_channel_descriptor *channel);
-  /**
-   * Callback invoked when a client unadvertises a client channel.
-   */
-  void (*on_client_unadvertise)(const void *context,
-                                uint32_t client_id,
-                                const struct foxglove_channel_descriptor *channel);
-} foxglove_gateway_callbacks;
-#endif
-
-#if defined(FOXGLOVE_REMOTE_ACCESS)
-/**
- * Capabilities for the remote access gateway. These are advertised to clients.
- */
-typedef uint8_t foxglove_gateway_capability;
-#endif
-
-#if defined(FOXGLOVE_REMOTE_ACCESS)
-/**
- * Options for creating a remote access gateway.
- *
- * # Safety
- * - `context` can be null, or a valid pointer to a context created via `foxglove_context_new`.
- * - `name` must be a valid pointer to a UTF-8 string.
- * - `device_token` must be a valid pointer to a UTF-8 string, or empty to use the
- *   `FOXGLOVE_DEVICE_TOKEN` environment variable.
- * - If `supported_encodings` is supplied, all entries must contain valid UTF-8, and
- *   `supported_encodings` must have length equal to `supported_encodings_count`.
- */
-typedef struct foxglove_gateway_options {
-  /**
-   * `context` can be null, or a valid pointer to a context created via `foxglove_context_new`.
-   * If it's null, the gateway will be created with the default context.
-   */
-  const struct foxglove_context *context;
-  struct foxglove_string name;
-  struct foxglove_string device_token;
-  const struct foxglove_gateway_callbacks *callbacks;
-  foxglove_gateway_capability capabilities;
-  const struct foxglove_string *supported_encodings;
-  size_t supported_encodings_count;
-  /**
-   * Context provided to the `sink_channel_filter` callback.
-   */
-  const void *sink_channel_filter_context;
-  /**
-   * A filter for channels.
-   *
-   * Return false to disable logging of this channel.
-   * This method is invoked from the client's main poll loop and must not block.
-   */
-  bool (*sink_channel_filter)(const void *context, const struct foxglove_channel_descriptor *channel);
-  /**
-   * Optional Foxglove API base URL override. Empty string uses the default.
-   */
-  struct foxglove_string foxglove_api_url;
-  /**
-   * Optional Foxglove API timeout in seconds.
-   */
-  const uint64_t *foxglove_api_timeout_secs;
-  /**
-   * Optional message backlog size override.
-   */
-  const size_t *message_backlog_size;
-} foxglove_gateway_options;
-#endif
-
 #if !defined(__wasm__)
 /**
  * An array of parameter values.
@@ -2343,6 +2243,162 @@ typedef struct foxglove_parameter_array {
    */
   size_t capacity;
 } foxglove_parameter_array;
+#endif
+
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+/**
+ * Callbacks for the remote access gateway.
+ *
+ * These methods are invoked from time-sensitive contexts and must not block.
+ */
+typedef struct foxglove_gateway_callbacks {
+  /**
+   * A user-defined value that will be passed to callback functions.
+   */
+  const void *context;
+  /**
+   * Callback invoked when the gateway connection status changes.
+   */
+  void (*on_connection_status_changed)(const void *context, foxglove_connection_status status);
+  /**
+   * Callback invoked when a client subscribes to a channel.
+   */
+  void (*on_subscribe)(const void *context,
+                       uint32_t client_id,
+                       const struct foxglove_channel_descriptor *channel);
+  /**
+   * Callback invoked when a client unsubscribes from a channel or disconnects.
+   */
+  void (*on_unsubscribe)(const void *context,
+                         uint32_t client_id,
+                         const struct foxglove_channel_descriptor *channel);
+  /**
+   * Callback invoked when a client message is received.
+   */
+  void (*on_message_data)(const void *context,
+                          uint32_t client_id,
+                          const struct foxglove_channel_descriptor *channel,
+                          const uint8_t *payload,
+                          size_t payload_len);
+  /**
+   * Callback invoked when a client advertises a client channel.
+   */
+  void (*on_client_advertise)(const void *context,
+                              uint32_t client_id,
+                              const struct foxglove_channel_descriptor *channel);
+  /**
+   * Callback invoked when a client unadvertises a client channel.
+   */
+  void (*on_client_unadvertise)(const void *context,
+                                uint32_t client_id,
+                                const struct foxglove_channel_descriptor *channel);
+  /**
+   * Callback invoked when a client requests parameters.
+   *
+   * Requires `FOXGLOVE_GATEWAY_CAPABILITY_PARAMETERS`.
+   *
+   * The `request_id` argument may be NULL. The `param_names` argument is guaranteed to be
+   * non-NULL. These arguments point to buffers that are valid and immutable for the duration
+   * of the call.
+   *
+   * This function should return the named parameters, or all parameters if `param_names` is
+   * empty. The return value must be allocated with `foxglove_parameter_array_create`. Ownership
+   * of this value is transferred to the callee. A NULL return value is treated as empty.
+   */
+  struct foxglove_parameter_array *(*on_get_parameters)(const void *context,
+                                                        uint32_t client_id,
+                                                        const struct foxglove_string *request_id,
+                                                        const struct foxglove_string *param_names,
+                                                        size_t param_names_len);
+  /**
+   * Callback invoked when a client sets parameters.
+   *
+   * Requires `FOXGLOVE_GATEWAY_CAPABILITY_PARAMETERS`.
+   *
+   * The `request_id` argument may be NULL. The `params` argument is guaranteed to be non-NULL.
+   *
+   * This function should return the updated parameters. The return value must be allocated with
+   * `foxglove_parameter_array_create`. Ownership is transferred to the callee. A NULL return
+   * value is treated as empty.
+   */
+  struct foxglove_parameter_array *(*on_set_parameters)(const void *context,
+                                                        uint32_t client_id,
+                                                        const struct foxglove_string *request_id,
+                                                        const struct foxglove_parameter_array *params);
+  /**
+   * Callback invoked when a client subscribes to the named parameters for the first time.
+   *
+   * Requires `FOXGLOVE_GATEWAY_CAPABILITY_PARAMETERS`.
+   */
+  void (*on_parameters_subscribe)(const void *context,
+                                  const struct foxglove_string *param_names,
+                                  size_t param_names_len);
+  /**
+   * Callback invoked when the last client unsubscribes from the named parameters.
+   *
+   * Requires `FOXGLOVE_GATEWAY_CAPABILITY_PARAMETERS`.
+   */
+  void (*on_parameters_unsubscribe)(const void *context,
+                                    const struct foxglove_string *param_names,
+                                    size_t param_names_len);
+} foxglove_gateway_callbacks;
+#endif
+
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+/**
+ * Capabilities for the remote access gateway. These are advertised to clients.
+ */
+typedef uint8_t foxglove_gateway_capability;
+#endif
+
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+/**
+ * Options for creating a remote access gateway.
+ *
+ * # Safety
+ * - `context` can be null, or a valid pointer to a context created via `foxglove_context_new`.
+ * - `name` must be a valid pointer to a UTF-8 string.
+ * - `device_token` must be a valid pointer to a UTF-8 string, or empty to use the
+ *   `FOXGLOVE_DEVICE_TOKEN` environment variable.
+ * - If `supported_encodings` is supplied, all entries must contain valid UTF-8, and
+ *   `supported_encodings` must have length equal to `supported_encodings_count`.
+ */
+typedef struct foxglove_gateway_options {
+  /**
+   * `context` can be null, or a valid pointer to a context created via `foxglove_context_new`.
+   * If it's null, the gateway will be created with the default context.
+   */
+  const struct foxglove_context *context;
+  struct foxglove_string name;
+  struct foxglove_string device_token;
+  const struct foxglove_gateway_callbacks *callbacks;
+  foxglove_gateway_capability capabilities;
+  const struct foxglove_string *supported_encodings;
+  size_t supported_encodings_count;
+  /**
+   * Context provided to the `sink_channel_filter` callback.
+   */
+  const void *sink_channel_filter_context;
+  /**
+   * A filter for channels.
+   *
+   * Return false to disable logging of this channel.
+   * This method is invoked from the client's main poll loop and must not block.
+   */
+  bool (*sink_channel_filter)(const void *context, const struct foxglove_channel_descriptor *channel);
+  /**
+   * Optional Foxglove API base URL override. Empty string uses the default.
+   */
+  struct foxglove_string foxglove_api_url;
+  /**
+   * Optional Foxglove API timeout in seconds.
+   */
+  const uint64_t *foxglove_api_timeout_secs;
+  /**
+   * Optional message backlog size override.
+   */
+  const size_t *message_backlog_size;
+} foxglove_gateway_options;
 #endif
 
 #if !defined(__wasm__)
@@ -5308,6 +5364,19 @@ foxglove_error foxglove_gateway_add_service(const struct foxglove_gateway *gatew
  */
 foxglove_error foxglove_gateway_remove_service(const struct foxglove_gateway *gateway,
                                                struct foxglove_string service_name);
+#endif
+
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+/**
+ * Publish parameter values to all subscribed clients.
+ *
+ * # Safety
+ * - `gateway` must be a valid pointer to a gateway started with `foxglove_gateway_start`.
+ * - `params` must be a valid pointer to a value allocated by `foxglove_parameter_array_create`.
+ *   This value is moved into this function, and must not be accessed afterwards.
+ */
+foxglove_error foxglove_gateway_publish_parameter_values(const struct foxglove_gateway *gateway,
+                                                         struct foxglove_parameter_array *params);
 #endif
 
 #if !defined(__wasm__)

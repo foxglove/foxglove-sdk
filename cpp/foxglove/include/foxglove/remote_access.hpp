@@ -3,6 +3,7 @@
 #include <foxglove/channel.hpp>
 #include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
+#include <foxglove/server/parameter.hpp>
 #include <foxglove/server/service.hpp>
 
 #include <cstdint>
@@ -35,8 +36,10 @@ enum class RemoteAccessGatewayCapabilities : uint8_t {
   None = 0,
   /// Allow clients to advertise channels to send data messages to the server.
   ClientPublish = 1 << 0,
+  /// Allow clients to get, set, and subscribe to parameter updates.
+  Parameters = 1 << 1,
   /// Allow clients to call services.
-  Services = 1 << 1,
+  Services = 1 << 2,
 };
 
 /// @brief Combine two gateway capabilities.
@@ -80,6 +83,34 @@ struct RemoteAccessGatewayCallbacks {
 
   /// @brief Callback invoked when a client unadvertises a channel.
   std::function<void(uint32_t client_id, const ChannelDescriptor& channel)> onClientUnadvertise;
+
+  /// @brief Callback invoked when a client requests parameters.
+  ///
+  /// Requires RemoteAccessGatewayCapabilities::Parameters.
+  std::function<std::vector<Parameter>(
+    uint32_t client_id, std::optional<std::string_view> request_id,
+    const std::vector<std::string_view>& param_names
+  )>
+    onGetParameters;
+
+  /// @brief Callback invoked when a client sets parameters.
+  ///
+  /// Requires RemoteAccessGatewayCapabilities::Parameters.
+  std::function<std::vector<Parameter>(
+    uint32_t client_id, std::optional<std::string_view> request_id,
+    const std::vector<ParameterView>& params
+  )>
+    onSetParameters;
+
+  /// @brief Callback invoked when a client subscribes to parameters for the first time.
+  ///
+  /// Requires RemoteAccessGatewayCapabilities::Parameters.
+  std::function<void(const std::vector<std::string_view>& param_names)> onParametersSubscribe;
+
+  /// @brief Callback invoked when the last client unsubscribes from parameters.
+  ///
+  /// Requires RemoteAccessGatewayCapabilities::Parameters.
+  std::function<void(const std::vector<std::string_view>& param_names)> onParametersUnsubscribe;
 };
 
 /// @brief Options for creating a remote access gateway.
@@ -132,6 +163,13 @@ public:
   ///
   /// @param name The name of the service to remove.
   [[nodiscard]] FoxgloveError removeService(std::string_view name) const noexcept;
+
+  /// @brief Publishes parameter values to all subscribed clients.
+  ///
+  /// Requires RemoteAccessGatewayCapabilities::Parameters.
+  ///
+  /// @param params Updated parameters.
+  void publishParameterValues(std::vector<Parameter>&& params);
 
   /// @brief Gracefully shut down the gateway.
   FoxgloveError stop();
