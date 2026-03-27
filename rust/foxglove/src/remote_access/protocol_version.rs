@@ -51,6 +51,8 @@ pub(crate) fn parse_participant_protocol_version(
 /// not understand, so it is rejected just as an older-than-minimum version would be.
 ///
 /// Returns the parsed version if compatible, or `None` if the participant should be rejected.
+/// Callers should use [`REMOTE_ACCESS_PROTOCOL_VERSION`] (not the minimum) when reporting an
+/// incompatibility to the user, since the minimum does not cover major-version mismatches.
 pub(crate) fn check_participant_protocol_version(
     participant_identity: &ParticipantIdentity,
     attributes: &HashMap<String, String>,

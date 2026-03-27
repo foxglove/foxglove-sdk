@@ -939,9 +939,9 @@ impl RemoteAccessSession {
             .map(String::as_str)
             .unwrap_or(protocol_version::DEFAULT_PROTOCOL_VERSION);
         let message = format!(
-            "Remote access protocol version {} is not supported; minimum supported version is {}",
+            "Remote access protocol version {} is not compatible with this device (supported: {})",
             advertised,
-            protocol_version::REMOTE_ACCESS_MIN_SUPPORTED_PROTOCOL_VERSION,
+            protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION,
         );
         error!("{}", message);
 
