@@ -10,7 +10,10 @@ use std::time::Duration;
 use anyhow::{Context as _, Result};
 use futures_util::StreamExt;
 use livekit::id::ParticipantIdentity;
-use livekit::{Room, RoomEvent, RoomOptions, StreamByteOptions, StreamWriter as _};
+use livekit::{
+    ByteStreamWriter, Room, RoomEvent, RoomOptions, StreamByteOptions, StreamWriter as _,
+};
+use tokio::sync::Mutex;
 use tracing::info;
 
 use foxglove::protocol::v2::BinaryMessage;
@@ -112,10 +115,16 @@ impl FrameReader {
 // ---------------------------------------------------------------------------
 
 /// A viewer connected to a LiveKit room with an open control channel byte stream.
+///
+/// Maintains a persistent `ByteStreamWriter` for sending control messages to the gateway,
+/// reusing a single stream rather than opening a new one per message.
 pub struct ViewerConnection {
     pub room: Room,
     pub events: tokio::sync::mpsc::UnboundedReceiver<RoomEvent>,
     pub frame_reader: FrameReader,
+    /// Cached writer for the control channel byte stream to the gateway.
+    /// Lazily opened on first send, reused for all subsequent messages.
+    control_writer: Mutex<Option<ByteStreamWriter>>,
 }
 
 impl ViewerConnection {
@@ -148,6 +157,7 @@ impl ViewerConnection {
             room,
             events,
             frame_reader: FrameReader::new(reader),
+            control_writer: Mutex::new(None),
         })
     }
 
@@ -206,6 +216,7 @@ impl ViewerConnection {
                     room,
                     events,
                     frame_reader: FrameReader::new(reader),
+                    control_writer: Mutex::new(None),
                 });
             }
 
@@ -315,33 +326,41 @@ impl ViewerConnection {
         }
     }
 
+    /// Sends a pre-framed message to the gateway over the persistent control channel byte stream.
+    /// Opens the stream lazily on first call and reuses it for all subsequent messages.
+    async fn send_framed_message(&self, framed: &[u8]) -> Result<()> {
+        let mut guard = self.control_writer.lock().await;
+        if guard.is_none() {
+            let gateway_identity = ParticipantIdentity(mock_server::TEST_DEVICE_ID.to_string());
+            let writer = self
+                .room
+                .local_participant()
+                .stream_bytes(StreamByteOptions {
+                    topic: "control".to_string(),
+                    destination_identities: vec![gateway_identity],
+                    ..StreamByteOptions::default()
+                })
+                .await
+                .map_err(|e| anyhow::anyhow!("failed to open byte stream to gateway: {e}"))?;
+            *guard = Some(writer);
+        }
+        guard
+            .as_ref()
+            .unwrap()
+            .write(framed)
+            .await
+            .map_err(|e| anyhow::anyhow!("failed to write message to gateway: {e}"))?;
+        Ok(())
+    }
+
     /// Sends a binary-framed ServiceCallRequest to the gateway.
     pub async fn send_service_call_request(&self, req: &ServiceCallRequest<'_>) -> Result<()> {
         let binary = req.to_bytes();
         let framed = frame::frame_binary_message(&binary);
-
-        let gateway_identity = ParticipantIdentity(mock_server::TEST_DEVICE_ID.to_string());
-        let writer = self
-            .room
-            .local_participant()
-            .stream_bytes(StreamByteOptions {
-                topic: "control".to_string(),
-                destination_identities: vec![gateway_identity],
-                ..StreamByteOptions::default()
-            })
-            .await
-            .map_err(|e| anyhow::anyhow!("failed to open byte stream to gateway: {e}"))?;
-
-        writer
-            .write(&framed)
-            .await
-            .map_err(|e| anyhow::anyhow!("failed to write service call request: {e}"))?;
-
-        Ok(())
+        self.send_framed_message(&framed).await
     }
 
-    /// Opens a byte stream back to the gateway participant and sends a
-    /// JSON-framed Subscribe message.
+    /// Sends a JSON-framed Subscribe message to the gateway.
     pub async fn send_subscribe(&self, channel_ids: &[u64]) -> Result<()> {
         self.send_subscribe_channels(
             channel_ids
@@ -355,30 +374,12 @@ impl ViewerConnection {
         .await
     }
 
-    /// Opens a byte stream and sends a JSON-framed Subscribe with explicit channel options.
+    /// Sends a JSON-framed Subscribe with explicit channel options.
     pub async fn send_subscribe_channels(&self, channels: Vec<SubscribeChannel>) -> Result<()> {
         let subscribe = Subscribe { channels };
         let json = serde_json::to_string(&subscribe)?;
         let framed = frame::frame_text_message(json.as_bytes());
-
-        let gateway_identity = ParticipantIdentity(mock_server::TEST_DEVICE_ID.to_string());
-        let writer = self
-            .room
-            .local_participant()
-            .stream_bytes(StreamByteOptions {
-                topic: "control".to_string(),
-                destination_identities: vec![gateway_identity],
-                ..StreamByteOptions::default()
-            })
-            .await
-            .map_err(|e| anyhow::anyhow!("failed to open byte stream to gateway: {e}"))?;
-
-        writer
-            .write(&framed)
-            .await
-            .map_err(|e| anyhow::anyhow!("failed to write subscribe message: {e}"))?;
-
-        Ok(())
+        self.send_framed_message(&framed).await
     }
 
     /// Sends a Subscribe and waits for the channel to have at least one sink.
@@ -415,25 +416,7 @@ impl ViewerConnection {
         let unsubscribe = Unsubscribe::new(channel_ids.iter().copied());
         let json = serde_json::to_string(&unsubscribe)?;
         let framed = frame::frame_text_message(json.as_bytes());
-
-        let gateway_identity = ParticipantIdentity(mock_server::TEST_DEVICE_ID.to_string());
-        let writer = self
-            .room
-            .local_participant()
-            .stream_bytes(StreamByteOptions {
-                topic: "control".to_string(),
-                destination_identities: vec![gateway_identity],
-                ..StreamByteOptions::default()
-            })
-            .await
-            .map_err(|e| anyhow::anyhow!("failed to open byte stream to gateway: {e}"))?;
-
-        writer
-            .write(&framed)
-            .await
-            .map_err(|e| anyhow::anyhow!("failed to write unsubscribe message: {e}"))?;
-
-        Ok(())
+        self.send_framed_message(&framed).await
     }
 
     /// Sends a JSON-framed client Advertise message to the gateway.
@@ -448,25 +431,7 @@ impl ViewerConnection {
         }));
         let json_str = serde_json::to_string(&advertise)?;
         let framed = frame::frame_text_message(json_str.as_bytes());
-
-        let gateway_identity = ParticipantIdentity(mock_server::TEST_DEVICE_ID.to_string());
-        let writer = self
-            .room
-            .local_participant()
-            .stream_bytes(StreamByteOptions {
-                topic: "control".to_string(),
-                destination_identities: vec![gateway_identity],
-                ..StreamByteOptions::default()
-            })
-            .await
-            .map_err(|e| anyhow::anyhow!("failed to open byte stream to gateway: {e}"))?;
-
-        writer
-            .write(&framed)
-            .await
-            .map_err(|e| anyhow::anyhow!("failed to write client advertise message: {e}"))?;
-
-        Ok(())
+        self.send_framed_message(&framed).await
     }
 
     /// Sends a JSON-framed client Unadvertise message to the gateway.
@@ -474,25 +439,7 @@ impl ViewerConnection {
         let unadvertise = Unadvertise::new(channel_ids.iter().copied());
         let json = serde_json::to_string(&unadvertise)?;
         let framed = frame::frame_text_message(json.as_bytes());
-
-        let gateway_identity = ParticipantIdentity(mock_server::TEST_DEVICE_ID.to_string());
-        let writer = self
-            .room
-            .local_participant()
-            .stream_bytes(StreamByteOptions {
-                topic: "control".to_string(),
-                destination_identities: vec![gateway_identity],
-                ..StreamByteOptions::default()
-            })
-            .await
-            .map_err(|e| anyhow::anyhow!("failed to open byte stream to gateway: {e}"))?;
-
-        writer
-            .write(&framed)
-            .await
-            .map_err(|e| anyhow::anyhow!("failed to write client unadvertise message: {e}"))?;
-
-        Ok(())
+        self.send_framed_message(&framed).await
     }
 
     /// Sends a binary-framed `ClientMessageData` on a per-channel topic `"client-ch-{channelId}"`.
@@ -628,22 +575,7 @@ impl ViewerConnection {
     /// Sends a JSON-framed message to the gateway.
     async fn send_json_message(&self, json: &str) -> Result<()> {
         let framed = frame::frame_text_message(json.as_bytes());
-        let gateway_identity = ParticipantIdentity(mock_server::TEST_DEVICE_ID.to_string());
-        let writer = self
-            .room
-            .local_participant()
-            .stream_bytes(StreamByteOptions {
-                topic: "control".to_string(),
-                destination_identities: vec![gateway_identity],
-                ..StreamByteOptions::default()
-            })
-            .await
-            .map_err(|e| anyhow::anyhow!("failed to open byte stream to gateway: {e}"))?;
-        writer
-            .write(&framed)
-            .await
-            .map_err(|e| anyhow::anyhow!("failed to write JSON message: {e}"))?;
-        Ok(())
+        self.send_framed_message(&framed).await
     }
 
     /// Sends a GetParameters request to the gateway.
