@@ -598,7 +598,7 @@ pub struct LocationFix {
     /// Heading (yaw angle), in radians, measured clockwise from north
     #[prost(double, optional, tag = "10")]
     pub heading: ::core::option::Option<f64>,
-    /// Velocity in local East-North-Up (ENU) frame in m/s (x=longitude, y=latitude, z=altitude)
+    /// Velocity in local East-North-Up (ENU) frame in m/s
     #[prost(message, optional, tag = "11")]
     pub velocity: ::core::option::Option<Velocity3>,
     /// Color used to visualize the location

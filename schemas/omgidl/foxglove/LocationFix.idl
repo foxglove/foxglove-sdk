@@ -35,7 +35,7 @@ struct LocationFix {
   @optional
   double heading;
 
-  // Velocity in local East-North-Up (ENU) frame in m/s (x=longitude, y=latitude, z=altitude)
+  // Velocity in local East-North-Up (ENU) frame in m/s
   @optional
   Velocity3 velocity;
 

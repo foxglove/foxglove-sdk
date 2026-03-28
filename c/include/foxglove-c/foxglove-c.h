@@ -1337,7 +1337,7 @@ typedef struct foxglove_location_fix {
    */
   const double *heading;
   /**
-   * Velocity in local East-North-Up (ENU) frame in m/s (x=longitude, y=latitude, z=altitude)
+   * Velocity in local East-North-Up (ENU) frame in m/s
    */
   const struct foxglove_velocity3 *velocity;
   /**
