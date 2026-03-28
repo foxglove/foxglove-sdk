@@ -18,6 +18,7 @@ use crate::{
     Context, FoxgloveError, SinkChannelFilter,
     api_client::{DeviceToken, FoxgloveApiClientBuilder},
     library_version::get_library_version,
+    protocol::v2::parameter::Parameter,
     protocol::v2::server::ServerInfo,
     remote_access::{
         Capability, RemoteAccessError,
@@ -142,6 +143,15 @@ impl RemoteAccessConnection {
     /// Returns the current connection status.
     pub fn status(&self) -> ConnectionStatus {
         ConnectionStatus::from_u8(self.status.load(Ordering::Relaxed))
+    }
+
+    /// Publishes parameter values to all subscribed clients.
+    ///
+    /// If no session is currently active (e.g. while reconnecting), this is a no-op.
+    pub fn publish_parameter_values(&self, parameters: Vec<Parameter>) {
+        if let Some(session) = self.session.lock().clone() {
+            session.publish_parameter_values(parameters);
+        }
     }
 
     /// Update the connection status, notifying the listener if it changed.
