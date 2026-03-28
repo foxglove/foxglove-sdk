@@ -159,16 +159,15 @@ impl Listener for PyRemoteAccessListener {
         request_id: Option<&str>,
     ) -> Vec<foxglove::remote_access::Parameter> {
         let py_client = PyRemoteAccessClient::from(client);
-        let result: PyResult<Vec<foxglove::remote_access::Parameter>> =
-            Python::with_gil(|py| {
-                let args = (py_client, param_names, request_id);
-                let result = self
-                    .listener
-                    .bind(py)
-                    .call_method("on_get_parameters", args, None)?;
-                let parameters = result.extract::<Vec<PyParameter>>()?;
-                Ok(parameters.into_iter().map(Into::into).collect())
-            });
+        let result: PyResult<Vec<foxglove::remote_access::Parameter>> = Python::with_gil(|py| {
+            let args = (py_client, param_names, request_id);
+            let result = self
+                .listener
+                .bind(py)
+                .call_method("on_get_parameters", args, None)?;
+            let parameters = result.extract::<Vec<PyParameter>>()?;
+            Ok(parameters.into_iter().map(Into::into).collect())
+        });
         match result {
             Ok(parameters) => parameters,
             Err(err) => {
@@ -185,18 +184,16 @@ impl Listener for PyRemoteAccessListener {
         request_id: Option<&str>,
     ) -> Vec<foxglove::remote_access::Parameter> {
         let py_client = PyRemoteAccessClient::from(client);
-        let result: PyResult<Vec<foxglove::remote_access::Parameter>> =
-            Python::with_gil(|py| {
-                let parameters: Vec<PyParameter> =
-                    parameters.into_iter().map(Into::into).collect();
-                let args = (py_client, parameters, request_id);
-                let result = self
-                    .listener
-                    .bind(py)
-                    .call_method("on_set_parameters", args, None)?;
-                let parameters = result.extract::<Vec<PyParameter>>()?;
-                Ok(parameters.into_iter().map(Into::into).collect())
-            });
+        let result: PyResult<Vec<foxglove::remote_access::Parameter>> = Python::with_gil(|py| {
+            let parameters: Vec<PyParameter> = parameters.into_iter().map(Into::into).collect();
+            let args = (py_client, parameters, request_id);
+            let result = self
+                .listener
+                .bind(py)
+                .call_method("on_set_parameters", args, None)?;
+            let parameters = result.extract::<Vec<PyParameter>>()?;
+            Ok(parameters.into_iter().map(Into::into).collect())
+        });
         match result {
             Ok(parameters) => parameters,
             Err(err) => {
@@ -220,9 +217,11 @@ impl Listener for PyRemoteAccessListener {
 
     fn on_parameters_unsubscribe(&self, param_names: Vec<String>) {
         let result: PyResult<()> = Python::with_gil(|py| {
-            self.listener
-                .bind(py)
-                .call_method("on_parameters_unsubscribe", (param_names,), None)?;
+            self.listener.bind(py).call_method(
+                "on_parameters_unsubscribe",
+                (param_names,),
+                None,
+            )?;
             Ok(())
         });
         if let Err(err) = result {
