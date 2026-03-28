@@ -1750,11 +1750,11 @@ struct Odometry {
 
   /// @brief Row-major 6x6 covariance matrix (x, y, z, rotation about x, rotation about y, rotation
   /// about z). Set to zero if unknown.
-  std::array<double, 36> pose_covariance;
+  std::array<double, 36> pose_covariance = {};
 
   /// @brief Row-major 6x6 covariance matrix (vx, vy, vz, angular rate about x, angular rate about
   /// y, angular rate about z). Set to zero if unknown.
-  std::array<double, 36> velocity_covariance;
+  std::array<double, 36> velocity_covariance = {};
 
   /// @brief Encoded the Odometry as protobuf to the provided buffer.
   ///
