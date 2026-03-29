@@ -26,3 +26,6 @@ float64[36] pose_covariance
 
 # Row-major 6x6 covariance matrix (vx, vy, vz, angular rate about x, angular rate about y, angular rate about z). Set to zero if unknown. (NaN indicates this value is not set)
 float64[36] velocity_covariance
+
+# Additional user-provided metadata associated with the odometry message. Keys must be unique.
+foxglove_msgs/KeyValuePair[] metadata

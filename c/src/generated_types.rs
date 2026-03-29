@@ -4820,6 +4820,10 @@ pub struct Odometry {
 
     /// Row-major 6x6 covariance matrix (vx, vy, vz, angular rate about x, angular rate about y, angular rate about z). Set to zero if unknown.
     pub velocity_covariance: [f64; 36],
+
+    /// Additional user-provided metadata associated with the odometry message. Keys must be unique.
+    pub metadata: *const KeyValuePair,
+    pub metadata_count: usize,
 }
 
 #[cfg(not(target_family = "wasm"))]
@@ -4884,6 +4888,7 @@ impl BorrowToNative for Odometry {
                 .map(|m| m.borrow_to_native(arena.as_mut()))
         }
         .transpose()?;
+        let metadata = unsafe { arena.as_mut().map(self.metadata, self.metadata_count)? };
 
         Ok(ManuallyDrop::new(foxglove::messages::Odometry {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
@@ -4904,6 +4909,7 @@ impl BorrowToNative for Odometry {
                     self.velocity_covariance.len(),
                 )
             }),
+            metadata: ManuallyDrop::into_inner(metadata),
         }))
     }
 }

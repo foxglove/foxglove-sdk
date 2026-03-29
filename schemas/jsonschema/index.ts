@@ -5898,6 +5898,29 @@ export const Odometry = {
       "minItems": 36,
       "maxItems": 36,
       "description": "Row-major 6x6 covariance matrix (vx, vy, vz, angular rate about x, angular rate about y, angular rate about z). Set to zero if unknown."
+    },
+    "metadata": {
+      "type": "array",
+      "items": {
+        "title": "foxglove.KeyValuePair",
+        "description": "A key with its associated value",
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "Key"
+          },
+          "value": {
+            "type": "string",
+            "description": "Value"
+          }
+        },
+        "required": [
+          "key",
+          "value"
+        ]
+      },
+      "description": "Additional user-provided metadata associated with the odometry message. Keys must be unique."
     }
   },
   "required": [

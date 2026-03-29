@@ -587,6 +587,7 @@ class Odometry:
         angular_velocity: Velocity3 | None = None,
         pose_covariance: list[float] | None = None,
         velocity_covariance: list[float] | None = None,
+        metadata: list[KeyValuePair] | None = None,
     ) -> None: ...
     @staticmethod
     def get_schema() -> Schema:

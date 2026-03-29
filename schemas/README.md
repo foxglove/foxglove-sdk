@@ -2146,6 +2146,19 @@ Row-major 6x6 covariance matrix (vx, vy, vz, angular rate about x, angular rate 
 
 </td>
 </tr>
+<tr>
+<td><code>metadata</code> (optional)</td>
+<td>
+
+[KeyValuePair](#keyvaluepair)[]
+
+</td>
+<td>
+
+Additional user-provided metadata associated with the odometry message. Keys must be unique.
+
+</td>
+</tr>
 </table>
 
 ## PackedElementField

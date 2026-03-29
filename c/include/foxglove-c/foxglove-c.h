@@ -1664,6 +1664,11 @@ typedef struct foxglove_odometry {
    * Row-major 6x6 covariance matrix (vx, vy, vz, angular rate about x, angular rate about y, angular rate about z). Set to zero if unknown.
    */
   double velocity_covariance[36];
+  /**
+   * Additional user-provided metadata associated with the odometry message. Keys must be unique.
+   */
+  const struct foxglove_key_value_pair *metadata;
+  size_t metadata_count;
 } foxglove_odometry;
 
 /**

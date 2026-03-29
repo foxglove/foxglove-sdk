@@ -1755,6 +1755,10 @@ struct Odometry {
   /// y, angular rate about z). Set to zero if unknown.
   std::array<double, 36> velocity_covariance = {};
 
+  /// @brief Additional user-provided metadata associated with the odometry message. Keys must be
+  /// unique.
+  std::vector<KeyValuePair> metadata;
+
   /// @brief Encoded the Odometry as protobuf to the provided buffer.
   ///
   /// On success, writes the serialized length to *encoded_len.

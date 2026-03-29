@@ -1986,6 +1986,8 @@ void odometryToC(foxglove_odometry& dest, const Odometry& src, [[maybe_unused]] 
     src.velocity_covariance.data(),
     src.velocity_covariance.size() * sizeof(*src.velocity_covariance.data())
   );
+  dest.metadata = arena.map<foxglove_key_value_pair>(src.metadata, keyValuePairToC);
+  dest.metadata_count = src.metadata.size();
 }
 
 void packedElementFieldToC(

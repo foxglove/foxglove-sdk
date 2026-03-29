@@ -2100,6 +2100,7 @@ impl From<ModelPrimitive> for foxglove::messages::ModelPrimitive {
 /// :param angular_velocity: Angular velocity in rad/s in child_frame_id
 /// :param pose_covariance: Row-major 6x6 covariance matrix (x, y, z, rotation about x, rotation about y, rotation about z). Set to zero if unknown.
 /// :param velocity_covariance: Row-major 6x6 covariance matrix (vx, vy, vz, angular rate about x, angular rate about y, angular rate about z). Set to zero if unknown.
+/// :param metadata: Additional user-provided metadata associated with the odometry message. Keys must be unique.
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/odometry
 #[pyclass(module = "foxglove.messages")]
@@ -2108,7 +2109,7 @@ pub(crate) struct Odometry(pub(crate) foxglove::messages::Odometry);
 #[pymethods]
 impl Odometry {
     #[new]
-    #[pyo3(signature = (*, timestamp=None, frame_id="", child_frame_id="", pose=None, linear_velocity=None, angular_velocity=None, pose_covariance=None, velocity_covariance=None) )]
+    #[pyo3(signature = (*, timestamp=None, frame_id="", child_frame_id="", pose=None, linear_velocity=None, angular_velocity=None, pose_covariance=None, velocity_covariance=None, metadata=None) )]
     fn new(
         timestamp: Option<Timestamp>,
         frame_id: &str,
@@ -2118,6 +2119,7 @@ impl Odometry {
         angular_velocity: Option<Velocity3>,
         pose_covariance: Option<Vec<f64>>,
         velocity_covariance: Option<Vec<f64>>,
+        metadata: Option<Vec<KeyValuePair>>,
     ) -> Self {
         Self(foxglove::messages::Odometry {
             timestamp: timestamp.map(Into::into),
@@ -2128,11 +2130,16 @@ impl Odometry {
             angular_velocity: angular_velocity.map(Into::into),
             pose_covariance: pose_covariance.unwrap_or_default(),
             velocity_covariance: velocity_covariance.unwrap_or_default(),
+            metadata: metadata
+                .unwrap_or_default()
+                .into_iter()
+                .map(|x| x.into())
+                .collect(),
         })
     }
     fn __repr__(&self) -> String {
         format!(
-            "Odometry(timestamp={:?}, frame_id={:?}, child_frame_id={:?}, pose={:?}, linear_velocity={:?}, angular_velocity={:?}, pose_covariance={:?}, velocity_covariance={:?})",
+            "Odometry(timestamp={:?}, frame_id={:?}, child_frame_id={:?}, pose={:?}, linear_velocity={:?}, angular_velocity={:?}, pose_covariance={:?}, velocity_covariance={:?}, metadata={:?})",
             self.0.timestamp,
             self.0.frame_id,
             self.0.child_frame_id,
@@ -2141,6 +2148,7 @@ impl Odometry {
             self.0.angular_velocity,
             self.0.pose_covariance,
             self.0.velocity_covariance,
+            self.0.metadata,
         )
     }
     /// Returns the Odometry schema.

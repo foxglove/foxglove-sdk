@@ -2,6 +2,7 @@
 
 syntax = "proto3";
 
+import "foxglove/KeyValuePair.proto";
 import "foxglove/Pose.proto";
 import "foxglove/Velocity3.proto";
 import "google/protobuf/timestamp.proto";
@@ -33,4 +34,7 @@ message Odometry {
 
   // Row-major 6x6 covariance matrix (vx, vy, vz, angular rate about x, angular rate about y, angular rate about z). Set to zero if unknown.
   repeated double velocity_covariance = 8; // length 36
+
+  // Additional user-provided metadata associated with the odometry message. Keys must be unique.
+  repeated foxglove.KeyValuePair metadata = 9;
 }

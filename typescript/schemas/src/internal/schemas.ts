@@ -1753,6 +1753,14 @@ const Odometry: FoxgloveMessageSchema = {
       array: 36,
       optional: true,
     },
+    {
+      name: "metadata",
+      type: { type: "nested", schema: KeyValuePair },
+      array: true,
+      description:
+        "Additional user-provided metadata associated with the odometry message. Keys must be unique.",
+      optional: true,
+    },
   ],
 };
 

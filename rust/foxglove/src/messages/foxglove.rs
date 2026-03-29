@@ -815,6 +815,9 @@ pub struct Odometry {
     /// length 36
     #[prost(double, repeated, tag = "8")]
     pub velocity_covariance: ::prost::alloc::vec::Vec<f64>,
+    /// Additional user-provided metadata associated with the odometry message. Keys must be unique.
+    #[prost(message, repeated, tag = "9")]
+    pub metadata: ::prost::alloc::vec::Vec<KeyValuePair>,
 }
 /// A field present within each element in a byte array of packed elements.
 ///
