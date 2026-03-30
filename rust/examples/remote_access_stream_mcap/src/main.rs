@@ -2,13 +2,13 @@
 //! with inter-message timing preserved.
 
 use foxglove::{
-    ChannelBuilder, PartialMetadata, RawChannel, Schema,
+    ChannelBuilder, RawChannel, Schema,
     remote_access::{Gateway, Listener},
 };
 use std::{
     collections::HashMap,
     io::{BufReader, Read, Seek, SeekFrom},
-    path::PathBuf,
+    path::{Path, PathBuf},
     sync::Arc,
     time::Duration,
 };
@@ -30,7 +30,7 @@ struct NoopListener;
 impl Listener for NoopListener {}
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<()> {
     let env = env_logger::Env::default().default_filter_or("info");
     env_logger::init_from_env(env);
 
@@ -41,25 +41,30 @@ async fn main() {
         .start()
         .expect("Failed to start remote access gateway");
 
-    tokio::task::spawn(mcap_loop(args.file));
-    _ = tokio::signal::ctrl_c().await;
+    let result = tokio::select! {
+        r = mcap_loop(args.file) => r,
+        _ = tokio::signal::ctrl_c() => Ok(()),
+    };
+
     _ = handle.stop().await;
+
+    result
 }
 
 /// Reads and loops an MCAP file, publishing its messages as though they were live data.
-async fn mcap_loop(path: PathBuf) {
+async fn mcap_loop(path: PathBuf) -> Result<()> {
     loop {
-        if let Err(e) = mcap_playback(&path).await {
-            eprintln!("MCAP playback error: {e:#}");
-            return;
-        }
+        mcap_playback(&path)
+            .await
+            .inspect_err(|e| eprintln!("MCAP playback error: {e:#}"))?;
+
         println!("MCAP playback complete, looping...");
         tokio::time::sleep(Duration::from_millis(200)).await;
     }
 }
 
 /// Plays through an MCAP file once, respecting inter-message timing.
-async fn mcap_playback(path: &PathBuf) -> Result<()> {
+async fn mcap_playback(path: &Path) -> Result<()> {
     let mut file = BufReader::new(std::fs::File::open(path)?);
     let summary = load_summary(&mut file)?.ok_or_else(|| anyhow!("missing summary section"))?;
 
@@ -102,12 +107,7 @@ async fn mcap_playback(path: &PathBuf) -> Result<()> {
                 tokio::time::sleep_until(target).await;
 
                 if let Some(channel) = channels.get(&header.channel_id) {
-                    channel.log_with_meta(
-                        &data,
-                        PartialMetadata {
-                            log_time: Some(header.log_time),
-                        },
-                    );
+                    channel.log(data);
                 }
             }
         }
