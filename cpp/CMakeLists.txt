@@ -117,6 +117,27 @@ endif()
 
 set(CMAKE_WARN_DEPRECATED ON CACHE BOOL "" FORCE)
 
+option(BUILD_WS_STREAM_MCAP_EXAMPLE "Build the MCAP websocket streaming example (requires mcap and lz4)" ON)
+
+if(BUILD_WS_STREAM_MCAP_EXAMPLE)
+  FetchContent_Declare(
+    mcap
+    GIT_REPOSITORY https://github.com/foxglove/mcap.git
+    GIT_TAG releases/cpp/v2.1.2
+  )
+  FetchContent_MakeAvailable(mcap)
+
+  set(LZ4_BUILD_CLI OFF CACHE BOOL "" FORCE)
+  set(LZ4_BUILD_LEGACY_LZ4C OFF CACHE BOOL "" FORCE)
+  FetchContent_Declare(
+    lz4
+    GIT_REPOSITORY https://github.com/lz4/lz4.git
+    GIT_TAG v1.10.0
+    SOURCE_SUBDIR build/cmake
+  )
+  FetchContent_MakeAvailable(lz4)
+endif()
+
 if(DEFINED SANITIZE)
   if(NOT CMAKE_CXX_COMPILER_ID MATCHES ".*Clang")
     message(FATAL_ERROR "Sanitizers are only supported with Clang, not ${CMAKE_CXX_COMPILER_ID}")
@@ -330,4 +351,18 @@ if(BUILD_REMOTE_DATA_LOADER_BACKEND_EXAMPLE)
   target_link_options(example_remote_data_loader_backend PUBLIC ${SANITIZER_LINK_OPTIONS})
   target_link_libraries(example_remote_data_loader_backend foxglove_cpp_static nlohmann_json::nlohmann_json httplib::httplib base64 date::date)
   target_include_directories(example_remote_data_loader_backend SYSTEM PRIVATE ${NLOHMANN_INCLUDE_DIRS})
+endif()
+
+if(BUILD_WS_STREAM_MCAP_EXAMPLE)
+  add_executable(example_ws_stream_mcap
+    examples/ws-stream-mcap/src/main.cpp
+    examples/ws-stream-mcap/src/mcap_player.cpp
+  )
+  set_property(TARGET example_ws_stream_mcap PROPERTY CXX_STANDARD 17)
+  set_property(TARGET example_ws_stream_mcap PROPERTY CXX_STANDARD_REQUIRED True)
+  target_compile_options(example_ws_stream_mcap PUBLIC ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
+  target_link_options(example_ws_stream_mcap PUBLIC ${SANITIZER_LINK_OPTIONS})
+  target_compile_definitions(example_ws_stream_mcap PRIVATE MCAP_COMPRESSION_NO_ZSTD)
+  target_include_directories(example_ws_stream_mcap SYSTEM PRIVATE ${mcap_SOURCE_DIR}/cpp/mcap/include)
+  target_link_libraries(example_ws_stream_mcap foxglove_cpp_static lz4_static)
 endif()
