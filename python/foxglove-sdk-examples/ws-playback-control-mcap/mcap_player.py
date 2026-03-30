@@ -157,6 +157,8 @@ class McapPlayer(PlaybackSource):
         self._status = PlaybackStatus.Playing
 
     def pause(self) -> None:
+        if self._status == PlaybackStatus.Ended:
+            return
         if self._time_tracker is not None:
             self._time_tracker.pause()
         self._status = PlaybackStatus.Paused
