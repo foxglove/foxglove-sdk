@@ -27,6 +27,22 @@ pub(crate) struct RemovedSubscriptions {
     pub last_param_unsubscribed: Vec<String>,
 }
 
+/// Result of subscribing a participant to channels.
+pub(crate) struct SubscribeResult {
+    /// Channel IDs that gained their first subscriber.
+    pub first_subscribed: SmallVec<[ChannelId; 4]>,
+    /// All channel IDs where this participant was actually added.
+    pub newly_subscribed: SmallVec<[ChannelId; 4]>,
+}
+
+/// Result of unsubscribing a participant from channels.
+pub(crate) struct UnsubscribeResult {
+    /// Channel IDs that lost their last subscriber.
+    pub last_unsubscribed: SmallVec<[ChannelId; 4]>,
+    /// All channel IDs where this participant was actually removed.
+    pub actually_unsubscribed: SmallVec<[ChannelId; 4]>,
+}
+
 /// State machine for a remote access session.
 ///
 /// Tracks participants, advertised channels, and per-channel subscriptions.
@@ -228,6 +244,28 @@ impl SessionState {
         Some(descriptor)
     }
 
+    /// Returns the descriptor for an advertised server channel.
+    pub fn get_channel_descriptor(&self, channel_id: &ChannelId) -> Option<&ChannelDescriptor> {
+        self.channels.get(channel_id).map(|ch| ch.descriptor())
+    }
+
+    /// Returns all channel IDs that the given participant is subscribed to.
+    pub fn subscribed_channel_ids(
+        &self,
+        identity: &ParticipantIdentity,
+    ) -> SmallVec<[ChannelId; 4]> {
+        self.subscriptions
+            .iter()
+            .filter_map(|(&channel_id, subscribers)| {
+                if subscribers.contains(identity) {
+                    Some(channel_id)
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+
     /// Records a channel as advertised.
     pub fn insert_channel(&mut self, channel: &Arc<RawChannel>) {
         self.channels.insert(channel.id(), channel.clone());
@@ -347,14 +385,18 @@ impl SessionState {
 
     /// Subscribes a participant to the given channels.
     ///
-    /// Returns channel IDs that gained their first subscriber.
+    /// Returns two sets of channel IDs:
+    /// - `first_subscribed`: channels that gained their first subscriber (for context notifications).
+    /// - `newly_subscribed`: all channels where this participant was actually added (for listener
+    ///   callbacks). This excludes channels the participant was already subscribed to.
     #[must_use]
     pub fn subscribe(
         &mut self,
         participant: &Participant,
         channel_ids: &[ChannelId],
-    ) -> SmallVec<[ChannelId; 4]> {
+    ) -> SubscribeResult {
         let mut first_subscribed: SmallVec<[ChannelId; 4]> = SmallVec::new();
+        let mut newly_subscribed: SmallVec<[ChannelId; 4]> = SmallVec::new();
         for &channel_id in channel_ids {
             let subscribers = self.subscriptions.entry(channel_id).or_default();
             if subscribers.contains(participant.participant_id()) {
@@ -364,23 +406,31 @@ impl SessionState {
             let is_first = subscribers.is_empty();
             subscribers.push(participant.participant_id().clone());
             debug!("{participant} subscribed to channel {channel_id:?}");
+            newly_subscribed.push(channel_id);
             if is_first {
                 first_subscribed.push(channel_id);
             }
         }
-        first_subscribed
+        SubscribeResult {
+            first_subscribed,
+            newly_subscribed,
+        }
     }
 
     /// Unsubscribes a participant from the given channels.
     ///
-    /// Returns channel IDs that lost their last subscriber.
+    /// Returns two sets of channel IDs:
+    /// - `last_unsubscribed`: channels that lost their last subscriber (for context notifications).
+    /// - `actually_unsubscribed`: all channels where this participant was actually removed (for
+    ///   listener callbacks). This excludes channels the participant was not subscribed to.
     #[must_use]
     pub fn unsubscribe(
         &mut self,
         participant: &Participant,
         channel_ids: &[ChannelId],
-    ) -> SmallVec<[ChannelId; 4]> {
+    ) -> UnsubscribeResult {
         let mut last_unsubscribed: SmallVec<[ChannelId; 4]> = SmallVec::new();
+        let mut actually_unsubscribed: SmallVec<[ChannelId; 4]> = SmallVec::new();
         for &channel_id in channel_ids {
             let Some(subscribers) = self.subscriptions.get_mut(&channel_id) else {
                 info!("{participant} is not subscribed to channel {channel_id:?}; ignoring");
@@ -395,11 +445,15 @@ impl SessionState {
             };
             subscribers.swap_remove(pos);
             debug!("{participant} unsubscribed from channel {channel_id:?}");
+            actually_unsubscribed.push(channel_id);
             if subscribers.is_empty() {
                 last_unsubscribed.push(channel_id);
             }
         }
-        last_unsubscribed
+        UnsubscribeResult {
+            last_unsubscribed,
+            actually_unsubscribed,
+        }
     }
 
     /// Adds a participant to data subscriptions for the given channels.
@@ -708,8 +762,9 @@ mod tests {
         let (_id, p) = make_participant("alice");
         let ch = ChannelId::new(1);
 
-        let first = state.subscribe(&p, &[ch]);
-        assert_eq!(first.as_slice(), &[ch]);
+        let result = state.subscribe(&p, &[ch]);
+        assert_eq!(result.first_subscribed.as_slice(), &[ch]);
+        assert_eq!(result.newly_subscribed.as_slice(), &[ch]);
     }
 
     #[test]
@@ -720,8 +775,9 @@ mod tests {
         let ch = ChannelId::new(1);
 
         let _ = state.subscribe(&pa, &[ch]);
-        let first = state.subscribe(&pb, &[ch]);
-        assert!(first.is_empty());
+        let result = state.subscribe(&pb, &[ch]);
+        assert!(result.first_subscribed.is_empty());
+        assert_eq!(result.newly_subscribed.as_slice(), &[ch]);
     }
 
     #[test]
@@ -731,8 +787,9 @@ mod tests {
         let ch = ChannelId::new(1);
 
         let _ = state.subscribe(&p, &[ch]);
-        let first = state.subscribe(&p, &[ch]);
-        assert!(first.is_empty());
+        let result = state.subscribe(&p, &[ch]);
+        assert!(result.first_subscribed.is_empty());
+        assert!(result.newly_subscribed.is_empty());
         assert_eq!(state.subscriptions[&ch].len(), 1);
     }
 
@@ -743,10 +800,11 @@ mod tests {
         let ch1 = ChannelId::new(1);
         let ch2 = ChannelId::new(2);
 
-        let first = state.subscribe(&p, &[ch1, ch2]);
-        assert_eq!(first.len(), 2);
-        assert!(first.contains(&ch1));
-        assert!(first.contains(&ch2));
+        let result = state.subscribe(&p, &[ch1, ch2]);
+        assert_eq!(result.first_subscribed.len(), 2);
+        assert!(result.first_subscribed.contains(&ch1));
+        assert!(result.first_subscribed.contains(&ch2));
+        assert_eq!(result.newly_subscribed.len(), 2);
     }
 
     #[test]
@@ -756,8 +814,9 @@ mod tests {
         let ch = ChannelId::new(1);
 
         let _ = state.subscribe(&p, &[ch]);
-        let last = state.unsubscribe(&p, &[ch]);
-        assert_eq!(last.as_slice(), &[ch]);
+        let result = state.unsubscribe(&p, &[ch]);
+        assert_eq!(result.last_unsubscribed.as_slice(), &[ch]);
+        assert_eq!(result.actually_unsubscribed.as_slice(), &[ch]);
     }
 
     #[test]
@@ -770,8 +829,9 @@ mod tests {
         let _ = state.subscribe(&pa, &[ch]);
         let _ = state.subscribe(&pb, &[ch]);
 
-        let last = state.unsubscribe(&pa, &[ch]);
-        assert!(last.is_empty());
+        let result = state.unsubscribe(&pa, &[ch]);
+        assert!(result.last_unsubscribed.is_empty());
+        assert_eq!(result.actually_unsubscribed.as_slice(), &[ch]);
         assert_eq!(state.subscriptions[&ch].len(), 1);
     }
 
@@ -781,8 +841,9 @@ mod tests {
         let (_id, p) = make_participant("alice");
         let ch = ChannelId::new(1);
 
-        let last = state.unsubscribe(&p, &[ch]);
-        assert!(last.is_empty());
+        let result = state.unsubscribe(&p, &[ch]);
+        assert!(result.last_unsubscribed.is_empty());
+        assert!(result.actually_unsubscribed.is_empty());
     }
 
     #[test]
@@ -793,10 +854,11 @@ mod tests {
         let ch2 = ChannelId::new(2);
 
         let _ = state.subscribe(&p, &[ch1, ch2]);
-        let last = state.unsubscribe(&p, &[ch1, ch2]);
-        assert_eq!(last.len(), 2);
-        assert!(last.contains(&ch1));
-        assert!(last.contains(&ch2));
+        let result = state.unsubscribe(&p, &[ch1, ch2]);
+        assert_eq!(result.last_unsubscribed.len(), 2);
+        assert!(result.last_unsubscribed.contains(&ch1));
+        assert!(result.last_unsubscribed.contains(&ch2));
+        assert_eq!(result.actually_unsubscribed.len(), 2);
     }
 
     #[test]
@@ -1340,6 +1402,7 @@ mod tests {
         let ch = make_client_channel(1, "/cmd");
 
         state.insert_client_channel(&id, ch);
+
         let result = state.get_client_channel(&id, ChannelId::new(1));
         assert!(result.is_some());
         assert_eq!(result.unwrap().topic(), "/cmd");
@@ -1359,5 +1422,61 @@ mod tests {
         state.insert_participant(id.clone(), p);
         state.insert_client_channel(&id, make_client_channel(1, "/cmd"));
         assert!(state.get_client_channel(&id, ChannelId::new(99)).is_none());
+    }
+
+    #[test]
+    fn get_channel_descriptor_returns_descriptor() {
+        let mut state = SessionState::new();
+        let ch = make_channel("/topic1");
+        let ch_id = ch.id();
+        state.insert_channel(&ch);
+
+        let result = state.get_channel_descriptor(&ch_id);
+        assert!(result.is_some());
+        assert_eq!(result.unwrap().topic(), "/topic1");
+    }
+
+    #[test]
+    fn get_channel_descriptor_returns_none_for_unknown() {
+        let state = SessionState::new();
+        assert!(state.get_channel_descriptor(&ChannelId::new(999)).is_none());
+    }
+
+    #[test]
+    fn subscribed_channel_ids_returns_all_subscriptions() {
+        let mut state = SessionState::new();
+        let (id, p) = make_participant("alice");
+        state.insert_participant(id.clone(), p.clone());
+
+        let ch1 = ChannelId::new(1);
+        let ch2 = ChannelId::new(2);
+        let _ = state.subscribe(&p, &[ch1, ch2]);
+
+        let ids = state.subscribed_channel_ids(&id);
+        assert_eq!(ids.len(), 2);
+        assert!(ids.contains(&ch1));
+        assert!(ids.contains(&ch2));
+    }
+
+    #[test]
+    fn subscribed_channel_ids_returns_empty_for_unknown_participant() {
+        let state = SessionState::new();
+        let id = ParticipantIdentity("nobody".to_string());
+        assert!(state.subscribed_channel_ids(&id).is_empty());
+    }
+
+    #[test]
+    fn subscribed_channel_ids_excludes_other_participants() {
+        let mut state = SessionState::new();
+        let (id_a, pa) = make_participant("alice");
+        let (_id_b, pb) = make_participant("bob");
+
+        let ch1 = ChannelId::new(1);
+        let ch2 = ChannelId::new(2);
+        let _ = state.subscribe(&pa, &[ch1]);
+        let _ = state.subscribe(&pb, &[ch2]);
+
+        let ids = state.subscribed_channel_ids(&id_a);
+        assert_eq!(ids.as_slice(), &[ch1]);
     }
 }

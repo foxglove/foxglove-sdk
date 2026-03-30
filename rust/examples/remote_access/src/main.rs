@@ -31,6 +31,22 @@ impl Listener for MessageHandler {
         );
     }
 
+    fn on_subscribe(&self, client: Client, channel: &ChannelDescriptor) {
+        tracing::info!(
+            "Client {} subscribed to channel: {}",
+            client.id(),
+            channel.topic()
+        );
+    }
+
+    fn on_unsubscribe(&self, client: Client, channel: &ChannelDescriptor) {
+        tracing::info!(
+            "Client {} unsubscribed from channel: {}",
+            client.id(),
+            channel.topic()
+        );
+    }
+
     fn on_client_advertise(&self, client: Client, channel: &ChannelDescriptor) {
         tracing::info!(
             "Client {} advertised channel: {}",
