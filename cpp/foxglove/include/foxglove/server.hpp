@@ -93,7 +93,12 @@ enum class WebSocketServerStatusLevel : uint8_t {
 inline WebSocketServerCapabilities operator|(
   WebSocketServerCapabilities a, WebSocketServerCapabilities b
 ) {
-  return WebSocketServerCapabilities(uint8_t(a) | uint8_t(b));
+  // We have to disable the EnumCastOutOfRange check here since the current version of
+  // clang-analyzer doesn't yet support exempting enums marked as bitflags. See:
+  // https://github.com/llvm/llvm-project/issues/76208
+  return WebSocketServerCapabilities(
+    uint8_t(a) | uint8_t(b)
+  );  // NOLINT(clang-analyzer-optin.core.EnumCastOutOfRange)
 }
 
 /// @brief Check if a capability is set.
