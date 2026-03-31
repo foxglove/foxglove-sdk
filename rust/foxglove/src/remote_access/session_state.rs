@@ -507,10 +507,8 @@ mod tests {
     fn make_participant(name: &str) -> (ParticipantIdentity, Arc<Participant>) {
         let identity = ParticipantIdentity(name.to_string());
         let writer = Arc::new(crate::remote_access::participant::TestByteStreamWriter::default());
-        let version = semver::Version::parse(
-            crate::remote_access::protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION,
-        )
-        .expect("REMOTE_ACCESS_PROTOCOL_VERSION is valid semver");
+        let version =
+            crate::remote_access::protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone();
         let participant = Arc::new(Participant::new(
             identity.clone(),
             version,

@@ -9,15 +9,16 @@ use tracing::error;
 pub(crate) const PROTOCOL_VERSION_ATTRIBUTE: &str = "protocolVersion";
 
 /// The remote access protocol version supported by this SDK build.
-pub(crate) const REMOTE_ACCESS_PROTOCOL_VERSION: &str = "2.0.1";
+pub(crate) const REMOTE_ACCESS_PROTOCOL_VERSION: semver::Version = semver::Version::new(2, 0, 1);
 
 /// The minimum remote access protocol version this SDK will accept from a connecting participant.
-pub(crate) const REMOTE_ACCESS_MIN_SUPPORTED_PROTOCOL_VERSION: &str = "2.0.0";
+pub(crate) const REMOTE_ACCESS_MIN_SUPPORTED_PROTOCOL_VERSION: semver::Version =
+    semver::Version::new(2, 0, 0);
 
 /// The protocol version assumed when a participant does not advertise one.
 ///
 /// This is the version that was in use before version advertisement was introduced.
-pub(crate) const DEFAULT_PROTOCOL_VERSION: &str = "2.0.0";
+pub(crate) const DEFAULT_PROTOCOL_VERSION: semver::Version = semver::Version::new(2, 0, 0);
 
 /// Parse the remote access protocol version from a LiveKit participant's attributes.
 ///
@@ -28,15 +29,14 @@ pub(crate) const DEFAULT_PROTOCOL_VERSION: &str = "2.0.0";
 pub(crate) fn parse_participant_protocol_version(
     attributes: &HashMap<String, String>,
 ) -> Option<semver::Version> {
-    let version_str = attributes
-        .get(PROTOCOL_VERSION_ATTRIBUTE)
-        .map(String::as_str)
-        .unwrap_or(DEFAULT_PROTOCOL_VERSION);
+    let Some(version_str) = attributes.get(PROTOCOL_VERSION_ATTRIBUTE) else {
+        return Some(DEFAULT_PROTOCOL_VERSION.clone());
+    };
     match semver::Version::parse(version_str) {
         Ok(v) => Some(v),
         Err(e) => {
             error!(
-                version = version_str,
+                version = version_str.as_str(),
                 "failed to parse participant protocol version: {e}"
             );
             None
@@ -59,26 +59,22 @@ pub(crate) fn check_participant_protocol_version(
     remote_access_session_id: Option<&str>,
 ) -> Option<semver::Version> {
     let version = parse_participant_protocol_version(attributes)?;
-    let min = semver::Version::parse(REMOTE_ACCESS_MIN_SUPPORTED_PROTOCOL_VERSION)
-        .expect("REMOTE_ACCESS_MIN_SUPPORTED_PROTOCOL_VERSION is a valid semver");
-    let our_version = semver::Version::parse(REMOTE_ACCESS_PROTOCOL_VERSION)
-        .expect("REMOTE_ACCESS_PROTOCOL_VERSION is a valid semver");
-    if version < min {
+    if version < REMOTE_ACCESS_MIN_SUPPORTED_PROTOCOL_VERSION {
         error!(
             remote_access_session_id,
             participant_identity = %participant_identity,
             participant_version = %version,
-            min_supported_version = %min,
+            min_supported_version = %REMOTE_ACCESS_MIN_SUPPORTED_PROTOCOL_VERSION,
             "participant protocol version is below minimum supported; ignoring participant"
         );
         return None;
     }
-    if version.major != our_version.major {
+    if version.major != REMOTE_ACCESS_PROTOCOL_VERSION.major {
         error!(
             remote_access_session_id,
             participant_identity = %participant_identity,
             participant_version = %version,
-            our_version = %our_version,
+            our_version = %REMOTE_ACCESS_PROTOCOL_VERSION,
             "participant protocol version has incompatible major version; ignoring participant"
         );
         return None;
@@ -140,7 +136,7 @@ mod tests {
 
     #[test]
     fn check_missing_attribute_defaults_and_passes() {
-        // DEFAULT_PROTOCOL_VERSION == REMOTE_ACCESS_MIN_SUPPORTED_PROTOCOL_VERSION == "2.0.0"
+        // DEFAULT_PROTOCOL_VERSION == REMOTE_ACCESS_MIN_SUPPORTED_PROTOCOL_VERSION == 2.0.0
         let result = check_participant_protocol_version(&identity(), &HashMap::new(), None);
         assert_eq!(result, Some(semver::Version::new(2, 0, 0)));
     }

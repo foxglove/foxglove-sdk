@@ -197,7 +197,9 @@ impl RemoteAccessConnection {
         let credentials = match provider
             .load_credentials(RemoteSessionRequest {
                 remote_access_session_id: existing_session_id,
-                protocol_version: Some(protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.to_owned()),
+                protocol_version: Some(
+                    protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.to_string(),
+                ),
             })
             .await
         {

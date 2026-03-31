@@ -936,8 +936,8 @@ impl RemoteAccessSession {
     ) {
         let advertised = attributes
             .get(protocol_version::PROTOCOL_VERSION_ATTRIBUTE)
-            .map(String::as_str)
-            .unwrap_or(protocol_version::DEFAULT_PROTOCOL_VERSION);
+            .cloned()
+            .unwrap_or_else(|| protocol_version::DEFAULT_PROTOCOL_VERSION.to_string());
         let message = format!(
             "Remote access protocol version {} is not compatible with this device (supported: {})",
             advertised,
@@ -1818,8 +1818,7 @@ mod tests {
     fn make_participant(name: &str) -> (ParticipantIdentity, Arc<Participant>) {
         let identity = ParticipantIdentity(name.to_string());
         let writer = Arc::new(TestByteStreamWriter::default());
-        let version = semver::Version::parse(protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION)
-            .expect("REMOTE_ACCESS_PROTOCOL_VERSION is valid semver");
+        let version = protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone();
         let participant = Arc::new(Participant::new(
             identity.clone(),
             version,
