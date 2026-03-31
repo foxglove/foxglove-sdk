@@ -9,25 +9,25 @@ use crate::websocket::PlaybackState;
 /// [`tokio::task::spawn_blocking`]).
 pub trait ServerListener: Send + Sync {
     /// Callback invoked when a client message is received.
-    fn on_message_data(&self, _client: Client, _client_channel: &ClientChannel, _payload: &[u8]) {}
+    fn on_message_data(&self, _client: &Client, _client_channel: &ClientChannel, _payload: &[u8]) {}
     /// Callback invoked when a client subscribes to a channel.
     /// Only invoked if the channel is associated with the server and isn't already subscribed to by the client.
-    fn on_subscribe(&self, _client: Client, _channel: ChannelView) {}
+    fn on_subscribe(&self, _client: &Client, _channel: ChannelView) {}
     /// Callback invoked when a client unsubscribes from a channel or disconnects.
     /// Only invoked for channels that had an active subscription from the client.
-    fn on_unsubscribe(&self, _client: Client, _channel: ChannelView) {}
+    fn on_unsubscribe(&self, _client: &Client, _channel: ChannelView) {}
     /// Callback invoked when a client advertises a client channel. Requires
     /// [`Capability::ClientPublish`][super::Capability::ClientPublish].
-    fn on_client_advertise(&self, _client: Client, _channel: &ClientChannel) {}
+    fn on_client_advertise(&self, _client: &Client, _channel: &ClientChannel) {}
     /// Callback invoked when a client unadvertises a client channel. Requires
     /// [`Capability::ClientPublish`][super::Capability::ClientPublish].
-    fn on_client_unadvertise(&self, _client: Client, _channel: &ClientChannel) {}
+    fn on_client_unadvertise(&self, _client: &Client, _channel: &ClientChannel) {}
     /// Callback invoked when a client requests parameters. Requires
     /// [`Capability::Parameters`][super::Capability::Parameters]. Should return the named
     /// parameters, or all parameters if param_names is empty.
     fn on_get_parameters(
         &self,
-        _client: Client,
+        _client: &Client,
         _param_names: Vec<String>,
         _request_id: Option<&str>,
     ) -> Vec<Parameter> {
@@ -45,7 +45,7 @@ pub trait ServerListener: Send + Sync {
     /// value must include all parameters.
     fn on_set_parameters(
         &self,
-        _client: Client,
+        _client: &Client,
         parameters: Vec<Parameter>,
         _request_id: Option<&str>,
     ) -> Vec<Parameter> {

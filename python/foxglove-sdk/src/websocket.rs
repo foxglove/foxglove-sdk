@@ -184,19 +184,19 @@ pub struct PyServerListener {
 
 impl ServerListener for PyServerListener {
     /// Callback invoked when a client subscribes to a channel.
-    fn on_subscribe(&self, client: Client, channel: ChannelView) {
+    fn on_subscribe(&self, client: &Client, channel: ChannelView) {
         let channel_id = channel.id().into();
         self.call_client_channel_method("on_subscribe", client, channel_id, channel.topic());
     }
 
     /// Callback invoked when a client unsubscribes from a channel.
-    fn on_unsubscribe(&self, client: Client, channel: ChannelView) {
+    fn on_unsubscribe(&self, client: &Client, channel: ChannelView) {
         let channel_id = channel.id().into();
         self.call_client_channel_method("on_unsubscribe", client, channel_id, channel.topic());
     }
 
     /// Callback invoked when a client advertises a client channel.
-    fn on_client_advertise(&self, client: Client, channel: &ClientChannel) {
+    fn on_client_advertise(&self, client: &Client, channel: &ClientChannel) {
         let client_info = PyClient {
             id: client.id().into(),
         };
@@ -232,7 +232,7 @@ impl ServerListener for PyServerListener {
     }
 
     /// Callback invoked when a client unadvertises a client channel.
-    fn on_client_unadvertise(&self, client: Client, channel: &ClientChannel) {
+    fn on_client_unadvertise(&self, client: &Client, channel: &ClientChannel) {
         let client_info = PyClient {
             id: client.id().into(),
         };
@@ -253,7 +253,7 @@ impl ServerListener for PyServerListener {
     }
 
     /// Callback invoked when a client message is received.
-    fn on_message_data(&self, client: Client, channel: &ClientChannel, payload: &[u8]) {
+    fn on_message_data(&self, client: &Client, channel: &ClientChannel, payload: &[u8]) {
         let client_info = PyClient {
             id: client.id().into(),
         };
@@ -279,7 +279,7 @@ impl ServerListener for PyServerListener {
 
     fn on_get_parameters(
         &self,
-        client: Client,
+        client: &Client,
         param_names: Vec<String>,
         request_id: Option<&str>,
     ) -> Vec<foxglove::websocket::Parameter> {
@@ -311,7 +311,7 @@ impl ServerListener for PyServerListener {
 
     fn on_set_parameters(
         &self,
-        client: Client,
+        client: &Client,
         parameters: Vec<foxglove::websocket::Parameter>,
         request_id: Option<&str>,
     ) -> Vec<foxglove::websocket::Parameter> {
@@ -432,7 +432,7 @@ impl PyServerListener {
     fn call_client_channel_method(
         &self,
         method_name: &str,
-        client: Client,
+        client: &Client,
         channel_id: u64,
         topic: &str,
     ) {

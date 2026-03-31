@@ -171,7 +171,7 @@ impl RecordingServerListener {
 }
 
 impl ServerListener for RecordingServerListener {
-    fn on_message_data(&self, client: Client, channel: &ClientChannel, payload: &[u8]) {
+    fn on_message_data(&self, client: &Client, channel: &ClientChannel, payload: &[u8]) {
         let mut data = self.message_data.lock();
         data.push(MessageData {
             client_id: client.id(),
@@ -180,29 +180,29 @@ impl ServerListener for RecordingServerListener {
         });
     }
 
-    fn on_subscribe(&self, client: Client, channel: ChannelView) {
+    fn on_subscribe(&self, client: &Client, channel: ChannelView) {
         let mut subs = self.subscribe.lock();
         subs.push((client.id(), channel.into()));
     }
 
-    fn on_unsubscribe(&self, client: Client, channel: ChannelView) {
+    fn on_unsubscribe(&self, client: &Client, channel: ChannelView) {
         let mut unsubs = self.unsubscribe.lock();
         unsubs.push((client.id(), channel.into()));
     }
 
-    fn on_client_advertise(&self, client: Client, channel: &ClientChannel) {
+    fn on_client_advertise(&self, client: &Client, channel: &ClientChannel) {
         let mut adverts = self.client_advertise.lock();
         adverts.push((client.id(), channel.into()));
     }
 
-    fn on_client_unadvertise(&self, client: Client, channel: &ClientChannel) {
+    fn on_client_unadvertise(&self, client: &Client, channel: &ClientChannel) {
         let mut unadverts = self.client_unadvertise.lock();
         unadverts.push((client.id(), channel.into()));
     }
 
     fn on_get_parameters(
         &self,
-        client: Client,
+        client: &Client,
         param_names: Vec<String>,
         request_id: Option<&str>,
     ) -> Vec<Parameter> {
@@ -217,7 +217,7 @@ impl ServerListener for RecordingServerListener {
 
     fn on_set_parameters(
         &self,
-        client: Client,
+        client: &Client,
         parameters: Vec<Parameter>,
         request_id: Option<&str>,
     ) -> Vec<Parameter> {
