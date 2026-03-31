@@ -644,14 +644,21 @@ mod tests {
     use super::*;
     use crate::img2yuv::{ImageEncoding, RawImageEncoding};
     use crate::remote_access::participant::ParticipantWriter;
+    use livekit::id::ParticipantSid;
 
     fn make_participant(name: &str) -> (ParticipantIdentity, Arc<Participant>) {
+        make_participant_with_sid(name, &format!("PA_{name}"))
+    }
+
+    fn make_participant_with_sid(name: &str, sid: &str) -> (ParticipantIdentity, Arc<Participant>) {
         let identity = ParticipantIdentity(name.to_string());
+        let sid = ParticipantSid::try_from(sid.to_string()).unwrap();
         let writer = Arc::new(crate::remote_access::participant::TestByteStreamWriter::default());
         let version =
             crate::remote_access::protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone();
         let participant = Arc::new(Participant::new(
             identity.clone(),
+            sid,
             version,
             ParticipantWriter::Test(writer),
         ));
@@ -683,6 +690,49 @@ mod tests {
         assert!(state.insert_participant(id.clone(), p1));
         let (_, p2) = make_participant("bob");
         assert!(!state.insert_participant(id, p2));
+    }
+
+    #[test]
+    fn replace_participant_with_new_sid() {
+        let mut state = SessionState::new();
+        let (id, p1) = make_participant_with_sid("alice", "PA_old");
+        assert!(state.insert_participant(id.clone(), p1.clone()));
+
+        let ch = ChannelId::new(1);
+        let _ = state.subscribe(&p1, &[ch]);
+        state.subscribe_data(&p1, &[ch]);
+
+        // Simulate unclean exit + rejoin: remove old incarnation and insert new one.
+        let removed = state.remove_participant(&id);
+        assert_eq!(removed.last_unsubscribed.as_slice(), &[ch]);
+
+        let (_, p2) = make_participant_with_sid("alice", "PA_new");
+        assert!(state.insert_participant(id.clone(), p2));
+
+        // The new participant should be present but with no subscriptions.
+        let p = state.get_participant(&id).unwrap();
+        assert_eq!(p.sid().as_str(), "PA_new");
+        assert!(!state.has_data_subscribers(&ch));
+    }
+
+    #[test]
+    fn participant_sid_distinguishes_incarnations() {
+        let mut state = SessionState::new();
+        let (id, p1) = make_participant_with_sid("alice", "PA_first");
+        assert!(state.insert_participant(id.clone(), p1));
+        assert_eq!(
+            state.get_participant(&id).unwrap().sid().as_str(),
+            "PA_first"
+        );
+
+        // Replace with new incarnation.
+        let _ = state.remove_participant(&id);
+        let (_, p2) = make_participant_with_sid("alice", "PA_second");
+        assert!(state.insert_participant(id.clone(), p2));
+        assert_eq!(
+            state.get_participant(&id).unwrap().sid().as_str(),
+            "PA_second"
+        );
     }
 
     #[test]
