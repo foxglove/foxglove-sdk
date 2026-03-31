@@ -36,14 +36,4 @@ impl Client {
             client.send_status(status);
         }
     }
-
-    /// Send a fetch asset response to the client. Does nothing if client is disconnected.
-    pub(crate) fn send_asset_response(&self, result: Result<&[u8], &str>, request_id: u32) {
-        if let Some(client) = self.client.upgrade() {
-            match result {
-                Ok(asset) => client.send_asset_response(asset, request_id),
-                Err(err) => client.send_asset_error(err, request_id),
-            }
-        }
-    }
 }

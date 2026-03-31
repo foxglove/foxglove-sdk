@@ -27,8 +27,8 @@ use super::ws_protocol::client::ClientMessage;
 use super::ws_protocol::server::MessageData;
 use super::ws_protocol::{self, ParseError};
 use super::{
-    AssetResponder, Capability, Client, ClientChannel, ClientChannelId, ClientId, Parameter,
-    Status, StatusLevel, advertise,
+    Capability, Client, ClientChannel, ClientChannelId, ClientId, Parameter, Status, StatusLevel,
+    advertise, fetch_asset,
 };
 use crate::remote_common::semaphore::Semaphore;
 
@@ -637,7 +637,7 @@ impl ConnectedClient {
         };
 
         if let Some(handler) = server.fetch_asset_handler() {
-            let asset_responder = AssetResponder::new(Client::new(self), request_id, guard);
+            let asset_responder = fetch_asset::new_responder(self.arc(), request_id, guard);
             handler.fetch(uri, asset_responder);
         } else {
             tracing::error!("Server advertised the Assets capability without providing a handler");

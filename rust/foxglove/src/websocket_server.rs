@@ -157,6 +157,7 @@ impl WebSocketServer {
             Some(Box::new(BlockingAssetHandlerFn(Arc::new(handler))));
         self
     }
+
     /// Configure an asynchronous function as a fetch asset handler.
     /// There can only be one asset handler, exclusive with the other fetch_asset_handler methods.
     pub fn fetch_asset_handler_async_fn<F, Fut, T, Err>(mut self, handler: F) -> Self
