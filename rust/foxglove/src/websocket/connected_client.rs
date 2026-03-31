@@ -127,19 +127,19 @@ impl Sink for ConnectedClient {
     }
 
     fn remove_channel(&self, channel: &RawChannel) {
-        // If the client had a subscription for this channel, fire on_unsubscribe.
         let had_subscription = self
             .subscriptions
             .lock()
             .remove_by_left(&channel.id())
             .is_some();
+        self.unadvertise_channel(channel.id());
+        // Fire on_unsubscribe after the channel has been unadvertised.
         if had_subscription {
             let server = self.server.upgrade();
             if let Some(handler) = server.as_ref().and_then(|s| s.listener()) {
                 handler.on_unsubscribe(Client::new(self), channel.into());
             }
         }
-        self.unadvertise_channel(channel.id());
     }
 
     fn auto_subscribe(&self) -> bool {
