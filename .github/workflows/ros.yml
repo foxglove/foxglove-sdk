@@ -63,7 +63,7 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Download C++ SDK build
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: cpp-build
           path: cpp/build

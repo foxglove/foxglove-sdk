@@ -734,6 +734,10 @@ impl RemoteAccessSession {
         true
     }
 
+    /// Subscribes the participant to the requested channels and notifies the listener.
+    ///
+    /// Channels the participant is already subscribed to are silently skipped.
+    /// The context is notified only for channels gaining their first subscriber.
     fn handle_client_subscribe(
         self: &Arc<Self>,
         participant: &Arc<Participant>,
@@ -770,23 +774,45 @@ impl RemoteAccessSession {
         drop(state);
 
         let mut state = self.state.write();
-        let first_subscribed = state.subscribe(participant, &channel_ids);
+        let subscribe_result = state.subscribe(participant, &channel_ids);
         state.subscribe_data(participant, &data_channel_ids);
         state.unsubscribe_data(participant, &video_channel_ids);
         let first_video_subscribed = state.subscribe_video(participant, &video_channel_ids);
         let last_video_unsubscribed = state.unsubscribe_video(participant, &data_channel_ids);
         drop(state);
 
-        if !first_subscribed.is_empty() {
+        if !subscribe_result.first_subscribed.is_empty() {
             if let Some(context) = self.context.upgrade() {
-                context.subscribe_channels(self.sink_id, &first_subscribed);
+                context.subscribe_channels(self.sink_id, &subscribe_result.first_subscribed);
             }
         }
 
         self.start_video_tracks(&first_video_subscribed);
         self.stop_video_tracks(&last_video_unsubscribed);
+
+        if let Some(listener) = &self.listener {
+            let descriptors: SmallVec<[ChannelDescriptor; 4]> = {
+                let state = self.state.read();
+                subscribe_result
+                    .newly_subscribed
+                    .iter()
+                    .filter_map(|id| state.get_channel_descriptor(id).cloned())
+                    .collect()
+            };
+            let client = Client::new(
+                participant.client_id(),
+                participant.participant_id().clone(),
+            );
+            for descriptor in &descriptors {
+                listener.on_subscribe(client.clone(), descriptor);
+            }
+        }
     }
 
+    /// Unsubscribes the participant from the requested channels and notifies the listener.
+    ///
+    /// Channels the participant was not subscribed to are silently skipped.
+    /// The context is notified only for channels losing their last subscriber.
     fn handle_client_unsubscribe(
         self: &Arc<Self>,
         participant: &Participant,
@@ -800,18 +826,36 @@ impl RemoteAccessSession {
             .collect();
 
         let mut state = self.state.write();
-        let last_unsubscribed = state.unsubscribe(participant, &channel_ids);
+        let unsubscribe_result = state.unsubscribe(participant, &channel_ids);
         state.unsubscribe_data(participant, &channel_ids);
         let last_video_unsubscribed = state.unsubscribe_video(participant, &channel_ids);
         drop(state);
 
-        if !last_unsubscribed.is_empty() {
+        if !unsubscribe_result.last_unsubscribed.is_empty() {
             if let Some(context) = self.context.upgrade() {
-                context.unsubscribe_channels(self.sink_id, &last_unsubscribed);
+                context.unsubscribe_channels(self.sink_id, &unsubscribe_result.last_unsubscribed);
             }
         }
 
         self.stop_video_tracks(&last_video_unsubscribed);
+
+        if let Some(listener) = &self.listener {
+            let descriptors: SmallVec<[ChannelDescriptor; 4]> = {
+                let state = self.state.read();
+                unsubscribe_result
+                    .actually_unsubscribed
+                    .iter()
+                    .filter_map(|id| state.get_channel_descriptor(id).cloned())
+                    .collect()
+            };
+            let client = Client::new(
+                participant.client_id(),
+                participant.participant_id().clone(),
+            );
+            for descriptor in &descriptors {
+                listener.on_unsubscribe(client.clone(), descriptor);
+            }
+        }
     }
 
     fn handle_client_advertise(
@@ -1101,6 +1145,9 @@ impl RemoteAccessSession {
 
         self.pending_client_readers.lock().remove(participant_id);
 
+        // Collect subscribed channel IDs before removal so we can fire `on_unsubscribe` callbacks.
+        let subscribed_channel_ids = self.state.read().subscribed_channel_ids(participant_id);
+
         let removed = self.state.write().remove_participant(participant_id);
 
         if !removed.last_unsubscribed.is_empty() {
@@ -1117,12 +1164,24 @@ impl RemoteAccessSession {
             }
         }
 
-        if !removed.client_channels.is_empty() {
-            if let Some((listener, client_id)) = self.listener.as_ref().zip(removed.client_id) {
-                let client = Client::new(client_id, participant_id.clone());
-                for descriptor in &removed.client_channels {
-                    listener.on_client_unadvertise(client.clone(), descriptor);
+        if let Some((listener, client_id)) = self.listener.as_ref().zip(removed.client_id) {
+            let client = Client::new(client_id, participant_id.clone());
+
+            if !subscribed_channel_ids.is_empty() {
+                let descriptors: SmallVec<[ChannelDescriptor; 4]> = {
+                    let state = self.state.read();
+                    subscribed_channel_ids
+                        .iter()
+                        .filter_map(|id| state.get_channel_descriptor(id).cloned())
+                        .collect()
+                };
+                for descriptor in &descriptors {
+                    listener.on_unsubscribe(client.clone(), descriptor);
                 }
+            }
+
+            for descriptor in &removed.client_channels {
+                listener.on_client_unadvertise(client.clone(), descriptor);
             }
         }
     }
