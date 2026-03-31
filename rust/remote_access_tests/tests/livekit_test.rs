@@ -1154,7 +1154,7 @@ async fn livekit_unsubscribe_fires_listener_callback() -> Result<()> {
 
     // Subscribe first, then unsubscribe.
     viewer.subscribe_and_wait(&[channel_id], &channel).await?;
-    assert_eq!(listener.subscribed().len(), 1);
+    poll_until(|| listener.subscribed().len() == 1).await;
 
     viewer.send_unsubscribe(&[channel_id]).await?;
     poll_until(|| listener.unsubscribed().len() == 1).await;
@@ -1202,7 +1202,7 @@ async fn livekit_disconnect_fires_unsubscribe_for_subscribed_channels() -> Resul
     let channel_id = advertise.channels[0].id;
 
     viewer.subscribe_and_wait(&[channel_id], &channel).await?;
-    assert_eq!(listener.subscribed().len(), 1);
+    poll_until(|| listener.subscribed().len() == 1).await;
 
     // Disconnect — should fire on_unsubscribe for the subscribed channel.
     viewer.close().await?;
