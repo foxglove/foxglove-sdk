@@ -266,6 +266,23 @@ impl SessionState {
             .collect()
     }
 
+    /// Returns (client_id, participant_identity) for all subscribers of the given channel.
+    pub fn channel_subscriber_clients(
+        &self,
+        channel_id: &ChannelId,
+    ) -> SmallVec<[(ClientId, ParticipantIdentity); 4]> {
+        let Some(subscribers) = self.subscriptions.get(channel_id) else {
+            return SmallVec::new();
+        };
+        subscribers
+            .iter()
+            .filter_map(|identity| {
+                let participant = self.participants.get(identity)?;
+                Some((participant.client_id(), identity.clone()))
+            })
+            .collect()
+    }
+
     /// Records a channel as advertised.
     pub fn insert_channel(&mut self, channel: &Arc<RawChannel>) {
         self.channels.insert(channel.id(), channel.clone());
@@ -754,6 +771,46 @@ mod tests {
     fn remove_channel_returns_false_when_absent() {
         let mut state = SessionState::new();
         assert!(!state.remove_channel(ChannelId::new(999)));
+    }
+
+    #[test]
+    fn channel_subscriber_clients_empty_for_unknown_channel() {
+        let state = SessionState::new();
+        let result = state.channel_subscriber_clients(&ChannelId::new(999));
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn channel_subscriber_clients_returns_subscribers() {
+        let mut state = SessionState::new();
+        let (id_a, pa) = make_participant("alice");
+        let (id_b, pb) = make_participant("bob");
+        state.insert_participant(id_a.clone(), pa.clone());
+        state.insert_participant(id_b.clone(), pb.clone());
+
+        let ch = ChannelId::new(1);
+        let _ = state.subscribe(&pa, &[ch]);
+        let _ = state.subscribe(&pb, &[ch]);
+
+        let result = state.channel_subscriber_clients(&ch);
+        assert_eq!(result.len(), 2);
+        let identities: Vec<_> = result.iter().map(|(_, id)| id.clone()).collect();
+        assert!(identities.contains(&id_a));
+        assert!(identities.contains(&id_b));
+    }
+
+    #[test]
+    fn channel_subscriber_clients_empty_after_remove_channel() {
+        let mut state = SessionState::new();
+        let ch = make_channel("/topic1");
+        let (id, p) = make_participant("alice");
+        state.insert_participant(id.clone(), p.clone());
+        state.insert_channel(&ch);
+        let _ = state.subscribe(&p, &[ch.id()]);
+
+        assert_eq!(state.channel_subscriber_clients(&ch.id()).len(), 1);
+        state.remove_channel(ch.id());
+        assert!(state.channel_subscriber_clients(&ch.id()).is_empty());
     }
 
     #[test]
