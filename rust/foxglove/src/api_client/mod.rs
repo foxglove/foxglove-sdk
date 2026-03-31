@@ -13,4 +13,4 @@ mod types;
 pub(crate) use client::{
     DeviceToken, FoxgloveApiClient, FoxgloveApiClientBuilder, FoxgloveApiClientError,
 };
-pub(crate) use types::{DeviceResponse, RtcCredentials};
+pub(crate) use types::{DeviceResponse, RemoteSessionRequest, RtcCredentials};

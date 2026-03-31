@@ -232,28 +232,20 @@ impl FoxgloveApiClient<DeviceToken> {
 
     /// Authorizes a remote visualization session for the given device.
     ///
-    /// If `remote_access_session_id` is `Some`, the server uses the provided session ID.
-    /// If `None`, the server generates a new one.
-    ///
     /// This endpoint is not intended for direct usage. Access may be blocked if suspicious
     /// activity is detected.
     pub async fn authorize_remote_viz(
         &self,
         device_id: &str,
-        remote_access_session_id: Option<String>,
-        protocol_version: Option<&str>,
+        request: super::types::RemoteSessionRequest,
     ) -> Result<RtcCredentials, FoxgloveApiClientError> {
         let device_id = encode_uri_component(device_id);
-        let body = super::types::RemoteSessionRequest {
-            remote_access_session_id,
-            protocol_version: protocol_version.map(str::to_owned),
-        };
         let response = self
             .post(&format!(
                 "/internal/platform/v1/devices/{device_id}/remote-sessions"
             ))
             .device_token(&self.auth)
-            .json(&body)
+            .json(&request)
             .send()
             .await?;
 
@@ -319,6 +311,7 @@ mod tests {
         TEST_DEVICE_ID, TEST_DEVICE_TOKEN, TEST_PROJECT_ID, create_test_api_client,
         create_test_server,
     };
+    use crate::api_client::types::RemoteSessionRequest;
 
     use super::DeviceToken;
 
@@ -353,7 +346,13 @@ mod tests {
         let client = create_test_api_client(server.url(), DeviceToken::new(TEST_DEVICE_TOKEN));
 
         let result = client
-            .authorize_remote_viz(TEST_DEVICE_ID, None, None)
+            .authorize_remote_viz(
+                TEST_DEVICE_ID,
+                RemoteSessionRequest {
+                    remote_access_session_id: None,
+                    protocol_version: None,
+                },
+            )
             .await
             .expect("could not authorize remote viz");
         assert_eq!(result.token, "rtc-token-abc123");
@@ -368,7 +367,13 @@ mod tests {
         let client =
             create_test_api_client(server.url(), DeviceToken::new("some-bad-device-token"));
         let result = client
-            .authorize_remote_viz(TEST_DEVICE_ID, None, None)
+            .authorize_remote_viz(
+                TEST_DEVICE_ID,
+                RemoteSessionRequest {
+                    remote_access_session_id: None,
+                    protocol_version: None,
+                },
+            )
             .await;
         assert!(result.is_err());
     }

@@ -16,7 +16,7 @@ use tracing::{debug, error, info};
 
 use crate::{
     Context, FoxgloveError, SinkChannelFilter,
-    api_client::{DeviceToken, FoxgloveApiClientBuilder},
+    api_client::{DeviceToken, FoxgloveApiClientBuilder, RemoteSessionRequest},
     library_version::get_library_version,
     protocol::v2::server::ServerInfo,
     remote_access::{
@@ -195,10 +195,10 @@ impl RemoteAccessConnection {
             "requesting LiveKit credentials from API server"
         );
         let credentials = match provider
-            .load_credentials(
-                existing_session_id,
-                Some(protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION),
-            )
+            .load_credentials(RemoteSessionRequest {
+                remote_access_session_id: existing_session_id,
+                protocol_version: Some(protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.to_owned()),
+            })
             .await
         {
             Ok(creds) => {
