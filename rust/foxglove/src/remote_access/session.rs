@@ -968,6 +968,8 @@ impl RemoteAccessSession {
         if let Err(e) = stream.write(&encode_json_message(&status)).await {
             error!("failed to send incompatible version error to {participant_id}: {e:?}");
         }
+
+        _ = stream.close().await;
     }
 
     /// Handle a message from a `client-ch-{channelId}` byte stream.
