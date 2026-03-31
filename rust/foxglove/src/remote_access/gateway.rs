@@ -6,6 +6,7 @@ use tokio::task::JoinHandle;
 
 use crate::{
     ChannelDescriptor, Context, FoxgloveError, SinkChannelFilter,
+    protocol::v2::parameter::Parameter,
     remote_common::service::{Service, ServiceMap},
     runtime::get_runtime_handle,
     sink_channel_filter::SinkChannelFilterFn,
@@ -58,6 +59,11 @@ impl GatewayHandle {
     /// Unrecognized service names are silently ignored.
     pub fn remove_services(&self, names: impl IntoIterator<Item = impl AsRef<str>>) {
         self.connection.remove_services(names);
+    }
+
+    /// Publishes parameter values to all subscribed clients.
+    pub fn publish_parameter_values(&self, parameters: Vec<Parameter>) {
+        self.connection.publish_parameter_values(parameters);
     }
 
     /// Gracefully disconnect from the remote access connection, if connected.
