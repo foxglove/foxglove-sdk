@@ -1614,7 +1614,8 @@ impl RemoteAccessSession {
                 participant.client_id(),
                 participant.participant_id().clone(),
             );
-            let parameters = listener.on_get_parameters(&client, param_names, request_id.as_deref());
+            let parameters =
+                listener.on_get_parameters(&client, param_names, request_id.as_deref());
             self.send_parameter_values(participant, parameters, request_id);
         }
     }

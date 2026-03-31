@@ -840,7 +840,7 @@ pub unsafe extern "C" fn foxglove_server_remove_status(
 impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
     fn on_subscribe(
         &self,
-        client: foxglove::websocket::Client,
+        client: &foxglove::websocket::Client,
         channel: foxglove::websocket::ChannelView,
     ) {
         if let Some(on_subscribe) = self.on_subscribe {
@@ -854,7 +854,7 @@ impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
 
     fn on_unsubscribe(
         &self,
-        client: foxglove::websocket::Client,
+        client: &foxglove::websocket::Client,
         channel: foxglove::websocket::ChannelView,
     ) {
         if let Some(on_unsubscribe) = self.on_unsubscribe {
@@ -868,7 +868,7 @@ impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
 
     fn on_client_advertise(
         &self,
-        client: foxglove::websocket::Client,
+        client: &foxglove::websocket::Client,
         channel: &foxglove::websocket::ClientChannel,
     ) {
         let Some(on_client_advertise) = self.on_client_advertise else {
@@ -906,7 +906,7 @@ impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
 
     fn on_message_data(
         &self,
-        client: foxglove::websocket::Client,
+        client: &foxglove::websocket::Client,
         channel: &foxglove::websocket::ClientChannel,
         payload: &[u8],
     ) {
@@ -925,7 +925,7 @@ impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
 
     fn on_client_unadvertise(
         &self,
-        client: foxglove::websocket::Client,
+        client: &foxglove::websocket::Client,
         channel: &foxglove::websocket::ClientChannel,
     ) {
         if let Some(on_client_unadvertise) = self.on_client_unadvertise {
@@ -935,7 +935,7 @@ impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
 
     fn on_get_parameters(
         &self,
-        client: foxglove::websocket::Client,
+        client: &foxglove::websocket::Client,
         param_names: Vec<String>,
         request_id: Option<&str>,
     ) -> Vec<foxglove::websocket::Parameter> {
@@ -968,7 +968,7 @@ impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
 
     fn on_set_parameters(
         &self,
-        client: foxglove::websocket::Client,
+        client: &foxglove::websocket::Client,
         params: Vec<foxglove::websocket::Parameter>,
         request_id: Option<&str>,
     ) -> Vec<foxglove::websocket::Parameter> {
