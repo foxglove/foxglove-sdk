@@ -4,7 +4,7 @@
 # includes to include paths.
 
 cmake_minimum_required(VERSION 3.25)
-project(foxglove-sdk)
+project(foxglove-sdk VERSION 0.21.0)
 
 # Enable ccache if available
 find_program(CCACHE_PROGRAM ccache)
@@ -454,7 +454,7 @@ configure_package_config_file(
 
 write_basic_package_version_file(
   "${CMAKE_CURRENT_BINARY_DIR}/foxglove-sdkConfigVersion.cmake"
-  VERSION 0.0.0
+  VERSION ${PROJECT_VERSION}
   COMPATIBILITY SameMajorVersion
 )
 
