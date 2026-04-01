@@ -750,8 +750,11 @@ impl RemoteAccessSession {
                 }
             }
             ClientMessage::PingAck(ack) => {
-                let rtt_ms = millis_since_epoch().saturating_sub(ack.device_timestamp) as f64;
-                self.rtt_tracker.lock().record_sample(rtt_ms);
+                let now = millis_since_epoch();
+                if now >= ack.device_timestamp {
+                    let rtt_ms = (now - ack.device_timestamp) as f64;
+                    self.rtt_tracker.lock().record_sample(rtt_ms);
+                }
             }
             _ => {
                 warn!("Unhandled client message: {client_msg:?}");
