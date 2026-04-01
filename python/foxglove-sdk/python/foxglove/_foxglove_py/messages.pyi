@@ -594,6 +594,30 @@ class ModelPrimitive:
         """Encodes the ModelPrimitive."""
         ...
 
+class OccupancyGrid:
+    """
+    A 2D grid of occupancy data
+    """
+
+    def __init__(
+        self,
+        *,
+        timestamp: Timestamp | None = None,
+        frame_id: str = "",
+        pose: Pose | None = None,
+        column_count: int = 0,
+        cell_size: Vector2 | None = None,
+        data: bytes = b"",
+    ) -> None: ...
+    @staticmethod
+    def get_schema() -> Schema:
+        """Returns the OccupancyGrid schema"""
+        ...
+
+    def encode(self) -> bytes:
+        """Encodes the OccupancyGrid."""
+        ...
+
 class PackedElementField:
     """
     A field present within each element in a byte array of packed elements.
@@ -1094,6 +1118,7 @@ FoxgloveMessage = Union[
     FrameTransforms,
     GeoJson,
     Grid,
+    OccupancyGrid,
     VoxelGrid,
     ImageAnnotations,
     JointState,

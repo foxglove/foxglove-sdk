@@ -2487,6 +2487,192 @@ pub unsafe extern "C" fn foxglove_grid_encode(
     }
 }
 
+/// A 2D grid of occupancy data
+#[repr(C)]
+pub struct OccupancyGrid {
+    /// Timestamp of grid
+    pub timestamp: *const FoxgloveTimestamp,
+
+    /// Frame of reference
+    pub frame_id: FoxgloveString,
+
+    /// Origin of grid's corner relative to frame of reference; grid is positioned in the x-y plane relative to this origin
+    pub pose: *const Pose,
+
+    /// Number of grid columns
+    pub column_count: u32,
+
+    /// Size of single grid cell along x and y axes, relative to `pose`
+    pub cell_size: *const Vector2,
+
+    /// Occupancy grid cell data, in row-major (y-major) order. Each byte represents a single cell's occupancy value as a signed 8-bit integer: 0 represents a free cell, 100 represents an occupied cell, and -1 (255 as unsigned) represents an unknown cell. Values between 0 and 100 represent the probability that the cell is occupied.
+    pub data: *const c_uchar,
+    pub data_len: usize,
+}
+
+#[cfg(not(target_family = "wasm"))]
+impl OccupancyGrid {
+    /// Create a new typed channel, and return an owned raw channel pointer to it.
+    ///
+    /// # Safety
+    /// We're trusting the caller that the channel will only be used with this type T.
+    #[unsafe(no_mangle)]
+    pub unsafe extern "C" fn foxglove_channel_create_occupancy_grid(
+        topic: FoxgloveString,
+        context: *const FoxgloveContext,
+        channel: *mut *const FoxgloveChannel,
+    ) -> FoxgloveError {
+        if channel.is_null() {
+            tracing::error!("channel cannot be null");
+            return FoxgloveError::ValueError;
+        }
+        unsafe {
+            let result =
+                do_foxglove_channel_create::<foxglove::messages::OccupancyGrid>(topic, context);
+            result_to_c(result, channel)
+        }
+    }
+}
+
+impl BorrowToNative for OccupancyGrid {
+    type NativeType = foxglove::messages::OccupancyGrid;
+
+    unsafe fn borrow_to_native(
+        &self,
+        #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
+    ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
+        let frame_id = unsafe {
+            string_from_raw(
+                self.frame_id.as_ptr() as *const _,
+                self.frame_id.len(),
+                "frame_id",
+            )?
+        };
+        let pose = unsafe {
+            self.pose
+                .as_ref()
+                .map(|m| m.borrow_to_native(arena.as_mut()))
+        }
+        .transpose()?;
+        let cell_size = unsafe {
+            self.cell_size
+                .as_ref()
+                .map(|m| m.borrow_to_native(arena.as_mut()))
+        }
+        .transpose()?;
+
+        Ok(ManuallyDrop::new(foxglove::messages::OccupancyGrid {
+            timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
+            frame_id: ManuallyDrop::into_inner(frame_id),
+            pose: pose.map(ManuallyDrop::into_inner),
+            column_count: self.column_count,
+            cell_size: cell_size.map(ManuallyDrop::into_inner),
+            data: ManuallyDrop::into_inner(unsafe { bytes_from_raw(self.data, self.data_len) }),
+        }))
+    }
+}
+
+/// Log a OccupancyGrid message to a channel.
+///
+/// # Safety
+/// The channel must have been created for this type with foxglove_channel_create_occupancy_grid.
+#[cfg(not(target_family = "wasm"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn foxglove_channel_log_occupancy_grid(
+    channel: Option<&FoxgloveChannel>,
+    msg: Option<&OccupancyGrid>,
+    log_time: Option<&u64>,
+    sink_id: FoxgloveSinkId,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { OccupancyGrid::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
+            log_msg_to_channel(channel, &*msg, log_time, sink_id)
+        }
+        Err(e) => {
+            tracing::error!("OccupancyGrid: {}", e);
+            e.into()
+        }
+    }
+}
+
+/// Get the OccupancyGrid schema.
+///
+/// All buffers in the returned schema are statically allocated.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_occupancy_grid_schema() -> FoxgloveSchema {
+    let native =
+        foxglove::messages::OccupancyGrid::get_schema().expect("OccupancyGrid schema is Some");
+    let name: &'static str = "foxglove.OccupancyGrid";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("OccupancyGrid schema data is static");
+    };
+    FoxgloveSchema {
+        name: name.into(),
+        encoding: encoding.into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
+/// Encode a OccupancyGrid message as protobuf to the buffer provided.
+///
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+/// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+/// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+///
+/// # Safety
+/// ptr must be a valid pointer to a memory region at least len bytes long.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_occupancy_grid_encode(
+    msg: Option<&OccupancyGrid>,
+    ptr: *mut u8,
+    len: usize,
+    encoded_len: Option<&mut usize>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { OccupancyGrid::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            if len == 0 || ptr.is_null() {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = msg
+                        .encoded_len()
+                        .expect("foxglove messages return Some(len)");
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
+            if let Err(encode_error) = msg.encode(&mut buf) {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
+            }
+            FoxgloveError::Ok
+        }
+        Err(e) => {
+            tracing::error!("OccupancyGrid: {}", e);
+            FoxgloveError::EncodeError
+        }
+    }
+}
+
 /// A 3D grid of data
 #[repr(C)]
 pub struct VoxelGrid {

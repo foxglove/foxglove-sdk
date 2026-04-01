@@ -42,6 +42,7 @@ If the IDL does not support optional fields (e.g. ROS) you must specify a value 
 - [LocationFixes](#locationfixes)
 - [Log](#log)
 - [ModelPrimitive](#modelprimitive)
+- [OccupancyGrid](#occupancygrid)
 - [PackedElementField](#packedelementfield)
 - [Point2](#point2)
 - [Point3](#point3)
@@ -2106,6 +2107,96 @@ bytes
 <td>
 
 Embedded model. One of `url` or `data` should be non-empty. If `data` is non-empty, `media_type` must be set to indicate the type of the data.
+
+</td>
+</tr>
+</table>
+
+## OccupancyGrid
+
+A 2D grid of occupancy data
+
+<table>
+  <tr>
+    <th>field</th>
+    <th>type</th>
+    <th>description</th>
+  </tr>
+<tr>
+<td><code>timestamp</code></td>
+<td>
+
+[Timestamp](#timestamp)
+
+</td>
+<td>
+
+Timestamp of grid
+
+</td>
+</tr>
+<tr>
+<td><code>frame_id</code></td>
+<td>
+
+string
+
+</td>
+<td>
+
+Frame of reference
+
+</td>
+</tr>
+<tr>
+<td><code>pose</code></td>
+<td>
+
+[Pose](#pose)
+
+</td>
+<td>
+
+Origin of grid's corner relative to frame of reference; grid is positioned in the x-y plane relative to this origin
+
+</td>
+</tr>
+<tr>
+<td><code>column_count</code></td>
+<td>
+
+uint32
+
+</td>
+<td>
+
+Number of grid columns
+
+</td>
+</tr>
+<tr>
+<td><code>cell_size</code></td>
+<td>
+
+[Vector2](#vector2)
+
+</td>
+<td>
+
+Size of single grid cell along x and y axes, relative to `pose`
+
+</td>
+</tr>
+<tr>
+<td><code>data</code></td>
+<td>
+
+bytes
+
+</td>
+<td>
+
+Occupancy grid cell data, in row-major (y-major) order. Each byte represents a single cell's occupancy value as a signed 8-bit integer: 0 represents a free cell, 100 represents an occupied cell, and -1 (255 as unsigned) represents an unknown cell. Values between 0 and 100 represent the probability that the cell is occupied.
 
 </td>
 </tr>

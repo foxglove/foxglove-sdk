@@ -46,6 +46,7 @@ void locationFixToC(foxglove_location_fix& dest, const LocationFix& src, Arena& 
 void locationFixesToC(foxglove_location_fixes& dest, const LocationFixes& src, Arena& arena);
 void logToC(foxglove_log& dest, const Log& src, Arena& arena);
 void modelPrimitiveToC(foxglove_model_primitive& dest, const ModelPrimitive& src, Arena& arena);
+void occupancyGridToC(foxglove_occupancy_grid& dest, const OccupancyGrid& src, Arena& arena);
 void packedElementFieldToC(
   foxglove_packed_element_field& dest, const PackedElementField& src, Arena& arena
 );
@@ -897,6 +898,42 @@ uint64_t ModelPrimitiveChannel::id() const noexcept {
 }
 
 bool ModelPrimitiveChannel::hasSinks() const noexcept {
+  return foxglove_channel_has_sinks(impl_.get());
+}
+
+FoxgloveResult<OccupancyGridChannel> OccupancyGridChannel::create(
+  const std::string_view& topic, const Context& context
+) {
+  const foxglove_channel* channel = nullptr;
+  foxglove_error error = foxglove_channel_create_occupancy_grid(
+    {topic.data(), topic.size()}, context.getInner(), &channel
+  );
+  if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
+    return tl::unexpected(FoxgloveError(error));
+  }
+  return OccupancyGridChannel(ChannelUniquePtr(channel));
+}
+
+FoxgloveError OccupancyGridChannel::log(
+  const OccupancyGrid& msg, std::optional<uint64_t> log_time, std::optional<uint64_t> sink_id
+) noexcept {
+  Arena arena;
+  foxglove_occupancy_grid c_msg;
+  occupancyGridToC(c_msg, msg, arena);
+  return FoxgloveError(foxglove_channel_log_occupancy_grid(
+    impl_.get(), &c_msg, log_time ? &*log_time : nullptr, sink_id ? *sink_id : 0
+  ));
+}
+
+void OccupancyGridChannel::close() noexcept {
+  foxglove_channel_close(impl_.get());
+}
+
+uint64_t OccupancyGridChannel::id() const noexcept {
+  return foxglove_channel_get_id(impl_.get());
+}
+
+bool OccupancyGridChannel::hasSinks() const noexcept {
   return foxglove_channel_has_sinks(impl_.get());
 }
 
@@ -1980,6 +2017,20 @@ void modelPrimitiveToC(
   dest.data_len = src.data.size();
 }
 
+void occupancyGridToC(
+  foxglove_occupancy_grid& dest, const OccupancyGrid& src, [[maybe_unused]] Arena& arena
+) {
+  dest.timestamp =
+    src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
+  dest.frame_id = {src.frame_id.data(), src.frame_id.size()};
+  dest.pose = src.pose ? arena.mapOne<foxglove_pose>(src.pose.value(), poseToC) : nullptr;
+  dest.column_count = src.column_count;
+  dest.cell_size =
+    src.cell_size ? reinterpret_cast<const foxglove_vector2*>(&*src.cell_size) : nullptr;
+  dest.data = reinterpret_cast<const unsigned char*>(src.data.data());
+  dest.data_len = src.data.size();
+}
+
 void packedElementFieldToC(
   foxglove_packed_element_field& dest, const PackedElementField& src, [[maybe_unused]] Arena& arena
 ) {
@@ -2354,6 +2405,13 @@ FoxgloveError ModelPrimitive::encode(uint8_t* ptr, size_t len, size_t* encoded_l
   foxglove_model_primitive c_msg;
   modelPrimitiveToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_model_primitive_encode(&c_msg, ptr, len, encoded_len));
+}
+
+FoxgloveError OccupancyGrid::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
+  Arena arena;
+  foxglove_occupancy_grid c_msg;
+  occupancyGridToC(c_msg, *this, arena);
+  return FoxgloveError(foxglove_occupancy_grid_encode(&c_msg, ptr, len, encoded_len));
 }
 
 FoxgloveError PackedElementField::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
@@ -2733,6 +2791,16 @@ Schema Log::schema() {
 
 Schema ModelPrimitive::schema() {
   struct foxglove_schema c_schema = foxglove_model_primitive_schema();
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data_len = c_schema.data_len;
+  return result;
+}
+
+Schema OccupancyGrid::schema() {
+  struct foxglove_schema c_schema = foxglove_occupancy_grid_schema();
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);

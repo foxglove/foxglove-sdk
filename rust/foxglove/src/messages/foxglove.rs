@@ -806,6 +806,32 @@ pub struct ModelPrimitive {
     #[cfg_attr(feature = "serde", serde(with = "crate::messages::serde_bytes"))]
     pub data: ::prost::bytes::Bytes,
 }
+/// A 2D grid of occupancy data
+///
+/// <https://docs.foxglove.dev/docs/visualization/message-schemas/occupancy-grid>
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct OccupancyGrid {
+    /// Timestamp of grid
+    #[prost(message, optional, tag = "1")]
+    pub timestamp: ::core::option::Option<crate::messages::Timestamp>,
+    /// Frame of reference
+    #[prost(string, tag = "2")]
+    pub frame_id: ::prost::alloc::string::String,
+    /// Origin of grid's corner relative to frame of reference; grid is positioned in the x-y plane relative to this origin
+    #[prost(message, optional, tag = "3")]
+    pub pose: ::core::option::Option<Pose>,
+    /// Number of grid columns
+    #[prost(fixed32, tag = "4")]
+    pub column_count: u32,
+    /// Size of single grid cell along x and y axes, relative to `pose`
+    #[prost(message, optional, tag = "5")]
+    pub cell_size: ::core::option::Option<Vector2>,
+    /// Occupancy grid cell data, in row-major (y-major) order. Each byte represents a single cell's occupancy value as a signed 8-bit integer: 0 represents a free cell, 100 represents an occupied cell, and -1 (255 as unsigned) represents an unknown cell. Values between 0 and 100 represent the probability that the cell is occupied.
+    #[prost(bytes = "bytes", tag = "6")]
+    #[cfg_attr(feature = "serde", serde(with = "crate::messages::serde_bytes"))]
+    pub data: ::prost::bytes::Bytes,
+}
 /// A field present within each element in a byte array of packed elements.
 ///
 /// <https://docs.foxglove.dev/docs/visualization/message-schemas/packed-element-field>
