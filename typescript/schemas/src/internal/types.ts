@@ -33,8 +33,6 @@ export type FoxgloveMessageSchema = {
   type: "message";
   name: string;
   description: string;
-  /** Deprecated schema retained for compatibility. */
-  deprecated?: true;
   /** Exclude this schema from generated markdown docs. */
   hiddenFromDocs?: true;
   rosEquivalent?: keyof typeof import("@foxglove/rosmsg-msgs-common").ros1;

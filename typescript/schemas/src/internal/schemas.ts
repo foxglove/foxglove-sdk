@@ -159,7 +159,6 @@ const Velocity3: FoxgloveMessageSchema = {
   type: "message",
   name: "Velocity3",
   description: "A velocity vector in 3D space. Deprecated: use Vector3.",
-  deprecated: true,
   hiddenFromDocs: true,
   fields: [
     {
