@@ -1,7 +1,0 @@
----
-source: rust/foxglove/src/protocol/v2/client.rs
-expression: "format!(\"{:#04x?}\", buf)"
----
-[
-    0x04,
-]

@@ -26,6 +26,9 @@ impl<'a> Ping<'a> {
 
 impl<'a> BinaryPayload<'a> for Ping<'a> {
     fn parse_payload(data: &'a [u8]) -> Result<Self, ParseError> {
+        if data.len() < 8 {
+            return Err(ParseError::BufferTooShort);
+        }
         Ok(Self {
             payload: Cow::Borrowed(data),
         })
@@ -56,13 +59,8 @@ mod tests {
     }
 
     #[test]
-    fn test_empty_payload() {
-        let orig = Ping {
-            payload: Cow::Borrowed(b""),
-        };
-        let mut buf = Vec::new();
-        orig.write_payload(&mut buf);
-        let parsed = Ping::parse_payload(&buf).unwrap();
-        assert_eq!(parsed, orig);
+    fn test_buffer_too_short() {
+        let result = Ping::parse_payload(&[0x01, 0x02, 0x03]);
+        assert!(result.is_err());
     }
 }

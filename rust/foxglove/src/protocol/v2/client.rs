@@ -254,14 +254,12 @@ mod tests {
     }
 
     #[test]
-    fn test_ping_encode_empty_payload() {
+    fn test_ping_rejects_short_payload() {
         let message = Ping {
-            payload: b"".as_slice().into(),
+            payload: b"short".as_slice().into(),
         };
         let buf = message.to_bytes();
-        insta::assert_snapshot!(format!("{:#04x?}", buf));
-        let parsed = ClientMessage::parse_binary(&buf).unwrap();
-        assert_eq!(parsed, ClientMessage::Ping(message));
+        assert!(ClientMessage::parse_binary(&buf).is_err());
     }
 
     #[test]

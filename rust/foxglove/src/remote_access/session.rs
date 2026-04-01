@@ -734,20 +734,13 @@ impl RemoteAccessSession {
                 self.handle_unsubscribe_parameter_updates(&participant, msg.parameter_names);
             }
             ClientMessage::Ping(msg) => {
-                if msg.payload.len() < 8 {
-                    warn!(
-                        "Ping payload too short ({} bytes), ignoring",
-                        msg.payload.len()
-                    );
-                } else {
-                    // Build pong payload: [appTimestamp: u64 LE][deviceTimestamp: u64 LE]
-                    let mut pong_payload = Vec::with_capacity(16);
-                    pong_payload.extend_from_slice(&msg.payload[..8]);
-                    pong_payload.extend_from_slice(&millis_since_epoch().to_le_bytes());
-                    let pong = Pong::new(&pong_payload);
-                    let framed = encode_binary_message(&pong);
-                    self.send_control(participant, framed);
-                }
+                // Build pong payload: [appTimestamp: u64 LE][deviceTimestamp: u64 LE]
+                let mut pong_payload = Vec::with_capacity(16);
+                pong_payload.extend_from_slice(&msg.payload[..8]);
+                pong_payload.extend_from_slice(&millis_since_epoch().to_le_bytes());
+                let pong = Pong::new(&pong_payload);
+                let framed = encode_binary_message(&pong);
+                self.send_control(participant, framed);
             }
             ClientMessage::PingAck(ack) => {
                 let now = millis_since_epoch();
