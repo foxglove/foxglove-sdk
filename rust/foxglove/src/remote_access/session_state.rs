@@ -137,6 +137,10 @@ impl SessionState {
         for (&channel_id, subscribers) in &mut self.subscriptions {
             if let Some(pos) = subscribers.iter().position(|id| id == identity) {
                 subscribers.swap_remove(pos);
+                debug_assert!(
+                    self.channels.contains_key(&channel_id),
+                    "Channel {channel_id:?} has subscribers but is not advertised"
+                );
                 if let Some(descriptor) = self.channels.get(&channel_id).map(|ch| ch.descriptor()) {
                     subscribed_descriptors.push(descriptor.clone());
                 }
@@ -376,10 +380,10 @@ impl SessionState {
 
     /// Subscribes a participant to the given channels.
     ///
-    /// Returns two sets of channel IDs:
-    /// - `first_subscribed`: channels that gained their first subscriber (for context notifications).
-    /// - `newly_subscribed`: all channels where this participant was actually added (for listener
-    ///   callbacks). This excludes channels the participant was already subscribed to.
+    /// Returns:
+    /// - `first_subscribed`: channel IDs that gained their first subscriber (for context notifications).
+    /// - `newly_subscribed_descriptors`: descriptors for all channels where this participant was
+    ///   actually added (for listener callbacks). Excludes channels already subscribed to.
     #[must_use]
     pub fn subscribe(
         &mut self,
@@ -397,6 +401,10 @@ impl SessionState {
             let is_first = subscribers.is_empty();
             subscribers.push(participant.participant_id().clone());
             debug!("{participant} subscribed to channel {channel_id:?}");
+            debug_assert!(
+                self.channels.contains_key(&channel_id),
+                "Subscribing to channel {channel_id:?} which is not advertised"
+            );
             if let Some(descriptor) = self.get_channel_descriptor(&channel_id) {
                 newly_subscribed_descriptors.push(descriptor.clone());
             }
@@ -412,10 +420,10 @@ impl SessionState {
 
     /// Unsubscribes a participant from the given channels.
     ///
-    /// Returns two sets of channel IDs:
-    /// - `last_unsubscribed`: channels that lost their last subscriber (for context notifications).
-    /// - `actually_unsubscribed`: all channels where this participant was actually removed (for
-    ///   listener callbacks). This excludes channels the participant was not subscribed to.
+    /// Returns:
+    /// - `last_unsubscribed`: channel IDs that lost their last subscriber (for context notifications).
+    /// - `actually_unsubscribed_descriptors`: descriptors for all channels where this participant
+    ///   was actually removed (for listener callbacks). Excludes channels not subscribed to.
     #[must_use]
     pub fn unsubscribe(
         &mut self,
@@ -439,6 +447,10 @@ impl SessionState {
             };
             subscribers.swap_remove(pos);
             debug!("{participant} unsubscribed from channel {channel_id:?}");
+            debug_assert!(
+                self.channels.contains_key(&channel_id),
+                "Unsubscribing from channel {channel_id:?} which is not advertised"
+            );
             if let Some(descriptor) = self.channels.get(&channel_id).map(|ch| ch.descriptor()) {
                 actually_unsubscribed_descriptors.push(descriptor.clone());
             }
