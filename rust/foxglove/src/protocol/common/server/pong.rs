@@ -7,10 +7,12 @@ use crate::protocol::{BinaryPayload, ParseError};
 /// Pong message sent by the server in response to a
 /// [`Ping`](crate::protocol::common::client::Ping).
 ///
-/// The payload is echoed verbatim from the ping.
+/// The payload contains `[appTimestamp: u64 LE][deviceTimestamp: u64 LE]` (16 bytes),
+/// where `appTimestamp` is copied from the first 8 bytes of the ping and
+/// `deviceTimestamp` is the server's current time in milliseconds since the Unix epoch.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Pong<'a> {
-    /// Opaque payload echoed from the ping.
+    /// Pong payload: `[appTimestamp (8 bytes)][deviceTimestamp (8 bytes)]`, both little-endian.
     pub payload: Cow<'a, [u8]>,
 }
 

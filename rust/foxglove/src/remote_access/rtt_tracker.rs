@@ -7,6 +7,7 @@ const EWMA_ALPHA: f64 = 0.3;
 pub(crate) struct RttTracker {
     label: &'static str,
     first_sample_excluded: bool,
+    /// Most recent raw RTT sample, retained for future stats/diagnostics reporting.
     latest_ms: Option<f64>,
     ewma_ms: Option<f64>,
     ewma_variance: f64,
