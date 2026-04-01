@@ -33,6 +33,9 @@ impl<'a> Pong<'a> {
 
 impl<'a> BinaryPayload<'a> for Pong<'a> {
     fn parse_payload(data: &'a [u8]) -> Result<Self, ParseError> {
+        if data.len() < 16 {
+            return Err(ParseError::BufferTooShort);
+        }
         Ok(Self {
             payload: Cow::Borrowed(data),
         })
@@ -53,7 +56,7 @@ mod tests {
 
     #[test]
     fn test_roundtrip() {
-        let orig = Pong::new(b"1234567890");
+        let orig = Pong::new(b"1234567890123456");
         let mut buf = Vec::new();
         orig.write_payload(&mut buf);
         let parsed = Pong::parse_payload(&buf).unwrap();
@@ -61,11 +64,8 @@ mod tests {
     }
 
     #[test]
-    fn test_empty_payload() {
-        let orig = Pong::new(b"");
-        let mut buf = Vec::new();
-        orig.write_payload(&mut buf);
-        let parsed = Pong::parse_payload(&buf).unwrap();
-        assert_eq!(parsed, orig);
+    fn test_buffer_too_short() {
+        let result = Pong::parse_payload(b"short");
+        assert!(result.is_err());
     }
 }

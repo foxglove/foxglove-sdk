@@ -264,7 +264,7 @@ mod tests {
 
     #[test]
     fn test_pong_encode() {
-        let message = Pong::new(b"1234567890");
+        let message = Pong::new(b"1234567890123456");
         let buf = message.to_bytes();
         insta::assert_snapshot!(format!("{:#04x?}", buf));
         let parsed = ServerMessage::parse_binary(&buf).unwrap();
@@ -272,12 +272,10 @@ mod tests {
     }
 
     #[test]
-    fn test_pong_encode_empty_payload() {
-        let message = Pong::new(b"");
+    fn test_pong_rejects_short_payload() {
+        let message = Pong::new(b"short");
         let buf = message.to_bytes();
-        insta::assert_snapshot!(format!("{:#04x?}", buf));
-        let parsed = ServerMessage::parse_binary(&buf).unwrap();
-        assert_eq!(parsed, ServerMessage::Pong(message));
+        assert!(ServerMessage::parse_binary(&buf).is_err());
     }
 
     #[test]
