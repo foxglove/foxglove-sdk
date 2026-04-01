@@ -120,12 +120,12 @@ const Vector2: FoxgloveMessageSchema = {
     {
       name: "x",
       type: { type: "primitive", name: "float64" },
-      description: "x coordinate length",
+      description: "x component",
     },
     {
       name: "y",
       type: { type: "primitive", name: "float64" },
-      description: "y coordinate length",
+      description: "y component",
     },
   ],
 };
@@ -140,17 +140,17 @@ const Vector3: FoxgloveMessageSchema = {
     {
       name: "x",
       type: { type: "primitive", name: "float64" },
-      description: "x coordinate length",
+      description: "x component",
     },
     {
       name: "y",
       type: { type: "primitive", name: "float64" },
-      description: "y coordinate length",
+      description: "y component",
     },
     {
       name: "z",
       type: { type: "primitive", name: "float64" },
-      description: "z coordinate length",
+      description: "z component",
     },
   ],
 };
