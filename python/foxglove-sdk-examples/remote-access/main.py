@@ -1,7 +1,6 @@
 import json
 import logging
 import math
-import signal
 import time
 
 import foxglove
@@ -105,39 +104,33 @@ def main() -> None:
         P=[FX, 0, CX, 0, 0, FY, CY, 0, 0, 0, 1, 0],
     )
 
-    done = False
-
-    def handle_sigint(_sig: int, _frame: object) -> None:
-        nonlocal done
-        logging.info("Shutting down...")
-        done = True
-
-    signal.signal(signal.SIGINT, handle_sigint)
-
     frame = 0
-    while not done:
-        time.sleep(1 / 30)  # ~30 fps
+    try:
+        while True:
+            time.sleep(1 / 30)  # ~30 fps
 
-        now_ns = time.time_ns()
-        image_data = render_color_ramp(frame)
+            now_ns = time.time_ns()
+            image_data = render_color_ramp(frame)
 
-        image_channel.log(
-            RawImage(
-                frame_id="camera",
-                width=WIDTH,
-                height=HEIGHT,
-                encoding="rgb8",
-                step=STEP,
-                data=image_data,
-            ),
-            log_time=now_ns,
-        )
+            image_channel.log(
+                RawImage(
+                    frame_id="camera",
+                    width=WIDTH,
+                    height=HEIGHT,
+                    encoding="rgb8",
+                    step=STEP,
+                    data=image_data,
+                ),
+                log_time=now_ns,
+            )
 
-        cal_channel.log(calibration, log_time=now_ns)
-        frame += 1
-
-    gateway.stop()
-    logging.info("Done")
+            cal_channel.log(calibration, log_time=now_ns)
+            frame += 1
+    except KeyboardInterrupt:
+        logging.info("Shutting down...")
+    finally:
+        gateway.stop()
+        logging.info("Done")
 
 
 if __name__ == "__main__":
