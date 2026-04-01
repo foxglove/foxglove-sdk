@@ -6,10 +6,13 @@ use crate::protocol::{BinaryPayload, ParseError};
 
 /// Ping message sent by the client to measure round-trip time.
 ///
-/// The server echoes the payload back in a [`Pong`](crate::protocol::common::server::Pong).
+/// The payload must be at least 8 bytes. The first 8 bytes are treated as
+/// `appTimestamp` (u64 LE) and are copied into the
+/// [`Pong`](crate::protocol::common::server::Pong) response along with the
+/// server's own `deviceTimestamp`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Ping<'a> {
-    /// Opaque payload echoed back by the server.
+    /// Ping payload containing `appTimestamp` (u64 LE) in the first 8 bytes.
     pub payload: Cow<'a, [u8]>,
 }
 
