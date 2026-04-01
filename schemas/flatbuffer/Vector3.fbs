@@ -4,13 +4,13 @@ namespace foxglove;
 
 /// A vector in 3D space that represents a direction only
 table Vector3 {
-  /// x coordinate length
+  /// x component
   x:double (id: 0);
 
-  /// y coordinate length
+  /// y component
   y:double (id: 1);
 
-  /// z coordinate length
+  /// z component
   z:double (id: 2);
 }
 

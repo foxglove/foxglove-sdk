@@ -18,15 +18,15 @@ export const ArrowPrimitive = {
           "properties": {
             "x": {
               "type": "number",
-              "description": "x coordinate length"
+              "description": "x component"
             },
             "y": {
               "type": "number",
-              "description": "y coordinate length"
+              "description": "y component"
             },
             "z": {
               "type": "number",
-              "description": "z coordinate length"
+              "description": "z component"
             }
           },
           "required": [
@@ -468,15 +468,15 @@ export const CompressedPointCloud = {
           "properties": {
             "x": {
               "type": "number",
-              "description": "x coordinate length"
+              "description": "x component"
             },
             "y": {
               "type": "number",
-              "description": "y coordinate length"
+              "description": "y component"
             },
             "z": {
               "type": "number",
-              "description": "z coordinate length"
+              "description": "z component"
             }
           },
           "required": [
@@ -601,15 +601,15 @@ export const CylinderPrimitive = {
           "properties": {
             "x": {
               "type": "number",
-              "description": "x coordinate length"
+              "description": "x component"
             },
             "y": {
               "type": "number",
-              "description": "y coordinate length"
+              "description": "y component"
             },
             "z": {
               "type": "number",
-              "description": "z coordinate length"
+              "description": "z component"
             }
           },
           "required": [
@@ -660,15 +660,15 @@ export const CylinderPrimitive = {
       "properties": {
         "x": {
           "type": "number",
-          "description": "x coordinate length"
+          "description": "x component"
         },
         "y": {
           "type": "number",
-          "description": "y coordinate length"
+          "description": "y component"
         },
         "z": {
           "type": "number",
-          "description": "z coordinate length"
+          "description": "z component"
         }
       },
       "required": [
@@ -742,15 +742,15 @@ export const CubePrimitive = {
           "properties": {
             "x": {
               "type": "number",
-              "description": "x coordinate length"
+              "description": "x component"
             },
             "y": {
               "type": "number",
-              "description": "y coordinate length"
+              "description": "y component"
             },
             "z": {
               "type": "number",
-              "description": "z coordinate length"
+              "description": "z component"
             }
           },
           "required": [
@@ -801,15 +801,15 @@ export const CubePrimitive = {
       "properties": {
         "x": {
           "type": "number",
-          "description": "x coordinate length"
+          "description": "x component"
         },
         "y": {
           "type": "number",
-          "description": "y coordinate length"
+          "description": "y component"
         },
         "z": {
           "type": "number",
-          "description": "z coordinate length"
+          "description": "z component"
         }
       },
       "required": [
@@ -914,15 +914,15 @@ export const FrameTransform = {
       "properties": {
         "x": {
           "type": "number",
-          "description": "x coordinate length"
+          "description": "x component"
         },
         "y": {
           "type": "number",
-          "description": "y coordinate length"
+          "description": "y component"
         },
         "z": {
           "type": "number",
-          "description": "z coordinate length"
+          "description": "z component"
         }
       },
       "required": [
@@ -1014,15 +1014,15 @@ export const FrameTransforms = {
             "properties": {
               "x": {
                 "type": "number",
-                "description": "x coordinate length"
+                "description": "x component"
               },
               "y": {
                 "type": "number",
-                "description": "y coordinate length"
+                "description": "y component"
               },
               "z": {
                 "type": "number",
-                "description": "z coordinate length"
+                "description": "z component"
               }
             },
             "required": [
@@ -1131,15 +1131,15 @@ export const Grid = {
           "properties": {
             "x": {
               "type": "number",
-              "description": "x coordinate length"
+              "description": "x component"
             },
             "y": {
               "type": "number",
-              "description": "y coordinate length"
+              "description": "y component"
             },
             "z": {
               "type": "number",
-              "description": "z coordinate length"
+              "description": "z component"
             }
           },
           "required": [
@@ -1195,11 +1195,11 @@ export const Grid = {
       "properties": {
         "x": {
           "type": "number",
-          "description": "x coordinate length"
+          "description": "x component"
         },
         "y": {
           "type": "number",
-          "description": "y coordinate length"
+          "description": "y component"
         }
       },
       "required": [
@@ -1350,15 +1350,15 @@ export const VoxelGrid = {
           "properties": {
             "x": {
               "type": "number",
-              "description": "x coordinate length"
+              "description": "x component"
             },
             "y": {
               "type": "number",
-              "description": "y coordinate length"
+              "description": "y component"
             },
             "z": {
               "type": "number",
-              "description": "z coordinate length"
+              "description": "z component"
             }
           },
           "required": [
@@ -1419,15 +1419,15 @@ export const VoxelGrid = {
       "properties": {
         "x": {
           "type": "number",
-          "description": "x coordinate length"
+          "description": "x component"
         },
         "y": {
           "type": "number",
-          "description": "y coordinate length"
+          "description": "y component"
         },
         "z": {
           "type": "number",
-          "description": "z coordinate length"
+          "description": "z component"
         }
       },
       "required": [
@@ -2249,15 +2249,15 @@ export const LaserScan = {
           "properties": {
             "x": {
               "type": "number",
-              "description": "x coordinate length"
+              "description": "x component"
             },
             "y": {
               "type": "number",
-              "description": "y coordinate length"
+              "description": "y component"
             },
             "z": {
               "type": "number",
-              "description": "z coordinate length"
+              "description": "z component"
             }
           },
           "required": [
@@ -2374,15 +2374,15 @@ export const LinePrimitive = {
           "properties": {
             "x": {
               "type": "number",
-              "description": "x coordinate length"
+              "description": "x component"
             },
             "y": {
               "type": "number",
-              "description": "y coordinate length"
+              "description": "y component"
             },
             "z": {
               "type": "number",
-              "description": "z coordinate length"
+              "description": "z component"
             }
           },
           "required": [
@@ -2629,15 +2629,15 @@ export const LocationFix = {
       "properties": {
         "x": {
           "type": "number",
-          "description": "x coordinate length"
+          "description": "x component"
         },
         "y": {
           "type": "number",
-          "description": "y coordinate length"
+          "description": "y component"
         },
         "z": {
           "type": "number",
-          "description": "z coordinate length"
+          "description": "z component"
         }
       },
       "required": [
@@ -2801,15 +2801,15 @@ export const LocationFixes = {
             "properties": {
               "x": {
                 "type": "number",
-                "description": "x coordinate length"
+                "description": "x component"
               },
               "y": {
                 "type": "number",
-                "description": "y coordinate length"
+                "description": "y component"
               },
               "z": {
                 "type": "number",
-                "description": "z coordinate length"
+                "description": "z component"
               }
             },
             "required": [
@@ -3116,15 +3116,15 @@ export const SceneEntity = {
                 "properties": {
                   "x": {
                     "type": "number",
-                    "description": "x coordinate length"
+                    "description": "x component"
                   },
                   "y": {
                     "type": "number",
-                    "description": "y coordinate length"
+                    "description": "y component"
                   },
                   "z": {
                     "type": "number",
-                    "description": "z coordinate length"
+                    "description": "z component"
                   }
                 },
                 "required": [
@@ -3244,15 +3244,15 @@ export const SceneEntity = {
                 "properties": {
                   "x": {
                     "type": "number",
-                    "description": "x coordinate length"
+                    "description": "x component"
                   },
                   "y": {
                     "type": "number",
-                    "description": "y coordinate length"
+                    "description": "y component"
                   },
                   "z": {
                     "type": "number",
-                    "description": "z coordinate length"
+                    "description": "z component"
                   }
                 },
                 "required": [
@@ -3303,15 +3303,15 @@ export const SceneEntity = {
             "properties": {
               "x": {
                 "type": "number",
-                "description": "x coordinate length"
+                "description": "x component"
               },
               "y": {
                 "type": "number",
-                "description": "y coordinate length"
+                "description": "y component"
               },
               "z": {
                 "type": "number",
-                "description": "z coordinate length"
+                "description": "z component"
               }
             },
             "required": [
@@ -3377,15 +3377,15 @@ export const SceneEntity = {
                 "properties": {
                   "x": {
                     "type": "number",
-                    "description": "x coordinate length"
+                    "description": "x component"
                   },
                   "y": {
                     "type": "number",
-                    "description": "y coordinate length"
+                    "description": "y component"
                   },
                   "z": {
                     "type": "number",
-                    "description": "z coordinate length"
+                    "description": "z component"
                   }
                 },
                 "required": [
@@ -3436,15 +3436,15 @@ export const SceneEntity = {
             "properties": {
               "x": {
                 "type": "number",
-                "description": "x coordinate length"
+                "description": "x component"
               },
               "y": {
                 "type": "number",
-                "description": "y coordinate length"
+                "description": "y component"
               },
               "z": {
                 "type": "number",
-                "description": "z coordinate length"
+                "description": "z component"
               }
             },
             "required": [
@@ -3510,15 +3510,15 @@ export const SceneEntity = {
                 "properties": {
                   "x": {
                     "type": "number",
-                    "description": "x coordinate length"
+                    "description": "x component"
                   },
                   "y": {
                     "type": "number",
-                    "description": "y coordinate length"
+                    "description": "y component"
                   },
                   "z": {
                     "type": "number",
-                    "description": "z coordinate length"
+                    "description": "z component"
                   }
                 },
                 "required": [
@@ -3569,15 +3569,15 @@ export const SceneEntity = {
             "properties": {
               "x": {
                 "type": "number",
-                "description": "x coordinate length"
+                "description": "x component"
               },
               "y": {
                 "type": "number",
-                "description": "y coordinate length"
+                "description": "y component"
               },
               "z": {
                 "type": "number",
-                "description": "z coordinate length"
+                "description": "z component"
               }
             },
             "required": [
@@ -3674,15 +3674,15 @@ export const SceneEntity = {
                 "properties": {
                   "x": {
                     "type": "number",
-                    "description": "x coordinate length"
+                    "description": "x component"
                   },
                   "y": {
                     "type": "number",
-                    "description": "y coordinate length"
+                    "description": "y component"
                   },
                   "z": {
                     "type": "number",
-                    "description": "z coordinate length"
+                    "description": "z component"
                   }
                 },
                 "required": [
@@ -3865,15 +3865,15 @@ export const SceneEntity = {
                 "properties": {
                   "x": {
                     "type": "number",
-                    "description": "x coordinate length"
+                    "description": "x component"
                   },
                   "y": {
                     "type": "number",
-                    "description": "y coordinate length"
+                    "description": "y component"
                   },
                   "z": {
                     "type": "number",
-                    "description": "z coordinate length"
+                    "description": "z component"
                   }
                 },
                 "required": [
@@ -4045,15 +4045,15 @@ export const SceneEntity = {
                 "properties": {
                   "x": {
                     "type": "number",
-                    "description": "x coordinate length"
+                    "description": "x component"
                   },
                   "y": {
                     "type": "number",
-                    "description": "y coordinate length"
+                    "description": "y component"
                   },
                   "z": {
                     "type": "number",
-                    "description": "z coordinate length"
+                    "description": "z component"
                   }
                 },
                 "required": [
@@ -4173,15 +4173,15 @@ export const SceneEntity = {
                 "properties": {
                   "x": {
                     "type": "number",
-                    "description": "x coordinate length"
+                    "description": "x component"
                   },
                   "y": {
                     "type": "number",
-                    "description": "y coordinate length"
+                    "description": "y component"
                   },
                   "z": {
                     "type": "number",
-                    "description": "z coordinate length"
+                    "description": "z component"
                   }
                 },
                 "required": [
@@ -4232,15 +4232,15 @@ export const SceneEntity = {
             "properties": {
               "x": {
                 "type": "number",
-                "description": "x coordinate length"
+                "description": "x component"
               },
               "y": {
                 "type": "number",
-                "description": "y coordinate length"
+                "description": "y component"
               },
               "z": {
                 "type": "number",
-                "description": "z coordinate length"
+                "description": "z component"
               }
             },
             "required": [
@@ -4477,15 +4477,15 @@ export const SceneUpdate = {
                       "properties": {
                         "x": {
                           "type": "number",
-                          "description": "x coordinate length"
+                          "description": "x component"
                         },
                         "y": {
                           "type": "number",
-                          "description": "y coordinate length"
+                          "description": "y component"
                         },
                         "z": {
                           "type": "number",
-                          "description": "z coordinate length"
+                          "description": "z component"
                         }
                       },
                       "required": [
@@ -4605,15 +4605,15 @@ export const SceneUpdate = {
                       "properties": {
                         "x": {
                           "type": "number",
-                          "description": "x coordinate length"
+                          "description": "x component"
                         },
                         "y": {
                           "type": "number",
-                          "description": "y coordinate length"
+                          "description": "y component"
                         },
                         "z": {
                           "type": "number",
-                          "description": "z coordinate length"
+                          "description": "z component"
                         }
                       },
                       "required": [
@@ -4664,15 +4664,15 @@ export const SceneUpdate = {
                   "properties": {
                     "x": {
                       "type": "number",
-                      "description": "x coordinate length"
+                      "description": "x component"
                     },
                     "y": {
                       "type": "number",
-                      "description": "y coordinate length"
+                      "description": "y component"
                     },
                     "z": {
                       "type": "number",
-                      "description": "z coordinate length"
+                      "description": "z component"
                     }
                   },
                   "required": [
@@ -4738,15 +4738,15 @@ export const SceneUpdate = {
                       "properties": {
                         "x": {
                           "type": "number",
-                          "description": "x coordinate length"
+                          "description": "x component"
                         },
                         "y": {
                           "type": "number",
-                          "description": "y coordinate length"
+                          "description": "y component"
                         },
                         "z": {
                           "type": "number",
-                          "description": "z coordinate length"
+                          "description": "z component"
                         }
                       },
                       "required": [
@@ -4797,15 +4797,15 @@ export const SceneUpdate = {
                   "properties": {
                     "x": {
                       "type": "number",
-                      "description": "x coordinate length"
+                      "description": "x component"
                     },
                     "y": {
                       "type": "number",
-                      "description": "y coordinate length"
+                      "description": "y component"
                     },
                     "z": {
                       "type": "number",
-                      "description": "z coordinate length"
+                      "description": "z component"
                     }
                   },
                   "required": [
@@ -4871,15 +4871,15 @@ export const SceneUpdate = {
                       "properties": {
                         "x": {
                           "type": "number",
-                          "description": "x coordinate length"
+                          "description": "x component"
                         },
                         "y": {
                           "type": "number",
-                          "description": "y coordinate length"
+                          "description": "y component"
                         },
                         "z": {
                           "type": "number",
-                          "description": "z coordinate length"
+                          "description": "z component"
                         }
                       },
                       "required": [
@@ -4930,15 +4930,15 @@ export const SceneUpdate = {
                   "properties": {
                     "x": {
                       "type": "number",
-                      "description": "x coordinate length"
+                      "description": "x component"
                     },
                     "y": {
                       "type": "number",
-                      "description": "y coordinate length"
+                      "description": "y component"
                     },
                     "z": {
                       "type": "number",
-                      "description": "z coordinate length"
+                      "description": "z component"
                     }
                   },
                   "required": [
@@ -5035,15 +5035,15 @@ export const SceneUpdate = {
                       "properties": {
                         "x": {
                           "type": "number",
-                          "description": "x coordinate length"
+                          "description": "x component"
                         },
                         "y": {
                           "type": "number",
-                          "description": "y coordinate length"
+                          "description": "y component"
                         },
                         "z": {
                           "type": "number",
-                          "description": "z coordinate length"
+                          "description": "z component"
                         }
                       },
                       "required": [
@@ -5226,15 +5226,15 @@ export const SceneUpdate = {
                       "properties": {
                         "x": {
                           "type": "number",
-                          "description": "x coordinate length"
+                          "description": "x component"
                         },
                         "y": {
                           "type": "number",
-                          "description": "y coordinate length"
+                          "description": "y component"
                         },
                         "z": {
                           "type": "number",
-                          "description": "z coordinate length"
+                          "description": "z component"
                         }
                       },
                       "required": [
@@ -5406,15 +5406,15 @@ export const SceneUpdate = {
                       "properties": {
                         "x": {
                           "type": "number",
-                          "description": "x coordinate length"
+                          "description": "x component"
                         },
                         "y": {
                           "type": "number",
-                          "description": "y coordinate length"
+                          "description": "y component"
                         },
                         "z": {
                           "type": "number",
-                          "description": "z coordinate length"
+                          "description": "z component"
                         }
                       },
                       "required": [
@@ -5534,15 +5534,15 @@ export const SceneUpdate = {
                       "properties": {
                         "x": {
                           "type": "number",
-                          "description": "x coordinate length"
+                          "description": "x component"
                         },
                         "y": {
                           "type": "number",
-                          "description": "y coordinate length"
+                          "description": "y component"
                         },
                         "z": {
                           "type": "number",
-                          "description": "z coordinate length"
+                          "description": "z component"
                         }
                       },
                       "required": [
@@ -5593,15 +5593,15 @@ export const SceneUpdate = {
                   "properties": {
                     "x": {
                       "type": "number",
-                      "description": "x coordinate length"
+                      "description": "x component"
                     },
                     "y": {
                       "type": "number",
-                      "description": "y coordinate length"
+                      "description": "y component"
                     },
                     "z": {
                       "type": "number",
-                      "description": "z coordinate length"
+                      "description": "z component"
                     }
                   },
                   "required": [
@@ -5714,15 +5714,15 @@ export const ModelPrimitive = {
           "properties": {
             "x": {
               "type": "number",
-              "description": "x coordinate length"
+              "description": "x component"
             },
             "y": {
               "type": "number",
-              "description": "y coordinate length"
+              "description": "y component"
             },
             "z": {
               "type": "number",
-              "description": "z coordinate length"
+              "description": "z component"
             }
           },
           "required": [
@@ -5773,15 +5773,15 @@ export const ModelPrimitive = {
       "properties": {
         "x": {
           "type": "number",
-          "description": "x coordinate length"
+          "description": "x component"
         },
         "y": {
           "type": "number",
-          "description": "y coordinate length"
+          "description": "y component"
         },
         "z": {
           "type": "number",
-          "description": "z coordinate length"
+          "description": "z component"
         }
       },
       "required": [
@@ -6065,15 +6065,15 @@ export const PointCloud = {
           "properties": {
             "x": {
               "type": "number",
-              "description": "x coordinate length"
+              "description": "x component"
             },
             "y": {
               "type": "number",
-              "description": "y coordinate length"
+              "description": "y component"
             },
             "z": {
               "type": "number",
-              "description": "z coordinate length"
+              "description": "z component"
             }
           },
           "required": [
@@ -6433,15 +6433,15 @@ export const Pose = {
       "properties": {
         "x": {
           "type": "number",
-          "description": "x coordinate length"
+          "description": "x component"
         },
         "y": {
           "type": "number",
-          "description": "y coordinate length"
+          "description": "y component"
         },
         "z": {
           "type": "number",
-          "description": "z coordinate length"
+          "description": "z component"
         }
       },
       "required": [
@@ -6524,15 +6524,15 @@ export const PoseInFrame = {
           "properties": {
             "x": {
               "type": "number",
-              "description": "x coordinate length"
+              "description": "x component"
             },
             "y": {
               "type": "number",
-              "description": "y coordinate length"
+              "description": "y component"
             },
             "z": {
               "type": "number",
-              "description": "z coordinate length"
+              "description": "z component"
             }
           },
           "required": [
@@ -6624,15 +6624,15 @@ export const PosesInFrame = {
             "properties": {
               "x": {
                 "type": "number",
-                "description": "x coordinate length"
+                "description": "x component"
               },
               "y": {
                 "type": "number",
-                "description": "y coordinate length"
+                "description": "y component"
               },
               "z": {
                 "type": "number",
-                "description": "z coordinate length"
+                "description": "z component"
               }
             },
             "required": [
@@ -6848,15 +6848,15 @@ export const SpherePrimitive = {
           "properties": {
             "x": {
               "type": "number",
-              "description": "x coordinate length"
+              "description": "x component"
             },
             "y": {
               "type": "number",
-              "description": "y coordinate length"
+              "description": "y component"
             },
             "z": {
               "type": "number",
-              "description": "z coordinate length"
+              "description": "z component"
             }
           },
           "required": [
@@ -6907,15 +6907,15 @@ export const SpherePrimitive = {
       "properties": {
         "x": {
           "type": "number",
-          "description": "x coordinate length"
+          "description": "x component"
         },
         "y": {
           "type": "number",
-          "description": "y coordinate length"
+          "description": "y component"
         },
         "z": {
           "type": "number",
-          "description": "z coordinate length"
+          "description": "z component"
         }
       },
       "required": [
@@ -7120,15 +7120,15 @@ export const TextPrimitive = {
           "properties": {
             "x": {
               "type": "number",
-              "description": "x coordinate length"
+              "description": "x component"
             },
             "y": {
               "type": "number",
-              "description": "y coordinate length"
+              "description": "y component"
             },
             "z": {
               "type": "number",
-              "description": "z coordinate length"
+              "description": "z component"
             }
           },
           "required": [
@@ -7269,15 +7269,15 @@ export const TriangleListPrimitive = {
           "properties": {
             "x": {
               "type": "number",
-              "description": "x coordinate length"
+              "description": "x component"
             },
             "y": {
               "type": "number",
-              "description": "y coordinate length"
+              "description": "y component"
             },
             "z": {
               "type": "number",
-              "description": "z coordinate length"
+              "description": "z component"
             }
           },
           "required": [
@@ -7437,11 +7437,11 @@ export const Vector2 = {
   "properties": {
     "x": {
       "type": "number",
-      "description": "x coordinate length"
+      "description": "x component"
     },
     "y": {
       "type": "number",
-      "description": "y coordinate length"
+      "description": "y component"
     }
   },
   "required": [
@@ -7458,15 +7458,15 @@ export const Vector3 = {
   "properties": {
     "x": {
       "type": "number",
-      "description": "x coordinate length"
+      "description": "x component"
     },
     "y": {
       "type": "number",
-      "description": "y coordinate length"
+      "description": "y component"
     },
     "z": {
       "type": "number",
-      "description": "z coordinate length"
+      "description": "z component"
     }
   },
   "required": [

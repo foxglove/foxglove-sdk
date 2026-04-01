@@ -1455,10 +1455,10 @@ pub struct TriangleListPrimitive {
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 #[derive(Clone, Copy, PartialEq, ::prost::Message)]
 pub struct Vector2 {
-    /// x coordinate length
+    /// x component
     #[prost(double, tag = "1")]
     pub x: f64,
-    /// y coordinate length
+    /// y component
     #[prost(double, tag = "2")]
     pub y: f64,
 }
@@ -1468,13 +1468,13 @@ pub struct Vector2 {
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 #[derive(Clone, Copy, PartialEq, ::prost::Message)]
 pub struct Vector3 {
-    /// x coordinate length
+    /// x component
     #[prost(double, tag = "1")]
     pub x: f64,
-    /// y coordinate length
+    /// y component
     #[prost(double, tag = "2")]
     pub y: f64,
-    /// z coordinate length
+    /// z component
     #[prost(double, tag = "3")]
     pub z: f64,
 }

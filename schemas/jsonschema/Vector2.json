@@ -6,11 +6,11 @@
   "properties": {
     "x": {
       "type": "number",
-      "description": "x coordinate length"
+      "description": "x component"
     },
     "y": {
       "type": "number",
-      "description": "y coordinate length"
+      "description": "y component"
     }
   },
   "required": [

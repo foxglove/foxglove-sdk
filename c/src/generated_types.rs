@@ -7774,10 +7774,10 @@ pub unsafe extern "C" fn foxglove_triangle_list_primitive_encode(
 /// A vector in 2D space that represents a direction only
 #[repr(C)]
 pub struct Vector2 {
-    /// x coordinate length
+    /// x component
     pub x: f64,
 
-    /// y coordinate length
+    /// y component
     pub y: f64,
 }
 
@@ -7921,13 +7921,13 @@ pub unsafe extern "C" fn foxglove_vector2_encode(
 /// A vector in 3D space that represents a direction only
 #[repr(C)]
 pub struct Vector3 {
-    /// x coordinate length
+    /// x component
     pub x: f64,
 
-    /// y coordinate length
+    /// y component
     pub y: f64,
 
-    /// z coordinate length
+    /// z component
     pub z: f64,
 }
 

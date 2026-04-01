@@ -408,15 +408,15 @@ typedef struct foxglove_string {
  */
 typedef struct foxglove_vector3 {
   /**
-   * x coordinate length
+   * x component
    */
   double x;
   /**
-   * y coordinate length
+   * y component
    */
   double y;
   /**
-   * z coordinate length
+   * z component
    */
   double z;
 } foxglove_vector3;
@@ -896,11 +896,11 @@ typedef struct foxglove_geo_json {
  */
 typedef struct foxglove_vector2 {
   /**
-   * x coordinate length
+   * x component
    */
   double x;
   /**
-   * y coordinate length
+   * y component
    */
   double y;
 } foxglove_vector2;

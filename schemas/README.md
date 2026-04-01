@@ -3618,7 +3618,7 @@ float64
 </td>
 <td>
 
-x coordinate length
+x component
 
 </td>
 </tr>
@@ -3631,7 +3631,7 @@ float64
 </td>
 <td>
 
-y coordinate length
+y component
 
 </td>
 </tr>
@@ -3656,7 +3656,7 @@ float64
 </td>
 <td>
 
-x coordinate length
+x component
 
 </td>
 </tr>
@@ -3669,7 +3669,7 @@ float64
 </td>
 <td>
 
-y coordinate length
+y component
 
 </td>
 </tr>
@@ -3682,7 +3682,7 @@ float64
 </td>
 <td>
 
-z coordinate length
+z component
 
 </td>
 </tr>

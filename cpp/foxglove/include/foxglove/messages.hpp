@@ -22,13 +22,13 @@ namespace foxglove::messages {
 
 /// @brief A vector in 3D space that represents a direction only
 struct Vector3 {
-  /// @brief x coordinate length
+  /// @brief x component
   double x = 0;
 
-  /// @brief y coordinate length
+  /// @brief y component
   double y = 0;
 
-  /// @brief z coordinate length
+  /// @brief z component
   double z = 0;
 
   /// @brief Encoded the Vector3 as protobuf to the provided buffer.
@@ -727,10 +727,10 @@ struct GeoJSON {
 
 /// @brief A vector in 2D space that represents a direction only
 struct Vector2 {
-  /// @brief x coordinate length
+  /// @brief x component
   double x = 0;
 
-  /// @brief y coordinate length
+  /// @brief y component
   double y = 0;
 
   /// @brief Encoded the Vector2 as protobuf to the provided buffer.

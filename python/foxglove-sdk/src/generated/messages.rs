@@ -3261,8 +3261,8 @@ impl From<TriangleListPrimitive> for foxglove::messages::TriangleListPrimitive {
 
 /// A vector in 2D space that represents a direction only
 ///
-/// :param x: x coordinate length
-/// :param y: y coordinate length
+/// :param x: x component
+/// :param y: y component
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/vector2
 #[pyclass(module = "foxglove.messages")]
@@ -3307,9 +3307,9 @@ impl From<Vector2> for foxglove::messages::Vector2 {
 
 /// A vector in 3D space that represents a direction only
 ///
-/// :param x: x coordinate length
-/// :param y: y coordinate length
-/// :param z: z coordinate length
+/// :param x: x component
+/// :param y: y component
+/// :param z: z component
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/vector3
 #[pyclass(module = "foxglove.messages")]
