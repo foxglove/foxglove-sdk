@@ -71,7 +71,15 @@ set(LWS_WITHOUT_TESTAPPS ON CACHE BOOL "" FORCE)
 set(LWS_WITHOUT_TEST_SERVER ON CACHE BOOL "" FORCE)
 set(LWS_WITHOUT_TEST_PING ON CACHE BOOL "" FORCE)
 set(LWS_WITHOUT_TEST_CLIENT ON CACHE BOOL "" FORCE)
-FetchContent_MakeAvailable(libwebsockets)
+# Avoid FetchContent_MakeAvailable so we can pass EXCLUDE_FROM_ALL to add_subdirectory,
+# preventing libwebsockets' install rules from polluting our install.
+if(USE_PACKAGE_MANAGER_DEPENDENCIES)
+  find_package(libwebsockets QUIET)
+endif()
+if(NOT libwebsockets_FOUND)
+  FetchContent_Populate(libwebsockets)
+  add_subdirectory(${libwebsockets_SOURCE_DIR} ${libwebsockets_BINARY_DIR} EXCLUDE_FROM_ALL)
+endif()
 # System-installed libwebsockets provides the "websockets_shared" target, while the FetchContent
 # build provides "websockets". Create an alias so the rest of this file can use "websockets"
 # consistently.
@@ -103,6 +111,7 @@ if(BUILD_REMOTE_DATA_LOADER_BACKEND_EXAMPLE)
     FIND_PACKAGE_ARGS QUIET
   )
   set(ENABLE_DATE_TESTING OFF CACHE BOOL "" FORCE)
+  set(ENABLE_DATE_INSTALL OFF CACHE BOOL "" FORCE)
   FetchContent_MakeAvailable(date)
 
   FetchContent_Declare(httplib
@@ -118,6 +127,7 @@ if(BUILD_REMOTE_DATA_LOADER_BACKEND_EXAMPLE)
   set(HTTPLIB_USE_BROTLI_IF_AVAILABLE OFF CACHE BOOL "" FORCE)
   set(HTTPLIB_USE_ZSTD_IF_AVAILABLE OFF CACHE BOOL "" FORCE)
   set(HTTPLIB_USE_NON_BLOCKING_GETADDRINFO OFF CACHE BOOL "" FORCE)
+  set(HTTPLIB_INSTALL OFF CACHE BOOL "" FORCE)
   FetchContent_MakeAvailable(httplib)
 endif()
 
