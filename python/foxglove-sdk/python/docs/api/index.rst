@@ -8,7 +8,7 @@ foxglove
 
 .. automodule:: foxglove
    :members:
-   :exclude-members: CloudSink, CloudSinkListener, MCAPWriter, init_notebook_buffer, start_cloud_sink
+   :exclude-members: CloudSink, CloudSinkListener, MCAPWriter, init_notebook_buffer, start_cloud_sink, start_gateway, RemoteAccessCapability, RemoteAccessGateway, RemoteAccessListener, RemoteAccessConnectionStatus
 
 
 Message Types

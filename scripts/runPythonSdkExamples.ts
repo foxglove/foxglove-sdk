@@ -39,6 +39,13 @@ async function main(opts: { timeout: string; installSdkFromPath: boolean }) {
       continue;
     }
 
+    // Skip examples that require external credentials or services.
+    const skipList = ["remote-access"];
+    if (skipList.includes(entry.name)) {
+      console.debug(`Skipping example ${entry.name} (requires external credentials)`);
+      continue;
+    }
+
     console.debug(`Install & run example ${entry.name}`);
     await runExample(entry.name, { timeoutMillis, installSdkFromPath });
   }
