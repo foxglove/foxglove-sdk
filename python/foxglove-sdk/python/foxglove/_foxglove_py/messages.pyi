@@ -517,7 +517,7 @@ class LocationFix:
         position_covariance: list[float] | None = None,
         position_covariance_type: LocationFixPositionCovarianceType = LocationFixPositionCovarianceType.Unknown,
         heading: float | None = None,
-        velocity: Velocity3 | None = None,
+        velocity: Vector3 | None = None,
         color: Color | None = None,
         metadata: list[KeyValuePair] | None = None,
     ) -> None: ...
@@ -1038,7 +1038,7 @@ class Vector3:
 
 class Velocity3:
     """
-    A velocity vector in 3D space
+    A velocity vector in 3D space. Deprecated: use Vector3.
     """
 
     def __init__(self, *, x: float = 0.0, y: float = 0.0, z: float = 0.0) -> None: ...

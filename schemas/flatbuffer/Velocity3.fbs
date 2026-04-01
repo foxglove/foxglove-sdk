@@ -2,7 +2,7 @@
 
 namespace foxglove;
 
-/// A velocity vector in 3D space
+/// A velocity vector in 3D space. Deprecated: use Vector3.
 table Velocity3 {
   /// x component
   x:double = 0.0 (id: 0);

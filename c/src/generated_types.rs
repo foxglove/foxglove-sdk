@@ -3747,7 +3747,7 @@ pub struct LocationFix {
     pub heading: *const f64,
 
     /// Velocity in local East-North-Up (ENU) frame in m/s
-    pub velocity: *const Velocity3,
+    pub velocity: *const Vector3,
 
     /// Color used to visualize the location
     pub color: *const Color,
@@ -8069,7 +8069,7 @@ pub unsafe extern "C" fn foxglove_vector3_encode(
     }
 }
 
-/// A velocity vector in 3D space
+/// A velocity vector in 3D space. Deprecated: use Vector3.
 #[repr(C)]
 pub struct Velocity3 {
     /// x component

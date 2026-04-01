@@ -4,7 +4,9 @@ export function generateMarkdown(
   schemas: Iterable<FoxgloveMessageSchema>,
   enums: Iterable<FoxgloveEnumSchema>,
 ): string {
-  const sortedSchemas = [...schemas].sort((a, b) => a.name.localeCompare(b.name));
+  const sortedSchemas = [...schemas]
+    .filter((schema) => !schema.hiddenFromDocs)
+    .sort((a, b) => a.name.localeCompare(b.name));
   const sortedEnums = [...enums].sort((a, b) => a.name.localeCompare(b.name));
 
   return [

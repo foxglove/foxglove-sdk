@@ -64,7 +64,6 @@ If the IDL does not support optional fields (e.g. ROS) you must specify a value 
 - [TriangleListPrimitive](#trianglelistprimitive)
 - [Vector2](#vector2)
 - [Vector3](#vector3)
-- [Velocity3](#velocity3)
 - [VoxelGrid](#voxelgrid)
 
 ----
@@ -1856,7 +1855,7 @@ Heading (yaw angle), in radians, measured clockwise from north
 <td><code>velocity</code> (optional)</td>
 <td>
 
-[Velocity3](#velocity3)
+[Vector3](#vector3)
 
 </td>
 <td>
@@ -3684,57 +3683,6 @@ float64
 <td>
 
 z coordinate length
-
-</td>
-</tr>
-</table>
-
-## Velocity3
-
-A velocity vector in 3D space
-
-<table>
-  <tr>
-    <th>field</th>
-    <th>type</th>
-    <th>description</th>
-  </tr>
-<tr>
-<td><code>x</code></td>
-<td>
-
-float64
-
-</td>
-<td>
-
-x component
-
-</td>
-</tr>
-<tr>
-<td><code>y</code></td>
-<td>
-
-float64
-
-</td>
-<td>
-
-y component
-
-</td>
-</tr>
-<tr>
-<td><code>z</code></td>
-<td>
-
-float64
-
-</td>
-<td>
-
-z component
 
 </td>
 </tr>

@@ -1300,36 +1300,6 @@ struct LinePrimitive {
   static Schema schema();
 };
 
-/// @brief A velocity vector in 3D space
-struct Velocity3 {
-  /// @brief x component
-  double x = 0;
-
-  /// @brief y component
-  double y = 0;
-
-  /// @brief z component
-  double z = 0;
-
-  /// @brief Encoded the Velocity3 as protobuf to the provided buffer.
-  ///
-  /// On success, writes the serialized length to *encoded_len.
-  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
-  /// and returns FoxgloveError::BufferTooShort.
-  /// If the message cannot be encoded, writes the reason to stderr and returns
-  /// FoxgloveError::EncodeError.
-  ///
-  /// @param ptr the destination buffer. must point to at least len valid bytes.
-  /// @param len the length of the destination buffer.
-  /// @param encoded_len where the serialized length or required capacity will be written to.
-  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
-
-  /// @brief Get the Velocity3 schema.
-  ///
-  /// The schema data returned is statically allocated.
-  static Schema schema();
-};
-
 /// @brief A navigation satellite fix for any Global Navigation Satellite System
 struct LocationFix {
   /// @brief Type of position covariance
@@ -1370,7 +1340,7 @@ struct LocationFix {
   std::optional<double> heading = std::nullopt;
 
   /// @brief Velocity in local East-North-Up (ENU) frame in m/s
-  std::optional<Velocity3> velocity;
+  std::optional<Vector3> velocity;
 
   /// @brief Color used to visualize the location
   std::optional<Color> color;
@@ -2053,6 +2023,36 @@ struct RawImage {
   FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 
   /// @brief Get the RawImage schema.
+  ///
+  /// The schema data returned is statically allocated.
+  static Schema schema();
+};
+
+/// @brief A velocity vector in 3D space. Deprecated: use Vector3.
+struct Velocity3 {
+  /// @brief x component
+  double x = 0;
+
+  /// @brief y component
+  double y = 0;
+
+  /// @brief z component
+  double z = 0;
+
+  /// @brief Encoded the Velocity3 as protobuf to the provided buffer.
+  ///
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
+  /// and returns FoxgloveError::BufferTooShort.
+  /// If the message cannot be encoded, writes the reason to stderr and returns
+  /// FoxgloveError::EncodeError.
+  ///
+  /// @param ptr the destination buffer. must point to at least len valid bytes.
+  /// @param len the length of the destination buffer.
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
+
+  /// @brief Get the Velocity3 schema.
   ///
   /// The schema data returned is statically allocated.
   static Schema schema();

@@ -2,7 +2,7 @@
 
 module foxglove {
 
-// A velocity vector in 3D space
+// A velocity vector in 3D space. Deprecated: use Vector3.
 struct Velocity3 {
   // x component
   @default(0.0)

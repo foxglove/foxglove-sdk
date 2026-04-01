@@ -1944,7 +1944,7 @@ void locationFixToC(
     static_cast<foxglove_position_covariance_type>(src.position_covariance_type);
   dest.heading = src.heading ? &*src.heading : nullptr;
   dest.velocity =
-    src.velocity ? reinterpret_cast<const foxglove_velocity3*>(&*src.velocity) : nullptr;
+    src.velocity ? reinterpret_cast<const foxglove_vector3*>(&*src.velocity) : nullptr;
   dest.color = src.color ? reinterpret_cast<const foxglove_color*>(&*src.color) : nullptr;
   dest.metadata = arena.map<foxglove_key_value_pair>(src.metadata, keyValuePairToC);
   dest.metadata_count = src.metadata.size();

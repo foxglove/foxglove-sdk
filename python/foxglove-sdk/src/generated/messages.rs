@@ -1630,7 +1630,7 @@ impl LocationFix {
         position_covariance: Option<Vec<f64>>,
         position_covariance_type: LocationFixPositionCovarianceType,
         heading: Option<f64>,
-        velocity: Option<Velocity3>,
+        velocity: Option<Vector3>,
         color: Option<Color>,
         metadata: Option<Vec<KeyValuePair>>,
     ) -> Self {
@@ -3355,7 +3355,7 @@ impl From<Vector3> for foxglove::messages::Vector3 {
     }
 }
 
-/// A velocity vector in 3D space
+/// A velocity vector in 3D space. Deprecated: use Vector3.
 ///
 /// :param x: x component
 /// :param y: y component

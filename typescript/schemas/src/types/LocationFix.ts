@@ -5,7 +5,7 @@ import { Color } from "./Color";
 import { KeyValuePair } from "./KeyValuePair";
 import { PositionCovarianceType } from "./PositionCovarianceType";
 import { Time } from "./Time";
-import { Velocity3 } from "./Velocity3";
+import { Vector3 } from "./Vector3";
 
 /** A navigation satellite fix for any Global Navigation Satellite System */
 export type LocationFix = {
@@ -34,7 +34,7 @@ export type LocationFix = {
   heading?: number;
 
   /** Velocity in local East-North-Up (ENU) frame in m/s */
-  velocity?: Velocity3;
+  velocity?: Vector3;
 
   /** Color used to visualize the location */
   color?: Color;

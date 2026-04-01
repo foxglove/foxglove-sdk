@@ -1312,24 +1312,6 @@ typedef struct foxglove_line_primitive {
 } foxglove_line_primitive;
 
 /**
- * A velocity vector in 3D space
- */
-typedef struct foxglove_velocity3 {
-  /**
-   * x component
-   */
-  double x;
-  /**
-   * y component
-   */
-  double y;
-  /**
-   * z component
-   */
-  double z;
-} foxglove_velocity3;
-
-/**
  * A navigation satellite fix for any Global Navigation Satellite System
  */
 typedef struct foxglove_location_fix {
@@ -1368,7 +1350,7 @@ typedef struct foxglove_location_fix {
   /**
    * Velocity in local East-North-Up (ENU) frame in m/s
    */
-  const struct foxglove_velocity3 *velocity;
+  const struct foxglove_vector3 *velocity;
   /**
    * Color used to visualize the location
    */
@@ -1867,6 +1849,24 @@ typedef struct foxglove_raw_image {
   const unsigned char *data;
   size_t data_len;
 } foxglove_raw_image;
+
+/**
+ * A velocity vector in 3D space. Deprecated: use Vector3.
+ */
+typedef struct foxglove_velocity3 {
+  /**
+   * x component
+   */
+  double x;
+  /**
+   * y component
+   */
+  double y;
+  /**
+   * z component
+   */
+  double z;
+} foxglove_velocity3;
 
 #if !defined(__wasm__)
 /**

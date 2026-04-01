@@ -121,13 +121,11 @@ const Vector2: FoxgloveMessageSchema = {
       name: "x",
       type: { type: "primitive", name: "float64" },
       description: "x coordinate length",
-      defaultValue: 1.0,
     },
     {
       name: "y",
       type: { type: "primitive", name: "float64" },
       description: "y coordinate length",
-      defaultValue: 1.0,
     },
   ],
 };
@@ -143,19 +141,16 @@ const Vector3: FoxgloveMessageSchema = {
       name: "x",
       type: { type: "primitive", name: "float64" },
       description: "x coordinate length",
-      defaultValue: 1.0,
     },
     {
       name: "y",
       type: { type: "primitive", name: "float64" },
       description: "y coordinate length",
-      defaultValue: 1.0,
     },
     {
       name: "z",
       type: { type: "primitive", name: "float64" },
       description: "z coordinate length",
-      defaultValue: 1.0,
     },
   ],
 };
@@ -163,7 +158,9 @@ const Vector3: FoxgloveMessageSchema = {
 const Velocity3: FoxgloveMessageSchema = {
   type: "message",
   name: "Velocity3",
-  description: "A velocity vector in 3D space",
+  description: "A velocity vector in 3D space. Deprecated: use Vector3.",
+  deprecated: true,
+  hiddenFromDocs: true,
   fields: [
     {
       name: "x",
@@ -1695,7 +1692,7 @@ const LocationFix: FoxgloveMessageSchema = {
     },
     {
       name: "velocity",
-      type: { type: "nested", schema: Velocity3 },
+      type: { type: "nested", schema: Vector3 },
       description: "Velocity in local East-North-Up (ENU) frame in m/s",
       protobufFieldNumber: 11,
       flatbuffersFieldNumber: 10,

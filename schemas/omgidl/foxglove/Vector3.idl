@@ -5,15 +5,12 @@ module foxglove {
 // A vector in 3D space that represents a direction only
 struct Vector3 {
   // x coordinate length
-  @default(1.0)
   double x;
 
   // y coordinate length
-  @default(1.0)
   double y;
 
   // z coordinate length
-  @default(1.0)
   double z;
 };
 

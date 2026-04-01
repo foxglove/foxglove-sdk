@@ -76,21 +76,21 @@
       "description": "Heading (yaw angle), in radians, measured clockwise from north"
     },
     "velocity": {
-      "title": "foxglove.Velocity3",
+      "title": "foxglove.Vector3",
       "description": "Velocity in local East-North-Up (ENU) frame in m/s",
       "type": "object",
       "properties": {
         "x": {
           "type": "number",
-          "description": "x component"
+          "description": "x coordinate length"
         },
         "y": {
           "type": "number",
-          "description": "y component"
+          "description": "y coordinate length"
         },
         "z": {
           "type": "number",
-          "description": "z component"
+          "description": "z coordinate length"
         }
       },
       "required": [

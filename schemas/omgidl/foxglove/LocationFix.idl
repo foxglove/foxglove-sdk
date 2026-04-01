@@ -4,7 +4,7 @@
 #include "foxglove/KeyValuePair.idl"
 #include "foxglove/PositionCovarianceType.idl"
 #include "foxglove/Time.idl"
-#include "foxglove/Velocity3.idl"
+#include "foxglove/Vector3.idl"
 
 module foxglove {
 
@@ -37,7 +37,7 @@ struct LocationFix {
 
   // Velocity in local East-North-Up (ENU) frame in m/s
   @optional
-  Velocity3 velocity;
+  Vector3 velocity;
 
   // Color used to visualize the location
   @optional

@@ -625,7 +625,7 @@ pub struct LocationFix {
     pub heading: ::core::option::Option<f64>,
     /// Velocity in local East-North-Up (ENU) frame in m/s
     #[prost(message, optional, tag = "11")]
-    pub velocity: ::core::option::Option<Velocity3>,
+    pub velocity: ::core::option::Option<Vector3>,
     /// Color used to visualize the location
     #[prost(message, optional, tag = "8")]
     pub color: ::core::option::Option<Color>,
@@ -1478,7 +1478,7 @@ pub struct Vector3 {
     #[prost(double, tag = "3")]
     pub z: f64,
 }
-/// A velocity vector in 3D space
+/// A velocity vector in 3D space. Deprecated: use Vector3.
 ///
 /// <https://docs.foxglove.dev/docs/visualization/message-schemas/velocity3>
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
