@@ -126,6 +126,7 @@ jobs:
             staticlib_artifact_name: libfoxglove-x86_64-apple-darwin.a
             cdylib_artifact_name: libfoxglove-x86_64-apple-darwin.dylib
             cross: true
+            cmake_args: -DCMAKE_OSX_ARCHITECTURES=x86_64
             remote_access: true
 
           # Windows (remote access enabled, static CRT to match livekit prebuilt webrtc)
@@ -144,6 +145,7 @@ jobs:
             staticlib_artifact_name: foxglove-aarch64-pc-windows-msvc.lib
             cdylib_artifact_name: foxglove-aarch64-pc-windows-msvc.dll
             cross: true
+            cmake_args: -A ARM64
             remote_access: true
 
           # iOS
@@ -241,17 +243,16 @@ jobs:
 
       # Build and test C++ using the pre-built Rust libraries.
       - name: Build C++ library
-        if: ${{ !contains(matrix.target, 'apple-ios') }}
+        if: "!contains(matrix.target, 'apple-ios')"
         run: make ${{ matrix.remote_access && 'build-ra' || 'build' }}
         working-directory: cpp
         env:
           FOXGLOVE_PREBUILT_LIB_DIR: ${{ github.workspace }}/target/${{ matrix.target }}/release
+          CMAKE_ARGS: ${{ matrix.cmake_args || '' }}
       - name: Test C++ library
-        if: ${{ !matrix.cross && !contains(matrix.target, 'apple-ios') }}
-        run: make ${{ matrix.remote_access && 'test-ra' || 'test' }}
+        if: "!matrix.cross && !contains(matrix.target, 'apple-ios')"
+        run: ctest --test-dir ${{ matrix.remote_access && 'build-ra' || 'build' }} --verbose
         working-directory: cpp
-        env:
-          FOXGLOVE_PREBUILT_LIB_DIR: ${{ github.workspace }}/target/${{ matrix.target }}/release
 
       - name: Run remote data loader backend conformance tests
         if: ${{ !matrix.cross }}
