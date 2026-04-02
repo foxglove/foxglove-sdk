@@ -17,6 +17,7 @@ endif()
 option(USE_PACKAGE_MANAGER_DEPENDENCIES
   "Try to find dependencies provided by the local package manager, and if not found, fall back to building them from source"
   ON)
+option(FOXGLOVE_BUILD_REMOTE_ACCESS "Build with remote access gateway support" OFF)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
@@ -181,11 +182,24 @@ endif()
 
 ### C
 
-corrosion_import_crate(
-  MANIFEST_PATH ../c/Cargo.toml
-  CRATES foxglove_c
-  FLAGS ${SANITIZER_CARGO_FLAGS}
-)
+if(FOXGLOVE_BUILD_REMOTE_ACCESS)
+  # RA builds only produce the cdylib (shared library). A staticlib is not provided because
+  # the LiveKit/WebRTC dependency has strict ABI requirements and would leak internal symbols
+  # into the consumer's binary.
+  corrosion_import_crate(
+    MANIFEST_PATH ../c/Cargo.toml
+    CRATES foxglove_c
+    CRATE_TYPES cdylib
+    FEATURES remote-access
+    FLAGS ${SANITIZER_CARGO_FLAGS}
+  )
+else()
+  corrosion_import_crate(
+    MANIFEST_PATH ../c/Cargo.toml
+    CRATES foxglove_c
+    FLAGS ${SANITIZER_CARGO_FLAGS}
+  )
+endif()
 if(DEFINED SANITIZE)
   # Rust does not have flags for certain sanitizers so we strip them out
   string(REGEX REPLACE undefined "" rust_sanitizers ${SANITIZE})
@@ -195,13 +209,15 @@ if(DEFINED SANITIZE)
   corrosion_add_target_rustflags(foxglove -Zsanitizer=${rust_sanitizers} -Cforce-frame-pointers=yes)
 endif()
 
-if(WIN32)
-  target_link_libraries(foxglove-static INTERFACE Bcrypt SChannel Crypt32 Ncrypt)
-elseif(APPLE)
-  target_link_libraries(foxglove-static INTERFACE "-framework Security" "-framework CoreFoundation")
-elseif(UNIX)
-  # Required for the Rust standard library on older glibc (< 2.34) where these are separate libraries.
-  target_link_libraries(foxglove-static INTERFACE pthread dl m)
+if(NOT FOXGLOVE_BUILD_REMOTE_ACCESS)
+  if(WIN32)
+    target_link_libraries(foxglove-static INTERFACE Bcrypt SChannel Crypt32 Ncrypt)
+  elseif(APPLE)
+    target_link_libraries(foxglove-static INTERFACE "-framework Security" "-framework CoreFoundation")
+  elseif(UNIX)
+    # Required for the Rust standard library on older glibc (< 2.34) where these are separate libraries.
+    target_link_libraries(foxglove-static INTERFACE pthread dl m)
+  endif()
 endif()
 
 
@@ -248,23 +264,30 @@ target_include_directories(foxglove_cpp_obj PRIVATE
 target_compile_options(foxglove_cpp_obj PRIVATE ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
 target_link_options(foxglove_cpp_obj PRIVATE ${SANITIZER_LINK_OPTIONS})
 
-add_library(foxglove_cpp_static STATIC
-  $<TARGET_OBJECTS:foxglove_cpp_obj>
-  $<TARGET_OBJECTS:foxglove_generated_obj>
-)
+if(NOT FOXGLOVE_BUILD_REMOTE_ACCESS)
+  add_library(foxglove_cpp_static STATIC
+    $<TARGET_OBJECTS:foxglove_cpp_obj>
+    $<TARGET_OBJECTS:foxglove_generated_obj>
+  )
+  target_link_libraries(foxglove_cpp_static PRIVATE foxglove-static)
+endif()
+
 add_library(foxglove_cpp_shared SHARED
   $<TARGET_OBJECTS:foxglove_cpp_obj>
   $<TARGET_OBJECTS:foxglove_generated_obj>
 )
-target_link_libraries(foxglove_cpp_static PRIVATE foxglove-static)
-target_link_libraries(foxglove_cpp_shared PRIVATE foxglove-shared)
+target_link_libraries(foxglove_cpp_shared PUBLIC foxglove-shared)
 if(APPLE)
   set_target_properties(foxglove_cpp_shared PROPERTIES INSTALL_RPATH "@loader_path")
 else()
   set_target_properties(foxglove_cpp_shared PROPERTIES INSTALL_RPATH "$ORIGIN")
 endif()
 
-foreach(_target foxglove_cpp_static foxglove_cpp_shared)
+set(_foxglove_cpp_targets foxglove_cpp_shared)
+if(NOT FOXGLOVE_BUILD_REMOTE_ACCESS)
+  list(APPEND _foxglove_cpp_targets foxglove_cpp_static)
+endif()
+foreach(_target ${_foxglove_cpp_targets})
   target_include_directories(${_target} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/foxglove/include>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../c/include>
@@ -277,14 +300,7 @@ endforeach()
 
 ### Remote Access (optional)
 
-option(FOXGLOVE_BUILD_REMOTE_ACCESS "Build the remote access gateway library" OFF)
-
 if(FOXGLOVE_BUILD_REMOTE_ACCESS)
-  corrosion_import_crate(
-    MANIFEST_PATH ../c/ra/Cargo.toml
-    CRATES foxglove_c_ra
-    FLAGS ${SANITIZER_CARGO_FLAGS}
-  )
   add_library(foxglove_ra_cpp_obj OBJECT
     "foxglove/include/foxglove/remote_access.hpp"
     "foxglove/src/remote_access.cpp"
@@ -299,32 +315,16 @@ if(FOXGLOVE_BUILD_REMOTE_ACCESS)
   target_compile_options(foxglove_ra_cpp_obj PRIVATE ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
   target_link_options(foxglove_ra_cpp_obj PRIVATE ${SANITIZER_LINK_OPTIONS})
 
-  add_library(foxglove_ra_cpp_shared SHARED
-    $<TARGET_OBJECTS:foxglove_cpp_obj>
-    $<TARGET_OBJECTS:foxglove_generated_obj>
-    $<TARGET_OBJECTS:foxglove_ra_cpp_obj>
-  )
-  target_compile_definitions(foxglove_ra_cpp_shared PUBLIC FOXGLOVE_REMOTE_ACCESS)
-  target_link_libraries(foxglove_ra_cpp_shared PRIVATE foxglove_ra-shared)
-  if(APPLE)
-    set_target_properties(foxglove_ra_cpp_shared PROPERTIES INSTALL_RPATH "@loader_path")
-  else()
-    set_target_properties(foxglove_ra_cpp_shared PROPERTIES INSTALL_RPATH "$ORIGIN")
-  endif()
-  target_include_directories(foxglove_ra_cpp_shared PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/foxglove/include>
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../c/include>
-    $<INSTALL_INTERFACE:include>
-  )
-  target_compile_options(foxglove_ra_cpp_shared PRIVATE ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
-  target_link_options(foxglove_ra_cpp_shared PRIVATE ${SANITIZER_LINK_OPTIONS})
+  # Augment the shared library with RA objects
+  target_sources(foxglove_cpp_shared PRIVATE $<TARGET_OBJECTS:foxglove_ra_cpp_obj>)
+  target_compile_definitions(foxglove_cpp_shared PUBLIC FOXGLOVE_REMOTE_ACCESS)
 
   add_executable(example_remote_access examples/remote-access/src/main.cpp)
   set_property(TARGET example_remote_access PROPERTY CXX_STANDARD 17)
   set_property(TARGET example_remote_access PROPERTY CXX_STANDARD_REQUIRED True)
   target_compile_options(example_remote_access PUBLIC ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
   target_link_options(example_remote_access PUBLIC ${SANITIZER_LINK_OPTIONS})
-  target_link_libraries(example_remote_access foxglove_ra_cpp_shared)
+  target_link_libraries(example_remote_access foxglove_cpp_shared)
 endif()
 
 
@@ -340,7 +340,7 @@ set_property(TARGET tests PROPERTY CXX_STANDARD_REQUIRED True)
 target_compile_options(tests PUBLIC ${SANITIZER_COMPILE_OPTIONS})
 target_link_options(tests PUBLIC ${SANITIZER_LINK_OPTIONS})
 if(FOXGLOVE_BUILD_REMOTE_ACCESS)
-  target_link_libraries(tests PRIVATE foxglove_ra_cpp_shared Catch2::Catch2WithMain nlohmann_json::nlohmann_json websockets)
+  target_link_libraries(tests PRIVATE foxglove_cpp_shared Catch2::Catch2WithMain nlohmann_json::nlohmann_json websockets)
 else()
   target_link_libraries(tests PRIVATE foxglove_cpp_static Catch2::Catch2WithMain nlohmann_json::nlohmann_json websockets)
 endif()
@@ -476,17 +476,23 @@ endif()
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
-# Install the C++ static and shared libraries
-install(TARGETS foxglove_cpp_static foxglove_cpp_shared
-  EXPORT foxglove-sdkTargets
-  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-)
-
-# Install the Rust/C static library
-install(FILES $<TARGET_FILE:foxglove-static>
-  DESTINATION ${CMAKE_INSTALL_LIBDIR}
-)
+# Install C++ libraries
+if(FOXGLOVE_BUILD_REMOTE_ACCESS)
+  install(TARGETS foxglove_cpp_shared
+    EXPORT foxglove-sdkTargets
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  )
+else()
+  install(TARGETS foxglove_cpp_static foxglove_cpp_shared
+    EXPORT foxglove-sdkTargets
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  )
+  # Install the Rust/C static library
+  install(FILES $<TARGET_FILE:foxglove-static>
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  )
+endif()
 
 # Install the Rust/C shared library
 install(FILES $<TARGET_FILE:foxglove-shared>
@@ -530,21 +536,3 @@ install(FILES
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/foxglove-sdk
 )
 
-if(FOXGLOVE_BUILD_REMOTE_ACCESS)
-  # Install the RA C++ shared library
-  install(TARGETS foxglove_ra_cpp_shared
-    EXPORT foxglove-sdkRATargets
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  )
-
-  # Install the RA Rust/C shared library
-  install(FILES $<TARGET_FILE:foxglove_ra-shared>
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  )
-
-  install(EXPORT foxglove-sdkRATargets
-    FILE foxglove-sdkRATargets.cmake
-    NAMESPACE foxglove-sdk::
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/foxglove-sdk
-  )
-endif()

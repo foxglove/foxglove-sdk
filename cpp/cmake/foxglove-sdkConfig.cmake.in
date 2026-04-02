@@ -1,11 +1,12 @@
 @PACKAGE_INIT@
 
+# Whether the SDK was built with remote access gateway support.
+set(FOXGLOVE_SDK_REMOTE_ACCESS @FOXGLOVE_BUILD_REMOTE_ACCESS@)
+
 set(_foxglove_lib_dir "${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@")
 
-# Set up the Rust/C static library as an imported target.
-# The exported targets reference "foxglove-static" (the corrosion target name used at build time),
-# so we must create a target with that exact name.
-if(NOT TARGET foxglove-static)
+# Set up the Rust/C static library as an imported target (not available in RA builds).
+if(NOT FOXGLOVE_SDK_REMOTE_ACCESS AND NOT TARGET foxglove-static)
   add_library(foxglove-static STATIC IMPORTED)
   set_target_properties(foxglove-static PROPERTIES
     IMPORTED_LOCATION "${_foxglove_lib_dir}/${CMAKE_STATIC_LIBRARY_PREFIX}foxglove${CMAKE_STATIC_LIBRARY_SUFFIX}"
@@ -24,7 +25,6 @@ if(NOT TARGET foxglove-static)
 endif()
 
 # Set up the Rust/C shared library as an imported target.
-# The exported targets reference "foxglove-shared" (the corrosion target name used at build time).
 if(NOT TARGET foxglove-shared)
   add_library(foxglove-shared SHARED IMPORTED)
   set_target_properties(foxglove-shared PROPERTIES
@@ -32,21 +32,8 @@ if(NOT TARGET foxglove-shared)
   )
 endif()
 
-include("${CMAKE_CURRENT_LIST_DIR}/foxglove-sdkTargets.cmake")
-
-# Optionally set up the remote access targets, if the SDK was built with FOXGLOVE_BUILD_REMOTE_ACCESS.
-set(_foxglove_ra_targets "${CMAKE_CURRENT_LIST_DIR}/foxglove-sdkRATargets.cmake")
-if(EXISTS "${_foxglove_ra_targets}")
-  if(NOT TARGET foxglove_ra-shared)
-    add_library(foxglove_ra-shared SHARED IMPORTED)
-    set_target_properties(foxglove_ra-shared PROPERTIES
-      IMPORTED_LOCATION "${_foxglove_lib_dir}/${CMAKE_SHARED_LIBRARY_PREFIX}foxglove_ra${CMAKE_SHARED_LIBRARY_SUFFIX}"
-    )
-  endif()
-  include("${_foxglove_ra_targets}")
-endif()
-unset(_foxglove_ra_targets)
-
 unset(_foxglove_lib_dir)
+
+include("${CMAKE_CURRENT_LIST_DIR}/foxglove-sdkTargets.cmake")
 
 check_required_components(foxglove-sdk)

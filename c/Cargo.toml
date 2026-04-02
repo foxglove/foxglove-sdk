@@ -8,10 +8,8 @@ publish = false
 name = "foxglove"
 crate-type = ["staticlib", "cdylib"]
 
-# The `remote_access` feature gates `mod gateway` in src/lib.rs. It is not enabled here;
-# it is enabled by the separate ra/Cargo.toml crate which compiles the same source with
-# remote access support. When updating dependencies below, check whether corresponding
-# changes are needed in ra/Cargo.toml.
+# The `remote_access` feature gates `mod gateway` in src/lib.rs. It can be enabled via
+# the CMake option FOXGLOVE_BUILD_REMOTE_ACCESS, which passes this feature to corrosion.
 [features]
 remote-access = ["foxglove/remote-access"]
 

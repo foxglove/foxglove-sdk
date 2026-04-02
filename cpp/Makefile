@@ -56,7 +56,7 @@ build-ra:
 # Build only RA-specific targets to avoid also building the base foxglove_c
 # staticlib/cdylib and base examples, which are redundant here.
 	cmake --build $(RA_BUILD_DIR) -j 8 --config $(CMAKE_BUILD_TYPE) \
-		--target foxglove_ra_cpp_shared \
+		--target foxglove_cpp_shared \
 		--target example_remote_access \
 		--target tests
 
