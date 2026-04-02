@@ -55,10 +55,7 @@ build-ra:
 		$(if $(CLANG_TIDY),-DCLANG_TIDY=$(CLANG_TIDY)) \
 		$(if $(FOXGLOVE_PREBUILT_LIB_DIR),-DFOXGLOVE_PREBUILT_LIB_DIR=$(FOXGLOVE_PREBUILT_LIB_DIR)) \
 		-B $(RA_BUILD_DIR)
-	cmake --build $(RA_BUILD_DIR) -j 8 --config $(CMAKE_BUILD_TYPE) \
-		--target foxglove_cpp_shared \
-		--target example_remote_access \
-		--target tests
+	cmake --build $(RA_BUILD_DIR) -j 8 --config $(CMAKE_BUILD_TYPE)
 
 .PHONY: test-ra
 test-ra: build-ra
