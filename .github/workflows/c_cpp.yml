@@ -226,11 +226,18 @@ jobs:
       - if: contains(matrix.target, 'windows')
         uses: ilammy/setup-nasm@v1
 
+      # iOS builds only the Rust crate (CMake is not configured for the iOS SDK).
+      - name: Build C library for ${{ matrix.target }} (iOS)
+        if: contains(matrix.target, 'apple-ios')
+        run: cargo build --release
+        working-directory: c
+
       - name: Build C++ library
+        if: ${{ !contains(matrix.target, 'apple-ios') }}
         run: make ${{ fromJson(matrix.cross) && 'build' || 'test' }}
         working-directory: cpp
       - name: Build and test C++ library (remote access)
-        if: matrix.remote_access
+        if: ${{ matrix.remote_access && !contains(matrix.target, 'apple-ios') }}
         run: make ${{ fromJson(matrix.cross) && 'build-ra' || 'test-ra' }}
         working-directory: cpp
       - name: Ensure generated files are up to date
@@ -259,19 +266,26 @@ jobs:
           mkdir -p artifacts/foxglove/include
           mkdir -p artifacts/foxglove/src
 
-          # Staticlib always comes from the base build (no RA).
-          cp "cpp/build/${{ matrix.staticlib_name }}" artifacts/foxglove/lib/
-
-          # Cdylib comes from the RA build when remote access is enabled.
-          if [ "${{ matrix.remote_access }}" = "true" ]; then
-            cdylib_dir="cpp/build-ra"
+          if [[ "${{ matrix.target }}" == *apple-ios* ]]; then
+            # iOS: libs from cargo target dir
+            lib_dir="target/${{ matrix.target }}/release"
+            cp "$lib_dir/${{ matrix.staticlib_name }}" artifacts/foxglove/lib/
+            cp "$lib_dir/${{ matrix.cdylib_name }}" artifacts/foxglove/lib/
           else
-            cdylib_dir="cpp/build"
-          fi
-          cp "$cdylib_dir/${{ matrix.cdylib_name }}" artifacts/foxglove/lib/
-          # Include the MSVC import library on Windows (needed for link-time binding)
-          if [ -f "$cdylib_dir/${{ matrix.cdylib_name }}.lib" ]; then
-            cp "$cdylib_dir/${{ matrix.cdylib_name }}.lib" artifacts/foxglove/lib/
+            # Staticlib always comes from the base build (no RA).
+            cp "cpp/build/${{ matrix.staticlib_name }}" artifacts/foxglove/lib/
+
+            # Cdylib comes from the RA build when remote access is enabled.
+            if [ "${{ matrix.remote_access }}" = "true" ]; then
+              cdylib_dir="cpp/build-ra"
+            else
+              cdylib_dir="cpp/build"
+            fi
+            cp "$cdylib_dir/${{ matrix.cdylib_name }}" artifacts/foxglove/lib/
+            # Include the MSVC import library on Windows (needed for link-time binding)
+            if [ -f "$cdylib_dir/${{ matrix.cdylib_name }}.lib" ]; then
+              cp "$cdylib_dir/${{ matrix.cdylib_name }}.lib" artifacts/foxglove/lib/
+            fi
           fi
 
           cp -R c/include/foxglove-c artifacts/foxglove/include/
