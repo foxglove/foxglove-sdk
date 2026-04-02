@@ -298,6 +298,7 @@ add_library(foxglove_cpp_shared SHARED
   $<TARGET_OBJECTS:foxglove_cpp_obj>
   $<TARGET_OBJECTS:foxglove_generated_obj>
 )
+set_target_properties(foxglove_cpp_shared PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
 target_link_libraries(foxglove_cpp_shared PUBLIC foxglove-shared)
 if(APPLE)
   set_target_properties(foxglove_cpp_shared PROPERTIES INSTALL_RPATH "@loader_path")
