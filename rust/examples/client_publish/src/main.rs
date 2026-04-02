@@ -27,7 +27,7 @@ struct Cli {
 
 struct ExampleCallbackHandler;
 impl ServerListener for ExampleCallbackHandler {
-    fn on_message_data(&self, client: &Client, channel: &ClientChannel, message: &[u8]) {
+    fn on_message_data(&self, client: Client, channel: &ClientChannel, message: &[u8]) {
         let json: serde_json::Value =
             serde_json::from_slice(message).expect("Failed to parse message");
         println!(
@@ -37,7 +37,7 @@ impl ServerListener for ExampleCallbackHandler {
         );
     }
 
-    fn on_client_advertise(&self, client: &Client, channel: &ClientChannel) {
+    fn on_client_advertise(&self, client: Client, channel: &ClientChannel) {
         println!(
             "Client {} advertised channel: {}",
             client.id(),
@@ -45,7 +45,7 @@ impl ServerListener for ExampleCallbackHandler {
         );
     }
 
-    fn on_client_unadvertise(&self, client: &Client, channel: &ClientChannel) {
+    fn on_client_unadvertise(&self, client: Client, channel: &ClientChannel) {
         println!(
             "Client {} unadvertised channel: {}",
             client.id(),

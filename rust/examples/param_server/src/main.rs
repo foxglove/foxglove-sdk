@@ -41,7 +41,7 @@ impl ParamListener {
 impl ServerListener for ParamListener {
     fn on_get_parameters(
         &self,
-        _client: &Client,
+        _client: Client,
         param_names: Vec<String>,
         request_id: Option<&str>,
     ) -> Vec<Parameter> {
@@ -64,7 +64,7 @@ impl ServerListener for ParamListener {
 
     fn on_set_parameters(
         &self,
-        _client: &Client,
+        _client: Client,
         mut parameters: Vec<Parameter>,
         request_id: Option<&str>,
     ) -> Vec<Parameter> {

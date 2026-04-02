@@ -312,7 +312,7 @@ impl ConnectedClient {
         };
         // Call the handler after releasing the advertised_channels lock
         if let Some(handler) = server.listener() {
-            handler.on_message_data(&Client::new(self), &client_channel, &payload);
+            handler.on_message_data(Client::new(self), &client_channel, &payload);
         }
     }
 
@@ -344,7 +344,7 @@ impl ConnectedClient {
         // Call the handler after releasing the advertised_channels lock
         if let Some(handler) = server.listener() {
             for client_channel in client_channels {
-                handler.on_client_unadvertise(&Client::new(self), &client_channel);
+                handler.on_client_unadvertise(Client::new(self), &client_channel);
             }
         }
     }
@@ -386,7 +386,7 @@ impl ConnectedClient {
 
             // Call the handler after releasing the advertised_channels lock
             if let Some(handler) = server.listener() {
-                handler.on_client_advertise(&Client::new(self), &client_channel);
+                handler.on_client_advertise(Client::new(self), &client_channel);
             }
         }
     }
@@ -483,7 +483,7 @@ impl ConnectedClient {
 
             // Call the on_subscribe callback if one is registered
             if let Some(handler) = server.listener() {
-                handler.on_subscribe(&Client::new(self), channel.as_ref().into());
+                handler.on_subscribe(Client::new(self), channel.as_ref().into());
             }
         }
     }
@@ -501,7 +501,7 @@ impl ConnectedClient {
 
         if let Some(handler) = server.listener() {
             let parameters =
-                handler.on_get_parameters(&Client::new(self), param_names, request_id.as_deref());
+                handler.on_get_parameters(Client::new(self), param_names, request_id.as_deref());
             self.update_parameters(parameters, request_id);
         }
     }
@@ -519,7 +519,7 @@ impl ConnectedClient {
 
         let updated_parameters = if let Some(handler) = server.listener() {
             let updated =
-                handler.on_set_parameters(&Client::new(self), parameters, request_id.as_deref());
+                handler.on_set_parameters(Client::new(self), parameters, request_id.as_deref());
 
             // Send all the updated_parameters back to the client if request_id is provided.
             // This is the behavior of the reference Python server implementation.
@@ -817,7 +817,7 @@ impl ConnectedClient {
 
         // Finally call the handler for each channel
         for channel in unsubscribed_channels {
-            handler.on_unsubscribe(&Client::new(self), channel.as_ref().into());
+            handler.on_unsubscribe(Client::new(self), channel.as_ref().into());
         }
     }
 }
