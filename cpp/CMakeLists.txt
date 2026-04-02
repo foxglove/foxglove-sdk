@@ -201,6 +201,11 @@ if(FOXGLOVE_PREBUILT_LIB_DIR)
     set_target_properties(foxglove-shared PROPERTIES
       IMPORTED_IMPLIB "${FOXGLOVE_PREBUILT_LIB_DIR}/foxglove.dll.lib"
     )
+    # Copy the DLL into each build output directory so executables can find it at runtime.
+    # This is needed for catch_discover_tests (which runs the test exe at build time) and ctest.
+    foreach(_config Release RelWithDebInfo Debug MinSizeRel)
+      file(COPY "${FOXGLOVE_PREBUILT_LIB_DIR}/foxglove.dll" DESTINATION "${CMAKE_BINARY_DIR}/${_config}")
+    endforeach()
   endif()
 else()
   if(FOXGLOVE_BUILD_REMOTE_ACCESS)
