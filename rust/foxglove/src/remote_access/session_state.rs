@@ -695,13 +695,15 @@ mod tests {
         let (id, p) = make_participant("alice");
         state.insert_participant(id.clone(), p.clone());
 
-        let ch = ChannelId::new(1);
-        let _ = state.subscribe(&p, &[ch]);
-        state.subscribe_data(&p, &[ch]);
+        let ch = make_channel("/topic1");
+        let ch_id = ch.id();
+        state.insert_channel(&ch);
+        let _ = state.subscribe(&p, &[ch_id]);
+        state.subscribe_data(&p, &[ch_id]);
 
         let removed = state.remove_participant(&id);
-        assert_eq!(removed.last_unsubscribed.as_slice(), &[ch]);
-        assert!(!state.has_data_subscribers(&ch));
+        assert_eq!(removed.last_unsubscribed.as_slice(), &[ch_id]);
+        assert!(!state.has_data_subscribers(&ch_id));
     }
 
     #[test]
@@ -712,19 +714,23 @@ mod tests {
         state.insert_participant(id_a.clone(), pa.clone());
         state.insert_participant(id_b.clone(), pb.clone());
 
-        let ch1 = ChannelId::new(10);
-        let ch2 = ChannelId::new(20);
+        let ch1 = make_channel("/topic1");
+        let ch2 = make_channel("/topic2");
+        let ch1_id = ch1.id();
+        let ch2_id = ch2.id();
+        state.insert_channel(&ch1);
+        state.insert_channel(&ch2);
 
-        // Both subscribe to ch1; only alice subscribes to ch2
-        let _ = state.subscribe(&pa, &[ch1, ch2]);
-        state.subscribe_data(&pa, &[ch1, ch2]);
-        let _ = state.subscribe(&pb, &[ch1]);
-        state.subscribe_data(&pb, &[ch1]);
+        // Both subscribe to ch1; only alice subscribes to ch2.
+        let _ = state.subscribe(&pa, &[ch1_id, ch2_id]);
+        state.subscribe_data(&pa, &[ch1_id, ch2_id]);
+        let _ = state.subscribe(&pb, &[ch1_id]);
+        state.subscribe_data(&pb, &[ch1_id]);
 
         let removed = state.remove_participant(&id_a);
-        // ch1 still has bob, so only ch2 should be reported
-        assert_eq!(removed.last_unsubscribed.as_slice(), &[ch2]);
-        assert_eq!(state.subscriptions[&ch1].len(), 1);
+        // ch1 still has bob, so only ch2 should be reported.
+        assert_eq!(removed.last_unsubscribed.as_slice(), &[ch2_id]);
+        assert_eq!(state.subscriptions[&ch1_id].len(), 1);
     }
 
     #[test]
@@ -733,13 +739,15 @@ mod tests {
         let (id, p) = make_participant("alice");
         state.insert_participant(id.clone(), p.clone());
 
-        let ch = ChannelId::new(1);
-        let _ = state.subscribe(&p, &[ch]);
-        let _ = state.subscribe_video(&p, &[ch]);
+        let ch = make_channel("/topic1");
+        let ch_id = ch.id();
+        state.insert_channel(&ch);
+        let _ = state.subscribe(&p, &[ch_id]);
+        let _ = state.subscribe_video(&p, &[ch_id]);
 
         let removed = state.remove_participant(&id);
-        assert_eq!(removed.last_unsubscribed.as_slice(), &[ch]);
-        assert_eq!(removed.last_video_unsubscribed.as_slice(), &[ch]);
+        assert_eq!(removed.last_unsubscribed.as_slice(), &[ch_id]);
+        assert_eq!(removed.last_video_unsubscribed.as_slice(), &[ch_id]);
     }
 
     #[test]
@@ -966,19 +974,21 @@ mod tests {
         let mut state = SessionState::new();
         let (id_a, pa) = make_participant("alice");
         let (id_b, pb) = make_participant("bob");
-        let ch = ChannelId::new(1);
+        let ch = make_channel("/topic1");
+        let ch_id = ch.id();
 
         state.insert_participant(id_a.clone(), pa.clone());
         state.insert_participant(id_b, pb.clone());
+        state.insert_channel(&ch);
 
-        let _ = state.subscribe(&pa, &[ch]);
-        let _ = state.subscribe(&pb, &[ch]);
-        state.subscribe_data(&pa, &[ch]);
-        state.subscribe_data(&pb, &[ch]);
-        let v1 = state.get_data_subscription(&ch).unwrap().version();
+        let _ = state.subscribe(&pa, &[ch_id]);
+        let _ = state.subscribe(&pb, &[ch_id]);
+        state.subscribe_data(&pa, &[ch_id]);
+        state.subscribe_data(&pb, &[ch_id]);
+        let v1 = state.get_data_subscription(&ch_id).unwrap().version();
 
         let _ = state.remove_participant(&id_a);
-        let v2 = state.get_data_subscription(&ch).unwrap().version();
+        let v2 = state.get_data_subscription(&ch_id).unwrap().version();
 
         assert_ne!(v1, v2);
     }
@@ -1009,20 +1019,22 @@ mod tests {
         let (id, p) = make_participant("alice");
         state.insert_participant(id.clone(), p.clone());
 
-        let ch = ChannelId::new(1);
-        let _ = state.subscribe(&p, &[ch]);
-        state.subscribe_data(&p, &[ch]);
-        let v1 = state.data_subscriptions.get(&ch).unwrap().version();
+        let ch = make_channel("/topic1");
+        let ch_id = ch.id();
+        state.insert_channel(&ch);
+        let _ = state.subscribe(&p, &[ch_id]);
+        state.subscribe_data(&p, &[ch_id]);
+        let v1 = state.data_subscriptions.get(&ch_id).unwrap().version();
 
         let _ = state.remove_participant(&id);
-        let v2 = state.data_subscriptions.get(&ch).unwrap().version();
+        let v2 = state.data_subscriptions.get(&ch_id).unwrap().version();
         assert_ne!(v1, v2, "remove_participant should bump version");
 
         // Re-add participant and resubscribe.
         let (id2, p2) = make_participant("alice");
         state.insert_participant(id2, p2.clone());
-        state.subscribe_data(&p2, &[ch]);
-        let v3 = state.data_subscriptions.get(&ch).unwrap().version();
+        state.subscribe_data(&p2, &[ch_id]);
+        let v3 = state.data_subscriptions.get(&ch_id).unwrap().version();
         assert_ne!(v2, v3, "resubscribe after remove should bump version");
     }
 
@@ -1195,20 +1207,22 @@ mod tests {
         state.insert_participant(id_a.clone(), pa.clone());
         state.insert_participant(id_b.clone(), pb.clone());
 
-        let ch = ChannelId::new(1);
-        // alice=video, bob=data — both in the unified map
-        let _ = state.subscribe(&pa, &[ch]);
-        let _ = state.subscribe(&pb, &[ch]);
-        let _ = state.subscribe_video(&pa, &[ch]);
-        state.subscribe_data(&pb, &[ch]);
+        let ch = make_channel("/topic1");
+        let ch_id = ch.id();
+        state.insert_channel(&ch);
+        // alice=video, bob=data — both in the unified map.
+        let _ = state.subscribe(&pa, &[ch_id]);
+        let _ = state.subscribe(&pb, &[ch_id]);
+        let _ = state.subscribe_video(&pa, &[ch_id]);
+        state.subscribe_data(&pb, &[ch_id]);
 
         // Remove alice: channel keeps bob, but loses its last video subscriber.
         let removed = state.remove_participant(&id_a);
         assert!(removed.last_unsubscribed.is_empty(), "bob still subscribed");
-        assert_eq!(removed.last_video_unsubscribed.as_slice(), &[ch]);
+        assert_eq!(removed.last_video_unsubscribed.as_slice(), &[ch_id]);
 
         // Bob is the only subscriber and he's a data subscriber.
-        assert!(state.has_data_subscribers(&ch));
+        assert!(state.has_data_subscribers(&ch_id));
     }
 
     #[test]
@@ -1326,17 +1340,19 @@ mod tests {
         state.insert_participant(id_a.clone(), pa.clone());
         state.insert_participant(id_b.clone(), pb.clone());
 
-        let ch = ChannelId::new(1);
-        let _ = state.subscribe(&pa, &[ch]);
-        let _ = state.subscribe(&pb, &[ch]);
-        let _ = state.subscribe_video(&pa, &[ch]);
-        let _ = state.subscribe_video(&pb, &[ch]);
+        let ch = make_channel("/topic1");
+        let ch_id = ch.id();
+        state.insert_channel(&ch);
+        let _ = state.subscribe(&pa, &[ch_id]);
+        let _ = state.subscribe(&pb, &[ch_id]);
+        let _ = state.subscribe_video(&pa, &[ch_id]);
+        let _ = state.subscribe_video(&pb, &[ch_id]);
 
         // Remove alice: bob still has video.
         let removed = state.remove_participant(&id_a);
         assert!(removed.last_unsubscribed.is_empty());
         assert!(removed.last_video_unsubscribed.is_empty());
-        assert!(!state.has_data_subscribers(&ch));
+        assert!(!state.has_data_subscribers(&ch_id));
     }
 
     fn make_client_channel(channel_id: u64, topic: &str) -> ChannelDescriptor {
