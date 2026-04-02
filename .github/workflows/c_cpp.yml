@@ -48,7 +48,7 @@ jobs:
       - run: clang-tidy --version
       - run: make lint
         working-directory: cpp
-      - run: make CLANG_TIDY=true build
+      - run: make CLANG_TIDY=true CMAKE_BUILD_TYPE=Debug test
         working-directory: cpp
 
   lint-ra:
@@ -61,7 +61,7 @@ jobs:
           sudo apt-get install -y --no-install-recommends clang-format-19 clang-tidy-19 \
             gcc-14 g++-14 libglib2.0-dev libva-dev
           echo "/usr/lib/llvm-19/bin" >> $GITHUB_PATH
-      - run: make CLANG_TIDY=true build-ra
+      - run: make CLANG_TIDY=true CMAKE_BUILD_TYPE=Debug test-ra
         working-directory: cpp
 
   build:
