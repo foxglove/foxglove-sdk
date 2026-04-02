@@ -237,7 +237,7 @@ jobs:
         run: git diff --exit-code
 
       - name: Run remote data loader backend conformance tests
-        if: ${{ !fromJson(matrix.cross) && !matrix.remote_access }}
+        if: ${{ !fromJson(matrix.cross) }}
         env:
           REMOTE_DATA_LOADER_BACKEND_CMD: ${{ runner.os == 'Windows' && 'cpp/build/RelWithDebInfo/example_remote_data_loader_backend.exe' || 'cpp/build/example_remote_data_loader_backend' }}
           REMOTE_DATA_LOADER_BACKEND_URL: "http://127.0.0.1:8081/v1/manifest?flightId=TEST123&startTime=2024-01-01T00:00:00Z&endTime=2024-01-01T00:00:05Z"
