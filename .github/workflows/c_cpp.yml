@@ -183,6 +183,9 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           target: ${{ matrix.target }}
+          # Set a cache key to distinguish the remote-access-enabled linux
+          # builds from the non-remote-access-enabled linux builds.
+          cache-key: ${{ matrix.remote_access && 'ra' || '' }}
 
       - run: echo "IPHONEOS_DEPLOYMENT_TARGET=13.0.0" >> $GITHUB_ENV
         # Min version needed for libaws_lc_sys
