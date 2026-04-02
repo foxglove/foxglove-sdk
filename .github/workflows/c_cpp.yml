@@ -172,7 +172,7 @@ jobs:
             cdylib_artifact_name: libfoxglove-x86_64-apple-ios.dylib
             cross: true
 
-    name: build (${{ matrix.target }}, ${{ matrix.compiler || 'default compiler' }})
+    name: build (${{ matrix.target }}${{ matrix.remote_access && ', remote-access' || '' }})
     runs-on: ${{ matrix.runner }}
 
     env:
