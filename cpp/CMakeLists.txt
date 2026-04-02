@@ -292,17 +292,32 @@ if(FOXGLOVE_BUILD_REMOTE_ACCESS)
   set_property(TARGET foxglove_ra_cpp_obj PROPERTY POSITION_INDEPENDENT_CODE True)
   set_property(TARGET foxglove_ra_cpp_obj PROPERTY CXX_STANDARD 17)
   set_property(TARGET foxglove_ra_cpp_obj PROPERTY CXX_STANDARD_REQUIRED True)
-  target_include_directories(foxglove_ra_cpp_obj PUBLIC
-    foxglove/include
+  target_include_directories(foxglove_ra_cpp_obj PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/foxglove/include
     ${CMAKE_CURRENT_SOURCE_DIR}/../c/include
   )
-  target_compile_options(foxglove_ra_cpp_obj PUBLIC ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
-  target_link_options(foxglove_ra_cpp_obj PUBLIC ${SANITIZER_LINK_OPTIONS})
+  target_compile_options(foxglove_ra_cpp_obj PRIVATE ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
+  target_link_options(foxglove_ra_cpp_obj PRIVATE ${SANITIZER_LINK_OPTIONS})
 
-  add_library(foxglove_ra_cpp_shared SHARED)
+  add_library(foxglove_ra_cpp_shared SHARED
+    $<TARGET_OBJECTS:foxglove_cpp_obj>
+    $<TARGET_OBJECTS:foxglove_generated_obj>
+    $<TARGET_OBJECTS:foxglove_ra_cpp_obj>
+  )
   target_compile_definitions(foxglove_ra_cpp_shared PUBLIC FOXGLOVE_REMOTE_ACCESS)
-  target_link_libraries(foxglove_ra_cpp_shared PUBLIC foxglove_cpp_obj foxglove_generated_obj foxglove_ra_cpp_obj)
-  target_link_libraries(foxglove_ra_cpp_shared PUBLIC foxglove_ra-shared)
+  target_link_libraries(foxglove_ra_cpp_shared PRIVATE foxglove_ra-shared)
+  if(APPLE)
+    set_target_properties(foxglove_ra_cpp_shared PROPERTIES INSTALL_RPATH "@loader_path")
+  else()
+    set_target_properties(foxglove_ra_cpp_shared PROPERTIES INSTALL_RPATH "$ORIGIN")
+  endif()
+  target_include_directories(foxglove_ra_cpp_shared PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/foxglove/include>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../c/include>
+    $<INSTALL_INTERFACE:include>
+  )
+  target_compile_options(foxglove_ra_cpp_shared PRIVATE ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
+  target_link_options(foxglove_ra_cpp_shared PRIVATE ${SANITIZER_LINK_OPTIONS})
 
   add_executable(example_remote_access examples/remote-access/src/main.cpp)
   set_property(TARGET example_remote_access PROPERTY CXX_STANDARD 17)
@@ -514,3 +529,22 @@ install(FILES
   "${CMAKE_CURRENT_BINARY_DIR}/foxglove-sdkConfigVersion.cmake"
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/foxglove-sdk
 )
+
+if(FOXGLOVE_BUILD_REMOTE_ACCESS)
+  # Install the RA C++ shared library
+  install(TARGETS foxglove_ra_cpp_shared
+    EXPORT foxglove-sdkRATargets
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  )
+
+  # Install the RA Rust/C shared library
+  install(FILES $<TARGET_FILE:foxglove_ra-shared>
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  )
+
+  install(EXPORT foxglove-sdkRATargets
+    FILE foxglove-sdkRATargets.cmake
+    NAMESPACE foxglove-sdk::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/foxglove-sdk
+  )
+endif()
