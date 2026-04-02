@@ -214,9 +214,6 @@ jobs:
           sudo apt-get install -y gcc-14 g++-14 libglib2.0-dev libva-dev
           echo "CC=gcc-14" >> $GITHUB_ENV
           echo "CXX=g++-14" >> $GITHUB_ENV
-      - name: Use static CRT on Windows (to match livekit prebuilt webrtc)
-        if: matrix.remote_access && runner.os == 'Windows'
-        run: echo "RUSTFLAGS=-C target-feature=+crt-static" >> $env:GITHUB_ENV
       - name: Use Clang
         if: matrix.compiler == 'clang'
         run: |
@@ -240,6 +237,8 @@ jobs:
         if: ${{ matrix.remote_access && !contains(matrix.target, 'apple-ios') }}
         run: make ${{ fromJson(matrix.cross) && 'build-ra' || 'test-ra' }}
         working-directory: cpp
+        env:
+          RUSTFLAGS: ${{ runner.os == 'Windows' && '-C target-feature=+crt-static' || '' }}
       - name: Ensure generated files are up to date
         run: git diff --exit-code
 
@@ -310,7 +309,6 @@ jobs:
 
       - name: Upload static & shared library to artifacts
         uses: actions/upload-artifact@v7
-        if: ${{ !(matrix.skip_upload || false) }}
         with:
           name: foxglove-${{inputs.sdk-version || github.sha}}-cpp-${{ matrix.target }}${{ matrix.artifact_suffix || '' }}.zip
           path: artifacts/foxglove-${{inputs.sdk-version || github.sha}}-cpp-${{ matrix.target }}${{ matrix.artifact_suffix || '' }}.zip
