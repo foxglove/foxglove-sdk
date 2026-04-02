@@ -118,6 +118,23 @@ async function main() {
     console.log(`  ✅ Updated version in ${module} to ${newVersion}`);
   }
 
+  // update version in C++ CMakeLists.txt
+  console.log("\nUpdating version in C++ CMakeLists.txt...");
+  const cmakeFile = path.join(workspaceRoot, "cpp/CMakeLists.txt");
+  {
+    const content = await readFile(cmakeFile, "utf8");
+    const updatedContent = content.replace(
+      /project\(foxglove-sdk VERSION [^)]+\)/m,
+      `project(foxglove-sdk VERSION ${newVersion})`,
+    );
+    if (!updatedContent.includes(newVersion)) {
+      console.error(`❌ Failed to update version in ${cmakeFile}`);
+      process.exit(1);
+    }
+    await writeFile(cmakeFile, updatedContent);
+    console.log(`  ✅ Updated version in ${cmakeFile} to ${newVersion}`);
+  }
+
   console.log("\n✅ Success!");
 
   // github action outputs
