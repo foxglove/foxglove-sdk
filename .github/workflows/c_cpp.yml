@@ -274,6 +274,10 @@ jobs:
         with:
           toolchain: nightly
           components: rust-src
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libwebsockets-dev nlohmann-json3-dev catch2 liblz4-dev
 
       - run: make SANITIZE=address,undefined test
         working-directory: cpp
