@@ -80,7 +80,6 @@ jobs:
             cdylib_artifact_name: libfoxglove-aarch64-unknown-linux-gnu.so
             compiler: clang
             cross: false
-            test_debug: false
           - runner: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
             staticlib_name: libfoxglove.a
@@ -89,7 +88,6 @@ jobs:
             cdylib_artifact_name: libfoxglove-x86_64-unknown-linux-gnu.so
             compiler: clang
             cross: false
-            test_debug: true
 
           # Linux (remote access, GCC 14 / libstdc++ / glibc >= 2.39)
           - runner: ubuntu-24.04-arm
@@ -101,7 +99,6 @@ jobs:
             cross: false
             remote_access: true
             artifact_suffix: -glibc2.39
-            test_debug: false
           - runner: ubuntu-24.04
             target: x86_64-unknown-linux-gnu
             staticlib_name: libfoxglove.a
@@ -111,7 +108,6 @@ jobs:
             cross: false
             remote_access: true
             artifact_suffix: -glibc2.39
-            test_debug: false
 
           # macOS (remote access enabled)
           - runner: macos-15
@@ -122,7 +118,6 @@ jobs:
             cdylib_artifact_name: libfoxglove-aarch64-apple-darwin.dylib
             cross: false
             remote_access: true
-            test_debug: true
 
           - runner: macos-15
             target: x86_64-apple-darwin
@@ -132,7 +127,6 @@ jobs:
             cdylib_artifact_name: libfoxglove-x86_64-apple-darwin.dylib
             cross: true
             remote_access: true
-            test_debug: false
 
           # Windows (remote access enabled, static CRT to match livekit prebuilt webrtc)
           - runner: windows-2025
@@ -143,7 +137,6 @@ jobs:
             cdylib_artifact_name: foxglove-x86_64-pc-windows-msvc.dll
             cross: false
             remote_access: true
-            test_debug: false
           - runner: windows-2025
             target: aarch64-pc-windows-msvc
             staticlib_name: foxglove.lib
@@ -152,7 +145,6 @@ jobs:
             cdylib_artifact_name: foxglove-aarch64-pc-windows-msvc.dll
             cross: true
             remote_access: true
-            test_debug: false
 
           # iOS
           - runner: macos-15
@@ -162,7 +154,6 @@ jobs:
             staticlib_artifact_name: libfoxglove-aarch64-apple-ios.a
             cdylib_artifact_name: libfoxglove-aarch64-apple-ios.dylib
             cross: true
-            test_debug: false
           # iOS simulator
           - runner: macos-15
             target: aarch64-apple-ios-sim
@@ -171,7 +162,6 @@ jobs:
             staticlib_artifact_name: libfoxglove-aarch64-apple-ios-sim.a
             cdylib_artifact_name: libfoxglove-aarch64-apple-ios-sim.dylib
             cross: true
-            test_debug: false
           - runner: macos-15
             target: x86_64-apple-ios
             staticlib_name: libfoxglove.a
@@ -179,7 +169,6 @@ jobs:
             staticlib_artifact_name: libfoxglove-x86_64-apple-ios.a
             cdylib_artifact_name: libfoxglove-x86_64-apple-ios.dylib
             cross: true
-            test_debug: false
 
     name: build (${{ matrix.target }}, ${{ matrix.compiler || 'default compiler' }})
     runs-on: ${{ matrix.runner }}
@@ -192,7 +181,6 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           target: ${{ matrix.target }}
-
 
       - run: echo "IPHONEOS_DEPLOYMENT_TARGET=13.0.0" >> $GITHUB_ENV
         # Min version needed for libaws_lc_sys
@@ -223,40 +211,56 @@ jobs:
       - if: contains(matrix.target, 'windows')
         uses: ilammy/setup-nasm@v1
 
-      # iOS builds only the Rust crate (CMake is not configured for the iOS SDK).
-      - name: Build C library for ${{ matrix.target }} (iOS)
-        if: contains(matrix.target, 'apple-ios')
+      # Build the Rust/C library with cargo directly.
+      - name: Build C library for ${{ matrix.target }}
+        env:
+          FOXGLOVE_SDK_LANGUAGE: c
         run: cargo build --release
         working-directory: c
 
-      - name: Build C++ library
-        if: ${{ !contains(matrix.target, 'apple-ios') }}
-        run: make ${{ fromJson(matrix.cross) && 'build' || 'test' }}
-        working-directory: cpp
-      - name: Build and test C++ library (remote access)
-        if: ${{ matrix.remote_access && !contains(matrix.target, 'apple-ios') }}
-        run: make ${{ fromJson(matrix.cross) && 'build-ra' || 'test-ra' }}
-        working-directory: cpp
+      - name: Save base staticlib before RA rebuild
+        if: matrix.remote_access
+        shell: bash
+        run: cp target/${{ matrix.target }}/release/${{ matrix.staticlib_name }} target/${{ matrix.target }}/release/${{ matrix.staticlib_name }}.base
+
+      - name: Rebuild C library with remote access for ${{ matrix.target }}
+        if: matrix.remote_access
         env:
+          FOXGLOVE_SDK_LANGUAGE: c
           RUSTFLAGS: ${{ runner.os == 'Windows' && '-C target-feature=+crt-static' || '' }}
+        run: cargo build --release --features remote-access
+        working-directory: c
+
+      - name: Restore base staticlib
+        if: matrix.remote_access
+        shell: bash
+        run: mv target/${{ matrix.target }}/release/${{ matrix.staticlib_name }}.base target/${{ matrix.target }}/release/${{ matrix.staticlib_name }}
+
       - name: Ensure generated files are up to date
         run: git diff --exit-code
 
+      # Build and test C++ using the pre-built Rust libraries.
+      - name: Build C++ library
+        if: ${{ !contains(matrix.target, 'apple-ios') }}
+        run: make ${{ matrix.remote_access && 'build-ra' || 'build' }}
+        working-directory: cpp
+        env:
+          FOXGLOVE_PREBUILT_LIB_DIR: ${{ github.workspace }}/target/${{ matrix.target }}/release
+      - name: Test C++ library
+        if: ${{ !matrix.cross && !contains(matrix.target, 'apple-ios') }}
+        run: make ${{ matrix.remote_access && 'test-ra' || 'test' }}
+        working-directory: cpp
+        env:
+          FOXGLOVE_PREBUILT_LIB_DIR: ${{ github.workspace }}/target/${{ matrix.target }}/release
+
       - name: Run remote data loader backend conformance tests
-        if: ${{ !fromJson(matrix.cross) }}
+        if: ${{ !matrix.cross }}
         env:
           REMOTE_DATA_LOADER_BACKEND_CMD: ${{ runner.os == 'Windows' && 'cpp/build/RelWithDebInfo/example_remote_data_loader_backend.exe' || 'cpp/build/example_remote_data_loader_backend' }}
           REMOTE_DATA_LOADER_BACKEND_URL: "http://127.0.0.1:8081/v1/manifest?flightId=TEST123&startTime=2024-01-01T00:00:00Z&endTime=2024-01-01T00:00:05Z"
           REMOTE_DATA_LOADER_BACKEND_EXPECTED_STREAMED_SOURCE_COUNT: "1"
           REMOTE_DATA_LOADER_BACKEND_EXPECTED_STATIC_FILE_SOURCE_COUNT: "0"
         run: cargo run -p remote_data_loader_backend_conformance
-
-      - name: Build & test (Debug mode)
-        if: ${{ fromJson(matrix.test_debug) }}
-        env:
-          CMAKE_BUILD_TYPE: Debug
-        run: make test
-        working-directory: cpp
 
       - name: Organize artifacts for zip
         shell: bash
@@ -265,26 +269,12 @@ jobs:
           mkdir -p artifacts/foxglove/include
           mkdir -p artifacts/foxglove/src
 
-          if [[ "${{ matrix.target }}" == *apple-ios* ]]; then
-            # iOS: libs from cargo target dir
-            lib_dir="target/${{ matrix.target }}/release"
-            cp "$lib_dir/${{ matrix.staticlib_name }}" artifacts/foxglove/lib/
-            cp "$lib_dir/${{ matrix.cdylib_name }}" artifacts/foxglove/lib/
-          else
-            # Staticlib always comes from the base build (no RA).
-            cp "cpp/build/${{ matrix.staticlib_name }}" artifacts/foxglove/lib/
-
-            # Cdylib comes from the RA build when remote access is enabled.
-            if [ "${{ matrix.remote_access }}" = "true" ]; then
-              cdylib_dir="cpp/build-ra"
-            else
-              cdylib_dir="cpp/build"
-            fi
-            cp "$cdylib_dir/${{ matrix.cdylib_name }}" artifacts/foxglove/lib/
-            # Include the MSVC import library on Windows (needed for link-time binding)
-            if [ -f "$cdylib_dir/${{ matrix.cdylib_name }}.lib" ]; then
-              cp "$cdylib_dir/${{ matrix.cdylib_name }}.lib" artifacts/foxglove/lib/
-            fi
+          lib_dir="target/${{ matrix.target }}/release"
+          cp "$lib_dir/${{ matrix.staticlib_name }}" artifacts/foxglove/lib/
+          cp "$lib_dir/${{ matrix.cdylib_name }}" artifacts/foxglove/lib/
+          # Include the MSVC import library on Windows (needed for link-time binding)
+          if [ -f "$lib_dir/${{ matrix.cdylib_name }}.lib" ]; then
+            cp "$lib_dir/${{ matrix.cdylib_name }}.lib" artifacts/foxglove/lib/
           fi
 
           cp -R c/include/foxglove-c artifacts/foxglove/include/

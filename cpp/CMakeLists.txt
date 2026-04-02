@@ -182,31 +182,53 @@ endif()
 
 ### C
 
-if(FOXGLOVE_BUILD_REMOTE_ACCESS)
-  # RA builds only produce the cdylib (shared library). A staticlib is not provided because
-  # the LiveKit/WebRTC dependency has strict ABI requirements and would leak internal symbols
-  # into the consumer's binary.
-  corrosion_import_crate(
-    MANIFEST_PATH ../c/Cargo.toml
-    CRATES foxglove_c
-    CRATE_TYPES cdylib
-    FEATURES remote-access
-    FLAGS ${SANITIZER_CARGO_FLAGS}
+# FOXGLOVE_PREBUILT_LIB_DIR: path to a directory containing pre-built libfoxglove.{a,so,lib,dll,dylib}.
+# When set, these are used directly instead of building via corrosion. This is used by CI to avoid
+# redundant Rust builds and Windows long-path issues with corrosion's nested build directory.
+if(FOXGLOVE_PREBUILT_LIB_DIR)
+  get_filename_component(FOXGLOVE_PREBUILT_LIB_DIR "${FOXGLOVE_PREBUILT_LIB_DIR}" ABSOLUTE)
+  if(NOT FOXGLOVE_BUILD_REMOTE_ACCESS)
+    add_library(foxglove-static STATIC IMPORTED GLOBAL)
+    set_target_properties(foxglove-static PROPERTIES
+      IMPORTED_LOCATION "${FOXGLOVE_PREBUILT_LIB_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}foxglove${CMAKE_STATIC_LIBRARY_SUFFIX}"
+    )
+  endif()
+  add_library(foxglove-shared SHARED IMPORTED GLOBAL)
+  set_target_properties(foxglove-shared PROPERTIES
+    IMPORTED_LOCATION "${FOXGLOVE_PREBUILT_LIB_DIR}/${CMAKE_SHARED_LIBRARY_PREFIX}foxglove${CMAKE_SHARED_LIBRARY_SUFFIX}"
   )
+  if(WIN32)
+    set_target_properties(foxglove-shared PROPERTIES
+      IMPORTED_IMPLIB "${FOXGLOVE_PREBUILT_LIB_DIR}/foxglove.dll.lib"
+    )
+  endif()
 else()
-  corrosion_import_crate(
-    MANIFEST_PATH ../c/Cargo.toml
-    CRATES foxglove_c
-    FLAGS ${SANITIZER_CARGO_FLAGS}
-  )
-endif()
-if(DEFINED SANITIZE)
-  # Rust does not have flags for certain sanitizers so we strip them out
-  string(REGEX REPLACE undefined "" rust_sanitizers ${SANITIZE})
-  string(REGEX REPLACE ,, , rust_sanitizers ${rust_sanitizers})
-  string(REGEX REPLACE ,$ "" rust_sanitizers ${rust_sanitizers})
-  message(WARNING "Enabling -Zsanitizer=${rust_sanitizers} for Rust")
-  corrosion_add_target_rustflags(foxglove -Zsanitizer=${rust_sanitizers} -Cforce-frame-pointers=yes)
+  if(FOXGLOVE_BUILD_REMOTE_ACCESS)
+    # RA builds only produce the cdylib (shared library). A staticlib is not provided because
+    # the LiveKit/WebRTC dependency has strict ABI requirements and would leak internal symbols
+    # into the consumer's binary.
+    corrosion_import_crate(
+      MANIFEST_PATH ../c/Cargo.toml
+      CRATES foxglove_c
+      CRATE_TYPES cdylib
+      FEATURES remote-access
+      FLAGS ${SANITIZER_CARGO_FLAGS}
+    )
+  else()
+    corrosion_import_crate(
+      MANIFEST_PATH ../c/Cargo.toml
+      CRATES foxglove_c
+      FLAGS ${SANITIZER_CARGO_FLAGS}
+    )
+  endif()
+  if(DEFINED SANITIZE)
+    # Rust does not have flags for certain sanitizers so we strip them out
+    string(REGEX REPLACE undefined "" rust_sanitizers ${SANITIZE})
+    string(REGEX REPLACE ,, , rust_sanitizers ${rust_sanitizers})
+    string(REGEX REPLACE ,$ "" rust_sanitizers ${rust_sanitizers})
+    message(WARNING "Enabling -Zsanitizer=${rust_sanitizers} for Rust")
+    corrosion_add_target_rustflags(foxglove -Zsanitizer=${rust_sanitizers} -Cforce-frame-pointers=yes)
+  endif()
 endif()
 
 if(NOT FOXGLOVE_BUILD_REMOTE_ACCESS)
