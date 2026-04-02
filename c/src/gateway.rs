@@ -601,16 +601,16 @@ pub unsafe extern "C" fn foxglove_gateway_add_service(
     gateway: Option<&FoxgloveGateway>,
     service: *mut FoxgloveService,
 ) -> FoxgloveError {
-    let Some(gateway) = gateway else {
-        return FoxgloveError::ValueError;
-    };
     if service.is_null() {
         return FoxgloveError::ValueError;
     }
+    let service = unsafe { FoxgloveService::from_raw(service) };
+    let Some(gateway) = gateway else {
+        return FoxgloveError::ValueError;
+    };
     let Some(handle) = gateway.as_ref() else {
         return FoxgloveError::SinkClosed;
     };
-    let service = unsafe { FoxgloveService::from_raw(service) };
     handle
         .add_services([service.into_inner()])
         .err()
