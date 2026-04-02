@@ -174,6 +174,31 @@ pub struct CompressedImage {
     #[prost(string, tag = "3")]
     pub format: ::prost::alloc::string::String,
 }
+/// A compressed point cloud. A decoder for `format` must decompress `data`, using metadata stored in the compressed payload to recover point positions and any additional per-point attributes. The decoded point cloud must include at least 2 coordinate fields from `x`, `y`, and `z`; `red`, `green`, `blue`, and `alpha` are optional for customizing each point's color.
+///
+/// <https://docs.foxglove.dev/docs/visualization/message-schemas/compressed-point-cloud>
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct CompressedPointCloud {
+    /// Timestamp of point cloud
+    #[prost(message, optional, tag = "1")]
+    pub timestamp: ::core::option::Option<crate::messages::Timestamp>,
+    /// Frame of reference
+    #[prost(string, tag = "2")]
+    pub frame_id: ::prost::alloc::string::String,
+    /// The origin of the point cloud relative to the frame of reference
+    #[prost(message, optional, tag = "3")]
+    pub pose: ::core::option::Option<Pose>,
+    /// Compressed point cloud data for exactly one point cloud, including any format-specific metadata needed to describe the decoded point attributes.
+    #[prost(bytes = "bytes", tag = "4")]
+    #[cfg_attr(feature = "serde", serde(with = "crate::messages::serde_bytes"))]
+    pub data: ::prost::bytes::Bytes,
+    /// Point cloud compression format.
+    ///
+    /// Supported values: `draco` ([Google Draco](<https://google.github.io/draco/>)).
+    #[prost(string, tag = "5")]
+    pub format: ::prost::alloc::string::String,
+}
 /// A single frame of a compressed video bitstream
 ///
 /// <https://docs.foxglove.dev/docs/visualization/message-schemas/compressed-video>

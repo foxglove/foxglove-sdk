@@ -1236,6 +1236,42 @@ const PackedElementField: FoxgloveMessageSchema = {
   ],
 };
 
+const CompressedPointCloud: FoxgloveMessageSchema = {
+  type: "message",
+  name: "CompressedPointCloud",
+  description:
+    "A compressed point cloud. A decoder for `format` must decompress `data`, using metadata stored in the compressed payload to recover point positions and any additional per-point attributes. The decoded point cloud must include at least 2 coordinate fields from `x`, `y`, and `z`; `red`, `green`, `blue`, and `alpha` are optional for customizing each point's color.",
+  fields: [
+    {
+      name: "timestamp",
+      type: { type: "nested", schema: Timestamp },
+      description: "Timestamp of point cloud",
+    },
+    {
+      name: "frame_id",
+      type: { type: "primitive", name: "string" },
+      description: "Frame of reference",
+    },
+    {
+      name: "pose",
+      type: { type: "nested", schema: Pose },
+      description: "The origin of the point cloud relative to the frame of reference",
+    },
+    {
+      name: "data",
+      type: { type: "primitive", name: "bytes" },
+      description:
+        "Compressed point cloud data for exactly one point cloud, including any format-specific metadata needed to describe the decoded point attributes.",
+    },
+    {
+      name: "format",
+      type: { type: "primitive", name: "string" },
+      description:
+        "Point cloud compression format.\n\nSupported values: `draco` ([Google Draco](https://google.github.io/draco/)).",
+    },
+  ],
+};
+
 const Grid: FoxgloveMessageSchema = {
   type: "message",
   name: "Grid",
@@ -1903,6 +1939,7 @@ export const foxgloveMessageSchemas = {
   CircleAnnotation,
   Color,
   CompressedImage,
+  CompressedPointCloud,
   CompressedVideo,
   CylinderPrimitive,
   CubePrimitive,
