@@ -220,6 +220,10 @@ jobs:
         run: cargo build --release
         working-directory: c
 
+      # We include remote access support on platforms that support it, but only
+      # in the cdylib - we don't want to include it in the staticlib. There's no
+      # way to prevent cargo from building the staticlib again in this step, so
+      # we stash and restore the original staticlib.
       - name: Save base staticlib before RA rebuild
         if: matrix.remote_access
         shell: bash
