@@ -2297,6 +2297,7 @@ typedef struct foxglove_gateway_callbacks {
                        const struct foxglove_channel_descriptor *channel);
   /**
    * Callback invoked when a client unsubscribes from a channel or disconnects.
+   * Also invoked when a subscribed channel is removed from the context.
    */
   void (*on_unsubscribe)(const void *context,
                          uint32_t client_id,

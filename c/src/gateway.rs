@@ -113,6 +113,7 @@ pub struct FoxgloveGatewayCallbacks {
     >,
 
     /// Callback invoked when a client unsubscribes from a channel or disconnects.
+    /// Also invoked when a subscribed channel is removed from the context.
     pub on_unsubscribe: Option<
         unsafe extern "C" fn(
             context: *const c_void,
