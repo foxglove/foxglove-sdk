@@ -17,6 +17,7 @@ pub trait Listener: Send + Sync {
     /// Callback invoked when a client subscribes to a channel.
     fn on_subscribe(&self, _client: &Client, _channel: &ChannelDescriptor) {}
     /// Callback invoked when a client unsubscribes from a channel or disconnects.
+    /// Also invoked when a subscribed channel is removed from the [`Context`][crate::Context].
     fn on_unsubscribe(&self, _client: &Client, _channel: &ChannelDescriptor) {}
     /// Callback invoked when a client advertises a client channel.
     fn on_client_advertise(&self, _client: &Client, _channel: &ChannelDescriptor) {}

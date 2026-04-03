@@ -69,7 +69,8 @@ struct RemoteAccessGatewayCallbacks {
   /// @brief Callback invoked when a remote client subscribes to a channel.
   std::function<void(uint32_t client_id, const ChannelDescriptor& channel)> onSubscribe;
 
-  /// @brief Callback invoked when a remote client unsubscribes from a channel.
+  /// @brief Callback invoked when a remote client unsubscribes from a channel or disconnects.
+  /// Also invoked when a subscribed channel is removed from the Context.
   std::function<void(uint32_t client_id, const ChannelDescriptor& channel)> onUnsubscribe;
 
   /// @brief Callback invoked when a client message is received.

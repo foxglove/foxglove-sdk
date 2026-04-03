@@ -273,6 +273,10 @@ impl Sink for RemoteAccessSession {
     fn remove_channel(&self, channel: &RawChannel) {
         let _guard = self.subscription_lock.lock();
         let channel_id = channel.id();
+
+        // Collect subscriber info before removal for on_unsubscribe callbacks.
+        let subscriber_clients = self.state.read().channel_subscriber_clients(&channel_id);
+
         if !self.state.write().remove_channel(channel_id) {
             return;
         }
@@ -282,6 +286,15 @@ impl Sink for RemoteAccessSession {
 
         let unadvertise = Unadvertise::new([u64::from(channel_id)]);
         self.broadcast_control(encode_json_message(&unadvertise));
+
+        // Fire on_unsubscribe callbacks for subscribers of the removed channel.
+        if let Some(listener) = &self.listener {
+            let descriptor = channel.descriptor();
+            for (client_id, participant_id) in subscriber_clients {
+                let client = Client::new(client_id, participant_id);
+                listener.on_unsubscribe(&client, descriptor);
+            }
+        }
     }
 
     fn auto_subscribe(&self) -> bool {
