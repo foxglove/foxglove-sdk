@@ -78,7 +78,7 @@ You can also build the bridge using a ROS environment within a Docker container:
 make docker-build
 ```
 
-The built ROS workspace will be written to `/ros` in your `foxglove_sdk` directory.
+The built ROS workspace will be written to `/ros` in your `foxglove-sdk` directory.
 
 ## Running the bridge
 
