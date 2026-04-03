@@ -44,13 +44,11 @@ Run example programs (note that a different `build` directory may be used depend
 
 ## Remote access
 
-The remote access distribution (`libfoxglove_ra`) is a superset of the base SDK that adds the `RemoteAccessGateway` class for live visualization and teleop via the Foxglove platform.
-
-This is distributed as a **shared library only** — no static library is provided. The underlying LiveKit/WebRTC dependency is large (hundreds of MB as a static archive) and would leak internal symbols into your binary. You must ship the shared library (`libfoxglove_ra.so`, `libfoxglove_ra.dylib`, or `foxglove_ra.dll`) alongside your application.
+Remote access support adds the `RemoteAccessGateway` class for live visualization and teleop via the Foxglove platform. It is built by enabling the `FOXGLOVE_BUILD_REMOTE_ACCESS` CMake option, which adds the gateway code to `foxglove_cpp_shared`. Only the shared library is produced — no static library — because the LiveKit/WebRTC dependency has strict ABI requirements and would leak internal symbols into the consumer's binary.
 
 ### Supported platforms and ABI requirements
 
-The remote access library has strict ABI requirements inherited from the prebuilt LiveKit/WebRTC native library. **Your application must be built with a compatible compiler and runtime**, or you will encounter linker errors or undefined behavior.
+The remote access shared library has strict ABI requirements inherited from the prebuilt LiveKit/WebRTC native library. **Your application must be built with a compatible compiler and runtime**, or you will encounter linker errors or undefined behavior.
 
 | Platform | Compiler | C++ stdlib | CRT | Notes |
 |----------|----------|------------|-----|-------|
@@ -73,9 +71,9 @@ This uses a separate build directory (`build-ra/`) from the base SDK build.
 
 ### Consuming the library
 
-Link against the shared library and include the same C and C++ headers as the base SDK. The C++ header `foxglove/remote_access.hpp` provides the `RemoteAccessGateway` class.
+Link against `foxglove_cpp_shared` and include the same C and C++ headers as the base SDK. The C++ header `foxglove/remote_access.hpp` provides the `RemoteAccessGateway` class.
 
-The gateway-related C declarations in `foxglove-c/foxglove-c.h` are guarded by `#if defined(FOXGLOVE_REMOTE_ACCESS)`. If you are using CMake and link against the `foxglove_ra_cpp_shared` target, this define is propagated automatically. Otherwise, define `FOXGLOVE_REMOTE_ACCESS` before including the header.
+The gateway-related C declarations in `foxglove-c/foxglove-c.h` are guarded by `#if defined(FOXGLOVE_REMOTE_ACCESS)`. When using CMake and linking against `foxglove_cpp_shared` built with `FOXGLOVE_BUILD_REMOTE_ACCESS=ON`, this define is propagated automatically. Otherwise, define `FOXGLOVE_REMOTE_ACCESS` before including the header.
 
 ## Examples
 

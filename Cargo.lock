@@ -1599,20 +1599,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "foxglove_c_ra"
-version = "0.21.0"
-dependencies = [
- "base64 0.22.1",
- "bitflags",
- "env_logger",
- "foxglove 0.21.0",
- "log",
- "maplit",
- "mcap 0.24.0",
- "tracing",
-]
-
-[[package]]
 name = "foxglove_data_loader"
 version = "0.1.0"
 dependencies = [

@@ -38,6 +38,8 @@ build:
 		$(if $(STRICT),-DSTRICT=$(STRICT)) \
 		$(if $(CLANG_TIDY),-DCLANG_TIDY=$(CLANG_TIDY)) \
 		$(if $(BUILD_OPENCV_EXAMPLE),-DBUILD_OPENCV_EXAMPLE=$(BUILD_OPENCV_EXAMPLE)) \
+		$(if $(FOXGLOVE_PREBUILT_LIB_DIR),-DFOXGLOVE_PREBUILT_LIB_DIR=$(FOXGLOVE_PREBUILT_LIB_DIR)) \
+		$(CMAKE_ARGS) \
 		-B $(BUILD_DIR)
 	cmake --build $(BUILD_DIR) -j 8 --config $(CMAKE_BUILD_TYPE)
 
@@ -52,13 +54,10 @@ build-ra:
 		$(if $(SANITIZE),-DSANITIZE=$(SANITIZE) -DRust_TOOLCHAIN=nightly) \
 		$(if $(STRICT),-DSTRICT=$(STRICT)) \
 		$(if $(CLANG_TIDY),-DCLANG_TIDY=$(CLANG_TIDY)) \
+		$(if $(FOXGLOVE_PREBUILT_LIB_DIR),-DFOXGLOVE_PREBUILT_LIB_DIR=$(FOXGLOVE_PREBUILT_LIB_DIR)) \
+		$(CMAKE_ARGS) \
 		-B $(RA_BUILD_DIR)
-# Build only RA-specific targets to avoid also building the base foxglove_c
-# staticlib/cdylib and base examples, which are redundant here.
-	cmake --build $(RA_BUILD_DIR) -j 8 --config $(CMAKE_BUILD_TYPE) \
-		--target foxglove_ra_cpp_shared \
-		--target example_remote_access \
-		--target tests
+	cmake --build $(RA_BUILD_DIR) -j 8 --config $(CMAKE_BUILD_TYPE)
 
 .PHONY: test-ra
 test-ra: build-ra
