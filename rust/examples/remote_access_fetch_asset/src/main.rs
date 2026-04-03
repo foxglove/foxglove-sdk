@@ -21,7 +21,7 @@ use foxglove::LazyChannel;
 use foxglove::messages::{
     Color, ModelPrimitive, Pose, Quaternion, SceneEntity, SceneUpdate, Vector3,
 };
-use foxglove::remote_access::{AssetHandler, AssetResponder, Capability, Gateway};
+use foxglove::remote_access::{AssetHandler, AssetResponder, Gateway};
 use log::info;
 
 const PELICAN_URI: &str = "package://pelican/pelican.stl";
@@ -66,7 +66,6 @@ async fn main() {
     let asset_server = AssetServer::new();
 
     let handle = Gateway::new()
-        .capabilities([Capability::Assets])
         .fetch_asset_handler(Box::new(asset_server))
         .start()
         .expect("Failed to start remote access gateway");
