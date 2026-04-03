@@ -22,7 +22,7 @@ impl Listener for MessageHandler {
     }
 
     /// Called when a connected app publishes a message, such as from the Teleop panel.
-    fn on_message_data(&self, client: Client, channel: &ChannelDescriptor, message: &[u8]) {
+    fn on_message_data(&self, client: &Client, channel: &ChannelDescriptor, message: &[u8]) {
         let json = serde_json::from_slice::<Value>(message).expect("Failed to parse message");
         tracing::info!(
             "Teleop message from {} on topic {}: {json}",
@@ -31,7 +31,7 @@ impl Listener for MessageHandler {
         );
     }
 
-    fn on_subscribe(&self, client: Client, channel: &ChannelDescriptor) {
+    fn on_subscribe(&self, client: &Client, channel: &ChannelDescriptor) {
         tracing::info!(
             "Client {} subscribed to channel: {}",
             client.id(),
@@ -39,7 +39,7 @@ impl Listener for MessageHandler {
         );
     }
 
-    fn on_unsubscribe(&self, client: Client, channel: &ChannelDescriptor) {
+    fn on_unsubscribe(&self, client: &Client, channel: &ChannelDescriptor) {
         tracing::info!(
             "Client {} unsubscribed from channel: {}",
             client.id(),
@@ -47,7 +47,7 @@ impl Listener for MessageHandler {
         );
     }
 
-    fn on_client_advertise(&self, client: Client, channel: &ChannelDescriptor) {
+    fn on_client_advertise(&self, client: &Client, channel: &ChannelDescriptor) {
         tracing::info!(
             "Client {} advertised channel: {}",
             client.id(),
@@ -55,7 +55,7 @@ impl Listener for MessageHandler {
         );
     }
 
-    fn on_client_unadvertise(&self, client: Client, channel: &ChannelDescriptor) {
+    fn on_client_unadvertise(&self, client: &Client, channel: &ChannelDescriptor) {
         tracing::info!(
             "Client {} unadvertised channel: {}",
             client.id(),

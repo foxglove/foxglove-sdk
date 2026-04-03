@@ -819,7 +819,7 @@ impl RemoteAccessSession {
                     participant.participant_id().clone(),
                 );
                 for descriptor in &subscribe_result.newly_subscribed_descriptors {
-                    listener.on_subscribe(client.clone(), descriptor);
+                    listener.on_subscribe(&client, descriptor);
                 }
             }
         }
@@ -865,7 +865,7 @@ impl RemoteAccessSession {
                     participant.participant_id().clone(),
                 );
                 for descriptor in &unsubscribe_result.actually_unsubscribed_descriptors {
-                    listener.on_unsubscribe(client.clone(), descriptor);
+                    listener.on_unsubscribe(&client, descriptor);
                 }
             }
         }
@@ -944,7 +944,7 @@ impl RemoteAccessSession {
             }
 
             if let Some(listener) = &self.listener {
-                listener.on_client_advertise(client.clone(), &descriptor);
+                listener.on_client_advertise(&client, &descriptor);
             }
 
             // Drain any pending byte stream reader that arrived before this advertise.
@@ -990,7 +990,7 @@ impl RemoteAccessSession {
                 ),
                 Some(descriptor) => {
                     if let Some(listener) = &self.listener {
-                        listener.on_client_unadvertise(client.clone(), &descriptor);
+                        listener.on_client_unadvertise(&client, &descriptor);
                     }
                 }
             }
@@ -1086,7 +1086,7 @@ impl RemoteAccessSession {
                 participant.client_id(),
                 participant.participant_id().clone(),
             );
-            listener.on_message_data(client, &descriptor, &msg.data);
+            listener.on_message_data(&client, &descriptor, &msg.data);
         }
     }
 
@@ -1178,11 +1178,11 @@ impl RemoteAccessSession {
             let client = Client::new(client_id, participant_id.clone());
 
             for descriptor in &removed.subscribed_descriptors {
-                listener.on_unsubscribe(client.clone(), descriptor);
+                listener.on_unsubscribe(&client, descriptor);
             }
 
             for descriptor in &removed.client_channels {
-                listener.on_client_unadvertise(client.clone(), descriptor);
+                listener.on_client_unadvertise(&client, descriptor);
             }
         }
     }
@@ -1614,7 +1614,8 @@ impl RemoteAccessSession {
                 participant.client_id(),
                 participant.participant_id().clone(),
             );
-            let parameters = listener.on_get_parameters(client, param_names, request_id.as_deref());
+            let parameters =
+                listener.on_get_parameters(&client, param_names, request_id.as_deref());
             self.send_parameter_values(participant, parameters, request_id);
         }
     }
@@ -1639,7 +1640,7 @@ impl RemoteAccessSession {
                 participant.client_id(),
                 participant.participant_id().clone(),
             );
-            let updated = listener.on_set_parameters(client, parameters, request_id.as_deref());
+            let updated = listener.on_set_parameters(&client, parameters, request_id.as_deref());
 
             // Send the updated parameters back to the requesting client if `request_id` is set.
             if request_id.is_some() {
