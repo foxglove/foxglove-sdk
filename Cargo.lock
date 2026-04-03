@@ -1279,6 +1279,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "example_remote_access_stream_mcap"
+version = "0.0.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "env_logger",
+ "foxglove 0.21.0",
+ "mcap 0.24.0",
+ "tokio",
+]
+
+[[package]]
 name = "example_remote_data_loader_backend"
 version = "0.0.0"
 dependencies = [
