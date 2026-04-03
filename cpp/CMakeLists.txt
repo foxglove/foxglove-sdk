@@ -307,7 +307,7 @@ add_library(foxglove_cpp_shared SHARED
 # against the DLL. This is simpler than annotating every public function with
 # __declspec(dllexport), and the surface area is small (just our thin C++
 # wrapper, not the Rust lib or third-party deps). FLE-382 tracks the work to
-# switch to __declspec(dllexport), if we decode to go down that path.
+# switch to __declspec(dllexport), if we decide to go down that path.
 set_target_properties(foxglove_cpp_shared PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
 target_link_libraries(foxglove_cpp_shared PUBLIC foxglove-shared)
 if(APPLE)
