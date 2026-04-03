@@ -233,7 +233,7 @@ impl foxglove::remote_access::Listener for FoxgloveGatewayCallbacks {
 
     fn on_subscribe(
         &self,
-        client: foxglove::remote_access::Client,
+        client: &foxglove::remote_access::Client,
         channel: &foxglove::ChannelDescriptor,
     ) {
         if let Some(cb) = self.on_subscribe {
@@ -244,7 +244,7 @@ impl foxglove::remote_access::Listener for FoxgloveGatewayCallbacks {
 
     fn on_unsubscribe(
         &self,
-        client: foxglove::remote_access::Client,
+        client: &foxglove::remote_access::Client,
         channel: &foxglove::ChannelDescriptor,
     ) {
         if let Some(cb) = self.on_unsubscribe {
@@ -255,7 +255,7 @@ impl foxglove::remote_access::Listener for FoxgloveGatewayCallbacks {
 
     fn on_message_data(
         &self,
-        client: foxglove::remote_access::Client,
+        client: &foxglove::remote_access::Client,
         channel: &foxglove::ChannelDescriptor,
         payload: &[u8],
     ) {
@@ -275,7 +275,7 @@ impl foxglove::remote_access::Listener for FoxgloveGatewayCallbacks {
 
     fn on_client_advertise(
         &self,
-        client: foxglove::remote_access::Client,
+        client: &foxglove::remote_access::Client,
         channel: &foxglove::ChannelDescriptor,
     ) {
         if let Some(cb) = self.on_client_advertise {
@@ -286,7 +286,7 @@ impl foxglove::remote_access::Listener for FoxgloveGatewayCallbacks {
 
     fn on_client_unadvertise(
         &self,
-        client: foxglove::remote_access::Client,
+        client: &foxglove::remote_access::Client,
         channel: &foxglove::ChannelDescriptor,
     ) {
         if let Some(cb) = self.on_client_unadvertise {
@@ -297,7 +297,7 @@ impl foxglove::remote_access::Listener for FoxgloveGatewayCallbacks {
 
     fn on_get_parameters(
         &self,
-        client: foxglove::remote_access::Client,
+        client: &foxglove::remote_access::Client,
         param_names: Vec<String>,
         request_id: Option<&str>,
     ) -> Vec<foxglove::remote_access::Parameter> {
@@ -329,7 +329,7 @@ impl foxglove::remote_access::Listener for FoxgloveGatewayCallbacks {
 
     fn on_set_parameters(
         &self,
-        client: foxglove::remote_access::Client,
+        client: &foxglove::remote_access::Client,
         parameters: Vec<foxglove::remote_access::Parameter>,
         request_id: Option<&str>,
     ) -> Vec<foxglove::remote_access::Parameter> {
