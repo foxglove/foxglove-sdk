@@ -144,6 +144,12 @@ if (STRICT)
   endif()
 endif()
 
+# GCC 11 (e.g. Ubuntu 22.04) requires -fpermissive for some constructs compiled by webrtc-sys.
+# Propagate to Rust crate builds that compile C++ via the cc crate.
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 12)
+  set(FOXGLOVE_CORROSION_CXXFLAGS "-fpermissive")
+endif()
+
 option(CLANG_TIDY "Run clang-tidy static analysis" OFF)
 if(CLANG_TIDY)
   find_program(CLANG_TIDY_EXE NAMES clang-tidy REQUIRED)
@@ -204,6 +210,9 @@ else()
     string(REGEX REPLACE ,$ "" rust_sanitizers ${rust_sanitizers})
     message(WARNING "Enabling -Zsanitizer=${rust_sanitizers} for Rust")
     corrosion_add_target_rustflags(foxglove -Zsanitizer=${rust_sanitizers} -Cforce-frame-pointers=yes)
+  endif()
+  if(FOXGLOVE_CORROSION_CXXFLAGS)
+    corrosion_set_env_vars(foxglove "CXXFLAGS=${FOXGLOVE_CORROSION_CXXFLAGS}")
   endif()
 endif()
 
