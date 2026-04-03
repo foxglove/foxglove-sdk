@@ -145,7 +145,7 @@ jobs:
             staticlib_artifact_name: foxglove-aarch64-pc-windows-msvc.lib
             cdylib_artifact_name: foxglove-aarch64-pc-windows-msvc.dll
             cross: true
-            cmake_args: -A ARM64
+            cmake_args: -A ARM64 -DFOXGLOVE_SKIP_TEST_DISCOVERY=ON
             remote_access: true
 
           # iOS
