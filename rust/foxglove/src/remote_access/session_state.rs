@@ -804,11 +804,13 @@ mod tests {
         state.insert_participant(id_a.clone(), pa.clone());
         state.insert_participant(id_b.clone(), pb.clone());
 
-        let ch = ChannelId::new(1);
-        let _ = state.subscribe(&pa, &[ch]);
-        let _ = state.subscribe(&pb, &[ch]);
+        let ch = make_channel("/topic1");
+        let ch_id = ch.id();
+        state.insert_channel(&ch);
+        let _ = state.subscribe(&pa, &[ch_id]);
+        let _ = state.subscribe(&pb, &[ch_id]);
 
-        let result = state.channel_subscriber_clients(&ch);
+        let result = state.channel_subscriber_clients(&ch_id);
         assert_eq!(result.len(), 2);
         let identities: Vec<_> = result.iter().map(|(_, id)| id.clone()).collect();
         assert!(identities.contains(&id_a));
