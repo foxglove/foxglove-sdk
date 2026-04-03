@@ -4,7 +4,7 @@
 # includes to include paths.
 
 cmake_minimum_required(VERSION 3.25)
-project(foxglove-sdk)
+project(foxglove-sdk VERSION 0.21.0)
 
 # Enable ccache if available
 find_program(CCACHE_PROGRAM ccache)
@@ -71,7 +71,21 @@ set(LWS_WITHOUT_TESTAPPS ON CACHE BOOL "" FORCE)
 set(LWS_WITHOUT_TEST_SERVER ON CACHE BOOL "" FORCE)
 set(LWS_WITHOUT_TEST_PING ON CACHE BOOL "" FORCE)
 set(LWS_WITHOUT_TEST_CLIENT ON CACHE BOOL "" FORCE)
-FetchContent_MakeAvailable(libwebsockets)
+# Avoid FetchContent_MakeAvailable so we can pass EXCLUDE_FROM_ALL to add_subdirectory,
+# preventing libwebsockets' install rules from polluting our install.
+if(USE_PACKAGE_MANAGER_DEPENDENCIES)
+  find_package(libwebsockets QUIET)
+endif()
+if(NOT libwebsockets_FOUND)
+  FetchContent_Populate(libwebsockets)
+  add_subdirectory(${libwebsockets_SOURCE_DIR} ${libwebsockets_BINARY_DIR} EXCLUDE_FROM_ALL)
+endif()
+# System-installed libwebsockets provides the "websockets_shared" target, while the FetchContent
+# build provides "websockets". Create an alias so the rest of this file can use "websockets"
+# consistently.
+if(NOT TARGET websockets AND TARGET websockets_shared)
+  add_library(websockets ALIAS websockets_shared)
+endif()
 
 FetchContent_Declare(nlohmann_json
   GIT_REPOSITORY https://github.com/nlohmann/json.git
@@ -97,6 +111,7 @@ if(BUILD_REMOTE_DATA_LOADER_BACKEND_EXAMPLE)
     FIND_PACKAGE_ARGS QUIET
   )
   set(ENABLE_DATE_TESTING OFF CACHE BOOL "" FORCE)
+  set(ENABLE_DATE_INSTALL OFF CACHE BOOL "" FORCE)
   FetchContent_MakeAvailable(date)
 
   FetchContent_Declare(httplib
@@ -112,6 +127,7 @@ if(BUILD_REMOTE_DATA_LOADER_BACKEND_EXAMPLE)
   set(HTTPLIB_USE_BROTLI_IF_AVAILABLE OFF CACHE BOOL "" FORCE)
   set(HTTPLIB_USE_ZSTD_IF_AVAILABLE OFF CACHE BOOL "" FORCE)
   set(HTTPLIB_USE_NON_BLOCKING_GETADDRINFO OFF CACHE BOOL "" FORCE)
+  set(HTTPLIB_INSTALL OFF CACHE BOOL "" FORCE)
   FetchContent_MakeAvailable(httplib)
 endif()
 
@@ -182,6 +198,9 @@ if(WIN32)
   target_link_libraries(foxglove-static INTERFACE Bcrypt SChannel Crypt32 Ncrypt)
 elseif(APPLE)
   target_link_libraries(foxglove-static INTERFACE "-framework Security" "-framework CoreFoundation")
+elseif(UNIX)
+  # Required for the Rust standard library on older glibc (< 2.34) where these are separate libraries.
+  target_link_libraries(foxglove-static INTERFACE pthread dl m)
 endif()
 
 
@@ -197,9 +216,12 @@ set_property(TARGET foxglove_generated_obj PROPERTY POSITION_INDEPENDENT_CODE Tr
 set_property(TARGET foxglove_generated_obj PROPERTY CXX_STANDARD 17)
 set_property(TARGET foxglove_generated_obj PROPERTY CXX_STANDARD_REQUIRED True)
 set_property(TARGET foxglove_generated_obj PROPERTY CXX_CLANG_TIDY "")
-target_include_directories(foxglove_generated_obj PUBLIC foxglove/include ${CMAKE_CURRENT_SOURCE_DIR}/../c/include)
-target_compile_options(foxglove_generated_obj PUBLIC ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
-target_link_options(foxglove_generated_obj PUBLIC ${SANITIZER_LINK_OPTIONS})
+target_include_directories(foxglove_generated_obj PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/foxglove/include
+  ${CMAKE_CURRENT_SOURCE_DIR}/../c/include
+)
+target_compile_options(foxglove_generated_obj PRIVATE ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
+target_link_options(foxglove_generated_obj PRIVATE ${SANITIZER_LINK_OPTIONS})
 
 # Hand-written C++ code
 file(GLOB_RECURSE foxglove_cpp_srcs CONFIGURE_DEPENDS
@@ -216,16 +238,38 @@ add_library(foxglove_cpp_obj OBJECT "${foxglove_cpp_srcs}")
 set_property(TARGET foxglove_cpp_obj PROPERTY POSITION_INDEPENDENT_CODE True)
 set_property(TARGET foxglove_cpp_obj PROPERTY CXX_STANDARD 17)
 set_property(TARGET foxglove_cpp_obj PROPERTY CXX_STANDARD_REQUIRED True)
-target_include_directories(foxglove_cpp_obj PUBLIC foxglove/include ${CMAKE_CURRENT_SOURCE_DIR}/../c/include)
-target_compile_options(foxglove_cpp_obj PUBLIC ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
-target_link_options(foxglove_cpp_obj PUBLIC ${SANITIZER_LINK_OPTIONS})
+target_include_directories(foxglove_cpp_obj PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/foxglove/include
+  ${CMAKE_CURRENT_SOURCE_DIR}/../c/include
+)
+target_compile_options(foxglove_cpp_obj PRIVATE ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
+target_link_options(foxglove_cpp_obj PRIVATE ${SANITIZER_LINK_OPTIONS})
 
-add_library(foxglove_cpp_static STATIC)
-add_library(foxglove_cpp_shared SHARED)
-target_link_libraries(foxglove_cpp_static PUBLIC foxglove_cpp_obj foxglove_generated_obj)
+add_library(foxglove_cpp_static STATIC
+  $<TARGET_OBJECTS:foxglove_cpp_obj>
+  $<TARGET_OBJECTS:foxglove_generated_obj>
+)
+add_library(foxglove_cpp_shared SHARED
+  $<TARGET_OBJECTS:foxglove_cpp_obj>
+  $<TARGET_OBJECTS:foxglove_generated_obj>
+)
 target_link_libraries(foxglove_cpp_static PRIVATE foxglove-static)
-target_link_libraries(foxglove_cpp_shared PUBLIC foxglove_cpp_obj foxglove_generated_obj)
 target_link_libraries(foxglove_cpp_shared PRIVATE foxglove-shared)
+if(APPLE)
+  set_target_properties(foxglove_cpp_shared PROPERTIES INSTALL_RPATH "@loader_path")
+else()
+  set_target_properties(foxglove_cpp_shared PROPERTIES INSTALL_RPATH "$ORIGIN")
+endif()
+
+foreach(_target foxglove_cpp_static foxglove_cpp_shared)
+  target_include_directories(${_target} PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/foxglove/include>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../c/include>
+    $<INSTALL_INTERFACE:include>
+  )
+  target_compile_options(${_target} PRIVATE ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
+  target_link_options(${_target} PRIVATE ${SANITIZER_LINK_OPTIONS})
+endforeach()
 
 
 ### Tests
@@ -366,3 +410,62 @@ if(BUILD_WS_STREAM_MCAP_EXAMPLE)
   target_include_directories(example_ws_stream_mcap SYSTEM PRIVATE ${mcap_SOURCE_DIR}/cpp/mcap/include)
   target_link_libraries(example_ws_stream_mcap foxglove_cpp_static lz4_static)
 endif()
+
+### Install
+
+include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
+
+# Install the C++ static and shared libraries
+install(TARGETS foxglove_cpp_static foxglove_cpp_shared
+  EXPORT foxglove-sdkTargets
+  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+)
+
+# Install the Rust/C static library
+install(FILES $<TARGET_FILE:foxglove-static>
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}
+)
+
+# Install the Rust/C shared library
+install(FILES $<TARGET_FILE:foxglove-shared>
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}
+)
+
+# Install C++ headers
+install(DIRECTORY foxglove/include/
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+  FILES_MATCHING PATTERN "*.hpp"
+)
+
+# Install C headers
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../c/include/
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+  FILES_MATCHING PATTERN "*.h"
+)
+
+# Generate and install CMake package config files
+configure_package_config_file(
+  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/foxglove-sdkConfig.cmake.in"
+  "${CMAKE_CURRENT_BINARY_DIR}/foxglove-sdkConfig.cmake"
+  INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/foxglove-sdk
+)
+
+write_basic_package_version_file(
+  "${CMAKE_CURRENT_BINARY_DIR}/foxglove-sdkConfigVersion.cmake"
+  VERSION ${PROJECT_VERSION}
+  COMPATIBILITY SameMinorVersion
+)
+
+install(EXPORT foxglove-sdkTargets
+  FILE foxglove-sdkTargets.cmake
+  NAMESPACE foxglove-sdk::
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/foxglove-sdk
+)
+
+install(FILES
+  "${CMAKE_CURRENT_BINARY_DIR}/foxglove-sdkConfig.cmake"
+  "${CMAKE_CURRENT_BINARY_DIR}/foxglove-sdkConfigVersion.cmake"
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/foxglove-sdk
+)

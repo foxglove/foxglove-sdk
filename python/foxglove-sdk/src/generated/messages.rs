@@ -478,6 +478,76 @@ impl From<CompressedImage> for foxglove::messages::CompressedImage {
     }
 }
 
+/// A compressed point cloud. A decoder for `format` must decompress `data`, using metadata stored in the compressed payload to recover point positions and any additional per-point attributes. The decoded point cloud must include at least 2 coordinate fields from `x`, `y`, and `z`; `red`, `green`, `blue`, and `alpha` are optional for customizing each point's color.
+///
+/// :param timestamp: Timestamp of point cloud
+/// :param frame_id: Frame of reference
+/// :param pose: The origin of the point cloud relative to the frame of reference
+/// :param data: Compressed point cloud data for exactly one point cloud, including any format-specific metadata needed to describe the decoded point attributes.
+/// :param format: Point cloud compression format.
+///     
+///     Supported values: `draco` (`Google Draco <https://google.github.io/draco/>`__).
+///
+/// See https://docs.foxglove.dev/docs/visualization/message-schemas/compressed-point-cloud
+#[pyclass(module = "foxglove.messages")]
+#[derive(Clone)]
+pub(crate) struct CompressedPointCloud(pub(crate) foxglove::messages::CompressedPointCloud);
+#[pymethods]
+impl CompressedPointCloud {
+    #[new]
+    #[pyo3(signature = (*, timestamp=None, frame_id="", pose=None, data=None, format="") )]
+    fn new(
+        timestamp: Option<Timestamp>,
+        frame_id: &str,
+        pose: Option<Pose>,
+        data: Option<Bound<'_, PyBytes>>,
+        format: &str,
+    ) -> Self {
+        Self(foxglove::messages::CompressedPointCloud {
+            timestamp: timestamp.map(Into::into),
+            frame_id: frame_id.to_string(),
+            pose: pose.map(Into::into),
+            data: data
+                .map(|x| Bytes::copy_from_slice(x.as_bytes()))
+                .unwrap_or_default(),
+            format: format.to_string(),
+        })
+    }
+    fn __repr__(&self) -> String {
+        format!(
+            "CompressedPointCloud(timestamp={:?}, frame_id={:?}, pose={:?}, data={:?}, format={:?})",
+            self.0.timestamp, self.0.frame_id, self.0.pose, self.0.data, self.0.format,
+        )
+    }
+    /// Returns the CompressedPointCloud schema.
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::messages::CompressedPointCloud::get_schema()
+            .unwrap()
+            .into()
+    }
+    /// Encodes the CompressedPointCloud as protobuf.
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("failed to allocate buffer for encoded message")
+    }
+}
+
+impl From<CompressedPointCloud> for foxglove::messages::CompressedPointCloud {
+    fn from(value: CompressedPointCloud) -> Self {
+        value.0
+    }
+}
+
 /// A single frame of a compressed video bitstream
 ///
 /// :param timestamp: Timestamp of video frame
@@ -3349,6 +3419,7 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<CircleAnnotation>()?;
     module.add_class::<Color>()?;
     module.add_class::<CompressedImage>()?;
+    module.add_class::<CompressedPointCloud>()?;
     module.add_class::<CompressedVideo>()?;
     module.add_class::<CylinderPrimitive>()?;
     module.add_class::<CubePrimitive>()?;

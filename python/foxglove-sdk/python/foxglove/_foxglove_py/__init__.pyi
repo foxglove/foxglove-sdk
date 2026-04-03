@@ -22,6 +22,11 @@ class McapWritable(Protocol):
         ...
 
 from .mcap import MCAPWriteOptions, MCAPWriter
+from .remote_access import Capability as RemoteAccessCapability
+from .remote_access import (
+    RemoteAccessConnectionStatus,
+    RemoteAccessGateway,
+)
 from .websocket import Capability, Service, WebSocketServer
 
 class BaseChannel:
@@ -152,6 +157,25 @@ class ChannelDescriptor:
     schema: "Schema" | None
 
 SinkChannelFilter = Callable[[ChannelDescriptor], bool]
+
+def start_gateway(
+    *,
+    name: str | None = None,
+    device_token: str | None = None,
+    capabilities: list[RemoteAccessCapability] | None = None,
+    listener: Any = None,
+    supported_encodings: list[str] | None = None,
+    services: list[Service] | None = None,
+    context: Context | None = None,
+    channel_filter: SinkChannelFilter | None = None,
+    message_backlog_size: int | None = None,
+    foxglove_api_url: str | None = None,
+    foxglove_api_timeout: float | None = None,
+) -> RemoteAccessGateway:
+    """
+    Start a remote access gateway for live visualization and teleop in Foxglove.
+    """
+    ...
 
 def start_server(
     *,
