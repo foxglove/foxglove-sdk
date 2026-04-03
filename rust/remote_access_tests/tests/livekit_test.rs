@@ -1513,7 +1513,7 @@ async fn livekit_connection_status_lifecycle() -> Result<()> {
 
         fn on_subscribe(
             &self,
-            _client: foxglove::remote_access::Client,
+            _client: &foxglove::remote_access::Client,
             _channel: &foxglove::ChannelDescriptor,
         ) {
             let statuses = self.statuses.lock().unwrap();
@@ -1524,7 +1524,7 @@ async fn livekit_connection_status_lifecycle() -> Result<()> {
 
         fn on_message_data(
             &self,
-            _client: foxglove::remote_access::Client,
+            _client: &foxglove::remote_access::Client,
             _channel: &foxglove::ChannelDescriptor,
             _payload: &[u8],
         ) {
