@@ -12,6 +12,7 @@ use crate::remote_common::semaphore::Semaphore;
 type Result<T> = std::result::Result<T, Box<RemoteAccessError>>;
 
 const DEFAULT_SERVICE_CALLS_PER_PARTICIPANT: usize = 32;
+const DEFAULT_FETCH_ASSET_PER_PARTICIPANT: usize = 32;
 
 /// A participant in the remote access session.
 ///
@@ -27,6 +28,8 @@ pub(crate) struct Participant {
     writer: ParticipantWriter,
     /// Limits concurrent service calls from this participant.
     service_call_sem: Semaphore,
+    /// Limits concurrent fetch asset requests from this participant.
+    fetch_asset_sem: Semaphore,
 }
 
 /// A per-channel writer for data plane messages.
@@ -95,6 +98,7 @@ impl Participant {
             participant_id: identity,
             writer,
             service_call_sem: Semaphore::new(DEFAULT_SERVICE_CALLS_PER_PARTICIPANT),
+            fetch_asset_sem: Semaphore::new(DEFAULT_FETCH_ASSET_PER_PARTICIPANT),
         }
     }
 
@@ -106,6 +110,11 @@ impl Participant {
     /// Returns the service call semaphore for this participant.
     pub fn service_call_sem(&self) -> &Semaphore {
         &self.service_call_sem
+    }
+
+    /// Returns the fetch asset semaphore for this participant.
+    pub fn fetch_asset_sem(&self) -> &Semaphore {
+        &self.fetch_asset_sem
     }
 
     /// Returns the participant's identity.

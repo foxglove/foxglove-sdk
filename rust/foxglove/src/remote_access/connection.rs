@@ -21,7 +21,7 @@ use crate::{
     protocol::v2::parameter::Parameter,
     protocol::v2::server::ServerInfo,
     remote_access::{
-        Capability, RemoteAccessError,
+        AssetHandler, Capability, RemoteAccessError,
         credentials_provider::CredentialsProvider,
         session::{DEFAULT_PENDING_CLIENT_READER_TIMEOUT, RemoteAccessSession, SessionParams},
     },
@@ -81,6 +81,7 @@ pub(crate) struct ConnectionParams {
     pub listener: Option<Arc<dyn super::Listener>>,
     pub capabilities: Vec<Capability>,
     pub supported_encodings: Option<IndexSet<String>>,
+    pub fetch_asset_handler: Option<Arc<dyn AssetHandler>>,
     pub runtime: Handle,
     pub channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     pub server_info: Option<HashMap<String, String>>,
@@ -99,6 +100,7 @@ pub(crate) struct RemoteAccessConnection {
     listener: Option<Arc<dyn super::Listener>>,
     capabilities: Vec<Capability>,
     supported_encodings: Option<IndexSet<String>>,
+    fetch_asset_handler: Option<Arc<dyn AssetHandler>>,
     runtime: Handle,
     channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     server_info: Option<HashMap<String, String>>,
@@ -125,6 +127,7 @@ impl RemoteAccessConnection {
             listener: params.listener,
             capabilities: params.capabilities,
             supported_encodings: params.supported_encodings,
+            fetch_asset_handler: params.fetch_asset_handler,
             runtime: params.runtime,
             channel_filter: params.channel_filter,
             server_info: params.server_info,
@@ -250,6 +253,7 @@ impl RemoteAccessConnection {
                         remote_access_session_id: self
                             .remote_access_session_id()
                             .map(str::to_owned),
+                        fetch_asset_handler: self.fetch_asset_handler.clone(),
                     };
                     (
                         Arc::new(RemoteAccessSession::new(session_params)),

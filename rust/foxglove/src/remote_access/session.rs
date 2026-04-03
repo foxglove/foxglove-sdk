@@ -34,8 +34,9 @@ use crate::{
         },
     },
     remote_access::{
-        Capability, Listener, RemoteAccessError, client::Client, participant::Participant,
-        rtt_tracker::RttTracker, session_state::SessionState,
+        AssetHandler, Capability, Listener, RemoteAccessError, client::Client,
+        fetch_asset::AssetResponder, participant::Participant, rtt_tracker::RttTracker,
+        session_state::SessionState,
     },
 };
 
@@ -171,6 +172,7 @@ pub(crate) struct RemoteAccessSession {
     channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     listener: Option<Arc<dyn Listener>>,
     capabilities: Vec<Capability>,
+    fetch_asset_handler: Option<Arc<dyn AssetHandler>>,
     cancellation_token: CancellationToken,
     data_plane_tx: flume::Sender<ChannelMessage>,
     data_plane_rx: flume::Receiver<ChannelMessage>,
@@ -301,6 +303,7 @@ pub(crate) struct SessionParams {
     pub services: Arc<parking_lot::RwLock<ServiceMap>>,
     pub pending_client_reader_timeout: Duration,
     pub remote_access_session_id: Option<String>,
+    pub fetch_asset_handler: Option<Arc<dyn AssetHandler>>,
 }
 
 impl RemoteAccessSession {
@@ -308,6 +311,11 @@ impl RemoteAccessSession {
         let (data_plane_tx, data_plane_rx) = flume::bounded(params.message_backlog_size);
         let (control_plane_tx, control_plane_rx) = flume::bounded(params.message_backlog_size);
         let (video_metadata_tx, video_metadata_rx) = tokio::sync::watch::channel(());
+        let mut capabilities = params.capabilities;
+        // Auto-add Assets capability if a handler is provided.
+        if params.fetch_asset_handler.is_some() && !capabilities.contains(&Capability::Assets) {
+            capabilities.push(Capability::Assets);
+        }
         Self {
             sink_id: SinkId::next(),
             room: params.room,
@@ -316,7 +324,8 @@ impl RemoteAccessSession {
             state: RwLock::new(SessionState::new()),
             channel_filter: params.channel_filter,
             listener: params.listener,
-            capabilities: params.capabilities,
+            capabilities,
+            fetch_asset_handler: params.fetch_asset_handler,
             cancellation_token: params.cancellation_token,
             data_plane_tx,
             data_plane_rx,
@@ -718,6 +727,9 @@ impl RemoteAccessSession {
                     "Received MessageData over control channel; MessageData is only supported on channel-specific byte streams"
                 );
             }
+            ClientMessage::FetchAsset(msg) => {
+                self.handle_fetch_asset(&participant, msg.uri, msg.request_id);
+            }
             ClientMessage::ServiceCallRequest(req) => {
                 self.handle_service_call(&participant, req);
             }
@@ -817,6 +829,7 @@ impl RemoteAccessSession {
                 let client = Client::new(
                     participant.client_id(),
                     participant.participant_id().clone(),
+                    self.sink_id,
                 );
                 for descriptor in &subscribe_result.newly_subscribed_descriptors {
                     listener.on_subscribe(client.clone(), descriptor);
@@ -863,6 +876,7 @@ impl RemoteAccessSession {
                 let client = Client::new(
                     participant.client_id(),
                     participant.participant_id().clone(),
+                    self.sink_id,
                 );
                 for descriptor in &unsubscribe_result.actually_unsubscribed_descriptors {
                     listener.on_unsubscribe(client.clone(), descriptor);
@@ -893,6 +907,7 @@ impl RemoteAccessSession {
         let client = Client::new(
             participant.client_id(),
             participant.participant_id().clone(),
+            self.sink_id,
         );
 
         for ch in msg.channels {
@@ -975,6 +990,7 @@ impl RemoteAccessSession {
         let client = Client::new(
             participant.client_id(),
             participant.participant_id().clone(),
+            self.sink_id,
         );
 
         for channel_id_raw in msg.channel_ids {
@@ -1085,6 +1101,7 @@ impl RemoteAccessSession {
             let client = Client::new(
                 participant.client_id(),
                 participant.participant_id().clone(),
+                self.sink_id,
             );
             listener.on_message_data(client, &descriptor, &msg.data);
         }
@@ -1175,7 +1192,7 @@ impl RemoteAccessSession {
         }
 
         if let Some((listener, client_id)) = self.listener.as_ref().zip(removed.client_id) {
-            let client = Client::new(client_id, participant_id.clone());
+            let client = Client::new(client_id, participant_id.clone(), self.sink_id);
 
             for descriptor in &removed.subscribed_descriptors {
                 listener.on_unsubscribe(client.clone(), descriptor);
@@ -1594,6 +1611,40 @@ impl RemoteAccessSession {
         self.send_control(participant.clone(), encode_json_message(&failure));
     }
 
+    /// Handle a fetch asset request from a client.
+    fn handle_fetch_asset(&self, participant: &Arc<Participant>, uri: String, request_id: u32) {
+        if !self.has_capability(Capability::Assets) {
+            tracing::warn!("Received FetchAsset request but Assets capability is not enabled");
+            return;
+        }
+
+        let Some(guard) = participant.fetch_asset_sem().try_acquire() else {
+            let client = Client::with_sender(
+                participant.client_id(),
+                participant.participant_id().clone(),
+                self.sink_id,
+                participant.clone(),
+                self.control_plane_tx.clone(),
+            );
+            client.send_asset_response(Err("Too many concurrent fetch asset requests"), request_id);
+            return;
+        };
+
+        if let Some(handler) = self.fetch_asset_handler.as_ref() {
+            let client = Client::with_sender(
+                participant.client_id(),
+                participant.participant_id().clone(),
+                self.sink_id,
+                participant.clone(),
+                self.control_plane_tx.clone(),
+            );
+            let responder = AssetResponder::new(client, request_id, guard);
+            handler.fetch(uri, responder);
+        } else {
+            tracing::error!("Gateway advertised the Assets capability without providing a handler");
+        }
+    }
+
     /// Handle a `GetParameters` request from a client.
     fn handle_get_parameters(
         &self,
@@ -1613,6 +1664,7 @@ impl RemoteAccessSession {
             let client = Client::new(
                 participant.client_id(),
                 participant.participant_id().clone(),
+                self.sink_id,
             );
             let parameters = listener.on_get_parameters(client, param_names, request_id.as_deref());
             self.send_parameter_values(participant, parameters, request_id);
@@ -1638,6 +1690,7 @@ impl RemoteAccessSession {
             let client = Client::new(
                 participant.client_id(),
                 participant.participant_id().clone(),
+                self.sink_id,
             );
             let updated = listener.on_set_parameters(client, parameters, request_id.as_deref());
 

@@ -5,6 +5,7 @@ mod channel_subscription;
 mod client;
 mod connection;
 mod credentials_provider;
+mod fetch_asset;
 mod gateway;
 mod listener;
 mod participant;
@@ -16,6 +17,7 @@ mod session_state;
 pub use capability::Capability;
 pub use client::Client;
 pub use connection::ConnectionStatus;
+pub use fetch_asset::{AssetHandler, AssetResponder};
 pub use gateway::{Gateway, GatewayHandle};
 pub use listener::Listener;
 
