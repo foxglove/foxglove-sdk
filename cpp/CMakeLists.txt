@@ -236,7 +236,7 @@ else()
   endif()
 endif()
 
-if(NOT FOXGLOVE_BUILD_REMOTE_ACCESS)
+if(TARGET foxglove-static)
   if(WIN32)
     target_link_libraries(foxglove-static INTERFACE Bcrypt SChannel Crypt32 Ncrypt)
   elseif(APPLE)
