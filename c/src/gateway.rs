@@ -154,9 +154,11 @@ pub struct FoxgloveGatewayCallbacks {
     ///
     /// Requires `FOXGLOVE_GATEWAY_CAPABILITY_PARAMETERS`.
     ///
-    /// The `request_id` argument may be NULL. The `param_names` argument is guaranteed to be
-    /// non-NULL. These arguments point to buffers that are valid and immutable for the duration
-    /// of the call.
+    /// The `request_id` argument may be NULL.
+    ///
+    /// The `param_names` argument is guaranteed to be non-NULL. These arguments point to buffers
+    /// that are valid and immutable for the duration of the call. If the callback wishes to store
+    /// these values, they must be copied out.
     ///
     /// This function should return the named parameters, or all parameters if `param_names` is
     /// empty. The return value must be allocated with `foxglove_parameter_array_create`. Ownership
@@ -175,7 +177,11 @@ pub struct FoxgloveGatewayCallbacks {
     ///
     /// Requires `FOXGLOVE_GATEWAY_CAPABILITY_PARAMETERS`.
     ///
-    /// The `request_id` argument may be NULL. The `params` argument is guaranteed to be non-NULL.
+    /// The `request_id` argument may be NULL.
+    ///
+    /// The `params` argument is guaranteed to be non-NULL. These arguments point to buffers that
+    /// are valid and immutable for the duration of the call. If the callback wishes to store these
+    /// values, they must be copied out.
     ///
     /// This function should return the updated parameters. The return value must be allocated with
     /// `foxglove_parameter_array_create`. Ownership is transferred to the callee. A NULL return
