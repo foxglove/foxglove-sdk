@@ -631,9 +631,11 @@ mod tests {
     fn make_participant(name: &str) -> (ParticipantIdentity, Arc<Participant>) {
         let identity = ParticipantIdentity(name.to_string());
         let writer = Arc::new(crate::remote_access::participant::TestByteStreamWriter::default());
+        let (tx, _rx) = flume::bounded(16);
         let participant = Arc::new(Participant::new(
             identity.clone(),
             ParticipantWriter::Test(writer),
+            tx,
         ));
         (identity, participant)
     }

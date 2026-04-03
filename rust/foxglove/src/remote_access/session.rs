@@ -1145,6 +1145,7 @@ impl RemoteAccessSession {
         let participant = Arc::new(Participant::new(
             participant_id.clone(),
             ParticipantWriter::Livekit(stream),
+            self.control_plane_tx.clone(),
         ));
 
         // Send initial messages prior to adding the participant to the state map, to ensure that
@@ -1581,7 +1582,7 @@ impl RemoteAccessSession {
             service_id,
             call_id,
             encoding,
-            self.control_plane_tx.clone(),
+            participant.control_plane_tx().clone(),
             guard,
         );
         let request = crate::remote_common::service::Request::new(
@@ -1624,7 +1625,6 @@ impl RemoteAccessSession {
                 participant.participant_id().clone(),
                 self.sink_id,
                 participant.clone(),
-                self.control_plane_tx.clone(),
             );
             client.send_asset_response(Err("Too many concurrent fetch asset requests"), request_id);
             return;
@@ -1636,7 +1636,6 @@ impl RemoteAccessSession {
                 participant.participant_id().clone(),
                 self.sink_id,
                 participant.clone(),
-                self.control_plane_tx.clone(),
             );
             let responder = AssetResponder::new(client, request_id, guard);
             handler.fetch(uri, responder);
@@ -2056,9 +2055,11 @@ mod tests {
     fn make_participant(name: &str) -> (ParticipantIdentity, Arc<Participant>) {
         let identity = ParticipantIdentity(name.to_string());
         let writer = Arc::new(TestByteStreamWriter::default());
+        let (tx, _rx) = flume::bounded(16);
         let participant = Arc::new(Participant::new(
             identity.clone(),
             ParticipantWriter::Test(writer),
+            tx,
         ));
         (identity, participant)
     }

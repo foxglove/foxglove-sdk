@@ -1,11 +1,12 @@
-#[cfg(test)]
 use std::sync::Arc;
 
 #[cfg(test)]
 use bytes::Bytes;
 use livekit::{ByteStreamWriter, StreamWriter, id::ParticipantIdentity};
 
+use crate::protocol::v2::server::FetchAssetResponse;
 use crate::remote_access::RemoteAccessError;
+use crate::remote_access::session::ControlPlaneMessage;
 use crate::remote_common::ClientId;
 use crate::remote_common::semaphore::Semaphore;
 
@@ -26,6 +27,8 @@ pub(crate) struct Participant {
     participant_id: ParticipantIdentity,
     /// A reliable, ordered stream to send messages to just this participant
     writer: ParticipantWriter,
+    /// Control plane sender for queuing messages to this participant.
+    control_plane_tx: flume::Sender<ControlPlaneMessage>,
     /// Limits concurrent service calls from this participant.
     service_call_sem: Semaphore,
     /// Limits concurrent fetch asset requests from this participant.
@@ -92,11 +95,16 @@ impl ChannelWriterInner {
 
 impl Participant {
     /// Creates a new participant.
-    pub fn new(identity: ParticipantIdentity, writer: ParticipantWriter) -> Self {
+    pub fn new(
+        identity: ParticipantIdentity,
+        writer: ParticipantWriter,
+        control_plane_tx: flume::Sender<ControlPlaneMessage>,
+    ) -> Self {
         Self {
             client_id: ClientId::next(),
             participant_id: identity,
             writer,
+            control_plane_tx,
             service_call_sem: Semaphore::new(DEFAULT_SERVICE_CALLS_PER_PARTICIPANT),
             fetch_asset_sem: Semaphore::new(DEFAULT_FETCH_ASSET_PER_PARTICIPANT),
         }
@@ -122,11 +130,38 @@ impl Participant {
         &self.participant_id
     }
 
+    /// Returns the control plane sender for this participant.
+    pub(crate) fn control_plane_tx(&self) -> &flume::Sender<ControlPlaneMessage> {
+        &self.control_plane_tx
+    }
+
     /// Sends a message to the participant.
     ///
     /// The message is serialized and framed already and provided as a slice of bytes.
     pub(crate) async fn send(&self, bytes: &[u8]) -> Result<()> {
         self.writer.write(bytes).await
+    }
+
+    /// Send a fetch asset response to the participant via the control plane queue.
+    pub(crate) fn send_asset_response(self: &Arc<Self>, data: &[u8], request_id: u32) {
+        let msg = ControlPlaneMessage::binary(
+            self.clone(),
+            &FetchAssetResponse::asset_data(request_id, data),
+        );
+        if let Err(e) = self.control_plane_tx.send(msg) {
+            tracing::warn!("control plane queue disconnected, dropping asset response: {e}");
+        }
+    }
+
+    /// Send a fetch asset error to the participant via the control plane queue.
+    pub(crate) fn send_asset_error(self: &Arc<Self>, error: &str, request_id: u32) {
+        let msg = ControlPlaneMessage::binary(
+            self.clone(),
+            &FetchAssetResponse::error_message(request_id, error),
+        );
+        if let Err(e) = self.control_plane_tx.send(msg) {
+            tracing::warn!("control plane queue disconnected, dropping asset error: {e}");
+        }
     }
 }
 
