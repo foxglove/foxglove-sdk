@@ -374,7 +374,10 @@ get_target_property(LWS_INCLUDE_DIRS websockets INTERFACE_INCLUDE_DIRECTORIES)
 target_include_directories(tests SYSTEM PRIVATE ${LWS_INCLUDE_DIRS})
 get_target_property(NLOHMANN_INCLUDE_DIRS nlohmann_json::nlohmann_json INTERFACE_INCLUDE_DIRECTORIES)
 target_include_directories(tests SYSTEM PRIVATE ${NLOHMANN_INCLUDE_DIRS})
-if(NOT CMAKE_CROSSCOMPILING)
+# Skip test discovery when cross-compiling (the test exe can't run on the host).
+# Both checks are needed: CMAKE_CROSSCOMPILING catches OS/sysroot differences (e.g. iOS),
+# while the processor check catches MSVC -A ARM64 which doesn't set CMAKE_CROSSCOMPILING.
+if(NOT CMAKE_CROSSCOMPILING AND CMAKE_SYSTEM_PROCESSOR STREQUAL CMAKE_HOST_SYSTEM_PROCESSOR)
   catch_discover_tests(tests)
 endif()
 if(MSVC)
