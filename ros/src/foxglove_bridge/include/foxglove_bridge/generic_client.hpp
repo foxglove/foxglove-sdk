@@ -2,6 +2,7 @@
 
 #include <rclcpp/client.hpp>
 #include <rclcpp/serialized_message.hpp>
+#include <rclcpp/version.h>
 #include <rcpputils/shared_library.hpp>
 
 #include <foxglove/server/service.hpp>
@@ -22,8 +23,13 @@ public:
 
   std::shared_ptr<void> create_response() override;
   std::shared_ptr<rmw_request_id_t> create_request_header() override;
+#if RCLCPP_VERSION_GTE(31, 0, 0)
+  void handle_response(const std::shared_ptr<rmw_request_id_t>& request_header,
+                       const std::shared_ptr<void>& response) override;
+#else
   void handle_response(std::shared_ptr<rmw_request_id_t> request_header,
                        std::shared_ptr<void> response) override;
+#endif
   void async_send_request(SharedRequest request, foxglove::ServiceResponder&& cb);
 
 private:
