@@ -4,9 +4,9 @@ Changelog for package foxglove_msgs
 
 3.2.6 (2026-04-02)
 ------------------
-* Add CompressedPointCloud schema (`#1025 <https://github.com/foxglove/foxglove-sdk/pull/1025>`_)
-* Add heading and velocity to LocationFix (`#1034 <https://github.com/foxglove/foxglove-sdk/pull/1034>`_)
-* Add NV12 encoding documentation to RawImage schema (`#1047 <https://github.com/foxglove/foxglove-sdk/pull/1047>`_)
+* Add CompressedPointCloud schema
+* Add heading and velocity to LocationFix
+* Add NV12 encoding documentation to RawImage schema
 
 3.2.5 (2026-03-22)
 ------------------
