@@ -1265,6 +1265,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "example_remote_access_fetch_asset"
+version = "0.0.0"
+dependencies = [
+ "env_logger",
+ "foxglove 0.21.0",
+ "log",
+ "tokio",
+]
+
+[[package]]
 name = "example_remote_access_services"
 version = "0.0.0"
 dependencies = [
@@ -1335,6 +1345,7 @@ dependencies = [
  "clap",
  "env_logger",
  "foxglove 0.21.0",
+ "log",
  "tokio",
 ]
 
