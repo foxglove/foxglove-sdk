@@ -123,6 +123,7 @@ struct WebSocketServerCallbacks {
 
   /// @brief Callback invoked when a client unsubscribes from a channel.
   ///
+  /// Also invoked when a subscribed channel is removed from the server.
   /// Only invoked for channels that had an active subscription from the client.
   std::function<void(uint64_t channel_id, const ClientMetadata& client_metadata)> onUnsubscribe;
 

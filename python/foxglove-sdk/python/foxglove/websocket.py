@@ -66,6 +66,7 @@ class ServerListener(Protocol):
     def on_unsubscribe(self, client: Client, channel: ChannelView) -> None:
         """
         Called by the server when a client unsubscribes from a channel or disconnects.
+        Also called when a subscribed channel is removed from the server.
 
         :param client: The client (id) that sent the message.
         :param channel: The channel (id, topic) that the message was sent on.

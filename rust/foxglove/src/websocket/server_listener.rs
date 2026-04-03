@@ -14,6 +14,7 @@ pub trait ServerListener: Send + Sync {
     /// Only invoked if the channel is associated with the server and isn't already subscribed to by the client.
     fn on_subscribe(&self, _client: Client, _channel: ChannelView) {}
     /// Callback invoked when a client unsubscribes from a channel or disconnects.
+    /// Also invoked when a subscribed channel is removed from the server.
     /// Only invoked for channels that had an active subscription from the client.
     fn on_unsubscribe(&self, _client: Client, _channel: ChannelView) {}
     /// Callback invoked when a client advertises a client channel. Requires
