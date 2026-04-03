@@ -39,7 +39,10 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - run: |
-          sudo apt install -y --no-install-recommends clang-format-19 clang-tidy-19
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            clang-format-19 clang-tidy-19 \
+            libwebsockets-dev nlohmann-json3-dev
           echo "/usr/lib/llvm-19/bin" >> $GITHUB_PATH
       - run: clang-format --version
       - run: clang-tidy --version
@@ -271,6 +274,10 @@ jobs:
         with:
           toolchain: nightly
           components: rust-src
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libwebsockets-dev nlohmann-json3-dev
 
       - run: make SANITIZE=address,undefined test
         working-directory: cpp

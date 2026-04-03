@@ -23,6 +23,7 @@ If the IDL does not support optional fields (e.g. ROS) you must specify a value 
 - [CircleAnnotation](#circleannotation)
 - [Color](#color)
 - [CompressedImage](#compressedimage)
+- [CompressedPointCloud](#compressedpointcloud)
 - [CompressedVideo](#compressedvideo)
 - [CubePrimitive](#cubeprimitive)
 - [CylinderPrimitive](#cylinderprimitive)
@@ -641,6 +642,85 @@ string
 Image format
 
 Supported values: `jpeg`, `png`, `webp`, `avif`
+
+</td>
+</tr>
+</table>
+
+## CompressedPointCloud
+
+A compressed point cloud. A decoder for `format` must decompress `data`, using metadata stored in the compressed payload to recover point positions and any additional per-point attributes. The decoded point cloud must include at least 2 coordinate fields from `x`, `y`, and `z`; `red`, `green`, `blue`, and `alpha` are optional for customizing each point's color.
+
+<table>
+  <tr>
+    <th>field</th>
+    <th>type</th>
+    <th>description</th>
+  </tr>
+<tr>
+<td><code>timestamp</code></td>
+<td>
+
+[Timestamp](#timestamp)
+
+</td>
+<td>
+
+Timestamp of point cloud
+
+</td>
+</tr>
+<tr>
+<td><code>frame_id</code></td>
+<td>
+
+string
+
+</td>
+<td>
+
+Frame of reference
+
+</td>
+</tr>
+<tr>
+<td><code>pose</code></td>
+<td>
+
+[Pose](#pose)
+
+</td>
+<td>
+
+The origin of the point cloud relative to the frame of reference
+
+</td>
+</tr>
+<tr>
+<td><code>data</code></td>
+<td>
+
+bytes
+
+</td>
+<td>
+
+Compressed point cloud data for exactly one point cloud, including any format-specific metadata needed to describe the decoded point attributes.
+
+</td>
+</tr>
+<tr>
+<td><code>format</code></td>
+<td>
+
+string
+
+</td>
+<td>
+
+Point cloud compression format.
+
+Supported values: `draco` ([Google Draco](https://google.github.io/draco/)).
 
 </td>
 </tr>

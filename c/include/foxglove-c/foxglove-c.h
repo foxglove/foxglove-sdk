@@ -715,6 +715,35 @@ typedef struct foxglove_compressed_image {
 } foxglove_compressed_image;
 
 /**
+ * A compressed point cloud. A decoder for `format` must decompress `data`, using metadata stored in the compressed payload to recover point positions and any additional per-point attributes. The decoded point cloud must include at least 2 coordinate fields from `x`, `y`, and `z`; `red`, `green`, `blue`, and `alpha` are optional for customizing each point's color.
+ */
+typedef struct foxglove_compressed_point_cloud {
+  /**
+   * Timestamp of point cloud
+   */
+  const struct foxglove_timestamp *timestamp;
+  /**
+   * Frame of reference
+   */
+  struct foxglove_string frame_id;
+  /**
+   * The origin of the point cloud relative to the frame of reference
+   */
+  const struct foxglove_pose *pose;
+  /**
+   * Compressed point cloud data for exactly one point cloud, including any format-specific metadata needed to describe the decoded point attributes.
+   */
+  const unsigned char *data;
+  size_t data_len;
+  /**
+   * Point cloud compression format.
+   *
+   * Supported values: `draco` ([Google Draco](https://google.github.io/draco/)).
+   */
+  struct foxglove_string format;
+} foxglove_compressed_point_cloud;
+
+/**
  * A single frame of a compressed video bitstream
  */
 typedef struct foxglove_compressed_video {
@@ -2777,6 +2806,52 @@ foxglove_error foxglove_compressed_image_encode(const struct foxglove_compressed
                                                 uint8_t *ptr,
                                                 size_t len,
                                                 size_t *encoded_len);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_compressed_point_cloud(struct foxglove_string topic,
+                                                              const struct foxglove_context *context,
+                                                              const struct foxglove_channel **channel);
+
+#if !defined(__wasm__)
+/**
+ * Log a CompressedPointCloud message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_compressed_point_cloud.
+ */
+foxglove_error foxglove_channel_log_compressed_point_cloud(const struct foxglove_channel *channel,
+                                                           const struct foxglove_compressed_point_cloud *msg,
+                                                           const uint64_t *log_time,
+                                                           FoxgloveSinkId sink_id);
+#endif
+
+/**
+ * Get the CompressedPointCloud schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_compressed_point_cloud_schema(void);
+
+/**
+ * Encode a CompressedPointCloud message as protobuf to the buffer provided.
+ *
+ * On success, writes the encoded length to *encoded_len.
+ * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+ * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+ * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+ *
+ * # Safety
+ * ptr must be a valid pointer to a memory region at least len bytes long.
+ */
+foxglove_error foxglove_compressed_point_cloud_encode(const struct foxglove_compressed_point_cloud *msg,
+                                                      uint8_t *ptr,
+                                                      size_t len,
+                                                      size_t *encoded_len);
 
 /**
  * Create a new typed channel, and return an owned raw channel pointer to it.
