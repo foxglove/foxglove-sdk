@@ -1,0 +1,16 @@
+---
+source: rust/foxglove/src/protocol/v2/client.rs
+assertion_line: 273
+expression: "format!(\"{:#04x?}\", buf)"
+---
+[
+    0x05,
+    0x00,
+    0x7b,
+    0x59,
+    0x7d,
+    0x8e,
+    0x01,
+    0x00,
+    0x00,
+]

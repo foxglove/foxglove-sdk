@@ -9,3 +9,11 @@ pub(crate) fn nanoseconds_since_epoch() -> u64 {
     }
     0
 }
+
+#[cfg(feature = "remote-access")]
+pub(crate) fn millis_since_epoch() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis() as u64
+}

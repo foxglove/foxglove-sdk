@@ -7,6 +7,7 @@ pub mod fetch_asset_response;
 mod parameter_values;
 #[doc(hidden)]
 pub mod playback_state;
+mod pong;
 mod remove_status;
 pub mod server_info;
 mod service_call_failure;
@@ -23,6 +24,7 @@ pub use fetch_asset_response::FetchAssetResponse;
 pub use parameter_values::ParameterValues;
 #[doc(hidden)]
 pub use playback_state::PlaybackState;
+pub use pong::Pong;
 pub use remove_status::RemoveStatus;
 pub use server_info::ServerInfo;
 pub use service_call_failure::ServiceCallFailure;
