@@ -26,9 +26,6 @@ struct Args {
     file: PathBuf,
 }
 
-struct NoopListener;
-impl Listener for NoopListener {}
-
 #[tokio::main]
 async fn main() -> Result<()> {
     let env = env_logger::Env::default().default_filter_or("info");
@@ -37,7 +34,6 @@ async fn main() -> Result<()> {
     let args = Args::parse();
 
     let handle = Gateway::new()
-        .listener(Arc::new(NoopListener))
         .start()
         .expect("Failed to start remote access gateway");
 
