@@ -1,10 +1,6 @@
 //! Streams an MCAP file through the remote access gateway, looping playback
 //! with inter-message timing preserved.
 
-use foxglove::{
-    ChannelBuilder, RawChannel, Schema,
-    remote_access::{Gateway, Listener},
-};
 use std::{
     collections::HashMap,
     io::{BufReader, Read, Seek, SeekFrom},
@@ -15,6 +11,7 @@ use std::{
 
 use anyhow::{Context, Result, anyhow};
 use clap::Parser;
+use foxglove::{ChannelBuilder, RawChannel, Schema, remote_access::Gateway};
 use mcap::Summary;
 use mcap::sans_io::indexed_reader::{IndexedReadEvent, IndexedReader, IndexedReaderOptions};
 use mcap::sans_io::summary_reader::{SummaryReadEvent, SummaryReader};
