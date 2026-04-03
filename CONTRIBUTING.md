@@ -60,11 +60,11 @@ Permissions to push to [ros2-gbp/foxglove_bridge-release](https://github.com/ros
 The following is a modified version of [bloom release instructions](https://wiki.ros.org/bloom/Tutorials/ReleaseCatkinPackage) (because catkin_generate_changelog and catkin_prepare_release can't handle our custom tag format of `ros-vX.Y.Z`).
 
 1. Manually update the following files with the new version info:
-  - `ros/src/foxglove_bridge/package.xml`
-  - `ros/src/foxglove_bridge/CHANGELOG.rst`
-  - `ros/src/foxglove_bridge/CMakeLists.txt`
-  - `ros/src/foxglove_msgs/package.xml`
-  - `ros/src/foxglove_msgs/CHANGELOG.rst`
+   - `ros/src/foxglove_bridge/package.xml`
+   - `ros/src/foxglove_bridge/CHANGELOG.rst`
+   - `ros/src/foxglove_bridge/CMakeLists.txt`
+   - `ros/src/foxglove_msgs/package.xml`
+   - `ros/src/foxglove_msgs/CHANGELOG.rst`
 2. Manually create a tag named `ros-vX.Y.Z` for the new version
 3. Push the newly created commit and tag
 4. Run `bloom-release foxglove-sdk --ros-distro humble`, for each distro you want to publish the release to. Follow the prompts, and the script will automatically make a PR to the [ros/rosdistro](https://github.com/ros/rosdistro) repo.
