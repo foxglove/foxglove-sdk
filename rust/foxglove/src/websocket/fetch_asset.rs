@@ -1,3 +1,6 @@
+// NOTE: This file is largely a verbatim copy of `crate::remote_access::fetch_asset`.
+// If you modify this file, you should probably make the same change there, and vice versa.
+
 use std::fmt::Display;
 use std::future::Future;
 use std::sync::Arc;

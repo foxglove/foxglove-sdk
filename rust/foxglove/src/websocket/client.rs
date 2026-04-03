@@ -9,6 +9,7 @@ pub use crate::remote_common::ClientId;
 #[derive(Debug, Clone)]
 pub struct Client {
     id: ClientId,
+    sink_id: SinkId,
     client: Weak<ConnectedClient>,
 }
 
@@ -16,6 +17,7 @@ impl Client {
     pub(super) fn new(client: &ConnectedClient) -> Self {
         Self {
             id: client.id(),
+            sink_id: client.sink_id(),
             client: client.weak().clone(),
         }
     }
@@ -25,9 +27,9 @@ impl Client {
         self.id
     }
 
-    /// Returns the client's sink ID
-    pub fn sink_id(&self) -> Option<SinkId> {
-        self.client.upgrade().map(|client| client.sink_id())
+    /// Returns the client's sink ID.
+    pub fn sink_id(&self) -> SinkId {
+        self.sink_id
     }
 
     /// Send a status message to this client. Does nothing if client is disconnected.

@@ -846,7 +846,7 @@ impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
         if let Some(on_subscribe) = self.on_subscribe {
             let c_client_metadata = FoxgloveClientMetadata {
                 id: client.id().into(),
-                sink_id: client.sink_id().map(|id| id.into()).unwrap_or(0),
+                sink_id: client.sink_id().into(),
             };
             unsafe { on_subscribe(self.context, channel.id().into(), c_client_metadata) };
         }
@@ -860,7 +860,7 @@ impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
         if let Some(on_unsubscribe) = self.on_unsubscribe {
             let c_client_metadata = FoxgloveClientMetadata {
                 id: client.id().into(),
-                sink_id: client.sink_id().map(|id| id.into()).unwrap_or(0),
+                sink_id: client.sink_id().into(),
             };
             unsafe { on_unsubscribe(self.context, channel.id().into(), c_client_metadata) };
         }
