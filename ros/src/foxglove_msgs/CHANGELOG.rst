@@ -2,6 +2,12 @@
 Changelog for package foxglove_msgs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+3.2.6 (2026-04-02)
+------------------
+* Add CompressedPointCloud schema
+* Add heading and velocity to LocationFix
+* Add NV12 encoding documentation to RawImage schema
+
 3.2.5 (2026-03-22)
 ------------------
 * Version bump for foxglove_bridge 3.2.5 release

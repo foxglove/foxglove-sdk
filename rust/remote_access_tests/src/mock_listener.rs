@@ -40,21 +40,21 @@ impl MockListener {
 }
 
 impl Listener for MockListener {
-    fn on_client_advertise(&self, client: Client, channel: &ChannelDescriptor) {
+    fn on_client_advertise(&self, client: &Client, channel: &ChannelDescriptor) {
         self.advertised.lock().unwrap().push((
             client.participant_id().to_string(),
             channel.topic().to_string(),
         ));
     }
 
-    fn on_client_unadvertise(&self, client: Client, channel: &ChannelDescriptor) {
+    fn on_client_unadvertise(&self, client: &Client, channel: &ChannelDescriptor) {
         self.unadvertised.lock().unwrap().push((
             client.participant_id().to_string(),
             channel.topic().to_string(),
         ));
     }
 
-    fn on_message_data(&self, client: Client, channel: &ChannelDescriptor, payload: &[u8]) {
+    fn on_message_data(&self, client: &Client, channel: &ChannelDescriptor, payload: &[u8]) {
         self.message_data.lock().unwrap().push((
             client.participant_id().to_string(),
             channel.topic().to_string(),
@@ -62,14 +62,14 @@ impl Listener for MockListener {
         ));
     }
 
-    fn on_subscribe(&self, client: Client, channel: &ChannelDescriptor) {
+    fn on_subscribe(&self, client: &Client, channel: &ChannelDescriptor) {
         self.subscribed.lock().unwrap().push((
             client.participant_id().to_string(),
             channel.topic().to_string(),
         ));
     }
 
-    fn on_unsubscribe(&self, client: Client, channel: &ChannelDescriptor) {
+    fn on_unsubscribe(&self, client: &Client, channel: &ChannelDescriptor) {
         self.unsubscribed.lock().unwrap().push((
             client.participant_id().to_string(),
             channel.topic().to_string(),

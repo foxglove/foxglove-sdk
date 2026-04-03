@@ -4,6 +4,8 @@ pub mod advertise;
 mod fetch_asset;
 mod get_parameters;
 mod message_data;
+mod ping;
+mod ping_ack;
 mod playback_control_request;
 mod service_call_request;
 mod set_parameters;
@@ -17,6 +19,8 @@ pub use advertise::{Advertise, Channel as AdvertiseChannel};
 pub use fetch_asset::FetchAsset;
 pub use get_parameters::GetParameters;
 pub use message_data::MessageData;
+pub use ping::Ping;
+pub use ping_ack::PingAck;
 #[doc(hidden)]
 pub use playback_control_request::{PlaybackCommand, PlaybackControlRequest};
 pub use service_call_request::ServiceCallRequest;

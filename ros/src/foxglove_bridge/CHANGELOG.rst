@@ -2,6 +2,10 @@
 Changelog for package foxglove_bridge
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+3.2.6 (2026-04-02)
+------------------
+* Fix ROS rolling build for rclcpp 31.0.0
+
 3.2.5 (2026-03-22)
 ------------------
 * Work around broken rosx_introspection transitive dependencies

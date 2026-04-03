@@ -30,8 +30,8 @@ impl PyRemoteAccessClient {
     }
 }
 
-impl From<remote_access::Client> for PyRemoteAccessClient {
-    fn from(value: remote_access::Client) -> Self {
+impl From<&remote_access::Client> for PyRemoteAccessClient {
+    fn from(value: &remote_access::Client) -> Self {
         Self {
             id: value.id().into(),
         }
@@ -114,25 +114,25 @@ impl Listener for PyRemoteAccessListener {
         }
     }
 
-    fn on_subscribe(&self, client: remote_access::Client, channel: &ChannelDescriptor) {
+    fn on_subscribe(&self, client: &remote_access::Client, channel: &ChannelDescriptor) {
         self.call_client_channel_method("on_subscribe", client, channel);
     }
 
-    fn on_unsubscribe(&self, client: remote_access::Client, channel: &ChannelDescriptor) {
+    fn on_unsubscribe(&self, client: &remote_access::Client, channel: &ChannelDescriptor) {
         self.call_client_channel_method("on_unsubscribe", client, channel);
     }
 
-    fn on_client_advertise(&self, client: remote_access::Client, channel: &ChannelDescriptor) {
+    fn on_client_advertise(&self, client: &remote_access::Client, channel: &ChannelDescriptor) {
         self.call_client_channel_method("on_client_advertise", client, channel);
     }
 
-    fn on_client_unadvertise(&self, client: remote_access::Client, channel: &ChannelDescriptor) {
+    fn on_client_unadvertise(&self, client: &remote_access::Client, channel: &ChannelDescriptor) {
         self.call_client_channel_method("on_client_unadvertise", client, channel);
     }
 
     fn on_message_data(
         &self,
-        client: remote_access::Client,
+        client: &remote_access::Client,
         channel: &ChannelDescriptor,
         payload: &[u8],
     ) {
@@ -154,7 +154,7 @@ impl Listener for PyRemoteAccessListener {
 
     fn on_get_parameters(
         &self,
-        client: remote_access::Client,
+        client: &remote_access::Client,
         param_names: Vec<String>,
         request_id: Option<&str>,
     ) -> Vec<foxglove::remote_access::Parameter> {
@@ -179,7 +179,7 @@ impl Listener for PyRemoteAccessListener {
 
     fn on_set_parameters(
         &self,
-        client: remote_access::Client,
+        client: &remote_access::Client,
         parameters: Vec<foxglove::remote_access::Parameter>,
         request_id: Option<&str>,
     ) -> Vec<foxglove::remote_access::Parameter> {
@@ -234,7 +234,7 @@ impl PyRemoteAccessListener {
     fn call_client_channel_method(
         &self,
         method_name: &str,
-        client: remote_access::Client,
+        client: &remote_access::Client,
         channel: &ChannelDescriptor,
     ) {
         let py_client = PyRemoteAccessClient::from(client);

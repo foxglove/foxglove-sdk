@@ -20,6 +20,7 @@ use crate::protocol::v2::parameter::Parameter;
 use crate::protocol::v2::server::ParameterValues;
 use crate::remote_access::participant::ChannelWriter;
 use crate::remote_common::service::{CallId, Service, ServiceId, ServiceMap};
+use crate::time::millis_since_epoch;
 use crate::{
     ChannelDescriptor, ChannelId, Context, FoxgloveError, Metadata, RawChannel, Schema, Sink,
     SinkChannelFilter, SinkId,
@@ -27,13 +28,14 @@ use crate::{
         BinaryMessage, JsonMessage,
         client::{self, ClientMessage},
         server::{
-            AdvertiseServices, MessageData as ServerMessageData, ServerInfo, ServiceCallFailure,
-            Status, Unadvertise, UnadvertiseServices, advertise, advertise_services,
+            AdvertiseServices, MessageData as ServerMessageData, Pong, ServerInfo,
+            ServiceCallFailure, Status, Unadvertise, UnadvertiseServices, advertise,
+            advertise_services,
         },
     },
     remote_access::{
         Capability, Listener, RemoteAccessError, client::Client, participant::Participant,
-        session_state::SessionState,
+        rtt_tracker::RttTracker, session_state::SessionState,
     },
 };
 
@@ -191,6 +193,8 @@ pub(crate) struct RemoteAccessSession {
     pending_client_readers:
         parking_lot::Mutex<HashMap<ParticipantIdentity, HashMap<ChannelId, ByteStreamReader>>>,
     pending_client_reader_timeout: Duration,
+    rtt_tracker: parking_lot::Mutex<RttTracker>,
+    ice_rtt_tracker: parking_lot::Mutex<RttTracker>,
 }
 
 impl Sink for RemoteAccessSession {
@@ -325,6 +329,8 @@ impl RemoteAccessSession {
             pending_client_reader_timeout: params.pending_client_reader_timeout,
             services: params.services,
             supported_encodings: params.supported_encodings,
+            rtt_tracker: parking_lot::Mutex::new(RttTracker::new("ping/pong")),
+            ice_rtt_tracker: parking_lot::Mutex::new(RttTracker::new("ICE")),
         }
     }
 
@@ -727,6 +733,22 @@ impl RemoteAccessSession {
             ClientMessage::UnsubscribeParameterUpdates(msg) => {
                 self.handle_unsubscribe_parameter_updates(&participant, msg.parameter_names);
             }
+            ClientMessage::Ping(msg) => {
+                // Build pong payload: [appTimestamp: u64 LE][deviceTimestamp: u64 LE]
+                let mut pong_payload = Vec::with_capacity(16);
+                pong_payload.extend_from_slice(&msg.payload[..8]);
+                pong_payload.extend_from_slice(&millis_since_epoch().to_le_bytes());
+                let pong = Pong::new(&pong_payload);
+                let framed = encode_binary_message(&pong);
+                self.send_control(participant, framed);
+            }
+            ClientMessage::PingAck(ack) => {
+                let now = millis_since_epoch();
+                if now >= ack.device_timestamp {
+                    let rtt_ms = (now - ack.device_timestamp) as f64;
+                    self.rtt_tracker.lock().record_sample(rtt_ms);
+                }
+            }
             _ => {
                 warn!("Unhandled client message: {client_msg:?}");
             }
@@ -797,7 +819,7 @@ impl RemoteAccessSession {
                     participant.participant_id().clone(),
                 );
                 for descriptor in &subscribe_result.newly_subscribed_descriptors {
-                    listener.on_subscribe(client.clone(), descriptor);
+                    listener.on_subscribe(&client, descriptor);
                 }
             }
         }
@@ -843,7 +865,7 @@ impl RemoteAccessSession {
                     participant.participant_id().clone(),
                 );
                 for descriptor in &unsubscribe_result.actually_unsubscribed_descriptors {
-                    listener.on_unsubscribe(client.clone(), descriptor);
+                    listener.on_unsubscribe(&client, descriptor);
                 }
             }
         }
@@ -922,7 +944,7 @@ impl RemoteAccessSession {
             }
 
             if let Some(listener) = &self.listener {
-                listener.on_client_advertise(client.clone(), &descriptor);
+                listener.on_client_advertise(&client, &descriptor);
             }
 
             // Drain any pending byte stream reader that arrived before this advertise.
@@ -968,7 +990,7 @@ impl RemoteAccessSession {
                 ),
                 Some(descriptor) => {
                     if let Some(listener) = &self.listener {
-                        listener.on_client_unadvertise(client.clone(), &descriptor);
+                        listener.on_client_unadvertise(&client, &descriptor);
                     }
                 }
             }
@@ -1064,7 +1086,7 @@ impl RemoteAccessSession {
                 participant.client_id(),
                 participant.participant_id().clone(),
             );
-            listener.on_message_data(client, &descriptor, &msg.data);
+            listener.on_message_data(&client, &descriptor, &msg.data);
         }
     }
 
@@ -1156,11 +1178,11 @@ impl RemoteAccessSession {
             let client = Client::new(client_id, participant_id.clone());
 
             for descriptor in &removed.subscribed_descriptors {
-                listener.on_unsubscribe(client.clone(), descriptor);
+                listener.on_unsubscribe(&client, descriptor);
             }
 
             for descriptor in &removed.client_channels {
-                listener.on_client_unadvertise(client.clone(), descriptor);
+                listener.on_client_unadvertise(&client, descriptor);
             }
         }
     }
@@ -1391,9 +1413,9 @@ impl RemoteAccessSession {
             interval.tick().await;
             let stats = self.stats();
             let connection_quality = self.room.local_participant().connection_quality();
-            let total_video_bytes_sent = match self.room.get_stats().await {
-                Ok(stats) => Some(
-                    stats
+            let (total_video_bytes_sent, ice_rtt_ms) = match self.room.get_stats().await {
+                Ok(stats) => {
+                    let total_video_bytes_sent = stats
                         .publisher_stats
                         .iter()
                         .filter_map(|s| match s {
@@ -1404,13 +1426,29 @@ impl RemoteAccessSession {
                             }
                             _ => None,
                         })
-                        .sum::<u64>(),
-                ),
+                        .sum::<u64>();
+                    let ice_rtt_ms = stats
+                        .publisher_stats
+                        .iter()
+                        .filter_map(|s| match s {
+                            libwebrtc::stats::RtcStats::CandidatePair(cp)
+                                if cp.candidate_pair.nominated =>
+                            {
+                                Some(cp.candidate_pair.current_round_trip_time * 1000.0)
+                            }
+                            _ => None,
+                        })
+                        .next();
+                    (Some(total_video_bytes_sent), ice_rtt_ms)
+                }
                 Err(e) => {
                     warn!(remote_access_session_id, error = %e, "failed to get room stats: {e}");
-                    None
+                    (None, None)
                 }
             };
+            if let Some(rtt_ms) = ice_rtt_ms {
+                self.ice_rtt_tracker.lock().record_sample(rtt_ms);
+            }
             info!(
                 remote_access_session_id,
                 participants = stats.participants,
@@ -1576,7 +1614,8 @@ impl RemoteAccessSession {
                 participant.client_id(),
                 participant.participant_id().clone(),
             );
-            let parameters = listener.on_get_parameters(client, param_names, request_id.as_deref());
+            let parameters =
+                listener.on_get_parameters(&client, param_names, request_id.as_deref());
             self.send_parameter_values(participant, parameters, request_id);
         }
     }
@@ -1601,7 +1640,7 @@ impl RemoteAccessSession {
                 participant.client_id(),
                 participant.participant_id().clone(),
             );
-            let updated = listener.on_set_parameters(client, parameters, request_id.as_deref());
+            let updated = listener.on_set_parameters(&client, parameters, request_id.as_deref());
 
             // Send the updated parameters back to the requesting client if `request_id` is set.
             if request_id.is_some() {

@@ -11,8 +11,9 @@ mod unsubscribe;
 #[doc(hidden)]
 pub use crate::protocol::common::client::PlaybackControlRequest;
 pub use crate::protocol::common::client::{
-    Advertise, AdvertiseChannel, FetchAsset, GetParameters, MessageData, ServiceCallRequest,
-    SetParameters, SubscribeParameterUpdates, Unadvertise, UnsubscribeParameterUpdates,
+    Advertise, AdvertiseChannel, FetchAsset, GetParameters, MessageData, Ping, PingAck,
+    ServiceCallRequest, SetParameters, SubscribeParameterUpdates, Unadvertise,
+    UnsubscribeParameterUpdates,
 };
 pub use subscribe::{Subscribe, SubscribeChannel};
 pub use unsubscribe::Unsubscribe;
@@ -24,6 +25,8 @@ pub(crate) enum BinaryOpcode {
     ServiceCallRequest = 2,
     #[doc(hidden)]
     PlaybackControlRequest = 3,
+    Ping = 4,
+    PingAck = 5,
 }
 
 impl BinaryOpcode {
@@ -32,9 +35,19 @@ impl BinaryOpcode {
             1 => Some(Self::MessageData),
             2 => Some(Self::ServiceCallRequest),
             3 => Some(Self::PlaybackControlRequest),
+            4 => Some(Self::Ping),
+            5 => Some(Self::PingAck),
             _ => None,
         }
     }
+}
+
+impl<'a> BinaryMessage<'a> for Ping<'a> {
+    const OPCODE: u8 = BinaryOpcode::Ping as u8;
+}
+
+impl<'a> BinaryMessage<'a> for PingAck {
+    const OPCODE: u8 = BinaryOpcode::PingAck as u8;
 }
 
 /// A representation of a client message useful for deserializing.
@@ -56,6 +69,8 @@ pub enum ClientMessage<'a> {
     FetchAsset(FetchAsset),
     #[doc(hidden)]
     PlaybackControlRequest(PlaybackControlRequest),
+    Ping(Ping<'a>),
+    PingAck(PingAck),
 }
 
 impl<'a> ClientMessage<'a> {
@@ -81,6 +96,10 @@ impl<'a> ClientMessage<'a> {
                 Some(BinaryOpcode::PlaybackControlRequest) => {
                     PlaybackControlRequest::parse_payload(data)
                         .map(ClientMessage::PlaybackControlRequest)
+                }
+                Some(BinaryOpcode::Ping) => Ping::parse_payload(data).map(ClientMessage::Ping),
+                Some(BinaryOpcode::PingAck) => {
+                    PingAck::parse_payload(data).map(ClientMessage::PingAck)
                 }
                 None => Err(ParseError::InvalidOpcode(opcode)),
             }
@@ -111,6 +130,8 @@ impl<'a> ClientMessage<'a> {
             ClientMessage::UnsubscribeConnectionGraph => ClientMessage::UnsubscribeConnectionGraph,
             ClientMessage::FetchAsset(m) => ClientMessage::FetchAsset(m),
             ClientMessage::PlaybackControlRequest(m) => ClientMessage::PlaybackControlRequest(m),
+            ClientMessage::Ping(m) => ClientMessage::Ping(m.into_owned()),
+            ClientMessage::PingAck(m) => ClientMessage::PingAck(m),
         }
     }
 }
@@ -219,6 +240,37 @@ mod tests {
         insta::assert_snapshot!(format!("{:#04x?}", buf));
         let parsed = ClientMessage::parse_binary(&buf).unwrap();
         assert_eq!(parsed, ClientMessage::PlaybackControlRequest(message));
+    }
+
+    #[test]
+    fn test_ping_encode() {
+        let message = Ping {
+            payload: b"1234567890".as_slice().into(),
+        };
+        let buf = message.to_bytes();
+        insta::assert_snapshot!(format!("{:#04x?}", buf));
+        let parsed = ClientMessage::parse_binary(&buf).unwrap();
+        assert_eq!(parsed, ClientMessage::Ping(message));
+    }
+
+    #[test]
+    fn test_ping_rejects_short_payload() {
+        let message = Ping {
+            payload: b"short".as_slice().into(),
+        };
+        let buf = message.to_bytes();
+        assert!(ClientMessage::parse_binary(&buf).is_err());
+    }
+
+    #[test]
+    fn test_ping_ack_encode() {
+        let message = PingAck {
+            device_timestamp: 1_711_500_000_000,
+        };
+        let buf = message.to_bytes();
+        insta::assert_snapshot!(format!("{:#04x?}", buf));
+        let parsed = ClientMessage::parse_binary(&buf).unwrap();
+        assert_eq!(parsed, ClientMessage::PingAck(message));
     }
 
     #[test]

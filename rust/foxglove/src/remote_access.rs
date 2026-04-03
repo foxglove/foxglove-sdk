@@ -8,6 +8,7 @@ mod credentials_provider;
 mod gateway;
 mod listener;
 mod participant;
+mod rtt_tracker;
 mod service;
 mod session;
 mod session_state;
