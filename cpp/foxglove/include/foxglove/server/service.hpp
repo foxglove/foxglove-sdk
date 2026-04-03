@@ -174,6 +174,7 @@ public:
 
 private:
   friend class WebSocketServer;
+  friend class RemoteAccessGateway;
 
   struct Deleter {
     void operator()(foxglove_service* ptr) const noexcept;
