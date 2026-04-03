@@ -155,8 +155,13 @@ std::shared_ptr<rmw_request_id_t> GenericClient::create_request_header() {
   return std::shared_ptr<rmw_request_id_t>(new rmw_request_id_t);
 }
 
+#if RCLCPP_VERSION_GTE(31, 0, 0)
+void GenericClient::handle_response(const std::shared_ptr<rmw_request_id_t>& request_header,
+                                    const std::shared_ptr<void>& response) {
+#else
 void GenericClient::handle_response(std::shared_ptr<rmw_request_id_t> request_header,
                                     std::shared_ptr<void> response) {
+#endif
   std::unique_lock<std::mutex> lock(pending_requests_mutex_);
   int64_t sequence_number = request_header->sequence_number;
 
