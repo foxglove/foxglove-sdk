@@ -42,6 +42,39 @@ Run example programs (note that a different `build` directory may be used depend
 ./build/example_server
 ```
 
+## Remote access
+
+Remote access support adds the `RemoteAccessGateway` class for live visualization and teleop via the Foxglove platform. It is built by enabling the `FOXGLOVE_BUILD_REMOTE_ACCESS` CMake option, which adds the gateway code to `foxglove_cpp_shared`. Only the shared library is produced — no static library — because the LiveKit/WebRTC dependency has strict ABI requirements and would leak internal symbols into the consumer's binary.
+
+### Supported platforms and ABI requirements
+
+The remote access shared library has strict ABI requirements inherited from the prebuilt LiveKit/WebRTC native library. **Your application must be built with a compatible compiler and runtime**, or you will encounter linker errors or undefined behavior.
+
+| Platform | Compiler | C++ stdlib | CRT | Notes |
+|----------|----------|------------|-----|-------|
+| Linux x86_64 | GCC 14+ | libstdc++ | — | glibc >= 2.39 (Ubuntu 24.04+) |
+| Linux aarch64 | GCC 14+ | libstdc++ | — | glibc >= 2.39 (Ubuntu 24.04+) |
+| macOS x86_64 | Clang | libc++ | — | Default Xcode toolchain |
+| macOS aarch64 | Clang | libc++ | — | Default Xcode toolchain |
+| Windows x86_64 | MSVC | MSVC STL | `/MT` (static) | Your project must also use `/MT` |
+| Windows aarch64 | MSVC | MSVC STL | `/MT` (static) | Your project must also use `/MT` |
+
+**Not supported:** Clang/libc++ on Linux, `/MD` (dynamic CRT) on Windows.
+
+### Building locally
+
+```
+make build-ra
+```
+
+This uses a separate build directory (`build-ra/`) from the base SDK build.
+
+### Consuming the library
+
+Link against `foxglove_cpp_shared` and include the same C and C++ headers as the base SDK. The C++ header `foxglove/remote_access.hpp` provides the `RemoteAccessGateway` class.
+
+The gateway-related C declarations in `foxglove-c/foxglove-c.h` are guarded by `#if defined(FOXGLOVE_REMOTE_ACCESS)`. When using CMake and linking against `foxglove_cpp_shared` built with `FOXGLOVE_BUILD_REMOTE_ACCESS=ON`, this define is propagated automatically. Otherwise, define `FOXGLOVE_REMOTE_ACCESS` before including the header.
+
 ## Examples
 
 ### RGB Camera Visualization Example

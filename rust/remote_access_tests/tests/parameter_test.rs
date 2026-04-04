@@ -50,7 +50,7 @@ impl ParameterListener {
 impl Listener for ParameterListener {
     fn on_get_parameters(
         &self,
-        _client: foxglove::remote_access::Client,
+        _client: &foxglove::remote_access::Client,
         param_names: Vec<String>,
         _request_id: Option<&str>,
     ) -> Vec<Parameter> {
@@ -68,7 +68,7 @@ impl Listener for ParameterListener {
 
     fn on_set_parameters(
         &self,
-        _client: foxglove::remote_access::Client,
+        _client: &foxglove::remote_access::Client,
         parameters: Vec<Parameter>,
         _request_id: Option<&str>,
     ) -> Vec<Parameter> {

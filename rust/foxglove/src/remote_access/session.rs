@@ -275,6 +275,10 @@ impl Sink for RemoteAccessSession {
     fn remove_channel(&self, channel: &RawChannel) {
         let _guard = self.subscription_lock.lock();
         let channel_id = channel.id();
+
+        // Collect subscriber info before removal for on_unsubscribe callbacks.
+        let subscriber_clients = self.state.read().channel_subscriber_clients(&channel_id);
+
         if !self.state.write().remove_channel(channel_id) {
             return;
         }
@@ -284,6 +288,15 @@ impl Sink for RemoteAccessSession {
 
         let unadvertise = Unadvertise::new([u64::from(channel_id)]);
         self.broadcast_control(encode_json_message(&unadvertise));
+
+        // Fire on_unsubscribe callbacks for subscribers of the removed channel.
+        if let Some(listener) = &self.listener {
+            let descriptor = channel.descriptor();
+            for (client_id, participant_id) in subscriber_clients {
+                let client = Client::new(client_id, participant_id);
+                listener.on_unsubscribe(&client, descriptor);
+            }
+        }
     }
 
     fn auto_subscribe(&self) -> bool {
@@ -827,7 +840,7 @@ impl RemoteAccessSession {
                     self.sink_id,
                 );
                 for descriptor in &subscribe_result.newly_subscribed_descriptors {
-                    listener.on_subscribe(client.clone(), descriptor);
+                    listener.on_subscribe(&client, descriptor);
                 }
             }
         }
@@ -874,7 +887,7 @@ impl RemoteAccessSession {
                     self.sink_id,
                 );
                 for descriptor in &unsubscribe_result.actually_unsubscribed_descriptors {
-                    listener.on_unsubscribe(client.clone(), descriptor);
+                    listener.on_unsubscribe(&client, descriptor);
                 }
             }
         }
@@ -954,7 +967,7 @@ impl RemoteAccessSession {
             }
 
             if let Some(listener) = &self.listener {
-                listener.on_client_advertise(client.clone(), &descriptor);
+                listener.on_client_advertise(&client, &descriptor);
             }
 
             // Drain any pending byte stream reader that arrived before this advertise.
@@ -1001,7 +1014,7 @@ impl RemoteAccessSession {
                 ),
                 Some(descriptor) => {
                     if let Some(listener) = &self.listener {
-                        listener.on_client_unadvertise(client.clone(), &descriptor);
+                        listener.on_client_unadvertise(&client, &descriptor);
                     }
                 }
             }
@@ -1098,7 +1111,7 @@ impl RemoteAccessSession {
                 participant.participant_id().clone(),
                 self.sink_id,
             );
-            listener.on_message_data(client, &descriptor, &msg.data);
+            listener.on_message_data(&client, &descriptor, &msg.data);
         }
     }
 
@@ -1191,11 +1204,11 @@ impl RemoteAccessSession {
             let client = Client::new(client_id, participant_id.clone(), self.sink_id);
 
             for descriptor in &removed.subscribed_descriptors {
-                listener.on_unsubscribe(client.clone(), descriptor);
+                listener.on_unsubscribe(&client, descriptor);
             }
 
             for descriptor in &removed.client_channels {
-                listener.on_client_unadvertise(client.clone(), descriptor);
+                listener.on_client_unadvertise(&client, descriptor);
             }
         }
     }
@@ -1664,7 +1677,8 @@ impl RemoteAccessSession {
                 participant.participant_id().clone(),
                 self.sink_id,
             );
-            let parameters = listener.on_get_parameters(client, param_names, request_id.as_deref());
+            let parameters =
+                listener.on_get_parameters(&client, param_names, request_id.as_deref());
             self.send_parameter_values(participant, parameters, request_id);
         }
     }
@@ -1690,7 +1704,7 @@ impl RemoteAccessSession {
                 participant.participant_id().clone(),
                 self.sink_id,
             );
-            let updated = listener.on_set_parameters(client, parameters, request_id.as_deref());
+            let updated = listener.on_set_parameters(&client, parameters, request_id.as_deref());
 
             // Send the updated parameters back to the requesting client if `request_id` is set.
             if request_id.is_some() {

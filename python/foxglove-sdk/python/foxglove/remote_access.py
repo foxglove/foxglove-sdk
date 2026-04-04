@@ -46,6 +46,7 @@ class RemoteAccessListener(Protocol):
     def on_unsubscribe(self, client: Client, channel: ChannelDescriptor) -> None:
         """
         Called when a client unsubscribes from a channel or disconnects.
+        Also called when a subscribed channel is removed from the :class:`~foxglove.Context`.
 
         :param client: The client that unsubscribed.
         :param channel: The channel that was unsubscribed from.

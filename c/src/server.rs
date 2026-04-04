@@ -602,16 +602,16 @@ pub unsafe extern "C" fn foxglove_server_add_service(
     server: Option<&FoxgloveWebSocketServer>,
     service: *mut FoxgloveService,
 ) -> FoxgloveError {
-    let Some(server) = server else {
-        return FoxgloveError::ValueError;
-    };
     if service.is_null() {
         return FoxgloveError::ValueError;
     }
+    let service = unsafe { FoxgloveService::from_raw(service) };
+    let Some(server) = server else {
+        return FoxgloveError::ValueError;
+    };
     let Some(server) = server.as_ref() else {
         return FoxgloveError::SinkClosed;
     };
-    let service = unsafe { FoxgloveService::from_raw(service) };
     server
         .add_services([service.into_inner()])
         .err()
