@@ -1631,13 +1631,7 @@ impl RemoteAccessSession {
         }
 
         let Some(guard) = participant.fetch_asset_sem().try_acquire() else {
-            let client = Client::with_sender(
-                participant.client_id(),
-                participant.participant_id().clone(),
-                self.sink_id,
-                participant.clone(),
-            );
-            client.send_asset_response(Err("Too many concurrent fetch asset requests"), request_id);
+            participant.send_asset_error("Too many concurrent fetch asset requests", request_id);
             return;
         };
 
