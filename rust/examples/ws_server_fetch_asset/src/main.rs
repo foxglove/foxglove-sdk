@@ -1,3 +1,7 @@
+use std::collections::HashMap;
+use std::path::Path;
+use std::time::Duration;
+
 use clap::Parser;
 
 use foxglove::LazyChannel;
@@ -6,22 +10,20 @@ use foxglove::messages::{
 };
 use foxglove::websocket::{AssetHandler, AssetResponder};
 use log::info;
-use std::collections::HashMap;
-use std::time::Duration;
 
 const PELICAN_URI: &str = "package://pelican/pelican.stl";
 
 struct AssetServer {
-    assets: HashMap<String, &'static [u8]>,
+    assets: HashMap<String, Vec<u8>>,
 }
 
 impl AssetServer {
     fn new() -> Self {
-        let mut assets: HashMap<_, &'static [u8]> = HashMap::new();
-        assets.insert(
-            PELICAN_URI.to_string(),
-            include_bytes!("../../pelican.stl").as_slice(),
-        );
+        let stl_path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../pelican.stl");
+        let stl_data = std::fs::read(&stl_path)
+            .unwrap_or_else(|e| panic!("Failed to read {}: {e}", stl_path.display()));
+        let mut assets = HashMap::new();
+        assets.insert(PELICAN_URI.to_string(), stl_data);
         Self { assets }
     }
 }

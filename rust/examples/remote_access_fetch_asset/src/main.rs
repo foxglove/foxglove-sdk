@@ -1,9 +1,9 @@
 //! Remote access gateway example: demonstrates serving assets via the fetch
 //! asset handler and logging scene updates that reference those assets.
 //!
-//! The pelican STL model is embedded at compile time and served when a client
-//! requests `package://pelican/pelican.stl`. A `SceneUpdate` referencing the
-//! model is logged every second on the `/scene` topic.
+//! The pelican STL model is read at runtime and served when a client requests
+//! `package://pelican/pelican.stl`. A `SceneUpdate` referencing the model is
+//! logged every second on the `/scene` topic.
 //!
 //! Set the `FOXGLOVE_DEVICE_TOKEN` environment variable before running:
 //!
@@ -15,6 +15,7 @@
 //! via the remote access gateway.
 
 use std::collections::HashMap;
+use std::path::Path;
 use std::time::Duration;
 
 use foxglove::LazyChannel;
@@ -27,16 +28,16 @@ use log::info;
 const PELICAN_URI: &str = "package://pelican/pelican.stl";
 
 struct AssetServer {
-    assets: HashMap<String, &'static [u8]>,
+    assets: HashMap<String, Vec<u8>>,
 }
 
 impl AssetServer {
     fn new() -> Self {
-        let mut assets: HashMap<_, &'static [u8]> = HashMap::new();
-        assets.insert(
-            PELICAN_URI.to_string(),
-            include_bytes!("../../pelican.stl").as_slice(),
-        );
+        let stl_path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../pelican.stl");
+        let stl_data = std::fs::read(&stl_path)
+            .unwrap_or_else(|e| panic!("Failed to read {}: {e}", stl_path.display()));
+        let mut assets = HashMap::new();
+        assets.insert(PELICAN_URI.to_string(), stl_data);
         Self { assets }
     }
 }
