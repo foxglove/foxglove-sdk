@@ -2055,6 +2055,8 @@ async fn process_data_message<F, Fut>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::protocol::v2::server::FetchAssetResponse;
+    use crate::remote_access::fetch_asset::{AsyncAssetHandlerFn, BlockingAssetHandlerFn};
     use crate::remote_access::participant::{
         ParticipantWriter, TestByteStreamWriter, TestChannelWriter,
     };
@@ -2069,6 +2071,29 @@ mod tests {
             tx,
         ));
         (identity, participant)
+    }
+
+    fn make_participant_with_rx(
+        name: &str,
+    ) -> (Arc<Participant>, flume::Receiver<ControlPlaneMessage>) {
+        let identity = ParticipantIdentity(name.to_string());
+        let writer = Arc::new(TestByteStreamWriter::default());
+        let (tx, rx) = flume::bounded(16);
+        let participant = Arc::new(Participant::new(
+            identity,
+            ParticipantWriter::Test(writer),
+            tx,
+        ));
+        (participant, rx)
+    }
+
+    fn test_client(participant: &Arc<Participant>) -> Client {
+        Client::with_sender(
+            participant.client_id(),
+            participant.participant_id().clone(),
+            SinkId::next(),
+            participant.clone(),
+        )
     }
 
     /// A factory that produces a `ChannelWriter` backed by the given test writer.
@@ -2286,6 +2311,188 @@ mod tests {
         assert!(
             !writers.contains_key(&ch),
             "no writer should be cached when stream creation fails"
+        );
+    }
+
+    // ---- fetch asset tests ----
+
+    #[test]
+    fn asset_responder_sends_ok_response() {
+        let (participant, rx) = make_participant_with_rx("alice");
+        let guard = participant.fetch_asset_sem().try_acquire().unwrap();
+        let responder = AssetResponder::new(test_client(&participant), 42, guard);
+        responder.respond_ok(b"hello world");
+
+        let msg = rx.try_recv().unwrap();
+        assert_eq!(
+            msg.data,
+            encode_binary_message(&FetchAssetResponse::asset_data(42, &b"hello world"[..]))
+        );
+    }
+
+    #[test]
+    fn asset_responder_sends_error_response() {
+        let (participant, rx) = make_participant_with_rx("alice");
+        let guard = participant.fetch_asset_sem().try_acquire().unwrap();
+        let responder = AssetResponder::new(test_client(&participant), 42, guard);
+        responder.respond_err("something went wrong");
+
+        let msg = rx.try_recv().unwrap();
+        assert_eq!(
+            msg.data,
+            encode_binary_message(&FetchAssetResponse::error_message(
+                42,
+                "something went wrong"
+            ))
+        );
+    }
+
+    #[test]
+    fn asset_responder_sends_error_on_drop_without_response() {
+        let (participant, rx) = make_participant_with_rx("alice");
+        let guard = participant.fetch_asset_sem().try_acquire().unwrap();
+        let responder = AssetResponder::new(test_client(&participant), 42, guard);
+        drop(responder);
+
+        let msg = rx.try_recv().unwrap();
+        assert_eq!(
+            msg.data,
+            encode_binary_message(&FetchAssetResponse::error_message(
+                42,
+                "Internal server error: asset handler failed to send a response"
+            ))
+        );
+    }
+
+    #[test]
+    fn fetch_asset_semaphore_limits_concurrent_requests() {
+        let (participant, rx) = make_participant_with_rx("alice");
+        let mut guards = Vec::new();
+        while let Some(guard) = participant.fetch_asset_sem().try_acquire() {
+            guards.push(guard);
+        }
+        assert!(participant.fetch_asset_sem().try_acquire().is_none());
+
+        participant.send_asset_error("Too many concurrent fetch asset requests", 99);
+
+        let msg = rx.try_recv().unwrap();
+        assert_eq!(
+            msg.data,
+            encode_binary_message(&FetchAssetResponse::error_message(
+                99,
+                "Too many concurrent fetch asset requests"
+            ))
+        );
+
+        guards.pop();
+        assert!(participant.fetch_asset_sem().try_acquire().is_some());
+    }
+
+    #[test]
+    fn asset_responder_releases_semaphore_on_respond() {
+        let (participant, _rx) = make_participant_with_rx("alice");
+        let mut guards = Vec::new();
+        while let Some(guard) = participant.fetch_asset_sem().try_acquire() {
+            guards.push(guard);
+        }
+        let guard = guards.pop().unwrap();
+        let responder = AssetResponder::new(test_client(&participant), 1, guard);
+
+        assert!(participant.fetch_asset_sem().try_acquire().is_none());
+        responder.respond_ok(b"data");
+        assert!(participant.fetch_asset_sem().try_acquire().is_some());
+    }
+
+    #[test]
+    fn asset_responder_releases_semaphore_on_drop() {
+        let (participant, _rx) = make_participant_with_rx("alice");
+        let mut guards = Vec::new();
+        while let Some(guard) = participant.fetch_asset_sem().try_acquire() {
+            guards.push(guard);
+        }
+        let guard = guards.pop().unwrap();
+        let responder = AssetResponder::new(test_client(&participant), 1, guard);
+
+        assert!(participant.fetch_asset_sem().try_acquire().is_none());
+        drop(responder);
+        assert!(participant.fetch_asset_sem().try_acquire().is_some());
+    }
+
+    #[test]
+    fn missing_handler_sends_asset_error() {
+        let (participant, rx) = make_participant_with_rx("alice");
+        participant.send_asset_error("Server does not have a fetch asset handler", 42);
+
+        let msg = rx.try_recv().unwrap();
+        assert_eq!(
+            msg.data,
+            encode_binary_message(&FetchAssetResponse::error_message(
+                42,
+                "Server does not have a fetch asset handler"
+            ))
+        );
+    }
+
+    #[tokio::test]
+    async fn blocking_asset_handler_success() {
+        let (participant, rx) = make_participant_with_rx("alice");
+        let guard = participant.fetch_asset_sem().try_acquire().unwrap();
+        let responder = AssetResponder::new(test_client(&participant), 7, guard);
+
+        let handler = BlockingAssetHandlerFn(Arc::new(
+            |_client: Client, _uri: String| -> Result<&[u8], &str> { Ok(b"<robot/>") },
+        ));
+        handler.fetch("package://test/model.urdf".to_string(), responder);
+
+        let msg = tokio::time::timeout(Duration::from_secs(1), rx.recv_async())
+            .await
+            .expect("timed out waiting for asset response")
+            .expect("channel closed");
+        assert_eq!(
+            msg.data,
+            encode_binary_message(&FetchAssetResponse::asset_data(7, &b"<robot/>"[..]))
+        );
+    }
+
+    #[tokio::test]
+    async fn blocking_asset_handler_error() {
+        let (participant, rx) = make_participant_with_rx("alice");
+        let guard = participant.fetch_asset_sem().try_acquire().unwrap();
+        let responder = AssetResponder::new(test_client(&participant), 9, guard);
+
+        let handler = BlockingAssetHandlerFn(Arc::new(
+            |_client: Client, _uri: String| -> Result<&[u8], &str> { Err("not found") },
+        ));
+        handler.fetch("package://missing".to_string(), responder);
+
+        let msg = tokio::time::timeout(Duration::from_secs(1), rx.recv_async())
+            .await
+            .expect("timed out waiting for asset response")
+            .expect("channel closed");
+        assert_eq!(
+            msg.data,
+            encode_binary_message(&FetchAssetResponse::error_message(9, "not found"))
+        );
+    }
+
+    #[tokio::test]
+    async fn async_asset_handler_success() {
+        let (participant, rx) = make_participant_with_rx("alice");
+        let guard = participant.fetch_asset_sem().try_acquire().unwrap();
+        let responder = AssetResponder::new(test_client(&participant), 8, guard);
+
+        let handler = AsyncAssetHandlerFn(Arc::new(|_client: Client, _uri: String| async move {
+            Ok::<_, String>(b"PNG data".to_vec())
+        }));
+        handler.fetch("https://example.com/asset.png".to_string(), responder);
+
+        let msg = tokio::time::timeout(Duration::from_secs(1), rx.recv_async())
+            .await
+            .expect("timed out waiting for asset response")
+            .expect("channel closed");
+        assert_eq!(
+            msg.data,
+            encode_binary_message(&FetchAssetResponse::asset_data(8, &b"PNG data"[..]))
         );
     }
 }
