@@ -15,7 +15,7 @@ pub trait AssetHandler: Send + Sync + 'static {
     /// Fetch an asset with the given uri and return it via the responder.
     /// Fetch should not block, it should call `runtime.spawn`
     /// or `runtime.spawn_blocking` to do the actual work.
-    fn fetch(&self, _uri: String, _responder: AssetResponder);
+    fn fetch(&self, uri: String, responder: AssetResponder);
 }
 
 pub(crate) struct BlockingAssetHandlerFn<F>(pub Arc<F>);
