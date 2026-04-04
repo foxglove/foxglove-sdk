@@ -8,7 +8,7 @@ use tokio::sync::Mutex;
 
 use crate::api_client::{
     DeviceResponse, DeviceToken, FoxgloveApiClient, FoxgloveApiClientBuilder,
-    FoxgloveApiClientError, RtcCredentials,
+    FoxgloveApiClientError, RemoteSessionRequest, RtcCredentials,
 };
 
 #[derive(Error, Debug)]
@@ -46,7 +46,7 @@ impl CredentialsProvider {
 
     pub async fn load_credentials(
         &self,
-        remote_access_session_id: Option<String>,
+        request: RemoteSessionRequest,
     ) -> Result<Arc<RtcCredentials>, CredentialsError> {
         if let Some(credentials) = self.current_credentials() {
             return Ok(credentials);
@@ -58,12 +58,12 @@ impl CredentialsProvider {
         }
 
         tracing::info!(
-            remote_access_session_id = remote_access_session_id.as_deref(),
+            remote_access_session_id = request.remote_access_session_id.as_deref(),
             "refreshing credentials"
         );
         let credentials = Arc::new(
             self.client
-                .authorize_remote_viz(&self.device.id, remote_access_session_id)
+                .authorize_remote_viz(&self.device.id, request)
                 .await?,
         );
         self.credentials.store(Some(credentials.clone()));
@@ -90,7 +90,7 @@ mod tests {
         TEST_DEVICE_TOKEN, create_test_builder, create_test_server,
     };
 
-    use crate::api_client::DeviceToken;
+    use crate::api_client::{DeviceToken, RemoteSessionRequest};
 
     use super::CredentialsProvider;
 
@@ -122,7 +122,10 @@ mod tests {
         let provider = CredentialsProvider::new(builder).await.unwrap();
 
         let credentials = provider
-            .load_credentials(None)
+            .load_credentials(RemoteSessionRequest {
+                remote_access_session_id: None,
+                protocol_version: None,
+            })
             .await
             .expect("should fetch credentials");
 
@@ -137,7 +140,13 @@ mod tests {
         let builder = create_test_builder(server.url(), DeviceToken::new(TEST_DEVICE_TOKEN));
         let provider = CredentialsProvider::new(builder).await.unwrap();
 
-        provider.load_credentials(None).await.unwrap();
+        provider
+            .load_credentials(RemoteSessionRequest {
+                remote_access_session_id: None,
+                protocol_version: None,
+            })
+            .await
+            .unwrap();
         assert!(provider.current_credentials().is_some());
 
         provider.clear().await;

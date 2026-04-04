@@ -7,9 +7,10 @@ use futures_util::StreamExt;
 use indexmap::IndexSet;
 use libwebrtc::video_source::{RtcVideoSource, native::NativeVideoSource};
 use livekit::options::TrackPublishOptions;
-use livekit::prelude::*;
 use livekit::{ByteStreamReader, Room, StreamByteOptions, id::ParticipantIdentity};
+use livekit::{StreamWriter, prelude::*};
 use parking_lot::RwLock;
+use semver::Version;
 use smallvec::SmallVec;
 use tokio::io::AsyncReadExt;
 use tokio_util::{io::StreamReader, sync::CancellationToken};
@@ -35,7 +36,7 @@ use crate::{
     },
     remote_access::{
         Capability, Listener, RemoteAccessError, client::Client, participant::Participant,
-        rtt_tracker::RttTracker, session_state::SessionState,
+        protocol_version, rtt_tracker::RttTracker, session_state::SessionState,
     },
 };
 
@@ -1010,6 +1011,54 @@ impl RemoteAccessSession {
         }
     }
 
+    /// Send an incompatible protocol version error to a participant that will not be added to the
+    /// session. Opens a one-shot byte stream, writes the error status, and closes it.
+    pub(crate) async fn send_incompatible_version_error(
+        &self,
+        participant_id: &ParticipantIdentity,
+        attributes: &std::collections::HashMap<String, String>,
+    ) {
+        let advertised = attributes
+            .get(protocol_version::PROTOCOL_VERSION_ATTRIBUTE)
+            .cloned()
+            .unwrap_or_else(|| protocol_version::DEFAULT_PROTOCOL_VERSION.to_string());
+        let message = format!(
+            "Remote access protocol version {} is not compatible with this device (supported: {})",
+            advertised,
+            protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION,
+        );
+        error!("{}", message);
+
+        let stream = match self
+            .room
+            .local_participant()
+            .stream_bytes(StreamByteOptions {
+                topic: CONTROL_CHANNEL_TOPIC.to_string(),
+                destination_identities: vec![participant_id.clone()],
+                ..StreamByteOptions::default()
+            })
+            .await
+        {
+            Ok(s) => s,
+            Err(e) => {
+                error!(
+                    "failed to open error stream for incompatible participant {participant_id}: {e:?}"
+                );
+                return;
+            }
+        };
+
+        let status = Status::error(message);
+        if let Err(e) = stream.write(&encode_json_message(&status)).await {
+            error!("failed to send incompatible version error to {participant_id}: {e:?}");
+        }
+
+        // Close the stream so the client receives the end of stream signal.
+        // This is not required, if we just drop it LiveKit will spawn a task
+        // to close the stream and send the signal anyway, but it's clearer to make it explicit.
+        _ = stream.close().await;
+    }
+
     /// Handle a message from a `client-ch-{channelId}` byte stream.
     ///
     /// Only `MessageData` frames are expected. `expected_channel_id` is the channel ID parsed from
@@ -1113,6 +1162,7 @@ impl RemoteAccessSession {
     pub(crate) async fn add_participant(
         &self,
         participant_id: ParticipantIdentity,
+        protocol_version: Version,
         server_info: ServerInfo,
     ) -> Result<(), Box<RemoteAccessError>> {
         use crate::remote_access::participant::ParticipantWriter;
@@ -1140,6 +1190,7 @@ impl RemoteAccessSession {
 
         let participant = Arc::new(Participant::new(
             participant_id.clone(),
+            protocol_version,
             ParticipantWriter::Livekit(stream),
         ));
 
@@ -1213,13 +1264,26 @@ impl RemoteAccessSession {
             match event {
                 RoomEvent::ParticipantConnected(participant) => {
                     let participant_identity = participant.identity();
+                    let Some(version) = protocol_version::check_participant_protocol_version(
+                        &participant_identity,
+                        &participant.attributes(),
+                        remote_access_session_id,
+                    ) else {
+                        self.send_incompatible_version_error(
+                            &participant_identity,
+                            &participant.attributes(),
+                        )
+                        .await;
+                        continue;
+                    };
                     info!(
                         remote_access_session_id,
                         participant_identity = %participant_identity,
+                        version = %version,
                         "participant connected to room"
                     );
                     if let Err(e) = self
-                        .add_participant(participant.identity(), server_info.clone())
+                        .add_participant(participant.identity(), version, server_info.clone())
                         .await
                     {
                         error!(remote_access_session_id, error = %e, "failed to add participant: {e}");
@@ -2017,8 +2081,10 @@ mod tests {
     fn make_participant(name: &str) -> (ParticipantIdentity, Arc<Participant>) {
         let identity = ParticipantIdentity(name.to_string());
         let writer = Arc::new(TestByteStreamWriter::default());
+        let version = protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone();
         let participant = Arc::new(Participant::new(
             identity.clone(),
+            version,
             ParticipantWriter::Test(writer),
         ));
         (identity, participant)

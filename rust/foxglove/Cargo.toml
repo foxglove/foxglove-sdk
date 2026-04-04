@@ -29,6 +29,7 @@ remote-access = [
   "dep:libwebrtc",
   "dep:reqwest",
   "dep:percent-encoding",
+  "dep:semver",
 ]
 lz4 = ["mcap/lz4"]
 tls = [
@@ -101,6 +102,7 @@ regex = { version = "1", optional = true }
 cdr = { version = "0.2.4", optional = true }
 reqwest = { version = "0.13.1", features = ["json", "rustls"], optional = true }
 percent-encoding = { version = "2.3.2", optional = true }
+semver = { version = "1.0", optional = true }
 
 [dev-dependencies]
 assert_matches = "1.5.0"
