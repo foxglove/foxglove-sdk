@@ -53,7 +53,8 @@ where
     }
 }
 
-/// Wraps a Client and provides a method to respond to the fetch asset request from that client.
+/// Wraps a weak reference to a Client and provides a method
+/// to respond to the fetch asset request from that client.
 #[must_use]
 #[derive(Debug)]
 pub struct AssetResponder {

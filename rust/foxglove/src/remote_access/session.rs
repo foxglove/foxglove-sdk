@@ -1640,7 +1640,7 @@ impl RemoteAccessSession {
                 participant.client_id(),
                 participant.participant_id().clone(),
                 self.sink_id,
-                participant.clone(),
+                participant,
             );
             let responder = AssetResponder::new(client, request_id, guard);
             handler.fetch(uri, responder);
@@ -2092,7 +2092,7 @@ mod tests {
             participant.client_id(),
             participant.participant_id().clone(),
             SinkId::next(),
-            participant.clone(),
+            participant,
         )
     }
 
