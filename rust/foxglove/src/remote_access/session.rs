@@ -293,7 +293,7 @@ impl Sink for RemoteAccessSession {
         if let Some(listener) = &self.listener {
             let descriptor = channel.descriptor();
             for (client_id, participant_id) in subscriber_clients {
-                let client = Client::new(client_id, participant_id);
+                let client = Client::new(client_id, participant_id, self.sink_id);
                 listener.on_unsubscribe(&client, descriptor);
             }
         }
