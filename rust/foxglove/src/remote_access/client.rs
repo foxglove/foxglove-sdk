@@ -74,6 +74,14 @@ impl Client {
                 Ok(data) => participant.send_asset_response(data, request_id),
                 Err(err) => participant.send_asset_error(err, request_id),
             }
+        } else {
+            tracing::debug!(
+                client_id = ?self.client_id,
+                participant_id = ?self.participant_id,
+                sink_id = ?self.sink_id,
+                request_id,
+                "send_asset_response called but participant is not set"
+            );
         }
     }
 }
