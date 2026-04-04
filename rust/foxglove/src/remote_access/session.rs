@@ -1053,6 +1053,9 @@ impl RemoteAccessSession {
             error!("failed to send incompatible version error to {participant_id}: {e:?}");
         }
 
+        // Close the stream so the client receives the end of stream signal.
+        // This is not required, if we just drop it LiveKit will spawn a task
+        // to close the stream and send the signal anyway, but it's clearer to make it explicit.
         _ = stream.close().await;
     }
 
