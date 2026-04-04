@@ -321,6 +321,9 @@ impl RemoteAccessConnection {
                 "context has been dropped, stopping remote access connection"
             );
             *self.session.lock() = None;
+            if let Err(e) = session.room().close().await {
+                error!(remote_access_session_id, error = %e, "failed to close room: {e}");
+            }
             return;
         };
         context.add_sink(session.clone());
@@ -409,11 +412,14 @@ impl RemoteAccessConnection {
                 }
             };
 
+            // biased: prefer the connect result so a successfully-created Room
+            // is returned to run(), which will close it during teardown.
             let result = tokio::select! {
+                biased;
+                result = self.connect_session() => result,
                 () = self.cancellation_token.cancelled() => {
                     return None;
                 }
-                result = self.connect_session() => result,
             };
 
             let remote_access_session_id = self.remote_access_session_id();

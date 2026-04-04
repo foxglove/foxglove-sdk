@@ -8,6 +8,9 @@ publish = false
 name = "foxglove_py"
 crate-type = ["cdylib"]
 
+[features]
+remote-access = ["foxglove/remote-access"]
+
 [lints]
 workspace = true
 

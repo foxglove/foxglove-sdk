@@ -194,6 +194,29 @@ class CompressedImage:
         """Encodes the CompressedImage."""
         ...
 
+class CompressedPointCloud:
+    """
+    A compressed point cloud. A decoder for `format` must decompress `data`, using metadata stored in the compressed payload to recover point positions and any additional per-point attributes. The decoded point cloud must include at least 2 coordinate fields from `x`, `y`, and `z`; `red`, `green`, `blue`, and `alpha` are optional for customizing each point's color.
+    """
+
+    def __init__(
+        self,
+        *,
+        timestamp: Timestamp | None = None,
+        frame_id: str = "",
+        pose: Pose | None = None,
+        data: bytes = b"",
+        format: str = "",
+    ) -> None: ...
+    @staticmethod
+    def get_schema() -> Schema:
+        """Returns the CompressedPointCloud schema"""
+        ...
+
+    def encode(self) -> bytes:
+        """Encodes the CompressedPointCloud."""
+        ...
+
 class CompressedVideo:
     """
     A single frame of a compressed video bitstream
@@ -1063,6 +1086,7 @@ FoxgloveMessage = Union[
     CircleAnnotation,
     Color,
     CompressedImage,
+    CompressedPointCloud,
     CompressedVideo,
     CylinderPrimitive,
     CubePrimitive,

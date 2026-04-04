@@ -98,6 +98,66 @@ except ImportError:
     pass
 
 
+try:
+    from .remote_access import Capability as RemoteAccessCapability
+    from .remote_access import (
+        RemoteAccessGateway,
+        RemoteAccessListener,
+    )
+
+    def start_gateway(
+        *,
+        name: str | None = None,
+        device_token: str | None = None,
+        capabilities: list[RemoteAccessCapability] | None = None,
+        listener: RemoteAccessListener | None = None,
+        supported_encodings: list[str] | None = None,
+        services: list[Service] | None = None,
+        context: Context | None = None,
+        channel_filter: SinkChannelFilter | None = None,
+        message_backlog_size: int | None = None,
+        foxglove_api_url: str | None = None,
+        foxglove_api_timeout: float | None = None,
+    ) -> RemoteAccessGateway:
+        """
+        Start a remote access gateway for live visualization and teleop in Foxglove.
+
+        :param name: The name of the server. If not set, the device name from the Foxglove
+            platform is used.
+        :param device_token: The device token for authenticating with the Foxglove platform.
+            If not set, the ``FOXGLOVE_DEVICE_TOKEN`` environment variable is used.
+        :param capabilities: A list of capabilities to advertise to clients.
+        :param listener: A Python object that implements the
+            :py:class:`remote_access.RemoteAccessListener` protocol.
+        :param supported_encodings: A list of encodings to advertise to clients.
+        :param services: A list of services to advertise to clients.
+        :param context: The context to use for logging. If None, the global context is used.
+        :param channel_filter: A ``Callable`` that determines whether a channel should be logged
+            to. Return ``True`` to log the channel, or ``False`` to skip it. By default, all
+            channels will be logged.
+        :param message_backlog_size: The maximum number of messages to buffer before dropping
+            the oldest entries. Defaults to 1024.
+        :param foxglove_api_url: Override the Foxglove API base URL.
+        :param foxglove_api_timeout: Timeout for Foxglove API requests, in seconds.
+        """
+        return _foxglove.start_gateway(
+            name=name,
+            device_token=device_token,
+            capabilities=capabilities,
+            listener=listener,
+            supported_encodings=supported_encodings,
+            services=services,
+            context=context,
+            channel_filter=channel_filter,
+            message_backlog_size=message_backlog_size,
+            foxglove_api_url=foxglove_api_url,
+            foxglove_api_timeout=foxglove_api_timeout,
+        )
+
+except ImportError:
+    pass
+
+
 def set_log_level(level: int | str = "INFO") -> None:
     """
     Enable SDK logging.
@@ -204,6 +264,7 @@ __all__ = [
     "log",
     "open_mcap",
     "set_log_level",
+    "start_gateway",
     "start_server",
     "init_notebook_buffer",
 ]

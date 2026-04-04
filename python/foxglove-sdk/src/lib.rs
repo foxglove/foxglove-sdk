@@ -15,6 +15,8 @@ use std::io::BufWriter;
 use std::num::NonZeroU64;
 use std::path::PathBuf;
 
+#[cfg(feature = "remote-access")]
+use remote_access::start_gateway;
 use std::sync::{Arc, OnceLock};
 #[cfg(not(target_family = "wasm"))]
 use websocket::start_server;
@@ -23,6 +25,8 @@ mod errors;
 mod generated;
 mod logging;
 mod mcap;
+#[cfg(feature = "remote-access")]
+mod remote_access;
 mod schemas_wkt;
 mod sink_channel_filter;
 #[cfg(not(target_family = "wasm"))]
@@ -332,6 +336,8 @@ fn _foxglove_py(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(open_mcap, m)?)?;
     #[cfg(not(target_family = "wasm"))]
     m.add_function(wrap_pyfunction!(start_server, m)?)?;
+    #[cfg(feature = "remote-access")]
+    m.add_function(wrap_pyfunction!(start_gateway, m)?)?;
     m.add_function(wrap_pyfunction!(get_channel_for_topic, m)?)?;
     m.add_class::<BaseChannel>()?;
     m.add_class::<PySchema>()?;
@@ -344,5 +350,7 @@ fn _foxglove_py(m: &Bound<'_, PyModule>) -> PyResult<()> {
     mcap::register_submodule(m)?;
     #[cfg(not(target_family = "wasm"))]
     websocket::register_submodule(m)?;
+    #[cfg(feature = "remote-access")]
+    remote_access::register_submodule(m)?;
     Ok(())
 }

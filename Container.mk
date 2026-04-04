@@ -3,11 +3,17 @@ generate:
 	yarn install
 	yarn generate
 
+PYTHON_REMOTE_ACCESS ?= ON
+
+ifeq ($(PYTHON_REMOTE_ACCESS),ON)
+MATURIN_PEP517_ARGS += --features remote-access
+endif
+
 .PHONY: build-python
 build-python:
 	uv --directory python/foxglove-sdk lock --check
 	uv --directory python/foxglove-sdk sync --all-extras
-	uv --directory python/foxglove-sdk pip install --editable '.[notebook]'
+	MATURIN_PEP517_ARGS="$(MATURIN_PEP517_ARGS)" uv --directory python/foxglove-sdk pip install --editable '.[notebook]'
 
 .PHONY: lint-python
 lint-python:
@@ -20,7 +26,7 @@ lint-python:
 test-python:
 	uv --directory python/foxglove-sdk lock --check
 	uv --directory python/foxglove-sdk sync --all-extras
-	uv --directory python/foxglove-sdk pip install --editable '.[notebook]'
+	MATURIN_PEP517_ARGS="$(MATURIN_PEP517_ARGS)" uv --directory python/foxglove-sdk pip install --editable '.[notebook]'
 	uv --directory python/foxglove-sdk run mypy .
 	uv --directory python/foxglove-sdk run pytest
 
@@ -28,7 +34,7 @@ test-python:
 benchmark-python:
 	uv --directory python/foxglove-sdk lock --check
 	uv --directory python/foxglove-sdk sync --all-extras
-	uv --directory python/foxglove-sdk pip install --editable '.[notebook]'
+	MATURIN_PEP517_ARGS="$(MATURIN_PEP517_ARGS)" uv --directory python/foxglove-sdk pip install --editable '.[notebook]'
 	uv --directory python/foxglove-sdk run pytest --with-benchmarks
 
 .PHONY: docs-python
@@ -57,7 +63,11 @@ build-rust-foxglove-msrv:
 
 .PHONY: test-rust
 test-rust:
-	cargo test --all-features
+	cargo test -p foxglove --all-features
+	cargo test -p foxglove_c --all-features
+	cargo test -p foxglove_data_loader
+	cargo test -p foxglove_derive
+	cargo test -p foxglove-sdk-python --features remote-access
 
 .PHONY: test-rust-foxglove-no-default-features
 test-rust-foxglove-no-default-features:
@@ -103,3 +113,15 @@ test-cpp:
 .PHONY: test-cpp-sanitize
 test-cpp-sanitize:
 	make -C cpp SANITIZE=address,undefined test
+
+.PHONY: build-cpp-ra
+build-cpp-ra:
+	make -C cpp build-ra
+
+.PHONY: test-cpp-ra
+test-cpp-ra:
+	make -C cpp test-ra
+
+.PHONY: build-cpp-ra-tidy
+build-cpp-ra-tidy:
+	make -C cpp CLANG_TIDY=true build-ra
