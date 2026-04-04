@@ -8,7 +8,7 @@
 //! Set the `FOXGLOVE_DEVICE_TOKEN` environment variable before running:
 //!
 //! ```text
-//! FOXGLOVE_DEVICE_TOKEN=<your-token> cargo run --example remote_access_fetch_asset
+//! FOXGLOVE_DEVICE_TOKEN=<your-token> cargo run -p example_remote_access_fetch_asset
 //! ```
 //!
 //! Then open [Foxglove](https://app.foxglove.dev) and connect to the device

@@ -311,11 +311,6 @@ impl RemoteAccessSession {
         let (data_plane_tx, data_plane_rx) = flume::bounded(params.message_backlog_size);
         let (control_plane_tx, control_plane_rx) = flume::bounded(params.message_backlog_size);
         let (video_metadata_tx, video_metadata_rx) = tokio::sync::watch::channel(());
-        let mut capabilities = params.capabilities;
-        // Auto-add Assets capability if a handler is provided.
-        if params.fetch_asset_handler.is_some() && !capabilities.contains(&Capability::Assets) {
-            capabilities.push(Capability::Assets);
-        }
         Self {
             sink_id: SinkId::next(),
             room: params.room,
@@ -324,7 +319,7 @@ impl RemoteAccessSession {
             state: RwLock::new(SessionState::new()),
             channel_filter: params.channel_filter,
             listener: params.listener,
-            capabilities,
+            capabilities: params.capabilities,
             fetch_asset_handler: params.fetch_asset_handler,
             cancellation_token: params.cancellation_token,
             data_plane_tx,
@@ -1615,7 +1610,10 @@ impl RemoteAccessSession {
     /// Handle a fetch asset request from a client.
     fn handle_fetch_asset(&self, participant: &Arc<Participant>, uri: String, request_id: u32) {
         if !self.has_capability(Capability::Assets) {
-            tracing::warn!("Received FetchAsset request but Assets capability is not enabled");
+            self.send_error(
+                participant,
+                "Server does not support assets capability".to_string(),
+            );
             return;
         }
 
@@ -1641,6 +1639,7 @@ impl RemoteAccessSession {
             handler.fetch(uri, responder);
         } else {
             tracing::error!("Gateway advertised the Assets capability without providing a handler");
+            participant.send_asset_error("Server does not have a fetch asset handler", request_id);
         }
     }
 
