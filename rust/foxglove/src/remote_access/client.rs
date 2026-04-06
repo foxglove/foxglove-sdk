@@ -64,11 +64,6 @@ impl Client {
     pub fn participant_id(&self) -> &str {
         &self.participant_id.0
     }
-
-    /// Returns the sink ID for the session this client belongs to.
-    pub fn sink_id(&self) -> SinkId {
-        self.sink_id
-    }
 }
 
 impl SendAssetResponse for Client {

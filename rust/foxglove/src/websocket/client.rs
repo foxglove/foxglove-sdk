@@ -29,8 +29,8 @@ impl Client {
     }
 
     /// Returns the client's sink ID.
-    pub fn sink_id(&self) -> SinkId {
-        self.sink_id
+    pub fn sink_id(&self) -> Option<SinkId> {
+        Some(self.sink_id)
     }
 
     /// Send a status message to this client. Does nothing if client is disconnected.
