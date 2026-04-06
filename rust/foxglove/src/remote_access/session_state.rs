@@ -698,13 +698,15 @@ mod tests {
         let (id, p1) = make_participant_with_sid("alice", "PA_old");
         assert!(state.insert_participant(id.clone(), p1.clone()));
 
-        let ch = ChannelId::new(1);
-        let _ = state.subscribe(&p1, &[ch]);
-        state.subscribe_data(&p1, &[ch]);
+        let ch = make_channel("/topic1");
+        let ch_id = ch.id();
+        state.insert_channel(&ch);
+        let _ = state.subscribe(&p1, &[ch_id]);
+        state.subscribe_data(&p1, &[ch_id]);
 
         // Simulate unclean exit + rejoin: remove old incarnation and insert new one.
         let removed = state.remove_participant(&id);
-        assert_eq!(removed.last_unsubscribed.as_slice(), &[ch]);
+        assert_eq!(removed.last_unsubscribed.as_slice(), &[ch_id]);
 
         let (_, p2) = make_participant_with_sid("alice", "PA_new");
         assert!(state.insert_participant(id.clone(), p2));
@@ -712,7 +714,7 @@ mod tests {
         // The new participant should be present but with no subscriptions.
         let p = state.get_participant(&id).unwrap();
         assert_eq!(p.sid().as_str(), "PA_new");
-        assert!(!state.has_data_subscribers(&ch));
+        assert!(!state.has_data_subscribers(&ch_id));
     }
 
     #[test]

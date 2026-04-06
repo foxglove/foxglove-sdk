@@ -353,7 +353,12 @@ impl RemoteAccessConnection {
                 "adding existing participant"
             );
             if let Err(e) = session
-                .add_participant(identity.clone(), participant.sid(), version, server_info.clone())
+                .add_participant(
+                    identity.clone(),
+                    participant.sid(),
+                    version,
+                    server_info.clone(),
+                )
                 .await
             {
                 error!(
