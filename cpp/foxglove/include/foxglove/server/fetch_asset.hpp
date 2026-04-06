@@ -45,6 +45,7 @@ public:
 
 private:
   friend class WebSocketServer;
+  friend class RemoteAccessGateway;
 
   struct Deleter {
     void operator()(foxglove_fetch_asset_responder* ptr) const noexcept;

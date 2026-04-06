@@ -21,6 +21,7 @@ FoxgloveResult<RemoteAccessGateway> RemoteAccessGateway::create(
     options.callbacks.onParametersSubscribe || options.callbacks.onParametersUnsubscribe;
 
   std::unique_ptr<RemoteAccessGatewayCallbacks> callbacks;
+  std::unique_ptr<FetchAssetHandler> fetch_asset;
   std::unique_ptr<SinkChannelFilterFn> sink_channel_filter;
 
   foxglove_gateway_callbacks c_callbacks = {};
@@ -244,6 +245,26 @@ FoxgloveResult<RemoteAccessGateway> RemoteAccessGateway::create(
     };
   }
 
+  // Fetch asset handler
+  if (options.fetch_asset) {
+    fetch_asset = std::make_unique<FetchAssetHandler>(options.fetch_asset);
+    c_options.fetch_asset_context = fetch_asset.get();
+    c_options.fetch_asset = [](
+                              const void* context,
+                              const struct foxglove_string* c_uri,
+                              struct foxglove_fetch_asset_responder* c_responder
+                            ) {
+      try {
+        const auto* handler = static_cast<const FetchAssetHandler*>(context);
+        std::string_view uri{c_uri->data, c_uri->len};
+        FetchAssetResponder responder(c_responder);
+        (*handler)(uri, std::move(responder));
+      } catch (const std::exception& exc) {
+        warn() << "Fetch asset callback failed: " << exc.what();
+      }
+    };
+  }
+
   // Optional API URL
   foxglove_string api_url = {};
   if (options.foxglove_api_url) {
@@ -267,14 +288,18 @@ FoxgloveResult<RemoteAccessGateway> RemoteAccessGateway::create(
     return tl::unexpected(static_cast<FoxgloveError>(error));
   }
 
-  return RemoteAccessGateway(gateway, std::move(callbacks), std::move(sink_channel_filter));
+  return RemoteAccessGateway(
+    gateway, std::move(callbacks), std::move(fetch_asset), std::move(sink_channel_filter)
+  );
 }
 
 RemoteAccessGateway::RemoteAccessGateway(
   foxglove_gateway* gateway, std::unique_ptr<RemoteAccessGatewayCallbacks> callbacks,
+  std::unique_ptr<FetchAssetHandler> fetch_asset,
   std::unique_ptr<SinkChannelFilterFn> sink_channel_filter
 )
     : callbacks_(std::move(callbacks))
+    , fetch_asset_(std::move(fetch_asset))
     , sink_channel_filter_(std::move(sink_channel_filter))
     , impl_(gateway, foxglove_gateway_stop) {}
 

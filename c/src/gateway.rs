@@ -6,6 +6,7 @@ use std::time::Duration;
 use bitflags::bitflags;
 
 use crate::channel_descriptor::FoxgloveChannelDescriptor;
+use crate::fetch_asset::{FetchAssetHandler, FoxgloveFetchAssetResponder};
 use crate::parameter::FoxgloveParameterArray;
 use crate::service::FoxgloveService;
 use crate::sink_channel_filter::ChannelFilter;
@@ -421,6 +422,37 @@ pub struct FoxgloveGatewayOptions<'a> {
         ) -> bool,
     >,
 
+    /// Context provided to the `fetch_asset` callback.
+    pub fetch_asset_context: *const c_void,
+
+    /// Fetch an asset with the given URI and return it via the responder.
+    ///
+    /// This method is invoked from a time-sensitive context and must not block. If blocking or
+    /// long-running behavior is required, the implementation should return immediately and handle
+    /// the request asynchronously.
+    ///
+    /// The `uri` provided to the callback is only valid for the duration of the callback. If the
+    /// implementation wishes to retain its data for a longer lifetime, it must copy data out of
+    /// it.
+    ///
+    /// The `responder` provided to the callback represents an unfulfilled response. The
+    /// implementation must eventually call either `foxglove_fetch_asset_respond_ok` or
+    /// `foxglove_fetch_asset_respond_error`, exactly once, in order to complete the request. It is
+    /// safe to invoke these completion functions synchronously from the context of the callback.
+    ///
+    /// If provided, the Assets capability will be advertised automatically.
+    ///
+    /// # Safety
+    /// - If provided, the handler callback must be a pointer to the fetch asset callback function,
+    ///   and must remain valid until the gateway is stopped.
+    pub fetch_asset: Option<
+        unsafe extern "C" fn(
+            context: *const c_void,
+            uri: *const FoxgloveString,
+            responder: *mut FoxgloveFetchAssetResponder,
+        ),
+    >,
+
     /// Optional Foxglove API base URL override. Empty string uses the default.
     pub foxglove_api_url: FoxgloveString,
 
@@ -532,6 +564,14 @@ unsafe fn do_foxglove_gateway_start(
         gateway = gateway.channel_filter(Arc::new(ChannelFilter::new(
             options.sink_channel_filter_context,
             sink_channel_filter,
+        )));
+    }
+
+    // Fetch asset handler
+    if let Some(fetch_asset) = options.fetch_asset {
+        gateway = gateway.fetch_asset_handler(Box::new(FetchAssetHandler::new(
+            options.fetch_asset_context,
+            fetch_asset,
         )));
     }
 
