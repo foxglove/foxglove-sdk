@@ -358,6 +358,13 @@ if(FOXGLOVE_BUILD_REMOTE_ACCESS)
   target_compile_options(example_remote_access PUBLIC ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
   target_link_options(example_remote_access PUBLIC ${SANITIZER_LINK_OPTIONS})
   target_link_libraries(example_remote_access foxglove_cpp_shared)
+
+  add_executable(example_remote_access_fetch_asset examples/remote-access-fetch-asset/src/main.cpp)
+  set_property(TARGET example_remote_access_fetch_asset PROPERTY CXX_STANDARD 17)
+  set_property(TARGET example_remote_access_fetch_asset PROPERTY CXX_STANDARD_REQUIRED True)
+  target_compile_options(example_remote_access_fetch_asset PUBLIC ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
+  target_link_options(example_remote_access_fetch_asset PUBLIC ${SANITIZER_LINK_OPTIONS})
+  target_link_libraries(example_remote_access_fetch_asset foxglove_cpp_shared)
 endif()
 
 
