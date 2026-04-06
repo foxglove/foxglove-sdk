@@ -20,7 +20,10 @@ use crate::protocol::v2::DecodeError;
 use crate::protocol::v2::parameter::Parameter;
 use crate::protocol::v2::server::ParameterValues;
 use crate::remote_access::participant::ChannelWriter;
-use crate::remote_common::service::{CallId, Service, ServiceId, ServiceMap};
+use crate::remote_common::{
+    fetch_asset::AssetResponder,
+    service::{CallId, Service, ServiceId, ServiceMap},
+};
 use crate::time::millis_since_epoch;
 use crate::{
     ChannelDescriptor, ChannelId, Context, FoxgloveError, Metadata, RawChannel, Schema, Sink,
@@ -36,8 +39,8 @@ use crate::{
     },
     remote_access::{
         AssetHandler, Capability, Listener, RemoteAccessError, client::Client,
-        fetch_asset::AssetResponder, participant::Participant, protocol_version,
-        rtt_tracker::RttTracker, session_state::SessionState,
+        participant::Participant, protocol_version, rtt_tracker::RttTracker,
+        session_state::SessionState,
     },
 };
 
@@ -173,7 +176,7 @@ pub(crate) struct RemoteAccessSession {
     channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     listener: Option<Arc<dyn Listener>>,
     capabilities: Vec<Capability>,
-    fetch_asset_handler: Option<Arc<dyn AssetHandler>>,
+    fetch_asset_handler: Option<Arc<dyn AssetHandler<Client>>>,
     cancellation_token: CancellationToken,
     data_plane_tx: flume::Sender<ChannelMessage>,
     data_plane_rx: flume::Receiver<ChannelMessage>,
@@ -317,7 +320,7 @@ pub(crate) struct SessionParams {
     pub services: Arc<parking_lot::RwLock<ServiceMap>>,
     pub pending_client_reader_timeout: Duration,
     pub remote_access_session_id: Option<String>,
-    pub fetch_asset_handler: Option<Arc<dyn AssetHandler>>,
+    pub fetch_asset_handler: Option<Arc<dyn AssetHandler<Client>>>,
 }
 
 impl RemoteAccessSession {
@@ -2120,9 +2123,11 @@ async fn process_data_message<F, Fut>(
 mod tests {
     use super::*;
     use crate::protocol::v2::server::FetchAssetResponse;
-    use crate::remote_access::fetch_asset::{AsyncAssetHandlerFn, BlockingAssetHandlerFn};
     use crate::remote_access::participant::{
         ParticipantWriter, TestByteStreamWriter, TestChannelWriter,
+    };
+    use crate::remote_common::fetch_asset::{
+        AssetHandler, AsyncAssetHandlerFn, BlockingAssetHandlerFn,
     };
 
     fn make_participant(name: &str) -> (ParticipantIdentity, Arc<Participant>) {
