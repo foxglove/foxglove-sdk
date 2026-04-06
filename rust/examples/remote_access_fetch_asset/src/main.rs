@@ -43,7 +43,7 @@ impl AssetServer {
 }
 
 impl AssetHandler<Client> for AssetServer {
-    fn fetch(&self, uri: String, responder: AssetResponder<Client>) {
+    fn fetch(&self, uri: String, responder: AssetResponder) {
         match self.assets.get(&uri) {
             Some(asset) => {
                 info!("Serving asset: {uri} ({} bytes)", asset.len());

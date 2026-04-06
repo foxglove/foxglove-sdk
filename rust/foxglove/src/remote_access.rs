@@ -24,7 +24,9 @@ pub use listener::Listener;
 pub use crate::protocol::v2::parameter::{Parameter, ParameterType, ParameterValue};
 
 // Re-export fetch-asset types.
-pub use crate::remote_common::fetch_asset::{AssetHandler, AssetResponder};
+pub use crate::remote_common::fetch_asset::AssetHandler;
+/// Type alias for the remote-access-specific asset responder.
+pub type AssetResponder = crate::remote_common::fetch_asset::AssetResponder<Client>;
 
 // Re-export service types so Gateway::services() callers can construct services.
 pub use crate::remote_common::service::{
