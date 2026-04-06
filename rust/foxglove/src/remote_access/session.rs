@@ -204,12 +204,15 @@ pub(crate) struct RemoteAccessSession {
     rtt_tracker: parking_lot::Mutex<RttTracker>,
     ice_rtt_tracker: parking_lot::Mutex<RttTracker>,
     connection_graph: Arc<parking_lot::Mutex<ConnectionGraph>>,
-    /// Participants whose control stream has broken and need to be reset.
-    /// `run_sender` pushes identities here; `handle_room_events` drains and
-    /// resets them. Protected by a mutex so both tasks can access it safely.
-    participants_to_reset: parking_lot::Mutex<SmallVec<[ParticipantIdentity; 1]>>,
-    /// Wakes `handle_room_events` when `participants_to_reset` has new entries.
-    participant_reset_notify: tokio::sync::Notify,
+    /// Immutable `ServerInfo` message sent to each participant on connect and reset.
+    server_info: ServerInfo,
+    /// Channel used by `run_sender` to request participant resets when a control
+    /// stream write fails. `handle_room_events` receives identities and calls
+    /// `reset_participant`. Using `mpsc` rather than `Notify` because `Notify` is
+    /// not cancel-safe in `select!`.
+    participant_reset_tx: tokio::sync::mpsc::UnboundedSender<ParticipantIdentity>,
+    participant_reset_rx:
+        tokio::sync::Mutex<tokio::sync::mpsc::UnboundedReceiver<ParticipantIdentity>>,
 }
 
 impl Sink for RemoteAccessSession {
@@ -331,6 +334,7 @@ pub(crate) struct SessionParams {
     pub pending_client_reader_timeout: Duration,
     pub remote_access_session_id: Option<String>,
     pub fetch_asset_handler: Option<Arc<dyn AssetHandler<Client>>>,
+    pub server_info: ServerInfo,
 }
 
 impl RemoteAccessSession {
@@ -338,6 +342,7 @@ impl RemoteAccessSession {
         let (data_plane_tx, data_plane_rx) = flume::bounded(params.message_backlog_size);
         let (control_plane_tx, control_plane_rx) = flume::bounded(params.message_backlog_size);
         let (video_metadata_tx, video_metadata_rx) = tokio::sync::watch::channel(());
+        let (participant_reset_tx, participant_reset_rx) = tokio::sync::mpsc::unbounded_channel();
         Self {
             sink_id: SinkId::next(),
             room: params.room,
@@ -363,8 +368,9 @@ impl RemoteAccessSession {
             rtt_tracker: parking_lot::Mutex::new(RttTracker::new("ping/pong")),
             ice_rtt_tracker: parking_lot::Mutex::new(RttTracker::new("ICE")),
             connection_graph: params.connection_graph,
-            participants_to_reset: parking_lot::Mutex::new(SmallVec::new()),
-            participant_reset_notify: tokio::sync::Notify::new(),
+            server_info: params.server_info,
+            participant_reset_tx,
+            participant_reset_rx: tokio::sync::Mutex::new(participant_reset_rx),
         }
     }
 
@@ -485,10 +491,9 @@ impl RemoteAccessSession {
                             msg.participant,
                         );
                         poisoned_participants.insert(msg.participant.client_id());
-                        session.participants_to_reset.lock().push(
+                        let _ = session.participant_reset_tx.send(
                             msg.participant.participant_id().clone(),
                         );
-                        session.participant_reset_notify.notify_one();
                     }
                 }
                 Ok(()) = video_metadata_rx.changed() => {
@@ -1208,7 +1213,6 @@ impl RemoteAccessSession {
         &self,
         participant_id: ParticipantIdentity,
         protocol_version: Version,
-        server_info: ServerInfo,
     ) -> Result<(), Box<RemoteAccessError>> {
         use crate::remote_access::participant::ParticipantWriter;
 
@@ -1244,7 +1248,7 @@ impl RemoteAccessSession {
         // these are the first messages delivered to the participant. This is safe to do without
         // holding the write lock, because this is a new participant - see below.
         info!("sending server info and advertisements to participant {participant:?}");
-        self.send_control(participant.clone(), encode_json_message(&server_info));
+        self.send_control(participant.clone(), encode_json_message(&self.server_info));
         self.send_channel_advertisements(participant.clone());
         self.send_service_advertisements(participant.clone());
 
@@ -1314,27 +1318,22 @@ impl RemoteAccessSession {
     pub(crate) async fn handle_room_events(
         self: &Arc<Self>,
         mut room_events: tokio::sync::mpsc::UnboundedReceiver<RoomEvent>,
-        server_info: ServerInfo,
     ) {
         let remote_access_session_id = self.remote_access_session_id();
+        let mut participant_reset_rx = self.participant_reset_rx.lock().await;
         loop {
             tokio::select! {
                 event = room_events.recv() => {
                     let Some(event) = event else { break };
-                    if !self.handle_room_event(event, &server_info).await {
+                    if !self.handle_room_event(event).await {
                         return;
                     }
                 }
                 // Reset participants whose control streams have broken. This is
                 // the same flow as disconnect + reconnect: remove the old state,
                 // then re-add with a fresh stream and fresh advertisements.
-                _ = self.participant_reset_notify.notified() => {
-                    let to_reset: SmallVec<[ParticipantIdentity; 1]> = {
-                        std::mem::take(&mut *self.participants_to_reset.lock())
-                    };
-                    for participant_id in to_reset {
-                        self.reset_participant(participant_id, &server_info).await;
-                    }
+                Some(participant_id) = participant_reset_rx.recv() => {
+                    self.reset_participant(participant_id).await;
                 }
             }
         }
@@ -1346,11 +1345,7 @@ impl RemoteAccessSession {
 
     /// Handles a single room event. Returns `true` to keep the event loop running,
     /// or `false` to stop (e.g. on disconnect).
-    async fn handle_room_event(
-        self: &Arc<Self>,
-        event: RoomEvent,
-        server_info: &ServerInfo,
-    ) -> bool {
+    async fn handle_room_event(self: &Arc<Self>, event: RoomEvent) -> bool {
         let remote_access_session_id = self.remote_access_session_id();
         match event {
             RoomEvent::ParticipantConnected(participant) => {
@@ -1380,10 +1375,7 @@ impl RemoteAccessSession {
                     version = %version,
                     "participant active in room"
                 );
-                if let Err(e) = self
-                    .add_participant(participant.identity(), version, server_info.clone())
-                    .await
-                {
+                if let Err(e) = self.add_participant(participant.identity(), version).await {
                     error!(remote_access_session_id, error = %e, "failed to add participant: {e}");
                 }
             }
@@ -1588,11 +1580,7 @@ impl RemoteAccessSession {
     /// window, `add_participant` may open a dead stream, but the subsequent
     /// `ParticipantDisconnected` event will clean it up. This is harmless — just a
     /// wasted `stream_bytes` call and a log line.
-    async fn reset_participant(
-        self: &Arc<Self>,
-        participant_id: ParticipantIdentity,
-        server_info: &ServerInfo,
-    ) {
+    async fn reset_participant(self: &Arc<Self>, participant_id: ParticipantIdentity) {
         let remote_access_session_id = self.remote_access_session_id();
 
         self.remove_participant(&participant_id);
@@ -1601,7 +1589,11 @@ impl RemoteAccessSession {
         // (e.g., because the underlying WebRTC connection dropped). In that case, the
         // `ParticipantDisconnected` event is already queued and a future reconnect will
         // go through the normal `ParticipantConnected` → `add_participant` path.
-        let remote_participant = self.room.remote_participants().get(&participant_id).cloned();
+        let remote_participant = self
+            .room
+            .remote_participants()
+            .get(&participant_id)
+            .cloned();
         let Some(remote_participant) = remote_participant else {
             info!(
                 remote_access_session_id,
@@ -1629,10 +1621,7 @@ impl RemoteAccessSession {
             participant_identity = %participant_id,
             "resetting participant after control stream failure",
         );
-        if let Err(e) = self
-            .add_participant(participant_id, version, server_info.clone())
-            .await
-        {
+        if let Err(e) = self.add_participant(participant_id, version).await {
             error!(
                 remote_access_session_id,
                 error = %e,

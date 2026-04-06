@@ -284,6 +284,8 @@ impl RemoteAccessConnection {
             {
                 Ok((room, room_events)) => {
                     info!(remote_access_session_id, "connected to LiveKit server");
+                    let server_info =
+                        self.create_server_info(remote_access_session_id.unwrap_or(""));
                     let session_params = SessionParams {
                         room,
                         context: self.context.clone(),
@@ -304,6 +306,7 @@ impl RemoteAccessConnection {
                             .remote_access_session_id()
                             .map(str::to_owned),
                         fetch_asset_handler: self.fetch_asset_handler.clone(),
+                        server_info,
                     };
                     (
                         Arc::new(RemoteAccessSession::new(session_params)),
@@ -378,7 +381,6 @@ impl RemoteAccessConnection {
 
         // Send ServerInfo and channel advertisements to participants already in the room.
         // ParticipantConnected events only fire for participants joining after us.
-        let server_info = self.create_server_info(remote_access_session_id.unwrap_or(""));
         for (identity, participant) in session.room().remote_participants() {
             let Some(version) = protocol_version::check_participant_protocol_version(
                 &identity,
@@ -397,10 +399,7 @@ impl RemoteAccessConnection {
                 version = %version,
                 "adding existing participant"
             );
-            if let Err(e) = session
-                .add_participant(identity.clone(), version, server_info.clone())
-                .await
-            {
+            if let Err(e) = session.add_participant(identity.clone(), version).await {
                 error!(
                     remote_access_session_id,
                     error = %e,
@@ -412,7 +411,7 @@ impl RemoteAccessConnection {
         info!(remote_access_session_id, "running remote access server");
         tokio::select! {
             () = self.cancellation_token.cancelled() => (),
-            _ = session.handle_room_events(room_events, server_info) => {},
+            _ = session.handle_room_events(room_events) => {},
             _ = session.log_periodic_stats() => {},
         }
 
