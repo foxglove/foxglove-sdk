@@ -4,6 +4,7 @@ use super::Status;
 use super::connected_client::ConnectedClient;
 use crate::SinkId;
 pub use crate::remote_common::ClientId;
+use crate::remote_common::fetch_asset::SendAssetResponse;
 
 /// A connected client session with the websocket server.
 #[derive(Debug, Clone)]
@@ -38,9 +39,10 @@ impl Client {
             client.send_status(status);
         }
     }
+}
 
-    /// Send a fetch asset response to the client. Does nothing if client is disconnected.
-    pub(crate) fn send_asset_response(&self, result: Result<&[u8], &str>, request_id: u32) {
+impl SendAssetResponse for Client {
+    fn send_asset_response(&self, result: Result<&[u8], &str>, request_id: u32) {
         if let Some(client) = self.client.upgrade() {
             match result {
                 Ok(asset) => client.send_asset_response(asset, request_id),
