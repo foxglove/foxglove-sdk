@@ -16,13 +16,14 @@ use tracing::{debug, error, info};
 
 use crate::{
     Context, FoxgloveError, SinkChannelFilter,
-    api_client::{DeviceToken, FoxgloveApiClientBuilder},
+    api_client::{DeviceToken, FoxgloveApiClientBuilder, RemoteSessionRequest},
     library_version::get_library_version,
     protocol::v2::parameter::Parameter,
     protocol::v2::server::ServerInfo,
     remote_access::{
         AssetHandler, Capability, RemoteAccessError,
         credentials_provider::CredentialsProvider,
+        protocol_version,
         session::{DEFAULT_PENDING_CLIENT_READER_TIMEOUT, RemoteAccessSession, SessionParams},
     },
     remote_common::service::{Service, ServiceId, ServiceMap},
@@ -206,7 +207,15 @@ impl RemoteAccessConnection {
             remote_access_session_id = existing_session_id.as_deref(),
             "requesting LiveKit credentials from API server"
         );
-        let credentials = match provider.load_credentials(existing_session_id).await {
+        let credentials = match provider
+            .load_credentials(RemoteSessionRequest {
+                remote_access_session_id: existing_session_id,
+                protocol_version: Some(
+                    protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.to_string(),
+                ),
+            })
+            .await
+        {
             Ok(creds) => {
                 // Set the session ID on first successful fetch.
                 if let Some(ref session_id) = creds.remote_access_session_id {
@@ -329,9 +338,26 @@ impl RemoteAccessConnection {
         // Send ServerInfo and channel advertisements to participants already in the room.
         // ParticipantConnected events only fire for participants joining after us.
         let server_info = self.create_server_info(remote_access_session_id.unwrap_or(""));
-        for (identity, _) in session.room().remote_participants() {
+        for (identity, participant) in session.room().remote_participants() {
+            let Some(version) = protocol_version::check_participant_protocol_version(
+                &identity,
+                &participant.attributes(),
+                remote_access_session_id,
+            ) else {
+                // Incompatible version: send an error status and skip this participant.
+                session
+                    .send_incompatible_version_error(&identity, &participant.attributes())
+                    .await;
+                continue;
+            };
+            info!(
+                remote_access_session_id,
+                participant_identity = %identity,
+                version = %version,
+                "adding existing participant"
+            );
             if let Err(e) = session
-                .add_participant(identity.clone(), server_info.clone())
+                .add_participant(identity.clone(), version, server_info.clone())
                 .await
             {
                 error!(

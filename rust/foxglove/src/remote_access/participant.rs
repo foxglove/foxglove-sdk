@@ -3,6 +3,7 @@ use std::sync::Arc;
 #[cfg(test)]
 use bytes::Bytes;
 use livekit::{ByteStreamWriter, StreamWriter, id::ParticipantIdentity};
+use semver::Version;
 
 use crate::protocol::v2::server::FetchAssetResponse;
 use crate::remote_access::RemoteAccessError;
@@ -25,6 +26,10 @@ pub(crate) struct Participant {
     client_id: ClientId,
     /// LiveKit participant ID.
     participant_id: ParticipantIdentity,
+    /// The remote access protocol version advertised by this participant.
+    /// Stored for future use when branching protocol behavior based on the participant's version.
+    #[expect(dead_code)]
+    protocol_version: Version,
     /// A reliable, ordered stream to send messages to just this participant
     writer: ParticipantWriter,
     /// Control plane sender for queuing messages to this participant.
@@ -97,12 +102,14 @@ impl Participant {
     /// Creates a new participant.
     pub fn new(
         identity: ParticipantIdentity,
+        protocol_version: Version,
         writer: ParticipantWriter,
         control_plane_tx: flume::Sender<ControlPlaneMessage>,
     ) -> Self {
         Self {
             client_id: ClientId::next(),
             participant_id: identity,
+            protocol_version,
             writer,
             control_plane_tx,
             service_call_sem: Semaphore::new(DEFAULT_SERVICE_CALLS_PER_PARTICIPANT),
