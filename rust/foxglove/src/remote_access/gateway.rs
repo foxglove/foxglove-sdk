@@ -7,13 +7,13 @@ use tokio::task::JoinHandle;
 use crate::{
     ChannelDescriptor, Context, FoxgloveError, SinkChannelFilter,
     protocol::v2::parameter::Parameter,
+    remote_common::fetch_asset::{AssetHandler, AsyncAssetHandlerFn, BlockingAssetHandlerFn},
     remote_common::service::{Service, ServiceMap},
     runtime::get_runtime_handle,
     sink_channel_filter::SinkChannelFilterFn,
 };
 
 use super::connection::{ConnectionParams, ConnectionStatus, RemoteAccessConnection};
-use super::fetch_asset::{AssetHandler, AsyncAssetHandlerFn, BlockingAssetHandlerFn};
 use super::{Capability, Client, Listener};
 
 /// A handle to the remote access gateway connection.
@@ -131,7 +131,7 @@ pub struct Gateway {
     capabilities: Vec<Capability>,
     supported_encodings: Option<IndexSet<String>>,
     services: HashMap<String, Service>,
-    fetch_asset_handler: Option<Box<dyn AssetHandler>>,
+    fetch_asset_handler: Option<Box<dyn AssetHandler<Client>>>,
     runtime: Option<Handle>,
     channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     server_info: Option<HashMap<String, String>>,
@@ -324,7 +324,7 @@ impl Gateway {
 
     /// Configure the handler for fetching assets.
     /// There can only be one asset handler, exclusive with the other fetch_asset_handler methods.
-    pub fn fetch_asset_handler(mut self, handler: Box<dyn AssetHandler>) -> Self {
+    pub fn fetch_asset_handler(mut self, handler: Box<dyn AssetHandler<Client>>) -> Self {
         self.fetch_asset_handler = Some(handler);
         self
     }

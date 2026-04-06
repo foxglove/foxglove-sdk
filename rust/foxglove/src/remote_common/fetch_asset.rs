@@ -1,32 +1,34 @@
-// NOTE: This file is largely a verbatim copy of `crate::websocket::fetch_asset`.
-// If you modify this file, you should probably make the same change there, and vice versa.
-
 use std::fmt::Display;
 use std::future::Future;
 use std::sync::Arc;
 
-use super::Client;
 use crate::remote_common::semaphore::SemaphoreGuard;
+
+/// Internal trait for sending an asset response to a client.
+pub trait SendAssetResponse: Clone + Send + 'static {
+    fn send_asset_response(&self, result: Result<&[u8], &str>, request_id: u32);
+}
 
 /// A handler to respond to fetch asset requests.
 ///
 /// This can be used to serve assets to the Foxglove app, including URDF files for the 3D panel.
-pub trait AssetHandler: Send + Sync + 'static {
+pub trait AssetHandler<C: SendAssetResponse>: Send + Sync + 'static {
     /// Fetch an asset with the given uri and return it via the responder.
     /// Fetch should not block, it should call `runtime.spawn`
     /// or `runtime.spawn_blocking` to do the actual work.
-    fn fetch(&self, uri: String, responder: AssetResponder);
+    fn fetch(&self, uri: String, responder: AssetResponder<C>);
 }
 
 pub(crate) struct BlockingAssetHandlerFn<F>(pub Arc<F>);
 
-impl<F, T, Err> AssetHandler for BlockingAssetHandlerFn<F>
+impl<C, F, T, Err> AssetHandler<C> for BlockingAssetHandlerFn<F>
 where
-    F: Fn(Client, String) -> Result<T, Err> + Send + Sync + 'static,
+    C: SendAssetResponse,
+    F: Fn(C, String) -> Result<T, Err> + Send + Sync + 'static,
     T: AsRef<[u8]>,
     Err: Display,
 {
-    fn fetch(&self, uri: String, responder: AssetResponder) {
+    fn fetch(&self, uri: String, responder: AssetResponder<C>) {
         let func = self.0.clone();
         tokio::task::spawn_blocking(move || {
             let result = (func)(responder.client(), uri);
@@ -37,14 +39,15 @@ where
 
 pub(crate) struct AsyncAssetHandlerFn<F>(pub Arc<F>);
 
-impl<F, Fut, T, Err> AssetHandler for AsyncAssetHandlerFn<F>
+impl<C, F, Fut, T, Err> AssetHandler<C> for AsyncAssetHandlerFn<F>
 where
-    F: Fn(Client, String) -> Fut + Send + Sync + 'static,
+    C: SendAssetResponse,
+    F: Fn(C, String) -> Fut + Send + Sync + 'static,
     Fut: Future<Output = Result<T, Err>> + Send + 'static,
     T: AsRef<[u8]>,
     Err: Display,
 {
-    fn fetch(&self, uri: String, responder: AssetResponder) {
+    fn fetch(&self, uri: String, responder: AssetResponder<C>) {
         let func = self.0.clone();
         tokio::spawn(async move {
             let result = (func)(responder.client(), uri).await;
@@ -57,14 +60,14 @@ where
 /// to respond to the fetch asset request from that client.
 #[must_use]
 #[derive(Debug)]
-pub struct AssetResponder {
-    client: Client,
+pub struct AssetResponder<C: SendAssetResponse> {
+    client: C,
     inner: Option<AssetResponderInner>,
 }
 
-impl AssetResponder {
+impl<C: SendAssetResponse> AssetResponder<C> {
     /// Create a new asset responder for a fetch asset request.
-    pub(crate) fn new(client: Client, request_id: u32, guard: SemaphoreGuard) -> Self {
+    pub(crate) fn new(client: C, request_id: u32, guard: SemaphoreGuard) -> Self {
         Self {
             client,
             inner: Some(AssetResponderInner {
@@ -75,7 +78,7 @@ impl AssetResponder {
     }
 
     /// Return a clone of the Client.
-    pub fn client(&self) -> Client {
+    pub fn client(&self) -> C {
         self.client.clone()
     }
 
@@ -106,7 +109,7 @@ impl AssetResponder {
     }
 }
 
-impl Drop for AssetResponder {
+impl<C: SendAssetResponse> Drop for AssetResponder<C> {
     fn drop(&mut self) {
         if let Some(inner) = self.inner.take() {
             // The asset handler has dropped its responder without responding. This could be due to
@@ -127,7 +130,7 @@ struct AssetResponderInner {
 
 impl AssetResponderInner {
     /// Send a response to the client.
-    fn respond(self, client: &Client, result: Result<&[u8], &str>) {
+    fn respond(self, client: &impl SendAssetResponse, result: Result<&[u8], &str>) {
         client.send_asset_response(result, self.request_id);
     }
 }

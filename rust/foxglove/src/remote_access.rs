@@ -5,7 +5,6 @@ mod channel_subscription;
 mod client;
 mod connection;
 mod credentials_provider;
-mod fetch_asset;
 mod gateway;
 mod listener;
 mod participant;
@@ -17,12 +16,14 @@ mod session_state;
 pub use capability::Capability;
 pub use client::Client;
 pub use connection::ConnectionStatus;
-pub use fetch_asset::{AssetHandler, AssetResponder};
 pub use gateway::{Gateway, GatewayHandle};
 pub use listener::Listener;
 
 // Re-export parameter types so callers can construct parameter values.
 pub use crate::protocol::v2::parameter::{Parameter, ParameterType, ParameterValue};
+
+// Re-export fetch-asset types.
+pub use crate::remote_common::fetch_asset::{AssetHandler, AssetResponder};
 
 // Re-export service types so Gateway::services() callers can construct services.
 pub use crate::remote_common::service::{

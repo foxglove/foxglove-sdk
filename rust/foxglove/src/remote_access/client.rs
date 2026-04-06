@@ -5,6 +5,7 @@ use livekit::id::ParticipantIdentity;
 use crate::SinkId;
 use crate::remote_access::participant::Participant;
 use crate::remote_common::ClientId;
+use crate::remote_common::fetch_asset::SendAssetResponse;
 
 /// Represents a connected remote access client (LiveKit participant).
 #[derive(Debug, Clone)]
@@ -68,10 +69,12 @@ impl Client {
     pub fn sink_id(&self) -> SinkId {
         self.sink_id
     }
+}
 
+impl SendAssetResponse for Client {
     /// Send a fetch asset response to the client.
     /// Does nothing if the client has no sender or if the participant has been dropped.
-    pub(crate) fn send_asset_response(&self, result: Result<&[u8], &str>, request_id: u32) {
+    fn send_asset_response(&self, result: Result<&[u8], &str>, request_id: u32) {
         let Some(weak) = &self.participant else {
             tracing::debug!(
                 client_id = ?self.client_id,
