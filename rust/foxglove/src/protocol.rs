@@ -5,13 +5,13 @@
 )]
 //! Implementation of the Foxglove protocol
 
-// Common is kept internal to the protocol module; common messages are re-exported from specific protocol version modules as-needed.
+// Common messages are re-exported from specific protocol version modules as-needed.
 // End users should only use a specific protocol version module.
 #[cfg_attr(
     any(not(feature = "websocket"), not(feature = "remote-access")),
     allow(unused)
 )]
-mod common;
+pub(crate) mod common;
 use common::{BinaryMessage, BinaryPayload, JsonMessage, ParseError};
 use common::{parameter, schema};
 
