@@ -46,6 +46,7 @@ void locationFixToC(foxglove_location_fix& dest, const LocationFix& src, Arena& 
 void locationFixesToC(foxglove_location_fixes& dest, const LocationFixes& src, Arena& arena);
 void logToC(foxglove_log& dest, const Log& src, Arena& arena);
 void modelPrimitiveToC(foxglove_model_primitive& dest, const ModelPrimitive& src, Arena& arena);
+void odometryToC(foxglove_odometry& dest, const Odometry& src, Arena& arena);
 void packedElementFieldToC(
   foxglove_packed_element_field& dest, const PackedElementField& src, Arena& arena
 );
@@ -897,6 +898,41 @@ uint64_t ModelPrimitiveChannel::id() const noexcept {
 }
 
 bool ModelPrimitiveChannel::hasSinks() const noexcept {
+  return foxglove_channel_has_sinks(impl_.get());
+}
+
+FoxgloveResult<OdometryChannel> OdometryChannel::create(
+  const std::string_view& topic, const Context& context
+) {
+  const foxglove_channel* channel = nullptr;
+  foxglove_error error =
+    foxglove_channel_create_odometry({topic.data(), topic.size()}, context.getInner(), &channel);
+  if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
+    return tl::unexpected(FoxgloveError(error));
+  }
+  return OdometryChannel(ChannelUniquePtr(channel));
+}
+
+FoxgloveError OdometryChannel::log(
+  const Odometry& msg, std::optional<uint64_t> log_time, std::optional<uint64_t> sink_id
+) noexcept {
+  Arena arena;
+  foxglove_odometry c_msg;
+  odometryToC(c_msg, msg, arena);
+  return FoxgloveError(foxglove_channel_log_odometry(
+    impl_.get(), &c_msg, log_time ? &*log_time : nullptr, sink_id ? *sink_id : 0
+  ));
+}
+
+void OdometryChannel::close() noexcept {
+  foxglove_channel_close(impl_.get());
+}
+
+uint64_t OdometryChannel::id() const noexcept {
+  return foxglove_channel_get_id(impl_.get());
+}
+
+bool OdometryChannel::hasSinks() const noexcept {
   return foxglove_channel_has_sinks(impl_.get());
 }
 
@@ -1945,6 +1981,32 @@ void modelPrimitiveToC(
   dest.data_len = src.data.size();
 }
 
+void odometryToC(foxglove_odometry& dest, const Odometry& src, [[maybe_unused]] Arena& arena) {
+  dest.timestamp =
+    src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
+  dest.frame_id = {src.frame_id.data(), src.frame_id.size()};
+  dest.child_frame_id = {src.child_frame_id.data(), src.child_frame_id.size()};
+  dest.pose = src.pose ? arena.mapOne<foxglove_pose>(src.pose.value(), poseToC) : nullptr;
+  dest.linear_velocity = src.linear_velocity
+                           ? reinterpret_cast<const foxglove_vector3*>(&*src.linear_velocity)
+                           : nullptr;
+  dest.angular_velocity = src.angular_velocity
+                            ? reinterpret_cast<const foxglove_vector3*>(&*src.angular_velocity)
+                            : nullptr;
+  ::memcpy(
+    dest.pose_covariance,
+    src.pose_covariance.data(),
+    src.pose_covariance.size() * sizeof(*src.pose_covariance.data())
+  );
+  ::memcpy(
+    dest.velocity_covariance,
+    src.velocity_covariance.data(),
+    src.velocity_covariance.size() * sizeof(*src.velocity_covariance.data())
+  );
+  dest.metadata = arena.map<foxglove_key_value_pair>(src.metadata, keyValuePairToC);
+  dest.metadata_count = src.metadata.size();
+}
+
 void packedElementFieldToC(
   foxglove_packed_element_field& dest, const PackedElementField& src, [[maybe_unused]] Arena& arena
 ) {
@@ -2321,6 +2383,13 @@ FoxgloveError ModelPrimitive::encode(uint8_t* ptr, size_t len, size_t* encoded_l
   return FoxgloveError(foxglove_model_primitive_encode(&c_msg, ptr, len, encoded_len));
 }
 
+FoxgloveError Odometry::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
+  Arena arena;
+  foxglove_odometry c_msg;
+  odometryToC(c_msg, *this, arena);
+  return FoxgloveError(foxglove_odometry_encode(&c_msg, ptr, len, encoded_len));
+}
+
 FoxgloveError PackedElementField::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_packed_element_field c_msg;
@@ -2692,6 +2761,16 @@ Schema Log::schema() {
 
 Schema ModelPrimitive::schema() {
   struct foxglove_schema c_schema = foxglove_model_primitive_schema();
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data_len = c_schema.data_len;
+  return result;
+}
+
+Schema Odometry::schema() {
+  struct foxglove_schema c_schema = foxglove_odometry_schema();
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
