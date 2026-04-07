@@ -12,6 +12,8 @@ pub enum Capability {
     /// Allow clients to request assets. If you supply an asset handler to the gateway, this
     /// capability will be advertised automatically.
     Assets,
+    /// Allow clients to subscribe and make connection graph updates.
+    ConnectionGraph,
 }
 
 impl Capability {
@@ -24,6 +26,7 @@ impl Capability {
             ],
             Self::Services => &[server_info::Capability::Services],
             Self::Assets => &[server_info::Capability::Assets],
+            Self::ConnectionGraph => &[server_info::Capability::ConnectionGraph],
         }
     }
 }

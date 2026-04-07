@@ -91,6 +91,12 @@ impl ConnectionGraph {
         self.subscribers.remove(&client_id)
     }
 
+    /// Removes all subscribers.
+    #[cfg(feature = "remote-access")]
+    pub(crate) fn clear_subscribers(&mut self) {
+        self.subscribers.clear();
+    }
+
     /// Returns true if the graph has subscribers.
     pub(crate) fn has_subscribers(&self) -> bool {
         !self.subscribers.is_empty()

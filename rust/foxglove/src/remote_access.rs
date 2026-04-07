@@ -15,6 +15,7 @@ mod session;
 mod session_state;
 
 pub use crate::remote_common::ClientId;
+pub use crate::remote_common::connection_graph::ConnectionGraph;
 pub use capability::Capability;
 pub use client::Client;
 pub use connection::ConnectionStatus;

@@ -7,6 +7,7 @@ use tokio::task::JoinHandle;
 use crate::{
     ChannelDescriptor, Context, FoxgloveError, SinkChannelFilter,
     protocol::v2::parameter::Parameter,
+    remote_common::connection_graph::ConnectionGraph,
     remote_common::fetch_asset::{AssetHandler, AsyncAssetHandlerFn, BlockingAssetHandlerFn},
     remote_common::service::{Service, ServiceMap},
     runtime::get_runtime_handle,
@@ -78,6 +79,19 @@ impl GatewayHandle {
     /// Removes status messages by id from all connected participants.
     pub fn remove_status(&self, status_ids: Vec<String>) {
         self.connection.remove_status(status_ids);
+    }
+
+    /// Publishes a [ConnectionGraph] update to all subscribed clients.
+    ///
+    /// Requires the [`ConnectionGraph`](Capability::ConnectionGraph) capability.
+    ///
+    /// The update is published as a difference from the current graph to `replacement_graph`.
+    /// When a client first subscribes to connection graph updates, it receives the current graph.
+    pub fn publish_connection_graph(
+        &self,
+        replacement_graph: ConnectionGraph,
+    ) -> Result<(), FoxgloveError> {
+        self.connection.replace_connection_graph(replacement_graph)
     }
 
     /// Gracefully disconnect from the remote access connection, if connected.
