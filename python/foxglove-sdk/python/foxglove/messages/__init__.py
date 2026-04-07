@@ -64,7 +64,6 @@ from foxglove._foxglove_py.messages import (  # noqa: F401
     TriangleListPrimitive,
     Vector2,
     Vector3,
-    Velocity3,
     VoxelGrid,
 )
 
@@ -115,7 +114,6 @@ FoxgloveMessage = Union[
     TriangleListPrimitive,
     Vector2,
     Vector3,
-    Velocity3,
     VoxelGrid,
 ]
 
@@ -173,6 +171,5 @@ __all__ = [
     "TriangleListPrimitive",
     "Vector2",
     "Vector3",
-    "Velocity3",
     "VoxelGrid",
 ]

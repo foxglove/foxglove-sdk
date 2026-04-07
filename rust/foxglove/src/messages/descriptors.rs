@@ -47,5 +47,4 @@ pub const TIMESTAMP: &[u8] = include_bytes!("data/Timestamp.bin");
 pub const TRIANGLE_LIST_PRIMITIVE: &[u8] = include_bytes!("data/TriangleListPrimitive.bin");
 pub const VECTOR2: &[u8] = include_bytes!("data/Vector2.bin");
 pub const VECTOR3: &[u8] = include_bytes!("data/Vector3.bin");
-pub const VELOCITY3: &[u8] = include_bytes!("data/Velocity3.bin");
 pub const VOXEL_GRID: &[u8] = include_bytes!("data/VoxelGrid.bin");

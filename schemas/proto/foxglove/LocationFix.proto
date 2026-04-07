@@ -4,7 +4,7 @@ syntax = "proto3";
 
 import "foxglove/Color.proto";
 import "foxglove/KeyValuePair.proto";
-import "foxglove/Velocity3.proto";
+import "foxglove/Vector3.proto";
 import "google/protobuf/timestamp.proto";
 
 package foxglove;
@@ -50,7 +50,7 @@ message LocationFix {
   optional double heading = 10;
 
   // Velocity in local East-North-Up (ENU) frame in m/s
-  optional foxglove.Velocity3 velocity = 11;
+  optional foxglove.Vector3 velocity = 11;
 
   // Color used to visualize the location
   optional foxglove.Color color = 8;
