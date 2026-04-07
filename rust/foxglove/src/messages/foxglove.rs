@@ -1478,22 +1478,6 @@ pub struct Vector3 {
     #[prost(double, tag = "3")]
     pub z: f64,
 }
-/// A velocity vector in 3D space. Deprecated: use Vector3.
-///
-/// <https://docs.foxglove.dev/docs/visualization/message-schemas/velocity3>
-#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-#[derive(Clone, Copy, PartialEq, ::prost::Message)]
-pub struct Velocity3 {
-    /// x component
-    #[prost(double, tag = "1")]
-    pub x: f64,
-    /// y component
-    #[prost(double, tag = "2")]
-    pub y: f64,
-    /// z component
-    #[prost(double, tag = "3")]
-    pub z: f64,
-}
 /// A 3D grid of data
 ///
 /// <https://docs.foxglove.dev/docs/visualization/message-schemas/voxel-grid>

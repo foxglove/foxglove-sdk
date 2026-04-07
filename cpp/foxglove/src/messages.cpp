@@ -1648,41 +1648,6 @@ bool Vector3Channel::hasSinks() const noexcept {
   return foxglove_channel_has_sinks(impl_.get());
 }
 
-FoxgloveResult<Velocity3Channel> Velocity3Channel::create(
-  const std::string_view& topic, const Context& context
-) {
-  const foxglove_channel* channel = nullptr;
-  foxglove_error error =
-    foxglove_channel_create_velocity3({topic.data(), topic.size()}, context.getInner(), &channel);
-  if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
-    return tl::unexpected(FoxgloveError(error));
-  }
-  return Velocity3Channel(ChannelUniquePtr(channel));
-}
-
-FoxgloveError Velocity3Channel::log(
-  const Velocity3& msg, std::optional<uint64_t> log_time, std::optional<uint64_t> sink_id
-) noexcept {
-  return FoxgloveError(foxglove_channel_log_velocity3(
-    impl_.get(),
-    reinterpret_cast<const foxglove_velocity3*>(&msg),
-    log_time ? &*log_time : nullptr,
-    sink_id ? *sink_id : 0
-  ));
-}
-
-void Velocity3Channel::close() noexcept {
-  foxglove_channel_close(impl_.get());
-}
-
-uint64_t Velocity3Channel::id() const noexcept {
-  return foxglove_channel_get_id(impl_.get());
-}
-
-bool Velocity3Channel::hasSinks() const noexcept {
-  return foxglove_channel_has_sinks(impl_.get());
-}
-
 FoxgloveResult<VoxelGridChannel> VoxelGridChannel::create(
   const std::string_view& topic, const Context& context
 ) {
@@ -2498,12 +2463,6 @@ FoxgloveError Vector3::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   );
 }
 
-FoxgloveError Velocity3::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
-  return FoxgloveError(foxglove_velocity3_encode(
-    reinterpret_cast<const foxglove_velocity3*>(this), ptr, len, encoded_len
-  ));
-}
-
 FoxgloveError VoxelGrid::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_voxel_grid c_msg;
@@ -2943,16 +2902,6 @@ Schema Vector2::schema() {
 
 Schema Vector3::schema() {
   struct foxglove_schema c_schema = foxglove_vector3_schema();
-  Schema result;
-  result.name = std::string(c_schema.name.data, c_schema.name.len);
-  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
-  result.data_len = c_schema.data_len;
-  return result;
-}
-
-Schema Velocity3::schema() {
-  struct foxglove_schema c_schema = foxglove_velocity3_schema();
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);

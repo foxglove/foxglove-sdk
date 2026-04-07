@@ -155,33 +155,6 @@ const Vector3: FoxgloveMessageSchema = {
   ],
 };
 
-const Velocity3: FoxgloveMessageSchema = {
-  type: "message",
-  name: "Velocity3",
-  description: "A velocity vector in 3D space. Deprecated: use Vector3.",
-  hiddenFromDocs: true,
-  fields: [
-    {
-      name: "x",
-      type: { type: "primitive", name: "float64" },
-      description: "x component",
-      defaultValue: 0,
-    },
-    {
-      name: "y",
-      type: { type: "primitive", name: "float64" },
-      description: "y component",
-      defaultValue: 0,
-    },
-    {
-      name: "z",
-      type: { type: "primitive", name: "float64" },
-      description: "z component",
-      defaultValue: 0,
-    },
-  ],
-};
-
 const Point2: FoxgloveMessageSchema = {
   type: "message",
   name: "Point2",
@@ -1977,7 +1950,6 @@ export const foxgloveMessageSchemas = {
   TriangleListPrimitive,
   Vector2,
   Vector3,
-  Velocity3,
 };
 
 export const foxgloveEnumSchemas = {
