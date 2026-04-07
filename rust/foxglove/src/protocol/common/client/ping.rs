@@ -1,0 +1,66 @@
+use std::borrow::Cow;
+
+use bytes::BufMut;
+
+use crate::protocol::{BinaryPayload, ParseError};
+
+/// Ping message sent by the client to measure round-trip time.
+///
+/// The payload must be at least 8 bytes. The first 8 bytes are treated as
+/// `appTimestamp` (u64 LE) and are copied into the
+/// [`Pong`](crate::protocol::common::server::Pong) response along with the
+/// server's own `deviceTimestamp`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Ping<'a> {
+    /// Ping payload containing `appTimestamp` (u64 LE) in the first 8 bytes.
+    pub payload: Cow<'a, [u8]>,
+}
+
+impl<'a> Ping<'a> {
+    pub fn into_owned(self) -> Ping<'static> {
+        Ping {
+            payload: Cow::Owned(self.payload.into_owned()),
+        }
+    }
+}
+
+impl<'a> BinaryPayload<'a> for Ping<'a> {
+    fn parse_payload(data: &'a [u8]) -> Result<Self, ParseError> {
+        if data.len() < 8 {
+            return Err(ParseError::BufferTooShort);
+        }
+        Ok(Self {
+            payload: Cow::Borrowed(data),
+        })
+    }
+
+    fn payload_size(&self) -> usize {
+        self.payload.len()
+    }
+
+    fn write_payload(&self, buf: &mut impl BufMut) {
+        buf.put_slice(&self.payload);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_roundtrip() {
+        let orig = Ping {
+            payload: Cow::Borrowed(b"1234567890"),
+        };
+        let mut buf = Vec::new();
+        orig.write_payload(&mut buf);
+        let parsed = Ping::parse_payload(&buf).unwrap();
+        assert_eq!(parsed, orig);
+    }
+
+    #[test]
+    fn test_buffer_too_short() {
+        let result = Ping::parse_payload(&[0x01, 0x02, 0x03]);
+        assert!(result.is_err());
+    }
+}

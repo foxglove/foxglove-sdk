@@ -20,8 +20,7 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
     options.callbacks.onSetParameters || options.callbacks.onParametersSubscribe ||
     options.callbacks.onParametersUnsubscribe || options.callbacks.onConnectionGraphSubscribe ||
     options.callbacks.onConnectionGraphUnsubscribe || options.callbacks.onClientConnect ||
-    options.callbacks.onClientDisconnect || options.callbacks.onConnectionGraphUnsubscribe ||
-    options.callbacks.onPlaybackControlRequest;
+    options.callbacks.onClientDisconnect || options.callbacks.onPlaybackControlRequest;
 
   std::unique_ptr<WebSocketServerCallbacks> callbacks;
   std::unique_ptr<FetchAssetHandler> fetch_asset;

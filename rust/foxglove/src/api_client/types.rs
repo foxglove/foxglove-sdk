@@ -7,6 +7,8 @@ use serde::{Deserialize, Serialize};
 pub(crate) struct RemoteSessionRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub remote_access_session_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub protocol_version: Option<String>,
 }
 
 #[derive(Deserialize, Serialize, Clone)]

@@ -1,0 +1,39 @@
+@PACKAGE_INIT@
+
+# Whether the SDK was built with remote access gateway support.
+set(FOXGLOVE_SDK_REMOTE_ACCESS @FOXGLOVE_BUILD_REMOTE_ACCESS@)
+
+set(_foxglove_lib_dir "${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@")
+
+# Set up the Rust/C static library as an imported target (not available in RA builds).
+if(NOT FOXGLOVE_SDK_REMOTE_ACCESS AND NOT TARGET foxglove-static)
+  add_library(foxglove-static STATIC IMPORTED)
+  set_target_properties(foxglove-static PROPERTIES
+    IMPORTED_LOCATION "${_foxglove_lib_dir}/${CMAKE_STATIC_LIBRARY_PREFIX}foxglove${CMAKE_STATIC_LIBRARY_SUFFIX}"
+  )
+  if(WIN32)
+    set_property(TARGET foxglove-static APPEND PROPERTY
+      INTERFACE_LINK_LIBRARIES Bcrypt SChannel Crypt32 Ncrypt)
+  elseif(APPLE)
+    set_property(TARGET foxglove-static APPEND PROPERTY
+      INTERFACE_LINK_LIBRARIES "-framework Security" "-framework CoreFoundation")
+  elseif(UNIX)
+    # Required for the Rust standard library on older glibc (< 2.34) where these are separate libraries.
+    set_property(TARGET foxglove-static APPEND PROPERTY
+      INTERFACE_LINK_LIBRARIES pthread dl m)
+  endif()
+endif()
+
+# Set up the Rust/C shared library as an imported target.
+if(NOT TARGET foxglove-shared)
+  add_library(foxglove-shared SHARED IMPORTED)
+  set_target_properties(foxglove-shared PROPERTIES
+    IMPORTED_LOCATION "${_foxglove_lib_dir}/${CMAKE_SHARED_LIBRARY_PREFIX}foxglove${CMAKE_SHARED_LIBRARY_SUFFIX}"
+  )
+endif()
+
+unset(_foxglove_lib_dir)
+
+include("${CMAKE_CURRENT_LIST_DIR}/foxglove-sdkTargets.cmake")
+
+check_required_components(foxglove-sdk)

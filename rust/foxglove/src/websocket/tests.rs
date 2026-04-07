@@ -612,6 +612,62 @@ async fn test_on_unsubscribe_called_after_disconnect() {
     let _ = server.stop();
 }
 
+#[tokio::test]
+async fn test_on_unsubscribe_called_after_channel_removal() {
+    let recording_listener = Arc::new(RecordingServerListener::new());
+
+    let ctx = Context::new();
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            listener: Some(recording_listener.clone()),
+            ..Default::default()
+        },
+    );
+
+    let chan = new_channel("/foo", &ctx);
+    let addr = server
+        .start("127.0.0.1", 0)
+        .await
+        .expect("Failed to start server");
+
+    let mut client = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
+    expect_recv!(client, ServerMessage::ServerInfo);
+    expect_recv!(client, ServerMessage::Advertise);
+
+    client
+        .send(&Subscribe::new([Subscription::new(1, chan.id().into())]))
+        .await
+        .expect("Failed to send");
+
+    // Allow the server to process the subscription
+    assert_eventually(|| dbg!(chan.num_sinks()) == 1).await;
+
+    let subscriptions = recording_listener.take_subscribe();
+    assert_eq!(subscriptions.len(), 1);
+
+    let unsubscriptions = recording_listener.take_unsubscribe();
+    assert_eq!(unsubscriptions.len(), 0);
+
+    // Remove the channel from the context while a subscription is active
+    ctx.remove_channel(chan.id());
+
+    // Expect an Unadvertise message
+    let msg = expect_recv!(client, ServerMessage::Unadvertise);
+    assert_eq!(msg.channel_ids.len(), 1);
+    assert_eq!(msg.channel_ids[0], u64::from(chan.id()));
+
+    // on_unsubscribe should have been called for the active subscription
+    let unsubscriptions = recording_listener.take_unsubscribe();
+    assert_eq!(unsubscriptions.len(), 1);
+    assert_eq!(unsubscriptions[0].1.id, chan.id());
+    assert_eq!(unsubscriptions[0].1.topic, chan.topic());
+
+    let _ = server.stop();
+}
+
 #[traced_test]
 #[tokio::test]
 async fn test_error_when_client_publish_unsupported() {

@@ -1222,6 +1222,63 @@ async fn livekit_disconnect_fires_unsubscribe_for_subscribed_channels() -> Resul
     Ok(())
 }
 
+/// Test that closing a channel fires `on_unsubscribe` for active subscribers.
+#[traced_test]
+#[ignore]
+#[tokio::test]
+#[serial(livekit)]
+async fn livekit_channel_close_fires_unsubscribe_for_subscribers() -> Result<()> {
+    use std::sync::Arc;
+    let ctx = foxglove::Context::new();
+    let listener = Arc::new(MockListener::default());
+
+    let channel = ctx
+        .channel_builder("/radar")
+        .message_encoding("json")
+        .build_raw()
+        .context("create channel")?;
+
+    let gw = TestGateway::start_with_options(
+        &ctx,
+        TestGatewayOptions {
+            listener: Some(listener.clone()),
+            ..Default::default()
+        },
+    )
+    .await?;
+
+    let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+    let _server_info = viewer.expect_server_info().await?;
+    let advertise = viewer.expect_advertise().await?;
+    let channel_id = advertise.channels[0].id;
+
+    viewer.subscribe_and_wait(&[channel_id], &channel).await?;
+    poll_until(|| listener.subscribed().len() == 1).await;
+
+    // Close the channel while the subscription is active.
+    channel.close();
+
+    // The viewer should receive an Unadvertise message.
+    let unadvertise = viewer.expect_unadvertise().await?;
+    assert_eq!(unadvertise.channel_ids, vec![channel_id]);
+
+    // on_unsubscribe should have been called for the active subscription.
+    poll_until(|| listener.unsubscribed().len() == 1).await;
+
+    let unsubscribed = listener.unsubscribed();
+    assert_eq!(unsubscribed.len(), 1);
+    assert_eq!(unsubscribed[0].0, "viewer-1");
+    assert_eq!(unsubscribed[0].1, "/radar");
+    info!(
+        "channel close on_unsubscribe callback validated: {:?}",
+        unsubscribed[0]
+    );
+
+    viewer.close().await?;
+    gw.stop().await?;
+    Ok(())
+}
+
 // ===========================================================================
 // Client publish / message data tests
 // ===========================================================================
@@ -1456,7 +1513,7 @@ async fn livekit_connection_status_lifecycle() -> Result<()> {
 
         fn on_subscribe(
             &self,
-            _client: foxglove::remote_access::Client,
+            _client: &foxglove::remote_access::Client,
             _channel: &foxglove::ChannelDescriptor,
         ) {
             let statuses = self.statuses.lock().unwrap();
@@ -1467,7 +1524,7 @@ async fn livekit_connection_status_lifecycle() -> Result<()> {
 
         fn on_message_data(
             &self,
-            _client: foxglove::remote_access::Client,
+            _client: &foxglove::remote_access::Client,
             _channel: &foxglove::ChannelDescriptor,
             _payload: &[u8],
         ) {
