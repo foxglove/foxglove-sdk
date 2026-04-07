@@ -806,6 +806,44 @@ pub struct ModelPrimitive {
     #[cfg_attr(feature = "serde", serde(with = "crate::messages::serde_bytes"))]
     pub data: ::prost::bytes::Bytes,
 }
+/// An estimate of position, orientation, and velocity for an object or reference frame in 3D space
+///
+/// <https://docs.foxglove.dev/docs/visualization/message-schemas/odometry>
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct Odometry {
+    /// Timestamp of the message
+    #[prost(message, optional, tag = "1")]
+    pub timestamp: ::core::option::Option<crate::messages::Timestamp>,
+    /// Coordinate frame for pose data (e.g. `map` or `odom`)
+    #[prost(string, tag = "2")]
+    pub frame_id: ::prost::alloc::string::String,
+    /// Coordinate frame for velocity data (e.g. `base_link`)
+    #[prost(string, tag = "3")]
+    pub child_frame_id: ::prost::alloc::string::String,
+    /// Position and orientation of child_frame_id in frame_id
+    #[prost(message, optional, tag = "4")]
+    pub pose: ::core::option::Option<Pose>,
+    /// Linear velocity in m/s in child_frame_id
+    #[prost(message, optional, tag = "5")]
+    pub linear_velocity: ::core::option::Option<Vector3>,
+    /// Angular velocity in rad/s in child_frame_id
+    #[prost(message, optional, tag = "6")]
+    pub angular_velocity: ::core::option::Option<Vector3>,
+    /// Row-major 6x6 covariance matrix (x, y, z, rotation about x, rotation about y, rotation about z). Set to zero if unknown.
+    ///
+    /// length 36
+    #[prost(double, repeated, tag = "7")]
+    pub pose_covariance: ::prost::alloc::vec::Vec<f64>,
+    /// Row-major 6x6 covariance matrix (vx, vy, vz, angular rate about x, angular rate about y, angular rate about z). Set to zero if unknown.
+    ///
+    /// length 36
+    #[prost(double, repeated, tag = "8")]
+    pub velocity_covariance: ::prost::alloc::vec::Vec<f64>,
+    /// Additional user-provided metadata associated with the odometry message. Keys must be unique.
+    #[prost(message, repeated, tag = "9")]
+    pub metadata: ::prost::alloc::vec::Vec<KeyValuePair>,
+}
 /// A field present within each element in a byte array of packed elements.
 ///
 /// <https://docs.foxglove.dev/docs/visualization/message-schemas/packed-element-field>
