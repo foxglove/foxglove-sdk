@@ -572,6 +572,31 @@ impl ViewerConnection {
         }
     }
 
+    /// Reads and returns the next ConnectionGraphUpdate message.
+    pub async fn expect_connection_graph_update(
+        &mut self,
+    ) -> Result<foxglove::protocol::v2::server::ConnectionGraphUpdate> {
+        let msg = self.frame_reader.next_server_message().await?;
+        match msg {
+            ServerMessage::ConnectionGraphUpdate(update) => Ok(update),
+            other => anyhow::bail!("expected ConnectionGraphUpdate, got: {other:?}"),
+        }
+    }
+
+    /// Sends a JSON-framed SubscribeConnectionGraph message to the gateway.
+    pub async fn send_subscribe_connection_graph(&self) -> Result<()> {
+        let json = r#"{"op":"subscribeConnectionGraph"}"#;
+        let framed = frame::frame_text_message(json.as_bytes());
+        self.send_framed_message(&framed).await
+    }
+
+    /// Sends a JSON-framed UnsubscribeConnectionGraph message to the gateway.
+    pub async fn send_unsubscribe_connection_graph(&self) -> Result<()> {
+        let json = r#"{"op":"unsubscribeConnectionGraph"}"#;
+        let framed = frame::frame_text_message(json.as_bytes());
+        self.send_framed_message(&framed).await
+    }
+
     /// Reads and returns the next ParameterValues message.
     pub async fn expect_parameter_values(
         &mut self,
