@@ -1,10 +1,12 @@
 use std::sync::Mutex;
+use std::sync::atomic::{AtomicU32, Ordering};
 
 use foxglove::ChannelDescriptor;
 use foxglove::remote_access::{Client, Listener};
 
 /// A mock [`Listener`] that records `on_client_advertise`, `on_client_unadvertise`,
-/// `on_message_data`, `on_subscribe`, and `on_unsubscribe` callbacks.
+/// `on_message_data`, `on_subscribe`, `on_unsubscribe`, `on_connection_graph_subscribe`,
+/// and `on_connection_graph_unsubscribe` callbacks.
 ///
 /// Advertise/unadvertise entries are stored as `(participant_id, topic)`.
 /// Message data entries are stored as `(client_id, topic, payload)`.
@@ -15,6 +17,8 @@ pub struct MockListener {
     pub message_data: Mutex<Vec<(String, String, Vec<u8>)>>,
     pub subscribed: Mutex<Vec<(String, String)>>,
     pub unsubscribed: Mutex<Vec<(String, String)>>,
+    pub connection_graph_subscribed: AtomicU32,
+    pub connection_graph_unsubscribed: AtomicU32,
 }
 
 impl MockListener {
@@ -36,6 +40,14 @@ impl MockListener {
 
     pub fn unsubscribed(&self) -> Vec<(String, String)> {
         self.unsubscribed.lock().unwrap().clone()
+    }
+
+    pub fn connection_graph_subscribed_count(&self) -> u32 {
+        self.connection_graph_subscribed.load(Ordering::Relaxed)
+    }
+
+    pub fn connection_graph_unsubscribed_count(&self) -> u32 {
+        self.connection_graph_unsubscribed.load(Ordering::Relaxed)
     }
 }
 
@@ -74,5 +86,15 @@ impl Listener for MockListener {
             client.participant_id().to_string(),
             channel.topic().to_string(),
         ));
+    }
+
+    fn on_connection_graph_subscribe(&self) {
+        self.connection_graph_subscribed
+            .fetch_add(1, Ordering::Relaxed);
+    }
+
+    fn on_connection_graph_unsubscribe(&self) {
+        self.connection_graph_unsubscribed
+            .fetch_add(1, Ordering::Relaxed);
     }
 }
