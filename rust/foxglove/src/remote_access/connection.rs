@@ -25,6 +25,7 @@ use crate::{
         protocol_version,
         session::{DEFAULT_PENDING_CLIENT_READER_TIMEOUT, RemoteAccessSession, SessionParams},
     },
+    remote_common::connection_graph::ConnectionGraph,
     remote_common::service::{Service, ServiceId, ServiceMap},
 };
 
@@ -109,6 +110,7 @@ pub(crate) struct RemoteAccessConnection {
     context: Weak<Context>,
     cancellation_token: CancellationToken,
     services: Arc<parking_lot::RwLock<ServiceMap>>,
+    connection_graph: Arc<parking_lot::Mutex<ConnectionGraph>>,
     session: parking_lot::Mutex<Option<Arc<RemoteAccessSession>>>,
     credentials_provider: OnceCell<CredentialsProvider>,
     status: AtomicU8,
@@ -136,6 +138,7 @@ impl RemoteAccessConnection {
             context: params.context,
             cancellation_token: CancellationToken::new(),
             services,
+            connection_graph: Arc::new(parking_lot::Mutex::new(ConnectionGraph::new())),
             session: parking_lot::Mutex::new(None),
             credentials_provider: OnceCell::new(),
             status: AtomicU8::new(ConnectionStatus::Connecting as u8),
@@ -173,6 +176,26 @@ impl RemoteAccessConnection {
         if let Some(session) = self.session.lock().clone() {
             session.remove_status(status_ids);
         }
+    }
+
+    /// Replaces the connection graph and sends updates to subscribed participants.
+    ///
+    /// The graph state is persisted across session reconnects. If no session is currently
+    /// active, the graph is still updated so that participants connecting later will
+    /// receive the latest state when they subscribe.
+    pub fn replace_connection_graph(
+        &self,
+        replacement_graph: ConnectionGraph,
+    ) -> std::result::Result<(), FoxgloveError> {
+        if !self.has_capability(Capability::ConnectionGraph) {
+            return Err(FoxgloveError::ConnectionGraphNotSupported);
+        }
+        if let Some(session) = self.session.lock().as_ref() {
+            session.replace_connection_graph(replacement_graph);
+        } else {
+            self.connection_graph.lock().update(replacement_graph);
+        }
+        Ok(())
     }
 
     /// Update the connection status, notifying the listener if it changed.
@@ -273,6 +296,7 @@ impl RemoteAccessConnection {
                             .message_backlog_size
                             .unwrap_or(DEFAULT_MESSAGE_BACKLOG_SIZE),
                         services: self.services.clone(),
+                        connection_graph: self.connection_graph.clone(),
                         pending_client_reader_timeout: self
                             .pending_client_reader_timeout
                             .unwrap_or(DEFAULT_PENDING_CLIENT_READER_TIMEOUT),
@@ -401,6 +425,7 @@ impl RemoteAccessConnection {
 
         // Clear the active session and remove the sink before closing the room.
         *self.session.lock() = None;
+        self.connection_graph.lock().clear_subscribers();
         context.remove_sink(session.sink_id());
         sender_task.abort();
         // Wait for the sender task to fully stop so no callbacks are in flight.
