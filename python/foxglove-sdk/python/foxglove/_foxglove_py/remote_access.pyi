@@ -74,7 +74,7 @@ class RemoteAccessGateway:
         """Publishes a status message to all connected participants."""
         ...
 
-    def remove_status(self, status_ids: list[str]) -> None:
+    def remove_status(self, ids: list[str]) -> None:
         """Removes status messages by id from all connected participants."""
         ...
 

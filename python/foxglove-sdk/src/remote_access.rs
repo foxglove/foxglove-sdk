@@ -321,11 +321,11 @@ impl PyRemoteAccessGateway {
 
     /// Remove status messages by id from all connected participants.
     ///
-    /// :param status_ids: The ids of the status messages to remove.
-    /// :type status_ids: list[str]
-    pub fn remove_status(&self, status_ids: Vec<String>) {
+    /// :param ids: The ids of the status messages to remove.
+    /// :type ids: list[str]
+    pub fn remove_status(&self, ids: Vec<String>) {
         if let Some(handle) = &self.0 {
-            handle.remove_status(status_ids);
+            handle.remove_status(ids);
         }
     }
 
