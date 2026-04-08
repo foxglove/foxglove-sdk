@@ -152,7 +152,7 @@ pub(crate) fn create_server(
     }))
 }
 
-/// A websocket server that implements the Foxglove WebSocket Protocol
+/// A WebSocket server that implements the Foxglove WebSocket Protocol
 pub(crate) struct Server {
     /// A weak reference to the Arc holding the server.
     /// This is used to get a reference to the outer `Arc<Server>` from Server methods.

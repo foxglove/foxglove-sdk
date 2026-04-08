@@ -273,7 +273,7 @@
 //!
 //! // Log stuff here.
 //!
-//! server.stop();
+//! server.stop().wait().await;
 //! # }
 //! ```
 //!
@@ -307,7 +307,7 @@
 //!
 //! // Log stuff here.
 //!
-//! gateway.stop().await;
+//! gateway.stop().await.expect("Failed to stop remote access gateway");
 //! # }
 //! ```
 //!
@@ -328,12 +328,12 @@
 //!   all [message types](crate::messages).
 //! - `unstable`: features which are under active development and likely to change in an upcoming
 //!   version.
-//! - `websocket`: enables the websocket server and client for live visualization. Enabled by
+//! - `websocket`: enables the WebSocket server and client for live visualization. Enabled by
 //!   default.
 //! - `zstd`: enables support for the zstd compression algorithm for mcap files. Enabled by
 //!   default.
 //!
-//! If you do not require websocket features, you can disable that flag to reduce the
+//! If you do not require WebSocket features, you can disable that flag to reduce the
 //! compiled size of the SDK.
 //!
 //! # Requirements
@@ -417,7 +417,7 @@ pub use sink_channel_filter::SinkChannelFilter;
 pub use std::collections::BTreeMap;
 pub(crate) use time::nanoseconds_since_epoch;
 
-// Common dependencies for remote-access & websocket, with docsrs attributes to ensure that the
+// Common dependencies for remote-access & WebSocket, with docsrs attributes to ensure that the
 // feature gate badges in docs.rs render as the public features, as opposed to _remote-common. This
 // is only needed for modules that contain types which are publicly re-exported (Parameter,
 // Service, etc.).
