@@ -11,7 +11,7 @@ use crate::remote_common::service::ServiceId;
 
 // Re-export service types so Gateway::services() callers can construct services.
 pub use crate::remote_common::service::{
-    CallId, Handler, Request, Responder, Service, ServiceSchema, SyncHandler,
+    CallId, Handler, Request, Responder, Service, ServiceBuilder, ServiceSchema, SyncHandler,
 };
 
 /// Sends service call responses over the remote access control plane.
