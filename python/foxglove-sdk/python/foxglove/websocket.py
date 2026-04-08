@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional, Protocol, TypeAlias
+from typing import Optional, Protocol
 
 from . import (
     AnyInnerParameterValue,

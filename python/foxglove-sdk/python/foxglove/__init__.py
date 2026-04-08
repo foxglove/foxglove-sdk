@@ -33,6 +33,9 @@ from ._foxglove_py import (
 )
 from .channel import Channel, log
 
+# Deprecated. Use foxglove.mcap.MCAPWriter instead.
+from .mcap import MCAPWriter
+
 ServiceHandler: TypeAlias = Callable[[ServiceRequest], bytes]
 AnyParameterValue: TypeAlias = Union[
     ParameterValue.Integer,
@@ -57,13 +60,37 @@ AnyNativeParameterValue: TypeAlias = Union[
 ]
 AssetHandler: TypeAlias = "Callable[[str], bytes | None]"
 
-# Deprecated. Use foxglove.mcap.MCAPWriter instead.
-from .mcap import MCAPWriter
-
 if TYPE_CHECKING:
     from .notebook.notebook_buffer import NotebookBuffer
 
 atexit.register(_foxglove.shutdown)
+
+__all__ = [
+    "AnyInnerParameterValue",
+    "AnyNativeParameterValue",
+    "AnyParameterValue",
+    "AssetHandler",
+    "Channel",
+    "ChannelDescriptor",
+    "ConnectionGraph",
+    "Context",
+    "MCAPWriter",
+    "MessageSchema",
+    "Parameter",
+    "ParameterType",
+    "ParameterValue",
+    "Schema",
+    "Service",
+    "ServiceHandler",
+    "ServiceRequest",
+    "ServiceSchema",
+    "SinkChannelFilter",
+    "StatusLevel",
+    "log",
+    "open_mcap",
+    "set_log_level",
+    "init_notebook_buffer",
+]
 
 
 try:
@@ -288,30 +315,3 @@ def init_notebook_buffer(context: Context | None = None) -> NotebookBuffer:
         )
 
     return NotebookBuffer(context=context)
-
-
-__all__ = [
-    "AnyInnerParameterValue",
-    "AnyNativeParameterValue",
-    "AnyParameterValue",
-    "AssetHandler",
-    "Channel",
-    "ChannelDescriptor",
-    "ConnectionGraph",
-    "Context",
-    "MCAPWriter",
-    "MessageSchema",
-    "Parameter",
-    "ParameterType",
-    "ParameterValue",
-    "Schema",
-    "Service",
-    "ServiceHandler",
-    "ServiceRequest",
-    "ServiceSchema",
-    "SinkChannelFilter",
-    "log",
-    "open_mcap",
-    "set_log_level",
-    "init_notebook_buffer",
-]
