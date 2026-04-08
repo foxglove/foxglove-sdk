@@ -3,7 +3,7 @@ use std::time::Duration;
 
 use foxglove::ChannelDescriptor;
 use foxglove::remote_access::{
-    self, Capability, ConnectionStatus, Gateway, GatewayHandle, Listener,
+    self, Capability, ConnectionStatus, Gateway, GatewayHandle, Listener, Status,
 };
 use pyo3::prelude::*;
 use pyo3::types::PyBytes;
@@ -13,7 +13,7 @@ use crate::errors::PyFoxgloveError;
 use crate::sink_channel_filter::{PyChannelDescriptor, PySinkChannelFilter};
 use crate::websocket::{
     PyMessageSchema, PyParameter, PyParameterType, PyParameterValue, PyService, PyServiceRequest,
-    PyServiceSchema,
+    PyServiceSchema, PyStatusLevel,
 };
 
 /// A client connected to a running remote access gateway.
@@ -297,6 +297,35 @@ impl PyRemoteAccessGateway {
     pub fn publish_parameter_values(&self, parameters: Vec<PyParameter>) {
         if let Some(handle) = &self.0 {
             handle.publish_parameter_values(parameters.into_iter().map(Into::into).collect());
+        }
+    }
+
+    /// Send a status message to all connected participants.
+    ///
+    /// :param message: The message to send.
+    /// :type message: str
+    /// :param level: The level of the status message.
+    /// :type level: StatusLevel
+    /// :param id: An optional id for the status message.
+    /// :type id: str | None
+    #[pyo3(signature = (message, level, id=None))]
+    pub fn publish_status(&self, message: String, level: &PyStatusLevel, id: Option<String>) {
+        if let Some(handle) = &self.0 {
+            let status = match id {
+                Some(id) => Status::new(level.clone().into(), message).with_id(id),
+                None => Status::new(level.clone().into(), message),
+            };
+            handle.publish_status(status);
+        }
+    }
+
+    /// Remove status messages by id from all connected participants.
+    ///
+    /// :param status_ids: The ids of the status messages to remove.
+    /// :type status_ids: list[str]
+    pub fn remove_status(&self, status_ids: Vec<String>) {
+        if let Some(handle) = &self.0 {
+            handle.remove_status(status_ids);
         }
     }
 

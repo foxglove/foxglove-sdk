@@ -29,7 +29,7 @@ use crate::{
         BinaryMessage, JsonMessage,
         client::{self, ClientMessage},
         server::{
-            AdvertiseServices, MessageData as ServerMessageData, Pong, ServerInfo,
+            AdvertiseServices, MessageData as ServerMessageData, Pong, RemoveStatus, ServerInfo,
             ServiceCallFailure, Status, Unadvertise, UnadvertiseServices, advertise,
             advertise_services,
         },
@@ -1820,6 +1820,17 @@ impl RemoteAccessSession {
                 self.send_parameter_values(participant, filtered, no_request_id);
             }
         }
+    }
+
+    /// Publish a status message to all connected participants.
+    pub(crate) fn publish_status(&self, status: Status) {
+        self.broadcast_control(encode_json_message(&status));
+    }
+
+    /// Remove status messages by id from all connected participants.
+    pub(crate) fn remove_status(&self, status_ids: Vec<String>) {
+        let message = RemoveStatus::new(status_ids);
+        self.broadcast_control(encode_json_message(&message));
     }
 
     /// Check video publishers for metadata changes and re-advertise affected channels.

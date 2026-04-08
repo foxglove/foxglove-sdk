@@ -23,6 +23,9 @@ pub use listener::Listener;
 // Re-export parameter types so callers can construct parameter values.
 pub use crate::protocol::v2::parameter::{Parameter, ParameterType, ParameterValue};
 
+// Re-export status types so callers can publish and remove status messages.
+pub use crate::protocol::v2::server::status::{Level as StatusLevel, Status};
+
 // Re-export service types so Gateway::services() callers can construct services.
 pub use crate::remote_common::service::{
     Handler, Request, Responder, Service, ServiceSchema, SyncHandler,

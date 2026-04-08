@@ -7,6 +7,7 @@ from .websocket import ParameterValue as ParameterValue
 from .websocket import Service as Service
 from .websocket import ServiceRequest as ServiceRequest
 from .websocket import ServiceSchema as ServiceSchema
+from .websocket import StatusLevel as StatusLevel
 
 class Capability(Enum):
     """
@@ -65,6 +66,16 @@ class RemoteAccessGateway:
 
     def publish_parameter_values(self, parameters: list[Parameter]) -> None:
         """Publishes parameter values to all subscribed clients."""
+        ...
+
+    def publish_status(
+        self, message: str, level: StatusLevel, id: str | None = None
+    ) -> None:
+        """Publishes a status message to all connected participants."""
+        ...
+
+    def remove_status(self, status_ids: list[str]) -> None:
+        """Removes status messages by id from all connected participants."""
         ...
 
     def stop(self) -> None:

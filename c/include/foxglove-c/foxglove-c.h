@@ -5397,6 +5397,42 @@ foxglove_error foxglove_gateway_publish_parameter_values(const struct foxglove_g
                                                          struct foxglove_parameter_array *params);
 #endif
 
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+/**
+ * Publishes a status message to all connected participants.
+ *
+ * The caller may optionally provide a message ID, which can be used in a subsequent call to
+ * `foxglove_gateway_remove_status`.
+ *
+ * # Safety
+ * - `gateway` must be a valid pointer to a gateway started with `foxglove_gateway_start`.
+ * - `message` must be a valid pointer to a UTF-8 string, which must remain valid for the duration
+ *   of this call.
+ * - `id` must either be NULL, or a valid pointer to a UTF-8 string, which must remain valid for
+ *   the duration of this call.
+ */
+foxglove_error foxglove_gateway_publish_status(const struct foxglove_gateway *gateway,
+                                               foxglove_server_status_level level,
+                                               struct foxglove_string message,
+                                               const struct foxglove_string *id);
+#endif
+
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+/**
+ * Removes status messages from all connected participants.
+ *
+ * Previously published status messages are referenced by ID.
+ *
+ * # Safety
+ * - `gateway` must be a valid pointer to a gateway started with `foxglove_gateway_start`.
+ * - `ids` must be a valid pointer to an array of pointers to valid UTF-8 strings, all of which
+ *   must remain valid for the duration of this call.
+ */
+foxglove_error foxglove_gateway_remove_status(const struct foxglove_gateway *gateway,
+                                              const struct foxglove_string *ids,
+                                              size_t ids_count);
+#endif
+
 #if !defined(__wasm__)
 /**
  * Initialize SDK logging with the given severity level.
