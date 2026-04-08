@@ -8,7 +8,7 @@ foxglove
 
 .. automodule:: foxglove
    :members:
-   :exclude-members: MCAPWriter, ParameterType, ParameterValue, init_notebook_buffer
+   :exclude-members: Capability, MCAPWriter, ParameterType, ParameterValue, StatusLevel, init_notebook_buffer
 
 
 Message Types
