@@ -9,7 +9,7 @@ Remote Access
 ------------------
 .. literalinclude:: ../../../foxglove-sdk-examples/remote-access/main.py
 
-Websocket Server
+WebSocket Server
 ------------------
 .. literalinclude:: ../../../foxglove-sdk-examples/ws-server/main.py
 
