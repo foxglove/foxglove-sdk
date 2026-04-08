@@ -1728,7 +1728,6 @@ const Odometry: FoxgloveMessageSchema = {
       name: "pose",
       type: { type: "nested", schema: Pose },
       description: "Position and orientation of body_frame_id in frame_id",
-      optional: true,
     },
     {
       name: "linear_velocity",

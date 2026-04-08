@@ -2161,7 +2161,7 @@ Coordinate frame for velocity data (e.g. `base_link`)
 </td>
 </tr>
 <tr>
-<td><code>pose</code> (optional)</td>
+<td><code>pose</code></td>
 <td>
 
 [Pose](#pose)

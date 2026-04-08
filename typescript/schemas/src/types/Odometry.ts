@@ -18,7 +18,7 @@ export type Odometry = {
   body_frame_id: string;
 
   /** Position and orientation of body_frame_id in frame_id */
-  pose?: Pose;
+  pose: Pose;
 
   /** Linear velocity in m/s in body_frame_id */
   linear_velocity?: Vector3;

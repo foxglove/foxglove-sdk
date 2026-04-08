@@ -21,7 +21,7 @@ message Odometry {
   string body_frame_id = 3;
 
   // Position and orientation of body_frame_id in frame_id
-  optional foxglove.Pose pose = 4;
+  foxglove.Pose pose = 4;
 
   // Linear velocity in m/s in body_frame_id
   optional foxglove.Vector3 linear_velocity = 5;

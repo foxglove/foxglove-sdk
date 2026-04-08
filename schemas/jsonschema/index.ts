@@ -6035,7 +6035,8 @@ export const Odometry = {
   "required": [
     "timestamp",
     "frame_id",
-    "body_frame_id"
+    "body_frame_id",
+    "pose"
   ]
 };
 
