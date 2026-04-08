@@ -67,8 +67,7 @@ async fn livekit_status_remove() -> Result<()> {
     let status = viewer.expect_status().await?;
     assert_eq!(status.id.as_deref(), Some("err-1"));
 
-    gw.handle
-        .remove_status(vec!["err-1".to_string()]);
+    gw.handle.remove_status(vec!["err-1".to_string()]);
 
     let remove = viewer.expect_remove_status().await?;
     info!("RemoveStatus: {remove:?}");
