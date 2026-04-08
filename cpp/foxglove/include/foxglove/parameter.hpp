@@ -12,8 +12,11 @@
 #include <variant>
 #include <vector>
 
+// NOLINTNEXTLINE(readability-identifier-naming)
 struct foxglove_parameter_value;
+// NOLINTNEXTLINE(readability-identifier-naming)
 struct foxglove_parameter;
+// NOLINTNEXTLINE(readability-identifier-naming)
 struct foxglove_parameter_array;
 
 namespace foxglove {
