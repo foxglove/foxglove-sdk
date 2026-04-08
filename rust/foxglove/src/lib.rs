@@ -298,7 +298,7 @@
 //! ```no_run
 //! # #[cfg(feature = "remote-access")]
 //! # async fn func() {
-//! use foxglove::remote_access::{Capability, Gateway};
+//! use foxglove::remote_access::Gateway;
 //!
 //! let gateway = Gateway::new()
 //!     .name("R2-D2")

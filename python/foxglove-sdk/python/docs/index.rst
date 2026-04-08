@@ -93,7 +93,7 @@ listens on ``127.0.0.1:8765``. Each client that connects to the WebSocket server
 independent sink. The sink is dynamically added to the :py:class:`.Context` associated with the
 server when the client connects, and removed from the context when the client disconnects.
 
-To create a remote access gateway sink, use :py:func:`.start_gateway`. You must provide a device
+To create a remote access gateway sink, use ``start_gateway()``. You must provide a device
 token to authenticate with the Foxglove API; this can be passed directly or set via the
 ``FOXGLOVE_DEVICE_TOKEN`` environment variable. Once started, the gateway connects to the Foxglove
 platform over WebRTC and makes the device available for remote visualization and teleop. Each remote
