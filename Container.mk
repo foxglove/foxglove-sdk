@@ -42,7 +42,7 @@ docs-python:
 	uv --directory python/foxglove-sdk lock --check
 	uv --directory python/foxglove-sdk sync --all-extras
 	MATURIN_PEP517_ARGS="$(MATURIN_PEP517_ARGS)" uv --directory python/foxglove-sdk pip install --editable '.[notebook]'
-	uv --directory python/foxglove-sdk run sphinx-build --keep-going ./python/docs ./python/docs/_build
+	uv --directory python/foxglove-sdk run sphinx-build --fail-on-warning ./python/docs ./python/docs/_build
 
 .PHONY: clean-docs-python
 clean-docs-python:

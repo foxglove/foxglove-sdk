@@ -94,8 +94,8 @@ __all__ = [
 
 
 try:
-    from .websocket import Capability as WebSocketCapability
     from .websocket import (
+        Capability,
         ServerListener,
         WebSocketServer,
     )
@@ -105,7 +105,7 @@ try:
         name: str | None = None,
         host: str | None = "127.0.0.1",
         port: int | None = 8765,
-        capabilities: list[WebSocketCapability] | None = None,
+        capabilities: list[Capability] | None = None,
         server_listener: ServerListener | None = None,
         supported_encodings: list[str] | None = None,
         services: list[Service] | None = None,
@@ -153,7 +153,10 @@ try:
             playback_time_range=playback_time_range,
         )
 
-    __all__ += ["start_server"]
+    __all__ += [
+        "Capability",  # for backwards compatibility
+        "start_server",
+    ]
 
 except ImportError:
     pass
