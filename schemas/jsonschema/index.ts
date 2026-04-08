@@ -5874,13 +5874,13 @@ export const Odometry = {
       "type": "string",
       "description": "Coordinate frame for pose data (e.g. `map` or `odom`)"
     },
-    "child_frame_id": {
+    "body_frame_id": {
       "type": "string",
       "description": "Coordinate frame for velocity data (e.g. `base_link`)"
     },
     "pose": {
       "title": "foxglove.Pose",
-      "description": "Position and orientation of child_frame_id in frame_id",
+      "description": "Position and orientation of body_frame_id in frame_id",
       "type": "object",
       "properties": {
         "position": {
@@ -5944,7 +5944,7 @@ export const Odometry = {
     },
     "linear_velocity": {
       "title": "foxglove.Vector3",
-      "description": "Linear velocity in m/s in child_frame_id",
+      "description": "Linear velocity in m/s in body_frame_id",
       "type": "object",
       "properties": {
         "x": {
@@ -5968,7 +5968,7 @@ export const Odometry = {
     },
     "angular_velocity": {
       "title": "foxglove.Vector3",
-      "description": "Angular velocity in rad/s in child_frame_id",
+      "description": "Angular velocity in rad/s in body_frame_id",
       "type": "object",
       "properties": {
         "x": {
@@ -6035,7 +6035,7 @@ export const Odometry = {
   "required": [
     "timestamp",
     "frame_id",
-    "child_frame_id"
+    "body_frame_id"
   ]
 };
 

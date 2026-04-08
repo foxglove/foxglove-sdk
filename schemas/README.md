@@ -2148,7 +2148,7 @@ Coordinate frame for pose data (e.g. `map` or `odom`)
 </td>
 </tr>
 <tr>
-<td><code>child_frame_id</code></td>
+<td><code>body_frame_id</code></td>
 <td>
 
 string
@@ -2169,7 +2169,7 @@ Coordinate frame for velocity data (e.g. `base_link`)
 </td>
 <td>
 
-Position and orientation of child_frame_id in frame_id
+Position and orientation of body_frame_id in frame_id
 
 </td>
 </tr>
@@ -2182,7 +2182,7 @@ Position and orientation of child_frame_id in frame_id
 </td>
 <td>
 
-Linear velocity in m/s in child_frame_id
+Linear velocity in m/s in body_frame_id
 
 </td>
 </tr>
@@ -2195,7 +2195,7 @@ Linear velocity in m/s in child_frame_id
 </td>
 <td>
 
-Angular velocity in rad/s in child_frame_id
+Angular velocity in rad/s in body_frame_id
 
 </td>
 </tr>

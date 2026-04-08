@@ -1748,15 +1748,15 @@ struct Odometry {
   std::string frame_id;
 
   /// @brief Coordinate frame for velocity data (e.g. `base_link`)
-  std::string child_frame_id;
+  std::string body_frame_id;
 
-  /// @brief Position and orientation of child_frame_id in frame_id
+  /// @brief Position and orientation of body_frame_id in frame_id
   std::optional<Pose> pose;
 
-  /// @brief Linear velocity in m/s in child_frame_id
+  /// @brief Linear velocity in m/s in body_frame_id
   std::optional<Vector3> linear_velocity;
 
-  /// @brief Angular velocity in rad/s in child_frame_id
+  /// @brief Angular velocity in rad/s in body_frame_id
   std::optional<Vector3> angular_velocity;
 
   /// @brief Row-major 6x6 covariance matrix (x, y, z, rotation about x, rotation about y, rotation

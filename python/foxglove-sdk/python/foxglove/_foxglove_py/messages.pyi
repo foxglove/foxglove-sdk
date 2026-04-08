@@ -604,7 +604,7 @@ class Odometry:
         *,
         timestamp: Timestamp | None = None,
         frame_id: str = "",
-        child_frame_id: str = "",
+        body_frame_id: str = "",
         pose: Pose | None = None,
         linear_velocity: Vector3 | None = None,
         angular_velocity: Vector3 | None = None,

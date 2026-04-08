@@ -1720,26 +1720,26 @@ const Odometry: FoxgloveMessageSchema = {
       description: "Coordinate frame for pose data (e.g. `map` or `odom`)",
     },
     {
-      name: "child_frame_id",
+      name: "body_frame_id",
       type: { type: "primitive", name: "string" },
       description: "Coordinate frame for velocity data (e.g. `base_link`)",
     },
     {
       name: "pose",
       type: { type: "nested", schema: Pose },
-      description: "Position and orientation of child_frame_id in frame_id",
+      description: "Position and orientation of body_frame_id in frame_id",
       optional: true,
     },
     {
       name: "linear_velocity",
       type: { type: "nested", schema: Vector3 },
-      description: "Linear velocity in m/s in child_frame_id",
+      description: "Linear velocity in m/s in body_frame_id",
       optional: true,
     },
     {
       name: "angular_velocity",
       type: { type: "nested", schema: Vector3 },
-      description: "Angular velocity in rad/s in child_frame_id",
+      description: "Angular velocity in rad/s in body_frame_id",
       optional: true,
     },
     {

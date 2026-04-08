@@ -1985,7 +1985,7 @@ void odometryToC(foxglove_odometry& dest, const Odometry& src, [[maybe_unused]] 
   dest.timestamp =
     src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
   dest.frame_id = {src.frame_id.data(), src.frame_id.size()};
-  dest.child_frame_id = {src.child_frame_id.data(), src.child_frame_id.size()};
+  dest.body_frame_id = {src.body_frame_id.data(), src.body_frame_id.size()};
   dest.pose = src.pose ? arena.mapOne<foxglove_pose>(src.pose.value(), poseToC) : nullptr;
   dest.linear_velocity = src.linear_velocity
                            ? reinterpret_cast<const foxglove_vector3*>(&*src.linear_velocity)

@@ -820,14 +820,14 @@ pub struct Odometry {
     pub frame_id: ::prost::alloc::string::String,
     /// Coordinate frame for velocity data (e.g. `base_link`)
     #[prost(string, tag = "3")]
-    pub child_frame_id: ::prost::alloc::string::String,
-    /// Position and orientation of child_frame_id in frame_id
+    pub body_frame_id: ::prost::alloc::string::String,
+    /// Position and orientation of body_frame_id in frame_id
     #[prost(message, optional, tag = "4")]
     pub pose: ::core::option::Option<Pose>,
-    /// Linear velocity in m/s in child_frame_id
+    /// Linear velocity in m/s in body_frame_id
     #[prost(message, optional, tag = "5")]
     pub linear_velocity: ::core::option::Option<Vector3>,
-    /// Angular velocity in rad/s in child_frame_id
+    /// Angular velocity in rad/s in body_frame_id
     #[prost(message, optional, tag = "6")]
     pub angular_velocity: ::core::option::Option<Vector3>,
     /// Row-major 6x6 covariance matrix (x, y, z, rotation about x, rotation about y, rotation about z). Set to zero if unknown.

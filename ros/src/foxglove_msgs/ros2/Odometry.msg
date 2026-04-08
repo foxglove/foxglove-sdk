@@ -10,15 +10,15 @@ builtin_interfaces/Time timestamp
 string frame_id
 
 # Coordinate frame for velocity data (e.g. `base_link`)
-string child_frame_id
+string body_frame_id
 
-# Position and orientation of child_frame_id in frame_id
+# Position and orientation of body_frame_id in frame_id
 geometry_msgs/Pose pose
 
-# Linear velocity in m/s in child_frame_id
+# Linear velocity in m/s in body_frame_id
 geometry_msgs/Vector3 linear_velocity
 
-# Angular velocity in rad/s in child_frame_id
+# Angular velocity in rad/s in body_frame_id
 geometry_msgs/Vector3 angular_velocity
 
 # Row-major 6x6 covariance matrix (x, y, z, rotation about x, rotation about y, rotation about z). Set to zero if unknown. (NaN indicates this value is not set)

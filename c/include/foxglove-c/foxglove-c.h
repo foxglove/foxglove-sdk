@@ -1719,17 +1719,17 @@ typedef struct foxglove_odometry {
   /**
    * Coordinate frame for velocity data (e.g. `base_link`)
    */
-  struct foxglove_string child_frame_id;
+  struct foxglove_string body_frame_id;
   /**
-   * Position and orientation of child_frame_id in frame_id
+   * Position and orientation of body_frame_id in frame_id
    */
   const struct foxglove_pose *pose;
   /**
-   * Linear velocity in m/s in child_frame_id
+   * Linear velocity in m/s in body_frame_id
    */
   const struct foxglove_vector3 *linear_velocity;
   /**
-   * Angular velocity in rad/s in child_frame_id
+   * Angular velocity in rad/s in body_frame_id
    */
   const struct foxglove_vector3 *angular_velocity;
   /**

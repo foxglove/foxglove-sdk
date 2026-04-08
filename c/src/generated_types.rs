@@ -4992,15 +4992,15 @@ pub struct Odometry {
     pub frame_id: FoxgloveString,
 
     /// Coordinate frame for velocity data (e.g. `base_link`)
-    pub child_frame_id: FoxgloveString,
+    pub body_frame_id: FoxgloveString,
 
-    /// Position and orientation of child_frame_id in frame_id
+    /// Position and orientation of body_frame_id in frame_id
     pub pose: *const Pose,
 
-    /// Linear velocity in m/s in child_frame_id
+    /// Linear velocity in m/s in body_frame_id
     pub linear_velocity: *const Vector3,
 
-    /// Angular velocity in rad/s in child_frame_id
+    /// Angular velocity in rad/s in body_frame_id
     pub angular_velocity: *const Vector3,
 
     /// Row-major 6x6 covariance matrix (x, y, z, rotation about x, rotation about y, rotation about z). Set to zero if unknown.
@@ -5051,11 +5051,11 @@ impl BorrowToNative for Odometry {
                 "frame_id",
             )?
         };
-        let child_frame_id = unsafe {
+        let body_frame_id = unsafe {
             string_from_raw(
-                self.child_frame_id.as_ptr() as *const _,
-                self.child_frame_id.len(),
-                "child_frame_id",
+                self.body_frame_id.as_ptr() as *const _,
+                self.body_frame_id.len(),
+                "body_frame_id",
             )?
         };
         let pose = unsafe {
@@ -5081,7 +5081,7 @@ impl BorrowToNative for Odometry {
         Ok(ManuallyDrop::new(foxglove::messages::Odometry {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
             frame_id: ManuallyDrop::into_inner(frame_id),
-            child_frame_id: ManuallyDrop::into_inner(child_frame_id),
+            body_frame_id: ManuallyDrop::into_inner(body_frame_id),
             pose: pose.map(ManuallyDrop::into_inner),
             linear_velocity: linear_velocity.map(ManuallyDrop::into_inner),
             angular_velocity: angular_velocity.map(ManuallyDrop::into_inner),

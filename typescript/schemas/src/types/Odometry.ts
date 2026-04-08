@@ -15,15 +15,15 @@ export type Odometry = {
   frame_id: string;
 
   /** Coordinate frame for velocity data (e.g. `base_link`) */
-  child_frame_id: string;
+  body_frame_id: string;
 
-  /** Position and orientation of child_frame_id in frame_id */
+  /** Position and orientation of body_frame_id in frame_id */
   pose?: Pose;
 
-  /** Linear velocity in m/s in child_frame_id */
+  /** Linear velocity in m/s in body_frame_id */
   linear_velocity?: Vector3;
 
-  /** Angular velocity in rad/s in child_frame_id */
+  /** Angular velocity in rad/s in body_frame_id */
   angular_velocity?: Vector3;
 
   /** Row-major 6x6 covariance matrix (x, y, z, rotation about x, rotation about y, rotation about z). Set to zero if unknown. */

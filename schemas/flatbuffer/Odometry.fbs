@@ -16,15 +16,15 @@ table Odometry {
   frame_id:string (id: 1);
 
   /// Coordinate frame for velocity data (e.g. `base_link`)
-  child_frame_id:string (id: 2);
+  body_frame_id:string (id: 2);
 
-  /// Position and orientation of child_frame_id in frame_id
+  /// Position and orientation of body_frame_id in frame_id
   pose:foxglove.Pose (id: 3);
 
-  /// Linear velocity in m/s in child_frame_id
+  /// Linear velocity in m/s in body_frame_id
   linear_velocity:foxglove.Vector3 (id: 4);
 
-  /// Angular velocity in rad/s in child_frame_id
+  /// Angular velocity in rad/s in body_frame_id
   angular_velocity:foxglove.Vector3 (id: 5);
 
   /// Row-major 6x6 covariance matrix (x, y, z, rotation about x, rotation about y, rotation about z). Set to zero if unknown.

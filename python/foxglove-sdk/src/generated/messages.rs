@@ -2164,10 +2164,10 @@ impl From<ModelPrimitive> for foxglove::messages::ModelPrimitive {
 ///
 /// :param timestamp: Timestamp of the message
 /// :param frame_id: Coordinate frame for pose data (e.g. `map` or `odom`)
-/// :param child_frame_id: Coordinate frame for velocity data (e.g. `base_link`)
-/// :param pose: Position and orientation of child_frame_id in frame_id
-/// :param linear_velocity: Linear velocity in m/s in child_frame_id
-/// :param angular_velocity: Angular velocity in rad/s in child_frame_id
+/// :param body_frame_id: Coordinate frame for velocity data (e.g. `base_link`)
+/// :param pose: Position and orientation of body_frame_id in frame_id
+/// :param linear_velocity: Linear velocity in m/s in body_frame_id
+/// :param angular_velocity: Angular velocity in rad/s in body_frame_id
 /// :param pose_covariance: Row-major 6x6 covariance matrix (x, y, z, rotation about x, rotation about y, rotation about z). Set to zero if unknown.
 /// :param velocity_covariance: Row-major 6x6 covariance matrix (vx, vy, vz, angular rate about x, angular rate about y, angular rate about z). Set to zero if unknown.
 /// :param metadata: Additional user-provided metadata associated with the odometry message. Keys must be unique.
@@ -2179,11 +2179,11 @@ pub(crate) struct Odometry(pub(crate) foxglove::messages::Odometry);
 #[pymethods]
 impl Odometry {
     #[new]
-    #[pyo3(signature = (*, timestamp=None, frame_id="", child_frame_id="", pose=None, linear_velocity=None, angular_velocity=None, pose_covariance=None, velocity_covariance=None, metadata=None) )]
+    #[pyo3(signature = (*, timestamp=None, frame_id="", body_frame_id="", pose=None, linear_velocity=None, angular_velocity=None, pose_covariance=None, velocity_covariance=None, metadata=None) )]
     fn new(
         timestamp: Option<Timestamp>,
         frame_id: &str,
-        child_frame_id: &str,
+        body_frame_id: &str,
         pose: Option<Pose>,
         linear_velocity: Option<Vector3>,
         angular_velocity: Option<Vector3>,
@@ -2194,7 +2194,7 @@ impl Odometry {
         Self(foxglove::messages::Odometry {
             timestamp: timestamp.map(Into::into),
             frame_id: frame_id.to_string(),
-            child_frame_id: child_frame_id.to_string(),
+            body_frame_id: body_frame_id.to_string(),
             pose: pose.map(Into::into),
             linear_velocity: linear_velocity.map(Into::into),
             angular_velocity: angular_velocity.map(Into::into),
@@ -2209,10 +2209,10 @@ impl Odometry {
     }
     fn __repr__(&self) -> String {
         format!(
-            "Odometry(timestamp={:?}, frame_id={:?}, child_frame_id={:?}, pose={:?}, linear_velocity={:?}, angular_velocity={:?}, pose_covariance={:?}, velocity_covariance={:?}, metadata={:?})",
+            "Odometry(timestamp={:?}, frame_id={:?}, body_frame_id={:?}, pose={:?}, linear_velocity={:?}, angular_velocity={:?}, pose_covariance={:?}, velocity_covariance={:?}, metadata={:?})",
             self.0.timestamp,
             self.0.frame_id,
-            self.0.child_frame_id,
+            self.0.body_frame_id,
             self.0.pose,
             self.0.linear_velocity,
             self.0.angular_velocity,
