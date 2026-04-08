@@ -2,20 +2,22 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from foxglove import ChannelDescriptor
-
-from ._foxglove_py.remote_access import (
-    Capability,
-    Client,
+from foxglove import (
+    ChannelDescriptor,
     MessageSchema,
     Parameter,
     ParameterType,
     ParameterValue,
-    RemoteAccessConnectionStatus,
-    RemoteAccessGateway,
     Service,
     ServiceRequest,
     ServiceSchema,
+)
+
+from ._foxglove_py.remote_access import (
+    Capability,
+    Client,
+    RemoteAccessConnectionStatus,
+    RemoteAccessGateway,
 )
 
 

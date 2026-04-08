@@ -1,5 +1,5 @@
 """
-This implements a parameter server for live visualization.
+This implements a parameter server for the WebSocket server.
 
 View and edit parameters from a Parameters panel in Foxglove:
 https://docs.foxglove.dev/docs/visualization/panels/parameters

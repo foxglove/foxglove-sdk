@@ -1,52 +1,34 @@
 from __future__ import annotations
 
-from collections.abc import Callable
-from typing import Optional, Protocol, TypeAlias, Union
+from typing import Optional, Protocol, TypeAlias
 
-from ._foxglove_py.websocket import (
-    Capability,
-    ChannelView,
-    Client,
-    ClientChannel,
+from . import (
+    AnyInnerParameterValue,
+    AnyNativeParameterValue,
+    AnyParameterValue,
+    AssetHandler,
     ConnectionGraph,
     MessageSchema,
     Parameter,
     ParameterType,
     ParameterValue,
+    Service,
+    ServiceHandler,
+    ServiceRequest,
+    ServiceSchema,
+    StatusLevel,
+)
+from ._foxglove_py.websocket import (
+    Capability,
+    ChannelView,
+    Client,
+    ClientChannel,
     PlaybackCommand,
     PlaybackControlRequest,
     PlaybackState,
     PlaybackStatus,
-    Service,
-    ServiceRequest,
-    ServiceSchema,
-    StatusLevel,
     WebSocketServer,
 )
-
-ServiceHandler: TypeAlias = Callable[[ServiceRequest], bytes]
-AssetHandler: TypeAlias = Callable[[str], "bytes | None"]
-AnyParameterValue: TypeAlias = Union[
-    ParameterValue.Integer,
-    ParameterValue.Bool,
-    ParameterValue.Float64,
-    ParameterValue.String,
-    ParameterValue.Array,
-    ParameterValue.Dict,
-]
-AnyInnerParameterValue: TypeAlias = Union[
-    AnyParameterValue,
-    bool,
-    int,
-    float,
-    str,
-    "list[AnyInnerParameterValue]",
-    "dict[str, AnyInnerParameterValue]",
-]
-AnyNativeParameterValue: TypeAlias = Union[
-    AnyInnerParameterValue,
-    bytes,
-]
 
 
 class ServerListener(Protocol):

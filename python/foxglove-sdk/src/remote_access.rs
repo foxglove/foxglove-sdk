@@ -10,11 +10,8 @@ use pyo3::types::PyBytes;
 
 use crate::PyContext;
 use crate::errors::PyFoxgloveError;
+use crate::remote_common::{PyParameter, PyService};
 use crate::sink_channel_filter::{PyChannelDescriptor, PySinkChannelFilter};
-use crate::websocket::{
-    PyMessageSchema, PyParameter, PyParameterType, PyParameterValue, PyService, PyServiceRequest,
-    PyServiceSchema,
-};
 
 /// A client connected to a running remote access gateway.
 #[pyclass(name = "Client", module = "foxglove.remote_access")]
@@ -269,7 +266,15 @@ impl PyRemoteAccessGateway {
 
     /// Advertises support for the provided services.
     ///
+    /// These services will be available for clients to use until they are removed with
+    /// :py:meth:`remove_services`.
+    ///
+    /// This method will fail if the server was not configured with :py:attr:`Capability.Services`,
+    /// if a service name is not unique, or if a service has no request encoding and the server
+    /// has no supported encodings.
+    ///
     /// :param services: Services to add.
+    /// :type services: list[Service]
     pub fn add_services(&self, py: Python<'_>, services: Vec<PyService>) -> PyResult<()> {
         if let Some(handle) = &self.0 {
             py.allow_threads(move || {
@@ -284,6 +289,7 @@ impl PyRemoteAccessGateway {
     /// Removes services that were previously advertised.
     ///
     /// :param names: Names of services to remove.
+    /// :type names: list[str]
     pub fn remove_services(&self, py: Python<'_>, names: Vec<String>) {
         if let Some(handle) = &self.0 {
             py.allow_threads(move || handle.remove_services(names));
@@ -293,7 +299,7 @@ impl PyRemoteAccessGateway {
     /// Publishes parameter values to all subscribed clients.
     ///
     /// :param parameters: The parameters to publish.
-    /// :type parameters: list[:py:class:`Parameter`]
+    /// :type parameters: list[Parameter]
     pub fn publish_parameter_values(&self, parameters: Vec<PyParameter>) {
         if let Some(handle) = &self.0 {
             handle.publish_parameter_values(parameters.into_iter().map(Into::into).collect());
@@ -392,16 +398,6 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<PyRemoteAccessCapability>()?;
     module.add_class::<PyRemoteAccessClient>()?;
     module.add_class::<PyConnectionStatus>()?;
-
-    // Re-export shared service and parameter types from the websocket module,
-    // since remote_access and websocket share the same underlying types.
-    module.add_class::<PyService>()?;
-    module.add_class::<PyServiceRequest>()?;
-    module.add_class::<PyServiceSchema>()?;
-    module.add_class::<PyMessageSchema>()?;
-    module.add_class::<PyParameter>()?;
-    module.add_class::<PyParameterType>()?;
-    module.add_class::<PyParameterValue>()?;
 
     let py = parent_module.py();
     py.import("sys")?

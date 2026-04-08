@@ -28,9 +28,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
-        with:
-          python-version: "3.13"
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - name: Install common dependencies
+        uses: ./.github/actions/common-deps
       - run: corepack enable
       - uses: actions/setup-node@v6
         with:

@@ -1,12 +1,15 @@
 from enum import Enum
 
-from .websocket import MessageSchema as MessageSchema
-from .websocket import Parameter as Parameter
-from .websocket import ParameterType as ParameterType
-from .websocket import ParameterValue as ParameterValue
-from .websocket import Service as Service
-from .websocket import ServiceRequest as ServiceRequest
-from .websocket import ServiceSchema as ServiceSchema
+from foxglove import (
+    ChannelDescriptor,
+    MessageSchema,
+    Parameter,
+    ParameterType,
+    ParameterValue,
+    Service,
+    ServiceRequest,
+    ServiceSchema,
+)
 
 class Capability(Enum):
     """
