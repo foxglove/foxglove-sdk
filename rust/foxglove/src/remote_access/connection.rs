@@ -425,7 +425,16 @@ impl RemoteAccessConnection {
 
         // Clear the active session and remove the sink before closing the room.
         *self.session.lock() = None;
-        self.connection_graph.lock().clear_subscribers();
+        {
+            let mut graph = self.connection_graph.lock();
+            let had_subscribers = graph.has_subscribers();
+            graph.clear_subscribers();
+            if had_subscribers {
+                if let Some(listener) = &self.listener {
+                    listener.on_connection_graph_unsubscribe();
+                }
+            }
+        }
         context.remove_sink(session.sink_id());
         sender_task.abort();
         // Wait for the sender task to fully stop so no callbacks are in flight.
