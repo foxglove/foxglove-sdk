@@ -11,10 +11,10 @@ export type Odometry = {
   /** Timestamp of the message */
   timestamp: Time;
 
-  /** Coordinate frame for pose data (e.g. `map` or `odom`) */
+  /** Reference coordinate frame (e.g. `map` or `odom`) */
   frame_id: string;
 
-  /** Coordinate frame for velocity data (e.g. `base_link`) */
+  /** Coordinate frame of the body whose motion is being estimated (e.g. `base_link`) */
   body_frame_id: string;
 
   /** Position and orientation of body_frame_id in frame_id */

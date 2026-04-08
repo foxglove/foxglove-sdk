@@ -1717,12 +1717,13 @@ const Odometry: FoxgloveMessageSchema = {
     {
       name: "frame_id",
       type: { type: "primitive", name: "string" },
-      description: "Coordinate frame for pose data (e.g. `map` or `odom`)",
+      description: "Reference coordinate frame (e.g. `map` or `odom`)",
     },
     {
       name: "body_frame_id",
       type: { type: "primitive", name: "string" },
-      description: "Coordinate frame for velocity data (e.g. `base_link`)",
+      description:
+        "Coordinate frame of the body whose motion is being estimated (e.g. `base_link`)",
     },
     {
       name: "pose",

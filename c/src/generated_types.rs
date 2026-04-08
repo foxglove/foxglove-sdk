@@ -4988,10 +4988,10 @@ pub struct Odometry {
     /// Timestamp of the message
     pub timestamp: *const FoxgloveTimestamp,
 
-    /// Coordinate frame for pose data (e.g. `map` or `odom`)
+    /// Reference coordinate frame (e.g. `map` or `odom`)
     pub frame_id: FoxgloveString,
 
-    /// Coordinate frame for velocity data (e.g. `base_link`)
+    /// Coordinate frame of the body whose motion is being estimated (e.g. `base_link`)
     pub body_frame_id: FoxgloveString,
 
     /// Position and orientation of body_frame_id in frame_id

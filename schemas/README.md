@@ -2143,7 +2143,7 @@ string
 </td>
 <td>
 
-Coordinate frame for pose data (e.g. `map` or `odom`)
+Reference coordinate frame (e.g. `map` or `odom`)
 
 </td>
 </tr>
@@ -2156,7 +2156,7 @@ string
 </td>
 <td>
 
-Coordinate frame for velocity data (e.g. `base_link`)
+Coordinate frame of the body whose motion is being estimated (e.g. `base_link`)
 
 </td>
 </tr>

@@ -5872,11 +5872,11 @@ export const Odometry = {
     },
     "frame_id": {
       "type": "string",
-      "description": "Coordinate frame for pose data (e.g. `map` or `odom`)"
+      "description": "Reference coordinate frame (e.g. `map` or `odom`)"
     },
     "body_frame_id": {
       "type": "string",
-      "description": "Coordinate frame for velocity data (e.g. `base_link`)"
+      "description": "Coordinate frame of the body whose motion is being estimated (e.g. `base_link`)"
     },
     "pose": {
       "title": "foxglove.Pose",

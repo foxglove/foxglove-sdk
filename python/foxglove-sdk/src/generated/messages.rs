@@ -2163,8 +2163,8 @@ impl From<ModelPrimitive> for foxglove::messages::ModelPrimitive {
 /// An estimate of position, orientation, and velocity for an object or reference frame in 3D space
 ///
 /// :param timestamp: Timestamp of the message
-/// :param frame_id: Coordinate frame for pose data (e.g. `map` or `odom`)
-/// :param body_frame_id: Coordinate frame for velocity data (e.g. `base_link`)
+/// :param frame_id: Reference coordinate frame (e.g. `map` or `odom`)
+/// :param body_frame_id: Coordinate frame of the body whose motion is being estimated (e.g. `base_link`)
 /// :param pose: Position and orientation of body_frame_id in frame_id
 /// :param linear_velocity: Linear velocity in m/s in body_frame_id
 /// :param angular_velocity: Angular velocity in rad/s in body_frame_id

@@ -6,10 +6,10 @@
 # Timestamp of the message
 builtin_interfaces/Time timestamp
 
-# Coordinate frame for pose data (e.g. `map` or `odom`)
+# Reference coordinate frame (e.g. `map` or `odom`)
 string frame_id
 
-# Coordinate frame for velocity data (e.g. `base_link`)
+# Coordinate frame of the body whose motion is being estimated (e.g. `base_link`)
 string body_frame_id
 
 # Position and orientation of body_frame_id in frame_id

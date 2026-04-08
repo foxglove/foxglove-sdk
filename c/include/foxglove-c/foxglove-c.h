@@ -1713,11 +1713,11 @@ typedef struct foxglove_odometry {
    */
   const struct foxglove_timestamp *timestamp;
   /**
-   * Coordinate frame for pose data (e.g. `map` or `odom`)
+   * Reference coordinate frame (e.g. `map` or `odom`)
    */
   struct foxglove_string frame_id;
   /**
-   * Coordinate frame for velocity data (e.g. `base_link`)
+   * Coordinate frame of the body whose motion is being estimated (e.g. `base_link`)
    */
   struct foxglove_string body_frame_id;
   /**

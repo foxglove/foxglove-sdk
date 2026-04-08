@@ -815,10 +815,10 @@ pub struct Odometry {
     /// Timestamp of the message
     #[prost(message, optional, tag = "1")]
     pub timestamp: ::core::option::Option<crate::messages::Timestamp>,
-    /// Coordinate frame for pose data (e.g. `map` or `odom`)
+    /// Reference coordinate frame (e.g. `map` or `odom`)
     #[prost(string, tag = "2")]
     pub frame_id: ::prost::alloc::string::String,
-    /// Coordinate frame for velocity data (e.g. `base_link`)
+    /// Coordinate frame of the body whose motion is being estimated (e.g. `base_link`)
     #[prost(string, tag = "3")]
     pub body_frame_id: ::prost::alloc::string::String,
     /// Position and orientation of body_frame_id in frame_id

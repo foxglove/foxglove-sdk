@@ -1744,10 +1744,10 @@ struct Odometry {
   /// @brief Timestamp of the message
   std::optional<Timestamp> timestamp;
 
-  /// @brief Coordinate frame for pose data (e.g. `map` or `odom`)
+  /// @brief Reference coordinate frame (e.g. `map` or `odom`)
   std::string frame_id;
 
-  /// @brief Coordinate frame for velocity data (e.g. `base_link`)
+  /// @brief Coordinate frame of the body whose motion is being estimated (e.g. `base_link`)
   std::string body_frame_id;
 
   /// @brief Position and orientation of body_frame_id in frame_id
