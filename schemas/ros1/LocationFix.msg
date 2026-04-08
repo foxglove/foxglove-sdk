@@ -40,7 +40,7 @@ uint8 position_covariance_type
 float64 heading
 
 # Velocity in local East-North-Up (ENU) frame in m/s
-foxglove_msgs/Velocity3 velocity
+geometry_msgs/Vector3 velocity
 
 # Color used to visualize the location
 foxglove_msgs/Color color
