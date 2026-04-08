@@ -10,12 +10,13 @@ mod listener;
 mod participant;
 pub(super) mod protocol_version;
 mod rtt_tracker;
-mod service;
+pub mod service;
 mod session;
 mod session_state;
 
 pub use capability::Capability;
 pub use client::Client;
+pub use crate::remote_common::ClientId;
 pub use connection::ConnectionStatus;
 pub use gateway::{Gateway, GatewayHandle};
 pub use listener::Listener;
@@ -23,10 +24,6 @@ pub use listener::Listener;
 // Re-export parameter types so callers can construct parameter values.
 pub use crate::protocol::v2::parameter::{Parameter, ParameterType, ParameterValue};
 
-// Re-export service types so Gateway::services() callers can construct services.
-pub use crate::remote_common::service::{
-    Handler, Request, Responder, Service, ServiceSchema, SyncHandler,
-};
 
 use thiserror::Error;
 

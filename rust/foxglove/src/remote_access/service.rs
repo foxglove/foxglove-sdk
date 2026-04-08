@@ -7,9 +7,12 @@ use crate::protocol::v2::server::{ServiceCallFailure, ServiceCallResponse};
 use crate::remote_access::participant::Participant;
 use crate::remote_access::session::ControlPlaneMessage;
 use crate::remote_common::semaphore::SemaphoreGuard;
-use crate::remote_common::service::{CallId, ServiceId};
+use crate::remote_common::service::ServiceId;
 
-use crate::remote_common::service::Responder;
+// Re-export service types so Gateway::services() callers can construct services.
+pub use crate::remote_common::service::{
+    CallId, Handler, Request, Responder, Service, ServiceSchema, SyncHandler,
+};
 
 /// Sends service call responses over the remote access control plane.
 struct ResponseSender {
