@@ -331,6 +331,20 @@ if(FOXGLOVE_BUILD_REMOTE_ACCESS)
   # Augment the shared library with RA objects
   target_sources(foxglove_cpp_shared PRIVATE $<TARGET_OBJECTS:foxglove_ra_cpp_obj>)
   target_compile_definitions(foxglove_cpp_shared PUBLIC FOXGLOVE_REMOTE_ACCESS)
+
+  add_executable(example_remote_access examples/remote-access/src/main.cpp)
+  set_property(TARGET example_remote_access PROPERTY CXX_STANDARD 17)
+  set_property(TARGET example_remote_access PROPERTY CXX_STANDARD_REQUIRED True)
+  target_compile_options(example_remote_access PUBLIC ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
+  target_link_options(example_remote_access PUBLIC ${SANITIZER_LINK_OPTIONS})
+  target_link_libraries(example_remote_access foxglove_cpp_shared)
+
+  add_executable(example_remote_access_connection_graph examples/remote-access-connection-graph/src/main.cpp)
+  set_property(TARGET example_remote_access_connection_graph PROPERTY CXX_STANDARD 17)
+  set_property(TARGET example_remote_access_connection_graph PROPERTY CXX_STANDARD_REQUIRED True)
+  target_compile_options(example_remote_access_connection_graph PUBLIC ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
+  target_link_options(example_remote_access_connection_graph PUBLIC ${SANITIZER_LINK_OPTIONS})
+  target_link_libraries(example_remote_access_connection_graph foxglove_cpp_shared)
 endif()
 
 

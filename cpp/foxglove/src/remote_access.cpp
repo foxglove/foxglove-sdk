@@ -18,7 +18,8 @@ FoxgloveResult<RemoteAccessGateway> RemoteAccessGateway::create(
     options.callbacks.onUnsubscribe || options.callbacks.onMessageData ||
     options.callbacks.onClientAdvertise || options.callbacks.onClientUnadvertise ||
     options.callbacks.onGetParameters || options.callbacks.onSetParameters ||
-    options.callbacks.onParametersSubscribe || options.callbacks.onParametersUnsubscribe;
+    options.callbacks.onParametersSubscribe || options.callbacks.onParametersUnsubscribe ||
+    options.callbacks.onConnectionGraphSubscribe || options.callbacks.onConnectionGraphUnsubscribe;
 
   std::unique_ptr<RemoteAccessGatewayCallbacks> callbacks;
   std::unique_ptr<SinkChannelFilterFn> sink_channel_filter;
@@ -202,6 +203,25 @@ FoxgloveResult<RemoteAccessGateway> RemoteAccessGateway::create(
           }
         };
     }
+    if (callbacks->onConnectionGraphSubscribe) {
+      c_callbacks.on_connection_graph_subscribe = [](const void* context) {
+        try {
+          (static_cast<const RemoteAccessGatewayCallbacks*>(context))->onConnectionGraphSubscribe();
+        } catch (const std::exception& exc) {
+          warn() << "onConnectionGraphSubscribe callback failed: " << exc.what();
+        }
+      };
+    }
+    if (callbacks->onConnectionGraphUnsubscribe) {
+      c_callbacks.on_connection_graph_unsubscribe = [](const void* context) {
+        try {
+          (static_cast<const RemoteAccessGatewayCallbacks*>(context))
+            ->onConnectionGraphUnsubscribe();
+        } catch (const std::exception& exc) {
+          warn() << "onConnectionGraphUnsubscribe callback failed: " << exc.what();
+        }
+      };
+    }
   }
 
   // Build C options
@@ -320,6 +340,10 @@ FoxgloveError RemoteAccessGateway::removeStatus(const std::vector<std::string_vi
   }
   auto error = foxglove_gateway_remove_status(impl_.get(), c_ids.data(), c_ids.size());
   return FoxgloveError(error);
+}
+
+void RemoteAccessGateway::publishConnectionGraph(ConnectionGraph& graph) {
+  foxglove_gateway_publish_connection_graph(impl_.get(), graph.impl_.get());
 }
 
 FoxgloveError RemoteAccessGateway::stop() {

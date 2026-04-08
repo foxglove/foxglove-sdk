@@ -21,6 +21,7 @@ namespace foxglove {
 /// [Topic Graph panel]: https://docs.foxglove.dev/docs/visualization/panels/topic-graph
 class ConnectionGraph final {
   friend class WebSocketServer;
+  friend class RemoteAccessGateway;
 
 public:
   ConnectionGraph();

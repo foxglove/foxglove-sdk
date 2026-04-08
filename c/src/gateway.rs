@@ -6,6 +6,7 @@ use std::time::Duration;
 use bitflags::bitflags;
 
 use crate::channel_descriptor::FoxgloveChannelDescriptor;
+use crate::connection_graph::FoxgloveConnectionGraph;
 use crate::parameter::FoxgloveParameterArray;
 use crate::server::FoxgloveServerStatusLevel;
 use crate::service::FoxgloveService;
@@ -53,6 +54,8 @@ pub const FOXGLOVE_GATEWAY_CAPABILITY_CLIENT_PUBLISH: u8 = 1 << 0;
 pub const FOXGLOVE_GATEWAY_CAPABILITY_PARAMETERS: u8 = 1 << 1;
 /// Allow clients to call services.
 pub const FOXGLOVE_GATEWAY_CAPABILITY_SERVICES: u8 = 1 << 2;
+/// Allow clients to subscribe and make connection graph updates.
+pub const FOXGLOVE_GATEWAY_CAPABILITY_CONNECTION_GRAPH: u8 = 1 << 3;
 
 bitflags! {
     #[derive(Clone, Copy, PartialEq, Eq)]
@@ -60,6 +63,7 @@ bitflags! {
         const ClientPublish = FOXGLOVE_GATEWAY_CAPABILITY_CLIENT_PUBLISH;
         const Parameters = FOXGLOVE_GATEWAY_CAPABILITY_PARAMETERS;
         const Services = FOXGLOVE_GATEWAY_CAPABILITY_SERVICES;
+        const ConnectionGraph = FOXGLOVE_GATEWAY_CAPABILITY_CONNECTION_GRAPH;
     }
 }
 
@@ -76,6 +80,9 @@ impl FoxgloveGatewayCapabilityBitFlags {
             }
             FoxgloveGatewayCapabilityBitFlags::Services => {
                 Some(foxglove::remote_access::Capability::Services)
+            }
+            FoxgloveGatewayCapabilityBitFlags::ConnectionGraph => {
+                Some(foxglove::remote_access::Capability::ConnectionGraph)
             }
             _ => None,
         })
@@ -218,6 +225,16 @@ pub struct FoxgloveGatewayCallbacks {
             param_names_len: usize,
         ),
     >,
+
+    /// Callback invoked when the first client subscribes to connection graph updates.
+    ///
+    /// Requires `FOXGLOVE_GATEWAY_CAPABILITY_CONNECTION_GRAPH`.
+    pub on_connection_graph_subscribe: Option<unsafe extern "C" fn(context: *const c_void)>,
+
+    /// Callback invoked when the last client unsubscribes from connection graph updates.
+    ///
+    /// Requires `FOXGLOVE_GATEWAY_CAPABILITY_CONNECTION_GRAPH`.
+    pub on_connection_graph_unsubscribe: Option<unsafe extern "C" fn(context: *const c_void)>,
 }
 
 // SAFETY: The `context` pointer and callback function pointers are provided by the C caller,
@@ -381,6 +398,18 @@ impl foxglove::remote_access::Listener for FoxgloveGatewayCallbacks {
         unsafe {
             on_parameters_unsubscribe(self.context, c_param_names.as_ptr(), c_param_names.len())
         };
+    }
+
+    fn on_connection_graph_subscribe(&self) {
+        if let Some(on_connection_graph_subscribe) = self.on_connection_graph_subscribe {
+            unsafe { on_connection_graph_subscribe(self.context) };
+        }
+    }
+
+    fn on_connection_graph_unsubscribe(&self) {
+        if let Some(on_connection_graph_unsubscribe) = self.on_connection_graph_unsubscribe {
+            unsafe { on_connection_graph_unsubscribe(self.context) };
+        }
     }
 }
 
@@ -753,4 +782,30 @@ pub unsafe extern "C" fn foxglove_gateway_remove_status(
     };
     handle.remove_status(ids);
     FoxgloveError::Ok
+}
+
+/// Publish a connection graph to the gateway.
+///
+/// Requires `FOXGLOVE_GATEWAY_CAPABILITY_CONNECTION_GRAPH`.
+#[unsafe(no_mangle)]
+pub extern "C" fn foxglove_gateway_publish_connection_graph(
+    gateway: Option<&FoxgloveGateway>,
+    graph: Option<&mut FoxgloveConnectionGraph>,
+) -> FoxgloveError {
+    let Some(gateway) = gateway else {
+        tracing::error!("foxglove_gateway_publish_connection_graph called with null gateway");
+        return FoxgloveError::ValueError;
+    };
+    let Some(graph) = graph else {
+        tracing::error!("foxglove_gateway_publish_connection_graph called with null graph");
+        return FoxgloveError::ValueError;
+    };
+    let Some(handle) = gateway.as_ref() else {
+        tracing::error!("foxglove_gateway_publish_connection_graph called with closed gateway");
+        return FoxgloveError::SinkClosed;
+    };
+    match handle.publish_connection_graph(graph.0.clone()) {
+        Ok(_) => FoxgloveError::Ok,
+        Err(e) => FoxgloveError::from(e),
+    }
 }
