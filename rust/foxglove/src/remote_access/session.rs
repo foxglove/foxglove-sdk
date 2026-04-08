@@ -1960,10 +1960,11 @@ impl RemoteAccessSession {
     pub(crate) fn replace_connection_graph(&self, replacement_graph: ConnectionGraph) {
         let mut graph = self.connection_graph.lock();
         let update = graph.update(replacement_graph);
+        let encoded = encode_json_message(&update);
         let participants = self.state.read().collect_participants();
         for participant in participants {
             if graph.is_subscriber(participant.client_id()) {
-                self.send_control(participant, encode_json_message(&update));
+                self.send_control(participant, encoded.clone());
             }
         }
     }
