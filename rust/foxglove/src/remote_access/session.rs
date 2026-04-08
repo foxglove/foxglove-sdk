@@ -1262,8 +1262,7 @@ impl RemoteAccessSession {
         if let Some(client_id) = removed.client_id {
             if self.has_capability(Capability::ConnectionGraph) {
                 let mut graph = self.connection_graph.lock();
-                graph.remove_subscriber(client_id);
-                if !graph.has_subscribers() {
+                if graph.remove_subscriber(client_id) && !graph.has_subscribers() {
                     if let Some(listener) = &self.listener {
                         listener.on_connection_graph_unsubscribe();
                     }
