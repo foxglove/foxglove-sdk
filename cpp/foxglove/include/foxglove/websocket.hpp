@@ -1,13 +1,13 @@
 #pragma once
 
 #include <foxglove/channel.hpp>
+#include <foxglove/connection_graph.hpp>
 #include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
-#include <foxglove/playback_control_request.hpp>
-#include <foxglove/playback_state.hpp>
-#include <foxglove/connection_graph.hpp>
 #include <foxglove/fetch_asset.hpp>
 #include <foxglove/parameter.hpp>
+#include <foxglove/playback_control_request.hpp>
+#include <foxglove/playback_state.hpp>
 #include <foxglove/service.hpp>
 
 #include <cstdint>
@@ -213,8 +213,8 @@ struct WebSocketServerCallbacks {
   /// @note Since this playback state is in response to a specific request from the client, the
   /// `request_id` field in the returned `PlaybackState` will be overwritten to match the request_id
   /// in `playback_control_request`.
-  std::function<std::optional<PlaybackState>(const PlaybackControlRequest& playback_control_request
-  )>
+  std::function<
+    std::optional<PlaybackState>(const PlaybackControlRequest& playback_control_request)>
     onPlaybackControlRequest;
 };
 
@@ -295,7 +295,7 @@ public:
   /// @brief Get the current number of connected clients.
   [[nodiscard]] size_t clientCount() const;
 
-  /// @brief Gracefully shut down the websocket server.
+  /// @brief Gracefully shut down the WebSocket server.
   FoxgloveError stop();
 
   /// @brief Publishes the current server timestamp to all clients.
