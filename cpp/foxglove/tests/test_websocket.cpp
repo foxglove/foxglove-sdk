@@ -3,7 +3,7 @@
 #include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
 #include <foxglove/playback_control_request.hpp>
-#include <foxglove/server.hpp>
+#include <foxglove/websocket.hpp>
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>

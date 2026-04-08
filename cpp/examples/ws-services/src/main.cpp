@@ -1,6 +1,6 @@
 #include <foxglove/foxglove.hpp>
-#include <foxglove/server.hpp>
-#include <foxglove/server/service.hpp>
+#include <foxglove/websocket.hpp>
+#include <foxglove/service.hpp>
 
 #include <nlohmann/json.hpp>
 
