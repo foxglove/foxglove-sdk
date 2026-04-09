@@ -18,9 +18,8 @@ use std::time::Duration;
 
 use anyhow::{Context, Result};
 use foxglove::Schema;
-use foxglove::remote_access::{
-    Capability, Gateway, GatewayHandle, Request, Service, ServiceSchema, SyncHandler,
-};
+use foxglove::remote_access::service::{Request, Service, ServiceSchema, SyncHandler};
+use foxglove::remote_access::{Capability, Gateway, GatewayHandle};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use tracing::info;

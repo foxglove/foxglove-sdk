@@ -41,7 +41,7 @@ pub(crate) fn is_schema_required(message_encoding: &str) -> bool {
 
 /// Returns true if the given `schema_encoding` is one of the types that is known to require binary
 /// schema data (i.e. `protobuf` and `flatbuffer`). These require base64-encoding/decoding to be
-/// sent via JSON messages on the websocket connection.
+/// sent via JSON messages on the WebSocket connection.
 pub(crate) fn is_known_binary_schema_encoding(schema_encoding: impl AsRef<str>) -> bool {
     let schema_encoding = schema_encoding.as_ref();
     schema_encoding == "protobuf" || schema_encoding == "flatbuffer"

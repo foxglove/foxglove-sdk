@@ -5,7 +5,7 @@ use super::connected_client::ConnectedClient;
 use crate::SinkId;
 pub use crate::remote_common::ClientId;
 
-/// A connected client session with the websocket server.
+/// A connected client session with the WebSocket server.
 #[derive(Debug, Clone)]
 pub struct Client {
     id: ClientId,

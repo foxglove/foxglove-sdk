@@ -30,7 +30,7 @@ pub struct ClientChannelDesc {
     pub encoding: String,
 }
 use foxglove::protocol::v2::server::ServerMessage;
-use foxglove::remote_access::Service;
+use foxglove::remote_access::service::Service;
 
 use crate::frame::{self, Frame, OpCode};
 use crate::{livekit_token, mock_server};
