@@ -95,19 +95,18 @@ int main(int argc, char* argv[]) {
     std::cerr << "Connection status: " << label << '\n';
   };
 
-  options.fetch_asset =
-    [&assets](std::string_view uri, foxglove::FetchAssetResponder&& responder) {
-      auto it = assets.find(std::string(uri));
-      if (it != assets.end()) {
-        std::cerr << "Serving asset: " << uri << " (" << it->second.size() << " bytes)\n";
-        std::move(responder).respondOk(it->second);
-      } else {
-        std::cerr << "Asset not found: " << uri << '\n';
-        std::string msg = "Asset not found: ";
-        msg += uri;
-        std::move(responder).respondError(msg);
-      }
-    };
+  options.fetch_asset = [&assets](std::string_view uri, foxglove::FetchAssetResponder&& responder) {
+    auto it = assets.find(std::string(uri));
+    if (it != assets.end()) {
+      std::cerr << "Serving asset: " << uri << " (" << it->second.size() << " bytes)\n";
+      std::move(responder).respondOk(it->second);
+    } else {
+      std::cerr << "Asset not found: " << uri << '\n';
+      std::string msg = "Asset not found: ";
+      msg += uri;
+      std::move(responder).respondError(msg);
+    }
+  };
 
   auto gateway_result = foxglove::RemoteAccessGateway::create(std::move(options));
   if (!gateway_result.has_value()) {

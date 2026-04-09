@@ -225,7 +225,7 @@ extern bool exports_foxglove_loader_loader_method_data_loader_create_iterator(
     // NOTE: the owning pointer to the loader is stored by the host, not in the guest, which is why
     // we `release()` here.
     AbstractMessageIterator* iter = iter_result.value.value().release();
-    ret->__handle = (int32_t)new exports_foxglove_loader_loader_message_iterator_t{
+    ret->__handle = (int32_t) new exports_foxglove_loader_loader_message_iterator_t{
       .message_iterator = iter,
     };
     return true;
