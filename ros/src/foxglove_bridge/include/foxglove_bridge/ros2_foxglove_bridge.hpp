@@ -160,8 +160,12 @@ private:
                          std::shared_ptr<const rclcpp::SerializedMessage> msg);
 
   void createOrIncrementSubscription(ChannelId channelId, ClientId clientId, bool isGateway);
+  void createOrIncrementSubscription(const std::string& topic, ClientId clientId, bool isGateway);
+  void createOrIncrementSubscriptionLocked(ChannelId channelId, ClientId clientId, bool isGateway);
 
   void removeOrDecrementSubscription(ChannelId channelId, ClientId clientId, bool isGateway);
+  void removeOrDecrementSubscription(const std::string& topic, ClientId clientId, bool isGateway);
+  void removeOrDecrementSubscriptionLocked(ChannelId channelId, ClientId clientId, bool isGateway);
 
   // Shared helpers for client publish (used by both WebSocket and gateway paths).
   // Must be called with _clientAdvertisementsMutex held. May throw.

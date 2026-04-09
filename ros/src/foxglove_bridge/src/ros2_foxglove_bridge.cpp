@@ -712,7 +712,11 @@ void FoxgloveBridge::subscribe(ChannelId channelId, const foxglove::ClientMetada
 void FoxgloveBridge::createOrIncrementSubscription(ChannelId channelId, ClientId clientId,
                                                    bool isGateway) {
   std::lock_guard<std::mutex> lock(_subscriptionsMutex);
+  createOrIncrementSubscriptionLocked(channelId, clientId, isGateway);
+}
 
+void FoxgloveBridge::createOrIncrementSubscriptionLocked(ChannelId channelId, ClientId clientId,
+                                                         bool isGateway) {
   auto channelIt = _channels.find(channelId);
   if (channelIt == _channels.end()) {
     RCLCPP_ERROR(this->get_logger(), "received subscribe request for unknown channel: %lu",
@@ -764,6 +768,22 @@ void FoxgloveBridge::createOrIncrementSubscription(ChannelId channelId, ClientId
   }
 }
 
+void FoxgloveBridge::createOrIncrementSubscription(const std::string& topic, ClientId clientId,
+                                                   bool isGateway) {
+  std::lock_guard<std::mutex> lock(_subscriptionsMutex);
+
+  auto topicIt = _topicToChannelId.find(topic);
+  if (topicIt == _topicToChannelId.end()) {
+    RCLCPP_ERROR(this->get_logger(), "received subscribe request for unknown topic \"%s\"",
+                 topic.c_str());
+    return;
+  }
+
+  // Delegate to the channel-ID implementation without re-locking (_subscriptionsMutex is
+  // already held, so call the body directly via the unlocked helper below).
+  createOrIncrementSubscriptionLocked(topicIt->second, clientId, isGateway);
+}
+
 void FoxgloveBridge::unsubscribe(ChannelId channelId, const foxglove::ClientMetadata& client) {
   RCLCPP_INFO(this->get_logger(), "received unsubscribe request for channel %lu from client %u",
               channelId, client.id);
@@ -773,7 +793,25 @@ void FoxgloveBridge::unsubscribe(ChannelId channelId, const foxglove::ClientMeta
 void FoxgloveBridge::removeOrDecrementSubscription(ChannelId channelId, ClientId clientId,
                                                    bool isGateway) {
   std::lock_guard<std::mutex> lock(_subscriptionsMutex);
+  removeOrDecrementSubscriptionLocked(channelId, clientId, isGateway);
+}
 
+void FoxgloveBridge::removeOrDecrementSubscription(const std::string& topic, ClientId clientId,
+                                                   bool isGateway) {
+  std::lock_guard<std::mutex> lock(_subscriptionsMutex);
+
+  auto topicIt = _topicToChannelId.find(topic);
+  if (topicIt == _topicToChannelId.end()) {
+    RCLCPP_ERROR(this->get_logger(), "received unsubscribe request for unknown topic \"%s\"",
+                 topic.c_str());
+    return;
+  }
+
+  removeOrDecrementSubscriptionLocked(topicIt->second, clientId, isGateway);
+}
+
+void FoxgloveBridge::removeOrDecrementSubscriptionLocked(ChannelId channelId, ClientId clientId,
+                                                         bool isGateway) {
   auto subIt = _subscriptions.find(channelId);
   if (subIt == _subscriptions.end()) {
     RCLCPP_ERROR(this->get_logger(),
@@ -1261,21 +1299,7 @@ void FoxgloveBridge::gatewaySubscribe(uint32_t clientId,
   RCLCPP_INFO(this->get_logger(),
               "Gateway: received subscribe request for topic \"%s\" from client %u", topic.c_str(),
               clientId);
-
-  ChannelId channelId;
-  {
-    std::lock_guard<std::mutex> lock(_subscriptionsMutex);
-    auto topicIt = _topicToChannelId.find(topic);
-    if (topicIt == _topicToChannelId.end()) {
-      RCLCPP_ERROR(this->get_logger(),
-                   "Gateway: subscribe request for unknown topic \"%s\" from client %u",
-                   topic.c_str(), clientId);
-      return;
-    }
-    channelId = topicIt->second;
-  }
-
-  createOrIncrementSubscription(channelId, clientId, true);
+  createOrIncrementSubscription(topic, clientId, true);
 }
 
 void FoxgloveBridge::gatewayUnsubscribe(uint32_t clientId,
@@ -1284,21 +1308,7 @@ void FoxgloveBridge::gatewayUnsubscribe(uint32_t clientId,
   RCLCPP_INFO(this->get_logger(),
               "Gateway: received unsubscribe request for topic \"%s\" from client %u",
               topic.c_str(), clientId);
-
-  ChannelId channelId;
-  {
-    std::lock_guard<std::mutex> lock(_subscriptionsMutex);
-    auto topicIt = _topicToChannelId.find(topic);
-    if (topicIt == _topicToChannelId.end()) {
-      RCLCPP_ERROR(this->get_logger(),
-                   "Gateway: unsubscribe request for unknown topic \"%s\" from client %u",
-                   topic.c_str(), clientId);
-      return;
-    }
-    channelId = topicIt->second;
-  }
-
-  removeOrDecrementSubscription(channelId, clientId, true);
+  removeOrDecrementSubscription(topic, clientId, true);
 }
 
 void FoxgloveBridge::gatewayClientAdvertise(uint32_t clientId,
