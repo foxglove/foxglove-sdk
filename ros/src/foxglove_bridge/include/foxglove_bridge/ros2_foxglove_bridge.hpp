@@ -163,6 +163,17 @@ private:
 
   void removeOrDecrementSubscription(ChannelId channelId, ClientId clientId, bool isGateway);
 
+  // Shared helpers for client publish (used by both WebSocket and gateway paths).
+  // Must be called with _clientAdvertisementsMutex held. May throw.
+  ClientAdvertisement createClientPublisher(const std::string& topicName,
+                                            const std::string& topicType,
+                                            const std::string& encoding,
+                                            const std::byte* schemaData, size_t schemaLen);
+  // Must NOT be called with _clientAdvertisementsMutex held. May throw.
+  void publishClientData(const rclcpp::GenericPublisher::SharedPtr& publisher,
+                         const std::string& encoding, const std::string& schemaName,
+                         const std::byte* data, size_t dataLen);
+
   void handleServiceRequest(const foxglove::ServiceRequest& request,
                             foxglove::ServiceResponder&& responder);
 

@@ -797,6 +797,97 @@ void FoxgloveBridge::removeOrDecrementSubscription(ChannelId channelId, ClientId
   }
 }
 
+ClientAdvertisement FoxgloveBridge::createClientPublisher(
+  const std::string& topicName, const std::string& topicType, const std::string& encoding,
+  const std::byte* schemaData, size_t schemaLen) {
+  // Register a JSON parser for this schema if needed
+  if (encoding == "json") {
+    auto parserIt = _jsonParsers.find(topicType);
+    if (parserIt == _jsonParsers.end()) {
+      std::string schema;
+      if (schemaLen > 0) {
+        schema = std::string(reinterpret_cast<const char*>(schemaData), schemaLen);
+      } else {
+        auto [format, msgDefinition] = _messageDefinitionCache.get_full_text(topicType);
+        if (format != foxglove_bridge::MessageDefinitionFormat::MSG) {
+          throw std::runtime_error("Message definition (.msg) for schema " + topicType +
+                                   " not found");
+        }
+        schema = msgDefinition;
+      }
+      auto parser = std::make_shared<RosMsgParser::Parser>(
+        topicName, RosMsgParser::ROSType(topicType), schema);
+      _jsonParsers.insert({topicType, parser});
+    }
+  }
+
+  // Lookup if there are publishers from other nodes for that topic. If that's the case, we
+  // use a matching QoS profile.
+  const auto otherPublishers = get_publishers_info_by_topic(topicName);
+  const auto otherPublisherIt =
+    std::find_if(otherPublishers.begin(), otherPublishers.end(),
+                 [this](const rclcpp::TopicEndpointInfo& endpoint) {
+                   return endpoint.node_name() != this->get_name() ||
+                          endpoint.node_namespace() != this->get_namespace();
+                 });
+  rclcpp::QoS qos = otherPublisherIt == otherPublishers.end() ? rclcpp::SystemDefaultsQoS()
+                                                              : otherPublisherIt->qos_profile();
+
+  // When the QoS profile is copied from another existing publisher, it can happen that the
+  // history policy is Unknown, leading to an error when subsequently trying to create a
+  // publisher with that QoS profile. As a fix, we explicitly set the history policy to the
+  // system default.
+  if (qos.history() == rclcpp::HistoryPolicy::Unknown) {
+    qos.history(rclcpp::HistoryPolicy::SystemDefault);
+  }
+  rclcpp::PublisherOptions publisherOptions{};
+  publisherOptions.callback_group = _clientPublishCallbackGroup;
+  auto publisher = this->create_generic_publisher(topicName, topicType, qos, publisherOptions);
+
+  return ClientAdvertisement{std::move(publisher), topicName, topicType, encoding};
+}
+
+void FoxgloveBridge::publishClientData(const rclcpp::GenericPublisher::SharedPtr& publisher,
+                                       const std::string& encoding, const std::string& schemaName,
+                                       const std::byte* data, size_t dataLen) {
+  auto publishMessage = [&publisher, this](const void* msgData, size_t size) {
+    // Copy the message payload into a SerializedMessage object
+    rclcpp::SerializedMessage serializedMessage{size};
+    auto& rclSerializedMsg = serializedMessage.get_rcl_serialized_message();
+    std::memcpy(rclSerializedMsg.buffer, msgData, size);
+    rclSerializedMsg.buffer_length = size;
+    // Publish the message
+    if (_disableLoanMessage || !publisher->can_loan_messages()) {
+      publisher->publish(serializedMessage);
+    } else {
+      publisher->publish_as_loaned_msg(serializedMessage);
+    }
+  };
+
+  if (encoding == "cdr") {
+    publishMessage(data, dataLen);
+  } else if (encoding == "json") {
+    std::shared_ptr<RosMsgParser::Parser> parser;
+    {
+      std::lock_guard<std::mutex> lock(_clientAdvertisementsMutex);
+      auto parserIt = _jsonParsers.find(schemaName);
+      if (parserIt != _jsonParsers.end()) {
+        parser = parserIt->second;
+      }
+    }
+    if (!parser) {
+      throw std::runtime_error("no JSON parser found for schema \"" + schemaName + "\"");
+    }
+    thread_local RosMsgParser::ROS2_Serializer serializer;
+    serializer.reset();
+    const std::string jsonMessage(reinterpret_cast<const char*>(data), dataLen);
+    parser->serializeFromJson(jsonMessage, &serializer);
+    publishMessage(serializer.getBufferData(), serializer.getBufferSize());
+  } else {
+    throw std::runtime_error("unknown encoding \"" + encoding + "\"");
+  }
+}
+
 void FoxgloveBridge::clientAdvertise(ClientId clientId, const foxglove::ClientChannel& channel) {
   std::lock_guard<std::mutex> lock(_clientAdvertisementsMutex);
 
@@ -811,71 +902,19 @@ void FoxgloveBridge::clientAdvertise(ClientId clientId, const foxglove::ClientCh
                              std::to_string(channel.id) + " it had already advertised");
   }
 
-  if (channel.schema_name.empty()) {
+  if (topicType.empty()) {
     throw ClientChannelError("Received client advertisement from client ID " +
                              std::to_string(clientId) + " for channel " +
                              std::to_string(channel.id) + " with empty schema name");
   }
 
-  if (encoding == "json") {
-    // register the JSON parser for this schemaName
-    std::string schemaName(channel.schema_name);
-    auto parserIt = _jsonParsers.find(schemaName);
-    if (parserIt == _jsonParsers.end()) {
-      std::string schema = "";
-      if (channel.schema_len > 0) {
-        // Schema is given by the advertisement
-        schema = std::string(reinterpret_cast<const char*>(channel.schema), channel.schema_len);
-      } else {
-        // Schema not given, look it up.
-        auto [format, msgDefinition] = _messageDefinitionCache.get_full_text(schemaName);
-        if (format != foxglove_bridge::MessageDefinitionFormat::MSG) {
-          throw ClientChannelError("Message definition (.msg) for schema " + schemaName +
-                                   " for channel " + std::to_string(channel.id) + " not found.");
-        }
-
-        schema = msgDefinition;
-      }
-
-      auto parser = std::make_shared<RosMsgParser::Parser>(
-        topicName, RosMsgParser::ROSType(schemaName), schema);
-      _jsonParsers.insert({schemaName, parser});
-    }
-  }
-
   try {
-    // Create a new topic advertisement
-
-    // Lookup if there are publishers from other nodes for that topic. If that's the case, we
-    // use a matching QoS profile.
-    const auto otherPublishers = get_publishers_info_by_topic(topicName);
-    const auto otherPublisherIt =
-      std::find_if(otherPublishers.begin(), otherPublishers.end(),
-                   [this](const rclcpp::TopicEndpointInfo& endpoint) {
-                     return endpoint.node_name() != this->get_name() ||
-                            endpoint.node_namespace() != this->get_namespace();
-                   });
-    rclcpp::QoS qos = otherPublisherIt == otherPublishers.end() ? rclcpp::SystemDefaultsQoS()
-                                                                : otherPublisherIt->qos_profile();
-
-    // When the QoS profile is copied from another existing publisher, it can happen that the
-    // history policy is Unknown, leading to an error when subsequently trying to create a
-    // publisher with that QoS profile. As a fix, we explicitly set the history policy to the
-    // system default.
-    if (qos.history() == rclcpp::HistoryPolicy::Unknown) {
-      qos.history(rclcpp::HistoryPolicy::SystemDefault);
-    }
-    rclcpp::PublisherOptions publisherOptions{};
-    publisherOptions.callback_group = _clientPublishCallbackGroup;
-    auto publisher = this->create_generic_publisher(topicName, topicType, qos, publisherOptions);
-
+    auto ad = createClientPublisher(topicName, topicType, encoding, channel.schema,
+                                    channel.schema_len);
     RCLCPP_INFO(this->get_logger(),
                 "Client ID %d is advertising \"%s\" (%s) on channel %d with encoding \"%s\"",
                 clientId, topicName.c_str(), topicType.c_str(), channel.id, encoding.c_str());
-
-    // Store the new topic advertisement
-    ClientAdvertisement clientAdvertisement{std::move(publisher), topicName, topicType, encoding};
-    _clientAdvertisedTopics.emplace(key, std::move(clientAdvertisement));
+    _clientAdvertisedTopics.emplace(key, std::move(ad));
   } catch (const std::exception& ex) {
     throw ClientChannelError("Failed to create publisher for client channel " +
                              std::to_string(channel.id) + ": " + ex.what());
@@ -911,7 +950,6 @@ void FoxgloveBridge::clientUnadvertise(ClientId clientId, ChannelId clientChanne
 
 void FoxgloveBridge::clientMessage(ClientId clientId, ChannelId clientChannelId,
                                    const std::byte* data, size_t dataLen) {
-  // Get the publisher
   rclcpp::GenericPublisher::SharedPtr publisher;
   std::string encoding;
   std::string schemaName;
@@ -932,54 +970,12 @@ void FoxgloveBridge::clientMessage(ClientId clientId, ChannelId clientChannelId,
     schemaName = it->second.topicType;
   }
 
-  auto publishMessage = [publisher, this](const void* data, size_t size) {
-    // Copy the message payload into a SerializedMessage object
-    rclcpp::SerializedMessage serializedMessage{size};
-    auto& rclSerializedMsg = serializedMessage.get_rcl_serialized_message();
-    std::memcpy(rclSerializedMsg.buffer, data, size);
-    rclSerializedMsg.buffer_length = size;
-    // Publish the message
-    if (_disableLoanMessage || !publisher->can_loan_messages()) {
-      publisher->publish(serializedMessage);
-    } else {
-      publisher->publish_as_loaned_msg(serializedMessage);
-    }
-  };
-
-  if (encoding == "cdr") {
-    publishMessage(data, dataLen);
-  } else if (encoding == "json") {
-    // get the specific parser for this schemaName
-    std::shared_ptr<RosMsgParser::Parser> parser;
-    {
-      std::lock_guard<std::mutex> lock(_clientAdvertisementsMutex);
-      auto parserIt = _jsonParsers.find(schemaName);
-      if (parserIt != _jsonParsers.end()) {
-        parser = parserIt->second;
-      }
-    }
-    if (!parser) {
-      throw ClientChannelError(
-        "Dropping client message on client channel " + std::to_string(clientChannelId) +
-        " from client ID " + std::to_string(clientId) + " with encoding \"json\": no parser found");
-    } else {
-      thread_local RosMsgParser::ROS2_Serializer serializer;
-      serializer.reset();
-      const std::string jsonMessage(reinterpret_cast<const char*>(data), dataLen);
-      try {
-        parser->serializeFromJson(jsonMessage, &serializer);
-        publishMessage(serializer.getBufferData(), serializer.getBufferSize());
-      } catch (const std::exception& ex) {
-        throw ClientChannelError(
-          "Dropping client message on client channel " + std::to_string(clientChannelId) +
-          " from client ID " + std::to_string(clientId) + " with encoding \"json\": " + ex.what());
-      }
-    }
-  } else {
+  try {
+    publishClientData(publisher, encoding, schemaName, data, dataLen);
+  } catch (const std::exception& ex) {
     throw ClientChannelError("Dropping client message on client channel " +
                              std::to_string(clientChannelId) + " from client ID " +
-                             std::to_string(clientId) + " with unknown encoding \"" + encoding +
-                             "\"");
+                             std::to_string(clientId) + ": " + ex.what());
   }
 }
 
@@ -1320,9 +1316,13 @@ void FoxgloveBridge::gatewayClientAdvertise(uint32_t clientId,
   }
 
   std::string topicType;
+  const std::byte* schemaData = nullptr;
+  size_t schemaLen = 0;
   auto schema = channel.schema();
   if (schema.has_value()) {
     topicType = schema->name;
+    schemaData = schema->data;
+    schemaLen = schema->data_len;
   }
 
   if (topicType.empty()) {
@@ -1332,52 +1332,12 @@ void FoxgloveBridge::gatewayClientAdvertise(uint32_t clientId,
     return;
   }
 
-  if (encoding == "json") {
-    auto parserIt = _jsonParsers.find(topicType);
-    if (parserIt == _jsonParsers.end()) {
-      std::string schemaStr;
-      if (schema.has_value() && schema->data_len > 0) {
-        schemaStr =
-          std::string(reinterpret_cast<const char*>(schema->data), schema->data_len);
-      } else {
-        auto [format, msgDefinition] = _messageDefinitionCache.get_full_text(topicType);
-        if (format != foxglove_bridge::MessageDefinitionFormat::MSG) {
-          RCLCPP_ERROR(this->get_logger(),
-                       "Gateway: Message definition (.msg) for schema %s not found",
-                       topicType.c_str());
-          return;
-        }
-        schemaStr = msgDefinition;
-      }
-      auto parser = std::make_shared<RosMsgParser::Parser>(
-        topicName, RosMsgParser::ROSType(topicType), schemaStr);
-      _jsonParsers.insert({topicType, parser});
-    }
-  }
-
   try {
-    const auto otherPublishers = get_publishers_info_by_topic(topicName);
-    const auto otherPublisherIt =
-      std::find_if(otherPublishers.begin(), otherPublishers.end(),
-                   [this](const rclcpp::TopicEndpointInfo& endpoint) {
-                     return endpoint.node_name() != this->get_name() ||
-                            endpoint.node_namespace() != this->get_namespace();
-                   });
-    rclcpp::QoS qos = otherPublisherIt == otherPublishers.end() ? rclcpp::SystemDefaultsQoS()
-                                                                : otherPublisherIt->qos_profile();
-    if (qos.history() == rclcpp::HistoryPolicy::Unknown) {
-      qos.history(rclcpp::HistoryPolicy::SystemDefault);
-    }
-    rclcpp::PublisherOptions publisherOptions{};
-    publisherOptions.callback_group = _clientPublishCallbackGroup;
-    auto publisher = this->create_generic_publisher(topicName, topicType, qos, publisherOptions);
-
+    auto ad = createClientPublisher(topicName, topicType, encoding, schemaData, schemaLen);
     RCLCPP_INFO(this->get_logger(),
                 "Gateway: client %u is advertising \"%s\" (%s) with encoding \"%s\"", clientId,
                 topicName.c_str(), topicType.c_str(), encoding.c_str());
-
-    ClientAdvertisement clientAdvertisement{std::move(publisher), topicName, topicType, encoding};
-    _gatewayClientAdvertisedTopics.emplace(key, std::move(clientAdvertisement));
+    _gatewayClientAdvertisedTopics.emplace(key, std::move(ad));
   } catch (const std::exception& ex) {
     RCLCPP_ERROR(this->get_logger(),
                  "Gateway: failed to create publisher for client %u topic \"%s\": %s", clientId,
@@ -1433,51 +1393,12 @@ void FoxgloveBridge::gatewayClientMessage(uint32_t clientId,
     schemaName = it->second.topicType;
   }
 
-  auto publishMessage = [publisher, this](const void* msgData, size_t size) {
-    rclcpp::SerializedMessage serializedMessage{size};
-    auto& rclSerializedMsg = serializedMessage.get_rcl_serialized_message();
-    std::memcpy(rclSerializedMsg.buffer, msgData, size);
-    rclSerializedMsg.buffer_length = size;
-    if (_disableLoanMessage || !publisher->can_loan_messages()) {
-      publisher->publish(serializedMessage);
-    } else {
-      publisher->publish_as_loaned_msg(serializedMessage);
-    }
-  };
-
-  if (encoding == "cdr") {
-    publishMessage(data, dataLen);
-  } else if (encoding == "json") {
-    std::shared_ptr<RosMsgParser::Parser> parser;
-    {
-      std::lock_guard<std::mutex> lock(_clientAdvertisementsMutex);
-      auto parserIt = _jsonParsers.find(schemaName);
-      if (parserIt != _jsonParsers.end()) {
-        parser = parserIt->second;
-      }
-    }
-    if (!parser) {
-      RCLCPP_ERROR(this->get_logger(),
-                   "Gateway: dropping JSON message from client %u for topic \"%s\": no parser",
-                   clientId, topicName.c_str());
-    } else {
-      thread_local RosMsgParser::ROS2_Serializer serializer;
-      serializer.reset();
-      const std::string jsonMessage(reinterpret_cast<const char*>(data), dataLen);
-      try {
-        parser->serializeFromJson(jsonMessage, &serializer);
-        publishMessage(serializer.getBufferData(), serializer.getBufferSize());
-      } catch (const std::exception& ex) {
-        RCLCPP_ERROR(this->get_logger(),
-                     "Gateway: dropping JSON message from client %u for topic \"%s\": %s",
-                     clientId, topicName.c_str(), ex.what());
-      }
-    }
-  } else {
+  try {
+    publishClientData(publisher, encoding, schemaName, data, dataLen);
+  } catch (const std::exception& ex) {
     RCLCPP_ERROR(this->get_logger(),
-                 "Gateway: dropping message from client %u for topic \"%s\" with unknown "
-                 "encoding \"%s\"",
-                 clientId, topicName.c_str(), encoding.c_str());
+                 "Gateway: dropping message from client %u for topic \"%s\": %s", clientId,
+                 topicName.c_str(), ex.what());
   }
 }
 #endif
