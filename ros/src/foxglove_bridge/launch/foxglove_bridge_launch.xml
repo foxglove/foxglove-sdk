@@ -19,6 +19,10 @@
   <arg name="publish_client_count"            default="false" />
   <arg name="asset_uri_allowlist"             default="['^package://(?:[-\\w%]+/)*[-\\w%.]+\\.(?:dae|fbx|glb|gltf|jpeg|jpg|mtl|obj|png|stl|tif|tiff|urdf|webp|xacro)$']" />  <!-- Needs double-escape -->
   <arg name="ignore_unresponsive_param_nodes" default="true" />
+  <arg name="remote_access"                  default="false" />
+  <arg name="device_token"                   default="" />
+  <arg name="device_name"                    default="foxglove_bridge" />
+  <arg name="foxglove_api_url"               default="" />
 
   <node pkg="foxglove_bridge" exec="foxglove_bridge">
     <param name="port"                            value="$(var port)" />
@@ -41,5 +45,9 @@
     <param name="asset_uri_allowlist"             value="$(var asset_uri_allowlist)" />
     <param name="publish_client_count"            value="$(var publish_client_count)" />
     <param name="ignore_unresponsive_param_nodes" value="$(var ignore_unresponsive_param_nodes)" />
+    <param name="remote_access"                  value="$(var remote_access)" />
+    <param name="device_token"                   value="$(var device_token)" />
+    <param name="device_name"                    value="$(var device_name)" />
+    <param name="foxglove_api_url"               value="$(var foxglove_api_url)" />
   </node>
 </launch>

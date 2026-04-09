@@ -20,6 +20,7 @@ if (POLICY CMP0135)
 endif()
 
 option(USE_LOCAL_SDK "Use pre-built Foxglove SDK binaries from local source tree" OFF)
+option(FOXGLOVE_BRIDGE_REMOTE_ACCESS "Build with remote access gateway support" OFF)
 
 macro(enable_strict_compiler_warnings target)
   if (MSVC)
@@ -57,14 +58,27 @@ endif()
 
 if (USE_LOCAL_SDK)
   set(FOXGLOVE_SDK_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../../..)
-  add_library(foxglove_cpp_static STATIC IMPORTED)
-  set_target_properties(foxglove_cpp_static PROPERTIES
-    IMPORTED_LOCATION ${FOXGLOVE_SDK_ROOT}/cpp/build/libfoxglove_cpp_static.a
-  )
-  add_library(foxglove_c_static STATIC IMPORTED)
-  set_target_properties(foxglove_c_static PROPERTIES
-    IMPORTED_LOCATION ${FOXGLOVE_SDK_ROOT}/cpp/build/libfoxglove.a
-  )
+  if (FOXGLOVE_BRIDGE_REMOTE_ACCESS)
+    add_library(foxglove_cpp_shared SHARED IMPORTED)
+    set_target_properties(foxglove_cpp_shared PROPERTIES
+      IMPORTED_LOCATION ${FOXGLOVE_SDK_ROOT}/cpp/build/libfoxglove_cpp_shared.so
+      IMPORTED_NO_SONAME TRUE
+    )
+    add_library(foxglove_c_shared SHARED IMPORTED)
+    set_target_properties(foxglove_c_shared PROPERTIES
+      IMPORTED_LOCATION ${FOXGLOVE_SDK_ROOT}/cpp/build/libfoxglove.so
+      IMPORTED_NO_SONAME TRUE
+    )
+  else()
+    add_library(foxglove_cpp_static STATIC IMPORTED)
+    set_target_properties(foxglove_cpp_static PROPERTIES
+      IMPORTED_LOCATION ${FOXGLOVE_SDK_ROOT}/cpp/build/libfoxglove_cpp_static.a
+    )
+    add_library(foxglove_c_static STATIC IMPORTED)
+    set_target_properties(foxglove_c_static PROPERTIES
+      IMPORTED_LOCATION ${FOXGLOVE_SDK_ROOT}/cpp/build/libfoxglove.a
+    )
+  endif()
 else()
   message(STATUS "Fetching Foxglove SDK artifacts from GitHub")
   set(FOXGLOVE_SDK_VERSION "0.19.0")
@@ -157,7 +171,7 @@ else()
   )
 endif()
 
-if (USE_LOCAL_SDK)
+if (USE_LOCAL_SDK AND NOT FOXGLOVE_BRIDGE_REMOTE_ACCESS)
   # The locally-built C++ SDK needs to be statically linked to the C SDK
   target_link_libraries(foxglove_bridge_component foxglove_c_static)
 endif()
@@ -173,11 +187,21 @@ target_compile_definitions(foxglove_bridge_component
     RESOURCE_RETRIEVER_VERSION_PATCH=${resource_retriever_VERSION_PATCH}
 )
 
+if (FOXGLOVE_BRIDGE_REMOTE_ACCESS)
+  target_link_libraries(foxglove_bridge_component foxglove_cpp_shared)
+  target_compile_definitions(foxglove_bridge_component PRIVATE FOXGLOVE_REMOTE_ACCESS)
+  set_target_properties(foxglove_bridge_component PROPERTIES
+    INSTALL_RPATH "$ORIGIN"
+    BUILD_WITH_INSTALL_RPATH TRUE
+  )
+else()
+  target_link_libraries(foxglove_bridge_component foxglove_cpp_static)
+endif()
+
 target_link_libraries(foxglove_bridge_component
   ${rosgraph_msgs_TARGETS}
   ${std_msgs_TARGETS}
   ament_index_cpp::ament_index_cpp
-  foxglove_cpp_static
   rclcpp::rclcpp
   rclcpp_components::component
   rclcpp_components::component_manager

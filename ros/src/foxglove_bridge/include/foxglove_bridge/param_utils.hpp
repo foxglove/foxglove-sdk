@@ -30,6 +30,11 @@ constexpr char PARAM_ASSET_URI_ALLOWLIST[] = "asset_uri_allowlist";
 constexpr char PARAM_IGN_UNRESPONSIVE_PARAM_NODES[] = "ignore_unresponsive_param_nodes";
 constexpr char PARAM_PUBLISH_CLIENT_COUNT[] = "publish_client_count";
 
+constexpr char PARAM_REMOTE_ACCESS[] = "remote_access";
+constexpr char PARAM_DEVICE_TOKEN[] = "device_token";
+constexpr char PARAM_DEVICE_NAME[] = "device_name";
+constexpr char PARAM_FOXGLOVE_API_URL[] = "foxglove_api_url";
+
 constexpr int64_t DEFAULT_PORT = 8765;
 constexpr char DEFAULT_ADDRESS[] = "0.0.0.0";
 constexpr int64_t DEFAULT_SEND_BUFFER_LIMIT = 10000000;
