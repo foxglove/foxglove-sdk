@@ -157,18 +157,18 @@ target_include_directories(foxglove_bridge_component
     $<INSTALL_INTERFACE:include>
 )
 
-# When building with add_subdirectory (remote access + local SDK), the foxglove_cpp_shared
-# target already exports the C and C++ include directories. Otherwise we add them manually.
-if (USE_LOCAL_SDK AND FOXGLOVE_BRIDGE_REMOTE_ACCESS)
-  # Include dirs come from foxglove_cpp_shared target automatically via target_link_libraries
-elseif (USE_LOCAL_SDK)
-  target_include_directories(foxglove_bridge_component
-    PUBLIC
-      $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../../../c/include>
-      $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../../../cpp/foxglove/include>
-  )
-  # The locally-built C++ SDK needs to be statically linked to the C SDK
-  target_link_libraries(foxglove_bridge_component foxglove_c_static)
+if (USE_LOCAL_SDK)
+  if (NOT FOXGLOVE_BRIDGE_REMOTE_ACCESS)
+    target_include_directories(foxglove_bridge_component
+      PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../../../c/include>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../../../cpp/foxglove/include>
+    )
+    # The locally-built C++ SDK needs to be statically linked to the C SDK
+    target_link_libraries(foxglove_bridge_component foxglove_c_static)
+  endif()
+  # When FOXGLOVE_BRIDGE_REMOTE_ACCESS is ON, include dirs come from the
+  # foxglove_cpp_shared target automatically via target_link_libraries.
 else()
   target_include_directories(foxglove_bridge_component
     PUBLIC
