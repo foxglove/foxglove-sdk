@@ -1263,6 +1263,13 @@ impl RemoteAccessSession {
         while let Some(event) = room_events.recv().await {
             match event {
                 RoomEvent::ParticipantConnected(participant) => {
+                    info!(
+                        remote_access_session_id,
+                        participant_identity = %participant.identity(),
+                        "participant connected to room (waiting for ParticipantActive)"
+                    );
+                }
+                RoomEvent::ParticipantActive(participant) => {
                     let participant_identity = participant.identity();
                     let Some(version) = protocol_version::check_participant_protocol_version(
                         &participant_identity,
@@ -1280,7 +1287,7 @@ impl RemoteAccessSession {
                         remote_access_session_id,
                         participant_identity = %participant_identity,
                         version = %version,
-                        "participant connected to room"
+                        "participant active in room"
                     );
                     if let Err(e) = self
                         .add_participant(participant.identity(), version, server_info.clone())
