@@ -3,7 +3,7 @@
 #include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
 #include <foxglove/playback_control_request.hpp>
-#include <foxglove/server.hpp>
+#include <foxglove/websocket.hpp>
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
@@ -69,7 +69,7 @@ public:
     // NOLINTBEGIN(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
     static const struct lws_protocols kProtocols[] = {
       {"foxglove.sdk.v1", &WebSocketClient::callback, 0, 65536, 0, nullptr, 0},
-      LWS_PROTOCOL_LIST_TERM,
+      {nullptr, nullptr, 0, 0, 0, nullptr, 0},
     };
     // NOLINTEND(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
 

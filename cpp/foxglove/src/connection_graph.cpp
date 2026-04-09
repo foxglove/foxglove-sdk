@@ -1,5 +1,5 @@
 #include <foxglove-c/foxglove-c.h>
-#include <foxglove/server/connection_graph.hpp>
+#include <foxglove/connection_graph.hpp>
 
 namespace foxglove {
 

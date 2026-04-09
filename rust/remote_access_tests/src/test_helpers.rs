@@ -30,7 +30,7 @@ pub struct ClientChannelDesc {
     pub encoding: String,
 }
 use foxglove::protocol::v2::server::ServerMessage;
-use foxglove::remote_access::Service;
+use foxglove::remote_access::service::Service;
 
 use crate::frame::{self, Frame, OpCode};
 use crate::{livekit_token, mock_server};
@@ -257,6 +257,17 @@ impl ViewerConnection {
         match msg {
             ServerMessage::Status(status) => Ok(status),
             other => anyhow::bail!("expected Status, got: {other:?}"),
+        }
+    }
+
+    /// Reads and returns the next RemoveStatus message.
+    pub async fn expect_remove_status(
+        &mut self,
+    ) -> Result<foxglove::protocol::v2::server::RemoveStatus> {
+        let msg = self.frame_reader.next_server_message().await?;
+        match msg {
+            ServerMessage::RemoveStatus(remove) => Ok(remove),
+            other => anyhow::bail!("expected RemoveStatus, got: {other:?}"),
         }
     }
 

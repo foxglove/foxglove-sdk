@@ -7,6 +7,7 @@ use bitflags::bitflags;
 
 use crate::channel_descriptor::FoxgloveChannelDescriptor;
 use crate::parameter::FoxgloveParameterArray;
+use crate::server::FoxgloveServerStatusLevel;
 use crate::service::FoxgloveService;
 use crate::sink_channel_filter::ChannelFilter;
 use crate::{FoxgloveContext, FoxgloveError, FoxgloveString, result_to_c};
@@ -390,8 +391,8 @@ impl foxglove::remote_access::Listener for FoxgloveGatewayCallbacks {
 ///
 /// # Safety
 /// - `context` can be null, or a valid pointer to a context created via `foxglove_context_new`.
-/// - `name` must be a valid pointer to a UTF-8 string.
-/// - `device_token` must be a valid pointer to a UTF-8 string, or empty to use the
+/// - `name` must be a valid UTF-8 string.
+/// - `device_token` must be a valid UTF-8 string, or empty to use the
 ///   `FOXGLOVE_DEVICE_TOKEN` environment variable.
 /// - If `supported_encodings` is supplied, all entries must contain valid UTF-8, and
 ///   `supported_encodings` must have length equal to `supported_encodings_count`.
@@ -629,7 +630,7 @@ pub unsafe extern "C" fn foxglove_gateway_add_service(
 ///
 /// # Safety
 /// - `gateway` must be a valid pointer to a gateway started with `foxglove_gateway_start`.
-/// - `service_name` must be a valid pointer to a UTF-8 string.
+/// - `service_name` must be a valid UTF-8 string.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_gateway_remove_service(
     gateway: Option<&FoxgloveGateway>,
@@ -674,5 +675,82 @@ pub unsafe extern "C" fn foxglove_gateway_publish_parameter_values(
         return FoxgloveError::SinkClosed;
     };
     handle.publish_parameter_values(params.into_native());
+    FoxgloveError::Ok
+}
+
+/// Publishes a status message to all connected participants.
+///
+/// The caller may optionally provide a message ID, which can be used in a subsequent call to
+/// `foxglove_gateway_remove_status`.
+///
+/// # Safety
+/// - `gateway` must be a valid pointer to a gateway started with `foxglove_gateway_start`.
+/// - `message` must be a valid UTF-8 string, which must remain valid for the duration of this
+///   call.
+/// - `id` must either be NULL, or a pointer to a valid UTF-8 string, which must remain valid for
+///   the duration of this call.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_gateway_publish_status(
+    gateway: Option<&FoxgloveGateway>,
+    level: FoxgloveServerStatusLevel,
+    message: FoxgloveString,
+    id: Option<&FoxgloveString>,
+) -> FoxgloveError {
+    let Some(gateway) = gateway else {
+        return FoxgloveError::ValueError;
+    };
+    let Some(handle) = gateway.as_ref() else {
+        return FoxgloveError::SinkClosed;
+    };
+    let message = unsafe { message.as_utf8_str() };
+    let Ok(message) = message else {
+        return FoxgloveError::Utf8Error;
+    };
+    let id = id.map(|id| unsafe { id.as_utf8_str() }).transpose();
+    let Ok(id) = id else {
+        return FoxgloveError::Utf8Error;
+    };
+    let mut status = foxglove::remote_access::Status::new(level.into(), message);
+    if let Some(id) = id {
+        status = status.with_id(id);
+    }
+    handle.publish_status(status);
+    FoxgloveError::Ok
+}
+
+/// Removes status messages from all connected participants.
+///
+/// Previously published status messages are referenced by ID.
+///
+/// # Safety
+/// - `gateway` must be a valid pointer to a gateway started with `foxglove_gateway_start`.
+/// - `ids` must be a pointer to an array of valid UTF-8 strings, all of which must remain valid
+///   for the duration of this call.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_gateway_remove_status(
+    gateway: Option<&FoxgloveGateway>,
+    ids: *const FoxgloveString,
+    ids_count: usize,
+) -> FoxgloveError {
+    let Some(gateway) = gateway else {
+        return FoxgloveError::ValueError;
+    };
+    let Some(handle) = gateway.as_ref() else {
+        return FoxgloveError::SinkClosed;
+    };
+    if ids_count == 0 {
+        return FoxgloveError::Ok;
+    }
+    if ids.is_null() {
+        return FoxgloveError::ValueError;
+    }
+    let ids = unsafe { std::slice::from_raw_parts(ids, ids_count) }
+        .iter()
+        .map(|id| unsafe { id.as_utf8_str().map(|id| id.to_string()) })
+        .collect::<Result<Vec<_>, _>>();
+    let Ok(ids) = ids else {
+        return FoxgloveError::Utf8Error;
+    };
+    handle.remove_status(ids);
     FoxgloveError::Ok
 }

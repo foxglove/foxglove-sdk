@@ -1,4 +1,4 @@
-//! Websocket services.
+//! WebSocket services.
 
 use std::borrow::Cow;
 use std::sync::Arc;

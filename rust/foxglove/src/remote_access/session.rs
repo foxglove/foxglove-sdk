@@ -20,7 +20,10 @@ use crate::protocol::v2::DecodeError;
 use crate::protocol::v2::parameter::Parameter;
 use crate::protocol::v2::server::ParameterValues;
 use crate::remote_access::participant::ChannelWriter;
-use crate::remote_common::service::{CallId, Service, ServiceId, ServiceMap};
+use crate::remote_common::{
+    fetch_asset::AssetResponder,
+    service::{CallId, Service, ServiceId, ServiceMap},
+};
 use crate::time::millis_since_epoch;
 use crate::{
     ChannelDescriptor, ChannelId, Context, FoxgloveError, Metadata, RawChannel, Schema, Sink,
@@ -29,14 +32,15 @@ use crate::{
         BinaryMessage, JsonMessage,
         client::{self, ClientMessage},
         server::{
-            AdvertiseServices, MessageData as ServerMessageData, Pong, ServerInfo,
+            AdvertiseServices, MessageData as ServerMessageData, Pong, RemoveStatus, ServerInfo,
             ServiceCallFailure, Status, Unadvertise, UnadvertiseServices, advertise,
             advertise_services,
         },
     },
     remote_access::{
-        Capability, Listener, RemoteAccessError, client::Client, participant::Participant,
-        protocol_version, rtt_tracker::RttTracker, session_state::SessionState,
+        AssetHandler, Capability, Listener, RemoteAccessError, client::Client,
+        participant::Participant, protocol_version, rtt_tracker::RttTracker,
+        session_state::SessionState,
     },
 };
 
@@ -172,6 +176,7 @@ pub(crate) struct RemoteAccessSession {
     channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     listener: Option<Arc<dyn Listener>>,
     capabilities: Vec<Capability>,
+    fetch_asset_handler: Option<Arc<dyn AssetHandler<Client>>>,
     cancellation_token: CancellationToken,
     data_plane_tx: flume::Sender<ChannelMessage>,
     data_plane_rx: flume::Receiver<ChannelMessage>,
@@ -315,6 +320,7 @@ pub(crate) struct SessionParams {
     pub services: Arc<parking_lot::RwLock<ServiceMap>>,
     pub pending_client_reader_timeout: Duration,
     pub remote_access_session_id: Option<String>,
+    pub fetch_asset_handler: Option<Arc<dyn AssetHandler<Client>>>,
 }
 
 impl RemoteAccessSession {
@@ -331,6 +337,7 @@ impl RemoteAccessSession {
             channel_filter: params.channel_filter,
             listener: params.listener,
             capabilities: params.capabilities,
+            fetch_asset_handler: params.fetch_asset_handler,
             cancellation_token: params.cancellation_token,
             data_plane_tx,
             data_plane_rx,
@@ -731,6 +738,9 @@ impl RemoteAccessSession {
                 error!(
                     "Received MessageData over control channel; MessageData is only supported on channel-specific byte streams"
                 );
+            }
+            ClientMessage::FetchAsset(msg) => {
+                self.handle_fetch_asset(&participant, msg.uri, msg.request_id);
             }
             ClientMessage::ServiceCallRequest(req) => {
                 self.handle_service_call(&participant, req);
@@ -1192,6 +1202,7 @@ impl RemoteAccessSession {
             participant_id.clone(),
             protocol_version,
             ParticipantWriter::Livekit(stream),
+            self.control_plane_tx.clone(),
         ));
 
         // Send initial messages prior to adding the participant to the state map, to ensure that
@@ -1263,6 +1274,13 @@ impl RemoteAccessSession {
         while let Some(event) = room_events.recv().await {
             match event {
                 RoomEvent::ParticipantConnected(participant) => {
+                    info!(
+                        remote_access_session_id,
+                        participant_identity = %participant.identity(),
+                        "participant connected to room (waiting for ParticipantActive)"
+                    );
+                }
+                RoomEvent::ParticipantActive(participant) => {
                     let participant_identity = participant.identity();
                     let Some(version) = protocol_version::check_participant_protocol_version(
                         &participant_identity,
@@ -1280,7 +1298,7 @@ impl RemoteAccessSession {
                         remote_access_session_id,
                         participant_identity = %participant_identity,
                         version = %version,
-                        "participant connected to room"
+                        "participant active in room"
                     );
                     if let Err(e) = self
                         .add_participant(participant.identity(), version, server_info.clone())
@@ -1641,7 +1659,7 @@ impl RemoteAccessSession {
             service_id,
             call_id,
             encoding,
-            self.control_plane_tx.clone(),
+            participant.control_plane_tx().clone(),
             guard,
         );
         let request = crate::remote_common::service::Request::new(
@@ -1669,6 +1687,34 @@ impl RemoteAccessSession {
             message: message.to_string(),
         };
         self.send_control(participant.clone(), encode_json_message(&failure));
+    }
+
+    /// Handle a fetch asset request from a client.
+    fn handle_fetch_asset(&self, participant: &Arc<Participant>, uri: String, request_id: u32) {
+        if !self.has_capability(Capability::Assets) {
+            self.send_error(
+                participant,
+                "Server does not support assets capability".to_string(),
+            );
+            return;
+        }
+
+        let Some(guard) = participant.fetch_asset_sem().try_acquire() else {
+            participant.send_asset_error("Too many concurrent fetch asset requests", request_id);
+            return;
+        };
+
+        let handler = self.fetch_asset_handler.as_ref().expect(
+            "Gateway advertised the Assets capability without providing a handler; \
+             this should have been caught in Gateway::start()",
+        );
+        let client = Client::with_sender(
+            participant.client_id(),
+            participant.participant_id().clone(),
+            participant,
+        );
+        let responder = AssetResponder::new(client, request_id, guard);
+        handler.fetch(uri, responder);
     }
 
     /// Handle a `GetParameters` request from a client.
@@ -1820,6 +1866,17 @@ impl RemoteAccessSession {
                 self.send_parameter_values(participant, filtered, no_request_id);
             }
         }
+    }
+
+    /// Publish a status message to all connected participants.
+    pub(crate) fn publish_status(&self, status: Status) {
+        self.broadcast_control(encode_json_message(&status));
+    }
+
+    /// Remove status messages by id from all connected participants.
+    pub(crate) fn remove_status(&self, status_ids: Vec<String>) {
+        let message = RemoveStatus::new(status_ids);
+        self.broadcast_control(encode_json_message(&message));
     }
 
     /// Check video publishers for metadata changes and re-advertise affected channels.
@@ -2074,20 +2131,50 @@ async fn process_data_message<F, Fut>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::protocol::v2::server::FetchAssetResponse;
     use crate::remote_access::participant::{
         ParticipantWriter, TestByteStreamWriter, TestChannelWriter,
+    };
+    use crate::remote_common::fetch_asset::{
+        AssetHandler, AsyncAssetHandlerFn, BlockingAssetHandlerFn,
     };
 
     fn make_participant(name: &str) -> (ParticipantIdentity, Arc<Participant>) {
         let identity = ParticipantIdentity(name.to_string());
         let writer = Arc::new(TestByteStreamWriter::default());
         let version = protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone();
+        let (tx, _rx) = flume::bounded(16);
         let participant = Arc::new(Participant::new(
             identity.clone(),
             version,
             ParticipantWriter::Test(writer),
+            tx,
         ));
         (identity, participant)
+    }
+
+    fn make_participant_with_rx(
+        name: &str,
+    ) -> (Arc<Participant>, flume::Receiver<ControlPlaneMessage>) {
+        let identity = ParticipantIdentity(name.to_string());
+        let writer = Arc::new(TestByteStreamWriter::default());
+        let version = protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone();
+        let (tx, rx) = flume::bounded(16);
+        let participant = Arc::new(Participant::new(
+            identity,
+            version,
+            ParticipantWriter::Test(writer),
+            tx,
+        ));
+        (participant, rx)
+    }
+
+    fn test_client(participant: &Arc<Participant>) -> Client {
+        Client::with_sender(
+            participant.client_id(),
+            participant.participant_id().clone(),
+            participant,
+        )
     }
 
     /// A factory that produces a `ChannelWriter` backed by the given test writer.
@@ -2305,6 +2392,188 @@ mod tests {
         assert!(
             !writers.contains_key(&ch),
             "no writer should be cached when stream creation fails"
+        );
+    }
+
+    // ---- fetch asset tests ----
+
+    #[test]
+    fn asset_responder_sends_ok_response() {
+        let (participant, rx) = make_participant_with_rx("alice");
+        let guard = participant.fetch_asset_sem().try_acquire().unwrap();
+        let responder = AssetResponder::new(test_client(&participant), 42, guard);
+        responder.respond_ok(b"hello world");
+
+        let msg = rx.try_recv().unwrap();
+        assert_eq!(
+            msg.data,
+            encode_binary_message(&FetchAssetResponse::asset_data(42, &b"hello world"[..]))
+        );
+    }
+
+    #[test]
+    fn asset_responder_sends_error_response() {
+        let (participant, rx) = make_participant_with_rx("alice");
+        let guard = participant.fetch_asset_sem().try_acquire().unwrap();
+        let responder = AssetResponder::new(test_client(&participant), 42, guard);
+        responder.respond_err("something went wrong");
+
+        let msg = rx.try_recv().unwrap();
+        assert_eq!(
+            msg.data,
+            encode_binary_message(&FetchAssetResponse::error_message(
+                42,
+                "something went wrong"
+            ))
+        );
+    }
+
+    #[test]
+    fn asset_responder_sends_error_on_drop_without_response() {
+        let (participant, rx) = make_participant_with_rx("alice");
+        let guard = participant.fetch_asset_sem().try_acquire().unwrap();
+        let responder = AssetResponder::new(test_client(&participant), 42, guard);
+        drop(responder);
+
+        let msg = rx.try_recv().unwrap();
+        assert_eq!(
+            msg.data,
+            encode_binary_message(&FetchAssetResponse::error_message(
+                42,
+                "Internal server error: asset handler failed to send a response"
+            ))
+        );
+    }
+
+    #[test]
+    fn fetch_asset_semaphore_limits_concurrent_requests() {
+        let (participant, rx) = make_participant_with_rx("alice");
+        let mut guards = Vec::new();
+        while let Some(guard) = participant.fetch_asset_sem().try_acquire() {
+            guards.push(guard);
+        }
+        assert!(participant.fetch_asset_sem().try_acquire().is_none());
+
+        participant.send_asset_error("Too many concurrent fetch asset requests", 99);
+
+        let msg = rx.try_recv().unwrap();
+        assert_eq!(
+            msg.data,
+            encode_binary_message(&FetchAssetResponse::error_message(
+                99,
+                "Too many concurrent fetch asset requests"
+            ))
+        );
+
+        guards.pop();
+        assert!(participant.fetch_asset_sem().try_acquire().is_some());
+    }
+
+    #[test]
+    fn asset_responder_releases_semaphore_on_respond() {
+        let (participant, _rx) = make_participant_with_rx("alice");
+        let mut guards = Vec::new();
+        while let Some(guard) = participant.fetch_asset_sem().try_acquire() {
+            guards.push(guard);
+        }
+        let guard = guards.pop().unwrap();
+        let responder = AssetResponder::new(test_client(&participant), 1, guard);
+
+        assert!(participant.fetch_asset_sem().try_acquire().is_none());
+        responder.respond_ok(b"data");
+        assert!(participant.fetch_asset_sem().try_acquire().is_some());
+    }
+
+    #[test]
+    fn asset_responder_releases_semaphore_on_drop() {
+        let (participant, _rx) = make_participant_with_rx("alice");
+        let mut guards = Vec::new();
+        while let Some(guard) = participant.fetch_asset_sem().try_acquire() {
+            guards.push(guard);
+        }
+        let guard = guards.pop().unwrap();
+        let responder = AssetResponder::new(test_client(&participant), 1, guard);
+
+        assert!(participant.fetch_asset_sem().try_acquire().is_none());
+        drop(responder);
+        assert!(participant.fetch_asset_sem().try_acquire().is_some());
+    }
+
+    #[test]
+    fn missing_handler_sends_asset_error() {
+        let (participant, rx) = make_participant_with_rx("alice");
+        participant.send_asset_error("Server does not have a fetch asset handler", 42);
+
+        let msg = rx.try_recv().unwrap();
+        assert_eq!(
+            msg.data,
+            encode_binary_message(&FetchAssetResponse::error_message(
+                42,
+                "Server does not have a fetch asset handler"
+            ))
+        );
+    }
+
+    #[tokio::test]
+    async fn blocking_asset_handler_success() {
+        let (participant, rx) = make_participant_with_rx("alice");
+        let guard = participant.fetch_asset_sem().try_acquire().unwrap();
+        let responder = AssetResponder::new(test_client(&participant), 7, guard);
+
+        let handler = BlockingAssetHandlerFn(Arc::new(
+            |_client: Client, _uri: String| -> Result<&[u8], &str> { Ok(b"<robot/>") },
+        ));
+        handler.fetch("package://test/model.urdf".to_string(), responder);
+
+        let msg = tokio::time::timeout(Duration::from_secs(1), rx.recv_async())
+            .await
+            .expect("timed out waiting for asset response")
+            .expect("channel closed");
+        assert_eq!(
+            msg.data,
+            encode_binary_message(&FetchAssetResponse::asset_data(7, &b"<robot/>"[..]))
+        );
+    }
+
+    #[tokio::test]
+    async fn blocking_asset_handler_error() {
+        let (participant, rx) = make_participant_with_rx("alice");
+        let guard = participant.fetch_asset_sem().try_acquire().unwrap();
+        let responder = AssetResponder::new(test_client(&participant), 9, guard);
+
+        let handler = BlockingAssetHandlerFn(Arc::new(
+            |_client: Client, _uri: String| -> Result<&[u8], &str> { Err("not found") },
+        ));
+        handler.fetch("package://missing".to_string(), responder);
+
+        let msg = tokio::time::timeout(Duration::from_secs(1), rx.recv_async())
+            .await
+            .expect("timed out waiting for asset response")
+            .expect("channel closed");
+        assert_eq!(
+            msg.data,
+            encode_binary_message(&FetchAssetResponse::error_message(9, "not found"))
+        );
+    }
+
+    #[tokio::test]
+    async fn async_asset_handler_success() {
+        let (participant, rx) = make_participant_with_rx("alice");
+        let guard = participant.fetch_asset_sem().try_acquire().unwrap();
+        let responder = AssetResponder::new(test_client(&participant), 8, guard);
+
+        let handler = AsyncAssetHandlerFn(Arc::new(|_client: Client, _uri: String| async move {
+            Ok::<_, String>(b"PNG data".to_vec())
+        }));
+        handler.fetch("https://example.com/asset.png".to_string(), responder);
+
+        let msg = tokio::time::timeout(Duration::from_secs(1), rx.recv_async())
+            .await
+            .expect("timed out waiting for asset response")
+            .expect("channel closed");
+        assert_eq!(
+            msg.data,
+            encode_binary_message(&FetchAssetResponse::asset_data(8, &b"PNG data"[..]))
         );
     }
 }

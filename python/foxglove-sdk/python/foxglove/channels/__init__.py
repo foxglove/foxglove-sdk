@@ -50,7 +50,6 @@ from foxglove._foxglove_py.channels import (
     TriangleListPrimitiveChannel,
     Vector2Channel,
     Vector3Channel,
-    Velocity3Channel,
     VoxelGridChannel,
 )
 
@@ -99,6 +98,5 @@ __all__ = [
     "TriangleListPrimitiveChannel",
     "Vector2Channel",
     "Vector3Channel",
-    "Velocity3Channel",
     "VoxelGridChannel",
 ]

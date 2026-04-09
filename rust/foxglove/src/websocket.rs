@@ -1,4 +1,4 @@
-//! Websocket functionality
+//! WebSocket functionality
 
 mod advertise;
 mod capability;

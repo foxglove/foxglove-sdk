@@ -3,8 +3,8 @@
 #include <foxglove/channel.hpp>
 #include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
-#include <foxglove/server/parameter.hpp>
-#include <foxglove/server/service.hpp>
+#include <foxglove/parameter.hpp>
+#include <foxglove/service.hpp>
 
 #include <cstdint>
 #include <functional>
@@ -28,6 +28,16 @@ enum class RemoteAccessConnectionStatus : uint8_t {
   ShuttingDown = 2,
   /// The gateway has been shut down. No further listener callbacks will be invoked.
   Shutdown = 3,
+};
+
+/// @brief Level indicator for a remote access gateway status message.
+enum class RemoteAccessStatusLevel : uint8_t {
+  /// Info level.
+  Info = 0,
+  /// Warning level.
+  Warning = 1,
+  /// Error level.
+  Error = 2,
 };
 
 /// @brief Capabilities that a remote access gateway may advertise to clients.
@@ -171,6 +181,26 @@ public:
   ///
   /// @param params Updated parameters.
   void publishParameterValues(std::vector<Parameter>&& params);
+
+  /// @brief Publishes a status message to all connected participants.
+  ///
+  /// The caller may optionally provide a message ID, which can be used in a
+  /// subsequent call to `removeStatus()`.
+  ///
+  /// @param level Status level value.
+  /// @param message Status message.
+  /// @param id Optional message ID.
+  [[nodiscard]] FoxgloveError publishStatus(
+    RemoteAccessStatusLevel level, std::string_view message,
+    std::optional<std::string_view> id = std::nullopt
+  ) const noexcept;
+
+  /// @brief Removes status messages from all connected participants.
+  ///
+  /// Previously published status messages are referenced by ID.
+  ///
+  /// @param ids Message IDs.
+  [[nodiscard]] FoxgloveError removeStatus(const std::vector<std::string_view>& ids) const;
 
   /// @brief Gracefully shut down the gateway.
   FoxgloveError stop();

@@ -86,7 +86,7 @@ impl AppUrl {
         self
     }
 
-    /// Sets a websocket data source.
+    /// Sets a WebSocket data source.
     pub fn with_websocket(mut self, url: impl Into<String>) -> Self {
         self.data_source = Some(DataSource::WebSocket(url.into()));
         self

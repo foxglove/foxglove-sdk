@@ -18,10 +18,9 @@ use crate::{
     Context, FoxgloveError, SinkChannelFilter,
     api_client::{DeviceToken, FoxgloveApiClientBuilder, RemoteSessionRequest},
     library_version::get_library_version,
-    protocol::v2::parameter::Parameter,
-    protocol::v2::server::ServerInfo,
+    protocol::v2::{parameter::Parameter, server::ServerInfo},
     remote_access::{
-        Capability, RemoteAccessError,
+        AssetHandler, Capability, Client, RemoteAccessError,
         credentials_provider::CredentialsProvider,
         protocol_version,
         session::{DEFAULT_PENDING_CLIENT_READER_TIMEOUT, RemoteAccessSession, SessionParams},
@@ -82,6 +81,7 @@ pub(crate) struct ConnectionParams {
     pub listener: Option<Arc<dyn super::Listener>>,
     pub capabilities: Vec<Capability>,
     pub supported_encodings: Option<IndexSet<String>>,
+    pub fetch_asset_handler: Option<Arc<dyn AssetHandler<Client>>>,
     pub runtime: Handle,
     pub channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     pub server_info: Option<HashMap<String, String>>,
@@ -100,6 +100,7 @@ pub(crate) struct RemoteAccessConnection {
     listener: Option<Arc<dyn super::Listener>>,
     capabilities: Vec<Capability>,
     supported_encodings: Option<IndexSet<String>>,
+    fetch_asset_handler: Option<Arc<dyn AssetHandler<Client>>>,
     runtime: Handle,
     channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     server_info: Option<HashMap<String, String>>,
@@ -126,6 +127,7 @@ impl RemoteAccessConnection {
             listener: params.listener,
             capabilities: params.capabilities,
             supported_encodings: params.supported_encodings,
+            fetch_asset_handler: params.fetch_asset_handler,
             runtime: params.runtime,
             channel_filter: params.channel_filter,
             server_info: params.server_info,
@@ -152,6 +154,24 @@ impl RemoteAccessConnection {
     pub fn publish_parameter_values(&self, parameters: Vec<Parameter>) {
         if let Some(session) = self.session.lock().clone() {
             session.publish_parameter_values(parameters);
+        }
+    }
+
+    /// Publishes a status message to all connected participants.
+    ///
+    /// If no session is currently active (e.g. while reconnecting), this is a no-op.
+    pub fn publish_status(&self, status: super::Status) {
+        if let Some(session) = self.session.lock().clone() {
+            session.publish_status(status);
+        }
+    }
+
+    /// Removes status messages by id from all connected participants.
+    ///
+    /// If no session is currently active (e.g. while reconnecting), this is a no-op.
+    pub fn remove_status(&self, status_ids: Vec<String>) {
+        if let Some(session) = self.session.lock().clone() {
+            session.remove_status(status_ids);
         }
     }
 
@@ -259,6 +279,7 @@ impl RemoteAccessConnection {
                         remote_access_session_id: self
                             .remote_access_session_id()
                             .map(str::to_owned),
+                        fetch_asset_handler: self.fetch_asset_handler.clone(),
                     };
                     (
                         Arc::new(RemoteAccessSession::new(session_params)),

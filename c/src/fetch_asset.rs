@@ -1,6 +1,6 @@
 use std::ffi::c_void;
 
-use foxglove::websocket::{AssetHandler, AssetResponder};
+use foxglove::websocket::{AssetHandler, AssetResponder, Client};
 
 use crate::{FoxgloveString, bytes::FoxgloveBytes};
 
@@ -49,7 +49,7 @@ impl FetchAssetHandler {
 }
 unsafe impl Send for FetchAssetHandler {}
 unsafe impl Sync for FetchAssetHandler {}
-impl AssetHandler for FetchAssetHandler {
+impl AssetHandler<Client> for FetchAssetHandler {
     fn fetch(&self, uri: String, responder: AssetResponder) {
         let c_uri = FoxgloveString::from(&uri);
         let c_responder = FoxgloveFetchAssetResponder(responder).into_raw();
@@ -83,7 +83,7 @@ pub unsafe extern "C" fn foxglove_fetch_asset_respond_ok(
 /// - `responder` must be a pointer to a `foxglove_fetch_asset_responder` obtained via the
 ///   `foxglove_server_options.fetch_asset` callback. This value is moved into this
 ///   function, and must not accessed afterwards.
-/// - `message` must be a pointer to a valid UTF-8 string. This value is copied by this function.
+/// - `message` must be a valid UTF-8 string. This value is copied by this function.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_fetch_asset_respond_error(
     responder: *mut FoxgloveFetchAssetResponder,

@@ -28,7 +28,7 @@ use super::ws_protocol::server::{
     AdvertiseServices, RemoveStatus, ServerInfo, UnadvertiseServices,
 };
 use super::{
-    AssetHandler, Capability, ClientId, ConnectionGraph, Parameter, ServerListener, Status,
+    AssetHandler, Capability, Client, ClientId, ConnectionGraph, Parameter, ServerListener, Status,
     advertise, handshake,
 };
 
@@ -46,7 +46,7 @@ pub(crate) struct ServerOptions {
     pub services: HashMap<String, Service>,
     pub supported_encodings: Option<IndexSet<String>>,
     pub runtime: Option<Handle>,
-    pub fetch_asset_handler: Option<Box<dyn AssetHandler>>,
+    pub fetch_asset_handler: Option<Box<dyn AssetHandler<Client>>>,
     pub tls_identity: Option<TlsIdentity>,
     pub channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     pub server_info: Option<HashMap<String, String>>,
@@ -152,7 +152,7 @@ pub(crate) fn create_server(
     }))
 }
 
-/// A websocket server that implements the Foxglove WebSocket Protocol
+/// A WebSocket server that implements the Foxglove WebSocket Protocol
 pub(crate) struct Server {
     /// A weak reference to the Arc holding the server.
     /// This is used to get a reference to the outer `Arc<Server>` from Server methods.
@@ -184,7 +184,7 @@ pub(crate) struct Server {
     /// Registered services.
     services: parking_lot::RwLock<ServiceMap>,
     /// Handler for fetch asset requests
-    fetch_asset_handler: Option<Box<dyn AssetHandler>>,
+    fetch_asset_handler: Option<Box<dyn AssetHandler<Client>>>,
     /// Client tasks.
     tasks: parking_lot::Mutex<Option<JoinSet<()>>>,
     /// Configuration to support TLS streams when enabled.
@@ -289,7 +289,7 @@ impl Server {
     }
 
     /// Returns a reference to the fetch asset handler.
-    pub(super) fn fetch_asset_handler(&self) -> Option<&dyn AssetHandler> {
+    pub(super) fn fetch_asset_handler(&self) -> Option<&dyn AssetHandler<Client>> {
         self.fetch_asset_handler.as_deref()
     }
 

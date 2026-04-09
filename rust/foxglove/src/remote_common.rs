@@ -1,8 +1,9 @@
-//! Common types shared between the websocket and remote access modules.
+//! Common types shared between the WebSocket and remote access modules.
 
 use std::sync::atomic::{AtomicU32, Ordering};
 
 pub(crate) mod connection_graph;
+pub(crate) mod fetch_asset;
 pub(crate) mod semaphore;
 pub(crate) mod service;
 

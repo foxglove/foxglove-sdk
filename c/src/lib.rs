@@ -216,8 +216,8 @@ impl FoxgloveSchema {
     /// Converts a schema to the native type.
     ///
     /// # Safety
-    /// - `name` must be a valid pointer to a UTF-8 string.
-    /// - `encoding` must be a valid pointer to a UTF-8 string.
+    /// - `name` must be a valid UTF-8 string.
+    /// - `encoding` must be a valid UTF-8 string.
     /// - `data` must be a valid pointer to a buffer of `data_len` bytes.
     unsafe fn to_native(&self) -> Result<foxglove::Schema, foxglove::FoxgloveError> {
         let name = unsafe { self.name.as_utf8_str() }
