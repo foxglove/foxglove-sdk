@@ -10,10 +10,11 @@ mod listener;
 mod participant;
 pub(super) mod protocol_version;
 mod rtt_tracker;
-mod service;
+pub mod service;
 mod session;
 mod session_state;
 
+pub use crate::remote_common::ClientId;
 pub use capability::Capability;
 pub use client::Client;
 pub use connection::ConnectionStatus;
@@ -25,12 +26,6 @@ pub use crate::protocol::v2::parameter::{Parameter, ParameterType, ParameterValu
 
 // Re-export status types so callers can publish and remove status messages.
 pub use crate::protocol::v2::server::status::{Level as StatusLevel, Status};
-
-// Re-export service types so Gateway::services() callers can construct services.
-pub use crate::remote_common::service::{
-    Handler, Request, Responder, Service, ServiceSchema, SyncHandler,
-};
-
 use thiserror::Error;
 
 use crate::api_client::FoxgloveApiClientError;

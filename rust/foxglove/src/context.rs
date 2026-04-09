@@ -262,7 +262,7 @@ impl Context {
         McapWriter::with_options(options).context(self)
     }
 
-    /// Returns a builder for a websocket server in this context.
+    /// Returns a builder for a WebSocket server in this context.
     #[cfg(feature = "websocket")]
     pub fn websocket_server(self: &Arc<Self>) -> crate::WebSocketServer {
         crate::WebSocketServer::new().context(self)
