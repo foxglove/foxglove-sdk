@@ -2,10 +2,20 @@ ROS_DISTRIBUTIONS := humble jazzy kilted rolling
 USE_LOCAL_SDK := OFF
 EXTRA_DOCKER_ARGS :=
 DOCKER_USER_ARGS :=
+DOCKER_RUN_ARGS :=
 GTEST_REPEAT := 1
 
 ifeq ($(shell uname -s), Linux)
 	DOCKER_USER_ARGS = --build-arg USER_UID=$(shell id -u) --build-arg USER_GID=$(shell id -g)
+endif
+
+# Detect rootless podman. In rootless mode, UID 0 inside the container maps to
+# the host user's UID, so running as root avoids both permission issues on volume
+# mounts and the slow id-mapped layer copies that --userns=keep-id requires.
+ifneq ($(shell docker --version 2>&1 | grep -c podman),0)
+	ifneq ($(shell docker info --format '{{.Host.Security.Rootless}}' 2>/dev/null),false)
+		DOCKER_RUN_ARGS += --user 0:0
+	endif
 endif
 
 .PHONY: all
@@ -41,15 +51,15 @@ docker-build-image-$(1):
 
 .PHONY: docker-build-$(1)
 docker-build-$(1): docker-build-image-$(1)
-	docker run --rm -v $(PWD)/..:/sdk foxglove-sdk-ros-$(1) make USE_LOCAL_SDK=$(USE_LOCAL_SDK) build
+	docker run --rm $(DOCKER_RUN_ARGS) -v $(PWD)/..:/sdk foxglove-sdk-ros-$(1) make USE_LOCAL_SDK=$(USE_LOCAL_SDK) build
 
 .PHONY: docker-test-$(1)
 docker-test-$(1):
-	docker run --rm -v $(PWD)/..:/sdk foxglove-sdk-ros-$(1) make GTEST_REPEAT=$(GTEST_REPEAT) test
+	docker run --rm $(DOCKER_RUN_ARGS) -v $(PWD)/..:/sdk foxglove-sdk-ros-$(1) make GTEST_REPEAT=$(GTEST_REPEAT) test
 
 .PHONY: docker-sh-$(1)
 docker-sh-$(1):
-	docker run --rm -it -v $(PWD)/..:/sdk foxglove-sdk-ros-$(1)
+	docker run --rm -it $(DOCKER_RUN_ARGS) -v $(PWD)/..:/sdk foxglove-sdk-ros-$(1)
 
 endef
 $(foreach distribution,$(ROS_DISTRIBUTIONS),$(eval $(call generate_ros_targets,$(strip $(distribution)))))
