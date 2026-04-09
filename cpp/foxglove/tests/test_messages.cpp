@@ -3,12 +3,7 @@
 #include <foxglove/messages.hpp>
 
 #include <catch2/catch_test_macros.hpp>
-#include <catch2/matchers/catch_matchers_string.hpp>
 
-#include <string>
-
-using Catch::Matchers::ContainsSubstring;
-using Catch::Matchers::Equals;
 using namespace foxglove;
 using namespace foxglove::messages;
 
