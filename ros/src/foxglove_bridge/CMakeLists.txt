@@ -102,16 +102,37 @@ else()
     URL_HASH SHA256=${FOXGLOVE_SDK_SHA}
   )
   FetchContent_MakeAvailable(foxglove_sdk)
-  add_library(foxglove_cpp_static STATIC)
-  target_include_directories(foxglove_cpp_static SYSTEM
-    PUBLIC
-      $<BUILD_INTERFACE:${foxglove_sdk_SOURCE_DIR}/include>
-      $<INSTALL_INTERFACE:include>
-  )
   file(GLOB_RECURSE FOXGLOVE_SDK_SOURCES CONFIGURE_DEPENDS "${foxglove_sdk_SOURCE_DIR}/src/*.cpp")
-  target_sources(foxglove_cpp_static PRIVATE ${FOXGLOVE_SDK_SOURCES})
-  set_target_properties(foxglove_cpp_static PROPERTIES POSITION_INDEPENDENT_CODE ON)
-  target_link_libraries(foxglove_cpp_static PRIVATE ${foxglove_sdk_SOURCE_DIR}/lib/libfoxglove.a)
+
+  if (FOXGLOVE_BRIDGE_REMOTE_ACCESS)
+    add_library(foxglove_cpp_shared SHARED)
+    target_include_directories(foxglove_cpp_shared SYSTEM
+      PUBLIC
+        $<BUILD_INTERFACE:${foxglove_sdk_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>
+    )
+    target_sources(foxglove_cpp_shared PRIVATE ${FOXGLOVE_SDK_SOURCES})
+    # Import the prebuilt C shared library from the fetched SDK
+    add_library(foxglove-shared SHARED IMPORTED)
+    set_target_properties(foxglove-shared PROPERTIES
+      IMPORTED_LOCATION ${foxglove_sdk_SOURCE_DIR}/lib/libfoxglove.so
+    )
+    target_link_libraries(foxglove_cpp_shared PRIVATE foxglove-shared)
+    set_target_properties(foxglove_cpp_shared PROPERTIES
+      INSTALL_RPATH "$ORIGIN"
+      BUILD_WITH_INSTALL_RPATH TRUE
+    )
+  else()
+    add_library(foxglove_cpp_static STATIC)
+    target_include_directories(foxglove_cpp_static SYSTEM
+      PUBLIC
+        $<BUILD_INTERFACE:${foxglove_sdk_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>
+    )
+    target_sources(foxglove_cpp_static PRIVATE ${FOXGLOVE_SDK_SOURCES})
+    set_target_properties(foxglove_cpp_static PROPERTIES POSITION_INDEPENDENT_CODE ON)
+    target_link_libraries(foxglove_cpp_static PRIVATE ${foxglove_sdk_SOURCE_DIR}/lib/libfoxglove.a)
+  endif()
 endif()
 
 find_program(GIT_SCM git DOC "Git version control")
@@ -257,7 +278,7 @@ install(TARGETS foxglove_bridge_component
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin
 )
-if (FOXGLOVE_BRIDGE_REMOTE_ACCESS AND USE_LOCAL_SDK)
+if (FOXGLOVE_BRIDGE_REMOTE_ACCESS)
   # Install the SDK shared libraries alongside the bridge component library so
   # the runtime linker can find them via RPATH ($ORIGIN).
   install(FILES $<TARGET_FILE:foxglove_cpp_shared> DESTINATION lib)
