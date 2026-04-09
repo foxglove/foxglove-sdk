@@ -4,7 +4,7 @@
 #include <foxglove/foxglove.hpp>
 #include <foxglove/mcap.hpp>
 #include <foxglove/messages.hpp>
-#include <foxglove/server.hpp>
+#include <foxglove/websocket.hpp>
 
 #include <atomic>
 #include <chrono>
