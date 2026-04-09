@@ -190,7 +190,7 @@ public:
    * std::nullopt indicates that no more messages can be read.
    * */
   virtual std::optional<Result<Message>> next() = 0;
-  virtual ~AbstractMessageIterator(){};
+  virtual ~AbstractMessageIterator() {};
 };
 
 class AbstractDataLoader {

@@ -27,7 +27,7 @@ std::optional<std::map<std::string, std::string>> ChannelDescriptor::metadata() 
     return std::nullopt;
   }
 
-  struct foxglove_key_value item {};
+  struct foxglove_key_value item{};
   while (foxglove_channel_descriptor_metadata_iter_next(iter, &item)) {
     metadata[std::string(item.key.data, item.key.len)] =
       std::string(item.value.data, item.value.len);
@@ -141,7 +141,7 @@ std::optional<std::map<std::string, std::string>> RawChannel::metadata() const n
     return std::nullopt;
   }
 
-  struct foxglove_key_value item {};
+  struct foxglove_key_value item{};
   while (foxglove_channel_metadata_iter_next(iter, &item)) {
     result[std::string(item.key.data, item.key.len)] = std::string(item.value.data, item.value.len);
   }
