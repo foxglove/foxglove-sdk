@@ -5406,9 +5406,9 @@ foxglove_error foxglove_gateway_publish_parameter_values(const struct foxglove_g
  *
  * # Safety
  * - `gateway` must be a valid pointer to a gateway started with `foxglove_gateway_start`.
- * - `message` must be a valid pointer to a UTF-8 string, which must remain valid for the duration
- *   of this call.
- * - `id` must either be NULL, or a valid pointer to a UTF-8 string, which must remain valid for
+ * - `message` must be a valid UTF-8 string, which must remain valid for the duration of this
+ *   call.
+ * - `id` must either be NULL, or a pointer to a valid UTF-8 string, which must remain valid for
  *   the duration of this call.
  */
 foxglove_error foxglove_gateway_publish_status(const struct foxglove_gateway *gateway,
@@ -5425,8 +5425,8 @@ foxglove_error foxglove_gateway_publish_status(const struct foxglove_gateway *ga
  *
  * # Safety
  * - `gateway` must be a valid pointer to a gateway started with `foxglove_gateway_start`.
- * - `ids` must be a valid pointer to an array of pointers to valid UTF-8 strings, all of which
- *   must remain valid for the duration of this call.
+ * - `ids` must be a pointer to an array of valid UTF-8 strings, all of which must remain valid
+ *   for the duration of this call.
  */
 foxglove_error foxglove_gateway_remove_status(const struct foxglove_gateway *gateway,
                                               const struct foxglove_string *ids,

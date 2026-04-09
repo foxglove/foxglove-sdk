@@ -685,9 +685,9 @@ pub unsafe extern "C" fn foxglove_gateway_publish_parameter_values(
 ///
 /// # Safety
 /// - `gateway` must be a valid pointer to a gateway started with `foxglove_gateway_start`.
-/// - `message` must be a valid pointer to a UTF-8 string, which must remain valid for the duration
-///   of this call.
-/// - `id` must either be NULL, or a valid pointer to a UTF-8 string, which must remain valid for
+/// - `message` must be a valid UTF-8 string, which must remain valid for the duration of this
+///   call.
+/// - `id` must either be NULL, or a pointer to a valid UTF-8 string, which must remain valid for
 ///   the duration of this call.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_gateway_publish_status(
@@ -724,8 +724,8 @@ pub unsafe extern "C" fn foxglove_gateway_publish_status(
 ///
 /// # Safety
 /// - `gateway` must be a valid pointer to a gateway started with `foxglove_gateway_start`.
-/// - `ids` must be a valid pointer to an array of pointers to valid UTF-8 strings, all of which
-///   must remain valid for the duration of this call.
+/// - `ids` must be a pointer to an array of valid UTF-8 strings, all of which must remain valid
+///   for the duration of this call.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_gateway_remove_status(
     gateway: Option<&FoxgloveGateway>,
@@ -738,6 +738,9 @@ pub unsafe extern "C" fn foxglove_gateway_remove_status(
     let Some(handle) = gateway.as_ref() else {
         return FoxgloveError::SinkClosed;
     };
+    if ids_count == 0 {
+        return FoxgloveError::Ok;
+    }
     if ids.is_null() {
         return FoxgloveError::ValueError;
     }
