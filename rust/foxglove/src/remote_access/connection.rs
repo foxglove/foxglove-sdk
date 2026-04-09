@@ -157,6 +157,24 @@ impl RemoteAccessConnection {
         }
     }
 
+    /// Publishes a status message to all connected participants.
+    ///
+    /// If no session is currently active (e.g. while reconnecting), this is a no-op.
+    pub fn publish_status(&self, status: super::Status) {
+        if let Some(session) = self.session.lock().clone() {
+            session.publish_status(status);
+        }
+    }
+
+    /// Removes status messages by id from all connected participants.
+    ///
+    /// If no session is currently active (e.g. while reconnecting), this is a no-op.
+    pub fn remove_status(&self, status_ids: Vec<String>) {
+        if let Some(session) = self.session.lock().clone() {
+            session.remove_status(status_ids);
+        }
+    }
+
     /// Update the connection status, notifying the listener if it changed.
     fn set_status(&self, status: ConnectionStatus) {
         let prev = self.status.swap(status as u8, Ordering::Relaxed);

@@ -260,6 +260,17 @@ impl ViewerConnection {
         }
     }
 
+    /// Reads and returns the next RemoveStatus message.
+    pub async fn expect_remove_status(
+        &mut self,
+    ) -> Result<foxglove::protocol::v2::server::RemoveStatus> {
+        let msg = self.frame_reader.next_server_message().await?;
+        match msg {
+            ServerMessage::RemoveStatus(remove) => Ok(remove),
+            other => anyhow::bail!("expected RemoveStatus, got: {other:?}"),
+        }
+    }
+
     /// Reads and returns the next Unadvertise message.
     pub async fn expect_unadvertise(
         &mut self,
