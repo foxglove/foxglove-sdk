@@ -14,9 +14,6 @@
 #include <string>
 #include <type_traits>
 
-struct foxglove_channel;
-struct foxglove_channel_descriptor;
-
 /// The foxglove namespace.
 namespace foxglove {
 

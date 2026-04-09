@@ -297,7 +297,7 @@ impl Sink for RemoteAccessSession {
         if let Some(listener) = &self.listener {
             let descriptor = channel.descriptor();
             for (client_id, participant_id) in subscriber_clients {
-                let client = Client::new(client_id, participant_id, self.sink_id);
+                let client = Client::new(client_id, participant_id);
                 listener.on_unsubscribe(&client, descriptor);
             }
         }
@@ -841,7 +841,6 @@ impl RemoteAccessSession {
                 let client = Client::new(
                     participant.client_id(),
                     participant.participant_id().clone(),
-                    self.sink_id,
                 );
                 for descriptor in &subscribe_result.newly_subscribed_descriptors {
                     listener.on_subscribe(&client, descriptor);
@@ -888,7 +887,6 @@ impl RemoteAccessSession {
                 let client = Client::new(
                     participant.client_id(),
                     participant.participant_id().clone(),
-                    self.sink_id,
                 );
                 for descriptor in &unsubscribe_result.actually_unsubscribed_descriptors {
                     listener.on_unsubscribe(&client, descriptor);
@@ -919,7 +917,6 @@ impl RemoteAccessSession {
         let client = Client::new(
             participant.client_id(),
             participant.participant_id().clone(),
-            self.sink_id,
         );
 
         for ch in msg.channels {
@@ -1002,7 +999,6 @@ impl RemoteAccessSession {
         let client = Client::new(
             participant.client_id(),
             participant.participant_id().clone(),
-            self.sink_id,
         );
 
         for channel_id_raw in msg.channel_ids {
@@ -1161,7 +1157,6 @@ impl RemoteAccessSession {
             let client = Client::new(
                 participant.client_id(),
                 participant.participant_id().clone(),
-                self.sink_id,
             );
             listener.on_message_data(&client, &descriptor, &msg.data);
         }
@@ -1255,7 +1250,7 @@ impl RemoteAccessSession {
         }
 
         if let Some((listener, client_id)) = self.listener.as_ref().zip(removed.client_id) {
-            let client = Client::new(client_id, participant_id.clone(), self.sink_id);
+            let client = Client::new(client_id, participant_id.clone());
 
             for descriptor in &removed.subscribed_descriptors {
                 listener.on_unsubscribe(&client, descriptor);
@@ -1279,6 +1274,13 @@ impl RemoteAccessSession {
         while let Some(event) = room_events.recv().await {
             match event {
                 RoomEvent::ParticipantConnected(participant) => {
+                    info!(
+                        remote_access_session_id,
+                        participant_identity = %participant.identity(),
+                        "participant connected to room (waiting for ParticipantActive)"
+                    );
+                }
+                RoomEvent::ParticipantActive(participant) => {
                     let participant_identity = participant.identity();
                     let Some(version) = protocol_version::check_participant_protocol_version(
                         &participant_identity,
@@ -1296,7 +1298,7 @@ impl RemoteAccessSession {
                         remote_access_session_id,
                         participant_identity = %participant_identity,
                         version = %version,
-                        "participant connected to room"
+                        "participant active in room"
                     );
                     if let Err(e) = self
                         .add_participant(participant.identity(), version, server_info.clone())
@@ -1702,19 +1704,17 @@ impl RemoteAccessSession {
             return;
         };
 
-        if let Some(handler) = self.fetch_asset_handler.as_ref() {
-            let client = Client::with_sender(
-                participant.client_id(),
-                participant.participant_id().clone(),
-                self.sink_id,
-                participant,
-            );
-            let responder = AssetResponder::new(client, request_id, guard);
-            handler.fetch(uri, responder);
-        } else {
-            tracing::error!("Gateway advertised the Assets capability without providing a handler");
-            participant.send_asset_error("Server does not have a fetch asset handler", request_id);
-        }
+        let handler = self.fetch_asset_handler.as_ref().expect(
+            "Gateway advertised the Assets capability without providing a handler; \
+             this should have been caught in Gateway::start()",
+        );
+        let client = Client::with_sender(
+            participant.client_id(),
+            participant.participant_id().clone(),
+            participant,
+        );
+        let responder = AssetResponder::new(client, request_id, guard);
+        handler.fetch(uri, responder);
     }
 
     /// Handle a `GetParameters` request from a client.
@@ -1736,7 +1736,6 @@ impl RemoteAccessSession {
             let client = Client::new(
                 participant.client_id(),
                 participant.participant_id().clone(),
-                self.sink_id,
             );
             let parameters =
                 listener.on_get_parameters(&client, param_names, request_id.as_deref());
@@ -1763,7 +1762,6 @@ impl RemoteAccessSession {
             let client = Client::new(
                 participant.client_id(),
                 participant.participant_id().clone(),
-                self.sink_id,
             );
             let updated = listener.on_set_parameters(&client, parameters, request_id.as_deref());
 
@@ -2164,7 +2162,6 @@ mod tests {
         Client::with_sender(
             participant.client_id(),
             participant.participant_id().clone(),
-            SinkId::next(),
             participant,
         )
     }

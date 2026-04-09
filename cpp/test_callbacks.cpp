@@ -1,5 +1,5 @@
 #include <foxglove/context.hpp>
-#include <foxglove/server.hpp>
+#include <foxglove/websocket.hpp>
 
 #include <atomic>
 #include <chrono>

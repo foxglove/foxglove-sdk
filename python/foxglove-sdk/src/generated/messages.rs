@@ -1630,7 +1630,7 @@ impl LocationFix {
         position_covariance: Option<Vec<f64>>,
         position_covariance_type: LocationFixPositionCovarianceType,
         heading: Option<f64>,
-        velocity: Option<Velocity3>,
+        velocity: Option<Vector3>,
         color: Option<Color>,
         metadata: Option<Vec<KeyValuePair>>,
     ) -> Self {
@@ -3261,8 +3261,8 @@ impl From<TriangleListPrimitive> for foxglove::messages::TriangleListPrimitive {
 
 /// A vector in 2D space that represents a direction only
 ///
-/// :param x: x coordinate length
-/// :param y: y coordinate length
+/// :param x: x component
+/// :param y: y component
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/vector2
 #[pyclass(module = "foxglove.messages")]
@@ -3307,9 +3307,9 @@ impl From<Vector2> for foxglove::messages::Vector2 {
 
 /// A vector in 3D space that represents a direction only
 ///
-/// :param x: x coordinate length
-/// :param y: y coordinate length
-/// :param z: z coordinate length
+/// :param x: x component
+/// :param y: y component
+/// :param z: z component
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/vector3
 #[pyclass(module = "foxglove.messages")]
@@ -3351,56 +3351,6 @@ impl Vector3 {
 
 impl From<Vector3> for foxglove::messages::Vector3 {
     fn from(value: Vector3) -> Self {
-        value.0
-    }
-}
-
-/// A velocity vector in 3D space
-///
-/// :param x: x component
-/// :param y: y component
-/// :param z: z component
-///
-/// See https://docs.foxglove.dev/docs/visualization/message-schemas/velocity3
-#[pyclass(module = "foxglove.messages")]
-#[derive(Clone)]
-pub(crate) struct Velocity3(pub(crate) foxglove::messages::Velocity3);
-#[pymethods]
-impl Velocity3 {
-    #[new]
-    #[pyo3(signature = (*, x=0.0, y=0.0, z=0.0) )]
-    fn new(x: f64, y: f64, z: f64) -> Self {
-        Self(foxglove::messages::Velocity3 { x, y, z })
-    }
-    fn __repr__(&self) -> String {
-        format!(
-            "Velocity3(x={:?}, y={:?}, z={:?})",
-            self.0.x, self.0.y, self.0.z,
-        )
-    }
-    /// Returns the Velocity3 schema.
-    #[staticmethod]
-    fn get_schema() -> PySchema {
-        foxglove::messages::Velocity3::get_schema().unwrap().into()
-    }
-    /// Encodes the Velocity3 as protobuf.
-    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
-        PyBytes::new_with(
-            py,
-            self.0.encoded_len().expect("foxglove schemas provide len"),
-            |mut b: &mut [u8]| {
-                self.0
-                    .encode(&mut b)
-                    .expect("encoding len was provided above");
-                Ok(())
-            },
-        )
-        .expect("failed to allocate buffer for encoded message")
-    }
-}
-
-impl From<Velocity3> for foxglove::messages::Velocity3 {
-    fn from(value: Velocity3) -> Self {
         value.0
     }
 }
@@ -3461,7 +3411,6 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<TriangleListPrimitive>()?;
     module.add_class::<Vector2>()?;
     module.add_class::<Vector3>()?;
-    module.add_class::<Velocity3>()?;
 
     // Define as a package
     // https://github.com/PyO3/pyo3/issues/759

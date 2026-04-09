@@ -1,5 +1,5 @@
 #include <foxglove-c/foxglove-c.h>
-#include <foxglove/server/service.hpp>
+#include <foxglove/service.hpp>
 
 #include <memory>
 

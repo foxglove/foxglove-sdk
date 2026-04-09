@@ -10,10 +10,11 @@ mod listener;
 mod participant;
 pub(super) mod protocol_version;
 mod rtt_tracker;
-mod service;
+pub mod service;
 mod session;
 mod session_state;
 
+pub use crate::remote_common::ClientId;
 pub use capability::Capability;
 pub use client::Client;
 pub use connection::ConnectionStatus;

@@ -6,9 +6,9 @@ package foxglove;
 
 // A vector in 2D space that represents a direction only
 message Vector2 {
-  // x coordinate length
+  // x component
   double x = 1;
 
-  // y coordinate length
+  // y component
   double y = 2;
 }

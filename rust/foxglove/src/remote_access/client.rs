@@ -2,7 +2,6 @@ use std::sync::{Arc, Weak};
 
 use livekit::id::ParticipantIdentity;
 
-use crate::SinkId;
 use crate::remote_access::participant::Participant;
 use crate::remote_common::ClientId;
 use crate::remote_common::fetch_asset::SendAssetResponse;
@@ -14,8 +13,6 @@ pub struct Client {
     client_id: ClientId,
     /// LiveKit participant ID.
     participant_id: ParticipantIdentity,
-    /// The sink ID for the session this client belongs to.
-    sink_id: SinkId,
     /// Weak reference to the participant, used for sending asset responses.
     /// Only set when created via `with_sender`. Using Weak allows the participant
     /// to be cleaned up even if a slow handler is still holding a Client reference.
@@ -24,15 +21,10 @@ pub struct Client {
 
 impl Client {
     /// Instantiate a new client.
-    pub(crate) fn new(
-        client_id: ClientId,
-        participant_id: ParticipantIdentity,
-        sink_id: SinkId,
-    ) -> Self {
+    pub(crate) fn new(client_id: ClientId, participant_id: ParticipantIdentity) -> Self {
         Self {
             client_id,
             participant_id,
-            sink_id,
             participant: None,
         }
     }
@@ -41,13 +33,11 @@ impl Client {
     pub(super) fn with_sender(
         client_id: ClientId,
         participant_id: ParticipantIdentity,
-        sink_id: SinkId,
         participant: &Arc<Participant>,
     ) -> Self {
         Self {
             client_id,
             participant_id,
-            sink_id,
             participant: Some(Arc::downgrade(participant)),
         }
     }
@@ -74,7 +64,6 @@ impl SendAssetResponse for Client {
             tracing::debug!(
                 client_id = ?self.client_id,
                 participant_id = ?self.participant_id,
-                sink_id = ?self.sink_id,
                 request_id,
                 "send_asset_response called but participant is not set"
             );
@@ -84,7 +73,6 @@ impl SendAssetResponse for Client {
             tracing::debug!(
                 client_id = ?self.client_id,
                 participant_id = ?self.participant_id,
-                sink_id = ?self.sink_id,
                 request_id,
                 "participant disconnected, dropping asset response"
             );

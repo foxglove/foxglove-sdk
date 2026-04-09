@@ -148,15 +148,15 @@
                       "properties": {
                         "x": {
                           "type": "number",
-                          "description": "x coordinate length"
+                          "description": "x component"
                         },
                         "y": {
                           "type": "number",
-                          "description": "y coordinate length"
+                          "description": "y component"
                         },
                         "z": {
                           "type": "number",
-                          "description": "z coordinate length"
+                          "description": "z component"
                         }
                       },
                       "required": [
@@ -276,15 +276,15 @@
                       "properties": {
                         "x": {
                           "type": "number",
-                          "description": "x coordinate length"
+                          "description": "x component"
                         },
                         "y": {
                           "type": "number",
-                          "description": "y coordinate length"
+                          "description": "y component"
                         },
                         "z": {
                           "type": "number",
-                          "description": "z coordinate length"
+                          "description": "z component"
                         }
                       },
                       "required": [
@@ -335,15 +335,15 @@
                   "properties": {
                     "x": {
                       "type": "number",
-                      "description": "x coordinate length"
+                      "description": "x component"
                     },
                     "y": {
                       "type": "number",
-                      "description": "y coordinate length"
+                      "description": "y component"
                     },
                     "z": {
                       "type": "number",
-                      "description": "z coordinate length"
+                      "description": "z component"
                     }
                   },
                   "required": [
@@ -409,15 +409,15 @@
                       "properties": {
                         "x": {
                           "type": "number",
-                          "description": "x coordinate length"
+                          "description": "x component"
                         },
                         "y": {
                           "type": "number",
-                          "description": "y coordinate length"
+                          "description": "y component"
                         },
                         "z": {
                           "type": "number",
-                          "description": "z coordinate length"
+                          "description": "z component"
                         }
                       },
                       "required": [
@@ -468,15 +468,15 @@
                   "properties": {
                     "x": {
                       "type": "number",
-                      "description": "x coordinate length"
+                      "description": "x component"
                     },
                     "y": {
                       "type": "number",
-                      "description": "y coordinate length"
+                      "description": "y component"
                     },
                     "z": {
                       "type": "number",
-                      "description": "z coordinate length"
+                      "description": "z component"
                     }
                   },
                   "required": [
@@ -542,15 +542,15 @@
                       "properties": {
                         "x": {
                           "type": "number",
-                          "description": "x coordinate length"
+                          "description": "x component"
                         },
                         "y": {
                           "type": "number",
-                          "description": "y coordinate length"
+                          "description": "y component"
                         },
                         "z": {
                           "type": "number",
-                          "description": "z coordinate length"
+                          "description": "z component"
                         }
                       },
                       "required": [
@@ -601,15 +601,15 @@
                   "properties": {
                     "x": {
                       "type": "number",
-                      "description": "x coordinate length"
+                      "description": "x component"
                     },
                     "y": {
                       "type": "number",
-                      "description": "y coordinate length"
+                      "description": "y component"
                     },
                     "z": {
                       "type": "number",
-                      "description": "z coordinate length"
+                      "description": "z component"
                     }
                   },
                   "required": [
@@ -706,15 +706,15 @@
                       "properties": {
                         "x": {
                           "type": "number",
-                          "description": "x coordinate length"
+                          "description": "x component"
                         },
                         "y": {
                           "type": "number",
-                          "description": "y coordinate length"
+                          "description": "y component"
                         },
                         "z": {
                           "type": "number",
-                          "description": "z coordinate length"
+                          "description": "z component"
                         }
                       },
                       "required": [
@@ -897,15 +897,15 @@
                       "properties": {
                         "x": {
                           "type": "number",
-                          "description": "x coordinate length"
+                          "description": "x component"
                         },
                         "y": {
                           "type": "number",
-                          "description": "y coordinate length"
+                          "description": "y component"
                         },
                         "z": {
                           "type": "number",
-                          "description": "z coordinate length"
+                          "description": "z component"
                         }
                       },
                       "required": [
@@ -1077,15 +1077,15 @@
                       "properties": {
                         "x": {
                           "type": "number",
-                          "description": "x coordinate length"
+                          "description": "x component"
                         },
                         "y": {
                           "type": "number",
-                          "description": "y coordinate length"
+                          "description": "y component"
                         },
                         "z": {
                           "type": "number",
-                          "description": "z coordinate length"
+                          "description": "z component"
                         }
                       },
                       "required": [
@@ -1205,15 +1205,15 @@
                       "properties": {
                         "x": {
                           "type": "number",
-                          "description": "x coordinate length"
+                          "description": "x component"
                         },
                         "y": {
                           "type": "number",
-                          "description": "y coordinate length"
+                          "description": "y component"
                         },
                         "z": {
                           "type": "number",
-                          "description": "z coordinate length"
+                          "description": "z component"
                         }
                       },
                       "required": [
@@ -1264,15 +1264,15 @@
                   "properties": {
                     "x": {
                       "type": "number",
-                      "description": "x coordinate length"
+                      "description": "x component"
                     },
                     "y": {
                       "type": "number",
-                      "description": "y coordinate length"
+                      "description": "y component"
                     },
                     "z": {
                       "type": "number",
-                      "description": "z coordinate length"
+                      "description": "z component"
                     }
                   },
                   "required": [

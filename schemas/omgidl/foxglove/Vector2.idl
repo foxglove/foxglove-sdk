@@ -4,12 +4,10 @@ module foxglove {
 
 // A vector in 2D space that represents a direction only
 struct Vector2 {
-  // x coordinate length
-  @default(1.0)
+  // x component
   double x;
 
-  // y coordinate length
-  @default(1.0)
+  // y component
   double y;
 };
 

@@ -73,7 +73,6 @@ target_include_directories(custom_protobuf PRIVATE
 # Find all Foxglove SDK source files
 file(GLOB FOXGLOVE_SOURCES CONFIGURE_DEPENDS
     "${foxglove_SOURCE_DIR}/src/*.cpp"
-    "${foxglove_SOURCE_DIR}/src/server/*.cpp"
 )
 
 # Add Foxglove SDK source files
