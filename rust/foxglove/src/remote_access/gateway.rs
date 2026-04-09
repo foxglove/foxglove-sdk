@@ -67,6 +67,19 @@ impl GatewayHandle {
         self.connection.publish_parameter_values(parameters);
     }
 
+    /// Publishes a status message to all connected participants.
+    ///
+    /// This can be used to communicate information, warnings, and errors to the Foxglove app. An
+    /// ID may be included in the status to later remove it by referencing that ID.
+    pub fn publish_status(&self, status: super::Status) {
+        self.connection.publish_status(status);
+    }
+
+    /// Removes status messages by id from all connected participants.
+    pub fn remove_status(&self, status_ids: Vec<String>) {
+        self.connection.remove_status(status_ids);
+    }
+
     /// Gracefully disconnect from the remote access connection, if connected.
     ///
     /// Returns a JoinHandle that will allow waiting until the connection has been fully closed.

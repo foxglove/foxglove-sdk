@@ -329,6 +329,29 @@ void RemoteAccessGateway::publishParameterValues(std::vector<Parameter>&& params
   foxglove_gateway_publish_parameter_values(impl_.get(), array.release());
 }
 
+FoxgloveError RemoteAccessGateway::publishStatus(
+  RemoteAccessStatusLevel level, std::string_view message, std::optional<std::string_view> id
+) const noexcept {
+  auto c_id = id ? std::optional<foxglove_string>{{id->data(), id->size()}} : std::nullopt;
+  auto error = foxglove_gateway_publish_status(
+    impl_.get(),
+    static_cast<foxglove_server_status_level>(level),
+    {message.data(), message.size()},
+    c_id ? &*c_id : nullptr
+  );
+  return FoxgloveError(error);
+}
+
+FoxgloveError RemoteAccessGateway::removeStatus(const std::vector<std::string_view>& ids) const {
+  std::vector<foxglove_string> c_ids;
+  c_ids.reserve(ids.size());
+  for (const auto& id : ids) {
+    c_ids.push_back({id.data(), id.size()});
+  }
+  auto error = foxglove_gateway_remove_status(impl_.get(), c_ids.data(), c_ids.size());
+  return FoxgloveError(error);
+}
+
 FoxgloveError RemoteAccessGateway::stop() {
   foxglove_error error = foxglove_gateway_stop(impl_.release());
   return FoxgloveError(error);
