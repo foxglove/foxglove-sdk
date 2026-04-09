@@ -410,6 +410,15 @@ impl Gateway {
         if self.fetch_asset_handler.is_some() && !self.capabilities.contains(&Capability::Assets) {
             self.capabilities.push(Capability::Assets);
         }
+        // Conversely, the "assets" capability requires a fetch asset handler.
+        if self.capabilities.contains(&Capability::Assets) && self.fetch_asset_handler.is_none() {
+            return Err(FoxgloveError::ConfigurationError(
+                "The Assets capability requires a fetch asset handler. \
+                 Use fetch_asset_handler(), fetch_asset_handler_blocking_fn(), \
+                 or fetch_asset_handler_async_fn()."
+                    .to_string(),
+            ));
+        }
         let runtime = self.runtime.unwrap_or_else(get_runtime_handle);
         let services = Arc::new(parking_lot::RwLock::new(ServiceMap::from_iter(
             self.services.into_values(),
@@ -473,5 +482,15 @@ mod tests {
             result,
             Err(FoxgloveError::MissingRequestEncoding(_))
         ));
+    }
+
+    #[test]
+    fn test_assets_capability_without_handler() {
+        // Advertising the Assets capability without a handler is a configuration error.
+        let result = Gateway::new()
+            .device_token("test-token")
+            .capabilities([Capability::Assets])
+            .start();
+        assert!(matches!(result, Err(FoxgloveError::ConfigurationError(_))));
     }
 }
