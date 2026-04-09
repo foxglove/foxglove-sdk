@@ -119,10 +119,10 @@ pub unsafe extern "C" fn foxglove_fetch_asset_respond_ok(
 /// Completes a request by sending an error message to the client.
 ///
 /// # Safety
-/// - `responder` must be a pointer to a `foxglove_fetch_asset_responder` obtained via a
-///   `fetch_asset` callback. This value is moved into this function, and must not be accessed
-///   afterwards.
-/// - `message` must be a pointer to a valid UTF-8 string. This value is copied by this function.
+/// - `responder` must be a pointer to a `foxglove_fetch_asset_responder` obtained via the
+///   `foxglove_server_options.fetch_asset` callback. This value is moved into this
+///   function, and must not accessed afterwards.
+/// - `message` must be a valid UTF-8 string. This value is copied by this function.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_fetch_asset_respond_error(
     responder: *mut FoxgloveFetchAssetResponder,
