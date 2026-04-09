@@ -1,6 +1,6 @@
 use super::ws_protocol::server::server_info;
 
-/// A capability that a websocket server can support.
+/// A capability that a WebSocket server can support.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Capability {
     /// Allow clients to advertise channels to send data messages to the server.

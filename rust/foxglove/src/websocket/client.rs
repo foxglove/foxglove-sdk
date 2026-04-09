@@ -6,7 +6,7 @@ use crate::SinkId;
 pub use crate::remote_common::ClientId;
 use crate::remote_common::fetch_asset::SendAssetResponse;
 
-/// A connected client session with the websocket server.
+/// A connected client session with the WebSocket server.
 #[derive(Debug, Clone)]
 pub struct Client {
     id: ClientId,

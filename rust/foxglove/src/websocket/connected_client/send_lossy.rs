@@ -31,7 +31,7 @@ pub(crate) fn send_lossy(
     mut message: Message,
     retries: usize,
 ) -> SendLossyResult {
-    // If the queue is full, drop the oldest message(s). We do this because the websocket
+    // If the queue is full, drop the oldest message(s). We do this because the WebSocket
     // client is falling behind, and we either start dropping messages, or we'll end up
     // buffering until we run out of memory. There's no point in that because the client is
     // unlikely to catch up and be able to consume the messages.
