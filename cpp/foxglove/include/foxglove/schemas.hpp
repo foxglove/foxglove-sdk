@@ -1,9 +1,5 @@
-// Deprecated backward-compatibility wrapper.
-// Include <foxglove/messages.hpp> and use foxglove::messages instead.
-// This header will be removed in a future release.
-
 #pragma once
-
+#pragma message("This header is deprecated. Use <foxglove/messages.hpp> instead.")
 #include <foxglove/messages.hpp>
 
 namespace foxglove {
