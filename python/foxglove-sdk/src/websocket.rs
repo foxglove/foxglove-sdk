@@ -792,7 +792,7 @@ struct CallbackAssetHandler {
     handler: Arc<Py<PyAny>>,
 }
 
-impl AssetHandler for CallbackAssetHandler {
+impl AssetHandler<Client> for CallbackAssetHandler {
     fn fetch(&self, uri: String, responder: foxglove::websocket::AssetResponder) {
         let handler = self.handler.clone();
 

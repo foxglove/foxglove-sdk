@@ -140,7 +140,7 @@ impl WebSocketServer {
 
     /// Configure the handler for fetching assets.
     /// There can only be one asset handler, exclusive with the other fetch_asset_handler methods.
-    pub fn fetch_asset_handler(mut self, handler: Box<dyn AssetHandler>) -> Self {
+    pub fn fetch_asset_handler(mut self, handler: Box<dyn AssetHandler<Client>>) -> Self {
         self.options.fetch_asset_handler = Some(handler);
         self
     }

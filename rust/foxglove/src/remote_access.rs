@@ -24,6 +24,16 @@ pub use listener::Listener;
 // Re-export parameter types so callers can construct parameter values.
 pub use crate::protocol::v2::parameter::{Parameter, ParameterType, ParameterValue};
 
+// Re-export fetch-asset types.
+pub use crate::remote_common::fetch_asset::AssetHandler;
+/// Type alias for the remote-access-specific asset responder.
+pub type AssetResponder = crate::remote_common::fetch_asset::AssetResponder<Client>;
+
+// Re-export service types so Gateway::services() callers can construct services.
+pub use crate::remote_common::service::{
+    Handler, Request, Responder, Service, ServiceSchema, SyncHandler,
+};
+
 use thiserror::Error;
 
 use crate::api_client::FoxgloveApiClientError;
