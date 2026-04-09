@@ -1,3 +1,3 @@
-// Deprecated: include <foxglove/websocket.hpp> instead.
 #pragma once
+#pragma message("This header is deprecated. Use <foxglove/websocket.hpp> instead.")
 #include <foxglove/websocket.hpp>
