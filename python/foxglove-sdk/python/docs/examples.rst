@@ -6,7 +6,7 @@ Quickstart
 .. literalinclude:: ../../../foxglove-sdk-examples/quickstart/main.py
 
 Remote Access
-------------------
+-------------
 .. literalinclude:: ../../../foxglove-sdk-examples/remote-access/main.py
 
 WebSocket Server
