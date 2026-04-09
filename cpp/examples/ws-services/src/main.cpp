@@ -1,6 +1,6 @@
 #include <foxglove/foxglove.hpp>
-#include <foxglove/server.hpp>
-#include <foxglove/server/service.hpp>
+#include <foxglove/service.hpp>
+#include <foxglove/websocket.hpp>
 
 #include <nlohmann/json.hpp>
 
@@ -128,7 +128,7 @@ bool registerEchoService(foxglove::WebSocketServer& server) {
  * A service that sleeps.
  *
  * Services that need to do more heavy lifting should be handled asynchronously,
- * because the callback is invoked from the websocket client's main poll thread.
+ * because the callback is invoked from the WebSocket client's main poll thread.
  */
 bool registerSleepService(foxglove::WebSocketServer& server) {
   foxglove::ServiceSchema empty_schema{"/std_srvs/Empty"};
@@ -138,7 +138,7 @@ bool registerSleepService(foxglove::WebSocketServer& server) {
                                                   foxglove::ServiceResponder&& responder
                                                 ) {
     // Spawn a new thread to handle the response, so that we don't block the
-    // websocket client's main poll thread.
+    // WebSocket client's main poll thread.
     std::thread t([responder = std::move(responder)]() mutable {
       std::this_thread::sleep_for(1s);
       std::move(responder).respondOk(makeBytes(R"({"status": "refreshed"})"));

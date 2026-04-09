@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::Arc, time::Duration};
+use std::{collections::HashMap, fmt::Display, future::Future, sync::Arc, time::Duration};
 
 use indexmap::IndexSet;
 use tokio::runtime::Handle;
@@ -7,13 +7,14 @@ use tokio::task::JoinHandle;
 use crate::{
     ChannelDescriptor, Context, FoxgloveError, SinkChannelFilter,
     protocol::v2::parameter::Parameter,
+    remote_common::fetch_asset::{AssetHandler, AsyncAssetHandlerFn, BlockingAssetHandlerFn},
     remote_common::service::{Service, ServiceMap},
     runtime::get_runtime_handle,
     sink_channel_filter::SinkChannelFilterFn,
 };
 
 use super::connection::{ConnectionParams, ConnectionStatus, RemoteAccessConnection};
-use super::{Capability, Listener};
+use super::{Capability, Client, Listener};
 
 /// A handle to the remote access gateway connection.
 ///
@@ -97,6 +98,7 @@ impl GatewayHandle {
             listener: None,
             capabilities: Vec::new(),
             supported_encodings: None,
+            fetch_asset_handler: None,
             runtime: runtime.clone(),
             channel_filter: None,
             server_info: None,
@@ -142,6 +144,7 @@ pub struct Gateway {
     capabilities: Vec<Capability>,
     supported_encodings: Option<IndexSet<String>>,
     services: HashMap<String, Service>,
+    fetch_asset_handler: Option<Box<dyn AssetHandler<Client>>>,
     runtime: Option<Handle>,
     channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     server_info: Option<HashMap<String, String>>,
@@ -161,6 +164,7 @@ impl Default for Gateway {
             capabilities: Vec::new(),
             supported_encodings: None,
             services: HashMap::new(),
+            fetch_asset_handler: None,
             runtime: None,
             channel_filter: None,
             server_info: None,
@@ -182,6 +186,10 @@ impl std::fmt::Debug for Gateway {
             .field("capabilities", &self.capabilities)
             .field("supported_encodings", &self.supported_encodings)
             .field("num_services", &self.services.len())
+            .field(
+                "has_fetch_asset_handler",
+                &self.fetch_asset_handler.is_some(),
+            )
             .field("has_runtime", &self.runtime.is_some())
             .field("has_channel_filter", &self.channel_filter.is_some())
             .field("server_info", &self.server_info)
@@ -327,6 +335,38 @@ impl Gateway {
         self
     }
 
+    /// Configure the handler for fetching assets.
+    /// There can only be one asset handler, exclusive with the other fetch_asset_handler methods.
+    pub fn fetch_asset_handler(mut self, handler: Box<dyn AssetHandler<Client>>) -> Self {
+        self.fetch_asset_handler = Some(handler);
+        self
+    }
+
+    /// Configure a synchronous, blocking function as a fetch asset handler.
+    /// There can only be one asset handler, exclusive with the other fetch_asset_handler methods.
+    pub fn fetch_asset_handler_blocking_fn<F, T, Err>(mut self, handler: F) -> Self
+    where
+        F: Fn(Client, String) -> Result<T, Err> + Send + Sync + 'static,
+        T: AsRef<[u8]>,
+        Err: Display,
+    {
+        self.fetch_asset_handler = Some(Box::new(BlockingAssetHandlerFn(Arc::new(handler))));
+        self
+    }
+
+    /// Configure an asynchronous function as a fetch asset handler.
+    /// There can only be one asset handler, exclusive with the other fetch_asset_handler methods.
+    pub fn fetch_asset_handler_async_fn<F, Fut, T, Err>(mut self, handler: F) -> Self
+    where
+        F: Fn(Client, String) -> Fut + Send + Sync + 'static,
+        Fut: Future<Output = Result<T, Err>> + Send + 'static,
+        T: AsRef<[u8]>,
+        Err: Display,
+    {
+        self.fetch_asset_handler = Some(Box::new(AsyncAssetHandlerFn(Arc::new(handler))));
+        self
+    }
+
     /// Starts the remote access gateway, which will establish a connection in the background.
     ///
     /// Returns a handle that can optionally be used to manage the gateway.
@@ -379,6 +419,19 @@ impl Gateway {
                 }
             }
         }
+        // If the gateway was declared with a fetch asset handler, automatically add the "assets" capability.
+        if self.fetch_asset_handler.is_some() && !self.capabilities.contains(&Capability::Assets) {
+            self.capabilities.push(Capability::Assets);
+        }
+        // Conversely, the "assets" capability requires a fetch asset handler.
+        if self.capabilities.contains(&Capability::Assets) && self.fetch_asset_handler.is_none() {
+            return Err(FoxgloveError::ConfigurationError(
+                "The Assets capability requires a fetch asset handler. \
+                 Use fetch_asset_handler(), fetch_asset_handler_blocking_fn(), \
+                 or fetch_asset_handler_async_fn()."
+                    .to_string(),
+            ));
+        }
         let runtime = self.runtime.unwrap_or_else(get_runtime_handle);
         let services = Arc::new(parking_lot::RwLock::new(ServiceMap::from_iter(
             self.services.into_values(),
@@ -391,6 +444,7 @@ impl Gateway {
             listener: self.listener,
             capabilities: self.capabilities,
             supported_encodings: self.supported_encodings,
+            fetch_asset_handler: self.fetch_asset_handler.map(Arc::from),
             runtime: runtime.clone(),
             channel_filter: self.channel_filter,
             server_info: self.server_info,
@@ -441,5 +495,15 @@ mod tests {
             result,
             Err(FoxgloveError::MissingRequestEncoding(_))
         ));
+    }
+
+    #[test]
+    fn test_assets_capability_without_handler() {
+        // Advertising the Assets capability without a handler is a configuration error.
+        let result = Gateway::new()
+            .device_token("test-token")
+            .capabilities([Capability::Assets])
+            .start();
+        assert!(matches!(result, Err(FoxgloveError::ConfigurationError(_))));
     }
 }

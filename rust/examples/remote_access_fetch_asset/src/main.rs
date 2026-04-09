@@ -1,14 +1,28 @@
+//! Remote access gateway example: demonstrates serving assets via the fetch
+//! asset handler and logging scene updates that reference those assets.
+//!
+//! The pelican STL model is read at runtime and served when a client requests
+//! `package://pelican/pelican.stl`. A `SceneUpdate` referencing the model is
+//! logged every second on the `/scene` topic.
+//!
+//! Set the `FOXGLOVE_DEVICE_TOKEN` environment variable before running:
+//!
+//! ```text
+//! FOXGLOVE_DEVICE_TOKEN=<your-token> cargo run -p example_remote_access_fetch_asset
+//! ```
+//!
+//! Then open [Foxglove](https://app.foxglove.dev) and connect to the device
+//! via the remote access gateway.
+
 use std::collections::HashMap;
 use std::path::Path;
 use std::time::Duration;
-
-use clap::Parser;
 
 use foxglove::LazyChannel;
 use foxglove::messages::{
     Color, ModelPrimitive, Pose, Quaternion, SceneEntity, SceneUpdate, Vector3,
 };
-use foxglove::websocket::{AssetHandler, AssetResponder, Client};
+use foxglove::remote_access::{AssetHandler, AssetResponder, Client, Gateway};
 use log::info;
 
 const PELICAN_URI: &str = "package://pelican/pelican.stl";
@@ -45,31 +59,17 @@ impl AssetHandler<Client> for AssetServer {
 
 static SCENE_CHANNEL: LazyChannel<SceneUpdate> = LazyChannel::new("/scene");
 
-#[derive(Debug, Parser)]
-struct Cli {
-    /// Server TCP port.
-    #[arg(short, long, default_value_t = 8765)]
-    port: u16,
-    /// Server IP address.
-    #[arg(long, default_value = "127.0.0.1")]
-    host: String,
-}
-
 #[tokio::main]
 async fn main() {
-    let env = env_logger::Env::default().default_filter_or("debug");
+    let env = env_logger::Env::default().default_filter_or("info");
     env_logger::init_from_env(env);
 
-    let args = Cli::parse();
     let asset_server = AssetServer::new();
 
-    let server = foxglove::WebSocketServer::new()
-        .name(env!("CARGO_PKG_NAME"))
-        .bind(&args.host, args.port)
+    let handle = Gateway::new()
         .fetch_asset_handler(Box::new(asset_server))
         .start()
-        .await
-        .expect("Server failed to start");
+        .expect("Failed to start remote access gateway");
 
     let scene = SceneUpdate {
         deletions: vec![],
@@ -123,5 +123,5 @@ async fn main() {
         }
     }
 
-    server.stop().wait().await;
+    _ = handle.stop().await;
 }

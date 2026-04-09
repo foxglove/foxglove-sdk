@@ -10,8 +10,8 @@
  */
 
 #include <foxglove/foxglove.hpp>
-#include <foxglove/server.hpp>
-#include <foxglove/server/parameter.hpp>
+#include <foxglove/parameter.hpp>
+#include <foxglove/websocket.hpp>
 
 #include <atomic>
 #include <chrono>

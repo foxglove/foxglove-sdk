@@ -650,10 +650,12 @@ mod tests {
         let writer = Arc::new(crate::remote_access::participant::TestByteStreamWriter::default());
         let version =
             crate::remote_access::protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone();
+        let (tx, _rx) = flume::bounded(16);
         let participant = Arc::new(Participant::new(
             identity.clone(),
             version,
             ParticipantWriter::Test(writer),
+            tx,
         ));
         (identity, participant)
     }

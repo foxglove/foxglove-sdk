@@ -3,8 +3,8 @@
 #include <foxglove/channel.hpp>
 #include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
-#include <foxglove/server/parameter.hpp>
-#include <foxglove/server/service.hpp>
+#include <foxglove/parameter.hpp>
+#include <foxglove/service.hpp>
 
 #include <cstdint>
 #include <functional>

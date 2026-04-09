@@ -1,6 +1,6 @@
 #pragma once
 
-#include <foxglove/server.hpp>
+#include <foxglove/websocket.hpp>
 
 #include <chrono>
 #include <cstdint>

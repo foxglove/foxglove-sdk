@@ -1,6 +1,6 @@
 use std::ffi::c_void;
 
-use foxglove::websocket::{AssetHandler, AssetResponder};
+use foxglove::websocket::{AssetHandler, AssetResponder, Client};
 
 use crate::{FoxgloveString, bytes::FoxgloveBytes};
 
@@ -49,7 +49,7 @@ impl FetchAssetHandler {
 }
 unsafe impl Send for FetchAssetHandler {}
 unsafe impl Sync for FetchAssetHandler {}
-impl AssetHandler for FetchAssetHandler {
+impl AssetHandler<Client> for FetchAssetHandler {
     fn fetch(&self, uri: String, responder: AssetResponder) {
         let c_uri = FoxgloveString::from(&uri);
         let c_responder = FoxgloveFetchAssetResponder(responder).into_raw();
