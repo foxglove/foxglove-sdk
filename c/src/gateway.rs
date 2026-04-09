@@ -391,8 +391,8 @@ impl foxglove::remote_access::Listener for FoxgloveGatewayCallbacks {
 ///
 /// # Safety
 /// - `context` can be null, or a valid pointer to a context created via `foxglove_context_new`.
-/// - `name` must be a valid pointer to a UTF-8 string.
-/// - `device_token` must be a valid pointer to a UTF-8 string, or empty to use the
+/// - `name` must be a valid UTF-8 string.
+/// - `device_token` must be a valid UTF-8 string, or empty to use the
 ///   `FOXGLOVE_DEVICE_TOKEN` environment variable.
 /// - If `supported_encodings` is supplied, all entries must contain valid UTF-8, and
 ///   `supported_encodings` must have length equal to `supported_encodings_count`.
@@ -630,7 +630,7 @@ pub unsafe extern "C" fn foxglove_gateway_add_service(
 ///
 /// # Safety
 /// - `gateway` must be a valid pointer to a gateway started with `foxglove_gateway_start`.
-/// - `service_name` must be a valid pointer to a UTF-8 string.
+/// - `service_name` must be a valid UTF-8 string.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_gateway_remove_service(
     gateway: Option<&FoxgloveGateway>,

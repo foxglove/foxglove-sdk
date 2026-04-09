@@ -565,7 +565,7 @@ pub unsafe extern "C" fn foxglove_server_broadcast_playback_state(
 /// If `session_id` is not provided, generates a new one based on the current timestamp.
 ///
 /// # Safety
-/// - `session_id` must either be NULL, or a valid pointer to a UTF-8 string.
+/// - `session_id` must either be NULL, or a pointer to a valid UTF-8 string.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_server_clear_session(
     server: Option<&FoxgloveWebSocketServer>,
@@ -623,7 +623,7 @@ pub unsafe extern "C" fn foxglove_server_add_service(
 ///
 /// # Safety
 /// - `server` must be a valid pointer to a server started with `foxglove_server_start`.
-/// - `service_name` must be a valid pointer to a UTF-8 string.
+/// - `service_name` must be a valid UTF-8 string.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_server_remove_service(
     server: Option<&FoxgloveWebSocketServer>,
@@ -771,9 +771,9 @@ impl From<FoxgloveServerStatusLevel> for foxglove::websocket::StatusLevel {
 /// `foxglove_server_remove_status`.
 ///
 /// # Safety
-/// - `message` must be a valid pointer to a UTF-8 string, which must remain valid for the duration
-///   of this call.
-/// - `id` must either be NULL, or a valid pointer to a UTF-8 string, which must remain valid for
+/// - `message` must be a valid UTF-8 string, which must remain valid for the duration of this
+///   call.
+/// - `id` must either be NULL, or a pointer to a valid UTF-8 string, which must remain valid for
 ///   the duration of this call.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_server_publish_status(
@@ -809,8 +809,8 @@ pub unsafe extern "C" fn foxglove_server_publish_status(
 /// Previously published status messages are referenced by ID.
 ///
 /// # Safety
-/// - `ids` must be a valid pointer to an array of pointers to valid UTF-8 strings, all of which
-///   must remain valid for the duration of this call.
+/// - `ids` must be a pointer to an array of valid UTF-8 strings, all of which must remain valid
+///   for the duration of this call.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_server_remove_status(
     server: Option<&mut FoxgloveWebSocketServer>,
