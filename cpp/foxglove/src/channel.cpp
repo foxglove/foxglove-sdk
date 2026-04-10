@@ -10,6 +10,10 @@ ChannelDescriptor::ChannelDescriptor(const foxglove_channel_descriptor* channel_
     : channel_descriptor_(channel_descriptor) {}
 /// @endcond
 
+uint64_t ChannelDescriptor::id() const noexcept {
+  return foxglove_channel_descriptor_get_id(channel_descriptor_);
+}
+
 std::string_view ChannelDescriptor::topic() const noexcept {
   foxglove_string topic = foxglove_channel_descriptor_get_topic(channel_descriptor_);
   return {topic.data, topic.len};
