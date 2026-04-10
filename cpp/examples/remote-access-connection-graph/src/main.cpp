@@ -28,7 +28,7 @@ int main() {
     }
   });
 
-  foxglove::setLogLevel(foxglove::LogLevel::Debug);
+  foxglove::setLogLevel(foxglove::LogLevel::Info);
 
   foxglove::RemoteAccessGatewayOptions options = {};
   options.name = "remote-access-connection-graph-cpp";
