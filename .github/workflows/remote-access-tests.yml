@@ -81,3 +81,42 @@ jobs:
       - name: Stop LiveKit with netem
         if: always()
         run: docker compose -f docker-compose.yaml -f docker-compose.netem.yml down
+
+  netem-perlink-test:
+    runs-on: ubuntu-latest
+    # UDP loss test sends 150 packets per link with 2s timeout each (~5 min
+    # total), plus build and Docker setup overhead.
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          lfs: true
+
+      - name: Install common dependencies
+        uses: ./.github/actions/common-deps
+
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+
+      - name: Start LiveKit with per-link netem
+        run: >
+          docker compose
+          -f docker-compose.yaml
+          -f docker-compose.netem.yml
+          -f docker-compose.netem-perlink.yml
+          up -d --wait
+
+      - name: Run per-link netem integration tests
+        run: |
+          cargo test -p remote_access_tests -- --ignored perlink_infra_
+          cargo test -p remote_access_tests -- --ignored perlink_product_
+
+      - name: Stop per-link netem stack
+        if: always()
+        run: >
+          docker compose
+          -f docker-compose.yaml
+          -f docker-compose.netem.yml
+          -f docker-compose.netem-perlink.yml
+          down
