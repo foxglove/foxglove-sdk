@@ -1,10 +1,34 @@
 use std::ffi::c_void;
 
-use foxglove::websocket::{AssetHandler, AssetResponder};
+use foxglove::websocket;
 
 use crate::{FoxgloveString, bytes::FoxgloveBytes};
 
-pub struct FoxgloveFetchAssetResponder(AssetResponder);
+enum AssetResponderVariant {
+    WebSocket(websocket::AssetResponder),
+    #[cfg(feature = "remote-access")]
+    Gateway(foxglove::remote_access::AssetResponder),
+}
+
+impl AssetResponderVariant {
+    fn respond_ok(self, data: &[u8]) {
+        match self {
+            Self::WebSocket(r) => r.respond_ok(data),
+            #[cfg(feature = "remote-access")]
+            Self::Gateway(r) => r.respond_ok(data),
+        }
+    }
+
+    fn respond_err(self, message: impl AsRef<str>) {
+        match self {
+            Self::WebSocket(r) => r.respond_err(message),
+            #[cfg(feature = "remote-access")]
+            Self::Gateway(r) => r.respond_err(message),
+        }
+    }
+}
+
+pub struct FoxgloveFetchAssetResponder(AssetResponderVariant);
 impl FoxgloveFetchAssetResponder {
     /// Moves the responder to the heap and returns a raw pointer.
     ///
@@ -49,10 +73,12 @@ impl FetchAssetHandler {
 }
 unsafe impl Send for FetchAssetHandler {}
 unsafe impl Sync for FetchAssetHandler {}
-impl AssetHandler for FetchAssetHandler {
-    fn fetch(&self, uri: String, responder: AssetResponder) {
+
+impl websocket::AssetHandler<websocket::Client> for FetchAssetHandler {
+    fn fetch(&self, uri: String, responder: websocket::AssetResponder) {
         let c_uri = FoxgloveString::from(&uri);
-        let c_responder = FoxgloveFetchAssetResponder(responder).into_raw();
+        let c_responder =
+            FoxgloveFetchAssetResponder(AssetResponderVariant::WebSocket(responder)).into_raw();
         // SAFETY: It's the callback implementation's responsibility to ensure that this callback
         // function pointer remains valid for the lifetime of the websocket server, as described in
         // the safety requirements of `foxglove_server_options.fetch_asset`.
@@ -60,12 +86,25 @@ impl AssetHandler for FetchAssetHandler {
     }
 }
 
+#[cfg(feature = "remote-access")]
+impl foxglove::remote_access::AssetHandler<foxglove::remote_access::Client> for FetchAssetHandler {
+    fn fetch(&self, uri: String, responder: foxglove::remote_access::AssetResponder) {
+        let c_uri = FoxgloveString::from(&uri);
+        let c_responder =
+            FoxgloveFetchAssetResponder(AssetResponderVariant::Gateway(responder)).into_raw();
+        // SAFETY: It's the callback implementation's responsibility to ensure that this callback
+        // function pointer remains valid for the lifetime of the gateway, as described in
+        // the safety requirements of `foxglove_gateway_options.fetch_asset`.
+        unsafe { (self.callback)(self.callback_context, &raw const c_uri, c_responder) };
+    }
+}
+
 /// Completes a fetch asset request by sending asset data to the client.
 ///
 /// # Safety
-/// - `responder` must be a pointer to a `foxglove_fetch_asset_responder` obtained via the
-///   `foxglove_server_options.fetch_asset` callback. This value is moved into this
-///   function, and must not accessed afterwards.
+/// - `responder` must be a pointer to a `foxglove_fetch_asset_responder` obtained via a
+///   `fetch_asset` callback. This value is moved into this function, and must not be accessed
+///   afterwards.
 /// - `data` must be a pointer to the response data. This value is copied by this function.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_fetch_asset_respond_ok(
@@ -83,7 +122,7 @@ pub unsafe extern "C" fn foxglove_fetch_asset_respond_ok(
 /// - `responder` must be a pointer to a `foxglove_fetch_asset_responder` obtained via the
 ///   `foxglove_server_options.fetch_asset` callback. This value is moved into this
 ///   function, and must not accessed afterwards.
-/// - `message` must be a pointer to a valid UTF-8 string. This value is copied by this function.
+/// - `message` must be a valid UTF-8 string. This value is copied by this function.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_fetch_asset_respond_error(
     responder: *mut FoxgloveFetchAssetResponder,

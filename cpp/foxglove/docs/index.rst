@@ -6,8 +6,8 @@ Version: |release|
 The official `Foxglove <https://docs.foxglove.dev/docs>`_ SDK for C++.
 
 This library provides support for integrating with the Foxglove platform. It can be used to log
-events to local `MCAP <https://mcap.dev/>`_ files or a local visualization server that communicates
-with the Foxglove app.
+events to local `MCAP <https://mcap.dev/>`_ files, a local WebSocket server, or a remote access
+gateway that communicates with the Foxglove app.
 
 Installation
 ------------
@@ -25,9 +25,10 @@ Overview
 
 To record messages, you need at least one sink and at least one channel.
 
-A "sink" is a destination for logged messages — either an MCAP file or a live visualization server.
-Use :func:`foxglove::McapWriter::create` to create a new MCAP sink. Use
-:func:`foxglove::WebSocketServer::create` to create a new live visualization server.
+A "sink" is a destination for logged messages — an MCAP file, a WebSocket server, or a remote
+access gateway. Use :func:`foxglove::McapWriter::create` to create a new MCAP sink. Use
+:func:`foxglove::WebSocketServer::create` to create a new WebSocket server. Use
+:func:`foxglove::RemoteAccessGateway::create` to create a new remote access gateway.
 
 A "channel" gives a way to log related messages which have the same schema. Each channel is
 instantiated with a unique topic name.
@@ -88,10 +89,18 @@ As long as the handle remains in scope, events will be logged to the MCAP file. 
 closed or dropped, the sink will be unregistered from the :class:`foxglove::Context`, and the file will be
 finalized and flushed.
 
-To create a live visualization server sink, call :func:`foxglove::WebSocketServer::create`. By default, the server
-listens on ``127.0.0.1:8765``. Each client that connects to the websocket server is its own independent
-sink. The sink is dynamically added to the :class:`foxglove::Context` associated with the server when the client
-connects, and removed from the context when the client disconnects.
+To create a WebSocket server sink, call :func:`foxglove::WebSocketServer::create`. By default, the
+server listens on ``127.0.0.1:8765``. Each client that connects to the WebSocket server is its own
+independent sink. The sink is dynamically added to the :class:`foxglove::Context` associated with the
+server when the client connects, and removed from the context when the client disconnects.
+
+To create a remote access gateway sink, call :func:`foxglove::RemoteAccessGateway::create`. You must
+provide a device token to authenticate with the Foxglove API; this can be set via
+:class:`foxglove::RemoteAccessGatewayOptions` or with the ``FOXGLOVE_DEVICE_TOKEN`` environment
+variable. Once started, the gateway connects to the Foxglove platform over WebRTC and makes the
+device available for remote visualization and teleop. Each remote client that connects is its own
+independent sink, dynamically added to the :class:`foxglove::Context` when the client connects and
+removed when it disconnects.
 
 
 

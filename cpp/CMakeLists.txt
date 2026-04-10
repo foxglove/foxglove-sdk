@@ -3,7 +3,7 @@
 # the sources under `cpp/foxglove`, link with the C static or shared library, and add both the C/C++
 # includes to include paths.
 
-cmake_minimum_required(VERSION 3.25)
+cmake_minimum_required(VERSION 3.22)
 project(foxglove-sdk VERSION 0.21.0)
 
 # Enable ccache if available
@@ -24,47 +24,28 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 include(CTest)
 include(FetchContent)
-
-# When USE_PACKAGE_MANAGER_DEPENDENCIES is ON, FetchContent will try find_package() first for
-# dependencies that specify FIND_PACKAGE_ARGS, falling back to source builds if not found.
-# When OFF, FetchContent always builds from source.
-if(USE_PACKAGE_MANAGER_DEPENDENCIES)
-  set(FETCHCONTENT_TRY_FIND_PACKAGE_MODE OPT_IN)
-else()
-  set(FETCHCONTENT_TRY_FIND_PACKAGE_MODE NEVER)
-endif()
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/FindOrFetch.cmake)
 
 # Suppress CMake deprecation warnings from vendored dependencies with older cmake_minimum_required
 set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
 set(CMAKE_WARN_DEPRECATED OFF CACHE BOOL "" FORCE)
 
-FetchContent_Declare(Catch2
+find_or_fetch(Catch2
   GIT_REPOSITORY https://github.com/catchorg/Catch2.git
   GIT_TAG        v3.8.0
-  FIND_PACKAGE_ARGS 3 QUIET
+  VERSION 3
 )
-FetchContent_MakeAvailable(Catch2)
 if(catch2_SOURCE_DIR)
   list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
 endif()
 include(Catch)
 
-FetchContent_Declare(Corrosion
+find_or_fetch(Corrosion
   GIT_REPOSITORY https://github.com/corrosion-rs/corrosion.git
   GIT_TAG v0.5.1
-  FIND_PACKAGE_ARGS 0.5.1 QUIET
+  VERSION 0.5.1
 )
-# Clear CMAKE_CONFIGURATION_TYPES before making Corrosion available
-if(CMAKE_GENERATOR MATCHES "Unix Makefiles|Ninja")
-  unset(CMAKE_CONFIGURATION_TYPES CACHE)
-endif()
-FetchContent_MakeAvailable(Corrosion)
 
-FetchContent_Declare(libwebsockets
-  GIT_REPOSITORY https://libwebsockets.org/repo/libwebsockets
-  GIT_TAG v4.3.3
-  FIND_PACKAGE_ARGS QUIET
-)
 set(LWS_WITH_SSL OFF CACHE BOOL "" FORCE)
 set(LWS_WITH_SHARED OFF CACHE BOOL "" FORCE)
 set(LWS_WITH_STATIC ON CACHE BOOL "" FORCE)
@@ -72,15 +53,15 @@ set(LWS_WITHOUT_TESTAPPS ON CACHE BOOL "" FORCE)
 set(LWS_WITHOUT_TEST_SERVER ON CACHE BOOL "" FORCE)
 set(LWS_WITHOUT_TEST_PING ON CACHE BOOL "" FORCE)
 set(LWS_WITHOUT_TEST_CLIENT ON CACHE BOOL "" FORCE)
-# Avoid FetchContent_MakeAvailable so we can pass EXCLUDE_FROM_ALL to add_subdirectory,
-# preventing libwebsockets' install rules from polluting our install.
-if(USE_PACKAGE_MANAGER_DEPENDENCIES)
-  find_package(libwebsockets QUIET)
-endif()
-if(NOT libwebsockets_FOUND)
-  FetchContent_Populate(libwebsockets)
-  add_subdirectory(${libwebsockets_SOURCE_DIR} ${libwebsockets_BINARY_DIR} EXCLUDE_FROM_ALL)
-endif()
+find_or_fetch(libwebsockets
+  GIT_REPOSITORY https://github.com/warmcat/libwebsockets.git
+  GIT_TAG v4.3.3
+  # Ubuntu packages the config file as LibwebsocketsConfig.cmake (capital L),
+  # which doesn't match find_package(libwebsockets) on case-sensitive filesystems.
+  ALT_NAME Libwebsockets
+  # Prevent libwebsockets' install rules from polluting our install.
+  EXCLUDE_FROM_ALL
+)
 # System-installed libwebsockets provides the "websockets_shared" target, while the FetchContent
 # build provides "websockets". Create an alias so the rest of this file can use "websockets"
 # consistently.
@@ -88,38 +69,27 @@ if(NOT TARGET websockets AND TARGET websockets_shared)
   add_library(websockets ALIAS websockets_shared)
 endif()
 
-FetchContent_Declare(nlohmann_json
+find_or_fetch(nlohmann_json
   GIT_REPOSITORY https://github.com/nlohmann/json.git
   GIT_TAG v3.12.0
-  FIND_PACKAGE_ARGS QUIET
 )
-FetchContent_MakeAvailable(nlohmann_json)
 
-FetchContent_Declare(base64
+set(BASE64_ENABLE_TESTING OFF CACHE BOOL "" FORCE)
+find_or_fetch(base64
   GIT_REPOSITORY https://github.com/tobiaslocker/base64.git
   GIT_TAG 8d96a2a737ac1396304b1de289beb3a5ea0cb752
-  FIND_PACKAGE_ARGS QUIET
 )
-set(BASE64_ENABLE_TESTING OFF CACHE BOOL "" FORCE)
-FetchContent_MakeAvailable(base64)
 
 option(BUILD_REMOTE_DATA_LOADER_BACKEND_EXAMPLE "Build the remote data loader backend example (requires cpp-httplib and date)" ON)
 
 if(BUILD_REMOTE_DATA_LOADER_BACKEND_EXAMPLE)
-  FetchContent_Declare(date
-    GIT_REPOSITORY https://github.com/HowardHinnant/date.git
-    GIT_TAG v3.0.4
-    FIND_PACKAGE_ARGS QUIET
-  )
   set(ENABLE_DATE_TESTING OFF CACHE BOOL "" FORCE)
   set(ENABLE_DATE_INSTALL OFF CACHE BOOL "" FORCE)
-  FetchContent_MakeAvailable(date)
-
-  FetchContent_Declare(httplib
-    GIT_REPOSITORY https://github.com/yhirose/cpp-httplib.git
-    GIT_TAG v0.32.0
-    FIND_PACKAGE_ARGS QUIET
+  find_or_fetch(date
+    GIT_REPOSITORY https://github.com/HowardHinnant/date.git
+    GIT_TAG v3.0.4
   )
+
   set(HTTPLIB_COMPILE OFF CACHE BOOL "" FORCE)
   set(HTTPLIB_REQUIRE_OPENSSL OFF CACHE BOOL "" FORCE)
   set(HTTPLIB_USE_OPENSSL_IF_AVAILABLE OFF CACHE BOOL "" FORCE)
@@ -129,7 +99,10 @@ if(BUILD_REMOTE_DATA_LOADER_BACKEND_EXAMPLE)
   set(HTTPLIB_USE_ZSTD_IF_AVAILABLE OFF CACHE BOOL "" FORCE)
   set(HTTPLIB_USE_NON_BLOCKING_GETADDRINFO OFF CACHE BOOL "" FORCE)
   set(HTTPLIB_INSTALL OFF CACHE BOOL "" FORCE)
-  FetchContent_MakeAvailable(httplib)
+  find_or_fetch(httplib
+    GIT_REPOSITORY https://github.com/yhirose/cpp-httplib.git
+    GIT_TAG v0.32.0
+  )
 endif()
 
 set(CMAKE_WARN_DEPRECATED ON CACHE BOOL "" FORCE)
@@ -137,12 +110,10 @@ set(CMAKE_WARN_DEPRECATED ON CACHE BOOL "" FORCE)
 option(BUILD_WS_STREAM_MCAP_EXAMPLE "Build the MCAP websocket streaming example (requires mcap and lz4)" ON)
 
 if(BUILD_WS_STREAM_MCAP_EXAMPLE)
-  FetchContent_Declare(
-    mcap
+  find_or_fetch(mcap
     GIT_REPOSITORY https://github.com/foxglove/mcap.git
     GIT_TAG releases/cpp/v2.1.2
   )
-  FetchContent_MakeAvailable(mcap)
 
   set(LZ4_BUILD_CLI OFF CACHE BOOL "" FORCE)
   set(LZ4_BUILD_LEGACY_LZ4C OFF CACHE BOOL "" FORCE)
@@ -171,6 +142,12 @@ if (STRICT)
   elseif(MSVC)
     set (STRICT_COMPILE_OPTIONS /W4 /WX)
   endif()
+endif()
+
+# GCC 11 (e.g. Ubuntu 22.04) requires -fpermissive for some constructs compiled by webrtc-sys.
+# Propagate to Rust crate builds that compile C++ via the cc crate.
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 12)
+  set(FOXGLOVE_CORROSION_CXXFLAGS "-fpermissive")
 endif()
 
 option(CLANG_TIDY "Run clang-tidy static analysis" OFF)
@@ -233,6 +210,9 @@ else()
     string(REGEX REPLACE ,$ "" rust_sanitizers ${rust_sanitizers})
     message(WARNING "Enabling -Zsanitizer=${rust_sanitizers} for Rust")
     corrosion_add_target_rustflags(foxglove -Zsanitizer=${rust_sanitizers} -Cforce-frame-pointers=yes)
+  endif()
+  if(FOXGLOVE_CORROSION_CXXFLAGS)
+    corrosion_set_env_vars(foxglove "CXXFLAGS=${FOXGLOVE_CORROSION_CXXFLAGS}")
   endif()
 endif()
 
@@ -351,13 +331,6 @@ if(FOXGLOVE_BUILD_REMOTE_ACCESS)
   # Augment the shared library with RA objects
   target_sources(foxglove_cpp_shared PRIVATE $<TARGET_OBJECTS:foxglove_ra_cpp_obj>)
   target_compile_definitions(foxglove_cpp_shared PUBLIC FOXGLOVE_REMOTE_ACCESS)
-
-  add_executable(example_remote_access examples/remote-access/src/main.cpp)
-  set_property(TARGET example_remote_access PROPERTY CXX_STANDARD 17)
-  set_property(TARGET example_remote_access PROPERTY CXX_STANDARD_REQUIRED True)
-  target_compile_options(example_remote_access PUBLIC ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
-  target_link_options(example_remote_access PUBLIC ${SANITIZER_LINK_OPTIONS})
-  target_link_libraries(example_remote_access foxglove_cpp_shared)
 endif()
 
 
@@ -374,11 +347,15 @@ target_compile_options(tests PUBLIC ${SANITIZER_COMPILE_OPTIONS})
 target_link_options(tests PUBLIC ${SANITIZER_LINK_OPTIONS})
 target_link_libraries(tests PRIVATE foxglove_cpp_shared Catch2::Catch2WithMain nlohmann_json::nlohmann_json websockets)
 # Suppress warnings from third-party headers by treating them as system includes.
-# We can't use SYSTEM on FetchContent_Declare due to a CMake 3.25 bug.
+# SYSTEM on FetchContent_Declare requires CMake 3.25+, so we add system includes manually.
 get_target_property(LWS_INCLUDE_DIRS websockets INTERFACE_INCLUDE_DIRECTORIES)
-target_include_directories(tests SYSTEM PRIVATE ${LWS_INCLUDE_DIRS})
+if(LWS_INCLUDE_DIRS)
+  target_include_directories(tests SYSTEM PRIVATE ${LWS_INCLUDE_DIRS})
+endif()
 get_target_property(NLOHMANN_INCLUDE_DIRS nlohmann_json::nlohmann_json INTERFACE_INCLUDE_DIRECTORIES)
-target_include_directories(tests SYSTEM PRIVATE ${NLOHMANN_INCLUDE_DIRS})
+if(NLOHMANN_INCLUDE_DIRS)
+  target_include_directories(tests SYSTEM PRIVATE ${NLOHMANN_INCLUDE_DIRS})
+endif()
 # Skip test discovery when cross-compiling (the test exe can't run on the host).
 # FOXGLOVE_SKIP_TEST_DISCOVERY is needed for MSVC -A ARM64 which doesn't set CMAKE_CROSSCOMPILING.
 if(NOT CMAKE_CROSSCOMPILING AND NOT FOXGLOVE_SKIP_TEST_DISCOVERY)
@@ -403,105 +380,60 @@ add_custom_target(html-docs
 
 ### Examples
 
-add_executable(example_server examples/ws-server/src/main.cpp)
-set_property(TARGET example_server PROPERTY CXX_STANDARD 17)
-set_property(TARGET example_server PROPERTY CXX_STANDARD_REQUIRED True)
-target_compile_options(example_server PUBLIC ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
-target_link_options(example_server PUBLIC ${SANITIZER_LINK_OPTIONS})
-target_link_libraries(example_server foxglove_cpp_shared)
+# Helper to define an example target with common boilerplate.
+# Extra arguments after the source file(s) are passed to target_link_libraries.
+function(add_foxglove_example name)
+  cmake_parse_arguments(PARSE_ARGV 1 ARG "" "" "SOURCES;LIBS")
+  add_executable(${name} ${ARG_SOURCES})
+  set_target_properties(${name} PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED True)
+  target_compile_options(${name} PRIVATE ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
+  target_link_options(${name} PRIVATE ${SANITIZER_LINK_OPTIONS})
+  target_link_libraries(${name} foxglove_cpp_shared ${ARG_LIBS})
+  # Mark third-party include directories as SYSTEM to suppress warnings.
+  # SYSTEM on target_link_libraries requires CMake 3.25+, so we add them manually.
+  foreach(_lib ${ARG_LIBS})
+    if(TARGET ${_lib})
+      get_target_property(_inc ${_lib} INTERFACE_INCLUDE_DIRECTORIES)
+      if(_inc)
+        target_include_directories(${name} SYSTEM PRIVATE ${_inc})
+      endif()
+    endif()
+  endforeach()
+endfunction()
 
-add_executable(example_services examples/ws-services/src/main.cpp)
-set_property(TARGET example_services PROPERTY CXX_STANDARD 17)
-set_property(TARGET example_services PROPERTY CXX_STANDARD_REQUIRED True)
-target_compile_options(example_services PUBLIC ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
-target_link_options(example_services PUBLIC ${SANITIZER_LINK_OPTIONS})
-target_link_libraries(example_services foxglove_cpp_shared nlohmann_json::nlohmann_json)
-target_include_directories(example_services SYSTEM PRIVATE ${NLOHMANN_INCLUDE_DIRS})
+add_foxglove_example(example_server SOURCES examples/ws-server/src/main.cpp)
+add_foxglove_example(example_services SOURCES examples/ws-services/src/main.cpp LIBS nlohmann_json::nlohmann_json)
+add_foxglove_example(example_mcap SOURCES examples/mcap/src/main.cpp)
+add_foxglove_example(example_foxglove_schemas SOURCES examples/foxglove-schemas/src/main.cpp)
+add_foxglove_example(example_param_server SOURCES examples/param-server/src/main.cpp)
+add_foxglove_example(example_quickstart SOURCES examples/quickstart/src/main.cpp)
+add_foxglove_example(example_connection_graph SOURCES examples/connection-graph/src/main.cpp)
+add_foxglove_example(example_auto_serialize SOURCES examples/auto-serialize/src/main.cpp LIBS nlohmann_json::nlohmann_json)
+add_foxglove_example(example_message_filtering SOURCES examples/message-filtering/src/main.cpp)
 
-add_executable(example_mcap examples/mcap/src/main.cpp)
-set_property(TARGET example_mcap PROPERTY CXX_STANDARD 17)
-set_property(TARGET example_mcap PROPERTY CXX_STANDARD_REQUIRED True)
-target_compile_options(example_mcap PUBLIC ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
-target_link_options(example_mcap PUBLIC ${SANITIZER_LINK_OPTIONS})
-target_link_libraries(example_mcap foxglove_cpp_shared)
-
-add_executable(example_foxglove_schemas examples/foxglove-schemas/src/main.cpp)
-set_property(TARGET example_foxglove_schemas PROPERTY CXX_STANDARD 17)
-set_property(TARGET example_foxglove_schemas PROPERTY CXX_STANDARD_REQUIRED True)
-target_compile_options(example_foxglove_schemas PUBLIC ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
-target_link_options(example_foxglove_schemas PUBLIC ${SANITIZER_LINK_OPTIONS})
-target_link_libraries(example_foxglove_schemas foxglove_cpp_shared)
-
-add_executable(example_param_server examples/param-server/src/main.cpp)
-set_property(TARGET example_param_server PROPERTY CXX_STANDARD 17)
-set_property(TARGET example_param_server PROPERTY CXX_STANDARD_REQUIRED True)
-target_compile_options(example_param_server PUBLIC ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
-target_link_options(example_param_server PUBLIC ${SANITIZER_LINK_OPTIONS})
-target_link_libraries(example_param_server foxglove_cpp_shared)
-
-add_executable(example_quickstart examples/quickstart/src/main.cpp)
-set_property(TARGET example_quickstart PROPERTY CXX_STANDARD 17)
-set_property(TARGET example_quickstart PROPERTY CXX_STANDARD_REQUIRED True)
-target_compile_options(example_quickstart PUBLIC ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
-target_link_options(example_quickstart PUBLIC ${SANITIZER_LINK_OPTIONS})
-target_link_libraries(example_quickstart foxglove_cpp_shared)
-
-add_executable(example_connection_graph examples/connection-graph/src/main.cpp)
-set_property(TARGET example_connection_graph PROPERTY CXX_STANDARD 17)
-set_property(TARGET example_connection_graph PROPERTY CXX_STANDARD_REQUIRED True)
-target_compile_options(example_connection_graph PUBLIC ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
-target_link_options(example_connection_graph PUBLIC ${SANITIZER_LINK_OPTIONS})
-target_link_libraries(example_connection_graph foxglove_cpp_shared)
-
-add_executable(example_auto_serialize examples/auto-serialize/src/main.cpp)
-set_property(TARGET example_auto_serialize PROPERTY CXX_STANDARD 17)
-set_property(TARGET example_auto_serialize PROPERTY CXX_STANDARD_REQUIRED True)
-target_compile_options(example_auto_serialize PUBLIC ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
-target_link_options(example_auto_serialize PUBLIC ${SANITIZER_LINK_OPTIONS})
-target_link_libraries(example_auto_serialize foxglove_cpp_shared nlohmann_json::nlohmann_json)
-target_include_directories(example_auto_serialize SYSTEM PRIVATE ${NLOHMANN_INCLUDE_DIRS})
+if(FOXGLOVE_BUILD_REMOTE_ACCESS)
+  add_foxglove_example(example_remote_access SOURCES examples/remote-access/src/main.cpp)
+  add_foxglove_example(example_remote_access_fetch_asset SOURCES examples/remote-access-fetch-asset/src/main.cpp)
+endif()
 
 option(BUILD_OPENCV_EXAMPLE "Build the RGB camera visualization example (requires OpenCV)" OFF)
 
 if(BUILD_OPENCV_EXAMPLE)
   find_package(OpenCV REQUIRED COMPONENTS core videoio)
-  add_executable(example_rgb_camera_visualization examples/rgb-camera-visualization/main.cpp)
-  set_property(TARGET example_rgb_camera_visualization PROPERTY CXX_STANDARD 17)
-  set_property(TARGET example_rgb_camera_visualization PROPERTY CXX_STANDARD_REQUIRED True)
-  target_compile_options(example_rgb_camera_visualization PUBLIC ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
-  target_link_options(example_rgb_camera_visualization PUBLIC ${SANITIZER_LINK_OPTIONS})
-  target_link_libraries(example_rgb_camera_visualization foxglove_cpp_shared opencv_core opencv_videoio)
+  add_foxglove_example(example_rgb_camera_visualization SOURCES examples/rgb-camera-visualization/main.cpp LIBS opencv_core opencv_videoio)
 endif()
 
-add_executable(example_message_filtering examples/message-filtering/src/main.cpp)
-set_property(TARGET example_message_filtering PROPERTY CXX_STANDARD 17)
-set_property(TARGET example_message_filtering PROPERTY CXX_STANDARD_REQUIRED True)
-target_compile_options(example_message_filtering PUBLIC ${SANITIZER_COMPILE_OPTIONS})
-target_link_options(example_message_filtering PUBLIC ${SANITIZER_LINK_OPTIONS})
-target_link_libraries(example_message_filtering foxglove_cpp_shared)
-
 if(BUILD_REMOTE_DATA_LOADER_BACKEND_EXAMPLE)
-  add_executable(example_remote_data_loader_backend examples/remote-data-loader-backend/src/main.cpp)
-  set_property(TARGET example_remote_data_loader_backend PROPERTY CXX_STANDARD 17)
-  set_property(TARGET example_remote_data_loader_backend PROPERTY CXX_STANDARD_REQUIRED True)
-  target_compile_options(example_remote_data_loader_backend PUBLIC ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
-  target_link_options(example_remote_data_loader_backend PUBLIC ${SANITIZER_LINK_OPTIONS})
-  target_link_libraries(example_remote_data_loader_backend foxglove_cpp_shared nlohmann_json::nlohmann_json httplib::httplib base64 date::date)
-  target_include_directories(example_remote_data_loader_backend SYSTEM PRIVATE ${NLOHMANN_INCLUDE_DIRS})
+  add_foxglove_example(example_remote_data_loader_backend SOURCES examples/remote-data-loader-backend/src/main.cpp LIBS nlohmann_json::nlohmann_json httplib::httplib base64 date::date)
 endif()
 
 if(BUILD_WS_STREAM_MCAP_EXAMPLE)
-  add_executable(example_ws_stream_mcap
-    examples/ws-stream-mcap/src/main.cpp
-    examples/ws-stream-mcap/src/mcap_player.cpp
+  add_foxglove_example(example_ws_stream_mcap
+    SOURCES examples/ws-stream-mcap/src/main.cpp examples/ws-stream-mcap/src/mcap_player.cpp
+    LIBS lz4_static
   )
-  set_property(TARGET example_ws_stream_mcap PROPERTY CXX_STANDARD 17)
-  set_property(TARGET example_ws_stream_mcap PROPERTY CXX_STANDARD_REQUIRED True)
-  target_compile_options(example_ws_stream_mcap PUBLIC ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
-  target_link_options(example_ws_stream_mcap PUBLIC ${SANITIZER_LINK_OPTIONS})
   target_compile_definitions(example_ws_stream_mcap PRIVATE MCAP_COMPRESSION_NO_ZSTD)
   target_include_directories(example_ws_stream_mcap SYSTEM PRIVATE ${mcap_SOURCE_DIR}/cpp/mcap/include)
-  target_link_libraries(example_ws_stream_mcap foxglove_cpp_shared lz4_static)
 endif()
 
 ### Install

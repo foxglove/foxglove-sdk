@@ -10,10 +10,12 @@ mod listener;
 mod participant;
 pub(super) mod protocol_version;
 mod rtt_tracker;
-mod service;
+pub mod service;
 mod session;
 mod session_state;
 
+pub use crate::remote_common::ClientId;
+pub use crate::remote_common::connection_graph::ConnectionGraph;
 pub use capability::Capability;
 pub use client::Client;
 pub use connection::ConnectionStatus;
@@ -23,10 +25,13 @@ pub use listener::Listener;
 // Re-export parameter types so callers can construct parameter values.
 pub use crate::protocol::v2::parameter::{Parameter, ParameterType, ParameterValue};
 
-// Re-export service types so Gateway::services() callers can construct services.
-pub use crate::remote_common::service::{
-    Handler, Request, Responder, Service, ServiceSchema, SyncHandler,
-};
+// Re-export status types so callers can publish and remove status messages.
+pub use crate::protocol::v2::server::status::{Level as StatusLevel, Status};
+
+// Re-export fetch-asset types.
+pub use crate::remote_common::fetch_asset::AssetHandler;
+/// Type alias for the remote-access-specific asset responder.
+pub type AssetResponder = crate::remote_common::fetch_asset::AssetResponder<Client>;
 
 use thiserror::Error;
 

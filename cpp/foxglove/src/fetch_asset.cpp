@@ -1,5 +1,5 @@
 #include <foxglove-c/foxglove-c.h>
-#include <foxglove/server/fetch_asset.hpp>
+#include <foxglove/fetch_asset.hpp>
 
 using namespace std::string_view_literals;
 

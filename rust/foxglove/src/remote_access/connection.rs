@@ -18,14 +18,14 @@ use crate::{
     Context, FoxgloveError, SinkChannelFilter,
     api_client::{DeviceToken, FoxgloveApiClientBuilder, RemoteSessionRequest},
     library_version::get_library_version,
-    protocol::v2::parameter::Parameter,
-    protocol::v2::server::ServerInfo,
+    protocol::v2::{parameter::Parameter, server::ServerInfo},
     remote_access::{
-        Capability, RemoteAccessError,
+        AssetHandler, Capability, Client, RemoteAccessError,
         credentials_provider::CredentialsProvider,
         protocol_version,
         session::{DEFAULT_PENDING_CLIENT_READER_TIMEOUT, RemoteAccessSession, SessionParams},
     },
+    remote_common::connection_graph::ConnectionGraph,
     remote_common::service::{Service, ServiceId, ServiceMap},
 };
 
@@ -82,6 +82,7 @@ pub(crate) struct ConnectionParams {
     pub listener: Option<Arc<dyn super::Listener>>,
     pub capabilities: Vec<Capability>,
     pub supported_encodings: Option<IndexSet<String>>,
+    pub fetch_asset_handler: Option<Arc<dyn AssetHandler<Client>>>,
     pub runtime: Handle,
     pub channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     pub server_info: Option<HashMap<String, String>>,
@@ -100,6 +101,7 @@ pub(crate) struct RemoteAccessConnection {
     listener: Option<Arc<dyn super::Listener>>,
     capabilities: Vec<Capability>,
     supported_encodings: Option<IndexSet<String>>,
+    fetch_asset_handler: Option<Arc<dyn AssetHandler<Client>>>,
     runtime: Handle,
     channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     server_info: Option<HashMap<String, String>>,
@@ -108,6 +110,7 @@ pub(crate) struct RemoteAccessConnection {
     context: Weak<Context>,
     cancellation_token: CancellationToken,
     services: Arc<parking_lot::RwLock<ServiceMap>>,
+    connection_graph: Arc<parking_lot::Mutex<ConnectionGraph>>,
     session: parking_lot::Mutex<Option<Arc<RemoteAccessSession>>>,
     credentials_provider: OnceCell<CredentialsProvider>,
     status: AtomicU8,
@@ -126,6 +129,7 @@ impl RemoteAccessConnection {
             listener: params.listener,
             capabilities: params.capabilities,
             supported_encodings: params.supported_encodings,
+            fetch_asset_handler: params.fetch_asset_handler,
             runtime: params.runtime,
             channel_filter: params.channel_filter,
             server_info: params.server_info,
@@ -134,6 +138,7 @@ impl RemoteAccessConnection {
             context: params.context,
             cancellation_token: CancellationToken::new(),
             services,
+            connection_graph: Arc::new(parking_lot::Mutex::new(ConnectionGraph::new())),
             session: parking_lot::Mutex::new(None),
             credentials_provider: OnceCell::new(),
             status: AtomicU8::new(ConnectionStatus::Connecting as u8),
@@ -153,6 +158,44 @@ impl RemoteAccessConnection {
         if let Some(session) = self.session.lock().clone() {
             session.publish_parameter_values(parameters);
         }
+    }
+
+    /// Publishes a status message to all connected participants.
+    ///
+    /// If no session is currently active (e.g. while reconnecting), this is a no-op.
+    pub fn publish_status(&self, status: super::Status) {
+        if let Some(session) = self.session.lock().clone() {
+            session.publish_status(status);
+        }
+    }
+
+    /// Removes status messages by id from all connected participants.
+    ///
+    /// If no session is currently active (e.g. while reconnecting), this is a no-op.
+    pub fn remove_status(&self, status_ids: Vec<String>) {
+        if let Some(session) = self.session.lock().clone() {
+            session.remove_status(status_ids);
+        }
+    }
+
+    /// Replaces the connection graph and sends updates to subscribed participants.
+    ///
+    /// The graph state is persisted across session reconnects. If no session is currently
+    /// active, the graph is still updated so that participants connecting later will
+    /// receive the latest state when they subscribe.
+    pub fn replace_connection_graph(
+        &self,
+        replacement_graph: ConnectionGraph,
+    ) -> std::result::Result<(), FoxgloveError> {
+        if !self.has_capability(Capability::ConnectionGraph) {
+            return Err(FoxgloveError::ConnectionGraphNotSupported);
+        }
+        if let Some(session) = self.session.lock().clone() {
+            session.replace_connection_graph(replacement_graph);
+        } else {
+            self.connection_graph.lock().update(replacement_graph);
+        }
+        Ok(())
     }
 
     /// Update the connection status, notifying the listener if it changed.
@@ -253,12 +296,14 @@ impl RemoteAccessConnection {
                             .message_backlog_size
                             .unwrap_or(DEFAULT_MESSAGE_BACKLOG_SIZE),
                         services: self.services.clone(),
+                        connection_graph: self.connection_graph.clone(),
                         pending_client_reader_timeout: self
                             .pending_client_reader_timeout
                             .unwrap_or(DEFAULT_PENDING_CLIENT_READER_TIMEOUT),
                         remote_access_session_id: self
                             .remote_access_session_id()
                             .map(str::to_owned),
+                        fetch_asset_handler: self.fetch_asset_handler.clone(),
                     };
                     (
                         Arc::new(RemoteAccessSession::new(session_params)),
@@ -380,6 +425,16 @@ impl RemoteAccessConnection {
 
         // Clear the active session and remove the sink before closing the room.
         *self.session.lock() = None;
+        {
+            let mut graph = self.connection_graph.lock();
+            let had_subscribers = graph.has_subscribers();
+            graph.clear_subscribers();
+            if had_subscribers {
+                if let Some(listener) = &self.listener {
+                    listener.on_connection_graph_unsubscribe();
+                }
+            }
+        }
         context.remove_sink(session.sink_id());
         sender_task.abort();
         // Wait for the sender task to fully stop so no callbacks are in flight.

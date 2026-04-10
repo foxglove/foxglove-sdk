@@ -1,4 +1,4 @@
-//! Websocket server
+//! WebSocket server
 
 use std::collections::HashMap;
 use std::fmt::{Debug, Display};
@@ -58,12 +58,12 @@ impl Default for WebSocketServer {
 }
 
 impl WebSocketServer {
-    /// Creates a new websocket server with default options.
+    /// Creates a new WebSocket server with default options.
     pub fn new() -> Self {
         Self::default()
     }
 
-    /// Set the websocket server name to advertise to clients.
+    /// Set the WebSocket server name to advertise to clients.
     ///
     /// By default, the server is not given a name.
     pub fn name(mut self, name: impl Into<String>) -> Self {
@@ -140,7 +140,7 @@ impl WebSocketServer {
 
     /// Configure the handler for fetching assets.
     /// There can only be one asset handler, exclusive with the other fetch_asset_handler methods.
-    pub fn fetch_asset_handler(mut self, handler: Box<dyn AssetHandler>) -> Self {
+    pub fn fetch_asset_handler(mut self, handler: Box<dyn AssetHandler<Client>>) -> Self {
         self.options.fetch_asset_handler = Some(handler);
         self
     }
@@ -237,7 +237,7 @@ impl WebSocketServer {
         self
     }
 
-    /// Starts the websocket server.
+    /// Starts the WebSocket server.
     ///
     /// Returns a handle that can optionally be used to gracefully shutdown the server. The caller
     /// can safely drop the handle, and the server will run forever.
@@ -247,7 +247,7 @@ impl WebSocketServer {
         Ok(WebSocketServerHandle(server, addr))
     }
 
-    /// Starts the websocket server.
+    /// Starts the WebSocket server.
     ///
     /// Returns a handle that can optionally be used to gracefully shutdown the server. The caller
     /// can safely drop the handle, and the server will run forever.
@@ -270,7 +270,7 @@ impl WebSocketServer {
     }
 }
 
-/// A handle to the websocket server.
+/// A handle to the WebSocket server.
 ///
 /// This handle can safely be dropped and the server will run forever.
 pub struct WebSocketServerHandle(Arc<Server>, SocketAddr);
@@ -292,7 +292,7 @@ impl WebSocketServerHandle {
         self.0.client_count()
     }
 
-    /// Returns an app URL to open the websocket as a data source.
+    /// Returns an app URL to open the WebSocket connection as a data source.
     pub fn app_url(&self) -> AppUrl {
         let protocol = if self.0.is_tls_configured() {
             "wss"
@@ -375,7 +375,7 @@ impl WebSocketServerHandle {
         self.0.replace_connection_graph(replacement_graph)
     }
 
-    /// Gracefully shut down the websocket server.
+    /// Gracefully shut down the WebSocket server.
     ///
     /// Returns a handle that can be used to wait for the graceful shutdown to complete. If the
     /// handle is dropped, all client tasks will be immediately aborted.

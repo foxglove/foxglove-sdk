@@ -4,6 +4,16 @@ The Foxglove C++ SDK is a higher-level wrapper around the [C library](../c). To 
 
 The SDK headers include a copy of `expected.hpp` from [tl-expected](https://github.com/TartanLlama/expected) ([docs](https://tl.tartanllama.xyz/en/latest/api/expected.html)), which provides an implementation similar to `std::expected` from C++23.
 
+## Dependencies
+
+By default, CMake will try to find dependencies (Catch2, nlohmann\_json, etc.) from the local package manager and fall back to building them from source via FetchContent. This is controlled by the `USE_PACKAGE_MANAGER_DEPENDENCIES` CMake option (default: `ON`).
+
+To force all dependencies to be fetched and built from source:
+
+```
+cmake -DUSE_PACKAGE_MANAGER_DEPENDENCIES=OFF ..
+```
+
 ## Local development
 
 Build the library and examples:

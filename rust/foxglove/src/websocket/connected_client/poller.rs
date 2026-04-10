@@ -12,9 +12,9 @@ use super::{ConnectedClient, ShutdownReason};
 /// A poller for a connected client.
 ///
 /// The poller is responsible for:
-/// - Sending messages (from `data_plane` and `control_plane`) to the websocket.
-/// - Receiving messages from the websocket and invoking [`ConnectedClient::handle_message`].
-/// - Waiting for a shutdown signal, and closing the websocket.
+/// - Sending messages (from `data_plane` and `control_plane`) to the WebSocket.
+/// - Receiving messages from the WebSocket and invoking [`ConnectedClient::handle_message`].
+/// - Waiting for a shutdown signal, and closing the WebSocket.
 pub(super) struct Poller {
     websocket: WebSocketStream<ServerStream<TcpStream>>,
     data_plane_rx: flume::Receiver<Message>,
@@ -38,12 +38,12 @@ impl Poller {
         }
     }
 
-    /// Runs the main poll loop for a websocket connection.
+    /// Runs the main poll loop for a WebSocket connection.
     pub async fn run(self, client: &ConnectedClient) {
         let addr = client.addr();
         let (mut ws_tx, mut ws_rx) = self.websocket.split();
 
-        // Handle messages received from the websocket.
+        // Handle messages received from the WebSocket.
         let ws_rx_loop = async {
             while let Some(msg) = ws_rx.next().await {
                 match msg {
