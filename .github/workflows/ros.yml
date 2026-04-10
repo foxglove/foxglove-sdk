@@ -26,7 +26,7 @@ jobs:
               - 'ros/**'
               - '.github/workflows/ros.yml'
 
-  build-cpp-sdk:
+  build-cpp-dist:
     needs: changes
     if: needs.changes.outputs.should_run == 'true'
     # Pinned to 22.04 so libfoxglove.a is compatible with ROS Humble (glibc 2.35)
@@ -41,40 +41,18 @@ jobs:
           echo "CC=gcc" >> $GITHUB_ENV
           echo "CXX=g++" >> $GITHUB_ENV
 
-      # For remote access targets, build the staticlib and cdylib separately so
-      # we can enable remote-access only in the cdylib.
-      - name: Build C staticlib
-        env:
-          FOXGLOVE_SDK_LANGUAGE: c
-        run: cargo rustc --release --lib --crate-type staticlib
-        working-directory: c
-
-      - name: Build C cdylib with remote access
-        env:
-          FOXGLOVE_SDK_LANGUAGE: c
-        run: cargo rustc --release --lib --crate-type cdylib --features remote-access
-        working-directory: c
-
-      - name: Organize SDK artifact
-        run: |
-          mkdir -p cpp-sdk/foxglove/lib
-          mkdir -p cpp-sdk/foxglove/include
-          mkdir -p cpp-sdk/foxglove/src
-          cp target/release/libfoxglove.a cpp-sdk/foxglove/lib/
-          cp target/release/libfoxglove.so cpp-sdk/foxglove/lib/
-          cp -R c/include/foxglove-c cpp-sdk/foxglove/include/
-          cp -R cpp/foxglove/include/foxglove cpp-sdk/foxglove/include/
-          cp -R cpp/foxglove/src/* cpp-sdk/foxglove/src/
+      - name: Build C++ SDK
+        run: make -f Container.mk build-cpp-dist
 
       - name: Upload SDK artifact
         uses: actions/upload-artifact@v7
         with:
           name: cpp-sdk
-          path: cpp-sdk/foxglove
+          path: cpp/dist
           retention-days: 1
 
   ros:
-    needs: [changes, build-cpp-sdk]
+    needs: [changes, build-cpp-dist]
     if: needs.changes.outputs.should_run == 'true'
     runs-on: ubuntu-latest
     strategy:
@@ -93,7 +71,7 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           name: cpp-sdk
-          path: cpp-sdk/foxglove
+          path: cpp/dist
 
       - name: Run make lint
         run: make lint
@@ -102,7 +80,7 @@ jobs:
       - name: Run make docker-build
         run: |
           make \
-            FOXGLOVE_CPP_SDK_DIR=/sdk/cpp-sdk/foxglove \
+            FOXGLOVE_CPP_SDK_DIR=/sdk/cpp/dist \
             ${{ matrix.ros_distribution == 'rolling' && 'EXTRA_DOCKER_ARGS="--build-arg USE_ROS_TESTING=true"' || '' }} \
             docker-build-${{ matrix.ros_distribution }}
         working-directory: ros
@@ -117,7 +95,7 @@ jobs:
   # individual matrix jobs.
   ros-status:
     name: ros-status
-    needs: [changes, build-cpp-sdk, ros]
+    needs: [changes, build-cpp-dist, ros]
     if: always()
     runs-on: ubuntu-latest
     steps:

@@ -113,3 +113,25 @@ test-cpp:
 .PHONY: test-cpp-sanitize
 test-cpp-sanitize:
 	make -C cpp SANITIZE=address,undefined FOXGLOVE_REMOTE_ACCESS=OFF test
+
+# Build the C/C++ SDK into a directory suitable for use as
+# FETCHCONTENT_SOURCE_DIR_FOXGLOVE_SDK in CMake.
+CPP_SDK_DIR ?= cpp/dist
+FOXGLOVE_REMOTE_ACCESS ?= ON
+STATICLIB_NAME ?= libfoxglove.a
+CDYLIB_NAME ?= libfoxglove.so
+CARGO_LIB_DIR = target/$(if $(CARGO_BUILD_TARGET),$(CARGO_BUILD_TARGET)/)release
+.PHONY: build-cpp-dist
+build-cpp-dist:
+	cd c && FOXGLOVE_SDK_LANGUAGE=c cargo rustc --release --lib --crate-type staticlib
+	cd c && FOXGLOVE_SDK_LANGUAGE=c cargo rustc --release --lib --crate-type cdylib \
+		$(if $(filter ON,$(FOXGLOVE_REMOTE_ACCESS)),--features remote-access)
+	mkdir -p $(CPP_SDK_DIR)/lib $(CPP_SDK_DIR)/include $(CPP_SDK_DIR)/src
+	cp $(CARGO_LIB_DIR)/$(STATICLIB_NAME) $(CPP_SDK_DIR)/lib/
+	cp $(CARGO_LIB_DIR)/$(CDYLIB_NAME) $(CPP_SDK_DIR)/lib/
+	if [ -f "$(CARGO_LIB_DIR)/$(CDYLIB_NAME).lib" ]; then \
+		cp "$(CARGO_LIB_DIR)/$(CDYLIB_NAME).lib" "$(CPP_SDK_DIR)/lib/"; \
+	fi
+	cp -R c/include/foxglove-c $(CPP_SDK_DIR)/include/
+	cp -R cpp/foxglove/include/foxglove $(CPP_SDK_DIR)/include/
+	cp -R cpp/foxglove/src/* $(CPP_SDK_DIR)/src/

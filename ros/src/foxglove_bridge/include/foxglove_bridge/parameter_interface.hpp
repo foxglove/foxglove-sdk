@@ -10,7 +10,7 @@
 
 #include <rclcpp/rclcpp.hpp>
 
-#include <foxglove/server/parameter.hpp>
+#include <foxglove/parameter.hpp>
 
 namespace foxglove_bridge {
 
