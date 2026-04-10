@@ -18,6 +18,7 @@ option(USE_PACKAGE_MANAGER_DEPENDENCIES
   "Try to find dependencies provided by the local package manager, and if not found, fall back to building them from source"
   ON)
 option(FOXGLOVE_REMOTE_ACCESS "Build with remote access gateway support" OFF)
+option(FOXGLOVE_BUILD_INTEGRATION_TESTS "Build LiveKit integration tests (requires FOXGLOVE_REMOTE_ACCESS)" OFF)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
@@ -89,7 +90,9 @@ if(BUILD_REMOTE_DATA_LOADER_BACKEND_EXAMPLE)
     GIT_REPOSITORY https://github.com/HowardHinnant/date.git
     GIT_TAG v3.0.4
   )
+endif()
 
+if(BUILD_REMOTE_DATA_LOADER_BACKEND_EXAMPLE OR FOXGLOVE_BUILD_INTEGRATION_TESTS)
   set(HTTPLIB_COMPILE OFF CACHE BOOL "" FORCE)
   set(HTTPLIB_REQUIRE_OPENSSL OFF CACHE BOOL "" FORCE)
   set(HTTPLIB_USE_OPENSSL_IF_AVAILABLE OFF CACHE BOOL "" FORCE)
@@ -341,6 +344,8 @@ file(GLOB_RECURSE foxglove_test_srcs CONFIGURE_DEPENDS
     "foxglove/tests/*.hpp"
     "foxglove/tests/*.cpp"
 )
+# Exclude integration test sources from the unit test binary.
+list(FILTER foxglove_test_srcs EXCLUDE REGEX "foxglove/tests/integration/")
 add_executable(tests "${foxglove_test_srcs}")
 set_property(TARGET tests PROPERTY CXX_STANDARD 17)
 set_property(TARGET tests PROPERTY CXX_STANDARD_REQUIRED True)
@@ -366,6 +371,77 @@ if(MSVC)
   # Auto-detection of C++11 support is not working on the windows-2025 runner with default settings
   target_compile_options(tests PRIVATE /Zc:__cplusplus)
 endif()
+
+
+### Integration Tests (optional, requires remote access + LiveKit)
+
+if(FOXGLOVE_BUILD_INTEGRATION_TESTS)
+  if(NOT FOXGLOVE_REMOTE_ACCESS)
+    message(FATAL_ERROR "FOXGLOVE_BUILD_INTEGRATION_TESTS requires FOXGLOVE_REMOTE_ACCESS=ON")
+  endif()
+
+  # LiveKit C++ SDK
+  set(LK_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+  set(LK_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+  FetchContent_Declare(
+    livekit
+    GIT_REPOSITORY https://github.com/livekit/client-sdk-cpp.git
+    GIT_TAG v0.3.3
+  )
+  FetchContent_MakeAvailable(livekit)
+
+  # jwt-cpp (header-only JWT library for generating LiveKit access tokens)
+  set(JWT_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+  set(JWT_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+  set(JWT_DISABLE_PICOJSON OFF CACHE BOOL "" FORCE)
+  FetchContent_Declare(
+    jwt-cpp
+    GIT_REPOSITORY https://github.com/Thalhammer/jwt-cpp.git
+    GIT_TAG v0.7.0
+    EXCLUDE_FROM_ALL
+  )
+  FetchContent_MakeAvailable(jwt-cpp)
+
+  file(GLOB foxglove_integration_test_srcs CONFIGURE_DEPENDS
+      "foxglove/tests/integration/*.hpp"
+      "foxglove/tests/integration/*.cpp"
+  )
+  add_executable(integration_tests "${foxglove_integration_test_srcs}")
+  set_property(TARGET integration_tests PROPERTY CXX_STANDARD 17)
+  set_property(TARGET integration_tests PROPERTY CXX_STANDARD_REQUIRED True)
+  target_compile_options(integration_tests PRIVATE ${SANITIZER_COMPILE_OPTIONS})
+  target_link_options(integration_tests PRIVATE ${SANITIZER_LINK_OPTIONS})
+  target_link_libraries(integration_tests PRIVATE
+    foxglove_cpp_shared
+    Catch2::Catch2WithMain
+    nlohmann_json::nlohmann_json
+    httplib::httplib
+    livekit
+    jwt-cpp::jwt-cpp
+  )
+  # Suppress warnings from third-party headers.
+  foreach(_lib nlohmann_json::nlohmann_json httplib::httplib jwt-cpp::jwt-cpp)
+    if(TARGET ${_lib})
+      get_target_property(_inc ${_lib} INTERFACE_INCLUDE_DIRECTORIES)
+      if(_inc)
+        target_include_directories(integration_tests SYSTEM PRIVATE ${_inc})
+      endif()
+    endif()
+  endforeach()
+  if(TARGET livekit)
+    get_target_property(_lk_inc livekit INTERFACE_INCLUDE_DIRECTORIES)
+    if(_lk_inc)
+      target_include_directories(integration_tests SYSTEM PRIVATE ${_lk_inc})
+    endif()
+  endif()
+  if(NOT CMAKE_CROSSCOMPILING AND NOT FOXGLOVE_SKIP_TEST_DISCOVERY)
+    catch_discover_tests(integration_tests
+      TEST_PREFIX "integration/"
+      PROPERTIES LABELS "integration"
+    )
+  endif()
+endif()
+
 
 ### Docs
 
