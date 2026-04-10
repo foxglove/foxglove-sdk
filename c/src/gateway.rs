@@ -790,7 +790,7 @@ pub unsafe extern "C" fn foxglove_gateway_remove_status(
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_gateway_publish_connection_graph(
     gateway: Option<&FoxgloveGateway>,
-    graph: Option<&mut FoxgloveConnectionGraph>,
+    graph: Option<&FoxgloveConnectionGraph>,
 ) -> FoxgloveError {
     let Some(gateway) = gateway else {
         tracing::error!("foxglove_gateway_publish_connection_graph called with null gateway");

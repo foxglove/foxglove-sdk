@@ -16,7 +16,8 @@ namespace foxglove {
 /// services.
 ///
 /// Connection graph data can be published with WebSocketServer::publishConnectionGraph
-/// or RemoteAccessGateway::publishConnectionGraph, and visualized in the Foxglove [Topic Graph panel].
+/// or RemoteAccessGateway::publishConnectionGraph, and visualized in the Foxglove [Topic Graph
+/// panel].
 ///
 /// [Topic Graph panel]: https://docs.foxglove.dev/docs/visualization/panels/topic-graph
 class ConnectionGraph final {

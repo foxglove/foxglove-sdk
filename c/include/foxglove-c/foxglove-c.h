@@ -5459,7 +5459,7 @@ foxglove_error foxglove_gateway_remove_status(const struct foxglove_gateway *gat
  * Requires `FOXGLOVE_GATEWAY_CAPABILITY_CONNECTION_GRAPH`.
  */
 foxglove_error foxglove_gateway_publish_connection_graph(const struct foxglove_gateway *gateway,
-                                                         struct foxglove_connection_graph *graph);
+                                                         const struct foxglove_connection_graph *graph);
 #endif
 
 #if !defined(__wasm__)
