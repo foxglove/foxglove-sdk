@@ -410,6 +410,7 @@ pub fn generate_protos(proto_path: &Path, out_dir: &Path) -> anyhow::Result<()> 
     }
 
     let mut config = prost_build::Config::new();
+    config.protoc_arg("--experimental_allow_proto3_optional");
     config.message_attribute(".", format!("/// {DOC_REF}"));
 
     // Add conditional serde derives for the "serde" feature.
