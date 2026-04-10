@@ -20,6 +20,7 @@ use crate::protocol::v2::DecodeError;
 use crate::protocol::v2::parameter::Parameter;
 use crate::protocol::v2::server::ParameterValues;
 use crate::remote_access::participant::ChannelWriter;
+use crate::remote_common::connection_graph::ConnectionGraph;
 use crate::remote_common::{
     fetch_asset::AssetResponder,
     service::{CallId, Service, ServiceId, ServiceMap},
@@ -201,6 +202,7 @@ pub(crate) struct RemoteAccessSession {
     pending_client_reader_timeout: Duration,
     rtt_tracker: parking_lot::Mutex<RttTracker>,
     ice_rtt_tracker: parking_lot::Mutex<RttTracker>,
+    connection_graph: Arc<parking_lot::Mutex<ConnectionGraph>>,
 }
 
 impl Sink for RemoteAccessSession {
@@ -318,6 +320,7 @@ pub(crate) struct SessionParams {
     pub cancellation_token: CancellationToken,
     pub message_backlog_size: usize,
     pub services: Arc<parking_lot::RwLock<ServiceMap>>,
+    pub connection_graph: Arc<parking_lot::Mutex<ConnectionGraph>>,
     pub pending_client_reader_timeout: Duration,
     pub remote_access_session_id: Option<String>,
     pub fetch_asset_handler: Option<Arc<dyn AssetHandler<Client>>>,
@@ -352,6 +355,7 @@ impl RemoteAccessSession {
             supported_encodings: params.supported_encodings,
             rtt_tracker: parking_lot::Mutex::new(RttTracker::new("ping/pong")),
             ice_rtt_tracker: parking_lot::Mutex::new(RttTracker::new("ICE")),
+            connection_graph: params.connection_graph,
         }
     }
 
@@ -772,6 +776,12 @@ impl RemoteAccessSession {
                     let rtt_ms = (now - ack.device_timestamp) as f64;
                     self.rtt_tracker.lock().record_sample(rtt_ms);
                 }
+            }
+            ClientMessage::SubscribeConnectionGraph => {
+                self.handle_connection_graph_subscribe(&participant);
+            }
+            ClientMessage::UnsubscribeConnectionGraph => {
+                self.handle_connection_graph_unsubscribe(&participant);
             }
             _ => {
                 warn!("Unhandled client message: {client_msg:?}");
@@ -1246,6 +1256,17 @@ impl RemoteAccessSession {
         if !removed.last_param_unsubscribed.is_empty() {
             if let Some(listener) = &self.listener {
                 listener.on_parameters_unsubscribe(removed.last_param_unsubscribed);
+            }
+        }
+
+        if let Some(client_id) = removed.client_id {
+            if self.has_capability(Capability::ConnectionGraph) {
+                let mut graph = self.connection_graph.lock();
+                if graph.remove_subscriber(client_id) && !graph.has_subscribers() {
+                    if let Some(listener) = &self.listener {
+                        listener.on_connection_graph_unsubscribe();
+                    }
+                }
             }
         }
 
@@ -1877,6 +1898,75 @@ impl RemoteAccessSession {
     pub(crate) fn remove_status(&self, status_ids: Vec<String>) {
         let message = RemoveStatus::new(status_ids);
         self.broadcast_control(encode_json_message(&message));
+    }
+
+    /// Handle a `SubscribeConnectionGraph` message from a client.
+    fn handle_connection_graph_subscribe(&self, participant: &Arc<Participant>) {
+        if !self.has_capability(Capability::ConnectionGraph) {
+            self.send_error(
+                participant,
+                "Server does not support connection graph capability".to_string(),
+            );
+            return;
+        }
+
+        let mut graph = self.connection_graph.lock();
+        let first = !graph.has_subscribers();
+        if !graph.add_subscriber(participant.client_id()) {
+            debug!(
+                "Participant {} is already subscribed to connection graph updates",
+                participant,
+            );
+            return;
+        }
+
+        if first {
+            if let Some(listener) = &self.listener {
+                listener.on_connection_graph_subscribe();
+            }
+        }
+
+        let initial_update = graph.as_initial_update();
+        self.send_control(participant.clone(), encode_json_message(&initial_update));
+    }
+
+    /// Handle an `UnsubscribeConnectionGraph` message from a client.
+    fn handle_connection_graph_unsubscribe(&self, participant: &Arc<Participant>) {
+        if !self.has_capability(Capability::ConnectionGraph) {
+            self.send_error(
+                participant,
+                "Server does not support connection graph capability".to_string(),
+            );
+            return;
+        }
+
+        let mut graph = self.connection_graph.lock();
+        if !graph.remove_subscriber(participant.client_id()) {
+            debug!(
+                "Participant {} is already unsubscribed from connection graph updates",
+                participant,
+            );
+            return;
+        }
+
+        if !graph.has_subscribers() {
+            if let Some(listener) = &self.listener {
+                listener.on_connection_graph_unsubscribe();
+            }
+        }
+    }
+
+    /// Replaces the connection graph and sends updates to subscribed participants.
+    pub(crate) fn replace_connection_graph(&self, replacement_graph: ConnectionGraph) {
+        let mut graph = self.connection_graph.lock();
+        let update = graph.update(replacement_graph);
+        let encoded = encode_json_message(&update);
+        let participants = self.state.read().collect_participants();
+        for participant in participants {
+            if graph.is_subscriber(participant.client_id()) {
+                self.send_control(participant, encoded.clone());
+            }
+        }
     }
 
     /// Check video publishers for metadata changes and re-advertise affected channels.

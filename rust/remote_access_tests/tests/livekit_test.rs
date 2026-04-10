@@ -11,7 +11,7 @@ use anyhow::{Context as _, Result};
 use foxglove::messages::{RawImage, Timestamp};
 use foxglove::protocol::v2::client::SubscribeChannel;
 use foxglove::protocol::v2::server::ServerMessage;
-use foxglove::remote_access::ConnectionStatus;
+use foxglove::remote_access::{ConnectionGraph, ConnectionStatus};
 use foxglove::{Encode, Schema};
 use livekit::{Room, RoomOptions};
 use remote_access_tests::livekit_token;
@@ -1605,5 +1605,461 @@ async fn livekit_connection_status_lifecycle() -> Result<()> {
         "listener callback fired after Shutdown"
     );
 
+    Ok(())
+}
+
+// ===========================================================================
+// Connection graph tests
+// ===========================================================================
+
+/// Test that subscribing to the connection graph delivers an empty initial update
+/// when no graph has been published.
+#[traced_test]
+#[ignore]
+#[tokio::test]
+#[serial(livekit)]
+async fn livekit_connection_graph_subscribe_receives_empty_initial_state() -> Result<()> {
+    let ctx = foxglove::Context::new();
+
+    let gw = TestGateway::start_with_options(
+        &ctx,
+        TestGatewayOptions {
+            capabilities: vec![foxglove::remote_access::Capability::ConnectionGraph],
+            ..Default::default()
+        },
+    )
+    .await?;
+
+    let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+    let _server_info = viewer.expect_server_info().await?;
+
+    viewer.send_subscribe_connection_graph().await?;
+    let update = viewer.expect_connection_graph_update().await?;
+
+    assert!(update.published_topics.is_empty());
+    assert!(update.subscribed_topics.is_empty());
+    assert!(update.advertised_services.is_empty());
+    assert!(update.removed_topics.is_empty());
+    assert!(update.removed_services.is_empty());
+    info!("empty initial connection graph update validated");
+
+    viewer.close().await?;
+    gw.stop().await?;
+    Ok(())
+}
+
+/// Test that after subscribing to the connection graph and publishing a graph,
+/// the viewer receives a ConnectionGraphUpdate with the published data.
+#[traced_test]
+#[ignore]
+#[tokio::test]
+#[serial(livekit)]
+async fn livekit_connection_graph_subscribe_and_publish() -> Result<()> {
+    let ctx = foxglove::Context::new();
+
+    let gw = TestGateway::start_with_options(
+        &ctx,
+        TestGatewayOptions {
+            capabilities: vec![foxglove::remote_access::Capability::ConnectionGraph],
+            ..Default::default()
+        },
+    )
+    .await?;
+
+    let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+    let _server_info = viewer.expect_server_info().await?;
+
+    viewer.send_subscribe_connection_graph().await?;
+    let _initial = viewer.expect_connection_graph_update().await?;
+
+    let mut graph = ConnectionGraph::new();
+    graph.set_published_topic("/camera", ["node_1"]);
+    graph.set_subscribed_topic("/camera", ["node_2"]);
+    graph.set_advertised_service("/set_mode", ["node_1"]);
+    gw.handle.publish_connection_graph(graph)?;
+
+    let update = viewer.expect_connection_graph_update().await?;
+    assert_eq!(update.published_topics.len(), 1);
+    assert_eq!(update.published_topics[0].name, "/camera");
+    assert_eq!(update.published_topics[0].publisher_ids, vec!["node_1"]);
+
+    assert_eq!(update.subscribed_topics.len(), 1);
+    assert_eq!(update.subscribed_topics[0].name, "/camera");
+    assert_eq!(update.subscribed_topics[0].subscriber_ids, vec!["node_2"]);
+
+    assert_eq!(update.advertised_services.len(), 1);
+    assert_eq!(update.advertised_services[0].name, "/set_mode");
+    assert_eq!(update.advertised_services[0].provider_ids, vec!["node_1"]);
+    info!("connection graph subscribe and publish validated");
+
+    viewer.close().await?;
+    gw.stop().await?;
+    Ok(())
+}
+
+/// Test that publishing a replacement connection graph delivers a diff update
+/// containing only the changes (additions, modifications, and removals).
+#[traced_test]
+#[ignore]
+#[tokio::test]
+#[serial(livekit)]
+async fn livekit_connection_graph_publish_diff_update() -> Result<()> {
+    let ctx = foxglove::Context::new();
+
+    let gw = TestGateway::start_with_options(
+        &ctx,
+        TestGatewayOptions {
+            capabilities: vec![foxglove::remote_access::Capability::ConnectionGraph],
+            ..Default::default()
+        },
+    )
+    .await?;
+
+    let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+    let _server_info = viewer.expect_server_info().await?;
+
+    viewer.send_subscribe_connection_graph().await?;
+    let _initial = viewer.expect_connection_graph_update().await?;
+
+    // Publish a first graph.
+    let mut graph1 = ConnectionGraph::new();
+    graph1.set_published_topic("/camera", ["node_1"]);
+    graph1.set_advertised_service("/set_mode", ["node_1"]);
+    gw.handle.publish_connection_graph(graph1)?;
+    let _update1 = viewer.expect_connection_graph_update().await?;
+
+    // Publish a replacement that removes /camera, changes the service, and adds /lidar.
+    let mut graph2 = ConnectionGraph::new();
+    graph2.set_published_topic("/lidar", ["node_2"]);
+    graph2.set_advertised_service("/set_mode", ["node_2"]);
+    gw.handle.publish_connection_graph(graph2)?;
+
+    let update2 = viewer.expect_connection_graph_update().await?;
+
+    assert_eq!(update2.published_topics.len(), 1);
+    assert_eq!(update2.published_topics[0].name, "/lidar");
+
+    assert_eq!(update2.advertised_services.len(), 1);
+    assert_eq!(update2.advertised_services[0].name, "/set_mode");
+    assert_eq!(update2.advertised_services[0].provider_ids, vec!["node_2"]);
+
+    assert_eq!(update2.removed_topics, vec!["/camera"]);
+    assert!(
+        update2.removed_services.is_empty(),
+        "service was updated, not removed"
+    );
+    info!("connection graph diff update validated");
+
+    viewer.close().await?;
+    gw.stop().await?;
+    Ok(())
+}
+
+/// Test that unsubscribing from the connection graph prevents further updates
+/// from being delivered.
+#[traced_test]
+#[ignore]
+#[tokio::test]
+#[serial(livekit)]
+async fn livekit_connection_graph_unsubscribe_stops_updates() -> Result<()> {
+    let ctx = foxglove::Context::new();
+
+    let gw = TestGateway::start_with_options(
+        &ctx,
+        TestGatewayOptions {
+            capabilities: vec![foxglove::remote_access::Capability::ConnectionGraph],
+            ..Default::default()
+        },
+    )
+    .await?;
+
+    let channel = ctx
+        .channel_builder("/test")
+        .message_encoding("json")
+        .build_raw()
+        .context("create channel")?;
+
+    let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+    let _server_info = viewer.expect_server_info().await?;
+    let _advertise = viewer.expect_advertise().await?;
+
+    // Subscribe to connection graph, then unsubscribe.
+    viewer.send_subscribe_connection_graph().await?;
+    let _initial = viewer.expect_connection_graph_update().await?;
+    viewer.send_unsubscribe_connection_graph().await?;
+
+    // Brief settle for the unsubscribe to be processed.
+    tokio::time::sleep(Duration::from_millis(500)).await;
+
+    // Publish a graph — the viewer should NOT receive this update.
+    let mut graph = ConnectionGraph::new();
+    graph.set_published_topic("/camera", ["node_1"]);
+    gw.handle.publish_connection_graph(graph)?;
+
+    // Subscribe to a channel and log a message to verify the control channel
+    // is still working — we should receive MessageData but NOT a graph update.
+    viewer
+        .subscribe_and_wait(&[u64::from(channel.id())], &channel)
+        .await?;
+    channel.log(b"ping");
+    let msg = viewer.expect_new_bytestream_and_message_data().await?;
+    assert_eq!(msg.data.as_ref(), b"ping");
+    info!("connection graph unsubscribe validated: no graph update received after unsubscribe");
+
+    viewer.close().await?;
+    gw.stop().await?;
+    Ok(())
+}
+
+/// Test that subscribing to the connection graph without the ConnectionGraph
+/// capability results in a Status error message.
+#[traced_test]
+#[ignore]
+#[tokio::test]
+#[serial(livekit)]
+async fn livekit_connection_graph_subscribe_without_capability_sends_error() -> Result<()> {
+    let ctx = foxglove::Context::new();
+
+    // Start gateway without ConnectionGraph capability.
+    let gw = TestGateway::start(&ctx).await?;
+
+    let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+    let _server_info = viewer.expect_server_info().await?;
+
+    viewer.send_subscribe_connection_graph().await?;
+
+    let status = viewer.expect_status().await?;
+    assert_eq!(
+        status.level,
+        foxglove::protocol::v2::server::status::Level::Error
+    );
+    assert!(
+        status.message.contains("connection graph"),
+        "unexpected status message: {}",
+        status.message
+    );
+    info!("error status received: {}", status.message);
+
+    viewer.close().await?;
+    gw.stop().await?;
+    Ok(())
+}
+
+/// Test that `on_connection_graph_subscribe` fires when the first client subscribes
+/// and `on_connection_graph_unsubscribe` fires when the last client unsubscribes.
+#[traced_test]
+#[ignore]
+#[tokio::test]
+#[serial(livekit)]
+async fn livekit_connection_graph_listener_callbacks() -> Result<()> {
+    let ctx = foxglove::Context::new();
+    let listener = Arc::new(MockListener::default());
+
+    let gw = TestGateway::start_with_options(
+        &ctx,
+        TestGatewayOptions {
+            listener: Some(listener.clone()),
+            capabilities: vec![foxglove::remote_access::Capability::ConnectionGraph],
+            ..Default::default()
+        },
+    )
+    .await?;
+
+    let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+    let _server_info = viewer.expect_server_info().await?;
+
+    // Subscribe — should fire on_connection_graph_subscribe (first subscriber).
+    viewer.send_subscribe_connection_graph().await?;
+    let _initial = viewer.expect_connection_graph_update().await?;
+    poll_until(|| listener.connection_graph_subscribed_count() == 1).await;
+    assert_eq!(listener.connection_graph_unsubscribed_count(), 0);
+    info!("on_connection_graph_subscribe fired on first subscriber");
+
+    // Unsubscribe — should fire on_connection_graph_unsubscribe (last subscriber).
+    viewer.send_unsubscribe_connection_graph().await?;
+    poll_until(|| listener.connection_graph_unsubscribed_count() == 1).await;
+    assert_eq!(listener.connection_graph_subscribed_count(), 1);
+    info!("on_connection_graph_unsubscribe fired on last unsubscribe");
+
+    viewer.close().await?;
+    gw.stop().await?;
+    Ok(())
+}
+
+/// Test that disconnecting a viewer that is subscribed to the connection graph
+/// fires `on_connection_graph_unsubscribe` when it was the last subscriber.
+#[traced_test]
+#[ignore]
+#[tokio::test]
+#[serial(livekit)]
+async fn livekit_connection_graph_disconnect_cleans_up_subscription() -> Result<()> {
+    let ctx = foxglove::Context::new();
+    let listener = Arc::new(MockListener::default());
+
+    let gw = TestGateway::start_with_options(
+        &ctx,
+        TestGatewayOptions {
+            listener: Some(listener.clone()),
+            capabilities: vec![foxglove::remote_access::Capability::ConnectionGraph],
+            ..Default::default()
+        },
+    )
+    .await?;
+
+    let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+    let _server_info = viewer.expect_server_info().await?;
+
+    viewer.send_subscribe_connection_graph().await?;
+    let _initial = viewer.expect_connection_graph_update().await?;
+    poll_until(|| listener.connection_graph_subscribed_count() == 1).await;
+
+    // Disconnect — should clean up subscription and fire unsubscribe callback.
+    viewer.close().await?;
+    poll_until(|| listener.connection_graph_unsubscribed_count() == 1).await;
+    info!("disconnect cleaned up connection graph subscription");
+
+    gw.stop().await?;
+    Ok(())
+}
+
+/// Test first/last subscriber semantics with multiple viewers.
+/// `on_connection_graph_subscribe` fires only on the first subscriber and
+/// `on_connection_graph_unsubscribe` fires only when the last subscriber leaves.
+#[traced_test]
+#[ignore]
+#[tokio::test]
+#[serial(livekit)]
+async fn livekit_connection_graph_multiple_subscribers() -> Result<()> {
+    let ctx = foxglove::Context::new();
+    let listener = Arc::new(MockListener::default());
+
+    let gw = TestGateway::start_with_options(
+        &ctx,
+        TestGatewayOptions {
+            listener: Some(listener.clone()),
+            capabilities: vec![foxglove::remote_access::Capability::ConnectionGraph],
+            ..Default::default()
+        },
+    )
+    .await?;
+
+    // First viewer subscribes — fires on_connection_graph_subscribe.
+    let mut viewer1 = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+    let _si1 = viewer1.expect_server_info().await?;
+    viewer1.send_subscribe_connection_graph().await?;
+    let _initial1 = viewer1.expect_connection_graph_update().await?;
+    poll_until(|| listener.connection_graph_subscribed_count() == 1).await;
+
+    // Second viewer subscribes — should NOT fire on_connection_graph_subscribe again.
+    let mut viewer2 = ViewerConnection::connect(&gw.room_name, "viewer-2").await?;
+    let _si2 = viewer2.expect_server_info().await?;
+    viewer2.send_subscribe_connection_graph().await?;
+    let _initial2 = viewer2.expect_connection_graph_update().await?;
+
+    // Brief settle to ensure no extra callback fires.
+    tokio::time::sleep(Duration::from_millis(500)).await;
+    assert_eq!(
+        listener.connection_graph_subscribed_count(),
+        1,
+        "on_connection_graph_subscribe should only fire once for the first subscriber"
+    );
+
+    // Publish a graph — both viewers should receive the update.
+    let mut graph = ConnectionGraph::new();
+    graph.set_published_topic("/camera", ["node_1"]);
+    gw.handle.publish_connection_graph(graph)?;
+
+    let update1 = viewer1.expect_connection_graph_update().await?;
+    let update2 = viewer2.expect_connection_graph_update().await?;
+    assert_eq!(update1.published_topics.len(), 1);
+    assert_eq!(update2.published_topics.len(), 1);
+    info!("both subscribers received graph update");
+
+    // Disconnect first viewer — should NOT fire on_connection_graph_unsubscribe.
+    viewer1.close().await?;
+    // Wait for the gateway to process the disconnect.
+    viewer2
+        .wait_for_participant_disconnected("viewer-1")
+        .await?;
+    tokio::time::sleep(Duration::from_millis(200)).await;
+    assert_eq!(
+        listener.connection_graph_unsubscribed_count(),
+        0,
+        "on_connection_graph_unsubscribe should not fire while subscribers remain"
+    );
+
+    // Disconnect second (last) viewer — should fire on_connection_graph_unsubscribe.
+    viewer2.close().await?;
+    poll_until(|| listener.connection_graph_unsubscribed_count() == 1).await;
+    info!("on_connection_graph_unsubscribe fired when last subscriber disconnected");
+
+    gw.stop().await?;
+    Ok(())
+}
+
+/// Test that updating the connection graph while no session is active (e.g. before
+/// the gateway has connected) persists the state, and a viewer subscribing after
+/// the session is established receives the latest graph.
+#[traced_test]
+#[ignore]
+#[tokio::test]
+#[serial(livekit)]
+async fn livekit_connection_graph_persists_when_no_session() -> Result<()> {
+    let ctx = foxglove::Context::new();
+
+    let (room_name, mock) = TestGateway::prepare().await;
+
+    let gw = TestGateway::start_with_mock(
+        &ctx,
+        room_name,
+        mock,
+        TestGatewayOptions {
+            capabilities: vec![foxglove::remote_access::Capability::ConnectionGraph],
+            ..Default::default()
+        },
+    )?;
+
+    // The gateway was just started and is still connecting (no session yet).
+    // Publish a connection graph in this state — it should be stored on the
+    // connection and delivered to subscribers once a session is established.
+    assert_eq!(
+        gw.handle.connection_status(),
+        ConnectionStatus::Connecting,
+        "gateway should still be connecting"
+    );
+
+    let mut graph = ConnectionGraph::new();
+    graph.set_published_topic("/persisted_topic", ["node_1"]);
+    graph.set_subscribed_topic("/persisted_topic", ["node_2"]);
+    graph.set_advertised_service("/persisted_service", ["node_1"]);
+    gw.handle.publish_connection_graph(graph)?;
+
+    // Now wait for the gateway to connect.
+    poll_until(|| gw.handle.connection_status() == ConnectionStatus::Connected).await;
+
+    // Connect a viewer and subscribe to the connection graph.
+    let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+    let _server_info = viewer.expect_server_info().await?;
+
+    viewer.send_subscribe_connection_graph().await?;
+    let update = viewer.expect_connection_graph_update().await?;
+
+    // Verify the initial update contains the graph state that was published
+    // before the session was established.
+    assert_eq!(update.published_topics.len(), 1);
+    assert_eq!(update.published_topics[0].name, "/persisted_topic");
+    assert_eq!(update.published_topics[0].publisher_ids, vec!["node_1"]);
+
+    assert_eq!(update.subscribed_topics.len(), 1);
+    assert_eq!(update.subscribed_topics[0].name, "/persisted_topic");
+    assert_eq!(update.subscribed_topics[0].subscriber_ids, vec!["node_2"]);
+
+    assert_eq!(update.advertised_services.len(), 1);
+    assert_eq!(update.advertised_services[0].name, "/persisted_service");
+    assert_eq!(update.advertised_services[0].provider_ids, vec!["node_1"]);
+    info!("connection graph persisted across no-session gap validated");
+
+    viewer.close().await?;
+    gw.stop().await?;
     Ok(())
 }
