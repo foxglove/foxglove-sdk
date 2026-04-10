@@ -332,19 +332,6 @@ if(FOXGLOVE_BUILD_REMOTE_ACCESS)
   target_sources(foxglove_cpp_shared PRIVATE $<TARGET_OBJECTS:foxglove_ra_cpp_obj>)
   target_compile_definitions(foxglove_cpp_shared PUBLIC FOXGLOVE_REMOTE_ACCESS)
 
-  add_executable(example_remote_access examples/remote-access/src/main.cpp)
-  set_property(TARGET example_remote_access PROPERTY CXX_STANDARD 17)
-  set_property(TARGET example_remote_access PROPERTY CXX_STANDARD_REQUIRED True)
-  target_compile_options(example_remote_access PUBLIC ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
-  target_link_options(example_remote_access PUBLIC ${SANITIZER_LINK_OPTIONS})
-  target_link_libraries(example_remote_access foxglove_cpp_shared)
-
-  add_executable(example_remote_access_connection_graph examples/remote-access-connection-graph/src/main.cpp)
-  set_property(TARGET example_remote_access_connection_graph PROPERTY CXX_STANDARD 17)
-  set_property(TARGET example_remote_access_connection_graph PROPERTY CXX_STANDARD_REQUIRED True)
-  target_compile_options(example_remote_access_connection_graph PUBLIC ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
-  target_link_options(example_remote_access_connection_graph PUBLIC ${SANITIZER_LINK_OPTIONS})
-  target_link_libraries(example_remote_access_connection_graph foxglove_cpp_shared)
 endif()
 
 
@@ -427,6 +414,7 @@ add_foxglove_example(example_message_filtering SOURCES examples/message-filterin
 
 if(FOXGLOVE_BUILD_REMOTE_ACCESS)
   add_foxglove_example(example_remote_access SOURCES examples/remote-access/src/main.cpp)
+  add_foxglove_example(example_remote_access_connection_graph SOURCES examples/remote-access-connection-graph/src/main.cpp)
 endif()
 
 option(BUILD_OPENCV_EXAMPLE "Build the RGB camera visualization example (requires OpenCV)" OFF)
