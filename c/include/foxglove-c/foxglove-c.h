@@ -5168,6 +5168,18 @@ void foxglove_context_free(const struct foxglove_context *context);
 
 #if !defined(__wasm__)
 /**
+ * Get the id of a channel descriptor.
+ *
+ * # Safety
+ * `channel` must be a valid pointer to a `foxglove_channel_descriptor`.
+ *
+ * If the passed channel is null, 0 is returned.
+ */
+uint64_t foxglove_channel_descriptor_get_id(const struct foxglove_channel_descriptor *channel);
+#endif
+
+#if !defined(__wasm__)
+/**
  * Get the topic of a channel descriptor.
  *
  * # Safety
