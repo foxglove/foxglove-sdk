@@ -81,7 +81,10 @@ int main() {
   };
 
   while (!done) {
-    gateway.publishConnectionGraph(graph);
+    auto err2 = gateway.publishConnectionGraph(graph);
+    if (err2 != foxglove::FoxgloveError::Ok) {
+      std::cerr << "Failed to publish connection graph: " << foxglove::strerror(err2) << '\n';
+    }
     std::this_thread::sleep_for(1s);
   }
 
