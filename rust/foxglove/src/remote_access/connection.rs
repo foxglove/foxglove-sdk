@@ -190,7 +190,7 @@ impl RemoteAccessConnection {
         if !self.has_capability(Capability::ConnectionGraph) {
             return Err(FoxgloveError::ConnectionGraphNotSupported);
         }
-        if let Some(session) = self.session.lock().as_ref() {
+        if let Some(session) = self.session.lock().clone() {
             session.replace_connection_graph(replacement_graph);
         } else {
             self.connection_graph.lock().update(replacement_graph);
