@@ -372,7 +372,7 @@ FoxgloveError RemoteAccessGateway::removeStatus(const std::vector<std::string_vi
   return FoxgloveError(error);
 }
 
-FoxgloveError RemoteAccessGateway::publishConnectionGraph(ConnectionGraph& graph) {
+FoxgloveError RemoteAccessGateway::publishConnectionGraph(const ConnectionGraph& graph) {
   return FoxgloveError(foxglove_gateway_publish_connection_graph(impl_.get(), graph.impl_.get()));
 }
 

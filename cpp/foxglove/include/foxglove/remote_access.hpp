@@ -223,7 +223,7 @@ public:
   /// Requires RemoteAccessGatewayCapabilities::ConnectionGraph.
   ///
   /// @param graph The connection graph to publish.
-  [[nodiscard]] FoxgloveError publishConnectionGraph(ConnectionGraph& graph) const;
+  [[nodiscard]] FoxgloveError publishConnectionGraph(const ConnectionGraph& graph) const;
 
   /// @brief Gracefully shut down the gateway.
   FoxgloveError stop();

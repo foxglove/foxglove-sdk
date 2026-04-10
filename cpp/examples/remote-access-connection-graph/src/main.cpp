@@ -14,7 +14,7 @@ using namespace std::chrono_literals;
  * This example constructs a connection graph which can be viewed as a Topic Graph in Foxglove:
  * https://docs.foxglove.dev/docs/visualization/panels/topic-graph
  *
- * Unlike the WebSocket connection-graph example, this uses the remote access gateway.
+ * This uses the remote access gateway for live visualization.
  */
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
