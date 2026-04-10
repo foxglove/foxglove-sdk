@@ -19,6 +19,8 @@ if (POLICY CMP0135)
   cmake_policy(SET CMP0135 NEW)
 endif()
 
+option(FOXGLOVE_BRIDGE_REMOTE_ACCESS "Build with remote access gateway support" ON)
+
 macro(enable_strict_compiler_warnings target)
   if (MSVC)
     target_compile_options(${target} PRIVATE /WX /W4)
@@ -74,16 +76,25 @@ FetchContent_Declare(
   URL_HASH SHA256=${FOXGLOVE_SDK_SHA}
 )
 FetchContent_MakeAvailable(foxglove_sdk)
-add_library(foxglove_cpp_static STATIC)
-target_include_directories(foxglove_cpp_static SYSTEM
+file(GLOB_RECURSE FOXGLOVE_SDK_SOURCES CONFIGURE_DEPENDS "${foxglove_sdk_SOURCE_DIR}/src/*.cpp")
+
+add_library(foxglove_cpp_shared SHARED)
+target_include_directories(foxglove_cpp_shared SYSTEM
   PUBLIC
     $<BUILD_INTERFACE:${foxglove_sdk_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
 )
-file(GLOB_RECURSE FOXGLOVE_SDK_SOURCES CONFIGURE_DEPENDS "${foxglove_sdk_SOURCE_DIR}/src/*.cpp")
-target_sources(foxglove_cpp_static PRIVATE ${FOXGLOVE_SDK_SOURCES})
-set_target_properties(foxglove_cpp_static PROPERTIES POSITION_INDEPENDENT_CODE ON)
-target_link_libraries(foxglove_cpp_static PRIVATE ${foxglove_sdk_SOURCE_DIR}/lib/libfoxglove.a)
+target_sources(foxglove_cpp_shared PRIVATE ${FOXGLOVE_SDK_SOURCES})
+# Import the prebuilt C shared library from the fetched SDK
+add_library(foxglove-shared SHARED IMPORTED)
+set_target_properties(foxglove-shared PROPERTIES
+  IMPORTED_LOCATION ${foxglove_sdk_SOURCE_DIR}/lib/libfoxglove.so
+)
+target_link_libraries(foxglove_cpp_shared PRIVATE foxglove-shared)
+set_target_properties(foxglove_cpp_shared PROPERTIES
+  INSTALL_RPATH "$ORIGIN"
+  BUILD_WITH_INSTALL_RPATH TRUE
+)
 
 find_program(GIT_SCM git DOC "Git version control")
 if (GIT_SCM)
@@ -139,11 +150,15 @@ target_compile_definitions(foxglove_bridge_component
     RESOURCE_RETRIEVER_VERSION_PATCH=${resource_retriever_VERSION_PATCH}
 )
 
+if (FOXGLOVE_BRIDGE_REMOTE_ACCESS)
+  target_compile_definitions(foxglove_bridge_component PRIVATE FOXGLOVE_REMOTE_ACCESS)
+endif()
+
 target_link_libraries(foxglove_bridge_component
+  foxglove_cpp_shared
   ${rosgraph_msgs_TARGETS}
   ${std_msgs_TARGETS}
   ament_index_cpp::ament_index_cpp
-  foxglove_cpp_static
   rclcpp::rclcpp
   rclcpp_components::component
   rclcpp_components::component_manager
@@ -153,6 +168,10 @@ target_link_libraries(foxglove_bridge_component
 
 rclcpp_components_register_nodes(foxglove_bridge_component "foxglove_bridge::FoxgloveBridge")
 enable_strict_compiler_warnings(foxglove_bridge_component)
+set_target_properties(foxglove_bridge_component PROPERTIES
+  INSTALL_RPATH "$ORIGIN"
+  BUILD_WITH_INSTALL_RPATH TRUE
+)
 
 add_executable(foxglove_bridge
   src/ros2_foxglove_bridge_node.cpp
@@ -199,6 +218,10 @@ install(TARGETS foxglove_bridge_component
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin
 )
+# Install the SDK shared libraries alongside the bridge component library so
+# the runtime linker can find them via RPATH ($ORIGIN).
+install(FILES $<TARGET_FILE:foxglove_cpp_shared> DESTINATION lib)
+install(FILES $<TARGET_FILE:foxglove-shared> DESTINATION lib)
 install(TARGETS foxglove_bridge
   DESTINATION lib/${PROJECT_NAME}
 )

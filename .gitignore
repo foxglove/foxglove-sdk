@@ -23,9 +23,6 @@
 /python/foxglove-sdk-examples/**/uv.lock
 /python/foxglove-sdk/python/docs/_build
 /python/foxglove-sdk/python/docs/notebook/panels/
-/ros/build/
-/ros/install/
-/ros/log/
 /rust/examples/*/target/
 /target/
 /typescript/*/dist/
