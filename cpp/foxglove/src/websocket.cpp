@@ -296,13 +296,18 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
                               const struct foxglove_string* c_uri,
                               struct foxglove_fetch_asset_responder* c_responder
                             ) {
+      const auto* handler = static_cast<const FetchAssetHandler*>(context);
+      std::string_view uri{c_uri->data, c_uri->len};
+      FetchAssetResponder responder(c_responder);
       try {
-        const auto* handler = static_cast<const FetchAssetHandler*>(context);
-        std::string_view uri{c_uri->data, c_uri->len};
-        FetchAssetResponder responder(c_responder);
         (*handler)(uri, std::move(responder));
       } catch (const std::exception& exc) {
         warn() << "Fetch asset callback failed: " << exc.what();
+        auto* ptr = responder.impl_.release();
+        if (ptr) {
+          std::string message = std::string("Fetch asset callback failed: ") + exc.what();
+          foxglove_fetch_asset_respond_error(ptr, {message.data(), message.length()});
+        }
       }
     };
   }
