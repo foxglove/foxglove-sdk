@@ -144,7 +144,7 @@ jobs:
           target: ${{ matrix.target }}
           # Set a cache key to distinguish the remote-access-enabled linux
           # builds from the non-remote-access-enabled linux builds.
-          cache-key: ${{ matrix.remote_access && 'ra' || '' }}
+          cache-key: ${{ matrix.remote_access && 'ra-v2' || '' }}
 
       - run: echo "IPHONEOS_DEPLOYMENT_TARGET=13.0.0" >> $GITHUB_ENV
         # Min version needed for libaws_lc_sys
