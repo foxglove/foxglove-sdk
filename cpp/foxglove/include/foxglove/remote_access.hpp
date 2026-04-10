@@ -220,7 +220,7 @@ public:
   /// Requires RemoteAccessGatewayCapabilities::ConnectionGraph.
   ///
   /// @param graph The connection graph to publish.
-  void publishConnectionGraph(ConnectionGraph& graph);
+  [[nodiscard]] FoxgloveError publishConnectionGraph(ConnectionGraph& graph);
 
   /// @brief Gracefully shut down the gateway.
   FoxgloveError stop();
