@@ -3,6 +3,7 @@
 #include <foxglove/channel.hpp>
 #include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
+#include <foxglove/fetch_asset.hpp>
 #include <foxglove/parameter.hpp>
 #include <foxglove/service.hpp>
 
@@ -140,6 +141,8 @@ struct RemoteAccessGatewayOptions {
   RemoteAccessGatewayCapabilities capabilities = RemoteAccessGatewayCapabilities::None;
   /// @brief Supported encodings for client requests.
   std::vector<std::string> supported_encodings;
+  /// @brief A fetch asset handler callback.
+  FetchAssetHandler fetch_asset;
   /// @brief A sink channel filter callback.
   SinkChannelFilterFn sink_channel_filter;
   /// @brief Override the Foxglove API base URL.
@@ -208,10 +211,12 @@ public:
 private:
   RemoteAccessGateway(
     foxglove_gateway* gateway, std::unique_ptr<RemoteAccessGatewayCallbacks> callbacks,
+    std::unique_ptr<FetchAssetHandler> fetch_asset,
     std::unique_ptr<SinkChannelFilterFn> sink_channel_filter
   );
 
   std::unique_ptr<RemoteAccessGatewayCallbacks> callbacks_;
+  std::unique_ptr<FetchAssetHandler> fetch_asset_;
   std::unique_ptr<SinkChannelFilterFn> sink_channel_filter_;
   std::unique_ptr<foxglove_gateway, foxglove_error (*)(foxglove_gateway*)> impl_;
 };

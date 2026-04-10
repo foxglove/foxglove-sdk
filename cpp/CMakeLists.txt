@@ -413,6 +413,7 @@ add_foxglove_example(example_message_filtering SOURCES examples/message-filterin
 
 if(FOXGLOVE_BUILD_REMOTE_ACCESS)
   add_foxglove_example(example_remote_access SOURCES examples/remote-access/src/main.cpp)
+  add_foxglove_example(example_remote_access_fetch_asset SOURCES examples/remote-access-fetch-asset/src/main.cpp)
 endif()
 
 option(BUILD_OPENCV_EXAMPLE "Build the RGB camera visualization example (requires OpenCV)" OFF)
