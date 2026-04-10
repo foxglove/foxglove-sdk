@@ -1,9 +1,9 @@
 #pragma once
 
 #include <foxglove/channel.hpp>
+#include <foxglove/connection_graph.hpp>
 #include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
-#include <foxglove/connection_graph.hpp>
 #include <foxglove/parameter.hpp>
 #include <foxglove/service.hpp>
 
