@@ -1,5 +1,6 @@
 build
 build-*
+dist
 .cache
 foxglove/docs/generated
 *.zip

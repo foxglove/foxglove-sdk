@@ -11,9 +11,9 @@
 #include <rosx_introspection/ros_parser.hpp>
 #include <std_msgs/msg/u_int32.hpp>
 
+#include <foxglove/fetch_asset.hpp>
 #include <foxglove/foxglove.hpp>
-#include <foxglove/server.hpp>
-#include <foxglove/server/fetch_asset.hpp>
+#include <foxglove/websocket.hpp>
 #include <foxglove_bridge/generic_client.hpp>
 #include <foxglove_bridge/message_definition_cache.hpp>
 #include <foxglove_bridge/param_utils.hpp>

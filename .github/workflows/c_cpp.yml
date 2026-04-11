@@ -175,30 +175,15 @@ jobs:
       - if: contains(matrix.target, 'windows')
         uses: ilammy/setup-nasm@v1
 
-      # Build the Rust/C library with cargo directly.
-      - name: Build C library for ${{ matrix.target }}
-        if: "!matrix.remote_access"
+      - name: Build and package C/C++ SDK
         env:
-          FOXGLOVE_SDK_LANGUAGE: c
-        run: cargo build --release
-        working-directory: c
-
-      # For remote access targets, build the staticlib and cdylib separately so
-      # we can enable remote-access only in the cdylib.
-      - name: Build C staticlib for ${{ matrix.target }}
-        if: matrix.remote_access
-        env:
-          FOXGLOVE_SDK_LANGUAGE: c
-        run: cargo rustc --release --lib --crate-type staticlib
-        working-directory: c
-
-      - name: Build C cdylib with remote access for ${{ matrix.target }}
-        if: matrix.remote_access
-        env:
-          FOXGLOVE_SDK_LANGUAGE: c
           RUSTFLAGS: ${{ runner.os == 'Windows' && '-C target-feature=+crt-static' || '' }}
-        run: cargo rustc --release --lib --crate-type cdylib --features remote-access
-        working-directory: c
+        run: >-
+          make -f Container.mk build-cpp-dist
+          CPP_SDK_DIR=artifacts/foxglove
+          FOXGLOVE_REMOTE_ACCESS=${{ matrix.remote_access && 'ON' || 'OFF' }}
+          STATICLIB_NAME=${{ matrix.staticlib_name }}
+          CDYLIB_NAME=${{ matrix.cdylib_name }}
 
       - name: Ensure generated files are up to date
         run: git diff --exit-code
@@ -209,7 +194,7 @@ jobs:
         run: make build
         working-directory: cpp
         env:
-          FOXGLOVE_PREBUILT_LIB_DIR: ${{ github.workspace }}/target/${{ matrix.target }}/release
+          FOXGLOVE_PREBUILT_LIB_DIR: ${{ github.workspace }}/artifacts/foxglove/lib
           FOXGLOVE_REMOTE_ACCESS: ${{ matrix.remote_access && 'ON' || 'OFF' }}
           CMAKE_ARGS: ${{ matrix.cmake_args || '' }}
       - name: Test C++ library
@@ -225,25 +210,6 @@ jobs:
           REMOTE_DATA_LOADER_BACKEND_EXPECTED_STREAMED_SOURCE_COUNT: "1"
           REMOTE_DATA_LOADER_BACKEND_EXPECTED_STATIC_FILE_SOURCE_COUNT: "0"
         run: cargo run -p remote_data_loader_backend_conformance
-
-      - name: Organize artifacts for zip
-        shell: bash
-        run: |
-          mkdir -p artifacts/foxglove/lib
-          mkdir -p artifacts/foxglove/include
-          mkdir -p artifacts/foxglove/src
-
-          lib_dir="target/${{ matrix.target }}/release"
-          cp "$lib_dir/${{ matrix.staticlib_name }}" artifacts/foxglove/lib/
-          cp "$lib_dir/${{ matrix.cdylib_name }}" artifacts/foxglove/lib/
-          # Include the MSVC import library on Windows (needed for link-time binding)
-          if [ -f "$lib_dir/${{ matrix.cdylib_name }}.lib" ]; then
-            cp "$lib_dir/${{ matrix.cdylib_name }}.lib" artifacts/foxglove/lib/
-          fi
-
-          cp -R c/include/foxglove-c artifacts/foxglove/include/
-          cp -R cpp/foxglove/include/foxglove artifacts/foxglove/include/
-          cp -R cpp/foxglove/src/* artifacts/foxglove/src/
 
       - name: Zip libraries for artifact
         if: runner.os != 'Windows'

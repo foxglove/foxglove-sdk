@@ -1,5 +1,4 @@
 ROS_DISTRIBUTIONS := humble jazzy kilted rolling
-USE_LOCAL_SDK := OFF
 FOXGLOVE_CPP_SDK_DIR :=
 EXTRA_DOCKER_ARGS :=
 DOCKER_USER_ARGS :=
@@ -35,7 +34,6 @@ deps:
 .PHONY: build
 build:
 	colcon build --cmake-args \
-		-DUSE_LOCAL_SDK=$(USE_LOCAL_SDK) \
 		$(if $(FOXGLOVE_CPP_SDK_DIR),-DFETCHCONTENT_SOURCE_DIR_FOXGLOVE_SDK=$(FOXGLOVE_CPP_SDK_DIR))
 
 .PHONY: test
@@ -55,8 +53,7 @@ docker-build-image-$(1):
 .PHONY: docker-build-$(1)
 docker-build-$(1): docker-build-image-$(1)
 	docker run --rm $(DOCKER_RUN_ARGS) -v $(PWD)/..:/sdk foxglove-sdk-ros-$(1) \
-		make USE_LOCAL_SDK=$(USE_LOCAL_SDK) \
-		$(if $(FOXGLOVE_CPP_SDK_DIR),FOXGLOVE_CPP_SDK_DIR=$(FOXGLOVE_CPP_SDK_DIR)) \
+		make $(if $(FOXGLOVE_CPP_SDK_DIR),FOXGLOVE_CPP_SDK_DIR=$(FOXGLOVE_CPP_SDK_DIR)) \
 		build
 
 .PHONY: docker-test-$(1)

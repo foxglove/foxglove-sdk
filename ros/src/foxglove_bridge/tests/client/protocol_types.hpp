@@ -7,7 +7,7 @@
 #include <variant>
 #include <vector>
 
-#include <foxglove/server/parameter.hpp>
+#include <foxglove/parameter.hpp>
 
 namespace foxglove::test {
 
