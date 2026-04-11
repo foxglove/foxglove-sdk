@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Weak};
 use std::time::Duration;
 
@@ -20,6 +20,7 @@ use crate::protocol::v2::DecodeError;
 use crate::protocol::v2::parameter::Parameter;
 use crate::protocol::v2::server::ParameterValues;
 use crate::remote_access::participant::ChannelWriter;
+use crate::remote_common::ClientId;
 use crate::remote_common::connection_graph::ConnectionGraph;
 use crate::remote_common::{
     fetch_asset::AssetResponder,
@@ -203,6 +204,15 @@ pub(crate) struct RemoteAccessSession {
     rtt_tracker: parking_lot::Mutex<RttTracker>,
     ice_rtt_tracker: parking_lot::Mutex<RttTracker>,
     connection_graph: Arc<parking_lot::Mutex<ConnectionGraph>>,
+    /// Immutable `ServerInfo` message sent to each participant on connect and reset.
+    server_info: ServerInfo,
+    /// Channel used by `run_sender` to request participant resets when a control
+    /// stream write fails. `handle_room_events` receives identities and calls
+    /// `reset_participant`. Using `mpsc` rather than `Notify` because `Notify` is
+    /// not cancel-safe in `select!`.
+    participant_reset_tx: tokio::sync::mpsc::UnboundedSender<ParticipantIdentity>,
+    participant_reset_rx:
+        tokio::sync::Mutex<tokio::sync::mpsc::UnboundedReceiver<ParticipantIdentity>>,
 }
 
 impl Sink for RemoteAccessSession {
@@ -324,6 +334,7 @@ pub(crate) struct SessionParams {
     pub pending_client_reader_timeout: Duration,
     pub remote_access_session_id: Option<String>,
     pub fetch_asset_handler: Option<Arc<dyn AssetHandler<Client>>>,
+    pub server_info: ServerInfo,
 }
 
 impl RemoteAccessSession {
@@ -331,6 +342,7 @@ impl RemoteAccessSession {
         let (data_plane_tx, data_plane_rx) = flume::bounded(params.message_backlog_size);
         let (control_plane_tx, control_plane_rx) = flume::bounded(params.message_backlog_size);
         let (video_metadata_tx, video_metadata_rx) = tokio::sync::watch::channel(());
+        let (participant_reset_tx, participant_reset_rx) = tokio::sync::mpsc::unbounded_channel();
         Self {
             sink_id: SinkId::next(),
             room: params.room,
@@ -356,6 +368,9 @@ impl RemoteAccessSession {
             rtt_tracker: parking_lot::Mutex::new(RttTracker::new("ping/pong")),
             ice_rtt_tracker: parking_lot::Mutex::new(RttTracker::new("ICE")),
             connection_graph: params.connection_graph,
+            server_info: params.server_info,
+            participant_reset_tx,
+            participant_reset_rx: tokio::sync::Mutex::new(participant_reset_rx),
         }
     }
 
@@ -456,14 +471,29 @@ impl RemoteAccessSession {
         let mut channel_writers: HashMap<ChannelId, ChannelWriter> = HashMap::new();
         let mut video_metadata: HashMap<ChannelId, VideoMetadata> = HashMap::new();
         let mut video_metadata_rx = session.video_metadata_rx.clone();
+        // Participants whose control stream has broken. Messages for a poisoned
+        // `ClientId` are dropped without attempting a write. A fresh `ClientId` is
+        // assigned by `add_participant` after reset, so messages for the new
+        // participant pass through normally.
+        let mut poisoned_participants: HashSet<ClientId> = HashSet::new();
         loop {
             tokio::select! {
                 biased;
                 () = session.cancellation_token.cancelled() => break,
                 msg = session.control_plane_rx.recv_async() => {
                     let Ok(msg) = msg else { break };
+                    if poisoned_participants.contains(&msg.participant.client_id()) {
+                        continue;
+                    }
                     if let Err(e) = msg.participant.send(&msg.data).await {
-                        error!("failed to send control message to {:?}: {e:?}", msg.participant);
+                        warn!(
+                            "control write failed for {:?}, requesting reset: {e:?}",
+                            msg.participant,
+                        );
+                        poisoned_participants.insert(msg.participant.client_id());
+                        let _ = session.participant_reset_tx.send(
+                            msg.participant.participant_id().clone(),
+                        );
                     }
                 }
                 Ok(()) = video_metadata_rx.changed() => {
@@ -1183,7 +1213,6 @@ impl RemoteAccessSession {
         &self,
         participant_id: ParticipantIdentity,
         protocol_version: Version,
-        server_info: ServerInfo,
     ) -> Result<(), Box<RemoteAccessError>> {
         use crate::remote_access::participant::ParticipantWriter;
 
@@ -1219,7 +1248,7 @@ impl RemoteAccessSession {
         // these are the first messages delivered to the participant. This is safe to do without
         // holding the write lock, because this is a new participant - see below.
         info!("sending server info and advertisements to participant {participant:?}");
-        self.send_control(participant.clone(), encode_json_message(&server_info));
+        self.send_control(participant.clone(), encode_json_message(&self.server_info));
         self.send_channel_advertisements(participant.clone());
         self.send_service_advertisements(participant.clone());
 
@@ -1289,227 +1318,22 @@ impl RemoteAccessSession {
     pub(crate) async fn handle_room_events(
         self: &Arc<Self>,
         mut room_events: tokio::sync::mpsc::UnboundedReceiver<RoomEvent>,
-        server_info: ServerInfo,
     ) {
         let remote_access_session_id = self.remote_access_session_id();
-        while let Some(event) = room_events.recv().await {
-            match event {
-                RoomEvent::ParticipantConnected(participant) => {
-                    info!(
-                        remote_access_session_id,
-                        participant_identity = %participant.identity(),
-                        "participant connected to room (waiting for ParticipantActive)"
-                    );
-                }
-                RoomEvent::ParticipantActive(participant) => {
-                    let participant_identity = participant.identity();
-                    let Some(version) = protocol_version::check_participant_protocol_version(
-                        &participant_identity,
-                        &participant.attributes(),
-                        remote_access_session_id,
-                    ) else {
-                        self.send_incompatible_version_error(
-                            &participant_identity,
-                            &participant.attributes(),
-                        )
-                        .await;
-                        continue;
-                    };
-                    info!(
-                        remote_access_session_id,
-                        participant_identity = %participant_identity,
-                        version = %version,
-                        "participant active in room"
-                    );
-                    if let Err(e) = self
-                        .add_participant(participant.identity(), version, server_info.clone())
-                        .await
-                    {
-                        error!(remote_access_session_id, error = %e, "failed to add participant: {e}");
-                        continue;
+        let mut participant_reset_rx = self.participant_reset_rx.lock().await;
+        loop {
+            tokio::select! {
+                event = room_events.recv() => {
+                    let Some(event) = event else { break };
+                    if !self.handle_room_event(event).await {
+                        return;
                     }
                 }
-                RoomEvent::ParticipantDisconnected(participant) => {
-                    info!(
-                        remote_access_session_id,
-                        participant_identity = %participant.identity(),
-                        "participant disconnected from room"
-                    );
-                    self.remove_participant(&participant.identity());
-                }
-                RoomEvent::DataReceived {
-                    payload: _,
-                    topic,
-                    kind: _,
-                    participant: _,
-                } => {
-                    info!(remote_access_session_id, "data received: {:?}", topic);
-                }
-                RoomEvent::ByteStreamOpened {
-                    reader,
-                    topic,
-                    participant_identity,
-                } => {
-                    info!(
-                        remote_access_session_id,
-                        participant_identity = %participant_identity,
-                        topic = %topic,
-                        "byte stream opened from participant"
-                    );
-                    if let Some(reader) = reader.take() {
-                        if topic == CONTROL_CHANNEL_TOPIC {
-                            let session = self.clone();
-                            tokio::spawn(async move {
-                                session
-                                    .handle_byte_stream_from_client(
-                                        participant_identity,
-                                        reader,
-                                        None,
-                                    )
-                                    .await;
-                            });
-                        } else if let Some(id_str) = topic.strip_prefix(CLIENT_CHANNEL_TOPIC_PREFIX)
-                        {
-                            if let Ok(id) = id_str.parse::<u64>() {
-                                self.handle_client_channel_stream(
-                                    participant_identity,
-                                    ChannelId::new(id),
-                                    reader,
-                                );
-                            } else {
-                                warn!(
-                                    "invalid channel id in topic {:?} from {:?}",
-                                    topic, participant_identity
-                                );
-                            }
-                        } else {
-                            warn!(
-                                "ignoring unexpected byte stream topic from {:?}: {:?}",
-                                participant_identity, topic
-                            );
-                        }
-                    }
-                }
-                RoomEvent::ConnectionStateChanged(state) => {
-                    info!(
-                        remote_access_session_id,
-                        state = ?state,
-                        "connection state changed"
-                    );
-                }
-                RoomEvent::Reconnecting => {
-                    info!(remote_access_session_id, "reconnecting to room");
-                }
-                RoomEvent::Reconnected => {
-                    info!(remote_access_session_id, "reconnected to room");
-                }
-                RoomEvent::ConnectionQualityChanged {
-                    quality,
-                    participant,
-                } => {
-                    info!(
-                        remote_access_session_id,
-                        participant = %participant.identity(),
-                        quality = ?quality,
-                        "connection quality changed"
-                    );
-                }
-                RoomEvent::TrackSubscriptionFailed {
-                    participant,
-                    error,
-                    track_sid,
-                } => {
-                    warn!(
-                        remote_access_session_id,
-                        participant = %participant.identity(),
-                        track_sid = %track_sid,
-                        error = %error,
-                        "track subscription failed: {error}"
-                    );
-                }
-                RoomEvent::LocalTrackPublished {
-                    publication,
-                    track: _,
-                    participant: _,
-                } => {
-                    info!(
-                        remote_access_session_id,
-                        track_sid = %publication.sid(),
-                        track_name = %publication.name(),
-                        "local track published"
-                    );
-                }
-                RoomEvent::LocalTrackUnpublished {
-                    publication,
-                    participant: _,
-                } => {
-                    info!(
-                        remote_access_session_id,
-                        track_sid = %publication.sid(),
-                        track_name = %publication.name(),
-                        "local track unpublished"
-                    );
-                }
-                RoomEvent::TrackSubscribed {
-                    track: _,
-                    publication,
-                    participant,
-                } => {
-                    info!(
-                        remote_access_session_id,
-                        participant = %participant.identity(),
-                        track_sid = %publication.sid(),
-                        track_name = %publication.name(),
-                        "remote track subscribed"
-                    );
-                }
-                RoomEvent::TrackUnsubscribed {
-                    track: _,
-                    publication,
-                    participant,
-                } => {
-                    info!(
-                        remote_access_session_id,
-                        participant = %participant.identity(),
-                        track_sid = %publication.sid(),
-                        track_name = %publication.name(),
-                        "remote track unsubscribed"
-                    );
-                }
-                RoomEvent::TrackMuted {
-                    participant,
-                    publication,
-                } => {
-                    info!(
-                        remote_access_session_id,
-                        participant = %participant.identity(),
-                        track_sid = %publication.sid(),
-                        track_name = %publication.name(),
-                        "track muted"
-                    );
-                }
-                RoomEvent::TrackUnmuted {
-                    participant,
-                    publication,
-                } => {
-                    info!(
-                        remote_access_session_id,
-                        participant = %participant.identity(),
-                        track_sid = %publication.sid(),
-                        track_name = %publication.name(),
-                        "track unmuted"
-                    );
-                }
-                RoomEvent::Disconnected { reason } => {
-                    info!(
-                        remote_access_session_id,
-                        reason = reason.as_str_name(),
-                        "disconnected from room, will attempt to reconnect"
-                    );
-                    return;
-                }
-                _ => {
-                    debug!(remote_access_session_id, "room event: {:?}", event);
+                // Reset participants whose control streams have broken. This is
+                // the same flow as disconnect + reconnect: remove the old state,
+                // then re-add with a fresh stream and fresh advertisements.
+                Some(participant_id) = participant_reset_rx.recv() => {
+                    self.reset_participant(participant_id).await;
                 }
             }
         }
@@ -1517,6 +1341,293 @@ impl RemoteAccessSession {
             remote_access_session_id,
             "stopped listening for room events"
         );
+    }
+
+    /// Handles a single room event. Returns `true` to keep the event loop running,
+    /// or `false` to stop (e.g. on disconnect).
+    async fn handle_room_event(self: &Arc<Self>, event: RoomEvent) -> bool {
+        let remote_access_session_id = self.remote_access_session_id();
+        match event {
+            RoomEvent::ParticipantConnected(participant) => {
+                info!(
+                    remote_access_session_id,
+                    participant_identity = %participant.identity(),
+                    "participant connected to room (waiting for ParticipantActive)"
+                );
+            }
+            RoomEvent::ParticipantActive(participant) => {
+                let participant_identity = participant.identity();
+                let Some(version) = protocol_version::check_participant_protocol_version(
+                    &participant_identity,
+                    &participant.attributes(),
+                    remote_access_session_id,
+                ) else {
+                    self.send_incompatible_version_error(
+                        &participant_identity,
+                        &participant.attributes(),
+                    )
+                    .await;
+                    return true;
+                };
+                info!(
+                    remote_access_session_id,
+                    participant_identity = %participant_identity,
+                    version = %version,
+                    "participant active in room"
+                );
+                if let Err(e) = self.add_participant(participant.identity(), version).await {
+                    error!(remote_access_session_id, error = %e, "failed to add participant: {e}");
+                }
+            }
+            RoomEvent::ParticipantDisconnected(participant) => {
+                info!(
+                    remote_access_session_id,
+                    participant_identity = %participant.identity(),
+                    "participant disconnected from room"
+                );
+                self.remove_participant(&participant.identity());
+            }
+            RoomEvent::DataReceived {
+                payload: _,
+                topic,
+                kind: _,
+                participant: _,
+            } => {
+                info!(remote_access_session_id, "data received: {:?}", topic);
+            }
+            RoomEvent::ByteStreamOpened {
+                reader,
+                topic,
+                participant_identity,
+            } => {
+                info!(
+                    remote_access_session_id,
+                    participant_identity = %participant_identity,
+                    topic = %topic,
+                    "byte stream opened from participant"
+                );
+                if let Some(reader) = reader.take() {
+                    if topic == CONTROL_CHANNEL_TOPIC {
+                        let session = self.clone();
+                        tokio::spawn(async move {
+                            session
+                                .handle_byte_stream_from_client(participant_identity, reader, None)
+                                .await;
+                        });
+                    } else if let Some(id_str) = topic.strip_prefix(CLIENT_CHANNEL_TOPIC_PREFIX) {
+                        if let Ok(id) = id_str.parse::<u64>() {
+                            self.handle_client_channel_stream(
+                                participant_identity,
+                                ChannelId::new(id),
+                                reader,
+                            );
+                        } else {
+                            warn!(
+                                "invalid channel id in topic {:?} from {:?}",
+                                topic, participant_identity
+                            );
+                        }
+                    } else {
+                        warn!(
+                            "ignoring unexpected byte stream topic from {:?}: {:?}",
+                            participant_identity, topic
+                        );
+                    }
+                }
+            }
+            RoomEvent::ConnectionStateChanged(state) => {
+                info!(
+                    remote_access_session_id,
+                    state = ?state,
+                    "connection state changed"
+                );
+            }
+            RoomEvent::Reconnecting => {
+                info!(remote_access_session_id, "reconnecting to room");
+            }
+            RoomEvent::Reconnected => {
+                info!(remote_access_session_id, "reconnected to room");
+            }
+            RoomEvent::ConnectionQualityChanged {
+                quality,
+                participant,
+            } => {
+                info!(
+                    remote_access_session_id,
+                    participant = %participant.identity(),
+                    quality = ?quality,
+                    "connection quality changed"
+                );
+            }
+            RoomEvent::TrackSubscriptionFailed {
+                participant,
+                error,
+                track_sid,
+            } => {
+                warn!(
+                    remote_access_session_id,
+                    participant = %participant.identity(),
+                    track_sid = %track_sid,
+                    error = %error,
+                    "track subscription failed: {error}"
+                );
+            }
+            RoomEvent::LocalTrackPublished {
+                publication,
+                track: _,
+                participant: _,
+            } => {
+                info!(
+                    remote_access_session_id,
+                    track_sid = %publication.sid(),
+                    track_name = %publication.name(),
+                    "local track published"
+                );
+            }
+            RoomEvent::LocalTrackUnpublished {
+                publication,
+                participant: _,
+            } => {
+                info!(
+                    remote_access_session_id,
+                    track_sid = %publication.sid(),
+                    track_name = %publication.name(),
+                    "local track unpublished"
+                );
+            }
+            RoomEvent::TrackSubscribed {
+                track: _,
+                publication,
+                participant,
+            } => {
+                info!(
+                    remote_access_session_id,
+                    participant = %participant.identity(),
+                    track_sid = %publication.sid(),
+                    track_name = %publication.name(),
+                    "remote track subscribed"
+                );
+            }
+            RoomEvent::TrackUnsubscribed {
+                track: _,
+                publication,
+                participant,
+            } => {
+                info!(
+                    remote_access_session_id,
+                    participant = %participant.identity(),
+                    track_sid = %publication.sid(),
+                    track_name = %publication.name(),
+                    "remote track unsubscribed"
+                );
+            }
+            RoomEvent::TrackMuted {
+                participant,
+                publication,
+            } => {
+                info!(
+                    remote_access_session_id,
+                    participant = %participant.identity(),
+                    track_sid = %publication.sid(),
+                    track_name = %publication.name(),
+                    "track muted"
+                );
+            }
+            RoomEvent::TrackUnmuted {
+                participant,
+                publication,
+            } => {
+                info!(
+                    remote_access_session_id,
+                    participant = %participant.identity(),
+                    track_sid = %publication.sid(),
+                    track_name = %publication.name(),
+                    "track unmuted"
+                );
+            }
+            RoomEvent::Disconnected { reason } => {
+                info!(
+                    remote_access_session_id,
+                    reason = reason.as_str_name(),
+                    "disconnected from room, will attempt to reconnect"
+                );
+                return false;
+            }
+            _ => {
+                debug!(remote_access_session_id, "room event: {:?}", event);
+            }
+        }
+        true
+    }
+
+    /// Tears down a participant and re-initializes it with a fresh control stream.
+    ///
+    /// This is the recovery path when a control stream write fails: since in-flight
+    /// messages may also have been lost, we remove the participant (cleaning up
+    /// subscriptions) and re-add it. This opens a fresh stream and re-sends `ServerInfo`
+    /// and all advertisements — identical to the normal disconnect/reconnect flow.
+    ///
+    /// # Interaction with `ParticipantDisconnected`
+    ///
+    /// Write failures often coincide with participant disconnection. When that happens,
+    /// both a reset notification and a `ParticipantDisconnected` event may be in flight.
+    /// We guard against the common case by checking `remote_participants()` before
+    /// re-adding: if LiveKit has already removed the participant, we skip the re-add
+    /// and let the normal `ParticipantConnected` flow handle any future reconnection.
+    ///
+    /// This is a best-effort check (TOCTOU): the participant could disconnect between
+    /// the check and the `stream_bytes` call inside `add_participant`. In that narrow
+    /// window, `add_participant` may open a dead stream, but the subsequent
+    /// `ParticipantDisconnected` event will clean it up. This is harmless — just a
+    /// wasted `stream_bytes` call and a log line.
+    async fn reset_participant(self: &Arc<Self>, participant_id: ParticipantIdentity) {
+        let remote_access_session_id = self.remote_access_session_id();
+
+        self.remove_participant(&participant_id);
+
+        // Best-effort guard: skip re-add if LiveKit has already removed the participant
+        // (e.g., because the underlying WebRTC connection dropped). In that case, the
+        // `ParticipantDisconnected` event is already queued and a future reconnect will
+        // go through the normal `ParticipantConnected` → `add_participant` path.
+        let remote_participant = self
+            .room
+            .remote_participants()
+            .get(&participant_id)
+            .cloned();
+        let Some(remote_participant) = remote_participant else {
+            info!(
+                remote_access_session_id,
+                participant_identity = %participant_id,
+                "participant already left room, skipping re-add after control stream failure",
+            );
+            return;
+        };
+
+        let Some(version) = protocol_version::check_participant_protocol_version(
+            &participant_id,
+            &remote_participant.attributes(),
+            remote_access_session_id,
+        ) else {
+            warn!(
+                remote_access_session_id,
+                participant_identity = %participant_id,
+                "skipping reset for participant with incompatible protocol version",
+            );
+            return;
+        };
+
+        warn!(
+            remote_access_session_id,
+            participant_identity = %participant_id,
+            "resetting participant after control stream failure",
+        );
+        if let Err(e) = self.add_participant(participant_id, version).await {
+            error!(
+                remote_access_session_id,
+                error = %e,
+                "failed to re-add participant after reset: {e}",
+            );
+        }
     }
 
     /// Periodically logs session statistics for monitoring and debugging.
