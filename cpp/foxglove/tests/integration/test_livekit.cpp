@@ -214,10 +214,13 @@ TEST_CASE("livekit: channel filter excludes filtered channels", "[integration]")
 
 TEST_CASE("livekit: multiple participants receive messages", "[integration]") {
   auto ctx = foxglove::Context::create();
+  MockListener listener;
   auto channel = foxglove::RawChannel::create("/test", "json", std::nullopt, ctx);
   REQUIRE(channel.has_value());
 
-  auto gw = TestGateway::start(ctx);
+  TestGatewayOptions opts;
+  opts.callbacks = listener.make_callbacks();
+  auto gw = TestGateway::start_with_options(ctx, std::move(opts));
 
   auto viewer1 = ViewerConnection::connect(gw.room_name, "viewer-1");
   auto viewer2 = ViewerConnection::connect(gw.room_name, "viewer-2");
@@ -238,7 +241,7 @@ TEST_CASE("livekit: multiple participants receive messages", "[integration]") {
   auto adv2 = viewer2.expect_advertise();
   CHECK(adv2["channels"][0]["id"].get<uint64_t>() == channel_id);
   viewer2.send_subscribe({channel_id});
-  std::this_thread::sleep_for(500ms);
+  poll_until([&] { return listener.subscribed_count() == 2; });
 
   std::string payload2 = "message-2";
   channel->log(
@@ -252,7 +255,7 @@ TEST_CASE("livekit: multiple participants receive messages", "[integration]") {
 
   viewer1.close();
   viewer2.wait_for_participant_disconnected("viewer-1");
-  std::this_thread::sleep_for(200ms);
+  poll_until([&] { return listener.unsubscribed_count() >= 1; });
 
   std::string payload3 = "message-3";
   channel->log(
@@ -321,17 +324,6 @@ TEST_CASE("livekit: video channel messages bypass data plane", "[integration]") 
   auto json_id = json_channel->id();
 
   // Subscribe to video with requestVideoTrack, json without.
-  nlohmann::json channels = nlohmann::json::array();
-  channels.push_back({{"id", video_id}, {"requestVideoTrack", true}});
-  channels.push_back({{"id", json_id}});
-  nlohmann::json sub_msg = {{"op", "subscribe"}, {"subscriptions", channels}};
-  // Use internal send method to send custom subscribe
-  viewer.subscribe_and_wait({json_id}, [&] { return json_channel->hasSinks(); });
-
-  // Unsubscribe the json channel and resubscribe with both using video
-  viewer.send_unsubscribe({json_id});
-  std::this_thread::sleep_for(200ms);
-
   viewer.send_subscribe_video({video_id});
   viewer.send_subscribe({json_id});
   poll_until([&] { return json_channel->hasSinks(); });

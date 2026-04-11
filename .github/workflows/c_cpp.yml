@@ -293,7 +293,7 @@ jobs:
         working-directory: cpp
         run: |
           make build-integration
-          ctest --test-dir build-ra --verbose -L integration
+          ctest --test-dir build-integration --verbose -L integration
 
       - name: Stop LiveKit server
         if: always()

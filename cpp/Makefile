@@ -67,6 +67,8 @@ build-ra:
 test-ra: build-ra
 	cd $(RA_BUILD_DIR) && ctest --verbose
 
+INTEGRATION_BUILD_DIR=$(BUILD_DIR)-integration
+
 .PHONY: build-integration
 build-integration:
 	cmake \
@@ -78,16 +80,20 @@ build-integration:
 		$(if $(STRICT),-DSTRICT=$(STRICT)) \
 		$(if $(FOXGLOVE_PREBUILT_LIB_DIR),-DFOXGLOVE_PREBUILT_LIB_DIR=$(FOXGLOVE_PREBUILT_LIB_DIR)) \
 		$(CMAKE_ARGS) \
-		-B $(RA_BUILD_DIR)
-	cmake --build $(RA_BUILD_DIR) -j 8 --config $(CMAKE_BUILD_TYPE)
+		-B $(INTEGRATION_BUILD_DIR)
+	cmake --build $(INTEGRATION_BUILD_DIR) -j 8 --config $(CMAKE_BUILD_TYPE)
 
 .PHONY: test-integration
 test-integration: build-integration
-	cd $(RA_BUILD_DIR) && ctest --verbose -L integration
+	cd $(INTEGRATION_BUILD_DIR) && ctest --verbose -L integration
 
 .PHONY: clean-ra
 clean-ra:
 	rm -rf $(RA_BUILD_DIR)
+
+.PHONY: clean-integration
+clean-integration:
+	rm -rf $(INTEGRATION_BUILD_DIR)
 
 
 .PHONY: test
