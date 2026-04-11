@@ -40,7 +40,7 @@ pub extern "C" fn foxglove_set_log_level(level: FoxgloveLoggingLevel) {
         };
 
         let env = env_logger::Env::default()
-            .filter_or("FOXGLOVE_LOG_LEVEL", initial_level)
+            .filter_or("FOXGLOVE_LOG_LEVEL", format!("foxglove={initial_level}"))
             .write_style_or("FOXGLOVE_LOG_STYLE", "auto");
 
         env_logger::Builder::from_env(env)
