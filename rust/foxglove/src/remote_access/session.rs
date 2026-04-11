@@ -14,7 +14,7 @@ use semver::Version;
 use smallvec::SmallVec;
 use tokio::io::AsyncReadExt;
 use tokio_util::{io::StreamReader, sync::CancellationToken};
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, info, trace, warn};
 
 use crate::protocol::v2::DecodeError;
 use crate::protocol::v2::parameter::Parameter;
@@ -1554,7 +1554,7 @@ impl RemoteAccessSession {
                 return false;
             }
             _ => {
-                debug!(remote_access_session_id, "room event: {:?}", event);
+                trace!(remote_access_session_id, "room event: {:?}", event);
             }
         }
         true
