@@ -130,11 +130,15 @@ struct RemoteAccessGatewayCallbacks {
   /// @brief Callback invoked when the first client subscribes to connection graph updates.
   ///
   /// Requires RemoteAccessGatewayCapabilities::ConnectionGraph.
+  ///
+  /// @warning Do not call publishConnectionGraph from within this callback; doing so will deadlock.
   std::function<void()> onConnectionGraphSubscribe;
 
   /// @brief Callback invoked when the last client unsubscribes from connection graph updates.
   ///
   /// Requires RemoteAccessGatewayCapabilities::ConnectionGraph.
+  ///
+  /// @warning Do not call publishConnectionGraph from within this callback; doing so will deadlock.
   std::function<void()> onConnectionGraphUnsubscribe;
 };
 
