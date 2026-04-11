@@ -53,10 +53,7 @@ impl MockListener {
 
 impl Listener for MockListener {
     fn on_client_advertise(&self, client: &Client, channel: &ChannelDescriptor) {
-        let schema_name = channel
-            .schema()
-            .map(|s| s.name.clone())
-            .unwrap_or_default();
+        let schema_name = channel.schema().map(|s| s.name.clone()).unwrap_or_default();
         self.advertised.lock().unwrap().push((
             client.participant_id().to_string(),
             channel.topic().to_string(),
