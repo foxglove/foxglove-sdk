@@ -1,6 +1,7 @@
 #pragma once
 
 #include <foxglove/channel.hpp>
+#include <foxglove/connection_graph.hpp>
 #include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
 #include <foxglove/fetch_asset.hpp>
@@ -51,6 +52,8 @@ enum class RemoteAccessGatewayCapabilities : uint8_t {
   Parameters = 1 << 1,
   /// Allow clients to call services.
   Services = 1 << 2,
+  /// Allow clients to subscribe and make connection graph updates.
+  ConnectionGraph = 1 << 3,
 };
 
 /// @brief Combine two gateway capabilities.
@@ -123,6 +126,20 @@ struct RemoteAccessGatewayCallbacks {
   ///
   /// Requires RemoteAccessGatewayCapabilities::Parameters.
   std::function<void(const std::vector<std::string_view>& param_names)> onParametersUnsubscribe;
+
+  /// @brief Callback invoked when the first client subscribes to connection graph updates.
+  ///
+  /// Requires RemoteAccessGatewayCapabilities::ConnectionGraph.
+  ///
+  /// @warning Do not call publishConnectionGraph from within this callback; doing so will deadlock.
+  std::function<void()> onConnectionGraphSubscribe;
+
+  /// @brief Callback invoked when the last client unsubscribes from connection graph updates.
+  ///
+  /// Requires RemoteAccessGatewayCapabilities::ConnectionGraph.
+  ///
+  /// @warning Do not call publishConnectionGraph from within this callback; doing so will deadlock.
+  std::function<void()> onConnectionGraphUnsubscribe;
 };
 
 /// @brief Options for creating a remote access gateway.
@@ -204,6 +221,13 @@ public:
   ///
   /// @param ids Message IDs.
   [[nodiscard]] FoxgloveError removeStatus(const std::vector<std::string_view>& ids) const;
+
+  /// @brief Publish a connection graph to all subscribed clients.
+  ///
+  /// Requires RemoteAccessGatewayCapabilities::ConnectionGraph.
+  ///
+  /// @param graph The connection graph to publish.
+  [[nodiscard]] FoxgloveError publishConnectionGraph(const ConnectionGraph& graph) const;
 
   /// @brief Gracefully shut down the gateway.
   FoxgloveError stop();

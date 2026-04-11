@@ -331,6 +331,7 @@ if(FOXGLOVE_REMOTE_ACCESS)
   # Augment the shared library with RA objects
   target_sources(foxglove_cpp_shared PRIVATE $<TARGET_OBJECTS:foxglove_ra_cpp_obj>)
   target_compile_definitions(foxglove_cpp_shared PUBLIC FOXGLOVE_REMOTE_ACCESS)
+
 endif()
 
 
@@ -413,6 +414,7 @@ add_foxglove_example(example_message_filtering SOURCES examples/message-filterin
 
 if(FOXGLOVE_REMOTE_ACCESS)
   add_foxglove_example(example_remote_access SOURCES examples/remote-access/src/main.cpp)
+  add_foxglove_example(example_remote_access_connection_graph SOURCES examples/remote-access-connection-graph/src/main.cpp)
   add_foxglove_example(example_remote_access_fetch_asset SOURCES examples/remote-access-fetch-asset/src/main.cpp)
 endif()
 
