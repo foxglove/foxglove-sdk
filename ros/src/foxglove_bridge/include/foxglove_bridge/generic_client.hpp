@@ -5,7 +5,7 @@
 #include <rclcpp/version.h>
 #include <rcpputils/shared_library.hpp>
 
-#include <foxglove/server/service.hpp>
+#include <foxglove/websocket.hpp>
 
 namespace foxglove_bridge {
 

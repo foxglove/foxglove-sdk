@@ -28,6 +28,9 @@ public:
   explicit ChannelDescriptor(const foxglove_channel_descriptor* channel_descriptor);
   /// @endcond
 
+  /// @brief Get the id of the channel descriptor.
+  [[nodiscard]] uint64_t id() const noexcept;
+
   /// @brief Get the topic of the channel descriptor.
   [[nodiscard]] std::string_view topic() const noexcept;
 

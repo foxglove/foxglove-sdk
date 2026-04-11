@@ -8,11 +8,11 @@ use foxglove::remote_access::{Client, Listener};
 /// `on_message_data`, `on_subscribe`, `on_unsubscribe`, `on_connection_graph_subscribe`,
 /// and `on_connection_graph_unsubscribe` callbacks.
 ///
-/// Advertise/unadvertise entries are stored as `(participant_id, topic)`.
+/// Advertise/unadvertise entries are stored as `(participant_id, topic, schema_name)`.
 /// Message data entries are stored as `(client_id, topic, payload)`.
 #[derive(Default)]
 pub struct MockListener {
-    pub advertised: Mutex<Vec<(String, String)>>,
+    pub advertised: Mutex<Vec<(String, String, String)>>,
     pub unadvertised: Mutex<Vec<(String, String)>>,
     pub message_data: Mutex<Vec<(String, String, Vec<u8>)>>,
     pub subscribed: Mutex<Vec<(String, String)>>,
@@ -22,7 +22,7 @@ pub struct MockListener {
 }
 
 impl MockListener {
-    pub fn advertised(&self) -> Vec<(String, String)> {
+    pub fn advertised(&self) -> Vec<(String, String, String)> {
         self.advertised.lock().unwrap().clone()
     }
 
@@ -53,9 +53,11 @@ impl MockListener {
 
 impl Listener for MockListener {
     fn on_client_advertise(&self, client: &Client, channel: &ChannelDescriptor) {
+        let schema_name = channel.schema().map(|s| s.name.clone()).unwrap_or_default();
         self.advertised.lock().unwrap().push((
             client.participant_id().to_string(),
             channel.topic().to_string(),
+            schema_name,
         ));
     }
 

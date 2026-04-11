@@ -1,7 +1,7 @@
 @PACKAGE_INIT@
 
 # Whether the SDK was built with remote access gateway support.
-set(FOXGLOVE_SDK_REMOTE_ACCESS @FOXGLOVE_BUILD_REMOTE_ACCESS@)
+set(FOXGLOVE_SDK_REMOTE_ACCESS @FOXGLOVE_REMOTE_ACCESS@)
 
 set(_foxglove_lib_dir "${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@")
 

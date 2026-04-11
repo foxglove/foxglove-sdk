@@ -2,6 +2,22 @@ use crate::{FoxgloveError, FoxgloveKeyValue, FoxgloveSchema, FoxgloveString};
 
 pub struct FoxgloveChannelDescriptor(pub(crate) foxglove::ChannelDescriptor);
 
+/// Get the id of a channel descriptor.
+///
+/// # Safety
+/// `channel` must be a valid pointer to a `foxglove_channel_descriptor`.
+///
+/// If the passed channel is null, 0 is returned.
+#[unsafe(no_mangle)]
+pub extern "C" fn foxglove_channel_descriptor_get_id(
+    channel: Option<&FoxgloveChannelDescriptor>,
+) -> u64 {
+    let Some(channel) = channel else {
+        return 0;
+    };
+    channel.0.id().into()
+}
+
 /// Get the topic of a channel descriptor.
 ///
 /// # Safety

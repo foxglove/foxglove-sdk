@@ -17,7 +17,7 @@ endif()
 option(USE_PACKAGE_MANAGER_DEPENDENCIES
   "Try to find dependencies provided by the local package manager, and if not found, fall back to building them from source"
   ON)
-option(FOXGLOVE_BUILD_REMOTE_ACCESS "Build with remote access gateway support" OFF)
+option(FOXGLOVE_REMOTE_ACCESS "Build with remote access gateway support" OFF)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
@@ -164,7 +164,7 @@ endif()
 # redundant Rust builds and Windows long-path issues with corrosion's nested build directory.
 if(FOXGLOVE_PREBUILT_LIB_DIR)
   get_filename_component(FOXGLOVE_PREBUILT_LIB_DIR "${FOXGLOVE_PREBUILT_LIB_DIR}" ABSOLUTE)
-  if(NOT FOXGLOVE_BUILD_REMOTE_ACCESS)
+  if(NOT FOXGLOVE_REMOTE_ACCESS)
     add_library(foxglove-static STATIC IMPORTED GLOBAL)
     set_target_properties(foxglove-static PROPERTIES
       IMPORTED_LOCATION "${FOXGLOVE_PREBUILT_LIB_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}foxglove${CMAKE_STATIC_LIBRARY_SUFFIX}"
@@ -185,7 +185,7 @@ if(FOXGLOVE_PREBUILT_LIB_DIR)
     endforeach()
   endif()
 else()
-  if(FOXGLOVE_BUILD_REMOTE_ACCESS)
+  if(FOXGLOVE_REMOTE_ACCESS)
     # RA builds only produce the cdylib (shared library). A staticlib is not provided because
     # the LiveKit/WebRTC dependency has strict ABI requirements and would leak internal symbols
     # into the consumer's binary.
@@ -271,7 +271,7 @@ target_include_directories(foxglove_cpp_obj PRIVATE
 target_compile_options(foxglove_cpp_obj PRIVATE ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
 target_link_options(foxglove_cpp_obj PRIVATE ${SANITIZER_LINK_OPTIONS})
 
-if(NOT FOXGLOVE_BUILD_REMOTE_ACCESS)
+if(NOT FOXGLOVE_REMOTE_ACCESS)
   add_library(foxglove_cpp_static STATIC
     $<TARGET_OBJECTS:foxglove_cpp_obj>
     $<TARGET_OBJECTS:foxglove_generated_obj>
@@ -297,7 +297,7 @@ else()
 endif()
 
 set(_foxglove_cpp_targets foxglove_cpp_shared)
-if(NOT FOXGLOVE_BUILD_REMOTE_ACCESS)
+if(NOT FOXGLOVE_REMOTE_ACCESS)
   list(APPEND _foxglove_cpp_targets foxglove_cpp_static)
 endif()
 foreach(_target ${_foxglove_cpp_targets})
@@ -313,7 +313,7 @@ endforeach()
 
 ### Remote Access (optional)
 
-if(FOXGLOVE_BUILD_REMOTE_ACCESS)
+if(FOXGLOVE_REMOTE_ACCESS)
   add_library(foxglove_ra_cpp_obj OBJECT
     "foxglove/include/foxglove/remote_access.hpp"
     "foxglove/src/remote_access.cpp"
@@ -412,7 +412,7 @@ add_foxglove_example(example_connection_graph SOURCES examples/connection-graph/
 add_foxglove_example(example_auto_serialize SOURCES examples/auto-serialize/src/main.cpp LIBS nlohmann_json::nlohmann_json)
 add_foxglove_example(example_message_filtering SOURCES examples/message-filtering/src/main.cpp)
 
-if(FOXGLOVE_BUILD_REMOTE_ACCESS)
+if(FOXGLOVE_REMOTE_ACCESS)
   add_foxglove_example(example_remote_access SOURCES examples/remote-access/src/main.cpp)
   add_foxglove_example(example_remote_access_connection_graph SOURCES examples/remote-access-connection-graph/src/main.cpp)
   add_foxglove_example(example_remote_access_fetch_asset SOURCES examples/remote-access-fetch-asset/src/main.cpp)
@@ -444,7 +444,7 @@ include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
 # Install C++ libraries
-if(FOXGLOVE_BUILD_REMOTE_ACCESS)
+if(FOXGLOVE_REMOTE_ACCESS)
   install(TARGETS foxglove_cpp_shared
     EXPORT foxglove-sdkTargets
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
