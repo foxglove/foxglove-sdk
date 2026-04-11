@@ -932,6 +932,7 @@ async fn livekit_client_advertise_fires_listener_callback() -> Result<()> {
             id: 1,
             topic: "/cmd".to_string(),
             encoding: "json".to_string(),
+            schema_name: String::new(),
         }])
         .await?;
 
@@ -951,6 +952,58 @@ async fn livekit_client_advertise_fires_listener_callback() -> Result<()> {
     info!(
         "on_client_advertise callback validated: {:?}",
         advertised[0]
+    );
+
+    viewer.close().await?;
+    gw.stop().await?;
+    Ok(())
+}
+
+/// Test that a client Advertise with a schema_name but no binary schema data still
+/// preserves the schema_name on the ChannelDescriptor delivered to the listener.
+/// This is the typical case for teleop panels (e.g. publishing to /cmd_vel).
+#[traced_test]
+#[ignore]
+#[tokio::test]
+#[serial(livekit)]
+async fn livekit_client_advertise_preserves_schema_name_without_schema_data() -> Result<()> {
+    use std::sync::Arc;
+    let ctx = foxglove::Context::new();
+    let listener = Arc::new(MockListener::default());
+
+    let gw = TestGateway::start_with_options(
+        &ctx,
+        TestGatewayOptions {
+            listener: Some(listener.clone()),
+            capabilities: vec![foxglove::remote_access::Capability::ClientPublish],
+            ..Default::default()
+        },
+    )
+    .await?;
+
+    let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+    let _server_info = viewer.frame_reader.next_server_message().await?;
+
+    // Advertise a channel with schema_name but no schema data — this is what the
+    // Foxglove teleop panel sends for /cmd_vel.
+    viewer
+        .send_client_advertise(&[ClientChannelDesc {
+            id: 1,
+            topic: "/cmd_vel".to_string(),
+            encoding: "json".to_string(),
+            schema_name: "geometry_msgs/msg/Twist".to_string(),
+        }])
+        .await?;
+
+    poll_until(|| listener.advertised().len() == 1).await;
+
+    let advertised = listener.advertised();
+    assert_eq!(advertised.len(), 1);
+    assert_eq!(advertised[0].0, "viewer-1");
+    assert_eq!(advertised[0].1, "/cmd_vel");
+    assert_eq!(
+        advertised[0].2, "geometry_msgs/msg/Twist",
+        "schema_name should be preserved even without binary schema data"
     );
 
     viewer.close().await?;
@@ -987,6 +1040,7 @@ async fn livekit_client_unadvertise_fires_listener_callback() -> Result<()> {
             id: 42,
             topic: "/joy".to_string(),
             encoding: "json".to_string(),
+            schema_name: String::new(),
         }])
         .await?;
     poll_until(|| listener.advertised().len() == 1).await;
@@ -1040,11 +1094,13 @@ async fn livekit_client_disconnect_fires_unadvertise_for_advertised_channels() -
                 id: 1,
                 topic: "/cmd_vel".to_string(),
                 encoding: "json".to_string(),
+                schema_name: String::new(),
             },
             ClientChannelDesc {
                 id: 2,
                 topic: "/joy".to_string(),
                 encoding: "json".to_string(),
+                schema_name: String::new(),
             },
         ])
         .await?;
@@ -1312,6 +1368,7 @@ async fn livekit_client_message_data_fires_listener_callback() -> Result<()> {
             id: 1,
             topic: "/cmd".to_string(),
             encoding: "json".to_string(),
+            schema_name: String::new(),
         }])
         .await?;
     poll_until(|| listener.advertised().len() == 1).await;
@@ -1368,6 +1425,7 @@ async fn livekit_client_message_data_before_advertise_is_delivered() -> Result<(
             id: 1,
             topic: "/cmd".to_string(),
             encoding: "json".to_string(),
+            schema_name: String::new(),
         }])
         .await?;
 
@@ -1467,6 +1525,7 @@ async fn livekit_client_message_advertise_without_capability_sends_error() -> Re
             id: 1,
             topic: "/cmd".to_string(),
             encoding: "json".to_string(),
+            schema_name: String::new(),
         }])
         .await?;
 

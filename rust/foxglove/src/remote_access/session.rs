@@ -962,12 +962,19 @@ impl RemoteAccessSession {
         for ch in msg.channels {
             let channel_id = ChannelId::new(ch.id.into());
 
-            // Decode the schema, tolerating absent schemas.
+            // Decode the schema, tolerating absent schemas. Even when binary schema
+            // data is missing, preserve the schema_name so downstream consumers (e.g.
+            // the ROS bridge) can identify the message type.
             let schema = match ch.decode_schema() {
                 Ok(data) => Some(Schema {
                     name: ch.schema_name.to_string(),
                     encoding: ch.schema_encoding.as_deref().unwrap_or("").to_string(),
                     data: data.into(),
+                }),
+                Err(DecodeError::MissingSchema) if !ch.schema_name.is_empty() => Some(Schema {
+                    name: ch.schema_name.to_string(),
+                    encoding: ch.schema_encoding.as_deref().unwrap_or("").to_string(),
+                    data: Vec::new().into(),
                 }),
                 Err(DecodeError::MissingSchema) => None,
                 Err(e) => {
