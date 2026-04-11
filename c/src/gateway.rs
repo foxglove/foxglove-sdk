@@ -54,6 +54,8 @@ pub const FOXGLOVE_GATEWAY_CAPABILITY_CLIENT_PUBLISH: u8 = 1 << 0;
 pub const FOXGLOVE_GATEWAY_CAPABILITY_PARAMETERS: u8 = 1 << 1;
 /// Allow clients to call services.
 pub const FOXGLOVE_GATEWAY_CAPABILITY_SERVICES: u8 = 1 << 2;
+/// Allow clients to request assets.
+pub const FOXGLOVE_GATEWAY_CAPABILITY_ASSETS: u8 = 1 << 3;
 
 bitflags! {
     #[derive(Clone, Copy, PartialEq, Eq)]
@@ -61,6 +63,7 @@ bitflags! {
         const ClientPublish = FOXGLOVE_GATEWAY_CAPABILITY_CLIENT_PUBLISH;
         const Parameters = FOXGLOVE_GATEWAY_CAPABILITY_PARAMETERS;
         const Services = FOXGLOVE_GATEWAY_CAPABILITY_SERVICES;
+        const Assets = FOXGLOVE_GATEWAY_CAPABILITY_ASSETS;
     }
 }
 
@@ -77,6 +80,9 @@ impl FoxgloveGatewayCapabilityBitFlags {
             }
             FoxgloveGatewayCapabilityBitFlags::Services => {
                 Some(foxglove::remote_access::Capability::Services)
+            }
+            FoxgloveGatewayCapabilityBitFlags::Assets => {
+                Some(foxglove::remote_access::Capability::Assets)
             }
             _ => None,
         })

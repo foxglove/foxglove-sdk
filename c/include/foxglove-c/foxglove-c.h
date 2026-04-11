@@ -49,6 +49,13 @@
 #define FOXGLOVE_GATEWAY_CAPABILITY_SERVICES (1 << 2)
 #endif
 
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+/**
+ * Allow clients to request assets.
+ */
+#define FOXGLOVE_GATEWAY_CAPABILITY_ASSETS (1 << 3)
+#endif
+
 #if !defined(__wasm__)
 /**
  * Allow clients to advertise channels to send data messages to the server.

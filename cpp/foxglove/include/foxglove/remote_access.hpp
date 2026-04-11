@@ -51,6 +51,8 @@ enum class RemoteAccessGatewayCapabilities : uint8_t {
   Parameters = 1 << 1,
   /// Allow clients to call services.
   Services = 1 << 2,
+  /// Allow clients to request assets.
+  Assets = 1 << 3,
 };
 
 /// @brief Combine two gateway capabilities.
