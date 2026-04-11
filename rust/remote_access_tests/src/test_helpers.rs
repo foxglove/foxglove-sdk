@@ -28,6 +28,7 @@ pub struct ClientChannelDesc {
     pub id: u32,
     pub topic: String,
     pub encoding: String,
+    pub schema_name: String,
 }
 use foxglove::protocol::v2::server::ServerMessage;
 use foxglove::remote_access::service::Service;
@@ -436,7 +437,7 @@ impl ViewerConnection {
             id: c.id,
             topic: c.topic.as_str().into(),
             encoding: c.encoding.as_str().into(),
-            schema_name: "".into(),
+            schema_name: c.schema_name.as_str().into(),
             schema_encoding: None,
             schema: None,
         }));
