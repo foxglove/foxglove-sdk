@@ -7,6 +7,24 @@
 #include <cstring>
 #include <stdexcept>
 
+extern "C" {
+using FfiHandleId = uint64_t;
+FfiHandleId livekit_ffi_request(
+  const uint8_t* data, size_t len, const uint8_t** res_ptr, size_t* res_len
+);
+bool livekit_ffi_drop_handle(FfiHandleId handle_id);
+}
+
+namespace livekit {
+class RoomCallbackTest {
+public:
+  static uint64_t getRoomHandleId(Room& room) {
+    std::lock_guard<std::mutex> g(room.lock_);
+    return room.room_handle_ ? static_cast<uint64_t>(room.room_handle_->get()) : 0;
+  }
+};
+}  // namespace livekit
+
 namespace foxglove_integration {
 
 // FrameReader
@@ -89,6 +107,12 @@ void TestRoomDelegate::onParticipantDisconnected(
   ViewerEvent ve;
   ve.type = ViewerEvent::Type::ParticipantDisconnected;
   ve.identity = event.participant->identity();
+  push_event(std::move(ve));
+}
+
+void TestRoomDelegate::onRoomEos(livekit::Room& /*room*/, const livekit::RoomEosEvent&) {
+  ViewerEvent ve;
+  ve.type = ViewerEvent::Type::RoomEos;
   push_event(std::move(ve));
 }
 
@@ -446,12 +470,51 @@ void ViewerConnection::wait_for_participant_disconnected(const std::string& iden
   }
 }
 
+namespace {
+void encode_varint(std::vector<uint8_t>& buf, uint64_t value) {
+  while (value > 0x7f) {
+    buf.push_back(static_cast<uint8_t>(value & 0x7f) | 0x80);
+    value >>= 7;
+  }
+  buf.push_back(static_cast<uint8_t>(value));
+}
+
+std::vector<uint8_t> encode_disconnect_ffi_request(uint64_t room_handle) {
+  // DisconnectRequest { room_handle (field 1, varint) }
+  std::vector<uint8_t> inner;
+  inner.push_back(0x08);  // field 1, wire type 0 (varint)
+  encode_varint(inner, room_handle);
+
+  // FfiRequest { disconnect (field 4, length-delimited) = inner }
+  std::vector<uint8_t> outer;
+  outer.push_back(0x22);  // field 4, wire type 2 (length-delimited)
+  encode_varint(outer, inner.size());
+  outer.insert(outer.end(), inner.begin(), inner.end());
+  return outer;
+}
+}  // namespace
+
 void ViewerConnection::close() {
   if (control_writer_) {
     control_writer_->close();
     control_writer_.reset();
   }
   if (room_) {
+    uint64_t handle_id = livekit::RoomCallbackTest::getRoomHandleId(*room_);
+    if (handle_id != 0) {
+      auto req = encode_disconnect_ffi_request(handle_id);
+      const uint8_t* resp_ptr = nullptr;
+      size_t resp_len = 0;
+      FfiHandleId resp_handle = livekit_ffi_request(req.data(), req.size(), &resp_ptr, &resp_len);
+      if (resp_handle != 0) {
+        livekit_ffi_drop_handle(resp_handle);
+      }
+
+      delegate_->wait_for_event(
+        [](const ViewerEvent& e) { return e.type == ViewerEvent::Type::RoomEos; },
+        std::chrono::duration_cast<std::chrono::milliseconds>(EVENT_TIMEOUT)
+      );
+    }
     room_.reset();
   }
 }

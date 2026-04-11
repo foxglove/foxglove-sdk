@@ -426,6 +426,7 @@ if(FOXGLOVE_BUILD_INTEGRATION_TESTS)
     nlohmann_json::nlohmann_json
     httplib::httplib
     livekit
+    livekit_ffi
     jwt-cpp::jwt-cpp
   )
   # Suppress warnings from third-party headers.

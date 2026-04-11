@@ -42,6 +42,7 @@ struct ViewerEvent {
     TrackSubscribed,
     TrackUnsubscribed,
     ParticipantDisconnected,
+    RoomEos,
   };
   Type type;
   std::string topic;
@@ -59,6 +60,7 @@ public:
   void onParticipantDisconnected(
     livekit::Room& room, const livekit::ParticipantDisconnectedEvent& event
   ) override;
+  void onRoomEos(livekit::Room& room, const livekit::RoomEosEvent& event) override;
 
   /// Wait for an event matching the predicate, up to the given timeout.
   std::optional<ViewerEvent> wait_for_event(
