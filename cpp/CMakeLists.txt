@@ -381,8 +381,17 @@ if(FOXGLOVE_BUILD_INTEGRATION_TESTS)
   endif()
 
   # LiveKit C++ SDK
-  set(LK_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-  set(LK_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+  set(LIVEKIT_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+  set(LIVEKIT_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+  # The LiveKit SDK CMakeLists.txt incorrectly uses CMAKE_SOURCE_DIR instead of
+  # CMAKE_CURRENT_SOURCE_DIR for its install config template. When built via
+  # FetchContent, CMAKE_SOURCE_DIR points to our project root instead of the
+  # LiveKit source directory. Work around this by providing the expected file.
+  if(NOT EXISTS "${CMAKE_SOURCE_DIR}/cmake/LiveKitConfig.cmake.in")
+    file(WRITE "${CMAKE_SOURCE_DIR}/cmake/LiveKitConfig.cmake.in"
+      "@PACKAGE_INIT@\ninclude(\"\${CMAKE_CURRENT_LIST_DIR}/LiveKitTargets.cmake\")\n"
+    )
+  endif()
   FetchContent_Declare(
     livekit
     GIT_REPOSITORY https://github.com/livekit/client-sdk-cpp.git
@@ -437,7 +446,7 @@ if(FOXGLOVE_BUILD_INTEGRATION_TESTS)
   if(NOT CMAKE_CROSSCOMPILING AND NOT FOXGLOVE_SKIP_TEST_DISCOVERY)
     catch_discover_tests(integration_tests
       TEST_PREFIX "integration/"
-      PROPERTIES LABELS "integration"
+      PROPERTIES LABELS "integration" TIMEOUT 30
     )
   endif()
 endif()

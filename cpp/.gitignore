@@ -4,3 +4,5 @@ dist
 .cache
 foxglove/docs/generated
 *.zip
+# Generated at configure time to work around LiveKit SDK FetchContent bug
+cmake/LiveKitConfig.cmake.in

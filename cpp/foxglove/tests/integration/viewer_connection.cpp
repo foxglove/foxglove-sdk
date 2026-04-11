@@ -49,16 +49,16 @@ nlohmann::json FrameReader::next_server_message() {
 
   // Parse known binary message types
   uint8_t bin_op = frame.payload[0];
-  // MessageData binary opcode is 1
-  if (bin_op == 1 && frame.payload.size() >= 13) {
-    uint32_t subscription_id = 0;
-    std::memcpy(&subscription_id, frame.payload.data() + 1, 4);
+  // v2 MessageData binary: opcode(1) + channel_id(u64) + log_time(u64) + data
+  if (bin_op == 1 && frame.payload.size() >= 17) {
+    uint64_t channel_id = 0;
+    std::memcpy(&channel_id, frame.payload.data() + 1, 8);
     uint64_t timestamp = 0;
-    std::memcpy(&timestamp, frame.payload.data() + 5, 8);
+    std::memcpy(&timestamp, frame.payload.data() + 9, 8);
     msg["op"] = "messageData";
-    msg["subscriptionId"] = subscription_id;
+    msg["channelId"] = channel_id;
     msg["timestamp"] = timestamp;
-    msg["data"] = std::vector<uint8_t>(frame.payload.begin() + 13, frame.payload.end());
+    msg["data"] = std::vector<uint8_t>(frame.payload.begin() + 17, frame.payload.end());
   }
   return msg;
 }
@@ -140,8 +140,6 @@ ViewerConnection ViewerConnection::connect(
     auto room = std::make_unique<livekit::Room>();
     room->setDelegate(delegate.get());
 
-    // Register a byte stream handler for the "control" topic.
-    // The handler pushes a ByteStreamOpened event with the reader.
     auto delegate_weak = std::weak_ptr<TestRoomDelegate>(delegate);
     room->registerByteStreamHandler(
       "control",
@@ -162,7 +160,10 @@ ViewerConnection ViewerConnection::connect(
 
     livekit::RoomOptions options;
     options.auto_subscribe = true;
-    room->Connect(livekit_url(), token, options);
+    bool connected = room->Connect(livekit_url(), token, options);
+    if (!connected) {
+      throw std::runtime_error("viewer Room::Connect() returned false for " + identity);
+    }
 
     auto inner_timeout = std::min(
       CONNECT_RETRY_TIMEOUT,
@@ -256,20 +257,22 @@ void ViewerConnection::send_framed_text(const std::string& json) {
 }
 
 void ViewerConnection::send_subscribe(const std::vector<uint64_t>& channel_ids) {
+  ensure_device_ch_handlers();
   nlohmann::json channels = nlohmann::json::array();
   for (auto id : channel_ids) {
     channels.push_back({{"id", id}});
   }
-  nlohmann::json msg = {{"op", "subscribe"}, {"subscriptions", channels}};
+  nlohmann::json msg = {{"op", "subscribe"}, {"channels", channels}};
   send_framed_text(msg.dump());
 }
 
 void ViewerConnection::send_subscribe_video(const std::vector<uint64_t>& channel_ids) {
+  ensure_device_ch_handlers();
   nlohmann::json channels = nlohmann::json::array();
   for (auto id : channel_ids) {
     channels.push_back({{"id", id}, {"requestVideoTrack", true}});
   }
-  nlohmann::json msg = {{"op", "subscribe"}, {"subscriptions", channels}};
+  nlohmann::json msg = {{"op", "subscribe"}, {"channels", channels}};
   send_framed_text(msg.dump());
 }
 
@@ -292,7 +295,7 @@ void ViewerConnection::send_unsubscribe(const std::vector<uint64_t>& channel_ids
   for (auto id : channel_ids) {
     ids.push_back(id);
   }
-  nlohmann::json msg = {{"op", "unsubscribe"}, {"subscriptionIds", ids}};
+  nlohmann::json msg = {{"op", "unsubscribe"}, {"channelIds", ids}};
   send_framed_text(msg.dump());
 }
 
@@ -448,8 +451,10 @@ void ViewerConnection::close() {
     control_writer_->close();
     control_writer_.reset();
   }
-  // Destroying the Room disconnects from the server.
-  room_.reset();
+  if (room_) {
+    room_->Disconnect();
+    room_.reset();
+  }
 }
 
 }  // namespace foxglove_integration

@@ -261,7 +261,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.build == 'true'
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
         with:
@@ -269,6 +269,18 @@ jobs:
 
       - name: Install common dependencies
         uses: ./.github/actions/common-deps
+
+      - name: Install LiveKit C++ SDK dependencies
+        run: |
+          sudo apt-get install -y --no-install-recommends \
+            llvm-dev libclang-dev clang \
+            libdrm-dev libgbm-dev libx11-dev libgl1-mesa-dev \
+            libxext-dev libxcomposite-dev libxdamage-dev libxfixes-dev \
+            libxrandr-dev libxi-dev libxkbcommon-dev \
+            libasound2-dev libpulse-dev \
+            libssl-dev \
+            libabsl-dev \
+            libwayland-dev libdecor-0-dev
 
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:

@@ -8,6 +8,7 @@
 #include <foxglove/remote_access.hpp>
 
 #include <memory>
+#include <optional>
 #include <string>
 
 namespace foxglove_integration {
@@ -57,7 +58,7 @@ public:
 
     TestGateway gw;
     gw.room_name = std::move(room_name);
-    gw.mock_ = std::move(mock);
+    gw.mock_.emplace(std::move(mock));
     gw.gateway_ = std::make_unique<foxglove::RemoteAccessGateway>(std::move(result.value()));
     return gw;
   }
@@ -79,7 +80,7 @@ public:
 private:
   TestGateway() = default;
 
-  MockServerHandle mock_{"unused"};
+  std::optional<MockServerHandle> mock_;
   std::unique_ptr<foxglove::RemoteAccessGateway> gateway_;
 };
 
