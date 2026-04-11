@@ -452,7 +452,6 @@ void ViewerConnection::close() {
     control_writer_.reset();
   }
   if (room_) {
-    room_->Disconnect();
     room_.reset();
   }
 }
