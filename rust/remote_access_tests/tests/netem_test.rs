@@ -14,7 +14,6 @@
 use std::time::Duration;
 
 use anyhow::{Context as _, Result};
-use foxglove::protocol::v2::server::ServerMessage;
 use remote_access_tests::test_helpers::{NETEM_EVENT_TIMEOUT, TestGateway, ViewerConnection};
 use serial_test::serial;
 use tracing::info;
@@ -262,6 +261,7 @@ async fn netem_message_delivery_under_impairment() -> Result<()> {
     let channel_id = advertise.channels[0].id;
 
     viewer.subscribe_and_wait(&[channel_id], &channel).await?;
+    viewer.ensure_device_data_track().await?;
 
     let payload = b"netem-hello";
     channel.log(payload);
@@ -302,6 +302,9 @@ async fn netem_burst_delivery_under_impairment() -> Result<()> {
 
     viewer.subscribe_and_wait(&[channel_id], &channel).await?;
 
+    // Wait for the device data track to be published and subscribe to it.
+    let mut ch_reader = viewer.expect_device_channel_data_track().await?;
+
     // Send a burst of messages.
     let count = 20;
     for i in 0..count {
@@ -309,22 +312,16 @@ async fn netem_burst_delivery_under_impairment() -> Result<()> {
         channel.log(payload.as_bytes());
     }
 
-    // Wait for the per-channel byte stream to open, then read all messages from it.
-    let mut ch_reader = viewer.expect_channel_byte_stream().await?;
+    // Read all messages from the data track.
     for i in 0..count {
-        let msg = ch_reader.next_server_message().await?;
+        let msg = ch_reader.next_message_data().await?;
         let expected = format!("msg-{i:04}");
-        match msg {
-            ServerMessage::MessageData(data) => {
-                assert_eq!(data.channel_id, channel_id);
-                assert_eq!(
-                    data.data.as_ref(),
-                    expected.as_bytes(),
-                    "message {i} out of order or missing"
-                );
-            }
-            other => anyhow::bail!("expected MessageData, got: {other:?}"),
-        }
+        assert_eq!(msg.channel_id, channel_id);
+        assert_eq!(
+            msg.data.as_ref(),
+            expected.as_bytes(),
+            "message {i} out of order or missing"
+        );
     }
     info!("all {count} messages delivered in order under impairment");
 
