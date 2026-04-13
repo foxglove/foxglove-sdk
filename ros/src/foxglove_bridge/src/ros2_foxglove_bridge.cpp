@@ -276,6 +276,10 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
       gatewayOptions.capabilities =
         gatewayOptions.capabilities | foxglove::RemoteAccessGatewayCapabilities::Assets;
     }
+    if (hasCapability(_capabilities, foxglove::WebSocketServerCapabilities::ConnectionGraph)) {
+      gatewayOptions.capabilities =
+        gatewayOptions.capabilities | foxglove::RemoteAccessGatewayCapabilities::ConnectionGraph;
+    }
 
     // Wire up gateway callbacks
     gatewayOptions.callbacks.onConnectionStatusChanged =
@@ -307,6 +311,13 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
         std::bind(&FoxgloveBridge::getParameters, this, _1, _2, _3);
       gatewayOptions.callbacks.onSetParameters =
         std::bind(&FoxgloveBridge::setParameters, this, _1, _2, _3);
+    }
+
+    if (hasCapability(_capabilities, foxglove::WebSocketServerCapabilities::ConnectionGraph)) {
+      gatewayOptions.callbacks.onConnectionGraphSubscribe =
+        std::bind(&FoxgloveBridge::subscribeConnectionGraph, this, true);
+      gatewayOptions.callbacks.onConnectionGraphUnsubscribe =
+        std::bind(&FoxgloveBridge::subscribeConnectionGraph, this, false);
     }
 
     auto maybeGateway = foxglove::RemoteAccessGateway::create(std::move(gatewayOptions));
@@ -721,6 +732,11 @@ void FoxgloveBridge::updateConnectionGraph(
 
   RCLCPP_INFO(this->get_logger(), "publishing connection graph");
   _server->publishConnectionGraph(connectionGraph);
+#ifdef FOXGLOVE_REMOTE_ACCESS
+  if (_gateway) {
+    _gateway->publishConnectionGraph(connectionGraph);
+  }
+#endif
 }
 
 void FoxgloveBridge::subscribeConnectionGraph(bool subscribe) {
