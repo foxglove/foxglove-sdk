@@ -17,7 +17,6 @@ use crate::remote_common::ClientId;
 use crate::{ChannelDescriptor, ChannelId, RawChannel};
 
 /// Channels and parameters that lost their last subscriber when a participant was removed.
-#[allow(dead_code)]
 pub(crate) struct RemovedSubscriptions {
     /// The locally-significant client ID of the removed participant.
     pub client_id: Option<ClientId>,
@@ -25,8 +24,6 @@ pub(crate) struct RemovedSubscriptions {
     pub last_unsubscribed: SmallVec<[ChannelId; 4]>,
     /// Channel IDs that lost their last video subscriber.
     pub last_video_unsubscribed: SmallVec<[ChannelId; 4]>,
-    /// Channel IDs that lost their last data subscriber.
-    pub last_data_unsubscribed: SmallVec<[ChannelId; 4]>,
     /// Data track publishers removed for channels that lost their last data subscriber,
     /// paired with their lifecycle receivers for chaining teardown tasks.
     pub removed_data_track_publishers: Vec<(
@@ -144,7 +141,6 @@ impl SessionState {
                 client_id: None,
                 last_unsubscribed: SmallVec::new(),
                 last_video_unsubscribed: SmallVec::new(),
-                last_data_unsubscribed: SmallVec::new(),
                 removed_data_track_publishers: Vec::new(),
                 subscribed_descriptors: SmallVec::new(),
                 client_channels: Vec::new(),
@@ -220,7 +216,6 @@ impl SessionState {
             client_id: Some(client_id),
             last_unsubscribed,
             last_video_unsubscribed,
-            last_data_unsubscribed,
             removed_data_track_publishers,
             subscribed_descriptors,
             client_channels,
@@ -1121,30 +1116,6 @@ mod tests {
 
         let last = state.unsubscribe_data(&pb, &[ch]);
         assert_eq!(last.as_slice(), &[ch]);
-    }
-
-    #[test]
-    fn remove_participant_reports_last_data_unsubscribed() {
-        let mut state = SessionState::new();
-        let (id_a, pa) = make_participant("alice");
-        let (id_b, pb) = make_participant("bob");
-        let ch = make_channel("/topic1");
-        let ch_id = ch.id();
-
-        state.insert_participant(id_a.clone(), pa.clone());
-        state.insert_participant(id_b, pb.clone());
-        state.insert_channel(&ch);
-
-        let _ = state.subscribe(&pa, &[ch_id]);
-        let _ = state.subscribe(&pb, &[ch_id]);
-        let _ = state.subscribe_data(&pa, &[ch_id]);
-        let _ = state.subscribe_data(&pb, &[ch_id]);
-
-        let removed = state.remove_participant(&id_a);
-        assert!(removed.last_data_unsubscribed.is_empty());
-
-        let removed = state.remove_participant(&pb.participant_id().clone());
-        assert_eq!(removed.last_data_unsubscribed.as_slice(), &[ch_id]);
     }
 
     #[test]

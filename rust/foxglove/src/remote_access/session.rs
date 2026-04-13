@@ -2237,6 +2237,10 @@ impl RemoteAccessSession {
                                         "giving up publishing data track {topic} \
                                          after {TIMEOUT:?} of DuplicateName retries"
                                     );
+                                    session
+                                        .state
+                                        .write()
+                                        .remove_data_track_publisher(&channel_id);
                                     _ = done_tx.send(());
                                     return;
                                 }
@@ -2251,6 +2255,10 @@ impl RemoteAccessSession {
                                 error!(
                                     "failed to publish data track for channel {channel_id:?}: {e:?}"
                                 );
+                                session
+                                    .state
+                                    .write()
+                                    .remove_data_track_publisher(&channel_id);
                                 _ = done_tx.send(());
                                 return;
                             }
