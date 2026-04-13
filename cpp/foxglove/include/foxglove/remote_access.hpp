@@ -149,6 +149,8 @@ struct RemoteAccessGatewayOptions {
   /// @brief The logging context for this gateway.
   Context context;
   /// @brief The name of the device/server reported in the ServerInfo message.
+  ///
+  /// If empty, the device name from the Foxglove platform is used.
   std::string name;
   /// @brief Device token for Foxglove platform authentication.
   ///
