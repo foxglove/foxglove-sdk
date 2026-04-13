@@ -151,7 +151,7 @@ target_compile_definitions(foxglove_bridge_component
 )
 
 if (FOXGLOVE_BRIDGE_REMOTE_ACCESS)
-  target_compile_definitions(foxglove_bridge_component PRIVATE FOXGLOVE_REMOTE_ACCESS)
+  target_compile_definitions(foxglove_bridge_component PUBLIC FOXGLOVE_REMOTE_ACCESS)
 endif()
 
 target_link_libraries(foxglove_bridge_component

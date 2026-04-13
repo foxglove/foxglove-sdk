@@ -85,6 +85,11 @@ private:
     Subscription rosSubscription;
     std::unordered_set<ClientId> wsClientIds;
     std::unordered_set<ClientId> gatewayClientIds;
+    rclcpp::QoS qos{10};
+    // Cached last message for transient_local topics, replayed to late subscribers
+    std::vector<uint8_t> cachedMessageData;
+    uint64_t cachedMessageTimestamp = 0;
+    bool hasCachedMessage = false;
   };
   std::unordered_map<ChannelId, ChannelSubscription> _subscriptions;
 
@@ -155,8 +160,13 @@ private:
 
   void rosMessageHandler(ChannelId channelId, std::shared_ptr<const rclcpp::SerializedMessage> msg);
 
-  void createOrIncrementSubscription(ChannelId channelId, ClientId clientId, bool isGateway);
-  void createOrIncrementSubscriptionLocked(ChannelId channelId, ClientId clientId, bool isGateway);
+  Subscription createRosSubscription(ChannelId channelId, const std::string& topic,
+                                      const std::string& datatype, const rclcpp::QoS& qos);
+
+  void createOrIncrementSubscription(ChannelId channelId, ClientId clientId, bool isGateway,
+                                      std::optional<uint64_t> sinkId = std::nullopt);
+  void createOrIncrementSubscriptionLocked(ChannelId channelId, ClientId clientId, bool isGateway,
+                                            std::optional<uint64_t> sinkId = std::nullopt);
 
   void removeOrDecrementSubscription(ChannelId channelId, ClientId clientId, bool isGateway);
   void removeOrDecrementSubscriptionLocked(ChannelId channelId, ClientId clientId, bool isGateway);

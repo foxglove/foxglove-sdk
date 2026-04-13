@@ -724,17 +724,41 @@ void FoxgloveBridge::subscribeConnectionGraph(bool subscribe) {
 void FoxgloveBridge::subscribe(ChannelId channelId, const foxglove::ClientMetadata& client) {
   RCLCPP_INFO(this->get_logger(), "received subscribe request for channel %lu from client %u",
               channelId, client.id);
-  createOrIncrementSubscription(channelId, client.id, false);
+  createOrIncrementSubscription(channelId, client.id, false, client.sink_id);
+}
+
+Subscription FoxgloveBridge::createRosSubscription(ChannelId channelId, const std::string& topic,
+                                                     const std::string& datatype,
+                                                     const rclcpp::QoS& qos) {
+  rclcpp::SubscriptionEventCallbacks eventCallbacks;
+  eventCallbacks.incompatible_qos_callback = [this, topic, datatype](
+                                               const rclcpp::QOSRequestedIncompatibleQoSInfo&) {
+    RCLCPP_ERROR(this->get_logger(), "Incompatible subscriber QoS settings for topic \"%s\" (%s)",
+                 topic.c_str(), datatype.c_str());
+  };
+
+  rclcpp::SubscriptionOptions subscriptionOptions;
+  subscriptionOptions.event_callbacks = eventCallbacks;
+  subscriptionOptions.callback_group = _subscriptionCallbackGroup;
+
+  return this->create_generic_subscription(
+    topic, datatype, qos,
+    [this, channelId](std::shared_ptr<const rclcpp::SerializedMessage> msg) {
+      this->rosMessageHandler(channelId, msg);
+    },
+    subscriptionOptions);
 }
 
 void FoxgloveBridge::createOrIncrementSubscription(ChannelId channelId, ClientId clientId,
-                                                   bool isGateway) {
+                                                   bool isGateway,
+                                                   std::optional<uint64_t> sinkId) {
   std::lock_guard<std::mutex> lock(_subscriptionsMutex);
-  createOrIncrementSubscriptionLocked(channelId, clientId, isGateway);
+  createOrIncrementSubscriptionLocked(channelId, clientId, isGateway, sinkId);
 }
 
 void FoxgloveBridge::createOrIncrementSubscriptionLocked(ChannelId channelId, ClientId clientId,
-                                                         bool isGateway) {
+                                                         bool isGateway,
+                                                         std::optional<uint64_t> sinkId) {
   auto channelIt = _channels.find(channelId);
   if (channelIt == _channels.end()) {
     RCLCPP_ERROR(this->get_logger(), "received subscribe request for unknown channel: %lu",
@@ -745,37 +769,30 @@ void FoxgloveBridge::createOrIncrementSubscriptionLocked(ChannelId channelId, Cl
   auto& channel = channelIt->second;
 
   auto subIt = _subscriptions.find(channelId);
-  if (subIt == _subscriptions.end()) {
+  bool isNewSubscription = (subIt == _subscriptions.end());
+
+  if (isNewSubscription) {
     // First subscriber for this channel -- create the ROS subscription
     const std::string topic(channel.topic());
     const std::string datatype = channel.schema().value().name;
     const rclcpp::QoS qos = determineQoS(topic);
 
-    rclcpp::SubscriptionEventCallbacks eventCallbacks;
-    eventCallbacks.incompatible_qos_callback = [this, topic, datatype](
-                                                 const rclcpp::QOSRequestedIncompatibleQoSInfo&) {
-      RCLCPP_ERROR(this->get_logger(), "Incompatible subscriber QoS settings for topic \"%s\" (%s)",
-                   topic.c_str(), datatype.c_str());
-    };
-
-    rclcpp::SubscriptionOptions subscriptionOptions;
-    subscriptionOptions.event_callbacks = eventCallbacks;
-    subscriptionOptions.callback_group = _subscriptionCallbackGroup;
-
-    auto rosSubscription = this->create_generic_subscription(
-      topic, datatype, qos,
-      [this, channelId](std::shared_ptr<const rclcpp::SerializedMessage> msg) {
-        this->rosMessageHandler(channelId, msg);
-      },
-      subscriptionOptions);
-
     ChannelSubscription channelSub;
-    channelSub.rosSubscription = std::move(rosSubscription);
+    channelSub.rosSubscription = createRosSubscription(channelId, topic, datatype, qos);
+    channelSub.qos = qos;
     auto [it, inserted] = _subscriptions.emplace(channelId, std::move(channelSub));
     subIt = it;
 
     RCLCPP_INFO(this->get_logger(), "Created ROS subscription on %s (%s) for channel %lu",
                 topic.c_str(), datatype.c_str(), channelId);
+  }
+
+  // For transient_local topics, replay the cached message to the new client before adding
+  // them to the broadcast set, so they don't miss the latched value.
+  if (!isNewSubscription && subIt->second.hasCachedMessage && sinkId.has_value()) {
+    channel.log(reinterpret_cast<const std::byte*>(subIt->second.cachedMessageData.data()),
+                subIt->second.cachedMessageData.size(), subIt->second.cachedMessageTimestamp,
+                sinkId.value());
   }
 
   // Add client to the appropriate set
@@ -1078,6 +1095,16 @@ void FoxgloveBridge::rosMessageHandler(ChannelId channelId,
   std::lock_guard<std::mutex> lock(_subscriptionsMutex);
   if (_channels.find(channelId) == _channels.end()) {
     return;
+  }
+
+  // Cache the message for transient_local subscriptions so late subscribers can receive it.
+  auto subIt = _subscriptions.find(channelId);
+  if (subIt != _subscriptions.end() &&
+      subIt->second.qos.durability() == rclcpp::DurabilityPolicy::TransientLocal) {
+    subIt->second.cachedMessageData.assign(rclSerializedMsg.buffer,
+                                           rclSerializedMsg.buffer + rclSerializedMsg.buffer_length);
+    subIt->second.cachedMessageTimestamp = timestamp;
+    subIt->second.hasCachedMessage = true;
   }
 
   auto& channel = _channels.at(channelId);
