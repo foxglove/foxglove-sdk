@@ -191,11 +191,15 @@ struct WebSocketServerCallbacks {
   /// @brief Callback invoked when a client requests connection graph updates.
   ///
   /// Requires the capability WebSocketServerCapabilities::ConnectionGraph
+  ///
+  /// @warning Do not call publishConnectionGraph from within this callback; doing so will deadlock.
   std::function<void()> onConnectionGraphSubscribe;
 
   /// @brief Callback invoked when a client unsubscribes from connection graph updates.
   ///
   /// Requires the capability WebSocketServerCapabilities::ConnectionGraph
+  ///
+  /// @warning Do not call publishConnectionGraph from within this callback; doing so will deadlock.
   std::function<void()> onConnectionGraphUnsubscribe;
 
   /// @brief Callback invoked when a client connects to the server.

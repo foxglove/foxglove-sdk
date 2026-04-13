@@ -51,9 +51,16 @@
 
 #if defined(FOXGLOVE_REMOTE_ACCESS)
 /**
+ * Allow clients to subscribe and make connection graph updates.
+ */
+#define FOXGLOVE_GATEWAY_CAPABILITY_CONNECTION_GRAPH (1 << 3)
+#endif
+
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+/**
  * Allow clients to request assets.
  */
-#define FOXGLOVE_GATEWAY_CAPABILITY_ASSETS (1 << 3)
+#define FOXGLOVE_GATEWAY_CAPABILITY_ASSETS (1 << 4)
 #endif
 
 #if !defined(__wasm__)
@@ -2366,6 +2373,18 @@ typedef struct foxglove_gateway_callbacks {
   void (*on_parameters_unsubscribe)(const void *context,
                                     const struct foxglove_string *param_names,
                                     size_t param_names_len);
+  /**
+   * Callback invoked when the first client subscribes to connection graph updates.
+   *
+   * Requires `FOXGLOVE_GATEWAY_CAPABILITY_CONNECTION_GRAPH`.
+   */
+  void (*on_connection_graph_subscribe)(const void *context);
+  /**
+   * Callback invoked when the last client unsubscribes from connection graph updates.
+   *
+   * Requires `FOXGLOVE_GATEWAY_CAPABILITY_CONNECTION_GRAPH`.
+   */
+  void (*on_connection_graph_unsubscribe)(const void *context);
 } foxglove_gateway_callbacks;
 #endif
 
@@ -5479,6 +5498,16 @@ foxglove_error foxglove_gateway_publish_status(const struct foxglove_gateway *ga
 foxglove_error foxglove_gateway_remove_status(const struct foxglove_gateway *gateway,
                                               const struct foxglove_string *ids,
                                               size_t ids_count);
+#endif
+
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+/**
+ * Publish a connection graph to the gateway.
+ *
+ * Requires `FOXGLOVE_GATEWAY_CAPABILITY_CONNECTION_GRAPH`.
+ */
+foxglove_error foxglove_gateway_publish_connection_graph(const struct foxglove_gateway *gateway,
+                                                         const struct foxglove_connection_graph *graph);
 #endif
 
 #if !defined(__wasm__)
