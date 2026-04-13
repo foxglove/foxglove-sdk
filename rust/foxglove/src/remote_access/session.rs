@@ -60,10 +60,8 @@ pub(crate) struct SessionStats {
 }
 
 const CONTROL_CHANNEL_TOPIC: &str = "control";
-const CLIENT_CHANNEL_TOPIC_PREFIX: &str = "client-ch-";
 const MESSAGE_FRAME_SIZE: usize = 5; // 1 byte opcode + u32 LE length
 const MAX_MESSAGE_SIZE: usize = 16 * 1024 * 1024; // 16 MiB
-pub(crate) const DEFAULT_PENDING_CLIENT_READER_TIMEOUT: Duration = Duration::from_secs(15);
 
 /// A control plane message queued for delivery to a specific participant.
 pub(super) struct ControlPlaneMessage {
@@ -195,12 +193,6 @@ pub(crate) struct RemoteAccessSession {
     /// the sender loop to re-advertise affected channels.
     video_metadata_tx: tokio::sync::watch::Sender<()>,
     video_metadata_rx: tokio::sync::watch::Receiver<()>,
-    /// Byte stream readers for `client-ch-{channelId}` streams that arrived before the
-    /// corresponding Client Advertise message. Keyed by participant identity then channel ID.
-    /// Drained when the advertise arrives; expired after `pending_client_reader_timeout`.
-    pending_client_readers:
-        parking_lot::Mutex<HashMap<ParticipantIdentity, HashMap<ChannelId, ByteStreamReader>>>,
-    pending_client_reader_timeout: Duration,
     rtt_tracker: parking_lot::Mutex<RttTracker>,
     ice_rtt_tracker: parking_lot::Mutex<RttTracker>,
     connection_graph: Arc<parking_lot::Mutex<ConnectionGraph>>,
@@ -337,7 +329,6 @@ pub(crate) struct SessionParams {
     pub message_backlog_size: usize,
     pub services: Arc<parking_lot::RwLock<ServiceMap>>,
     pub connection_graph: Arc<parking_lot::Mutex<ConnectionGraph>>,
-    pub pending_client_reader_timeout: Duration,
     pub remote_access_session_id: Option<String>,
     pub fetch_asset_handler: Option<Arc<dyn AssetHandler<Client>>>,
     pub server_info: ServerInfo,
@@ -365,8 +356,6 @@ impl RemoteAccessSession {
             subscription_lock: parking_lot::Mutex::new(()),
             video_metadata_tx,
             video_metadata_rx,
-            pending_client_readers: parking_lot::Mutex::new(HashMap::new()),
-            pending_client_reader_timeout: params.pending_client_reader_timeout,
             services: params.services,
             supported_encodings: params.supported_encodings,
             rtt_tracker: parking_lot::Mutex::new(RttTracker::new("ping/pong")),
@@ -467,17 +456,11 @@ impl RemoteAccessSession {
         }
     }
 
-    /// Read framed messages from a client byte stream.
-    ///
-    /// `expected_channel_id` identifies a `client-ch-{channelId}` stream: the channel ID parsed from
-    /// the topic name. Every `MessageData` frame on this stream must carry the same channel ID;
-    /// mismatches are considered a protocol violation (debug-asserted). Pass `None` for the
-    /// `"control"` control stream.
+    /// Read framed messages from a client byte stream on the control channel.
     pub(crate) async fn handle_byte_stream_from_client(
         self: &Arc<Self>,
         participant_identity: ParticipantIdentity,
         reader: ByteStreamReader,
-        expected_channel_id: Option<u32>,
     ) {
         let stream = reader.map(|result| result.map_err(std::io::Error::other));
         let mut reader = StreamReader::new(stream);
@@ -529,16 +512,7 @@ impl RemoteAccessSession {
                 }
             }
 
-            if let Some(channel_id) = expected_channel_id {
-                if !self.handle_channel_stream_message(
-                    &participant_identity,
-                    channel_id,
-                    opcode,
-                    &payload,
-                ) {
-                    return;
-                }
-            } else if !self.handle_client_control_message(
+            if !self.handle_client_control_message(
                 &participant_identity,
                 opcode,
                 Bytes::from(payload),
@@ -546,99 +520,6 @@ impl RemoteAccessSession {
                 return;
             }
         }
-    }
-
-    /// Handle an incoming `client-ch-{channelId}` byte stream.
-    ///
-    /// If the client has already advertised this channel, the stream is read immediately.
-    /// Otherwise the reader is stashed until the Client Advertise arrives (or a timeout
-    /// expires), letting LiveKit buffer the data in the meantime.
-    pub(crate) fn handle_client_channel_stream(
-        self: &Arc<Self>,
-        participant_identity: ParticipantIdentity,
-        channel_id: ChannelId,
-        reader: ByteStreamReader,
-    ) {
-        if !self.has_capability(Capability::ClientPublish) {
-            drop(reader);
-            warn!(
-                "Received client channel stream from {participant_identity:?} but clientPublish capability is not enabled"
-            );
-            if let Some(participant) = self.state.read().get_participant(&participant_identity) {
-                self.send_error(
-                    &participant,
-                    "Server does not support clientPublish capability".to_string(),
-                );
-            }
-            return;
-        }
-
-        // Hold the pending lock across the state check and potential insert to prevent a
-        // TOCTOU race with handle_client_advertise. The advertise path inserts the channel
-        // into state (releasing the state write lock) *then* acquires this lock to drain
-        // pending readers. By holding this lock while we check state, we guarantee that
-        // either we see the channel (and process immediately) or the advertise path will
-        // see our pending reader (and drain it).
-        let mut pending = self.pending_client_readers.lock();
-        let has_channel = self
-            .state
-            .read()
-            .get_client_channel(&participant_identity, channel_id)
-            .is_some();
-
-        if has_channel {
-            drop(pending);
-            let session = self.clone();
-            let expected_channel_id = u64::from(channel_id) as u32;
-            tokio::spawn(async move {
-                session
-                    .handle_byte_stream_from_client(
-                        participant_identity,
-                        reader,
-                        Some(expected_channel_id),
-                    )
-                    .await;
-            });
-            return;
-        }
-
-        let map = pending.entry(participant_identity.clone()).or_default();
-        if let Some(_old) = map.insert(channel_id, reader) {
-            debug!("replacing pending reader for {participant_identity:?} channel {channel_id:?}");
-        }
-        drop(pending);
-
-        let session = self.clone();
-        tokio::spawn(async move {
-            tokio::select! {
-                () = session.cancellation_token.cancelled() => {}
-                () = tokio::time::sleep(session.pending_client_reader_timeout) => {
-                    let removed = {
-                        let mut pending = session.pending_client_readers.lock();
-                        let reader = pending
-                            .get_mut(&participant_identity)
-                            .and_then(|map| map.remove(&channel_id));
-                        if pending.get(&participant_identity).is_some_and(|m| m.is_empty()) {
-                            pending.remove(&participant_identity);
-                        }
-                        reader
-                    };
-                    if removed.is_some() {
-                        if let Some(participant) =
-                            session.state.read().get_participant(&participant_identity)
-                        {
-                            session.send_error(
-                                &participant,
-                                format!(
-                                    "Client has not advertised channel: {}",
-                                    u64::from(channel_id),
-                                ),
-                            );
-                        }
-                    }
-                }
-            }
-        });
     }
 
     /// Handle a single framed control channel message. Returns `false` if the byte stream
@@ -694,10 +575,8 @@ impl RemoteAccessSession {
             ClientMessage::Unadvertise(msg) => {
                 self.handle_client_unadvertise(&participant, msg);
             }
-            ClientMessage::MessageData(_) => {
-                error!(
-                    "Received MessageData over control channel; MessageData is only supported on channel-specific byte streams"
-                );
+            ClientMessage::MessageData(msg) => {
+                self.handle_client_message_data(&participant, msg);
             }
             ClientMessage::FetchAsset(msg) => {
                 self.handle_fetch_asset(&participant, msg.uri, msg.request_id);
@@ -940,23 +819,6 @@ impl RemoteAccessSession {
             if let Some(listener) = &self.listener {
                 listener.on_client_advertise(&client, &descriptor);
             }
-
-            // Drain any pending byte stream reader that arrived before this advertise.
-            let pending_reader = self
-                .pending_client_readers
-                .lock()
-                .get_mut(participant.participant_id())
-                .and_then(|map| map.remove(&channel_id));
-            if let Some(reader) = pending_reader {
-                let session = self.clone();
-                let identity = participant.participant_id().clone();
-                let expected_channel_id = u64::from(channel_id) as u32;
-                tokio::spawn(async move {
-                    session
-                        .handle_byte_stream_from_client(identity, reader, Some(expected_channel_id))
-                        .await;
-                });
-            }
         }
     }
 
@@ -1037,64 +899,6 @@ impl RemoteAccessSession {
         // This is not required, if we just drop it LiveKit will spawn a task
         // to close the stream and send the signal anyway, but it's clearer to make it explicit.
         _ = stream.close().await;
-    }
-
-    /// Handle a message from a `client-ch-{channelId}` byte stream.
-    ///
-    /// Only `MessageData` frames are expected. `expected_channel_id` is the channel ID parsed from
-    /// the stream topic and must match the `channel_id` field inside every `MessageData` frame.
-    /// A mismatch indicates a misbehaving client (the topic determines which stream carries the
-    /// data, but the channel ID inside the message determines which descriptor is used).
-    ///
-    /// Returns `false` if the stream should be closed (protocol violation that will repeat
-    /// for every subsequent frame), `true` to continue reading.
-    fn handle_channel_stream_message(
-        self: &Arc<Self>,
-        participant_identity: &ParticipantIdentity,
-        expected_channel_id: u32,
-        opcode: u8,
-        payload: &[u8],
-    ) -> bool {
-        const BINARY: u8 = OpCode::Binary as u8;
-        if opcode != BINARY {
-            error!("Unexpected non-binary message on channel stream (opcode {opcode})");
-            return true;
-        }
-        let msg = match ClientMessage::parse_binary(payload) {
-            Ok(ClientMessage::MessageData(msg)) => msg,
-            Ok(other) => {
-                error!(
-                    "Unexpected message on channel stream: {other:?}; only MessageData is supported"
-                );
-                return true;
-            }
-            Err(e) => {
-                error!("Failed to parse channel stream message: {e:?}");
-                return true;
-            }
-        };
-        if expected_channel_id != msg.channel_id {
-            error!(
-                "MessageData channel_id ({}) does not match the stream topic channel_id ({})",
-                msg.channel_id, expected_channel_id,
-            );
-            if let Some(participant) = self.state.read().get_participant(participant_identity) {
-                self.send_error(
-                    &participant,
-                    format!(
-                        "MessageData channel_id ({}) does not match the stream topic ({})",
-                        msg.channel_id, expected_channel_id,
-                    ),
-                );
-            }
-            return false;
-        }
-        let Some(participant) = self.state.read().get_participant(participant_identity) else {
-            error!("Unknown participant identity: {participant_identity:?}");
-            return false;
-        };
-        self.handle_client_message_data(&participant, msg);
-        true
     }
 
     fn handle_client_message_data(
@@ -1199,8 +1003,6 @@ impl RemoteAccessSession {
     /// Channels that lose their last subscriber are unsubscribed from the context.
     pub(crate) fn remove_participant(self: &Arc<Self>, participant_id: &ParticipantIdentity) {
         let _guard = self.subscription_lock.lock();
-
-        self.pending_client_readers.lock().remove(participant_id);
 
         let removed = self.state.write().remove_participant(participant_id);
 
@@ -1341,22 +1143,9 @@ impl RemoteAccessSession {
                         let session = self.clone();
                         tokio::spawn(async move {
                             session
-                                .handle_byte_stream_from_client(participant_identity, reader, None)
+                                .handle_byte_stream_from_client(participant_identity, reader)
                                 .await;
                         });
-                    } else if let Some(id_str) = topic.strip_prefix(CLIENT_CHANNEL_TOPIC_PREFIX) {
-                        if let Ok(id) = id_str.parse::<u64>() {
-                            self.handle_client_channel_stream(
-                                participant_identity,
-                                ChannelId::new(id),
-                                reader,
-                            );
-                        } else {
-                            warn!(
-                                "invalid channel id in topic {:?} from {:?}",
-                                topic, participant_identity
-                            );
-                        }
                     } else {
                         warn!(
                             "ignoring unexpected byte stream topic from {:?}: {:?}",
