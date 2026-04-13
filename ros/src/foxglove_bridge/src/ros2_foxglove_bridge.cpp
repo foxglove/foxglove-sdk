@@ -311,12 +311,11 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
 
     auto maybeGateway = foxglove::RemoteAccessGateway::create(std::move(gatewayOptions));
     if (!maybeGateway.has_value()) {
-      RCLCPP_ERROR(this->get_logger(), "Failed to create remote access gateway: %s",
-                   foxglove::strerror(maybeGateway.error()));
-    } else {
-      _gateway = std::make_unique<foxglove::RemoteAccessGateway>(std::move(maybeGateway.value()));
-      RCLCPP_INFO(this->get_logger(), "Remote access gateway started");
+      throw std::runtime_error(std::string("Failed to create remote access gateway: ") +
+                               foxglove::strerror(maybeGateway.error()));
     }
+    _gateway = std::make_unique<foxglove::RemoteAccessGateway>(std::move(maybeGateway.value()));
+    RCLCPP_INFO(this->get_logger(), "Remote access gateway started");
   }
 #endif
 }
