@@ -3,14 +3,16 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use livekit::id::{ParticipantIdentity, TrackSid};
-use livekit::prelude::LocalDataTrack;
 use smallvec::SmallVec;
+use tokio::sync::oneshot;
 use tracing::{debug, info};
 
 use crate::protocol::v2::server::advertise;
 use crate::remote_access::channel_subscription::ChannelSubscription;
 use crate::remote_access::participant::Participant;
-use crate::remote_access::session::{VideoInputSchema, VideoMetadata, VideoPublisher};
+use crate::remote_access::session::{
+    DataTrackPublisher, VideoInputSchema, VideoMetadata, VideoPublisher,
+};
 use crate::remote_common::ClientId;
 use crate::{ChannelDescriptor, ChannelId, RawChannel};
 
@@ -25,8 +27,13 @@ pub(crate) struct RemovedSubscriptions {
     pub last_video_unsubscribed: SmallVec<[ChannelId; 4]>,
     /// Channel IDs that lost their last data subscriber.
     pub last_data_unsubscribed: SmallVec<[ChannelId; 4]>,
-    /// Data tracks removed for channels that lost their last data subscriber.
-    pub removed_data_tracks: Vec<LocalDataTrack>,
+    /// Data track publishers removed for channels that lost their last data subscriber,
+    /// paired with their lifecycle receivers for chaining teardown tasks.
+    pub removed_data_track_publishers: Vec<(
+        ChannelId,
+        Arc<DataTrackPublisher>,
+        Option<oneshot::Receiver<()>>,
+    )>,
     /// Descriptors for all channels the participant was subscribed to at removal time.
     pub subscribed_descriptors: SmallVec<[ChannelDescriptor; 4]>,
     /// Client channels that were advertised by the removed participant.
@@ -68,8 +75,11 @@ pub(crate) struct SessionState {
     subscriptions: HashMap<ChannelId, SmallVec<[ParticipantIdentity; 1]>>,
     /// Data subscriber identities per channel.
     data_subscriptions: HashMap<ChannelId, ChannelSubscription>,
-    /// Published data tracks for channels with active data subscribers.
-    data_tracks: HashMap<ChannelId, LocalDataTrack>,
+    /// Data track publishers for channels with active data subscribers.
+    data_track_publishers: HashMap<ChannelId, Arc<DataTrackPublisher>>,
+    /// Completion receivers for in-flight data track lifecycle tasks (publish or teardown).
+    /// Used to serialize publish/unpublish operations per channel and avoid DuplicateName errors.
+    data_track_lifecycle: HashMap<ChannelId, oneshot::Receiver<()>>,
     /// Video subscriber identities per channel.
     video_subscribers: HashMap<ChannelId, SmallVec<[ParticipantIdentity; 1]>>,
     /// Detected video input schemas for channels.
@@ -93,7 +103,8 @@ impl SessionState {
             channels: HashMap::new(),
             subscriptions: HashMap::new(),
             data_subscriptions: HashMap::new(),
-            data_tracks: HashMap::new(),
+            data_track_publishers: HashMap::new(),
+            data_track_lifecycle: HashMap::new(),
             video_subscribers: HashMap::new(),
             video_schemas: HashMap::new(),
             video_publishers: HashMap::new(),
@@ -134,7 +145,7 @@ impl SessionState {
                 last_unsubscribed: SmallVec::new(),
                 last_video_unsubscribed: SmallVec::new(),
                 last_data_unsubscribed: SmallVec::new(),
-                removed_data_tracks: Vec::new(),
+                removed_data_track_publishers: Vec::new(),
                 subscribed_descriptors: SmallVec::new(),
                 client_channels: Vec::new(),
                 last_param_unsubscribed: Vec::new(),
@@ -168,10 +179,12 @@ impl SessionState {
             }
         }
 
-        let mut removed_data_tracks = Vec::new();
+        let mut removed_data_track_publishers = Vec::new();
         for &channel_id in &last_data_unsubscribed {
-            if let Some(track) = self.data_tracks.remove(&channel_id) {
-                removed_data_tracks.push(track);
+            let publisher = self.data_track_publishers.remove(&channel_id);
+            let lifecycle_rx = self.data_track_lifecycle.remove(&channel_id);
+            if let Some(publisher) = publisher {
+                removed_data_track_publishers.push((channel_id, publisher, lifecycle_rx));
             }
         }
 
@@ -208,7 +221,7 @@ impl SessionState {
             last_unsubscribed,
             last_video_unsubscribed,
             last_data_unsubscribed,
-            removed_data_tracks,
+            removed_data_track_publishers,
             subscribed_descriptors,
             client_channels,
             last_param_unsubscribed,
@@ -644,16 +657,35 @@ impl SessionState {
         if sub.is_empty() { None } else { Some(sub) }
     }
 
-    pub fn get_data_track(&self, channel_id: &ChannelId) -> Option<&LocalDataTrack> {
-        self.data_tracks.get(channel_id)
+    pub fn get_data_track_publisher(
+        &self,
+        channel_id: &ChannelId,
+    ) -> Option<&Arc<DataTrackPublisher>> {
+        self.data_track_publishers.get(channel_id)
     }
 
-    pub fn insert_data_track(&mut self, channel_id: ChannelId, track: LocalDataTrack) {
-        self.data_tracks.insert(channel_id, track);
+    pub fn insert_data_track_publisher(
+        &mut self,
+        channel_id: ChannelId,
+        publisher: Arc<DataTrackPublisher>,
+    ) {
+        self.data_track_publishers.insert(channel_id, publisher);
     }
 
-    pub fn remove_data_track(&mut self, channel_id: &ChannelId) -> Option<LocalDataTrack> {
-        self.data_tracks.remove(channel_id)
+    pub fn remove_data_track_publisher(
+        &mut self,
+        channel_id: &ChannelId,
+    ) -> Option<Arc<DataTrackPublisher>> {
+        self.data_track_publishers.remove(channel_id)
+    }
+
+    /// Replaces the lifecycle completion receiver for a channel, returning the previous one.
+    pub fn swap_data_track_lifecycle(
+        &mut self,
+        channel_id: ChannelId,
+        new_rx: oneshot::Receiver<()>,
+    ) -> Option<oneshot::Receiver<()>> {
+        self.data_track_lifecycle.insert(channel_id, new_rx)
     }
 
     /// Add parameter subscriptions for a participant.
