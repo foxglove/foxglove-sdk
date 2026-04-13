@@ -313,8 +313,6 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
     if (!maybeGateway.has_value()) {
       RCLCPP_ERROR(this->get_logger(), "Failed to create remote access gateway: %s",
                    foxglove::strerror(maybeGateway.error()));
-      RCLCPP_ERROR(this->get_logger(),
-                   "Ensure FOXGLOVE_DEVICE_TOKEN is set or pass the device_token parameter");
     } else {
       _gateway = std::make_unique<foxglove::RemoteAccessGateway>(std::move(maybeGateway.value()));
       RCLCPP_INFO(this->get_logger(), "Remote access gateway started");
@@ -728,14 +726,14 @@ void FoxgloveBridge::subscribe(ChannelId channelId, const foxglove::ClientMetada
 }
 
 Subscription FoxgloveBridge::createRosSubscription(ChannelId channelId, const std::string& topic,
-                                                     const std::string& datatype,
-                                                     const rclcpp::QoS& qos) {
+                                                   const std::string& datatype,
+                                                   const rclcpp::QoS& qos) {
   rclcpp::SubscriptionEventCallbacks eventCallbacks;
-  eventCallbacks.incompatible_qos_callback = [this, topic, datatype](
-                                               const rclcpp::QOSRequestedIncompatibleQoSInfo&) {
-    RCLCPP_ERROR(this->get_logger(), "Incompatible subscriber QoS settings for topic \"%s\" (%s)",
-                 topic.c_str(), datatype.c_str());
-  };
+  eventCallbacks.incompatible_qos_callback =
+    [this, topic, datatype](const rclcpp::QOSRequestedIncompatibleQoSInfo&) {
+      RCLCPP_ERROR(this->get_logger(), "Incompatible subscriber QoS settings for topic \"%s\" (%s)",
+                   topic.c_str(), datatype.c_str());
+    };
 
   rclcpp::SubscriptionOptions subscriptionOptions;
   subscriptionOptions.event_callbacks = eventCallbacks;
@@ -750,8 +748,7 @@ Subscription FoxgloveBridge::createRosSubscription(ChannelId channelId, const st
 }
 
 void FoxgloveBridge::createOrIncrementSubscription(ChannelId channelId, ClientId clientId,
-                                                   bool isGateway,
-                                                   std::optional<uint64_t> sinkId) {
+                                                   bool isGateway, std::optional<uint64_t> sinkId) {
   std::lock_guard<std::mutex> lock(_subscriptionsMutex);
   createOrIncrementSubscriptionLocked(channelId, clientId, isGateway, sinkId);
 }
@@ -986,7 +983,7 @@ void FoxgloveBridge::clientUnadvertise(ClientId clientId, ChannelId clientChanne
   _clientAdvertisedTopics.erase(it);
 
   if (!_shuttingDown && rclcpp::ok()) {
-    // Create a timer that immedeately goes out of scope (so it never fires) which will trigger
+    // Create a timer that immediately goes out of scope (so it never fires) which will trigger
     // the previously destroyed publisher to be cleaned up. This is a workaround for
     // https://github.com/ros2/rclcpp/issues/2146
     this->create_wall_timer(1s, []() {});
@@ -1101,8 +1098,8 @@ void FoxgloveBridge::rosMessageHandler(ChannelId channelId,
   auto subIt = _subscriptions.find(channelId);
   if (subIt != _subscriptions.end() &&
       subIt->second.qos.durability() == rclcpp::DurabilityPolicy::TransientLocal) {
-    subIt->second.cachedMessageData.assign(rclSerializedMsg.buffer,
-                                           rclSerializedMsg.buffer + rclSerializedMsg.buffer_length);
+    subIt->second.cachedMessageData.assign(
+      rclSerializedMsg.buffer, rclSerializedMsg.buffer + rclSerializedMsg.buffer_length);
     subIt->second.cachedMessageTimestamp = timestamp;
     subIt->second.hasCachedMessage = true;
   }
@@ -1390,7 +1387,7 @@ void FoxgloveBridge::gatewayClientUnadvertise(uint32_t clientId,
   _gatewayClientAdvertisedTopics.erase(it);
 
   if (!_shuttingDown && rclcpp::ok()) {
-    // Create a timer that immedeately goes out of scope (so it never fires) which will trigger
+    // Create a timer that immediately goes out of scope (so it never fires) which will trigger
     // the previously destroyed publisher to be cleaned up. This is a workaround for
     // https://github.com/ros2/rclcpp/issues/2146
     this->create_wall_timer(1s, []() {});

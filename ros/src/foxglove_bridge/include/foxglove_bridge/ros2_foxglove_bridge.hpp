@@ -161,12 +161,12 @@ private:
   void rosMessageHandler(ChannelId channelId, std::shared_ptr<const rclcpp::SerializedMessage> msg);
 
   Subscription createRosSubscription(ChannelId channelId, const std::string& topic,
-                                      const std::string& datatype, const rclcpp::QoS& qos);
+                                     const std::string& datatype, const rclcpp::QoS& qos);
 
   void createOrIncrementSubscription(ChannelId channelId, ClientId clientId, bool isGateway,
-                                      std::optional<uint64_t> sinkId = std::nullopt);
+                                     std::optional<uint64_t> sinkId = std::nullopt);
   void createOrIncrementSubscriptionLocked(ChannelId channelId, ClientId clientId, bool isGateway,
-                                            std::optional<uint64_t> sinkId = std::nullopt);
+                                           std::optional<uint64_t> sinkId = std::nullopt);
 
   void removeOrDecrementSubscription(ChannelId channelId, ClientId clientId, bool isGateway);
   void removeOrDecrementSubscriptionLocked(ChannelId channelId, ClientId clientId, bool isGateway);
