@@ -233,6 +233,13 @@ public:
   /// @param graph The connection graph to publish.
   [[nodiscard]] FoxgloveError publishConnectionGraph(const ConnectionGraph& graph) const;
 
+  /// @cond foxglove_internal
+  /// @brief Get the sink ID of the gateway's current session.
+  ///
+  /// Returns std::nullopt if no session is currently active.
+  [[nodiscard]] std::optional<uint64_t> sinkId() const;
+  /// @endcond
+
   /// @brief Gracefully shut down the gateway.
   FoxgloveError stop();
 

@@ -5,7 +5,7 @@ use tokio::runtime::Handle;
 use tokio::task::JoinHandle;
 
 use crate::{
-    ChannelDescriptor, Context, FoxgloveError, SinkChannelFilter,
+    ChannelDescriptor, Context, FoxgloveError, SinkChannelFilter, SinkId,
     protocol::v2::parameter::Parameter,
     remote_common::connection_graph::ConnectionGraph,
     remote_common::fetch_asset::{AssetHandler, AsyncAssetHandlerFn, BlockingAssetHandlerFn},
@@ -40,6 +40,12 @@ impl GatewayHandle {
     /// Returns the current connection status.
     pub fn connection_status(&self) -> ConnectionStatus {
         self.connection.status()
+    }
+
+    /// Returns the sink ID of the current session, if one is active.
+    #[doc(hidden)]
+    pub fn sink_id(&self) -> Option<SinkId> {
+        self.connection.sink_id()
     }
 
     /// Adds new services, and advertises them to all connected participants.

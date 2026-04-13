@@ -15,7 +15,7 @@ use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info};
 
 use crate::{
-    Context, FoxgloveError, SinkChannelFilter,
+    Context, FoxgloveError, SinkChannelFilter, SinkId,
     api_client::{DeviceToken, FoxgloveApiClientBuilder, RemoteSessionRequest},
     library_version::get_library_version,
     protocol::v2::{parameter::Parameter, server::ServerInfo},
@@ -149,6 +149,11 @@ impl RemoteAccessConnection {
     /// Returns the current connection status.
     pub fn status(&self) -> ConnectionStatus {
         ConnectionStatus::from_u8(self.status.load(Ordering::Relaxed))
+    }
+
+    /// Returns the sink ID of the current session, if one is active.
+    pub fn sink_id(&self) -> Option<SinkId> {
+        self.session.lock().as_ref().map(|s| s.sink_id())
     }
 
     /// Publishes parameter values to all subscribed clients.

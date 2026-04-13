@@ -12,7 +12,7 @@ use crate::parameter::FoxgloveParameterArray;
 use crate::server::FoxgloveServerStatusLevel;
 use crate::service::FoxgloveService;
 use crate::sink_channel_filter::ChannelFilter;
-use crate::{FoxgloveContext, FoxgloveError, FoxgloveString, result_to_c};
+use crate::{FoxgloveContext, FoxgloveError, FoxgloveSinkId, FoxgloveString, result_to_c};
 
 /// The status of the remote access gateway connection.
 #[repr(u8)]
@@ -671,6 +671,21 @@ pub extern "C" fn foxglove_gateway_connection_status(
         return FoxgloveConnectionStatus::Shutdown;
     };
     FoxgloveConnectionStatus::from(handle.connection_status())
+}
+
+/// Get the sink ID of the gateway's current session.
+///
+/// Returns 0 if the gateway pointer is null, the gateway has been stopped,
+/// or no session is currently active.
+#[unsafe(no_mangle)]
+pub extern "C" fn foxglove_gateway_sink_id(gateway: Option<&FoxgloveGateway>) -> FoxgloveSinkId {
+    let Some(gateway) = gateway else {
+        return 0;
+    };
+    let Some(handle) = gateway.as_ref() else {
+        return 0;
+    };
+    handle.sink_id().map(|id| id.into()).unwrap_or(0)
 }
 
 /// Adds a service to the gateway and advertises it to connected clients.

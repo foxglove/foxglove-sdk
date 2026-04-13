@@ -5428,6 +5428,16 @@ foxglove_connection_status foxglove_gateway_connection_status(const struct foxgl
 
 #if defined(FOXGLOVE_REMOTE_ACCESS)
 /**
+ * Get the sink ID of the gateway's current session.
+ *
+ * Returns 0 if the gateway pointer is null, the gateway has been stopped,
+ * or no session is currently active.
+ */
+FoxgloveSinkId foxglove_gateway_sink_id(const struct foxglove_gateway *gateway);
+#endif
+
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+/**
  * Adds a service to the gateway and advertises it to connected clients.
  *
  * # Safety

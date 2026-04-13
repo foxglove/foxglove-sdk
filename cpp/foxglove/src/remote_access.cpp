@@ -376,6 +376,14 @@ FoxgloveError RemoteAccessGateway::publishConnectionGraph(const ConnectionGraph&
   return FoxgloveError(foxglove_gateway_publish_connection_graph(impl_.get(), graph.impl_.get()));
 }
 
+std::optional<uint64_t> RemoteAccessGateway::sinkId() const {
+  uint64_t id = foxglove_gateway_sink_id(impl_.get());
+  if (id == 0) {
+    return std::nullopt;
+  }
+  return id;
+}
+
 FoxgloveError RemoteAccessGateway::stop() {
   foxglove_error error = foxglove_gateway_stop(impl_.release());
   return FoxgloveError(error);

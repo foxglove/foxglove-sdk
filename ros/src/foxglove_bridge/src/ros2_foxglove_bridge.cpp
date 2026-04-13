@@ -1339,7 +1339,7 @@ void FoxgloveBridge::gatewaySubscribe(uint32_t clientId,
   RCLCPP_INFO(this->get_logger(),
               "Gateway: received subscribe request for channel %lu (\"%s\") from client %u",
               channel.id(), std::string(channel.topic()).c_str(), clientId);
-  createOrIncrementSubscription(channel.id(), clientId, true);
+  createOrIncrementSubscription(channel.id(), clientId, true, _gateway->sinkId());
 }
 
 void FoxgloveBridge::gatewayUnsubscribe(uint32_t clientId,
