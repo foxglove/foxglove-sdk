@@ -396,88 +396,101 @@ void FoxgloveBridge::updateAdvertisedTopics(
       numIgnoredTopics);
   }
 
-  std::lock_guard<std::mutex> lock(_subscriptionsMutex);
+  // Collect channels to close outside the lock to avoid deadlock:
+  // channel.close() can fire onUnsubscribe callbacks that re-acquire _subscriptionsMutex.
+  std::vector<foxglove::RawChannel> channelsToClose;
 
-  // Remove channels for which the topic does not exist anymore
-  for (auto channelIt = _channels.begin(); channelIt != _channels.end();) {
-    auto& channel = channelIt->second;
-    std::string schemaName = channel.schema().value().name;
-    std::string topic(channel.topic());
-    const TopicAndDatatype topicAndSchemaName = {topic, schemaName};
-    if (latestTopics.find(topicAndSchemaName) == latestTopics.end()) {
-      const auto channelId = channel.id();
-      RCLCPP_INFO(this->get_logger(), "Removing channel %lu for topic \"%s\" (%s)", channelId,
-                  topic.c_str(), schemaName.c_str());
-      // Remove any active subscriptions for this channel
-      _subscriptions.erase(channelId);
-      channel.close();
-      channelIt = _channels.erase(channelIt);
-    } else {
-      channelIt++;
+  {
+    std::lock_guard<std::mutex> lock(_subscriptionsMutex);
+
+    // Remove channels for which the topic does not exist anymore
+    for (auto channelIt = _channels.begin(); channelIt != _channels.end();) {
+      auto& channel = channelIt->second;
+      std::string schemaName = channel.schema().value().name;
+      std::string topic(channel.topic());
+      const TopicAndDatatype topicAndSchemaName = {topic, schemaName};
+      if (latestTopics.find(topicAndSchemaName) == latestTopics.end()) {
+        const auto channelId = channel.id();
+        RCLCPP_INFO(this->get_logger(), "Removing channel %lu for topic \"%s\" (%s)", channelId,
+                    topic.c_str(), schemaName.c_str());
+        // Remove any active subscriptions for this channel
+        _subscriptions.erase(channelId);
+        channelsToClose.push_back(std::move(channel));
+        channelIt = _channels.erase(channelIt);
+      } else {
+        channelIt++;
+      }
+    }
+
+    // Advertise new topics
+    for (const auto& topicAndDatatype : latestTopics) {
+      const auto& topic = topicAndDatatype.first;
+      const auto& schemaName = topicAndDatatype.second;
+
+      if (std::find_if(_channels.begin(), _channels.end(), [&topic, &schemaName](const auto& kvp) {
+            const auto& [channelId, channel] = kvp;
+            return channel.topic() == topic && channel.schema().value().name == schemaName;
+          }) != _channels.end()) {
+        continue;
+      }
+
+      // Load actual schema and encoding from disk
+      // TODO: (FG-10638): Add support for reading schemas from the wire if available
+      std::optional<foxglove::Schema> schema = foxglove::Schema();
+      schema->name = schemaName;
+      std::string messageEncoding;
+
+      try {
+        auto [format, msgDefinition] = _messageDefinitionCache.get_full_text(schemaName);
+        schema->data_len = msgDefinition.size();
+        schema->data = reinterpret_cast<const std::byte*>(msgDefinition.data());
+
+        switch (format) {
+          case foxglove_bridge::MessageDefinitionFormat::MSG:
+            messageEncoding = "cdr";
+            schema->encoding = "ros2msg";
+            break;
+          case foxglove_bridge::MessageDefinitionFormat::IDL:
+            messageEncoding = "cdr";
+            schema->encoding = "ros2idl";
+            break;
+          default:
+            RCLCPP_WARN(this->get_logger(), "Unsupported message definition format for type %s",
+                        schemaName.c_str());
+            continue;
+        }
+      } catch (const foxglove_bridge::DefinitionNotFoundError& err) {
+        // If the definition isn't found, advertise the channel with an empty schema as a fallback
+        RCLCPP_WARN(this->get_logger(), "Could not find definition for type %s: %s",
+                    schemaName.c_str(), err.what());
+        schema = std::nullopt;
+      } catch (const std::exception& err) {
+        RCLCPP_ERROR(this->get_logger(),
+                     "Failed to load schemaDefinition for topic \"%s\" (%s): %s", topic.c_str(),
+                     schemaName.c_str(), err.what());
+        continue;
+      }
+
+      // Create the new SDK channel
+      auto channelResult =
+        foxglove::RawChannel::create(topic, messageEncoding, schema, _serverContext);
+      if (!channelResult.has_value()) {
+        RCLCPP_ERROR(this->get_logger(), "Failed to create channel for topic \"%s\" (%s)",
+                     topic.c_str(), foxglove::strerror(channelResult.error()));
+        continue;
+      }
+
+      const ChannelId channelId = channelResult.value().id();
+      RCLCPP_INFO(this->get_logger(), "Advertising new channel %lu for topic \"%s\"", channelId,
+                  topic.c_str());
+      _channels.insert({channelId, std::move(channelResult.value())});
     }
   }
 
-  // Advertise new topics
-  for (const auto& topicAndDatatype : latestTopics) {
-    const auto& topic = topicAndDatatype.first;
-    const auto& schemaName = topicAndDatatype.second;
-
-    if (std::find_if(_channels.begin(), _channels.end(), [&topic, &schemaName](const auto& kvp) {
-          const auto& [channelId, channel] = kvp;
-          return channel.topic() == topic && channel.schema().value().name == schemaName;
-        }) != _channels.end()) {
-      continue;
-    }
-
-    // Load actual schema and encoding from disk
-    // TODO: (FG-10638): Add support for reading schemas from the wire if available
-    std::optional<foxglove::Schema> schema = foxglove::Schema();
-    schema->name = schemaName;
-    std::string messageEncoding;
-
-    try {
-      auto [format, msgDefinition] = _messageDefinitionCache.get_full_text(schemaName);
-      schema->data_len = msgDefinition.size();
-      schema->data = reinterpret_cast<const std::byte*>(msgDefinition.data());
-
-      switch (format) {
-        case foxglove_bridge::MessageDefinitionFormat::MSG:
-          messageEncoding = "cdr";
-          schema->encoding = "ros2msg";
-          break;
-        case foxglove_bridge::MessageDefinitionFormat::IDL:
-          messageEncoding = "cdr";
-          schema->encoding = "ros2idl";
-          break;
-        default:
-          RCLCPP_WARN(this->get_logger(), "Unsupported message definition format for type %s",
-                      schemaName.c_str());
-          continue;
-      }
-    } catch (const foxglove_bridge::DefinitionNotFoundError& err) {
-      // If the definition isn't found, advertise the channel with an empty schema as a fallback
-      RCLCPP_WARN(this->get_logger(), "Could not find definition for type %s: %s",
-                  schemaName.c_str(), err.what());
-      schema = std::nullopt;
-    } catch (const std::exception& err) {
-      RCLCPP_ERROR(this->get_logger(), "Failed to load schemaDefinition for topic \"%s\" (%s): %s",
-                   topic.c_str(), schemaName.c_str(), err.what());
-      continue;
-    }
-
-    // Create the new SDK channel
-    auto channelResult =
-      foxglove::RawChannel::create(topic, messageEncoding, schema, _serverContext);
-    if (!channelResult.has_value()) {
-      RCLCPP_ERROR(this->get_logger(), "Failed to create channel for topic \"%s\" (%s)",
-                   topic.c_str(), foxglove::strerror(channelResult.error()));
-      continue;
-    }
-
-    const ChannelId channelId = channelResult.value().id();
-    RCLCPP_INFO(this->get_logger(), "Advertising new channel %lu for topic \"%s\"", channelId,
-                topic.c_str());
-    _channels.insert({channelId, std::move(channelResult.value())});
+  // Close channels after releasing _subscriptionsMutex, since close() may fire
+  // onUnsubscribe callbacks that need to acquire _subscriptionsMutex.
+  for (auto& channel : channelsToClose) {
+    channel.close();
   }
 }
 
