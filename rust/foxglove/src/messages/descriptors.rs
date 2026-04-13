@@ -24,6 +24,7 @@ pub const LOCATION_FIX: &[u8] = include_bytes!("data/LocationFix.bin");
 pub const LOCATION_FIXES: &[u8] = include_bytes!("data/LocationFixes.bin");
 pub const LOG: &[u8] = include_bytes!("data/Log.bin");
 pub const MODEL_PRIMITIVE: &[u8] = include_bytes!("data/ModelPrimitive.bin");
+pub const OCCUPANCY_GRID: &[u8] = include_bytes!("data/OccupancyGrid.bin");
 pub const PACKED_ELEMENT_FIELD: &[u8] = include_bytes!("data/PackedElementField.bin");
 pub const POINT2: &[u8] = include_bytes!("data/Point2.bin");
 pub const POINT3: &[u8] = include_bytes!("data/Point3.bin");

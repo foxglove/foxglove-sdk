@@ -1070,6 +1070,82 @@ impl From<Grid> for foxglove::messages::Grid {
     }
 }
 
+/// A 2D grid of occupancy data
+///
+/// :param timestamp: Timestamp of grid
+/// :param frame_id: Frame of reference
+/// :param pose: Origin of grid's corner relative to frame of reference; grid is positioned in the x-y plane relative to this origin
+/// :param column_count: Number of grid columns
+/// :param cell_size: Size of single grid cell along x and y axes, relative to `pose`
+/// :param data: Occupancy grid cell data, in row-major (y-major) order. Each byte represents a single cell's occupancy value as a signed 8-bit integer: 0 represents a free cell, 100 represents an occupied cell, and -1 (255 as unsigned) represents an unknown cell. Values between 0 and 100 represent the probability that the cell is occupied.
+///
+/// See https://docs.foxglove.dev/docs/visualization/message-schemas/occupancy-grid
+#[pyclass(module = "foxglove.messages")]
+#[derive(Clone)]
+pub(crate) struct OccupancyGrid(pub(crate) foxglove::messages::OccupancyGrid);
+#[pymethods]
+impl OccupancyGrid {
+    #[new]
+    #[pyo3(signature = (*, timestamp=None, frame_id="", pose=None, column_count=0, cell_size=None, data=None) )]
+    fn new(
+        timestamp: Option<Timestamp>,
+        frame_id: &str,
+        pose: Option<Pose>,
+        column_count: u32,
+        cell_size: Option<Vector2>,
+        data: Option<Bound<'_, PyBytes>>,
+    ) -> Self {
+        Self(foxglove::messages::OccupancyGrid {
+            timestamp: timestamp.map(Into::into),
+            frame_id: frame_id.to_string(),
+            pose: pose.map(Into::into),
+            column_count,
+            cell_size: cell_size.map(Into::into),
+            data: data
+                .map(|x| Bytes::copy_from_slice(x.as_bytes()))
+                .unwrap_or_default(),
+        })
+    }
+    fn __repr__(&self) -> String {
+        format!(
+            "OccupancyGrid(timestamp={:?}, frame_id={:?}, pose={:?}, column_count={:?}, cell_size={:?}, data={:?})",
+            self.0.timestamp,
+            self.0.frame_id,
+            self.0.pose,
+            self.0.column_count,
+            self.0.cell_size,
+            self.0.data,
+        )
+    }
+    /// Returns the OccupancyGrid schema.
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::messages::OccupancyGrid::get_schema()
+            .unwrap()
+            .into()
+    }
+    /// Encodes the OccupancyGrid as protobuf.
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("failed to allocate buffer for encoded message")
+    }
+}
+
+impl From<OccupancyGrid> for foxglove::messages::OccupancyGrid {
+    fn from(value: OccupancyGrid) -> Self {
+        value.0
+    }
+}
+
 /// A 3D grid of data
 ///
 /// :param timestamp: Timestamp of grid
@@ -3378,6 +3454,7 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<FrameTransforms>()?;
     module.add_class::<GeoJson>()?;
     module.add_class::<Grid>()?;
+    module.add_class::<OccupancyGrid>()?;
     module.add_class::<VoxelGrid>()?;
     module.add_class::<ImageAnnotations>()?;
     module.add_class::<JointState>()?;

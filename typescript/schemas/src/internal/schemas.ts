@@ -1365,6 +1365,46 @@ const VoxelGrid: FoxgloveMessageSchema = {
   ],
 };
 
+const OccupancyGrid: FoxgloveMessageSchema = {
+  type: "message",
+  name: "OccupancyGrid",
+  description: "A 2D grid of occupancy data",
+  fields: [
+    {
+      name: "timestamp",
+      type: { type: "nested", schema: Timestamp },
+      description: "Timestamp of grid",
+    },
+    {
+      name: "frame_id",
+      type: { type: "primitive", name: "string" },
+      description: "Frame of reference",
+    },
+    {
+      name: "pose",
+      type: { type: "nested", schema: Pose },
+      description:
+        "Origin of grid's corner relative to frame of reference; grid is positioned in the x-y plane relative to this origin",
+    },
+    {
+      name: "column_count",
+      type: { type: "primitive", name: "uint32" },
+      description: "Number of grid columns",
+    },
+    {
+      name: "cell_size",
+      type: { type: "nested", schema: Vector2 },
+      description: "Size of single grid cell along x and y axes, relative to `pose`",
+    },
+    {
+      name: "data",
+      type: { type: "primitive", name: "bytes" },
+      description:
+        "Occupancy grid cell data, in row-major (y-major) order. Each byte represents a single cell's occupancy value as a signed 8-bit integer: 0 represents a free cell, 100 represents an occupied cell, and -1 (255 as unsigned) represents an unknown cell. Values between 0 and 100 represent the probability that the cell is occupied.",
+    },
+  ],
+};
+
 const CircleAnnotation: FoxgloveMessageSchema = {
   type: "message",
   name: "CircleAnnotation",
@@ -1917,6 +1957,7 @@ export const foxgloveMessageSchemas = {
   FrameTransforms,
   GeoJSON,
   Grid,
+  OccupancyGrid,
   VoxelGrid,
   ImageAnnotations,
   JointState,
