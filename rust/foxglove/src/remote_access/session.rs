@@ -2218,8 +2218,11 @@ impl RemoteAccessSession {
 
                 let topic = format!("{CHANNEL_TOPIC_PREFIX}{}", u64::from(channel_id));
                 let track = {
-                    const MAX_RETRIES: u32 = 50;
-                    let mut attempt = 0u32;
+                    const INITIAL_BACKOFF: Duration = Duration::from_millis(100);
+                    const MAX_BACKOFF: Duration = Duration::from_secs(3);
+                    const TIMEOUT: Duration = Duration::from_secs(60);
+                    let deadline = tokio::time::Instant::now() + TIMEOUT;
+                    let mut backoff = INITIAL_BACKOFF;
                     loop {
                         match session
                             .room
@@ -2229,19 +2232,20 @@ impl RemoteAccessSession {
                         {
                             Ok(track) => break track,
                             Err(PublishError::DuplicateName) => {
-                                attempt += 1;
-                                if attempt >= MAX_RETRIES {
+                                if tokio::time::Instant::now() + backoff >= deadline {
                                     error!(
                                         "giving up publishing data track {topic} \
-                                         after {MAX_RETRIES} DuplicateName retries"
+                                         after {TIMEOUT:?} of DuplicateName retries"
                                     );
                                     _ = done_tx.send(());
                                     return;
                                 }
                                 debug!(
-                                    "data track {topic} still being unpublished at SFU, retrying"
+                                    "data track {topic} still being unpublished at SFU, \
+                                     retrying in {backoff:?}"
                                 );
-                                tokio::time::sleep(Duration::from_millis(100)).await;
+                                tokio::time::sleep(backoff).await;
+                                backoff = (backoff * 2).min(MAX_BACKOFF);
                             }
                             Err(e) => {
                                 error!(
