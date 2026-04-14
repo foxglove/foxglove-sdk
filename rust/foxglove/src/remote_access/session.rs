@@ -1,4 +1,5 @@
 use std::collections::{HashMap, HashSet};
+use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Weak};
 use std::time::Duration;
 
@@ -60,11 +61,14 @@ pub(crate) struct SessionStats {
 }
 
 const CONTROL_CHANNEL_TOPIC: &str = "control";
-const DATA_TRACK_FRAME_HEADER_SIZE: usize = 5; // 1 byte flags + u32 LE channel id
+const DATA_TRACK_FRAME_HEADER_SIZE: usize = 9; // 1 byte flags + u32 LE channel id + u32 LE sequence
 const CLIENT_CHANNEL_TOPIC_PREFIX: &str = "client-ch-";
 const MESSAGE_FRAME_SIZE: usize = 5; // 1 byte opcode + u32 LE length
 const MAX_MESSAGE_SIZE: usize = 16 * 1024 * 1024; // 16 MiB
 pub(crate) const DEFAULT_PENDING_CLIENT_READER_TIMEOUT: Duration = Duration::from_secs(15);
+
+/// Global monotonic sequence number for data track frames, used for packet loss detection.
+static DATA_TRACK_SEQUENCE: AtomicU32 = AtomicU32::new(0);
 
 /// A control plane message queued for delivery to a specific participant.
 pub(super) struct ControlPlaneMessage {
@@ -222,9 +226,11 @@ impl Sink for RemoteAccessSession {
 
         // Send to data subscribers via data track publisher.
         if let Some(publisher) = state.get_data_track_publisher(&channel_id) {
+            let seq = DATA_TRACK_SEQUENCE.fetch_add(1, Ordering::Relaxed);
             let mut payload = Vec::with_capacity(DATA_TRACK_FRAME_HEADER_SIZE + msg.len());
             payload.push(0u8); // flags
             payload.extend_from_slice(&(u64::from(channel_id) as u32).to_le_bytes());
+            payload.extend_from_slice(&seq.to_le_bytes());
             payload.extend_from_slice(msg);
             let frame = DataTrackFrame::new(payload).with_user_timestamp(metadata.log_time);
             if let Err(e) = publisher.try_push(frame) {
@@ -2234,6 +2240,7 @@ impl RemoteAccessSession {
             };
 
             let session = Arc::clone(self);
+            let cancel = self.cancellation_token.clone();
             tokio::spawn(async move {
                 if let Some(prev) = prev_rx {
                     _ = prev.await;
@@ -2253,7 +2260,23 @@ impl RemoteAccessSession {
                         {
                             Ok(track) => break track,
                             Err(PublishError::DuplicateName) => {
-                                if tokio::time::Instant::now() + backoff >= deadline {
+                                debug!(
+                                    "data track {topic} still being unpublished at SFU, \
+                                     retrying in {backoff:?}"
+                                );
+                                tokio::select! {
+                                    () = cancel.cancelled() => {
+                                        session
+                                            .state
+                                            .write()
+                                            .remove_data_track_publisher(&channel_id);
+                                        _ = done_tx.send(());
+                                        return;
+                                    }
+                                    () = tokio::time::sleep(backoff) => {}
+                                }
+                                backoff = (backoff * 2).min(MAX_BACKOFF);
+                                if tokio::time::Instant::now() >= deadline {
                                     error!(
                                         "giving up publishing data track {topic} \
                                          after {TIMEOUT:?} of DuplicateName retries"
@@ -2265,12 +2288,6 @@ impl RemoteAccessSession {
                                     _ = done_tx.send(());
                                     return;
                                 }
-                                debug!(
-                                    "data track {topic} still being unpublished at SFU, \
-                                     retrying in {backoff:?}"
-                                );
-                                tokio::time::sleep(backoff).await;
-                                backoff = (backoff * 2).min(MAX_BACKOFF);
                             }
                             Err(e) => {
                                 error!(
