@@ -8,11 +8,11 @@ use tokio::sync::oneshot;
 use tracing::{debug, info};
 
 use crate::protocol::v2::server::advertise;
+use livekit::prelude::LocalDataTrack;
+
 use crate::remote_access::channel_subscription::ChannelSubscription;
 use crate::remote_access::participant::Participant;
-use crate::remote_access::session::{
-    DataTrackPublisher, VideoInputSchema, VideoMetadata, VideoPublisher,
-};
+use crate::remote_access::session::{VideoInputSchema, VideoMetadata, VideoPublisher};
 use crate::remote_common::ClientId;
 use crate::{ChannelDescriptor, ChannelId, RawChannel};
 
@@ -67,9 +67,10 @@ pub(crate) struct SessionState {
     subscriptions: HashMap<ChannelId, SmallVec<[ParticipantIdentity; 1]>>,
     /// Data subscriber identities per channel.
     data_subscriptions: HashMap<ChannelId, ChannelSubscription>,
-    /// Data track publishers for channels with active data subscribers.
-    data_track_publishers: HashMap<ChannelId, Arc<DataTrackPublisher>>,
-    /// Completion receivers for in-flight data track lifecycle tasks (publish or teardown).
+    /// Published LiveKit data tracks, keyed by channel ID.
+    /// Lifecycle follows channel advertise/unadvertise, not subscribe/unsubscribe.
+    data_tracks: HashMap<ChannelId, LocalDataTrack>,
+    /// Completion receivers for in-flight data track lifecycle tasks (publish or unpublish).
     /// Used to serialize publish/unpublish operations per channel and avoid DuplicateName errors.
     data_track_lifecycle: HashMap<ChannelId, oneshot::Receiver<()>>,
     /// Video subscriber identities per channel.
@@ -95,7 +96,7 @@ impl SessionState {
             channels: HashMap::new(),
             subscriptions: HashMap::new(),
             data_subscriptions: HashMap::new(),
-            data_track_publishers: HashMap::new(),
+            data_tracks: HashMap::new(),
             data_track_lifecycle: HashMap::new(),
             video_subscribers: HashMap::new(),
             video_schemas: HashMap::new(),
@@ -309,6 +310,7 @@ impl SessionState {
     pub fn remove_channel(&mut self, channel_id: ChannelId) -> bool {
         self.subscriptions.remove(&channel_id);
         self.data_subscriptions.remove(&channel_id);
+        self.data_tracks.remove(&channel_id);
         self.video_subscribers.remove(&channel_id);
         self.video_metadata.remove(&channel_id);
         self.channels.remove(&channel_id).is_some()
@@ -626,9 +628,10 @@ impl SessionState {
     }
 
     /// Returns true if a channel has any data subscribers.
-    #[cfg(test)]
     pub fn has_data_subscribers(&self, channel_id: &ChannelId) -> bool {
-        self.get_data_subscription(channel_id).is_some()
+        self.data_subscriptions
+            .get(channel_id)
+            .is_some_and(|sub| !sub.is_empty())
     }
 
     /// Returns the data subscription for a channel, if it has subscribers.
@@ -638,26 +641,21 @@ impl SessionState {
         if sub.is_empty() { None } else { Some(sub) }
     }
 
-    pub fn get_data_track_publisher(
-        &self,
-        channel_id: &ChannelId,
-    ) -> Option<&Arc<DataTrackPublisher>> {
-        self.data_track_publishers.get(channel_id)
+    /// Returns the data track for a channel if the channel has at least one data subscriber
+    /// AND the track has been published. This is the single gate used by `Sink::log`.
+    pub fn get_subscribed_data_track(&self, channel_id: &ChannelId) -> Option<&LocalDataTrack> {
+        if !self.has_data_subscribers(channel_id) {
+            return None;
+        }
+        self.data_tracks.get(channel_id)
     }
 
-    pub fn insert_data_track_publisher(
-        &mut self,
-        channel_id: ChannelId,
-        publisher: Arc<DataTrackPublisher>,
-    ) {
-        self.data_track_publishers.insert(channel_id, publisher);
+    pub fn insert_data_track(&mut self, channel_id: ChannelId, track: LocalDataTrack) {
+        self.data_tracks.insert(channel_id, track);
     }
 
-    pub fn remove_data_track_publisher(
-        &mut self,
-        channel_id: &ChannelId,
-    ) -> Option<Arc<DataTrackPublisher>> {
-        self.data_track_publishers.remove(channel_id)
+    pub fn remove_data_track(&mut self, channel_id: &ChannelId) -> Option<LocalDataTrack> {
+        self.data_tracks.remove(channel_id)
     }
 
     /// Replaces the lifecycle completion receiver for a channel, returning the previous one.

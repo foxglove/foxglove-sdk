@@ -46,9 +46,7 @@ use crate::{
     },
 };
 
-mod data_track_publisher;
 mod video_track;
-pub(crate) use data_track_publisher::DataTrackPublisher;
 pub(crate) use video_track::{
     VideoInputSchema, VideoMetadata, VideoPublisher, get_video_input_schema,
 };
@@ -163,7 +161,7 @@ pub(crate) struct RemoteAccessSession {
     room: Room,
     context: Weak<Context>,
     remote_access_session_id: Option<String>,
-    state: RwLock<SessionState>,
+    state: Arc<RwLock<SessionState>>,
     channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     listener: Option<Arc<dyn Listener>>,
     capabilities: Vec<Capability>,
@@ -224,8 +222,8 @@ impl Sink for RemoteAccessSession {
             publisher.send(Bytes::copy_from_slice(msg), metadata.log_time);
         }
 
-        // Send to data subscribers via data track publisher.
-        if let Some(publisher) = state.get_data_track_publisher(&channel_id) {
+        // Send to data subscribers via the eagerly-published data track.
+        if let Some(track) = state.get_subscribed_data_track(&channel_id) {
             let seq = DATA_TRACK_SEQUENCE.fetch_add(1, Ordering::Relaxed);
             let mut payload = Vec::with_capacity(DATA_TRACK_FRAME_HEADER_SIZE + msg.len());
             payload.push(0u8); // flags
@@ -233,7 +231,7 @@ impl Sink for RemoteAccessSession {
             payload.extend_from_slice(&seq.to_le_bytes());
             payload.extend_from_slice(msg);
             let frame = DataTrackFrame::new(payload).with_user_timestamp(metadata.log_time);
-            if let Err(e) = publisher.try_push(frame) {
+            if let Err(e) = track.try_push(frame) {
                 if self.drop_throttler.lock().try_acquire() {
                     debug!("data track message dropped for channel {channel_id:?}: {e:?}");
                 }
@@ -267,22 +265,27 @@ impl Sink for RemoteAccessSession {
         // Track advertised channels and detect video-capable ones.
         let advertised_ids: std::collections::HashSet<u64> =
             advertise_msg.channels.iter().map(|ch| ch.id).collect();
-        {
+        let advertised_topics: SmallVec<[(ChannelId, String); 4]> = {
             let mut state = self.state.write();
+            let mut topics = SmallVec::new();
             for &ch in &filtered {
                 if advertised_ids.contains(&u64::from(ch.id())) {
                     state.insert_channel(ch);
+                    topics.push((ch.id(), ch.topic().to_string()));
                     if let Some(input_schema) = get_video_input_schema(ch) {
                         state.insert_video_schema(ch.id(), input_schema);
                     }
                 }
             }
             state.add_metadata_to_advertisement(&mut advertise_msg);
-        }
+            topics
+        };
 
         self.broadcast_control(encode_json_message(&advertise_msg));
 
-        // Clients subscribe asynchronously.
+        // Eagerly publish a data track for each newly advertised channel.
+        self.publish_data_tracks(&advertised_topics);
+
         None
     }
 
@@ -346,7 +349,7 @@ impl RemoteAccessSession {
             room: params.room,
             context: params.context,
             remote_access_session_id: params.remote_access_session_id,
-            state: RwLock::new(SessionState::new()),
+            state: Arc::new(RwLock::new(SessionState::new())),
             channel_filter: params.channel_filter,
             listener: params.listener,
             capabilities: params.capabilities,
@@ -784,8 +787,8 @@ impl RemoteAccessSession {
 
         let mut state = self.state.write();
         let subscribe_result = state.subscribe(participant, &channel_ids);
-        let first_data_subscribed = state.subscribe_data(participant, &data_channel_ids);
-        let last_data_unsubscribed = state.unsubscribe_data(participant, &video_channel_ids);
+        let _first_data_subscribed = state.subscribe_data(participant, &data_channel_ids);
+        let _last_data_unsubscribed = state.unsubscribe_data(participant, &video_channel_ids);
         let first_video_subscribed = state.subscribe_video(participant, &video_channel_ids);
         let last_video_unsubscribed = state.unsubscribe_video(participant, &data_channel_ids);
         drop(state);
@@ -798,10 +801,6 @@ impl RemoteAccessSession {
 
         self.start_video_tracks(&first_video_subscribed);
         self.stop_video_tracks(&last_video_unsubscribed);
-        self.start_data_tracks(&first_data_subscribed);
-        for &channel_id in &last_data_unsubscribed {
-            self.teardown_data_track(channel_id);
-        }
 
         if let Some(listener) = &self.listener {
             if !subscribe_result.newly_subscribed_descriptors.is_empty() {
@@ -834,7 +833,7 @@ impl RemoteAccessSession {
 
         let mut state = self.state.write();
         let unsubscribe_result = state.unsubscribe(participant, &channel_ids);
-        let last_data_unsubscribed = state.unsubscribe_data(participant, &channel_ids);
+        let _last_data_unsubscribed = state.unsubscribe_data(participant, &channel_ids);
         let last_video_unsubscribed = state.unsubscribe_video(participant, &channel_ids);
         drop(state);
 
@@ -845,10 +844,6 @@ impl RemoteAccessSession {
         }
 
         self.stop_video_tracks(&last_video_unsubscribed);
-
-        for &channel_id in &last_data_unsubscribed {
-            self.teardown_data_track(channel_id);
-        }
 
         if let Some(listener) = &self.listener {
             if !unsubscribe_result
@@ -1219,10 +1214,6 @@ impl RemoteAccessSession {
         }
 
         self.stop_video_tracks(&removed.last_video_unsubscribed);
-
-        for &channel_id in &removed.last_data_unsubscribed {
-            self.teardown_data_track(channel_id);
-        }
 
         if !removed.last_param_unsubscribed.is_empty() {
             if let Some(listener) = &self.listener {
@@ -2193,42 +2184,22 @@ impl RemoteAccessSession {
         }
     }
 
-    /// Publish data tracks for channels that gained their first data subscriber.
+    /// Eagerly publish data tracks for newly advertised channels.
     ///
-    /// Each publisher is inserted synchronously so `Sink::log` can buffer frames immediately.
-    /// The actual LiveKit publish is spawned as a chained async task.
-    ///
-    /// Caller must hold `subscription_lock`.
-    fn start_data_tracks(self: &Arc<Self>, first_subscribed: &[ChannelId]) {
-        // Collect channel topics while holding the read lock.
-        let topics: SmallVec<[(ChannelId, String); 4]> = {
-            let state = self.state.read();
-            state
-                .with_channels(|channels| {
-                    first_subscribed
-                        .iter()
-                        .map(|&channel_id| {
-                            let topic = channels
-                                .get(&channel_id)
-                                .map(|ch| ch.topic().to_string())
-                                .unwrap_or_default();
-                            (channel_id, topic)
-                        })
-                        .collect()
-                })
-                .unwrap_or_default()
-        };
-
+    /// Each publish is spawned as a chained async task to serialize with any prior
+    /// publish/unpublish for the same channel name (avoids DuplicateName errors).
+    fn publish_data_tracks(&self, topics: &[(ChannelId, String)]) {
         for (channel_id, topic) in topics {
-            let publisher = Arc::new(DataTrackPublisher::new());
+            let channel_id = *channel_id;
+            let topic = topic.clone();
             let (prev_rx, done_tx) = {
                 let mut state = self.state.write();
-                state.insert_data_track_publisher(channel_id, publisher.clone());
                 Self::chain_data_track_task(&mut state, channel_id)
             };
 
-            let session = Arc::clone(self);
+            let local_participant = self.room.local_participant();
             let cancel = self.cancellation_token.clone();
+            let state = Arc::clone(&self.state);
             tokio::spawn(async move {
                 if let Some(prev) = prev_rx {
                     _ = prev.await;
@@ -2240,9 +2211,7 @@ impl RemoteAccessSession {
                     let deadline = tokio::time::Instant::now() + TIMEOUT;
                     let mut backoff = INITIAL_BACKOFF;
                     loop {
-                        match session
-                            .room
-                            .local_participant()
+                        match local_participant
                             .publish_data_track(topic.clone())
                             .await
                         {
@@ -2254,10 +2223,6 @@ impl RemoteAccessSession {
                                 );
                                 tokio::select! {
                                     () = cancel.cancelled() => {
-                                        session
-                                            .state
-                                            .write()
-                                            .remove_data_track_publisher(&channel_id);
                                         _ = done_tx.send(());
                                         return;
                                     }
@@ -2269,10 +2234,6 @@ impl RemoteAccessSession {
                                         "giving up publishing data track {topic} \
                                          after {TIMEOUT:?} of DuplicateName retries"
                                     );
-                                    session
-                                        .state
-                                        .write()
-                                        .remove_data_track_publisher(&channel_id);
                                     _ = done_tx.send(());
                                     return;
                                 }
@@ -2281,10 +2242,6 @@ impl RemoteAccessSession {
                                 error!(
                                     "failed to publish data track for channel {channel_id:?}: {e:?}"
                                 );
-                                session
-                                    .state
-                                    .write()
-                                    .remove_data_track_publisher(&channel_id);
                                 _ = done_tx.send(());
                                 return;
                             }
@@ -2292,32 +2249,28 @@ impl RemoteAccessSession {
                     }
                 };
 
-                publisher.set_track(track);
+                state.write().insert_data_track(channel_id, track);
                 _ = done_tx.send(());
             });
         }
     }
 
-    /// Tear down the data track for a channel. Removes the publisher from state synchronously,
+    /// Tear down the data track for a channel. Removes the track from state synchronously,
     /// then spawns a chained async task that awaits any in-flight publish before unpublishing.
-    ///
-    /// Caller must hold `subscription_lock`.
     fn teardown_data_track(&self, channel_id: ChannelId) {
-        let (publisher, prev_rx, done_tx) = {
+        let (track, prev_rx, done_tx) = {
             let mut state = self.state.write();
-            let publisher = state.remove_data_track_publisher(&channel_id);
+            let track = state.remove_data_track(&channel_id);
             let (prev_rx, done_tx) = Self::chain_data_track_task(&mut state, channel_id);
-            (publisher, prev_rx, done_tx)
+            (track, prev_rx, done_tx)
         };
 
         tokio::spawn(async move {
             if let Some(prev) = prev_rx {
                 _ = prev.await;
             }
-            if let Some(publisher) = publisher {
-                if let Some(track) = publisher.take_track() {
-                    track.unpublish();
-                }
+            if let Some(track) = track {
+                track.unpublish();
             }
             _ = done_tx.send(());
         });
