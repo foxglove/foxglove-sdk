@@ -734,7 +734,7 @@ void FoxgloveBridge::updateConnectionGraph(
   _server->publishConnectionGraph(connectionGraph);
 #ifdef FOXGLOVE_REMOTE_ACCESS
   if (_gateway) {
-    _gateway->publishConnectionGraph(connectionGraph);
+    (void)_gateway->publishConnectionGraph(connectionGraph);
   }
 #endif
 }
