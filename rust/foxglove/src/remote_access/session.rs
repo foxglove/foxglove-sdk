@@ -833,8 +833,6 @@ impl RemoteAccessSession {
 
         let mut state = self.state.write();
         let subscribe_result = state.subscribe(participant, &channel_ids);
-        let _first_data_subscribed = state.subscribe_data(participant, &data_channel_ids);
-        let _last_data_unsubscribed = state.unsubscribe_data(participant, &video_channel_ids);
         let first_video_subscribed = state.subscribe_video(participant, &video_channel_ids);
         let last_video_unsubscribed = state.unsubscribe_video(participant, &data_channel_ids);
         drop(state);
@@ -879,7 +877,6 @@ impl RemoteAccessSession {
 
         let mut state = self.state.write();
         let unsubscribe_result = state.unsubscribe(participant, &channel_ids);
-        let _last_data_unsubscribed = state.unsubscribe_data(participant, &channel_ids);
         let last_video_unsubscribed = state.unsubscribe_video(participant, &channel_ids);
         drop(state);
 
