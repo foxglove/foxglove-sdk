@@ -3,7 +3,8 @@ use std::time::Duration;
 
 use foxglove::ChannelDescriptor;
 use foxglove::remote_access::{
-    self, Capability, ConnectionStatus, Gateway, GatewayHandle, Listener, Status,
+    self, Capability, ConnectionStatus, Gateway, GatewayHandle, Listener, QosProfile, Reliability,
+    Status,
 };
 use pyo3::prelude::*;
 use pyo3::types::PyBytes;
@@ -343,9 +344,79 @@ impl PyRemoteAccessGateway {
     }
 }
 
+/// The reliability policy for a channel's data delivery.
+#[pyclass(name = "Reliability", module = "foxglove.remote_access", eq, eq_int)]
+#[derive(Clone, PartialEq)]
+pub enum PyReliability {
+    /// Data is sent over unreliable data tracks. This is the default.
+    Lossy,
+    /// Data is sent over the reliable control channel (ordered, guaranteed delivery).
+    Reliable,
+}
+
+impl From<PyReliability> for Reliability {
+    fn from(value: PyReliability) -> Self {
+        match value {
+            PyReliability::Lossy => Reliability::Lossy,
+            PyReliability::Reliable => Reliability::Reliable,
+        }
+    }
+}
+
+/// Quality-of-service profile for a channel.
+#[pyclass(name = "QosProfile", module = "foxglove.remote_access")]
+#[derive(Clone)]
+pub struct PyQosProfile {
+    #[pyo3(get, set)]
+    pub reliability: PyReliability,
+}
+
+#[pymethods]
+impl PyQosProfile {
+    #[new]
+    #[pyo3(signature = (*, reliability=PyReliability::Lossy))]
+    fn new(reliability: PyReliability) -> Self {
+        Self { reliability }
+    }
+}
+
+impl From<PyQosProfile> for QosProfile {
+    fn from(value: PyQosProfile) -> Self {
+        QosProfile::builder()
+            .reliability(value.reliability.into())
+            .build()
+    }
+}
+
+/// A QoS classifier wrapping a Python callable.
+///
+/// The callable should accept a `ChannelDescriptor` and return a `QosProfile`.
+pub struct PyQosClassifier(pub Py<PyAny>);
+
+impl foxglove::remote_access::QosClassifier for PyQosClassifier {
+    fn classify(&self, channel: &foxglove::ChannelDescriptor) -> QosProfile {
+        Python::with_gil(|py| {
+            let handler = self.0.clone_ref(py);
+            let descriptor = PyChannelDescriptor(channel.clone());
+            let result = handler
+                .bind(py)
+                .call((descriptor,), None)
+                .and_then(|f| f.extract::<PyQosProfile>());
+
+            match result {
+                Ok(profile) => profile.into(),
+                Err(err) => {
+                    tracing::error!("Error in QoS classifier: {}", err.to_string());
+                    QosProfile::default()
+                }
+            }
+        })
+    }
+}
+
 /// Start a remote access gateway for live visualization and teleop in Foxglove.
 #[pyfunction]
-#[pyo3(signature = (*, name=None, device_token=None, capabilities=None, listener=None, supported_encodings=None, services=None, context=None, channel_filter=None, message_backlog_size=None, foxglove_api_url=None, foxglove_api_timeout=None))]
+#[pyo3(signature = (*, name=None, device_token=None, capabilities=None, listener=None, supported_encodings=None, services=None, context=None, channel_filter=None, qos_classifier=None, message_backlog_size=None, foxglove_api_url=None, foxglove_api_timeout=None))]
 #[allow(clippy::too_many_arguments)]
 pub fn start_gateway(
     py: Python<'_>,
@@ -357,6 +428,7 @@ pub fn start_gateway(
     services: Option<Vec<PyService>>,
     context: Option<PyRef<PyContext>>,
     channel_filter: Option<Py<PyAny>>,
+    qos_classifier: Option<Py<PyAny>>,
     message_backlog_size: Option<usize>,
     foxglove_api_url: Option<String>,
     foxglove_api_timeout: Option<f64>,
@@ -396,6 +468,10 @@ pub fn start_gateway(
         gateway = gateway.channel_filter(Arc::new(PySinkChannelFilter(channel_filter)));
     }
 
+    if let Some(qos_classifier) = qos_classifier {
+        gateway = gateway.qos_classifier(Arc::new(PyQosClassifier(qos_classifier)));
+    }
+
     if let Some(size) = message_backlog_size {
         gateway = gateway.message_backlog_size(size);
     }
@@ -427,6 +503,8 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<PyRemoteAccessCapability>()?;
     module.add_class::<PyRemoteAccessClient>()?;
     module.add_class::<PyConnectionStatus>()?;
+    module.add_class::<PyReliability>()?;
+    module.add_class::<PyQosProfile>()?;
 
     let py = parent_module.py();
     py.import("sys")?

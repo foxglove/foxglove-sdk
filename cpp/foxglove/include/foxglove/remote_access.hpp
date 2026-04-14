@@ -144,6 +144,24 @@ struct RemoteAccessGatewayCallbacks {
   std::function<void()> onConnectionGraphUnsubscribe;
 };
 
+/// @brief The reliability policy for a channel's data delivery.
+enum class Reliability : uint8_t {
+  /// Data is sent over unreliable data tracks. This is the default.
+  Lossy = 0,
+  /// Data is sent over the reliable control channel (ordered, guaranteed delivery).
+  Reliable = 1,
+};
+
+/// @brief Quality-of-service profile for a channel.
+struct QosProfile {
+  Reliability reliability = Reliability::Lossy;
+};
+
+/// @brief A callable that assigns a QoS profile to each channel.
+///
+/// Accepts any callable with signature `QosProfile(const ChannelDescriptor&)`.
+using QosClassifierFn = std::function<QosProfile(const ChannelDescriptor&)>;
+
 /// @brief Options for creating a remote access gateway.
 struct RemoteAccessGatewayOptions {
   /// @brief The logging context for this gateway.
@@ -166,6 +184,11 @@ struct RemoteAccessGatewayOptions {
   FetchAssetHandler fetch_asset;
   /// @brief A sink channel filter callback.
   SinkChannelFilterFn sink_channel_filter;
+  /// @brief A QoS classifier callback.
+  ///
+  /// If set, this callback is invoked for each channel to determine its quality-of-service
+  /// profile. If not set, all channels default to lossy (data track delivery).
+  QosClassifierFn qos_classifier;
   /// @brief Override the Foxglove API base URL.
   std::optional<std::string> foxglove_api_url;
   /// @brief Override the Foxglove API timeout (in seconds).
@@ -247,12 +270,14 @@ private:
   RemoteAccessGateway(
     foxglove_gateway* gateway, std::unique_ptr<RemoteAccessGatewayCallbacks> callbacks,
     std::unique_ptr<FetchAssetHandler> fetch_asset,
-    std::unique_ptr<SinkChannelFilterFn> sink_channel_filter
+    std::unique_ptr<SinkChannelFilterFn> sink_channel_filter,
+    std::unique_ptr<QosClassifierFn> qos_classifier
   );
 
   std::unique_ptr<RemoteAccessGatewayCallbacks> callbacks_;
   std::unique_ptr<FetchAssetHandler> fetch_asset_;
   std::unique_ptr<SinkChannelFilterFn> sink_channel_filter_;
+  std::unique_ptr<QosClassifierFn> qos_classifier_;
   std::unique_ptr<foxglove_gateway, foxglove_error (*)(foxglove_gateway*)> impl_;
 };
 
