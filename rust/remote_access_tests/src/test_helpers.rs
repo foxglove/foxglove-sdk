@@ -117,30 +117,37 @@ impl FrameReader {
 // converts them to MessageData.
 // ---------------------------------------------------------------------------
 
-/// Reads frames from a device channel data track (`device-ch-{channelId}`)
-/// and converts them to [`ServerMessageData`].
+const DATA_TRACK_FRAME_HEADER_SIZE: usize = 5; // 1 byte flags + u32 LE channel id
+
+/// Reads framed data track frames and converts them to [`ServerMessageData`].
+///
+/// Each frame payload contains a 5-byte header (1 byte flags + u32 LE channel id)
+/// followed by the raw message data.
 pub struct DeviceChannelReader {
-    pub channel_id: u64,
     stream: DataTrackStream,
 }
 
 impl DeviceChannelReader {
     /// Reads the next frame from the data track and constructs a [`ServerMessageData`].
     ///
-    /// The frame payload is the raw message bytes (no framing header).
-    /// The channel_id comes from the track name and log_time from the frame's user timestamp.
+    /// Parses the channel_id from the frame header and log_time from the frame's user timestamp.
     pub async fn next_message_data(&mut self) -> Result<ServerMessageData<'static>> {
         let deadline = tokio::time::Instant::now() + READ_TIMEOUT;
         let frame = tokio::time::timeout_at(deadline, self.stream.next())
             .await
             .context("timeout reading data track frame")?
             .context("data track stream ended")?;
+        let payload = frame.payload();
+        anyhow::ensure!(
+            payload.len() >= DATA_TRACK_FRAME_HEADER_SIZE,
+            "data track frame too small ({} bytes)",
+            payload.len()
+        );
+        // let _flags = payload[0];
+        let channel_id = u32::from_le_bytes(payload[1..5].try_into().unwrap()) as u64;
+        let data = payload[DATA_TRACK_FRAME_HEADER_SIZE..].to_vec();
         let log_time = frame.user_timestamp().unwrap_or(0);
-        Ok(ServerMessageData::new(
-            self.channel_id,
-            log_time,
-            frame.payload().to_vec(),
-        ))
+        Ok(ServerMessageData::new(channel_id, log_time, data))
     }
 }
 
@@ -566,20 +573,15 @@ impl ViewerConnection {
         }
     }
 
-    /// Waits for a `DataTrackPublished` event for a `device-ch-{channelId}` track,
-    /// subscribes to it, and returns a [`DeviceChannelReader`].
+    /// Waits for a `DataTrackPublished` event, subscribes to it, and returns
+    /// a [`DeviceChannelReader`].
     ///
-    /// Device data channels use LiveKit data tracks. The gateway publishes a data
-    /// track named `device-ch-{channelId}` when a subscriber subscribes. This
-    /// method waits for that event (checking buffered events first) and subscribes.
+    /// Device data channels use LiveKit data tracks named by topic. The gateway
+    /// publishes a data track when a subscriber subscribes. This method waits
+    /// for that event (checking buffered events first) and subscribes.
     pub async fn expect_device_channel_data_track(&mut self) -> Result<DeviceChannelReader> {
         // Check buffered events first.
-        if let Some(idx) = self
-            .pending_data_tracks
-            .iter()
-            .position(|t| t.info().name().starts_with("device-ch-"))
-        {
-            let track = self.pending_data_tracks.remove(idx);
+        if let Some(track) = self.pending_data_tracks.pop() {
             return subscribe_to_device_data_track(track).await;
         }
 
@@ -590,13 +592,8 @@ impl ViewerConnection {
                 .context("timeout waiting for device channel data track")?
                 .context("room events channel closed")?;
             match event {
-                RoomEvent::DataTrackPublished(track)
-                    if track.info().name().starts_with("device-ch-") =>
-                {
-                    return subscribe_to_device_data_track(track).await;
-                }
                 RoomEvent::DataTrackPublished(track) => {
-                    self.pending_data_tracks.push(track);
+                    return subscribe_to_device_data_track(track).await;
                 }
                 _ => continue,
             }
@@ -606,9 +603,9 @@ impl ViewerConnection {
     /// Ensures a device channel data track reader is stored internally.
     ///
     /// If one already exists, this is a no-op. Otherwise, waits for a
-    /// `DataTrackPublished` event for a `device-ch-*` track and subscribes.
-    /// Call this after subscribing to a channel and before logging data to
-    /// ensure the viewer is ready to receive data track frames.
+    /// `DataTrackPublished` event and subscribes. Call this after subscribing
+    /// to a channel and before logging data to ensure the viewer is ready to
+    /// receive data track frames.
     pub async fn ensure_device_data_track(&mut self) -> Result<()> {
         if self.device_channel_reader.is_some() {
             return Ok(());
@@ -868,21 +865,15 @@ impl TestGateway {
 // Data track helpers
 // ---------------------------------------------------------------------------
 
-/// Subscribes to a `RemoteDataTrack` for a `device-ch-{channelId}` topic and
-/// returns a [`DeviceChannelReader`].
+/// Subscribes to a `RemoteDataTrack` and returns a [`DeviceChannelReader`].
 async fn subscribe_to_device_data_track(track: RemoteDataTrack) -> Result<DeviceChannelReader> {
     let name = track.info().name().to_string();
-    let channel_id: u64 = name
-        .strip_prefix("device-ch-")
-        .context("data track name missing device-ch- prefix")?
-        .parse()
-        .context("failed to parse channel_id from data track name")?;
     let stream = track
         .subscribe()
         .await
         .map_err(|e| anyhow::anyhow!("failed to subscribe to data track: {e}"))?;
-    info!("subscribed to device data track: {name}, channel_id={channel_id}");
-    Ok(DeviceChannelReader { channel_id, stream })
+    info!("subscribed to device data track: {name}");
+    Ok(DeviceChannelReader { stream })
 }
 
 // ---------------------------------------------------------------------------

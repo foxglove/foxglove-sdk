@@ -60,7 +60,7 @@ pub(crate) struct SessionStats {
 }
 
 const CONTROL_CHANNEL_TOPIC: &str = "control";
-const CHANNEL_TOPIC_PREFIX: &str = "device-ch-";
+const DATA_TRACK_FRAME_HEADER_SIZE: usize = 5; // 1 byte flags + u32 LE channel id
 const CLIENT_CHANNEL_TOPIC_PREFIX: &str = "client-ch-";
 const MESSAGE_FRAME_SIZE: usize = 5; // 1 byte opcode + u32 LE length
 const MAX_MESSAGE_SIZE: usize = 16 * 1024 * 1024; // 16 MiB
@@ -222,7 +222,11 @@ impl Sink for RemoteAccessSession {
 
         // Send to data subscribers via data track publisher.
         if let Some(publisher) = state.get_data_track_publisher(&channel_id) {
-            let frame = DataTrackFrame::new(Vec::from(msg)).with_user_timestamp(metadata.log_time);
+            let mut payload = Vec::with_capacity(DATA_TRACK_FRAME_HEADER_SIZE + msg.len());
+            payload.push(0u8); // flags
+            payload.extend_from_slice(&(u64::from(channel_id) as u32).to_le_bytes());
+            payload.extend_from_slice(msg);
+            let frame = DataTrackFrame::new(payload).with_user_timestamp(metadata.log_time);
             if let Err(e) = publisher.try_push(frame) {
                 if self.drop_throttler.lock().try_acquire() {
                     debug!("data track message dropped for channel {channel_id:?}: {e:?}");
@@ -2202,7 +2206,26 @@ impl RemoteAccessSession {
     ///
     /// Caller must hold `subscription_lock`.
     fn start_data_tracks(self: &Arc<Self>, first_subscribed: &[ChannelId]) {
-        for &channel_id in first_subscribed {
+        // Collect channel topics while holding the read lock.
+        let topics: SmallVec<[(ChannelId, String); 4]> = {
+            let state = self.state.read();
+            state
+                .with_channels(|channels| {
+                    first_subscribed
+                        .iter()
+                        .map(|&channel_id| {
+                            let topic = channels
+                                .get(&channel_id)
+                                .map(|ch| ch.topic().to_string())
+                                .unwrap_or_default();
+                            (channel_id, topic)
+                        })
+                        .collect()
+                })
+                .unwrap_or_default()
+        };
+
+        for (channel_id, topic) in topics {
             let publisher = Arc::new(DataTrackPublisher::new());
             let (prev_rx, done_tx) = {
                 let mut state = self.state.write();
@@ -2215,8 +2238,6 @@ impl RemoteAccessSession {
                 if let Some(prev) = prev_rx {
                     _ = prev.await;
                 }
-
-                let topic = format!("{CHANNEL_TOPIC_PREFIX}{}", u64::from(channel_id));
                 let track = {
                     const INITIAL_BACKOFF: Duration = Duration::from_millis(100);
                     const MAX_BACKOFF: Duration = Duration::from_secs(3);
