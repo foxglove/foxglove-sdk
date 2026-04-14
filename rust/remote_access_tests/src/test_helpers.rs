@@ -573,15 +573,24 @@ impl ViewerConnection {
         }
     }
 
-    /// Waits for a `DataTrackPublished` event, subscribes to it, and returns
-    /// a [`DeviceChannelReader`].
+    /// Waits for a `DataTrackPublished` event whose track name matches `topic`,
+    /// subscribes to it, and returns a [`DeviceChannelReader`].
     ///
     /// Device data channels use LiveKit data tracks named by topic. The gateway
     /// publishes a data track when a subscriber subscribes. This method waits
     /// for that event (checking buffered events first) and subscribes.
-    pub async fn expect_device_channel_data_track(&mut self) -> Result<DeviceChannelReader> {
-        // Check buffered events first.
-        if let Some(track) = self.pending_data_tracks.pop() {
+    ///
+    /// Non-matching tracks are buffered for later consumption.
+    pub async fn expect_device_channel_data_track(
+        &mut self,
+        topic: &str,
+    ) -> Result<DeviceChannelReader> {
+        if let Some(idx) = self
+            .pending_data_tracks
+            .iter()
+            .position(|t| t.info().name() == topic)
+        {
+            let track = self.pending_data_tracks.remove(idx);
             return subscribe_to_device_data_track(track).await;
         }
 
@@ -592,8 +601,11 @@ impl ViewerConnection {
                 .context("timeout waiting for device channel data track")?
                 .context("room events channel closed")?;
             match event {
-                RoomEvent::DataTrackPublished(track) => {
+                RoomEvent::DataTrackPublished(track) if track.info().name() == topic => {
                     return subscribe_to_device_data_track(track).await;
+                }
+                RoomEvent::DataTrackPublished(track) => {
+                    self.pending_data_tracks.push(track);
                 }
                 _ => continue,
             }
@@ -603,14 +615,14 @@ impl ViewerConnection {
     /// Ensures a device channel data track reader is stored internally.
     ///
     /// If one already exists, this is a no-op. Otherwise, waits for a
-    /// `DataTrackPublished` event and subscribes. Call this after subscribing
-    /// to a channel and before logging data to ensure the viewer is ready to
-    /// receive data track frames.
-    pub async fn ensure_device_data_track(&mut self) -> Result<()> {
+    /// `DataTrackPublished` event whose track name matches `topic` and
+    /// subscribes. Call this after subscribing to a channel and before logging
+    /// data to ensure the viewer is ready to receive data track frames.
+    pub async fn ensure_device_data_track(&mut self, topic: &str) -> Result<()> {
         if self.device_channel_reader.is_some() {
             return Ok(());
         }
-        let reader = self.expect_device_channel_data_track().await?;
+        let reader = self.expect_device_channel_data_track(topic).await?;
         self.device_channel_reader = Some(reader);
         Ok(())
     }
@@ -618,11 +630,13 @@ impl ViewerConnection {
     /// Reads the next MessageData from the device channel data track.
     ///
     /// If no data track reader is stored yet, waits for a `DataTrackPublished`
-    /// event and subscribes first. Subsequent calls reuse the same reader.
+    /// event whose track name matches `topic` and subscribes first. Subsequent
+    /// calls reuse the same reader.
     pub async fn expect_new_data_track_and_message_data(
         &mut self,
+        topic: &str,
     ) -> Result<ServerMessageData<'static>> {
-        self.ensure_device_data_track().await?;
+        self.ensure_device_data_track(topic).await?;
         self.device_channel_reader
             .as_mut()
             .unwrap()

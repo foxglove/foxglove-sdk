@@ -59,12 +59,13 @@ pub(crate) struct SessionStats {
 }
 
 const CONTROL_CHANNEL_TOPIC: &str = "control";
-const DATA_TRACK_FRAME_HEADER_SIZE: usize = 9; // 1 byte flags + u32 LE channel id + u32 LE sequence
+const DATA_TRACK_FRAME_HEADER_SIZE: usize = 5; // 1 byte flags + u32 LE sequence
 const CLIENT_CHANNEL_TOPIC_PREFIX: &str = "client-ch-";
 const MESSAGE_FRAME_SIZE: usize = 5; // 1 byte opcode + u32 LE length
 const MAX_MESSAGE_SIZE: usize = 16 * 1024 * 1024; // 16 MiB
 pub(crate) const DEFAULT_PENDING_CLIENT_READER_TIMEOUT: Duration = Duration::from_secs(15);
 
+// Note: we may want to track a per-channel sequence in the future, depending how we use this.
 /// Global monotonic sequence number for data track frames, used for packet loss detection.
 static DATA_TRACK_SEQUENCE: AtomicU32 = AtomicU32::new(0);
 
@@ -227,7 +228,6 @@ impl Sink for RemoteAccessSession {
             let seq = DATA_TRACK_SEQUENCE.fetch_add(1, Ordering::Relaxed);
             let mut payload = Vec::with_capacity(DATA_TRACK_FRAME_HEADER_SIZE + msg.len());
             payload.push(0u8); // flags
-            payload.extend_from_slice(&(u64::from(channel_id) as u32).to_le_bytes());
             payload.extend_from_slice(&seq.to_le_bytes());
             payload.extend_from_slice(msg);
             let frame = DataTrackFrame::new(payload).with_user_timestamp(metadata.log_time);
