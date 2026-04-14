@@ -9,6 +9,7 @@ use tracing::{debug, info};
 use crate::protocol::v2::server::advertise;
 
 use crate::remote_access::participant::Participant;
+use crate::remote_access::qos::{QosProfile, Reliability};
 use crate::remote_access::session::{DataTrack, VideoInputSchema, VideoMetadata, VideoPublisher};
 use crate::remote_common::ClientId;
 use crate::{ChannelDescriptor, ChannelId, RawChannel};
@@ -60,6 +61,8 @@ pub(crate) struct SessionState {
     participants: HashMap<ParticipantIdentity, Arc<Participant>>,
     /// Channels that have been advertised to participants.
     channels: HashMap<ChannelId, Arc<RawChannel>>,
+    /// QoS profile per channel.
+    qos_profiles: HashMap<ChannelId, QosProfile>,
     /// All subscriber identities per channel, regardless of subscription type.
     subscriptions: HashMap<ChannelId, SmallVec<[ParticipantIdentity; 1]>>,
     /// Data tracks for advertised channels.
@@ -86,6 +89,7 @@ impl SessionState {
         Self {
             participants: HashMap::new(),
             channels: HashMap::new(),
+            qos_profiles: HashMap::new(),
             subscriptions: HashMap::new(),
             data_tracks: HashMap::new(),
             video_subscribers: HashMap::new(),
@@ -282,6 +286,37 @@ impl SessionState {
         self.channels.insert(channel.id(), channel.clone());
     }
 
+    /// Records the QoS profile for a channel.
+    pub fn insert_qos_profile(&mut self, channel_id: ChannelId, qos: QosProfile) {
+        self.qos_profiles.insert(channel_id, qos);
+    }
+
+    /// Returns the QoS profile for a channel, defaulting to [`QosProfile::default()`].
+    pub fn qos_profile(&self, channel_id: &ChannelId) -> QosProfile {
+        self.qos_profiles
+            .get(channel_id)
+            .copied()
+            .unwrap_or_default()
+    }
+
+    /// Returns participants that have data subscriptions for a channel.
+    ///
+    /// A "data subscriber" is one in `subscriptions` but not `video_subscribers`.
+    pub fn data_subscriber_participants(
+        &self,
+        channel_id: &ChannelId,
+    ) -> SmallVec<[Arc<Participant>; 4]> {
+        let Some(subscribers) = self.subscriptions.get(channel_id) else {
+            return SmallVec::new();
+        };
+        let video_subs = self.video_subscribers.get(channel_id);
+        subscribers
+            .iter()
+            .filter(|identity| !video_subs.map_or(false, |vs| vs.contains(identity)))
+            .filter_map(|identity| self.participants.get(identity).cloned())
+            .collect()
+    }
+
     /// Returns `true` if the channel is currently advertised.
     pub fn has_channel(&self, channel_id: &ChannelId) -> bool {
         self.channels.contains_key(channel_id)
@@ -293,6 +328,7 @@ impl SessionState {
     /// `teardown_data_track()` which removes the track and unpublishes it.
     pub fn remove_channel(&mut self, channel_id: ChannelId) -> bool {
         self.subscriptions.remove(&channel_id);
+        self.qos_profiles.remove(&channel_id);
         self.video_subscribers.remove(&channel_id);
         self.video_metadata.remove(&channel_id);
         self.channels.remove(&channel_id).is_some()
@@ -379,6 +415,10 @@ impl SessionState {
     pub fn add_metadata_to_advertisement(&self, advertise: &mut advertise::Advertise<'_>) {
         for ch in &mut advertise.channels {
             let channel_id = ChannelId::new(ch.id);
+            if self.qos_profile(&channel_id).reliability == Reliability::Reliable {
+                ch.metadata
+                    .insert("foxglove.reliable".to_string(), "true".to_string());
+            }
             if self.video_schemas.contains_key(&channel_id) {
                 ch.metadata
                     .insert("foxglove.hasVideoTrack".to_string(), "true".to_string());

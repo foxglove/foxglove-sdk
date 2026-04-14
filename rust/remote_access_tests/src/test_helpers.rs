@@ -126,6 +126,7 @@ const DATA_TRACK_FRAME_HEADER_SIZE: usize = 8; // u16 LE flags + u16 LE data_off
 /// u32 LE sequence) followed by the raw message data. The channel identity is
 /// determined by the data track name (topic), not by the frame content.
 pub struct DeviceChannelReader {
+    channel_id: u64,
     stream: DataTrackStream,
 }
 
@@ -148,7 +149,7 @@ impl DeviceChannelReader {
         );
         let data = payload[DATA_TRACK_FRAME_HEADER_SIZE..].to_vec();
         let log_time = frame.user_timestamp().unwrap_or(0);
-        Ok(ServerMessageData::new(0, log_time, data))
+        Ok(ServerMessageData::new(self.channel_id, log_time, data))
     }
 }
 
@@ -592,7 +593,7 @@ impl ViewerConnection {
             .position(|t| t.info().name() == expected_name)
         {
             let track = self.pending_data_tracks.remove(idx);
-            return subscribe_to_device_data_track(track).await;
+            return subscribe_to_device_data_track(track, channel_id).await;
         }
 
         let deadline = tokio::time::Instant::now() + READ_TIMEOUT;
@@ -603,7 +604,7 @@ impl ViewerConnection {
                 .context("room events channel closed")?;
             match event {
                 RoomEvent::DataTrackPublished(track) if track.info().name() == expected_name => {
-                    return subscribe_to_device_data_track(track).await;
+                    return subscribe_to_device_data_track(track, channel_id).await;
                 }
                 RoomEvent::DataTrackPublished(track) => {
                     self.pending_data_tracks.push(track);
@@ -775,6 +776,13 @@ pub struct TestGatewayOptions {
     pub capabilities: Vec<foxglove::remote_access::Capability>,
     pub pending_client_reader_timeout: Option<Duration>,
     pub services: Vec<Service>,
+    pub qos_classifier: Option<
+        Box<
+            dyn Fn(&foxglove::ChannelDescriptor) -> foxglove::remote_access::QosProfile
+                + Send
+                + Sync,
+        >,
+    >,
 }
 
 /// A test gateway backed by a mock Foxglove API server and a LiveKit room.
@@ -855,6 +863,9 @@ impl TestGateway {
         if !options.services.is_empty() {
             gateway = gateway.services(options.services);
         }
+        if let Some(classifier) = options.qos_classifier {
+            gateway = gateway.qos_classifier_fn(classifier);
+        }
 
         let handle = gateway.start().context("start Gateway")?;
 
@@ -880,14 +891,17 @@ impl TestGateway {
 // ---------------------------------------------------------------------------
 
 /// Subscribes to a `RemoteDataTrack` and returns a [`DeviceChannelReader`].
-async fn subscribe_to_device_data_track(track: RemoteDataTrack) -> Result<DeviceChannelReader> {
+async fn subscribe_to_device_data_track(
+    track: RemoteDataTrack,
+    channel_id: u64,
+) -> Result<DeviceChannelReader> {
     let name = track.info().name().to_string();
     let stream = track
         .subscribe()
         .await
         .map_err(|e| anyhow::anyhow!("failed to subscribe to data track: {e}"))?;
     info!("subscribed to device data track: {name}");
-    Ok(DeviceChannelReader { stream })
+    Ok(DeviceChannelReader { channel_id, stream })
 }
 
 // ---------------------------------------------------------------------------

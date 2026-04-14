@@ -14,6 +14,8 @@ use crate::{
     sink_channel_filter::SinkChannelFilterFn,
 };
 
+use super::qos::{QosClassifier, QosClassifierFn, QosProfile};
+
 use super::connection::{ConnectionParams, ConnectionStatus, RemoteAccessConnection};
 use super::{Capability, Client, Listener};
 
@@ -115,6 +117,7 @@ impl GatewayHandle {
             fetch_asset_handler: None,
             runtime: runtime.clone(),
             channel_filter: None,
+            qos_classifier: None,
             server_info: None,
             message_backlog_size: None,
             pending_client_reader_timeout: None,
@@ -161,6 +164,7 @@ pub struct Gateway {
     fetch_asset_handler: Option<Box<dyn AssetHandler<Client>>>,
     runtime: Option<Handle>,
     channel_filter: Option<Arc<dyn SinkChannelFilter>>,
+    qos_classifier: Option<Arc<dyn QosClassifier>>,
     server_info: Option<HashMap<String, String>>,
     message_backlog_size: Option<usize>,
     pending_client_reader_timeout: Option<Duration>,
@@ -181,6 +185,7 @@ impl Default for Gateway {
             fetch_asset_handler: None,
             runtime: None,
             channel_filter: None,
+            qos_classifier: None,
             server_info: None,
             message_backlog_size: None,
             pending_client_reader_timeout: None,
@@ -206,6 +211,7 @@ impl std::fmt::Debug for Gateway {
             )
             .field("has_runtime", &self.runtime.is_some())
             .field("has_channel_filter", &self.channel_filter.is_some())
+            .field("has_qos_classifier", &self.qos_classifier.is_some())
             .field("server_info", &self.server_info)
             .field("message_backlog_size", &self.message_backlog_size)
             .field("has_context", &(self.context.strong_count() > 0))
@@ -335,6 +341,26 @@ impl Gateway {
         self
     }
 
+    /// Sets a [`QosClassifier`] for assigning quality-of-service profiles to channels.
+    ///
+    /// The classifier is invoked when channels are registered and determines how data for
+    /// each channel is delivered to remote participants.
+    ///
+    /// If not set, all channels use the default [`QosProfile`].
+    pub fn qos_classifier(mut self, classifier: Arc<dyn QosClassifier>) -> Self {
+        self.qos_classifier = Some(classifier);
+        self
+    }
+
+    /// Sets a QoS classifier function. See [`QosClassifier`] for more information.
+    pub fn qos_classifier_fn(
+        mut self,
+        classifier: impl Fn(&ChannelDescriptor) -> QosProfile + Sync + Send + 'static,
+    ) -> Self {
+        self.qos_classifier = Some(Arc::new(QosClassifierFn(classifier)));
+        self
+    }
+
     /// Configure the set of services to advertise to clients.
     ///
     /// Automatically adds [`Capability::Services`] to the set of advertised capabilities.
@@ -461,6 +487,7 @@ impl Gateway {
             fetch_asset_handler: self.fetch_asset_handler.map(Arc::from),
             runtime: runtime.clone(),
             channel_filter: self.channel_filter,
+            qos_classifier: self.qos_classifier,
             server_info: self.server_info,
             message_backlog_size: self.message_backlog_size,
             pending_client_reader_timeout: self.pending_client_reader_timeout,
