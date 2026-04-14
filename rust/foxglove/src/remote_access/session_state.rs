@@ -24,8 +24,6 @@ pub(crate) struct RemovedSubscriptions {
     pub last_unsubscribed: SmallVec<[ChannelId; 4]>,
     /// Channel IDs that lost their last video subscriber.
     pub last_video_unsubscribed: SmallVec<[ChannelId; 4]>,
-    /// Channel IDs that lost their last data subscriber.
-    pub last_data_unsubscribed: SmallVec<[ChannelId; 4]>,
     /// Descriptors for all channels the participant was subscribed to at removal time.
     pub subscribed_descriptors: SmallVec<[ChannelDescriptor; 4]>,
     /// Client channels that were advertised by the removed participant.
@@ -137,7 +135,6 @@ impl SessionState {
                 client_id: None,
                 last_unsubscribed: SmallVec::new(),
                 last_video_unsubscribed: SmallVec::new(),
-                last_data_unsubscribed: SmallVec::new(),
                 subscribed_descriptors: SmallVec::new(),
                 client_channels: Vec::new(),
                 last_param_unsubscribed: Vec::new(),
@@ -164,11 +161,8 @@ impl SessionState {
             }
         }
 
-        let mut last_data_unsubscribed: SmallVec<[ChannelId; 4]> = SmallVec::new();
-        for (&channel_id, sub) in &mut self.data_subscriptions {
-            if sub.remove(identity) && sub.is_empty() {
-                last_data_unsubscribed.push(channel_id);
-            }
+        for (_, sub) in &mut self.data_subscriptions {
+            sub.remove(identity);
         }
 
         let mut last_video_unsubscribed: SmallVec<[ChannelId; 4]> = SmallVec::new();
@@ -203,7 +197,6 @@ impl SessionState {
             client_id: Some(client_id),
             last_unsubscribed,
             last_video_unsubscribed,
-            last_data_unsubscribed,
             subscribed_descriptors,
             client_channels,
             last_param_unsubscribed,

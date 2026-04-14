@@ -2211,10 +2211,7 @@ impl RemoteAccessSession {
                     let deadline = tokio::time::Instant::now() + TIMEOUT;
                     let mut backoff = INITIAL_BACKOFF;
                     loop {
-                        match local_participant
-                            .publish_data_track(topic.clone())
-                            .await
-                        {
+                        match local_participant.publish_data_track(topic.clone()).await {
                             Ok(track) => break track,
                             Err(PublishError::DuplicateName) => {
                                 debug!(
