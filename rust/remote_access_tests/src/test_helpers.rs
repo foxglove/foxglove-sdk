@@ -117,12 +117,13 @@ impl FrameReader {
 // converts them to MessageData.
 // ---------------------------------------------------------------------------
 
-const DATA_TRACK_FRAME_HEADER_SIZE: usize = 5; // 1 byte flags + u32 LE channel id
+const DATA_TRACK_FRAME_HEADER_SIZE: usize = 5; // 1 byte flags + u32 LE sequence
 
 /// Reads framed data track frames and converts them to [`ServerMessageData`].
 ///
-/// Each frame payload contains a 5-byte header (1 byte flags + u32 LE channel id)
-/// followed by the raw message data.
+/// Each frame payload contains a 5-byte header (1 byte flags + u32 LE sequence)
+/// followed by the raw message data. The channel identity is determined by the
+/// data track name (topic), not by the frame content.
 pub struct DeviceChannelReader {
     stream: DataTrackStream,
 }
@@ -130,7 +131,8 @@ pub struct DeviceChannelReader {
 impl DeviceChannelReader {
     /// Reads the next frame from the data track and constructs a [`ServerMessageData`].
     ///
-    /// Parses the channel_id from the frame header and log_time from the frame's user timestamp.
+    /// The frame header contains a sequence number (not a channel_id); channel identity
+    /// is determined by which data track this reader is attached to.
     pub async fn next_message_data(&mut self) -> Result<ServerMessageData<'static>> {
         let deadline = tokio::time::Instant::now() + READ_TIMEOUT;
         let frame = tokio::time::timeout_at(deadline, self.stream.next())
@@ -143,11 +145,9 @@ impl DeviceChannelReader {
             "data track frame too small ({} bytes)",
             payload.len()
         );
-        // let _flags = payload[0];
-        let channel_id = u32::from_le_bytes(payload[1..5].try_into().unwrap()) as u64;
         let data = payload[DATA_TRACK_FRAME_HEADER_SIZE..].to_vec();
         let log_time = frame.user_timestamp().unwrap_or(0);
-        Ok(ServerMessageData::new(channel_id, log_time, data))
+        Ok(ServerMessageData::new(0, log_time, data))
     }
 }
 
@@ -245,6 +245,7 @@ impl ViewerConnection {
                 tokio::time::Instant::now() + CONNECT_RETRY_TIMEOUT,
                 outer_deadline,
             );
+            let mut buffered_data_tracks = Vec::new();
             let reader = loop {
                 let event = tokio::time::timeout_at(inner_deadline, events.recv()).await;
                 match event {
@@ -257,6 +258,9 @@ impl ViewerConnection {
                     })) if topic == "control" => {
                         break Some(stream_reader.take().context("reader already taken")?);
                     }
+                    Ok(Some(RoomEvent::DataTrackPublished(track))) => {
+                        buffered_data_tracks.push(track);
+                    }
                     Ok(Some(_)) => continue,
                 }
             };
@@ -267,7 +271,7 @@ impl ViewerConnection {
                     events,
                     frame_reader: FrameReader::new(reader),
                     control_writer: Mutex::new(None),
-                    pending_data_tracks: Vec::new(),
+                    pending_data_tracks: buffered_data_tracks,
                     device_channel_reader: None,
                 });
             }

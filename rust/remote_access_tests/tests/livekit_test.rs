@@ -129,7 +129,6 @@ async fn livekit_viewer_receives_message_after_subscribe() -> Result<()> {
     for (i, &payload) in payloads.iter().enumerate() {
         channel.log(payload);
         let msg = ch_reader.next_message_data().await?;
-        assert_eq!(msg.channel_id, channel_id);
         assert_eq!(msg.data.as_ref(), payload);
         info!("received message {}/{}", i + 1, payloads.len());
     }
@@ -173,7 +172,6 @@ async fn livekit_viewer_does_not_receive_message_before_subscribe() -> Result<()
     let msg_data = viewer
         .expect_new_data_track_and_message_data("/test")
         .await?;
-    assert_eq!(msg_data.channel_id, channel_id);
     assert_eq!(
         msg_data.data.as_ref(),
         expected_payload,
@@ -484,7 +482,6 @@ async fn livekit_video_channel_messages_bypass_data_plane() -> Result<()> {
     let msg = viewer
         .expect_new_data_track_and_message_data("/data")
         .await?;
-    assert_eq!(msg.channel_id, json_id, "should receive the JSON message");
     assert_eq!(msg.data.as_ref(), b"json-payload");
     info!("video channel correctly bypassed data plane");
 
@@ -677,7 +674,6 @@ async fn livekit_video_channel_without_request_video_track_uses_data_plane() -> 
     let msg = viewer
         .expect_new_data_track_and_message_data("/camera")
         .await?;
-    assert_eq!(msg.channel_id, channel_id);
     assert_eq!(msg.data.as_ref(), b"video-frame");
     info!("video data received via data plane (no video track requested)");
 
@@ -736,7 +732,6 @@ async fn livekit_video_resubscribe_switches_to_data_plane() -> Result<()> {
     let msg = viewer
         .expect_new_data_track_and_message_data("/camera")
         .await?;
-    assert_eq!(msg.channel_id, channel_id);
     assert_eq!(msg.data.as_ref(), b"video-frame");
     info!("data received via data plane after switching from video");
 
