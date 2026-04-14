@@ -1,3 +1,6 @@
+//! [`DataTrackPublisher`] buffers LiveKit data track frames before the track is published,
+//! then drains the buffer and forwards frames directly once the track is available.
+
 use std::fmt;
 
 use livekit::prelude::{DataTrackFrame, LocalDataTrack, PushFrameError};

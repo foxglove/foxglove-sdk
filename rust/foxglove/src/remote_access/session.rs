@@ -46,9 +46,9 @@ use crate::{
     },
 };
 
-mod data_track;
+mod data_track_publisher;
 mod video_track;
-pub(crate) use data_track::DataTrackPublisher;
+pub(crate) use data_track_publisher::DataTrackPublisher;
 pub(crate) use video_track::{
     VideoInputSchema, VideoMetadata, VideoPublisher, get_video_input_schema,
 };
