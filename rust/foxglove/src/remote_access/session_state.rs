@@ -300,10 +300,12 @@ impl SessionState {
     }
 
     /// Removes an advertised channel. Returns `true` if it was present.
+    ///
+    /// Does NOT remove `data_tracks` — the caller is responsible for calling
+    /// `teardown_data_track()` which removes the track and unpublishes it.
     pub fn remove_channel(&mut self, channel_id: ChannelId) -> bool {
         self.subscriptions.remove(&channel_id);
         self.data_subscriptions.remove(&channel_id);
-        self.data_tracks.remove(&channel_id);
         self.video_subscribers.remove(&channel_id);
         self.video_metadata.remove(&channel_id);
         self.channels.remove(&channel_id).is_some()
