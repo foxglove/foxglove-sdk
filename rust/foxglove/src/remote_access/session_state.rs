@@ -562,10 +562,7 @@ impl SessionState {
 
     /// Returns true if a channel has at least one subscriber that is not a video subscriber.
     pub fn has_data_subscribers(&self, channel_id: &ChannelId) -> bool {
-        let total = self
-            .subscriptions
-            .get(channel_id)
-            .map_or(0, |s| s.len());
+        let total = self.subscriptions.get(channel_id).map_or(0, |s| s.len());
         let video = self
             .video_subscribers
             .get(channel_id)
