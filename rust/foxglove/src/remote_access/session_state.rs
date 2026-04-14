@@ -161,7 +161,7 @@ impl SessionState {
             }
         }
 
-        for (_, sub) in &mut self.data_subscriptions {
+        for sub in self.data_subscriptions.values_mut() {
             sub.remove(identity);
         }
 
