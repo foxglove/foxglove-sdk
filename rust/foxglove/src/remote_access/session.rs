@@ -2200,6 +2200,7 @@ impl RemoteAccessSession {
             let local_participant = self.room.local_participant();
             let cancel = self.cancellation_token.clone();
             let state = Arc::clone(&self.state);
+            let control_plane_tx = self.control_plane_tx.clone();
             tokio::spawn(async move {
                 if let Some(prev) = prev_rx {
                     _ = prev.await;
@@ -2212,7 +2213,7 @@ impl RemoteAccessSession {
                     let mut backoff = INITIAL_BACKOFF;
                     loop {
                         match local_participant.publish_data_track(topic.clone()).await {
-                            Ok(track) => break track,
+                            Ok(track) => break Some(track),
                             Err(PublishError::DuplicateName) => {
                                 debug!(
                                     "data track {topic} still being unpublished at SFU, \
@@ -2225,28 +2226,60 @@ impl RemoteAccessSession {
                                     }
                                     () = tokio::time::sleep(backoff) => {}
                                 }
+                                if !state.read().has_channel(&channel_id) {
+                                    debug!(
+                                        "channel {channel_id:?} removed during \
+                                         data track publish retry; aborting"
+                                    );
+                                    _ = done_tx.send(());
+                                    return;
+                                }
                                 backoff = (backoff * 2).min(MAX_BACKOFF);
                                 if tokio::time::Instant::now() >= deadline {
                                     error!(
                                         "giving up publishing data track {topic} \
                                          after {TIMEOUT:?} of DuplicateName retries"
                                     );
-                                    _ = done_tx.send(());
-                                    return;
+                                    break None;
                                 }
                             }
                             Err(e) => {
                                 error!(
                                     "failed to publish data track for channel {channel_id:?}: {e:?}"
                                 );
-                                _ = done_tx.send(());
-                                return;
+                                break None;
                             }
                         }
                     }
                 };
 
-                state.write().insert_data_track(channel_id, track);
+                match track {
+                    Some(track) => {
+                        state.write().insert_data_track(channel_id, track);
+                    }
+                    None => {
+                        let mut state_guard = state.write();
+                        if state_guard.remove_channel(channel_id) {
+                            let participants = state_guard.collect_participants();
+                            drop(state_guard);
+                            let data = encode_json_message(&Unadvertise::new([u64::from(
+                                channel_id,
+                            )]));
+                            for participant in participants {
+                                let msg = ControlPlaneMessage {
+                                    participant,
+                                    data: data.clone(),
+                                };
+                                if let Err(e) = control_plane_tx.send(msg) {
+                                    warn!(
+                                        "control plane queue disconnected, \
+                                         dropping unadvertise: {e}"
+                                    );
+                                }
+                            }
+                        }
+                    }
+                }
                 _ = done_tx.send(());
             });
         }
