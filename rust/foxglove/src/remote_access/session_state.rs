@@ -24,13 +24,8 @@ pub(crate) struct RemovedSubscriptions {
     pub last_unsubscribed: SmallVec<[ChannelId; 4]>,
     /// Channel IDs that lost their last video subscriber.
     pub last_video_unsubscribed: SmallVec<[ChannelId; 4]>,
-    /// Data track publishers removed for channels that lost their last data subscriber,
-    /// paired with their lifecycle receivers for chaining teardown tasks.
-    pub removed_data_track_publishers: Vec<(
-        ChannelId,
-        Arc<DataTrackPublisher>,
-        Option<oneshot::Receiver<()>>,
-    )>,
+    /// Channel IDs that lost their last data subscriber.
+    pub last_data_unsubscribed: SmallVec<[ChannelId; 4]>,
     /// Descriptors for all channels the participant was subscribed to at removal time.
     pub subscribed_descriptors: SmallVec<[ChannelDescriptor; 4]>,
     /// Client channels that were advertised by the removed participant.
@@ -141,7 +136,7 @@ impl SessionState {
                 client_id: None,
                 last_unsubscribed: SmallVec::new(),
                 last_video_unsubscribed: SmallVec::new(),
-                removed_data_track_publishers: Vec::new(),
+                last_data_unsubscribed: SmallVec::new(),
                 subscribed_descriptors: SmallVec::new(),
                 client_channels: Vec::new(),
                 last_param_unsubscribed: Vec::new(),
@@ -172,15 +167,6 @@ impl SessionState {
         for (&channel_id, sub) in &mut self.data_subscriptions {
             if sub.remove(identity) && sub.is_empty() {
                 last_data_unsubscribed.push(channel_id);
-            }
-        }
-
-        let mut removed_data_track_publishers = Vec::new();
-        for &channel_id in &last_data_unsubscribed {
-            let publisher = self.data_track_publishers.remove(&channel_id);
-            let lifecycle_rx = self.data_track_lifecycle.remove(&channel_id);
-            if let Some(publisher) = publisher {
-                removed_data_track_publishers.push((channel_id, publisher, lifecycle_rx));
             }
         }
 
@@ -216,7 +202,7 @@ impl SessionState {
             client_id: Some(client_id),
             last_unsubscribed,
             last_video_unsubscribed,
-            removed_data_track_publishers,
+            last_data_unsubscribed,
             subscribed_descriptors,
             client_channels,
             last_param_unsubscribed,

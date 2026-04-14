@@ -1220,20 +1220,8 @@ impl RemoteAccessSession {
 
         self.stop_video_tracks(&removed.last_video_unsubscribed);
 
-        for (channel_id, publisher, prev_rx) in removed.removed_data_track_publishers {
-            let (done_tx, done_rx) = oneshot::channel();
-            self.state
-                .write()
-                .swap_data_track_lifecycle(channel_id, done_rx);
-            tokio::spawn(async move {
-                if let Some(prev) = prev_rx {
-                    _ = prev.await;
-                }
-                if let Some(track) = publisher.take_track() {
-                    track.unpublish();
-                }
-                _ = done_tx.send(());
-            });
+        for &channel_id in &removed.last_data_unsubscribed {
+            self.teardown_data_track(channel_id);
         }
 
         if !removed.last_param_unsubscribed.is_empty() {
