@@ -35,6 +35,7 @@ deps:
 .PHONY: build
 build:
 	colcon build --cmake-args \
+		-DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
 		-DFOXGLOVE_BRIDGE_REMOTE_ACCESS=$(FOXGLOVE_BRIDGE_REMOTE_ACCESS) \
 		$(if $(FOXGLOVE_CPP_SDK_DIR),-DFETCHCONTENT_SOURCE_DIR_FOXGLOVE_SDK=$(FOXGLOVE_CPP_SDK_DIR))
 
@@ -137,6 +138,13 @@ deb-bridge: deb-bridge-rolling
 
 .PHONY: deb-msgs
 deb-msgs: deb-msgs-rolling
+
+# Merge per-package compile_commands.json and remap container paths to host paths.
+# Run after docker-build to get IDE support (clangd, etc).
+.PHONY: compile-commands
+compile-commands:
+	jq -s 'add' build/*/compile_commands.json \
+		| sed 's|/sdk|$(realpath $(CURDIR)/..)|g' > build/compile_commands.json
 
 .PHONY: lint
 lint:
