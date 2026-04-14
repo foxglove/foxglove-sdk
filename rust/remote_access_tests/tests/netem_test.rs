@@ -234,7 +234,8 @@ async fn netem_channel_advertisement_under_impairment() -> Result<()> {
 }
 
 /// Verify that the full subscribe-and-receive flow works under impairment.
-/// A single message is logged after subscribing and the viewer must receive it.
+/// Data tracks are lossy, so the message is sent repeatedly every 1ms until
+/// the viewer receives it (or the test times out).
 #[traced_test]
 #[ignore]
 #[tokio::test]
@@ -259,11 +260,19 @@ async fn netem_message_delivery_under_impairment() -> Result<()> {
     viewer.subscribe_and_wait(&[channel_id], &channel).await?;
 
     let payload = b"netem-hello";
-    channel.log(payload);
+    let sender_channel = channel.clone();
+    let sender = tokio::spawn(async move {
+        let mut interval = tokio::time::interval(Duration::from_millis(1));
+        loop {
+            interval.tick().await;
+            sender_channel.log(payload);
+        }
+    });
 
     let msg = viewer
         .expect_new_data_track_and_message_data("/netem-test")
         .await?;
+    sender.abort();
     assert_eq!(msg.data.as_ref(), payload);
     info!("message delivered under impairment");
 
