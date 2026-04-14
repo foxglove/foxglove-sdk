@@ -30,6 +30,7 @@ void cubePrimitiveToC(foxglove_cube_primitive& dest, const CubePrimitive& src, A
 void cylinderPrimitiveToC(
   foxglove_cylinder_primitive& dest, const CylinderPrimitive& src, Arena& arena
 );
+void eventToC(foxglove_event& dest, const Event& src, Arena& arena);
 void frameTransformToC(foxglove_frame_transform& dest, const FrameTransform& src, Arena& arena);
 void frameTransformsToC(foxglove_frame_transforms& dest, const FrameTransforms& src, Arena& arena);
 void geoJSONToC(foxglove_geo_json& dest, const GeoJSON& src, Arena& arena);
@@ -399,6 +400,41 @@ uint64_t CylinderPrimitiveChannel::id() const noexcept {
 }
 
 bool CylinderPrimitiveChannel::hasSinks() const noexcept {
+  return foxglove_channel_has_sinks(impl_.get());
+}
+
+FoxgloveResult<EventChannel> EventChannel::create(
+  const std::string_view& topic, const Context& context
+) {
+  const foxglove_channel* channel = nullptr;
+  foxglove_error error =
+    foxglove_channel_create_event({topic.data(), topic.size()}, context.getInner(), &channel);
+  if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
+    return tl::unexpected(FoxgloveError(error));
+  }
+  return EventChannel(ChannelUniquePtr(channel));
+}
+
+FoxgloveError EventChannel::log(
+  const Event& msg, std::optional<uint64_t> log_time, std::optional<uint64_t> sink_id
+) noexcept {
+  Arena arena;
+  foxglove_event c_msg;
+  eventToC(c_msg, msg, arena);
+  return FoxgloveError(foxglove_channel_log_event(
+    impl_.get(), &c_msg, log_time ? &*log_time : nullptr, sink_id ? *sink_id : 0
+  ));
+}
+
+void EventChannel::close() noexcept {
+  foxglove_channel_close(impl_.get());
+}
+
+uint64_t EventChannel::id() const noexcept {
+  return foxglove_channel_get_id(impl_.get());
+}
+
+bool EventChannel::hasSinks() const noexcept {
   return foxglove_channel_has_sinks(impl_.get());
 }
 
@@ -1817,6 +1853,17 @@ void cylinderPrimitiveToC(
   dest.color = src.color ? reinterpret_cast<const foxglove_color*>(&*src.color) : nullptr;
 }
 
+void eventToC(foxglove_event& dest, const Event& src, [[maybe_unused]] Arena& arena) {
+  dest.start_time =
+    src.start_time ? reinterpret_cast<const foxglove_timestamp*>(&*src.start_time) : nullptr;
+  dest.end_time =
+    src.end_time ? reinterpret_cast<const foxglove_timestamp*>(&*src.end_time) : nullptr;
+  dest.label = {src.label.data(), src.label.size()};
+  dest.color = src.color ? reinterpret_cast<const foxglove_color*>(&*src.color) : nullptr;
+  dest.metadata = arena.map<foxglove_key_value_pair>(src.metadata, keyValuePairToC);
+  dest.metadata_count = src.metadata.size();
+}
+
 void frameTransformToC(
   foxglove_frame_transform& dest, const FrameTransform& src, [[maybe_unused]] Arena& arena
 ) {
@@ -2285,6 +2332,13 @@ FoxgloveError CylinderPrimitive::encode(uint8_t* ptr, size_t len, size_t* encode
   return FoxgloveError(foxglove_cylinder_primitive_encode(&c_msg, ptr, len, encoded_len));
 }
 
+FoxgloveError Event::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
+  Arena arena;
+  foxglove_event c_msg;
+  eventToC(c_msg, *this, arena);
+  return FoxgloveError(foxglove_event_encode(&c_msg, ptr, len, encoded_len));
+}
+
 FoxgloveError FrameTransform::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_frame_transform c_msg;
@@ -2621,6 +2675,16 @@ Schema CubePrimitive::schema() {
 
 Schema CylinderPrimitive::schema() {
   struct foxglove_schema c_schema = foxglove_cylinder_primitive_schema();
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data_len = c_schema.data_len;
+  return result;
+}
+
+Schema Event::schema() {
+  struct foxglove_schema c_schema = foxglove_event_schema();
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);

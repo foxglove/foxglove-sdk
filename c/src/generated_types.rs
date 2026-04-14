@@ -1755,6 +1755,176 @@ pub unsafe extern "C" fn foxglove_cube_primitive_encode(
     }
 }
 
+/// A discrete event that occurred at a specific time or over a time range
+#[repr(C)]
+pub struct Event {
+    /// Event start time
+    pub start_time: *const FoxgloveTimestamp,
+
+    /// Event end time. Omit for point events.
+    pub end_time: *const FoxgloveTimestamp,
+
+    /// Display name for the event
+    pub label: FoxgloveString,
+
+    /// Color used to visualize the event
+    pub color: *const Color,
+
+    /// Additional key-value metadata. Keys must be unique.
+    pub metadata: *const KeyValuePair,
+    pub metadata_count: usize,
+}
+
+#[cfg(not(target_family = "wasm"))]
+impl Event {
+    /// Create a new typed channel, and return an owned raw channel pointer to it.
+    ///
+    /// # Safety
+    /// We're trusting the caller that the channel will only be used with this type T.
+    #[unsafe(no_mangle)]
+    pub unsafe extern "C" fn foxglove_channel_create_event(
+        topic: FoxgloveString,
+        context: *const FoxgloveContext,
+        channel: *mut *const FoxgloveChannel,
+    ) -> FoxgloveError {
+        if channel.is_null() {
+            tracing::error!("channel cannot be null");
+            return FoxgloveError::ValueError;
+        }
+        unsafe {
+            let result = do_foxglove_channel_create::<foxglove::messages::Event>(topic, context);
+            result_to_c(result, channel)
+        }
+    }
+}
+
+impl BorrowToNative for Event {
+    type NativeType = foxglove::messages::Event;
+
+    unsafe fn borrow_to_native(
+        &self,
+        #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
+    ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
+        let label =
+            unsafe { string_from_raw(self.label.as_ptr() as *const _, self.label.len(), "label")? };
+        let color = unsafe {
+            self.color
+                .as_ref()
+                .map(|m| m.borrow_to_native(arena.as_mut()))
+        }
+        .transpose()?;
+        let metadata = unsafe { arena.as_mut().map(self.metadata, self.metadata_count)? };
+
+        Ok(ManuallyDrop::new(foxglove::messages::Event {
+            start_time: unsafe { self.start_time.as_ref() }.map(|&m| m.into()),
+            end_time: unsafe { self.end_time.as_ref() }.map(|&m| m.into()),
+            label: ManuallyDrop::into_inner(label),
+            color: color.map(ManuallyDrop::into_inner),
+            metadata: ManuallyDrop::into_inner(metadata),
+        }))
+    }
+}
+
+/// Log a Event message to a channel.
+///
+/// # Safety
+/// The channel must have been created for this type with foxglove_channel_create_event.
+#[cfg(not(target_family = "wasm"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn foxglove_channel_log_event(
+    channel: Option<&FoxgloveChannel>,
+    msg: Option<&Event>,
+    log_time: Option<&u64>,
+    sink_id: FoxgloveSinkId,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { Event::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
+            log_msg_to_channel(channel, &*msg, log_time, sink_id)
+        }
+        Err(e) => {
+            tracing::error!("Event: {}", e);
+            e.into()
+        }
+    }
+}
+
+/// Get the Event schema.
+///
+/// All buffers in the returned schema are statically allocated.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_event_schema() -> FoxgloveSchema {
+    let native = foxglove::messages::Event::get_schema().expect("Event schema is Some");
+    let name: &'static str = "foxglove.Event";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("Event schema data is static");
+    };
+    FoxgloveSchema {
+        name: name.into(),
+        encoding: encoding.into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
+/// Encode a Event message as protobuf to the buffer provided.
+///
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+/// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+/// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+///
+/// # Safety
+/// ptr must be a valid pointer to a memory region at least len bytes long.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_event_encode(
+    msg: Option<&Event>,
+    ptr: *mut u8,
+    len: usize,
+    encoded_len: Option<&mut usize>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { Event::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            if len == 0 || ptr.is_null() {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = msg
+                        .encoded_len()
+                        .expect("foxglove messages return Some(len)");
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
+            if let Err(encode_error) = msg.encode(&mut buf) {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
+            }
+            FoxgloveError::Ok
+        }
+        Err(e) => {
+            tracing::error!("Event: {}", e);
+            FoxgloveError::EncodeError
+        }
+    }
+}
+
 /// A transform between two reference frames in 3D space. The transform defines the position and orientation of a child frame within a parent frame. Translation moves the origin of the child frame relative to the parent origin. The rotation changes the orientation of the child frame around its origin.
 ///
 /// Examples:

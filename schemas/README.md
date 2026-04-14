@@ -28,6 +28,7 @@ If the IDL does not support optional fields (e.g. ROS) you must specify a value 
 - [CubePrimitive](#cubeprimitive)
 - [CylinderPrimitive](#cylinderprimitive)
 - [Duration](#duration)
+- [Event](#event)
 - [FrameTransform](#frametransform)
 - [FrameTransforms](#frametransforms)
 - [GeoJSON](#geojson)
@@ -979,6 +980,83 @@ uint32
 <td>
 
 The number of nanoseconds in the positive direction
+
+</td>
+</tr>
+</table>
+
+## Event
+
+A discrete event that occurred at a specific time or over a time range
+
+<table>
+  <tr>
+    <th>field</th>
+    <th>type</th>
+    <th>description</th>
+  </tr>
+<tr>
+<td><code>start_time</code></td>
+<td>
+
+[Timestamp](#timestamp)
+
+</td>
+<td>
+
+Event start time
+
+</td>
+</tr>
+<tr>
+<td><code>end_time</code> (optional)</td>
+<td>
+
+[Timestamp](#timestamp)
+
+</td>
+<td>
+
+Event end time. Omit for point events.
+
+</td>
+</tr>
+<tr>
+<td><code>label</code></td>
+<td>
+
+string
+
+</td>
+<td>
+
+Display name for the event
+
+</td>
+</tr>
+<tr>
+<td><code>color</code> (optional)</td>
+<td>
+
+[Color](#color)
+
+</td>
+<td>
+
+Color used to visualize the event
+
+</td>
+</tr>
+<tr>
+<td><code>metadata</code> (optional)</td>
+<td>
+
+[KeyValuePair](#keyvaluepair)[]
+
+</td>
+<td>
+
+Additional key-value metadata. Keys must be unique.
 
 </td>
 </tr>

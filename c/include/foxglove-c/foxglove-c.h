@@ -911,6 +911,33 @@ typedef struct foxglove_cube_primitive {
 } foxglove_cube_primitive;
 
 /**
+ * A discrete event that occurred at a specific time or over a time range
+ */
+typedef struct foxglove_event {
+  /**
+   * Event start time
+   */
+  const struct foxglove_timestamp *start_time;
+  /**
+   * Event end time. Omit for point events.
+   */
+  const struct foxglove_timestamp *end_time;
+  /**
+   * Display name for the event
+   */
+  struct foxglove_string label;
+  /**
+   * Color used to visualize the event
+   */
+  const struct foxglove_color *color;
+  /**
+   * Additional key-value metadata. Keys must be unique.
+   */
+  const struct foxglove_key_value_pair *metadata;
+  size_t metadata_count;
+} foxglove_event;
+
+/**
  * A transform between two reference frames in 3D space. The transform defines the position and orientation of a child frame within a parent frame. Translation moves the origin of the child frame relative to the parent origin. The rotation changes the orientation of the child frame around its origin.
  *
  * Examples:
@@ -3291,6 +3318,52 @@ foxglove_error foxglove_cube_primitive_encode(const struct foxglove_cube_primiti
                                               uint8_t *ptr,
                                               size_t len,
                                               size_t *encoded_len);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_event(struct foxglove_string topic,
+                                             const struct foxglove_context *context,
+                                             const struct foxglove_channel **channel);
+
+#if !defined(__wasm__)
+/**
+ * Log a Event message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_event.
+ */
+foxglove_error foxglove_channel_log_event(const struct foxglove_channel *channel,
+                                          const struct foxglove_event *msg,
+                                          const uint64_t *log_time,
+                                          FoxgloveSinkId sink_id);
+#endif
+
+/**
+ * Get the Event schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_event_schema(void);
+
+/**
+ * Encode a Event message as protobuf to the buffer provided.
+ *
+ * On success, writes the encoded length to *encoded_len.
+ * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+ * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+ * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+ *
+ * # Safety
+ * ptr must be a valid pointer to a memory region at least len bytes long.
+ */
+foxglove_error foxglove_event_encode(const struct foxglove_event *msg,
+                                     uint8_t *ptr,
+                                     size_t len,
+                                     size_t *encoded_len);
 
 /**
  * Create a new typed channel, and return an owned raw channel pointer to it.
