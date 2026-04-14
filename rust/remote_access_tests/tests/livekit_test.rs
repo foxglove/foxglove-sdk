@@ -170,7 +170,7 @@ async fn livekit_viewer_does_not_receive_message_before_subscribe() -> Result<()
     let expected_payload = b"message-after-subscribe";
     channel.log(expected_payload);
 
-    let msg_data = viewer.expect_new_bytestream_and_message_data().await?;
+    let msg_data = viewer.expect_new_data_track_and_message_data().await?;
     assert_eq!(msg_data.channel_id, channel_id);
     assert_eq!(
         msg_data.data.as_ref(),
@@ -479,7 +479,7 @@ async fn livekit_video_channel_messages_bypass_data_plane() -> Result<()> {
     video_channel.log(b"video-frame");
     json_channel.log(b"json-payload");
 
-    let msg = viewer.expect_new_bytestream_and_message_data().await?;
+    let msg = viewer.expect_new_data_track_and_message_data().await?;
     assert_eq!(msg.channel_id, json_id, "should receive the JSON message");
     assert_eq!(msg.data.as_ref(), b"json-payload");
     info!("video channel correctly bypassed data plane");
@@ -670,7 +670,7 @@ async fn livekit_video_channel_without_request_video_track_uses_data_plane() -> 
     viewer.ensure_device_data_track().await?;
 
     video_channel.log(b"video-frame");
-    let msg = viewer.expect_new_bytestream_and_message_data().await?;
+    let msg = viewer.expect_new_data_track_and_message_data().await?;
     assert_eq!(msg.channel_id, channel_id);
     assert_eq!(msg.data.as_ref(), b"video-frame");
     info!("video data received via data plane (no video track requested)");
@@ -727,7 +727,7 @@ async fn livekit_video_resubscribe_switches_to_data_plane() -> Result<()> {
 
     // Data should now arrive via the data plane.
     video_channel.log(b"video-frame");
-    let msg = viewer.expect_new_bytestream_and_message_data().await?;
+    let msg = viewer.expect_new_data_track_and_message_data().await?;
     assert_eq!(msg.channel_id, channel_id);
     assert_eq!(msg.data.as_ref(), b"video-frame");
     info!("data received via data plane after switching from video");
@@ -1857,7 +1857,7 @@ async fn livekit_connection_graph_unsubscribe_stops_updates() -> Result<()> {
         .await?;
     viewer.ensure_device_data_track().await?;
     channel.log(b"ping");
-    let msg = viewer.expect_new_bytestream_and_message_data().await?;
+    let msg = viewer.expect_new_data_track_and_message_data().await?;
     assert_eq!(msg.data.as_ref(), b"ping");
     info!("connection graph unsubscribe validated: no graph update received after unsubscribe");
 

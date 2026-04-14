@@ -261,7 +261,7 @@ async fn netem_message_delivery_under_impairment() -> Result<()> {
     let payload = b"netem-hello";
     channel.log(payload);
 
-    let msg = viewer.expect_new_bytestream_and_message_data().await?;
+    let msg = viewer.expect_new_data_track_and_message_data().await?;
     assert_eq!(msg.channel_id, channel_id);
     assert_eq!(msg.data.as_ref(), payload);
     info!("message delivered under impairment");

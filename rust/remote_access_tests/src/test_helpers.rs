@@ -619,7 +619,7 @@ impl ViewerConnection {
     ///
     /// If no data track reader is stored yet, waits for a `DataTrackPublished`
     /// event and subscribes first. Subsequent calls reuse the same reader.
-    pub async fn expect_new_bytestream_and_message_data(
+    pub async fn expect_new_data_track_and_message_data(
         &mut self,
     ) -> Result<ServerMessageData<'static>> {
         self.ensure_device_data_track().await?;
