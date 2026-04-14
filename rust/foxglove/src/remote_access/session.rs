@@ -2262,9 +2262,8 @@ impl RemoteAccessSession {
                         if state_guard.remove_channel(channel_id) {
                             let participants = state_guard.collect_participants();
                             drop(state_guard);
-                            let data = encode_json_message(&Unadvertise::new([u64::from(
-                                channel_id,
-                            )]));
+                            let data =
+                                encode_json_message(&Unadvertise::new([u64::from(channel_id)]));
                             for participant in participants {
                                 let msg = ControlPlaneMessage {
                                     participant,
@@ -2285,20 +2284,20 @@ impl RemoteAccessSession {
         }
     }
 
-    /// Tear down the data track for a channel. Removes the track from state synchronously,
-    /// then spawns a chained async task that awaits any in-flight publish before unpublishing.
+    /// Tear down the data track for a channel. Chains an async task that awaits any in-flight
+    /// publish, then removes and unpublishes the track.
     fn teardown_data_track(&self, channel_id: ChannelId) {
-        let (track, prev_rx, done_tx) = {
+        let (prev_rx, done_tx) = {
             let mut state = self.state.write();
-            let track = state.remove_data_track(&channel_id);
-            let (prev_rx, done_tx) = Self::chain_data_track_task(&mut state, channel_id);
-            (track, prev_rx, done_tx)
+            Self::chain_data_track_task(&mut state, channel_id)
         };
 
+        let state = Arc::clone(&self.state);
         tokio::spawn(async move {
             if let Some(prev) = prev_rx {
                 _ = prev.await;
             }
+            let track = state.write().remove_data_track(&channel_id);
             if let Some(track) = track {
                 track.unpublish();
             }
