@@ -150,6 +150,51 @@ fn build_advertise_services_msg(services: &[Arc<Service>]) -> Option<AdvertiseSe
     Some(msg)
 }
 
+/// Enqueue a control plane message for each of the given participants.
+fn send_control_to_all(
+    tx: &flume::Sender<ControlPlaneMessage>,
+    participants: &[Arc<Participant>],
+    data: Bytes,
+) {
+    for participant in participants {
+        let msg = ControlPlaneMessage {
+            participant: participant.clone(),
+            data: data.clone(),
+        };
+        if let Err(e) = tx.send(msg) {
+            warn!("control plane queue disconnected, dropping message: {e}");
+        }
+    }
+}
+
+/// Called when we permanently give up publishing a data track.
+///
+/// Removes the channel from state, unadvertises it to all participants,
+/// and fires `on_unsubscribe` for any active subscribers.
+fn handle_data_track_publish_failure(
+    channel_id: ChannelId,
+    state: &Arc<RwLock<SessionState>>,
+    control_plane_tx: &flume::Sender<ControlPlaneMessage>,
+    listener: &Option<Arc<dyn Listener>>,
+) {
+    let mut state_guard = state.write();
+    let subscriber_clients = state_guard.channel_subscriber_clients(&channel_id);
+    let descriptor = state_guard.get_channel_descriptor(&channel_id).cloned();
+    if state_guard.remove_channel(channel_id) {
+        let participants = state_guard.collect_participants();
+        drop(state_guard);
+        let data = encode_json_message(&Unadvertise::new([u64::from(channel_id)]));
+        send_control_to_all(control_plane_tx, &participants, data);
+
+        if let (Some(listener), Some(descriptor)) = (listener, &descriptor) {
+            for (client_id, participant_id) in subscriber_clients {
+                let client = Client::new(client_id, participant_id);
+                listener.on_unsubscribe(&client, descriptor);
+            }
+        }
+    }
+}
+
 /// RemoteAccessSession tracks a connected LiveKit session (the Room)
 /// and any state that is specific to that session.
 /// We discard this state if we close or lose the connection.
@@ -303,6 +348,9 @@ impl Sink for RemoteAccessSession {
         self.teardown_video_track(channel_id);
         self.teardown_data_track(channel_id);
         self.state.write().remove_video_schema(&channel_id);
+        // Note: we don't cleanup data_track_lifecycle,
+        // so we can chain on that if we re-add the channel.
+        // It's fine that it takes up space in the map, and it's cleaned up when the session is.
 
         let unadvertise = Unadvertise::new([u64::from(channel_id)]);
         self.broadcast_control(encode_json_message(&unadvertise));
@@ -428,9 +476,7 @@ impl RemoteAccessSession {
     /// Enqueue a control plane message for all currently connected participants.
     fn broadcast_control(&self, data: Bytes) {
         let participants = self.state.read().collect_participants();
-        for participant in participants {
-            self.send_control(participant, data.clone());
-        }
+        send_control_to_all(&self.control_plane_tx, &participants, data);
     }
 
     /// Reads from the control plane queue and sends messages to participants.
@@ -2201,6 +2247,7 @@ impl RemoteAccessSession {
             let cancel = self.cancellation_token.clone();
             let state = Arc::clone(&self.state);
             let control_plane_tx = self.control_plane_tx.clone();
+            let listener = self.listener.clone();
             tokio::spawn(async move {
                 if let Some(prev) = prev_rx {
                     _ = prev.await;
@@ -2258,25 +2305,12 @@ impl RemoteAccessSession {
                         state.write().insert_data_track(channel_id, track);
                     }
                     None => {
-                        let mut state_guard = state.write();
-                        if state_guard.remove_channel(channel_id) {
-                            let participants = state_guard.collect_participants();
-                            drop(state_guard);
-                            let data =
-                                encode_json_message(&Unadvertise::new([u64::from(channel_id)]));
-                            for participant in participants {
-                                let msg = ControlPlaneMessage {
-                                    participant,
-                                    data: data.clone(),
-                                };
-                                if let Err(e) = control_plane_tx.send(msg) {
-                                    warn!(
-                                        "control plane queue disconnected, \
-                                         dropping unadvertise: {e}"
-                                    );
-                                }
-                            }
-                        }
+                        handle_data_track_publish_failure(
+                            channel_id,
+                            &state,
+                            &control_plane_tx,
+                            &listener,
+                        );
                     }
                 }
                 _ = done_tx.send(());

@@ -171,7 +171,7 @@ pub struct ViewerConnection {
     /// other room events. Checked before waiting on the events channel.
     pending_data_tracks: Vec<RemoteDataTrack>,
     /// Stored device channel data track reader, reused across calls to
-    /// [`expect_new_bytestream_and_message_data`].
+    /// [`expect_new_data_track_and_message_data`].
     device_channel_reader: Option<DeviceChannelReader>,
 }
 
