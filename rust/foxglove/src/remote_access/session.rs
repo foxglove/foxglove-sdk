@@ -175,7 +175,7 @@ fn handle_data_track_publish_failure(
     channel_id: ChannelId,
     state: &Arc<RwLock<SessionState>>,
     control_plane_tx: &flume::Sender<ControlPlaneMessage>,
-    listener: &Option<Arc<dyn Listener>>,
+    listener: Option<&Arc<dyn Listener>>,
 ) {
     let mut state_guard = state.write();
     let subscriber_clients = state_guard.channel_subscriber_clients(&channel_id);
@@ -2309,7 +2309,7 @@ impl RemoteAccessSession {
                             channel_id,
                             &state,
                             &control_plane_tx,
-                            &listener,
+                            listener.as_ref(),
                         );
                     }
                 }
