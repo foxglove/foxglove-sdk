@@ -96,9 +96,9 @@ server when the client connects, and removed from the context when the client di
 To create a remote access gateway sink, use :py:func:`.start_gateway`. You must provide a device
 token to authenticate with the Foxglove API; this can be passed directly or set via the
 ``FOXGLOVE_DEVICE_TOKEN`` environment variable. Once started, the gateway connects to the Foxglove
-platform over WebRTC and makes the device available for remote visualization and teleop. Each remote
-client that connects is its own independent sink, dynamically added to the :py:class:`.Context` when
-the client connects and removed when it disconnects.
+platform over WebRTC and makes the device available for remote visualization and teleop. The gateway
+acts as a single sink on the :py:class:`.Context`, registered when the gateway starts and
+unregistered when it stops.
 
 Notebook integration
 ^^^^^^^^^^^^^^^^^^^^

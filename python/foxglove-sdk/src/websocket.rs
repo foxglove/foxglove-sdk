@@ -33,7 +33,7 @@ pub struct PyClientChannel {
     schema: Option<Py<PyBytes>>,
 }
 
-/// A client connected to a running websocket server.
+/// A client connected to a running WebSocket server.
 #[pyclass(name = "Client", module = "foxglove.websocket")]
 pub struct PyClient {
     /// A client identifier that is unique within the scope of this server.
@@ -539,7 +539,7 @@ pub fn start_server(
     Ok(PyWebSocketServer(Some(handle)))
 }
 
-/// A websocket server. Obtain an instance by calling :py:func:`foxglove.start_server`.
+/// A WebSocket server. Obtain an instance by calling :py:func:`foxglove.start_server`.
 #[pyclass(name = "WebSocketServer", module = "foxglove.websocket")]
 pub struct PyWebSocketServer(pub Option<WebSocketServerHandle>);
 
@@ -558,7 +558,7 @@ impl PyWebSocketServer {
         self.0.as_ref().map_or(0, |handle| handle.port())
     }
 
-    /// Returns an app URL to open the websocket as a data source.
+    /// Returns an app URL to open the WebSocket as a data source.
     ///
     /// Returns None if the server has been stopped.
     ///
@@ -624,7 +624,7 @@ impl PyWebSocketServer {
     /// :type message: str
     /// :param level: The level of the status message.
     /// :type level: StatusLevel
-    /// :param id: An optional id for the status message.
+    /// :param id: An optional ID for the status message.
     /// :type id: str | None
     #[pyo3(signature = (message, level, id=None))]
     pub fn publish_status(&self, message: String, level: &PyStatusLevel, id: Option<String>) {
@@ -638,7 +638,7 @@ impl PyWebSocketServer {
         server.publish_status(status);
     }
 
-    /// Remove status messages by id from all clients.
+    /// Remove status messages by ID from all clients.
     /// If the server has been stopped, this has no effect.
     ///
     /// :param status_ids: The ids of the status messages to remove.

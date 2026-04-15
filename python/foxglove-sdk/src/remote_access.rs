@@ -312,7 +312,7 @@ impl PyRemoteAccessGateway {
     /// :type message: str
     /// :param level: The level of the status message.
     /// :type level: StatusLevel
-    /// :param id: An optional id for the status message.
+    /// :param id: An optional ID for the status message.
     /// :type id: str | None
     #[pyo3(signature = (message, level, id=None))]
     pub fn publish_status(&self, message: String, level: &PyStatusLevel, id: Option<String>) {
@@ -325,9 +325,9 @@ impl PyRemoteAccessGateway {
         }
     }
 
-    /// Remove status messages by id from all connected participants.
+    /// Remove status messages by ID from all connected participants.
     ///
-    /// :param ids: The ids of the status messages to remove.
+    /// :param ids: The IDs of the status messages to remove.
     /// :type ids: list[str]
     pub fn remove_status(&self, ids: Vec<String>) {
         if let Some(handle) = &self.0 {

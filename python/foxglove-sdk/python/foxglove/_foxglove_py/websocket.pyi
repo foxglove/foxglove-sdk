@@ -195,7 +195,7 @@ class WebSocketServer:
 
     def remove_status(self, ids: list[str]) -> None:
         """
-        Remove status messages by id from all clients. If the server has been stopped, this has no
+        Remove status messages by ID from all clients. If the server has been stopped, this has no
         effect.
         """
         ...
