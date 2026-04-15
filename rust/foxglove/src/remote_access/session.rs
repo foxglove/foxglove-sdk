@@ -267,26 +267,26 @@ impl Sink for RemoteAccessSession {
         // Track advertised channels and detect video-capable ones.
         let advertised_ids: std::collections::HashSet<u64> =
             advertise_msg.channels.iter().map(|ch| ch.id).collect();
-        let advertised_topics: SmallVec<[(ChannelId, String); 4]> = {
+        let advertised_channel_ids: SmallVec<[ChannelId; 4]> = {
             let mut state = self.state.write();
-            let mut topics = SmallVec::new();
+            let mut ids = SmallVec::new();
             for &ch in &filtered {
                 if advertised_ids.contains(&u64::from(ch.id())) {
                     state.insert_channel(ch);
-                    topics.push((ch.id(), ch.topic().to_string()));
+                    ids.push(ch.id());
                     if let Some(input_schema) = get_video_input_schema(ch) {
                         state.insert_video_schema(ch.id(), input_schema);
                     }
                 }
             }
             state.add_metadata_to_advertisement(&mut advertise_msg);
-            topics
+            ids
         };
 
         self.broadcast_control(encode_json_message(&advertise_msg));
 
         // Eagerly publish a data track for each newly advertised channel.
-        self.publish_data_tracks(&advertised_topics);
+        self.publish_data_tracks(&advertised_channel_ids);
 
         None
     }
@@ -2181,13 +2181,12 @@ impl RemoteAccessSession {
     }
 
     /// Eagerly publish data tracks for newly advertised channels.
-    fn publish_data_tracks(&self, topics: &[(ChannelId, String)]) {
-        for (channel_id, topic) in topics {
+    fn publish_data_tracks(&self, topics: &[ChannelId]) {
+        for channel_id in topics {
             let data_track = DataTrack::publish(
                 &self.runtime,
                 self.room.local_participant(),
                 *channel_id,
-                topic,
                 self.cancellation_token.child_token(),
             );
             self.state

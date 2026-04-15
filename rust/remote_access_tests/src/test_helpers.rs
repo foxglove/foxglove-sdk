@@ -602,9 +602,7 @@ impl ViewerConnection {
                 .context("timeout waiting for device channel data track")?
                 .context("room events channel closed")?;
             match event {
-                RoomEvent::DataTrackPublished(track)
-                    if track.info().name() == expected_name =>
-                {
+                RoomEvent::DataTrackPublished(track) if track.info().name() == expected_name => {
                     return subscribe_to_device_data_track(track).await;
                 }
                 RoomEvent::DataTrackPublished(track) => {

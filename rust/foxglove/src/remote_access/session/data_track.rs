@@ -37,14 +37,12 @@ impl DataTrack {
         runtime: &Handle,
         local_participant: LocalParticipant,
         channel_id: ChannelId,
-        topic: &str,
         cancel: CancellationToken,
     ) -> Self {
         let track = Arc::new(OnceLock::new());
         let track_clone = Arc::clone(&track);
         let cancel_clone = cancel.clone();
         let name = format!("data-ch-{}", u64::from(channel_id));
-        let topic = topic.to_owned();
 
         let task = runtime.spawn(async move {
             const INITIAL_BACKOFF: Duration = Duration::from_millis(100);
@@ -59,13 +57,13 @@ impl DataTrack {
                     }
                     Err(PublishError::DuplicateName) => {
                         debug!(
-                            "data track {name} ({topic}) still being unpublished at SFU, \
+                            "data track {name} still being unpublished at SFU, \
                              retrying in {backoff:?}"
                         );
                     }
                     Err(e) => {
                         error!(
-                            "failed to publish data track {name} ({topic}): {e:?}, \
+                            "failed to publish data track {name}: {e:?}, \
                              retrying in {backoff:?}"
                         );
                     }
