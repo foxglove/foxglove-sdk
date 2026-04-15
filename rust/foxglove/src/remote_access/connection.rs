@@ -23,7 +23,7 @@ use crate::{
         AssetHandler, Capability, Client, RemoteAccessError,
         credentials_provider::CredentialsProvider,
         protocol_version,
-        session::{DEFAULT_PENDING_CLIENT_READER_TIMEOUT, RemoteAccessSession, SessionParams},
+        session::{RemoteAccessSession, SessionParams},
     },
     remote_common::connection_graph::ConnectionGraph,
     remote_common::service::{Service, ServiceId, ServiceMap},
@@ -87,7 +87,6 @@ pub(crate) struct ConnectionParams {
     pub channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     pub server_info: Option<HashMap<String, String>>,
     pub message_backlog_size: Option<usize>,
-    pub pending_client_reader_timeout: Option<Duration>,
     pub context: Weak<Context>,
 }
 
@@ -106,7 +105,6 @@ pub(crate) struct RemoteAccessConnection {
     channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     server_info: Option<HashMap<String, String>>,
     message_backlog_size: Option<usize>,
-    pending_client_reader_timeout: Option<Duration>,
     context: Weak<Context>,
     cancellation_token: CancellationToken,
     services: Arc<parking_lot::RwLock<ServiceMap>>,
@@ -134,7 +132,6 @@ impl RemoteAccessConnection {
             channel_filter: params.channel_filter,
             server_info: params.server_info,
             message_backlog_size: params.message_backlog_size,
-            pending_client_reader_timeout: params.pending_client_reader_timeout,
             context: params.context,
             cancellation_token: CancellationToken::new(),
             services,
@@ -300,9 +297,6 @@ impl RemoteAccessConnection {
                             .unwrap_or(DEFAULT_MESSAGE_BACKLOG_SIZE),
                         services: self.services.clone(),
                         connection_graph: self.connection_graph.clone(),
-                        pending_client_reader_timeout: self
-                            .pending_client_reader_timeout
-                            .unwrap_or(DEFAULT_PENDING_CLIENT_READER_TIMEOUT),
                         remote_access_session_id: self
                             .remote_access_session_id()
                             .map(str::to_owned),
