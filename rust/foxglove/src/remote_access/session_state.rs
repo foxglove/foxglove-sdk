@@ -3,7 +3,6 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use livekit::id::{ParticipantIdentity, TrackSid};
-use livekit::prelude::LocalDataTrack;
 use smallvec::SmallVec;
 use tracing::{debug, info};
 
@@ -567,11 +566,13 @@ impl SessionState {
 
     /// Returns the data track for a channel if the channel has at least one data subscriber
     /// AND the track has been published. This is the single gate used by `Sink::log`.
-    pub fn get_subscribed_data_track(&self, channel_id: &ChannelId) -> Option<&LocalDataTrack> {
+    pub fn get_subscribed_data_track(&self, channel_id: &ChannelId) -> Option<&DataTrack> {
         if !self.has_data_subscribers(channel_id) {
             return None;
         }
-        self.data_tracks.get(channel_id)?.get()
+        let track = self.data_tracks.get(channel_id)?;
+        track.get()?;
+        Some(track)
     }
 
     pub fn insert_data_track(&mut self, channel_id: ChannelId, track: DataTrack) {

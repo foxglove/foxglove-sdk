@@ -1,13 +1,16 @@
+use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
-use livekit::prelude::{LocalDataTrack, LocalParticipant, PublishError};
+use livekit::prelude::{DataTrackFrame, LocalDataTrack, LocalParticipant, PublishError};
 use tokio::runtime::Handle;
 use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, error};
 
-use crate::ChannelId;
+use crate::{ChannelId, Metadata};
+
+const FRAME_HEADER_SIZE: usize = 5; // 1 byte flags + u32 LE sequence
 
 /// Manages the lifecycle of a single published data track.
 pub(crate) struct DataTrack {
@@ -19,6 +22,10 @@ pub(crate) struct DataTrack {
     cancel: CancellationToken,
     /// Handle to the spawned publish task.
     task: JoinHandle<()>,
+    /// Per-track monotonic sequence number for packet loss detection.
+    sequence: AtomicU32,
+    /// Throttles debug log messages when data track messages are dropped.
+    drop_throttler: parking_lot::Mutex<crate::throttler::Throttler>,
 }
 
 impl DataTrack {
@@ -75,12 +82,35 @@ impl DataTrack {
             track,
             cancel,
             task,
+            sequence: AtomicU32::new(0),
+            drop_throttler: parking_lot::Mutex::new(crate::throttler::Throttler::new(
+                Duration::from_secs(30),
+            )),
         }
     }
 
     /// Returns the underlying LiveKit track if publishing has completed successfully.
     pub fn get(&self) -> Option<&LocalDataTrack> {
         self.track.get()
+    }
+
+    /// Build a sequenced frame and push it to the data track.
+    /// Drops with a throttled debug log if the track is not ready or full.
+    pub fn log(&self, channel_id: ChannelId, msg: &[u8], metadata: &Metadata) {
+        let Some(track) = self.track.get() else {
+            return;
+        };
+        let seq = self.sequence.fetch_add(1, Ordering::Relaxed);
+        let mut payload = Vec::with_capacity(FRAME_HEADER_SIZE + msg.len());
+        payload.push(0u8); // flags
+        payload.extend_from_slice(&seq.to_le_bytes());
+        payload.extend_from_slice(msg);
+        let frame = DataTrackFrame::new(payload).with_user_timestamp(metadata.log_time);
+        if let Err(e) = track.try_push(frame) {
+            if self.drop_throttler.lock().try_acquire() {
+                debug!("data track message dropped for channel {channel_id:?}: {e:?}");
+            }
+        }
     }
 
     /// Close the data track: cancel any in-flight publish, wait for it to settle,

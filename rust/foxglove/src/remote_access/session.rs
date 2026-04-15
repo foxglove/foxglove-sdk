@@ -1,5 +1,4 @@
 use std::collections::{HashMap, HashSet};
-use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Weak};
 use std::time::Duration;
 
@@ -61,15 +60,10 @@ pub(crate) struct SessionStats {
 }
 
 const CONTROL_CHANNEL_TOPIC: &str = "control";
-const DATA_TRACK_FRAME_HEADER_SIZE: usize = 5; // 1 byte flags + u32 LE sequence
 const CLIENT_CHANNEL_TOPIC_PREFIX: &str = "client-ch-";
 const MESSAGE_FRAME_SIZE: usize = 5; // 1 byte opcode + u32 LE length
 const MAX_MESSAGE_SIZE: usize = 16 * 1024 * 1024; // 16 MiB
 pub(crate) const DEFAULT_PENDING_CLIENT_READER_TIMEOUT: Duration = Duration::from_secs(15);
-
-// Note: we may want to track a per-channel sequence in the future, depending how we use this.
-/// Global monotonic sequence number for data track frames, used for packet loss detection.
-static DATA_TRACK_SEQUENCE: AtomicU32 = AtomicU32::new(0);
 
 /// A control plane message queued for delivery to a specific participant.
 pub(super) struct ControlPlaneMessage {
@@ -219,8 +213,6 @@ pub(crate) struct RemoteAccessSession {
     participant_reset_tx: tokio::sync::mpsc::UnboundedSender<ParticipantIdentity>,
     participant_reset_rx:
         tokio::sync::Mutex<tokio::sync::mpsc::UnboundedReceiver<ParticipantIdentity>>,
-    /// Throttles debug log messages when data track messages are dropped.
-    drop_throttler: parking_lot::Mutex<crate::throttler::Throttler>,
 }
 
 impl Sink for RemoteAccessSession {
@@ -245,17 +237,7 @@ impl Sink for RemoteAccessSession {
 
         // Send to data subscribers via the eagerly-published data track.
         if let Some(track) = state.get_subscribed_data_track(&channel_id) {
-            let seq = DATA_TRACK_SEQUENCE.fetch_add(1, Ordering::Relaxed);
-            let mut payload = Vec::with_capacity(DATA_TRACK_FRAME_HEADER_SIZE + msg.len());
-            payload.push(0u8); // flags
-            payload.extend_from_slice(&seq.to_le_bytes());
-            payload.extend_from_slice(msg);
-            let frame = DataTrackFrame::new(payload).with_user_timestamp(metadata.log_time);
-            if let Err(e) = track.try_push(frame) {
-                if self.drop_throttler.lock().try_acquire() {
-                    debug!("data track message dropped for channel {channel_id:?}: {e:?}");
-                }
-            }
+            track.log(channel_id, msg, metadata);
         }
 
         Ok(())
@@ -392,9 +374,6 @@ impl RemoteAccessSession {
             server_info: params.server_info,
             participant_reset_tx,
             participant_reset_rx: tokio::sync::Mutex::new(participant_reset_rx),
-            drop_throttler: parking_lot::Mutex::new(crate::throttler::Throttler::new(
-                Duration::from_secs(30),
-            )),
         }
     }
 
