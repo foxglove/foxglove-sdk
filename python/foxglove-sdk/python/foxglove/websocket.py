@@ -1,52 +1,34 @@
 from __future__ import annotations
 
-from collections.abc import Callable
-from typing import Optional, Protocol, TypeAlias, Union
+from typing import Optional, Protocol
 
-from ._foxglove_py.websocket import (
-    Capability,
-    ChannelView,
-    Client,
-    ClientChannel,
+from . import (
+    AnyInnerParameterValue,
+    AnyNativeParameterValue,
+    AnyParameterValue,
+    AssetHandler,
     ConnectionGraph,
     MessageSchema,
     Parameter,
     ParameterType,
     ParameterValue,
+    Service,
+    ServiceHandler,
+    ServiceRequest,
+    ServiceSchema,
+    StatusLevel,
+)
+from ._foxglove_py.websocket import (
+    Capability,
+    ChannelView,
+    Client,
+    ClientChannel,
     PlaybackCommand,
     PlaybackControlRequest,
     PlaybackState,
     PlaybackStatus,
-    Service,
-    ServiceRequest,
-    ServiceSchema,
-    StatusLevel,
     WebSocketServer,
 )
-
-ServiceHandler: TypeAlias = Callable[[ServiceRequest], bytes]
-AssetHandler: TypeAlias = Callable[[str], "bytes | None"]
-AnyParameterValue: TypeAlias = Union[
-    ParameterValue.Integer,
-    ParameterValue.Bool,
-    ParameterValue.Float64,
-    ParameterValue.String,
-    ParameterValue.Array,
-    ParameterValue.Dict,
-]
-AnyInnerParameterValue: TypeAlias = Union[
-    AnyParameterValue,
-    bool,
-    int,
-    float,
-    str,
-    "list[AnyInnerParameterValue]",
-    "dict[str, AnyInnerParameterValue]",
-]
-AnyNativeParameterValue: TypeAlias = Union[
-    AnyInnerParameterValue,
-    bytes,
-]
 
 
 class ServerListener(Protocol):
@@ -87,7 +69,7 @@ class ServerListener(Protocol):
         Called by the server when a client unadvertises a channel.
 
         :param client: The client (id) that is unadvertising the channel.
-        :param client_channel_id: The client channel id that is being unadvertised.
+        :param client_channel_id: The client channel ID that is being unadvertised.
         """
         return None
 
@@ -98,7 +80,7 @@ class ServerListener(Protocol):
         Called by the server when a message is received from a client.
 
         :param client: The client (id) that sent the message.
-        :param client_channel_id: The client channel id that the message was sent on.
+        :param client_channel_id: The client channel ID that the message was sent on.
         :param data: The message data.
         """
         return None
@@ -116,7 +98,7 @@ class ServerListener(Protocol):
 
         :param client: The client (id) that sent the message.
         :param param_names: The names of the parameters to get.
-        :param request_id: An optional request id.
+        :param request_id: An optional request ID.
         """
         return []
 
@@ -136,7 +118,7 @@ class ServerListener(Protocol):
 
         :param client: The client (id) that sent the message.
         :param parameters: The parameters to set.
-        :param request_id: An optional request id.
+        :param request_id: An optional request ID.
         """
         return parameters
 

@@ -1381,20 +1381,20 @@ async fn livekit_client_message_data_fires_listener_callback() -> Result<()> {
     assert_eq!(messages[0].0, "viewer-1", "client id should match");
     assert_eq!(messages[0].1, "/cmd", "topic should match");
     assert_eq!(messages[0].2, payload, "payload should match");
-    info!("on_message_data callback validated via per-channel stream");
+    info!("on_message_data callback validated via control channel");
 
     viewer.close().await?;
     gw.stop().await?;
     Ok(())
 }
 
-/// Test that sending MessageData before the Client Advertise still delivers the
-/// message once the advertise arrives (the server holds the byte stream until then).
+/// Test that sending MessageData before the Client Advertise produces an error
+/// (channel not advertised).
 #[traced_test]
 #[ignore]
 #[tokio::test]
 #[serial(livekit)]
-async fn livekit_client_message_data_before_advertise_is_delivered() -> Result<()> {
+async fn livekit_client_message_data_before_advertise_sends_error() -> Result<()> {
     use std::sync::Arc;
     let ctx = foxglove::Context::new();
     let listener = Arc::new(MockListener::default());
@@ -1415,26 +1415,35 @@ async fn livekit_client_message_data_before_advertise_is_delivered() -> Result<(
     let payload = b"early data";
     viewer.send_client_message_data(1, payload).await?;
 
-    // Brief pause to make it likely the data stream arrives before the advertise.
-    tokio::time::sleep(Duration::from_millis(500)).await;
+    let deadline = tokio::time::Instant::now() + EVENT_TIMEOUT;
+    let status = loop {
+        let msg = tokio::time::timeout_at(deadline, viewer.frame_reader.next_server_message())
+            .await
+            .context("timeout waiting for error status")?
+            .context("failed to read server message")?;
+        if let ServerMessage::Status(s) = msg {
+            break s;
+        }
+    };
 
-    viewer
-        .send_client_advertise(&[ClientChannelDesc {
-            id: 1,
-            topic: "/cmd".to_string(),
-            encoding: "json".to_string(),
-            schema_name: String::new(),
-        }])
-        .await?;
+    assert_eq!(
+        status.level,
+        foxglove::protocol::v2::server::status::Level::Error
+    );
+    assert!(
+        status.message.contains("not advertised channel"),
+        "unexpected status message: {}",
+        status.message
+    );
+    info!(
+        "error status received for message data before advertise: {}",
+        status.message
+    );
 
-    poll_until(|| listener.message_data().len() == 1).await;
-
-    let messages = listener.message_data();
-    assert_eq!(messages.len(), 1);
-    assert_eq!(messages[0].0, "viewer-1", "client id should match");
-    assert_eq!(messages[0].1, "/cmd", "topic should match");
-    assert_eq!(messages[0].2, payload, "payload should match");
-    info!("message data delivered after late advertise");
+    assert!(
+        listener.message_data().is_empty(),
+        "listener should not receive message data for unadvertised channel"
+    );
 
     viewer.close().await?;
     gw.stop().await?;
@@ -1456,7 +1465,6 @@ async fn livekit_client_message_data_for_unadvertised_channel_sends_error() -> R
         TestGatewayOptions {
             listener: Some(listener.clone()),
             capabilities: vec![foxglove::remote_access::Capability::ClientPublish],
-            pending_client_reader_timeout: Some(Duration::from_secs(1)),
             ..Default::default()
         },
     )
@@ -1466,8 +1474,6 @@ async fn livekit_client_message_data_for_unadvertised_channel_sends_error() -> R
     let _server_info = viewer.expect_server_info().await?;
 
     // Send MessageData for channel 999, which was never advertised by the client.
-    // The server stashes the byte stream waiting for a matching Client Advertise.
-    // With pending_client_reader_timeout set to 1s, the error arrives quickly.
     let payload = b"rogue data";
     viewer.send_client_message_data(999, payload).await?;
 

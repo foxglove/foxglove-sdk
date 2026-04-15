@@ -2253,7 +2253,7 @@ typedef union foxglove_parameter_value_data {
 
 #if !defined(__wasm__)
 /**
- * A websocket parameter value.
+ * A WebSocket parameter value.
  *
  * Constructed with `foxglove_parameter_value_create_*`.
  */
@@ -2271,7 +2271,7 @@ typedef struct foxglove_parameter_value {
 
 #if !defined(__wasm__)
 /**
- * A websocket parameter.
+ * A WebSocket parameter.
  *
  * Constructed with `foxglove_parameter_create`.
  */
@@ -2293,7 +2293,7 @@ typedef struct foxglove_parameter {
 
 #if !defined(__wasm__)
 /**
- * An array of websocket parameters.
+ * An array of WebSocket parameters.
  *
  * Constructed with `foxglove_parameter_array_create`.
  */
@@ -2807,7 +2807,7 @@ typedef struct foxglove_server_options {
 
 #if !defined(__wasm__)
 /**
- * A schema describing either a websocket service request or response.
+ * A schema describing either a WebSocket service request or response.
  */
 typedef struct foxglove_service_message_schema {
   /**
@@ -2823,7 +2823,7 @@ typedef struct foxglove_service_message_schema {
 
 #if !defined(__wasm__)
 /**
- * A websocket service schema.
+ * A WebSocket service schema.
  */
 typedef struct foxglove_service_schema {
   /**
@@ -2843,7 +2843,7 @@ typedef struct foxglove_service_schema {
 
 #if !defined(__wasm__)
 /**
- * A websocket service request message.
+ * A WebSocket service request message.
  */
 typedef struct foxglove_service_request {
   /**
@@ -5143,7 +5143,7 @@ void foxglove_channel_free(const struct foxglove_channel *channel);
  * # Safety
  * `channel` must be a valid pointer to a `foxglove_channel` created via `foxglove_channel_create`.
  *
- * If the passed channel is null, an invalid id of 0 is returned.
+ * If the passed channel is null, an invalid ID of 0 is returned.
  */
 uint64_t foxglove_channel_get_id(const struct foxglove_channel *channel);
 #endif
@@ -5283,7 +5283,7 @@ void foxglove_context_free(const struct foxglove_context *context);
 
 #if !defined(__wasm__)
 /**
- * Get the id of a channel descriptor.
+ * Get the ID of a channel descriptor.
  *
  * # Safety
  * `channel` must be a valid pointer to a `foxglove_channel_descriptor`.
@@ -6220,9 +6220,9 @@ foxglove_error foxglove_server_remove_status(struct foxglove_websocket_server *s
 
 #if !defined(__wasm__)
 /**
- * Creates a new websocket service.
+ * Creates a new WebSocket service.
  *
- * The service must be registered with a websocket server using `foxglove_server_add_service`, or
+ * The service must be registered with a WebSocket server using `foxglove_server_add_service`, or
  * freed with `foxglove_service_free`.
  *
  * The callback is invoked from the client's main poll loop and must not block. If blocking or
@@ -6256,11 +6256,11 @@ foxglove_error foxglove_service_create(struct foxglove_service **service,
 
 #if !defined(__wasm__)
 /**
- * Frees a service that was never registered to a websocket server.
+ * Frees a service that was never registered to a WebSocket server.
  *
  * # Safety
  * - `service` must be a valid pointer to a service allocated by `foxglove_service_create`. The
- *   service MUST NOT have been previously registered with a websocket server.
+ *   service MUST NOT have been previously registered with a WebSocket server.
  */
 void foxglove_service_free(struct foxglove_service *service);
 #endif

@@ -289,8 +289,8 @@
 //! the `FOXGLOVE_DEVICE_TOKEN` environment variable.
 //!
 //! Once started, the gateway connects to the Foxglove platform and makes the device available for
-//! remote visualization and teleop. Each remote client that connects is its own independent sink,
-//! dynamically added to the [`Context`] when the client connects and removed when it disconnects.
+//! remote visualization and teleop. The gateway acts as a single sink on the [`Context`], registered
+//! when the gateway starts and unregistered when it stops.
 //!
 //! The gateway handle can safely be dropped and the connection will continue to run. Use
 //! [`stop`](`remote_access::GatewayHandle::stop`) to shut down the gateway explicitly.

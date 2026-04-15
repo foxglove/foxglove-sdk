@@ -1,4 +1,4 @@
-//! A websocket server without a #[tokio::main] entrypoint.
+//! A WebSocket server without a #[tokio::main] entrypoint.
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};

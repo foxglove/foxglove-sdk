@@ -32,7 +32,7 @@ unsafe fn raw_vec_clone<T: Clone>(ptr: *const T, len: usize, cap: usize) -> Vec<
         .collect()
 }
 
-/// An array of websocket parameters.
+/// An array of WebSocket parameters.
 ///
 /// Constructed with `foxglove_parameter_array_create`.
 //
@@ -165,7 +165,7 @@ pub unsafe extern "C" fn foxglove_parameter_array_free(array: *mut FoxgloveParam
     }
 }
 
-/// A websocket parameter.
+/// A WebSocket parameter.
 ///
 /// Constructed with `foxglove_parameter_create`.
 #[repr(C)]
@@ -676,7 +676,7 @@ impl FoxgloveParameterType {
     }
 }
 
-/// A websocket parameter value.
+/// A WebSocket parameter value.
 ///
 /// Constructed with `foxglove_parameter_value_create_*`.
 #[repr(C)]

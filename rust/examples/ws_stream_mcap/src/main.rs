@@ -1,4 +1,4 @@
-//! Streams an mcap file over a websocket.
+//! Streams an mcap file over a WebSocket.
 
 mod mcap_player;
 mod playback_source;

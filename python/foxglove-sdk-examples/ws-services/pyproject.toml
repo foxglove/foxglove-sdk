@@ -1,7 +1,7 @@
 [project]
 name = "ws-services"
 version = "0.0.0"
-description = "Example of implementing websocket services"
+description = "Example of implementing WebSocket services"
 authors = [{ name = "Foxglove", email = "support@foxglove.dev" }]
 requires-python = ">=3.10"
 readme = "README.md"

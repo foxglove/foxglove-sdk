@@ -2,21 +2,23 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from foxglove import ChannelDescriptor
-
-from ._foxglove_py.remote_access import (
-    Capability,
-    Client,
+from foxglove import (
+    ChannelDescriptor,
     MessageSchema,
     Parameter,
     ParameterType,
     ParameterValue,
-    RemoteAccessConnectionStatus,
-    RemoteAccessGateway,
     Service,
     ServiceRequest,
     ServiceSchema,
     StatusLevel,
+)
+
+from ._foxglove_py.remote_access import (
+    Capability,
+    Client,
+    RemoteAccessConnectionStatus,
+    RemoteAccessGateway,
 )
 
 
@@ -97,7 +99,7 @@ class RemoteAccessListener(Protocol):
 
         :param client: The client that sent the request.
         :param param_names: The names of the parameters to get.
-        :param request_id: An optional request id.
+        :param request_id: An optional request ID.
         """
         return []
 
@@ -114,7 +116,7 @@ class RemoteAccessListener(Protocol):
 
         :param client: The client that sent the request.
         :param parameters: The parameters to set.
-        :param request_id: An optional request id.
+        :param request_id: An optional request ID.
         """
         return parameters
 
