@@ -28,12 +28,6 @@ pub(crate) struct RemovedSubscriptions {
     pub client_channels: Vec<ChannelDescriptor>,
     /// Parameter names that lost their last subscriber.
     pub last_param_unsubscribed: Vec<String>,
-    /// The flush task handle for the removed participant, if one was registered.
-    /// Intentionally dropped (detached) by callers. The flush task drains naturally
-    /// once all `Arc<Participant>` refs are dropped (which drops `control_tx`). The
-    /// session-level `CancellationToken` is the backstop for prompt shutdown.
-    #[allow(dead_code)]
-    pub flush_handle: Option<JoinHandle<()>>,
 }
 
 /// Result of subscribing a participant to channels.
@@ -118,6 +112,14 @@ impl SessionState {
         self.flush_handles.drain().map(|(_, h)| h).collect()
     }
 
+    /// Removes and returns the flush handle for a participant, if one was registered.
+    pub fn remove_flush_handle(
+        &mut self,
+        identity: &ParticipantIdentity,
+    ) -> Option<JoinHandle<()>> {
+        self.flush_handles.remove(identity)
+    }
+
     /// Removes all participants, dropping their `Arc<Participant>` references.
     /// This causes per-participant `control_tx` senders to drop, which signals
     /// flush tasks to exit.
@@ -161,7 +163,6 @@ impl SessionState {
                 subscribed_descriptors: SmallVec::new(),
                 client_channels: Vec::new(),
                 last_param_unsubscribed: Vec::new(),
-                flush_handle: None,
             };
         };
         let client_id = participant.client_id();
@@ -213,8 +214,6 @@ impl SessionState {
             }
         });
 
-        let flush_handle = self.flush_handles.remove(identity);
-
         RemovedSubscriptions {
             client_id: Some(client_id),
             last_unsubscribed,
@@ -222,7 +221,6 @@ impl SessionState {
             subscribed_descriptors,
             client_channels,
             last_param_unsubscribed,
-            flush_handle,
         }
     }
 

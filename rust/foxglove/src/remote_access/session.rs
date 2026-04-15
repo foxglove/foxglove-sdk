@@ -1011,7 +1011,13 @@ impl RemoteAccessSession {
     pub(crate) fn remove_participant(self: &Arc<Self>, participant_id: &ParticipantIdentity) {
         let _guard = self.subscription_lock.lock();
 
-        let removed = self.state.write().remove_participant(participant_id);
+        let removed = {
+            let mut state = self.state.write();
+            let removed = state.remove_participant(participant_id);
+            // Detach the flush task — it exits when control_tx drops.
+            drop(state.remove_flush_handle(participant_id));
+            removed
+        };
 
         if !removed.last_unsubscribed.is_empty() {
             if let Some(context) = self.context.upgrade() {
