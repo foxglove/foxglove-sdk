@@ -130,7 +130,7 @@ foxglove.remote_access
 .. Enums are excluded and manually documented, since pyo3 only emulates them. (https://github.com/PyO3/pyo3/issues/2887)
 .. automodule:: foxglove.remote_access
    :members:
-   :exclude-members: Capability, RemoteAccessConnectionStatus, MessageSchema, Parameter, ParameterType, ParameterValue, Service, ServiceRequest, ServiceSchema
+   :exclude-members: Capability, RemoteAccessConnectionStatus, MessageSchema, Parameter, ParameterType, ParameterValue, Service, ServiceRequest, ServiceSchema, StatusLevel
 
 
 Enums
