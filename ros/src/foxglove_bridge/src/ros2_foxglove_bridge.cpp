@@ -853,6 +853,15 @@ void FoxgloveBridge::createOrIncrementSubscriptionLocked(ChannelId channelId, Cl
     ChannelSubscription channelSub;
     channelSub.rosSubscription = createRosSubscription(channelId, topic, datatype, qos);
     channelSub.qos = qos;
+
+    if (qos.durability() == rclcpp::DurabilityPolicy::TransientLocal) {
+      for (const auto& pub : this->get_publishers_info_by_topic(topic)) {
+        Gid gid = pub.endpoint_gid();
+        channelSub.publisherCaches[gid].maxMessages =
+          std::max(static_cast<size_t>(1), pub.qos_profile().depth());
+      }
+    }
+
     auto [it, inserted] = _subscriptions.emplace(channelId, std::move(channelSub));
     subIt = it;
 
@@ -1175,17 +1184,6 @@ void FoxgloveBridge::rosMessageHandler(ChannelId channelId,
     std::copy(rawGid.data, rawGid.data + RMW_GID_STORAGE_SIZE, gid.begin());
 
     auto& pubCache = subIt->second.publisherCaches[gid];
-    if (pubCache.messages.empty()) {
-      // New publisher — look up its QoS depth
-      pubCache.maxMessages = 1;
-      const std::string topic(channelIt->second.topic());
-      for (const auto& pub : this->get_publishers_info_by_topic(topic)) {
-        if (pub.endpoint_gid() == gid) {
-          pubCache.maxMessages = std::max(static_cast<size_t>(1), pub.qos_profile().depth());
-          break;
-        }
-      }
-    }
     if (pubCache.messages.size() >= pubCache.maxMessages) {
       pubCache.messages.pop_front();
     }
