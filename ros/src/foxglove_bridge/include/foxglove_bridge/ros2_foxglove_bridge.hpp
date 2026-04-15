@@ -102,7 +102,6 @@ private:
     rclcpp::QoS qos{10};
     // Per-publisher message cache for transient_local topics, replayed to late subscribers.
     std::map<Gid, PublisherCache> publisherCaches;
-    bool isTransientLocal = false;
   };
   std::unordered_map<ChannelId, ChannelSubscription> _subscriptions;
 

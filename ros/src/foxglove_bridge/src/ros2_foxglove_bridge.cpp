@@ -806,7 +806,6 @@ void FoxgloveBridge::createOrIncrementSubscriptionLocked(ChannelId channelId, Cl
     ChannelSubscription channelSub;
     channelSub.rosSubscription = createRosSubscription(channelId, topic, datatype, qos);
     channelSub.qos = qos;
-    channelSub.isTransientLocal = qos.durability() == rclcpp::DurabilityPolicy::TransientLocal;
     auto [it, inserted] = _subscriptions.emplace(channelId, std::move(channelSub));
     subIt = it;
 
@@ -1122,7 +1121,8 @@ void FoxgloveBridge::rosMessageHandler(ChannelId channelId,
   // Cache messages per-publisher for transient_local subscriptions so late subscribers receive
   // them.
   auto subIt = _subscriptions.find(channelId);
-  if (subIt != _subscriptions.end() && subIt->second.isTransientLocal) {
+  if (subIt != _subscriptions.end() &&
+      subIt->second.qos.durability() == rclcpp::DurabilityPolicy::TransientLocal) {
     Gid gid;
     const auto& rawGid = messageInfo.get_rmw_message_info().publisher_gid;
     std::copy(rawGid.data, rawGid.data + RMW_GID_STORAGE_SIZE, gid.begin());
