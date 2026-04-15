@@ -776,14 +776,14 @@ Subscription FoxgloveBridge::createRosSubscription(ChannelId channelId, const st
 }
 
 void FoxgloveBridge::createOrIncrementSubscription(ChannelId channelId, ClientId clientId,
-                                                   bool isGateway, std::optional<uint64_t> sinkId) {
+                                                   bool isGateway, std::optional<SinkId> sinkId) {
   std::lock_guard<std::mutex> lock(_subscriptionsMutex);
   createOrIncrementSubscriptionLocked(channelId, clientId, isGateway, sinkId);
 }
 
 void FoxgloveBridge::createOrIncrementSubscriptionLocked(ChannelId channelId, ClientId clientId,
                                                          bool isGateway,
-                                                         std::optional<uint64_t> sinkId) {
+                                                         std::optional<SinkId> sinkId) {
   auto channelIt = _channels.find(channelId);
   if (channelIt == _channels.end()) {
     RCLCPP_ERROR(this->get_logger(), "received subscribe request for unknown channel: %lu",

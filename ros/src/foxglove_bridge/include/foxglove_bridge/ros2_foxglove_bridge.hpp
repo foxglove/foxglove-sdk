@@ -36,6 +36,7 @@ using MapOfSets = std::unordered_map<std::string, std::unordered_set<std::string
 using ServicesByType = std::unordered_map<std::string, std::string>;
 
 using ClientId = uint32_t;
+using SinkId = uint64_t;
 using ChannelId = uint64_t;
 using ChannelAndClientId = std::pair<ChannelId, ClientId>;
 struct ClientAdvertisement {
@@ -164,9 +165,9 @@ private:
                                      const std::string& datatype, const rclcpp::QoS& qos);
 
   void createOrIncrementSubscription(ChannelId channelId, ClientId clientId, bool isGateway,
-                                     std::optional<uint64_t> sinkId = std::nullopt);
+                                     std::optional<SinkId> sinkId = std::nullopt);
   void createOrIncrementSubscriptionLocked(ChannelId channelId, ClientId clientId, bool isGateway,
-                                           std::optional<uint64_t> sinkId = std::nullopt);
+                                           std::optional<SinkId> sinkId = std::nullopt);
 
   void removeOrDecrementSubscription(ChannelId channelId, ClientId clientId, bool isGateway);
   void removeOrDecrementSubscriptionLocked(ChannelId channelId, ClientId clientId, bool isGateway);
