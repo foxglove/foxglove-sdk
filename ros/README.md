@@ -30,16 +30,17 @@ make docker-test-humble   # specific distro
 
 ### Build .deb packages
 
-The workspace must already be built for the target distribution (via
-`docker-build-{dist}`). Output is written to `dist/`.
+Uses [bloom](https://wiki.ros.org/bloom) to generate Debian packaging from
+`package.xml` and builds via `fakeroot debian/rules binary`. Output is written
+to `dist/`.
 
 ```sh
-make deb                 # both packages, rolling
-make deb-humble          # both packages, specific distro
-make deb-bridge          # foxglove_bridge only, rolling
-make deb-bridge-humble   # foxglove_bridge only, specific distro
-make deb-msgs            # foxglove_msgs only, rolling
-make deb-msgs-humble     # foxglove_msgs only, specific distro
+make docker-deb                 # both packages, rolling
+make docker-deb-humble          # both packages, specific distro
+make docker-deb-bridge          # foxglove_bridge only, rolling
+make docker-deb-bridge-humble   # foxglove_bridge only, specific distro
+make docker-deb-msgs            # foxglove_msgs only, rolling
+make docker-deb-msgs-humble     # foxglove_msgs only, specific distro
 ```
 
 ## Using a pre-built C++ SDK
