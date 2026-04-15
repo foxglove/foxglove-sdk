@@ -76,7 +76,7 @@ impl GatewayHandle {
         self.connection.publish_status(status);
     }
 
-    /// Removes status messages by id from all connected participants.
+    /// Removes status messages by ID from all connected participants.
     pub fn remove_status(&self, status_ids: Vec<String>) {
         self.connection.remove_status(status_ids);
     }

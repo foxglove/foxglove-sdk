@@ -308,7 +308,7 @@ impl Default for SchemaManager {
 }
 
 impl SchemaManager {
-    /// Find the next available schema id. This method ensures no other schemas are using this id.
+    /// Find the next available schema ID. This method ensures no other schemas are using this ID.
     fn get_free_id(&mut self) -> u16 {
         loop {
             let current_id = self.next_schema_id;
@@ -322,8 +322,8 @@ impl SchemaManager {
         }
     }
 
-    /// Add a [`foxglove::Schema`] to the manager using a certain id, returning a [`LinkedSchema`].
-    /// This method will return None if the id is being used by another schema.
+    /// Add a [`foxglove::Schema`] to the manager using a certain ID, returning a [`LinkedSchema`].
+    /// This method will return None if the ID is being used by another schema.
     fn add_schema(
         &mut self,
         id: u16,

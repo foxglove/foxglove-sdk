@@ -1,4 +1,4 @@
-//! Connection graph types shared between the websocket and remote access modules.
+//! Connection graph types shared between the WebSocket and remote access modules.
 
 use std::collections::{HashMap, HashSet};
 

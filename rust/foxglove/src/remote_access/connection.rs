@@ -166,7 +166,7 @@ impl RemoteAccessConnection {
         }
     }
 
-    /// Removes status messages by id from all connected participants.
+    /// Removes status messages by ID from all connected participants.
     ///
     /// If no session is currently active (e.g. while reconnecting), this is a no-op.
     pub fn remove_status(&self, status_ids: Vec<String>) {
