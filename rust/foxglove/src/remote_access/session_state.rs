@@ -1467,4 +1467,103 @@ mod tests {
         let state = SessionState::new();
         assert!(state.get_channel_descriptor(&ChannelId::new(999)).is_none());
     }
+
+    // -----------------------------------------------------------------------
+    // QoS profile tests
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn qos_profile_defaults_to_lossy() {
+        let state = SessionState::new();
+        let qos = state.qos_profile(&ChannelId::new(42));
+        assert_eq!(qos.reliability, Reliability::Lossy);
+    }
+
+    #[test]
+    fn insert_and_retrieve_qos_profile() {
+        let mut state = SessionState::new();
+        let ch = make_channel("/config");
+        let ch_id = ch.id();
+        state.insert_channel(&ch);
+
+        let qos = QosProfile::builder()
+            .reliability(Reliability::Reliable)
+            .build();
+        state.insert_qos_profile(ch_id, qos);
+
+        assert_eq!(
+            state.qos_profile(&ch_id).reliability,
+            Reliability::Reliable
+        );
+    }
+
+    #[test]
+    fn remove_channel_cleans_up_qos_profile() {
+        let mut state = SessionState::new();
+        let ch = make_channel("/config");
+        let ch_id = ch.id();
+        state.insert_channel(&ch);
+        state.insert_qos_profile(
+            ch_id,
+            QosProfile::builder()
+                .reliability(Reliability::Reliable)
+                .build(),
+        );
+
+        state.remove_channel(ch_id);
+
+        // Should fall back to default after removal.
+        assert_eq!(state.qos_profile(&ch_id).reliability, Reliability::Lossy);
+    }
+
+    // -----------------------------------------------------------------------
+    // data_subscriber_participants tests
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn data_subscriber_participants_empty_when_no_subscribers() {
+        let state = SessionState::new();
+        assert!(state
+            .data_subscriber_participants(&ChannelId::new(1))
+            .is_empty());
+    }
+
+    #[test]
+    fn data_subscriber_participants_returns_data_only_subscribers() {
+        let mut state = SessionState::new();
+        let (id_a, pa) = make_participant("alice");
+        let (id_b, pb) = make_participant("bob");
+        state.insert_participant(id_a.clone(), pa.clone());
+        state.insert_participant(id_b.clone(), pb.clone());
+
+        let ch = make_channel("/data");
+        let ch_id = ch.id();
+        state.insert_channel(&ch);
+
+        // Both subscribe (data). Bob also subscribes to video.
+        let _ = state.subscribe(&pa, &[ch_id]);
+        let _ = state.subscribe(&pb, &[ch_id]);
+        let _ = state.subscribe_video(&pb, &[ch_id]);
+
+        let participants = state.data_subscriber_participants(&ch_id);
+        // Only alice should be returned — bob is a video subscriber.
+        assert_eq!(participants.len(), 1);
+        assert_eq!(participants[0].participant_id(), &id_a);
+    }
+
+    #[test]
+    fn data_subscriber_participants_empty_when_all_are_video() {
+        let mut state = SessionState::new();
+        let (id, p) = make_participant("alice");
+        state.insert_participant(id.clone(), p.clone());
+
+        let ch = make_channel("/cam");
+        let ch_id = ch.id();
+        state.insert_channel(&ch);
+
+        let _ = state.subscribe(&p, &[ch_id]);
+        let _ = state.subscribe_video(&p, &[ch_id]);
+
+        assert!(state.data_subscriber_participants(&ch_id).is_empty());
+    }
 }
