@@ -13,13 +13,13 @@ use parking_lot::RwLock;
 use semver::Version;
 use smallvec::SmallVec;
 use tokio::io::AsyncReadExt;
+use tokio::runtime::Handle;
 use tokio_util::{io::StreamReader, sync::CancellationToken};
 use tracing::{debug, error, info, trace, warn};
 
 use crate::protocol::v2::DecodeError;
 use crate::protocol::v2::parameter::Parameter;
 use crate::protocol::v2::server::ParameterValues;
-use crate::remote_access::participant::ChannelWriter;
 use crate::remote_common::ClientId;
 use crate::remote_common::connection_graph::ConnectionGraph;
 use crate::remote_common::{
@@ -34,9 +34,8 @@ use crate::{
         BinaryMessage, JsonMessage,
         client::{self, ClientMessage},
         server::{
-            AdvertiseServices, MessageData as ServerMessageData, Pong, RemoveStatus, ServerInfo,
-            ServiceCallFailure, Status, Unadvertise, UnadvertiseServices, advertise,
-            advertise_services,
+            AdvertiseServices, Pong, RemoveStatus, ServerInfo, ServiceCallFailure, Status,
+            Unadvertise, UnadvertiseServices, advertise, advertise_services,
         },
     },
     remote_access::{
@@ -46,6 +45,8 @@ use crate::{
     },
 };
 
+mod data_track;
+pub(crate) use data_track::DataTrack;
 mod video_track;
 pub(crate) use video_track::{
     VideoInputSchema, VideoMetadata, VideoPublisher, get_video_input_schema,
@@ -59,27 +60,10 @@ pub(crate) struct SessionStats {
 }
 
 const CONTROL_CHANNEL_TOPIC: &str = "control";
-const CHANNEL_TOPIC_PREFIX: &str = "device-ch-";
 const CLIENT_CHANNEL_TOPIC_PREFIX: &str = "client-ch-";
 const MESSAGE_FRAME_SIZE: usize = 5; // 1 byte opcode + u32 LE length
 const MAX_MESSAGE_SIZE: usize = 16 * 1024 * 1024; // 16 MiB
-const MAX_SEND_RETRIES: usize = 3;
 pub(crate) const DEFAULT_PENDING_CLIENT_READER_TIMEOUT: Duration = Duration::from_secs(15);
-
-/// A data plane message queued for delivery to subscribed participants.
-struct ChannelMessage {
-    channel_id: ChannelId,
-    data: Bytes,
-}
-
-impl ChannelMessage {
-    fn binary<'a>(channel_id: ChannelId, message: &impl BinaryMessage<'a>) -> Self {
-        Self {
-            channel_id,
-            data: encode_binary_message(message),
-        }
-    }
-}
 
 /// A control plane message queued for delivery to a specific participant.
 pub(super) struct ControlPlaneMessage {
@@ -162,6 +146,23 @@ fn build_advertise_services_msg(services: &[Arc<Service>]) -> Option<AdvertiseSe
     Some(msg)
 }
 
+/// Enqueue a control plane message for each of the given participants.
+fn send_control_to_all(
+    tx: &flume::Sender<ControlPlaneMessage>,
+    participants: &[Arc<Participant>],
+    data: Bytes,
+) {
+    for participant in participants {
+        let msg = ControlPlaneMessage {
+            participant: participant.clone(),
+            data: data.clone(),
+        };
+        if let Err(e) = tx.send(msg) {
+            warn!("control plane queue disconnected, dropping message: {e}");
+        }
+    }
+}
+
 /// RemoteAccessSession tracks a connected LiveKit session (the Room)
 /// and any state that is specific to that session.
 /// We discard this state if we close or lose the connection.
@@ -179,9 +180,8 @@ pub(crate) struct RemoteAccessSession {
     listener: Option<Arc<dyn Listener>>,
     capabilities: Vec<Capability>,
     fetch_asset_handler: Option<Arc<dyn AssetHandler<Client>>>,
+    runtime: Handle,
     cancellation_token: CancellationToken,
-    data_plane_tx: flume::Sender<ChannelMessage>,
-    data_plane_rx: flume::Receiver<ChannelMessage>,
     control_plane_tx: flume::Sender<ControlPlaneMessage>,
     control_plane_rx: flume::Receiver<ControlPlaneMessage>,
     services: Arc<parking_lot::RwLock<ServiceMap>>,
@@ -235,11 +235,9 @@ impl Sink for RemoteAccessSession {
             publisher.send(Bytes::copy_from_slice(msg), metadata.log_time);
         }
 
-        // Send to data subscribers.
-        if state.has_data_subscribers(&channel_id) {
-            drop(state);
-            let message = ServerMessageData::new(u64::from(channel_id), metadata.log_time, msg);
-            self.send_data_lossy(ChannelMessage::binary(channel_id, &message));
+        // Send to data subscribers via the data track.
+        if let Some(track) = state.get_subscribed_data_track(&channel_id) {
+            track.log(channel_id, msg, metadata);
         }
 
         Ok(())
@@ -269,20 +267,26 @@ impl Sink for RemoteAccessSession {
         // Track advertised channels and detect video-capable ones.
         let advertised_ids: std::collections::HashSet<u64> =
             advertise_msg.channels.iter().map(|ch| ch.id).collect();
-        {
+        let advertised_channel_ids: SmallVec<[ChannelId; 4]> = {
             let mut state = self.state.write();
+            let mut ids = SmallVec::new();
             for &ch in &filtered {
                 if advertised_ids.contains(&u64::from(ch.id())) {
                     state.insert_channel(ch);
+                    ids.push(ch.id());
                     if let Some(input_schema) = get_video_input_schema(ch) {
                         state.insert_video_schema(ch.id(), input_schema);
                     }
                 }
             }
             state.add_metadata_to_advertisement(&mut advertise_msg);
-        }
+            ids
+        };
 
         self.broadcast_control(encode_json_message(&advertise_msg));
+
+        // Eagerly publish a data track for each newly advertised channel.
+        self.publish_data_tracks(&advertised_channel_ids);
 
         // Clients subscribe asynchronously.
         None
@@ -300,6 +304,7 @@ impl Sink for RemoteAccessSession {
         }
 
         self.teardown_video_track(channel_id);
+        self.teardown_data_track(channel_id);
         self.state.write().remove_video_schema(&channel_id);
 
         let unadvertise = Unadvertise::new([u64::from(channel_id)]);
@@ -327,6 +332,7 @@ pub(crate) struct SessionParams {
     pub listener: Option<Arc<dyn Listener>>,
     pub capabilities: Vec<Capability>,
     pub supported_encodings: IndexSet<String>,
+    pub runtime: Handle,
     pub cancellation_token: CancellationToken,
     pub message_backlog_size: usize,
     pub services: Arc<parking_lot::RwLock<ServiceMap>>,
@@ -339,7 +345,6 @@ pub(crate) struct SessionParams {
 
 impl RemoteAccessSession {
     pub(crate) fn new(params: SessionParams) -> Self {
-        let (data_plane_tx, data_plane_rx) = flume::bounded(params.message_backlog_size);
         let (control_plane_tx, control_plane_rx) = flume::bounded(params.message_backlog_size);
         let (video_metadata_tx, video_metadata_rx) = tokio::sync::watch::channel(());
         let (participant_reset_tx, participant_reset_rx) = tokio::sync::mpsc::unbounded_channel();
@@ -353,9 +358,8 @@ impl RemoteAccessSession {
             listener: params.listener,
             capabilities: params.capabilities,
             fetch_asset_handler: params.fetch_asset_handler,
+            runtime: params.runtime,
             cancellation_token: params.cancellation_token,
-            data_plane_tx,
-            data_plane_rx,
             control_plane_tx,
             control_plane_rx,
             subscription_lock: parking_lot::Mutex::new(()),
@@ -400,35 +404,6 @@ impl RemoteAccessSession {
         }
     }
 
-    /// Enqueue a data plane message, dropping old messages if the queue is full.
-    fn send_data_lossy(&self, mut msg: ChannelMessage) {
-        static THROTTLER: parking_lot::Mutex<crate::throttler::Throttler> =
-            parking_lot::Mutex::new(crate::throttler::Throttler::new(Duration::from_secs(30)));
-        let mut dropped = 0;
-        loop {
-            match self.data_plane_tx.try_send(msg) {
-                Ok(_) => {
-                    if dropped > 0 && THROTTLER.lock().try_acquire() {
-                        info!("data plane queue full, dropped {dropped} message(s)");
-                    }
-                    return;
-                }
-                Err(flume::TrySendError::Disconnected(_)) => return,
-                Err(flume::TrySendError::Full(rejected)) => {
-                    if dropped >= MAX_SEND_RETRIES {
-                        if THROTTLER.lock().try_acquire() {
-                            info!("data plane queue full, dropped message");
-                        }
-                        return;
-                    }
-                    msg = rejected;
-                    let _ = self.data_plane_rx.try_recv();
-                    dropped += 1;
-                }
-            }
-        }
-    }
-
     /// Enqueue a control plane message for a specific participant.
     /// Blocks the thread if the queue is full.
     fn send_control(&self, participant: Arc<Participant>, data: Bytes) {
@@ -455,26 +430,15 @@ impl RemoteAccessSession {
     /// Enqueue a control plane message for all currently connected participants.
     fn broadcast_control(&self, data: Bytes) {
         let participants = self.state.read().collect_participants();
-        for participant in participants {
-            self.send_control(participant, data.clone());
-        }
+        send_control_to_all(&self.control_plane_tx, &participants, data);
     }
 
-    /// Reads from the data plane and control plane queues and sends messages to participants.
+    /// Reads from the control plane queue and sends messages to participants.
     ///
     /// Control plane messages are sent to the targeted participant via its per-participant writer.
-    /// Data plane messages are written to a per-channel `ByteStreamWriter` addressed to the
-    /// channel's current subscriber set. The writer is created (or replaced) lazily: if the
-    /// locally cached writer's subscription version differs from the current version in state,
-    /// the old writer is dropped and a new one is opened for the up-to-date subscriber set.
     pub(crate) async fn run_sender(session: Arc<Self>) {
-        let mut channel_writers: HashMap<ChannelId, ChannelWriter> = HashMap::new();
         let mut video_metadata: HashMap<ChannelId, VideoMetadata> = HashMap::new();
         let mut video_metadata_rx = session.video_metadata_rx.clone();
-        // Participants whose control stream has broken. Messages for a poisoned
-        // `ClientId` are dropped without attempting a write. A fresh `ClientId` is
-        // assigned by `add_participant` after reset, so messages for the new
-        // participant pass through normally.
         let mut poisoned_participants: HashSet<ClientId> = HashSet::new();
         loop {
             tokio::select! {
@@ -497,45 +461,7 @@ impl RemoteAccessSession {
                     }
                 }
                 Ok(()) = video_metadata_rx.changed() => {
-                    session
-                        .republish_video_metadata(&mut video_metadata);
-                }
-                msg = session.data_plane_rx.recv_async() => {
-                    let Ok(msg) = msg else { break };
-                    process_data_message(
-                        &session.state,
-                        &msg,
-                        &mut channel_writers,
-                        |channel_id, subscribers, version| {
-                            let session = Arc::clone(&session);
-                            async move {
-                                let topic = format!(
-                                    "{CHANNEL_TOPIC_PREFIX}{}",
-                                    u64::from(channel_id),
-                                );
-                                match session
-                                    .room
-                                    .local_participant()
-                                    .stream_bytes(StreamByteOptions {
-                                        topic,
-                                        destination_identities: subscribers,
-                                        ..StreamByteOptions::default()
-                                    })
-                                    .await
-                                {
-                                    Ok(s) => Some(ChannelWriter::new(s, version)),
-                                    Err(e) => {
-                                        error!(
-                                            "failed to open byte stream for channel \
-                                             {channel_id:?}: {e:?}",
-                                        );
-                                        None
-                                    }
-                                }
-                            }
-                        },
-                    )
-                    .await;
+                    session.republish_video_metadata(&mut video_metadata);
                 }
             }
         }
@@ -861,8 +787,6 @@ impl RemoteAccessSession {
 
         let mut state = self.state.write();
         let subscribe_result = state.subscribe(participant, &channel_ids);
-        state.subscribe_data(participant, &data_channel_ids);
-        state.unsubscribe_data(participant, &video_channel_ids);
         let first_video_subscribed = state.subscribe_video(participant, &video_channel_ids);
         let last_video_unsubscribed = state.unsubscribe_video(participant, &data_channel_ids);
         drop(state);
@@ -907,7 +831,6 @@ impl RemoteAccessSession {
 
         let mut state = self.state.write();
         let unsubscribe_result = state.unsubscribe(participant, &channel_ids);
-        state.unsubscribe_data(participant, &channel_ids);
         let last_video_unsubscribed = state.unsubscribe_video(participant, &channel_ids);
         drop(state);
 
@@ -2257,82 +2180,27 @@ impl RemoteAccessSession {
             });
         }
     }
-}
 
-/// Returns a reference to the locally cached `ChannelWriter` for `channel_id`,
-/// creating or replacing it if the subscription version has changed.
-///
-/// `open_stream` is called to create a new writer when the cached version is stale
-/// or no writer exists yet. It receives `(channel_id, subscribers, version)` and
-/// returns `Some(writer)` on success or `None` on failure.
-///
-/// Returns `None` if the channel has no subscribers or if stream creation fails.
-async fn get_or_replace_channel_writer<'a, F, Fut>(
-    state: &RwLock<SessionState>,
-    channel_id: &ChannelId,
-    channel_writers: &'a mut HashMap<ChannelId, ChannelWriter>,
-    open_stream: F,
-) -> Option<&'a ChannelWriter>
-where
-    F: FnOnce(ChannelId, Vec<ParticipantIdentity>, u32) -> Fut,
-    Fut: std::future::Future<Output = Option<ChannelWriter>>,
-{
-    // Read the current subscription version (fast read-lock, no await).
-    let (current_version, subscribers) = {
-        let state = state.read();
-        // Only consider data subscribers.
-        let Some(sub) = state.get_data_subscription(channel_id) else {
-            channel_writers.remove(channel_id);
-            return None;
-        };
-        debug_assert!(!sub.subscribers().is_empty());
-        let cached_version = channel_writers.get(channel_id).map(|w| w.version());
-        if cached_version == Some(sub.version()) {
-            // Fast path: writer is up to date.
-            return channel_writers.get(channel_id);
-        }
-        (sub.version(), sub.subscribers().to_vec())
-    };
-
-    // Subscriber set changed (or no writer yet): open a new byte stream.
-    // The old writer is implicitly closed when it is replaced in the map.
-    match open_stream(*channel_id, subscribers, current_version).await {
-        Some(writer) => {
-            channel_writers.insert(*channel_id, writer);
-            channel_writers.get(channel_id)
-        }
-        None => {
-            channel_writers.remove(channel_id);
-            None
+    /// Eagerly publish data tracks for newly advertised channels.
+    fn publish_data_tracks(&self, topics: &[ChannelId]) {
+        for channel_id in topics {
+            let data_track = DataTrack::publish(
+                &self.runtime,
+                self.room.local_participant(),
+                *channel_id,
+                self.cancellation_token.clone(),
+            );
+            self.state
+                .write()
+                .insert_data_track(*channel_id, data_track);
         }
     }
-}
 
-/// Processes a single data plane message: looks up (or creates) the channel writer
-/// and writes the message data through it.
-///
-/// On write failure the writer is removed from the cache so the next message
-/// triggers stream re-creation.
-async fn process_data_message<F, Fut>(
-    state: &RwLock<SessionState>,
-    msg: &ChannelMessage,
-    channel_writers: &mut HashMap<ChannelId, ChannelWriter>,
-    open_stream: F,
-) where
-    F: FnOnce(ChannelId, Vec<ParticipantIdentity>, u32) -> Fut,
-    Fut: std::future::Future<Output = Option<ChannelWriter>>,
-{
-    let writer =
-        get_or_replace_channel_writer(state, &msg.channel_id, channel_writers, open_stream).await;
-    let Some(writer) = writer else {
-        return;
-    };
-    if let Err(e) = writer.write(&msg.data).await {
-        error!(
-            "failed to send data for channel {:?}: {e:?}",
-            msg.channel_id
-        );
-        channel_writers.remove(&msg.channel_id);
+    /// Tear down the data track for a channel.
+    fn teardown_data_track(&self, channel_id: ChannelId) {
+        if let Some(mut data_track) = self.state.write().remove_data_track(&channel_id) {
+            self.runtime.spawn(async move { data_track.close().await });
+        }
     }
 }
 
@@ -2340,26 +2208,10 @@ async fn process_data_message<F, Fut>(
 mod tests {
     use super::*;
     use crate::protocol::v2::server::FetchAssetResponse;
-    use crate::remote_access::participant::{
-        ParticipantWriter, TestByteStreamWriter, TestChannelWriter,
-    };
+    use crate::remote_access::participant::{ParticipantWriter, TestByteStreamWriter};
     use crate::remote_common::fetch_asset::{
         AssetHandler, AsyncAssetHandlerFn, BlockingAssetHandlerFn,
     };
-
-    fn make_participant(name: &str) -> (ParticipantIdentity, Arc<Participant>) {
-        let identity = ParticipantIdentity(name.to_string());
-        let writer = Arc::new(TestByteStreamWriter::default());
-        let version = protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone();
-        let (tx, _rx) = flume::bounded(16);
-        let participant = Arc::new(Participant::new(
-            identity.clone(),
-            version,
-            ParticipantWriter::Test(writer),
-            tx,
-        ));
-        (identity, participant)
-    }
 
     fn make_participant_with_rx(
         name: &str,
@@ -2383,224 +2235,6 @@ mod tests {
             participant.participant_id().clone(),
             participant,
         )
-    }
-
-    /// A factory that produces a `ChannelWriter` backed by the given test writer.
-    fn test_factory(
-        writer: Arc<TestChannelWriter>,
-    ) -> impl FnOnce(ChannelId, Vec<ParticipantIdentity>, u32) -> std::future::Ready<Option<ChannelWriter>>
-    {
-        move |_channel_id, _subscribers, version| {
-            std::future::ready(Some(ChannelWriter::test(writer, version)))
-        }
-    }
-
-    /// A factory that always fails to open a stream.
-    fn failing_factory()
-    -> impl FnOnce(ChannelId, Vec<ParticipantIdentity>, u32) -> std::future::Ready<Option<ChannelWriter>>
-    {
-        |_channel_id, _subscribers, _version| std::future::ready(None)
-    }
-
-    #[tokio::test]
-    async fn data_message_writes_to_channel() {
-        let state = RwLock::new(SessionState::new());
-        let (_id, p) = make_participant("alice");
-        let ch = ChannelId::new(1);
-        state.write().subscribe_data(&p, &[ch]);
-
-        let test_writer = Arc::new(TestChannelWriter::default());
-        let mut writers = HashMap::new();
-
-        let msg = ChannelMessage {
-            channel_id: ch,
-            data: Bytes::from_static(b"hello"),
-        };
-        process_data_message(
-            &state,
-            &msg,
-            &mut writers,
-            test_factory(test_writer.clone()),
-        )
-        .await;
-
-        assert_eq!(test_writer.writes(), vec![Bytes::from_static(b"hello")]);
-        assert!(writers.contains_key(&ch));
-    }
-
-    #[tokio::test]
-    async fn cached_writer_reused_on_version_match() {
-        let state = RwLock::new(SessionState::new());
-        let (_id, p) = make_participant("alice");
-        let ch = ChannelId::new(1);
-        state.write().subscribe_data(&p, &[ch]);
-
-        let test_writer = Arc::new(TestChannelWriter::default());
-        let mut writers = HashMap::new();
-
-        let msg1 = ChannelMessage {
-            channel_id: ch,
-            data: Bytes::from_static(b"msg1"),
-        };
-        process_data_message(
-            &state,
-            &msg1,
-            &mut writers,
-            test_factory(test_writer.clone()),
-        )
-        .await;
-
-        // Second message should reuse the cached writer (factory not called).
-        let other_writer = Arc::new(TestChannelWriter::default());
-        let msg2 = ChannelMessage {
-            channel_id: ch,
-            data: Bytes::from_static(b"msg2"),
-        };
-        process_data_message(
-            &state,
-            &msg2,
-            &mut writers,
-            test_factory(other_writer.clone()),
-        )
-        .await;
-
-        assert_eq!(
-            test_writer.writes(),
-            vec![Bytes::from_static(b"msg1"), Bytes::from_static(b"msg2")]
-        );
-        assert!(other_writer.writes().is_empty());
-    }
-
-    #[tokio::test]
-    async fn writer_replaced_on_subscriber_change() {
-        let state = RwLock::new(SessionState::new());
-        let (_id_a, pa) = make_participant("alice");
-        let (_id_b, pb) = make_participant("bob");
-        let ch = ChannelId::new(1);
-        state.write().subscribe_data(&pa, &[ch]);
-
-        let writer1 = Arc::new(TestChannelWriter::default());
-        let mut writers = HashMap::new();
-
-        let msg1 = ChannelMessage {
-            channel_id: ch,
-            data: Bytes::from_static(b"before"),
-        };
-        process_data_message(&state, &msg1, &mut writers, test_factory(writer1.clone())).await;
-
-        // Adding a subscriber bumps the version, so the next message creates a new writer.
-        state.write().subscribe_data(&pb, &[ch]);
-
-        let writer2 = Arc::new(TestChannelWriter::default());
-        let msg2 = ChannelMessage {
-            channel_id: ch,
-            data: Bytes::from_static(b"after"),
-        };
-        process_data_message(&state, &msg2, &mut writers, test_factory(writer2.clone())).await;
-
-        assert_eq!(writer1.writes(), vec![Bytes::from_static(b"before")]);
-        assert_eq!(writer2.writes(), vec![Bytes::from_static(b"after")]);
-    }
-
-    #[tokio::test]
-    async fn no_subscribers_skips_write() {
-        let state = RwLock::new(SessionState::new());
-        let mut writers = HashMap::new();
-        let ch = ChannelId::new(1);
-
-        let factory_called = Arc::new(std::sync::atomic::AtomicBool::new(false));
-        let fc = factory_called.clone();
-
-        let msg = ChannelMessage {
-            channel_id: ch,
-            data: Bytes::from_static(b"nobody"),
-        };
-        process_data_message(&state, &msg, &mut writers, move |_id, _subs, _v| {
-            fc.store(true, std::sync::atomic::Ordering::Relaxed);
-            std::future::ready(None)
-        })
-        .await;
-
-        assert!(!factory_called.load(std::sync::atomic::Ordering::Relaxed));
-        assert!(!writers.contains_key(&ch));
-    }
-
-    #[tokio::test]
-    async fn write_failure_removes_writer_from_cache() {
-        let state = RwLock::new(SessionState::new());
-        let (_id, p) = make_participant("alice");
-        let ch = ChannelId::new(1);
-        state.write().subscribe_data(&p, &[ch]);
-
-        let failing = Arc::new(TestChannelWriter::new_failing());
-        let mut writers = HashMap::new();
-
-        let msg = ChannelMessage {
-            channel_id: ch,
-            data: Bytes::from_static(b"will fail"),
-        };
-        process_data_message(&state, &msg, &mut writers, test_factory(failing)).await;
-
-        assert!(
-            !writers.contains_key(&ch),
-            "writer should be evicted from cache after write failure"
-        );
-    }
-
-    #[tokio::test]
-    async fn writer_replaced_after_unsubscribe_resubscribe() {
-        let state = RwLock::new(SessionState::new());
-        let (_id, p) = make_participant("alice");
-        let ch = ChannelId::new(1);
-        state.write().subscribe_data(&p, &[ch]);
-
-        let writer1 = Arc::new(TestChannelWriter::default());
-        let mut writers = HashMap::new();
-
-        // First message creates a writer.
-        let msg1 = ChannelMessage {
-            channel_id: ch,
-            data: Bytes::from_static(b"before"),
-        };
-        process_data_message(&state, &msg1, &mut writers, test_factory(writer1.clone())).await;
-        assert_eq!(writer1.writes(), vec![Bytes::from_static(b"before")]);
-
-        // Unsubscribe and resubscribe — the version counter is preserved,
-        // so the new version differs from the cached writer's version.
-        state.write().unsubscribe_data(&p, &[ch]);
-        state.write().subscribe_data(&p, &[ch]);
-
-        // Second message should create a NEW writer (not reuse the old one).
-        let writer2 = Arc::new(TestChannelWriter::default());
-        let msg2 = ChannelMessage {
-            channel_id: ch,
-            data: Bytes::from_static(b"after"),
-        };
-        process_data_message(&state, &msg2, &mut writers, test_factory(writer2.clone())).await;
-
-        assert_eq!(writer1.writes(), vec![Bytes::from_static(b"before")]);
-        assert_eq!(writer2.writes(), vec![Bytes::from_static(b"after")]);
-    }
-
-    #[tokio::test]
-    async fn stream_open_failure_does_not_cache_writer() {
-        let state = RwLock::new(SessionState::new());
-        let (_id, p) = make_participant("alice");
-        let ch = ChannelId::new(1);
-        state.write().subscribe_data(&p, &[ch]);
-
-        let mut writers = HashMap::new();
-
-        let msg = ChannelMessage {
-            channel_id: ch,
-            data: Bytes::from_static(b"no stream"),
-        };
-        process_data_message(&state, &msg, &mut writers, failing_factory()).await;
-
-        assert!(
-            !writers.contains_key(&ch),
-            "no writer should be cached when stream creation fails"
-        );
     }
 
     // ---- fetch asset tests ----

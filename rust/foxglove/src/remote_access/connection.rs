@@ -298,6 +298,7 @@ impl RemoteAccessConnection {
                         listener: self.listener.clone(),
                         capabilities: self.capabilities.clone(),
                         supported_encodings: self.supported_encodings.clone().unwrap_or_default(),
+                        runtime: self.runtime.clone(),
                         cancellation_token: self.cancellation_token.clone(),
                         message_backlog_size: self
                             .message_backlog_size
