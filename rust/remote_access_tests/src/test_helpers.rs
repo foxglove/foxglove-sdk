@@ -4,6 +4,7 @@
 //! managing test gateway instances, and common utilities. Used across test suites
 //! such as `livekit_test` and `netem_test`.
 
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -117,13 +118,13 @@ impl FrameReader {
 // converts them to MessageData.
 // ---------------------------------------------------------------------------
 
-const DATA_TRACK_FRAME_HEADER_SIZE: usize = 5; // 1 byte flags + u32 LE sequence
+const DATA_TRACK_FRAME_HEADER_SIZE: usize = 8; // u16 LE flags + u16 LE data_offset + u32 LE sequence
 
 /// Reads framed data track frames and converts them to [`ServerMessageData`].
 ///
-/// Each frame payload contains a 5-byte header (1 byte flags + u32 LE sequence)
-/// followed by the raw message data. The channel identity is determined by the
-/// data track name (topic), not by the frame content.
+/// Each frame payload contains an 8-byte header (u16 LE flags, u16 LE data_offset,
+/// u32 LE sequence) followed by the raw message data. The channel identity is
+/// determined by the data track name (topic), not by the frame content.
 pub struct DeviceChannelReader {
     stream: DataTrackStream,
 }
@@ -170,9 +171,8 @@ pub struct ViewerConnection {
     /// Buffered `DataTrackPublished` events that were received while processing
     /// other room events. Checked before waiting on the events channel.
     pending_data_tracks: Vec<RemoteDataTrack>,
-    /// Stored device channel data track reader, reused across calls to
-    /// [`expect_new_data_track_and_message_data`].
-    device_channel_reader: Option<DeviceChannelReader>,
+    /// Per-channel device data track readers, keyed by channel ID.
+    device_channel_readers: HashMap<u64, DeviceChannelReader>,
 }
 
 impl ViewerConnection {
@@ -207,7 +207,7 @@ impl ViewerConnection {
             frame_reader: FrameReader::new(reader),
             control_writer: Mutex::new(None),
             pending_data_tracks: Vec::new(),
-            device_channel_reader: None,
+            device_channel_readers: HashMap::new(),
         })
     }
 
@@ -272,7 +272,7 @@ impl ViewerConnection {
                     frame_reader: FrameReader::new(reader),
                     control_writer: Mutex::new(None),
                     pending_data_tracks: buffered_data_tracks,
-                    device_channel_reader: None,
+                    device_channel_readers: HashMap::new(),
                 });
             }
 
@@ -613,32 +613,32 @@ impl ViewerConnection {
         }
     }
 
-    /// Ensures a device channel data track reader is stored internally.
+    /// Ensures a device channel data track reader exists for `channel_id`.
     ///
-    /// If one already exists, this is a no-op. Otherwise, waits for a
-    /// `DataTrackPublished` event whose track name matches `data-ch-{channel_id}`
-    /// and subscribes.
+    /// If one already exists for this channel, this is a no-op. Otherwise,
+    /// waits for a `DataTrackPublished` event whose track name matches
+    /// `data-ch-{channel_id}` and subscribes.
     pub async fn ensure_device_data_track(&mut self, channel_id: u64) -> Result<()> {
-        if self.device_channel_reader.is_some() {
+        if self.device_channel_readers.contains_key(&channel_id) {
             return Ok(());
         }
         let reader = self.expect_device_channel_data_track(channel_id).await?;
-        self.device_channel_reader = Some(reader);
+        self.device_channel_readers.insert(channel_id, reader);
         Ok(())
     }
 
-    /// Reads the next MessageData from the device channel data track.
+    /// Reads the next MessageData from the device channel data track for `channel_id`.
     ///
-    /// If no data track reader is stored yet, waits for a `DataTrackPublished`
-    /// event for `channel_id` and subscribes first. Subsequent calls reuse the
-    /// same reader.
+    /// If no data track reader is stored yet for this channel, waits for a
+    /// `DataTrackPublished` event for `channel_id` and subscribes first.
+    /// Subsequent calls reuse the same reader.
     pub async fn expect_new_data_track_and_message_data(
         &mut self,
         channel_id: u64,
     ) -> Result<ServerMessageData<'static>> {
         self.ensure_device_data_track(channel_id).await?;
-        self.device_channel_reader
-            .as_mut()
+        self.device_channel_readers
+            .get_mut(&channel_id)
             .unwrap()
             .next_message_data()
             .await

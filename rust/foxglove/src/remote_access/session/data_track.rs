@@ -10,7 +10,7 @@ use tracing::{debug, error};
 
 use crate::{ChannelId, Metadata};
 
-const FRAME_HEADER_SIZE: usize = 5; // 1 byte flags + u32 LE sequence
+const FRAME_HEADER_SIZE: usize = 8; // u16 LE flags + u16 LE data_offset + u32 LE sequence
 
 /// Manages the lifecycle of a single published data track.
 pub(crate) struct DataTrack {
@@ -96,11 +96,15 @@ impl DataTrack {
     /// Drops with a throttled debug log if the track is not ready or full.
     pub fn log(&self, channel_id: ChannelId, msg: &[u8], metadata: &Metadata) {
         let Some(track) = self.track.get() else {
+            if self.drop_throttler.lock().try_acquire() {
+                debug!("data track not ready, dropping message for channel {channel_id:?}");
+            }
             return;
         };
         let seq = self.sequence.fetch_add(1, Ordering::Relaxed);
         let mut payload = Vec::with_capacity(FRAME_HEADER_SIZE + msg.len());
-        payload.push(0u8); // flags
+        payload.extend_from_slice(&0u16.to_le_bytes()); // flags
+        payload.extend_from_slice(&(FRAME_HEADER_SIZE as u16).to_le_bytes()); // data_offset
         payload.extend_from_slice(&seq.to_le_bytes());
         payload.extend_from_slice(msg);
         let frame = DataTrackFrame::new(payload).with_user_timestamp(metadata.log_time);
