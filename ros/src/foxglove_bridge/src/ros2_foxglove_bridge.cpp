@@ -390,7 +390,7 @@ void FoxgloveBridge::rosgraphPollThread() {
         const auto topicNamesAndTypes = get_topic_names_and_types();
         updateAdvertisedTopics(topicNamesAndTypes);
         updateAdvertisedServices();
-        if (_subscribeGraphUpdates) {
+        if (_graphSubscriptionCount > 0) {
           updateConnectionGraph(topicNamesAndTypes);
         }
         // Graph changes tend to come in batches, so wait a bit before checking again
@@ -771,10 +771,13 @@ void FoxgloveBridge::updateConnectionGraph(
 
 void FoxgloveBridge::subscribeConnectionGraph(bool subscribe) {
   RCLCPP_INFO(this->get_logger(), "received connection graph subscribe request");
-  if ((_subscribeGraphUpdates = subscribe)) {
+  if (subscribe) {
+    ++_graphSubscriptionCount;
     // TODO: This causes a deadlock in the SDK implementation
     // updateConnectionGraph(get_topic_names_and_types());
-  };
+  } else if (_graphSubscriptionCount > 0) {
+    --_graphSubscriptionCount;
+  }
 }
 
 void FoxgloveBridge::subscribe(ChannelId channelId, const foxglove::ClientMetadata& client) {

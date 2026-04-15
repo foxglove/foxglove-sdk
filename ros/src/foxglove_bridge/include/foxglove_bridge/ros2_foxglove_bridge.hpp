@@ -134,7 +134,7 @@ private:
   size_t _maxQosDepth = DEFAULT_MAX_QOS_DEPTH;
   std::shared_ptr<rclcpp::Subscription<rosgraph_msgs::msg::Clock>> _clockSubscription;
   bool _useSimTime = false;
-  std::atomic<bool> _subscribeGraphUpdates = false;
+  std::atomic<int> _graphSubscriptionCount = 0;
   bool _includeHidden = false;
   bool _disableLoanMessage = true;
   std::unordered_map<std::string, std::shared_ptr<RosMsgParser::Parser>> _jsonParsers;
