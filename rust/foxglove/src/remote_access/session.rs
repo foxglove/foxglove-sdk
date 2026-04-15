@@ -248,7 +248,7 @@ impl Sink for RemoteAccessSession {
                     self.send_control(participant, encoded.clone());
                 }
             } else if let Some(track) = state.get_subscribed_data_track(&channel_id) {
-                // Volatile channels: send via the eagerly-published data track.
+                // Lossy channels: send via the eagerly-published data track.
                 track.log(channel_id, msg, metadata);
             }
         }

@@ -2200,7 +2200,7 @@ async fn livekit_reliable_channel_delivers_via_control_plane() -> Result<()> {
 }
 
 /// Test that the QoS classifier can classify some channels as Reliable and others
-/// as Volatile based on the channel topic.
+/// as Lossy based on the channel topic.
 #[traced_test]
 #[ignore]
 #[tokio::test]
@@ -2212,11 +2212,11 @@ async fn livekit_qos_classifier_per_channel() -> Result<()> {
         .message_encoding("json")
         .build_raw()
         .context("create reliable channel")?;
-    let volatile_channel = ctx
+    let lossy_channel = ctx
         .channel_builder("/data")
         .message_encoding("json")
         .build_raw()
-        .context("create volatile channel")?;
+        .context("create lossy channel")?;
 
     let gw = TestGateway::start_with_options(
         &ctx,
@@ -2244,11 +2244,11 @@ async fn livekit_qos_classifier_per_channel() -> Result<()> {
         .iter()
         .find(|ch| ch.topic == "/config")
         .expect("reliable channel advertised");
-    let volatile_ch = advertise
+    let lossy_ch = advertise
         .channels
         .iter()
         .find(|ch| ch.topic == "/data")
-        .expect("volatile channel advertised");
+        .expect("lossy channel advertised");
 
     assert_eq!(
         reliable_ch.metadata.get("foxglove.reliable"),
@@ -2256,21 +2256,21 @@ async fn livekit_qos_classifier_per_channel() -> Result<()> {
         "reliable channel should have foxglove.reliable metadata"
     );
     assert_eq!(
-        volatile_ch.metadata.get("foxglove.reliable"),
+        lossy_ch.metadata.get("foxglove.reliable"),
         None,
-        "volatile channel should not have foxglove.reliable metadata"
+        "lossy channel should not have foxglove.reliable metadata"
     );
 
     let reliable_id = reliable_ch.id;
-    let volatile_id = volatile_ch.id;
+    let lossy_id = lossy_ch.id;
 
     // Subscribe to both channels.
     viewer
-        .subscribe_and_wait(&[reliable_id, volatile_id], &reliable_channel)
+        .subscribe_and_wait(&[reliable_id, lossy_id], &reliable_channel)
         .await?;
 
-    // The volatile channel should have a data track published.
-    let mut data_reader = viewer.expect_device_channel_data_track(volatile_id).await?;
+    // The lossy channel should have a data track published.
+    let mut data_reader = viewer.expect_device_channel_data_track(lossy_id).await?;
 
     // Log to the reliable channel — should arrive on the control plane.
     reliable_channel.log(b"reliable-msg");
@@ -2279,12 +2279,12 @@ async fn livekit_qos_classifier_per_channel() -> Result<()> {
     assert_eq!(msg.data.as_ref(), b"reliable-msg");
     info!("reliable channel delivered via control plane");
 
-    // Log to the volatile channel — should arrive on the data track.
-    volatile_channel.log(b"volatile-msg");
+    // Log to the lossy channel — should arrive on the data track.
+    lossy_channel.log(b"lossy-msg");
     let msg = data_reader.next_message_data().await?;
-    assert_eq!(msg.channel_id, volatile_id);
-    assert_eq!(msg.data.as_ref(), b"volatile-msg");
-    info!("volatile channel delivered via data track");
+    assert_eq!(msg.channel_id, lossy_id);
+    assert_eq!(msg.data.as_ref(), b"lossy-msg");
+    info!("lossy channel delivered via data track");
 
     viewer.close().await?;
     gw.stop().await?;

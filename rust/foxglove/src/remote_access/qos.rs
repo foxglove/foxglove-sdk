@@ -6,15 +6,15 @@ use crate::channel::ChannelDescriptor;
 /// or over unreliable data tracks.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Reliability {
+    /// Data is sent over lossy data tracks (unordered, no guaranteed delivery).
+    ///
+    /// This is the default and is suitable for high-frequency data streams.
+    #[default]
+    Lossy,
     /// Data is sent over the reliable control channel (ordered, guaranteed delivery).
     ///
     /// Use this for low-frequency, config-like data where every message must be delivered.
     Reliable,
-    /// Data is sent over unreliable data tracks.
-    ///
-    /// This is the default and is suitable for high-frequency data streams.
-    #[default]
-    Volatile,
 }
 
 /// Quality-of-service profile for a channel.
