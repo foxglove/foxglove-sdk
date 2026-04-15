@@ -2188,7 +2188,7 @@ impl RemoteAccessSession {
                 &self.runtime,
                 self.room.local_participant(),
                 *channel_id,
-                self.cancellation_token.child_token(),
+                self.cancellation_token.clone(),
             );
             self.state
                 .write()

@@ -17,9 +17,9 @@ pub(crate) struct DataTrack {
     /// Shared cell where the publish task deposits the track on success.
     /// Read lock-free from the logging hot path.
     track: Arc<OnceLock<LocalDataTrack>>,
-    /// Child token of the session cancellation token.
-    /// Cancelled by [`close`](Self::close), or when the session shuts down.
-    cancel: CancellationToken,
+    /// Cancelled by [`close`](Self::close) or on drop. Stops retry attempts but
+    /// does not interrupt an in-flight `publish_data_track` call.
+    close: CancellationToken,
     /// Handle to the spawned publish task.
     task: Option<JoinHandle<()>>,
     /// Per-track monotonic sequence number for packet loss detection.
@@ -33,15 +33,21 @@ impl DataTrack {
     ///
     /// The track is named `data-ch-{channel_id}`, which is unique within a session
     /// because channel IDs are never reused.
+    ///
+    /// `session_cancel` is the session-level cancellation token; it hard-cancels
+    /// in-flight `publish_data_track` calls during session teardown. The per-track
+    /// [`close`](Self::close) token only stops retry attempts between calls, so a
+    /// normal channel removal never yanks a publish out from under the SFU.
     pub fn publish(
         runtime: &Handle,
         local_participant: LocalParticipant,
         channel_id: ChannelId,
-        cancel: CancellationToken,
+        session_cancel: CancellationToken,
     ) -> Self {
         let track = Arc::new(OnceLock::new());
         let track_clone = Arc::clone(&track);
-        let cancel_clone = cancel.clone();
+        let close = CancellationToken::new();
+        let close_clone = close.clone();
         let name = format!("data-ch-{}", u64::from(channel_id));
 
         let task = runtime.spawn(async move {
@@ -50,8 +56,11 @@ impl DataTrack {
             let mut backoff = INITIAL_BACKOFF;
 
             loop {
+                if close_clone.is_cancelled() {
+                    return;
+                }
                 let result = tokio::select! {
-                    () = cancel_clone.cancelled() => return,
+                    () = session_cancel.cancelled() => return,
                     result = local_participant.publish_data_track(name.clone()) => result,
                 };
                 match result {
@@ -74,7 +83,8 @@ impl DataTrack {
                     }
                 }
                 tokio::select! {
-                    () = cancel_clone.cancelled() => return,
+                    () = close_clone.cancelled() => return,
+                    () = session_cancel.cancelled() => return,
                     () = tokio::time::sleep(backoff) => {}
                 }
                 backoff = (backoff * 2).min(MAX_BACKOFF);
@@ -83,7 +93,7 @@ impl DataTrack {
 
         Self {
             track,
-            cancel,
+            close,
             task: Some(task),
             sequence: AtomicU32::new(0),
             drop_throttler: parking_lot::Mutex::new(crate::throttler::Throttler::new(
@@ -118,11 +128,11 @@ impl DataTrack {
         }
     }
 
-    /// Close the data track: cancel any in-flight publish, wait for it to settle,
-    /// then unpublish the track if it was successfully published.
+    /// Close the data track: stop retrying, wait for any in-flight publish to
+    /// complete, then unpublish the track if it was successfully published.
     pub async fn close(&mut self) {
         debug!("closing data track");
-        self.cancel.cancel();
+        self.close.cancel();
         if let Some(task) = self.task.take() {
             _ = task.await;
         }
@@ -135,6 +145,6 @@ impl DataTrack {
 
 impl Drop for DataTrack {
     fn drop(&mut self) {
-        self.cancel.cancel();
+        self.close.cancel();
     }
 }
