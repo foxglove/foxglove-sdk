@@ -775,8 +775,8 @@ void FoxgloveBridge::subscribeConnectionGraph(bool subscribe) {
     ++_graphSubscriptionCount;
     // TODO: This causes a deadlock in the SDK implementation
     // updateConnectionGraph(get_topic_names_and_types());
-  } else if (_graphSubscriptionCount > 0) {
-    --_graphSubscriptionCount;
+  } else if (_graphSubscriptionCount.fetch_sub(1) <= 0) {
+    _graphSubscriptionCount.fetch_add(1);
   }
 }
 
