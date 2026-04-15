@@ -580,7 +580,12 @@ impl SessionState {
     }
 
     pub fn insert_data_track(&mut self, channel_id: ChannelId, track: DataTrack) {
-        self.data_tracks.insert(channel_id, track);
+        let old = self.data_tracks.insert(channel_id, track);
+        debug_assert!(
+            old.is_none(),
+            "insert_data_track called for channel {channel_id:?} that already has a data track; \
+             the old track's background publish task is orphaned"
+        );
     }
 
     pub fn remove_data_track(&mut self, channel_id: &ChannelId) -> Option<DataTrack> {
