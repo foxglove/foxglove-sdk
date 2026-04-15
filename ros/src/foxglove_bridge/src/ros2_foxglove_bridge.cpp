@@ -1397,10 +1397,18 @@ void FoxgloveBridge::gatewayConnectionStatusChanged(foxglove::RemoteAccessConnec
 
 void FoxgloveBridge::gatewaySubscribe(uint32_t clientId,
                                       const foxglove::ChannelDescriptor& channel) {
+  auto sinkId = _gateway->sinkId();
+  if (!sinkId.has_value()) {
+    RCLCPP_WARN(this->get_logger(),
+                "Gateway: subscribe request for channel %lu (\"%s\") from client %u "
+                "but gateway session has no sink ID (reconnecting?); "
+                "cached transient_local messages will not be replayed",
+                channel.id(), std::string(channel.topic()).c_str(), clientId);
+  }
   RCLCPP_INFO(this->get_logger(),
               "Gateway: received subscribe request for channel %lu (\"%s\") from client %u",
               channel.id(), std::string(channel.topic()).c_str(), clientId);
-  createOrIncrementSubscription(channel.id(), clientId, true, _gateway->sinkId());
+  createOrIncrementSubscription(channel.id(), clientId, true, sinkId);
 }
 
 void FoxgloveBridge::gatewayUnsubscribe(uint32_t clientId,
