@@ -64,27 +64,22 @@ inline std::vector<std::byte> readFile(const std::string& filepath) {
 // This subclass overrides handle_serialized_message to forward it.
 class GenericSubscriptionWithMessageInfo : public rclcpp::GenericSubscription {
 public:
-  using CallbackWithInfoT = std::function<void(std::shared_ptr<rclcpp::SerializedMessage>,
-                                               const rclcpp::MessageInfo&)>;
+  using CallbackWithInfoT =
+    std::function<void(std::shared_ptr<rclcpp::SerializedMessage>, const rclcpp::MessageInfo&)>;
 
-  template<typename AllocatorT = std::allocator<void>>
+  template <typename AllocatorT = std::allocator<void>>
   GenericSubscriptionWithMessageInfo(
     rclcpp::node_interfaces::NodeBaseInterface* node_base,
-    const std::shared_ptr<rcpputils::SharedLibrary> ts_lib,
-    const std::string& topic_name,
-    const std::string& topic_type,
-    const rclcpp::QoS& qos,
-    CallbackWithInfoT callback,
+    const std::shared_ptr<rcpputils::SharedLibrary> ts_lib, const std::string& topic_name,
+    const std::string& topic_type, const rclcpp::QoS& qos, CallbackWithInfoT callback,
     const rclcpp::SubscriptionOptionsWithAllocator<AllocatorT>& options)
-    : GenericSubscription(
-        node_base, ts_lib, topic_name, topic_type, qos,
-        [](std::shared_ptr<rclcpp::SerializedMessage>) {},
-        options)
-    , callback_with_info_(std::move(callback)) {}
+      : GenericSubscription(
+          node_base, ts_lib, topic_name, topic_type, qos,
+          [](std::shared_ptr<rclcpp::SerializedMessage>) {}, options)
+      , callback_with_info_(std::move(callback)) {}
 
-  void handle_serialized_message(
-    const std::shared_ptr<rclcpp::SerializedMessage>& message,
-    const rclcpp::MessageInfo& message_info) override {
+  void handle_serialized_message(const std::shared_ptr<rclcpp::SerializedMessage>& message,
+                                 const rclcpp::MessageInfo& message_info) override {
     callback_with_info_(message, message_info);
   }
 
@@ -813,8 +808,7 @@ Subscription FoxgloveBridge::createRosSubscription(ChannelId channelId, const st
 #else
   auto ts_lib = rclcpp::get_typesupport_library(datatype, "rosidl_typesupport_cpp");
   auto subscription = std::make_shared<GenericSubscriptionWithMessageInfo>(
-    this->get_node_base_interface().get(),
-    std::move(ts_lib), topic, datatype, qos,
+    this->get_node_base_interface().get(), std::move(ts_lib), topic, datatype, qos,
     [this, channelId](std::shared_ptr<rclcpp::SerializedMessage> msg,
                       const rclcpp::MessageInfo& messageInfo) {
       this->rosMessageHandler(channelId, msg, messageInfo);
