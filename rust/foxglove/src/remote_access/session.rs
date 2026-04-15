@@ -14,7 +14,7 @@ use parking_lot::RwLock;
 use semver::Version;
 use smallvec::SmallVec;
 use tokio::io::AsyncReadExt;
-use tokio::sync::oneshot;
+use tokio::runtime::Handle;
 use tokio_util::{io::StreamReader, sync::CancellationToken};
 use tracing::{debug, error, info, trace, warn};
 
@@ -46,6 +46,8 @@ use crate::{
     },
 };
 
+mod data_track;
+pub(crate) use data_track::DataTrack;
 mod video_track;
 pub(crate) use video_track::{
     VideoInputSchema, VideoMetadata, VideoPublisher, get_video_input_schema,
@@ -167,34 +169,6 @@ fn send_control_to_all(
     }
 }
 
-/// Called when we permanently give up publishing a data track.
-///
-/// Removes the channel from state, unadvertises it to all participants,
-/// and fires `on_unsubscribe` for any active subscribers.
-fn handle_data_track_publish_failure(
-    channel_id: ChannelId,
-    state: &Arc<RwLock<SessionState>>,
-    control_plane_tx: &flume::Sender<ControlPlaneMessage>,
-    listener: Option<&Arc<dyn Listener>>,
-) {
-    let mut state_guard = state.write();
-    let subscriber_clients = state_guard.channel_subscriber_clients(&channel_id);
-    let descriptor = state_guard.get_channel_descriptor(&channel_id).cloned();
-    if state_guard.remove_channel(channel_id) {
-        let participants = state_guard.collect_participants();
-        drop(state_guard);
-        let data = encode_json_message(&Unadvertise::new([u64::from(channel_id)]));
-        send_control_to_all(control_plane_tx, &participants, data);
-
-        if let (Some(listener), Some(descriptor)) = (listener, &descriptor) {
-            for (client_id, participant_id) in subscriber_clients {
-                let client = Client::new(client_id, participant_id);
-                listener.on_unsubscribe(&client, descriptor);
-            }
-        }
-    }
-}
-
 /// RemoteAccessSession tracks a connected LiveKit session (the Room)
 /// and any state that is specific to that session.
 /// We discard this state if we close or lose the connection.
@@ -212,6 +186,7 @@ pub(crate) struct RemoteAccessSession {
     listener: Option<Arc<dyn Listener>>,
     capabilities: Vec<Capability>,
     fetch_asset_handler: Option<Arc<dyn AssetHandler<Client>>>,
+    runtime: Handle,
     cancellation_token: CancellationToken,
     control_plane_tx: flume::Sender<ControlPlaneMessage>,
     control_plane_rx: flume::Receiver<ControlPlaneMessage>,
@@ -348,9 +323,6 @@ impl Sink for RemoteAccessSession {
         self.teardown_video_track(channel_id);
         self.teardown_data_track(channel_id);
         self.state.write().remove_video_schema(&channel_id);
-        // Note: we don't cleanup data_track_lifecycle,
-        // so we can chain on that if we re-add the channel.
-        // It's fine that it takes up space in the map, and it's cleaned up when the session is.
 
         let unadvertise = Unadvertise::new([u64::from(channel_id)]);
         self.broadcast_control(encode_json_message(&unadvertise));
@@ -377,6 +349,7 @@ pub(crate) struct SessionParams {
     pub listener: Option<Arc<dyn Listener>>,
     pub capabilities: Vec<Capability>,
     pub supported_encodings: IndexSet<String>,
+    pub runtime: Handle,
     pub cancellation_token: CancellationToken,
     pub message_backlog_size: usize,
     pub services: Arc<parking_lot::RwLock<ServiceMap>>,
@@ -402,6 +375,7 @@ impl RemoteAccessSession {
             listener: params.listener,
             capabilities: params.capabilities,
             fetch_asset_handler: params.fetch_asset_handler,
+            runtime: params.runtime,
             cancellation_token: params.cancellation_token,
             control_plane_tx,
             control_plane_rx,
@@ -2228,125 +2202,26 @@ impl RemoteAccessSession {
     }
 
     /// Eagerly publish data tracks for newly advertised channels.
-    ///
-    /// Each publish is spawned as a chained async task to serialize with any prior
-    /// publish/unpublish for the same channel name (avoids DuplicateName errors).
     fn publish_data_tracks(&self, topics: &[(ChannelId, String)]) {
         for (channel_id, topic) in topics {
-            let channel_id = *channel_id;
-            let topic = topic.clone();
-            let (prev_rx, done_tx) = {
-                let mut state = self.state.write();
-                Self::chain_data_track_task(&mut state, channel_id)
-            };
-
-            let local_participant = self.room.local_participant();
-            let cancel = self.cancellation_token.clone();
-            let state = Arc::clone(&self.state);
-            let control_plane_tx = self.control_plane_tx.clone();
-            let listener = self.listener.clone();
-            tokio::spawn(async move {
-                if let Some(prev) = prev_rx {
-                    _ = prev.await;
-                }
-                let track = {
-                    const INITIAL_BACKOFF: Duration = Duration::from_millis(100);
-                    const MAX_BACKOFF: Duration = Duration::from_secs(3);
-                    const TIMEOUT: Duration = Duration::from_secs(60);
-                    let deadline = tokio::time::Instant::now() + TIMEOUT;
-                    let mut backoff = INITIAL_BACKOFF;
-                    loop {
-                        match local_participant.publish_data_track(topic.clone()).await {
-                            Ok(track) => break Some(track),
-                            Err(PublishError::DuplicateName) => {
-                                debug!(
-                                    "data track {topic} still being unpublished at SFU, \
-                                     retrying in {backoff:?}"
-                                );
-                                tokio::select! {
-                                    () = cancel.cancelled() => {
-                                        _ = done_tx.send(());
-                                        return;
-                                    }
-                                    () = tokio::time::sleep(backoff) => {}
-                                }
-                                if !state.read().has_channel(&channel_id) {
-                                    debug!(
-                                        "channel {channel_id:?} removed during \
-                                         data track publish retry; aborting"
-                                    );
-                                    _ = done_tx.send(());
-                                    return;
-                                }
-                                backoff = (backoff * 2).min(MAX_BACKOFF);
-                                if tokio::time::Instant::now() >= deadline {
-                                    error!(
-                                        "giving up publishing data track {topic} \
-                                         after {TIMEOUT:?} of DuplicateName retries"
-                                    );
-                                    break None;
-                                }
-                            }
-                            Err(e) => {
-                                error!(
-                                    "failed to publish data track for channel {channel_id:?}: {e:?}"
-                                );
-                                break None;
-                            }
-                        }
-                    }
-                };
-
-                match track {
-                    Some(track) => {
-                        state.write().insert_data_track(channel_id, track);
-                    }
-                    None => {
-                        handle_data_track_publish_failure(
-                            channel_id,
-                            &state,
-                            &control_plane_tx,
-                            listener.as_ref(),
-                        );
-                    }
-                }
-                _ = done_tx.send(());
-            });
+            let data_track = DataTrack::publish(
+                &self.runtime,
+                self.room.local_participant(),
+                *channel_id,
+                topic,
+                self.cancellation_token.child_token(),
+            );
+            self.state
+                .write()
+                .insert_data_track(*channel_id, data_track);
         }
     }
 
-    /// Tear down the data track for a channel. Chains an async task that awaits any in-flight
-    /// publish, then removes and unpublishes the track.
+    /// Tear down the data track for a channel.
     fn teardown_data_track(&self, channel_id: ChannelId) {
-        let (prev_rx, done_tx) = {
-            let mut state = self.state.write();
-            Self::chain_data_track_task(&mut state, channel_id)
-        };
-
-        let state = Arc::clone(&self.state);
-        tokio::spawn(async move {
-            if let Some(prev) = prev_rx {
-                _ = prev.await;
-            }
-            let track = state.write().remove_data_track(&channel_id);
-            if let Some(track) = track {
-                track.unpublish();
-            }
-            _ = done_tx.send(());
-        });
-    }
-
-    /// Chain a new data track lifecycle task for the given channel.
-    ///
-    /// Returns the previous task's completion receiver (if any) and a sender to signal
-    /// this task's completion. The caller must hold a `&mut SessionState` (via `state.write()`).
-    fn chain_data_track_task(
-        state: &mut SessionState,
-        channel_id: ChannelId,
-    ) -> (Option<oneshot::Receiver<()>>, oneshot::Sender<()>) {
-        let (done_tx, done_rx) = oneshot::channel();
-        let prev_rx = state.swap_data_track_lifecycle(channel_id, done_rx);
-        (prev_rx, done_tx)
+        if let Some(data_track) = self.state.write().remove_data_track(&channel_id) {
+            self.runtime.spawn(data_track.close());
+        }
     }
 }
 

@@ -3,15 +3,14 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use livekit::id::{ParticipantIdentity, TrackSid};
+use livekit::prelude::LocalDataTrack;
 use smallvec::SmallVec;
-use tokio::sync::oneshot;
 use tracing::{debug, info};
 
 use crate::protocol::v2::server::advertise;
-use livekit::prelude::LocalDataTrack;
 
 use crate::remote_access::participant::Participant;
-use crate::remote_access::session::{VideoInputSchema, VideoMetadata, VideoPublisher};
+use crate::remote_access::session::{DataTrack, VideoInputSchema, VideoMetadata, VideoPublisher};
 use crate::remote_common::ClientId;
 use crate::{ChannelDescriptor, ChannelId, RawChannel};
 
@@ -64,12 +63,9 @@ pub(crate) struct SessionState {
     channels: HashMap<ChannelId, Arc<RawChannel>>,
     /// All subscriber identities per channel, regardless of subscription type.
     subscriptions: HashMap<ChannelId, SmallVec<[ParticipantIdentity; 1]>>,
-    /// Published LiveKit data tracks, keyed by channel ID.
+    /// Data tracks for advertised channels.
     /// Lifecycle follows channel advertise/unadvertise, not subscribe/unsubscribe.
-    data_tracks: HashMap<ChannelId, LocalDataTrack>,
-    /// Completion receivers for in-flight data track lifecycle tasks (publish or unpublish).
-    /// Used to serialize publish/unpublish operations per channel and avoid DuplicateName errors.
-    data_track_lifecycle: HashMap<ChannelId, oneshot::Receiver<()>>,
+    data_tracks: HashMap<ChannelId, DataTrack>,
     /// Video subscriber identities per channel.
     video_subscribers: HashMap<ChannelId, SmallVec<[ParticipantIdentity; 1]>>,
     /// Detected video input schemas for channels.
@@ -93,7 +89,6 @@ impl SessionState {
             channels: HashMap::new(),
             subscriptions: HashMap::new(),
             data_tracks: HashMap::new(),
-            data_track_lifecycle: HashMap::new(),
             video_subscribers: HashMap::new(),
             video_schemas: HashMap::new(),
             video_publishers: HashMap::new(),
@@ -576,24 +571,15 @@ impl SessionState {
         if !self.has_data_subscribers(channel_id) {
             return None;
         }
-        self.data_tracks.get(channel_id)
+        self.data_tracks.get(channel_id)?.get()
     }
 
-    pub fn insert_data_track(&mut self, channel_id: ChannelId, track: LocalDataTrack) {
+    pub fn insert_data_track(&mut self, channel_id: ChannelId, track: DataTrack) {
         self.data_tracks.insert(channel_id, track);
     }
 
-    pub fn remove_data_track(&mut self, channel_id: &ChannelId) -> Option<LocalDataTrack> {
+    pub fn remove_data_track(&mut self, channel_id: &ChannelId) -> Option<DataTrack> {
         self.data_tracks.remove(channel_id)
-    }
-
-    /// Replaces the lifecycle completion receiver for a channel, returning the previous one.
-    pub fn swap_data_track_lifecycle(
-        &mut self,
-        channel_id: ChannelId,
-        new_rx: oneshot::Receiver<()>,
-    ) -> Option<oneshot::Receiver<()>> {
-        self.data_track_lifecycle.insert(channel_id, new_rx)
     }
 
     /// Add parameter subscriptions for a participant.
