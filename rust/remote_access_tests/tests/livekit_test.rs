@@ -122,7 +122,7 @@ async fn livekit_viewer_receives_message_after_subscribe() -> Result<()> {
     viewer.subscribe_and_wait(&[channel_id], &channel).await?;
 
     // Wait for the device data track to be published and subscribe to it.
-    let mut ch_reader = viewer.expect_device_channel_data_track("/test").await?;
+    let mut ch_reader = viewer.expect_device_channel_data_track(channel_id).await?;
 
     let payloads: &[&[u8]] = &[b"message-1", b"message-2", b"message-3"];
 
@@ -163,14 +163,14 @@ async fn livekit_viewer_does_not_receive_message_before_subscribe() -> Result<()
 
     // Now subscribe and wait for the data track to be ready.
     viewer.subscribe_and_wait(&[channel_id], &channel).await?;
-    viewer.ensure_device_data_track("/test").await?;
+    viewer.ensure_device_data_track(channel_id).await?;
 
     // Log a second message — this one should be delivered.
     let expected_payload = b"message-after-subscribe";
     channel.log(expected_payload);
 
     let msg_data = viewer
-        .expect_new_data_track_and_message_data("/test")
+        .expect_new_data_track_and_message_data(channel_id)
         .await?;
     assert_eq!(
         msg_data.data.as_ref(),
@@ -322,7 +322,7 @@ async fn livekit_multiple_participants_receive_messages() -> Result<()> {
     viewer1.subscribe_and_wait(&[channel_id], &channel).await?;
 
     // Wait for the device data track and subscribe to it.
-    let mut ch_reader1 = viewer1.expect_device_channel_data_track("/test").await?;
+    let mut ch_reader1 = viewer1.expect_device_channel_data_track(channel_id).await?;
 
     // Log message-1 — only viewer-1 should receive it.
     channel.log(b"message-1");
@@ -336,7 +336,7 @@ async fn livekit_multiple_participants_receive_messages() -> Result<()> {
     assert_eq!(adv2.channels[0].id, channel_id);
     viewer2.send_subscribe(&[channel_id]).await?;
     // Wait for viewer-2 to receive and subscribe to the device data track.
-    let mut ch_reader2 = viewer2.expect_device_channel_data_track("/test").await?;
+    let mut ch_reader2 = viewer2.expect_device_channel_data_track(channel_id).await?;
     // Brief settle for the gateway to process viewer-2's subscription.
     tokio::time::sleep(Duration::from_millis(500)).await;
 
@@ -471,7 +471,7 @@ async fn livekit_video_channel_messages_bypass_data_plane() -> Result<()> {
     poll_until(|| json_channel.has_sinks()).await;
 
     // Wait for the JSON channel's data track to be ready.
-    viewer.ensure_device_data_track("/data").await?;
+    viewer.ensure_device_data_track(json_id).await?;
 
     // Log to the video channel first, then the JSON channel.
     // If the video message leaked to the data plane, it would arrive before
@@ -480,7 +480,7 @@ async fn livekit_video_channel_messages_bypass_data_plane() -> Result<()> {
     json_channel.log(b"json-payload");
 
     let msg = viewer
-        .expect_new_data_track_and_message_data("/data")
+        .expect_new_data_track_and_message_data(json_id)
         .await?;
     assert_eq!(msg.data.as_ref(), b"json-payload");
     info!("video channel correctly bypassed data plane");
@@ -668,11 +668,11 @@ async fn livekit_video_channel_without_request_video_track_uses_data_plane() -> 
     viewer
         .subscribe_and_wait(&[channel_id], &video_channel)
         .await?;
-    viewer.ensure_device_data_track("/camera").await?;
+    viewer.ensure_device_data_track(channel_id).await?;
 
     video_channel.log(b"video-frame");
     let msg = viewer
-        .expect_new_data_track_and_message_data("/camera")
+        .expect_new_data_track_and_message_data(channel_id)
         .await?;
     assert_eq!(msg.data.as_ref(), b"video-frame");
     info!("video data received via data plane (no video track requested)");
@@ -725,12 +725,12 @@ async fn livekit_video_resubscribe_switches_to_data_plane() -> Result<()> {
     info!("video track torn down after re-subscribe with requestVideoTrack: false");
 
     // Wait for the device data track to be published and subscribe.
-    viewer.ensure_device_data_track("/camera").await?;
+    viewer.ensure_device_data_track(channel_id).await?;
 
     // Data should now arrive via the data plane.
     video_channel.log(b"video-frame");
     let msg = viewer
-        .expect_new_data_track_and_message_data("/camera")
+        .expect_new_data_track_and_message_data(channel_id)
         .await?;
     assert_eq!(msg.data.as_ref(), b"video-frame");
     info!("data received via data plane after switching from video");
@@ -1855,13 +1855,14 @@ async fn livekit_connection_graph_unsubscribe_stops_updates() -> Result<()> {
 
     // Subscribe to a channel and log a message to verify the data plane
     // is still working — we should receive MessageData but NOT a graph update.
+    let cg_channel_id = u64::from(channel.id());
     viewer
-        .subscribe_and_wait(&[u64::from(channel.id())], &channel)
+        .subscribe_and_wait(&[cg_channel_id], &channel)
         .await?;
-    viewer.ensure_device_data_track("/test").await?;
+    viewer.ensure_device_data_track(cg_channel_id).await?;
     channel.log(b"ping");
     let msg = viewer
-        .expect_new_data_track_and_message_data("/test")
+        .expect_new_data_track_and_message_data(cg_channel_id)
         .await?;
     assert_eq!(msg.data.as_ref(), b"ping");
     info!("connection graph unsubscribe validated: no graph update received after unsubscribe");

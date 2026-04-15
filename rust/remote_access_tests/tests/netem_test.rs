@@ -270,7 +270,7 @@ async fn netem_message_delivery_under_impairment() -> Result<()> {
     });
 
     let msg = viewer
-        .expect_new_data_track_and_message_data("/netem-test")
+        .expect_new_data_track_and_message_data(channel_id)
         .await?;
     sender.abort();
     assert_eq!(msg.data.as_ref(), payload);
