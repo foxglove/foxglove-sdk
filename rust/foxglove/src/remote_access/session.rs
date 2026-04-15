@@ -135,7 +135,7 @@ pub(crate) struct RemoteAccessSession {
     room: Room,
     context: Weak<Context>,
     remote_access_session_id: Option<String>,
-    state: Arc<RwLock<SessionState>>,
+    state: RwLock<SessionState>,
     channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     listener: Option<Arc<dyn Listener>>,
     capabilities: Vec<Capability>,
@@ -305,7 +305,7 @@ impl RemoteAccessSession {
             room: params.room,
             context: params.context,
             remote_access_session_id: params.remote_access_session_id,
-            state: Arc::new(RwLock::new(SessionState::new())),
+            state: RwLock::new(SessionState::new()),
             channel_filter: params.channel_filter,
             listener: params.listener,
             capabilities: params.capabilities,
@@ -409,15 +409,22 @@ impl RemoteAccessSession {
         }
     }
 
-    /// Shut down the session: await all per-participant flush tasks, then close
-    /// the LiveKit room.
+    /// Shut down the session: clear all participants (dropping their control
+    /// queue senders so flush tasks exit), await the flush task handles, then
+    /// close the LiveKit room.
     ///
-    /// The caller must ensure that `handle_room_events` has stopped (so no new
-    /// `remove_participant` / `reset_participant` calls can race with the flush
-    /// handle drain) and that the `CancellationToken` has fired (so flush tasks
-    /// exit promptly).
+    /// The caller must ensure that `handle_room_events` has stopped so no new
+    /// `remove_participant` / `reset_participant` calls can race with us.
     pub(crate) async fn close(&self) {
-        let flush_handles = self.state.write().take_flush_handles();
+        let flush_handles = {
+            let mut state = self.state.write();
+            // Clear participants first — this drops `Arc<Participant>` which drops
+            // `control_tx`, causing each flush task's `recv_async` to return `Err`
+            // and exit. Without this, flush tasks hang if the `CancellationToken`
+            // hasn't been fired (e.g., on room disconnect without cancellation).
+            state.clear_participants();
+            state.take_flush_handles()
+        };
         for handle in flush_handles {
             let _ = handle.await;
         }

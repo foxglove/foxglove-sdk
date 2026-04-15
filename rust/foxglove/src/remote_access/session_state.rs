@@ -118,6 +118,13 @@ impl SessionState {
         self.flush_handles.drain().map(|(_, h)| h).collect()
     }
 
+    /// Removes all participants, dropping their `Arc<Participant>` references.
+    /// This causes per-participant `control_tx` senders to drop, which signals
+    /// flush tasks to exit.
+    pub fn clear_participants(&mut self) {
+        self.participants.clear();
+    }
+
     /// Inserts a participant if not already present.
     ///
     /// Returns true if this is a new participant, or false if there was already a participant

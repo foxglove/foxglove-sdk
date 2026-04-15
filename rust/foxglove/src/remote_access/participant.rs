@@ -78,8 +78,9 @@ impl Participant {
         &self.participant_id
     }
 
-    /// Try to queue a control plane message. Returns `true` if enqueued, `false`
-    /// if the queue is full or disconnected.
+    /// Try to queue a control plane message. Returns `true` if enqueued or if
+    /// the queue is already disconnected (no reset needed). Returns `false` if
+    /// the queue is full (caller should trigger a participant reset).
     ///
     /// When this returns `false`, the caller should trigger a participant reset
     /// (disconnect + reconnect) — a full queue means the client is not keeping up.
