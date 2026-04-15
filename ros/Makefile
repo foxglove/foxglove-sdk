@@ -96,12 +96,20 @@ docker-test-$(1):
 docker-sh-$(1):
 	docker run --rm -it $(DOCKER_RUN_ARGS) -v $(PWD)/..:/sdk foxglove-sdk-ros-$(1)
 
-.PHONY: docker-deb-$(1)
-docker-deb-$(1): docker-build-image-$(1)
+.PHONY: docker-deb-bridge-$(1)
+docker-deb-bridge-$(1): docker-build-image-$(1)
 	docker run --rm $(DOCKER_RUN_ARGS) -v $(PWD)/..:/sdk foxglove-sdk-ros-$(1) \
 		make FOXGLOVE_BRIDGE_REMOTE_ACCESS=$(FOXGLOVE_BRIDGE_REMOTE_ACCESS) \
 		$(if $(FOXGLOVE_CPP_SDK_DIR),FOXGLOVE_CPP_SDK_DIR=$(FOXGLOVE_CPP_SDK_DIR)) \
-		deb
+		deb-bridge
+
+.PHONY: docker-deb-msgs-$(1)
+docker-deb-msgs-$(1): docker-build-image-$(1)
+	docker run --rm $(DOCKER_RUN_ARGS) -v $(PWD)/..:/sdk foxglove-sdk-ros-$(1) \
+		make deb-msgs
+
+.PHONY: docker-deb-$(1)
+docker-deb-$(1): docker-deb-bridge-$(1) docker-deb-msgs-$(1)
 
 endef
 $(foreach distribution,$(ROS_DISTRIBUTIONS),$(eval $(call generate_ros_targets,$(strip $(distribution)))))
@@ -120,6 +128,12 @@ docker-sh: docker-sh-rolling
 
 .PHONY: docker-deb
 docker-deb: docker-deb-rolling
+
+.PHONY: docker-deb-bridge
+docker-deb-bridge: docker-deb-bridge-rolling
+
+.PHONY: docker-deb-msgs
+docker-deb-msgs: docker-deb-msgs-rolling
 
 # Merge per-package compile_commands.json and remap container paths to host paths.
 # Run after docker-build to get IDE support (clangd, etc).
