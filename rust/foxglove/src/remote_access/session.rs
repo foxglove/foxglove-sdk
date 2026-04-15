@@ -1700,8 +1700,7 @@ impl RemoteAccessSession {
         }
 
         // Collect the per-participant messages while holding the read lock, then
-        // send them after the lock is released to avoid holding a parking_lot guard
-        // across a potentially-blocking `queue_control` call.
+        // send them after the lock is released to minimize lock scope.
         let to_send: Vec<(Arc<Participant>, Bytes)> = {
             let state = self.state.read();
             let participants = state.collect_participants();
