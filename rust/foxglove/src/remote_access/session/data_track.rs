@@ -50,7 +50,11 @@ impl DataTrack {
             let mut backoff = INITIAL_BACKOFF;
 
             loop {
-                match local_participant.publish_data_track(name.clone()).await {
+                let result = tokio::select! {
+                    () = cancel_clone.cancelled() => return,
+                    result = local_participant.publish_data_track(name.clone()) => result,
+                };
+                match result {
                     Ok(published) => {
                         track_clone.set(published).ok();
                         debug!("data track {name} published");
@@ -104,7 +108,10 @@ impl DataTrack {
         };
         let seq = self.sequence.fetch_add(1, Ordering::Relaxed);
         let mut payload = Vec::with_capacity(FRAME_HEADER_SIZE + msg.len());
-        payload.extend_from_slice(&0u16.to_le_bytes()); // flags
+        // flags is 0, it's reserved for future use
+        payload.extend_from_slice(&0u16.to_le_bytes());
+        // data_offset is always FRAME_HEADER_SIZE, but this is part of the frame
+        // so that we can more easily add fields here without breaking old clients.
         payload.extend_from_slice(&(FRAME_HEADER_SIZE as u16).to_le_bytes()); // data_offset
         payload.extend_from_slice(&seq.to_le_bytes());
         payload.extend_from_slice(msg);
