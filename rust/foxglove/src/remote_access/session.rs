@@ -175,7 +175,7 @@ pub(crate) struct RemoteAccessSession {
     room: Room,
     context: Weak<Context>,
     remote_access_session_id: Option<String>,
-    state: Arc<RwLock<SessionState>>,
+    state: RwLock<SessionState>,
     channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     listener: Option<Arc<dyn Listener>>,
     capabilities: Vec<Capability>,
@@ -235,7 +235,7 @@ impl Sink for RemoteAccessSession {
             publisher.send(Bytes::copy_from_slice(msg), metadata.log_time);
         }
 
-        // Send to data subscribers via the eagerly-published data track.
+        // Send to data subscribers via the data track.
         if let Some(track) = state.get_subscribed_data_track(&channel_id) {
             track.log(channel_id, msg, metadata);
         }
@@ -288,6 +288,7 @@ impl Sink for RemoteAccessSession {
         // Eagerly publish a data track for each newly advertised channel.
         self.publish_data_tracks(&advertised_channel_ids);
 
+        // Clients subscribe asynchronously.
         None
     }
 
@@ -352,7 +353,7 @@ impl RemoteAccessSession {
             room: params.room,
             context: params.context,
             remote_access_session_id: params.remote_access_session_id,
-            state: Arc::new(RwLock::new(SessionState::new())),
+            state: RwLock::new(SessionState::new()),
             channel_filter: params.channel_filter,
             listener: params.listener,
             capabilities: params.capabilities,

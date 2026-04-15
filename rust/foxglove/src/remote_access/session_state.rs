@@ -575,7 +575,6 @@ impl SessionState {
             return None;
         }
         let track = self.data_tracks.get(channel_id)?;
-        track.get()?;
         Some(track)
     }
 

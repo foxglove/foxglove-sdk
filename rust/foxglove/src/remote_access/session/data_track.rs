@@ -92,11 +92,6 @@ impl DataTrack {
         }
     }
 
-    /// Returns the underlying LiveKit track if publishing has completed successfully.
-    pub fn get(&self) -> Option<&LocalDataTrack> {
-        self.track.get()
-    }
-
     /// Build a sequenced frame and push it to the data track.
     /// Drops with a throttled debug log if the track is not ready or full.
     pub fn log(&self, channel_id: ChannelId, msg: &[u8], metadata: &Metadata) {
