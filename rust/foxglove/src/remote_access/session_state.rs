@@ -574,8 +574,7 @@ impl SessionState {
         if !self.has_data_subscribers(channel_id) {
             return None;
         }
-        let track = self.data_tracks.get(channel_id)?;
-        Some(track)
+        self.data_tracks.get(channel_id)
     }
 
     pub fn insert_data_track(&mut self, channel_id: ChannelId, track: DataTrack) {

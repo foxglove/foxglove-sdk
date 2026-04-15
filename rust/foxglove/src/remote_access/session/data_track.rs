@@ -131,7 +131,6 @@ impl DataTrack {
     /// Close the data track: stop retrying, wait for any in-flight publish to
     /// complete, then unpublish the track if it was successfully published.
     pub async fn close(&mut self) {
-        debug!("closing data track");
         self.close.cancel();
         if let Some(task) = self.task.take() {
             _ = task.await;
