@@ -1,7 +1,7 @@
 [project]
 name = "ws-param-server"
 version = "0.0.0"
-description = "A parameter server for Foxglove live visualization"
+description = "A parameter server for the Foxglove WebSocket server"
 authors = [{ name = "Foxglove", email = "support@foxglove.dev" }]
 requires-python = ">=3.10"
 readme = "README.md"

@@ -1,7 +1,7 @@
 [project]
 name = "ws-asset-server"
 version = "0.0.0"
-description = "Example of a websocket asset server"
+description = "Example of a WebSocket asset server"
 authors = [{ name = "Foxglove", email = "support@foxglove.dev" }]
 requires-python = ">=3.10"
 readme = "README.md"

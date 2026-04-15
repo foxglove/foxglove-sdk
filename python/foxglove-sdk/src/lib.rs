@@ -27,6 +27,8 @@ mod logging;
 mod mcap;
 #[cfg(feature = "remote-access")]
 mod remote_access;
+#[cfg(not(target_family = "wasm"))]
+mod remote_common;
 mod schemas_wkt;
 mod sink_channel_filter;
 #[cfg(not(target_family = "wasm"))]
@@ -344,6 +346,19 @@ fn _foxglove_py(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyContext>()?;
     m.add_class::<PySinkChannelFilter>()?;
     m.add_class::<PyChannelDescriptor>()?;
+    // Shared types used by both websocket and remote_access.
+    #[cfg(not(target_family = "wasm"))]
+    {
+        m.add_class::<remote_common::PyConnectionGraph>()?;
+        m.add_class::<remote_common::PyMessageSchema>()?;
+        m.add_class::<remote_common::PyParameter>()?;
+        m.add_class::<remote_common::PyParameterType>()?;
+        m.add_class::<remote_common::PyParameterValue>()?;
+        m.add_class::<remote_common::PyService>()?;
+        m.add_class::<remote_common::PyServiceRequest>()?;
+        m.add_class::<remote_common::PyServiceSchema>()?;
+        m.add_class::<remote_common::PyStatusLevel>()?;
+    }
     // Register nested modules.
     messages::register_submodule(m)?;
     channels::register_submodule(m)?;

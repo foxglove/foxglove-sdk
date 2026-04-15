@@ -1,11 +1,17 @@
 name: Install common dependencies
 
+inputs:
+  python-version:
+    description: Python version to install
+    required: false
+    default: "3.10"
+
 runs:
   using: composite
   steps:
     - uses: actions/setup-python@v6
       with:
-        python-version: "3.10"
+        python-version: ${{ inputs.python-version }}
 
     - uses: astral-sh/setup-uv@v6
 

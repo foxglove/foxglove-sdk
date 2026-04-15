@@ -9,16 +9,26 @@ from __future__ import annotations
 
 import atexit
 import logging
-from typing import TYPE_CHECKING
+from collections.abc import Callable
+from typing import TYPE_CHECKING, TypeAlias, Union
 
 from . import _foxglove_py as _foxglove
 
 # Re-export these imports
 from ._foxglove_py import (
     ChannelDescriptor,
+    ConnectionGraph,
     Context,
+    MessageSchema,
+    Parameter,
+    ParameterType,
+    ParameterValue,
     Schema,
+    Service,
+    ServiceRequest,
+    ServiceSchema,
     SinkChannelFilter,
+    StatusLevel,
     open_mcap,
 )
 from .channel import Channel, log
@@ -26,18 +36,67 @@ from .channel import Channel, log
 # Deprecated. Use foxglove.mcap.MCAPWriter instead.
 from .mcap import MCAPWriter
 
+ServiceHandler: TypeAlias = Callable[[ServiceRequest], bytes]
+AnyParameterValue: TypeAlias = Union[
+    ParameterValue.Integer,
+    ParameterValue.Bool,
+    ParameterValue.Float64,
+    ParameterValue.String,
+    ParameterValue.Array,
+    ParameterValue.Dict,
+]
+AnyInnerParameterValue: TypeAlias = Union[
+    AnyParameterValue,
+    bool,
+    int,
+    float,
+    str,
+    "list[AnyInnerParameterValue]",
+    "dict[str, AnyInnerParameterValue]",
+]
+AnyNativeParameterValue: TypeAlias = Union[
+    AnyInnerParameterValue,
+    bytes,
+]
+AssetHandler: TypeAlias = "Callable[[str], bytes | None]"
+
 if TYPE_CHECKING:
     from .notebook.notebook_buffer import NotebookBuffer
 
 atexit.register(_foxglove.shutdown)
 
+__all__ = [
+    "AnyInnerParameterValue",
+    "AnyNativeParameterValue",
+    "AnyParameterValue",
+    "AssetHandler",
+    "Channel",
+    "ChannelDescriptor",
+    "ConnectionGraph",
+    "Context",
+    "MCAPWriter",
+    "MessageSchema",
+    "Parameter",
+    "ParameterType",
+    "ParameterValue",
+    "Schema",
+    "Service",
+    "ServiceHandler",
+    "ServiceRequest",
+    "ServiceSchema",
+    "SinkChannelFilter",
+    "StatusLevel",
+    "log",
+    "open_mcap",
+    "set_log_level",
+    "init_notebook_buffer",
+]
+
 
 try:
     from .websocket import (
-        AssetHandler,
         Capability,
         ServerListener,
-        Service,
         WebSocketServer,
     )
 
@@ -57,7 +116,7 @@ try:
         playback_time_range: tuple[int, int] | None = None,
     ) -> WebSocketServer:
         """
-        Start a websocket server for live visualization.
+        Start a WebSocket server for live visualization.
 
         :param name: The name of the server.
         :param host: The host to bind to.
@@ -73,11 +132,11 @@ try:
         :param session_id: An ID which allows the client to understand if the connection is a
             re-connection or a new server instance. If None, then an ID is generated based on the
             current time.
-        :param channel_filter: A `Callable` that determines whether a channel should be logged to.
-            Return `True` to log the channel, or `False` to skip it. By default, all channels
+        :param channel_filter: A ``Callable`` that determines whether a channel should be logged to.
+            Return ``True`` to log the channel, or ``False`` to skip it. By default, all channels
             will be logged.
         :param playback_time_range: Time range of data being played back, in absolute nanoseconds.
-            Implies `Capability.PlaybackControl` if set.
+            Implies ``Capability.PlaybackControl`` if set.
         """
         return _foxglove.start_server(
             name=name,
@@ -93,6 +152,11 @@ try:
             channel_filter=channel_filter,
             playback_time_range=playback_time_range,
         )
+
+    __all__ += [
+        "Capability",  # for backwards compatibility
+        "start_server",
+    ]
 
 except ImportError:
     pass
@@ -128,7 +192,7 @@ try:
             If not set, the ``FOXGLOVE_DEVICE_TOKEN`` environment variable is used.
         :param capabilities: A list of capabilities to advertise to clients.
         :param listener: A Python object that implements the
-            :py:class:`remote_access.RemoteAccessListener` protocol.
+            :py:class:`foxglove.remote_access.RemoteAccessListener` protocol.
         :param supported_encodings: A list of encodings to advertise to clients.
         :param services: A list of services to advertise to clients.
         :param context: The context to use for logging. If None, the global context is used.
@@ -153,6 +217,8 @@ try:
             foxglove_api_url=foxglove_api_url,
             foxglove_api_timeout=foxglove_api_timeout,
         )
+
+    __all__ += ["start_gateway"]
 
 except ImportError:
     pass
@@ -252,19 +318,3 @@ def init_notebook_buffer(context: Context | None = None) -> NotebookBuffer:
         )
 
     return NotebookBuffer(context=context)
-
-
-__all__ = [
-    "Channel",
-    "ChannelDescriptor",
-    "Context",
-    "MCAPWriter",
-    "Schema",
-    "SinkChannelFilter",
-    "log",
-    "open_mcap",
-    "set_log_level",
-    "start_gateway",
-    "start_server",
-    "init_notebook_buffer",
-]

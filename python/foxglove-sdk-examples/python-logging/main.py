@@ -18,7 +18,7 @@ logging.basicConfig(
 foxglove.set_log_level("INFO")
 
 # To further filter SDK logs in a fine-grained way, you can get the logger by the module name; here,
-# let's say we want to reduce the verbosity of the websocket server.
+# let's say we want to reduce the verbosity of the WebSocket server.
 #
 # (You could instead install a log filter on your handler or the root logger's handlers).
 logging.getLogger("foxglove.websocket.server").setLevel(logging.WARN)
@@ -28,7 +28,7 @@ logger = logging.getLogger("logging-example")
 
 
 # With this configuration, we'll see debug app logging, but only info logs from Foxglove, and only
-# warnings from the websocket server.
+# warnings from the WebSocket server.
 def main() -> None:
     server = foxglove.start_server()
     try:

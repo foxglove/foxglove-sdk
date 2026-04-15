@@ -1,7 +1,7 @@
 [project]
 name = "message-filtering"
 version = "0.0.0"
-description = "Example message filtering with MCAP and live visualization"
+description = "Example message filtering with MCAP and WebSocket server"
 authors = [{ name = "Foxglove", email = "support@foxglove.dev" }]
 readme = "README.md"
 requires-python = ">=3.10"
