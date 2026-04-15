@@ -56,7 +56,7 @@ impl Poller {
             ShutdownReason::ClientDisconnected
         };
 
-        // Send messages from queues to the websocket.
+        // Send messages from queues to the WebSocket.
         let ws_tx_loop = async {
             while let Ok(msg) = tokio::select! {
                 msg = self.control_plane_rx.recv_async() => msg,

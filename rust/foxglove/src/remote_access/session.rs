@@ -1724,7 +1724,7 @@ impl RemoteAccessSession {
         self.broadcast_control(encode_json_message(&status));
     }
 
-    /// Remove status messages by id from all connected participants.
+    /// Remove status messages by ID from all connected participants.
     pub(crate) fn remove_status(&self, status_ids: Vec<String>) {
         let message = RemoveStatus::new(status_ids);
         self.broadcast_control(encode_json_message(&message));

@@ -2,7 +2,7 @@ use crate::{FoxgloveError, FoxgloveKeyValue, FoxgloveSchema, FoxgloveString};
 
 pub struct FoxgloveChannelDescriptor(pub(crate) foxglove::ChannelDescriptor);
 
-/// Get the id of a channel descriptor.
+/// Get the ID of a channel descriptor.
 ///
 /// # Safety
 /// `channel` must be a valid pointer to a `foxglove_channel_descriptor`.

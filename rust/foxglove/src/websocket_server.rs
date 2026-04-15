@@ -357,7 +357,7 @@ impl WebSocketServerHandle {
         self.0.publish_status(status);
     }
 
-    /// Removes status messages by id from all clients.
+    /// Removes status messages by ID from all clients.
     pub fn remove_status(&self, status_ids: Vec<String>) {
         self.0.remove_status(status_ids);
     }
