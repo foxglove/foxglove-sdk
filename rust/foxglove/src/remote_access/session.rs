@@ -2197,8 +2197,8 @@ impl RemoteAccessSession {
 
     /// Tear down the data track for a channel.
     fn teardown_data_track(&self, channel_id: ChannelId) {
-        if let Some(data_track) = self.state.write().remove_data_track(&channel_id) {
-            self.runtime.spawn(data_track.close());
+        if let Some(mut data_track) = self.state.write().remove_data_track(&channel_id) {
+            self.runtime.spawn(async move { data_track.close().await });
         }
     }
 }

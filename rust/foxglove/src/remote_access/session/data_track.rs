@@ -21,7 +21,7 @@ pub(crate) struct DataTrack {
     /// Cancelled by [`close`](Self::close), or when the session shuts down.
     cancel: CancellationToken,
     /// Handle to the spawned publish task.
-    task: JoinHandle<()>,
+    task: Option<JoinHandle<()>>,
     /// Per-track monotonic sequence number for packet loss detection.
     sequence: AtomicU32,
     /// Throttles debug log messages when data track messages are dropped.
@@ -80,7 +80,7 @@ impl DataTrack {
         Self {
             track,
             cancel,
-            task,
+            task: Some(task),
             sequence: AtomicU32::new(0),
             drop_throttler: parking_lot::Mutex::new(crate::throttler::Throttler::new(
                 Duration::from_secs(30),
@@ -118,13 +118,21 @@ impl DataTrack {
 
     /// Close the data track: cancel any in-flight publish, wait for it to settle,
     /// then unpublish the track if it was successfully published.
-    pub async fn close(self) {
+    pub async fn close(&mut self) {
         debug!("closing data track");
         self.cancel.cancel();
-        _ = self.task.await;
+        if let Some(task) = self.task.take() {
+            _ = task.await;
+        }
         if let Some(track) = self.track.get() {
             debug!("unpublishing data track {}", track.info().name());
             track.unpublish();
         }
+    }
+}
+
+impl Drop for DataTrack {
+    fn drop(&mut self) {
+        self.cancel.cancel();
     }
 }
