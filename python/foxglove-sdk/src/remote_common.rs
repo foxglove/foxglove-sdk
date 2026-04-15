@@ -1,6 +1,6 @@
 use crate::PySchema;
 use base64::prelude::*;
-use foxglove::websocket::{AssetHandler, StatusLevel};
+use foxglove::websocket::{AssetHandler, Client, StatusLevel};
 use pyo3::IntoPyObjectExt;
 use pyo3::exceptions::{PyIOError, PyTypeError, PyValueError};
 use pyo3::prelude::*;
@@ -530,7 +530,7 @@ pub struct CallbackAssetHandler {
     pub handler: Arc<Py<PyAny>>,
 }
 
-impl AssetHandler for CallbackAssetHandler {
+impl AssetHandler<Client> for CallbackAssetHandler {
     fn fetch(&self, uri: String, responder: foxglove::websocket::AssetResponder) {
         let handler = self.handler.clone();
 
