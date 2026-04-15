@@ -121,6 +121,10 @@ impl SessionState {
     /// Removes all participants, dropping their `Arc<Participant>` references.
     /// This causes per-participant `control_tx` senders to drop, which signals
     /// flush tasks to exit.
+    ///
+    /// For use during session teardown only — does not clean up subscriptions,
+    /// video subscribers, client channels, or parameter subscriptions (the room
+    /// is closing immediately after).
     pub fn clear_participants(&mut self) {
         self.participants.clear();
     }

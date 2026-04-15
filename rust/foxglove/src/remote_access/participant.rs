@@ -107,9 +107,12 @@ impl Participant {
     }
 
     /// Send a fetch asset response to the participant via the control plane queue.
+    ///
+    /// The `try_queue_control` return is intentionally ignored here: these methods
+    /// don't have access to `participant_reset_tx` to trigger a reset. In practice,
+    /// protocol messages via `send_control` flow regularly and will trigger the
+    /// reset if the queue stays full.
     pub(crate) fn send_asset_response(&self, data: &[u8], request_id: u32) {
-        // Asset responses are best-effort — if the queue is full, the client is
-        // being disconnected anyway and will re-request after reconnection.
         self.try_queue_control(encode_binary_message(&FetchAssetResponse::asset_data(
             request_id, data,
         )));
