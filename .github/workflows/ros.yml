@@ -26,7 +26,7 @@ jobs:
               - 'ros/**'
               - '.github/workflows/ros.yml'
 
-  build-cpp:
+  build-cpp-dist:
     needs: changes
     if: needs.changes.outputs.should_run == 'true'
     # Pinned to 22.04 so libfoxglove.a is compatible with ROS Humble (glibc 2.35)
@@ -37,21 +37,22 @@ jobs:
       - run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            libwebsockets-dev nlohmann-json3-dev
+            libglib2.0-dev libva-dev libwebsockets-dev
+          echo "CC=gcc" >> $GITHUB_ENV
+          echo "CXX=g++" >> $GITHUB_ENV
+
       - name: Build C++ SDK
-        run: make build
-        working-directory: cpp
-      - name: Upload build artifacts
+        run: make -f Container.mk build-cpp-dist
+
+      - name: Upload SDK artifact
         uses: actions/upload-artifact@v7
         with:
-          name: cpp-build
-          path: |
-            cpp/build/libfoxglove.a
-            cpp/build/libfoxglove_cpp_static.a
+          name: cpp-sdk
+          path: cpp/dist
           retention-days: 1
 
   ros:
-    needs: [changes, build-cpp]
+    needs: [changes, build-cpp-dist]
     if: needs.changes.outputs.should_run == 'true'
     runs-on: ubuntu-latest
     strategy:
@@ -66,18 +67,22 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Download C++ SDK build
+      - name: Download C++ SDK artifact
         uses: actions/download-artifact@v8
         with:
-          name: cpp-build
-          path: cpp/build
+          name: cpp-sdk
+          path: cpp/dist
 
       - name: Run make lint
         run: make lint
         working-directory: ros
 
       - name: Run make docker-build
-        run: make USE_LOCAL_SDK=ON ${{ matrix.ros_distribution == 'rolling' && 'EXTRA_DOCKER_ARGS="--build-arg USE_ROS_TESTING=true"' || '' }} docker-build-${{ matrix.ros_distribution }}
+        run: |
+          make \
+            FOXGLOVE_CPP_SDK_DIR=/sdk/cpp/dist \
+            ${{ matrix.ros_distribution == 'rolling' && 'EXTRA_DOCKER_ARGS="--build-arg USE_ROS_TESTING=true"' || '' }} \
+            docker-build-${{ matrix.ros_distribution }}
         working-directory: ros
 
       - name: Run make docker-test
@@ -90,7 +95,7 @@ jobs:
   # individual matrix jobs.
   ros-status:
     name: ros-status
-    needs: [changes, build-cpp, ros]
+    needs: [changes, build-cpp-dist, ros]
     if: always()
     runs-on: ubuntu-latest
     steps:

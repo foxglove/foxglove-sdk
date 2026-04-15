@@ -1,6 +1,6 @@
 #include <foxglove/channel.hpp>
 #include <foxglove/foxglove.hpp>
-#include <foxglove/server.hpp>
+#include <foxglove/websocket.hpp>
 
 #include <atomic>
 #include <chrono>

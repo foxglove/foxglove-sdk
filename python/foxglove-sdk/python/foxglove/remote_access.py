@@ -11,6 +11,7 @@ from foxglove import (
     Service,
     ServiceRequest,
     ServiceSchema,
+    StatusLevel,
 )
 
 from ._foxglove_py.remote_access import (
@@ -153,4 +154,5 @@ __all__ = [
     "Service",
     "ServiceRequest",
     "ServiceSchema",
+    "StatusLevel",
 ]

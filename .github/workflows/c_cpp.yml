@@ -38,30 +38,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
       - run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             clang-format-19 clang-tidy-19 \
+            gcc g++ libglib2.0-dev libva-dev  \
             libwebsockets-dev nlohmann-json3-dev
           echo "/usr/lib/llvm-19/bin" >> $GITHUB_PATH
       - run: clang-format --version
       - run: clang-tidy --version
       - run: make lint
         working-directory: cpp
-      - run: make CLANG_TIDY=true CMAKE_BUILD_TYPE=Debug test
-        working-directory: cpp
-
-  lint-ra:
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
-      - run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends clang-format-19 clang-tidy-19 \
-            gcc-14 g++-14 libglib2.0-dev libva-dev
-          echo "/usr/lib/llvm-19/bin" >> $GITHUB_PATH
-      - run: make CLANG_TIDY=true CMAKE_BUILD_TYPE=Debug test-ra
+      - name: Build C libs
+        run: make -f Container.mk build-cpp-dist
+      - name: Test with clang tidy
+        run: |
+          make test \
+            CLANG_TIDY=true \
+            CMAKE_BUILD_TYPE=Debug \
+            FOXGLOVE_PREBUILT_LIB_DIR=dist/lib
         working-directory: cpp
 
   build:
@@ -71,60 +67,40 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Linux
+          # Linux (clang, remote access disabled)
+          - runner: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            staticlib_name: libfoxglove.a
+            cdylib_name: libfoxglove.so
+            compiler: clang
+            skip_upload: true
+            cross: false
+
+          # Linux (remote access enabled)
           - runner: ubuntu-22.04-arm
             target: aarch64-unknown-linux-gnu
             staticlib_name: libfoxglove.a
             cdylib_name: libfoxglove.so
-            staticlib_artifact_name: libfoxglove-aarch64-unknown-linux-gnu.a
-            cdylib_artifact_name: libfoxglove-aarch64-unknown-linux-gnu.so
-            compiler: clang
             cross: false
+            remote_access: true
           - runner: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
             staticlib_name: libfoxglove.a
             cdylib_name: libfoxglove.so
-            staticlib_artifact_name: libfoxglove-x86_64-unknown-linux-gnu.a
-            cdylib_artifact_name: libfoxglove-x86_64-unknown-linux-gnu.so
-            compiler: clang
-            cross: false
-
-          # Linux (remote access, GCC 14 / libstdc++ / glibc >= 2.39)
-          - runner: ubuntu-24.04-arm
-            target: aarch64-unknown-linux-gnu
-            staticlib_name: libfoxglove.a
-            cdylib_name: libfoxglove.so
-            staticlib_artifact_name: libfoxglove-aarch64-unknown-linux-gnu.a
-            cdylib_artifact_name: libfoxglove-aarch64-unknown-linux-gnu.so
             cross: false
             remote_access: true
-            artifact_suffix: -glibc2.39
-          - runner: ubuntu-24.04
-            target: x86_64-unknown-linux-gnu
-            staticlib_name: libfoxglove.a
-            cdylib_name: libfoxglove.so
-            staticlib_artifact_name: libfoxglove-x86_64-unknown-linux-gnu.a
-            cdylib_artifact_name: libfoxglove-x86_64-unknown-linux-gnu.so
-            cross: false
-            remote_access: true
-            artifact_suffix: -glibc2.39
 
           # macOS (remote access enabled)
           - runner: macos-15
             target: aarch64-apple-darwin
             staticlib_name: libfoxglove.a
             cdylib_name: libfoxglove.dylib
-            staticlib_artifact_name: libfoxglove-aarch64-apple-darwin.a
-            cdylib_artifact_name: libfoxglove-aarch64-apple-darwin.dylib
             cross: false
             remote_access: true
-
           - runner: macos-15
             target: x86_64-apple-darwin
             staticlib_name: libfoxglove.a
             cdylib_name: libfoxglove.dylib
-            staticlib_artifact_name: libfoxglove-x86_64-apple-darwin.a
-            cdylib_artifact_name: libfoxglove-x86_64-apple-darwin.dylib
             cross: true
             cmake_args: -DCMAKE_OSX_ARCHITECTURES=x86_64
             remote_access: true
@@ -134,16 +110,12 @@ jobs:
             target: x86_64-pc-windows-msvc
             staticlib_name: foxglove.lib
             cdylib_name: foxglove.dll
-            staticlib_artifact_name: foxglove-x86_64-pc-windows-msvc.lib
-            cdylib_artifact_name: foxglove-x86_64-pc-windows-msvc.dll
             cross: false
             remote_access: true
           - runner: windows-2025
             target: aarch64-pc-windows-msvc
             staticlib_name: foxglove.lib
             cdylib_name: foxglove.dll
-            staticlib_artifact_name: foxglove-aarch64-pc-windows-msvc.lib
-            cdylib_artifact_name: foxglove-aarch64-pc-windows-msvc.dll
             cross: true
             cmake_args: -A ARM64 -DFOXGLOVE_SKIP_TEST_DISCOVERY=ON
             remote_access: true
@@ -153,26 +125,20 @@ jobs:
             target: aarch64-apple-ios
             staticlib_name: libfoxglove.a
             cdylib_name: libfoxglove.dylib
-            staticlib_artifact_name: libfoxglove-aarch64-apple-ios.a
-            cdylib_artifact_name: libfoxglove-aarch64-apple-ios.dylib
             cross: true
           # iOS simulator
           - runner: macos-15
             target: aarch64-apple-ios-sim
             staticlib_name: libfoxglove.a
             cdylib_name: libfoxglove.dylib
-            staticlib_artifact_name: libfoxglove-aarch64-apple-ios-sim.a
-            cdylib_artifact_name: libfoxglove-aarch64-apple-ios-sim.dylib
             cross: true
           - runner: macos-15
             target: x86_64-apple-ios
             staticlib_name: libfoxglove.a
             cdylib_name: libfoxglove.dylib
-            staticlib_artifact_name: libfoxglove-x86_64-apple-ios.a
-            cdylib_artifact_name: libfoxglove-x86_64-apple-ios.dylib
             cross: true
 
-    name: build (${{ matrix.target }}${{ matrix.remote_access && ', remote-access' || '' }})
+    name: build (${{ matrix.target }}${{ matrix.remote_access && ', remote-access' || '' }}${{ matrix.compiler == 'clang' && ', clang' || ''}})
     runs-on: ${{ matrix.runner }}
 
     env:
@@ -185,7 +151,7 @@ jobs:
           target: ${{ matrix.target }}
           # Set a cache key to distinguish the remote-access-enabled linux
           # builds from the non-remote-access-enabled linux builds.
-          cache-key: ${{ matrix.remote_access && 'ra' || '' }}
+          cache-key: ${{ matrix.remote_access && 'ra-v2' || '' }}
 
       - run: echo "IPHONEOS_DEPLOYMENT_TARGET=13.0.0" >> $GITHUB_ENV
         # Min version needed for libaws_lc_sys
@@ -204,9 +170,9 @@ jobs:
         if: matrix.remote_access && runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y gcc-14 g++-14 libglib2.0-dev libva-dev
-          echo "CC=gcc-14" >> $GITHUB_ENV
-          echo "CXX=g++-14" >> $GITHUB_ENV
+          sudo apt-get install -y libglib2.0-dev libva-dev libwebsockets-dev
+          echo "CC=gcc" >> $GITHUB_ENV
+          echo "CXX=g++" >> $GITHUB_ENV
       - name: Use Clang
         if: matrix.compiler == 'clang'
         run: |
@@ -216,34 +182,15 @@ jobs:
       - if: contains(matrix.target, 'windows')
         uses: ilammy/setup-nasm@v1
 
-      # Build the Rust/C library with cargo directly.
-      - name: Build C library for ${{ matrix.target }}
+      - name: Build and package C/C++ SDK
         env:
-          FOXGLOVE_SDK_LANGUAGE: c
-        run: cargo build --release
-        working-directory: c
-
-      # We include remote access support on platforms that support it, but only
-      # in the cdylib - we don't want to include it in the staticlib. There's no
-      # way to prevent cargo from building the staticlib again in this step, so
-      # we stash and restore the original staticlib.
-      - name: Save base staticlib before RA rebuild
-        if: matrix.remote_access
-        shell: bash
-        run: cp target/${{ matrix.target }}/release/${{ matrix.staticlib_name }} target/${{ matrix.target }}/release/${{ matrix.staticlib_name }}.base
-
-      - name: Rebuild C library with remote access for ${{ matrix.target }}
-        if: matrix.remote_access
-        env:
-          FOXGLOVE_SDK_LANGUAGE: c
           RUSTFLAGS: ${{ runner.os == 'Windows' && '-C target-feature=+crt-static' || '' }}
-        run: cargo build --release --features remote-access
-        working-directory: c
-
-      - name: Restore base staticlib
-        if: matrix.remote_access
-        shell: bash
-        run: mv target/${{ matrix.target }}/release/${{ matrix.staticlib_name }}.base target/${{ matrix.target }}/release/${{ matrix.staticlib_name }}
+        run: >-
+          make -f Container.mk build-cpp-dist
+          CPP_SDK_DIR=artifacts/foxglove
+          FOXGLOVE_REMOTE_ACCESS=${{ matrix.remote_access && 'ON' || 'OFF' }}
+          STATICLIB_NAME=${{ matrix.staticlib_name }}
+          CDYLIB_NAME=${{ matrix.cdylib_name }}
 
       - name: Ensure generated files are up to date
         run: git diff --exit-code
@@ -251,50 +198,32 @@ jobs:
       # Build and test C++ using the pre-built Rust libraries.
       - name: Build C++ library
         if: "!contains(matrix.target, 'apple-ios')"
-        run: make ${{ matrix.remote_access && 'build-ra' || 'build' }}
+        run: make build
         working-directory: cpp
         env:
-          FOXGLOVE_PREBUILT_LIB_DIR: ${{ github.workspace }}/target/${{ matrix.target }}/release
+          FOXGLOVE_PREBUILT_LIB_DIR: ${{ github.workspace }}/artifacts/foxglove/lib
+          FOXGLOVE_REMOTE_ACCESS: ${{ matrix.remote_access && 'ON' || 'OFF' }}
           CMAKE_ARGS: ${{ matrix.cmake_args || '' }}
       - name: Test C++ library
         if: "!matrix.cross && !contains(matrix.target, 'apple-ios')"
-        run: ctest --test-dir ${{ matrix.remote_access && 'build-ra' || 'build' }} --verbose
+        run: ctest --test-dir build --verbose
         working-directory: cpp
 
       - name: Run remote data loader backend conformance tests
         if: ${{ !matrix.cross }}
         env:
-          REMOTE_DATA_LOADER_BACKEND_CMD: ${{ format('cpp/{0}/{1}', matrix.remote_access && 'build-ra' || 'build', runner.os == 'Windows' && 'RelWithDebInfo/example_remote_data_loader_backend.exe' || 'example_remote_data_loader_backend') }}
+          REMOTE_DATA_LOADER_BACKEND_CMD: ${{ format('cpp/build/{0}', runner.os == 'Windows' && 'RelWithDebInfo/example_remote_data_loader_backend.exe' || 'example_remote_data_loader_backend') }}
           REMOTE_DATA_LOADER_BACKEND_URL: "http://127.0.0.1:8081/v1/manifest?flightId=TEST123&startTime=2024-01-01T00:00:00Z&endTime=2024-01-01T00:00:05Z"
           REMOTE_DATA_LOADER_BACKEND_EXPECTED_STREAMED_SOURCE_COUNT: "1"
           REMOTE_DATA_LOADER_BACKEND_EXPECTED_STATIC_FILE_SOURCE_COUNT: "0"
         run: cargo run -p remote_data_loader_backend_conformance
-
-      - name: Organize artifacts for zip
-        shell: bash
-        run: |
-          mkdir -p artifacts/foxglove/lib
-          mkdir -p artifacts/foxglove/include
-          mkdir -p artifacts/foxglove/src
-
-          lib_dir="target/${{ matrix.target }}/release"
-          cp "$lib_dir/${{ matrix.staticlib_name }}" artifacts/foxglove/lib/
-          cp "$lib_dir/${{ matrix.cdylib_name }}" artifacts/foxglove/lib/
-          # Include the MSVC import library on Windows (needed for link-time binding)
-          if [ -f "$lib_dir/${{ matrix.cdylib_name }}.lib" ]; then
-            cp "$lib_dir/${{ matrix.cdylib_name }}.lib" artifacts/foxglove/lib/
-          fi
-
-          cp -R c/include/foxglove-c artifacts/foxglove/include/
-          cp -R cpp/foxglove/include/foxglove artifacts/foxglove/include/
-          cp -R cpp/foxglove/src/* artifacts/foxglove/src/
 
       - name: Zip libraries for artifact
         if: runner.os != 'Windows'
         working-directory: artifacts
         run: |
           zip -r \
-            foxglove-${{inputs.sdk-version || github.sha}}-cpp-${{ matrix.target }}${{ matrix.artifact_suffix || '' }}.zip \
+            foxglove-${{inputs.sdk-version || github.sha}}-cpp-${{ matrix.target }}.zip \
             foxglove/
 
       - name: Zip libraries for artifact (Windows)
@@ -302,14 +231,15 @@ jobs:
         working-directory: artifacts
         run: |
           7z a -tzip -sse `
-            foxglove-${{inputs.sdk-version || github.sha}}-cpp-${{ matrix.target }}${{ matrix.artifact_suffix || '' }}.zip `
+            foxglove-${{inputs.sdk-version || github.sha}}-cpp-${{ matrix.target }}.zip `
             foxglove/
 
       - name: Upload static & shared library to artifacts
+        if: ${{ !(matrix.skip_upload || false) }}
         uses: actions/upload-artifact@v7
         with:
-          name: foxglove-${{inputs.sdk-version || github.sha}}-cpp-${{ matrix.target }}${{ matrix.artifact_suffix || '' }}.zip
-          path: artifacts/foxglove-${{inputs.sdk-version || github.sha}}-cpp-${{ matrix.target }}${{ matrix.artifact_suffix || '' }}.zip
+          name: foxglove-${{inputs.sdk-version || github.sha}}-cpp-${{ matrix.target }}.zip
+          path: artifacts/foxglove-${{inputs.sdk-version || github.sha}}-cpp-${{ matrix.target }}.zip
           if-no-files-found: error
 
   test-asan-ubsan:
@@ -328,9 +258,10 @@ jobs:
       - run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
+            libglib2.0-dev libva-dev \
             libwebsockets-dev nlohmann-json3-dev
 
-      - run: make SANITIZE=address,undefined test
+      - run: make SANITIZE=address,undefined FOXGLOVE_REMOTE_ACCESS=OFF test
         working-directory: cpp
 
   # Gate job for branch protection. Always posts a status so that the required
@@ -339,7 +270,7 @@ jobs:
   # individual matrix jobs.
   c-cpp-status:
     name: c-cpp-status
-    needs: [changes, lint, lint-ra, build, test-asan-ubsan]
+    needs: [changes, lint, build, test-asan-ubsan]
     if: always()
     runs-on: ubuntu-latest
     steps:

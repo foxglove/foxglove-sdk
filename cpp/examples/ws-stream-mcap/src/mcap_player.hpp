@@ -1,7 +1,7 @@
 #pragma once
 
 #include <foxglove/channel.hpp>
-#include <foxglove/server.hpp>
+#include <foxglove/websocket.hpp>
 
 #include <mcap/reader.hpp>
 

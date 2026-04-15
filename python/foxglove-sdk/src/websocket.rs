@@ -749,12 +749,6 @@ impl From<PyCapability> for foxglove::websocket::Capability {
     }
 }
 
-/// Container for a user-defined asset handler.
-///
-/// The handler must be a callback function which takes the uri as its argument, and returns the
-/// asset `bytes`. If the handler returns `None`, a "not found" message will be sent to the client.
-/// If the handler raises an exception, the stringified exception message will be returned to the
-/// client as an error.
 pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     let module = PyModule::new(parent_module.py(), "websocket")?;
 

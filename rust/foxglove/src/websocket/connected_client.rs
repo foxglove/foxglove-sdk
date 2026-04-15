@@ -53,7 +53,7 @@ pub(super) enum ShutdownReason {
     ControlPlaneQueueFull,
 }
 
-/// A connected client session with the websocket server.
+/// A connected client session with the WebSocket server.
 pub(super) struct ConnectedClient {
     id: ClientId,
     addr: SocketAddr,
@@ -237,7 +237,7 @@ impl ConnectedClient {
                 return;
             }
             Err(ParseError::UnhandledMessageType) => {
-                tracing::debug!("Unhandled websocket message: {message:?}");
+                tracing::debug!("Unhandled WebSocket message: {message:?}");
                 return;
             }
             Err(err) => {

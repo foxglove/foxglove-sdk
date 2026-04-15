@@ -239,17 +239,17 @@
 //! # }
 //! ```
 //!
-//! ### Live visualization server
+//! ### WebSocket server
 //!
-//! You can use the SDK to publish messages to the Foxglove app.
+//! You can use the SDK to publish messages to the Foxglove app over a local WebSocket connection.
 //!
 //! Note: this requires the `websocket` feature, which is enabled by default.
 //!
-//! Use [`WebSocketServer::new`] to create a new live visualization server. By default, the server
+//! Use [`WebSocketServer::new`] to create a new WebSocket server. By default, the server
 //! listens on `127.0.0.1:8765`. Once the server is configured, call [`WebSocketServer::start`] to
-//! start the server, and begin accepting websocket connections from the Foxglove app.
+//! start the server, and begin accepting WebSocket connections from the Foxglove app.
 //!
-//! Each client that connects to the websocket server is its own independent sink. The sink is
+//! Each client that connects to the WebSocket server is its own independent sink. The sink is
 //! dynamically added to the [`Context`] associated with the server when the client connects, and
 //! removed from the context when the client disconnects.
 //!
@@ -269,11 +269,45 @@
 //!     .bind("127.0.0.1", 9999)
 //!     .start()
 //!     .await
-//!     .expect("Failed to start visualization server");
+//!     .expect("Failed to start WebSocket server");
 //!
 //! // Log stuff here.
 //!
-//! server.stop();
+//! server.stop().wait().await;
+//! # }
+//! ```
+//!
+//! ### Remote access gateway
+//!
+//! You can use the SDK to publish messages to the Foxglove app over a remote WebRTC connection,
+//! using the Foxglove remote access service.
+//!
+//! Note: this requires the `remote-access` feature, which is not enabled by default.
+//!
+//! Use [`remote_access::Gateway::new`] to create a new remote access gateway. You must provide a
+//! device token to authenticate with the Foxglove API; this can be set via the builder or with
+//! the `FOXGLOVE_DEVICE_TOKEN` environment variable.
+//!
+//! Once started, the gateway connects to the Foxglove platform and makes the device available for
+//! remote visualization and teleop. Each remote client that connects is its own independent sink,
+//! dynamically added to the [`Context`] when the client connects and removed when it disconnects.
+//!
+//! The gateway handle can safely be dropped and the connection will continue to run. Use
+//! [`stop`](`remote_access::GatewayHandle::stop`) to shut down the gateway explicitly.
+//!
+//! ```no_run
+//! # #[cfg(feature = "remote-access")]
+//! # async fn func() {
+//! use foxglove::remote_access::Gateway;
+//!
+//! let gateway = Gateway::new()
+//!     .name("R2-D2")
+//!     .start()
+//!     .expect("Failed to start remote access gateway");
+//!
+//! // Log stuff here.
+//!
+//! gateway.stop().await.expect("Failed to stop remote access gateway");
 //! # }
 //! ```
 //!
@@ -285,27 +319,28 @@
 //!   [`Timestamp`][crate::messages::Timestamp].
 //! - `derive`: enables the use of `#[derive(Encode)]` to derive the [`Encode`] trait for logging
 //!   custom structs. Enabled by default.
-//! - `live_visualization`: deprecated alias for `websocket`.
 //! - `lz4`: enables support for the LZ4 compression algorithm for mcap files. Enabled by default.
+//! - `remote-access`: enables the remote access gateway for live visualization and teleop via
+//!   WebRTC.
 //! - `schemars`: provides a blanket implementation of the [`Encode`] trait for types that
 //!   implement [`Serialize`](serde::Serialize) and [`JsonSchema`][jsonschema-trait].
 //! - `serde`: derives [`Serialize`](serde::Serialize) and [`Deserialize`](serde::Deserialize) for
 //!   all [message types](crate::messages).
 //! - `unstable`: features which are under active development and likely to change in an upcoming
 //!   version.
-//! - `websocket`: enables the websocket server and client for live visualization. Enabled by
+//! - `websocket`: enables the WebSocket server and client for live visualization. Enabled by
 //!   default.
 //! - `zstd`: enables support for the zstd compression algorithm for mcap files. Enabled by
 //!   default.
 //!
-//! If you do not require websocket features, you can disable that flag to reduce the
+//! If you do not require WebSocket features, you can disable that flag to reduce the
 //! compiled size of the SDK.
 //!
 //! # Requirements
 //!
-//! With the `websocket` feature (enabled by default), the Foxglove SDK depends on [tokio]
-//! as its async runtime. See [`WebSocketServer`] for more information. Refer to the tokio
-//! documentation for more information about how to configure your application to use tokio.
+//! With the `websocket` or `remote-access` features, the Foxglove SDK depends on [tokio]
+//! as its async runtime. Refer to the tokio documentation for more information about how to
+//! configure your application to use tokio.
 //!
 //! [chrono]: https://docs.rs/chrono/latest/chrono/
 //! [tokio]: https://docs.rs/tokio/latest/tokio/
@@ -382,7 +417,7 @@ pub use sink_channel_filter::SinkChannelFilter;
 pub use std::collections::BTreeMap;
 pub(crate) use time::nanoseconds_since_epoch;
 
-// Common dependencies for remote-access & websocket, with docsrs attributes to ensure that the
+// Common dependencies for remote-access & WebSocket, with docsrs attributes to ensure that the
 // feature gate badges in docs.rs render as the public features, as opposed to _remote-common. This
 // is only needed for modules that contain types which are publicly re-exported (Parameter,
 // Service, etc.).
@@ -408,7 +443,6 @@ pub use runtime::shutdown_runtime;
 
 #[cfg(feature = "remote-access")]
 mod api_client;
-#[doc(hidden)]
 #[cfg(feature = "remote-access")]
 pub mod remote_access;
 

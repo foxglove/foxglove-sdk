@@ -9,6 +9,7 @@ from foxglove import (
     Service,
     ServiceRequest,
     ServiceSchema,
+    StatusLevel,
 )
 
 class Capability(Enum):
@@ -68,6 +69,16 @@ class RemoteAccessGateway:
 
     def publish_parameter_values(self, parameters: list[Parameter]) -> None:
         """Publishes parameter values to all subscribed clients."""
+        ...
+
+    def publish_status(
+        self, message: str, level: StatusLevel, id: str | None = None
+    ) -> None:
+        """Publishes a status message to all connected participants."""
+        ...
+
+    def remove_status(self, ids: list[str]) -> None:
+        """Removes status messages by id from all connected participants."""
         ...
 
     def stop(self) -> None:

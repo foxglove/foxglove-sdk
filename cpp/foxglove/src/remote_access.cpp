@@ -18,9 +18,11 @@ FoxgloveResult<RemoteAccessGateway> RemoteAccessGateway::create(
     options.callbacks.onUnsubscribe || options.callbacks.onMessageData ||
     options.callbacks.onClientAdvertise || options.callbacks.onClientUnadvertise ||
     options.callbacks.onGetParameters || options.callbacks.onSetParameters ||
-    options.callbacks.onParametersSubscribe || options.callbacks.onParametersUnsubscribe;
+    options.callbacks.onParametersSubscribe || options.callbacks.onParametersUnsubscribe ||
+    options.callbacks.onConnectionGraphSubscribe || options.callbacks.onConnectionGraphUnsubscribe;
 
   std::unique_ptr<RemoteAccessGatewayCallbacks> callbacks;
+  std::unique_ptr<FetchAssetHandler> fetch_asset;
   std::unique_ptr<SinkChannelFilterFn> sink_channel_filter;
 
   foxglove_gateway_callbacks c_callbacks = {};
@@ -202,6 +204,25 @@ FoxgloveResult<RemoteAccessGateway> RemoteAccessGateway::create(
           }
         };
     }
+    if (callbacks->onConnectionGraphSubscribe) {
+      c_callbacks.on_connection_graph_subscribe = [](const void* context) {
+        try {
+          (static_cast<const RemoteAccessGatewayCallbacks*>(context))->onConnectionGraphSubscribe();
+        } catch (const std::exception& exc) {
+          warn() << "onConnectionGraphSubscribe callback failed: " << exc.what();
+        }
+      };
+    }
+    if (callbacks->onConnectionGraphUnsubscribe) {
+      c_callbacks.on_connection_graph_unsubscribe = [](const void* context) {
+        try {
+          (static_cast<const RemoteAccessGatewayCallbacks*>(context))
+            ->onConnectionGraphUnsubscribe();
+        } catch (const std::exception& exc) {
+          warn() << "onConnectionGraphUnsubscribe callback failed: " << exc.what();
+        }
+      };
+    }
   }
 
   // Build C options
@@ -244,6 +265,31 @@ FoxgloveResult<RemoteAccessGateway> RemoteAccessGateway::create(
     };
   }
 
+  // Fetch asset handler
+  if (options.fetch_asset) {
+    fetch_asset = std::make_unique<FetchAssetHandler>(options.fetch_asset);
+    c_options.fetch_asset_context = fetch_asset.get();
+    c_options.fetch_asset = [](
+                              const void* context,
+                              const struct foxglove_string* c_uri,
+                              struct foxglove_fetch_asset_responder* c_responder
+                            ) {
+      const auto* handler = static_cast<const FetchAssetHandler*>(context);
+      std::string_view uri{c_uri->data, c_uri->len};
+      FetchAssetResponder responder(c_responder);
+      try {
+        (*handler)(uri, std::move(responder));
+      } catch (const std::exception& exc) {
+        warn() << "Fetch asset callback failed: " << exc.what();
+        auto* ptr = responder.impl_.release();
+        if (ptr) {
+          std::string message = std::string("Fetch asset callback failed: ") + exc.what();
+          foxglove_fetch_asset_respond_error(ptr, {message.data(), message.length()});
+        }
+      }
+    };
+  }
+
   // Optional API URL
   foxglove_string api_url = {};
   if (options.foxglove_api_url) {
@@ -267,14 +313,18 @@ FoxgloveResult<RemoteAccessGateway> RemoteAccessGateway::create(
     return tl::unexpected(static_cast<FoxgloveError>(error));
   }
 
-  return RemoteAccessGateway(gateway, std::move(callbacks), std::move(sink_channel_filter));
+  return RemoteAccessGateway(
+    gateway, std::move(callbacks), std::move(fetch_asset), std::move(sink_channel_filter)
+  );
 }
 
 RemoteAccessGateway::RemoteAccessGateway(
   foxglove_gateway* gateway, std::unique_ptr<RemoteAccessGatewayCallbacks> callbacks,
+  std::unique_ptr<FetchAssetHandler> fetch_asset,
   std::unique_ptr<SinkChannelFilterFn> sink_channel_filter
 )
     : callbacks_(std::move(callbacks))
+    , fetch_asset_(std::move(fetch_asset))
     , sink_channel_filter_(std::move(sink_channel_filter))
     , impl_(gateway, foxglove_gateway_stop) {}
 
@@ -297,6 +347,33 @@ FoxgloveError RemoteAccessGateway::removeService(std::string_view name) const no
 void RemoteAccessGateway::publishParameterValues(std::vector<Parameter>&& params) {
   ParameterArray array(std::move(params));
   foxglove_gateway_publish_parameter_values(impl_.get(), array.release());
+}
+
+FoxgloveError RemoteAccessGateway::publishStatus(
+  RemoteAccessStatusLevel level, std::string_view message, std::optional<std::string_view> id
+) const noexcept {
+  auto c_id = id ? std::optional<foxglove_string>{{id->data(), id->size()}} : std::nullopt;
+  auto error = foxglove_gateway_publish_status(
+    impl_.get(),
+    static_cast<foxglove_server_status_level>(level),
+    {message.data(), message.size()},
+    c_id ? &*c_id : nullptr
+  );
+  return FoxgloveError(error);
+}
+
+FoxgloveError RemoteAccessGateway::removeStatus(const std::vector<std::string_view>& ids) const {
+  std::vector<foxglove_string> c_ids;
+  c_ids.reserve(ids.size());
+  for (const auto& id : ids) {
+    c_ids.push_back({id.data(), id.size()});
+  }
+  auto error = foxglove_gateway_remove_status(impl_.get(), c_ids.data(), c_ids.size());
+  return FoxgloveError(error);
+}
+
+FoxgloveError RemoteAccessGateway::publishConnectionGraph(const ConnectionGraph& graph) const {
+  return FoxgloveError(foxglove_gateway_publish_connection_graph(impl_.get(), graph.impl_.get()));
 }
 
 FoxgloveError RemoteAccessGateway::stop() {

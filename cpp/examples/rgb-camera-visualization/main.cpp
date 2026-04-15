@@ -1,6 +1,6 @@
 #include <foxglove/foxglove.hpp>
 #include <foxglove/messages.hpp>
-#include <foxglove/server.hpp>
+#include <foxglove/websocket.hpp>
 
 #include <opencv2/core/mat.hpp>
 #include <opencv2/videoio.hpp>

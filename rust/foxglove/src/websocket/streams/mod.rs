@@ -1,4 +1,4 @@
-//! Support for TLS in the websocket server, if the "tls" feature is enabled.
+//! Support for TLS in the WebSocket server, if the "tls" feature is enabled.
 //! When disabled, provides no-op implementations over plain streams.
 
 #[cfg(not(feature = "tls"))]

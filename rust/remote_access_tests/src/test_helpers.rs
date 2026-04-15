@@ -4,12 +4,14 @@
 //! managing test gateway instances, and common utilities. Used across test suites
 //! such as `livekit_test` and `netem_test`.
 
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::{Context as _, Result};
 use futures_util::StreamExt;
 use livekit::id::ParticipantIdentity;
+use livekit::prelude::{DataTrackStream, RemoteDataTrack};
 use livekit::{
     ByteStreamWriter, Room, RoomEvent, RoomOptions, StreamByteOptions, StreamWriter as _,
 };
@@ -22,15 +24,17 @@ use foxglove::protocol::v2::client::{
     ServiceCallRequest, SetParameters, Subscribe, SubscribeChannel, SubscribeParameterUpdates,
     Unadvertise, Unsubscribe, UnsubscribeParameterUpdates,
 };
+use foxglove::protocol::v2::server::MessageData as ServerMessageData;
 
 /// Describes a client-advertised channel for use in test helpers.
 pub struct ClientChannelDesc {
     pub id: u32,
     pub topic: String,
     pub encoding: String,
+    pub schema_name: String,
 }
 use foxglove::protocol::v2::server::ServerMessage;
-use foxglove::remote_access::Service;
+use foxglove::remote_access::service::Service;
 
 use crate::frame::{self, Frame, OpCode};
 use crate::{livekit_token, mock_server};
@@ -110,6 +114,45 @@ impl FrameReader {
 }
 
 // ---------------------------------------------------------------------------
+// DeviceChannelReader: reads data track frames for a device channel and
+// converts them to MessageData.
+// ---------------------------------------------------------------------------
+
+const DATA_TRACK_FRAME_HEADER_SIZE: usize = 8; // u16 LE flags + u16 LE data_offset + u32 LE sequence
+
+/// Reads framed data track frames and converts them to [`ServerMessageData`].
+///
+/// Each frame payload contains an 8-byte header (u16 LE flags, u16 LE data_offset,
+/// u32 LE sequence) followed by the raw message data. The channel identity is
+/// determined by the data track name (topic), not by the frame content.
+pub struct DeviceChannelReader {
+    stream: DataTrackStream,
+}
+
+impl DeviceChannelReader {
+    /// Reads the next frame from the data track and constructs a [`ServerMessageData`].
+    ///
+    /// The frame header contains a sequence number (not a channel_id); channel identity
+    /// is determined by which data track this reader is attached to.
+    pub async fn next_message_data(&mut self) -> Result<ServerMessageData<'static>> {
+        let deadline = tokio::time::Instant::now() + READ_TIMEOUT;
+        let frame = tokio::time::timeout_at(deadline, self.stream.next())
+            .await
+            .context("timeout reading data track frame")?
+            .context("data track stream ended")?;
+        let payload = frame.payload();
+        anyhow::ensure!(
+            payload.len() >= DATA_TRACK_FRAME_HEADER_SIZE,
+            "data track frame too small ({} bytes)",
+            payload.len()
+        );
+        let data = payload[DATA_TRACK_FRAME_HEADER_SIZE..].to_vec();
+        let log_time = frame.user_timestamp().unwrap_or(0);
+        Ok(ServerMessageData::new(0, log_time, data))
+    }
+}
+
+// ---------------------------------------------------------------------------
 // ViewerConnection: connects to a LiveKit room and provides helpers for
 // reading control channel messages.
 // ---------------------------------------------------------------------------
@@ -125,6 +168,11 @@ pub struct ViewerConnection {
     /// Cached writer for the control channel byte stream to the gateway.
     /// Lazily opened on first send, reused for all subsequent messages.
     control_writer: Mutex<Option<ByteStreamWriter>>,
+    /// Buffered `DataTrackPublished` events that were received while processing
+    /// other room events. Checked before waiting on the events channel.
+    pending_data_tracks: Vec<RemoteDataTrack>,
+    /// Per-channel device data track readers, keyed by channel ID.
+    device_channel_readers: HashMap<u64, DeviceChannelReader>,
 }
 
 impl ViewerConnection {
@@ -158,6 +206,8 @@ impl ViewerConnection {
             events,
             frame_reader: FrameReader::new(reader),
             control_writer: Mutex::new(None),
+            pending_data_tracks: Vec::new(),
+            device_channel_readers: HashMap::new(),
         })
     }
 
@@ -195,6 +245,7 @@ impl ViewerConnection {
                 tokio::time::Instant::now() + CONNECT_RETRY_TIMEOUT,
                 outer_deadline,
             );
+            let mut buffered_data_tracks = Vec::new();
             let reader = loop {
                 let event = tokio::time::timeout_at(inner_deadline, events.recv()).await;
                 match event {
@@ -207,6 +258,9 @@ impl ViewerConnection {
                     })) if topic == "control" => {
                         break Some(stream_reader.take().context("reader already taken")?);
                     }
+                    Ok(Some(RoomEvent::DataTrackPublished(track))) => {
+                        buffered_data_tracks.push(track);
+                    }
                     Ok(Some(_)) => continue,
                 }
             };
@@ -217,6 +271,8 @@ impl ViewerConnection {
                     events,
                     frame_reader: FrameReader::new(reader),
                     control_writer: Mutex::new(None),
+                    pending_data_tracks: buffered_data_tracks,
+                    device_channel_readers: HashMap::new(),
                 });
             }
 
@@ -257,6 +313,17 @@ impl ViewerConnection {
         match msg {
             ServerMessage::Status(status) => Ok(status),
             other => anyhow::bail!("expected Status, got: {other:?}"),
+        }
+    }
+
+    /// Reads and returns the next RemoveStatus message.
+    pub async fn expect_remove_status(
+        &mut self,
+    ) -> Result<foxglove::protocol::v2::server::RemoveStatus> {
+        let msg = self.frame_reader.next_server_message().await?;
+        match msg {
+            ServerMessage::RemoveStatus(remove) => Ok(remove),
+            other => anyhow::bail!("expected RemoveStatus, got: {other:?}"),
         }
     }
 
@@ -425,7 +492,7 @@ impl ViewerConnection {
             id: c.id,
             topic: c.topic.as_str().into(),
             encoding: c.encoding.as_str().into(),
-            schema_name: "".into(),
+            schema_name: c.schema_name.as_str().into(),
             schema_encoding: None,
             schema: None,
         }));
@@ -442,32 +509,12 @@ impl ViewerConnection {
         self.send_framed_message(&framed).await
     }
 
-    /// Sends a binary-framed `ClientMessageData` on a per-channel topic `"client-ch-{channelId}"`.
-    ///
-    /// This tests the new per-channel delivery path for client publish message data.
+    /// Sends a binary-framed `ClientMessageData` on the control channel.
     pub async fn send_client_message_data(&self, channel_id: u32, data: &[u8]) -> Result<()> {
         let msg = ClientMessageData::new(channel_id, data);
         let inner = msg.to_bytes();
         let framed = frame::frame_binary_message(&inner);
-
-        let gateway_identity = ParticipantIdentity(mock_server::TEST_DEVICE_ID.to_string());
-        let writer = self
-            .room
-            .local_participant()
-            .stream_bytes(StreamByteOptions {
-                topic: format!("client-ch-{channel_id}"),
-                destination_identities: vec![gateway_identity],
-                ..StreamByteOptions::default()
-            })
-            .await
-            .map_err(|e| anyhow::anyhow!("failed to open byte stream to gateway: {e}"))?;
-
-        writer
-            .write(&framed)
-            .await
-            .map_err(|e| anyhow::anyhow!("failed to write client message data on channel: {e}"))?;
-
-        Ok(())
+        self.send_framed_message(&framed).await
     }
 
     /// Waits for a `TrackSubscribed` room event and returns the track name.
@@ -478,8 +525,14 @@ impl ViewerConnection {
                 .await
                 .context("timeout waiting for TrackSubscribed event")?
                 .context("room events channel closed")?;
-            if let RoomEvent::TrackSubscribed { publication, .. } = event {
-                return Ok(publication.name());
+            match event {
+                RoomEvent::TrackSubscribed { publication, .. } => {
+                    return Ok(publication.name());
+                }
+                RoomEvent::DataTrackPublished(track) => {
+                    self.pending_data_tracks.push(track);
+                }
+                _ => continue,
             }
         }
     }
@@ -492,54 +545,83 @@ impl ViewerConnection {
                 .await
                 .context("timeout waiting for TrackUnsubscribed event")?
                 .context("room events channel closed")?;
-            if let RoomEvent::TrackUnsubscribed { publication, .. } = event {
-                return Ok(publication.name());
-            }
-        }
-    }
-
-    /// Waits for a per-channel byte stream to open and returns a [`FrameReader`]
-    /// for it.
-    ///
-    /// Data plane messages are delivered on per-channel byte streams (topic `"device-ch-{id}"`)
-    /// rather than the control plane `"control"` stream. Each time the subscriber
-    /// set changes the gateway opens a new byte stream, so this method waits for the
-    /// corresponding `ByteStreamOpened` event.
-    pub async fn expect_channel_byte_stream(&mut self) -> Result<FrameReader> {
-        let deadline = tokio::time::Instant::now() + READ_TIMEOUT;
-        loop {
-            let event = tokio::time::timeout_at(deadline, self.events.recv())
-                .await
-                .context("timeout waiting for channel byte stream")?
-                .context("room events channel closed")?;
             match event {
-                RoomEvent::ByteStreamOpened { reader, topic, .. }
-                    if topic.starts_with("device-ch-") =>
-                {
-                    let stream_reader = reader.take().context("reader already taken")?;
-                    return Ok(FrameReader::new(stream_reader));
+                RoomEvent::TrackUnsubscribed { publication, .. } => {
+                    return Ok(publication.name());
+                }
+                RoomEvent::DataTrackPublished(track) => {
+                    self.pending_data_tracks.push(track);
                 }
                 _ => continue,
             }
         }
     }
 
-    /// Waits for a per-channel byte stream to open and reads the next MessageData
-    /// frame from it.
+    /// Waits for a `DataTrackPublished` event whose track name matches
+    /// `data-ch-{channel_id}`, subscribes to it, and returns a [`DeviceChannelReader`].
     ///
-    /// This is a convenience wrapper around [`expect_channel_byte_stream`] for
-    /// tests that only need a single message from a freshly opened stream.
-    pub async fn expect_new_bytestream_and_message_data(
+    /// Non-matching tracks are buffered for later consumption.
+    pub async fn expect_device_channel_data_track(
         &mut self,
-    ) -> Result<foxglove::protocol::v2::server::MessageData<'static>> {
-        let mut reader = self.expect_channel_byte_stream().await?;
-        let msg = reader.next_server_message().await?;
-        match msg {
-            ServerMessage::MessageData(data) => Ok(data),
-            other => {
-                anyhow::bail!("expected MessageData on channel stream, got: {other:?}")
+        channel_id: u64,
+    ) -> Result<DeviceChannelReader> {
+        let expected_name = format!("data-ch-{channel_id}");
+        if let Some(idx) = self
+            .pending_data_tracks
+            .iter()
+            .position(|t| t.info().name() == expected_name)
+        {
+            let track = self.pending_data_tracks.remove(idx);
+            return subscribe_to_device_data_track(track).await;
+        }
+
+        let deadline = tokio::time::Instant::now() + READ_TIMEOUT;
+        loop {
+            let event = tokio::time::timeout_at(deadline, self.events.recv())
+                .await
+                .context("timeout waiting for device channel data track")?
+                .context("room events channel closed")?;
+            match event {
+                RoomEvent::DataTrackPublished(track) if track.info().name() == expected_name => {
+                    return subscribe_to_device_data_track(track).await;
+                }
+                RoomEvent::DataTrackPublished(track) => {
+                    self.pending_data_tracks.push(track);
+                }
+                _ => continue,
             }
         }
+    }
+
+    /// Ensures a device channel data track reader exists for `channel_id`.
+    ///
+    /// If one already exists for this channel, this is a no-op. Otherwise,
+    /// waits for a `DataTrackPublished` event whose track name matches
+    /// `data-ch-{channel_id}` and subscribes.
+    pub async fn ensure_device_data_track(&mut self, channel_id: u64) -> Result<()> {
+        if self.device_channel_readers.contains_key(&channel_id) {
+            return Ok(());
+        }
+        let reader = self.expect_device_channel_data_track(channel_id).await?;
+        self.device_channel_readers.insert(channel_id, reader);
+        Ok(())
+    }
+
+    /// Reads the next MessageData from the device channel data track for `channel_id`.
+    ///
+    /// If no data track reader is stored yet for this channel, waits for a
+    /// `DataTrackPublished` event for `channel_id` and subscribes first.
+    /// Subsequent calls reuse the same reader.
+    pub async fn expect_new_data_track_and_message_data(
+        &mut self,
+        channel_id: u64,
+    ) -> Result<ServerMessageData<'static>> {
+        self.ensure_device_data_track(channel_id).await?;
+        self.device_channel_readers
+            .get_mut(&channel_id)
+            .unwrap()
+            .next_message_data()
+            .await
     }
 
     /// Waits for a `ParticipantDisconnected` room event for the given identity.
@@ -553,12 +635,43 @@ impl ViewerConnection {
                 .await
                 .context("timeout waiting for ParticipantDisconnected event")?
                 .context("room events channel closed")?;
-            if let RoomEvent::ParticipantDisconnected(participant) = event {
-                if participant.identity().0 == identity {
+            match event {
+                RoomEvent::ParticipantDisconnected(participant)
+                    if participant.identity().0 == identity =>
+                {
                     return Ok(());
                 }
+                RoomEvent::DataTrackPublished(track) => {
+                    self.pending_data_tracks.push(track);
+                }
+                _ => continue,
             }
         }
+    }
+
+    /// Reads and returns the next ConnectionGraphUpdate message.
+    pub async fn expect_connection_graph_update(
+        &mut self,
+    ) -> Result<foxglove::protocol::v2::server::ConnectionGraphUpdate> {
+        let msg = self.frame_reader.next_server_message().await?;
+        match msg {
+            ServerMessage::ConnectionGraphUpdate(update) => Ok(update),
+            other => anyhow::bail!("expected ConnectionGraphUpdate, got: {other:?}"),
+        }
+    }
+
+    /// Sends a JSON-framed SubscribeConnectionGraph message to the gateway.
+    pub async fn send_subscribe_connection_graph(&self) -> Result<()> {
+        let json = r#"{"op":"subscribeConnectionGraph"}"#;
+        let framed = frame::frame_text_message(json.as_bytes());
+        self.send_framed_message(&framed).await
+    }
+
+    /// Sends a JSON-framed UnsubscribeConnectionGraph message to the gateway.
+    pub async fn send_unsubscribe_connection_graph(&self) -> Result<()> {
+        let json = r#"{"op":"unsubscribeConnectionGraph"}"#;
+        let framed = frame::frame_text_message(json.as_bytes());
+        self.send_framed_message(&framed).await
     }
 
     /// Reads and returns the next ParameterValues message.
@@ -640,7 +753,6 @@ pub struct TestGatewayOptions {
     pub filter: Option<ChannelFilterFn>,
     pub listener: Option<Arc<dyn foxglove::remote_access::Listener>>,
     pub capabilities: Vec<foxglove::remote_access::Capability>,
-    pub pending_client_reader_timeout: Option<Duration>,
     pub services: Vec<Service>,
 }
 
@@ -716,9 +828,6 @@ impl TestGateway {
         if !options.capabilities.is_empty() {
             gateway = gateway.capabilities(options.capabilities);
         }
-        if let Some(timeout) = options.pending_client_reader_timeout {
-            gateway = gateway.pending_client_reader_timeout(timeout);
-        }
         if !options.services.is_empty() {
             gateway = gateway.services(options.services);
         }
@@ -740,6 +849,21 @@ impl TestGateway {
             .context("gateway runner panicked")?;
         Ok(())
     }
+}
+
+// ---------------------------------------------------------------------------
+// Data track helpers
+// ---------------------------------------------------------------------------
+
+/// Subscribes to a `RemoteDataTrack` and returns a [`DeviceChannelReader`].
+async fn subscribe_to_device_data_track(track: RemoteDataTrack) -> Result<DeviceChannelReader> {
+    let name = track.info().name().to_string();
+    let stream = track
+        .subscribe()
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to subscribe to data track: {e}"))?;
+    info!("subscribed to device data track: {name}");
+    Ok(DeviceChannelReader { stream })
 }
 
 // ---------------------------------------------------------------------------

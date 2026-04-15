@@ -49,6 +49,13 @@
 #define FOXGLOVE_GATEWAY_CAPABILITY_SERVICES (1 << 2)
 #endif
 
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+/**
+ * Allow clients to subscribe and make connection graph updates.
+ */
+#define FOXGLOVE_GATEWAY_CAPABILITY_CONNECTION_GRAPH (1 << 3)
+#endif
+
 #if !defined(__wasm__)
 /**
  * Allow clients to advertise channels to send data messages to the server.
@@ -1705,6 +1712,49 @@ typedef struct foxglove_scene_update {
 } foxglove_scene_update;
 
 /**
+ * An estimate of position, orientation, and velocity for an object or reference frame in 3D space
+ */
+typedef struct foxglove_odometry {
+  /**
+   * Timestamp of the message
+   */
+  const struct foxglove_timestamp *timestamp;
+  /**
+   * Reference coordinate frame (e.g. `map` or `odom`)
+   */
+  struct foxglove_string frame_id;
+  /**
+   * Coordinate frame of the body whose motion is being estimated (e.g. `base_link`)
+   */
+  struct foxglove_string body_frame_id;
+  /**
+   * Position and orientation of body_frame_id in frame_id
+   */
+  const struct foxglove_pose *pose;
+  /**
+   * Linear velocity in m/s in body_frame_id
+   */
+  const struct foxglove_vector3 *linear_velocity;
+  /**
+   * Angular velocity in rad/s in body_frame_id
+   */
+  const struct foxglove_vector3 *angular_velocity;
+  /**
+   * Row-major 6x6 covariance matrix (x, y, z, rotation about x, rotation about y, rotation about z). Set to zero if unknown.
+   */
+  double pose_covariance[36];
+  /**
+   * Row-major 6x6 covariance matrix (vx, vy, vz, angular rate about x, angular rate about y, angular rate about z). Set to zero if unknown.
+   */
+  double velocity_covariance[36];
+  /**
+   * Additional user-provided metadata associated with the odometry message. Keys must be unique.
+   */
+  const struct foxglove_key_value_pair *metadata;
+  size_t metadata_count;
+} foxglove_odometry;
+
+/**
  * A timestamped point for a position in 3D space
  */
 typedef struct foxglove_point3_in_frame {
@@ -2359,6 +2409,18 @@ typedef struct foxglove_gateway_callbacks {
   void (*on_parameters_unsubscribe)(const void *context,
                                     const struct foxglove_string *param_names,
                                     size_t param_names_len);
+  /**
+   * Callback invoked when the first client subscribes to connection graph updates.
+   *
+   * Requires `FOXGLOVE_GATEWAY_CAPABILITY_CONNECTION_GRAPH`.
+   */
+  void (*on_connection_graph_subscribe)(const void *context);
+  /**
+   * Callback invoked when the last client unsubscribes from connection graph updates.
+   *
+   * Requires `FOXGLOVE_GATEWAY_CAPABILITY_CONNECTION_GRAPH`.
+   */
+  void (*on_connection_graph_unsubscribe)(const void *context);
 } foxglove_gateway_callbacks;
 #endif
 
@@ -2375,8 +2437,8 @@ typedef uint8_t foxglove_gateway_capability;
  *
  * # Safety
  * - `context` can be null, or a valid pointer to a context created via `foxglove_context_new`.
- * - `name` must be a valid pointer to a UTF-8 string.
- * - `device_token` must be a valid pointer to a UTF-8 string, or empty to use the
+ * - `name` must be a valid UTF-8 string.
+ * - `device_token` must be a valid UTF-8 string, or empty to use the
  *   `FOXGLOVE_DEVICE_TOKEN` environment variable.
  * - If `supported_encodings` is supplied, all entries must contain valid UTF-8, and
  *   `supported_encodings` must have length equal to `supported_encodings_count`.
@@ -2404,6 +2466,35 @@ typedef struct foxglove_gateway_options {
    * This method is invoked from the client's main poll loop and must not block.
    */
   bool (*sink_channel_filter)(const void *context, const struct foxglove_channel_descriptor *channel);
+  /**
+   * Context provided to the `fetch_asset` callback.
+   */
+  const void *fetch_asset_context;
+  /**
+   * Fetch an asset with the given URI and return it via the responder.
+   *
+   * This method is invoked from a time-sensitive context and must not block. If blocking or
+   * long-running behavior is required, the implementation should return immediately and handle
+   * the request asynchronously.
+   *
+   * The `uri` provided to the callback is only valid for the duration of the callback. If the
+   * implementation wishes to retain its data for a longer lifetime, it must copy data out of
+   * it.
+   *
+   * The `responder` provided to the callback represents an unfulfilled response. The
+   * implementation must eventually call either `foxglove_fetch_asset_respond_ok` or
+   * `foxglove_fetch_asset_respond_error`, exactly once, in order to complete the request. It is
+   * safe to invoke these completion functions synchronously from the context of the callback.
+   *
+   * If provided, the Assets capability will be advertised automatically.
+   *
+   * # Safety
+   * - If provided, the handler callback must be a pointer to the fetch asset callback function,
+   *   and must remain valid until the gateway is stopped.
+   */
+  void (*fetch_asset)(const void *context,
+                      const struct foxglove_string *uri,
+                      struct foxglove_fetch_asset_responder *responder);
   /**
    * Optional Foxglove API base URL override. Empty string uses the default.
    */
@@ -4035,6 +4126,52 @@ foxglove_error foxglove_model_primitive_encode(const struct foxglove_model_primi
  * # Safety
  * We're trusting the caller that the channel will only be used with this type T.
  */
+foxglove_error foxglove_channel_create_odometry(struct foxglove_string topic,
+                                                const struct foxglove_context *context,
+                                                const struct foxglove_channel **channel);
+
+#if !defined(__wasm__)
+/**
+ * Log a Odometry message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_odometry.
+ */
+foxglove_error foxglove_channel_log_odometry(const struct foxglove_channel *channel,
+                                             const struct foxglove_odometry *msg,
+                                             const uint64_t *log_time,
+                                             FoxgloveSinkId sink_id);
+#endif
+
+/**
+ * Get the Odometry schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_odometry_schema(void);
+
+/**
+ * Encode a Odometry message as protobuf to the buffer provided.
+ *
+ * On success, writes the encoded length to *encoded_len.
+ * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+ * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+ * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+ *
+ * # Safety
+ * ptr must be a valid pointer to a memory region at least len bytes long.
+ */
+foxglove_error foxglove_odometry_encode(const struct foxglove_odometry *msg,
+                                        uint8_t *ptr,
+                                        size_t len,
+                                        size_t *encoded_len);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
 foxglove_error foxglove_channel_create_packed_element_field(struct foxglove_string topic,
                                                             const struct foxglove_context *context,
                                                             const struct foxglove_channel **channel);
@@ -5139,6 +5276,18 @@ void foxglove_context_free(const struct foxglove_context *context);
 
 #if !defined(__wasm__)
 /**
+ * Get the id of a channel descriptor.
+ *
+ * # Safety
+ * `channel` must be a valid pointer to a `foxglove_channel_descriptor`.
+ *
+ * If the passed channel is null, 0 is returned.
+ */
+uint64_t foxglove_channel_descriptor_get_id(const struct foxglove_channel_descriptor *channel);
+#endif
+
+#if !defined(__wasm__)
+/**
  * Get the topic of a channel descriptor.
  *
  * # Safety
@@ -5304,9 +5453,9 @@ foxglove_error foxglove_connection_graph_set_advertised_service(struct foxglove_
  * Completes a fetch asset request by sending asset data to the client.
  *
  * # Safety
- * - `responder` must be a pointer to a `foxglove_fetch_asset_responder` obtained via the
- *   `foxglove_server_options.fetch_asset` callback. This value is moved into this
- *   function, and must not accessed afterwards.
+ * - `responder` must be a pointer to a `foxglove_fetch_asset_responder` obtained via a
+ *   `fetch_asset` callback. This value is moved into this function, and must not be accessed
+ *   afterwards.
  * - `data` must be a pointer to the response data. This value is copied by this function.
  */
 void foxglove_fetch_asset_respond_ok(struct foxglove_fetch_asset_responder *responder,
@@ -5321,7 +5470,7 @@ void foxglove_fetch_asset_respond_ok(struct foxglove_fetch_asset_responder *resp
  * - `responder` must be a pointer to a `foxglove_fetch_asset_responder` obtained via the
  *   `foxglove_server_options.fetch_asset` callback. This value is moved into this
  *   function, and must not accessed afterwards.
- * - `message` must be a pointer to a valid UTF-8 string. This value is copied by this function.
+ * - `message` must be a valid UTF-8 string. This value is copied by this function.
  */
 void foxglove_fetch_asset_respond_error(struct foxglove_fetch_asset_responder *responder,
                                         struct foxglove_string message);
@@ -5378,7 +5527,7 @@ foxglove_error foxglove_gateway_add_service(const struct foxglove_gateway *gatew
  *
  * # Safety
  * - `gateway` must be a valid pointer to a gateway started with `foxglove_gateway_start`.
- * - `service_name` must be a valid pointer to a UTF-8 string.
+ * - `service_name` must be a valid UTF-8 string.
  */
 foxglove_error foxglove_gateway_remove_service(const struct foxglove_gateway *gateway,
                                                struct foxglove_string service_name);
@@ -5395,6 +5544,52 @@ foxglove_error foxglove_gateway_remove_service(const struct foxglove_gateway *ga
  */
 foxglove_error foxglove_gateway_publish_parameter_values(const struct foxglove_gateway *gateway,
                                                          struct foxglove_parameter_array *params);
+#endif
+
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+/**
+ * Publishes a status message to all connected participants.
+ *
+ * The caller may optionally provide a message ID, which can be used in a subsequent call to
+ * `foxglove_gateway_remove_status`.
+ *
+ * # Safety
+ * - `gateway` must be a valid pointer to a gateway started with `foxglove_gateway_start`.
+ * - `message` must be a valid UTF-8 string, which must remain valid for the duration of this
+ *   call.
+ * - `id` must either be NULL, or a pointer to a valid UTF-8 string, which must remain valid for
+ *   the duration of this call.
+ */
+foxglove_error foxglove_gateway_publish_status(const struct foxglove_gateway *gateway,
+                                               foxglove_server_status_level level,
+                                               struct foxglove_string message,
+                                               const struct foxglove_string *id);
+#endif
+
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+/**
+ * Removes status messages from all connected participants.
+ *
+ * Previously published status messages are referenced by ID.
+ *
+ * # Safety
+ * - `gateway` must be a valid pointer to a gateway started with `foxglove_gateway_start`.
+ * - `ids` must be a pointer to an array of valid UTF-8 strings, all of which must remain valid
+ *   for the duration of this call.
+ */
+foxglove_error foxglove_gateway_remove_status(const struct foxglove_gateway *gateway,
+                                              const struct foxglove_string *ids,
+                                              size_t ids_count);
+#endif
+
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+/**
+ * Publish a connection graph to the gateway.
+ *
+ * Requires `FOXGLOVE_GATEWAY_CAPABILITY_CONNECTION_GRAPH`.
+ */
+foxglove_error foxglove_gateway_publish_connection_graph(const struct foxglove_gateway *gateway,
+                                                         const struct foxglove_connection_graph *graph);
 #endif
 
 #if !defined(__wasm__)
@@ -5893,7 +6088,7 @@ foxglove_error foxglove_server_broadcast_playback_state(const struct foxglove_we
  * If `session_id` is not provided, generates a new one based on the current timestamp.
  *
  * # Safety
- * - `session_id` must either be NULL, or a valid pointer to a UTF-8 string.
+ * - `session_id` must either be NULL, or a pointer to a valid UTF-8 string.
  */
 foxglove_error foxglove_server_clear_session(const struct foxglove_websocket_server *server,
                                              const struct foxglove_string *session_id);
@@ -5922,7 +6117,7 @@ foxglove_error foxglove_server_add_service(const struct foxglove_websocket_serve
  *
  * # Safety
  * - `server` must be a valid pointer to a server started with `foxglove_server_start`.
- * - `service_name` must be a valid pointer to a UTF-8 string.
+ * - `service_name` must be a valid UTF-8 string.
  */
 foxglove_error foxglove_server_remove_service(const struct foxglove_websocket_server *server,
                                               struct foxglove_string service_name);
@@ -5980,9 +6175,9 @@ foxglove_error foxglove_server_publish_connection_graph(struct foxglove_websocke
  * `foxglove_server_remove_status`.
  *
  * # Safety
- * - `message` must be a valid pointer to a UTF-8 string, which must remain valid for the duration
- *   of this call.
- * - `id` must either be NULL, or a valid pointer to a UTF-8 string, which must remain valid for
+ * - `message` must be a valid UTF-8 string, which must remain valid for the duration of this
+ *   call.
+ * - `id` must either be NULL, or a pointer to a valid UTF-8 string, which must remain valid for
  *   the duration of this call.
  */
 foxglove_error foxglove_server_publish_status(struct foxglove_websocket_server *server,
@@ -5998,8 +6193,8 @@ foxglove_error foxglove_server_publish_status(struct foxglove_websocket_server *
  * Previously published status messages are referenced by ID.
  *
  * # Safety
- * - `ids` must be a valid pointer to an array of pointers to valid UTF-8 strings, all of which
- *   must remain valid for the duration of this call.
+ * - `ids` must be a pointer to an array of valid UTF-8 strings, all of which must remain valid
+ *   for the duration of this call.
  */
 foxglove_error foxglove_server_remove_status(struct foxglove_websocket_server *server,
                                              const struct foxglove_string *ids,
@@ -6028,7 +6223,7 @@ foxglove_error foxglove_server_remove_status(struct foxglove_websocket_server *s
  *
  * # Safety
  * - `service` must be a valid pointer.
- * - `name` must be a valid pointer to a UTF-8 string.
+ * - `name` must be a valid UTF-8 string.
  * - `schema` must be NULL, or a valid pointer to a service schema.
  * - `callback` must be a valid pointer to a service callback function, which must remain valid
  *   until the service is either unregistered or freed.
@@ -6060,7 +6255,7 @@ void foxglove_service_free(struct foxglove_service *service);
  * # Safety
  * - `responder` must be a pointer to a `foxglove_service_responder` obtained via the
  *   `foxglove_service.handler` callback.
- * - `encoding` must be a pointer to a valid UTF-8 string. This value is copied by this function.
+ * - `encoding` must be a valid UTF-8 string. This value is copied by this function.
  */
 foxglove_error foxglove_service_set_response_encoding(struct foxglove_service_responder *responder,
                                                       struct foxglove_string encoding);
@@ -6088,7 +6283,7 @@ void foxglove_service_respond_ok(struct foxglove_service_responder *responder,
  * - `responder` must be a pointer to a `foxglove_service_responder` obtained via the
  *   `foxglove_service.handler` callback. This value is moved into this function, and must not
  *   accessed afterwards.
- * - `message` must be a pointer to a valid UTF-8 string. This value is copied by this function.
+ * - `message` must be a valid UTF-8 string. This value is copied by this function.
  */
 void foxglove_service_respond_error(struct foxglove_service_responder *responder,
                                     struct foxglove_string message);

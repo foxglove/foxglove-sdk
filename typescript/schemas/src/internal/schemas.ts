@@ -1703,6 +1703,72 @@ const LocationFixes: FoxgloveMessageSchema = {
   ],
 };
 
+const Odometry: FoxgloveMessageSchema = {
+  type: "message",
+  name: "Odometry",
+  description:
+    "An estimate of position, orientation, and velocity for an object or reference frame in 3D space",
+  fields: [
+    {
+      name: "timestamp",
+      type: { type: "nested", schema: Timestamp },
+      description: "Timestamp of the message",
+    },
+    {
+      name: "frame_id",
+      type: { type: "primitive", name: "string" },
+      description: "Reference coordinate frame (e.g. `map` or `odom`)",
+    },
+    {
+      name: "body_frame_id",
+      type: { type: "primitive", name: "string" },
+      description:
+        "Coordinate frame of the body whose motion is being estimated (e.g. `base_link`)",
+    },
+    {
+      name: "pose",
+      type: { type: "nested", schema: Pose },
+      description: "Position and orientation of body_frame_id in frame_id",
+    },
+    {
+      name: "linear_velocity",
+      type: { type: "nested", schema: Vector3 },
+      description: "Linear velocity in m/s in body_frame_id",
+      optional: true,
+    },
+    {
+      name: "angular_velocity",
+      type: { type: "nested", schema: Vector3 },
+      description: "Angular velocity in rad/s in body_frame_id",
+      optional: true,
+    },
+    {
+      name: "pose_covariance",
+      type: { type: "primitive", name: "float64" },
+      description:
+        "Row-major 6x6 covariance matrix (x, y, z, rotation about x, rotation about y, rotation about z). Set to zero if unknown.",
+      array: 36,
+      optional: true,
+    },
+    {
+      name: "velocity_covariance",
+      type: { type: "primitive", name: "float64" },
+      description:
+        "Row-major 6x6 covariance matrix (vx, vy, vz, angular rate about x, angular rate about y, angular rate about z). Set to zero if unknown.",
+      array: 36,
+      optional: true,
+    },
+    {
+      name: "metadata",
+      type: { type: "nested", schema: KeyValuePair },
+      array: true,
+      description:
+        "Additional user-provided metadata associated with the odometry message. Keys must be unique.",
+      optional: true,
+    },
+  ],
+};
+
 const LogLevel: FoxgloveEnumSchema = {
   type: "enum",
   name: "LogLevel",
@@ -1931,6 +1997,7 @@ export const foxgloveMessageSchemas = {
   SceneEntity,
   SceneUpdate,
   ModelPrimitive,
+  Odometry,
   PackedElementField,
   Point2,
   Point3,

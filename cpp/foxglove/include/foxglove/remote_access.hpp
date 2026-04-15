@@ -1,10 +1,12 @@
 #pragma once
 
 #include <foxglove/channel.hpp>
+#include <foxglove/connection_graph.hpp>
 #include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
-#include <foxglove/server/parameter.hpp>
-#include <foxglove/server/service.hpp>
+#include <foxglove/fetch_asset.hpp>
+#include <foxglove/parameter.hpp>
+#include <foxglove/service.hpp>
 
 #include <cstdint>
 #include <functional>
@@ -30,6 +32,16 @@ enum class RemoteAccessConnectionStatus : uint8_t {
   Shutdown = 3,
 };
 
+/// @brief Level indicator for a remote access gateway status message.
+enum class RemoteAccessStatusLevel : uint8_t {
+  /// Info level.
+  Info = 0,
+  /// Warning level.
+  Warning = 1,
+  /// Error level.
+  Error = 2,
+};
+
 /// @brief Capabilities that a remote access gateway may advertise to clients.
 enum class RemoteAccessGatewayCapabilities : uint8_t {
   /// No capabilities.
@@ -40,6 +52,8 @@ enum class RemoteAccessGatewayCapabilities : uint8_t {
   Parameters = 1 << 1,
   /// Allow clients to call services.
   Services = 1 << 2,
+  /// Allow clients to subscribe and make connection graph updates.
+  ConnectionGraph = 1 << 3,
 };
 
 /// @brief Combine two gateway capabilities.
@@ -112,6 +126,20 @@ struct RemoteAccessGatewayCallbacks {
   ///
   /// Requires RemoteAccessGatewayCapabilities::Parameters.
   std::function<void(const std::vector<std::string_view>& param_names)> onParametersUnsubscribe;
+
+  /// @brief Callback invoked when the first client subscribes to connection graph updates.
+  ///
+  /// Requires RemoteAccessGatewayCapabilities::ConnectionGraph.
+  ///
+  /// @warning Do not call publishConnectionGraph from within this callback; doing so will deadlock.
+  std::function<void()> onConnectionGraphSubscribe;
+
+  /// @brief Callback invoked when the last client unsubscribes from connection graph updates.
+  ///
+  /// Requires RemoteAccessGatewayCapabilities::ConnectionGraph.
+  ///
+  /// @warning Do not call publishConnectionGraph from within this callback; doing so will deadlock.
+  std::function<void()> onConnectionGraphUnsubscribe;
 };
 
 /// @brief Options for creating a remote access gateway.
@@ -130,6 +158,8 @@ struct RemoteAccessGatewayOptions {
   RemoteAccessGatewayCapabilities capabilities = RemoteAccessGatewayCapabilities::None;
   /// @brief Supported encodings for client requests.
   std::vector<std::string> supported_encodings;
+  /// @brief A fetch asset handler callback.
+  FetchAssetHandler fetch_asset;
   /// @brief A sink channel filter callback.
   SinkChannelFilterFn sink_channel_filter;
   /// @brief Override the Foxglove API base URL.
@@ -172,16 +202,45 @@ public:
   /// @param params Updated parameters.
   void publishParameterValues(std::vector<Parameter>&& params);
 
+  /// @brief Publishes a status message to all connected participants.
+  ///
+  /// The caller may optionally provide a message ID, which can be used in a
+  /// subsequent call to `removeStatus()`.
+  ///
+  /// @param level Status level value.
+  /// @param message Status message.
+  /// @param id Optional message ID.
+  [[nodiscard]] FoxgloveError publishStatus(
+    RemoteAccessStatusLevel level, std::string_view message,
+    std::optional<std::string_view> id = std::nullopt
+  ) const noexcept;
+
+  /// @brief Removes status messages from all connected participants.
+  ///
+  /// Previously published status messages are referenced by ID.
+  ///
+  /// @param ids Message IDs.
+  [[nodiscard]] FoxgloveError removeStatus(const std::vector<std::string_view>& ids) const;
+
+  /// @brief Publish a connection graph to all subscribed clients.
+  ///
+  /// Requires RemoteAccessGatewayCapabilities::ConnectionGraph.
+  ///
+  /// @param graph The connection graph to publish.
+  [[nodiscard]] FoxgloveError publishConnectionGraph(const ConnectionGraph& graph) const;
+
   /// @brief Gracefully shut down the gateway.
   FoxgloveError stop();
 
 private:
   RemoteAccessGateway(
     foxglove_gateway* gateway, std::unique_ptr<RemoteAccessGatewayCallbacks> callbacks,
+    std::unique_ptr<FetchAssetHandler> fetch_asset,
     std::unique_ptr<SinkChannelFilterFn> sink_channel_filter
   );
 
   std::unique_ptr<RemoteAccessGatewayCallbacks> callbacks_;
+  std::unique_ptr<FetchAssetHandler> fetch_asset_;
   std::unique_ptr<SinkChannelFilterFn> sink_channel_filter_;
   std::unique_ptr<foxglove_gateway, foxglove_error (*)(foxglove_gateway*)> impl_;
 };

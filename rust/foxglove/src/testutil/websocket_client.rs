@@ -125,7 +125,7 @@ impl WebSocketClient {
             .map_err(WebSocketClientError::from)
     }
 
-    /// Closes the websocket connection.
+    /// Closes the WebSocket connection.
     pub async fn close(&mut self) -> Result<(), WebSocketClientError> {
         self.stream
             .close(None)

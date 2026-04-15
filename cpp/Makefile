@@ -12,17 +12,20 @@ $(info Using sanitizer: $(SANITIZE))
 endif
 
 CMAKE_BUILD_TYPE?=RelWithDebInfo
+FOXGLOVE_REMOTE_ACCESS?=ON
 
 .PHONY: lint
 lint:
 	find . -path './build*' -prune -name '*.h' -o -name '*.hpp' -o -name '*.cpp' -o -name '*.inl' |\
 		grep -v 'foxglove/expected.hpp' |\
+		grep -v '/_deps/' |\
 		xargs clang-format --dry-run -Werror --color=1
 
 .PHONY: lint-fix
 lint-fix:
 	find . -path './build*' -prune -name '*.h' -o -name '*.hpp' -o -name '*.cpp' -o -name '*.inl' |\
 		grep -v 'foxglove/expected.hpp' |\
+		grep -v '/_deps/' |\
 		xargs clang-format -i -Werror --color=1
 
 .PHONY: clean
@@ -39,33 +42,10 @@ build:
 		$(if $(CLANG_TIDY),-DCLANG_TIDY=$(CLANG_TIDY)) \
 		$(if $(BUILD_OPENCV_EXAMPLE),-DBUILD_OPENCV_EXAMPLE=$(BUILD_OPENCV_EXAMPLE)) \
 		$(if $(FOXGLOVE_PREBUILT_LIB_DIR),-DFOXGLOVE_PREBUILT_LIB_DIR=$(FOXGLOVE_PREBUILT_LIB_DIR)) \
+		-DFOXGLOVE_REMOTE_ACCESS=$(FOXGLOVE_REMOTE_ACCESS) \
 		$(CMAKE_ARGS) \
 		-B $(BUILD_DIR)
 	cmake --build $(BUILD_DIR) -j 8 --config $(CMAKE_BUILD_TYPE)
-
-RA_BUILD_DIR=$(BUILD_DIR)-ra
-
-.PHONY: build-ra
-build-ra:
-	cmake \
-		-DCMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE) \
-		-DCMAKE_EXPORT_COMPILE_COMMANDS=true \
-		-DFOXGLOVE_BUILD_REMOTE_ACCESS=ON \
-		$(if $(SANITIZE),-DSANITIZE=$(SANITIZE) -DRust_TOOLCHAIN=nightly) \
-		$(if $(STRICT),-DSTRICT=$(STRICT)) \
-		$(if $(CLANG_TIDY),-DCLANG_TIDY=$(CLANG_TIDY)) \
-		$(if $(FOXGLOVE_PREBUILT_LIB_DIR),-DFOXGLOVE_PREBUILT_LIB_DIR=$(FOXGLOVE_PREBUILT_LIB_DIR)) \
-		$(CMAKE_ARGS) \
-		-B $(RA_BUILD_DIR)
-	cmake --build $(RA_BUILD_DIR) -j 8 --config $(CMAKE_BUILD_TYPE)
-
-.PHONY: test-ra
-test-ra: build-ra
-	cd $(RA_BUILD_DIR) && ctest --verbose
-
-.PHONY: clean-ra
-clean-ra:
-	rm -rf $(RA_BUILD_DIR)
 
 .PHONY: test
 test: build

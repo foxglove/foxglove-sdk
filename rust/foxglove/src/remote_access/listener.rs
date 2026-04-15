@@ -57,4 +57,14 @@ pub trait Listener: Send + Sync {
     /// Callback invoked when the last client unsubscribes from the named parameters.
     /// Requires [`Capability::Parameters`][super::Capability::Parameters].
     fn on_parameters_unsubscribe(&self, _param_names: Vec<String>) {}
+    /// Callback invoked when the first client subscribes to the connection graph.
+    /// Requires [`Capability::ConnectionGraph`][super::Capability::ConnectionGraph].
+    ///
+    /// Do not call `publish_connection_graph` from within this callback; doing so will deadlock.
+    fn on_connection_graph_subscribe(&self) {}
+    /// Callback invoked when the last client unsubscribes from the connection graph.
+    /// Requires [`Capability::ConnectionGraph`][super::Capability::ConnectionGraph].
+    ///
+    /// Do not call `publish_connection_graph` from within this callback; doing so will deadlock.
+    fn on_connection_graph_unsubscribe(&self) {}
 }

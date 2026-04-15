@@ -20,7 +20,7 @@ jobs:
       - uses: arduino/setup-protoc@v3
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-          version: "29.x"
+          version: "29.6"
 
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
@@ -144,7 +144,7 @@ jobs:
       - uses: arduino/setup-protoc@v3
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-          version: "29.x"
+          version: "29.6"
 
       - run: yarn install --immutable
       - run: yarn lint:ci
