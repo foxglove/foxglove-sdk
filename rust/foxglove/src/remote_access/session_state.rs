@@ -561,6 +561,10 @@ impl SessionState {
             .video_subscribers
             .get(channel_id)
             .map_or(0, |s| s.len());
+        debug_assert!(
+            video <= total,
+            "Video subscribers {video} must be less than or equal to total subscribers {total}"
+        );
         total > video
     }
 
