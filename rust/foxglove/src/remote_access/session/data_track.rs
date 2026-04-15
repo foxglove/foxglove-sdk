@@ -53,6 +53,7 @@ impl DataTrack {
                 match local_participant.publish_data_track(name.clone()).await {
                     Ok(published) => {
                         track_clone.set(published).ok();
+                        debug!("data track {name} published");
                         return;
                     }
                     Err(PublishError::DuplicateName) => {
@@ -118,9 +119,11 @@ impl DataTrack {
     /// Close the data track: cancel any in-flight publish, wait for it to settle,
     /// then unpublish the track if it was successfully published.
     pub async fn close(self) {
+        debug!("closing data track");
         self.cancel.cancel();
         _ = self.task.await;
         if let Some(track) = self.track.get() {
+            debug!("unpublishing data track {}", track.info().name());
             track.unpublish();
         }
     }
