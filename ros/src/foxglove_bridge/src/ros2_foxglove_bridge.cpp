@@ -2,6 +2,7 @@
 #include <fstream>
 #include <unordered_set>
 
+#include <rclcpp/version.h>
 #include <resource_retriever/retriever.hpp>
 
 #include <foxglove_bridge/ros2_foxglove_bridge.hpp>
@@ -57,6 +58,40 @@ inline std::vector<std::byte> readFile(const std::string& filepath) {
 
   return buffer;
 }
+
+#if !RCLCPP_VERSION_GTE(28, 0, 0)
+// Prior to Jazzy, GenericSubscription drops MessageInfo from the callback.
+// This subclass overrides handle_serialized_message to forward it.
+class GenericSubscriptionWithMessageInfo : public rclcpp::GenericSubscription {
+public:
+  using CallbackWithInfoT = std::function<void(std::shared_ptr<rclcpp::SerializedMessage>,
+                                               const rclcpp::MessageInfo&)>;
+
+  template<typename AllocatorT = std::allocator<void>>
+  GenericSubscriptionWithMessageInfo(
+    rclcpp::node_interfaces::NodeBaseInterface* node_base,
+    const std::shared_ptr<rcpputils::SharedLibrary> ts_lib,
+    const std::string& topic_name,
+    const std::string& topic_type,
+    const rclcpp::QoS& qos,
+    CallbackWithInfoT callback,
+    const rclcpp::SubscriptionOptionsWithAllocator<AllocatorT>& options)
+    : GenericSubscription(
+        node_base, ts_lib, topic_name, topic_type, qos,
+        [](std::shared_ptr<rclcpp::SerializedMessage>) {},
+        options)
+    , callback_with_info_(std::move(callback)) {}
+
+  void handle_serialized_message(
+    const std::shared_ptr<rclcpp::SerializedMessage>& message,
+    const rclcpp::MessageInfo& message_info) override {
+    callback_with_info_(message, message_info);
+  }
+
+private:
+  CallbackWithInfoT callback_with_info_;
+};
+#endif
 
 }  // namespace
 
@@ -767,6 +802,7 @@ Subscription FoxgloveBridge::createRosSubscription(ChannelId channelId, const st
   subscriptionOptions.event_callbacks = eventCallbacks;
   subscriptionOptions.callback_group = _subscriptionCallbackGroup;
 
+#if RCLCPP_VERSION_GTE(28, 0, 0)
   return this->create_generic_subscription(
     topic, datatype, qos,
     [this, channelId](std::shared_ptr<const rclcpp::SerializedMessage> msg,
@@ -774,6 +810,20 @@ Subscription FoxgloveBridge::createRosSubscription(ChannelId channelId, const st
       this->rosMessageHandler(channelId, msg, messageInfo);
     },
     subscriptionOptions);
+#else
+  auto ts_lib = rclcpp::get_typesupport_library(datatype, "rosidl_typesupport_cpp");
+  auto subscription = std::make_shared<GenericSubscriptionWithMessageInfo>(
+    this->get_node_base_interface().get(),
+    std::move(ts_lib), topic, datatype, qos,
+    [this, channelId](std::shared_ptr<rclcpp::SerializedMessage> msg,
+                      const rclcpp::MessageInfo& messageInfo) {
+      this->rosMessageHandler(channelId, msg, messageInfo);
+    },
+    subscriptionOptions);
+  this->get_node_topics_interface()->add_subscription(subscription,
+                                                      subscriptionOptions.callback_group);
+  return subscription;
+#endif
 }
 
 void FoxgloveBridge::createOrIncrementSubscription(ChannelId channelId, ClientId clientId,
