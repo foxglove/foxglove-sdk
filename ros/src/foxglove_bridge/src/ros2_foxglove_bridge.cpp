@@ -769,8 +769,9 @@ Subscription FoxgloveBridge::createRosSubscription(ChannelId channelId, const st
 
   return this->create_generic_subscription(
     topic, datatype, qos,
-    [this, channelId](std::shared_ptr<const rclcpp::SerializedMessage> msg) {
-      this->rosMessageHandler(channelId, msg);
+    [this, channelId](std::shared_ptr<const rclcpp::SerializedMessage> msg,
+                      const rclcpp::MessageInfo& messageInfo) {
+      this->rosMessageHandler(channelId, msg, messageInfo);
     },
     subscriptionOptions);
 }
@@ -805,6 +806,8 @@ void FoxgloveBridge::createOrIncrementSubscriptionLocked(ChannelId channelId, Cl
     ChannelSubscription channelSub;
     channelSub.rosSubscription = createRosSubscription(channelId, topic, datatype, qos);
     channelSub.qos = qos;
+    channelSub.isTransientLocal =
+      qos.durability() == rclcpp::DurabilityPolicy::TransientLocal;
     auto [it, inserted] = _subscriptions.emplace(channelId, std::move(channelSub));
     subIt = it;
 
@@ -812,12 +815,15 @@ void FoxgloveBridge::createOrIncrementSubscriptionLocked(ChannelId channelId, Cl
                 topic.c_str(), datatype.c_str(), channelId);
   }
 
-  // For transient_local topics, replay the cached message to the new client before adding
-  // them to the broadcast set, so they don't miss the latched value.
-  if (!isNewSubscription && subIt->second.hasCachedMessage && sinkId.has_value()) {
-    channel.log(reinterpret_cast<const std::byte*>(subIt->second.cachedMessageData.data()),
-                subIt->second.cachedMessageData.size(), subIt->second.cachedMessageTimestamp,
-                sinkId.value());
+  // For transient_local topics, replay cached messages to the new client before adding
+  // them to the broadcast set, so they don't miss latched values.
+  if (!isNewSubscription && sinkId.has_value()) {
+    for (const auto& [gid, cache] : subIt->second.publisherCaches) {
+      for (const auto& cached : cache.messages) {
+        channel.log(reinterpret_cast<const std::byte*>(cached.data.data()), cached.data.size(),
+                    cached.timestamp, sinkId.value());
+      }
+    }
   }
 
   // Add client to the appropriate set
@@ -1100,7 +1106,8 @@ void FoxgloveBridge::parameterUpdates(const std::vector<foxglove::Parameter>& pa
 }
 
 void FoxgloveBridge::rosMessageHandler(ChannelId channelId,
-                                       std::shared_ptr<const rclcpp::SerializedMessage> msg) {
+                                       std::shared_ptr<const rclcpp::SerializedMessage> msg,
+                                       const rclcpp::MessageInfo& messageInfo) {
   // NOTE: Do not call any RCLCPP_* logging functions from this function. Otherwise, subscribing
   // to `/rosout` will cause a feedback loop
   const auto timestamp = this->now().nanoseconds();
@@ -1108,18 +1115,37 @@ void FoxgloveBridge::rosMessageHandler(ChannelId channelId,
   const auto rclSerializedMsg = msg->get_rcl_serialized_message();
 
   std::lock_guard<std::mutex> lock(_subscriptionsMutex);
-  if (_channels.find(channelId) == _channels.end()) {
+  auto channelIt = _channels.find(channelId);
+  if (channelIt == _channels.end()) {
     return;
   }
 
-  // Cache the message for transient_local subscriptions so late subscribers can receive it.
+  // Cache messages per-publisher for transient_local subscriptions so late subscribers receive them.
   auto subIt = _subscriptions.find(channelId);
-  if (subIt != _subscriptions.end() &&
-      subIt->second.qos.durability() == rclcpp::DurabilityPolicy::TransientLocal) {
-    subIt->second.cachedMessageData.assign(
-      rclSerializedMsg.buffer, rclSerializedMsg.buffer + rclSerializedMsg.buffer_length);
-    subIt->second.cachedMessageTimestamp = timestamp;
-    subIt->second.hasCachedMessage = true;
+  if (subIt != _subscriptions.end() && subIt->second.isTransientLocal) {
+    Gid gid;
+    const auto& rawGid = messageInfo.get_rmw_message_info().publisher_gid;
+    std::copy(rawGid.data, rawGid.data + RMW_GID_STORAGE_SIZE, gid.begin());
+
+    auto& pubCache = subIt->second.publisherCaches[gid];
+    if (pubCache.messages.empty()) {
+      // New publisher — look up its QoS depth
+      pubCache.maxMessages = 1;
+      const std::string topic(channelIt->second.topic());
+      for (const auto& pub : this->get_publishers_info_by_topic(topic)) {
+        if (pub.endpoint_gid() == gid) {
+          pubCache.maxMessages = std::max(static_cast<size_t>(1), pub.qos_profile().depth());
+          break;
+        }
+      }
+    }
+    pubCache.messages.push_back(CachedMessage{
+      {rclSerializedMsg.buffer, rclSerializedMsg.buffer + rclSerializedMsg.buffer_length},
+      static_cast<uint64_t>(timestamp),
+    });
+    while (pubCache.messages.size() > pubCache.maxMessages) {
+      pubCache.messages.pop_front();
+    }
   }
 
   auto& channel = _channels.at(channelId);

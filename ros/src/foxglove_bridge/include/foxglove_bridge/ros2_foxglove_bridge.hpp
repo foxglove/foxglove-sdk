@@ -2,12 +2,15 @@
 
 #include <atomic>
 #include <chrono>
+#include <deque>
+#include <map>
 #include <memory>
 #include <regex>
 #include <thread>
 #include <unordered_set>
 
 #include <rclcpp/rclcpp.hpp>
+#include <rmw/types.h>
 #include <rosgraph_msgs/msg/clock.hpp>
 #include <rosx_introspection/ros_parser.hpp>
 #include <std_msgs/msg/u_int32.hpp>
@@ -83,15 +86,23 @@ private:
   std::unordered_map<ChannelId, foxglove::RawChannel> _channels;
 
   // One shared ROS subscription per channel, reference-counted by client subscriptions
+  struct CachedMessage {
+    std::vector<uint8_t> data;
+    uint64_t timestamp;
+  };
+  using Gid = std::array<uint8_t, RMW_GID_STORAGE_SIZE>;
+  struct PublisherCache {
+    std::deque<CachedMessage> messages;
+    size_t maxMessages = 1;
+  };
   struct ChannelSubscription {
     Subscription rosSubscription;
     std::unordered_set<ClientId> wsClientIds;
     std::unordered_set<ClientId> gatewayClientIds;
     rclcpp::QoS qos{10};
-    // Cached last message for transient_local topics, replayed to late subscribers
-    std::vector<uint8_t> cachedMessageData;
-    uint64_t cachedMessageTimestamp = 0;
-    bool hasCachedMessage = false;
+    // Per-publisher message cache for transient_local topics, replayed to late subscribers.
+    std::map<Gid, PublisherCache> publisherCaches;
+    bool isTransientLocal = false;
   };
   std::unordered_map<ChannelId, ChannelSubscription> _subscriptions;
 
@@ -160,7 +171,8 @@ private:
 
   void parameterUpdates(const std::vector<foxglove::Parameter>& parameters);
 
-  void rosMessageHandler(ChannelId channelId, std::shared_ptr<const rclcpp::SerializedMessage> msg);
+  void rosMessageHandler(ChannelId channelId, std::shared_ptr<const rclcpp::SerializedMessage> msg,
+                         const rclcpp::MessageInfo& messageInfo);
 
   Subscription createRosSubscription(ChannelId channelId, const std::string& topic,
                                      const std::string& datatype, const rclcpp::QoS& qos);
