@@ -641,7 +641,7 @@ impl PyWebSocketServer {
     /// Remove status messages by ID from all clients.
     /// If the server has been stopped, this has no effect.
     ///
-    /// :param status_ids: The ids of the status messages to remove.
+    /// :param status_ids: The IDs of the status messages to remove.
     /// :type status_ids: list[str]
     pub fn remove_status(&self, status_ids: Vec<String>) {
         if let Some(server) = &self.0 {

@@ -17,7 +17,7 @@ from foxglove import (
 
 class Capability(Enum):
     """
-    An enumeration of capabilities that the websocket server can advertise to its clients.
+    An enumeration of capabilities that the WebSocket server can advertise to its clients.
     """
 
     ClientPublish = ...
@@ -40,7 +40,7 @@ class Capability(Enum):
 
 class Client:
     """
-    A client that is connected to a running websocket server.
+    A client that is connected to a running WebSocket server.
     """
 
     id: int = ...
@@ -131,7 +131,7 @@ class PlaybackStatus(Enum):
 
 class WebSocketServer:
     """
-    A websocket server for live visualization.
+    A WebSocket server for live visualization.
     """
 
     def __init__(self) -> None: ...
@@ -147,7 +147,7 @@ class WebSocketServer:
         open_in_desktop: bool = False,
     ) -> str | None:
         """
-        Returns a web app URL to open the websocket as a data source.
+        Returns a web app URL to open the WebSocket as a data source.
 
         Returns None if the server has been stopped.
 

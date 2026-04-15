@@ -168,31 +168,31 @@ class ConnectionGraph:
     def __init__(self) -> None: ...
     def set_published_topic(self, topic: str, publisher_ids: list[str]) -> None:
         """
-        Set a published topic and its associated publisher ids. Overwrites any existing topic with
+        Set a published topic and its associated publisher IDs. Overwrites any existing topic with
         the same name.
 
         :param topic: The topic name.
-        :param publisher_ids: The set of publisher ids.
+        :param publisher_ids: The set of publisher IDs.
         """
         ...
 
     def set_subscribed_topic(self, topic: str, subscriber_ids: list[str]) -> None:
         """
-        Set a subscribed topic and its associated subscriber ids. Overwrites any existing topic with
+        Set a subscribed topic and its associated subscriber IDs. Overwrites any existing topic with
         the same name.
 
         :param topic: The topic name.
-        :param subscriber_ids: The set of subscriber ids.
+        :param subscriber_ids: The set of subscriber IDs.
         """
         ...
 
     def set_advertised_service(self, service: str, provider_ids: list[str]) -> None:
         """
-        Set an advertised service and its associated provider ids. Overwrites any existing service
+        Set an advertised service and its associated provider IDs. Overwrites any existing service
         with the same name.
 
         :param service: The service name.
-        :param provider_ids: The set of provider ids.
+        :param provider_ids: The set of provider IDs.
         """
         ...
 
@@ -380,7 +380,7 @@ def start_server(
     playback_time_range: tuple[int, int] | None = None,
 ) -> WebSocketServer:
     """
-    Start a websocket server for live visualization.
+    Start a WebSocket server for live visualization.
     """
     ...
 
@@ -398,7 +398,7 @@ def disable_logging() -> None:
 
 def shutdown() -> None:
     """
-    Shutdown the running websocket server.
+    Shutdown the running WebSocket server.
     """
     ...
 

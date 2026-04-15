@@ -487,29 +487,29 @@ impl PyConnectionGraph {
         Self(foxglove::websocket::ConnectionGraph::new())
     }
 
-    /// Set a published topic and its associated publisher ids.
+    /// Set a published topic and its associated publisher IDs.
     /// Overwrites any existing topic with the same name.
     ///
     /// :param topic: The topic name.
-    /// :param publisher_ids: The set of publisher ids.
+    /// :param publisher_ids: The set of publisher IDs.
     pub fn set_published_topic(&mut self, topic: &str, publisher_ids: Vec<String>) {
         self.0.set_published_topic(topic, publisher_ids);
     }
 
-    /// Set a subscribed topic and its associated subscriber ids.
+    /// Set a subscribed topic and its associated subscriber IDs.
     /// Overwrites any existing topic with the same name.
     ///
     /// :param topic: The topic name.
-    /// :param subscriber_ids: The set of subscriber ids.
+    /// :param subscriber_ids: The set of subscriber IDs.
     pub fn set_subscribed_topic(&mut self, topic: &str, subscriber_ids: Vec<String>) {
         self.0.set_subscribed_topic(topic, subscriber_ids);
     }
 
-    /// Set an advertised service and its associated provider ids.
+    /// Set an advertised service and its associated provider IDs.
     /// Overwrites any existing service with the same name.
     ///
     /// :param service: The service name.
-    /// :param provider_ids: The set of provider ids.
+    /// :param provider_ids: The set of provider IDs.
     pub fn set_advertised_service(&mut self, service: &str, provider_ids: Vec<String>) {
         self.0.set_advertised_service(service, provider_ids);
     }

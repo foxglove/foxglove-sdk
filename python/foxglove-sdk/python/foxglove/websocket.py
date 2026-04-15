@@ -69,7 +69,7 @@ class ServerListener(Protocol):
         Called by the server when a client unadvertises a channel.
 
         :param client: The client (id) that is unadvertising the channel.
-        :param client_channel_id: The client channel id that is being unadvertised.
+        :param client_channel_id: The client channel ID that is being unadvertised.
         """
         return None
 
@@ -80,7 +80,7 @@ class ServerListener(Protocol):
         Called by the server when a message is received from a client.
 
         :param client: The client (id) that sent the message.
-        :param client_channel_id: The client channel id that the message was sent on.
+        :param client_channel_id: The client channel ID that the message was sent on.
         :param data: The message data.
         """
         return None
@@ -98,7 +98,7 @@ class ServerListener(Protocol):
 
         :param client: The client (id) that sent the message.
         :param param_names: The names of the parameters to get.
-        :param request_id: An optional request id.
+        :param request_id: An optional request ID.
         """
         return []
 
@@ -118,7 +118,7 @@ class ServerListener(Protocol):
 
         :param client: The client (id) that sent the message.
         :param parameters: The parameters to set.
-        :param request_id: An optional request id.
+        :param request_id: An optional request ID.
         """
         return parameters
 

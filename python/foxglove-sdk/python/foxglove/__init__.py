@@ -116,7 +116,7 @@ try:
         playback_time_range: tuple[int, int] | None = None,
     ) -> WebSocketServer:
         """
-        Start a websocket server for live visualization.
+        Start a WebSocket server for live visualization.
 
         :param name: The name of the server.
         :param host: The host to bind to.

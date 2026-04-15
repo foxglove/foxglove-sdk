@@ -99,7 +99,7 @@ class RemoteAccessListener(Protocol):
 
         :param client: The client that sent the request.
         :param param_names: The names of the parameters to get.
-        :param request_id: An optional request id.
+        :param request_id: An optional request ID.
         """
         return []
 
@@ -116,7 +116,7 @@ class RemoteAccessListener(Protocol):
 
         :param client: The client that sent the request.
         :param parameters: The parameters to set.
-        :param request_id: An optional request id.
+        :param request_id: An optional request ID.
         """
         return parameters
 
