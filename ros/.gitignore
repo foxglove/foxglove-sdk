@@ -2,3 +2,5 @@ build
 dist
 install
 log
+src/*/debian
+src/*/.obj-*

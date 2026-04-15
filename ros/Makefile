@@ -58,7 +58,7 @@ deb-bridge:
 		src/foxglove_bridge/debian/rules
 	cd src/foxglove_bridge && fakeroot debian/rules binary
 	mkdir -p dist && mv src/ros-*-foxglove-bridge*.deb dist/
-	rm -rf src/foxglove_bridge/debian src/foxglove_bridge/obj-*
+	rm -rf src/foxglove_bridge/debian src/foxglove_bridge/.obj-*
 	rm -f src/ros-*-foxglove-bridge*
 
 .PHONY: deb-msgs
@@ -66,7 +66,7 @@ deb-msgs:
 	cd src/foxglove_msgs && bloom-generate rosdebian
 	cd src/foxglove_msgs && fakeroot debian/rules binary
 	mkdir -p dist && mv src/ros-*-foxglove-msgs*.deb dist/
-	rm -rf src/foxglove_msgs/debian src/foxglove_msgs/obj-*
+	rm -rf src/foxglove_msgs/debian src/foxglove_msgs/.obj-*
 	rm -f src/ros-*-foxglove-msgs*
 
 .PHONY: deb
