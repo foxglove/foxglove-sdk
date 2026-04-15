@@ -1139,13 +1139,13 @@ void FoxgloveBridge::rosMessageHandler(ChannelId channelId,
         }
       }
     }
+    if (pubCache.messages.size() >= pubCache.maxMessages) {
+      pubCache.messages.pop_front();
+    }
     pubCache.messages.push_back(CachedMessage{
       {rclSerializedMsg.buffer, rclSerializedMsg.buffer + rclSerializedMsg.buffer_length},
       static_cast<uint64_t>(timestamp),
     });
-    while (pubCache.messages.size() > pubCache.maxMessages) {
-      pubCache.messages.pop_front();
-    }
   }
 
   auto& channel = _channels.at(channelId);
