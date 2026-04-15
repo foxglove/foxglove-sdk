@@ -1,0 +1,2 @@
+#!/bin/bash
+bash .githooks/init-ai-tooling.sh
