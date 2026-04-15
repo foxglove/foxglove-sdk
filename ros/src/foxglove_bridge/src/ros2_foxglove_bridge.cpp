@@ -870,10 +870,13 @@ ClientAdvertisement FoxgloveBridge::createClientPublisher(const std::string& top
                                                           const std::string& encoding,
                                                           const std::byte* schemaData,
                                                           size_t schemaLen) {
-  // Register a JSON parser for this schema if needed
+  // Create a JSON parser for this schema if needed
+  std::shared_ptr<RosMsgParser::Parser> jsonParser;
   if (encoding == "json") {
     auto parserIt = _jsonParsers.find(topicType);
-    if (parserIt == _jsonParsers.end()) {
+    if (parserIt != _jsonParsers.end()) {
+      jsonParser = parserIt->second;
+    } else {
       std::string schema;
       if (schemaLen > 0) {
         schema = std::string(reinterpret_cast<const char*>(schemaData), schemaLen);
@@ -885,9 +888,9 @@ ClientAdvertisement FoxgloveBridge::createClientPublisher(const std::string& top
         }
         schema = msgDefinition;
       }
-      auto parser =
+      jsonParser =
         std::make_shared<RosMsgParser::Parser>(topicName, RosMsgParser::ROSType(topicType), schema);
-      _jsonParsers.insert({topicType, parser});
+      _jsonParsers.insert({topicType, jsonParser});
     }
   }
 
@@ -914,47 +917,38 @@ ClientAdvertisement FoxgloveBridge::createClientPublisher(const std::string& top
   publisherOptions.callback_group = _clientPublishCallbackGroup;
   auto publisher = this->create_generic_publisher(topicName, topicType, qos, publisherOptions);
 
-  return ClientAdvertisement{std::move(publisher), topicName, topicType, encoding};
+  return ClientAdvertisement{std::move(publisher), topicName, topicType, encoding, jsonParser};
 }
 
-void FoxgloveBridge::publishClientData(const rclcpp::GenericPublisher::SharedPtr& publisher,
-                                       const std::string& encoding, const std::string& schemaName,
-                                       const std::byte* data, size_t dataLen) {
-  auto publishMessage = [&publisher, this](const void* msgData, size_t size) {
+void FoxgloveBridge::publishClientData(const ClientAdvertisement& ad, const std::byte* data,
+                                       size_t dataLen) {
+  auto publishMessage = [&ad, this](const void* msgData, size_t size) {
     // Copy the message payload into a SerializedMessage object
     rclcpp::SerializedMessage serializedMessage{size};
     auto& rclSerializedMsg = serializedMessage.get_rcl_serialized_message();
     std::memcpy(rclSerializedMsg.buffer, msgData, size);
     rclSerializedMsg.buffer_length = size;
     // Publish the message
-    if (_disableLoanMessage || !publisher->can_loan_messages()) {
-      publisher->publish(serializedMessage);
+    if (_disableLoanMessage || !ad.publisher->can_loan_messages()) {
+      ad.publisher->publish(serializedMessage);
     } else {
-      publisher->publish_as_loaned_msg(serializedMessage);
+      ad.publisher->publish_as_loaned_msg(serializedMessage);
     }
   };
 
-  if (encoding == "cdr") {
+  if (ad.encoding == "cdr") {
     publishMessage(data, dataLen);
-  } else if (encoding == "json") {
-    std::shared_ptr<RosMsgParser::Parser> parser;
-    {
-      std::lock_guard<std::mutex> lock(_clientAdvertisementsMutex);
-      auto parserIt = _jsonParsers.find(schemaName);
-      if (parserIt != _jsonParsers.end()) {
-        parser = parserIt->second;
-      }
-    }
-    if (!parser) {
-      throw std::runtime_error("no JSON parser found for schema \"" + schemaName + "\"");
+  } else if (ad.encoding == "json") {
+    if (!ad.jsonParser) {
+      throw std::runtime_error("no JSON parser found for schema \"" + ad.topicType + "\"");
     }
     thread_local RosMsgParser::ROS2_Serializer serializer;
     serializer.reset();
     const std::string jsonMessage(reinterpret_cast<const char*>(data), dataLen);
-    parser->serializeFromJson(jsonMessage, &serializer);
+    ad.jsonParser->serializeFromJson(jsonMessage, &serializer);
     publishMessage(serializer.getBufferData(), serializer.getBufferSize());
   } else {
-    throw std::runtime_error("unknown encoding \"" + encoding + "\"");
+    throw std::runtime_error("unknown encoding \"" + ad.encoding + "\"");
   }
 }
 
@@ -1020,9 +1014,7 @@ void FoxgloveBridge::clientUnadvertise(ClientId clientId, ChannelId clientChanne
 
 void FoxgloveBridge::clientMessage(ClientId clientId, ChannelId clientChannelId,
                                    const std::byte* data, size_t dataLen) {
-  rclcpp::GenericPublisher::SharedPtr publisher;
-  std::string encoding;
-  std::string schemaName;
+  ClientAdvertisement ad;
   {
     const ChannelAndClientId key = {clientChannelId, clientId};
     std::lock_guard<std::mutex> lock(_clientAdvertisementsMutex);
@@ -1035,13 +1027,11 @@ void FoxgloveBridge::clientMessage(ClientId clientId, ChannelId clientChannelId,
                                ", client has no advertised topics");
     }
 
-    publisher = it->second.publisher;
-    encoding = it->second.encoding;
-    schemaName = it->second.topicType;
+    ad = it->second;
   }
 
   try {
-    publishClientData(publisher, encoding, schemaName, data, dataLen);
+    publishClientData(ad, data, dataLen);
   } catch (const std::exception& ex) {
     throw ClientChannelError("Dropping client message on client channel " +
                              std::to_string(clientChannelId) + " from client ID " +
@@ -1426,9 +1416,7 @@ void FoxgloveBridge::gatewayClientMessage(uint32_t clientId,
                                           const foxglove::ChannelDescriptor& channel,
                                           const std::byte* data, size_t dataLen) {
   const ChannelId channelId = channel.id();
-  rclcpp::GenericPublisher::SharedPtr publisher;
-  std::string encoding;
-  std::string schemaName;
+  ClientAdvertisement ad;
   {
     ChannelAndClientId key = {channelId, clientId};
     std::lock_guard<std::mutex> lock(_clientAdvertisementsMutex);
@@ -1441,13 +1429,11 @@ void FoxgloveBridge::gatewayClientMessage(uint32_t clientId,
       return;
     }
 
-    publisher = it->second.publisher;
-    encoding = it->second.encoding;
-    schemaName = it->second.topicType;
+    ad = it->second;
   }
 
   try {
-    publishClientData(publisher, encoding, schemaName, data, dataLen);
+    publishClientData(ad, data, dataLen);
   } catch (const std::exception& ex) {
     RCLCPP_ERROR(this->get_logger(), "Gateway: dropping message from client %u for channel %lu: %s",
                  clientId, channelId, ex.what());
