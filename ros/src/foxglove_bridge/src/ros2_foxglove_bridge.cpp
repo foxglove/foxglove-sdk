@@ -227,9 +227,9 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
 
 #ifndef FOXGLOVE_REMOTE_ACCESS
   if (this->get_parameter(PARAM_REMOTE_ACCESS).as_bool()) {
-    RCLCPP_ERROR(this->get_logger(),
-                 "remote_access is set to true but the bridge was not built with "
-                 "FOXGLOVE_BRIDGE_REMOTE_ACCESS=ON. Remote access is not available.");
+    throw std::runtime_error(
+      "remote_access is set to true but the bridge was not built with "
+      "FOXGLOVE_BRIDGE_REMOTE_ACCESS=ON. Remote access is not available.");
   }
 #else
   const bool enableRemoteAccess = this->get_parameter(PARAM_REMOTE_ACCESS).as_bool();
