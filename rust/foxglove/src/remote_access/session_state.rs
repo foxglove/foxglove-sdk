@@ -1491,10 +1491,7 @@ mod tests {
             .build();
         state.insert_qos_profile(ch_id, qos);
 
-        assert_eq!(
-            state.qos_profile(&ch_id).reliability,
-            Reliability::Reliable
-        );
+        assert_eq!(state.qos_profile(&ch_id).reliability, Reliability::Reliable);
     }
 
     #[test]
@@ -1523,9 +1520,11 @@ mod tests {
     #[test]
     fn data_subscriber_participants_empty_when_no_subscribers() {
         let state = SessionState::new();
-        assert!(state
-            .data_subscriber_participants(&ChannelId::new(1))
-            .is_empty());
+        assert!(
+            state
+                .data_subscriber_participants(&ChannelId::new(1))
+                .is_empty()
+        );
     }
 
     #[test]
