@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::sync::{Arc, Weak};
 use std::time::Duration;
 
@@ -20,7 +20,6 @@ use tracing::{debug, error, info, trace, warn};
 use crate::protocol::v2::DecodeError;
 use crate::protocol::v2::parameter::Parameter;
 use crate::protocol::v2::server::ParameterValues;
-use crate::remote_common::ClientId;
 use crate::remote_common::connection_graph::ConnectionGraph;
 use crate::remote_common::{
     fetch_asset::AssetResponder,
@@ -63,30 +62,10 @@ const CONTROL_CHANNEL_TOPIC: &str = "control";
 const MESSAGE_FRAME_SIZE: usize = 5; // 1 byte opcode + u32 LE length
 const MAX_MESSAGE_SIZE: usize = 16 * 1024 * 1024; // 16 MiB
 
-/// A control plane message queued for delivery to a specific participant.
-pub(super) struct ControlPlaneMessage {
-    participant: Arc<Participant>,
-    data: Bytes,
-}
-
-impl ControlPlaneMessage {
-    pub(super) fn json(participant: Arc<Participant>, message: &impl JsonMessage) -> Self {
-        Self {
-            participant,
-            data: encode_json_message(message),
-        }
-    }
-
-    pub(super) fn binary<'a>(
-        participant: Arc<Participant>,
-        message: &impl BinaryMessage<'a>,
-    ) -> Self {
-        Self {
-            participant,
-            data: encode_binary_message(message),
-        }
-    }
-}
+/// Default size of the per-participant control plane queue. Large enough to buffer the
+/// initial burst from `add_participant` (server info + channel/service advertisements)
+/// without blocking, small enough to detect a slow participant via `try_send`.
+pub(crate) const DEFAULT_CONTROL_QUEUE_SIZE: usize = 256;
 
 /// The operation code for the message framing for protocol v2.
 /// Distinguishes between frames containing JSON messages vs binary messages.
@@ -100,7 +79,7 @@ enum OpCode {
 }
 
 /// Encodes a JSON message with the v2 byte stream framing (1 byte opcode + 4 byte LE length + payload).
-fn encode_json_message(message: &impl JsonMessage) -> Bytes {
+pub(super) fn encode_json_message(message: &impl JsonMessage) -> Bytes {
     let payload = message.to_string();
     let payload = payload.as_bytes();
     let mut buf = Vec::with_capacity(MESSAGE_FRAME_SIZE + payload.len());
@@ -111,7 +90,7 @@ fn encode_json_message(message: &impl JsonMessage) -> Bytes {
     Bytes::from(buf)
 }
 
-fn encode_binary_message<'a>(message: &impl BinaryMessage<'a>) -> Bytes {
+pub(super) fn encode_binary_message<'a>(message: &impl BinaryMessage<'a>) -> Bytes {
     let msg_len = message.encoded_len();
     let mut buf = Vec::with_capacity(MESSAGE_FRAME_SIZE + msg_len);
     buf.push(OpCode::Binary as u8);
@@ -144,23 +123,6 @@ fn build_advertise_services_msg(services: &[Arc<Service>]) -> Option<AdvertiseSe
     Some(msg)
 }
 
-/// Enqueue a control plane message for each of the given participants.
-fn send_control_to_all(
-    tx: &flume::Sender<ControlPlaneMessage>,
-    participants: &[Arc<Participant>],
-    data: Bytes,
-) {
-    for participant in participants {
-        let msg = ControlPlaneMessage {
-            participant: participant.clone(),
-            data: data.clone(),
-        };
-        if let Err(e) = tx.send(msg) {
-            warn!("control plane queue disconnected, dropping message: {e}");
-        }
-    }
-}
-
 /// RemoteAccessSession tracks a connected LiveKit session (the Room)
 /// and any state that is specific to that session.
 /// We discard this state if we close or lose the connection.
@@ -173,15 +135,13 @@ pub(crate) struct RemoteAccessSession {
     room: Room,
     context: Weak<Context>,
     remote_access_session_id: Option<String>,
-    state: RwLock<SessionState>,
+    state: Arc<RwLock<SessionState>>,
     channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     listener: Option<Arc<dyn Listener>>,
     capabilities: Vec<Capability>,
     fetch_asset_handler: Option<Arc<dyn AssetHandler<Client>>>,
     runtime: Handle,
     cancellation_token: CancellationToken,
-    control_plane_tx: flume::Sender<ControlPlaneMessage>,
-    control_plane_rx: flume::Receiver<ControlPlaneMessage>,
     services: Arc<parking_lot::RwLock<ServiceMap>>,
     supported_encodings: IndexSet<String>,
     /// Serializes all participant-scoped state mutations: subscription changes, video track
@@ -198,13 +158,15 @@ pub(crate) struct RemoteAccessSession {
     connection_graph: Arc<parking_lot::Mutex<ConnectionGraph>>,
     /// Immutable `ServerInfo` message sent to each participant on connect and reset.
     server_info: ServerInfo,
-    /// Channel used by `run_sender` to request participant resets when a control
-    /// stream write fails. `handle_room_events` receives identities and calls
-    /// `reset_participant`. Using `mpsc` rather than `Notify` because `Notify` is
-    /// not cancel-safe in `select!`.
+    /// Channel used by per-participant flush tasks to request participant resets
+    /// when a control stream write fails. `handle_room_events` receives identities
+    /// and calls `reset_participant`. Using `mpsc` rather than `Notify` because
+    /// `Notify` is not cancel-safe in `select!`.
     participant_reset_tx: tokio::sync::mpsc::UnboundedSender<ParticipantIdentity>,
     participant_reset_rx:
         tokio::sync::Mutex<tokio::sync::mpsc::UnboundedReceiver<ParticipantIdentity>>,
+    /// Size of the per-participant control plane queue.
+    message_backlog_size: usize,
 }
 
 impl Sink for RemoteAccessSession {
@@ -336,7 +298,6 @@ pub(crate) struct SessionParams {
 
 impl RemoteAccessSession {
     pub(crate) fn new(params: SessionParams) -> Self {
-        let (control_plane_tx, control_plane_rx) = flume::bounded(params.message_backlog_size);
         let (video_metadata_tx, video_metadata_rx) = tokio::sync::watch::channel(());
         let (participant_reset_tx, participant_reset_rx) = tokio::sync::mpsc::unbounded_channel();
         Self {
@@ -344,15 +305,13 @@ impl RemoteAccessSession {
             room: params.room,
             context: params.context,
             remote_access_session_id: params.remote_access_session_id,
-            state: RwLock::new(SessionState::new()),
+            state: Arc::new(RwLock::new(SessionState::new())),
             channel_filter: params.channel_filter,
             listener: params.listener,
             capabilities: params.capabilities,
             fetch_asset_handler: params.fetch_asset_handler,
             runtime: params.runtime,
             cancellation_token: params.cancellation_token,
-            control_plane_tx,
-            control_plane_rx,
             subscription_lock: parking_lot::Mutex::new(()),
             video_metadata_tx,
             video_metadata_rx,
@@ -364,6 +323,7 @@ impl RemoteAccessSession {
             server_info: params.server_info,
             participant_reset_tx,
             participant_reset_rx: tokio::sync::Mutex::new(participant_reset_rx),
+            message_backlog_size: params.message_backlog_size,
         }
     }
 
@@ -393,66 +353,80 @@ impl RemoteAccessSession {
         }
     }
 
-    /// Enqueue a control plane message for a specific participant.
-    /// Blocks the thread if the queue is full.
-    fn send_control(&self, participant: Arc<Participant>, data: Bytes) {
-        let msg = ControlPlaneMessage { participant, data };
-        if let Err(e) = self.control_plane_tx.send(msg) {
-            warn!("control plane queue disconnected, dropping message: {e}");
+    /// Send a control plane message to a participant. If the queue is full,
+    /// the participant is disconnected (reset requested).
+    fn send_control(&self, participant: &Participant, data: Bytes) {
+        if !participant.try_queue_control(data) {
+            let _ = self
+                .participant_reset_tx
+                .send(participant.participant_id().clone());
         }
     }
 
     /// Send an error status message to a participant.
-    fn send_error(&self, participant: &Arc<Participant>, message: String) {
+    ///
+    /// Best-effort: if the participant's queue is full, the message is dropped
+    /// (the participant may already be disconnecting).
+    fn send_error(&self, participant: &Participant, message: String) {
         debug!("Sending error to {participant}: {message}");
         let status = Status::error(message);
-        self.send_control(participant.clone(), encode_json_message(&status));
+        participant.try_queue_control(encode_json_message(&status));
     }
 
     /// Send a warning status message to a participant.
-    fn send_warning(&self, participant: &Arc<Participant>, message: String) {
+    ///
+    /// Best-effort: if the participant's queue is full, the message is dropped
+    /// (the participant may already be disconnecting).
+    fn send_warning(&self, participant: &Participant, message: String) {
         debug!("Sending warning to {participant}: {message}");
         let status = Status::warning(message);
-        self.send_control(participant.clone(), encode_json_message(&status));
+        participant.try_queue_control(encode_json_message(&status));
     }
 
     /// Enqueue a control plane message for all currently connected participants.
+    /// If a participant's queue is full, a reset is requested for that participant.
     fn broadcast_control(&self, data: Bytes) {
         let participants = self.state.read().collect_participants();
-        send_control_to_all(&self.control_plane_tx, &participants, data);
+        for participant in participants {
+            self.send_control(&participant, data.clone());
+        }
     }
 
-    /// Reads from the control plane queue and sends messages to participants.
+    /// Watches for video metadata changes and re-advertises affected channels.
     ///
-    /// Control plane messages are sent to the targeted participant via its per-participant writer.
-    pub(crate) async fn run_sender(session: Arc<Self>) {
+    /// Runs until the cancellation token fires.
+    pub(crate) async fn run_video_metadata_watcher(session: Arc<Self>) {
         let mut video_metadata: HashMap<ChannelId, VideoMetadata> = HashMap::new();
         let mut video_metadata_rx = session.video_metadata_rx.clone();
-        let mut poisoned_participants: HashSet<ClientId> = HashSet::new();
         loop {
             tokio::select! {
                 biased;
                 () = session.cancellation_token.cancelled() => break,
-                msg = session.control_plane_rx.recv_async() => {
-                    let Ok(msg) = msg else { break };
-                    if poisoned_participants.contains(&msg.participant.client_id()) {
-                        continue;
-                    }
-                    if let Err(e) = msg.participant.send(&msg.data).await {
-                        warn!(
-                            "control write failed for {:?}, requesting reset: {e:?}",
-                            msg.participant,
-                        );
-                        poisoned_participants.insert(msg.participant.client_id());
-                        let _ = session.participant_reset_tx.send(
-                            msg.participant.participant_id().clone(),
-                        );
-                    }
-                }
                 Ok(()) = video_metadata_rx.changed() => {
                     session.republish_video_metadata(&mut video_metadata);
                 }
             }
+        }
+    }
+
+    /// Shut down the session: await all per-participant flush tasks, then close
+    /// the LiveKit room.
+    ///
+    /// The caller must ensure that `handle_room_events` has stopped (so no new
+    /// `remove_participant` / `reset_participant` calls can race with the flush
+    /// handle drain) and that the `CancellationToken` has fired (so flush tasks
+    /// exit promptly).
+    pub(crate) async fn close(&self) {
+        let flush_handles = self.state.write().take_flush_handles();
+        for handle in flush_handles {
+            let _ = handle.await;
+        }
+        if let Err(e) = self.room.close().await {
+            error!(
+                remote_access_session_id = self.remote_access_session_id(),
+                error = %e,
+                "failed to close room: {e}",
+            );
         }
     }
 
@@ -603,7 +577,7 @@ impl RemoteAccessSession {
                 pong_payload.extend_from_slice(&millis_since_epoch().to_le_bytes());
                 let pong = Pong::new(&pong_payload);
                 let framed = encode_binary_message(&pong);
-                self.send_control(participant, framed);
+                self.send_control(&participant, framed);
             }
             ClientMessage::PingAck(ack) => {
                 let now = millis_since_epoch();
@@ -971,18 +945,45 @@ impl RemoteAccessSession {
             }
         };
 
+        // Create a per-participant control plane channel and spawn a flush task
+        // that drains it into the byte stream writer.
+        let (control_tx, control_rx) = flume::bounded::<Bytes>(self.message_backlog_size);
+        let writer = ParticipantWriter::Livekit(stream);
+        let participant_id_for_task = participant_id.clone();
+        let reset_tx = self.participant_reset_tx.clone();
+        let cancel = self.cancellation_token.clone();
+
+        let flush_handle = tokio::spawn(async move {
+            loop {
+                let data = tokio::select! {
+                    () = cancel.cancelled() => break,
+                    msg = control_rx.recv_async() => match msg {
+                        Ok(data) => data,
+                        Err(_) => break,
+                    },
+                };
+                if let Err(e) = writer.write(&data).await {
+                    warn!(
+                        "control write failed for {:?}, requesting reset: {e:?}",
+                        participant_id_for_task,
+                    );
+                    let _ = reset_tx.send(participant_id_for_task.clone());
+                    break;
+                }
+            }
+        });
+
         let participant = Arc::new(Participant::new(
             participant_id.clone(),
             protocol_version,
-            ParticipantWriter::Livekit(stream),
-            self.control_plane_tx.clone(),
+            control_tx,
         ));
 
         // Send initial messages prior to adding the participant to the state map, to ensure that
         // these are the first messages delivered to the participant. This is safe to do without
-        // holding the write lock, because this is a new participant - see below.
+        // holding the write lock, because this is a new participant — see below.
         info!("sending server info and advertisements to participant {participant:?}");
-        self.send_control(participant.clone(), encode_json_message(&self.server_info));
+        participant.try_queue_control(encode_json_message(&self.server_info));
         self.send_channel_advertisements(participant.clone());
         self.send_service_advertisements(participant.clone());
 
@@ -990,11 +991,10 @@ impl RemoteAccessSession {
         // we validated that it did not exist in the map at the top of this function, and the
         // caller is responsible for ensuring this function is not called concurrently for the same
         // participant identity.
-        let did_insert = self
-            .state
-            .write()
-            .insert_participant(participant_id, participant);
+        let mut state = self.state.write();
+        let did_insert = state.insert_participant(participant_id.clone(), participant);
         assert!(did_insert);
+        state.insert_flush_handle(participant_id, flush_handle);
         Ok(())
     }
 
@@ -1426,14 +1426,14 @@ impl RemoteAccessSession {
             return;
         };
 
-        self.send_control(participant, encode_json_message(&advertise_msg));
+        participant.try_queue_control(encode_json_message(&advertise_msg));
     }
 
     /// Enqueue service advertisements for delivery to a single participant.
     fn send_service_advertisements(&self, participant: Arc<Participant>) {
         let services: Vec<_> = self.services.read().values().cloned().collect();
         if let Some(msg) = build_advertise_services_msg(&services) {
-            self.send_control(participant, encode_json_message(&msg));
+            participant.try_queue_control(encode_json_message(&msg));
         }
     }
 
@@ -1505,14 +1505,8 @@ impl RemoteAccessSession {
             .unwrap_or(req.encoding.as_ref())
             .to_string();
 
-        let responder = super::service::new_responder(
-            participant.clone(),
-            service_id,
-            call_id,
-            encoding,
-            participant.control_plane_tx().clone(),
-            guard,
-        );
+        let responder =
+            super::service::new_responder(participant, service_id, call_id, encoding, guard);
         let request = crate::remote_common::service::Request::new(
             service.clone(),
             participant.client_id(),
@@ -1537,7 +1531,7 @@ impl RemoteAccessSession {
             call_id: call_id.into(),
             message: message.to_string(),
         };
-        self.send_control(participant.clone(), encode_json_message(&failure));
+        self.send_control(participant, encode_json_message(&failure));
     }
 
     /// Handle a fetch asset request from a client.
@@ -1688,7 +1682,7 @@ impl RemoteAccessSession {
         if let Some(id) = request_id {
             msg = msg.with_id(id);
         }
-        self.send_control(participant.clone(), encode_json_message(&msg));
+        self.send_control(participant, encode_json_message(&msg));
     }
 
     /// Publish parameter values to all participants subscribed to those parameters.
@@ -1698,24 +1692,38 @@ impl RemoteAccessSession {
             return;
         }
 
-        let state = self.state.read();
-        let participants = state.collect_participants();
-        for participant in &participants {
-            // Filter parameters by this participant's subscriptions.
-            let filtered: Vec<_> = parameters
-                .iter()
-                .filter(|p| {
-                    state
-                        .parameter_subscribers(&p.name)
-                        .is_some_and(|ids| ids.contains(participant.participant_id()))
-                })
-                .cloned()
-                .collect();
+        // Collect the per-participant messages while holding the read lock, then
+        // send them after the lock is released to avoid holding a parking_lot guard
+        // across a potentially-blocking `queue_control` call.
+        let to_send: Vec<(Arc<Participant>, Bytes)> = {
+            let state = self.state.read();
+            let participants = state.collect_participants();
+            participants
+                .into_iter()
+                .filter_map(|participant| {
+                    let filtered: Vec<_> = parameters
+                        .iter()
+                        .filter(|p| {
+                            state
+                                .parameter_subscribers(&p.name)
+                                .is_some_and(|ids| ids.contains(participant.participant_id()))
+                        })
+                        .cloned()
+                        .collect();
 
-            if !filtered.is_empty() {
-                let no_request_id = None;
-                self.send_parameter_values(participant, filtered, no_request_id);
-            }
+                    if filtered.is_empty() {
+                        return None;
+                    }
+
+                    let msg =
+                        ParameterValues::new(filtered.into_iter().filter(|p| p.value.is_some()));
+                    Some((participant, encode_json_message(&msg)))
+                })
+                .collect()
+        };
+
+        for (participant, data) in to_send {
+            self.send_control(&participant, data);
         }
     }
 
@@ -1740,24 +1748,27 @@ impl RemoteAccessSession {
             return;
         }
 
-        let mut graph = self.connection_graph.lock();
-        let first = !graph.has_subscribers();
-        if !graph.add_subscriber(participant.client_id()) {
-            debug!(
-                "Participant {} is already subscribed to connection graph updates",
-                participant,
-            );
-            return;
-        }
-
-        if first {
-            if let Some(listener) = &self.listener {
-                listener.on_connection_graph_subscribe();
+        let encoded = {
+            let mut graph = self.connection_graph.lock();
+            let first = !graph.has_subscribers();
+            if !graph.add_subscriber(participant.client_id()) {
+                debug!(
+                    "Participant {} is already subscribed to connection graph updates",
+                    participant,
+                );
+                return;
             }
-        }
 
-        let initial_update = graph.as_initial_update();
-        self.send_control(participant.clone(), encode_json_message(&initial_update));
+            if first {
+                if let Some(listener) = &self.listener {
+                    listener.on_connection_graph_subscribe();
+                }
+            }
+
+            encode_json_message(&graph.as_initial_update())
+        };
+
+        self.send_control(participant, encoded);
     }
 
     /// Handle an `UnsubscribeConnectionGraph` message from a client.
@@ -1794,14 +1805,14 @@ impl RemoteAccessSession {
         let participants = self.state.read().collect_participants();
         for participant in participants {
             if graph.is_subscriber(participant.client_id()) {
-                self.send_control(participant, encoded.clone());
+                self.send_control(&participant, encoded.clone());
             }
         }
     }
 
     /// Check video publishers for metadata changes and re-advertise affected channels.
     ///
-    /// Called from `run_sender` when `video_metadata_rx` signals a change. Compares each
+    /// Called from `run_video_metadata_watcher` when `video_metadata_rx` signals a change. Compares each
     /// publisher's current metadata against what was last advertised, updates session state for
     /// any changes, and broadcasts re-advertise messages to participants.
     fn republish_video_metadata(&self, advertised: &mut HashMap<ChannelId, VideoMetadata>) {
@@ -1997,24 +2008,15 @@ impl RemoteAccessSession {
 mod tests {
     use super::*;
     use crate::protocol::v2::server::FetchAssetResponse;
-    use crate::remote_access::participant::{ParticipantWriter, TestByteStreamWriter};
     use crate::remote_common::fetch_asset::{
         AssetHandler, AsyncAssetHandlerFn, BlockingAssetHandlerFn,
     };
 
-    fn make_participant_with_rx(
-        name: &str,
-    ) -> (Arc<Participant>, flume::Receiver<ControlPlaneMessage>) {
+    fn make_participant_with_rx(name: &str) -> (Arc<Participant>, flume::Receiver<Bytes>) {
         let identity = ParticipantIdentity(name.to_string());
-        let writer = Arc::new(TestByteStreamWriter::default());
         let version = protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone();
         let (tx, rx) = flume::bounded(16);
-        let participant = Arc::new(Participant::new(
-            identity,
-            version,
-            ParticipantWriter::Test(writer),
-            tx,
-        ));
+        let participant = Arc::new(Participant::new(identity, version, tx));
         (participant, rx)
     }
 
@@ -2037,7 +2039,7 @@ mod tests {
 
         let msg = rx.try_recv().unwrap();
         assert_eq!(
-            msg.data,
+            msg,
             encode_binary_message(&FetchAssetResponse::asset_data(42, &b"hello world"[..]))
         );
     }
@@ -2051,7 +2053,7 @@ mod tests {
 
         let msg = rx.try_recv().unwrap();
         assert_eq!(
-            msg.data,
+            msg,
             encode_binary_message(&FetchAssetResponse::error_message(
                 42,
                 "something went wrong"
@@ -2068,7 +2070,7 @@ mod tests {
 
         let msg = rx.try_recv().unwrap();
         assert_eq!(
-            msg.data,
+            msg,
             encode_binary_message(&FetchAssetResponse::error_message(
                 42,
                 "Internal server error: asset handler failed to send a response"
@@ -2089,7 +2091,7 @@ mod tests {
 
         let msg = rx.try_recv().unwrap();
         assert_eq!(
-            msg.data,
+            msg,
             encode_binary_message(&FetchAssetResponse::error_message(
                 99,
                 "Too many concurrent fetch asset requests"
@@ -2137,7 +2139,7 @@ mod tests {
 
         let msg = rx.try_recv().unwrap();
         assert_eq!(
-            msg.data,
+            msg,
             encode_binary_message(&FetchAssetResponse::error_message(
                 42,
                 "Server does not have a fetch asset handler"
@@ -2161,7 +2163,7 @@ mod tests {
             .expect("timed out waiting for asset response")
             .expect("channel closed");
         assert_eq!(
-            msg.data,
+            msg,
             encode_binary_message(&FetchAssetResponse::asset_data(7, &b"<robot/>"[..]))
         );
     }
@@ -2182,7 +2184,7 @@ mod tests {
             .expect("timed out waiting for asset response")
             .expect("channel closed");
         assert_eq!(
-            msg.data,
+            msg,
             encode_binary_message(&FetchAssetResponse::error_message(9, "not found"))
         );
     }
@@ -2203,8 +2205,140 @@ mod tests {
             .expect("timed out waiting for asset response")
             .expect("channel closed");
         assert_eq!(
-            msg.data,
+            msg,
             encode_binary_message(&FetchAssetResponse::asset_data(8, &b"PNG data"[..]))
         );
+    }
+
+    // ---- flush task tests ----
+
+    /// Spawns a flush task identical to the one in `add_participant`, using a test writer.
+    /// Returns the control channel sender, the test writer (for inspecting writes), and
+    /// the task's `JoinHandle`.
+    fn spawn_test_flush_task(
+        cancel: CancellationToken,
+    ) -> (
+        flume::Sender<Bytes>,
+        Arc<crate::remote_access::participant::TestByteStreamWriter>,
+        tokio::task::JoinHandle<()>,
+    ) {
+        use crate::remote_access::participant::{ParticipantWriter, TestByteStreamWriter};
+
+        let (control_tx, control_rx) = flume::bounded::<Bytes>(DEFAULT_CONTROL_QUEUE_SIZE);
+        let writer = Arc::new(TestByteStreamWriter::default());
+        let writer_for_task = writer.clone();
+        let handle = tokio::spawn(async move {
+            let writer = ParticipantWriter::Test(writer_for_task);
+            loop {
+                let data = tokio::select! {
+                    () = cancel.cancelled() => break,
+                    msg = control_rx.recv_async() => match msg {
+                        Ok(data) => data,
+                        Err(_) => break,
+                    },
+                };
+                if let Err(e) = writer.write(&data).await {
+                    warn!("test flush task write failed: {e:?}");
+                    break;
+                }
+            }
+        });
+        (control_tx, writer, handle)
+    }
+
+    #[tokio::test]
+    async fn flush_task_delivers_messages() {
+        let cancel = CancellationToken::new();
+        let (tx, writer, handle) = spawn_test_flush_task(cancel.clone());
+
+        tx.send(Bytes::from_static(b"hello")).unwrap();
+        tx.send(Bytes::from_static(b"world")).unwrap();
+
+        // Drop the sender to signal the flush task to exit.
+        drop(tx);
+        handle.await.unwrap();
+
+        let writes = writer.writes();
+        assert_eq!(writes.len(), 2);
+        assert_eq!(writes[0], Bytes::from_static(b"hello"));
+        assert_eq!(writes[1], Bytes::from_static(b"world"));
+    }
+
+    #[tokio::test]
+    async fn flush_task_stops_on_sender_drop() {
+        let cancel = CancellationToken::new();
+        let (tx, _writer, handle) = spawn_test_flush_task(cancel.clone());
+
+        // Drop the sender without cancelling — task should exit because recv returns Err.
+        drop(tx);
+
+        let result = tokio::time::timeout(Duration::from_secs(1), handle).await;
+        assert!(result.is_ok(), "flush task did not exit after sender drop");
+    }
+
+    #[tokio::test]
+    async fn flush_task_stops_on_cancellation() {
+        let cancel = CancellationToken::new();
+        let (_tx, _writer, handle) = spawn_test_flush_task(cancel.clone());
+
+        // Cancel without dropping the sender — task should exit via the select! arm.
+        cancel.cancel();
+
+        let result = tokio::time::timeout(Duration::from_secs(1), handle).await;
+        assert!(result.is_ok(), "flush task did not exit after cancellation");
+    }
+
+    #[tokio::test]
+    async fn flush_tasks_are_independent() {
+        // Two flush tasks: task A is blocked by a Notify, task B should still make progress.
+        let cancel = CancellationToken::new();
+        let gate = Arc::new(tokio::sync::Notify::new());
+
+        // Task A: uses a custom writer that blocks on the gate before completing.
+        let (tx_a, control_rx_a) = flume::bounded::<Bytes>(DEFAULT_CONTROL_QUEUE_SIZE);
+        let gate_for_a = gate.clone();
+        let cancel_a = cancel.clone();
+        let writer_a = Arc::new(crate::remote_access::participant::TestByteStreamWriter::default());
+        let writer_a_for_task = writer_a.clone();
+        let handle_a = tokio::spawn(async move {
+            loop {
+                let data = tokio::select! {
+                    () = cancel_a.cancelled() => break,
+                    msg = control_rx_a.recv_async() => match msg {
+                        Ok(data) => data,
+                        Err(_) => break,
+                    },
+                };
+                // Wait for the gate before "writing".
+                gate_for_a.notified().await;
+                writer_a_for_task.record(&data);
+            }
+        });
+
+        // Task B: normal flush task, no blocking.
+        let (tx_b, writer_b, handle_b) = spawn_test_flush_task(cancel.clone());
+
+        // Send a message to both.
+        tx_a.send(Bytes::from_static(b"msg_a")).unwrap();
+        tx_b.send(Bytes::from_static(b"msg_b")).unwrap();
+
+        // Drop B's sender so it flushes and exits.
+        drop(tx_b);
+        let result = tokio::time::timeout(Duration::from_secs(1), handle_b).await;
+        assert!(
+            result.is_ok(),
+            "task B should complete even though task A is blocked"
+        );
+        assert_eq!(writer_b.writes(), vec![Bytes::from_static(b"msg_b")]);
+
+        // Task A hasn't written yet — still blocked on the gate.
+        assert!(writer_a.writes().is_empty());
+
+        // Release A.
+        gate.notify_one();
+        drop(tx_a);
+        let result = tokio::time::timeout(Duration::from_secs(1), handle_a).await;
+        assert!(result.is_ok(), "task A should complete after gate release");
+        assert_eq!(writer_a.writes(), vec![Bytes::from_static(b"msg_a")]);
     }
 }

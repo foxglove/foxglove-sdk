@@ -4,6 +4,7 @@ use std::sync::Arc;
 
 use livekit::id::{ParticipantIdentity, TrackSid};
 use smallvec::SmallVec;
+use tokio::task::JoinHandle;
 use tracing::{debug, info};
 
 use crate::protocol::v2::server::advertise;
@@ -27,6 +28,12 @@ pub(crate) struct RemovedSubscriptions {
     pub client_channels: Vec<ChannelDescriptor>,
     /// Parameter names that lost their last subscriber.
     pub last_param_unsubscribed: Vec<String>,
+    /// The flush task handle for the removed participant, if one was registered.
+    /// Intentionally dropped (detached) by callers. The flush task drains naturally
+    /// once all `Arc<Participant>` refs are dropped (which drops `control_tx`). The
+    /// session-level `CancellationToken` is the backstop for prompt shutdown.
+    #[allow(dead_code)]
+    pub flush_handle: Option<JoinHandle<()>>,
 }
 
 /// Result of subscribing a participant to channels.
@@ -79,6 +86,8 @@ pub(crate) struct SessionState {
     client_channels: HashMap<ParticipantIdentity, HashMap<ChannelId, ChannelDescriptor>>,
     /// Parameters subscribed to by participants, keyed by parameter name.
     subscribed_parameters: HashMap<String, HashSet<ParticipantIdentity>>,
+    /// Per-participant flush task handles, for teardown awaiting.
+    flush_handles: HashMap<ParticipantIdentity, JoinHandle<()>>,
 }
 
 impl SessionState {
@@ -95,7 +104,18 @@ impl SessionState {
             video_metadata: HashMap::new(),
             client_channels: HashMap::new(),
             subscribed_parameters: HashMap::new(),
+            flush_handles: HashMap::new(),
         }
+    }
+
+    /// Stores the flush task handle for a participant.
+    pub fn insert_flush_handle(&mut self, identity: ParticipantIdentity, handle: JoinHandle<()>) {
+        self.flush_handles.insert(identity, handle);
+    }
+
+    /// Drains all flush task handles, returning them for awaiting during teardown.
+    pub fn take_flush_handles(&mut self) -> Vec<JoinHandle<()>> {
+        self.flush_handles.drain().map(|(_, h)| h).collect()
     }
 
     /// Inserts a participant if not already present.
@@ -130,6 +150,7 @@ impl SessionState {
                 subscribed_descriptors: SmallVec::new(),
                 client_channels: Vec::new(),
                 last_param_unsubscribed: Vec::new(),
+                flush_handle: None,
             };
         };
         let client_id = participant.client_id();
@@ -181,6 +202,8 @@ impl SessionState {
             }
         });
 
+        let flush_handle = self.flush_handles.remove(identity);
+
         RemovedSubscriptions {
             client_id: Some(client_id),
             last_unsubscribed,
@@ -188,6 +211,7 @@ impl SessionState {
             subscribed_descriptors,
             client_channels,
             last_param_unsubscribed,
+            flush_handle,
         }
     }
 
@@ -639,20 +663,13 @@ impl SessionState {
 mod tests {
     use super::*;
     use crate::img2yuv::{ImageEncoding, RawImageEncoding};
-    use crate::remote_access::participant::ParticipantWriter;
 
     fn make_participant(name: &str) -> (ParticipantIdentity, Arc<Participant>) {
         let identity = ParticipantIdentity(name.to_string());
-        let writer = Arc::new(crate::remote_access::participant::TestByteStreamWriter::default());
         let version =
             crate::remote_access::protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone();
         let (tx, _rx) = flume::bounded(16);
-        let participant = Arc::new(Participant::new(
-            identity.clone(),
-            version,
-            ParticipantWriter::Test(writer),
-            tx,
-        ));
+        let participant = Arc::new(Participant::new(identity.clone(), version, tx));
         (identity, participant)
     }
 

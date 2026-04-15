@@ -304,12 +304,13 @@ impl Gateway {
         self
     }
 
-    /// Set the message backlog size.
+    /// Set the per-participant control plane message queue size.
     ///
-    /// The sink buffers outgoing log entries into a queue. If the backlog size is exceeded, the
-    /// oldest entries will be dropped.
+    /// Each participant gets an independent queue of this size. If a participant's
+    /// queue fills up (because it is not reading fast enough), it will be disconnected
+    /// and asked to reconnect.
     ///
-    /// By default, the sink will buffer 1024 messages.
+    /// By default, each participant gets a queue of 256 messages.
     pub fn message_backlog_size(mut self, size: usize) -> Self {
         self.message_backlog_size = Some(size);
         self
