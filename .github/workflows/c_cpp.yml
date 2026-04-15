@@ -50,7 +50,14 @@ jobs:
       - run: clang-tidy --version
       - run: make lint
         working-directory: cpp
-      - run: make CLANG_TIDY=true CMAKE_BUILD_TYPE=Debug test
+      - name: Build C libs
+        run: make -f Container.mk build-cpp-dist
+      - name: Test with clang tidy
+        run: |
+          make test \
+            CLANG_TIDY=true \
+            CMAKE_BUILD_TYPE=Debug \
+            FOXGLOVE_PREBUILT_LIB_DIR=dist/lib
         working-directory: cpp
 
   build:
