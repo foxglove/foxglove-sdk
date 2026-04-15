@@ -312,7 +312,7 @@ impl SessionState {
         let video_subs = self.video_subscribers.get(channel_id);
         subscribers
             .iter()
-            .filter(|identity| !video_subs.map_or(false, |vs| vs.contains(identity)))
+            .filter(|identity| !video_subs.is_some_and(|vs| vs.contains(identity)))
             .filter_map(|identity| self.participants.get(identity).cloned())
             .collect()
     }
