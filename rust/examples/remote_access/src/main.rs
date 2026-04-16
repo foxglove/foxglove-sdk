@@ -6,8 +6,10 @@
 use foxglove::{
     ChannelDescriptor,
     bytes::Bytes,
-    messages::{CameraCalibration, RawImage, Timestamp},
-    remote_access::{Capability, Client, ConnectionStatus, Gateway, Listener},
+    messages::{CameraCalibration, FrameTransform, Quaternion, RawImage, Timestamp, Vector3},
+    remote_access::{
+        Capability, Client, ConnectionStatus, Gateway, Listener, QosProfile, Reliability,
+    },
 };
 use serde_json::Value;
 use std::{
@@ -74,11 +76,21 @@ async fn main() {
         .capabilities([Capability::ClientPublish])
         .supported_encodings(["json"])
         .listener(Arc::new(MessageHandler))
+        .qos_classifier_fn(|channel: &ChannelDescriptor| {
+            if channel.topic() == "/tf_static" {
+                QosProfile::builder()
+                    .reliability(Reliability::Reliable)
+                    .build()
+            } else {
+                QosProfile::default()
+            }
+        })
         .start()
         .expect("Failed to start remote access gateway");
 
     tokio::select! {
         _ = camera_loop() => {}
+        _ = tf_static_loop() => {}
         _ = tokio::signal::ctrl_c() => {}
     }
     _ = handle.stop().await;
@@ -435,6 +447,31 @@ fn render_test_card(buf: &mut [u8], frame_number: u64) {
                 Rgb(200, 200, 255),
             );
         }
+    }
+}
+
+/// Publish a static transform on `/tf_static` at 1 Hz over the reliable channel.
+async fn tf_static_loop() {
+    let mut interval = tokio::time::interval(Duration::from_secs(1));
+    loop {
+        interval.tick().await;
+        let tf = FrameTransform {
+            timestamp: Some(Timestamp::now()),
+            parent_frame_id: "world".into(),
+            child_frame_id: "camera".into(),
+            translation: Some(Vector3 {
+                x: 1.0,
+                y: 0.0,
+                z: 0.5,
+            }),
+            rotation: Some(Quaternion {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+                w: 1.0,
+            }),
+        };
+        foxglove::log!("/tf_static", tf);
     }
 }
 

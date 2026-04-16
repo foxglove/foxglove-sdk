@@ -10,6 +10,7 @@ use tracing::{debug, info};
 use crate::protocol::v2::server::advertise;
 
 use crate::remote_access::participant::Participant;
+use crate::remote_access::qos::{QosProfile, Reliability};
 use crate::remote_access::session::{DataTrack, VideoInputSchema, VideoMetadata, VideoPublisher};
 use crate::remote_common::ClientId;
 use crate::{ChannelDescriptor, ChannelId, RawChannel};
@@ -61,6 +62,8 @@ pub(crate) struct SessionState {
     participants: HashMap<ParticipantIdentity, Arc<Participant>>,
     /// Channels that have been advertised to participants.
     channels: HashMap<ChannelId, Arc<RawChannel>>,
+    /// QoS profile per channel.
+    qos_profiles: HashMap<ChannelId, QosProfile>,
     /// All subscriber identities per channel, regardless of subscription type.
     subscriptions: HashMap<ChannelId, SmallVec<[ParticipantIdentity; 1]>>,
     /// Data tracks for advertised channels.
@@ -89,6 +92,7 @@ impl SessionState {
         Self {
             participants: HashMap::new(),
             channels: HashMap::new(),
+            qos_profiles: HashMap::new(),
             subscriptions: HashMap::new(),
             data_tracks: HashMap::new(),
             video_subscribers: HashMap::new(),
@@ -311,6 +315,37 @@ impl SessionState {
         self.channels.insert(channel.id(), channel.clone());
     }
 
+    /// Records the QoS profile for a channel.
+    pub fn insert_qos_profile(&mut self, channel_id: ChannelId, qos: QosProfile) {
+        self.qos_profiles.insert(channel_id, qos);
+    }
+
+    /// Returns the QoS profile for a channel, defaulting to [`QosProfile::default()`].
+    pub fn qos_profile(&self, channel_id: &ChannelId) -> QosProfile {
+        self.qos_profiles
+            .get(channel_id)
+            .copied()
+            .unwrap_or_default()
+    }
+
+    /// Returns participants that have data subscriptions for a channel.
+    ///
+    /// A "data subscriber" is one in `subscriptions` but not `video_subscribers`.
+    pub fn data_subscriber_participants(
+        &self,
+        channel_id: &ChannelId,
+    ) -> SmallVec<[Arc<Participant>; 4]> {
+        let Some(subscribers) = self.subscriptions.get(channel_id) else {
+            return SmallVec::new();
+        };
+        let video_subs = self.video_subscribers.get(channel_id);
+        subscribers
+            .iter()
+            .filter(|identity| !video_subs.is_some_and(|vs| vs.contains(identity)))
+            .filter_map(|identity| self.participants.get(identity).cloned())
+            .collect()
+    }
+
     /// Returns `true` if the channel is currently advertised.
     pub fn has_channel(&self, channel_id: &ChannelId) -> bool {
         self.channels.contains_key(channel_id)
@@ -322,6 +357,7 @@ impl SessionState {
     /// `teardown_data_track()` which removes the track and unpublishes it.
     pub fn remove_channel(&mut self, channel_id: ChannelId) -> bool {
         self.subscriptions.remove(&channel_id);
+        self.qos_profiles.remove(&channel_id);
         self.video_subscribers.remove(&channel_id);
         self.video_metadata.remove(&channel_id);
         self.channels.remove(&channel_id).is_some()
@@ -408,6 +444,10 @@ impl SessionState {
     pub fn add_metadata_to_advertisement(&self, advertise: &mut advertise::Advertise<'_>) {
         for ch in &mut advertise.channels {
             let channel_id = ChannelId::new(ch.id);
+            if self.qos_profile(&channel_id).reliability == Reliability::Reliable {
+                ch.metadata
+                    .insert("foxglove.reliable".to_string(), "true".to_string());
+            }
             if self.video_schemas.contains_key(&channel_id) {
                 ch.metadata
                     .insert("foxglove.hasVideoTrack".to_string(), "true".to_string());
@@ -1458,5 +1498,103 @@ mod tests {
     fn get_channel_descriptor_returns_none_for_unknown() {
         let state = SessionState::new();
         assert!(state.get_channel_descriptor(&ChannelId::new(999)).is_none());
+    }
+
+    // -----------------------------------------------------------------------
+    // QoS profile tests
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn qos_profile_defaults_to_lossy() {
+        let state = SessionState::new();
+        let qos = state.qos_profile(&ChannelId::new(42));
+        assert_eq!(qos.reliability, Reliability::Lossy);
+    }
+
+    #[test]
+    fn insert_and_retrieve_qos_profile() {
+        let mut state = SessionState::new();
+        let ch = make_channel("/config");
+        let ch_id = ch.id();
+        state.insert_channel(&ch);
+
+        let qos = QosProfile::builder()
+            .reliability(Reliability::Reliable)
+            .build();
+        state.insert_qos_profile(ch_id, qos);
+
+        assert_eq!(state.qos_profile(&ch_id).reliability, Reliability::Reliable);
+    }
+
+    #[test]
+    fn remove_channel_cleans_up_qos_profile() {
+        let mut state = SessionState::new();
+        let ch = make_channel("/config");
+        let ch_id = ch.id();
+        state.insert_channel(&ch);
+        state.insert_qos_profile(
+            ch_id,
+            QosProfile::builder()
+                .reliability(Reliability::Reliable)
+                .build(),
+        );
+
+        state.remove_channel(ch_id);
+
+        // Should fall back to default after removal.
+        assert_eq!(state.qos_profile(&ch_id).reliability, Reliability::Lossy);
+    }
+
+    // -----------------------------------------------------------------------
+    // data_subscriber_participants tests
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn data_subscriber_participants_empty_when_no_subscribers() {
+        let state = SessionState::new();
+        assert!(
+            state
+                .data_subscriber_participants(&ChannelId::new(1))
+                .is_empty()
+        );
+    }
+
+    #[test]
+    fn data_subscriber_participants_returns_data_only_subscribers() {
+        let mut state = SessionState::new();
+        let (id_a, pa) = make_participant("alice");
+        let (id_b, pb) = make_participant("bob");
+        state.insert_participant(id_a.clone(), pa.clone());
+        state.insert_participant(id_b.clone(), pb.clone());
+
+        let ch = make_channel("/data");
+        let ch_id = ch.id();
+        state.insert_channel(&ch);
+
+        // Both subscribe (data). Bob also subscribes to video.
+        let _ = state.subscribe(&pa, &[ch_id]);
+        let _ = state.subscribe(&pb, &[ch_id]);
+        let _ = state.subscribe_video(&pb, &[ch_id]);
+
+        let participants = state.data_subscriber_participants(&ch_id);
+        // Only alice should be returned — bob is a video subscriber.
+        assert_eq!(participants.len(), 1);
+        assert_eq!(participants[0].participant_id(), &id_a);
+    }
+
+    #[test]
+    fn data_subscriber_participants_empty_when_all_are_video() {
+        let mut state = SessionState::new();
+        let (id, p) = make_participant("alice");
+        state.insert_participant(id.clone(), p.clone());
+
+        let ch = make_channel("/cam");
+        let ch_id = ch.id();
+        state.insert_channel(&ch);
+
+        let _ = state.subscribe(&p, &[ch_id]);
+        let _ = state.subscribe_video(&p, &[ch_id]);
+
+        assert!(state.data_subscriber_participants(&ch_id).is_empty());
     }
 }
