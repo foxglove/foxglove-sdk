@@ -85,8 +85,8 @@ impl Participant {
                         Err(_) => break,
                     },
                 };
-                // Wrap the write in a cancel-aware select with a generous timeout
-                // as a safeguard against writer.write() blocking indefinitely.
+                // Wrap the write in a cancel-aware select so we can break out
+                // if the participant is being torn down.
                 let write_result = tokio::select! {
                     biased;
                     () = cancel_for_task.cancelled() => break,

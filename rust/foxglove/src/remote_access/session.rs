@@ -2272,13 +2272,9 @@ mod tests {
 
     #[tokio::test]
     async fn flush_tasks_are_independent() {
-        // Two flush tasks spawned via Participant::spawn. Task A gets a slow
-        // writer (delayed by a Notify gate), task B gets a normal writer.
-        // B should complete even while A is blocked.
+        // Two participants spawned independently. Dropping one and awaiting its
+        // flush task should not affect the other.
         let cancel = CancellationToken::new();
-
-        // Task A: normal Participant::spawn, but we'll send and then verify
-        // it completes independently of B's timing.
         let (participant_a, writer_a, handle_a) = spawn_test_participant(&cancel);
         let (participant_b, writer_b, handle_b) = spawn_test_participant(&cancel);
 
