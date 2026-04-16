@@ -11,7 +11,7 @@ use anyhow::{Context as _, Result};
 use foxglove::messages::{RawImage, Timestamp};
 use foxglove::protocol::v2::client::SubscribeChannel;
 use foxglove::protocol::v2::server::ServerMessage;
-use foxglove::remote_access::{ConnectionGraph, ConnectionStatus};
+use foxglove::remote_access::{ConnectionGraph, ConnectionStatus, QosProfile, Reliability};
 use foxglove::{Encode, Schema};
 use livekit::{Room, RoomOptions};
 use remote_access_tests::livekit_token;
@@ -2133,6 +2133,228 @@ async fn livekit_connection_graph_persists_when_no_session() -> Result<()> {
     assert_eq!(update.advertised_services[0].name, "/persisted_service");
     assert_eq!(update.advertised_services[0].provider_ids, vec!["node_1"]);
     info!("connection graph persisted across no-session gap validated");
+
+    viewer.close().await?;
+    gw.stop().await?;
+    Ok(())
+}
+
+/// Test that a channel classified as Reliable delivers message data on the control
+/// bytestream (as a binary MessageData frame) rather than a data track.
+#[traced_test]
+#[ignore]
+#[tokio::test]
+#[serial(livekit)]
+async fn livekit_reliable_channel_delivers_via_control_plane() -> Result<()> {
+    let ctx = foxglove::Context::new();
+    let channel = ctx
+        .channel_builder("/config")
+        .message_encoding("json")
+        .build_raw()
+        .context("create channel")?;
+
+    let gw = TestGateway::start_with_options(
+        &ctx,
+        TestGatewayOptions {
+            qos_classifier: Some(Box::new(|_| {
+                QosProfile::builder()
+                    .reliability(Reliability::Reliable)
+                    .build()
+            })),
+            ..Default::default()
+        },
+    )
+    .await?;
+
+    let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+    let _server_info = viewer.expect_server_info().await?;
+    let advertise = viewer.expect_advertise().await?;
+    let ch = &advertise.channels[0];
+    let channel_id = ch.id;
+
+    // The advertisement should include the reliable metadata.
+    assert_eq!(
+        ch.metadata.get("foxglove.reliable"),
+        Some(&"true".to_string()),
+        "reliable channel should be advertised with foxglove.reliable metadata"
+    );
+
+    // Subscribe to the channel.
+    viewer.subscribe_and_wait(&[channel_id], &channel).await?;
+
+    // No data track should be published for a reliable channel.
+    // Drain room events briefly to confirm.
+    let deadline = tokio::time::Instant::now() + Duration::from_secs(1);
+    loop {
+        match tokio::time::timeout_at(deadline, viewer.events.recv()).await {
+            Ok(Some(livekit::RoomEvent::DataTrackPublished(track))) => {
+                panic!(
+                    "unexpected DataTrackPublished for reliable channel: {:?}",
+                    track.info().name()
+                );
+            }
+            Ok(Some(_)) => continue,
+            _ => break,
+        }
+    }
+    info!("confirmed no data track published for reliable channel");
+
+    // Log a message — it should arrive as MessageData on the control plane,
+    // not via a data track.
+    channel.log(b"config-value");
+
+    let msg_data = viewer.expect_message_data().await?;
+    assert_eq!(msg_data.channel_id, channel_id);
+    assert_eq!(msg_data.data.as_ref(), b"config-value");
+    info!("reliable channel control plane delivery validated");
+
+    viewer.close().await?;
+    gw.stop().await?;
+    Ok(())
+}
+
+/// Test that the QoS classifier can classify some channels as Reliable and others
+/// as Lossy based on the channel topic.
+#[traced_test]
+#[ignore]
+#[tokio::test]
+#[serial(livekit)]
+async fn livekit_qos_classifier_per_channel() -> Result<()> {
+    let ctx = foxglove::Context::new();
+    let reliable_channel = ctx
+        .channel_builder("/config")
+        .message_encoding("json")
+        .build_raw()
+        .context("create reliable channel")?;
+    let lossy_channel = ctx
+        .channel_builder("/data")
+        .message_encoding("json")
+        .build_raw()
+        .context("create lossy channel")?;
+
+    let gw = TestGateway::start_with_options(
+        &ctx,
+        TestGatewayOptions {
+            qos_classifier: Some(Box::new(|ch: &foxglove::ChannelDescriptor| {
+                if ch.topic().starts_with("/config") {
+                    QosProfile::builder()
+                        .reliability(Reliability::Reliable)
+                        .build()
+                } else {
+                    QosProfile::default()
+                }
+            })),
+            ..Default::default()
+        },
+    )
+    .await?;
+
+    let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+    let _server_info = viewer.expect_server_info().await?;
+    let advertise = viewer.expect_advertise().await?;
+
+    let reliable_ch = advertise
+        .channels
+        .iter()
+        .find(|ch| ch.topic == "/config")
+        .expect("reliable channel advertised");
+    let lossy_ch = advertise
+        .channels
+        .iter()
+        .find(|ch| ch.topic == "/data")
+        .expect("lossy channel advertised");
+
+    assert_eq!(
+        reliable_ch.metadata.get("foxglove.reliable"),
+        Some(&"true".to_string()),
+        "reliable channel should have foxglove.reliable metadata"
+    );
+    assert_eq!(
+        lossy_ch.metadata.get("foxglove.reliable"),
+        None,
+        "lossy channel should not have foxglove.reliable metadata"
+    );
+
+    let reliable_id = reliable_ch.id;
+    let lossy_id = lossy_ch.id;
+
+    // Subscribe to both channels.
+    viewer
+        .subscribe_and_wait(&[reliable_id, lossy_id], &reliable_channel)
+        .await?;
+
+    // The lossy channel should have a data track published.
+    let mut data_reader = viewer.expect_device_channel_data_track(lossy_id).await?;
+
+    // Log to the reliable channel — should arrive on the control plane.
+    reliable_channel.log(b"reliable-msg");
+    let msg = viewer.expect_message_data().await?;
+    assert_eq!(msg.channel_id, reliable_id);
+    assert_eq!(msg.data.as_ref(), b"reliable-msg");
+    info!("reliable channel delivered via control plane");
+
+    // Log to the lossy channel — should arrive on the data track.
+    lossy_channel.log(b"lossy-msg");
+    let msg = data_reader.next_message_data().await?;
+    assert_eq!(msg.channel_id, lossy_id);
+    assert_eq!(msg.data.as_ref(), b"lossy-msg");
+    info!("lossy channel delivered via data track");
+
+    viewer.close().await?;
+    gw.stop().await?;
+    Ok(())
+}
+
+/// Test that a classifier returning Reliable for a video-capable channel is
+/// overridden to Lossy, and that a warning is logged.
+#[traced_test]
+#[ignore]
+#[tokio::test]
+#[serial(livekit)]
+async fn livekit_video_channel_forces_lossy_over_reliable_classifier() -> Result<()> {
+    let ctx = foxglove::Context::new();
+    let video_channel = ctx
+        .channel_builder("/camera")
+        .message_encoding("protobuf")
+        .schema(Schema::new("foxglove.RawImage", "protobuf", &b""[..]))
+        .build_raw()
+        .context("create video channel")?;
+
+    let gw = TestGateway::start_with_options(
+        &ctx,
+        TestGatewayOptions {
+            qos_classifier: Some(Box::new(|_| {
+                QosProfile::builder()
+                    .reliability(Reliability::Reliable)
+                    .build()
+            })),
+            ..Default::default()
+        },
+    )
+    .await?;
+
+    let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+    let _server_info = viewer.expect_server_info().await?;
+    let advertise = viewer.expect_advertise().await?;
+
+    let ch = advertise
+        .channels
+        .iter()
+        .find(|ch| ch.id == u64::from(video_channel.id()))
+        .expect("video channel advertised");
+
+    // Video detection takes precedence: the channel is advertised as a video
+    // track and NOT as reliable, even though the classifier asked for Reliable.
+    assert_eq!(
+        ch.metadata.get("foxglove.hasVideoTrack"),
+        Some(&"true".to_string()),
+        "video channel should have foxglove.hasVideoTrack metadata"
+    );
+    assert_eq!(
+        ch.metadata.get("foxglove.reliable"),
+        None,
+        "Reliable classification should be overridden to Lossy for video channels"
+    );
 
     viewer.close().await?;
     gw.stop().await?;

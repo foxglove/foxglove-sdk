@@ -33,10 +33,11 @@ use crate::{
         BinaryMessage, JsonMessage,
         client::{self, ClientMessage},
         server::{
-            AdvertiseServices, Pong, RemoveStatus, ServerInfo, ServiceCallFailure, Status,
-            Unadvertise, UnadvertiseServices, advertise, advertise_services,
+            AdvertiseServices, MessageData, Pong, RemoveStatus, ServerInfo, ServiceCallFailure,
+            Status, Unadvertise, UnadvertiseServices, advertise, advertise_services,
         },
     },
+    remote_access::qos::{QosClassifier, Reliability},
     remote_access::{
         AssetHandler, Capability, Listener, RemoteAccessError, client::Client,
         participant::Participant, protocol_version, rtt_tracker::RttTracker,
@@ -134,6 +135,7 @@ pub(crate) struct RemoteAccessSession {
     remote_access_session_id: Option<String>,
     state: RwLock<SessionState>,
     channel_filter: Option<Arc<dyn SinkChannelFilter>>,
+    qos_classifier: Option<Arc<dyn QosClassifier>>,
     listener: Option<Arc<dyn Listener>>,
     capabilities: Vec<Capability>,
     fetch_asset_handler: Option<Arc<dyn AssetHandler<Client>>>,
@@ -186,9 +188,20 @@ impl Sink for RemoteAccessSession {
             publisher.send(Bytes::copy_from_slice(msg), metadata.log_time);
         }
 
-        // Send to data subscribers via the data track.
-        if let Some(track) = state.get_subscribed_data_track(&channel_id) {
-            track.log(channel_id, msg, metadata);
+        // Send to data subscribers.
+        if state.has_data_subscribers(&channel_id) {
+            if state.qos_profile(&channel_id).reliability == Reliability::Reliable {
+                // Reliable channels: send MessageData via the control bytestream
+                // to each subscribed participant.
+                let message = MessageData::new(u64::from(channel_id), metadata.log_time, msg);
+                let encoded = encode_binary_message(&message);
+                for participant in state.data_subscriber_participants(&channel_id) {
+                    self.send_control(participant, encoded.clone());
+                }
+            } else if let Some(track) = state.get_subscribed_data_track(&channel_id) {
+                // Lossy channels: send via the eagerly-published data track.
+                track.log(channel_id, msg, metadata);
+            }
         }
 
         Ok(())
@@ -215,7 +228,7 @@ impl Sink for RemoteAccessSession {
             return None;
         }
 
-        // Track advertised channels and detect video-capable ones.
+        // Track advertised channels, detect video-capable ones, and classify QoS.
         let advertised_ids: std::collections::HashSet<u64> =
             advertise_msg.channels.iter().map(|ch| ch.id).collect();
         let advertised_channel_ids: SmallVec<[ChannelId; 4]> = {
@@ -224,9 +237,27 @@ impl Sink for RemoteAccessSession {
             for &ch in &filtered {
                 if advertised_ids.contains(&u64::from(ch.id())) {
                     state.insert_channel(ch);
-                    ids.push(ch.id());
-                    if let Some(input_schema) = get_video_input_schema(ch) {
+                    let video_schema = get_video_input_schema(ch);
+                    if let Some(input_schema) = video_schema {
                         state.insert_video_schema(ch.id(), input_schema);
+                    }
+                    let mut qos = self
+                        .qos_classifier
+                        .as_ref()
+                        .map(|c| c.classify(ch.descriptor()))
+                        .unwrap_or_default();
+                    if video_schema.is_some() && qos.reliability == Reliability::Reliable {
+                        warn!(
+                            "Forcing QoS to Lossy for video channel {:?} (topic={}): \
+                             Reliable delivery is not supported for video",
+                            ch.id(),
+                            ch.topic()
+                        );
+                        qos.reliability = Reliability::Lossy;
+                    }
+                    state.insert_qos_profile(ch.id(), qos);
+                    if qos.reliability != Reliability::Reliable {
+                        ids.push(ch.id());
                     }
                 }
             }
@@ -280,6 +311,7 @@ pub(crate) struct SessionParams {
     pub room: Room,
     pub context: Weak<Context>,
     pub channel_filter: Option<Arc<dyn SinkChannelFilter>>,
+    pub qos_classifier: Option<Arc<dyn QosClassifier>>,
     pub listener: Option<Arc<dyn Listener>>,
     pub capabilities: Vec<Capability>,
     pub supported_encodings: IndexSet<String>,
@@ -305,6 +337,7 @@ impl RemoteAccessSession {
             remote_access_session_id: params.remote_access_session_id,
             state: RwLock::new(SessionState::new()),
             channel_filter: params.channel_filter,
+            qos_classifier: params.qos_classifier,
             listener: params.listener,
             capabilities: params.capabilities,
             fetch_asset_handler: params.fetch_asset_handler,
@@ -1956,6 +1989,9 @@ impl RemoteAccessSession {
     }
 
     /// Eagerly publish data tracks for newly advertised channels.
+    ///
+    /// Reliable channels should be excluded by the caller; their data goes via
+    /// the control plane instead of data tracks.
     fn publish_data_tracks(&self, topics: &[ChannelId]) {
         for channel_id in topics {
             let data_track = DataTrack::publish(
