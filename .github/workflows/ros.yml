@@ -51,6 +51,31 @@ jobs:
           path: cpp/dist
           retention-days: 1
 
+  build-cpp-dist-aarch64:
+    needs: changes
+    if: needs.changes.outputs.should_run == 'true'
+    # Pinned to 22.04 so libfoxglove.a is compatible with ROS Humble (glibc 2.35)
+    runs-on: ubuntu-22.04-arm
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libglib2.0-dev libva-dev libwebsockets-dev
+          echo "CC=gcc" >> $GITHUB_ENV
+          echo "CXX=g++" >> $GITHUB_ENV
+
+      - name: Build C++ SDK
+        run: make -f Container.mk build-cpp-dist
+
+      - name: Upload SDK artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: cpp-sdk-aarch64
+          path: cpp/dist
+          retention-days: 1
+
   ros:
     needs: [changes, build-cpp-dist]
     if: needs.changes.outputs.should_run == 'true'
@@ -89,13 +114,42 @@ jobs:
         run: make GTEST_REPEAT=50 docker-test-${{ matrix.ros_distribution }}
         working-directory: ros
 
+  ros-deb-humble-aarch64:
+    needs: [changes, build-cpp-dist-aarch64]
+    if: needs.changes.outputs.should_run == 'true'
+    runs-on: ubuntu-22.04-arm
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Download C++ SDK artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: cpp-sdk-aarch64
+          path: cpp/dist
+
+      - name: Run make docker-deb-bridge-humble
+        run: make FOXGLOVE_CPP_SDK_DIR=/sdk/cpp/dist docker-deb-bridge-humble
+        working-directory: ros
+
+      - name: Upload .deb artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: foxglove-bridge-humble-aarch64-deb
+          path: ros/dist/*.deb
+          retention-days: 7
+
   # Gate job for branch protection. Always posts a status so that the required
   # check passes even when the ros matrix is skipped. Configure your required
   # status check to reference this job ("ROS / ros-status") instead of the
   # individual matrix jobs.
   ros-status:
     name: ros-status
-    needs: [changes, build-cpp-dist, ros]
+    needs:
+      - changes
+      - build-cpp-dist
+      - build-cpp-dist-aarch64
+      - ros
+      - ros-deb-humble-aarch64
     if: always()
     runs-on: ubuntu-latest
     steps:
