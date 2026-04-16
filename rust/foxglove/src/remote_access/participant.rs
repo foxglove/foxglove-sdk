@@ -6,6 +6,7 @@ use std::sync::Arc;
 use bytes::Bytes;
 use livekit::{ByteStreamWriter, StreamWriter, id::ParticipantIdentity};
 use semver::Version;
+use tokio_util::sync::CancellationToken;
 
 use crate::protocol::v2::server::FetchAssetResponse;
 use crate::remote_access::RemoteAccessError;
@@ -38,6 +39,9 @@ pub(crate) struct Participant {
     /// Channel to request a participant reset (disconnect + reconnect) when the
     /// control queue is full.
     reset_tx: tokio::sync::mpsc::UnboundedSender<ParticipantIdentity>,
+    /// Per-participant cancellation token. Cancelled when the control queue
+    /// overflows, signaling the flush task to stop immediately.
+    cancel: CancellationToken,
     /// Limits concurrent service calls from this participant.
     service_call_sem: Semaphore,
     /// Limits concurrent fetch asset requests from this participant.
@@ -51,6 +55,7 @@ impl Participant {
         protocol_version: Version,
         control_tx: flume::Sender<Bytes>,
         reset_tx: tokio::sync::mpsc::UnboundedSender<ParticipantIdentity>,
+        cancel: CancellationToken,
     ) -> Self {
         Self {
             client_id: ClientId::next(),
@@ -58,10 +63,12 @@ impl Participant {
             protocol_version,
             control_tx,
             reset_tx,
+            cancel,
             service_call_sem: Semaphore::new(DEFAULT_SERVICE_CALLS_PER_PARTICIPANT),
             fetch_asset_sem: Semaphore::new(DEFAULT_FETCH_ASSET_PER_PARTICIPANT),
         }
     }
+
 
     /// Returns the locally-significant client ID.
     pub fn client_id(&self) -> ClientId {
@@ -107,9 +114,11 @@ impl Participant {
     }
 
     /// Queue a control plane message, requesting a participant reset if the
-    /// queue is full.
+    /// queue is full. Also cancels the per-participant token so the flush task
+    /// stops immediately — no point draining messages for a client being disconnected.
     pub(crate) fn send_control(&self, data: Bytes) {
         if !self.try_queue_control(data) {
+            self.cancel.cancel();
             let _ = self.reset_tx.send(self.participant_id.clone());
         }
     }

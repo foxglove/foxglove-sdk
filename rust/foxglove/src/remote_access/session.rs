@@ -941,12 +941,15 @@ impl RemoteAccessSession {
         let writer = ParticipantWriter::Livekit(stream);
         let participant_id_for_task = participant_id.clone();
         let reset_tx = self.participant_reset_tx.clone();
-        let cancel = self.cancellation_token.clone();
+        // Per-participant cancellation token — a child of the session token so it
+        // fires on both session shutdown and per-participant queue overflow.
+        let participant_cancel = self.cancellation_token.child_token();
+        let cancel_for_task = participant_cancel.clone();
 
         let flush_handle = tokio::spawn(async move {
             loop {
                 let data = tokio::select! {
-                    () = cancel.cancelled() => break,
+                    () = cancel_for_task.cancelled() => break,
                     msg = control_rx.recv_async() => match msg {
                         Ok(data) => data,
                         Err(_) => break,
@@ -968,6 +971,7 @@ impl RemoteAccessSession {
             protocol_version,
             control_tx,
             self.participant_reset_tx.clone(),
+            participant_cancel,
         ));
 
         // Send initial messages prior to adding the participant to the state map, to ensure that
@@ -2013,7 +2017,8 @@ mod tests {
         let version = protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone();
         let (tx, rx) = flume::bounded(16);
         let (reset_tx, _reset_rx) = tokio::sync::mpsc::unbounded_channel();
-        let participant = Arc::new(Participant::new(identity, version, tx, reset_tx));
+        let cancel = CancellationToken::new();
+        let participant = Arc::new(Participant::new(identity, version, tx, reset_tx, cancel));
         (participant, rx)
     }
 
@@ -2344,11 +2349,13 @@ mod tests {
         let version = protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone();
         let (tx, _rx) = flume::bounded::<Bytes>(1);
         let (reset_tx, _reset_rx) = tokio::sync::mpsc::unbounded_channel();
+        let cancel = CancellationToken::new();
         let participant = Participant::new(
             ParticipantIdentity("alice".to_string()),
             version,
             tx,
             reset_tx,
+            cancel,
         );
 
         // First message fits.
@@ -2362,11 +2369,13 @@ mod tests {
         let version = protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone();
         let (tx, rx) = flume::bounded::<Bytes>(1);
         let (reset_tx, _reset_rx) = tokio::sync::mpsc::unbounded_channel();
+        let cancel = CancellationToken::new();
         let participant = Participant::new(
             ParticipantIdentity("alice".to_string()),
             version,
             tx,
             reset_tx,
+            cancel,
         );
 
         // Drop the receiver — channel disconnected.
