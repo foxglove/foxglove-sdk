@@ -350,8 +350,6 @@ impl RemoteAccessSession {
         }
     }
 
-    /// Send a control plane message to a participant. If the queue is full,
-    /// the participant is disconnected (reset requested).
     /// Send an error status message to a participant.
     fn send_error(&self, participant: &Participant, message: String) {
         debug!("Sending error to {participant}: {message}");
@@ -935,44 +933,14 @@ impl RemoteAccessSession {
             }
         };
 
-        // Create a per-participant control plane channel and spawn a flush task
-        // that drains it into the byte stream writer.
-        let (control_tx, control_rx) = flume::bounded::<Bytes>(self.message_backlog_size);
-        let writer = ParticipantWriter::Livekit(stream);
-        let participant_id_for_task = participant_id.clone();
-        let reset_tx = self.participant_reset_tx.clone();
-        // Per-participant cancellation token — a child of the session token so it
-        // fires on both session shutdown and per-participant queue overflow.
-        let participant_cancel = self.cancellation_token.child_token();
-        let cancel_for_task = participant_cancel.clone();
-
-        let flush_handle = tokio::spawn(async move {
-            loop {
-                let data = tokio::select! {
-                    () = cancel_for_task.cancelled() => break,
-                    msg = control_rx.recv_async() => match msg {
-                        Ok(data) => data,
-                        Err(_) => break,
-                    },
-                };
-                if let Err(e) = writer.write(&data).await {
-                    warn!(
-                        "control write failed for {:?}, requesting reset: {e:?}",
-                        participant_id_for_task,
-                    );
-                    let _ = reset_tx.send(participant_id_for_task.clone());
-                    break;
-                }
-            }
-        });
-
-        let participant = Arc::new(Participant::new(
+        let (participant, flush_handle) = Participant::spawn(
             participant_id.clone(),
             protocol_version,
-            control_tx,
+            ParticipantWriter::Livekit(stream),
+            self.message_backlog_size,
             self.participant_reset_tx.clone(),
-            participant_cancel,
-        ));
+            &self.cancellation_token,
+        );
 
         // Send initial messages prior to adding the participant to the state map, to ensure that
         // these are the first messages delivered to the participant. This is safe to do without

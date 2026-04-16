@@ -49,7 +49,65 @@ pub(crate) struct Participant {
 }
 
 impl Participant {
-    /// Creates a new participant.
+    /// Creates a new participant with its own control plane channel and flush task.
+    ///
+    /// The flush task drains the bounded channel into the `writer`. It exits when
+    /// the per-participant cancellation token fires (queue overflow or session
+    /// shutdown) or when all `control_tx` senders are dropped.
+    ///
+    /// Returns the participant (wrapped in `Arc` for shared ownership) and the
+    /// flush task's `JoinHandle` (for teardown awaiting).
+    pub fn spawn(
+        identity: ParticipantIdentity,
+        protocol_version: Version,
+        writer: ParticipantWriter,
+        queue_size: usize,
+        reset_tx: tokio::sync::mpsc::UnboundedSender<ParticipantIdentity>,
+        session_cancel: &CancellationToken,
+    ) -> (std::sync::Arc<Self>, tokio::task::JoinHandle<()>) {
+        let (control_tx, control_rx) = flume::bounded::<Bytes>(queue_size);
+        let cancel = session_cancel.child_token();
+        let cancel_for_task = cancel.clone();
+        let identity_for_task = identity.clone();
+        let reset_tx_for_task = reset_tx.clone();
+
+        let flush_handle = tokio::spawn(async move {
+            loop {
+                let data = tokio::select! {
+                    () = cancel_for_task.cancelled() => break,
+                    msg = control_rx.recv_async() => match msg {
+                        Ok(data) => data,
+                        Err(_) => break,
+                    },
+                };
+                if let Err(e) = writer.write(&data).await {
+                    tracing::warn!(
+                        "control write failed for {:?}, requesting reset: {e:?}",
+                        identity_for_task,
+                    );
+                    let _ = reset_tx_for_task.send(identity_for_task.clone());
+                    break;
+                }
+            }
+        });
+
+        let participant = std::sync::Arc::new(Self {
+            client_id: ClientId::next(),
+            participant_id: identity,
+            protocol_version,
+            control_tx,
+            reset_tx,
+            cancel,
+            service_call_sem: Semaphore::new(DEFAULT_SERVICE_CALLS_PER_PARTICIPANT),
+            fetch_asset_sem: Semaphore::new(DEFAULT_FETCH_ASSET_PER_PARTICIPANT),
+        });
+        (participant, flush_handle)
+    }
+
+    /// Creates a new participant without spawning a flush task.
+    ///
+    /// For use in tests that only need a participant with a pre-created channel.
+    #[cfg(test)]
     pub fn new(
         identity: ParticipantIdentity,
         protocol_version: Version,
@@ -68,7 +126,6 @@ impl Participant {
             fetch_asset_sem: Semaphore::new(DEFAULT_FETCH_ASSET_PER_PARTICIPANT),
         }
     }
-
 
     /// Returns the locally-significant client ID.
     pub fn client_id(&self) -> ClientId {
