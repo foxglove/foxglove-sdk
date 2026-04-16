@@ -517,14 +517,15 @@ async fn livekit_video_track_lifecycle() -> Result<()> {
     viewer
         .subscribe_video_and_wait(&[channel_id], &video_channel)
         .await?;
+    let expected_track_name = format!("video-ch-{channel_id}");
     let track_name = viewer.expect_track_subscribed().await?;
-    assert_eq!(track_name, "/camera", "video track name should match topic");
+    assert_eq!(track_name, expected_track_name, "video track name should match video-ch-{{channelId}}");
     info!("video track published on subscribe: {track_name}");
 
     // Unsubscribe — the gateway should unpublish the video track.
     viewer.send_unsubscribe(&[channel_id]).await?;
     let track_name = viewer.expect_track_unsubscribed().await?;
-    assert_eq!(track_name, "/camera");
+    assert_eq!(track_name, expected_track_name);
     info!("video track torn down on unsubscribe: {track_name}");
 
     viewer.close().await?;
@@ -555,18 +556,20 @@ async fn livekit_video_track_resubscribe() -> Result<()> {
     let advertise = viewer.expect_advertise().await?;
     let channel_id = advertise.channels[0].id;
 
+    let expected_track_name = format!("video-ch-{channel_id}");
+
     // First subscribe with requestVideoTrack — video track should be published.
     viewer
         .subscribe_video_and_wait(&[channel_id], &video_channel)
         .await?;
     let track_name = viewer.expect_track_subscribed().await?;
-    assert_eq!(track_name, "/camera");
+    assert_eq!(track_name, expected_track_name);
     info!("first subscribe: video track published");
 
     // Unsubscribe — video track should be torn down.
     viewer.send_unsubscribe(&[channel_id]).await?;
     let track_name = viewer.expect_track_unsubscribed().await?;
-    assert_eq!(track_name, "/camera");
+    assert_eq!(track_name, expected_track_name);
     info!("unsubscribe: video track torn down");
 
     // Resubscribe with requestVideoTrack — video track should come back.
@@ -577,7 +580,7 @@ async fn livekit_video_track_resubscribe() -> Result<()> {
         }])
         .await?;
     let track_name = viewer.expect_track_subscribed().await?;
-    assert_eq!(track_name, "/camera");
+    assert_eq!(track_name, expected_track_name);
     info!("resubscribe: video track re-established");
 
     viewer.close().await?;
@@ -705,12 +708,14 @@ async fn livekit_video_resubscribe_switches_to_data_plane() -> Result<()> {
     let advertise = viewer.expect_advertise().await?;
     let channel_id = advertise.channels[0].id;
 
+    let expected_track_name = format!("video-ch-{channel_id}");
+
     // First subscribe with requestVideoTrack: true — video track should be published.
     viewer
         .subscribe_video_and_wait(&[channel_id], &video_channel)
         .await?;
     let track_name = viewer.expect_track_subscribed().await?;
-    assert_eq!(track_name, "/camera");
+    assert_eq!(track_name, expected_track_name);
     info!("video track published");
 
     // Re-subscribe with requestVideoTrack: false — video track should be torn down.
@@ -721,7 +726,7 @@ async fn livekit_video_resubscribe_switches_to_data_plane() -> Result<()> {
         }])
         .await?;
     let track_name = viewer.expect_track_unsubscribed().await?;
-    assert_eq!(track_name, "/camera");
+    assert_eq!(track_name, expected_track_name);
     info!("video track torn down after re-subscribe with requestVideoTrack: false");
 
     // Wait for the device data track to be published and subscribe.
