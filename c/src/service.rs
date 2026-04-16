@@ -24,7 +24,7 @@ impl FoxgloveServiceResponder {
     }
 }
 
-/// A websocket service request message.
+/// A WebSocket service request message.
 #[repr(C)]
 pub struct FoxgloveServiceRequest {
     /// The service name.
@@ -74,7 +74,7 @@ impl FoxgloveService {
     }
 }
 
-/// A schema describing either a websocket service request or response.
+/// A schema describing either a WebSocket service request or response.
 #[repr(C)]
 pub struct FoxgloveServiceMessageSchema {
     /// The message encoding.
@@ -95,7 +95,7 @@ impl FoxgloveServiceMessageSchema {
     }
 }
 
-/// A websocket service schema.
+/// A WebSocket service schema.
 #[repr(C)]
 pub struct FoxgloveServiceSchema<'a> {
     /// Service schema name.
@@ -150,9 +150,9 @@ impl Handler for ServiceHandler {
     }
 }
 
-/// Creates a new websocket service.
+/// Creates a new WebSocket service.
 ///
-/// The service must be registered with a websocket server using `foxglove_server_add_service`, or
+/// The service must be registered with a WebSocket server using `foxglove_server_add_service`, or
 /// freed with `foxglove_service_free`.
 ///
 /// The callback is invoked from the client's main poll loop and must not block. If blocking or
@@ -215,11 +215,11 @@ pub unsafe extern "C" fn foxglove_service_create(
     FoxgloveError::Ok
 }
 
-/// Frees a service that was never registered to a websocket server.
+/// Frees a service that was never registered to a WebSocket server.
 ///
 /// # Safety
 /// - `service` must be a valid pointer to a service allocated by `foxglove_service_create`. The
-///   service MUST NOT have been previously registered with a websocket server.
+///   service MUST NOT have been previously registered with a WebSocket server.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_service_free(service: *mut FoxgloveService) {
     if !service.is_null() {

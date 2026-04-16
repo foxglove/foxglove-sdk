@@ -38,6 +38,9 @@ EXCLUDED_CLASSES = {
     # Python builtins that show up in dir()
     "ABC",
     "Any",
+    # Type aliases (isinstance(dict[str, Any], type) is True on Python 3.10)
+    "PanelConfig",
+    "Variables",
     # Internal base classes
     "BaseRendererConfig",
     "_BaseModel",

@@ -24,7 +24,7 @@ use crate::{
         credentials_provider::CredentialsProvider,
         protocol_version,
         qos::QosClassifier,
-        session::{DEFAULT_PENDING_CLIENT_READER_TIMEOUT, RemoteAccessSession, SessionParams},
+        session::{RemoteAccessSession, SessionParams},
     },
     remote_common::connection_graph::ConnectionGraph,
     remote_common::service::{Service, ServiceId, ServiceMap},
@@ -89,7 +89,6 @@ pub(crate) struct ConnectionParams {
     pub qos_classifier: Option<Arc<dyn QosClassifier>>,
     pub server_info: Option<HashMap<String, String>>,
     pub message_backlog_size: Option<usize>,
-    pub pending_client_reader_timeout: Option<Duration>,
     pub context: Weak<Context>,
 }
 
@@ -109,7 +108,6 @@ pub(crate) struct RemoteAccessConnection {
     qos_classifier: Option<Arc<dyn QosClassifier>>,
     server_info: Option<HashMap<String, String>>,
     message_backlog_size: Option<usize>,
-    pending_client_reader_timeout: Option<Duration>,
     context: Weak<Context>,
     cancellation_token: CancellationToken,
     services: Arc<parking_lot::RwLock<ServiceMap>>,
@@ -138,7 +136,6 @@ impl RemoteAccessConnection {
             qos_classifier: params.qos_classifier,
             server_info: params.server_info,
             message_backlog_size: params.message_backlog_size,
-            pending_client_reader_timeout: params.pending_client_reader_timeout,
             context: params.context,
             cancellation_token: CancellationToken::new(),
             services,
@@ -173,7 +170,7 @@ impl RemoteAccessConnection {
         }
     }
 
-    /// Removes status messages by id from all connected participants.
+    /// Removes status messages by ID from all connected participants.
     ///
     /// If no session is currently active (e.g. while reconnecting), this is a no-op.
     pub fn remove_status(&self, status_ids: Vec<String>) {
@@ -305,9 +302,6 @@ impl RemoteAccessConnection {
                             .unwrap_or(DEFAULT_MESSAGE_BACKLOG_SIZE),
                         services: self.services.clone(),
                         connection_graph: self.connection_graph.clone(),
-                        pending_client_reader_timeout: self
-                            .pending_client_reader_timeout
-                            .unwrap_or(DEFAULT_PENDING_CLIENT_READER_TIMEOUT),
                         remote_access_session_id: self
                             .remote_access_session_id()
                             .map(str::to_owned),

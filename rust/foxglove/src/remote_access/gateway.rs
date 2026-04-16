@@ -78,7 +78,7 @@ impl GatewayHandle {
         self.connection.publish_status(status);
     }
 
-    /// Removes status messages by id from all connected participants.
+    /// Removes status messages by ID from all connected participants.
     pub fn remove_status(&self, status_ids: Vec<String>) {
         self.connection.remove_status(status_ids);
     }
@@ -120,7 +120,6 @@ impl GatewayHandle {
             qos_classifier: None,
             server_info: None,
             message_backlog_size: None,
-            pending_client_reader_timeout: None,
             context: std::sync::Weak::new(),
         };
         let services = Arc::new(parking_lot::RwLock::new(ServiceMap::default()));
@@ -167,7 +166,6 @@ pub struct Gateway {
     qos_classifier: Option<Arc<dyn QosClassifier>>,
     server_info: Option<HashMap<String, String>>,
     message_backlog_size: Option<usize>,
-    pending_client_reader_timeout: Option<Duration>,
     context: std::sync::Weak<Context>,
 }
 
@@ -188,7 +186,6 @@ impl Default for Gateway {
             qos_classifier: None,
             server_info: None,
             message_backlog_size: None,
-            pending_client_reader_timeout: None,
             context: Arc::downgrade(&Context::get_default()),
         }
     }
@@ -321,14 +318,6 @@ impl Gateway {
     /// By default, the sink will buffer 1024 messages.
     pub fn message_backlog_size(mut self, size: usize) -> Self {
         self.message_backlog_size = Some(size);
-        self
-    }
-
-    /// How long to wait for a matching Client Advertise before rejecting a
-    /// `client-ch-{channelId}` byte stream. Defaults to 15 seconds.
-    #[doc(hidden)]
-    pub fn pending_client_reader_timeout(mut self, timeout: Duration) -> Self {
-        self.pending_client_reader_timeout = Some(timeout);
         self
     }
 
@@ -490,7 +479,6 @@ impl Gateway {
             qos_classifier: self.qos_classifier,
             server_info: self.server_info,
             message_backlog_size: self.message_backlog_size,
-            pending_client_reader_timeout: self.pending_client_reader_timeout,
             context: self.context,
         };
         let connection = RemoteAccessConnection::new(params, services);

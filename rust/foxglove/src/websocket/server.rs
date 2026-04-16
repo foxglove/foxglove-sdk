@@ -563,7 +563,7 @@ impl Server {
         }
     }
 
-    /// Remove status messages by id from all clients.
+    /// Remove status messages by ID from all clients.
     pub fn remove_status(&self, status_ids: Vec<String>) {
         let message = RemoveStatus { status_ids };
         let clients = self.clients.get();

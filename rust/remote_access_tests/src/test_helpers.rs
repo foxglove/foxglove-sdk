@@ -510,32 +510,12 @@ impl ViewerConnection {
         self.send_framed_message(&framed).await
     }
 
-    /// Sends a binary-framed `ClientMessageData` on a per-channel topic `"client-ch-{channelId}"`.
-    ///
-    /// This tests the new per-channel delivery path for client publish message data.
+    /// Sends a binary-framed `ClientMessageData` on the control channel.
     pub async fn send_client_message_data(&self, channel_id: u32, data: &[u8]) -> Result<()> {
         let msg = ClientMessageData::new(channel_id, data);
         let inner = msg.to_bytes();
         let framed = frame::frame_binary_message(&inner);
-
-        let gateway_identity = ParticipantIdentity(mock_server::TEST_DEVICE_ID.to_string());
-        let writer = self
-            .room
-            .local_participant()
-            .stream_bytes(StreamByteOptions {
-                topic: format!("client-ch-{channel_id}"),
-                destination_identities: vec![gateway_identity],
-                ..StreamByteOptions::default()
-            })
-            .await
-            .map_err(|e| anyhow::anyhow!("failed to open byte stream to gateway: {e}"))?;
-
-        writer
-            .write(&framed)
-            .await
-            .map_err(|e| anyhow::anyhow!("failed to write client message data on channel: {e}"))?;
-
-        Ok(())
+        self.send_framed_message(&framed).await
     }
 
     /// Waits for a `TrackSubscribed` room event and returns the track name.
@@ -777,7 +757,6 @@ pub struct TestGatewayOptions {
     pub filter: Option<ChannelFilterFn>,
     pub listener: Option<Arc<dyn foxglove::remote_access::Listener>>,
     pub capabilities: Vec<foxglove::remote_access::Capability>,
-    pub pending_client_reader_timeout: Option<Duration>,
     pub services: Vec<Service>,
     pub qos_classifier: Option<QosClassifierFn>,
 }
@@ -853,9 +832,6 @@ impl TestGateway {
         }
         if !options.capabilities.is_empty() {
             gateway = gateway.capabilities(options.capabilities);
-        }
-        if let Some(timeout) = options.pending_client_reader_timeout {
-            gateway = gateway.pending_client_reader_timeout(timeout);
         }
         if !options.services.is_empty() {
             gateway = gateway.services(options.services);

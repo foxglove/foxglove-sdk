@@ -8,7 +8,7 @@ foxglove
 
 .. automodule:: foxglove
    :members:
-   :exclude-members: CloudSink, CloudSinkListener, MCAPWriter, init_notebook_buffer, start_cloud_sink, start_gateway, RemoteAccessCapability, RemoteAccessGateway, RemoteAccessListener, RemoteAccessConnectionStatus
+   :exclude-members: Capability, MCAPWriter, ParameterType, ParameterValue, StatusLevel, init_notebook_buffer
 
 
 Message Types
@@ -31,9 +31,9 @@ Channels
 Parameters
 ^^^^^^^^^^
 
-Used with the parameter service during live visualization. Requires the :py:data:`websocket.Capability.Parameters` capability.
+Used with the parameter service. Requires the ``Capability.Parameters`` capability.
 
-.. autoclass:: foxglove.websocket.ParameterType
+.. autoclass:: foxglove.ParameterType
 
    .. py:data:: ByteArray
 
@@ -47,7 +47,7 @@ Used with the parameter service during live visualization. Requires the :py:data
 
       An array of floating-point values that can be represented as 64-bit floating point numbers.
 
-.. autoclass:: foxglove.websocket.ParameterValue
+.. autoclass:: foxglove.ParameterValue
 
    .. py:class:: Float64(value: float)
 
@@ -98,6 +98,17 @@ See the Asset Server example for more information.
    Deprecated. Use :py:class:`mcap.MCAPCompression` instead.
 
 
+Enums
+^^^^^
+
+.. py:enum:: StatusLevel
+
+   A status message severity level.
+
+   .. py:data:: Info
+   .. py:data:: Warning
+   .. py:data:: Error
+
 foxglove.mcap
 ------------------
 
@@ -113,14 +124,65 @@ foxglove.mcap
    .. py:data:: Lz4
 
 
+foxglove.remote_access
+----------------------
+
+.. Enums are excluded and manually documented, since pyo3 only emulates them. (https://github.com/PyO3/pyo3/issues/2887)
+.. automodule:: foxglove.remote_access
+   :members:
+   :exclude-members: Capability, RemoteAccessConnectionStatus, MessageSchema, Parameter, ParameterType, ParameterValue, Service, ServiceRequest, ServiceSchema, StatusLevel
+
+
+Enums
+^^^^^
+
+.. py:enum:: Capability
+
+   An enumeration of capabilities that the remote access gateway can advertise to its clients.
+
+   Specify the capabilities you support when calling :py:func:`foxglove.start_gateway`.
+
+   .. py:data:: ClientPublish
+
+      Allow clients to advertise channels to send data messages to the server.
+
+   .. py:data:: Parameters
+
+      Allow clients to get, set, and subscribe to parameter updates.
+
+   .. py:data:: Services
+
+      Allow clients to call services.
+
+
+.. py:enum:: RemoteAccessConnectionStatus
+
+   The status of the remote access gateway connection.
+
+   .. py:data:: Connecting
+
+      The gateway is attempting to establish or re-establish a connection.
+
+   .. py:data:: Connected
+
+      The gateway is connected and handling events.
+
+   .. py:data:: ShuttingDown
+
+      The gateway is shutting down. Listener callbacks may still be in progress.
+
+   .. py:data:: Shutdown
+
+      The gateway has been shut down. No further listener callbacks will be invoked.
+
+
 foxglove.websocket
 ------------------
 
 .. Enums are excluded and manually documented, since pyo3 only emulates them. (https://github.com/PyO3/pyo3/issues/2887)
-.. Parameter types and values are manually documented since nested classes (values) are not supported by automodule.
 .. automodule:: foxglove.websocket
    :members:
-   :exclude-members: Capability, ParameterType, ParameterValue, StatusLevel, PlaybackCommand, PlaybackStatus
+   :exclude-members: Capability, MessageSchema, Parameter, ParameterType, ParameterValue, Service, ServiceRequest, ServiceSchema, StatusLevel, PlaybackCommand, PlaybackStatus
 
 
 Enums
@@ -136,6 +198,10 @@ Enums
    .. py:data:: ClientPublish
 
       Allow clients to advertise channels to send data messages to the server.
+
+   .. py:data:: ConnectionGraph
+
+      Allow clients to subscribe and make connection graph updates.
 
    .. py:data:: Parameters
 
@@ -158,14 +224,6 @@ Enums
       Indicates that the server is capable of responding to playback control requests from
       controls in the Foxglove app.
 
-
-.. py:enum:: StatusLevel
-
-   A level for :py:meth:`WebSocketServer.publish_status`.
-
-   .. py:data:: Info
-   .. py:data:: Warning
-   .. py:data:: Error
 
 Playback control
 ^^^^^^^^^^^^^^^^
