@@ -1845,30 +1845,22 @@ impl RemoteAccessSession {
     }
 
     /// Start video tracks for first-subscribed channels that have video schemas.
+    /// Each track is named video-ch-{channel_id}.
     ///
     /// Caller must hold `subscription_lock`.
     fn start_video_tracks(self: &Arc<Self>, first_subscribed: &[ChannelId]) {
-        // Collect video-capable channels and their topics while holding the read lock.
-        let to_start: SmallVec<[(ChannelId, VideoInputSchema, String); 4]> = {
+        let to_start: SmallVec<[(ChannelId, VideoInputSchema); 4]> = {
             let state = self.state.read();
-            state
-                .with_channels(|channels| {
-                    first_subscribed
-                        .iter()
-                        .filter_map(|&channel_id| {
-                            let input_schema = state.get_video_schema(&channel_id)?;
-                            let topic = channels
-                                .get(&channel_id)
-                                .map(|ch| ch.topic().to_string())
-                                .unwrap_or_default();
-                            Some((channel_id, input_schema, topic))
-                        })
-                        .collect()
+            first_subscribed
+                .iter()
+                .filter_map(|&channel_id| {
+                    let input_schema = state.get_video_schema(&channel_id)?;
+                    Some((channel_id, input_schema))
                 })
-                .unwrap_or_default()
+                .collect()
         };
 
-        for (channel_id, input_schema, topic) in to_start {
+        for (channel_id, input_schema) in to_start {
             let video_source = NativeVideoSource::default();
             let publisher = Arc::new(VideoPublisher::new(
                 video_source.clone(),
@@ -1881,8 +1873,11 @@ impl RemoteAccessSession {
                 .write()
                 .insert_video_publisher(channel_id, publisher);
 
-            let track =
-                LocalVideoTrack::create_video_track(&topic, RtcVideoSource::Native(video_source));
+            let track_name = format!("video-ch-{}", u64::from(channel_id));
+            let track = LocalVideoTrack::create_video_track(
+                &track_name,
+                RtcVideoSource::Native(video_source),
+            );
 
             let local_participant = self.room.local_participant().clone();
             let session = self.clone();
