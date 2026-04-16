@@ -14,10 +14,6 @@ use crate::service::FoxgloveService;
 use crate::sink_channel_filter::ChannelFilter;
 use crate::{FoxgloveContext, FoxgloveError, FoxgloveSinkId, FoxgloveString, result_to_c};
 
-// ---------------------------------------------------------------------------
-// QoS types
-// ---------------------------------------------------------------------------
-
 /// The reliability policy for a channel's data delivery.
 #[repr(u8)]
 pub enum FoxgloveReliability {
@@ -49,10 +45,8 @@ impl From<FoxgloveQosProfile> for foxglove::remote_access::QosProfile {
 #[derive(Clone)]
 struct QosClassifier {
     callback_context: *const c_void,
-    callback: unsafe extern "C" fn(
-        *const c_void,
-        *const FoxgloveChannelDescriptor,
-    ) -> FoxgloveQosProfile,
+    callback:
+        unsafe extern "C" fn(*const c_void, *const FoxgloveChannelDescriptor) -> FoxgloveQosProfile,
 }
 
 impl QosClassifier {
@@ -84,8 +78,6 @@ impl foxglove::remote_access::QosClassifier for QosClassifier {
         profile.into()
     }
 }
-
-// ---------------------------------------------------------------------------
 
 /// The status of the remote access gateway connection.
 #[repr(u8)]

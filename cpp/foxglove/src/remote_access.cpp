@@ -271,9 +271,10 @@ FoxgloveResult<RemoteAccessGateway> RemoteAccessGateway::create(
     qos_classifier = std::make_unique<QosClassifierFn>(options.qos_classifier);
 
     c_options.qos_classifier_context = qos_classifier.get();
-    c_options.qos_classifier =
-      [](const void* context,
-         const struct foxglove_channel_descriptor* channel) -> foxglove_qos_profile {
+    c_options.qos_classifier = [](
+                                 const void* context,
+                                 const struct foxglove_channel_descriptor* channel
+                               ) -> foxglove_qos_profile {
       try {
         if (!context) {
           return {FOXGLOVE_RELIABILITY_LOSSY};
@@ -338,7 +339,10 @@ FoxgloveResult<RemoteAccessGateway> RemoteAccessGateway::create(
   }
 
   return RemoteAccessGateway(
-    gateway, std::move(callbacks), std::move(fetch_asset), std::move(sink_channel_filter),
+    gateway,
+    std::move(callbacks),
+    std::move(fetch_asset),
+    std::move(sink_channel_filter),
     std::move(qos_classifier)
   );
 }
