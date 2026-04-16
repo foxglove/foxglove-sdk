@@ -400,10 +400,15 @@ impl RemoteAccessSession {
     pub(crate) async fn close(&self) {
         let flush_handles = {
             let mut state = self.state.write();
-            // Clear participants first — this drops `Arc<Participant>` which drops
-            // `control_tx`, causing each flush task's `recv_async` to return `Err`
-            // and exit. Without this, flush tasks hang if the `CancellationToken`
-            // hasn't been fired (e.g., on room disconnect without cancellation).
+            // Cancel each participant's flush task token. This ensures flush tasks
+            // exit even if they are blocked on a slow `writer.write()` call.
+            // On the normal shutdown path the session-level CancellationToken
+            // (parent) would fire too, but on room disconnect without cancellation
+            // this is the only signal.
+            for participant in state.collect_participants() {
+                participant.cancel();
+            }
+            // Clear participants — drops `Arc<Participant>` and `control_tx`.
             state.clear_participants();
             state.take_flush_handles()
         };
@@ -1024,6 +1029,18 @@ impl RemoteAccessSession {
     ) {
         let remote_access_session_id = self.remote_access_session_id();
         loop {
+            // Drain pending resets before waiting for events. This covers the case
+            // where a `Notify::notified()` wakeup was lost due to `select!`
+            // cancellation — the identities are still in the set even if the
+            // notification was consumed by a dropped future.
+            let identities: Vec<_> = {
+                let mut set = self.pending_resets.lock();
+                set.drain().collect()
+            };
+            for participant_id in identities {
+                self.reset_participant(participant_id).await;
+            }
+
             tokio::select! {
                 event = room_events.recv() => {
                     let Some(event) = event else { break };
@@ -1031,18 +1048,8 @@ impl RemoteAccessSession {
                         return;
                     }
                 }
-                // Reset participants whose control queues overflowed or whose
-                // flush tasks encountered a write error. Drain the entire set
-                // atomically to deduplicate multiple reset requests.
-                () = self.reset_notify.notified() => {
-                    let identities: Vec<_> = {
-                        let mut set = self.pending_resets.lock();
-                        set.drain().collect()
-                    };
-                    for participant_id in identities {
-                        self.reset_participant(participant_id).await;
-                    }
-                }
+                // Wake when new reset requests arrive.
+                () = self.reset_notify.notified() => {}
             }
         }
         warn!(

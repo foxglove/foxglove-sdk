@@ -152,6 +152,12 @@ impl Participant {
         &self.fetch_asset_sem
     }
 
+    /// Cancel this participant's flush task. The task will exit at the next
+    /// `select!` iteration.
+    pub(crate) fn cancel(&self) {
+        self.cancel.cancel();
+    }
+
     /// Returns the participant's identity.
     pub fn participant_id(&self) -> &ParticipantIdentity {
         &self.participant_id
