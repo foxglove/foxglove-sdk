@@ -17,80 +17,91 @@ from . import _foxglove_py as _foxglove
 # Re-export these imports
 from ._foxglove_py import (
     ChannelDescriptor,
-    ConnectionGraph,
     Context,
-    MessageSchema,
-    Parameter,
-    ParameterType,
-    ParameterValue,
     Schema,
-    Service,
-    ServiceRequest,
-    ServiceSchema,
     SinkChannelFilter,
-    StatusLevel,
     open_mcap,
 )
+
 from .channel import Channel, log
 
 # Deprecated. Use foxglove.mcap.MCAPWriter instead.
 from .mcap import MCAPWriter
-
-ServiceHandler: TypeAlias = Callable[[ServiceRequest], bytes]
-AnyParameterValue: TypeAlias = Union[
-    ParameterValue.Integer,
-    ParameterValue.Bool,
-    ParameterValue.Float64,
-    ParameterValue.String,
-    ParameterValue.Array,
-    ParameterValue.Dict,
-]
-AnyInnerParameterValue: TypeAlias = Union[
-    AnyParameterValue,
-    bool,
-    int,
-    float,
-    str,
-    "list[AnyInnerParameterValue]",
-    "dict[str, AnyInnerParameterValue]",
-]
-AnyNativeParameterValue: TypeAlias = Union[
-    AnyInnerParameterValue,
-    bytes,
-]
-AssetHandler: TypeAlias = "Callable[[str], bytes | None]"
-
 if TYPE_CHECKING:
     from .notebook.notebook_buffer import NotebookBuffer
 
 atexit.register(_foxglove.shutdown)
 
 __all__ = [
-    "AnyInnerParameterValue",
-    "AnyNativeParameterValue",
-    "AnyParameterValue",
-    "AssetHandler",
     "Channel",
     "ChannelDescriptor",
-    "ConnectionGraph",
     "Context",
     "MCAPWriter",
-    "MessageSchema",
-    "Parameter",
-    "ParameterType",
-    "ParameterValue",
     "Schema",
-    "Service",
-    "ServiceHandler",
-    "ServiceRequest",
-    "ServiceSchema",
     "SinkChannelFilter",
-    "StatusLevel",
     "log",
     "open_mcap",
     "set_log_level",
     "init_notebook_buffer",
 ]
+
+# Re-export these imports (not available in WASM)
+try:
+    from ._foxglove_py import (
+        ConnectionGraph,
+        MessageSchema,
+        Parameter,
+        ParameterType,
+        ParameterValue,
+        Service,
+        ServiceRequest,
+        ServiceSchema,
+        StatusLevel,
+    )
+
+    ServiceHandler: TypeAlias = Callable[[ServiceRequest], bytes]
+    AnyParameterValue: TypeAlias = Union[
+        ParameterValue.Integer,
+        ParameterValue.Bool,
+        ParameterValue.Float64,
+        ParameterValue.String,
+        ParameterValue.Array,
+        ParameterValue.Dict,
+    ]
+    AnyInnerParameterValue: TypeAlias = Union[
+        AnyParameterValue,
+        bool,
+        int,
+        float,
+        str,
+        "list[AnyInnerParameterValue]",
+        "dict[str, AnyInnerParameterValue]",
+    ]
+    AnyNativeParameterValue: TypeAlias = Union[
+        AnyInnerParameterValue,
+        bytes,
+    ]
+    AssetHandler: TypeAlias = "Callable[[str], bytes | None]"
+
+    __all__.extend([
+        "AnyInnerParameterValue",
+        "AnyNativeParameterValue",
+        "AnyParameterValue",
+        "AssetHandler",
+        "ConnectionGraph",
+        "MessageSchema",
+        "Parameter",
+        "ParameterType",
+        "ParameterValue",
+        "Service",
+        "ServiceHandler",
+        "ServiceRequest",
+        "ServiceSchema",
+        "StatusLevel",
+    ])
+except ImportError:
+    pass
+
 
 
 try:
