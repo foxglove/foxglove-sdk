@@ -35,6 +35,9 @@ pub(crate) struct Participant {
     /// Per-participant control plane queue. The receiving end is owned by the
     /// flush task spawned in `add_participant`.
     control_tx: flume::Sender<Bytes>,
+    /// Channel to request a participant reset (disconnect + reconnect) when the
+    /// control queue is full.
+    reset_tx: tokio::sync::mpsc::UnboundedSender<ParticipantIdentity>,
     /// Limits concurrent service calls from this participant.
     service_call_sem: Semaphore,
     /// Limits concurrent fetch asset requests from this participant.
@@ -47,12 +50,14 @@ impl Participant {
         identity: ParticipantIdentity,
         protocol_version: Version,
         control_tx: flume::Sender<Bytes>,
+        reset_tx: tokio::sync::mpsc::UnboundedSender<ParticipantIdentity>,
     ) -> Self {
         Self {
             client_id: ClientId::next(),
             participant_id: identity,
             protocol_version,
             control_tx,
+            reset_tx,
             service_call_sem: Semaphore::new(DEFAULT_SERVICE_CALLS_PER_PARTICIPANT),
             fetch_asset_sem: Semaphore::new(DEFAULT_FETCH_ASSET_PER_PARTICIPANT),
         }
@@ -81,18 +86,12 @@ impl Participant {
     /// Try to queue a control plane message. Returns `true` if enqueued or if
     /// the queue is already disconnected (no reset needed). Returns `false` if
     /// the queue is full (caller should trigger a participant reset).
-    ///
-    /// When this returns `false`, the caller should trigger a participant reset
-    /// (disconnect + reconnect) — a full queue means the client is not keeping up.
     #[must_use]
     pub(crate) fn try_queue_control(&self, data: Bytes) -> bool {
         match self.control_tx.try_send(data) {
             Ok(()) => true,
             Err(flume::TrySendError::Full(_)) => {
-                tracing::warn!(
-                    "control queue full for {}",
-                    self.participant_id
-                );
+                tracing::warn!("control queue full for {}", self.participant_id);
                 false
             }
             Err(flume::TrySendError::Disconnected(_)) => {
@@ -107,21 +106,24 @@ impl Participant {
         }
     }
 
+    /// Queue a control plane message, requesting a participant reset if the
+    /// queue is full.
+    pub(crate) fn send_control(&self, data: Bytes) {
+        if !self.try_queue_control(data) {
+            let _ = self.reset_tx.send(self.participant_id.clone());
+        }
+    }
+
     /// Send a fetch asset response to the participant via the control plane queue.
-    ///
-    /// The `try_queue_control` return is intentionally ignored here: these methods
-    /// don't have access to `participant_reset_tx` to trigger a reset. In practice,
-    /// protocol messages via `send_control` flow regularly and will trigger the
-    /// reset if the queue stays full.
     pub(crate) fn send_asset_response(&self, data: &[u8], request_id: u32) {
-        let _ = self.try_queue_control(encode_binary_message(&FetchAssetResponse::asset_data(
+        self.send_control(encode_binary_message(&FetchAssetResponse::asset_data(
             request_id, data,
         )));
     }
 
     /// Send a fetch asset error to the participant via the control plane queue.
     pub(crate) fn send_asset_error(&self, error: &str, request_id: u32) {
-        let _ = self.try_queue_control(encode_binary_message(&FetchAssetResponse::error_message(
+        self.send_control(encode_binary_message(&FetchAssetResponse::error_message(
             request_id, error,
         )));
     }

@@ -55,7 +55,7 @@ impl crate::remote_common::service::ResponseSender for ResponseSender {
                 encode_json_message(&failure)
             }
         };
-        let _ = participant.try_queue_control(data);
+        participant.send_control(data);
     }
 }
 

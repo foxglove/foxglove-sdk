@@ -352,32 +352,18 @@ impl RemoteAccessSession {
 
     /// Send a control plane message to a participant. If the queue is full,
     /// the participant is disconnected (reset requested).
-    fn send_control(&self, participant: &Participant, data: Bytes) {
-        if !participant.try_queue_control(data) {
-            let _ = self
-                .participant_reset_tx
-                .send(participant.participant_id().clone());
-        }
-    }
-
     /// Send an error status message to a participant.
-    ///
-    /// Best-effort: if the participant's queue is full, the message is dropped
-    /// (the participant may already be disconnecting).
     fn send_error(&self, participant: &Participant, message: String) {
         debug!("Sending error to {participant}: {message}");
         let status = Status::error(message);
-        let _ = participant.try_queue_control(encode_json_message(&status));
+        participant.send_control(encode_json_message(&status));
     }
 
     /// Send a warning status message to a participant.
-    ///
-    /// Best-effort: if the participant's queue is full, the message is dropped
-    /// (the participant may already be disconnecting).
     fn send_warning(&self, participant: &Participant, message: String) {
         debug!("Sending warning to {participant}: {message}");
         let status = Status::warning(message);
-        let _ = participant.try_queue_control(encode_json_message(&status));
+        participant.send_control(encode_json_message(&status));
     }
 
     /// Enqueue a control plane message for all currently connected participants.
@@ -385,7 +371,7 @@ impl RemoteAccessSession {
     fn broadcast_control(&self, data: Bytes) {
         let participants = self.state.read().collect_participants();
         for participant in participants {
-            self.send_control(&participant, data.clone());
+            participant.send_control(data.clone());
         }
     }
 
@@ -581,7 +567,7 @@ impl RemoteAccessSession {
                 pong_payload.extend_from_slice(&millis_since_epoch().to_le_bytes());
                 let pong = Pong::new(&pong_payload);
                 let framed = encode_binary_message(&pong);
-                self.send_control(&participant, framed);
+                participant.send_control(framed);
             }
             ClientMessage::PingAck(ack) => {
                 let now = millis_since_epoch();
@@ -981,13 +967,14 @@ impl RemoteAccessSession {
             participant_id.clone(),
             protocol_version,
             control_tx,
+            self.participant_reset_tx.clone(),
         ));
 
         // Send initial messages prior to adding the participant to the state map, to ensure that
         // these are the first messages delivered to the participant. This is safe to do without
         // holding the write lock, because this is a new participant — see below.
         info!("sending server info and advertisements to participant {participant:?}");
-        let _ = participant.try_queue_control(encode_json_message(&self.server_info));
+        participant.send_control(encode_json_message(&self.server_info));
         self.send_channel_advertisements(participant.clone());
         self.send_service_advertisements(participant.clone());
 
@@ -1436,14 +1423,14 @@ impl RemoteAccessSession {
             return;
         };
 
-        let _ = participant.try_queue_control(encode_json_message(&advertise_msg));
+        participant.send_control(encode_json_message(&advertise_msg));
     }
 
     /// Enqueue service advertisements for delivery to a single participant.
     fn send_service_advertisements(&self, participant: Arc<Participant>) {
         let services: Vec<_> = self.services.read().values().cloned().collect();
         if let Some(msg) = build_advertise_services_msg(&services) {
-            let _ = participant.try_queue_control(encode_json_message(&msg));
+            participant.send_control(encode_json_message(&msg));
         }
     }
 
@@ -1541,7 +1528,7 @@ impl RemoteAccessSession {
             call_id: call_id.into(),
             message: message.to_string(),
         };
-        self.send_control(participant, encode_json_message(&failure));
+        participant.send_control(encode_json_message(&failure));
     }
 
     /// Handle a fetch asset request from a client.
@@ -1692,7 +1679,7 @@ impl RemoteAccessSession {
         if let Some(id) = request_id {
             msg = msg.with_id(id);
         }
-        self.send_control(participant, encode_json_message(&msg));
+        participant.send_control(encode_json_message(&msg));
     }
 
     /// Publish parameter values to all participants subscribed to those parameters.
@@ -1732,7 +1719,7 @@ impl RemoteAccessSession {
         };
 
         for (participant, data) in to_send {
-            self.send_control(&participant, data);
+            participant.send_control(data);
         }
     }
 
@@ -1777,7 +1764,7 @@ impl RemoteAccessSession {
             encode_json_message(&graph.as_initial_update())
         };
 
-        self.send_control(participant, encoded);
+        participant.send_control(encoded);
     }
 
     /// Handle an `UnsubscribeConnectionGraph` message from a client.
@@ -1814,7 +1801,7 @@ impl RemoteAccessSession {
         let participants = self.state.read().collect_participants();
         for participant in participants {
             if graph.is_subscriber(participant.client_id()) {
-                self.send_control(&participant, encoded.clone());
+                participant.send_control(encoded.clone());
             }
         }
     }
@@ -2025,7 +2012,8 @@ mod tests {
         let identity = ParticipantIdentity(name.to_string());
         let version = protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone();
         let (tx, rx) = flume::bounded(16);
-        let participant = Arc::new(Participant::new(identity, version, tx));
+        let (reset_tx, _reset_rx) = tokio::sync::mpsc::unbounded_channel();
+        let participant = Arc::new(Participant::new(identity, version, tx, reset_tx));
         (participant, rx)
     }
 
@@ -2355,7 +2343,13 @@ mod tests {
     fn try_queue_control_returns_false_when_full() {
         let version = protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone();
         let (tx, _rx) = flume::bounded::<Bytes>(1);
-        let participant = Participant::new(ParticipantIdentity("alice".to_string()), version, tx);
+        let (reset_tx, _reset_rx) = tokio::sync::mpsc::unbounded_channel();
+        let participant = Participant::new(
+            ParticipantIdentity("alice".to_string()),
+            version,
+            tx,
+            reset_tx,
+        );
 
         // First message fits.
         assert!(participant.try_queue_control(Bytes::from_static(b"first")));
@@ -2367,7 +2361,13 @@ mod tests {
     fn try_queue_control_returns_true_when_disconnected() {
         let version = protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone();
         let (tx, rx) = flume::bounded::<Bytes>(1);
-        let participant = Participant::new(ParticipantIdentity("alice".to_string()), version, tx);
+        let (reset_tx, _reset_rx) = tokio::sync::mpsc::unbounded_channel();
+        let participant = Participant::new(
+            ParticipantIdentity("alice".to_string()),
+            version,
+            tx,
+            reset_tx,
+        );
 
         // Drop the receiver — channel disconnected.
         drop(rx);

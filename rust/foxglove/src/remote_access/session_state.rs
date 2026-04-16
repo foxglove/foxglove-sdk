@@ -678,7 +678,8 @@ mod tests {
         let version =
             crate::remote_access::protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone();
         let (tx, _rx) = flume::bounded(16);
-        let participant = Arc::new(Participant::new(identity.clone(), version, tx));
+        let (reset_tx, _reset_rx) = tokio::sync::mpsc::unbounded_channel();
+        let participant = Arc::new(Participant::new(identity.clone(), version, tx, reset_tx));
         (identity, participant)
     }
 
