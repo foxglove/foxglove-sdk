@@ -532,6 +532,11 @@ void FoxgloveBridge::updateAdvertisedTopics(
 
   // Close channels after releasing _subscriptionsMutex, since close() may fire
   // onUnsubscribe callbacks that need to acquire _subscriptionsMutex.
+  //
+  // This is safe to do outside of the lock because this function is only called
+  // single-threaded from rosgraphPollThread, and the removal of the channel
+  // from _channels mean both createOrIncrementSubscriptionLocked and
+  // rosMessageHandler gracefully ignore channels they can't find.
   for (auto& channel : channelsToClose) {
     channel.close();
   }
