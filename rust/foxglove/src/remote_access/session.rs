@@ -196,7 +196,7 @@ impl Sink for RemoteAccessSession {
                 let message = MessageData::new(u64::from(channel_id), metadata.log_time, msg);
                 let encoded = encode_binary_message(&message);
                 for participant in state.data_subscriber_participants(&channel_id) {
-                    self.send_control(participant, encoded.clone());
+                    participant.send_control(encoded.clone());
                 }
             } else if let Some(track) = state.get_subscribed_data_track(&channel_id) {
                 // Lossy channels: send via the eagerly-published data track.
