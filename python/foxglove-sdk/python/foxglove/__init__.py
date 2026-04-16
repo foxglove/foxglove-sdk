@@ -199,8 +199,8 @@ try:
         :param channel_filter: A ``Callable`` that determines whether a channel should be logged
             to. Return ``True`` to log the channel, or ``False`` to skip it. By default, all
             channels will be logged.
-        :param message_backlog_size: The maximum number of control plane messages to buffer
-            per participant before disconnecting a slow client. Defaults to 256.
+        :param message_backlog_size: The maximum number of messages to buffer before dropping
+            the oldest entries. Defaults to 1024.
         :param foxglove_api_url: Override the Foxglove API base URL.
         :param foxglove_api_timeout: Timeout for Foxglove API requests, in seconds.
         """

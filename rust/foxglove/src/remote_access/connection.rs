@@ -32,7 +32,7 @@ use crate::{
 type Result<T> = std::result::Result<T, Box<RemoteAccessError>>;
 
 const AUTH_RETRY_PERIOD: Duration = Duration::from_secs(30);
-use super::session::DEFAULT_CONTROL_QUEUE_SIZE;
+use super::session::DEFAULT_MESSAGE_BACKLOG_SIZE;
 
 /// The status of the remote access gateway connection.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -294,7 +294,7 @@ impl RemoteAccessConnection {
                         cancellation_token: self.cancellation_token.clone(),
                         message_backlog_size: self
                             .message_backlog_size
-                            .unwrap_or(DEFAULT_CONTROL_QUEUE_SIZE),
+                            .unwrap_or(DEFAULT_MESSAGE_BACKLOG_SIZE),
                         services: self.services.clone(),
                         connection_graph: self.connection_graph.clone(),
                         remote_access_session_id: self

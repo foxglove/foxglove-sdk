@@ -310,7 +310,7 @@ impl Gateway {
     /// queue fills up (because it is not reading fast enough), it will be disconnected
     /// and asked to reconnect.
     ///
-    /// By default, each participant gets a queue of 256 messages.
+    /// By default, each participant gets a queue of 1024 messages.
     pub fn message_backlog_size(mut self, size: usize) -> Self {
         self.message_backlog_size = Some(size);
         self

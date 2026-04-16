@@ -62,10 +62,7 @@ const CONTROL_CHANNEL_TOPIC: &str = "control";
 const MESSAGE_FRAME_SIZE: usize = 5; // 1 byte opcode + u32 LE length
 const MAX_MESSAGE_SIZE: usize = 16 * 1024 * 1024; // 16 MiB
 
-/// Default size of the per-participant control plane queue. Large enough to buffer the
-/// initial burst from `add_participant` (server info + channel/service advertisements)
-/// without blocking, small enough to detect a slow participant via `try_send`.
-pub(crate) const DEFAULT_CONTROL_QUEUE_SIZE: usize = 256;
+pub(crate) const DEFAULT_MESSAGE_BACKLOG_SIZE: usize = 1024;
 
 /// The operation code for the message framing for protocol v2.
 /// Distinguishes between frames containing JSON messages vs binary messages.
@@ -2236,7 +2233,7 @@ mod tests {
     ) {
         use crate::remote_access::participant::{ParticipantWriter, TestByteStreamWriter};
 
-        let (control_tx, control_rx) = flume::bounded::<Bytes>(DEFAULT_CONTROL_QUEUE_SIZE);
+        let (control_tx, control_rx) = flume::bounded::<Bytes>(DEFAULT_MESSAGE_BACKLOG_SIZE);
         let writer = Arc::new(TestByteStreamWriter::default());
         let writer_for_task = writer.clone();
         let handle = tokio::spawn(async move {
@@ -2307,7 +2304,7 @@ mod tests {
         let gate = Arc::new(tokio::sync::Notify::new());
 
         // Task A: uses a custom writer that blocks on the gate before completing.
-        let (tx_a, control_rx_a) = flume::bounded::<Bytes>(DEFAULT_CONTROL_QUEUE_SIZE);
+        let (tx_a, control_rx_a) = flume::bounded::<Bytes>(DEFAULT_MESSAGE_BACKLOG_SIZE);
         let gate_for_a = gate.clone();
         let cancel_a = cancel.clone();
         let writer_a = Arc::new(crate::remote_access::participant::TestByteStreamWriter::default());
