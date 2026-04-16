@@ -249,7 +249,7 @@ pub(crate) enum ParticipantWriter {
 }
 
 impl ParticipantWriter {
-    pub(crate) async fn write(&self, bytes: &[u8]) -> Result<()> {
+    async fn write(&self, bytes: &[u8]) -> Result<()> {
         match self {
             ParticipantWriter::Livekit(stream) => stream.write(bytes).await.map_err(|e| e.into()),
             #[cfg(test)]
@@ -269,7 +269,7 @@ pub(crate) struct TestByteStreamWriter {
 
 #[cfg(test)]
 impl TestByteStreamWriter {
-    pub(crate) fn record(&self, data: &[u8]) {
+    fn record(&self, data: &[u8]) {
         self.writes.lock().push(Bytes::copy_from_slice(data));
     }
 

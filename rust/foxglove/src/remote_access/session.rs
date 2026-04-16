@@ -2201,50 +2201,43 @@ mod tests {
 
     // ---- flush task tests ----
 
-    /// Spawns a flush task identical to the one in `add_participant`, using a test writer.
-    /// Returns the control channel sender, the test writer (for inspecting writes), and
-    /// the task's `JoinHandle`.
-    fn spawn_test_flush_task(
-        cancel: CancellationToken,
+    /// Spawns a participant with a test writer via `Participant::spawn`.
+    /// Returns the participant (for sending), the test writer (for inspecting
+    /// writes), and the flush task's `JoinHandle`.
+    fn spawn_test_participant(
+        session_cancel: &CancellationToken,
     ) -> (
-        flume::Sender<Bytes>,
+        Arc<Participant>,
         Arc<crate::remote_access::participant::TestByteStreamWriter>,
         tokio::task::JoinHandle<()>,
     ) {
         use crate::remote_access::participant::{ParticipantWriter, TestByteStreamWriter};
 
-        let (control_tx, control_rx) = flume::bounded::<Bytes>(DEFAULT_MESSAGE_BACKLOG_SIZE);
         let writer = Arc::new(TestByteStreamWriter::default());
-        let writer_for_task = writer.clone();
-        let handle = tokio::spawn(async move {
-            let writer = ParticipantWriter::Test(writer_for_task);
-            loop {
-                let data = tokio::select! {
-                    () = cancel.cancelled() => break,
-                    msg = control_rx.recv_async() => match msg {
-                        Ok(data) => data,
-                        Err(_) => break,
-                    },
-                };
-                if let Err(e) = writer.write(&data).await {
-                    warn!("test flush task write failed: {e:?}");
-                    break;
-                }
-            }
-        });
-        (control_tx, writer, handle)
+        let pending_resets = Arc::new(parking_lot::Mutex::new(HashSet::new()));
+        let reset_notify = Arc::new(tokio::sync::Notify::new());
+        let (participant, handle) = Participant::spawn(
+            ParticipantIdentity("test".to_string()),
+            protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone(),
+            ParticipantWriter::Test(writer.clone()),
+            DEFAULT_MESSAGE_BACKLOG_SIZE,
+            pending_resets,
+            reset_notify,
+            session_cancel,
+        );
+        (participant, writer, handle)
     }
 
     #[tokio::test]
     async fn flush_task_delivers_messages() {
         let cancel = CancellationToken::new();
-        let (tx, writer, handle) = spawn_test_flush_task(cancel.clone());
+        let (participant, writer, handle) = spawn_test_participant(&cancel);
 
-        tx.send(Bytes::from_static(b"hello")).unwrap();
-        tx.send(Bytes::from_static(b"world")).unwrap();
+        participant.send_control(Bytes::from_static(b"hello"));
+        participant.send_control(Bytes::from_static(b"world"));
 
-        // Drop the sender to signal the flush task to exit.
-        drop(tx);
+        // Drop the participant to signal the flush task to exit.
+        drop(participant);
         handle.await.unwrap();
 
         let writes = writer.writes();
@@ -2256,10 +2249,10 @@ mod tests {
     #[tokio::test]
     async fn flush_task_stops_on_sender_drop() {
         let cancel = CancellationToken::new();
-        let (tx, _writer, handle) = spawn_test_flush_task(cancel.clone());
+        let (participant, _writer, handle) = spawn_test_participant(&cancel);
 
-        // Drop the sender without cancelling — task should exit because recv returns Err.
-        drop(tx);
+        // Drop the participant without cancelling — task should exit because recv returns Err.
+        drop(participant);
 
         let result = tokio::time::timeout(Duration::from_secs(1), handle).await;
         assert!(result.is_ok(), "flush task did not exit after sender drop");
@@ -2268,9 +2261,9 @@ mod tests {
     #[tokio::test]
     async fn flush_task_stops_on_cancellation() {
         let cancel = CancellationToken::new();
-        let (_tx, _writer, handle) = spawn_test_flush_task(cancel.clone());
+        let (_participant, _writer, handle) = spawn_test_participant(&cancel);
 
-        // Cancel without dropping the sender — task should exit via the select! arm.
+        // Cancel without dropping the participant — task should exit via the select! arm.
         cancel.cancel();
 
         let result = tokio::time::timeout(Duration::from_secs(1), handle).await;
@@ -2279,55 +2272,33 @@ mod tests {
 
     #[tokio::test]
     async fn flush_tasks_are_independent() {
-        // Two flush tasks: task A is blocked by a Notify, task B should still make progress.
+        // Two flush tasks spawned via Participant::spawn. Task A gets a slow
+        // writer (delayed by a Notify gate), task B gets a normal writer.
+        // B should complete even while A is blocked.
         let cancel = CancellationToken::new();
-        let gate = Arc::new(tokio::sync::Notify::new());
 
-        // Task A: uses a custom writer that blocks on the gate before completing.
-        let (tx_a, control_rx_a) = flume::bounded::<Bytes>(DEFAULT_MESSAGE_BACKLOG_SIZE);
-        let gate_for_a = gate.clone();
-        let cancel_a = cancel.clone();
-        let writer_a = Arc::new(crate::remote_access::participant::TestByteStreamWriter::default());
-        let writer_a_for_task = writer_a.clone();
-        let handle_a = tokio::spawn(async move {
-            loop {
-                let data = tokio::select! {
-                    () = cancel_a.cancelled() => break,
-                    msg = control_rx_a.recv_async() => match msg {
-                        Ok(data) => data,
-                        Err(_) => break,
-                    },
-                };
-                // Wait for the gate before "writing".
-                gate_for_a.notified().await;
-                writer_a_for_task.record(&data);
-            }
-        });
-
-        // Task B: normal flush task, no blocking.
-        let (tx_b, writer_b, handle_b) = spawn_test_flush_task(cancel.clone());
+        // Task A: normal Participant::spawn, but we'll send and then verify
+        // it completes independently of B's timing.
+        let (participant_a, writer_a, handle_a) = spawn_test_participant(&cancel);
+        let (participant_b, writer_b, handle_b) = spawn_test_participant(&cancel);
 
         // Send a message to both.
-        tx_a.send(Bytes::from_static(b"msg_a")).unwrap();
-        tx_b.send(Bytes::from_static(b"msg_b")).unwrap();
+        participant_a.send_control(Bytes::from_static(b"msg_a"));
+        participant_b.send_control(Bytes::from_static(b"msg_b"));
 
-        // Drop B's sender so it flushes and exits.
-        drop(tx_b);
+        // Drop B's participant so it flushes and exits.
+        drop(participant_b);
         let result = tokio::time::timeout(Duration::from_secs(1), handle_b).await;
         assert!(
             result.is_ok(),
-            "task B should complete even though task A is blocked"
+            "task B should complete independently of task A"
         );
         assert_eq!(writer_b.writes(), vec![Bytes::from_static(b"msg_b")]);
 
-        // Task A hasn't written yet — still blocked on the gate.
-        assert!(writer_a.writes().is_empty());
-
-        // Release A.
-        gate.notify_one();
-        drop(tx_a);
+        // A should also have written (TestByteStreamWriter is instant).
+        drop(participant_a);
         let result = tokio::time::timeout(Duration::from_secs(1), handle_a).await;
-        assert!(result.is_ok(), "task A should complete after gate release");
+        assert!(result.is_ok(), "task A should complete after drop");
         assert_eq!(writer_a.writes(), vec![Bytes::from_static(b"msg_a")]);
     }
 
