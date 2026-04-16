@@ -1201,11 +1201,10 @@ void FoxgloveBridge::rosMessageHandler(ChannelId channelId,
     });
   }
 
-  auto& channel = _channels.at(channelId);
   // Log without sink_id to broadcast to all sinks (WebSocket server + Gateway).
   // Each sink internally handles routing to its subscribed clients.
-  channel.log(reinterpret_cast<const std::byte*>(rclSerializedMsg.buffer),
-              rclSerializedMsg.buffer_length, timestamp);
+  channelIt->second.log(reinterpret_cast<const std::byte*>(rclSerializedMsg.buffer),
+                        rclSerializedMsg.buffer_length, timestamp);
 }
 
 void FoxgloveBridge::handleServiceRequest(const foxglove::ServiceRequest& request,
