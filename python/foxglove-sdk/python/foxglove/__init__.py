@@ -22,7 +22,6 @@ from ._foxglove_py import (
     SinkChannelFilter,
     open_mcap,
 )
-
 from .channel import Channel, log
 
 # Deprecated. Use foxglove.mcap.MCAPWriter instead.
@@ -48,7 +47,7 @@ __all__ = [
 
 # Re-export these imports (not available in WASM)
 try:
-    from ._foxglove_py import (
+    from ._foxglove_py import (  # noqa: F401
         ConnectionGraph,
         MessageSchema,
         Parameter,
