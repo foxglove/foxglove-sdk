@@ -1,13 +1,16 @@
+//! Per-participant state for a remote access session.
+
+use std::collections::HashSet;
 use std::sync::Arc;
 
-#[cfg(test)]
 use bytes::Bytes;
 use livekit::{ByteStreamWriter, StreamWriter, id::ParticipantIdentity};
 use semver::Version;
+use tokio_util::sync::CancellationToken;
 
 use crate::protocol::v2::server::FetchAssetResponse;
 use crate::remote_access::RemoteAccessError;
-use crate::remote_access::session::ControlPlaneMessage;
+use crate::remote_access::session::encode_binary_message;
 use crate::remote_common::ClientId;
 use crate::remote_common::semaphore::Semaphore;
 
@@ -18,9 +21,9 @@ const DEFAULT_FETCH_ASSET_PER_PARTICIPANT: usize = 32;
 
 /// A participant in the remote access session.
 ///
-/// A participant has an identity and a dedicated TCP-like binary stream for sending messages.
-///
-/// This is a place to store state specific to the participant.
+/// Each participant has an identity, a per-participant control plane queue, and
+/// rate-limiting semaphores. The actual byte-stream writer lives in a dedicated
+/// flush task (spawned by `Participant::spawn`), not in this struct.
 pub(crate) struct Participant {
     /// Locally-significant identifier for this particular instance of this participant.
     client_id: ClientId,
@@ -30,10 +33,17 @@ pub(crate) struct Participant {
     /// Stored for future use when branching protocol behavior based on the participant's version.
     #[expect(dead_code)]
     protocol_version: Version,
-    /// A reliable, ordered stream to send messages to just this participant
-    writer: ParticipantWriter,
-    /// Control plane sender for queuing messages to this participant.
-    control_plane_tx: flume::Sender<ControlPlaneMessage>,
+    /// Per-participant control plane queue. The receiving end is owned by the
+    /// flush task.
+    control_tx: flume::Sender<Bytes>,
+    /// Shared set of participant identities pending a reset. Inserting into this
+    /// set + notifying is how we signal `handle_room_events` to disconnect us.
+    pending_resets: Arc<parking_lot::Mutex<HashSet<ParticipantIdentity>>>,
+    /// Wakes `handle_room_events` when we add ourselves to `pending_resets`.
+    reset_notify: Arc<tokio::sync::Notify>,
+    /// Per-participant cancellation token. Cancelled when the control queue
+    /// overflows, signaling the flush task to stop immediately.
+    cancel: CancellationToken,
     /// Limits concurrent service calls from this participant.
     service_call_sem: Semaphore,
     /// Limits concurrent fetch asset requests from this participant.
@@ -41,19 +51,95 @@ pub(crate) struct Participant {
 }
 
 impl Participant {
-    /// Creates a new participant.
-    pub fn new(
+    /// Creates a new participant with its own control plane channel and flush task.
+    ///
+    /// The flush task drains the bounded channel into the `writer`. It exits when
+    /// the per-participant cancellation token fires (queue overflow or session
+    /// shutdown) or when all `control_tx` senders are dropped.
+    ///
+    /// Returns the participant (wrapped in `Arc` for shared ownership) and the
+    /// flush task's `JoinHandle` (for teardown awaiting).
+    pub fn spawn(
         identity: ParticipantIdentity,
         protocol_version: Version,
         writer: ParticipantWriter,
-        control_plane_tx: flume::Sender<ControlPlaneMessage>,
+        queue_size: usize,
+        pending_resets: Arc<parking_lot::Mutex<HashSet<ParticipantIdentity>>>,
+        reset_notify: Arc<tokio::sync::Notify>,
+        session_cancel: &CancellationToken,
+    ) -> (Arc<Self>, tokio::task::JoinHandle<()>) {
+        let (control_tx, control_rx) = flume::bounded::<Bytes>(queue_size);
+        let cancel = session_cancel.child_token();
+        let cancel_for_task = cancel.clone();
+        let identity_for_task = identity.clone();
+        let pending_resets_for_task = pending_resets.clone();
+        let reset_notify_for_task = reset_notify.clone();
+
+        let flush_handle = tokio::spawn(async move {
+            loop {
+                let data = tokio::select! {
+                    biased;
+                    () = cancel_for_task.cancelled() => break,
+                    msg = control_rx.recv_async() => match msg {
+                        Ok(data) => data,
+                        Err(_) => break,
+                    },
+                };
+                // Wrap the write in a cancel-aware select so we can break out
+                // if the participant is being torn down.
+                let write_result = tokio::select! {
+                    biased;
+                    () = cancel_for_task.cancelled() => break,
+                    result = writer.write(&data) => result,
+                };
+                if let Err(e) = write_result {
+                    tracing::warn!(
+                        "control write failed for {:?}, requesting reset: {e:?}",
+                        identity_for_task,
+                    );
+                    pending_resets_for_task
+                        .lock()
+                        .insert(identity_for_task.clone());
+                    reset_notify_for_task.notify_one();
+                    break;
+                }
+            }
+        });
+
+        let participant = Arc::new(Self {
+            client_id: ClientId::next(),
+            participant_id: identity,
+            protocol_version,
+            control_tx,
+            pending_resets,
+            reset_notify,
+            cancel,
+            service_call_sem: Semaphore::new(DEFAULT_SERVICE_CALLS_PER_PARTICIPANT),
+            fetch_asset_sem: Semaphore::new(DEFAULT_FETCH_ASSET_PER_PARTICIPANT),
+        });
+        (participant, flush_handle)
+    }
+
+    /// Creates a new participant without spawning a flush task.
+    ///
+    /// For use in tests that only need a participant with a pre-created channel.
+    #[cfg(test)]
+    pub fn new(
+        identity: ParticipantIdentity,
+        protocol_version: Version,
+        control_tx: flume::Sender<Bytes>,
+        pending_resets: Arc<parking_lot::Mutex<HashSet<ParticipantIdentity>>>,
+        reset_notify: Arc<tokio::sync::Notify>,
+        cancel: CancellationToken,
     ) -> Self {
         Self {
             client_id: ClientId::next(),
             participant_id: identity,
             protocol_version,
-            writer,
-            control_plane_tx,
+            control_tx,
+            pending_resets,
+            reset_notify,
+            cancel,
             service_call_sem: Semaphore::new(DEFAULT_SERVICE_CALLS_PER_PARTICIPANT),
             fetch_asset_sem: Semaphore::new(DEFAULT_FETCH_ASSET_PER_PARTICIPANT),
         }
@@ -74,43 +160,64 @@ impl Participant {
         &self.fetch_asset_sem
     }
 
+    /// Cancel this participant's flush task. The task will exit at the next
+    /// `select!` iteration.
+    pub(crate) fn cancel(&self) {
+        self.cancel.cancel();
+    }
+
     /// Returns the participant's identity.
     pub fn participant_id(&self) -> &ParticipantIdentity {
         &self.participant_id
     }
 
-    /// Returns the control plane sender for this participant.
-    pub(crate) fn control_plane_tx(&self) -> &flume::Sender<ControlPlaneMessage> {
-        &self.control_plane_tx
+    /// Try to queue a control plane message. Returns `false` if the queue is
+    /// full and the caller should trigger a participant reset.
+    #[must_use]
+    pub(crate) fn try_queue_control(&self, data: Bytes) -> bool {
+        match self.control_tx.try_send(data) {
+            Ok(()) => true,
+            Err(flume::TrySendError::Full(_)) => {
+                tracing::warn!("control queue full for {}", self.participant_id);
+                false
+            }
+            Err(flume::TrySendError::Disconnected(_)) => {
+                tracing::debug!(
+                    "control queue disconnected for {}, dropping message",
+                    self.participant_id
+                );
+                // Queue already disconnected — flush task has exited. A reset is
+                // likely already in progress, so don't trigger another one.
+                true
+            }
+        }
     }
 
-    /// Sends a message to the participant.
-    ///
-    /// The message is serialized and framed already and provided as a slice of bytes.
-    pub(crate) async fn send(&self, bytes: &[u8]) -> Result<()> {
-        self.writer.write(bytes).await
+    /// Queue a control plane message, requesting a participant reset if the
+    /// queue is full. Also cancels the per-participant token so the flush task
+    /// stops immediately — no point draining messages for a client being disconnected.
+    pub(crate) fn send_control(&self, data: Bytes) {
+        if !self.try_queue_control(data) {
+            self.cancel.cancel();
+            self.pending_resets
+                .lock()
+                .insert(self.participant_id.clone());
+            self.reset_notify.notify_one();
+        }
     }
 
     /// Send a fetch asset response to the participant via the control plane queue.
-    pub(crate) fn send_asset_response(self: &Arc<Self>, data: &[u8], request_id: u32) {
-        let msg = ControlPlaneMessage::binary(
-            self.clone(),
-            &FetchAssetResponse::asset_data(request_id, data),
-        );
-        if let Err(e) = self.control_plane_tx.send(msg) {
-            tracing::warn!("control plane queue disconnected, dropping asset response: {e}");
-        }
+    pub(crate) fn send_asset_response(&self, data: &[u8], request_id: u32) {
+        self.send_control(encode_binary_message(&FetchAssetResponse::asset_data(
+            request_id, data,
+        )));
     }
 
     /// Send a fetch asset error to the participant via the control plane queue.
-    pub(crate) fn send_asset_error(self: &Arc<Self>, error: &str, request_id: u32) {
-        let msg = ControlPlaneMessage::binary(
-            self.clone(),
-            &FetchAssetResponse::error_message(request_id, error),
-        );
-        if let Err(e) = self.control_plane_tx.send(msg) {
-            tracing::warn!("control plane queue disconnected, dropping asset error: {e}");
-        }
+    pub(crate) fn send_asset_error(&self, error: &str, request_id: u32) {
+        self.send_control(encode_binary_message(&FetchAssetResponse::error_message(
+            request_id, error,
+        )));
     }
 }
 
@@ -128,11 +235,12 @@ impl std::fmt::Display for Participant {
     }
 }
 
-/// A writer for a participant.
+/// A writer for a participant's control plane byte stream.
 ///
 /// Wraps an ordered, reliable byte stream to one specific participant.
+/// Owned by the per-participant flush task, not by `Participant` itself.
 ///
-/// Mocked with a TestByteStreamWriter for tests.
+/// Mocked with a `TestByteStreamWriter` for tests.
 pub(crate) enum ParticipantWriter {
     Livekit(ByteStreamWriter),
     #[allow(dead_code)]

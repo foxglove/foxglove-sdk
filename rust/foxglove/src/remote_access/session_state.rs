@@ -4,6 +4,7 @@ use std::sync::Arc;
 
 use livekit::id::{ParticipantIdentity, TrackSid};
 use smallvec::SmallVec;
+use tokio::task::JoinHandle;
 use tracing::{debug, info};
 
 use crate::protocol::v2::server::advertise;
@@ -79,6 +80,8 @@ pub(crate) struct SessionState {
     client_channels: HashMap<ParticipantIdentity, HashMap<ChannelId, ChannelDescriptor>>,
     /// Parameters subscribed to by participants, keyed by parameter name.
     subscribed_parameters: HashMap<String, HashSet<ParticipantIdentity>>,
+    /// Per-participant flush task handles, for teardown awaiting.
+    flush_handles: HashMap<ParticipantIdentity, JoinHandle<()>>,
 }
 
 impl SessionState {
@@ -95,7 +98,33 @@ impl SessionState {
             video_metadata: HashMap::new(),
             client_channels: HashMap::new(),
             subscribed_parameters: HashMap::new(),
+            flush_handles: HashMap::new(),
         }
+    }
+
+    /// Stores the flush task handle for a participant.
+    pub fn insert_flush_handle(&mut self, identity: ParticipantIdentity, handle: JoinHandle<()>) {
+        self.flush_handles.insert(identity, handle);
+    }
+
+    /// Removes and returns the flush handle for a participant, if one was registered.
+    pub fn remove_flush_handle(
+        &mut self,
+        identity: &ParticipantIdentity,
+    ) -> Option<JoinHandle<()>> {
+        self.flush_handles.remove(identity)
+    }
+
+    /// Removes all participants and their flush handles atomically, returning both.
+    ///
+    /// For use during session teardown only — does not clean up subscriptions,
+    /// video subscribers, client channels, or parameter subscriptions (the room
+    /// is closing immediately after). Does not fire listener callbacks
+    /// (`on_unsubscribe`, `on_client_unadvertise`, etc.).
+    pub fn take_participants(&mut self) -> (Vec<Arc<Participant>>, Vec<JoinHandle<()>>) {
+        let participants: Vec<_> = self.participants.drain().map(|(_, p)| p).collect();
+        let handles: Vec<_> = self.flush_handles.drain().map(|(_, h)| h).collect();
+        (participants, handles)
     }
 
     /// Inserts a participant if not already present.
@@ -639,19 +668,22 @@ impl SessionState {
 mod tests {
     use super::*;
     use crate::img2yuv::{ImageEncoding, RawImageEncoding};
-    use crate::remote_access::participant::ParticipantWriter;
 
     fn make_participant(name: &str) -> (ParticipantIdentity, Arc<Participant>) {
         let identity = ParticipantIdentity(name.to_string());
-        let writer = Arc::new(crate::remote_access::participant::TestByteStreamWriter::default());
         let version =
             crate::remote_access::protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone();
         let (tx, _rx) = flume::bounded(16);
+        let pending_resets = Arc::new(parking_lot::Mutex::new(std::collections::HashSet::new()));
+        let reset_notify = Arc::new(tokio::sync::Notify::new());
+        let cancel = tokio_util::sync::CancellationToken::new();
         let participant = Arc::new(Participant::new(
             identity.clone(),
             version,
-            ParticipantWriter::Test(writer),
             tx,
+            pending_resets,
+            reset_notify,
+            cancel,
         ));
         (identity, participant)
     }

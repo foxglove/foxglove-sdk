@@ -32,7 +32,7 @@ use crate::{
 type Result<T> = std::result::Result<T, Box<RemoteAccessError>>;
 
 const AUTH_RETRY_PERIOD: Duration = Duration::from_secs(30);
-const DEFAULT_MESSAGE_BACKLOG_SIZE: usize = 1024;
+use super::session::DEFAULT_MESSAGE_BACKLOG_SIZE;
 
 /// The status of the remote access gateway connection.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -372,7 +372,9 @@ impl RemoteAccessConnection {
         context.add_sink(session.clone());
 
         // We can use spawn here because we're already running on self.runtime
-        let sender_task = tokio::spawn(RemoteAccessSession::run_sender(session.clone()));
+        let video_metadata_task = tokio::spawn(RemoteAccessSession::run_video_metadata_watcher(
+            session.clone(),
+        ));
 
         // Send ServerInfo and channel advertisements to participants already in the room.
         // ParticipantConnected events only fire for participants joining after us.
@@ -430,16 +432,14 @@ impl RemoteAccessConnection {
             }
         }
         context.remove_sink(session.sink_id());
-        sender_task.abort();
-        // Wait for the sender task to fully stop so no callbacks are in flight.
-        let _ = sender_task.await;
+        video_metadata_task.abort();
+        let _ = video_metadata_task.await;
 
         info!(remote_access_session_id, "disconnecting from room");
-        // Close the room (disconnect) on shutdown.
-        // If we don't do that, there's a 15s delay before this device is removed from the participants
-        if let Err(e) = session.room().close().await {
-            error!(remote_access_session_id, error = %e, "failed to close room: {e}");
-        }
+        // handle_room_events was one arm of the select! above — when the select
+        // exits, that future is dropped, so no more remove_participant calls can
+        // race with the flush handle drain inside close().
+        session.close().await;
     }
 
     /// Connect to the room, retrying indefinitely.

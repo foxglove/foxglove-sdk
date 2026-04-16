@@ -1,11 +1,11 @@
 //! Remote access services.
 
 use std::borrow::Cow;
-use std::sync::Arc;
+use std::sync::{Arc, Weak};
 
 use crate::protocol::v2::server::{ServiceCallFailure, ServiceCallResponse};
 use crate::remote_access::participant::Participant;
-use crate::remote_access::session::ControlPlaneMessage;
+use crate::remote_access::session::{encode_binary_message, encode_json_message};
 use crate::remote_common::semaphore::SemaphoreGuard;
 use crate::remote_common::service::ServiceId;
 
@@ -15,17 +15,28 @@ pub use crate::remote_common::service::{
 };
 
 /// Sends service call responses over the remote access control plane.
+///
+/// Holds a `Weak<Participant>` so that in-flight service calls do not extend the
+/// participant's lifetime past removal. If the participant has been removed by
+/// the time the handler responds, the response is logged and dropped.
 struct ResponseSender {
-    participant: Arc<Participant>,
+    participant: Weak<Participant>,
     service_id: ServiceId,
     call_id: CallId,
-    control_plane_tx: flume::Sender<ControlPlaneMessage>,
     _guard: SemaphoreGuard,
 }
 
 impl crate::remote_common::service::ResponseSender for ResponseSender {
     fn send(&mut self, result: Result<(&str, &[u8]), String>) {
-        let msg = match result {
+        let Some(participant) = self.participant.upgrade() else {
+            tracing::debug!(
+                service_id = ?self.service_id,
+                call_id = ?self.call_id,
+                "participant disconnected, dropping service response",
+            );
+            return;
+        };
+        let data = match result {
             Ok((encoding, payload)) => {
                 let response = ServiceCallResponse {
                     service_id: self.service_id.into(),
@@ -33,7 +44,7 @@ impl crate::remote_common::service::ResponseSender for ResponseSender {
                     encoding: encoding.into(),
                     payload: Cow::Borrowed(payload),
                 };
-                ControlPlaneMessage::binary(self.participant.clone(), &response)
+                encode_binary_message(&response)
             }
             Err(message) => {
                 let failure = ServiceCallFailure {
@@ -41,29 +52,25 @@ impl crate::remote_common::service::ResponseSender for ResponseSender {
                     call_id: self.call_id.into(),
                     message,
                 };
-                ControlPlaneMessage::json(self.participant.clone(), &failure)
+                encode_json_message(&failure)
             }
         };
-        if let Err(e) = self.control_plane_tx.send(msg) {
-            tracing::warn!("control plane queue disconnected, dropping service response: {e}");
-        }
+        participant.send_control(data);
     }
 }
 
 /// Creates a new [`Responder`] backed by a remote access control plane.
 pub(super) fn new_responder(
-    participant: Arc<Participant>,
+    participant: &Arc<Participant>,
     service_id: ServiceId,
     call_id: CallId,
     encoding: impl Into<String>,
-    control_plane_tx: flume::Sender<ControlPlaneMessage>,
     guard: SemaphoreGuard,
 ) -> Responder {
     let sender = Box::new(ResponseSender {
-        participant,
+        participant: Arc::downgrade(participant),
         service_id,
         call_id,
-        control_plane_tx,
         _guard: guard,
     });
     Responder::new(encoding, sender)
