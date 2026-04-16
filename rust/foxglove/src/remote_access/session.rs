@@ -1855,6 +1855,7 @@ impl RemoteAccessSession {
     }
 
     /// Start video tracks for first-subscribed channels that have video schemas.
+    /// Each track is named video-ch-{channel_id}.
     ///
     /// Caller must hold `subscription_lock`.
     fn start_video_tracks(self: &Arc<Self>, first_subscribed: &[ChannelId]) {
@@ -1883,8 +1884,10 @@ impl RemoteAccessSession {
                 .insert_video_publisher(channel_id, publisher);
 
             let track_name = format!("video-ch-{}", u64::from(channel_id));
-            let track =
-                LocalVideoTrack::create_video_track(&track_name, RtcVideoSource::Native(video_source));
+            let track = LocalVideoTrack::create_video_track(
+                &track_name,
+                RtcVideoSource::Native(video_source),
+            );
 
             let local_participant = self.room.local_participant().clone();
             let session = self.clone();

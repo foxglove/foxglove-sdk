@@ -519,7 +519,10 @@ async fn livekit_video_track_lifecycle() -> Result<()> {
         .await?;
     let expected_track_name = format!("video-ch-{channel_id}");
     let track_name = viewer.expect_track_subscribed().await?;
-    assert_eq!(track_name, expected_track_name, "video track name should match video-ch-{{channelId}}");
+    assert_eq!(
+        track_name, expected_track_name,
+        "video track name should match video-ch-{{channelId}}"
+    );
     info!("video track published on subscribe: {track_name}");
 
     // Unsubscribe — the gateway should unpublish the video track.
