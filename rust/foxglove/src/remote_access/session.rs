@@ -278,14 +278,24 @@ impl Sink for RemoteAccessSession {
             for &ch in &filtered {
                 if advertised_ids.contains(&u64::from(ch.id())) {
                     state.insert_channel(ch);
-                    if let Some(input_schema) = get_video_input_schema(ch) {
+                    let video_schema = get_video_input_schema(ch);
+                    if let Some(input_schema) = video_schema {
                         state.insert_video_schema(ch.id(), input_schema);
                     }
-                    let qos = self
+                    let mut qos = self
                         .qos_classifier
                         .as_ref()
                         .map(|c| c.classify(ch.descriptor()))
                         .unwrap_or_default();
+                    if video_schema.is_some() && qos.reliability == Reliability::Reliable {
+                        warn!(
+                            "Forcing QoS to Lossy for video channel {:?} (topic={}): \
+                             Reliable delivery is not supported for video",
+                            ch.id(),
+                            ch.topic()
+                        );
+                        qos.reliability = Reliability::Lossy;
+                    }
                     state.insert_qos_profile(ch.id(), qos);
                     if qos.reliability != Reliability::Reliable {
                         ids.push(ch.id());

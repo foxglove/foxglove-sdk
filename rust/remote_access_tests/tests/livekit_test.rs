@@ -2296,3 +2296,59 @@ async fn livekit_qos_classifier_per_channel() -> Result<()> {
     gw.stop().await?;
     Ok(())
 }
+
+/// Test that a classifier returning Reliable for a video-capable channel is
+/// overridden to Lossy, and that a warning is logged.
+#[traced_test]
+#[ignore]
+#[tokio::test]
+#[serial(livekit)]
+async fn livekit_video_channel_forces_lossy_over_reliable_classifier() -> Result<()> {
+    let ctx = foxglove::Context::new();
+    let video_channel = ctx
+        .channel_builder("/camera")
+        .message_encoding("protobuf")
+        .schema(Schema::new("foxglove.RawImage", "protobuf", &b""[..]))
+        .build_raw()
+        .context("create video channel")?;
+
+    let gw = TestGateway::start_with_options(
+        &ctx,
+        TestGatewayOptions {
+            qos_classifier: Some(Box::new(|_| {
+                QosProfile::builder()
+                    .reliability(Reliability::Reliable)
+                    .build()
+            })),
+            ..Default::default()
+        },
+    )
+    .await?;
+
+    let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+    let _server_info = viewer.expect_server_info().await?;
+    let advertise = viewer.expect_advertise().await?;
+
+    let ch = advertise
+        .channels
+        .iter()
+        .find(|ch| ch.id == u64::from(video_channel.id()))
+        .expect("video channel advertised");
+
+    // Video detection takes precedence: the channel is advertised as a video
+    // track and NOT as reliable, even though the classifier asked for Reliable.
+    assert_eq!(
+        ch.metadata.get("foxglove.hasVideoTrack"),
+        Some(&"true".to_string()),
+        "video channel should have foxglove.hasVideoTrack metadata"
+    );
+    assert_eq!(
+        ch.metadata.get("foxglove.reliable"),
+        None,
+        "Reliable classification should be overridden to Lossy for video channels"
+    );
+
+    viewer.close().await?;
+    gw.stop().await?;
+    Ok(())
+}
