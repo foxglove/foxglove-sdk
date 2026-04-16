@@ -53,7 +53,7 @@ img2yuv-core = ["dep:image", "dep:yuv"]
 img2yuv-png = ["img2yuv-core", "image/png"]
 img2yuv-jpeg = ["img2yuv-core", "image/jpeg"]
 img2yuv-webp = ["img2yuv-core", "image/webp"]
-img2yuv = ["img2yuv-png", "img2yuv-jpeg", "img2yuv-webp"]
+img2yuv = ["img2yuv-png", "img2yuv-jpeg", "img2yuv-webp", "img2yuv-ros1", "img2yuv-ros2"]
 img2yuv-ros1 = ["img2yuv-core", "dep:regex"]
 img2yuv-ros2 = ["img2yuv-core", "dep:cdr", "dep:regex"]
 
