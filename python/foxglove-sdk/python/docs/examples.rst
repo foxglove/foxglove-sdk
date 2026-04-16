@@ -5,9 +5,13 @@ Quickstart
 ----------
 .. literalinclude:: ../../../foxglove-sdk-examples/quickstart/main.py
 
-Live visualization
+Remote Access
+-------------
+.. literalinclude:: ../../../foxglove-sdk-examples/remote-access/main.py
+
+WebSocket Server
 ------------------
-.. literalinclude:: ../../../foxglove-sdk-examples/live-visualization/main.py
+.. literalinclude:: ../../../foxglove-sdk-examples/ws-server/main.py
 
 
 Write to an MCAP file

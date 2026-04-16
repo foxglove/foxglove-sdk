@@ -121,33 +121,16 @@ async fn livekit_viewer_receives_message_after_subscribe() -> Result<()> {
     // Subscribe to the channel.
     viewer.subscribe_and_wait(&[channel_id], &channel).await?;
 
+    // Wait for the device data track to be published and subscribe to it.
+    let mut ch_reader = viewer.expect_device_channel_data_track(channel_id).await?;
+
     let payloads: &[&[u8]] = &[b"message-1", b"message-2", b"message-3"];
 
-    // Log the first message and wait for the per-channel byte stream to open.
-    channel.log(payloads[0]);
-    let mut ch_reader = viewer.expect_channel_byte_stream().await?;
-    let msg = ch_reader.next_server_message().await?;
-    match msg {
-        ServerMessage::MessageData(data) => {
-            assert_eq!(data.channel_id, channel_id);
-            assert_eq!(data.data.as_ref(), payloads[0]);
-        }
-        other => anyhow::bail!("expected MessageData, got: {other:?}"),
-    }
-    info!("received message 1/{}", payloads.len());
-
-    // Log remaining messages and read them from the same byte stream.
-    for (i, &payload) in payloads[1..].iter().enumerate() {
+    for (i, &payload) in payloads.iter().enumerate() {
         channel.log(payload);
-        let msg = ch_reader.next_server_message().await?;
-        match msg {
-            ServerMessage::MessageData(data) => {
-                assert_eq!(data.channel_id, channel_id);
-                assert_eq!(data.data.as_ref(), payload);
-            }
-            other => anyhow::bail!("expected MessageData, got: {other:?}"),
-        }
-        info!("received message {}/{}", i + 2, payloads.len());
+        let msg = ch_reader.next_message_data().await?;
+        assert_eq!(msg.data.as_ref(), payload);
+        info!("received message {}/{}", i + 1, payloads.len());
     }
 
     viewer.close().await?;
@@ -178,15 +161,17 @@ async fn livekit_viewer_does_not_receive_message_before_subscribe() -> Result<()
     // Log a message BEFORE subscribing — this should NOT be delivered.
     channel.log(b"message-before-subscribe");
 
-    // Now subscribe.
+    // Now subscribe and wait for the data track to be ready.
     viewer.subscribe_and_wait(&[channel_id], &channel).await?;
+    viewer.ensure_device_data_track(channel_id).await?;
 
     // Log a second message — this one should be delivered.
     let expected_payload = b"message-after-subscribe";
     channel.log(expected_payload);
 
-    let msg_data = viewer.expect_new_bytestream_and_message_data().await?;
-    assert_eq!(msg_data.channel_id, channel_id);
+    let msg_data = viewer
+        .expect_new_data_track_and_message_data(channel_id)
+        .await?;
     assert_eq!(
         msg_data.data.as_ref(),
         expected_payload,
@@ -336,30 +321,33 @@ async fn livekit_multiple_participants_receive_messages() -> Result<()> {
     let channel_id = adv1.channels[0].id;
     viewer1.subscribe_and_wait(&[channel_id], &channel).await?;
 
+    // Wait for the device data track and subscribe to it.
+    let mut ch_reader1 = viewer1.expect_device_channel_data_track(channel_id).await?;
+
     // Log message-1 — only viewer-1 should receive it.
     channel.log(b"message-1");
-    let msg1 = viewer1.expect_new_bytestream_and_message_data().await?;
+    let msg1 = ch_reader1.next_message_data().await?;
     assert_eq!(msg1.data.as_ref(), b"message-1");
     info!("viewer-1 received message-1");
-    // viewer-2 won't receive message-1, but we verify that below when it reads message-2 as expected and not message-1
 
     // Subscribe viewer-2
     let _si2 = viewer2.expect_server_info().await?;
     let adv2 = viewer2.expect_advertise().await?;
     assert_eq!(adv2.channels[0].id, channel_id);
     viewer2.send_subscribe(&[channel_id]).await?;
-    // Channel already has a sink from viewer-1, so we can't poll has_sinks().
-    // Use a brief settle time for the gateway to process viewer-2's subscription.
+    // Wait for viewer-2 to receive and subscribe to the device data track.
+    let mut ch_reader2 = viewer2.expect_device_channel_data_track(channel_id).await?;
+    // Brief settle for the gateway to process viewer-2's subscription.
     tokio::time::sleep(Duration::from_millis(500)).await;
 
     // Log message-2 — both viewers should receive it.
     channel.log(b"message-2");
 
-    let msg2_v1 = viewer1.expect_new_bytestream_and_message_data().await?;
+    let msg2_v1 = ch_reader1.next_message_data().await?;
     assert_eq!(msg2_v1.data.as_ref(), b"message-2");
     info!("viewer-1 received message-2");
 
-    let msg2_v2 = viewer2.expect_new_bytestream_and_message_data().await?;
+    let msg2_v2 = ch_reader2.next_message_data().await?;
     assert_eq!(msg2_v2.data.as_ref(), b"message-2");
     info!("viewer-2 received message-2");
 
@@ -375,7 +363,7 @@ async fn livekit_multiple_participants_receive_messages() -> Result<()> {
 
     // Log message-3 — only viewer-2 should receive it.
     channel.log(b"message-3");
-    let msg3_v2 = viewer2.expect_new_bytestream_and_message_data().await?;
+    let msg3_v2 = ch_reader2.next_message_data().await?;
     assert_eq!(msg3_v2.data.as_ref(), b"message-3");
     info!("viewer-2 received message-3 (viewer-1 disconnected)");
 
@@ -482,14 +470,18 @@ async fn livekit_video_channel_messages_bypass_data_plane() -> Result<()> {
         .await?;
     poll_until(|| json_channel.has_sinks()).await;
 
+    // Wait for the JSON channel's data track to be ready.
+    viewer.ensure_device_data_track(json_id).await?;
+
     // Log to the video channel first, then the JSON channel.
     // If the video message leaked to the data plane, it would arrive before
     // the JSON message (FIFO ordering).
     video_channel.log(b"video-frame");
     json_channel.log(b"json-payload");
 
-    let msg = viewer.expect_new_bytestream_and_message_data().await?;
-    assert_eq!(msg.channel_id, json_id, "should receive the JSON message");
+    let msg = viewer
+        .expect_new_data_track_and_message_data(json_id)
+        .await?;
     assert_eq!(msg.data.as_ref(), b"json-payload");
     info!("video channel correctly bypassed data plane");
 
@@ -676,10 +668,12 @@ async fn livekit_video_channel_without_request_video_track_uses_data_plane() -> 
     viewer
         .subscribe_and_wait(&[channel_id], &video_channel)
         .await?;
+    viewer.ensure_device_data_track(channel_id).await?;
 
     video_channel.log(b"video-frame");
-    let msg = viewer.expect_new_bytestream_and_message_data().await?;
-    assert_eq!(msg.channel_id, channel_id);
+    let msg = viewer
+        .expect_new_data_track_and_message_data(channel_id)
+        .await?;
     assert_eq!(msg.data.as_ref(), b"video-frame");
     info!("video data received via data plane (no video track requested)");
 
@@ -730,10 +724,14 @@ async fn livekit_video_resubscribe_switches_to_data_plane() -> Result<()> {
     assert_eq!(track_name, "/camera");
     info!("video track torn down after re-subscribe with requestVideoTrack: false");
 
+    // Wait for the device data track to be published and subscribe.
+    viewer.ensure_device_data_track(channel_id).await?;
+
     // Data should now arrive via the data plane.
     video_channel.log(b"video-frame");
-    let msg = viewer.expect_new_bytestream_and_message_data().await?;
-    assert_eq!(msg.channel_id, channel_id);
+    let msg = viewer
+        .expect_new_data_track_and_message_data(channel_id)
+        .await?;
     assert_eq!(msg.data.as_ref(), b"video-frame");
     info!("data received via data plane after switching from video");
 
@@ -1383,20 +1381,20 @@ async fn livekit_client_message_data_fires_listener_callback() -> Result<()> {
     assert_eq!(messages[0].0, "viewer-1", "client id should match");
     assert_eq!(messages[0].1, "/cmd", "topic should match");
     assert_eq!(messages[0].2, payload, "payload should match");
-    info!("on_message_data callback validated via per-channel stream");
+    info!("on_message_data callback validated via control channel");
 
     viewer.close().await?;
     gw.stop().await?;
     Ok(())
 }
 
-/// Test that sending MessageData before the Client Advertise still delivers the
-/// message once the advertise arrives (the server holds the byte stream until then).
+/// Test that sending MessageData before the Client Advertise produces an error
+/// (channel not advertised).
 #[traced_test]
 #[ignore]
 #[tokio::test]
 #[serial(livekit)]
-async fn livekit_client_message_data_before_advertise_is_delivered() -> Result<()> {
+async fn livekit_client_message_data_before_advertise_sends_error() -> Result<()> {
     use std::sync::Arc;
     let ctx = foxglove::Context::new();
     let listener = Arc::new(MockListener::default());
@@ -1417,26 +1415,35 @@ async fn livekit_client_message_data_before_advertise_is_delivered() -> Result<(
     let payload = b"early data";
     viewer.send_client_message_data(1, payload).await?;
 
-    // Brief pause to make it likely the data stream arrives before the advertise.
-    tokio::time::sleep(Duration::from_millis(500)).await;
+    let deadline = tokio::time::Instant::now() + EVENT_TIMEOUT;
+    let status = loop {
+        let msg = tokio::time::timeout_at(deadline, viewer.frame_reader.next_server_message())
+            .await
+            .context("timeout waiting for error status")?
+            .context("failed to read server message")?;
+        if let ServerMessage::Status(s) = msg {
+            break s;
+        }
+    };
 
-    viewer
-        .send_client_advertise(&[ClientChannelDesc {
-            id: 1,
-            topic: "/cmd".to_string(),
-            encoding: "json".to_string(),
-            schema_name: String::new(),
-        }])
-        .await?;
+    assert_eq!(
+        status.level,
+        foxglove::protocol::v2::server::status::Level::Error
+    );
+    assert!(
+        status.message.contains("not advertised channel"),
+        "unexpected status message: {}",
+        status.message
+    );
+    info!(
+        "error status received for message data before advertise: {}",
+        status.message
+    );
 
-    poll_until(|| listener.message_data().len() == 1).await;
-
-    let messages = listener.message_data();
-    assert_eq!(messages.len(), 1);
-    assert_eq!(messages[0].0, "viewer-1", "client id should match");
-    assert_eq!(messages[0].1, "/cmd", "topic should match");
-    assert_eq!(messages[0].2, payload, "payload should match");
-    info!("message data delivered after late advertise");
+    assert!(
+        listener.message_data().is_empty(),
+        "listener should not receive message data for unadvertised channel"
+    );
 
     viewer.close().await?;
     gw.stop().await?;
@@ -1458,7 +1465,6 @@ async fn livekit_client_message_data_for_unadvertised_channel_sends_error() -> R
         TestGatewayOptions {
             listener: Some(listener.clone()),
             capabilities: vec![foxglove::remote_access::Capability::ClientPublish],
-            pending_client_reader_timeout: Some(Duration::from_secs(1)),
             ..Default::default()
         },
     )
@@ -1468,8 +1474,6 @@ async fn livekit_client_message_data_for_unadvertised_channel_sends_error() -> R
     let _server_info = viewer.expect_server_info().await?;
 
     // Send MessageData for channel 999, which was never advertised by the client.
-    // The server stashes the byte stream waiting for a matching Client Advertise.
-    // With pending_client_reader_timeout set to 1s, the error arrives quickly.
     let payload = b"rogue data";
     viewer.send_client_message_data(999, payload).await?;
 
@@ -1855,13 +1859,17 @@ async fn livekit_connection_graph_unsubscribe_stops_updates() -> Result<()> {
     graph.set_published_topic("/camera", ["node_1"]);
     gw.handle.publish_connection_graph(graph)?;
 
-    // Subscribe to a channel and log a message to verify the control channel
+    // Subscribe to a channel and log a message to verify the data plane
     // is still working — we should receive MessageData but NOT a graph update.
+    let cg_channel_id = u64::from(channel.id());
     viewer
-        .subscribe_and_wait(&[u64::from(channel.id())], &channel)
+        .subscribe_and_wait(&[cg_channel_id], &channel)
         .await?;
+    viewer.ensure_device_data_track(cg_channel_id).await?;
     channel.log(b"ping");
-    let msg = viewer.expect_new_bytestream_and_message_data().await?;
+    let msg = viewer
+        .expect_new_data_track_and_message_data(cg_channel_id)
+        .await?;
     assert_eq!(msg.data.as_ref(), b"ping");
     info!("connection graph unsubscribe validated: no graph update received after unsubscribe");
 

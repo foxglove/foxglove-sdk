@@ -98,9 +98,8 @@ To create a remote access gateway sink, call :func:`foxglove::RemoteAccessGatewa
 provide a device token to authenticate with the Foxglove API; this can be set via
 :class:`foxglove::RemoteAccessGatewayOptions` or with the ``FOXGLOVE_DEVICE_TOKEN`` environment
 variable. Once started, the gateway connects to the Foxglove platform over WebRTC and makes the
-device available for remote visualization and teleop. Each remote client that connects is its own
-independent sink, dynamically added to the :class:`foxglove::Context` when the client connects and
-removed when it disconnects.
+device available for remote visualization and teleop. The gateway acts as a single sink on the
+:class:`foxglove::Context`, registered when the gateway starts and unregistered when it stops.
 
 
 
