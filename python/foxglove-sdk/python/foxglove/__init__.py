@@ -27,6 +27,7 @@ from .channel import Channel, log
 
 # Deprecated. Use foxglove.mcap.MCAPWriter instead.
 from .mcap import MCAPWriter
+
 if TYPE_CHECKING:
     from .notebook.notebook_buffer import NotebookBuffer
 
@@ -83,25 +84,26 @@ try:
     ]
     AssetHandler: TypeAlias = "Callable[[str], bytes | None]"
 
-    __all__.extend([
-        "AnyInnerParameterValue",
-        "AnyNativeParameterValue",
-        "AnyParameterValue",
-        "AssetHandler",
-        "ConnectionGraph",
-        "MessageSchema",
-        "Parameter",
-        "ParameterType",
-        "ParameterValue",
-        "Service",
-        "ServiceHandler",
-        "ServiceRequest",
-        "ServiceSchema",
-        "StatusLevel",
-    ])
+    __all__.extend(
+        [
+            "AnyInnerParameterValue",
+            "AnyNativeParameterValue",
+            "AnyParameterValue",
+            "AssetHandler",
+            "ConnectionGraph",
+            "MessageSchema",
+            "Parameter",
+            "ParameterType",
+            "ParameterValue",
+            "Service",
+            "ServiceHandler",
+            "ServiceRequest",
+            "ServiceSchema",
+            "StatusLevel",
+        ]
+    )
 except ImportError:
     pass
-
 
 
 try:
