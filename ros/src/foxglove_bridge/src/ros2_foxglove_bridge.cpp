@@ -73,6 +73,9 @@ public:
     const std::shared_ptr<rcpputils::SharedLibrary> ts_lib, const std::string& topic_name,
     const std::string& topic_type, const rclcpp::QoS& qos, CallbackWithInfoT callback,
     const rclcpp::SubscriptionOptionsWithAllocator<AllocatorT>& options)
+      // The base class callback is never invoked because we override
+      // handle_serialized_message below. A no-op is passed to satisfy
+      // the constructor signature.
       : GenericSubscription(
           node_base, ts_lib, topic_name, topic_type, qos,
           [](std::shared_ptr<rclcpp::SerializedMessage>) {}, options)
