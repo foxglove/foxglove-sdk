@@ -90,7 +90,7 @@ impl Participant {
             Ok(()) => true,
             Err(flume::TrySendError::Full(_)) => {
                 tracing::warn!(
-                    "control queue full for {}, disconnecting slow client",
+                    "control queue full for {}",
                     self.participant_id
                 );
                 false
