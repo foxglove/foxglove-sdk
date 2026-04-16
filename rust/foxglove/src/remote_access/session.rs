@@ -370,7 +370,7 @@ impl RemoteAccessSession {
     fn send_error(&self, participant: &Participant, message: String) {
         debug!("Sending error to {participant}: {message}");
         let status = Status::error(message);
-        participant.try_queue_control(encode_json_message(&status));
+        let _ = participant.try_queue_control(encode_json_message(&status));
     }
 
     /// Send a warning status message to a participant.
@@ -380,7 +380,7 @@ impl RemoteAccessSession {
     fn send_warning(&self, participant: &Participant, message: String) {
         debug!("Sending warning to {participant}: {message}");
         let status = Status::warning(message);
-        participant.try_queue_control(encode_json_message(&status));
+        let _ = participant.try_queue_control(encode_json_message(&status));
     }
 
     /// Enqueue a control plane message for all currently connected participants.
@@ -990,7 +990,7 @@ impl RemoteAccessSession {
         // these are the first messages delivered to the participant. This is safe to do without
         // holding the write lock, because this is a new participant — see below.
         info!("sending server info and advertisements to participant {participant:?}");
-        participant.try_queue_control(encode_json_message(&self.server_info));
+        let _ = participant.try_queue_control(encode_json_message(&self.server_info));
         self.send_channel_advertisements(participant.clone());
         self.send_service_advertisements(participant.clone());
 
@@ -1439,14 +1439,14 @@ impl RemoteAccessSession {
             return;
         };
 
-        participant.try_queue_control(encode_json_message(&advertise_msg));
+        let _ = participant.try_queue_control(encode_json_message(&advertise_msg));
     }
 
     /// Enqueue service advertisements for delivery to a single participant.
     fn send_service_advertisements(&self, participant: Arc<Participant>) {
         let services: Vec<_> = self.services.read().values().cloned().collect();
         if let Some(msg) = build_advertise_services_msg(&services) {
-            participant.try_queue_control(encode_json_message(&msg));
+            let _ = participant.try_queue_control(encode_json_message(&msg));
         }
     }
 
@@ -2352,5 +2352,29 @@ mod tests {
         let result = tokio::time::timeout(Duration::from_secs(1), handle_a).await;
         assert!(result.is_ok(), "task A should complete after gate release");
         assert_eq!(writer_a.writes(), vec![Bytes::from_static(b"msg_a")]);
+    }
+
+    #[test]
+    fn try_queue_control_returns_false_when_full() {
+        let version = protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone();
+        let (tx, _rx) = flume::bounded::<Bytes>(1);
+        let participant = Participant::new(ParticipantIdentity("alice".to_string()), version, tx);
+
+        // First message fits.
+        assert!(participant.try_queue_control(Bytes::from_static(b"first")));
+        // Second message overflows the 1-slot queue.
+        assert!(!participant.try_queue_control(Bytes::from_static(b"second")));
+    }
+
+    #[test]
+    fn try_queue_control_returns_true_when_disconnected() {
+        let version = protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone();
+        let (tx, rx) = flume::bounded::<Bytes>(1);
+        let participant = Participant::new(ParticipantIdentity("alice".to_string()), version, tx);
+
+        // Drop the receiver — channel disconnected.
+        drop(rx);
+        // Disconnected returns true (no reset needed).
+        assert!(participant.try_queue_control(Bytes::from_static(b"msg")));
     }
 }

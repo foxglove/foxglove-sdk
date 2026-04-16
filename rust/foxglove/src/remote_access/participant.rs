@@ -84,6 +84,7 @@ impl Participant {
     ///
     /// When this returns `false`, the caller should trigger a participant reset
     /// (disconnect + reconnect) — a full queue means the client is not keeping up.
+    #[must_use]
     pub(crate) fn try_queue_control(&self, data: Bytes) -> bool {
         match self.control_tx.try_send(data) {
             Ok(()) => true,
@@ -113,14 +114,14 @@ impl Participant {
     /// protocol messages via `send_control` flow regularly and will trigger the
     /// reset if the queue stays full.
     pub(crate) fn send_asset_response(&self, data: &[u8], request_id: u32) {
-        self.try_queue_control(encode_binary_message(&FetchAssetResponse::asset_data(
+        let _ = self.try_queue_control(encode_binary_message(&FetchAssetResponse::asset_data(
             request_id, data,
         )));
     }
 
     /// Send a fetch asset error to the participant via the control plane queue.
     pub(crate) fn send_asset_error(&self, error: &str, request_id: u32) {
-        self.try_queue_control(encode_binary_message(&FetchAssetResponse::error_message(
+        let _ = self.try_queue_control(encode_binary_message(&FetchAssetResponse::error_message(
             request_id, error,
         )));
     }
