@@ -678,13 +678,15 @@ mod tests {
         let version =
             crate::remote_access::protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone();
         let (tx, _rx) = flume::bounded(16);
-        let (reset_tx, _reset_rx) = tokio::sync::mpsc::unbounded_channel();
+        let pending_resets = Arc::new(parking_lot::Mutex::new(std::collections::HashSet::new()));
+        let reset_notify = Arc::new(tokio::sync::Notify::new());
         let cancel = tokio_util::sync::CancellationToken::new();
         let participant = Arc::new(Participant::new(
             identity.clone(),
             version,
             tx,
-            reset_tx,
+            pending_resets,
+            reset_notify,
             cancel,
         ));
         (identity, participant)

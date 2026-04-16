@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Weak};
 use std::time::Duration;
 
@@ -155,13 +155,13 @@ pub(crate) struct RemoteAccessSession {
     connection_graph: Arc<parking_lot::Mutex<ConnectionGraph>>,
     /// Immutable `ServerInfo` message sent to each participant on connect and reset.
     server_info: ServerInfo,
-    /// Channel used by per-participant flush tasks to request participant resets
-    /// when a control stream write fails. `handle_room_events` receives identities
-    /// and calls `reset_participant`. Using `mpsc` rather than `Notify` because
-    /// `Notify` is not cancel-safe in `select!`.
-    participant_reset_tx: tokio::sync::mpsc::UnboundedSender<ParticipantIdentity>,
-    participant_reset_rx:
-        tokio::sync::Mutex<tokio::sync::mpsc::UnboundedReceiver<ParticipantIdentity>>,
+    /// Set of participant identities pending a reset (disconnect + reconnect).
+    /// Populated by `Participant::send_control` on queue overflow and by flush
+    /// tasks on write failure. Drained by `handle_room_events`.
+    /// Using a set deduplicates multiple reset requests for the same participant.
+    pending_resets: Arc<parking_lot::Mutex<HashSet<ParticipantIdentity>>>,
+    /// Wakes `handle_room_events` when a new reset is added to `pending_resets`.
+    reset_notify: Arc<tokio::sync::Notify>,
     /// Size of the per-participant control plane queue.
     message_backlog_size: usize,
 }
@@ -296,7 +296,8 @@ pub(crate) struct SessionParams {
 impl RemoteAccessSession {
     pub(crate) fn new(params: SessionParams) -> Self {
         let (video_metadata_tx, video_metadata_rx) = tokio::sync::watch::channel(());
-        let (participant_reset_tx, participant_reset_rx) = tokio::sync::mpsc::unbounded_channel();
+        let pending_resets = Arc::new(parking_lot::Mutex::new(HashSet::new()));
+        let reset_notify = Arc::new(tokio::sync::Notify::new());
         Self {
             sink_id: SinkId::next(),
             room: params.room,
@@ -318,8 +319,8 @@ impl RemoteAccessSession {
             ice_rtt_tracker: parking_lot::Mutex::new(RttTracker::new("ICE")),
             connection_graph: params.connection_graph,
             server_info: params.server_info,
-            participant_reset_tx,
-            participant_reset_rx: tokio::sync::Mutex::new(participant_reset_rx),
+            pending_resets,
+            reset_notify,
             message_backlog_size: params.message_backlog_size,
         }
     }
@@ -938,7 +939,8 @@ impl RemoteAccessSession {
             protocol_version,
             ParticipantWriter::Livekit(stream),
             self.message_backlog_size,
-            self.participant_reset_tx.clone(),
+            self.pending_resets.clone(),
+            self.reset_notify.clone(),
             &self.cancellation_token,
         );
 
@@ -1021,7 +1023,6 @@ impl RemoteAccessSession {
         mut room_events: tokio::sync::mpsc::UnboundedReceiver<RoomEvent>,
     ) {
         let remote_access_session_id = self.remote_access_session_id();
-        let mut participant_reset_rx = self.participant_reset_rx.lock().await;
         loop {
             tokio::select! {
                 event = room_events.recv() => {
@@ -1030,11 +1031,17 @@ impl RemoteAccessSession {
                         return;
                     }
                 }
-                // Reset participants whose control streams have broken. This is
-                // the same flow as disconnect + reconnect: remove the old state,
-                // then re-add with a fresh stream and fresh advertisements.
-                Some(participant_id) = participant_reset_rx.recv() => {
-                    self.reset_participant(participant_id).await;
+                // Reset participants whose control queues overflowed or whose
+                // flush tasks encountered a write error. Drain the entire set
+                // atomically to deduplicate multiple reset requests.
+                () = self.reset_notify.notified() => {
+                    let identities: Vec<_> = {
+                        let mut set = self.pending_resets.lock();
+                        set.drain().collect()
+                    };
+                    for participant_id in identities {
+                        self.reset_participant(participant_id).await;
+                    }
                 }
             }
         }
@@ -1984,9 +1991,17 @@ mod tests {
         let identity = ParticipantIdentity(name.to_string());
         let version = protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone();
         let (tx, rx) = flume::bounded(16);
-        let (reset_tx, _reset_rx) = tokio::sync::mpsc::unbounded_channel();
+        let pending_resets = Arc::new(parking_lot::Mutex::new(HashSet::new()));
+        let reset_notify = Arc::new(tokio::sync::Notify::new());
         let cancel = CancellationToken::new();
-        let participant = Arc::new(Participant::new(identity, version, tx, reset_tx, cancel));
+        let participant = Arc::new(Participant::new(
+            identity,
+            version,
+            tx,
+            pending_resets,
+            reset_notify,
+            cancel,
+        ));
         (participant, rx)
     }
 
@@ -2312,19 +2327,26 @@ mod tests {
         assert_eq!(writer_a.writes(), vec![Bytes::from_static(b"msg_a")]);
     }
 
-    #[test]
-    fn try_queue_control_returns_false_when_full() {
+    fn make_test_participant(queue_size: usize) -> (Participant, flume::Receiver<Bytes>) {
         let version = protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone();
-        let (tx, _rx) = flume::bounded::<Bytes>(1);
-        let (reset_tx, _reset_rx) = tokio::sync::mpsc::unbounded_channel();
+        let (tx, rx) = flume::bounded::<Bytes>(queue_size);
+        let pending_resets = Arc::new(parking_lot::Mutex::new(HashSet::new()));
+        let reset_notify = Arc::new(tokio::sync::Notify::new());
         let cancel = CancellationToken::new();
         let participant = Participant::new(
             ParticipantIdentity("alice".to_string()),
             version,
             tx,
-            reset_tx,
+            pending_resets,
+            reset_notify,
             cancel,
         );
+        (participant, rx)
+    }
+
+    #[test]
+    fn try_queue_control_returns_false_when_full() {
+        let (participant, _rx) = make_test_participant(1);
 
         // First message fits.
         assert!(participant.try_queue_control(Bytes::from_static(b"first")));
@@ -2334,17 +2356,7 @@ mod tests {
 
     #[test]
     fn try_queue_control_returns_true_when_disconnected() {
-        let version = protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone();
-        let (tx, rx) = flume::bounded::<Bytes>(1);
-        let (reset_tx, _reset_rx) = tokio::sync::mpsc::unbounded_channel();
-        let cancel = CancellationToken::new();
-        let participant = Participant::new(
-            ParticipantIdentity("alice".to_string()),
-            version,
-            tx,
-            reset_tx,
-            cancel,
-        );
+        let (participant, rx) = make_test_participant(1);
 
         // Drop the receiver — channel disconnected.
         drop(rx);

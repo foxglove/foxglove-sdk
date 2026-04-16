@@ -1,6 +1,6 @@
 //! Per-participant state for a remote access session.
 
-#[cfg(test)]
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use bytes::Bytes;
@@ -23,7 +23,7 @@ const DEFAULT_FETCH_ASSET_PER_PARTICIPANT: usize = 32;
 ///
 /// Each participant has an identity, a per-participant control plane queue, and
 /// rate-limiting semaphores. The actual byte-stream writer lives in a dedicated
-/// flush task (spawned by `add_participant`), not in this struct.
+/// flush task (spawned by `Participant::spawn`), not in this struct.
 pub(crate) struct Participant {
     /// Locally-significant identifier for this particular instance of this participant.
     client_id: ClientId,
@@ -34,11 +34,13 @@ pub(crate) struct Participant {
     #[expect(dead_code)]
     protocol_version: Version,
     /// Per-participant control plane queue. The receiving end is owned by the
-    /// flush task spawned in `add_participant`.
+    /// flush task.
     control_tx: flume::Sender<Bytes>,
-    /// Channel to request a participant reset (disconnect + reconnect) when the
-    /// control queue is full.
-    reset_tx: tokio::sync::mpsc::UnboundedSender<ParticipantIdentity>,
+    /// Shared set of participant identities pending a reset. Inserting into this
+    /// set + notifying is how we signal `handle_room_events` to disconnect us.
+    pending_resets: Arc<parking_lot::Mutex<HashSet<ParticipantIdentity>>>,
+    /// Wakes `handle_room_events` when we add ourselves to `pending_resets`.
+    reset_notify: Arc<tokio::sync::Notify>,
     /// Per-participant cancellation token. Cancelled when the control queue
     /// overflows, signaling the flush task to stop immediately.
     cancel: CancellationToken,
@@ -62,14 +64,16 @@ impl Participant {
         protocol_version: Version,
         writer: ParticipantWriter,
         queue_size: usize,
-        reset_tx: tokio::sync::mpsc::UnboundedSender<ParticipantIdentity>,
+        pending_resets: Arc<parking_lot::Mutex<HashSet<ParticipantIdentity>>>,
+        reset_notify: Arc<tokio::sync::Notify>,
         session_cancel: &CancellationToken,
-    ) -> (std::sync::Arc<Self>, tokio::task::JoinHandle<()>) {
+    ) -> (Arc<Self>, tokio::task::JoinHandle<()>) {
         let (control_tx, control_rx) = flume::bounded::<Bytes>(queue_size);
         let cancel = session_cancel.child_token();
         let cancel_for_task = cancel.clone();
         let identity_for_task = identity.clone();
-        let reset_tx_for_task = reset_tx.clone();
+        let pending_resets_for_task = pending_resets.clone();
+        let reset_notify_for_task = reset_notify.clone();
 
         let flush_handle = tokio::spawn(async move {
             loop {
@@ -85,18 +89,22 @@ impl Participant {
                         "control write failed for {:?}, requesting reset: {e:?}",
                         identity_for_task,
                     );
-                    let _ = reset_tx_for_task.send(identity_for_task.clone());
+                    pending_resets_for_task
+                        .lock()
+                        .insert(identity_for_task.clone());
+                    reset_notify_for_task.notify_one();
                     break;
                 }
             }
         });
 
-        let participant = std::sync::Arc::new(Self {
+        let participant = Arc::new(Self {
             client_id: ClientId::next(),
             participant_id: identity,
             protocol_version,
             control_tx,
-            reset_tx,
+            pending_resets,
+            reset_notify,
             cancel,
             service_call_sem: Semaphore::new(DEFAULT_SERVICE_CALLS_PER_PARTICIPANT),
             fetch_asset_sem: Semaphore::new(DEFAULT_FETCH_ASSET_PER_PARTICIPANT),
@@ -112,7 +120,8 @@ impl Participant {
         identity: ParticipantIdentity,
         protocol_version: Version,
         control_tx: flume::Sender<Bytes>,
-        reset_tx: tokio::sync::mpsc::UnboundedSender<ParticipantIdentity>,
+        pending_resets: Arc<parking_lot::Mutex<HashSet<ParticipantIdentity>>>,
+        reset_notify: Arc<tokio::sync::Notify>,
         cancel: CancellationToken,
     ) -> Self {
         Self {
@@ -120,7 +129,8 @@ impl Participant {
             participant_id: identity,
             protocol_version,
             control_tx,
-            reset_tx,
+            pending_resets,
+            reset_notify,
             cancel,
             service_call_sem: Semaphore::new(DEFAULT_SERVICE_CALLS_PER_PARTICIPANT),
             fetch_asset_sem: Semaphore::new(DEFAULT_FETCH_ASSET_PER_PARTICIPANT),
@@ -176,7 +186,10 @@ impl Participant {
     pub(crate) fn send_control(&self, data: Bytes) {
         if !self.try_queue_control(data) {
             self.cancel.cancel();
-            let _ = self.reset_tx.send(self.participant_id.clone());
+            self.pending_resets
+                .lock()
+                .insert(self.participant_id.clone());
+            self.reset_notify.notify_one();
         }
     }
 
