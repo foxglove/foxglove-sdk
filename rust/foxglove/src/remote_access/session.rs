@@ -398,20 +398,13 @@ impl RemoteAccessSession {
     /// The caller must ensure that `handle_room_events` has stopped so no new
     /// `remove_participant` / `reset_participant` calls can race with us.
     pub(crate) async fn close(&self) {
-        let flush_handles = {
-            let mut state = self.state.write();
-            // Cancel each participant's flush task token. This ensures flush tasks
-            // exit even if they are blocked on a slow `writer.write()` call.
-            // On the normal shutdown path the session-level CancellationToken
-            // (parent) would fire too, but on room disconnect without cancellation
-            // this is the only signal.
-            for participant in state.collect_participants() {
-                participant.cancel();
-            }
-            // Clear participants — drops `Arc<Participant>` and `control_tx`.
-            state.clear_participants();
-            state.take_flush_handles()
-        };
+        let (participants, flush_handles) = self.state.write().take_participants();
+        // Cancel each participant's flush task so it breaks out of the recv/write
+        // select! and doesn't pick up new messages. In-flight writes will complete
+        // or fail once room.close() tears down the transport.
+        for participant in participants {
+            participant.cancel();
+        }
         for handle in flush_handles {
             let _ = handle.await;
         }
@@ -976,8 +969,12 @@ impl RemoteAccessSession {
 
         let removed = {
             let mut state = self.state.write();
+            // Cancel the flush task so it doesn't linger on a dead write.
+            if let Some(p) = state.get_participant(participant_id) {
+                p.cancel();
+            }
             let removed = state.remove_participant(participant_id);
-            // Detach the flush task — it exits when control_tx drops.
+            // Detach the flush handle — task exits via cancel or channel close.
             drop(state.remove_flush_handle(participant_id));
             removed
         };

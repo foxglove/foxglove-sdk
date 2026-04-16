@@ -107,11 +107,6 @@ impl SessionState {
         self.flush_handles.insert(identity, handle);
     }
 
-    /// Drains all flush task handles, returning them for awaiting during teardown.
-    pub fn take_flush_handles(&mut self) -> Vec<JoinHandle<()>> {
-        self.flush_handles.drain().map(|(_, h)| h).collect()
-    }
-
     /// Removes and returns the flush handle for a participant, if one was registered.
     pub fn remove_flush_handle(
         &mut self,
@@ -120,15 +115,16 @@ impl SessionState {
         self.flush_handles.remove(identity)
     }
 
-    /// Removes all participants, dropping their `Arc<Participant>` references.
-    /// This causes per-participant `control_tx` senders to drop, which signals
-    /// flush tasks to exit.
+    /// Removes all participants and their flush handles atomically, returning both.
     ///
     /// For use during session teardown only — does not clean up subscriptions,
     /// video subscribers, client channels, or parameter subscriptions (the room
-    /// is closing immediately after).
-    pub fn clear_participants(&mut self) {
-        self.participants.clear();
+    /// is closing immediately after). Does not fire listener callbacks
+    /// (`on_unsubscribe`, `on_client_unadvertise`, etc.).
+    pub fn take_participants(&mut self) -> (Vec<Arc<Participant>>, Vec<JoinHandle<()>>) {
+        let participants: Vec<_> = self.participants.drain().map(|(_, p)| p).collect();
+        let handles: Vec<_> = self.flush_handles.drain().map(|(_, h)| h).collect();
+        (participants, handles)
     }
 
     /// Inserts a participant if not already present.

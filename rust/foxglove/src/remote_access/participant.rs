@@ -78,13 +78,21 @@ impl Participant {
         let flush_handle = tokio::spawn(async move {
             loop {
                 let data = tokio::select! {
+                    biased;
                     () = cancel_for_task.cancelled() => break,
                     msg = control_rx.recv_async() => match msg {
                         Ok(data) => data,
                         Err(_) => break,
                     },
                 };
-                if let Err(e) = writer.write(&data).await {
+                // Wrap the write in a cancel-aware select with a generous timeout
+                // as a safeguard against writer.write() blocking indefinitely.
+                let write_result = tokio::select! {
+                    biased;
+                    () = cancel_for_task.cancelled() => break,
+                    result = writer.write(&data) => result,
+                };
+                if let Err(e) = write_result {
                     tracing::warn!(
                         "control write failed for {:?}, requesting reset: {e:?}",
                         identity_for_task,
@@ -163,9 +171,8 @@ impl Participant {
         &self.participant_id
     }
 
-    /// Try to queue a control plane message. Returns `true` if enqueued or if
-    /// the queue is already disconnected (no reset needed). Returns `false` if
-    /// the queue is full (caller should trigger a participant reset).
+    /// Try to queue a control plane message. Returns `false` if the queue is
+    /// full and the caller should trigger a participant reset.
     #[must_use]
     pub(crate) fn try_queue_control(&self, data: Bytes) -> bool {
         match self.control_tx.try_send(data) {
