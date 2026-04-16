@@ -190,7 +190,6 @@ private:
                                             const std::string& topicType,
                                             const std::string& encoding,
                                             const std::byte* schemaData, size_t schemaLen);
-  // Must NOT be called with _clientAdvertisementsMutex held. May throw.
   void publishClientData(const ClientAdvertisement& ad, const std::byte* data, size_t dataLen);
 
   void handleServiceRequest(const foxglove::ServiceRequest& request,
