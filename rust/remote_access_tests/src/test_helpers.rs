@@ -768,6 +768,9 @@ impl ViewerConnection {
 // TestGateway: starts a mock server + Gateway for integration tests.
 // ---------------------------------------------------------------------------
 
+type QosClassifierFn =
+    Box<dyn Fn(&foxglove::ChannelDescriptor) -> foxglove::remote_access::QosProfile + Send + Sync>;
+
 /// Options for starting a [`TestGateway`].
 #[derive(Default)]
 pub struct TestGatewayOptions {
@@ -776,13 +779,7 @@ pub struct TestGatewayOptions {
     pub capabilities: Vec<foxglove::remote_access::Capability>,
     pub pending_client_reader_timeout: Option<Duration>,
     pub services: Vec<Service>,
-    pub qos_classifier: Option<
-        Box<
-            dyn Fn(&foxglove::ChannelDescriptor) -> foxglove::remote_access::QosProfile
-                + Send
-                + Sync,
-        >,
-    >,
+    pub qos_classifier: Option<QosClassifierFn>,
 }
 
 /// A test gateway backed by a mock Foxglove API server and a LiveKit room.
