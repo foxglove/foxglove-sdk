@@ -321,6 +321,8 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
       std::bind(&FoxgloveBridge::gatewaySubscribe, this, _1, _2);
     gatewayOptions.callbacks.onUnsubscribe =
       std::bind(&FoxgloveBridge::gatewayUnsubscribe, this, _1, _2);
+    gatewayOptions.qos_classifier =
+      std::bind(&FoxgloveBridge::classifyRemoteAccessQos, this, _1);
 
     if (hasCapability(_capabilities, foxglove::WebSocketServerCapabilities::ClientPublish)) {
       gatewayOptions.callbacks.onClientAdvertise =
@@ -1290,22 +1292,19 @@ void FoxgloveBridge::fetchAsset(const std::string_view uriView,
   }
 }
 
-rclcpp::QoS FoxgloveBridge::determineQoS(const std::string& topic) {
-  // Select an appropriate subscription QOS profile. This is similar to how ros2 topic echo
-  // does it:
-  // https://github.com/ros2/ros2cli/blob/619b3d1c9/ros2topic/ros2topic/verb/echo.py#L137-L194
-  size_t depth = 0;
-  size_t reliabilityReliableEndpointsCount = 0;
-  size_t durabilityTransientLocalEndpointsCount = 0;
+FoxgloveBridge::TopicQosInfo FoxgloveBridge::collectTopicQosInfo(const std::string& topic) {
+  TopicQosInfo info;
+  info.bestEffortForced = isWhitelisted(topic, _bestEffortQosTopicWhiteListPatterns);
 
   const auto publisherInfo = this->get_publishers_info_by_topic(topic);
+  info.publisherCount = publisherInfo.size();
   for (const auto& publisher : publisherInfo) {
     const auto& qos = publisher.qos_profile();
     if (qos.reliability() == rclcpp::ReliabilityPolicy::Reliable) {
-      ++reliabilityReliableEndpointsCount;
+      ++info.reliableCount;
     }
     if (qos.durability() == rclcpp::DurabilityPolicy::TransientLocal) {
-      ++durabilityTransientLocalEndpointsCount;
+      ++info.transientLocalCount;
     }
     // Some RMWs do not retrieve history information of the publisher endpoint in which case the
     // history depth is 0. We use a lower limit of 1 here, so that the history depth is at least
@@ -1314,11 +1313,19 @@ rclcpp::QoS FoxgloveBridge::determineQoS(const std::string& topic) {
     // broadcasters). See also
     // https://github.com/foxglove/ros-foxglove-bridge/issues/238 and
     // https://github.com/foxglove/ros-foxglove-bridge/issues/208
-    const size_t publisherHistoryDepth = std::max(static_cast<size_t>(1), qos.depth());
-    depth = depth + publisherHistoryDepth;
+    info.totalHistoryDepth += std::max(static_cast<size_t>(1), qos.depth());
   }
 
-  depth = std::max(depth, _minQosDepth);
+  return info;
+}
+
+rclcpp::QoS FoxgloveBridge::determineQoS(const std::string& topic) {
+  // Select an appropriate subscription QOS profile. This is similar to how ros2 topic echo
+  // does it:
+  // https://github.com/ros2/ros2cli/blob/619b3d1c9/ros2topic/ros2topic/verb/echo.py#L137-L194
+  const auto info = collectTopicQosInfo(topic);
+
+  size_t depth = std::max(info.totalHistoryDepth, _minQosDepth);
   if (depth > _maxQosDepth) {
     RCLCPP_WARN(this->get_logger(),
                 "Limiting history depth for topic '%s' to %zu (was %zu). You may want to increase "
@@ -1330,13 +1337,13 @@ rclcpp::QoS FoxgloveBridge::determineQoS(const std::string& topic) {
   rclcpp::QoS qos{rclcpp::KeepLast(depth)};
 
   // Force the QoS to be "best_effort" if in the whitelist
-  if (isWhitelisted(topic, _bestEffortQosTopicWhiteListPatterns)) {
+  if (info.bestEffortForced) {
     qos.best_effort();
-  } else if (!publisherInfo.empty() && reliabilityReliableEndpointsCount == publisherInfo.size()) {
+  } else if (info.publisherCount > 0 && info.reliableCount == info.publisherCount) {
     // If all endpoints are reliable, ask for reliable
     qos.reliable();
   } else {
-    if (reliabilityReliableEndpointsCount > 0) {
+    if (info.reliableCount > 0) {
       RCLCPP_WARN(
         this->get_logger(),
         "Some, but not all, publishers on topic '%s' are offering "
@@ -1348,10 +1355,10 @@ rclcpp::QoS FoxgloveBridge::determineQoS(const std::string& topic) {
   }
 
   // If all endpoints are transient_local, ask for transient_local
-  if (!publisherInfo.empty() && durabilityTransientLocalEndpointsCount == publisherInfo.size()) {
+  if (info.publisherCount > 0 && info.transientLocalCount == info.publisherCount) {
     qos.transient_local();
   } else {
-    if (durabilityTransientLocalEndpointsCount > 0) {
+    if (info.transientLocalCount > 0) {
       RCLCPP_WARN(this->get_logger(),
                   "Some, but not all, publishers on topic '%s' are offering "
                   "QoSDurabilityPolicy.TRANSIENT_LOCAL. Falling back to "
@@ -1363,6 +1370,29 @@ rclcpp::QoS FoxgloveBridge::determineQoS(const std::string& topic) {
 
   return qos;
 }
+
+#ifdef FOXGLOVE_REMOTE_ACCESS
+foxglove::QosProfile FoxgloveBridge::classifyRemoteAccessQos(
+  const foxglove::ChannelDescriptor& channel) {
+  // Mirror the reliability/durability decisions made by determineQoS: a topic qualifies for a
+  // Reliable remote access profile only when it is not forced to best_effort by the whitelist
+  // and every publisher offers both Reliable and TransientLocal. Anything else falls back to
+  // the default (lossy data-track) profile.
+  foxglove::QosProfile profile;
+  const auto info = collectTopicQosInfo(std::string(channel.topic()));
+
+  if (info.bestEffortForced || info.publisherCount == 0) {
+    return profile;
+  }
+
+  const bool allReliable = info.reliableCount == info.publisherCount;
+  const bool allTransientLocal = info.transientLocalCount == info.publisherCount;
+  if (allReliable && allTransientLocal) {
+    profile.reliability = foxglove::Reliability::Reliable;
+  }
+  return profile;
+}
+#endif
 
 void FoxgloveBridge::onClientConnect() {
   publishClientCount();
