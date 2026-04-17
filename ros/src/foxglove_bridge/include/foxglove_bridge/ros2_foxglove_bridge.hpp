@@ -203,6 +203,16 @@ private:
 
   void publishClientCount();
 
+  struct TopicQosInfo {
+    size_t publisherCount = 0;
+    size_t reliableCount = 0;
+    size_t transientLocalCount = 0;
+    size_t totalHistoryDepth = 0;
+    bool bestEffortForced = false;
+  };
+
+  TopicQosInfo collectTopicQosInfo(const std::string& topic);
+
   rclcpp::QoS determineQoS(const std::string& topic);
 
 #ifdef FOXGLOVE_REMOTE_ACCESS
@@ -213,6 +223,7 @@ private:
   void gatewayClientMessage(uint32_t clientId, const foxglove::ChannelDescriptor& channel,
                             const std::byte* data, size_t dataLen);
   void gatewayConnectionStatusChanged(foxglove::RemoteAccessConnectionStatus status);
+  foxglove::QosProfile classifyRemoteAccessQos(const foxglove::ChannelDescriptor& channel);
 #endif
 };
 
