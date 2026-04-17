@@ -180,6 +180,7 @@ except ImportError:
 try:
     from .remote_access import Capability as RemoteAccessCapability
     from .remote_access import (
+        QosProfile,
         RemoteAccessGateway,
         RemoteAccessListener,
     )
@@ -194,6 +195,7 @@ try:
         services: list[Service] | None = None,
         context: Context | None = None,
         channel_filter: SinkChannelFilter | None = None,
+        qos_classifier: Callable[[ChannelDescriptor], QosProfile] | None = None,
         message_backlog_size: int | None = None,
         foxglove_api_url: str | None = None,
         foxglove_api_timeout: float | None = None,
@@ -214,6 +216,9 @@ try:
         :param channel_filter: A ``Callable`` that determines whether a channel should be logged
             to. Return ``True`` to log the channel, or ``False`` to skip it. By default, all
             channels will be logged.
+        :param qos_classifier: A ``Callable`` that returns the
+            :py:class:`foxglove.remote_access.QosProfile` to use for a given channel. If not set,
+            all channels use the default lossy profile.
         :param message_backlog_size: The maximum number of messages to buffer before dropping
             the oldest entries. Defaults to 1024.
         :param foxglove_api_url: Override the Foxglove API base URL.
@@ -228,6 +233,7 @@ try:
             services=services,
             context=context,
             channel_filter=channel_filter,
+            qos_classifier=qos_classifier,
             message_backlog_size=message_backlog_size,
             foxglove_api_url=foxglove_api_url,
             foxglove_api_timeout=foxglove_api_timeout,

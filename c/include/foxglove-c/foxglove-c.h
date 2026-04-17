@@ -392,6 +392,33 @@ enum foxglove_position_covariance_type
 typedef int32_t foxglove_position_covariance_type;
 #endif // __cplusplus
 
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+/**
+ * The reliability policy for a channel's data delivery.
+ */
+enum foxglove_reliability
+#ifdef __cplusplus
+  : uint8_t
+#endif // __cplusplus
+ {
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+  /**
+   * Data is sent over unreliable data tracks. This is the default.
+   */
+  FOXGLOVE_RELIABILITY_LOSSY = 0,
+#endif
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+  /**
+   * Data is sent over the reliable control channel (ordered, guaranteed delivery).
+   */
+  FOXGLOVE_RELIABILITY_RELIABLE = 1,
+#endif
+};
+#ifndef __cplusplus
+typedef uint8_t foxglove_reliability;
+#endif // __cplusplus
+#endif
+
 enum foxglove_scene_entity_deletion_type
 #ifdef __cplusplus
   : int32_t
@@ -2440,6 +2467,15 @@ typedef uint8_t foxglove_gateway_capability;
 
 #if defined(FOXGLOVE_REMOTE_ACCESS)
 /**
+ * Quality-of-service profile for a channel.
+ */
+typedef struct foxglove_qos_profile {
+  foxglove_reliability reliability;
+} foxglove_qos_profile;
+#endif
+
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+/**
  * Options for creating a remote access gateway.
  *
  * # Safety
@@ -2473,6 +2509,18 @@ typedef struct foxglove_gateway_options {
    * This method is invoked from the client's main poll loop and must not block.
    */
   bool (*sink_channel_filter)(const void *context, const struct foxglove_channel_descriptor *channel);
+  /**
+   * Context provided to the `qos_classifier` callback.
+   */
+  const void *qos_classifier_context;
+  /**
+   * A QoS classifier for channels.
+   *
+   * Returns a [`FoxgloveQosProfile`] for the given channel, determining how data is delivered.
+   * If not set, all channels use the default lossy profile.
+   */
+  struct foxglove_qos_profile (*qos_classifier)(const void *context,
+                                                const struct foxglove_channel_descriptor *channel);
   /**
    * Context provided to the `fetch_asset` callback.
    */

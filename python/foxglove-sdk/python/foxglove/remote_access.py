@@ -17,6 +17,8 @@ from foxglove import (
 from ._foxglove_py.remote_access import (
     Capability,
     Client,
+    QosProfile,
+    Reliability,
     RemoteAccessConnectionStatus,
     RemoteAccessGateway,
 )
@@ -148,6 +150,8 @@ __all__ = [
     "Parameter",
     "ParameterType",
     "ParameterValue",
+    "QosProfile",
+    "Reliability",
     "RemoteAccessConnectionStatus",
     "RemoteAccessGateway",
     "RemoteAccessListener",

@@ -25,6 +25,7 @@ class McapWritable(Protocol):
 from .mcap import MCAPWriteOptions, MCAPWriter
 from .remote_access import Capability as RemoteAccessCapability
 from .remote_access import (
+    QosProfile,
     RemoteAccessConnectionStatus,
     RemoteAccessGateway,
 )
@@ -355,6 +356,7 @@ def start_gateway(
     services: list[Service] | None = None,
     context: Context | None = None,
     channel_filter: SinkChannelFilter | None = None,
+    qos_classifier: Callable[[ChannelDescriptor], QosProfile] | None = None,
     message_backlog_size: int | None = None,
     foxglove_api_url: str | None = None,
     foxglove_api_timeout: float | None = None,

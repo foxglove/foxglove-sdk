@@ -12,6 +12,26 @@ from foxglove import (
     StatusLevel,
 )
 
+class Reliability(Enum):
+    """
+    The reliability policy for a channel's data delivery.
+    """
+
+    Lossy = ...
+    """Data is sent over unreliable data tracks. This is the default."""
+
+    Reliable = ...
+    """Data is sent over the reliable control channel (ordered, guaranteed delivery)."""
+
+class QosProfile:
+    """
+    Quality-of-service profile for a channel.
+    """
+
+    reliability: Reliability
+
+    def __init__(self, *, reliability: Reliability = Reliability.Lossy) -> None: ...
+
 class Capability(Enum):
     """
     An enumeration of capabilities that the remote access gateway can advertise to its clients.
