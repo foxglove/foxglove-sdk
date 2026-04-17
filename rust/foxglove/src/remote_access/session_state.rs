@@ -226,6 +226,11 @@ impl SessionState {
         self.participants.get_by_identity(identity).cloned()
     }
 
+    /// Returns the participant for the given `client_id`, if present.
+    pub fn get_participant_by_client_id(&self, client_id: ClientId) -> Option<Arc<Participant>> {
+        self.participants.get_by_client_id(client_id).cloned()
+    }
+
     /// Returns true if there is a participant for the given identity.
     pub fn has_participant(&self, identity: &ParticipantIdentity) -> bool {
         self.participants.contains_identity(identity)
@@ -765,6 +770,36 @@ mod tests {
         let state = SessionState::new();
         let id = ParticipantIdentity("nobody".to_string());
         assert!(state.get_participant(&id).is_none());
+    }
+
+    /// Protects the drain-time staleness check for `pending_resets`: after a
+    /// participant is removed and replaced (e.g. disconnect + reconnect), a
+    /// stale `ClientId` from the previous connection must not match the
+    /// replacement. If this ever returns `Some`, a stale reset request would
+    /// tear down a healthy reconnected participant.
+    #[test]
+    fn get_participant_by_client_id_does_not_match_replaced_participant() {
+        let mut state = SessionState::new();
+        let (id, original) = make_participant("alice");
+        let original_client_id = original.client_id();
+        state.insert_participant(id.clone(), original);
+        let _ = state.remove_participant(&id);
+        let (_, replacement) = make_participant("alice");
+        let replacement_client_id = replacement.client_id();
+        assert_ne!(original_client_id, replacement_client_id);
+        state.insert_participant(id, replacement);
+        assert!(
+            state
+                .get_participant_by_client_id(original_client_id)
+                .is_none(),
+            "stale ClientId must not resolve to the replacement participant",
+        );
+        assert!(
+            state
+                .get_participant_by_client_id(replacement_client_id)
+                .is_some(),
+            "fresh ClientId must resolve to the current participant",
+        );
     }
 
     #[test]

@@ -20,6 +20,7 @@ use tracing::{debug, error, info, trace, warn};
 use crate::protocol::v2::DecodeError;
 use crate::protocol::v2::parameter::Parameter;
 use crate::protocol::v2::server::ParameterValues;
+use crate::remote_common::ClientId;
 use crate::remote_common::connection_graph::ConnectionGraph;
 use crate::remote_common::{
     fetch_asset::AssetResponder,
@@ -157,11 +158,15 @@ pub(crate) struct RemoteAccessSession {
     connection_graph: Arc<parking_lot::Mutex<ConnectionGraph>>,
     /// Immutable `ServerInfo` message sent to each participant on connect and reset.
     server_info: ServerInfo,
-    /// Set of participant identities pending a reset (disconnect + reconnect).
+    /// Set of `ClientId`s pending a reset (disconnect + reconnect).
     /// Populated by `Participant::send_control` on queue overflow and by flush
     /// tasks on write failure. Drained by `handle_room_events`.
+    /// Keyed by `ClientId` (unique per physical connection) rather than
+    /// `ParticipantIdentity` (stable across reconnect) so a stale reset doesn't
+    /// fire against a reconnected participant reusing the same identity — the
+    /// drain-time lookup skips any `ClientId` no longer in `SessionState`.
     /// Using a set deduplicates multiple reset requests for the same participant.
-    pending_resets: Arc<parking_lot::Mutex<HashSet<ParticipantIdentity>>>,
+    pending_resets: Arc<parking_lot::Mutex<HashSet<ClientId>>>,
     /// Wakes `handle_room_events` when a new reset is added to `pending_resets`.
     reset_notify: Arc<tokio::sync::Notify>,
     /// Size of the per-participant control plane queue.
@@ -1061,14 +1066,26 @@ impl RemoteAccessSession {
         loop {
             // Drain pending resets before waiting for events. This covers the case
             // where a `Notify::notified()` wakeup was lost due to `select!`
-            // cancellation — the identities are still in the set even if the
+            // cancellation — the client ids are still in the set even if the
             // notification was consumed by a dropped future.
-            let identities: Vec<_> = {
+            let client_ids: Vec<ClientId> = {
                 let mut set = self.pending_resets.lock();
                 set.drain().collect()
             };
-            for participant_id in identities {
-                self.reset_participant(participant_id).await;
+            for client_id in client_ids {
+                // Look up the current participant by `ClientId`. If the id is
+                // no longer in `SessionState`, this reset request is stale —
+                // the participant was already removed (likely via the normal
+                // `ParticipantDisconnected` path) and may even have been
+                // replaced by a reconnected participant reusing the same
+                // identity but with a fresh `ClientId`. Skipping avoids
+                // spuriously tearing down the replacement.
+                let Some(participant) = self.state.read().get_participant_by_client_id(client_id)
+                else {
+                    continue;
+                };
+                self.reset_participant(participant.participant_id().clone())
+                    .await;
             }
 
             tokio::select! {

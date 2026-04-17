@@ -36,9 +36,13 @@ pub(crate) struct Participant {
     /// Per-participant control plane queue. The receiving end is owned by the
     /// flush task.
     control_tx: flume::Sender<Bytes>,
-    /// Shared set of participant identities pending a reset. Inserting into this
-    /// set + notifying is how we signal `handle_room_events` to disconnect us.
-    pending_resets: Arc<parking_lot::Mutex<HashSet<ParticipantIdentity>>>,
+    /// Shared set of `ClientId`s pending a reset. Inserting into this set +
+    /// notifying is how we signal `handle_room_events` to disconnect us.
+    /// Keyed by `ClientId` (unique per physical connection) rather than
+    /// `ParticipantIdentity` (stable across disconnect/reconnect) so that a
+    /// stale reset request doesn't fire against a reconnected participant
+    /// that happens to reuse the same identity.
+    pending_resets: Arc<parking_lot::Mutex<HashSet<ClientId>>>,
     /// Wakes `handle_room_events` when we add ourselves to `pending_resets`.
     reset_notify: Arc<tokio::sync::Notify>,
     /// Per-participant cancellation token. Cancelled when the control queue
@@ -64,13 +68,14 @@ impl Participant {
         protocol_version: Version,
         writer: ParticipantWriter,
         queue_size: usize,
-        pending_resets: Arc<parking_lot::Mutex<HashSet<ParticipantIdentity>>>,
+        pending_resets: Arc<parking_lot::Mutex<HashSet<ClientId>>>,
         reset_notify: Arc<tokio::sync::Notify>,
         session_cancel: &CancellationToken,
     ) -> (Arc<Self>, tokio::task::JoinHandle<()>) {
         let (control_tx, control_rx) = flume::bounded::<Bytes>(queue_size);
         let cancel = session_cancel.child_token();
         let cancel_for_task = cancel.clone();
+        let client_id = ClientId::next();
         let identity_for_task = identity.clone();
         let pending_resets_for_task = pending_resets.clone();
         let reset_notify_for_task = reset_notify.clone();
@@ -97,9 +102,7 @@ impl Participant {
                         "control write failed for {:?}, requesting reset: {e:?}",
                         identity_for_task,
                     );
-                    pending_resets_for_task
-                        .lock()
-                        .insert(identity_for_task.clone());
+                    pending_resets_for_task.lock().insert(client_id);
                     reset_notify_for_task.notify_one();
                     break;
                 }
@@ -107,7 +110,7 @@ impl Participant {
         });
 
         let participant = Arc::new(Self {
-            client_id: ClientId::next(),
+            client_id,
             participant_id: identity,
             protocol_version,
             control_tx,
@@ -128,7 +131,7 @@ impl Participant {
         identity: ParticipantIdentity,
         protocol_version: Version,
         control_tx: flume::Sender<Bytes>,
-        pending_resets: Arc<parking_lot::Mutex<HashSet<ParticipantIdentity>>>,
+        pending_resets: Arc<parking_lot::Mutex<HashSet<ClientId>>>,
         reset_notify: Arc<tokio::sync::Notify>,
         cancel: CancellationToken,
     ) -> Self {
@@ -199,9 +202,7 @@ impl Participant {
     pub(crate) fn send_control(&self, data: Bytes) {
         if !self.try_queue_control(data) {
             self.cancel.cancel();
-            self.pending_resets
-                .lock()
-                .insert(self.participant_id.clone());
+            self.pending_resets.lock().insert(self.client_id);
             self.reset_notify.notify_one();
         }
     }

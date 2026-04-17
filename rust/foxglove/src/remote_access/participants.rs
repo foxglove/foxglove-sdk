@@ -59,7 +59,6 @@ impl Participants {
     }
 
     /// Returns the participant for the given `client_id`, if present.
-    #[allow(dead_code)]
     pub fn get_by_client_id(&self, client_id: ClientId) -> Option<&Arc<Participant>> {
         self.by_client_id.get(&client_id)
     }
