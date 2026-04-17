@@ -321,8 +321,7 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
       std::bind(&FoxgloveBridge::gatewaySubscribe, this, _1, _2);
     gatewayOptions.callbacks.onUnsubscribe =
       std::bind(&FoxgloveBridge::gatewayUnsubscribe, this, _1, _2);
-    gatewayOptions.qos_classifier =
-      std::bind(&FoxgloveBridge::classifyRemoteAccessQos, this, _1);
+    gatewayOptions.qos_classifier = std::bind(&FoxgloveBridge::classifyRemoteAccessQos, this, _1);
 
     if (hasCapability(_capabilities, foxglove::WebSocketServerCapabilities::ClientPublish)) {
       gatewayOptions.callbacks.onClientAdvertise =
