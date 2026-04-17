@@ -443,10 +443,8 @@ impl RemoteAccessConnection {
         }
         context.remove_sink(session.sink_id());
         session.cancel();
-        if let Err(e) = video_metadata_task.await
-            && e.is_panic()
-        {
-            error!(remote_access_session_id, error = %e, "video metadata watcher panicked");
+        if let Err(e) = video_metadata_task.await {
+            error!(remote_access_session_id, error = %e, "video metadata watcher failed");
         }
 
         info!(remote_access_session_id, "disconnecting from room");

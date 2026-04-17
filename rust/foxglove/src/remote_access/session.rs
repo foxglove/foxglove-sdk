@@ -425,10 +425,8 @@ impl RemoteAccessSession {
         }
     }
 
-    /// Signal all session-scoped tasks to stop. This cancels the session's
-    /// `CancellationToken`, which fires the break in `run_video_metadata_watcher`,
-    /// `handle_byte_stream_from_client`, and each participant's flush task (via
-    /// their child tokens).
+    /// Cancel the session's `CancellationToken`, signaling all session-scoped
+    /// tasks to stop.
     pub(crate) fn cancel(&self) {
         self.cancellation_token.cancel();
     }
