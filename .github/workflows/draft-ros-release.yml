@@ -75,9 +75,11 @@ jobs:
 
       - name: Build .deb
         working-directory: ros
-        env:
-          SDK_ARG: ${{ (inputs.use_branch_sdk && matrix.package == 'bridge') && 'FOXGLOVE_CPP_SDK_DIR=/sdk/cpp/dist' || '' }}
-        run: make $SDK_ARG docker-deb-${{ matrix.package }}-${{ matrix.distro }}
+        run: |
+          make \
+            ${{ (inputs.use_branch_sdk && matrix.package == 'bridge') && 'FOXGLOVE_CPP_SDK_DIR=/sdk/cpp/dist' || '' }} \
+            ${{ matrix.distro == 'rolling' && 'EXTRA_DOCKER_ARGS="--build-arg USE_ROS_TESTING=true"' || '' }} \
+            docker-deb-${{ matrix.package }}-${{ matrix.distro }}
 
       - name: Upload .deb artifact
         uses: actions/upload-artifact@v7
