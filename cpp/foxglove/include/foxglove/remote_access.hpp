@@ -188,7 +188,7 @@ struct RemoteAccessGatewayOptions {
   /// @brief A QoS classifier callback.
   ///
   /// If set, this callback is invoked for each channel to determine its quality-of-service
-  /// profile. If not set, all channels default to lossy (data track delivery).
+  /// profile. If not set, all channels use the default lossy profile.
   QosClassifierFn qos_classifier;
   /// @brief Override the Foxglove API base URL.
   std::optional<std::string> foxglove_api_url;

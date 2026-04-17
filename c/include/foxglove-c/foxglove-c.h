@@ -2517,7 +2517,7 @@ typedef struct foxglove_gateway_options {
    * A QoS classifier for channels.
    *
    * Returns a [`FoxgloveQosProfile`] for the given channel, determining how data is delivered.
-   * If not set, all channels default to lossy (data track delivery).
+   * If not set, all channels use the default lossy profile.
    */
   struct foxglove_qos_profile (*qos_classifier)(const void *context,
                                                 const struct foxglove_channel_descriptor *channel);

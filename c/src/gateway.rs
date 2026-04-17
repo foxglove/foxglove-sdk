@@ -529,7 +529,7 @@ pub struct FoxgloveGatewayOptions<'a> {
     /// A QoS classifier for channels.
     ///
     /// Returns a [`FoxgloveQosProfile`] for the given channel, determining how data is delivered.
-    /// If not set, all channels default to lossy (data track delivery).
+    /// If not set, all channels use the default lossy profile.
     pub qos_classifier: Option<
         unsafe extern "C" fn(
             context: *const c_void,

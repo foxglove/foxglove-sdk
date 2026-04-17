@@ -203,7 +203,7 @@ try:
             channels will be logged.
         :param qos_classifier: A ``Callable`` that returns the
             :py:class:`foxglove.remote_access.QosProfile` to use for a given channel. If not set,
-            the default profile is used for all channels.
+            all channels use the default lossy profile.
         :param message_backlog_size: The maximum number of messages to buffer before dropping
             the oldest entries. Defaults to 1024.
         :param foxglove_api_url: Override the Foxglove API base URL.
