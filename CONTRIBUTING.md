@@ -45,6 +45,16 @@ All SDK languages are versioned and released together.
 2. Manually create a new Release in the GitHub UI. Ensure the tag uses the form `typescript/schemas/vX.Y.Z`.
 3. GitHub Actions will take care of the rest.
 
+### Python schema packages (`foxglove-schemas-protobuf`, `foxglove-schemas-flatbuffer`)
+
+These packages are versioned and released independently from the SDK.
+
+1. Create and merge a PR bumping the `version` in the package's `pyproject.toml` (and the corresponding entry in its `uv.lock`).
+2. From the merged commit on `main`, push a tag of the form:
+   - `python/foxglove-schemas-protobuf/vX.Y.Z`, or
+   - `python/foxglove-schemas-flatbuffer/vX.Y.Z`
+3. The `schemas` job in `.github/workflows/python.yml` will build the package and publish it to PyPI when it sees the matching tag.
+
 ### ROS
 
 For first-time setup, follow the guides for [installing bloom](http://ros-infrastructure.github.io/bloom/) and [authenticating with GitHub](https://wiki.ros.org/bloom/Tutorials/GithubManualAuthorization).
