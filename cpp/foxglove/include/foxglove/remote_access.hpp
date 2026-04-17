@@ -154,6 +154,7 @@ enum class Reliability : uint8_t {
 
 /// @brief Quality-of-service profile for a channel.
 struct QosProfile {
+  /// @brief The reliability policy for the channel's data delivery.
   Reliability reliability = Reliability::Lossy;
 };
 
