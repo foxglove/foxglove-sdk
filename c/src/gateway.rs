@@ -12,7 +12,7 @@ use crate::parameter::FoxgloveParameterArray;
 use crate::server::FoxgloveServerStatusLevel;
 use crate::service::FoxgloveService;
 use crate::sink_channel_filter::ChannelFilter;
-use crate::{FoxgloveContext, FoxgloveError, FoxgloveString, result_to_c};
+use crate::{FoxgloveContext, FoxgloveError, FoxgloveSinkId, FoxgloveString, result_to_c};
 
 /// The status of the remote access gateway connection.
 #[repr(u8)]
@@ -57,6 +57,8 @@ pub const FOXGLOVE_GATEWAY_CAPABILITY_PARAMETERS: u8 = 1 << 1;
 pub const FOXGLOVE_GATEWAY_CAPABILITY_SERVICES: u8 = 1 << 2;
 /// Allow clients to subscribe and make connection graph updates.
 pub const FOXGLOVE_GATEWAY_CAPABILITY_CONNECTION_GRAPH: u8 = 1 << 3;
+/// Allow clients to request assets.
+pub const FOXGLOVE_GATEWAY_CAPABILITY_ASSETS: u8 = 1 << 4;
 
 bitflags! {
     #[derive(Clone, Copy, PartialEq, Eq)]
@@ -65,6 +67,7 @@ bitflags! {
         const Parameters = FOXGLOVE_GATEWAY_CAPABILITY_PARAMETERS;
         const Services = FOXGLOVE_GATEWAY_CAPABILITY_SERVICES;
         const ConnectionGraph = FOXGLOVE_GATEWAY_CAPABILITY_CONNECTION_GRAPH;
+        const Assets = FOXGLOVE_GATEWAY_CAPABILITY_ASSETS;
     }
 }
 
@@ -84,6 +87,9 @@ impl FoxgloveGatewayCapabilityBitFlags {
             }
             FoxgloveGatewayCapabilityBitFlags::ConnectionGraph => {
                 Some(foxglove::remote_access::Capability::ConnectionGraph)
+            }
+            FoxgloveGatewayCapabilityBitFlags::Assets => {
+                Some(foxglove::remote_access::Capability::Assets)
             }
             _ => None,
         })
@@ -665,6 +671,21 @@ pub extern "C" fn foxglove_gateway_connection_status(
         return FoxgloveConnectionStatus::Shutdown;
     };
     FoxgloveConnectionStatus::from(handle.connection_status())
+}
+
+/// Get the sink ID of the gateway's current session.
+///
+/// Returns 0 if the gateway pointer is null, the gateway has been stopped,
+/// or no session is currently active.
+#[unsafe(no_mangle)]
+pub extern "C" fn foxglove_gateway_sink_id(gateway: Option<&FoxgloveGateway>) -> FoxgloveSinkId {
+    let Some(gateway) = gateway else {
+        return 0;
+    };
+    let Some(handle) = gateway.as_ref() else {
+        return 0;
+    };
+    handle.sink_id().map(|id| id.into()).unwrap_or(0)
 }
 
 /// Adds a service to the gateway and advertises it to connected clients.

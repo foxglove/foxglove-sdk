@@ -54,6 +54,8 @@ enum class RemoteAccessGatewayCapabilities : uint8_t {
   Services = 1 << 2,
   /// Allow clients to subscribe and make connection graph updates.
   ConnectionGraph = 1 << 3,
+  /// Allow clients to request assets.
+  Assets = 1 << 4,
 };
 
 /// @brief Combine two gateway capabilities.
@@ -147,6 +149,8 @@ struct RemoteAccessGatewayOptions {
   /// @brief The logging context for this gateway.
   Context context;
   /// @brief The name of the device/server reported in the ServerInfo message.
+  ///
+  /// If empty, the device name from the Foxglove platform is used.
   std::string name;
   /// @brief Device token for Foxglove platform authentication.
   ///
@@ -228,6 +232,13 @@ public:
   ///
   /// @param graph The connection graph to publish.
   [[nodiscard]] FoxgloveError publishConnectionGraph(const ConnectionGraph& graph) const;
+
+  /// @cond foxglove_internal
+  /// @brief Get the sink ID of the gateway's current session.
+  ///
+  /// Returns std::nullopt if no session is currently active.
+  [[nodiscard]] std::optional<uint64_t> sinkId() const;
+  /// @endcond
 
   /// @brief Gracefully shut down the gateway.
   FoxgloveError stop();

@@ -56,6 +56,13 @@
 #define FOXGLOVE_GATEWAY_CAPABILITY_CONNECTION_GRAPH (1 << 3)
 #endif
 
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+/**
+ * Allow clients to request assets.
+ */
+#define FOXGLOVE_GATEWAY_CAPABILITY_ASSETS (1 << 4)
+#endif
+
 #if !defined(__wasm__)
 /**
  * Allow clients to advertise channels to send data messages to the server.
@@ -5506,6 +5513,16 @@ foxglove_error foxglove_gateway_stop(struct foxglove_gateway *gateway);
  * Returns `Shutdown` if the gateway pointer is null or the gateway has been stopped.
  */
 foxglove_connection_status foxglove_gateway_connection_status(const struct foxglove_gateway *gateway);
+#endif
+
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+/**
+ * Get the sink ID of the gateway's current session.
+ *
+ * Returns 0 if the gateway pointer is null, the gateway has been stopped,
+ * or no session is currently active.
+ */
+FoxgloveSinkId foxglove_gateway_sink_id(const struct foxglove_gateway *gateway);
 #endif
 
 #if defined(FOXGLOVE_REMOTE_ACCESS)
