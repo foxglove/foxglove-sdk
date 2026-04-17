@@ -10,6 +10,7 @@ use tracing::{debug, info};
 use crate::protocol::v2::server::advertise;
 
 use crate::remote_access::participant::Participant;
+use crate::remote_access::participants::Participants;
 use crate::remote_access::qos::{QosProfile, Reliability};
 use crate::remote_access::session::{DataTrack, VideoInputSchema, VideoMetadata, VideoPublisher};
 use crate::remote_common::ClientId;
@@ -59,7 +60,7 @@ pub(crate) struct UnsubscribeResult {
 /// A subscriber is a "data subscriber" if they appear in `subscriptions` but not in
 /// `video_subscribers`. See [`Self::has_data_subscribers`].
 pub(crate) struct SessionState {
-    participants: HashMap<ParticipantIdentity, Arc<Participant>>,
+    participants: Participants,
     /// Channels that have been advertised to participants.
     channels: HashMap<ChannelId, Arc<RawChannel>>,
     /// QoS profile per channel.
@@ -90,7 +91,7 @@ pub(crate) struct SessionState {
 impl SessionState {
     pub fn new() -> Self {
         Self {
-            participants: HashMap::new(),
+            participants: Participants::new(),
             channels: HashMap::new(),
             qos_profiles: HashMap::new(),
             subscriptions: HashMap::new(),
@@ -126,7 +127,7 @@ impl SessionState {
     /// is closing immediately after). Does not fire listener callbacks
     /// (`on_unsubscribe`, `on_client_unadvertise`, etc.).
     pub fn take_participants(&mut self) -> (Vec<Arc<Participant>>, Vec<JoinHandle<()>>) {
-        let participants: Vec<_> = self.participants.drain().map(|(_, p)| p).collect();
+        let participants = self.participants.drain();
         let handles: Vec<_> = self.flush_handles.drain().map(|(_, h)| h).collect();
         (participants, handles)
     }
@@ -140,13 +141,9 @@ impl SessionState {
         identity: ParticipantIdentity,
         participant: Arc<Participant>,
     ) -> bool {
-        use std::collections::hash_map::Entry;
-        if let Entry::Vacant(v) = self.participants.entry(identity) {
-            v.insert(participant);
-            true
-        } else {
-            false
-        }
+        debug_assert_eq!(&identity, participant.participant_id());
+        let _ = identity;
+        self.participants.insert(participant)
     }
 
     /// Removes a participant and all of its subscriptions.
@@ -155,7 +152,7 @@ impl SessionState {
     /// and any client channels that were advertised by the participant.
     #[must_use]
     pub fn remove_participant(&mut self, identity: &ParticipantIdentity) -> RemovedSubscriptions {
-        let Some(participant) = self.participants.remove(identity) else {
+        let Some(participant) = self.participants.remove_by_identity(identity) else {
             return RemovedSubscriptions {
                 client_id: None,
                 last_unsubscribed: SmallVec::new(),
@@ -226,17 +223,17 @@ impl SessionState {
 
     /// Returns the participant for the given identity, if present.
     pub fn get_participant(&self, identity: &ParticipantIdentity) -> Option<Arc<Participant>> {
-        self.participants.get(identity).cloned()
+        self.participants.get_by_identity(identity).cloned()
     }
 
     /// Returns true if there is a participant for the given identity.
     pub fn has_participant(&self, identity: &ParticipantIdentity) -> bool {
-        self.participants.contains_key(identity)
+        self.participants.contains_identity(identity)
     }
 
     /// Collects and returns all current participants.
     pub fn collect_participants(&self) -> SmallVec<[Arc<Participant>; 8]> {
-        self.participants.values().cloned().collect()
+        self.participants.iter().cloned().collect()
     }
 
     /// Records a client-advertised channel for a participant.
@@ -249,10 +246,10 @@ impl SessionState {
         channel: ChannelDescriptor,
     ) -> bool {
         debug_assert!(
-            self.participants.contains_key(identity),
+            self.participants.contains_identity(identity),
             "Participant does not exist for identity: {identity:?}"
         );
-        if !self.participants.contains_key(identity) {
+        if !self.participants.contains_identity(identity) {
             return false;
         }
         let map = self.client_channels.entry(identity.clone()).or_default();
@@ -304,7 +301,7 @@ impl SessionState {
         subscribers
             .iter()
             .filter_map(|identity| {
-                let participant = self.participants.get(identity)?;
+                let participant = self.participants.get_by_identity(identity)?;
                 Some((participant.client_id(), identity.clone()))
             })
             .collect()
@@ -342,7 +339,7 @@ impl SessionState {
         subscribers
             .iter()
             .filter(|identity| !video_subs.is_some_and(|vs| vs.contains(identity)))
-            .filter_map(|identity| self.participants.get(identity).cloned())
+            .filter_map(|identity| self.participants.get_by_identity(identity).cloned())
             .collect()
     }
 
@@ -751,7 +748,7 @@ mod tests {
         let mut state = SessionState::new();
         let (id, p1) = make_participant("alice");
         assert!(state.insert_participant(id.clone(), p1));
-        let (_, p2) = make_participant("bob");
+        let (_, p2) = make_participant("alice");
         assert!(!state.insert_participant(id, p2));
     }
 
