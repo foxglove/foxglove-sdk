@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import atexit
 import logging
+import sys
 from collections.abc import Callable
 from typing import TYPE_CHECKING, TypeAlias, Union
 
@@ -102,7 +103,8 @@ try:
         ]
     )
 except ImportError:
-    pass
+    if sys.platform != "emscripten":
+        raise
 
 
 try:
@@ -171,7 +173,8 @@ try:
     ]
 
 except ImportError:
-    pass
+    if sys.platform != "emscripten":
+        raise
 
 
 try:
@@ -233,7 +236,8 @@ try:
     __all__ += ["start_gateway"]
 
 except ImportError:
-    pass
+    if sys.platform != "emscripten":
+        raise
 
 
 def set_log_level(level: int | str = "INFO") -> None:
