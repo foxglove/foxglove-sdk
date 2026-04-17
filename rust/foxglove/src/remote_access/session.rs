@@ -160,12 +160,8 @@ pub(crate) struct RemoteAccessSession {
     server_info: ServerInfo,
     /// Set of `ClientId`s pending a reset (disconnect + reconnect).
     /// Populated by `Participant::send_control` on queue overflow and by flush
-    /// tasks on write failure. Drained by `handle_room_events`.
-    /// Keyed by `ClientId` (unique per physical connection) rather than
-    /// `ParticipantIdentity` (stable across reconnect) so a stale reset doesn't
-    /// fire against a reconnected participant reusing the same identity — the
-    /// drain-time lookup skips any `ClientId` no longer in `SessionState`.
-    /// Using a set deduplicates multiple reset requests for the same participant.
+    /// tasks on write failure. Drained by `handle_room_events`. See
+    /// [`Participant::pending_resets`] for why this is keyed by `ClientId`.
     pending_resets: Arc<parking_lot::Mutex<HashSet<ClientId>>>,
     /// Wakes `handle_room_events` when a new reset is added to `pending_resets`.
     reset_notify: Arc<tokio::sync::Notify>,
@@ -993,7 +989,7 @@ impl RemoteAccessSession {
         // caller is responsible for ensuring this function is not called concurrently for the same
         // participant identity.
         let mut state = self.state.write();
-        let did_insert = state.insert_participant(participant_id.clone(), participant);
+        let did_insert = state.insert_participant(participant);
         assert!(did_insert);
         state.insert_flush_handle(participant_id, flush_handle);
         Ok(())
@@ -1072,14 +1068,14 @@ impl RemoteAccessSession {
                 let mut set = self.pending_resets.lock();
                 set.drain().collect()
             };
+            // `handle_room_events` is the single task driving participant
+            // membership during the session lifecycle, so the lookup below
+            // cannot be invalidated before `reset_participant` runs. A
+            // `ClientId` no longer registered means the request is stale —
+            // the participant was already removed and may have been replaced
+            // by a reconnection reusing the same identity; skipping avoids
+            // spuriously tearing down that replacement.
             for client_id in client_ids {
-                // Look up the current participant by `ClientId`. If the id is
-                // no longer in `SessionState`, this reset request is stale —
-                // the participant was already removed (likely via the normal
-                // `ParticipantDisconnected` path) and may even have been
-                // replaced by a reconnected participant reusing the same
-                // identity but with a fresh `ClientId`. Skipping avoids
-                // spuriously tearing down the replacement.
                 let Some(participant) = self.state.read().get_participant_by_client_id(client_id)
                 else {
                     continue;

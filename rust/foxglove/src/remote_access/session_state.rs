@@ -136,13 +136,7 @@ impl SessionState {
     ///
     /// Returns true if this is a new participant, or false if there was already a participant
     /// registered with this identity.
-    pub fn insert_participant(
-        &mut self,
-        identity: ParticipantIdentity,
-        participant: Arc<Participant>,
-    ) -> bool {
-        debug_assert_eq!(&identity, participant.participant_id());
-        let _ = identity;
+    pub fn insert_participant(&mut self, participant: Arc<Participant>) -> bool {
         self.participants.insert(participant)
     }
 
@@ -744,24 +738,24 @@ mod tests {
     #[test]
     fn insert_new_participant() {
         let mut state = SessionState::new();
-        let (id, p) = make_participant("alice");
-        assert!(state.insert_participant(id.clone(), p));
+        let (_, p) = make_participant("alice");
+        assert!(state.insert_participant(p));
     }
 
     #[test]
     fn insert_existing_participant() {
         let mut state = SessionState::new();
-        let (id, p1) = make_participant("alice");
-        assert!(state.insert_participant(id.clone(), p1));
+        let (_, p1) = make_participant("alice");
+        assert!(state.insert_participant(p1));
         let (_, p2) = make_participant("alice");
-        assert!(!state.insert_participant(id, p2));
+        assert!(!state.insert_participant(p2));
     }
 
     #[test]
     fn get_participant_returns_existing() {
         let mut state = SessionState::new();
         let (id, p) = make_participant("alice");
-        state.insert_participant(id.clone(), p);
+        state.insert_participant(p);
         assert!(state.get_participant(&id).is_some());
     }
 
@@ -782,12 +776,12 @@ mod tests {
         let mut state = SessionState::new();
         let (id, original) = make_participant("alice");
         let original_client_id = original.client_id();
-        state.insert_participant(id.clone(), original);
+        state.insert_participant(original);
         let _ = state.remove_participant(&id);
         let (_, replacement) = make_participant("alice");
         let replacement_client_id = replacement.client_id();
         assert_ne!(original_client_id, replacement_client_id);
-        state.insert_participant(id, replacement);
+        state.insert_participant(replacement);
         assert!(
             state
                 .get_participant_by_client_id(original_client_id)
@@ -815,7 +809,7 @@ mod tests {
     fn remove_participant_cleans_up_subscriptions() {
         let mut state = SessionState::new();
         let (id, p) = make_participant("alice");
-        state.insert_participant(id.clone(), p.clone());
+        state.insert_participant(p.clone());
 
         let ch = make_channel("/topic1");
         let ch_id = ch.id();
@@ -831,9 +825,9 @@ mod tests {
     fn remove_participant_reports_only_last_unsubscribed_channels() {
         let mut state = SessionState::new();
         let (id_a, pa) = make_participant("alice");
-        let (id_b, pb) = make_participant("bob");
-        state.insert_participant(id_a.clone(), pa.clone());
-        state.insert_participant(id_b.clone(), pb.clone());
+        let (_, pb) = make_participant("bob");
+        state.insert_participant(pa.clone());
+        state.insert_participant(pb.clone());
 
         let ch1 = make_channel("/topic1");
         let ch2 = make_channel("/topic2");
@@ -856,7 +850,7 @@ mod tests {
     fn remove_participant_cleans_up_video_subscriptions() {
         let mut state = SessionState::new();
         let (id, p) = make_participant("alice");
-        state.insert_participant(id.clone(), p.clone());
+        state.insert_participant(p.clone());
 
         let ch = make_channel("/topic1");
         let ch_id = ch.id();
@@ -903,8 +897,8 @@ mod tests {
         let mut state = SessionState::new();
         let (id_a, pa) = make_participant("alice");
         let (id_b, pb) = make_participant("bob");
-        state.insert_participant(id_a.clone(), pa.clone());
-        state.insert_participant(id_b.clone(), pb.clone());
+        state.insert_participant(pa.clone());
+        state.insert_participant(pb.clone());
 
         let ch = make_channel("/topic1");
         let ch_id = ch.id();
@@ -923,8 +917,8 @@ mod tests {
     fn channel_subscriber_clients_empty_after_remove_channel() {
         let mut state = SessionState::new();
         let ch = make_channel("/topic1");
-        let (id, p) = make_participant("alice");
-        state.insert_participant(id.clone(), p.clone());
+        let (_, p) = make_participant("alice");
+        state.insert_participant(p.clone());
         state.insert_channel(&ch);
         let _ = state.subscribe(&p, &[ch.id()]);
 
@@ -1063,10 +1057,10 @@ mod tests {
     #[test]
     fn collect_participants_yields_all() {
         let mut state = SessionState::new();
-        let (id_a, pa) = make_participant("alice");
-        let (id_b, pb) = make_participant("bob");
-        state.insert_participant(id_a, pa);
-        state.insert_participant(id_b, pb);
+        let (_, pa) = make_participant("alice");
+        let (_, pb) = make_participant("bob");
+        state.insert_participant(pa);
+        state.insert_participant(pb);
         assert_eq!(state.collect_participants().len(), 2);
     }
 
@@ -1225,9 +1219,9 @@ mod tests {
     fn remove_participant_with_mixed_video_preferences() {
         let mut state = SessionState::new();
         let (id_a, pa) = make_participant("alice");
-        let (id_b, pb) = make_participant("bob");
-        state.insert_participant(id_a.clone(), pa.clone());
-        state.insert_participant(id_b.clone(), pb.clone());
+        let (_, pb) = make_participant("bob");
+        state.insert_participant(pa.clone());
+        state.insert_participant(pb.clone());
 
         let ch = make_channel("/topic1");
         let ch_id = ch.id();
@@ -1357,9 +1351,9 @@ mod tests {
     fn remove_participant_video_subscriber_while_other_video_remains() {
         let mut state = SessionState::new();
         let (id_a, pa) = make_participant("alice");
-        let (id_b, pb) = make_participant("bob");
-        state.insert_participant(id_a.clone(), pa.clone());
-        state.insert_participant(id_b.clone(), pb.clone());
+        let (_, pb) = make_participant("bob");
+        state.insert_participant(pa.clone());
+        state.insert_participant(pb.clone());
 
         let ch = make_channel("/topic1");
         let ch_id = ch.id();
@@ -1390,7 +1384,7 @@ mod tests {
     fn insert_client_channel_succeeds_for_new_channel() {
         let mut state = SessionState::new();
         let (id, p) = make_participant("alice");
-        state.insert_participant(id.clone(), p);
+        state.insert_participant(p);
         let ch = make_client_channel(1, "/cmd");
 
         assert!(state.insert_client_channel(&id, ch));
@@ -1400,7 +1394,7 @@ mod tests {
     fn insert_client_channel_returns_false_for_duplicate() {
         let mut state = SessionState::new();
         let (id, p) = make_participant("alice");
-        state.insert_participant(id.clone(), p);
+        state.insert_participant(p);
         let ch = make_client_channel(1, "/cmd");
 
         assert!(state.insert_client_channel(&id, ch.clone()));
@@ -1411,7 +1405,7 @@ mod tests {
     fn remove_client_channel_returns_descriptor() {
         let mut state = SessionState::new();
         let (id, p) = make_participant("alice");
-        state.insert_participant(id.clone(), p);
+        state.insert_participant(p);
         let ch = make_client_channel(1, "/cmd");
 
         state.insert_client_channel(&id, ch);
@@ -1436,7 +1430,7 @@ mod tests {
     fn remove_participant_returns_subscribed_descriptors() {
         let mut state = SessionState::new();
         let (id, p) = make_participant("alice");
-        state.insert_participant(id.clone(), p.clone());
+        state.insert_participant(p.clone());
 
         let ch1 = make_channel("/topic1");
         let ch2 = make_channel("/topic2");
@@ -1459,7 +1453,7 @@ mod tests {
     fn remove_participant_cleans_up_client_channels() {
         let mut state = SessionState::new();
         let (id, p) = make_participant("alice");
-        state.insert_participant(id.clone(), p);
+        state.insert_participant(p);
 
         state.insert_client_channel(&id, make_client_channel(1, "/cmd_vel"));
         state.insert_client_channel(&id, make_client_channel(2, "/joy"));
@@ -1478,7 +1472,7 @@ mod tests {
     fn remove_participant_with_no_client_channels_yields_empty_vec() {
         let mut state = SessionState::new();
         let (id, p) = make_participant("alice");
-        state.insert_participant(id.clone(), p);
+        state.insert_participant(p);
 
         let removed = state.remove_participant(&id);
         assert!(removed.client_channels.is_empty());
@@ -1488,7 +1482,7 @@ mod tests {
     fn get_client_channel_returns_channel() {
         let mut state = SessionState::new();
         let (id, p) = make_participant("alice");
-        state.insert_participant(id.clone(), p);
+        state.insert_participant(p);
         let ch = make_client_channel(1, "/cmd");
 
         state.insert_client_channel(&id, ch);
@@ -1509,7 +1503,7 @@ mod tests {
     fn get_client_channel_returns_none_for_unknown_channel() {
         let mut state = SessionState::new();
         let (id, p) = make_participant("alice");
-        state.insert_participant(id.clone(), p);
+        state.insert_participant(p);
         state.insert_client_channel(&id, make_client_channel(1, "/cmd"));
         assert!(state.get_client_channel(&id, ChannelId::new(99)).is_none());
     }
@@ -1595,9 +1589,9 @@ mod tests {
     fn data_subscriber_participants_returns_data_only_subscribers() {
         let mut state = SessionState::new();
         let (id_a, pa) = make_participant("alice");
-        let (id_b, pb) = make_participant("bob");
-        state.insert_participant(id_a.clone(), pa.clone());
-        state.insert_participant(id_b.clone(), pb.clone());
+        let (_, pb) = make_participant("bob");
+        state.insert_participant(pa.clone());
+        state.insert_participant(pb.clone());
 
         let ch = make_channel("/data");
         let ch_id = ch.id();
@@ -1617,8 +1611,8 @@ mod tests {
     #[test]
     fn data_subscriber_participants_empty_when_all_are_video() {
         let mut state = SessionState::new();
-        let (id, p) = make_participant("alice");
-        state.insert_participant(id.clone(), p.clone());
+        let (_, p) = make_participant("alice");
+        state.insert_participant(p.clone());
 
         let ch = make_channel("/cam");
         let ch_id = ch.id();
