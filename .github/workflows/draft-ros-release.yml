@@ -10,9 +10,6 @@ on:
         type: boolean
         default: false
 
-permissions:
-  contents: write
-
 jobs:
   build-cpp-dist:
     # Only needed when overriding the SDK with a branch build; on tag pushes we
@@ -93,6 +90,8 @@ jobs:
     needs: [build-deb]
     if: ${{ github.event_name == 'push' && needs.build-deb.result == 'success' }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v6
 
