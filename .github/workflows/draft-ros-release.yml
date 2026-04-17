@@ -1,6 +1,8 @@
 name: Draft ROS Release
 
 on:
+  # FOR TESTING
+  pull_request: {}
   push:
     tags: ["ros-v*"]
   workflow_dispatch:
@@ -14,7 +16,7 @@ jobs:
   build-cpp-dist:
     # Only needed when overriding the SDK with a branch build; on tag pushes we
     # let FetchContent pull the released SDK.
-    if: ${{ inputs.use_branch_sdk }}
+    #if: ${{ inputs.use_branch_sdk }}
     strategy:
       fail-fast: false
       matrix:
@@ -67,7 +69,7 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Download C++ SDK artifact
-        if: ${{ inputs.use_branch_sdk && matrix.package == 'bridge' }}
+        if: ${{ matrix.package == 'bridge' }}
         uses: actions/download-artifact@v8
         with:
           name: cpp-sdk-${{ matrix.arch }}
@@ -77,7 +79,7 @@ jobs:
         working-directory: ros
         run: |
           make \
-            ${{ (inputs.use_branch_sdk && matrix.package == 'bridge') && 'FOXGLOVE_CPP_SDK_DIR=/sdk/cpp/dist' || '' }} \
+            ${{ matrix.package == 'bridge' && 'FOXGLOVE_CPP_SDK_DIR=/sdk/cpp/dist' || '' }} \
             ${{ matrix.distro == 'rolling' && 'EXTRA_DOCKER_ARGS="--build-arg USE_ROS_TESTING=true"' || '' }} \
             docker-deb-${{ matrix.package }}-${{ matrix.distro }}
 
@@ -90,7 +92,7 @@ jobs:
 
   draft-release:
     needs: [build-deb]
-    if: ${{ github.event_name == 'push' && needs.build-deb.result == 'success' }}
+    if: ${{ github.event_name == 'pull_request' && needs.build-deb.result == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
