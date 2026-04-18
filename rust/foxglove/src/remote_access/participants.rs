@@ -79,7 +79,7 @@ impl Participants {
     }
 
     /// Removes all participants and returns them.
-    pub fn drain(&mut self) -> Vec<Arc<Participant>> {
+    pub fn take(&mut self) -> Vec<Arc<Participant>> {
         self.by_client_id.clear();
         self.by_identity.drain().map(|(_, p)| p).collect()
     }
@@ -172,14 +172,14 @@ mod tests {
     }
 
     #[test]
-    fn drain_clears_both_indexes_and_returns_all() {
+    fn take_clears_both_indexes_and_returns_all() {
         let mut ps = Participants::new();
         let alice = make_participant("alice");
         let alice_client_id = alice.client_id();
         ps.insert(alice);
         ps.insert(make_participant("bob"));
-        let drained = ps.drain();
-        assert_eq!(drained.len(), 2);
+        let taken = ps.take();
+        assert_eq!(taken.len(), 2);
         assert_eq!(ps.len(), 0);
         assert!(ps.get_by_client_id(alice_client_id).is_none());
     }

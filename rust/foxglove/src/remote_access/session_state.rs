@@ -127,7 +127,7 @@ impl SessionState {
     /// is closing immediately after). Does not fire listener callbacks
     /// (`on_unsubscribe`, `on_client_unadvertise`, etc.).
     pub fn take_participants(&mut self) -> (Vec<Arc<Participant>>, Vec<JoinHandle<()>>) {
-        let participants = self.participants.drain();
+        let participants = self.participants.take();
         let handles: Vec<_> = self.flush_handles.drain().map(|(_, h)| h).collect();
         (participants, handles)
     }
