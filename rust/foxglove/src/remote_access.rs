@@ -7,6 +7,7 @@ mod credentials_provider;
 mod gateway;
 mod listener;
 mod participant;
+mod participants;
 pub(super) mod protocol_version;
 mod qos;
 mod rtt_tracker;
