@@ -6,7 +6,7 @@ use bytes::Bytes;
 use futures_util::StreamExt;
 use indexmap::IndexSet;
 use libwebrtc::video_source::{RtcVideoSource, native::NativeVideoSource};
-use livekit::options::TrackPublishOptions;
+use livekit::options::{TrackPublishOptions, VideoCodec};
 use livekit::{ByteStreamReader, Room, StreamByteOptions, id::ParticipantIdentity};
 use livekit::{StreamWriter, prelude::*};
 use parking_lot::RwLock;
@@ -1929,8 +1929,15 @@ impl RemoteAccessSession {
             let session = self.clone();
             tokio::spawn(async move {
                 let local_track = LocalTrack::Video(track);
+                // Prefer H.264 so that the libwebrtc VAAPI encoder (H.264-only) can be used
+                // on Linux hosts that have libva + a VA driver available. VP8/VP9/AV1 paths
+                // are software-only in our builds, so H.264 is at worst parity elsewhere.
+                let publish_options = TrackPublishOptions {
+                    video_codec: VideoCodec::H264,
+                    ..Default::default()
+                };
                 match local_participant
-                    .publish_track(local_track, TrackPublishOptions::default())
+                    .publish_track(local_track, publish_options)
                     .await
                 {
                     Ok(publication) => {
