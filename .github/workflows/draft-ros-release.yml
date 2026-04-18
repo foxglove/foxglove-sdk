@@ -1,0 +1,151 @@
+name: Draft ROS Release
+
+on:
+  push:
+    tags: ["ros-v*"]
+  workflow_dispatch:
+    inputs:
+      use_branch_sdk:
+        description: "Build the bridge against the SDK at HEAD (via `make build-cpp-dist`) instead of the released SDK"
+        type: boolean
+        default: false
+
+jobs:
+  build-cpp-dist:
+    # Only needed when overriding the SDK with a branch build; on tag pushes we
+    # let FetchContent pull the released SDK.
+    if: ${{ inputs.use_branch_sdk }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            # Pinned to 22.04 so libfoxglove.a is compatible with ROS Humble (glibc 2.35)
+            runs-on: ubuntu-22.04
+          - arch: aarch64
+            runs-on: ubuntu-22.04-arm
+    runs-on: ${{ matrix.runs-on }}
+    name: "build-cpp-dist (${{ matrix.arch }})"
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libglib2.0-dev libva-dev libwebsockets-dev
+          echo "CC=gcc" >> $GITHUB_ENV
+          echo "CXX=g++" >> $GITHUB_ENV
+
+      - name: Build C++ SDK
+        run: make -f Container.mk build-cpp-dist
+
+      - name: Upload SDK artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: cpp-sdk-${{ matrix.arch }}
+          path: cpp/dist
+          retention-days: 1
+
+  build-deb:
+    needs: [build-cpp-dist]
+    # Run when build-cpp-dist succeeded (branch-SDK mode) or was skipped (release-SDK mode).
+    if: ${{ always() && (needs.build-cpp-dist.result == 'success' || needs.build-cpp-dist.result == 'skipped') }}
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x86_64, aarch64]
+        distro: [humble, jazzy, kilted, rolling]
+        package: [bridge, msgs]
+        include:
+          - arch: x86_64
+            runs-on: ubuntu-22.04
+          - arch: aarch64
+            runs-on: ubuntu-22.04-arm
+    runs-on: ${{ matrix.runs-on }}
+    name: "build-deb (${{ matrix.distro }}, ${{ matrix.arch }}, ${{ matrix.package }})"
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Download C++ SDK artifact
+        if: ${{ inputs.use_branch_sdk && matrix.package == 'bridge' }}
+        uses: actions/download-artifact@v8
+        with:
+          name: cpp-sdk-${{ matrix.arch }}
+          path: cpp/dist
+
+      - name: Build .deb
+        working-directory: ros
+        run: |
+          make \
+            ${{ (inputs.use_branch_sdk && matrix.package == 'bridge') && 'FOXGLOVE_CPP_SDK_DIR=/sdk/cpp/dist' || '' }} \
+            ${{ matrix.distro == 'rolling' && 'EXTRA_DOCKER_ARGS="--build-arg USE_ROS_TESTING=true"' || '' }} \
+            docker-deb-${{ matrix.package }}-${{ matrix.distro }}
+
+      - name: Upload .deb artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: ros-${{ matrix.distro }}-foxglove-${{ matrix.package }}-${{ matrix.arch }}-deb
+          path: ros/dist/*.deb
+          retention-days: 7
+
+  draft-release:
+    needs: [build-deb]
+    if: ${{ github.event_name == 'push' && needs.build-deb.result == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Download all .deb artifacts
+        uses: actions/download-artifact@v8
+        with:
+          pattern: "ros-*-deb"
+          path: debs
+          merge-multiple: true
+
+      - name: List debs
+        run: find debs -type f -name '*.deb' | sort
+
+      - name: Build release notes from CHANGELOGs
+        run: |
+          set -euo pipefail
+          extract() {
+            # Print from the first "X.Y.Z (date)" heading up to (but not including) the second.
+            awk '
+              /^[0-9]+\.[0-9]+\.[0-9]+ \(/ {
+                count++
+                if (count == 2) exit
+              }
+              count == 1 { print }
+            ' "$1"
+          }
+          {
+            echo "## foxglove_bridge"
+            echo
+            extract ros/src/foxglove_bridge/CHANGELOG.rst
+            echo
+            echo "## foxglove_msgs"
+            echo
+            extract ros/src/foxglove_msgs/CHANGELOG.rst
+          } > release-notes.md
+          cat release-notes.md
+
+      - name: Create draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            debs/*.deb \
+            --title "${GITHUB_REF_NAME}" \
+            --notes-file release-notes.md \
+            --draft
+
+  status:
+    name: status
+    needs: [build-cpp-dist, build-deb, draft-release]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1
