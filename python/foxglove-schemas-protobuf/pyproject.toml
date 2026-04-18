@@ -18,7 +18,7 @@ documentation = "https://docs.foxglove.dev/"
 
 [dependency-groups]
 dev = [
-    "pytest>=8.3.4,<9",
+    "pytest>=8.3.4,<10",
     "mypy-protobuf>=3.6.0,<4",
 ]
 
