@@ -184,15 +184,32 @@ impl PyMessageSchema {
     }
 }
 
-/// A parameter type.
+/// An optional type hint for a :py:class:`Parameter`, used to disambiguate values whose intended
+/// type cannot be inferred from the wire representation alone.
+///
+/// A parameter's type is typically derived directly from its value: integers, booleans, strings,
+/// dicts, and homogeneous arrays of these are unambiguous on the wire. This enum only enumerates
+/// the cases that need an explicit hint:
+///
+/// - :py:attr:`ParameterType.ByteArray`: a byte array is transmitted as a base64-encoded string,
+///   so without a type hint it would be indistinguishable from an ordinary string.
+/// - :py:attr:`ParameterType.Float64`: a whole-valued float (e.g. ``1.0``) may be serialized as
+///   an integer by some JSON encoders; the hint preserves the intended floating-point type.
+/// - :py:attr:`ParameterType.Float64Array`: same rationale as ``Float64``, for arrays.
+///
+/// Parameters of other types (integer, bool, string, dict, arrays of these) leave
+/// :py:attr:`Parameter.type` set to ``None``.
 #[pyclass(name = "ParameterType", module = "foxglove", eq, eq_int)]
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum PyParameterType {
-    /// A byte array.
+    /// A byte array, transmitted on the wire as a base64-encoded string. The type hint
+    /// distinguishes it from an ordinary string value.
     ByteArray,
-    /// A floating-point value that can be represented as a `float64`.
+    /// A floating-point value that can be represented as a ``float64``. Used to preserve the
+    /// floating-point type for whole-valued numbers that would otherwise round-trip as integers.
     Float64,
-    /// An array of floating-point values that can be represented as `float64`s.
+    /// An array of floating-point values that can be represented as ``float64``s. Used to
+    /// preserve the floating-point type for arrays of whole-valued numbers.
     Float64Array,
 }
 

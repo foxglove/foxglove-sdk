@@ -21,18 +21,33 @@ struct foxglove_parameter_array;
 
 namespace foxglove {
 
-/// @brief A parameter type.
+/// @brief An optional type hint for a `Parameter`, used to disambiguate values whose intended
+/// type cannot be inferred from the wire representation alone.
 ///
-/// This enum is used to disambiguate `Parameter` values, in situations where the
-/// wire representation is ambiguous.
+/// A parameter's type is typically derived directly from its value: integers, booleans, strings,
+/// dicts, and homogeneous arrays of these are unambiguous on the wire. This enum only enumerates
+/// the cases that need an explicit hint:
+///
+/// - `ByteArray`: a byte array is transmitted as a base64-encoded string, so without a type hint
+///   it would be indistinguishable from an ordinary string.
+/// - `Float64`: a whole-valued float (e.g. `1.0`) may be serialized as an integer by some JSON
+///   encoders; the hint preserves the intended floating-point type.
+/// - `Float64Array`: same rationale as `Float64`, for arrays.
+///
+/// Parameters of other types (integer, bool, string, dict, arrays of these) use `None`.
 enum class ParameterType : uint8_t {
-  /// The parameter value can be inferred from the inner parameter value tag.
+  /// The parameter value can be inferred from the inner parameter value tag. Use this for
+  /// parameters whose type is unambiguous on the wire (integer, bool, string, dict, or
+  /// homogeneous arrays of these).
   None,
-  /// An array of bytes.
+  /// A byte array, transmitted on the wire as a base64-encoded string. The type hint
+  /// distinguishes it from an ordinary string value.
   ByteArray,
-  /// A floating-point value that can be represented as a `float64`.
+  /// A floating-point value that can be represented as a `float64`. Used to preserve the
+  /// floating-point type for whole-valued numbers that would otherwise round-trip as integers.
   Float64,
-  /// An array of floating-point values that can be represented as `float64`s.
+  /// An array of floating-point values that can be represented as `float64`s. Used to preserve
+  /// the floating-point type for arrays of whole-valued numbers.
   Float64Array,
 };
 
