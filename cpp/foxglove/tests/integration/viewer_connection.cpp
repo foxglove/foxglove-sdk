@@ -49,6 +49,9 @@ Frame FrameReader::next_frame() {
       throw std::runtime_error("timeout reading byte stream frame");
     }
     std::vector<uint8_t> chunk;
+    // Note: readNext blocks and can hang indefinitely if no chunk arrives
+    // and the it's never explicitly closed. For the purposes of the
+    // tests, we'll live with that for now.
     if (!reader_->readNext(chunk)) {
       throw std::runtime_error("byte stream ended unexpectedly");
     }
@@ -551,6 +554,9 @@ void encode_varint(std::vector<uint8_t>& buf, uint64_t value) {
   buf.push_back(static_cast<uint8_t>(value));
 }
 
+/// Manually construct the LiveKit disconnect FFI request protobuf message.
+/// This is a workaround for the fact that the C++ FFI does not currently expose
+/// a "disconnect" method or the protobuf message for it.
 std::vector<uint8_t> encode_disconnect_ffi_request(uint64_t room_handle) {
   // DisconnectRequest { room_handle (field 1, varint) }
   std::vector<uint8_t> inner;
@@ -566,6 +572,11 @@ std::vector<uint8_t> encode_disconnect_ffi_request(uint64_t room_handle) {
 }
 }  // namespace
 
+/// Closes the viewer connection by sending a disconnect FFI request to the LiveKit room.
+/// LiveKit doesn't currently export a public disconnect() method, so
+/// we manually construct the FFI request protobuf message and send it to the room.
+/// We'll get this fixed upstream and then we can remove this hack.
+/// For now, since this is only for integration tests, we'll use this workaround.
 void ViewerConnection::close() {
   device_channel_readers_.clear();
   if (control_writer_) {

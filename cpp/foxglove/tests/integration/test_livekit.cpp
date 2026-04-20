@@ -244,7 +244,6 @@ TEST_CASE("livekit: multiple participants receive messages", "[integration]") {
     return listener.subscribed_count() == 2;
   });
   auto reader2 = viewer2.expect_device_channel_data_track(channel_id);
-  std::this_thread::sleep_for(500ms);
 
   std::string payload2 = "message-2";
   channel->log(reinterpret_cast<const std::byte*>(payload2.data()), payload2.size());
