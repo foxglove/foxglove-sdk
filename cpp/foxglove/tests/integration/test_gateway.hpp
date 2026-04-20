@@ -1,15 +1,15 @@
 #pragma once
 
-#include "mock_listener.hpp"
-#include "mock_server.hpp"
-#include "test_helpers.hpp"
-
 #include <foxglove/foxglove.hpp>
 #include <foxglove/remote_access.hpp>
 
 #include <memory>
 #include <optional>
 #include <string>
+
+#include "mock_listener.hpp"
+#include "mock_server.hpp"
+#include "test_helpers.hpp"
 
 namespace foxglove_integration {
 
@@ -33,9 +33,7 @@ public:
   }
 
   /// Starts a gateway with the given options.
-  static TestGateway start_with_options(
-    const foxglove::Context& ctx, TestGatewayOptions opts
-  ) {
+  static TestGateway start_with_options(const foxglove::Context& ctx, TestGatewayOptions opts) {
     auto room_name = "test-room-" + unique_id();
     auto mock = start_mock_server(room_name);
 

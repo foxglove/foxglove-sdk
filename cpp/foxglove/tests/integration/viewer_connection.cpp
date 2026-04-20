@@ -1,9 +1,5 @@
 #include "viewer_connection.hpp"
 
-#include "livekit_token.hpp"
-#include "mock_server.hpp"
-#include "test_helpers.hpp"
-
 #include <livekit/data_track_stream.h>
 #include <livekit/remote_data_track.h>
 
@@ -11,6 +7,10 @@
 #include <future>
 #include <stdexcept>
 #include <thread>
+
+#include "livekit_token.hpp"
+#include "mock_server.hpp"
+#include "test_helpers.hpp"
 
 extern "C" {
 using FfiHandleId = uint64_t;
@@ -95,8 +95,7 @@ constexpr size_t DATA_TRACK_FRAME_HEADER_SIZE = 8;
 /// running read() on a worker thread and closing the stream if it doesn't
 /// complete in time.
 livekit::DataTrackFrame read_data_track_frame_with_timeout(
-  const std::shared_ptr<livekit::DataTrackStream>& stream,
-  std::chrono::milliseconds timeout
+  const std::shared_ptr<livekit::DataTrackStream>& stream, std::chrono::milliseconds timeout
 ) {
   std::promise<livekit::DataTrackFrame> frame_promise;
   auto future = frame_promise.get_future();
@@ -125,7 +124,8 @@ livekit::DataTrackFrame read_data_track_frame_with_timeout(
 DeviceChannelReader::DeviceChannelReader(
   std::shared_ptr<livekit::DataTrackStream> stream, uint64_t channel_id
 )
-    : stream_(std::move(stream)), channel_id_(channel_id) {}
+    : stream_(std::move(stream))
+    , channel_id_(channel_id) {}
 
 nlohmann::json DeviceChannelReader::next_server_message() {
   auto frame = read_data_track_frame_with_timeout(
@@ -140,9 +140,8 @@ nlohmann::json DeviceChannelReader::next_server_message() {
   msg["op"] = "messageData";
   msg["channelId"] = channel_id_;
   msg["timestamp"] = frame.user_timestamp.value_or(0);
-  msg["data"] = std::vector<uint8_t>(
-    frame.payload.begin() + DATA_TRACK_FRAME_HEADER_SIZE, frame.payload.end()
-  );
+  msg["data"] =
+    std::vector<uint8_t>(frame.payload.begin() + DATA_TRACK_FRAME_HEADER_SIZE, frame.payload.end());
   return msg;
 }
 
@@ -246,8 +245,7 @@ ViewerConnection ViewerConnection::connect(
     room->registerByteStreamHandler(
       "control",
       [delegate_weak](
-        std::shared_ptr<livekit::ByteStreamReader> reader,
-        const std::string& participant_identity
+        std::shared_ptr<livekit::ByteStreamReader> reader, const std::string& participant_identity
       ) {
         if (auto d = delegate_weak.lock()) {
           ViewerEvent ve;
@@ -349,8 +347,13 @@ nlohmann::json ViewerConnection::next_server_message() {
 void ViewerConnection::ensure_control_writer() {
   if (!control_writer_) {
     control_writer_ = std::make_unique<livekit::ByteStreamWriter>(
-      *room_->localParticipant(), "unused", "control",
-      std::map<std::string, std::string>{}, "", std::nullopt, "application/octet-stream",
+      *room_->localParticipant(),
+      "unused",
+      "control",
+      std::map<std::string, std::string>{},
+      "",
+      std::nullopt,
+      "application/octet-stream",
       std::vector<std::string>{TEST_DEVICE_ID}
     );
   }
@@ -468,9 +471,7 @@ std::shared_ptr<DeviceChannelReader> ViewerConnection::expect_device_channel_dat
     std::chrono::duration_cast<std::chrono::milliseconds>(READ_TIMEOUT)
   );
   if (!event) {
-    throw std::runtime_error(
-      "timeout waiting for device channel data track: " + expected_name
-    );
+    throw std::runtime_error("timeout waiting for device channel data track: " + expected_name);
   }
   auto sub = event->data_track->subscribe();
   if (!sub) {
@@ -505,7 +506,9 @@ nlohmann::json ViewerConnection::expect_new_data_track_and_message_data(uint64_t
 
 std::string ViewerConnection::expect_track_subscribed() {
   auto event = delegate_->wait_for_event(
-    [](const ViewerEvent& e) { return e.type == ViewerEvent::Type::TrackSubscribed; },
+    [](const ViewerEvent& e) {
+      return e.type == ViewerEvent::Type::TrackSubscribed;
+    },
     std::chrono::duration_cast<std::chrono::milliseconds>(EVENT_TIMEOUT)
   );
   if (!event) {
@@ -516,7 +519,9 @@ std::string ViewerConnection::expect_track_subscribed() {
 
 std::string ViewerConnection::expect_track_unsubscribed() {
   auto event = delegate_->wait_for_event(
-    [](const ViewerEvent& e) { return e.type == ViewerEvent::Type::TrackUnsubscribed; },
+    [](const ViewerEvent& e) {
+      return e.type == ViewerEvent::Type::TrackUnsubscribed;
+    },
     std::chrono::duration_cast<std::chrono::milliseconds>(EVENT_TIMEOUT)
   );
   if (!event) {
@@ -579,7 +584,9 @@ void ViewerConnection::close() {
       }
 
       delegate_->wait_for_event(
-        [](const ViewerEvent& e) { return e.type == ViewerEvent::Type::RoomEos; },
+        [](const ViewerEvent& e) {
+          return e.type == ViewerEvent::Type::RoomEos;
+        },
         std::chrono::duration_cast<std::chrono::milliseconds>(EVENT_TIMEOUT)
       );
     }

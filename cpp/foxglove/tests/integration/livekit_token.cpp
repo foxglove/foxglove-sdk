@@ -27,12 +27,10 @@ std::string generate_token(const std::string& room_name, const std::string& iden
                  .set_expires_at(now + std::chrono::hours(1))
                  .set_payload_claim(
                    "video",
-                   jwt::claim(
-                     picojson::value(picojson::object{
-                       {"roomJoin", picojson::value(true)},
-                       {"room", picojson::value(room_name)},
-                     })
-                   )
+                   jwt::claim(picojson::value(picojson::object{
+                     {"roomJoin", picojson::value(true)},
+                     {"room", picojson::value(room_name)},
+                   }))
                  )
                  .sign(jwt::algorithm::hs256{DEV_API_SECRET});
   return token;

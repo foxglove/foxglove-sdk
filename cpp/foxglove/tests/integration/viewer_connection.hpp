@@ -1,9 +1,6 @@
 #pragma once
 
-#include "frame.hpp"
-
 #include <livekit/livekit.h>
-
 #include <nlohmann/json.hpp>
 
 #include <chrono>
@@ -16,6 +13,8 @@
 #include <optional>
 #include <string>
 #include <vector>
+
+#include "frame.hpp"
 
 namespace foxglove_integration {
 
@@ -87,8 +86,7 @@ public:
 
   /// Wait for an event matching the predicate, up to the given timeout.
   std::optional<ViewerEvent> wait_for_event(
-    const std::function<bool(const ViewerEvent&)>& predicate,
-    std::chrono::milliseconds timeout
+    const std::function<bool(const ViewerEvent&)>& predicate, std::chrono::milliseconds timeout
   );
 
   /// Push an event from an external source (e.g. byte stream handler).

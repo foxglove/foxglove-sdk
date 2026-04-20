@@ -24,9 +24,8 @@ constexpr auto CONNECT_RETRY_TIMEOUT = std::chrono::seconds(5);
 
 inline void poll_until(
   const std::function<bool()>& cond,
-  std::chrono::milliseconds timeout = std::chrono::duration_cast<std::chrono::milliseconds>(
-    EVENT_TIMEOUT
-  )
+  std::chrono::milliseconds timeout =
+    std::chrono::duration_cast<std::chrono::milliseconds>(EVENT_TIMEOUT)
 ) {
   auto deadline = std::chrono::steady_clock::now() + timeout;
   while (!cond()) {

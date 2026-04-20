@@ -3,13 +3,6 @@
 //
 // Requires a local LiveKit server via `docker compose up -d`.
 
-#include "frame.hpp"
-#include "mock_listener.hpp"
-#include "mock_server.hpp"
-#include "test_gateway.hpp"
-#include "test_helpers.hpp"
-#include "viewer_connection.hpp"
-
 #include <foxglove/channel.hpp>
 #include <foxglove/connection_graph.hpp>
 #include <foxglove/context.hpp>
@@ -17,12 +10,18 @@
 #include <foxglove/schema.hpp>
 
 #include <catch2/catch_test_macros.hpp>
-
 #include <nlohmann/json.hpp>
 
 #include <string>
 #include <thread>
 #include <vector>
+
+#include "frame.hpp"
+#include "mock_listener.hpp"
+#include "mock_server.hpp"
+#include "test_gateway.hpp"
+#include "test_helpers.hpp"
+#include "viewer_connection.hpp"
 
 using namespace foxglove_integration;
 using namespace std::chrono_literals;
@@ -90,21 +89,19 @@ TEST_CASE("livekit: viewer receives message after subscribe", "[integration]") {
   auto advertise = viewer.expect_advertise();
   auto channel_id = advertise["channels"][0]["id"].get<uint64_t>();
 
-  viewer.subscribe_and_wait({channel_id}, [&] { return channel->hasSinks(); });
+  viewer.subscribe_and_wait({channel_id}, [&] {
+    return channel->hasSinks();
+  });
 
   auto ch_reader = viewer.expect_device_channel_data_track(channel_id);
 
   std::string payload1 = "message-1";
-  channel->log(
-    reinterpret_cast<const std::byte*>(payload1.data()), payload1.size()
-  );
+  channel->log(reinterpret_cast<const std::byte*>(payload1.data()), payload1.size());
   auto msg = ch_reader->next_server_message();
   CHECK(msg.value("op", "") == "messageData");
 
   std::string payload2 = "message-2";
-  channel->log(
-    reinterpret_cast<const std::byte*>(payload2.data()), payload2.size()
-  );
+  channel->log(reinterpret_cast<const std::byte*>(payload2.data()), payload2.size());
   msg = ch_reader->next_server_message();
   CHECK(msg.value("op", "") == "messageData");
 
@@ -125,17 +122,15 @@ TEST_CASE("livekit: viewer does not receive message before subscribe", "[integra
   auto channel_id = advertise["channels"][0]["id"].get<uint64_t>();
 
   std::string before = "message-before-subscribe";
-  channel->log(
-    reinterpret_cast<const std::byte*>(before.data()), before.size()
-  );
+  channel->log(reinterpret_cast<const std::byte*>(before.data()), before.size());
 
-  viewer.subscribe_and_wait({channel_id}, [&] { return channel->hasSinks(); });
+  viewer.subscribe_and_wait({channel_id}, [&] {
+    return channel->hasSinks();
+  });
   viewer.ensure_device_data_track(channel_id);
 
   std::string after = "message-after-subscribe";
-  channel->log(
-    reinterpret_cast<const std::byte*>(after.data()), after.size()
-  );
+  channel->log(reinterpret_cast<const std::byte*>(after.data()), after.size());
 
   auto msg = viewer.expect_new_data_track_and_message_data(channel_id);
   CHECK(msg.value("op", "") == "messageData");
@@ -230,13 +225,13 @@ TEST_CASE("livekit: multiple participants receive messages", "[integration]") {
   viewer1.expect_server_info();
   auto adv1 = viewer1.expect_advertise();
   auto channel_id = adv1["channels"][0]["id"].get<uint64_t>();
-  viewer1.subscribe_and_wait({channel_id}, [&] { return channel->hasSinks(); });
+  viewer1.subscribe_and_wait({channel_id}, [&] {
+    return channel->hasSinks();
+  });
   auto reader1 = viewer1.expect_device_channel_data_track(channel_id);
 
   std::string payload1 = "message-1";
-  channel->log(
-    reinterpret_cast<const std::byte*>(payload1.data()), payload1.size()
-  );
+  channel->log(reinterpret_cast<const std::byte*>(payload1.data()), payload1.size());
   auto msg1 = reader1->next_server_message();
   CHECK(msg1.value("op", "") == "messageData");
 
@@ -244,14 +239,14 @@ TEST_CASE("livekit: multiple participants receive messages", "[integration]") {
   auto adv2 = viewer2.expect_advertise();
   CHECK(adv2["channels"][0]["id"].get<uint64_t>() == channel_id);
   viewer2.send_subscribe({channel_id});
-  poll_until([&] { return listener.subscribed_count() == 2; });
+  poll_until([&] {
+    return listener.subscribed_count() == 2;
+  });
   auto reader2 = viewer2.expect_device_channel_data_track(channel_id);
   std::this_thread::sleep_for(500ms);
 
   std::string payload2 = "message-2";
-  channel->log(
-    reinterpret_cast<const std::byte*>(payload2.data()), payload2.size()
-  );
+  channel->log(reinterpret_cast<const std::byte*>(payload2.data()), payload2.size());
 
   auto msg2_v1 = reader1->next_server_message();
   CHECK(msg2_v1.value("op", "") == "messageData");
@@ -260,12 +255,12 @@ TEST_CASE("livekit: multiple participants receive messages", "[integration]") {
 
   viewer1.close();
   viewer2.wait_for_participant_disconnected("viewer-1");
-  poll_until([&] { return listener.unsubscribed_count() >= 1; });
+  poll_until([&] {
+    return listener.unsubscribed_count() >= 1;
+  });
 
   std::string payload3 = "message-3";
-  channel->log(
-    reinterpret_cast<const std::byte*>(payload3.data()), payload3.size()
-  );
+  channel->log(reinterpret_cast<const std::byte*>(payload3.data()), payload3.size());
   auto msg3_v2 = reader2->next_server_message();
   CHECK(msg3_v2.value("op", "") == "messageData");
 
@@ -312,8 +307,7 @@ TEST_CASE("livekit: video channel messages bypass data plane", "[integration]") 
   auto ctx = foxglove::Context::create();
 
   auto video_channel = foxglove::RawChannel::create(
-    "/camera", "protobuf",
-    foxglove::Schema{"foxglove.RawImage", "protobuf", nullptr, 0}, ctx
+    "/camera", "protobuf", foxglove::Schema{"foxglove.RawImage", "protobuf", nullptr, 0}, ctx
   );
   REQUIRE(video_channel.has_value());
   auto json_channel = foxglove::RawChannel::create("/data", "json", std::nullopt, ctx);
@@ -331,7 +325,9 @@ TEST_CASE("livekit: video channel messages bypass data plane", "[integration]") 
   // Subscribe to video with requestVideoTrack, json without.
   viewer.send_subscribe_video({video_id});
   viewer.send_subscribe({json_id});
-  poll_until([&] { return json_channel->hasSinks(); });
+  poll_until([&] {
+    return json_channel->hasSinks();
+  });
 
   viewer.ensure_device_data_track(json_id);
 
@@ -340,9 +336,7 @@ TEST_CASE("livekit: video channel messages bypass data plane", "[integration]") 
     reinterpret_cast<const std::byte*>(video_payload.data()), video_payload.size()
   );
   std::string json_payload = "json-payload";
-  json_channel->log(
-    reinterpret_cast<const std::byte*>(json_payload.data()), json_payload.size()
-  );
+  json_channel->log(reinterpret_cast<const std::byte*>(json_payload.data()), json_payload.size());
 
   // The first message on the data plane should be the JSON one, not video
   auto msg = viewer.expect_new_data_track_and_message_data(json_id);
@@ -356,8 +350,7 @@ TEST_CASE("livekit: video track lifecycle", "[integration]") {
   auto ctx = foxglove::Context::create();
 
   auto video_channel = foxglove::RawChannel::create(
-    "/camera", "protobuf",
-    foxglove::Schema{"foxglove.RawImage", "protobuf", nullptr, 0}, ctx
+    "/camera", "protobuf", foxglove::Schema{"foxglove.RawImage", "protobuf", nullptr, 0}, ctx
   );
   REQUIRE(video_channel.has_value());
 
@@ -368,7 +361,9 @@ TEST_CASE("livekit: video track lifecycle", "[integration]") {
   auto advertise = viewer.expect_advertise();
   auto channel_id = advertise["channels"][0]["id"].get<uint64_t>();
 
-  viewer.subscribe_video_and_wait({channel_id}, [&] { return video_channel->hasSinks(); });
+  viewer.subscribe_video_and_wait({channel_id}, [&] {
+    return video_channel->hasSinks();
+  });
   auto expected_track_name = "video-ch-" + std::to_string(channel_id);
   auto track_name = viewer.expect_track_subscribed();
   CHECK(track_name == expected_track_name);
@@ -385,8 +380,7 @@ TEST_CASE("livekit: video track resubscribe", "[integration]") {
   auto ctx = foxglove::Context::create();
 
   auto video_channel = foxglove::RawChannel::create(
-    "/camera", "protobuf",
-    foxglove::Schema{"foxglove.RawImage", "protobuf", nullptr, 0}, ctx
+    "/camera", "protobuf", foxglove::Schema{"foxglove.RawImage", "protobuf", nullptr, 0}, ctx
   );
   REQUIRE(video_channel.has_value());
 
@@ -397,7 +391,9 @@ TEST_CASE("livekit: video track resubscribe", "[integration]") {
   auto advertise = viewer.expect_advertise();
   auto channel_id = advertise["channels"][0]["id"].get<uint64_t>();
 
-  viewer.subscribe_video_and_wait({channel_id}, [&] { return video_channel->hasSinks(); });
+  viewer.subscribe_video_and_wait({channel_id}, [&] {
+    return video_channel->hasSinks();
+  });
   auto expected_track_name = "video-ch-" + std::to_string(channel_id);
   CHECK(viewer.expect_track_subscribed() == expected_track_name);
 
@@ -411,14 +407,11 @@ TEST_CASE("livekit: video track resubscribe", "[integration]") {
   gw.stop();
 }
 
-TEST_CASE(
-  "livekit: video channel without request video track uses data plane", "[integration]"
-) {
+TEST_CASE("livekit: video channel without request video track uses data plane", "[integration]") {
   auto ctx = foxglove::Context::create();
 
   auto video_channel = foxglove::RawChannel::create(
-    "/camera", "protobuf",
-    foxglove::Schema{"foxglove.RawImage", "protobuf", nullptr, 0}, ctx
+    "/camera", "protobuf", foxglove::Schema{"foxglove.RawImage", "protobuf", nullptr, 0}, ctx
   );
   REQUIRE(video_channel.has_value());
 
@@ -429,13 +422,13 @@ TEST_CASE(
   auto advertise = viewer.expect_advertise();
   auto channel_id = advertise["channels"][0]["id"].get<uint64_t>();
 
-  viewer.subscribe_and_wait({channel_id}, [&] { return video_channel->hasSinks(); });
+  viewer.subscribe_and_wait({channel_id}, [&] {
+    return video_channel->hasSinks();
+  });
   viewer.ensure_device_data_track(channel_id);
 
   std::string payload = "video-frame";
-  video_channel->log(
-    reinterpret_cast<const std::byte*>(payload.data()), payload.size()
-  );
+  video_channel->log(reinterpret_cast<const std::byte*>(payload.data()), payload.size());
   auto msg = viewer.expect_new_data_track_and_message_data(channel_id);
   CHECK(msg.value("op", "") == "messageData");
 
@@ -447,8 +440,7 @@ TEST_CASE("livekit: video resubscribe switches to data plane", "[integration]") 
   auto ctx = foxglove::Context::create();
 
   auto video_channel = foxglove::RawChannel::create(
-    "/camera", "protobuf",
-    foxglove::Schema{"foxglove.RawImage", "protobuf", nullptr, 0}, ctx
+    "/camera", "protobuf", foxglove::Schema{"foxglove.RawImage", "protobuf", nullptr, 0}, ctx
   );
   REQUIRE(video_channel.has_value());
 
@@ -459,7 +451,9 @@ TEST_CASE("livekit: video resubscribe switches to data plane", "[integration]") 
   auto advertise = viewer.expect_advertise();
   auto channel_id = advertise["channels"][0]["id"].get<uint64_t>();
 
-  viewer.subscribe_video_and_wait({channel_id}, [&] { return video_channel->hasSinks(); });
+  viewer.subscribe_video_and_wait({channel_id}, [&] {
+    return video_channel->hasSinks();
+  });
   auto expected_track_name = "video-ch-" + std::to_string(channel_id);
   CHECK(viewer.expect_track_subscribed() == expected_track_name);
 
@@ -470,9 +464,7 @@ TEST_CASE("livekit: video resubscribe switches to data plane", "[integration]") 
   viewer.ensure_device_data_track(channel_id);
 
   std::string payload = "video-frame";
-  video_channel->log(
-    reinterpret_cast<const std::byte*>(payload.data()), payload.size()
-  );
+  video_channel->log(reinterpret_cast<const std::byte*>(payload.data()), payload.size());
   auto msg = viewer.expect_new_data_track_and_message_data(channel_id);
   CHECK(msg.value("op", "") == "messageData");
 
@@ -480,9 +472,7 @@ TEST_CASE("livekit: video resubscribe switches to data plane", "[integration]") 
   gw.stop();
 }
 
-TEST_CASE(
-  "livekit: request video track on non-video channel sends error", "[integration]"
-) {
+TEST_CASE("livekit: request video track on non-video channel sends error", "[integration]") {
   auto ctx = foxglove::Context::create();
 
   auto json_channel = foxglove::RawChannel::create("/json_data", "json", std::nullopt, ctx);
@@ -524,7 +514,9 @@ TEST_CASE("livekit: client advertise fires listener callback", "[integration]") 
   viewer.next_server_message();  // skip server info
 
   viewer.send_client_advertise({{1, "/cmd", "json"}});
-  poll_until([&] { return listener.client_advertised_count() == 1; });
+  poll_until([&] {
+    return listener.client_advertised_count() == 1;
+  });
 
   {
     std::lock_guard<std::mutex> lock(listener.mutex);
@@ -549,10 +541,14 @@ TEST_CASE("livekit: client unadvertise fires listener callback", "[integration]"
   viewer.next_server_message();
 
   viewer.send_client_advertise({{42, "/joy", "json"}});
-  poll_until([&] { return listener.client_advertised_count() == 1; });
+  poll_until([&] {
+    return listener.client_advertised_count() == 1;
+  });
 
   viewer.send_client_unadvertise({42});
-  poll_until([&] { return listener.client_unadvertised_count() == 1; });
+  poll_until([&] {
+    return listener.client_unadvertised_count() == 1;
+  });
 
   {
     std::lock_guard<std::mutex> lock(listener.mutex);
@@ -564,9 +560,7 @@ TEST_CASE("livekit: client unadvertise fires listener callback", "[integration]"
   gw.stop();
 }
 
-TEST_CASE(
-  "livekit: client disconnect fires unadvertise for advertised channels", "[integration]"
-) {
+TEST_CASE("livekit: client disconnect fires unadvertise for advertised channels", "[integration]") {
   auto ctx = foxglove::Context::create();
   MockListener listener;
 
@@ -579,10 +573,14 @@ TEST_CASE(
   viewer.next_server_message();
 
   viewer.send_client_advertise({{1, "/cmd_vel", "json"}, {2, "/joy", "json"}});
-  poll_until([&] { return listener.client_advertised_count() == 2; });
+  poll_until([&] {
+    return listener.client_advertised_count() == 2;
+  });
 
   viewer.close();
-  poll_until([&] { return listener.client_unadvertised_count() == 2; });
+  poll_until([&] {
+    return listener.client_unadvertised_count() == 2;
+  });
 
   {
     std::lock_guard<std::mutex> lock(listener.mutex);
@@ -619,7 +617,9 @@ TEST_CASE("livekit: subscribe fires listener callback", "[integration]") {
   auto channel_id = advertise["channels"][0]["id"].get<uint64_t>();
 
   viewer.send_subscribe({channel_id});
-  poll_until([&] { return listener.subscribed_count() == 1; });
+  poll_until([&] {
+    return listener.subscribed_count() == 1;
+  });
 
   {
     std::lock_guard<std::mutex> lock(listener.mutex);
@@ -628,7 +628,9 @@ TEST_CASE("livekit: subscribe fires listener callback", "[integration]") {
   }
 
   viewer.close();
-  poll_until([&] { return listener.unsubscribed_count() == 1; });
+  poll_until([&] {
+    return listener.unsubscribed_count() == 1;
+  });
   gw.stop();
 }
 
@@ -648,11 +650,17 @@ TEST_CASE("livekit: unsubscribe fires listener callback", "[integration]") {
   auto advertise = viewer.expect_advertise();
   auto channel_id = advertise["channels"][0]["id"].get<uint64_t>();
 
-  viewer.subscribe_and_wait({channel_id}, [&] { return channel->hasSinks(); });
-  poll_until([&] { return listener.subscribed_count() == 1; });
+  viewer.subscribe_and_wait({channel_id}, [&] {
+    return channel->hasSinks();
+  });
+  poll_until([&] {
+    return listener.subscribed_count() == 1;
+  });
 
   viewer.send_unsubscribe({channel_id});
-  poll_until([&] { return listener.unsubscribed_count() == 1; });
+  poll_until([&] {
+    return listener.unsubscribed_count() == 1;
+  });
 
   {
     std::lock_guard<std::mutex> lock(listener.mutex);
@@ -664,9 +672,7 @@ TEST_CASE("livekit: unsubscribe fires listener callback", "[integration]") {
   gw.stop();
 }
 
-TEST_CASE(
-  "livekit: disconnect fires unsubscribe for subscribed channels", "[integration]"
-) {
+TEST_CASE("livekit: disconnect fires unsubscribe for subscribed channels", "[integration]") {
   auto ctx = foxglove::Context::create();
   MockListener listener;
 
@@ -682,11 +688,17 @@ TEST_CASE(
   auto advertise = viewer.expect_advertise();
   auto channel_id = advertise["channels"][0]["id"].get<uint64_t>();
 
-  viewer.subscribe_and_wait({channel_id}, [&] { return channel->hasSinks(); });
-  poll_until([&] { return listener.subscribed_count() == 1; });
+  viewer.subscribe_and_wait({channel_id}, [&] {
+    return channel->hasSinks();
+  });
+  poll_until([&] {
+    return listener.subscribed_count() == 1;
+  });
 
   viewer.close();
-  poll_until([&] { return listener.unsubscribed_count() == 1; });
+  poll_until([&] {
+    return listener.unsubscribed_count() == 1;
+  });
 
   {
     std::lock_guard<std::mutex> lock(listener.mutex);
@@ -697,9 +709,7 @@ TEST_CASE(
   gw.stop();
 }
 
-TEST_CASE(
-  "livekit: channel close fires unsubscribe for subscribers", "[integration]"
-) {
+TEST_CASE("livekit: channel close fires unsubscribe for subscribers", "[integration]") {
   auto ctx = foxglove::Context::create();
   MockListener listener;
 
@@ -715,15 +725,21 @@ TEST_CASE(
   auto advertise = viewer.expect_advertise();
   auto channel_id = advertise["channels"][0]["id"].get<uint64_t>();
 
-  viewer.subscribe_and_wait({channel_id}, [&] { return channel->hasSinks(); });
-  poll_until([&] { return listener.subscribed_count() == 1; });
+  viewer.subscribe_and_wait({channel_id}, [&] {
+    return channel->hasSinks();
+  });
+  poll_until([&] {
+    return listener.subscribed_count() == 1;
+  });
 
   channel->close();
 
   auto unadvertise = viewer.expect_unadvertise();
   CHECK(unadvertise["channelIds"][0].get<uint64_t>() == channel_id);
 
-  poll_until([&] { return listener.unsubscribed_count() == 1; });
+  poll_until([&] {
+    return listener.unsubscribed_count() == 1;
+  });
 
   {
     std::lock_guard<std::mutex> lock(listener.mutex);
@@ -752,12 +768,16 @@ TEST_CASE("livekit: client message data fires listener callback", "[integration]
   viewer.next_server_message();
 
   viewer.send_client_advertise({{1, "/cmd", "json"}});
-  poll_until([&] { return listener.client_advertised_count() == 1; });
+  poll_until([&] {
+    return listener.client_advertised_count() == 1;
+  });
 
   std::vector<uint8_t> payload = {'{', '"', 'v', '"', ':', '1', '}'};
   viewer.send_client_message_data(1, payload);
 
-  poll_until([&] { return listener.message_data_count() == 1; });
+  poll_until([&] {
+    return listener.message_data_count() == 1;
+  });
 
   {
     std::lock_guard<std::mutex> lock(listener.mutex);
@@ -770,9 +790,7 @@ TEST_CASE("livekit: client message data fires listener callback", "[integration]
   gw.stop();
 }
 
-TEST_CASE(
-  "livekit: client message data before advertise sends error", "[integration]"
-) {
+TEST_CASE("livekit: client message data before advertise sends error", "[integration]") {
   auto ctx = foxglove::Context::create();
   MockListener listener;
 
@@ -808,9 +826,7 @@ TEST_CASE(
   gw.stop();
 }
 
-TEST_CASE(
-  "livekit: client advertise without capability sends error", "[integration]"
-) {
+TEST_CASE("livekit: client advertise without capability sends error", "[integration]") {
   auto ctx = foxglove::Context::create();
 
   auto gw = TestGateway::start(ctx);
@@ -850,11 +866,10 @@ TEST_CASE("livekit: connection status lifecycle", "[integration]") {
   REQUIRE(channel.has_value());
 
   TestGatewayOptions opts;
-  opts.callbacks.onConnectionStatusChanged =
-    [&](foxglove::RemoteAccessConnectionStatus status) {
-      std::lock_guard<std::mutex> lock(status_mutex);
-      statuses.push_back(status);
-    };
+  opts.callbacks.onConnectionStatusChanged = [&](foxglove::RemoteAccessConnectionStatus status) {
+    std::lock_guard<std::mutex> lock(status_mutex);
+    statuses.push_back(status);
+  };
   auto gw = TestGateway::start_with_options(ctx, std::move(opts));
 
   poll_until([&] {
@@ -869,9 +884,9 @@ TEST_CASE("livekit: connection status lifecycle", "[integration]") {
   CHECK(gw.connection_status() == foxglove::RemoteAccessConnectionStatus::Connected);
 
   auto viewer = ViewerConnection::connect(gw.room_name, "viewer-status");
-  viewer.subscribe_and_wait(
-    {channel->id()}, [&] { return channel->hasSinks(); }
-  );
+  viewer.subscribe_and_wait({channel->id()}, [&] {
+    return channel->hasSinks();
+  });
   viewer.close();
 
   gw.stop();
@@ -889,9 +904,7 @@ TEST_CASE("livekit: connection status lifecycle", "[integration]") {
 // Connection graph tests
 // ===========================================================================
 
-TEST_CASE(
-  "livekit: connection graph subscribe receives empty initial state", "[integration]"
-) {
+TEST_CASE("livekit: connection graph subscribe receives empty initial state", "[integration]") {
   auto ctx = foxglove::Context::create();
 
   TestGatewayOptions opts;
@@ -989,9 +1002,7 @@ TEST_CASE("livekit: connection graph publish diff update", "[integration]") {
   gw.stop();
 }
 
-TEST_CASE(
-  "livekit: connection graph unsubscribe stops updates", "[integration]"
-) {
+TEST_CASE("livekit: connection graph unsubscribe stops updates", "[integration]") {
   auto ctx = foxglove::Context::create();
 
   TestGatewayOptions opts;
@@ -1017,12 +1028,12 @@ TEST_CASE(
 
   // Verify the control channel still works by subscribing and logging
   auto cg_channel_id = channel->id();
-  viewer.subscribe_and_wait({cg_channel_id}, [&] { return channel->hasSinks(); });
+  viewer.subscribe_and_wait({cg_channel_id}, [&] {
+    return channel->hasSinks();
+  });
   viewer.ensure_device_data_track(cg_channel_id);
   std::string payload = "ping";
-  channel->log(
-    reinterpret_cast<const std::byte*>(payload.data()), payload.size()
-  );
+  channel->log(reinterpret_cast<const std::byte*>(payload.data()), payload.size());
   auto msg = viewer.expect_new_data_track_and_message_data(cg_channel_id);
   CHECK(msg.value("op", "") == "messageData");
 
@@ -1030,9 +1041,7 @@ TEST_CASE(
   gw.stop();
 }
 
-TEST_CASE(
-  "livekit: connection graph subscribe without capability sends error", "[integration]"
-) {
+TEST_CASE("livekit: connection graph subscribe without capability sends error", "[integration]") {
   auto ctx = foxglove::Context::create();
 
   auto gw = TestGateway::start(ctx);
@@ -1078,9 +1087,7 @@ TEST_CASE("livekit: connection graph listener callbacks", "[integration]") {
   gw.stop();
 }
 
-TEST_CASE(
-  "livekit: connection graph disconnect cleans up subscription", "[integration]"
-) {
+TEST_CASE("livekit: connection graph disconnect cleans up subscription", "[integration]") {
   auto ctx = foxglove::Context::create();
   MockListener listener;
 
@@ -1106,9 +1113,7 @@ TEST_CASE(
   gw.stop();
 }
 
-TEST_CASE(
-  "livekit: connection graph multiple subscribers", "[integration]"
-) {
+TEST_CASE("livekit: connection graph multiple subscribers", "[integration]") {
   auto ctx = foxglove::Context::create();
   MockListener listener;
 

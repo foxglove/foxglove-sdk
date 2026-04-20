@@ -38,15 +38,16 @@ struct MockListener {
       std::lock_guard<std::mutex> lock(mutex);
       client_advertised.emplace_back(client_id, std::string(channel.topic()));
     };
-    cb.onClientUnadvertise = [this](
-                               uint32_t client_id, const foxglove::ChannelDescriptor& channel
-                             ) {
-      std::lock_guard<std::mutex> lock(mutex);
-      client_unadvertised.emplace_back(client_id, std::string(channel.topic()));
-    };
+    cb.onClientUnadvertise =
+      [this](uint32_t client_id, const foxglove::ChannelDescriptor& channel) {
+        std::lock_guard<std::mutex> lock(mutex);
+        client_unadvertised.emplace_back(client_id, std::string(channel.topic()));
+      };
     cb.onMessageData = [this](
-                         uint32_t client_id, const foxglove::ChannelDescriptor& channel,
-                         const std::byte* data, size_t data_len
+                         uint32_t client_id,
+                         const foxglove::ChannelDescriptor& channel,
+                         const std::byte* data,
+                         size_t data_len
                        ) {
       std::lock_guard<std::mutex> lock(mutex);
       message_data.emplace_back(
