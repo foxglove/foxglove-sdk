@@ -298,6 +298,9 @@ jobs:
 
       - name: Build and run C++ integration tests
         working-directory: cpp
+        # Disable warnings (needed for livekit)
+        env:
+          RUSTFLAGS: ""
         run: |
           make build-integration
           ctest --test-dir build-integration --verbose -L integration
