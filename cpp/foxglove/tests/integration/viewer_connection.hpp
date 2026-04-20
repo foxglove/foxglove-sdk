@@ -10,6 +10,7 @@
 #include <condition_variable>
 #include <deque>
 #include <functional>
+#include <map>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -35,6 +36,24 @@ private:
   std::vector<uint8_t> buf_;
 };
 
+/// Reads framed data-track frames for a single device channel and exposes them
+/// as JSON messages. Each frame payload begins with an 8-byte header (u16 LE
+/// flags, u16 LE data_offset, u32 LE sequence) followed by the raw message
+/// bytes. The channel identity is determined by the data track name.
+class DeviceChannelReader {
+public:
+  DeviceChannelReader(std::shared_ptr<livekit::DataTrackStream> stream, uint64_t channel_id);
+
+  /// Reads the next data-track frame and returns a JSON message shaped like
+  /// the control-plane messageData: {"op":"messageData","channelId":<id>,
+  /// "timestamp":<ts>,"data":[...bytes...]}. Blocks up to READ_TIMEOUT.
+  nlohmann::json next_server_message();
+
+private:
+  std::shared_ptr<livekit::DataTrackStream> stream_;
+  uint64_t channel_id_;
+};
+
 /// Events pushed to a thread-safe queue for test consumption.
 struct ViewerEvent {
   enum class Type {
@@ -43,12 +62,14 @@ struct ViewerEvent {
     TrackUnsubscribed,
     ParticipantDisconnected,
     RoomEos,
+    DataTrackPublished,
   };
   Type type;
   std::string topic;
   std::string identity;
   std::string track_name;
   std::shared_ptr<livekit::ByteStreamReader> reader;
+  std::shared_ptr<livekit::RemoteDataTrack> data_track;
 };
 
 /// RoomDelegate that pushes track and participant events into a queue.
@@ -61,6 +82,8 @@ public:
     livekit::Room& room, const livekit::ParticipantDisconnectedEvent& event
   ) override;
   void onRoomEos(livekit::Room& room, const livekit::RoomEosEvent& event) override;
+  void onDataTrackPublished(livekit::Room& room, const livekit::DataTrackPublishedEvent& event)
+    override;
 
   /// Wait for an event matching the predicate, up to the given timeout.
   std::optional<ViewerEvent> wait_for_event(
@@ -132,7 +155,8 @@ public:
   /// Sends a client Unadvertise message.
   void send_client_unadvertise(const std::vector<uint32_t>& channel_ids);
 
-  /// Sends a client MessageData on a per-channel topic.
+  /// Sends a client MessageData on the control stream as a binary-framed v2
+  /// ClientMessageData.
   void send_client_message_data(uint32_t channel_id, const std::vector<uint8_t>& data);
 
   /// Sends a subscribeConnectionGraph message.
@@ -141,11 +165,17 @@ public:
   /// Sends an unsubscribeConnectionGraph message.
   void send_unsubscribe_connection_graph();
 
-  /// Waits for a per-channel byte stream to open and returns a FrameReader.
-  FrameReader expect_channel_byte_stream();
+  /// Waits for a `DataTrackPublished` event whose track name matches
+  /// `data-ch-{channel_id}`, subscribes to it, and returns a reader.
+  std::shared_ptr<DeviceChannelReader> expect_device_channel_data_track(uint64_t channel_id);
 
-  /// Waits for a per-channel byte stream and reads the next MessageData from it.
-  nlohmann::json expect_new_bytestream_and_message_data();
+  /// Ensures a device channel data track reader exists for `channel_id`. No-op
+  /// if one already exists; otherwise waits for and subscribes to the track.
+  void ensure_device_data_track(uint64_t channel_id);
+
+  /// Ensures a data-track reader exists for the given channel, then reads the
+  /// next MessageData from it. Subsequent calls reuse the same reader.
+  nlohmann::json expect_new_data_track_and_message_data(uint64_t channel_id);
 
   /// Waits for a TrackSubscribed event and returns the track name.
   std::string expect_track_subscribed();
@@ -166,13 +196,14 @@ private:
   );
 
   void send_framed_text(const std::string& json);
-  void ensure_device_ch_handlers();
+  void send_framed_binary(const std::vector<uint8_t>& data);
+  void ensure_control_writer();
 
   std::unique_ptr<livekit::Room> room_;
   std::shared_ptr<TestRoomDelegate> delegate_;
   FrameReader control_reader_;
   std::unique_ptr<livekit::ByteStreamWriter> control_writer_;
-  bool device_ch_handlers_registered_ = false;
+  std::map<uint64_t, std::shared_ptr<DeviceChannelReader>> device_channel_readers_;
 };
 
 }  // namespace foxglove_integration

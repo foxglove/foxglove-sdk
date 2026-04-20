@@ -92,19 +92,20 @@ TEST_CASE("livekit: viewer receives message after subscribe", "[integration]") {
 
   viewer.subscribe_and_wait({channel_id}, [&] { return channel->hasSinks(); });
 
+  auto ch_reader = viewer.expect_device_channel_data_track(channel_id);
+
   std::string payload1 = "message-1";
   channel->log(
     reinterpret_cast<const std::byte*>(payload1.data()), payload1.size()
   );
-  auto ch_reader = viewer.expect_channel_byte_stream();
-  auto msg = ch_reader.next_server_message();
+  auto msg = ch_reader->next_server_message();
   CHECK(msg.value("op", "") == "messageData");
 
   std::string payload2 = "message-2";
   channel->log(
     reinterpret_cast<const std::byte*>(payload2.data()), payload2.size()
   );
-  msg = ch_reader.next_server_message();
+  msg = ch_reader->next_server_message();
   CHECK(msg.value("op", "") == "messageData");
 
   viewer.close();
@@ -129,13 +130,14 @@ TEST_CASE("livekit: viewer does not receive message before subscribe", "[integra
   );
 
   viewer.subscribe_and_wait({channel_id}, [&] { return channel->hasSinks(); });
+  viewer.ensure_device_data_track(channel_id);
 
   std::string after = "message-after-subscribe";
   channel->log(
     reinterpret_cast<const std::byte*>(after.data()), after.size()
   );
 
-  auto msg = viewer.expect_new_bytestream_and_message_data();
+  auto msg = viewer.expect_new_data_track_and_message_data(channel_id);
   CHECK(msg.value("op", "") == "messageData");
 
   viewer.close();
@@ -229,12 +231,13 @@ TEST_CASE("livekit: multiple participants receive messages", "[integration]") {
   auto adv1 = viewer1.expect_advertise();
   auto channel_id = adv1["channels"][0]["id"].get<uint64_t>();
   viewer1.subscribe_and_wait({channel_id}, [&] { return channel->hasSinks(); });
+  auto reader1 = viewer1.expect_device_channel_data_track(channel_id);
 
   std::string payload1 = "message-1";
   channel->log(
     reinterpret_cast<const std::byte*>(payload1.data()), payload1.size()
   );
-  auto msg1 = viewer1.expect_new_bytestream_and_message_data();
+  auto msg1 = reader1->next_server_message();
   CHECK(msg1.value("op", "") == "messageData");
 
   viewer2.expect_server_info();
@@ -242,15 +245,17 @@ TEST_CASE("livekit: multiple participants receive messages", "[integration]") {
   CHECK(adv2["channels"][0]["id"].get<uint64_t>() == channel_id);
   viewer2.send_subscribe({channel_id});
   poll_until([&] { return listener.subscribed_count() == 2; });
+  auto reader2 = viewer2.expect_device_channel_data_track(channel_id);
+  std::this_thread::sleep_for(500ms);
 
   std::string payload2 = "message-2";
   channel->log(
     reinterpret_cast<const std::byte*>(payload2.data()), payload2.size()
   );
 
-  auto msg2_v1 = viewer1.expect_new_bytestream_and_message_data();
+  auto msg2_v1 = reader1->next_server_message();
   CHECK(msg2_v1.value("op", "") == "messageData");
-  auto msg2_v2 = viewer2.expect_new_bytestream_and_message_data();
+  auto msg2_v2 = reader2->next_server_message();
   CHECK(msg2_v2.value("op", "") == "messageData");
 
   viewer1.close();
@@ -261,7 +266,7 @@ TEST_CASE("livekit: multiple participants receive messages", "[integration]") {
   channel->log(
     reinterpret_cast<const std::byte*>(payload3.data()), payload3.size()
   );
-  auto msg3_v2 = viewer2.expect_new_bytestream_and_message_data();
+  auto msg3_v2 = reader2->next_server_message();
   CHECK(msg3_v2.value("op", "") == "messageData");
 
   viewer2.close();
@@ -328,6 +333,8 @@ TEST_CASE("livekit: video channel messages bypass data plane", "[integration]") 
   viewer.send_subscribe({json_id});
   poll_until([&] { return json_channel->hasSinks(); });
 
+  viewer.ensure_device_data_track(json_id);
+
   std::string video_payload = "video-frame";
   video_channel->log(
     reinterpret_cast<const std::byte*>(video_payload.data()), video_payload.size()
@@ -338,7 +345,7 @@ TEST_CASE("livekit: video channel messages bypass data plane", "[integration]") 
   );
 
   // The first message on the data plane should be the JSON one, not video
-  auto msg = viewer.expect_new_bytestream_and_message_data();
+  auto msg = viewer.expect_new_data_track_and_message_data(json_id);
   CHECK(msg.value("op", "") == "messageData");
 
   viewer.close();
@@ -362,12 +369,13 @@ TEST_CASE("livekit: video track lifecycle", "[integration]") {
   auto channel_id = advertise["channels"][0]["id"].get<uint64_t>();
 
   viewer.subscribe_video_and_wait({channel_id}, [&] { return video_channel->hasSinks(); });
+  auto expected_track_name = "video-ch-" + std::to_string(channel_id);
   auto track_name = viewer.expect_track_subscribed();
-  CHECK(track_name == "/camera");
+  CHECK(track_name == expected_track_name);
 
   viewer.send_unsubscribe({channel_id});
   track_name = viewer.expect_track_unsubscribed();
-  CHECK(track_name == "/camera");
+  CHECK(track_name == expected_track_name);
 
   viewer.close();
   gw.stop();
@@ -390,13 +398,14 @@ TEST_CASE("livekit: video track resubscribe", "[integration]") {
   auto channel_id = advertise["channels"][0]["id"].get<uint64_t>();
 
   viewer.subscribe_video_and_wait({channel_id}, [&] { return video_channel->hasSinks(); });
-  CHECK(viewer.expect_track_subscribed() == "/camera");
+  auto expected_track_name = "video-ch-" + std::to_string(channel_id);
+  CHECK(viewer.expect_track_subscribed() == expected_track_name);
 
   viewer.send_unsubscribe({channel_id});
-  CHECK(viewer.expect_track_unsubscribed() == "/camera");
+  CHECK(viewer.expect_track_unsubscribed() == expected_track_name);
 
   viewer.send_subscribe_video({channel_id});
-  CHECK(viewer.expect_track_subscribed() == "/camera");
+  CHECK(viewer.expect_track_subscribed() == expected_track_name);
 
   viewer.close();
   gw.stop();
@@ -421,12 +430,13 @@ TEST_CASE(
   auto channel_id = advertise["channels"][0]["id"].get<uint64_t>();
 
   viewer.subscribe_and_wait({channel_id}, [&] { return video_channel->hasSinks(); });
+  viewer.ensure_device_data_track(channel_id);
 
   std::string payload = "video-frame";
   video_channel->log(
     reinterpret_cast<const std::byte*>(payload.data()), payload.size()
   );
-  auto msg = viewer.expect_new_bytestream_and_message_data();
+  auto msg = viewer.expect_new_data_track_and_message_data(channel_id);
   CHECK(msg.value("op", "") == "messageData");
 
   viewer.close();
@@ -450,17 +460,20 @@ TEST_CASE("livekit: video resubscribe switches to data plane", "[integration]") 
   auto channel_id = advertise["channels"][0]["id"].get<uint64_t>();
 
   viewer.subscribe_video_and_wait({channel_id}, [&] { return video_channel->hasSinks(); });
-  CHECK(viewer.expect_track_subscribed() == "/camera");
+  auto expected_track_name = "video-ch-" + std::to_string(channel_id);
+  CHECK(viewer.expect_track_subscribed() == expected_track_name);
 
   // Re-subscribe without video track
   viewer.send_subscribe({channel_id});
-  CHECK(viewer.expect_track_unsubscribed() == "/camera");
+  CHECK(viewer.expect_track_unsubscribed() == expected_track_name);
+
+  viewer.ensure_device_data_track(channel_id);
 
   std::string payload = "video-frame";
   video_channel->log(
     reinterpret_cast<const std::byte*>(payload.data()), payload.size()
   );
-  auto msg = viewer.expect_new_bytestream_and_message_data();
+  auto msg = viewer.expect_new_data_track_and_message_data(channel_id);
   CHECK(msg.value("op", "") == "messageData");
 
   viewer.close();
@@ -758,7 +771,7 @@ TEST_CASE("livekit: client message data fires listener callback", "[integration]
 }
 
 TEST_CASE(
-  "livekit: client message data before advertise is delivered", "[integration]"
+  "livekit: client message data before advertise sends error", "[integration]"
 ) {
   auto ctx = foxglove::Context::create();
   MockListener listener;
@@ -769,22 +782,27 @@ TEST_CASE(
   auto gw = TestGateway::start_with_options(ctx, std::move(opts));
 
   auto viewer = ViewerConnection::connect(gw.room_name, "viewer-1");
-  viewer.next_server_message();
+  viewer.expect_server_info();
 
   std::vector<uint8_t> payload = {'e', 'a', 'r', 'l', 'y'};
   viewer.send_client_message_data(1, payload);
 
-  std::this_thread::sleep_for(500ms);
-
-  viewer.send_client_advertise({{1, "/cmd", "json"}});
-
-  poll_until([&] { return listener.message_data_count() == 1; });
-
-  {
-    std::lock_guard<std::mutex> lock(listener.mutex);
-    REQUIRE(listener.message_data.size() == 1);
-    CHECK(std::get<1>(listener.message_data[0]) == "/cmd");
+  // Expect an error status message because channel 1 was never advertised.
+  auto deadline = std::chrono::steady_clock::now() + EVENT_TIMEOUT;
+  nlohmann::json status;
+  while (std::chrono::steady_clock::now() < deadline) {
+    auto msg = viewer.next_server_message();
+    if (msg.value("op", "") == "status") {
+      status = msg;
+      break;
+    }
   }
+  REQUIRE(!status.empty());
+  CHECK(status["level"].get<int>() == 2);  // Error
+  auto message = status["message"].get<std::string>();
+  CHECK(message.find("not advertised channel") != std::string::npos);
+
+  CHECK(listener.message_data_count() == 0);
 
   viewer.close();
   gw.stop();
@@ -998,12 +1016,14 @@ TEST_CASE(
   CHECK(gw.gateway().publishConnectionGraph(graph) == foxglove::FoxgloveError::Ok);
 
   // Verify the control channel still works by subscribing and logging
-  viewer.subscribe_and_wait({channel->id()}, [&] { return channel->hasSinks(); });
+  auto cg_channel_id = channel->id();
+  viewer.subscribe_and_wait({cg_channel_id}, [&] { return channel->hasSinks(); });
+  viewer.ensure_device_data_track(cg_channel_id);
   std::string payload = "ping";
   channel->log(
     reinterpret_cast<const std::byte*>(payload.data()), payload.size()
   );
-  auto msg = viewer.expect_new_bytestream_and_message_data();
+  auto msg = viewer.expect_new_data_track_and_message_data(cg_channel_id);
   CHECK(msg.value("op", "") == "messageData");
 
   viewer.close();

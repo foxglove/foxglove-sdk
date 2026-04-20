@@ -4,8 +4,13 @@
 #include "mock_server.hpp"
 #include "test_helpers.hpp"
 
+#include <livekit/data_track_stream.h>
+#include <livekit/remote_data_track.h>
+
 #include <cstring>
+#include <future>
 #include <stdexcept>
+#include <thread>
 
 extern "C" {
 using FfiHandleId = uint64_t;
@@ -65,7 +70,6 @@ nlohmann::json FrameReader::next_server_message() {
   msg["_binary"] = true;
   msg["_opcode"] = frame.payload[0];
 
-  // Parse known binary message types
   uint8_t bin_op = frame.payload[0];
   // v2 MessageData binary: opcode(1) + channel_id(u64) + log_time(u64) + data
   if (bin_op == 1 && frame.payload.size() >= 17) {
@@ -78,6 +82,67 @@ nlohmann::json FrameReader::next_server_message() {
     msg["timestamp"] = timestamp;
     msg["data"] = std::vector<uint8_t>(frame.payload.begin() + 17, frame.payload.end());
   }
+  return msg;
+}
+
+// DeviceChannelReader
+
+namespace {
+// u16 LE flags + u16 LE data_offset + u32 LE sequence = 8 bytes.
+constexpr size_t DATA_TRACK_FRAME_HEADER_SIZE = 8;
+
+/// Reads the next DataTrackFrame from a DataTrackStream with a timeout by
+/// running read() on a worker thread and closing the stream if it doesn't
+/// complete in time.
+livekit::DataTrackFrame read_data_track_frame_with_timeout(
+  const std::shared_ptr<livekit::DataTrackStream>& stream,
+  std::chrono::milliseconds timeout
+) {
+  std::promise<livekit::DataTrackFrame> frame_promise;
+  auto future = frame_promise.get_future();
+
+  std::thread reader([stream, promise = std::move(frame_promise)]() mutable {
+    try {
+      livekit::DataTrackFrame frame;
+      if (!stream->read(frame)) {
+        throw std::runtime_error("data track stream ended before a frame arrived");
+      }
+      promise.set_value(std::move(frame));
+    } catch (...) {
+      promise.set_exception(std::current_exception());
+    }
+  });
+
+  if (future.wait_for(timeout) != std::future_status::ready) {
+    stream->close();
+  }
+
+  reader.join();
+  return future.get();
+}
+}  // namespace
+
+DeviceChannelReader::DeviceChannelReader(
+  std::shared_ptr<livekit::DataTrackStream> stream, uint64_t channel_id
+)
+    : stream_(std::move(stream)), channel_id_(channel_id) {}
+
+nlohmann::json DeviceChannelReader::next_server_message() {
+  auto frame = read_data_track_frame_with_timeout(
+    stream_, std::chrono::duration_cast<std::chrono::milliseconds>(READ_TIMEOUT)
+  );
+  if (frame.payload.size() < DATA_TRACK_FRAME_HEADER_SIZE) {
+    throw std::runtime_error(
+      "data track frame too small (" + std::to_string(frame.payload.size()) + " bytes)"
+    );
+  }
+  nlohmann::json msg;
+  msg["op"] = "messageData";
+  msg["channelId"] = channel_id_;
+  msg["timestamp"] = frame.user_timestamp.value_or(0);
+  msg["data"] = std::vector<uint8_t>(
+    frame.payload.begin() + DATA_TRACK_FRAME_HEADER_SIZE, frame.payload.end()
+  );
   return msg;
 }
 
@@ -113,6 +178,19 @@ void TestRoomDelegate::onParticipantDisconnected(
 void TestRoomDelegate::onRoomEos(livekit::Room& /*room*/, const livekit::RoomEosEvent&) {
   ViewerEvent ve;
   ve.type = ViewerEvent::Type::RoomEos;
+  push_event(std::move(ve));
+}
+
+void TestRoomDelegate::onDataTrackPublished(
+  livekit::Room& /*room*/, const livekit::DataTrackPublishedEvent& event
+) {
+  if (!event.track) {
+    return;
+  }
+  ViewerEvent ve;
+  ve.type = ViewerEvent::Type::DataTrackPublished;
+  ve.track_name = event.track->info().name;
+  ve.data_track = event.track;
   push_event(std::move(ve));
 }
 
@@ -268,8 +346,7 @@ nlohmann::json ViewerConnection::next_server_message() {
   return control_reader_.next_server_message();
 }
 
-void ViewerConnection::send_framed_text(const std::string& json) {
-  auto framed = frame_text_message(json);
+void ViewerConnection::ensure_control_writer() {
   if (!control_writer_) {
     control_writer_ = std::make_unique<livekit::ByteStreamWriter>(
       *room_->localParticipant(), "unused", "control",
@@ -277,11 +354,21 @@ void ViewerConnection::send_framed_text(const std::string& json) {
       std::vector<std::string>{TEST_DEVICE_ID}
     );
   }
+}
+
+void ViewerConnection::send_framed_text(const std::string& json) {
+  ensure_control_writer();
+  auto framed = frame_text_message(json);
+  control_writer_->write(framed);
+}
+
+void ViewerConnection::send_framed_binary(const std::vector<uint8_t>& data) {
+  ensure_control_writer();
+  auto framed = frame_binary_message(data.data(), data.size());
   control_writer_->write(framed);
 }
 
 void ViewerConnection::send_subscribe(const std::vector<uint64_t>& channel_ids) {
-  ensure_device_ch_handlers();
   nlohmann::json channels = nlohmann::json::array();
   for (auto id : channel_ids) {
     channels.push_back({{"id", id}});
@@ -291,7 +378,6 @@ void ViewerConnection::send_subscribe(const std::vector<uint64_t>& channel_ids) 
 }
 
 void ViewerConnection::send_subscribe_video(const std::vector<uint64_t>& channel_ids) {
-  ensure_device_ch_handlers();
   nlohmann::json channels = nlohmann::json::array();
   for (auto id : channel_ids) {
     channels.push_back({{"id", id}, {"requestVideoTrack", true}});
@@ -351,7 +437,7 @@ void ViewerConnection::send_client_unadvertise(const std::vector<uint32_t>& chan
 void ViewerConnection::send_client_message_data(
   uint32_t channel_id, const std::vector<uint8_t>& data
 ) {
-  // ClientMessageData binary format: opcode 1 + channel_id u32 LE + data
+  // v2 ClientMessageData binary framing: opcode(1) + channel_id(u32 LE) + data
   std::vector<uint8_t> inner;
   inner.push_back(1);
   inner.push_back(static_cast<uint8_t>(channel_id & 0xFF));
@@ -360,15 +446,7 @@ void ViewerConnection::send_client_message_data(
   inner.push_back(static_cast<uint8_t>((channel_id >> 24) & 0xFF));
   inner.insert(inner.end(), data.begin(), data.end());
 
-  auto framed = frame_binary_message(inner.data(), inner.size());
-
-  auto topic = "client-ch-" + std::to_string(channel_id);
-  livekit::ByteStreamWriter writer(
-    *room_->localParticipant(), "unused", topic, std::map<std::string, std::string>{}, "",
-    std::nullopt, "application/octet-stream", std::vector<std::string>{TEST_DEVICE_ID}
-  );
-  writer.write(framed);
-  writer.close();
+  send_framed_binary(inner);
 }
 
 void ViewerConnection::send_subscribe_connection_graph() {
@@ -379,61 +457,50 @@ void ViewerConnection::send_unsubscribe_connection_graph() {
   send_framed_text(R"({"op":"unsubscribeConnectionGraph"})");
 }
 
-FrameReader ViewerConnection::expect_channel_byte_stream() {
-  // Per-channel byte streams have topics like "device-ch-{subscription_id}".
-  // We register handlers dynamically and poll for events from them.
-  // Register a batch of handlers for potential subscription IDs if not already done.
-  ensure_device_ch_handlers();
-
+std::shared_ptr<DeviceChannelReader> ViewerConnection::expect_device_channel_data_track(
+  uint64_t channel_id
+) {
+  auto expected_name = "data-ch-" + std::to_string(channel_id);
   auto event = delegate_->wait_for_event(
-    [](const ViewerEvent& e) {
-      return e.type == ViewerEvent::Type::ByteStreamOpened &&
-             e.topic.find("device-ch-") == 0;
+    [&expected_name](const ViewerEvent& e) {
+      return e.type == ViewerEvent::Type::DataTrackPublished && e.track_name == expected_name;
     },
     std::chrono::duration_cast<std::chrono::milliseconds>(READ_TIMEOUT)
   );
   if (!event) {
-    throw std::runtime_error("timeout waiting for channel byte stream");
-  }
-  return FrameReader(event->reader);
-}
-
-void ViewerConnection::ensure_device_ch_handlers() {
-  if (device_ch_handlers_registered_) {
-    return;
-  }
-  device_ch_handlers_registered_ = true;
-
-  auto delegate_weak = std::weak_ptr<TestRoomDelegate>(delegate_);
-  // Register handlers for subscription IDs 0-99 to cover typical test scenarios.
-  for (int i = 0; i < 100; ++i) {
-    auto topic = "device-ch-" + std::to_string(i);
-    room_->registerByteStreamHandler(
-      topic,
-      [delegate_weak, topic](
-        std::shared_ptr<livekit::ByteStreamReader> reader,
-        const std::string& participant_identity
-      ) {
-        if (auto d = delegate_weak.lock()) {
-          ViewerEvent ve;
-          ve.type = ViewerEvent::Type::ByteStreamOpened;
-          ve.topic = topic;
-          ve.identity = participant_identity;
-          ve.reader = std::move(reader);
-          d->push_event(std::move(ve));
-        }
-      }
+    throw std::runtime_error(
+      "timeout waiting for device channel data track: " + expected_name
     );
   }
+  auto sub = event->data_track->subscribe();
+  if (!sub) {
+    throw std::runtime_error(
+      "failed to subscribe to data track " + expected_name + ": " + sub.error().message
+    );
+  }
+  // The C++ subscribe() returns immediately, but the underlying Rust FFI
+  // subscription is asynchronous: the SFU must add a data downtrack and send
+  // `DataTrackSubscriberHandles` back before any frames will be routed. If we
+  // publish a frame from the SDK before that handshake completes, the SFU has
+  // no downtrack and silently drops the packet. Sleep briefly to let the
+  // subscription activate. The Rust test helper avoids this race with
+  // `subscribe().await`, but the C++ FFI does not currently expose an
+  // "active" signal.
+  std::this_thread::sleep_for(std::chrono::milliseconds(500));
+  return std::make_shared<DeviceChannelReader>(sub.value(), channel_id);
 }
 
-nlohmann::json ViewerConnection::expect_new_bytestream_and_message_data() {
-  auto reader = expect_channel_byte_stream();
-  auto msg = reader.next_server_message();
-  if (msg.value("op", "") != "messageData") {
-    throw std::runtime_error("expected messageData on channel stream, got: " + msg.dump());
+void ViewerConnection::ensure_device_data_track(uint64_t channel_id) {
+  if (device_channel_readers_.count(channel_id) > 0) {
+    return;
   }
-  return msg;
+  auto reader = expect_device_channel_data_track(channel_id);
+  device_channel_readers_.emplace(channel_id, std::move(reader));
+}
+
+nlohmann::json ViewerConnection::expect_new_data_track_and_message_data(uint64_t channel_id) {
+  ensure_device_data_track(channel_id);
+  return device_channel_readers_.at(channel_id)->next_server_message();
 }
 
 std::string ViewerConnection::expect_track_subscribed() {
@@ -495,6 +562,7 @@ std::vector<uint8_t> encode_disconnect_ffi_request(uint64_t room_handle) {
 }  // namespace
 
 void ViewerConnection::close() {
+  device_channel_readers_.clear();
   if (control_writer_) {
     control_writer_->close();
     control_writer_.reset();
