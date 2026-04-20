@@ -12,10 +12,10 @@
 #include <catch2/catch_test_macros.hpp>
 #include <nlohmann/json.hpp>
 
+#include <algorithm>
 #include <string>
 #include <thread>
 #include <vector>
-#include <algorithm>
 
 #include "frame.hpp"
 #include "mock_listener.hpp"
