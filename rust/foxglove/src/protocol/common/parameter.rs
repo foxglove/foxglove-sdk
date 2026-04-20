@@ -21,16 +21,16 @@ pub enum DecodeError {
 }
 
 /// An optional type hint for a [`Parameter`], used to disambiguate values whose intended type
-/// cannot be inferred from the JSON representation alone.
+/// cannot be inferred from the wire representation alone.
 ///
-/// A parameter's type is typically derived directly from its [`ParameterValue`]: integers,
-/// booleans, strings, dicts, and homogeneous arrays of these are unambiguous on the wire.
+/// A parameter's type is typically derived directly from its value: integers, booleans, strings,
+/// dicts, and homogeneous arrays of these are unambiguous on the wire.
 /// This enum only enumerates the cases that need an explicit hint:
 ///
 /// - [`ParameterType::ByteArray`]: a byte array is transmitted as a base64-encoded string, so
 ///   without a type hint it would be indistinguishable from an ordinary string.
-/// - [`ParameterType::Float64`]: a whole-valued float (e.g. `1.0`) may be serialized as an
-///   integer by some JSON encoders; the hint preserves the intended floating-point type.
+/// - [`ParameterType::Float64`]: a whole-valued float (e.g. `1.0`) may be indistinguishable from
+///   an integer on the wire; the hint preserves the intended floating-point type.
 /// - [`ParameterType::Float64Array`]: same rationale as `Float64`, for arrays.
 ///
 /// Parameters of other types (integer, bool, string, dict, arrays of these) leave
@@ -38,7 +38,8 @@ pub enum DecodeError {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ParameterType {
-    /// A byte array, encoded on the wire as a base64-encoded string.
+    /// A byte array, transmitted on the wire as a base64-encoded string. The type hint
+    /// distinguishes it from an ordinary string value.
     ByteArray,
     /// A floating-point value that can be represented as a `float64`. Used to preserve the
     /// floating-point type for whole-valued numbers that would otherwise round-trip as integers.

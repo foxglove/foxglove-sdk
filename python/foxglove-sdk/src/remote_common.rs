@@ -193,8 +193,9 @@ impl PyMessageSchema {
 ///
 /// - :py:attr:`ParameterType.ByteArray`: a byte array is transmitted as a base64-encoded string,
 ///   so without a type hint it would be indistinguishable from an ordinary string.
-/// - :py:attr:`ParameterType.Float64`: a whole-valued float (e.g. ``1.0``) may be serialized as
-///   an integer by some JSON encoders; the hint preserves the intended floating-point type.
+/// - :py:attr:`ParameterType.Float64`: a whole-valued float (e.g. ``1.0``) may be
+///   indistinguishable from an integer on the wire; the hint preserves the intended
+///   floating-point type.
 /// - :py:attr:`ParameterType.Float64Array`: same rationale as ``Float64``, for arrays.
 ///
 /// Parameters of other types (integer, bool, string, dict, arrays of these) leave

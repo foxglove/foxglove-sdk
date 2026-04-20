@@ -30,11 +30,12 @@ namespace foxglove {
 ///
 /// - `ByteArray`: a byte array is transmitted as a base64-encoded string, so without a type hint
 ///   it would be indistinguishable from an ordinary string.
-/// - `Float64`: a whole-valued float (e.g. `1.0`) may be serialized as an integer by some JSON
-///   encoders; the hint preserves the intended floating-point type.
+/// - `Float64`: a whole-valued float (e.g. `1.0`) may be indistinguishable from an integer on
+///   the wire; the hint preserves the intended floating-point type.
 /// - `Float64Array`: same rationale as `Float64`, for arrays.
 ///
-/// Parameters of other types (integer, bool, string, dict, arrays of these) use `None`.
+/// Parameters of other types (integer, bool, string, dict, arrays of these) leave `type()` as
+/// `ParameterType::None`.
 enum class ParameterType : uint8_t {
   /// The parameter value can be inferred from the inner parameter value tag. Use this for
   /// parameters whose type is unambiguous on the wire (integer, bool, string, dict, or
