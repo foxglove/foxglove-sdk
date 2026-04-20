@@ -301,7 +301,7 @@ impl RemoteAccessConnection {
                         capabilities: self.capabilities.clone(),
                         supported_encodings: self.supported_encodings.clone().unwrap_or_default(),
                         runtime: self.runtime.clone(),
-                        cancellation_token: self.cancellation_token.clone(),
+                        cancellation_token: self.cancellation_token.child_token(),
                         message_backlog_size: self
                             .message_backlog_size
                             .unwrap_or(DEFAULT_MESSAGE_BACKLOG_SIZE),
@@ -442,8 +442,10 @@ impl RemoteAccessConnection {
             }
         }
         context.remove_sink(session.sink_id());
-        video_metadata_task.abort();
-        let _ = video_metadata_task.await;
+        session.cancel();
+        if let Err(e) = video_metadata_task.await {
+            error!(remote_access_session_id, error = %e, "video metadata watcher failed");
+        }
 
         info!(remote_access_session_id, "disconnecting from room");
         // handle_room_events was one arm of the select! above — when the select
