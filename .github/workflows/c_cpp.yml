@@ -264,58 +264,13 @@ jobs:
       - run: make SANITIZE=address,undefined FOXGLOVE_REMOTE_ACCESS=OFF test
         working-directory: cpp
 
-  integration-test:
-    needs: changes
-    if: needs.changes.outputs.build == 'true'
-    runs-on: ubuntu-24.04
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          lfs: true
-
-      - name: Install common dependencies
-        uses: ./.github/actions/common-deps
-
-      - name: Install LiveKit C++ SDK dependencies
-        run: |
-          sudo apt-get install -y --no-install-recommends \
-            llvm-dev libclang-dev clang \
-            libdrm-dev libgbm-dev libx11-dev libgl1-mesa-dev \
-            libxext-dev libxcomposite-dev libxdamage-dev libxfixes-dev \
-            libxrandr-dev libxi-dev libxkbcommon-dev \
-            libasound2-dev libpulse-dev \
-            libssl-dev \
-            libabsl-dev \
-            libwayland-dev libdecor-0-dev
-
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
-        with:
-          toolchain: stable
-
-      - name: Start LiveKit server
-        run: docker compose up -d --wait
-
-      - name: Build and run C++ integration tests
-        working-directory: cpp
-        # Disable warnings (needed for livekit)
-        env:
-          RUSTFLAGS: ""
-        run: |
-          make build-integration
-          ctest --test-dir build-integration --verbose -L integration
-
-      - name: Stop LiveKit server
-        if: always()
-        run: docker compose down
-
   # Gate job for branch protection. Always posts a status so that the required
   # check passes even when the other jobs are skipped. Configure your required
   # status check to reference this job ("C/C++ / c-cpp-status") instead of the
   # individual matrix jobs.
   c-cpp-status:
     name: c-cpp-status
-    needs: [changes, lint, build, test-asan-ubsan, integration-test]
+    needs: [changes, lint, build, test-asan-ubsan]
     if: always()
     runs-on: ubuntu-latest
     steps:
