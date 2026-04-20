@@ -265,6 +265,31 @@ FoxgloveResult<RemoteAccessGateway> RemoteAccessGateway::create(
     };
   }
 
+  // QoS classifier
+  std::unique_ptr<QosClassifierFn> qos_classifier;
+  if (options.qos_classifier) {
+    qos_classifier = std::make_unique<QosClassifierFn>(options.qos_classifier);
+
+    c_options.qos_classifier_context = qos_classifier.get();
+    c_options.qos_classifier = [](
+                                 const void* context,
+                                 const struct foxglove_channel_descriptor* channel
+                               ) -> foxglove_qos_profile {
+      try {
+        if (!context) {
+          return {FOXGLOVE_RELIABILITY_LOSSY};
+        }
+        const auto* classifier_func = static_cast<const QosClassifierFn*>(context);
+        auto cpp_channel = ChannelDescriptor(channel);
+        auto profile = (*classifier_func)(cpp_channel);
+        return {static_cast<foxglove_reliability>(profile.reliability)};
+      } catch (const std::exception& exc) {
+        warn() << "QoS classifier failed: " << exc.what();
+        return {FOXGLOVE_RELIABILITY_LOSSY};
+      }
+    };
+  }
+
   // Fetch asset handler
   if (options.fetch_asset) {
     fetch_asset = std::make_unique<FetchAssetHandler>(options.fetch_asset);
@@ -314,18 +339,24 @@ FoxgloveResult<RemoteAccessGateway> RemoteAccessGateway::create(
   }
 
   return RemoteAccessGateway(
-    gateway, std::move(callbacks), std::move(fetch_asset), std::move(sink_channel_filter)
+    gateway,
+    std::move(callbacks),
+    std::move(fetch_asset),
+    std::move(sink_channel_filter),
+    std::move(qos_classifier)
   );
 }
 
 RemoteAccessGateway::RemoteAccessGateway(
   foxglove_gateway* gateway, std::unique_ptr<RemoteAccessGatewayCallbacks> callbacks,
   std::unique_ptr<FetchAssetHandler> fetch_asset,
-  std::unique_ptr<SinkChannelFilterFn> sink_channel_filter
+  std::unique_ptr<SinkChannelFilterFn> sink_channel_filter,
+  std::unique_ptr<QosClassifierFn> qos_classifier
 )
     : callbacks_(std::move(callbacks))
     , fetch_asset_(std::move(fetch_asset))
     , sink_channel_filter_(std::move(sink_channel_filter))
+    , qos_classifier_(std::move(qos_classifier))
     , impl_(gateway, foxglove_gateway_stop) {}
 
 RemoteAccessConnectionStatus RemoteAccessGateway::connectionStatus() const {
@@ -374,6 +405,14 @@ FoxgloveError RemoteAccessGateway::removeStatus(const std::vector<std::string_vi
 
 FoxgloveError RemoteAccessGateway::publishConnectionGraph(const ConnectionGraph& graph) const {
   return FoxgloveError(foxglove_gateway_publish_connection_graph(impl_.get(), graph.impl_.get()));
+}
+
+std::optional<uint64_t> RemoteAccessGateway::sinkId() const {
+  uint64_t id = foxglove_gateway_sink_id(impl_.get());
+  if (id == 0) {
+    return std::nullopt;
+  }
+  return id;
 }
 
 FoxgloveError RemoteAccessGateway::stop() {

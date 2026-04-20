@@ -5,7 +5,7 @@ use tokio::runtime::Handle;
 use tokio::task::JoinHandle;
 
 use crate::{
-    ChannelDescriptor, Context, FoxgloveError, SinkChannelFilter,
+    ChannelDescriptor, Context, FoxgloveError, SinkChannelFilter, SinkId,
     protocol::v2::parameter::Parameter,
     remote_common::connection_graph::ConnectionGraph,
     remote_common::fetch_asset::{AssetHandler, AsyncAssetHandlerFn, BlockingAssetHandlerFn},
@@ -13,6 +13,8 @@ use crate::{
     runtime::get_runtime_handle,
     sink_channel_filter::SinkChannelFilterFn,
 };
+
+use super::qos::{QosClassifier, QosClassifierFn, QosProfile};
 
 use super::connection::{ConnectionParams, ConnectionStatus, RemoteAccessConnection};
 use super::{Capability, Client, Listener};
@@ -40,6 +42,12 @@ impl GatewayHandle {
     /// Returns the current connection status.
     pub fn connection_status(&self) -> ConnectionStatus {
         self.connection.status()
+    }
+
+    /// Returns the sink ID of the current session, if one is active.
+    #[doc(hidden)]
+    pub fn sink_id(&self) -> Option<SinkId> {
+        self.connection.sink_id()
     }
 
     /// Adds new services, and advertises them to all connected participants.
@@ -76,7 +84,7 @@ impl GatewayHandle {
         self.connection.publish_status(status);
     }
 
-    /// Removes status messages by id from all connected participants.
+    /// Removes status messages by ID from all connected participants.
     pub fn remove_status(&self, status_ids: Vec<String>) {
         self.connection.remove_status(status_ids);
     }
@@ -115,9 +123,9 @@ impl GatewayHandle {
             fetch_asset_handler: None,
             runtime: runtime.clone(),
             channel_filter: None,
+            qos_classifier: None,
             server_info: None,
             message_backlog_size: None,
-            pending_client_reader_timeout: None,
             context: std::sync::Weak::new(),
         };
         let services = Arc::new(parking_lot::RwLock::new(ServiceMap::default()));
@@ -161,9 +169,9 @@ pub struct Gateway {
     fetch_asset_handler: Option<Box<dyn AssetHandler<Client>>>,
     runtime: Option<Handle>,
     channel_filter: Option<Arc<dyn SinkChannelFilter>>,
+    qos_classifier: Option<Arc<dyn QosClassifier>>,
     server_info: Option<HashMap<String, String>>,
     message_backlog_size: Option<usize>,
-    pending_client_reader_timeout: Option<Duration>,
     context: std::sync::Weak<Context>,
 }
 
@@ -181,9 +189,9 @@ impl Default for Gateway {
             fetch_asset_handler: None,
             runtime: None,
             channel_filter: None,
+            qos_classifier: None,
             server_info: None,
             message_backlog_size: None,
-            pending_client_reader_timeout: None,
             context: Arc::downgrade(&Context::get_default()),
         }
     }
@@ -206,6 +214,7 @@ impl std::fmt::Debug for Gateway {
             )
             .field("has_runtime", &self.runtime.is_some())
             .field("has_channel_filter", &self.channel_filter.is_some())
+            .field("has_qos_classifier", &self.qos_classifier.is_some())
             .field("server_info", &self.server_info)
             .field("message_backlog_size", &self.message_backlog_size)
             .field("has_context", &(self.context.strong_count() > 0))
@@ -307,22 +316,15 @@ impl Gateway {
         self
     }
 
-    /// Set the message backlog size.
+    /// Set the per-participant control plane message queue size.
     ///
-    /// The sink buffers outgoing log entries into a queue. If the backlog size is exceeded, the
-    /// oldest entries will be dropped.
+    /// Each participant gets an independent queue of this size. If a participant's
+    /// queue fills up (because it is not reading fast enough), it will be disconnected
+    /// and asked to reconnect.
     ///
-    /// By default, the sink will buffer 1024 messages.
+    /// By default, each participant gets a queue of 1024 messages.
     pub fn message_backlog_size(mut self, size: usize) -> Self {
         self.message_backlog_size = Some(size);
-        self
-    }
-
-    /// How long to wait for a matching Client Advertise before rejecting a
-    /// `client-ch-{channelId}` byte stream. Defaults to 15 seconds.
-    #[doc(hidden)]
-    pub fn pending_client_reader_timeout(mut self, timeout: Duration) -> Self {
-        self.pending_client_reader_timeout = Some(timeout);
         self
     }
 
@@ -332,6 +334,26 @@ impl Gateway {
         filter: impl Fn(&ChannelDescriptor) -> bool + Sync + Send + 'static,
     ) -> Self {
         self.channel_filter = Some(Arc::new(SinkChannelFilterFn(filter)));
+        self
+    }
+
+    /// Sets a [`QosClassifier`] for assigning quality-of-service profiles to channels.
+    ///
+    /// The classifier is invoked when channels are registered and determines how data for
+    /// each channel is delivered to remote participants.
+    ///
+    /// If not set, all channels use the default [`QosProfile`].
+    pub fn qos_classifier(mut self, classifier: Arc<dyn QosClassifier>) -> Self {
+        self.qos_classifier = Some(classifier);
+        self
+    }
+
+    /// Sets a QoS classifier function. See [`QosClassifier`] for more information.
+    pub fn qos_classifier_fn(
+        mut self,
+        classifier: impl Fn(&ChannelDescriptor) -> QosProfile + Sync + Send + 'static,
+    ) -> Self {
+        self.qos_classifier = Some(Arc::new(QosClassifierFn(classifier)));
         self
     }
 
@@ -461,9 +483,9 @@ impl Gateway {
             fetch_asset_handler: self.fetch_asset_handler.map(Arc::from),
             runtime: runtime.clone(),
             channel_filter: self.channel_filter,
+            qos_classifier: self.qos_classifier,
             server_info: self.server_info,
             message_backlog_size: self.message_backlog_size,
-            pending_client_reader_timeout: self.pending_client_reader_timeout,
             context: self.context,
         };
         let connection = RemoteAccessConnection::new(params, services);

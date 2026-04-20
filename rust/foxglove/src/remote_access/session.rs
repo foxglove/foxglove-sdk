@@ -6,20 +6,20 @@ use bytes::Bytes;
 use futures_util::StreamExt;
 use indexmap::IndexSet;
 use libwebrtc::video_source::{RtcVideoSource, native::NativeVideoSource};
-use livekit::options::TrackPublishOptions;
+use livekit::options::{TrackPublishOptions, VideoCodec};
 use livekit::{ByteStreamReader, Room, StreamByteOptions, id::ParticipantIdentity};
 use livekit::{StreamWriter, prelude::*};
 use parking_lot::RwLock;
 use semver::Version;
 use smallvec::SmallVec;
 use tokio::io::AsyncReadExt;
+use tokio::runtime::Handle;
 use tokio_util::{io::StreamReader, sync::CancellationToken};
 use tracing::{debug, error, info, trace, warn};
 
 use crate::protocol::v2::DecodeError;
 use crate::protocol::v2::parameter::Parameter;
 use crate::protocol::v2::server::ParameterValues;
-use crate::remote_access::participant::ChannelWriter;
 use crate::remote_common::ClientId;
 use crate::remote_common::connection_graph::ConnectionGraph;
 use crate::remote_common::{
@@ -34,11 +34,11 @@ use crate::{
         BinaryMessage, JsonMessage,
         client::{self, ClientMessage},
         server::{
-            AdvertiseServices, MessageData as ServerMessageData, Pong, RemoveStatus, ServerInfo,
-            ServiceCallFailure, Status, Unadvertise, UnadvertiseServices, advertise,
-            advertise_services,
+            AdvertiseServices, MessageData, Pong, RemoveStatus, ServerInfo, ServiceCallFailure,
+            Status, Unadvertise, UnadvertiseServices, advertise, advertise_services,
         },
     },
+    remote_access::qos::{QosClassifier, Reliability},
     remote_access::{
         AssetHandler, Capability, Listener, RemoteAccessError, client::Client,
         participant::Participant, protocol_version, rtt_tracker::RttTracker,
@@ -46,6 +46,8 @@ use crate::{
     },
 };
 
+mod data_track;
+pub(crate) use data_track::DataTrack;
 mod video_track;
 pub(crate) use video_track::{
     VideoInputSchema, VideoMetadata, VideoPublisher, get_video_input_schema,
@@ -59,52 +61,10 @@ pub(crate) struct SessionStats {
 }
 
 const CONTROL_CHANNEL_TOPIC: &str = "control";
-const CHANNEL_TOPIC_PREFIX: &str = "device-ch-";
-const CLIENT_CHANNEL_TOPIC_PREFIX: &str = "client-ch-";
 const MESSAGE_FRAME_SIZE: usize = 5; // 1 byte opcode + u32 LE length
 const MAX_MESSAGE_SIZE: usize = 16 * 1024 * 1024; // 16 MiB
-const MAX_SEND_RETRIES: usize = 3;
-pub(crate) const DEFAULT_PENDING_CLIENT_READER_TIMEOUT: Duration = Duration::from_secs(15);
 
-/// A data plane message queued for delivery to subscribed participants.
-struct ChannelMessage {
-    channel_id: ChannelId,
-    data: Bytes,
-}
-
-impl ChannelMessage {
-    fn binary<'a>(channel_id: ChannelId, message: &impl BinaryMessage<'a>) -> Self {
-        Self {
-            channel_id,
-            data: encode_binary_message(message),
-        }
-    }
-}
-
-/// A control plane message queued for delivery to a specific participant.
-pub(super) struct ControlPlaneMessage {
-    participant: Arc<Participant>,
-    data: Bytes,
-}
-
-impl ControlPlaneMessage {
-    pub(super) fn json(participant: Arc<Participant>, message: &impl JsonMessage) -> Self {
-        Self {
-            participant,
-            data: encode_json_message(message),
-        }
-    }
-
-    pub(super) fn binary<'a>(
-        participant: Arc<Participant>,
-        message: &impl BinaryMessage<'a>,
-    ) -> Self {
-        Self {
-            participant,
-            data: encode_binary_message(message),
-        }
-    }
-}
+pub(crate) const DEFAULT_MESSAGE_BACKLOG_SIZE: usize = 1024;
 
 /// The operation code for the message framing for protocol v2.
 /// Distinguishes between frames containing JSON messages vs binary messages.
@@ -118,7 +78,7 @@ enum OpCode {
 }
 
 /// Encodes a JSON message with the v2 byte stream framing (1 byte opcode + 4 byte LE length + payload).
-fn encode_json_message(message: &impl JsonMessage) -> Bytes {
+pub(super) fn encode_json_message(message: &impl JsonMessage) -> Bytes {
     let payload = message.to_string();
     let payload = payload.as_bytes();
     let mut buf = Vec::with_capacity(MESSAGE_FRAME_SIZE + payload.len());
@@ -129,7 +89,7 @@ fn encode_json_message(message: &impl JsonMessage) -> Bytes {
     Bytes::from(buf)
 }
 
-fn encode_binary_message<'a>(message: &impl BinaryMessage<'a>) -> Bytes {
+pub(super) fn encode_binary_message<'a>(message: &impl BinaryMessage<'a>) -> Bytes {
     let msg_len = message.encoded_len();
     let mut buf = Vec::with_capacity(MESSAGE_FRAME_SIZE + msg_len);
     buf.push(OpCode::Binary as u8);
@@ -176,14 +136,12 @@ pub(crate) struct RemoteAccessSession {
     remote_access_session_id: Option<String>,
     state: RwLock<SessionState>,
     channel_filter: Option<Arc<dyn SinkChannelFilter>>,
+    qos_classifier: Option<Arc<dyn QosClassifier>>,
     listener: Option<Arc<dyn Listener>>,
     capabilities: Vec<Capability>,
     fetch_asset_handler: Option<Arc<dyn AssetHandler<Client>>>,
+    runtime: Handle,
     cancellation_token: CancellationToken,
-    data_plane_tx: flume::Sender<ChannelMessage>,
-    data_plane_rx: flume::Receiver<ChannelMessage>,
-    control_plane_tx: flume::Sender<ControlPlaneMessage>,
-    control_plane_rx: flume::Receiver<ControlPlaneMessage>,
     services: Arc<parking_lot::RwLock<ServiceMap>>,
     supported_encodings: IndexSet<String>,
     /// Serializes all participant-scoped state mutations: subscription changes, video track
@@ -195,24 +153,20 @@ pub(crate) struct RemoteAccessSession {
     /// the sender loop to re-advertise affected channels.
     video_metadata_tx: tokio::sync::watch::Sender<()>,
     video_metadata_rx: tokio::sync::watch::Receiver<()>,
-    /// Byte stream readers for `client-ch-{channelId}` streams that arrived before the
-    /// corresponding Client Advertise message. Keyed by participant identity then channel ID.
-    /// Drained when the advertise arrives; expired after `pending_client_reader_timeout`.
-    pending_client_readers:
-        parking_lot::Mutex<HashMap<ParticipantIdentity, HashMap<ChannelId, ByteStreamReader>>>,
-    pending_client_reader_timeout: Duration,
     rtt_tracker: parking_lot::Mutex<RttTracker>,
     ice_rtt_tracker: parking_lot::Mutex<RttTracker>,
     connection_graph: Arc<parking_lot::Mutex<ConnectionGraph>>,
     /// Immutable `ServerInfo` message sent to each participant on connect and reset.
     server_info: ServerInfo,
-    /// Channel used by `run_sender` to request participant resets when a control
-    /// stream write fails. `handle_room_events` receives identities and calls
-    /// `reset_participant`. Using `mpsc` rather than `Notify` because `Notify` is
-    /// not cancel-safe in `select!`.
-    participant_reset_tx: tokio::sync::mpsc::UnboundedSender<ParticipantIdentity>,
-    participant_reset_rx:
-        tokio::sync::Mutex<tokio::sync::mpsc::UnboundedReceiver<ParticipantIdentity>>,
+    /// Set of `ClientId`s pending a reset (disconnect + reconnect).
+    /// Populated by `Participant::send_control` on queue overflow and by flush
+    /// tasks on write failure. Drained by `handle_room_events`. See
+    /// [`Participant::pending_resets`] for why this is keyed by `ClientId`.
+    pending_resets: Arc<parking_lot::Mutex<HashSet<ClientId>>>,
+    /// Wakes `handle_room_events` when a new reset is added to `pending_resets`.
+    reset_notify: Arc<tokio::sync::Notify>,
+    /// Size of the per-participant control plane queue.
+    message_backlog_size: usize,
 }
 
 impl Sink for RemoteAccessSession {
@@ -237,9 +191,18 @@ impl Sink for RemoteAccessSession {
 
         // Send to data subscribers.
         if state.has_data_subscribers(&channel_id) {
-            drop(state);
-            let message = ServerMessageData::new(u64::from(channel_id), metadata.log_time, msg);
-            self.send_data_lossy(ChannelMessage::binary(channel_id, &message));
+            if state.qos_profile(&channel_id).reliability == Reliability::Reliable {
+                // Reliable channels: send MessageData via the control bytestream
+                // to each subscribed participant.
+                let message = MessageData::new(u64::from(channel_id), metadata.log_time, msg);
+                let encoded = encode_binary_message(&message);
+                for participant in state.data_subscriber_participants(&channel_id) {
+                    participant.send_control(encoded.clone());
+                }
+            } else if let Some(track) = state.get_subscribed_data_track(&channel_id) {
+                // Lossy channels: send via the eagerly-published data track.
+                track.log(channel_id, msg, metadata);
+            }
         }
 
         Ok(())
@@ -266,23 +229,47 @@ impl Sink for RemoteAccessSession {
             return None;
         }
 
-        // Track advertised channels and detect video-capable ones.
+        // Track advertised channels, detect video-capable ones, and classify QoS.
         let advertised_ids: std::collections::HashSet<u64> =
             advertise_msg.channels.iter().map(|ch| ch.id).collect();
-        {
+        let advertised_channel_ids: SmallVec<[ChannelId; 4]> = {
             let mut state = self.state.write();
+            let mut ids = SmallVec::new();
             for &ch in &filtered {
                 if advertised_ids.contains(&u64::from(ch.id())) {
                     state.insert_channel(ch);
-                    if let Some(input_schema) = get_video_input_schema(ch) {
+                    let video_schema = get_video_input_schema(ch);
+                    if let Some(input_schema) = video_schema {
                         state.insert_video_schema(ch.id(), input_schema);
+                    }
+                    let mut qos = self
+                        .qos_classifier
+                        .as_ref()
+                        .map(|c| c.classify(ch.descriptor()))
+                        .unwrap_or_default();
+                    if video_schema.is_some() && qos.reliability == Reliability::Reliable {
+                        warn!(
+                            "Forcing QoS to Lossy for video channel {:?} (topic={}): \
+                             Reliable delivery is not supported for video",
+                            ch.id(),
+                            ch.topic()
+                        );
+                        qos.reliability = Reliability::Lossy;
+                    }
+                    state.insert_qos_profile(ch.id(), qos);
+                    if qos.reliability != Reliability::Reliable {
+                        ids.push(ch.id());
                     }
                 }
             }
             state.add_metadata_to_advertisement(&mut advertise_msg);
-        }
+            ids
+        };
 
         self.broadcast_control(encode_json_message(&advertise_msg));
+
+        // Eagerly publish a data track for each newly advertised channel.
+        self.publish_data_tracks(&advertised_channel_ids);
 
         // Clients subscribe asynchronously.
         None
@@ -300,6 +287,7 @@ impl Sink for RemoteAccessSession {
         }
 
         self.teardown_video_track(channel_id);
+        self.teardown_data_track(channel_id);
         self.state.write().remove_video_schema(&channel_id);
 
         let unadvertise = Unadvertise::new([u64::from(channel_id)]);
@@ -324,14 +312,15 @@ pub(crate) struct SessionParams {
     pub room: Room,
     pub context: Weak<Context>,
     pub channel_filter: Option<Arc<dyn SinkChannelFilter>>,
+    pub qos_classifier: Option<Arc<dyn QosClassifier>>,
     pub listener: Option<Arc<dyn Listener>>,
     pub capabilities: Vec<Capability>,
     pub supported_encodings: IndexSet<String>,
+    pub runtime: Handle,
     pub cancellation_token: CancellationToken,
     pub message_backlog_size: usize,
     pub services: Arc<parking_lot::RwLock<ServiceMap>>,
     pub connection_graph: Arc<parking_lot::Mutex<ConnectionGraph>>,
-    pub pending_client_reader_timeout: Duration,
     pub remote_access_session_id: Option<String>,
     pub fetch_asset_handler: Option<Arc<dyn AssetHandler<Client>>>,
     pub server_info: ServerInfo,
@@ -339,10 +328,9 @@ pub(crate) struct SessionParams {
 
 impl RemoteAccessSession {
     pub(crate) fn new(params: SessionParams) -> Self {
-        let (data_plane_tx, data_plane_rx) = flume::bounded(params.message_backlog_size);
-        let (control_plane_tx, control_plane_rx) = flume::bounded(params.message_backlog_size);
         let (video_metadata_tx, video_metadata_rx) = tokio::sync::watch::channel(());
-        let (participant_reset_tx, participant_reset_rx) = tokio::sync::mpsc::unbounded_channel();
+        let pending_resets = Arc::new(parking_lot::Mutex::new(HashSet::new()));
+        let reset_notify = Arc::new(tokio::sync::Notify::new());
         Self {
             sink_id: SinkId::next(),
             room: params.room,
@@ -350,27 +338,24 @@ impl RemoteAccessSession {
             remote_access_session_id: params.remote_access_session_id,
             state: RwLock::new(SessionState::new()),
             channel_filter: params.channel_filter,
+            qos_classifier: params.qos_classifier,
             listener: params.listener,
             capabilities: params.capabilities,
             fetch_asset_handler: params.fetch_asset_handler,
+            runtime: params.runtime,
             cancellation_token: params.cancellation_token,
-            data_plane_tx,
-            data_plane_rx,
-            control_plane_tx,
-            control_plane_rx,
             subscription_lock: parking_lot::Mutex::new(()),
             video_metadata_tx,
             video_metadata_rx,
-            pending_client_readers: parking_lot::Mutex::new(HashMap::new()),
-            pending_client_reader_timeout: params.pending_client_reader_timeout,
             services: params.services,
             supported_encodings: params.supported_encodings,
             rtt_tracker: parking_lot::Mutex::new(RttTracker::new("ping/pong")),
             ice_rtt_tracker: parking_lot::Mutex::new(RttTracker::new("ICE")),
             connection_graph: params.connection_graph,
             server_info: params.server_info,
-            participant_reset_tx,
-            participant_reset_rx: tokio::sync::Mutex::new(participant_reset_rx),
+            pending_resets,
+            reset_notify,
+            message_backlog_size: params.message_backlog_size,
         }
     }
 
@@ -400,158 +385,77 @@ impl RemoteAccessSession {
         }
     }
 
-    /// Enqueue a data plane message, dropping old messages if the queue is full.
-    fn send_data_lossy(&self, mut msg: ChannelMessage) {
-        static THROTTLER: parking_lot::Mutex<crate::throttler::Throttler> =
-            parking_lot::Mutex::new(crate::throttler::Throttler::new(Duration::from_secs(30)));
-        let mut dropped = 0;
-        loop {
-            match self.data_plane_tx.try_send(msg) {
-                Ok(_) => {
-                    if dropped > 0 && THROTTLER.lock().try_acquire() {
-                        info!("data plane queue full, dropped {dropped} message(s)");
-                    }
-                    return;
-                }
-                Err(flume::TrySendError::Disconnected(_)) => return,
-                Err(flume::TrySendError::Full(rejected)) => {
-                    if dropped >= MAX_SEND_RETRIES {
-                        if THROTTLER.lock().try_acquire() {
-                            info!("data plane queue full, dropped message");
-                        }
-                        return;
-                    }
-                    msg = rejected;
-                    let _ = self.data_plane_rx.try_recv();
-                    dropped += 1;
-                }
-            }
-        }
-    }
-
-    /// Enqueue a control plane message for a specific participant.
-    /// Blocks the thread if the queue is full.
-    fn send_control(&self, participant: Arc<Participant>, data: Bytes) {
-        let msg = ControlPlaneMessage { participant, data };
-        if let Err(e) = self.control_plane_tx.send(msg) {
-            warn!("control plane queue disconnected, dropping message: {e}");
-        }
-    }
-
     /// Send an error status message to a participant.
-    fn send_error(&self, participant: &Arc<Participant>, message: String) {
+    fn send_error(&self, participant: &Participant, message: String) {
         debug!("Sending error to {participant}: {message}");
         let status = Status::error(message);
-        self.send_control(participant.clone(), encode_json_message(&status));
+        participant.send_control(encode_json_message(&status));
     }
 
     /// Send a warning status message to a participant.
-    fn send_warning(&self, participant: &Arc<Participant>, message: String) {
+    fn send_warning(&self, participant: &Participant, message: String) {
         debug!("Sending warning to {participant}: {message}");
         let status = Status::warning(message);
-        self.send_control(participant.clone(), encode_json_message(&status));
+        participant.send_control(encode_json_message(&status));
     }
 
     /// Enqueue a control plane message for all currently connected participants.
+    /// If a participant's queue is full, a reset is requested for that participant.
     fn broadcast_control(&self, data: Bytes) {
         let participants = self.state.read().collect_participants();
         for participant in participants {
-            self.send_control(participant, data.clone());
+            participant.send_control(data.clone());
         }
     }
 
-    /// Reads from the data plane and control plane queues and sends messages to participants.
+    /// Watches for video metadata changes and re-advertises affected channels.
     ///
-    /// Control plane messages are sent to the targeted participant via its per-participant writer.
-    /// Data plane messages are written to a per-channel `ByteStreamWriter` addressed to the
-    /// channel's current subscriber set. The writer is created (or replaced) lazily: if the
-    /// locally cached writer's subscription version differs from the current version in state,
-    /// the old writer is dropped and a new one is opened for the up-to-date subscriber set.
-    pub(crate) async fn run_sender(session: Arc<Self>) {
-        let mut channel_writers: HashMap<ChannelId, ChannelWriter> = HashMap::new();
+    /// Runs until the cancellation token fires.
+    pub(crate) async fn run_video_metadata_watcher(session: Arc<Self>) {
         let mut video_metadata: HashMap<ChannelId, VideoMetadata> = HashMap::new();
         let mut video_metadata_rx = session.video_metadata_rx.clone();
-        // Participants whose control stream has broken. Messages for a poisoned
-        // `ClientId` are dropped without attempting a write. A fresh `ClientId` is
-        // assigned by `add_participant` after reset, so messages for the new
-        // participant pass through normally.
-        let mut poisoned_participants: HashSet<ClientId> = HashSet::new();
         loop {
             tokio::select! {
                 biased;
                 () = session.cancellation_token.cancelled() => break,
-                msg = session.control_plane_rx.recv_async() => {
-                    let Ok(msg) = msg else { break };
-                    if poisoned_participants.contains(&msg.participant.client_id()) {
-                        continue;
-                    }
-                    if let Err(e) = msg.participant.send(&msg.data).await {
-                        warn!(
-                            "control write failed for {:?}, requesting reset: {e:?}",
-                            msg.participant,
-                        );
-                        poisoned_participants.insert(msg.participant.client_id());
-                        let _ = session.participant_reset_tx.send(
-                            msg.participant.participant_id().clone(),
-                        );
-                    }
-                }
                 Ok(()) = video_metadata_rx.changed() => {
-                    session
-                        .republish_video_metadata(&mut video_metadata);
-                }
-                msg = session.data_plane_rx.recv_async() => {
-                    let Ok(msg) = msg else { break };
-                    process_data_message(
-                        &session.state,
-                        &msg,
-                        &mut channel_writers,
-                        |channel_id, subscribers, version| {
-                            let session = Arc::clone(&session);
-                            async move {
-                                let topic = format!(
-                                    "{CHANNEL_TOPIC_PREFIX}{}",
-                                    u64::from(channel_id),
-                                );
-                                match session
-                                    .room
-                                    .local_participant()
-                                    .stream_bytes(StreamByteOptions {
-                                        topic,
-                                        destination_identities: subscribers,
-                                        ..StreamByteOptions::default()
-                                    })
-                                    .await
-                                {
-                                    Ok(s) => Some(ChannelWriter::new(s, version)),
-                                    Err(e) => {
-                                        error!(
-                                            "failed to open byte stream for channel \
-                                             {channel_id:?}: {e:?}",
-                                        );
-                                        None
-                                    }
-                                }
-                            }
-                        },
-                    )
-                    .await;
+                    session.republish_video_metadata(&mut video_metadata);
                 }
             }
         }
     }
 
-    /// Read framed messages from a client byte stream.
+    /// Shut down the session: clear all participants (dropping their control
+    /// queue senders so flush tasks exit), await the flush task handles, then
+    /// close the LiveKit room.
     ///
-    /// `expected_channel_id` identifies a `client-ch-{channelId}` stream: the channel ID parsed from
-    /// the topic name. Every `MessageData` frame on this stream must carry the same channel ID;
-    /// mismatches are considered a protocol violation (debug-asserted). Pass `None` for the
-    /// `"control"` control stream.
+    /// The caller must ensure that `handle_room_events` has stopped so no new
+    /// `remove_participant` / `reset_participant` calls can race with us.
+    pub(crate) async fn close(&self) {
+        let (participants, flush_handles) = self.state.write().take_participants();
+        // Cancel each participant's flush task so it breaks out of the recv/write
+        // select! and doesn't pick up new messages. In-flight writes will complete
+        // or fail once room.close() tears down the transport.
+        for participant in participants {
+            participant.cancel();
+        }
+        for handle in flush_handles {
+            let _ = handle.await;
+        }
+        if let Err(e) = self.room.close().await {
+            error!(
+                remote_access_session_id = self.remote_access_session_id(),
+                error = %e,
+                "failed to close room: {e}",
+            );
+        }
+    }
+
+    /// Read framed messages from a client byte stream on the control channel.
     pub(crate) async fn handle_byte_stream_from_client(
         self: &Arc<Self>,
         participant_identity: ParticipantIdentity,
         reader: ByteStreamReader,
-        expected_channel_id: Option<u32>,
     ) {
         let stream = reader.map(|result| result.map_err(std::io::Error::other));
         let mut reader = StreamReader::new(stream);
@@ -603,16 +507,7 @@ impl RemoteAccessSession {
                 }
             }
 
-            if let Some(channel_id) = expected_channel_id {
-                if !self.handle_channel_stream_message(
-                    &participant_identity,
-                    channel_id,
-                    opcode,
-                    &payload,
-                ) {
-                    return;
-                }
-            } else if !self.handle_client_control_message(
+            if !self.handle_client_control_message(
                 &participant_identity,
                 opcode,
                 Bytes::from(payload),
@@ -620,99 +515,6 @@ impl RemoteAccessSession {
                 return;
             }
         }
-    }
-
-    /// Handle an incoming `client-ch-{channelId}` byte stream.
-    ///
-    /// If the client has already advertised this channel, the stream is read immediately.
-    /// Otherwise the reader is stashed until the Client Advertise arrives (or a timeout
-    /// expires), letting LiveKit buffer the data in the meantime.
-    pub(crate) fn handle_client_channel_stream(
-        self: &Arc<Self>,
-        participant_identity: ParticipantIdentity,
-        channel_id: ChannelId,
-        reader: ByteStreamReader,
-    ) {
-        if !self.has_capability(Capability::ClientPublish) {
-            drop(reader);
-            warn!(
-                "Received client channel stream from {participant_identity:?} but clientPublish capability is not enabled"
-            );
-            if let Some(participant) = self.state.read().get_participant(&participant_identity) {
-                self.send_error(
-                    &participant,
-                    "Server does not support clientPublish capability".to_string(),
-                );
-            }
-            return;
-        }
-
-        // Hold the pending lock across the state check and potential insert to prevent a
-        // TOCTOU race with handle_client_advertise. The advertise path inserts the channel
-        // into state (releasing the state write lock) *then* acquires this lock to drain
-        // pending readers. By holding this lock while we check state, we guarantee that
-        // either we see the channel (and process immediately) or the advertise path will
-        // see our pending reader (and drain it).
-        let mut pending = self.pending_client_readers.lock();
-        let has_channel = self
-            .state
-            .read()
-            .get_client_channel(&participant_identity, channel_id)
-            .is_some();
-
-        if has_channel {
-            drop(pending);
-            let session = self.clone();
-            let expected_channel_id = u64::from(channel_id) as u32;
-            tokio::spawn(async move {
-                session
-                    .handle_byte_stream_from_client(
-                        participant_identity,
-                        reader,
-                        Some(expected_channel_id),
-                    )
-                    .await;
-            });
-            return;
-        }
-
-        let map = pending.entry(participant_identity.clone()).or_default();
-        if let Some(_old) = map.insert(channel_id, reader) {
-            debug!("replacing pending reader for {participant_identity:?} channel {channel_id:?}");
-        }
-        drop(pending);
-
-        let session = self.clone();
-        tokio::spawn(async move {
-            tokio::select! {
-                () = session.cancellation_token.cancelled() => {}
-                () = tokio::time::sleep(session.pending_client_reader_timeout) => {
-                    let removed = {
-                        let mut pending = session.pending_client_readers.lock();
-                        let reader = pending
-                            .get_mut(&participant_identity)
-                            .and_then(|map| map.remove(&channel_id));
-                        if pending.get(&participant_identity).is_some_and(|m| m.is_empty()) {
-                            pending.remove(&participant_identity);
-                        }
-                        reader
-                    };
-                    if removed.is_some() {
-                        if let Some(participant) =
-                            session.state.read().get_participant(&participant_identity)
-                        {
-                            session.send_error(
-                                &participant,
-                                format!(
-                                    "Client has not advertised channel: {}",
-                                    u64::from(channel_id),
-                                ),
-                            );
-                        }
-                    }
-                }
-            }
-        });
     }
 
     /// Handle a single framed control channel message. Returns `false` if the byte stream
@@ -768,10 +570,8 @@ impl RemoteAccessSession {
             ClientMessage::Unadvertise(msg) => {
                 self.handle_client_unadvertise(&participant, msg);
             }
-            ClientMessage::MessageData(_) => {
-                error!(
-                    "Received MessageData over control channel; MessageData is only supported on channel-specific byte streams"
-                );
+            ClientMessage::MessageData(msg) => {
+                self.handle_client_message_data(&participant, msg);
             }
             ClientMessage::FetchAsset(msg) => {
                 self.handle_fetch_asset(&participant, msg.uri, msg.request_id);
@@ -798,7 +598,7 @@ impl RemoteAccessSession {
                 pong_payload.extend_from_slice(&millis_since_epoch().to_le_bytes());
                 let pong = Pong::new(&pong_payload);
                 let framed = encode_binary_message(&pong);
-                self.send_control(participant, framed);
+                participant.send_control(framed);
             }
             ClientMessage::PingAck(ack) => {
                 let now = millis_since_epoch();
@@ -861,8 +661,6 @@ impl RemoteAccessSession {
 
         let mut state = self.state.write();
         let subscribe_result = state.subscribe(participant, &channel_ids);
-        state.subscribe_data(participant, &data_channel_ids);
-        state.unsubscribe_data(participant, &video_channel_ids);
         let first_video_subscribed = state.subscribe_video(participant, &video_channel_ids);
         let last_video_unsubscribed = state.unsubscribe_video(participant, &data_channel_ids);
         drop(state);
@@ -907,7 +705,6 @@ impl RemoteAccessSession {
 
         let mut state = self.state.write();
         let unsubscribe_result = state.unsubscribe(participant, &channel_ids);
-        state.unsubscribe_data(participant, &channel_ids);
         let last_video_unsubscribed = state.unsubscribe_video(participant, &channel_ids);
         drop(state);
 
@@ -1017,23 +814,6 @@ impl RemoteAccessSession {
             if let Some(listener) = &self.listener {
                 listener.on_client_advertise(&client, &descriptor);
             }
-
-            // Drain any pending byte stream reader that arrived before this advertise.
-            let pending_reader = self
-                .pending_client_readers
-                .lock()
-                .get_mut(participant.participant_id())
-                .and_then(|map| map.remove(&channel_id));
-            if let Some(reader) = pending_reader {
-                let session = self.clone();
-                let identity = participant.participant_id().clone();
-                let expected_channel_id = u64::from(channel_id) as u32;
-                tokio::spawn(async move {
-                    session
-                        .handle_byte_stream_from_client(identity, reader, Some(expected_channel_id))
-                        .await;
-                });
-            }
         }
     }
 
@@ -1116,64 +896,6 @@ impl RemoteAccessSession {
         _ = stream.close().await;
     }
 
-    /// Handle a message from a `client-ch-{channelId}` byte stream.
-    ///
-    /// Only `MessageData` frames are expected. `expected_channel_id` is the channel ID parsed from
-    /// the stream topic and must match the `channel_id` field inside every `MessageData` frame.
-    /// A mismatch indicates a misbehaving client (the topic determines which stream carries the
-    /// data, but the channel ID inside the message determines which descriptor is used).
-    ///
-    /// Returns `false` if the stream should be closed (protocol violation that will repeat
-    /// for every subsequent frame), `true` to continue reading.
-    fn handle_channel_stream_message(
-        self: &Arc<Self>,
-        participant_identity: &ParticipantIdentity,
-        expected_channel_id: u32,
-        opcode: u8,
-        payload: &[u8],
-    ) -> bool {
-        const BINARY: u8 = OpCode::Binary as u8;
-        if opcode != BINARY {
-            error!("Unexpected non-binary message on channel stream (opcode {opcode})");
-            return true;
-        }
-        let msg = match ClientMessage::parse_binary(payload) {
-            Ok(ClientMessage::MessageData(msg)) => msg,
-            Ok(other) => {
-                error!(
-                    "Unexpected message on channel stream: {other:?}; only MessageData is supported"
-                );
-                return true;
-            }
-            Err(e) => {
-                error!("Failed to parse channel stream message: {e:?}");
-                return true;
-            }
-        };
-        if expected_channel_id != msg.channel_id {
-            error!(
-                "MessageData channel_id ({}) does not match the stream topic channel_id ({})",
-                msg.channel_id, expected_channel_id,
-            );
-            if let Some(participant) = self.state.read().get_participant(participant_identity) {
-                self.send_error(
-                    &participant,
-                    format!(
-                        "MessageData channel_id ({}) does not match the stream topic ({})",
-                        msg.channel_id, expected_channel_id,
-                    ),
-                );
-            }
-            return false;
-        }
-        let Some(participant) = self.state.read().get_participant(participant_identity) else {
-            error!("Unknown participant identity: {participant_identity:?}");
-            return false;
-        };
-        self.handle_client_message_data(&participant, msg);
-        true
-    }
-
     fn handle_client_message_data(
         &self,
         participant: &Arc<Participant>,
@@ -1244,18 +966,21 @@ impl RemoteAccessSession {
             }
         };
 
-        let participant = Arc::new(Participant::new(
+        let (participant, flush_handle) = Participant::spawn(
             participant_id.clone(),
             protocol_version,
             ParticipantWriter::Livekit(stream),
-            self.control_plane_tx.clone(),
-        ));
+            self.message_backlog_size,
+            self.pending_resets.clone(),
+            self.reset_notify.clone(),
+            &self.cancellation_token,
+        );
 
         // Send initial messages prior to adding the participant to the state map, to ensure that
         // these are the first messages delivered to the participant. This is safe to do without
-        // holding the write lock, because this is a new participant - see below.
+        // holding the write lock, because this is a new participant — see below.
         info!("sending server info and advertisements to participant {participant:?}");
-        self.send_control(participant.clone(), encode_json_message(&self.server_info));
+        participant.send_control(encode_json_message(&self.server_info));
         self.send_channel_advertisements(participant.clone());
         self.send_service_advertisements(participant.clone());
 
@@ -1263,11 +988,10 @@ impl RemoteAccessSession {
         // we validated that it did not exist in the map at the top of this function, and the
         // caller is responsible for ensuring this function is not called concurrently for the same
         // participant identity.
-        let did_insert = self
-            .state
-            .write()
-            .insert_participant(participant_id, participant);
+        let mut state = self.state.write();
+        let did_insert = state.insert_participant(participant);
         assert!(did_insert);
+        state.insert_flush_handle(participant_id, flush_handle);
         Ok(())
     }
 
@@ -1277,9 +1001,17 @@ impl RemoteAccessSession {
     pub(crate) fn remove_participant(self: &Arc<Self>, participant_id: &ParticipantIdentity) {
         let _guard = self.subscription_lock.lock();
 
-        self.pending_client_readers.lock().remove(participant_id);
-
-        let removed = self.state.write().remove_participant(participant_id);
+        let removed = {
+            let mut state = self.state.write();
+            // Cancel the flush task so it doesn't linger on a dead write.
+            if let Some(p) = state.get_participant(participant_id) {
+                p.cancel();
+            }
+            let removed = state.remove_participant(participant_id);
+            // Detach the flush handle — task exits via cancel or channel close.
+            drop(state.remove_flush_handle(participant_id));
+            removed
+        };
 
         if !removed.last_unsubscribed.is_empty() {
             if let Some(context) = self.context.upgrade() {
@@ -1327,8 +1059,31 @@ impl RemoteAccessSession {
         mut room_events: tokio::sync::mpsc::UnboundedReceiver<RoomEvent>,
     ) {
         let remote_access_session_id = self.remote_access_session_id();
-        let mut participant_reset_rx = self.participant_reset_rx.lock().await;
         loop {
+            // Drain pending resets before waiting for events. This covers the case
+            // where a `Notify::notified()` wakeup was lost due to `select!`
+            // cancellation — the client ids are still in the set even if the
+            // notification was consumed by a dropped future.
+            let client_ids: Vec<ClientId> = {
+                let mut set = self.pending_resets.lock();
+                set.drain().collect()
+            };
+            // `handle_room_events` is the single task driving participant
+            // membership during the session lifecycle, so the lookup below
+            // cannot be invalidated before `reset_participant` runs. A
+            // `ClientId` no longer registered means the request is stale —
+            // the participant was already removed and may have been replaced
+            // by a reconnection reusing the same identity; skipping avoids
+            // spuriously tearing down that replacement.
+            for client_id in client_ids {
+                let Some(participant) = self.state.read().get_participant_by_client_id(client_id)
+                else {
+                    continue;
+                };
+                self.reset_participant(participant.participant_id().clone())
+                    .await;
+            }
+
             tokio::select! {
                 event = room_events.recv() => {
                     let Some(event) = event else { break };
@@ -1336,12 +1091,8 @@ impl RemoteAccessSession {
                         return;
                     }
                 }
-                // Reset participants whose control streams have broken. This is
-                // the same flow as disconnect + reconnect: remove the old state,
-                // then re-add with a fresh stream and fresh advertisements.
-                Some(participant_id) = participant_reset_rx.recv() => {
-                    self.reset_participant(participant_id).await;
-                }
+                // Wake when new reset requests arrive.
+                () = self.reset_notify.notified() => {}
             }
         }
         warn!(
@@ -1418,22 +1169,9 @@ impl RemoteAccessSession {
                         let session = self.clone();
                         tokio::spawn(async move {
                             session
-                                .handle_byte_stream_from_client(participant_identity, reader, None)
+                                .handle_byte_stream_from_client(participant_identity, reader)
                                 .await;
                         });
-                    } else if let Some(id_str) = topic.strip_prefix(CLIENT_CHANNEL_TOPIC_PREFIX) {
-                        if let Ok(id) = id_str.parse::<u64>() {
-                            self.handle_client_channel_stream(
-                                participant_identity,
-                                ChannelId::new(id),
-                                reader,
-                            );
-                        } else {
-                            warn!(
-                                "invalid channel id in topic {:?} from {:?}",
-                                topic, participant_identity
-                            );
-                        }
                     } else {
                         warn!(
                             "ignoring unexpected byte stream topic from {:?}: {:?}",
@@ -1714,14 +1452,14 @@ impl RemoteAccessSession {
             return;
         };
 
-        self.send_control(participant, encode_json_message(&advertise_msg));
+        participant.send_control(encode_json_message(&advertise_msg));
     }
 
     /// Enqueue service advertisements for delivery to a single participant.
     fn send_service_advertisements(&self, participant: Arc<Participant>) {
         let services: Vec<_> = self.services.read().values().cloned().collect();
         if let Some(msg) = build_advertise_services_msg(&services) {
-            self.send_control(participant, encode_json_message(&msg));
+            participant.send_control(encode_json_message(&msg));
         }
     }
 
@@ -1793,14 +1531,8 @@ impl RemoteAccessSession {
             .unwrap_or(req.encoding.as_ref())
             .to_string();
 
-        let responder = super::service::new_responder(
-            participant.clone(),
-            service_id,
-            call_id,
-            encoding,
-            participant.control_plane_tx().clone(),
-            guard,
-        );
+        let responder =
+            super::service::new_responder(participant, service_id, call_id, encoding, guard);
         let request = crate::remote_common::service::Request::new(
             service.clone(),
             participant.client_id(),
@@ -1825,7 +1557,7 @@ impl RemoteAccessSession {
             call_id: call_id.into(),
             message: message.to_string(),
         };
-        self.send_control(participant.clone(), encode_json_message(&failure));
+        participant.send_control(encode_json_message(&failure));
     }
 
     /// Handle a fetch asset request from a client.
@@ -1976,7 +1708,7 @@ impl RemoteAccessSession {
         if let Some(id) = request_id {
             msg = msg.with_id(id);
         }
-        self.send_control(participant.clone(), encode_json_message(&msg));
+        participant.send_control(encode_json_message(&msg));
     }
 
     /// Publish parameter values to all participants subscribed to those parameters.
@@ -1986,24 +1718,37 @@ impl RemoteAccessSession {
             return;
         }
 
-        let state = self.state.read();
-        let participants = state.collect_participants();
-        for participant in &participants {
-            // Filter parameters by this participant's subscriptions.
-            let filtered: Vec<_> = parameters
-                .iter()
-                .filter(|p| {
-                    state
-                        .parameter_subscribers(&p.name)
-                        .is_some_and(|ids| ids.contains(participant.participant_id()))
-                })
-                .cloned()
-                .collect();
+        // Collect the per-participant messages while holding the read lock, then
+        // send them after the lock is released to minimize lock scope.
+        let to_send: Vec<(Arc<Participant>, Bytes)> = {
+            let state = self.state.read();
+            let participants = state.collect_participants();
+            participants
+                .into_iter()
+                .filter_map(|participant| {
+                    let filtered: Vec<_> = parameters
+                        .iter()
+                        .filter(|p| {
+                            state
+                                .parameter_subscribers(&p.name)
+                                .is_some_and(|ids| ids.contains(participant.participant_id()))
+                        })
+                        .cloned()
+                        .collect();
 
-            if !filtered.is_empty() {
-                let no_request_id = None;
-                self.send_parameter_values(participant, filtered, no_request_id);
-            }
+                    if filtered.is_empty() {
+                        return None;
+                    }
+
+                    let msg =
+                        ParameterValues::new(filtered.into_iter().filter(|p| p.value.is_some()));
+                    Some((participant, encode_json_message(&msg)))
+                })
+                .collect()
+        };
+
+        for (participant, data) in to_send {
+            participant.send_control(data);
         }
     }
 
@@ -2012,7 +1757,7 @@ impl RemoteAccessSession {
         self.broadcast_control(encode_json_message(&status));
     }
 
-    /// Remove status messages by id from all connected participants.
+    /// Remove status messages by ID from all connected participants.
     pub(crate) fn remove_status(&self, status_ids: Vec<String>) {
         let message = RemoveStatus::new(status_ids);
         self.broadcast_control(encode_json_message(&message));
@@ -2028,24 +1773,27 @@ impl RemoteAccessSession {
             return;
         }
 
-        let mut graph = self.connection_graph.lock();
-        let first = !graph.has_subscribers();
-        if !graph.add_subscriber(participant.client_id()) {
-            debug!(
-                "Participant {} is already subscribed to connection graph updates",
-                participant,
-            );
-            return;
-        }
-
-        if first {
-            if let Some(listener) = &self.listener {
-                listener.on_connection_graph_subscribe();
+        let encoded = {
+            let mut graph = self.connection_graph.lock();
+            let first = !graph.has_subscribers();
+            if !graph.add_subscriber(participant.client_id()) {
+                debug!(
+                    "Participant {} is already subscribed to connection graph updates",
+                    participant,
+                );
+                return;
             }
-        }
 
-        let initial_update = graph.as_initial_update();
-        self.send_control(participant.clone(), encode_json_message(&initial_update));
+            if first {
+                if let Some(listener) = &self.listener {
+                    listener.on_connection_graph_subscribe();
+                }
+            }
+
+            encode_json_message(&graph.as_initial_update())
+        };
+
+        participant.send_control(encoded);
     }
 
     /// Handle an `UnsubscribeConnectionGraph` message from a client.
@@ -2082,14 +1830,14 @@ impl RemoteAccessSession {
         let participants = self.state.read().collect_participants();
         for participant in participants {
             if graph.is_subscriber(participant.client_id()) {
-                self.send_control(participant, encoded.clone());
+                participant.send_control(encoded.clone());
             }
         }
     }
 
     /// Check video publishers for metadata changes and re-advertise affected channels.
     ///
-    /// Called from `run_sender` when `video_metadata_rx` signals a change. Compares each
+    /// Called from `run_video_metadata_watcher` when `video_metadata_rx` signals a change. Compares each
     /// publisher's current metadata against what was last advertised, updates session state for
     /// any changes, and broadcasts re-advertise messages to participants.
     fn republish_video_metadata(&self, advertised: &mut HashMap<ChannelId, VideoMetadata>) {
@@ -2143,30 +1891,22 @@ impl RemoteAccessSession {
     }
 
     /// Start video tracks for first-subscribed channels that have video schemas.
+    /// Each track is named video-ch-{channel_id}.
     ///
     /// Caller must hold `subscription_lock`.
     fn start_video_tracks(self: &Arc<Self>, first_subscribed: &[ChannelId]) {
-        // Collect video-capable channels and their topics while holding the read lock.
-        let to_start: SmallVec<[(ChannelId, VideoInputSchema, String); 4]> = {
+        let to_start: SmallVec<[(ChannelId, VideoInputSchema); 4]> = {
             let state = self.state.read();
-            state
-                .with_channels(|channels| {
-                    first_subscribed
-                        .iter()
-                        .filter_map(|&channel_id| {
-                            let input_schema = state.get_video_schema(&channel_id)?;
-                            let topic = channels
-                                .get(&channel_id)
-                                .map(|ch| ch.topic().to_string())
-                                .unwrap_or_default();
-                            Some((channel_id, input_schema, topic))
-                        })
-                        .collect()
+            first_subscribed
+                .iter()
+                .filter_map(|&channel_id| {
+                    let input_schema = state.get_video_schema(&channel_id)?;
+                    Some((channel_id, input_schema))
                 })
-                .unwrap_or_default()
+                .collect()
         };
 
-        for (channel_id, input_schema, topic) in to_start {
+        for (channel_id, input_schema) in to_start {
             let video_source = NativeVideoSource::default();
             let publisher = Arc::new(VideoPublisher::new(
                 video_source.clone(),
@@ -2179,15 +1919,25 @@ impl RemoteAccessSession {
                 .write()
                 .insert_video_publisher(channel_id, publisher);
 
-            let track =
-                LocalVideoTrack::create_video_track(&topic, RtcVideoSource::Native(video_source));
+            let track_name = format!("video-ch-{}", u64::from(channel_id));
+            let track = LocalVideoTrack::create_video_track(
+                &track_name,
+                RtcVideoSource::Native(video_source),
+            );
 
             let local_participant = self.room.local_participant().clone();
             let session = self.clone();
             tokio::spawn(async move {
                 let local_track = LocalTrack::Video(track);
+                // Prefer H.264 so that the libwebrtc VAAPI encoder (H.264-only) can be used
+                // on Linux hosts that have libva + a VA driver available. VP8/VP9/AV1 paths
+                // are software-only in our builds, so H.264 is at worst parity elsewhere.
+                let publish_options = TrackPublishOptions {
+                    video_codec: VideoCodec::H264,
+                    ..Default::default()
+                };
                 match local_participant
-                    .publish_track(local_track, TrackPublishOptions::default())
+                    .publish_track(local_track, publish_options)
                     .await
                 {
                     Ok(publication) => {
@@ -2257,82 +2007,30 @@ impl RemoteAccessSession {
             });
         }
     }
-}
 
-/// Returns a reference to the locally cached `ChannelWriter` for `channel_id`,
-/// creating or replacing it if the subscription version has changed.
-///
-/// `open_stream` is called to create a new writer when the cached version is stale
-/// or no writer exists yet. It receives `(channel_id, subscribers, version)` and
-/// returns `Some(writer)` on success or `None` on failure.
-///
-/// Returns `None` if the channel has no subscribers or if stream creation fails.
-async fn get_or_replace_channel_writer<'a, F, Fut>(
-    state: &RwLock<SessionState>,
-    channel_id: &ChannelId,
-    channel_writers: &'a mut HashMap<ChannelId, ChannelWriter>,
-    open_stream: F,
-) -> Option<&'a ChannelWriter>
-where
-    F: FnOnce(ChannelId, Vec<ParticipantIdentity>, u32) -> Fut,
-    Fut: std::future::Future<Output = Option<ChannelWriter>>,
-{
-    // Read the current subscription version (fast read-lock, no await).
-    let (current_version, subscribers) = {
-        let state = state.read();
-        // Only consider data subscribers.
-        let Some(sub) = state.get_data_subscription(channel_id) else {
-            channel_writers.remove(channel_id);
-            return None;
-        };
-        debug_assert!(!sub.subscribers().is_empty());
-        let cached_version = channel_writers.get(channel_id).map(|w| w.version());
-        if cached_version == Some(sub.version()) {
-            // Fast path: writer is up to date.
-            return channel_writers.get(channel_id);
-        }
-        (sub.version(), sub.subscribers().to_vec())
-    };
-
-    // Subscriber set changed (or no writer yet): open a new byte stream.
-    // The old writer is implicitly closed when it is replaced in the map.
-    match open_stream(*channel_id, subscribers, current_version).await {
-        Some(writer) => {
-            channel_writers.insert(*channel_id, writer);
-            channel_writers.get(channel_id)
-        }
-        None => {
-            channel_writers.remove(channel_id);
-            None
+    /// Eagerly publish data tracks for newly advertised channels.
+    ///
+    /// Reliable channels should be excluded by the caller; their data goes via
+    /// the control plane instead of data tracks.
+    fn publish_data_tracks(&self, topics: &[ChannelId]) {
+        for channel_id in topics {
+            let data_track = DataTrack::publish(
+                &self.runtime,
+                self.room.local_participant(),
+                *channel_id,
+                self.cancellation_token.clone(),
+            );
+            self.state
+                .write()
+                .insert_data_track(*channel_id, data_track);
         }
     }
-}
 
-/// Processes a single data plane message: looks up (or creates) the channel writer
-/// and writes the message data through it.
-///
-/// On write failure the writer is removed from the cache so the next message
-/// triggers stream re-creation.
-async fn process_data_message<F, Fut>(
-    state: &RwLock<SessionState>,
-    msg: &ChannelMessage,
-    channel_writers: &mut HashMap<ChannelId, ChannelWriter>,
-    open_stream: F,
-) where
-    F: FnOnce(ChannelId, Vec<ParticipantIdentity>, u32) -> Fut,
-    Fut: std::future::Future<Output = Option<ChannelWriter>>,
-{
-    let writer =
-        get_or_replace_channel_writer(state, &msg.channel_id, channel_writers, open_stream).await;
-    let Some(writer) = writer else {
-        return;
-    };
-    if let Err(e) = writer.write(&msg.data).await {
-        error!(
-            "failed to send data for channel {:?}: {e:?}",
-            msg.channel_id
-        );
-        channel_writers.remove(&msg.channel_id);
+    /// Tear down the data track for a channel.
+    fn teardown_data_track(&self, channel_id: ChannelId) {
+        if let Some(mut data_track) = self.state.write().remove_data_track(&channel_id) {
+            self.runtime.spawn(async move { data_track.close().await });
+        }
     }
 }
 
@@ -2340,39 +2038,24 @@ async fn process_data_message<F, Fut>(
 mod tests {
     use super::*;
     use crate::protocol::v2::server::FetchAssetResponse;
-    use crate::remote_access::participant::{
-        ParticipantWriter, TestByteStreamWriter, TestChannelWriter,
-    };
     use crate::remote_common::fetch_asset::{
         AssetHandler, AsyncAssetHandlerFn, BlockingAssetHandlerFn,
     };
 
-    fn make_participant(name: &str) -> (ParticipantIdentity, Arc<Participant>) {
+    fn make_participant_with_rx(name: &str) -> (Arc<Participant>, flume::Receiver<Bytes>) {
         let identity = ParticipantIdentity(name.to_string());
-        let writer = Arc::new(TestByteStreamWriter::default());
-        let version = protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone();
-        let (tx, _rx) = flume::bounded(16);
-        let participant = Arc::new(Participant::new(
-            identity.clone(),
-            version,
-            ParticipantWriter::Test(writer),
-            tx,
-        ));
-        (identity, participant)
-    }
-
-    fn make_participant_with_rx(
-        name: &str,
-    ) -> (Arc<Participant>, flume::Receiver<ControlPlaneMessage>) {
-        let identity = ParticipantIdentity(name.to_string());
-        let writer = Arc::new(TestByteStreamWriter::default());
         let version = protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone();
         let (tx, rx) = flume::bounded(16);
+        let pending_resets = Arc::new(parking_lot::Mutex::new(HashSet::new()));
+        let reset_notify = Arc::new(tokio::sync::Notify::new());
+        let cancel = CancellationToken::new();
         let participant = Arc::new(Participant::new(
             identity,
             version,
-            ParticipantWriter::Test(writer),
             tx,
+            pending_resets,
+            reset_notify,
+            cancel,
         ));
         (participant, rx)
     }
@@ -2383,224 +2066,6 @@ mod tests {
             participant.participant_id().clone(),
             participant,
         )
-    }
-
-    /// A factory that produces a `ChannelWriter` backed by the given test writer.
-    fn test_factory(
-        writer: Arc<TestChannelWriter>,
-    ) -> impl FnOnce(ChannelId, Vec<ParticipantIdentity>, u32) -> std::future::Ready<Option<ChannelWriter>>
-    {
-        move |_channel_id, _subscribers, version| {
-            std::future::ready(Some(ChannelWriter::test(writer, version)))
-        }
-    }
-
-    /// A factory that always fails to open a stream.
-    fn failing_factory()
-    -> impl FnOnce(ChannelId, Vec<ParticipantIdentity>, u32) -> std::future::Ready<Option<ChannelWriter>>
-    {
-        |_channel_id, _subscribers, _version| std::future::ready(None)
-    }
-
-    #[tokio::test]
-    async fn data_message_writes_to_channel() {
-        let state = RwLock::new(SessionState::new());
-        let (_id, p) = make_participant("alice");
-        let ch = ChannelId::new(1);
-        state.write().subscribe_data(&p, &[ch]);
-
-        let test_writer = Arc::new(TestChannelWriter::default());
-        let mut writers = HashMap::new();
-
-        let msg = ChannelMessage {
-            channel_id: ch,
-            data: Bytes::from_static(b"hello"),
-        };
-        process_data_message(
-            &state,
-            &msg,
-            &mut writers,
-            test_factory(test_writer.clone()),
-        )
-        .await;
-
-        assert_eq!(test_writer.writes(), vec![Bytes::from_static(b"hello")]);
-        assert!(writers.contains_key(&ch));
-    }
-
-    #[tokio::test]
-    async fn cached_writer_reused_on_version_match() {
-        let state = RwLock::new(SessionState::new());
-        let (_id, p) = make_participant("alice");
-        let ch = ChannelId::new(1);
-        state.write().subscribe_data(&p, &[ch]);
-
-        let test_writer = Arc::new(TestChannelWriter::default());
-        let mut writers = HashMap::new();
-
-        let msg1 = ChannelMessage {
-            channel_id: ch,
-            data: Bytes::from_static(b"msg1"),
-        };
-        process_data_message(
-            &state,
-            &msg1,
-            &mut writers,
-            test_factory(test_writer.clone()),
-        )
-        .await;
-
-        // Second message should reuse the cached writer (factory not called).
-        let other_writer = Arc::new(TestChannelWriter::default());
-        let msg2 = ChannelMessage {
-            channel_id: ch,
-            data: Bytes::from_static(b"msg2"),
-        };
-        process_data_message(
-            &state,
-            &msg2,
-            &mut writers,
-            test_factory(other_writer.clone()),
-        )
-        .await;
-
-        assert_eq!(
-            test_writer.writes(),
-            vec![Bytes::from_static(b"msg1"), Bytes::from_static(b"msg2")]
-        );
-        assert!(other_writer.writes().is_empty());
-    }
-
-    #[tokio::test]
-    async fn writer_replaced_on_subscriber_change() {
-        let state = RwLock::new(SessionState::new());
-        let (_id_a, pa) = make_participant("alice");
-        let (_id_b, pb) = make_participant("bob");
-        let ch = ChannelId::new(1);
-        state.write().subscribe_data(&pa, &[ch]);
-
-        let writer1 = Arc::new(TestChannelWriter::default());
-        let mut writers = HashMap::new();
-
-        let msg1 = ChannelMessage {
-            channel_id: ch,
-            data: Bytes::from_static(b"before"),
-        };
-        process_data_message(&state, &msg1, &mut writers, test_factory(writer1.clone())).await;
-
-        // Adding a subscriber bumps the version, so the next message creates a new writer.
-        state.write().subscribe_data(&pb, &[ch]);
-
-        let writer2 = Arc::new(TestChannelWriter::default());
-        let msg2 = ChannelMessage {
-            channel_id: ch,
-            data: Bytes::from_static(b"after"),
-        };
-        process_data_message(&state, &msg2, &mut writers, test_factory(writer2.clone())).await;
-
-        assert_eq!(writer1.writes(), vec![Bytes::from_static(b"before")]);
-        assert_eq!(writer2.writes(), vec![Bytes::from_static(b"after")]);
-    }
-
-    #[tokio::test]
-    async fn no_subscribers_skips_write() {
-        let state = RwLock::new(SessionState::new());
-        let mut writers = HashMap::new();
-        let ch = ChannelId::new(1);
-
-        let factory_called = Arc::new(std::sync::atomic::AtomicBool::new(false));
-        let fc = factory_called.clone();
-
-        let msg = ChannelMessage {
-            channel_id: ch,
-            data: Bytes::from_static(b"nobody"),
-        };
-        process_data_message(&state, &msg, &mut writers, move |_id, _subs, _v| {
-            fc.store(true, std::sync::atomic::Ordering::Relaxed);
-            std::future::ready(None)
-        })
-        .await;
-
-        assert!(!factory_called.load(std::sync::atomic::Ordering::Relaxed));
-        assert!(!writers.contains_key(&ch));
-    }
-
-    #[tokio::test]
-    async fn write_failure_removes_writer_from_cache() {
-        let state = RwLock::new(SessionState::new());
-        let (_id, p) = make_participant("alice");
-        let ch = ChannelId::new(1);
-        state.write().subscribe_data(&p, &[ch]);
-
-        let failing = Arc::new(TestChannelWriter::new_failing());
-        let mut writers = HashMap::new();
-
-        let msg = ChannelMessage {
-            channel_id: ch,
-            data: Bytes::from_static(b"will fail"),
-        };
-        process_data_message(&state, &msg, &mut writers, test_factory(failing)).await;
-
-        assert!(
-            !writers.contains_key(&ch),
-            "writer should be evicted from cache after write failure"
-        );
-    }
-
-    #[tokio::test]
-    async fn writer_replaced_after_unsubscribe_resubscribe() {
-        let state = RwLock::new(SessionState::new());
-        let (_id, p) = make_participant("alice");
-        let ch = ChannelId::new(1);
-        state.write().subscribe_data(&p, &[ch]);
-
-        let writer1 = Arc::new(TestChannelWriter::default());
-        let mut writers = HashMap::new();
-
-        // First message creates a writer.
-        let msg1 = ChannelMessage {
-            channel_id: ch,
-            data: Bytes::from_static(b"before"),
-        };
-        process_data_message(&state, &msg1, &mut writers, test_factory(writer1.clone())).await;
-        assert_eq!(writer1.writes(), vec![Bytes::from_static(b"before")]);
-
-        // Unsubscribe and resubscribe — the version counter is preserved,
-        // so the new version differs from the cached writer's version.
-        state.write().unsubscribe_data(&p, &[ch]);
-        state.write().subscribe_data(&p, &[ch]);
-
-        // Second message should create a NEW writer (not reuse the old one).
-        let writer2 = Arc::new(TestChannelWriter::default());
-        let msg2 = ChannelMessage {
-            channel_id: ch,
-            data: Bytes::from_static(b"after"),
-        };
-        process_data_message(&state, &msg2, &mut writers, test_factory(writer2.clone())).await;
-
-        assert_eq!(writer1.writes(), vec![Bytes::from_static(b"before")]);
-        assert_eq!(writer2.writes(), vec![Bytes::from_static(b"after")]);
-    }
-
-    #[tokio::test]
-    async fn stream_open_failure_does_not_cache_writer() {
-        let state = RwLock::new(SessionState::new());
-        let (_id, p) = make_participant("alice");
-        let ch = ChannelId::new(1);
-        state.write().subscribe_data(&p, &[ch]);
-
-        let mut writers = HashMap::new();
-
-        let msg = ChannelMessage {
-            channel_id: ch,
-            data: Bytes::from_static(b"no stream"),
-        };
-        process_data_message(&state, &msg, &mut writers, failing_factory()).await;
-
-        assert!(
-            !writers.contains_key(&ch),
-            "no writer should be cached when stream creation fails"
-        );
     }
 
     // ---- fetch asset tests ----
@@ -2614,7 +2079,7 @@ mod tests {
 
         let msg = rx.try_recv().unwrap();
         assert_eq!(
-            msg.data,
+            msg,
             encode_binary_message(&FetchAssetResponse::asset_data(42, &b"hello world"[..]))
         );
     }
@@ -2628,7 +2093,7 @@ mod tests {
 
         let msg = rx.try_recv().unwrap();
         assert_eq!(
-            msg.data,
+            msg,
             encode_binary_message(&FetchAssetResponse::error_message(
                 42,
                 "something went wrong"
@@ -2645,7 +2110,7 @@ mod tests {
 
         let msg = rx.try_recv().unwrap();
         assert_eq!(
-            msg.data,
+            msg,
             encode_binary_message(&FetchAssetResponse::error_message(
                 42,
                 "Internal server error: asset handler failed to send a response"
@@ -2666,7 +2131,7 @@ mod tests {
 
         let msg = rx.try_recv().unwrap();
         assert_eq!(
-            msg.data,
+            msg,
             encode_binary_message(&FetchAssetResponse::error_message(
                 99,
                 "Too many concurrent fetch asset requests"
@@ -2714,7 +2179,7 @@ mod tests {
 
         let msg = rx.try_recv().unwrap();
         assert_eq!(
-            msg.data,
+            msg,
             encode_binary_message(&FetchAssetResponse::error_message(
                 42,
                 "Server does not have a fetch asset handler"
@@ -2738,7 +2203,7 @@ mod tests {
             .expect("timed out waiting for asset response")
             .expect("channel closed");
         assert_eq!(
-            msg.data,
+            msg,
             encode_binary_message(&FetchAssetResponse::asset_data(7, &b"<robot/>"[..]))
         );
     }
@@ -2759,7 +2224,7 @@ mod tests {
             .expect("timed out waiting for asset response")
             .expect("channel closed");
         assert_eq!(
-            msg.data,
+            msg,
             encode_binary_message(&FetchAssetResponse::error_message(9, "not found"))
         );
     }
@@ -2780,8 +2245,144 @@ mod tests {
             .expect("timed out waiting for asset response")
             .expect("channel closed");
         assert_eq!(
-            msg.data,
+            msg,
             encode_binary_message(&FetchAssetResponse::asset_data(8, &b"PNG data"[..]))
         );
+    }
+
+    // ---- flush task tests ----
+
+    /// Spawns a participant with a test writer via `Participant::spawn`.
+    /// Returns the participant (for sending), the test writer (for inspecting
+    /// writes), and the flush task's `JoinHandle`.
+    fn spawn_test_participant(
+        session_cancel: &CancellationToken,
+    ) -> (
+        Arc<Participant>,
+        Arc<crate::remote_access::participant::TestByteStreamWriter>,
+        tokio::task::JoinHandle<()>,
+    ) {
+        use crate::remote_access::participant::{ParticipantWriter, TestByteStreamWriter};
+
+        let writer = Arc::new(TestByteStreamWriter::default());
+        let pending_resets = Arc::new(parking_lot::Mutex::new(HashSet::new()));
+        let reset_notify = Arc::new(tokio::sync::Notify::new());
+        let (participant, handle) = Participant::spawn(
+            ParticipantIdentity("test".to_string()),
+            protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone(),
+            ParticipantWriter::Test(writer.clone()),
+            DEFAULT_MESSAGE_BACKLOG_SIZE,
+            pending_resets,
+            reset_notify,
+            session_cancel,
+        );
+        (participant, writer, handle)
+    }
+
+    #[tokio::test]
+    async fn flush_task_delivers_messages() {
+        let cancel = CancellationToken::new();
+        let (participant, writer, handle) = spawn_test_participant(&cancel);
+
+        participant.send_control(Bytes::from_static(b"hello"));
+        participant.send_control(Bytes::from_static(b"world"));
+
+        // Drop the participant to signal the flush task to exit.
+        drop(participant);
+        handle.await.unwrap();
+
+        let writes = writer.writes();
+        assert_eq!(writes.len(), 2);
+        assert_eq!(writes[0], Bytes::from_static(b"hello"));
+        assert_eq!(writes[1], Bytes::from_static(b"world"));
+    }
+
+    #[tokio::test]
+    async fn flush_task_stops_on_sender_drop() {
+        let cancel = CancellationToken::new();
+        let (participant, _writer, handle) = spawn_test_participant(&cancel);
+
+        // Drop the participant without cancelling — task should exit because recv returns Err.
+        drop(participant);
+
+        let result = tokio::time::timeout(Duration::from_secs(1), handle).await;
+        assert!(result.is_ok(), "flush task did not exit after sender drop");
+    }
+
+    #[tokio::test]
+    async fn flush_task_stops_on_cancellation() {
+        let cancel = CancellationToken::new();
+        let (_participant, _writer, handle) = spawn_test_participant(&cancel);
+
+        // Cancel without dropping the participant — task should exit via the select! arm.
+        cancel.cancel();
+
+        let result = tokio::time::timeout(Duration::from_secs(1), handle).await;
+        assert!(result.is_ok(), "flush task did not exit after cancellation");
+    }
+
+    #[tokio::test]
+    async fn flush_tasks_are_independent() {
+        // Two participants spawned independently. Dropping one and awaiting its
+        // flush task should not affect the other.
+        let cancel = CancellationToken::new();
+        let (participant_a, writer_a, handle_a) = spawn_test_participant(&cancel);
+        let (participant_b, writer_b, handle_b) = spawn_test_participant(&cancel);
+
+        // Send a message to both.
+        participant_a.send_control(Bytes::from_static(b"msg_a"));
+        participant_b.send_control(Bytes::from_static(b"msg_b"));
+
+        // Drop B's participant so it flushes and exits.
+        drop(participant_b);
+        let result = tokio::time::timeout(Duration::from_secs(1), handle_b).await;
+        assert!(
+            result.is_ok(),
+            "task B should complete independently of task A"
+        );
+        assert_eq!(writer_b.writes(), vec![Bytes::from_static(b"msg_b")]);
+
+        // A should also have written (TestByteStreamWriter is instant).
+        drop(participant_a);
+        let result = tokio::time::timeout(Duration::from_secs(1), handle_a).await;
+        assert!(result.is_ok(), "task A should complete after drop");
+        assert_eq!(writer_a.writes(), vec![Bytes::from_static(b"msg_a")]);
+    }
+
+    fn make_test_participant(queue_size: usize) -> (Participant, flume::Receiver<Bytes>) {
+        let version = protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone();
+        let (tx, rx) = flume::bounded::<Bytes>(queue_size);
+        let pending_resets = Arc::new(parking_lot::Mutex::new(HashSet::new()));
+        let reset_notify = Arc::new(tokio::sync::Notify::new());
+        let cancel = CancellationToken::new();
+        let participant = Participant::new(
+            ParticipantIdentity("alice".to_string()),
+            version,
+            tx,
+            pending_resets,
+            reset_notify,
+            cancel,
+        );
+        (participant, rx)
+    }
+
+    #[test]
+    fn try_queue_control_returns_false_when_full() {
+        let (participant, _rx) = make_test_participant(1);
+
+        // First message fits.
+        assert!(participant.try_queue_control(Bytes::from_static(b"first")));
+        // Second message overflows the 1-slot queue.
+        assert!(!participant.try_queue_control(Bytes::from_static(b"second")));
+    }
+
+    #[test]
+    fn try_queue_control_returns_true_when_disconnected() {
+        let (participant, rx) = make_test_participant(1);
+
+        // Drop the receiver — channel disconnected.
+        drop(rx);
+        // Disconnected returns true (no reset needed).
+        assert!(participant.try_queue_control(Bytes::from_static(b"msg")));
     }
 }

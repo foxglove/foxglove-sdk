@@ -1,7 +1,8 @@
+from enum import Enum
 from pathlib import Path
 from typing import Any, BinaryIO, Callable, Protocol
 
-from foxglove.websocket import AssetHandler
+from foxglove import AnyNativeParameterValue, AnyParameterValue, AssetHandler
 
 class McapWritable(Protocol):
     """A writable and seekable file-like object.
@@ -24,10 +25,12 @@ class McapWritable(Protocol):
 from .mcap import MCAPWriteOptions, MCAPWriter
 from .remote_access import Capability as RemoteAccessCapability
 from .remote_access import (
+    QosProfile,
     RemoteAccessConnectionStatus,
     RemoteAccessGateway,
 )
-from .websocket import Capability, Service, WebSocketServer
+from .websocket import Capability as WebSocketCapability
+from .websocket import WebSocketServer
 
 class BaseChannel:
     """
@@ -158,6 +161,191 @@ class ChannelDescriptor:
 
 SinkChannelFilter = Callable[[ChannelDescriptor], bool]
 
+class ConnectionGraph:
+    """
+    A graph of connections between clients.
+    """
+
+    def __init__(self) -> None: ...
+    def set_published_topic(self, topic: str, publisher_ids: list[str]) -> None:
+        """
+        Set a published topic and its associated publisher IDs. Overwrites any existing topic with
+        the same name.
+
+        :param topic: The topic name.
+        :param publisher_ids: The set of publisher IDs.
+        """
+        ...
+
+    def set_subscribed_topic(self, topic: str, subscriber_ids: list[str]) -> None:
+        """
+        Set a subscribed topic and its associated subscriber IDs. Overwrites any existing topic with
+        the same name.
+
+        :param topic: The topic name.
+        :param subscriber_ids: The set of subscriber IDs.
+        """
+        ...
+
+    def set_advertised_service(self, service: str, provider_ids: list[str]) -> None:
+        """
+        Set an advertised service and its associated provider IDs. Overwrites any existing service
+        with the same name.
+
+        :param service: The service name.
+        :param provider_ids: The set of provider IDs.
+        """
+        ...
+
+class MessageSchema:
+    """
+    A service request or response schema.
+    """
+
+    encoding: str
+    schema: Schema
+
+    def __init__(
+        self,
+        *,
+        encoding: str,
+        schema: Schema,
+    ) -> None: ...
+
+class Parameter:
+    """
+    A parameter which can be sent to a client.
+
+    :param name: The parameter name.
+    :type name: str
+    :param value: Optional value, represented as a native python object, or a ParameterValue.
+    :type value: None|bool|int|float|str|bytes|list|dict|ParameterValue
+    :param type: Optional parameter type. This is automatically derived when passing a native
+                 python object as the value.
+    :type type: ParameterType|None
+    """
+
+    name: str
+    type: ParameterType | None
+    value: AnyParameterValue | None
+
+    def __init__(
+        self,
+        name: str,
+        *,
+        value: AnyNativeParameterValue | None = None,
+        type: ParameterType | None = None,
+    ) -> None: ...
+    def get_value(self) -> AnyNativeParameterValue | None:
+        """Returns the parameter value as a native python object."""
+        ...
+
+class ParameterType(Enum):
+    """
+    The type of a parameter.
+    """
+
+    ByteArray = ...
+    """A byte array."""
+
+    Float64 = ...
+    """A floating-point value that can be represented as a `float64`."""
+
+    Float64Array = ...
+    """An array of floating-point values that can be represented as `float64`s."""
+
+class ParameterValue:
+    """
+    A parameter value.
+    """
+
+    class Integer:
+        """An integer value."""
+
+        def __init__(self, value: int) -> None: ...
+
+    class Bool:
+        """A boolean value."""
+
+        def __init__(self, value: bool) -> None: ...
+
+    class Float64:
+        """A floating-point value."""
+
+        def __init__(self, value: float) -> None: ...
+
+    class String:
+        """
+        A string value.
+
+        For parameters of type :py:attr:`ParameterType.ByteArray`, this is a
+        base64 encoding of the byte array.
+        """
+
+        def __init__(self, value: str) -> None: ...
+
+    class Array:
+        """An array of parameter values."""
+
+        def __init__(self, value: list[AnyParameterValue]) -> None: ...
+
+    class Dict:
+        """An associative map of parameter values."""
+
+        def __init__(self, value: dict[str, AnyParameterValue]) -> None: ...
+
+class Service:
+    """
+    A service.
+    """
+
+    name: str
+    schema: ServiceSchema
+    handler: Callable[[ServiceRequest], bytes]
+
+    def __init__(
+        self,
+        name: str,
+        *,
+        schema: ServiceSchema,
+        handler: Callable[[ServiceRequest], bytes],
+    ): ...
+
+class ServiceRequest:
+    """
+    A service request.
+    """
+
+    service_name: str
+    client_id: int
+    call_id: int
+    encoding: str
+    payload: bytes
+
+class ServiceSchema:
+    """
+    A service schema.
+    """
+
+    name: str
+    request: MessageSchema | None
+    response: MessageSchema | None
+
+    def __init__(
+        self,
+        name: str,
+        *,
+        request: MessageSchema | None = None,
+        response: MessageSchema | None = None,
+    ): ...
+
+class StatusLevel(Enum):
+    """A status message severity level"""
+
+    Info = ...
+    Warning = ...
+    Error = ...
+
 def start_gateway(
     *,
     name: str | None = None,
@@ -168,6 +356,7 @@ def start_gateway(
     services: list[Service] | None = None,
     context: Context | None = None,
     channel_filter: SinkChannelFilter | None = None,
+    qos_classifier: Callable[[ChannelDescriptor], QosProfile] | None = None,
     message_backlog_size: int | None = None,
     foxglove_api_url: str | None = None,
     foxglove_api_timeout: float | None = None,
@@ -182,7 +371,7 @@ def start_server(
     name: str | None = None,
     host: str | None = "127.0.0.1",
     port: int | None = 8765,
-    capabilities: list[Capability] | None = None,
+    capabilities: list[WebSocketCapability] | None = None,
     server_listener: Any = None,
     supported_encodings: list[str] | None = None,
     services: list[Service] | None = None,
@@ -193,7 +382,7 @@ def start_server(
     playback_time_range: tuple[int, int] | None = None,
 ) -> WebSocketServer:
     """
-    Start a websocket server for live visualization.
+    Start a WebSocket server for live visualization.
     """
     ...
 
@@ -211,7 +400,7 @@ def disable_logging() -> None:
 
 def shutdown() -> None:
     """
-    Shutdown the running websocket server.
+    Shutdown the running WebSocket server.
     """
     ...
 

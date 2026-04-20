@@ -4,14 +4,15 @@ from urllib.parse import parse_qs, urlparse
 
 import pytest
 from foxglove import (
-    Capability,
     Channel,
     Context,
     ServerListener,
     Service,
+    ServiceSchema,
+    StatusLevel,
     start_server,
 )
-from foxglove.websocket import PlaybackState, PlaybackStatus, ServiceSchema, StatusLevel
+from foxglove.websocket import Capability, PlaybackState, PlaybackStatus
 
 
 def test_server_interface() -> None:

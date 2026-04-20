@@ -1,14 +1,15 @@
 //! Remote access implementation.
 
 mod capability;
-mod channel_subscription;
 mod client;
 mod connection;
 mod credentials_provider;
 mod gateway;
 mod listener;
 mod participant;
+mod participants;
 pub(super) mod protocol_version;
+mod qos;
 mod rtt_tracker;
 pub mod service;
 mod session;
@@ -21,6 +22,7 @@ pub use client::Client;
 pub use connection::ConnectionStatus;
 pub use gateway::{Gateway, GatewayHandle};
 pub use listener::Listener;
+pub use qos::{QosClassifier, QosProfile, QosProfileBuilder, Reliability};
 
 // Re-export parameter types so callers can construct parameter values.
 pub use crate::protocol::v2::parameter::{Parameter, ParameterType, ParameterValue};

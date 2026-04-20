@@ -6,7 +6,7 @@ This example demonstrates how to use the Foxglove SDK to filter messages when lo
 file and/or a WebSocket server.
 
 Oftentimes, you may want to split "heavy" topics out into separate MCAP recordings, but still log
-everything for live visualization. Splitting on topic in this way can be useful for selectively
+everything to the WebSocket server. Splitting on topic in this way can be useful for selectively
 retrieving data from bandwidth-constrained environments, such as with the Foxglove Agent.
 
 In this example, we log some point cloud data to one MCAP file, and some minimal metadata to

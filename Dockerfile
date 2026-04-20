@@ -16,10 +16,18 @@ RUN apt-get update \
         libva-dev \
         libwebsockets-dev \
         lsb-release \
-        protobuf-compiler \
         python3-dev \
         software-properties-common \
+        unzip \
     && rm -rf /var/lib/apt/lists/*
+
+# protoc — pin to match CI (arduino/setup-protoc version in .github/workflows/ci.yml)
+ARG PROTOC_VERSION=29.6
+RUN ARCH=$(uname -m | sed 's/aarch64/aarch_64/') \
+    && curl -fsSL https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-${ARCH}.zip \
+        -o /tmp/protoc.zip \
+    && unzip /tmp/protoc.zip -d /usr/local \
+    && rm /tmp/protoc.zip
 
 # clang
 RUN curl https://apt.llvm.org/llvm.sh -fsS -o llvm.sh \

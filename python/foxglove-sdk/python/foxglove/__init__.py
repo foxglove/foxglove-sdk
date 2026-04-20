@@ -9,7 +9,9 @@ from __future__ import annotations
 
 import atexit
 import logging
-from typing import TYPE_CHECKING
+import sys
+from collections.abc import Callable
+from typing import TYPE_CHECKING, TypeAlias, Union
 
 from . import _foxglove_py as _foxglove
 
@@ -31,13 +33,84 @@ if TYPE_CHECKING:
 
 atexit.register(_foxglove.shutdown)
 
+__all__ = [
+    "Channel",
+    "ChannelDescriptor",
+    "Context",
+    "MCAPWriter",
+    "Schema",
+    "SinkChannelFilter",
+    "log",
+    "open_mcap",
+    "set_log_level",
+    "init_notebook_buffer",
+]
+
+# Re-export these imports (not available in WASM)
+try:
+    from ._foxglove_py import (  # noqa: F401
+        ConnectionGraph,
+        MessageSchema,
+        Parameter,
+        ParameterType,
+        ParameterValue,
+        Service,
+        ServiceRequest,
+        ServiceSchema,
+        StatusLevel,
+    )
+
+    ServiceHandler: TypeAlias = Callable[[ServiceRequest], bytes]
+    AnyParameterValue: TypeAlias = Union[
+        ParameterValue.Integer,
+        ParameterValue.Bool,
+        ParameterValue.Float64,
+        ParameterValue.String,
+        ParameterValue.Array,
+        ParameterValue.Dict,
+    ]
+    AnyInnerParameterValue: TypeAlias = Union[
+        AnyParameterValue,
+        bool,
+        int,
+        float,
+        str,
+        "list[AnyInnerParameterValue]",
+        "dict[str, AnyInnerParameterValue]",
+    ]
+    AnyNativeParameterValue: TypeAlias = Union[
+        AnyInnerParameterValue,
+        bytes,
+    ]
+    AssetHandler: TypeAlias = "Callable[[str], bytes | None]"
+
+    __all__.extend(
+        [
+            "AnyInnerParameterValue",
+            "AnyNativeParameterValue",
+            "AnyParameterValue",
+            "AssetHandler",
+            "ConnectionGraph",
+            "MessageSchema",
+            "Parameter",
+            "ParameterType",
+            "ParameterValue",
+            "Service",
+            "ServiceHandler",
+            "ServiceRequest",
+            "ServiceSchema",
+            "StatusLevel",
+        ]
+    )
+except ImportError:
+    if sys.platform != "emscripten":
+        raise
+
 
 try:
     from .websocket import (
-        AssetHandler,
         Capability,
         ServerListener,
-        Service,
         WebSocketServer,
     )
 
@@ -57,7 +130,7 @@ try:
         playback_time_range: tuple[int, int] | None = None,
     ) -> WebSocketServer:
         """
-        Start a websocket server for live visualization.
+        Start a WebSocket server for live visualization.
 
         :param name: The name of the server.
         :param host: The host to bind to.
@@ -73,11 +146,11 @@ try:
         :param session_id: An ID which allows the client to understand if the connection is a
             re-connection or a new server instance. If None, then an ID is generated based on the
             current time.
-        :param channel_filter: A `Callable` that determines whether a channel should be logged to.
-            Return `True` to log the channel, or `False` to skip it. By default, all channels
+        :param channel_filter: A ``Callable`` that determines whether a channel should be logged to.
+            Return ``True`` to log the channel, or ``False`` to skip it. By default, all channels
             will be logged.
         :param playback_time_range: Time range of data being played back, in absolute nanoseconds.
-            Implies `Capability.PlaybackControl` if set.
+            Implies ``Capability.PlaybackControl`` if set.
         """
         return _foxglove.start_server(
             name=name,
@@ -94,13 +167,20 @@ try:
             playback_time_range=playback_time_range,
         )
 
+    __all__ += [
+        "Capability",  # for backwards compatibility
+        "start_server",
+    ]
+
 except ImportError:
-    pass
+    if sys.platform != "emscripten":
+        raise
 
 
 try:
     from .remote_access import Capability as RemoteAccessCapability
     from .remote_access import (
+        QosProfile,
         RemoteAccessGateway,
         RemoteAccessListener,
     )
@@ -115,6 +195,7 @@ try:
         services: list[Service] | None = None,
         context: Context | None = None,
         channel_filter: SinkChannelFilter | None = None,
+        qos_classifier: Callable[[ChannelDescriptor], QosProfile] | None = None,
         message_backlog_size: int | None = None,
         foxglove_api_url: str | None = None,
         foxglove_api_timeout: float | None = None,
@@ -128,13 +209,16 @@ try:
             If not set, the ``FOXGLOVE_DEVICE_TOKEN`` environment variable is used.
         :param capabilities: A list of capabilities to advertise to clients.
         :param listener: A Python object that implements the
-            :py:class:`remote_access.RemoteAccessListener` protocol.
+            :py:class:`foxglove.remote_access.RemoteAccessListener` protocol.
         :param supported_encodings: A list of encodings to advertise to clients.
         :param services: A list of services to advertise to clients.
         :param context: The context to use for logging. If None, the global context is used.
         :param channel_filter: A ``Callable`` that determines whether a channel should be logged
             to. Return ``True`` to log the channel, or ``False`` to skip it. By default, all
             channels will be logged.
+        :param qos_classifier: A ``Callable`` that returns the
+            :py:class:`foxglove.remote_access.QosProfile` to use for a given channel. If not set,
+            all channels use the default lossy profile.
         :param message_backlog_size: The maximum number of messages to buffer before dropping
             the oldest entries. Defaults to 1024.
         :param foxglove_api_url: Override the Foxglove API base URL.
@@ -149,13 +233,17 @@ try:
             services=services,
             context=context,
             channel_filter=channel_filter,
+            qos_classifier=qos_classifier,
             message_backlog_size=message_backlog_size,
             foxglove_api_url=foxglove_api_url,
             foxglove_api_timeout=foxglove_api_timeout,
         )
 
+    __all__ += ["start_gateway"]
+
 except ImportError:
-    pass
+    if sys.platform != "emscripten":
+        raise
 
 
 def set_log_level(level: int | str = "INFO") -> None:
@@ -252,19 +340,3 @@ def init_notebook_buffer(context: Context | None = None) -> NotebookBuffer:
         )
 
     return NotebookBuffer(context=context)
-
-
-__all__ = [
-    "Channel",
-    "ChannelDescriptor",
-    "Context",
-    "MCAPWriter",
-    "Schema",
-    "SinkChannelFilter",
-    "log",
-    "open_mcap",
-    "set_log_level",
-    "start_gateway",
-    "start_server",
-    "init_notebook_buffer",
-]

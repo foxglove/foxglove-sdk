@@ -56,6 +56,13 @@
 #define FOXGLOVE_GATEWAY_CAPABILITY_CONNECTION_GRAPH (1 << 3)
 #endif
 
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+/**
+ * Allow clients to request assets.
+ */
+#define FOXGLOVE_GATEWAY_CAPABILITY_ASSETS (1 << 4)
+#endif
+
 #if !defined(__wasm__)
 /**
  * Allow clients to advertise channels to send data messages to the server.
@@ -384,6 +391,33 @@ enum foxglove_position_covariance_type
 #ifndef __cplusplus
 typedef int32_t foxglove_position_covariance_type;
 #endif // __cplusplus
+
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+/**
+ * The reliability policy for a channel's data delivery.
+ */
+enum foxglove_reliability
+#ifdef __cplusplus
+  : uint8_t
+#endif // __cplusplus
+ {
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+  /**
+   * Data is sent over unreliable data tracks. This is the default.
+   */
+  FOXGLOVE_RELIABILITY_LOSSY = 0,
+#endif
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+  /**
+   * Data is sent over the reliable control channel (ordered, guaranteed delivery).
+   */
+  FOXGLOVE_RELIABILITY_RELIABLE = 1,
+#endif
+};
+#ifndef __cplusplus
+typedef uint8_t foxglove_reliability;
+#endif // __cplusplus
+#endif
 
 enum foxglove_scene_entity_deletion_type
 #ifdef __cplusplus
@@ -1712,6 +1746,49 @@ typedef struct foxglove_scene_update {
 } foxglove_scene_update;
 
 /**
+ * An estimate of position, orientation, and velocity for an object or reference frame in 3D space
+ */
+typedef struct foxglove_odometry {
+  /**
+   * Timestamp of the message
+   */
+  const struct foxglove_timestamp *timestamp;
+  /**
+   * Reference coordinate frame (e.g. `map` or `odom`)
+   */
+  struct foxglove_string frame_id;
+  /**
+   * Coordinate frame of the body whose motion is being estimated (e.g. `base_link`)
+   */
+  struct foxglove_string body_frame_id;
+  /**
+   * Position and orientation of body_frame_id in frame_id
+   */
+  const struct foxglove_pose *pose;
+  /**
+   * Linear velocity in m/s in body_frame_id
+   */
+  const struct foxglove_vector3 *linear_velocity;
+  /**
+   * Angular velocity in rad/s in body_frame_id
+   */
+  const struct foxglove_vector3 *angular_velocity;
+  /**
+   * Row-major 6x6 covariance matrix (x, y, z, rotation about x, rotation about y, rotation about z). Set to zero if unknown.
+   */
+  double pose_covariance[36];
+  /**
+   * Row-major 6x6 covariance matrix (vx, vy, vz, angular rate about x, angular rate about y, angular rate about z). Set to zero if unknown.
+   */
+  double velocity_covariance[36];
+  /**
+   * Additional user-provided metadata associated with the odometry message. Keys must be unique.
+   */
+  const struct foxglove_key_value_pair *metadata;
+  size_t metadata_count;
+} foxglove_odometry;
+
+/**
  * A timestamped point for a position in 3D space
  */
 typedef struct foxglove_point3_in_frame {
@@ -2203,7 +2280,7 @@ typedef union foxglove_parameter_value_data {
 
 #if !defined(__wasm__)
 /**
- * A websocket parameter value.
+ * A WebSocket parameter value.
  *
  * Constructed with `foxglove_parameter_value_create_*`.
  */
@@ -2221,7 +2298,7 @@ typedef struct foxglove_parameter_value {
 
 #if !defined(__wasm__)
 /**
- * A websocket parameter.
+ * A WebSocket parameter.
  *
  * Constructed with `foxglove_parameter_create`.
  */
@@ -2243,7 +2320,7 @@ typedef struct foxglove_parameter {
 
 #if !defined(__wasm__)
 /**
- * An array of websocket parameters.
+ * An array of WebSocket parameters.
  *
  * Constructed with `foxglove_parameter_array_create`.
  */
@@ -2390,6 +2467,15 @@ typedef uint8_t foxglove_gateway_capability;
 
 #if defined(FOXGLOVE_REMOTE_ACCESS)
 /**
+ * Quality-of-service profile for a channel.
+ */
+typedef struct foxglove_qos_profile {
+  foxglove_reliability reliability;
+} foxglove_qos_profile;
+#endif
+
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+/**
  * Options for creating a remote access gateway.
  *
  * # Safety
@@ -2423,6 +2509,18 @@ typedef struct foxglove_gateway_options {
    * This method is invoked from the client's main poll loop and must not block.
    */
   bool (*sink_channel_filter)(const void *context, const struct foxglove_channel_descriptor *channel);
+  /**
+   * Context provided to the `qos_classifier` callback.
+   */
+  const void *qos_classifier_context;
+  /**
+   * A QoS classifier for channels.
+   *
+   * Returns a [`FoxgloveQosProfile`] for the given channel, determining how data is delivered.
+   * If not set, all channels use the default lossy profile.
+   */
+  struct foxglove_qos_profile (*qos_classifier)(const void *context,
+                                                const struct foxglove_channel_descriptor *channel);
   /**
    * Context provided to the `fetch_asset` callback.
    */
@@ -2757,7 +2855,7 @@ typedef struct foxglove_server_options {
 
 #if !defined(__wasm__)
 /**
- * A schema describing either a websocket service request or response.
+ * A schema describing either a WebSocket service request or response.
  */
 typedef struct foxglove_service_message_schema {
   /**
@@ -2773,7 +2871,7 @@ typedef struct foxglove_service_message_schema {
 
 #if !defined(__wasm__)
 /**
- * A websocket service schema.
+ * A WebSocket service schema.
  */
 typedef struct foxglove_service_schema {
   /**
@@ -2793,7 +2891,7 @@ typedef struct foxglove_service_schema {
 
 #if !defined(__wasm__)
 /**
- * A websocket service request message.
+ * A WebSocket service request message.
  */
 typedef struct foxglove_service_request {
   /**
@@ -4083,6 +4181,52 @@ foxglove_error foxglove_model_primitive_encode(const struct foxglove_model_primi
  * # Safety
  * We're trusting the caller that the channel will only be used with this type T.
  */
+foxglove_error foxglove_channel_create_odometry(struct foxglove_string topic,
+                                                const struct foxglove_context *context,
+                                                const struct foxglove_channel **channel);
+
+#if !defined(__wasm__)
+/**
+ * Log a Odometry message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_odometry.
+ */
+foxglove_error foxglove_channel_log_odometry(const struct foxglove_channel *channel,
+                                             const struct foxglove_odometry *msg,
+                                             const uint64_t *log_time,
+                                             FoxgloveSinkId sink_id);
+#endif
+
+/**
+ * Get the Odometry schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_odometry_schema(void);
+
+/**
+ * Encode a Odometry message as protobuf to the buffer provided.
+ *
+ * On success, writes the encoded length to *encoded_len.
+ * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+ * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+ * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+ *
+ * # Safety
+ * ptr must be a valid pointer to a memory region at least len bytes long.
+ */
+foxglove_error foxglove_odometry_encode(const struct foxglove_odometry *msg,
+                                        uint8_t *ptr,
+                                        size_t len,
+                                        size_t *encoded_len);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
 foxglove_error foxglove_channel_create_packed_element_field(struct foxglove_string topic,
                                                             const struct foxglove_context *context,
                                                             const struct foxglove_channel **channel);
@@ -5047,7 +5191,7 @@ void foxglove_channel_free(const struct foxglove_channel *channel);
  * # Safety
  * `channel` must be a valid pointer to a `foxglove_channel` created via `foxglove_channel_create`.
  *
- * If the passed channel is null, an invalid id of 0 is returned.
+ * If the passed channel is null, an invalid ID of 0 is returned.
  */
 uint64_t foxglove_channel_get_id(const struct foxglove_channel *channel);
 #endif
@@ -5187,7 +5331,7 @@ void foxglove_context_free(const struct foxglove_context *context);
 
 #if !defined(__wasm__)
 /**
- * Get the id of a channel descriptor.
+ * Get the ID of a channel descriptor.
  *
  * # Safety
  * `channel` must be a valid pointer to a `foxglove_channel_descriptor`.
@@ -5417,6 +5561,16 @@ foxglove_error foxglove_gateway_stop(struct foxglove_gateway *gateway);
  * Returns `Shutdown` if the gateway pointer is null or the gateway has been stopped.
  */
 foxglove_connection_status foxglove_gateway_connection_status(const struct foxglove_gateway *gateway);
+#endif
+
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+/**
+ * Get the sink ID of the gateway's current session.
+ *
+ * Returns 0 if the gateway pointer is null, the gateway has been stopped,
+ * or no session is currently active.
+ */
+FoxgloveSinkId foxglove_gateway_sink_id(const struct foxglove_gateway *gateway);
 #endif
 
 #if defined(FOXGLOVE_REMOTE_ACCESS)
@@ -6114,9 +6268,9 @@ foxglove_error foxglove_server_remove_status(struct foxglove_websocket_server *s
 
 #if !defined(__wasm__)
 /**
- * Creates a new websocket service.
+ * Creates a new WebSocket service.
  *
- * The service must be registered with a websocket server using `foxglove_server_add_service`, or
+ * The service must be registered with a WebSocket server using `foxglove_server_add_service`, or
  * freed with `foxglove_service_free`.
  *
  * The callback is invoked from the client's main poll loop and must not block. If blocking or
@@ -6150,11 +6304,11 @@ foxglove_error foxglove_service_create(struct foxglove_service **service,
 
 #if !defined(__wasm__)
 /**
- * Frees a service that was never registered to a websocket server.
+ * Frees a service that was never registered to a WebSocket server.
  *
  * # Safety
  * - `service` must be a valid pointer to a service allocated by `foxglove_service_create`. The
- *   service MUST NOT have been previously registered with a websocket server.
+ *   service MUST NOT have been previously registered with a WebSocket server.
  */
 void foxglove_service_free(struct foxglove_service *service);
 #endif

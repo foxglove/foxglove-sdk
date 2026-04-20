@@ -1,7 +1,7 @@
 # Remote Access Example
 
 This example demonstrates using the Foxglove remote access gateway to stream
-camera images for live visualization through the Foxglove platform.
+camera images for visualization through the Foxglove platform.
 
 ## Prerequisites
 

@@ -200,6 +200,32 @@ void declareParameters(rclcpp::Node* node) {
   publishClientCountDescription.description = "Publish the number of connected clients";
   publishClientCountDescription.read_only = true;
   node->declare_parameter(PARAM_PUBLISH_CLIENT_COUNT, false, publishClientCountDescription);
+
+  auto remoteAccessDescription = rcl_interfaces::msg::ParameterDescriptor{};
+  remoteAccessDescription.name = PARAM_REMOTE_ACCESS;
+  remoteAccessDescription.type = rcl_interfaces::msg::ParameterType::PARAMETER_BOOL;
+  remoteAccessDescription.description =
+    "Enable the remote access gateway for Foxglove platform. "
+    "Requires the bridge to be built with FOXGLOVE_BRIDGE_REMOTE_ACCESS=ON.";
+  remoteAccessDescription.read_only = true;
+  node->declare_parameter(PARAM_REMOTE_ACCESS, false, remoteAccessDescription);
+
+  auto deviceTokenDescription = rcl_interfaces::msg::ParameterDescriptor{};
+  deviceTokenDescription.name = PARAM_DEVICE_TOKEN;
+  deviceTokenDescription.type = rcl_interfaces::msg::ParameterType::PARAMETER_STRING;
+  deviceTokenDescription.description =
+    "Foxglove device token for platform authentication. "
+    "If empty, falls back to FOXGLOVE_DEVICE_TOKEN environment variable.";
+  deviceTokenDescription.read_only = true;
+  node->declare_parameter(PARAM_DEVICE_TOKEN, "", deviceTokenDescription);
+
+  auto foxgloveApiUrlDescription = rcl_interfaces::msg::ParameterDescriptor{};
+  foxgloveApiUrlDescription.name = PARAM_FOXGLOVE_API_URL;
+  foxgloveApiUrlDescription.type = rcl_interfaces::msg::ParameterType::PARAMETER_STRING;
+  foxgloveApiUrlDescription.description =
+    "Override the Foxglove API base URL. If empty, the SDK default is used.";
+  foxgloveApiUrlDescription.read_only = true;
+  node->declare_parameter(PARAM_FOXGLOVE_API_URL, "", foxgloveApiUrlDescription);
 }
 
 std::vector<std::regex> parseRegexStrings(rclcpp::Node* node,

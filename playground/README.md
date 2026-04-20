@@ -36,7 +36,7 @@ CFLAGS=-fPIC \
   RUSTC_BOOTSTRAP=1 \
   RUSTUP_TOOLCHAIN=1.86.0 \
   uv run maturin build --release --out dist --target wasm32-unknown-emscripten -i python3.12
-cp dist/foxglove_sdk-*.whl ../../playground/public
+cp dist/foxglove_sdk-*.whl ../../playground/public/
 ```
 
 Then run the dev server:

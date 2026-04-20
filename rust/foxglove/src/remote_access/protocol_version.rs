@@ -9,16 +9,14 @@ use tracing::error;
 pub(crate) const PROTOCOL_VERSION_ATTRIBUTE: &str = "protocolVersion";
 
 /// The remote access protocol version supported by this SDK build.
-pub(crate) const REMOTE_ACCESS_PROTOCOL_VERSION: semver::Version = semver::Version::new(2, 0, 1);
+pub(crate) const REMOTE_ACCESS_PROTOCOL_VERSION: semver::Version = semver::Version::new(2, 2, 0);
 
 /// The minimum remote access protocol version this SDK will accept from a connecting participant.
 pub(crate) const REMOTE_ACCESS_MIN_SUPPORTED_PROTOCOL_VERSION: semver::Version =
-    semver::Version::new(2, 0, 0);
+    semver::Version::new(2, 2, 0);
 
 /// The protocol version assumed when a participant does not advertise one.
-///
-/// This is the version that was in use before version advertisement was introduced.
-pub(crate) const DEFAULT_PROTOCOL_VERSION: semver::Version = semver::Version::new(2, 0, 0);
+pub(crate) const DEFAULT_PROTOCOL_VERSION: semver::Version = semver::Version::new(2, 2, 0);
 
 /// Parse the remote access protocol version from a LiveKit participant's attributes.
 ///
@@ -98,14 +96,14 @@ mod tests {
 
     #[test]
     fn parse_valid_version() {
-        let result = parse_participant_protocol_version(&attrs("2.0.1"));
-        assert_eq!(result, Some(semver::Version::new(2, 0, 1)));
+        let result = parse_participant_protocol_version(&attrs("2.2.0"));
+        assert_eq!(result, Some(semver::Version::new(2, 2, 0)));
     }
 
     #[test]
-    fn parse_missing_attribute_defaults_to_2_0_0() {
+    fn parse_missing_attribute_defaults_to_current() {
         let result = parse_participant_protocol_version(&HashMap::new());
-        assert_eq!(result, Some(semver::Version::new(2, 0, 0)));
+        assert_eq!(result, Some(semver::Version::new(2, 2, 0)));
     }
 
     #[test]
@@ -124,26 +122,26 @@ mod tests {
 
     #[test]
     fn check_valid_version_at_minimum_returns_some() {
-        let result = check_participant_protocol_version(&identity(), &attrs("2.0.0"), None);
-        assert_eq!(result, Some(semver::Version::new(2, 0, 0)));
+        let result = check_participant_protocol_version(&identity(), &attrs("2.2.0"), None);
+        assert_eq!(result, Some(semver::Version::new(2, 2, 0)));
     }
 
     #[test]
     fn check_valid_version_above_minimum_returns_some() {
-        let result = check_participant_protocol_version(&identity(), &attrs("2.0.1"), Some("sess"));
-        assert_eq!(result, Some(semver::Version::new(2, 0, 1)));
+        let result = check_participant_protocol_version(&identity(), &attrs("2.2.1"), Some("sess"));
+        assert_eq!(result, Some(semver::Version::new(2, 2, 1)));
     }
 
     #[test]
     fn check_missing_attribute_defaults_and_passes() {
-        // DEFAULT_PROTOCOL_VERSION == REMOTE_ACCESS_MIN_SUPPORTED_PROTOCOL_VERSION == 2.0.0
+        // DEFAULT_PROTOCOL_VERSION == REMOTE_ACCESS_MIN_SUPPORTED_PROTOCOL_VERSION == 2.2.0
         let result = check_participant_protocol_version(&identity(), &HashMap::new(), None);
-        assert_eq!(result, Some(semver::Version::new(2, 0, 0)));
+        assert_eq!(result, Some(semver::Version::new(2, 2, 0)));
     }
 
     #[test]
     fn check_version_below_minimum_returns_none() {
-        let result = check_participant_protocol_version(&identity(), &attrs("1.9.9"), None);
+        let result = check_participant_protocol_version(&identity(), &attrs("2.1.9"), None);
         assert_eq!(result, None);
     }
 

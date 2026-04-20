@@ -704,7 +704,7 @@ pub extern "C" fn foxglove_channel_free(channel: Option<&FoxgloveChannel>) {
 /// # Safety
 /// `channel` must be a valid pointer to a `foxglove_channel` created via `foxglove_channel_create`.
 ///
-/// If the passed channel is null, an invalid id of 0 is returned.
+/// If the passed channel is null, an invalid ID of 0 is returned.
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_get_id(channel: Option<&FoxgloveChannel>) -> u64 {
     let Some(channel) = channel else {

@@ -5,7 +5,7 @@ with a channel_filter registered on a context sink.
 These tests run in subprocesses with a timeout to detect deadlocks without
 hanging the test suite. The McapSink is registered directly as a context sink
 with a filter, so should_subscribe() is invoked synchronously during
-add_channel() and add_sink() without needing a connected websocket client.
+add_channel() and add_sink() without needing a connected WebSocket client.
 """
 
 import subprocess

@@ -1,4 +1,4 @@
-# Websocket Services
+# WebSocket Services
 
 An example from the Foxglove SDK.
 

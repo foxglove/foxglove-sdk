@@ -26,7 +26,8 @@ RUN if [ "$USE_ROS_TESTING" = "true" ]; then \
 # That ensures that we have the latest versions of the
 # ROS packages in the underlay and for what is installed
 # by rosdep.
-RUN apt-get update && apt-get -y dist-upgrade
+RUN apt-get update && apt-get -y dist-upgrade && \
+    apt-get install -y python3-bloom fakeroot dpkg-dev debhelper
 
 # create foxglove user (or use existing user if UID matches)
 ARG USERNAME=foxglove

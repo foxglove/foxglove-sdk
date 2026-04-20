@@ -12,7 +12,72 @@ use crate::parameter::FoxgloveParameterArray;
 use crate::server::FoxgloveServerStatusLevel;
 use crate::service::FoxgloveService;
 use crate::sink_channel_filter::ChannelFilter;
-use crate::{FoxgloveContext, FoxgloveError, FoxgloveString, result_to_c};
+use crate::{FoxgloveContext, FoxgloveError, FoxgloveSinkId, FoxgloveString, result_to_c};
+
+/// The reliability policy for a channel's data delivery.
+#[repr(u8)]
+pub enum FoxgloveReliability {
+    /// Data is sent over unreliable data tracks. This is the default.
+    Lossy = 0,
+    /// Data is sent over the reliable control channel (ordered, guaranteed delivery).
+    Reliable = 1,
+}
+
+/// Quality-of-service profile for a channel.
+#[repr(C)]
+pub struct FoxgloveQosProfile {
+    pub reliability: FoxgloveReliability,
+}
+
+impl From<FoxgloveQosProfile> for foxglove::remote_access::QosProfile {
+    fn from(profile: FoxgloveQosProfile) -> Self {
+        let reliability = match profile.reliability {
+            FoxgloveReliability::Lossy => foxglove::remote_access::Reliability::Lossy,
+            FoxgloveReliability::Reliable => foxglove::remote_access::Reliability::Reliable,
+        };
+        foxglove::remote_access::QosProfile::builder()
+            .reliability(reliability)
+            .build()
+    }
+}
+
+/// A QoS classifier that wraps a C callback.
+#[derive(Clone)]
+struct QosClassifier {
+    callback_context: *const c_void,
+    callback:
+        unsafe extern "C" fn(*const c_void, *const FoxgloveChannelDescriptor) -> FoxgloveQosProfile,
+}
+
+impl QosClassifier {
+    fn new(
+        callback_context: *const c_void,
+        callback: unsafe extern "C" fn(
+            *const c_void,
+            *const FoxgloveChannelDescriptor,
+        ) -> FoxgloveQosProfile,
+    ) -> Self {
+        Self {
+            callback_context,
+            callback,
+        }
+    }
+}
+
+unsafe impl Send for QosClassifier {}
+unsafe impl Sync for QosClassifier {}
+
+impl foxglove::remote_access::QosClassifier for QosClassifier {
+    fn classify(
+        &self,
+        channel: &foxglove::ChannelDescriptor,
+    ) -> foxglove::remote_access::QosProfile {
+        let c_channel_descriptor = FoxgloveChannelDescriptor(channel.clone());
+        let profile =
+            unsafe { (self.callback)(self.callback_context, &raw const c_channel_descriptor) };
+        profile.into()
+    }
+}
 
 /// The status of the remote access gateway connection.
 #[repr(u8)]
@@ -57,6 +122,8 @@ pub const FOXGLOVE_GATEWAY_CAPABILITY_PARAMETERS: u8 = 1 << 1;
 pub const FOXGLOVE_GATEWAY_CAPABILITY_SERVICES: u8 = 1 << 2;
 /// Allow clients to subscribe and make connection graph updates.
 pub const FOXGLOVE_GATEWAY_CAPABILITY_CONNECTION_GRAPH: u8 = 1 << 3;
+/// Allow clients to request assets.
+pub const FOXGLOVE_GATEWAY_CAPABILITY_ASSETS: u8 = 1 << 4;
 
 bitflags! {
     #[derive(Clone, Copy, PartialEq, Eq)]
@@ -65,6 +132,7 @@ bitflags! {
         const Parameters = FOXGLOVE_GATEWAY_CAPABILITY_PARAMETERS;
         const Services = FOXGLOVE_GATEWAY_CAPABILITY_SERVICES;
         const ConnectionGraph = FOXGLOVE_GATEWAY_CAPABILITY_CONNECTION_GRAPH;
+        const Assets = FOXGLOVE_GATEWAY_CAPABILITY_ASSETS;
     }
 }
 
@@ -84,6 +152,9 @@ impl FoxgloveGatewayCapabilityBitFlags {
             }
             FoxgloveGatewayCapabilityBitFlags::ConnectionGraph => {
                 Some(foxglove::remote_access::Capability::ConnectionGraph)
+            }
+            FoxgloveGatewayCapabilityBitFlags::Assets => {
+                Some(foxglove::remote_access::Capability::Assets)
             }
             _ => None,
         })
@@ -452,6 +523,20 @@ pub struct FoxgloveGatewayOptions<'a> {
         ) -> bool,
     >,
 
+    /// Context provided to the `qos_classifier` callback.
+    pub qos_classifier_context: *const c_void,
+
+    /// A QoS classifier for channels.
+    ///
+    /// Returns a [`FoxgloveQosProfile`] for the given channel, determining how data is delivered.
+    /// If not set, all channels use the default lossy profile.
+    pub qos_classifier: Option<
+        unsafe extern "C" fn(
+            context: *const c_void,
+            channel: *const FoxgloveChannelDescriptor,
+        ) -> FoxgloveQosProfile,
+    >,
+
     /// Context provided to the `fetch_asset` callback.
     pub fetch_asset_context: *const c_void,
 
@@ -597,6 +682,14 @@ unsafe fn do_foxglove_gateway_start(
         )));
     }
 
+    // QoS classifier
+    if let Some(qos_classifier) = options.qos_classifier {
+        gateway = gateway.qos_classifier(Arc::new(QosClassifier::new(
+            options.qos_classifier_context,
+            qos_classifier,
+        )));
+    }
+
     // Fetch asset handler
     if let Some(fetch_asset) = options.fetch_asset {
         gateway = gateway.fetch_asset_handler(Box::new(FetchAssetHandler::new(
@@ -665,6 +758,21 @@ pub extern "C" fn foxglove_gateway_connection_status(
         return FoxgloveConnectionStatus::Shutdown;
     };
     FoxgloveConnectionStatus::from(handle.connection_status())
+}
+
+/// Get the sink ID of the gateway's current session.
+///
+/// Returns 0 if the gateway pointer is null, the gateway has been stopped,
+/// or no session is currently active.
+#[unsafe(no_mangle)]
+pub extern "C" fn foxglove_gateway_sink_id(gateway: Option<&FoxgloveGateway>) -> FoxgloveSinkId {
+    let Some(gateway) = gateway else {
+        return 0;
+    };
+    let Some(handle) = gateway.as_ref() else {
+        return 0;
+    };
+    handle.sink_id().map(|id| id.into()).unwrap_or(0)
 }
 
 /// Adds a service to the gateway and advertises it to connected clients.

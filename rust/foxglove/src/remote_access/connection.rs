@@ -15,7 +15,7 @@ use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info};
 
 use crate::{
-    Context, FoxgloveError, SinkChannelFilter,
+    Context, FoxgloveError, SinkChannelFilter, SinkId,
     api_client::{DeviceToken, FoxgloveApiClientBuilder, RemoteSessionRequest},
     library_version::get_library_version,
     protocol::v2::{parameter::Parameter, server::ServerInfo},
@@ -23,7 +23,8 @@ use crate::{
         AssetHandler, Capability, Client, RemoteAccessError,
         credentials_provider::CredentialsProvider,
         protocol_version,
-        session::{DEFAULT_PENDING_CLIENT_READER_TIMEOUT, RemoteAccessSession, SessionParams},
+        qos::QosClassifier,
+        session::{RemoteAccessSession, SessionParams},
     },
     remote_common::connection_graph::ConnectionGraph,
     remote_common::service::{Service, ServiceId, ServiceMap},
@@ -32,7 +33,7 @@ use crate::{
 type Result<T> = std::result::Result<T, Box<RemoteAccessError>>;
 
 const AUTH_RETRY_PERIOD: Duration = Duration::from_secs(30);
-const DEFAULT_MESSAGE_BACKLOG_SIZE: usize = 1024;
+use super::session::DEFAULT_MESSAGE_BACKLOG_SIZE;
 
 /// The status of the remote access gateway connection.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -85,9 +86,9 @@ pub(crate) struct ConnectionParams {
     pub fetch_asset_handler: Option<Arc<dyn AssetHandler<Client>>>,
     pub runtime: Handle,
     pub channel_filter: Option<Arc<dyn SinkChannelFilter>>,
+    pub qos_classifier: Option<Arc<dyn QosClassifier>>,
     pub server_info: Option<HashMap<String, String>>,
     pub message_backlog_size: Option<usize>,
-    pub pending_client_reader_timeout: Option<Duration>,
     pub context: Weak<Context>,
 }
 
@@ -104,9 +105,9 @@ pub(crate) struct RemoteAccessConnection {
     fetch_asset_handler: Option<Arc<dyn AssetHandler<Client>>>,
     runtime: Handle,
     channel_filter: Option<Arc<dyn SinkChannelFilter>>,
+    qos_classifier: Option<Arc<dyn QosClassifier>>,
     server_info: Option<HashMap<String, String>>,
     message_backlog_size: Option<usize>,
-    pending_client_reader_timeout: Option<Duration>,
     context: Weak<Context>,
     cancellation_token: CancellationToken,
     services: Arc<parking_lot::RwLock<ServiceMap>>,
@@ -132,9 +133,9 @@ impl RemoteAccessConnection {
             fetch_asset_handler: params.fetch_asset_handler,
             runtime: params.runtime,
             channel_filter: params.channel_filter,
+            qos_classifier: params.qos_classifier,
             server_info: params.server_info,
             message_backlog_size: params.message_backlog_size,
-            pending_client_reader_timeout: params.pending_client_reader_timeout,
             context: params.context,
             cancellation_token: CancellationToken::new(),
             services,
@@ -149,6 +150,11 @@ impl RemoteAccessConnection {
     /// Returns the current connection status.
     pub fn status(&self) -> ConnectionStatus {
         ConnectionStatus::from_u8(self.status.load(Ordering::Relaxed))
+    }
+
+    /// Returns the sink ID of the current session, if one is active.
+    pub fn sink_id(&self) -> Option<SinkId> {
+        self.session.lock().as_ref().map(|s| s.sink_id())
     }
 
     /// Publishes parameter values to all subscribed clients.
@@ -169,7 +175,7 @@ impl RemoteAccessConnection {
         }
     }
 
-    /// Removes status messages by id from all connected participants.
+    /// Removes status messages by ID from all connected participants.
     ///
     /// If no session is currently active (e.g. while reconnecting), this is a no-op.
     pub fn remove_status(&self, status_ids: Vec<String>) {
@@ -290,18 +296,17 @@ impl RemoteAccessConnection {
                         room,
                         context: self.context.clone(),
                         channel_filter: self.channel_filter.clone(),
+                        qos_classifier: self.qos_classifier.clone(),
                         listener: self.listener.clone(),
                         capabilities: self.capabilities.clone(),
                         supported_encodings: self.supported_encodings.clone().unwrap_or_default(),
+                        runtime: self.runtime.clone(),
                         cancellation_token: self.cancellation_token.clone(),
                         message_backlog_size: self
                             .message_backlog_size
                             .unwrap_or(DEFAULT_MESSAGE_BACKLOG_SIZE),
                         services: self.services.clone(),
                         connection_graph: self.connection_graph.clone(),
-                        pending_client_reader_timeout: self
-                            .pending_client_reader_timeout
-                            .unwrap_or(DEFAULT_PENDING_CLIENT_READER_TIMEOUT),
                         remote_access_session_id: self
                             .remote_access_session_id()
                             .map(str::to_owned),
@@ -377,7 +382,9 @@ impl RemoteAccessConnection {
         context.add_sink(session.clone());
 
         // We can use spawn here because we're already running on self.runtime
-        let sender_task = tokio::spawn(RemoteAccessSession::run_sender(session.clone()));
+        let video_metadata_task = tokio::spawn(RemoteAccessSession::run_video_metadata_watcher(
+            session.clone(),
+        ));
 
         // Send ServerInfo and channel advertisements to participants already in the room.
         // ParticipantConnected events only fire for participants joining after us.
@@ -435,16 +442,14 @@ impl RemoteAccessConnection {
             }
         }
         context.remove_sink(session.sink_id());
-        sender_task.abort();
-        // Wait for the sender task to fully stop so no callbacks are in flight.
-        let _ = sender_task.await;
+        video_metadata_task.abort();
+        let _ = video_metadata_task.await;
 
         info!(remote_access_session_id, "disconnecting from room");
-        // Close the room (disconnect) on shutdown.
-        // If we don't do that, there's a 15s delay before this device is removed from the participants
-        if let Err(e) = session.room().close().await {
-            error!(remote_access_session_id, error = %e, "failed to close room: {e}");
-        }
+        // handle_room_events was one arm of the select! above — when the select
+        // exits, that future is dropped, so no more remove_participant calls can
+        // race with the flush handle drain inside close().
+        session.close().await;
     }
 
     /// Connect to the room, retrying indefinitely.

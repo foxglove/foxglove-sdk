@@ -383,17 +383,21 @@ public:
     // Set up binary message handler to resolve when a binary message has been received
     auto promise = std::make_shared<std::promise<std::vector<uint8_t>>>();
     auto future = promise->get_future();
+    auto fulfilled = std::make_shared<std::atomic<bool>>(false);
 
-    setBinaryMessageHandler(
-      [promise = std::move(promise), subscriptionId](const uint8_t* data, size_t dataLength) {
-        if (ReadUint32LE(data + 1) != subscriptionId) {
-          return;
-        }
-        const size_t offset = 1 + 4 + 8;
-        std::vector<uint8_t> dataCopy(dataLength - offset);
-        std::memcpy(dataCopy.data(), data + offset, dataLength - offset);
-        promise->set_value(std::move(dataCopy));
-      });
+    setBinaryMessageHandler([promise = std::move(promise), fulfilled, subscriptionId](
+                              const uint8_t* data, size_t dataLength) {
+      if (ReadUint32LE(data + 1) != subscriptionId) {
+        return;
+      }
+      if (fulfilled->exchange(true)) {
+        return;
+      }
+      const size_t offset = 1 + 4 + 8;
+      std::vector<uint8_t> dataCopy(dataLength - offset);
+      std::memcpy(dataCopy.data(), data + offset, dataLength - offset);
+      promise->set_value(std::move(dataCopy));
+    });
 
     return future;
   }

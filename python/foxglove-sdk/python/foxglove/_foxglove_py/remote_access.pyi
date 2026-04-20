@@ -1,13 +1,36 @@
 from enum import Enum
 
-from .websocket import MessageSchema as MessageSchema
-from .websocket import Parameter as Parameter
-from .websocket import ParameterType as ParameterType
-from .websocket import ParameterValue as ParameterValue
-from .websocket import Service as Service
-from .websocket import ServiceRequest as ServiceRequest
-from .websocket import ServiceSchema as ServiceSchema
-from .websocket import StatusLevel as StatusLevel
+from foxglove import (
+    ChannelDescriptor,
+    MessageSchema,
+    Parameter,
+    ParameterType,
+    ParameterValue,
+    Service,
+    ServiceRequest,
+    ServiceSchema,
+    StatusLevel,
+)
+
+class Reliability(Enum):
+    """
+    The reliability policy for a channel's data delivery.
+    """
+
+    Lossy = ...
+    """Data is sent over unreliable data tracks. This is the default."""
+
+    Reliable = ...
+    """Data is sent over the reliable control channel (ordered, guaranteed delivery)."""
+
+class QosProfile:
+    """
+    Quality-of-service profile for a channel.
+    """
+
+    reliability: Reliability
+
+    def __init__(self, *, reliability: Reliability = Reliability.Lossy) -> None: ...
 
 class Capability(Enum):
     """
@@ -75,7 +98,7 @@ class RemoteAccessGateway:
         ...
 
     def remove_status(self, ids: list[str]) -> None:
-        """Removes status messages by id from all connected participants."""
+        """Removes status messages by ID from all connected participants."""
         ...
 
     def stop(self) -> None:
