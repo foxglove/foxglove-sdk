@@ -15,6 +15,7 @@
 #include <string>
 #include <thread>
 #include <vector>
+#include <algorithm>
 
 #include "frame.hpp"
 #include "mock_listener.hpp"
