@@ -90,6 +90,8 @@ pub(crate) struct ConnectionParams {
     pub server_info: Option<HashMap<String, String>>,
     pub message_backlog_size: Option<usize>,
     pub context: Weak<Context>,
+    #[cfg(feature = "sysinfo")]
+    pub sysinfo: bool,
 }
 
 /// RemoteAccessConnection manages the connected [`RemoteAccessSession`] to the LiveKit server,
@@ -109,6 +111,8 @@ pub(crate) struct RemoteAccessConnection {
     server_info: Option<HashMap<String, String>>,
     message_backlog_size: Option<usize>,
     context: Weak<Context>,
+    #[cfg(feature = "sysinfo")]
+    sysinfo: bool,
     cancellation_token: CancellationToken,
     services: Arc<parking_lot::RwLock<ServiceMap>>,
     connection_graph: Arc<parking_lot::Mutex<ConnectionGraph>>,
@@ -137,6 +141,8 @@ impl RemoteAccessConnection {
             server_info: params.server_info,
             message_backlog_size: params.message_backlog_size,
             context: params.context,
+            #[cfg(feature = "sysinfo")]
+            sysinfo: params.sysinfo,
             cancellation_token: CancellationToken::new(),
             services,
             connection_graph: Arc::new(parking_lot::Mutex::new(ConnectionGraph::new())),
@@ -330,6 +336,14 @@ impl RemoteAccessConnection {
     ///
     /// If disconnected from the room, reset all state and attempt to restart the run loop.
     pub fn spawn_run_until_cancelled(self: Arc<Self>) -> JoinHandle<()> {
+        #[cfg(feature = "sysinfo")]
+        if self.sysinfo {
+            crate::system_info::spawn_publisher(
+                self.context.clone(),
+                &self.runtime,
+                self.cancellation_token.clone(),
+            );
+        }
         self.runtime.spawn(self.clone().run_until_cancelled())
     }
 

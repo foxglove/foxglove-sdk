@@ -127,6 +127,8 @@ impl GatewayHandle {
             server_info: None,
             message_backlog_size: None,
             context: std::sync::Weak::new(),
+            #[cfg(feature = "sysinfo")]
+            sysinfo: false,
         };
         let services = Arc::new(parking_lot::RwLock::new(ServiceMap::default()));
         let connection = RemoteAccessConnection::new(params, services);
@@ -173,6 +175,8 @@ pub struct Gateway {
     server_info: Option<HashMap<String, String>>,
     message_backlog_size: Option<usize>,
     context: std::sync::Weak<Context>,
+    #[cfg(feature = "sysinfo")]
+    sysinfo: bool,
 }
 
 impl Default for Gateway {
@@ -193,14 +197,16 @@ impl Default for Gateway {
             server_info: None,
             message_backlog_size: None,
             context: Arc::downgrade(&Context::get_default()),
+            #[cfg(feature = "sysinfo")]
+            sysinfo: false,
         }
     }
 }
 
 impl std::fmt::Debug for Gateway {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Gateway")
-            .field("name", &self.name)
+        let mut dbg = f.debug_struct("Gateway");
+        dbg.field("name", &self.name)
             .field("has_device_token", &self.device_token.is_some())
             .field("foxglove_api_url", &self.foxglove_api_url)
             .field("foxglove_api_timeout", &self.foxglove_api_timeout)
@@ -217,8 +223,10 @@ impl std::fmt::Debug for Gateway {
             .field("has_qos_classifier", &self.qos_classifier.is_some())
             .field("server_info", &self.server_info)
             .field("message_backlog_size", &self.message_backlog_size)
-            .field("has_context", &(self.context.strong_count() > 0))
-            .finish()
+            .field("has_context", &(self.context.strong_count() > 0));
+        #[cfg(feature = "sysinfo")]
+        dbg.field("sysinfo", &self.sysinfo);
+        dbg.finish()
     }
 }
 
@@ -269,6 +277,21 @@ impl Gateway {
     /// Sets the context for this sink.
     pub fn context(mut self, ctx: &Arc<Context>) -> Self {
         self.context = Arc::downgrade(ctx);
+        self
+    }
+
+    /// Enables or disables publishing process and system statistics to the
+    /// `/sysinfo` topic.
+    ///
+    /// When enabled, the gateway publishes a
+    /// [`SystemInfo`][crate::system_info::SystemInfo] message every 200
+    /// milliseconds for the duration of the gateway's lifetime.
+    ///
+    /// Defaults to `false`.
+    #[cfg(feature = "sysinfo")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "sysinfo")))]
+    pub fn sysinfo(mut self, enabled: bool) -> Self {
+        self.sysinfo = enabled;
         self
     }
 
@@ -487,6 +510,8 @@ impl Gateway {
             server_info: self.server_info,
             message_backlog_size: self.message_backlog_size,
             context: self.context,
+            #[cfg(feature = "sysinfo")]
+            sysinfo: self.sysinfo,
         };
         let connection = RemoteAccessConnection::new(params, services);
         Ok(GatewayHandle::new(Arc::new(connection), runtime))

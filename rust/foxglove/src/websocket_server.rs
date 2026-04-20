@@ -237,6 +237,20 @@ impl WebSocketServer {
         self
     }
 
+    /// Enables or disables publishing process and system statistics to the
+    /// `/sysinfo` topic.
+    ///
+    /// When enabled, the server publishes a [`SystemInfo`][crate::system_info::SystemInfo]
+    /// message every 200 milliseconds for the duration of the server's lifetime.
+    ///
+    /// Defaults to `false`.
+    #[cfg(feature = "sysinfo")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "sysinfo")))]
+    pub fn sysinfo(mut self, enabled: bool) -> Self {
+        self.options.sysinfo = enabled;
+        self
+    }
+
     /// Starts the WebSocket server.
     ///
     /// Returns a handle that can optionally be used to gracefully shutdown the server. The caller

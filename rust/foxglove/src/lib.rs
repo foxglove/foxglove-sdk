@@ -326,6 +326,8 @@
 //!   implement [`Serialize`](serde::Serialize) and [`JsonSchema`][jsonschema-trait].
 //! - `serde`: derives [`Serialize`](serde::Serialize) and [`Deserialize`](serde::Deserialize) for
 //!   all [message types](crate::messages).
+//! - `sysinfo`: enables an opt-in publisher that reports process and system statistics on the
+//!   `/sysinfo` topic when enabled on the [`WebSocketServer`] or [`remote_access::Gateway`] builder.
 //! - `unstable`: features which are under active development and likely to change in an upcoming
 //!   version.
 //! - `websocket`: enables the WebSocket server and client for live visualization. Enabled by
@@ -347,6 +349,12 @@
 
 #![warn(missing_docs)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
+
+// The `#[derive(foxglove::Encode)]` macro emits code that refers to
+// `::foxglove::...`. Expose the current crate under that name so derived
+// implementations compile when used from within this crate.
+#[cfg(feature = "derive")]
+extern crate self as foxglove;
 
 use thiserror::Error;
 
@@ -445,6 +453,10 @@ pub use runtime::shutdown_runtime;
 mod api_client;
 #[cfg(feature = "remote-access")]
 pub mod remote_access;
+
+#[cfg(feature = "sysinfo")]
+#[cfg_attr(docsrs, doc(cfg(feature = "sysinfo")))]
+pub mod system_info;
 
 #[cfg(feature = "websocket")]
 pub mod websocket;
