@@ -70,8 +70,8 @@ The remote access shared library has strict ABI requirements inherited from the 
 
 | Platform        | Compiler | C++ stdlib | CRT            | Notes                            |
 | --------------- | -------- | ---------- | -------------- | -------------------------------- |
-| Linux x86_64    | GCC 14+  | libstdc++  | —              | glibc >= 2.39 (Ubuntu 24.04+)    |
-| Linux aarch64   | GCC 14+  | libstdc++  | —              | glibc >= 2.39 (Ubuntu 24.04+)    |
+| Linux x86_64    | GCC      | libstdc++  | —              | glibc >= 2.35 (Ubuntu 22.04+)    |
+| Linux aarch64   | GCC      | libstdc++  | —              | glibc >= 2.35 (Ubuntu 22.04+)    |
 | macOS x86_64    | Clang    | libc++     | —              | Default Xcode toolchain          |
 | macOS aarch64   | Clang    | libc++     | —              | Default Xcode toolchain          |
 | Windows x86_64  | MSVC     | MSVC STL   | `/MT` (static) | Your project must also use `/MT` |
