@@ -53,9 +53,7 @@ pub struct SystemInfo {
 /// Spawns a background task that refreshes system info at the requested
 /// interval and publishes it to the `/sysinfo` topic on the provided context.
 ///
-/// `refresh_interval` is clamped to a minimum of
-/// [`sysinfo::MINIMUM_CPU_UPDATE_INTERVAL`], since CPU usage samples taken more
-/// frequently than that are not refreshed by the underlying crate.
+/// `refresh_interval` is clamped to a minimum of 200ms.
 ///
 /// The task exits when `cancel` is triggered, or when the context is dropped.
 pub(crate) fn spawn_publisher(
@@ -64,7 +62,13 @@ pub(crate) fn spawn_publisher(
     cancel: CancellationToken,
     refresh_interval: Duration,
 ) -> JoinHandle<()> {
-    let refresh_interval = refresh_interval.max(MINIMUM_CPU_UPDATE_INTERVAL);
+    // If we refresh too quickly we'll get invalid values for cpu usage.
+    // sysinfo crate exports a platform dependant MINIMUM_CPU_UPDATE_INTERVAL
+    // that is 200ms on Linux. However, it is 0 on unknown platforms.
+    // We clamp to 200ms as well to be safe.
+    let refresh_interval = refresh_interval
+        .max(MINIMUM_CPU_UPDATE_INTERVAL)
+        .max(Duration::from_millis(200));
     runtime.spawn(run_publisher(context, cancel, refresh_interval))
 }
 

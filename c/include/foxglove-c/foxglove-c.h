@@ -2567,9 +2567,7 @@ typedef struct foxglove_gateway_options {
    * to the `/sysinfo` topic.
    *
    * When provided, the gateway publishes a `SystemInfo` message at the given interval for the
-   * duration of the gateway's lifetime. The interval is clamped to a minimum of
-   * `sysinfo::MINIMUM_CPU_UPDATE_INTERVAL`, since CPU usage samples taken more frequently
-   * than that are not refreshed by the underlying crate.
+   * duration of the gateway's lifetime. Clamped to a minimum of 200ms.
    *
    * If null, sysinfo publishing is disabled (the default).
    */
@@ -2867,9 +2865,7 @@ typedef struct foxglove_server_options {
    * to the `/sysinfo` topic.
    *
    * When provided, the server publishes a `SystemInfo` message at the given interval for the
-   * duration of the server's lifetime. The interval is clamped to a minimum of
-   * `sysinfo::MINIMUM_CPU_UPDATE_INTERVAL`, since CPU usage samples taken more frequently
-   * than that are not refreshed by the underlying crate.
+   * duration of the server's lifetime. Clamped to a minimum of 200ms.
    *
    * If null, sysinfo publishing is disabled (the default).
    */

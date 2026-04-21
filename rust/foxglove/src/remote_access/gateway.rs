@@ -281,10 +281,7 @@ impl Gateway {
     ///
     /// When set to `Some(interval)`, the gateway publishes a
     /// [`SystemInfo`][crate::system_info::SystemInfo] message at the given
-    /// `interval` for the duration of the gateway's lifetime. The interval is
-    /// clamped to a minimum of [`sysinfo::MINIMUM_CPU_UPDATE_INTERVAL`], since
-    /// CPU usage samples taken more frequently than that are not refreshed by
-    /// the underlying crate.
+    /// `interval` for the duration of the gateway's lifetime. Clamped to a minimum of 200ms.
     ///
     /// Defaults to `None` (disabled).
     pub fn sysinfo(mut self, refresh_interval: Option<Duration>) -> Self {
