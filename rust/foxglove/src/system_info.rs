@@ -23,24 +23,26 @@ const REFRESH_INTERVAL: Duration = Duration::from_millis(200);
 #[derive(Clone, Debug, foxglove_derive::Encode)]
 pub struct SystemInfo {
     /// Resident memory used by the SDK process, in bytes.
-    pub process_memory: u64,
+    pub process_memory: f64,
     /// Virtual memory used by the SDK process, in bytes.
-    pub process_virtual_memory: u64,
+    pub process_virtual_memory: f64,
     /// CPU usage for the SDK process, as a percent.
     ///
     /// Values are normalized per logical CPU: 100.0 means a single CPU is fully
     /// utilized, so the maximum value is `100.0 * num_cpus`.
     pub process_cpu_percent: f32,
+    /// Total CPU usage across all logical CPUs on the system, as a percent (0.0 to 100.0).
+    pub total_cpu_percent: f64,
     /// Number of logical CPUs on the system.
     pub num_cpus: u32,
     /// Total physical memory on the system, in bytes.
-    pub total_memory: u64,
+    pub total_memory: f64,
     /// Used physical memory on the system, in bytes.
-    pub used_memory: u64,
+    pub used_memory: f64,
     /// Total swap space on the system, in bytes.
-    pub total_swap: u64,
+    pub total_swap: f64,
     /// Used swap space on the system, in bytes.
-    pub used_swap: u64,
+    pub used_swap: f64,
     /// Kernel version string, or empty if unavailable on this platform.
     pub kernel_version: String,
     /// OS version string, or empty if unavailable on this platform.
@@ -77,13 +79,15 @@ async fn run_publisher(context: Weak<Context>, cancel: CancellationToken) {
     let mut system = System::new();
     // Populate the CPU list once so that cpus().len() returns the correct count.
     // New CPUs being added at runtime is vanishingly rare, so we don't refresh this.
-    system.refresh_cpu_list(CpuRefreshKind::nothing());
+    let cpu_refresh = CpuRefreshKind::nothing().with_cpu_usage();
+    system.refresh_cpu_list(cpu_refresh);
     let num_cpus = u32::try_from(system.cpus().len()).unwrap_or(u32::MAX);
 
     let process_refresh = ProcessRefreshKind::nothing().with_cpu().with_memory();
-    // Prime the per-process CPU usage; the first reading is always 0 since it
-    // relies on diffs between consecutive samples.
+    // Prime the per-process and global CPU usage; the first reading is always 0
+    // since it relies on diffs between consecutive samples.
     system.refresh_processes_specifics(ProcessesToUpdate::Some(&[pid]), false, process_refresh);
+    system.refresh_cpu_specifics(cpu_refresh);
 
     let mut interval = tokio::time::interval(REFRESH_INTERVAL);
     interval.set_missed_tick_behavior(MissedTickBehavior::Skip);
@@ -103,6 +107,7 @@ async fn run_publisher(context: Weak<Context>, cancel: CancellationToken) {
 
         system.refresh_memory();
         system.refresh_processes_specifics(ProcessesToUpdate::Some(&[pid]), false, process_refresh);
+        system.refresh_cpu_specifics(cpu_refresh);
 
         let (process_memory, process_virtual_memory, process_cpu_percent) = system
             .process(pid)
@@ -110,14 +115,15 @@ async fn run_publisher(context: Weak<Context>, cancel: CancellationToken) {
             .unwrap_or_default();
 
         let info = SystemInfo {
-            process_memory,
-            process_virtual_memory,
+            process_memory: process_memory as f64,
+            process_virtual_memory: process_virtual_memory as f64,
             process_cpu_percent,
+            total_cpu_percent: system.global_cpu_usage() as f64,
             num_cpus,
-            total_memory: system.total_memory(),
-            used_memory: system.used_memory(),
-            total_swap: system.total_swap(),
-            used_swap: system.used_swap(),
+            total_memory: system.total_memory() as f64,
+            used_memory: system.used_memory() as f64,
+            total_swap: system.total_swap() as f64,
+            used_swap: system.used_swap() as f64,
             kernel_version: kernel_version.clone(),
             os_version: os_version.clone(),
         };
