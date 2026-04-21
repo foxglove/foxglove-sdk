@@ -153,9 +153,8 @@ try:
         :param playback_time_range: Time range of data being played back, in absolute nanoseconds.
             Implies ``Capability.PlaybackControl`` if set.
         :param sysinfo_refresh_interval: If set, the server publishes process and system
-            statistics to the ``/sysinfo`` topic at this interval, in seconds. The interval is
-            clamped to a minimum that depends on the underlying ``sysinfo`` crate's CPU update
-            interval. Defaults to ``None`` (disabled).
+            statistics to the ``/sysinfo`` topic at this interval, in seconds.
+            Clamped to a minimum of 200ms. Defaults to ``None`` (disabled).
         """
         return _foxglove.start_server(
             name=name,

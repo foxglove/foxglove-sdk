@@ -348,12 +348,6 @@
 #![warn(missing_docs)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
-// The `#[derive(foxglove::Encode)]` macro emits code that refers to
-// `::foxglove::...`. Expose the current crate under that name so derived
-// implementations compile when used from within this crate.
-#[cfg(feature = "derive")]
-extern crate self as foxglove;
-
 use thiserror::Error;
 
 mod app_url;
