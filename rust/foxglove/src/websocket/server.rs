@@ -51,7 +51,7 @@ pub(crate) struct ServerOptions {
     pub channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     pub server_info: Option<HashMap<String, String>>,
     pub playback_time_range: Option<(u64, u64)>,
-    pub sysinfo: bool,
+    pub sysinfo: Option<Duration>,
 }
 
 impl std::fmt::Debug for ServerOptions {
@@ -196,9 +196,9 @@ pub(crate) struct Server {
     /// Time range of data being played back, in absolute nanoseconds.
     /// Implies the [`PlaybackControl`](crate::websocket::Capability::PlaybackControl) capability if set.
     playback_time_range: Option<(u64, u64)>,
-    /// When true, spawn a background task that publishes process/system statistics
-    /// to the `/sysinfo` topic every 200 milliseconds.
-    sysinfo: bool,
+    /// When `Some`, spawn a background task that publishes process/system statistics
+    /// to the `/sysinfo` topic at the given interval.
+    sysinfo: Option<Duration>,
 }
 
 impl Server {
@@ -329,11 +329,12 @@ impl Server {
             }
         });
 
-        if self.sysinfo {
+        if let Some(refresh_interval) = self.sysinfo {
             crate::system_info::spawn_publisher(
                 self.context.clone(),
                 &self.runtime,
                 self.cancellation_token.clone(),
+                refresh_interval,
             );
         }
 

@@ -127,7 +127,7 @@ impl GatewayHandle {
             server_info: None,
             message_backlog_size: None,
             context: std::sync::Weak::new(),
-            sysinfo: false,
+            sysinfo: None,
         };
         let services = Arc::new(parking_lot::RwLock::new(ServiceMap::default()));
         let connection = RemoteAccessConnection::new(params, services);
@@ -174,7 +174,7 @@ pub struct Gateway {
     server_info: Option<HashMap<String, String>>,
     message_backlog_size: Option<usize>,
     context: std::sync::Weak<Context>,
-    sysinfo: bool,
+    sysinfo: Option<Duration>,
 }
 
 impl Default for Gateway {
@@ -195,7 +195,7 @@ impl Default for Gateway {
             server_info: None,
             message_backlog_size: None,
             context: Arc::downgrade(&Context::get_default()),
-            sysinfo: false,
+            sysinfo: None,
         }
     }
 }
@@ -279,13 +279,16 @@ impl Gateway {
     /// Enables or disables publishing process and system statistics to the
     /// `/sysinfo` topic.
     ///
-    /// When enabled, the gateway publishes a
-    /// [`SystemInfo`][crate::system_info::SystemInfo] message every 200
-    /// milliseconds for the duration of the gateway's lifetime.
+    /// When set to `Some(interval)`, the gateway publishes a
+    /// [`SystemInfo`][crate::system_info::SystemInfo] message at the given
+    /// `interval` for the duration of the gateway's lifetime. The interval is
+    /// clamped to a minimum of [`sysinfo::MINIMUM_CPU_UPDATE_INTERVAL`], since
+    /// CPU usage samples taken more frequently than that are not refreshed by
+    /// the underlying crate.
     ///
-    /// Defaults to `false`.
-    pub fn sysinfo(mut self, enabled: bool) -> Self {
-        self.sysinfo = enabled;
+    /// Defaults to `None` (disabled).
+    pub fn sysinfo(mut self, refresh_interval: Option<Duration>) -> Self {
+        self.sysinfo = refresh_interval;
         self
     }
 

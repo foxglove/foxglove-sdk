@@ -90,7 +90,7 @@ pub(crate) struct ConnectionParams {
     pub server_info: Option<HashMap<String, String>>,
     pub message_backlog_size: Option<usize>,
     pub context: Weak<Context>,
-    pub sysinfo: bool,
+    pub sysinfo: Option<Duration>,
 }
 
 /// RemoteAccessConnection manages the connected [`RemoteAccessSession`] to the LiveKit server,
@@ -110,7 +110,7 @@ pub(crate) struct RemoteAccessConnection {
     server_info: Option<HashMap<String, String>>,
     message_backlog_size: Option<usize>,
     context: Weak<Context>,
-    sysinfo: bool,
+    sysinfo: Option<Duration>,
     cancellation_token: CancellationToken,
     services: Arc<parking_lot::RwLock<ServiceMap>>,
     connection_graph: Arc<parking_lot::Mutex<ConnectionGraph>>,
@@ -333,11 +333,12 @@ impl RemoteAccessConnection {
     ///
     /// If disconnected from the room, reset all state and attempt to restart the run loop.
     pub fn spawn_run_until_cancelled(self: Arc<Self>) -> JoinHandle<()> {
-        if self.sysinfo {
+        if let Some(refresh_interval) = self.sysinfo {
             crate::system_info::spawn_publisher(
                 self.context.clone(),
                 &self.runtime,
                 self.cancellation_token.clone(),
+                refresh_interval,
             );
         }
         self.runtime.spawn(self.clone().run_until_cancelled())

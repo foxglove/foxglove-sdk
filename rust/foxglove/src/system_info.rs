@@ -8,7 +8,7 @@
 use std::sync::Weak;
 use std::time::Duration;
 
-use sysinfo::{CpuRefreshKind, Pid, ProcessRefreshKind, ProcessesToUpdate, System};
+use sysinfo::{CpuRefreshKind, MINIMUM_CPU_UPDATE_INTERVAL, Pid, ProcessRefreshKind, ProcessesToUpdate, System};
 use tokio::runtime::Handle;
 use tokio::task::JoinHandle;
 use tokio::time::MissedTickBehavior;
@@ -17,7 +17,6 @@ use tokio_util::sync::CancellationToken;
 use crate::{ChannelBuilder, Context};
 
 const SYSINFO_TOPIC: &str = "/sysinfo";
-const REFRESH_INTERVAL: Duration = Duration::from_millis(200);
 
 /// A snapshot of process and system statistics published on the `/sysinfo` topic.
 #[derive(Clone, Debug, foxglove_derive::Encode)]
@@ -49,19 +48,29 @@ pub struct SystemInfo {
     pub os_version: String,
 }
 
-/// Spawns a background task that refreshes system info every 200ms and
-/// publishes it to the `/sysinfo` topic on the provided context.
+/// Spawns a background task that refreshes system info at the requested
+/// interval and publishes it to the `/sysinfo` topic on the provided context.
+///
+/// `refresh_interval` is clamped to a minimum of
+/// [`sysinfo::MINIMUM_CPU_UPDATE_INTERVAL`], since CPU usage samples taken more
+/// frequently than that are not refreshed by the underlying crate.
 ///
 /// The task exits when `cancel` is triggered, or when the context is dropped.
 pub(crate) fn spawn_publisher(
     context: Weak<Context>,
     runtime: &Handle,
     cancel: CancellationToken,
+    refresh_interval: Duration,
 ) -> JoinHandle<()> {
-    runtime.spawn(run_publisher(context, cancel))
+    let refresh_interval = refresh_interval.max(MINIMUM_CPU_UPDATE_INTERVAL);
+    runtime.spawn(run_publisher(context, cancel, refresh_interval))
 }
 
-async fn run_publisher(context: Weak<Context>, cancel: CancellationToken) {
+async fn run_publisher(
+    context: Weak<Context>,
+    cancel: CancellationToken,
+    refresh_interval: Duration,
+) {
     let Some(ctx) = context.upgrade() else {
         return;
     };
@@ -89,7 +98,7 @@ async fn run_publisher(context: Weak<Context>, cancel: CancellationToken) {
     system.refresh_processes_specifics(ProcessesToUpdate::Some(&[pid]), false, process_refresh);
     system.refresh_cpu_specifics(cpu_refresh);
 
-    let mut interval = tokio::time::interval(REFRESH_INTERVAL);
+    let mut interval = tokio::time::interval(refresh_interval);
     interval.set_missed_tick_behavior(MissedTickBehavior::Skip);
     // The first tick fires immediately; consume it to align subsequent ticks to the period.
     interval.tick().await;
@@ -156,6 +165,7 @@ mod tests {
             Arc::downgrade(&ctx),
             &tokio::runtime::Handle::current(),
             cancel.clone(),
+            Duration::from_millis(200),
         );
 
         // Let the task reach the select loop (past the priming calls).
