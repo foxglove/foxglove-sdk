@@ -5,36 +5,11 @@
 ///
 /// Use @ref foxglove::remote_data_loader_backend::ChannelSet to declare channels, then construct a
 /// @ref foxglove::remote_data_loader_backend::StreamedSource with the resulting topics and schemas.
+/// See @ref foxglove::remote_data_loader_backend::Manifest for a full example.
 ///
 /// @note This header requires [nlohmann/json](https://github.com/nlohmann/json) and
 /// [tobiaslocker/base64](https://github.com/tobiaslocker/base64) to be available on the include
 /// path.
-///
-/// ## Example
-///
-/// @code{.cpp}
-/// #include <foxglove/remote_data_loader_backend.hpp>
-/// #include <foxglove/messages.hpp>
-///
-/// namespace rdl = foxglove::remote_data_loader_backend;
-///
-/// rdl::ChannelSet channels;
-/// channels.insert<foxglove::messages::Vector3>("/demo");
-///
-/// rdl::StreamedSource source;
-/// source.url = "/v1/data?flightId=ABC123";
-/// source.id = "flight-v1-ABC123";
-/// source.topics = std::move(channels.topics);
-/// source.schemas = std::move(channels.schemas);
-/// source.start_time = "2024-01-01T00:00:00Z";
-/// source.end_time = "2024-01-02T00:00:00Z";
-///
-/// rdl::Manifest manifest;
-/// manifest.name = "Flight ABC123";
-/// manifest.sources = {std::move(source)};
-///
-/// std::string json_str = rdl::toJsonString(manifest);
-/// @endcode
 
 #include <foxglove/schema.hpp>
 
@@ -104,6 +79,30 @@ struct StreamedSource {
 };
 
 /// @brief Manifest of upstream sources returned by the manifest endpoint.
+///
+/// @code{.cpp}
+/// #include <foxglove/remote_data_loader_backend.hpp>
+/// #include <foxglove/messages.hpp>
+///
+/// namespace rdl = foxglove::remote_data_loader_backend;
+///
+/// rdl::ChannelSet channels;
+/// channels.insert<foxglove::messages::Vector3>("/demo");
+///
+/// rdl::StreamedSource source;
+/// source.url = "/v1/data?flightId=ABC123";
+/// source.id = "flight-v1-ABC123";
+/// source.topics = std::move(channels.topics);
+/// source.schemas = std::move(channels.schemas);
+/// source.start_time = "2024-01-01T00:00:00Z";
+/// source.end_time = "2024-01-02T00:00:00Z";
+///
+/// rdl::Manifest manifest;
+/// manifest.name = "Flight ABC123";
+/// manifest.sources = {std::move(source)};
+///
+/// std::string json_str = rdl::toJsonString(manifest);
+/// @endcode
 struct Manifest {
   /// @brief Human-readable display name for this manifest.
   std::optional<std::string> name;
