@@ -242,8 +242,8 @@ impl WebSocketServer {
     /// `/sysinfo` topic.
     ///
     /// When set to `Some(interval)`, the server publishes a
-    /// [`SystemInfo`][crate::system_info::SystemInfo] message at the given
-    /// `interval` for the duration of the server's lifetime. Clamped to a minimum of 200ms.
+    /// SystemInfo message at the given `interval` with cpu and memory
+    /// stats for the process and the system. Clamped to a minimum of 200ms.
     ///
     /// Defaults to `None` (disabled).
     pub fn sysinfo(mut self, refresh_interval: Option<Duration>) -> Self {
