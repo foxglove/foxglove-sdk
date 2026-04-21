@@ -454,8 +454,6 @@ mod api_client;
 #[cfg(feature = "remote-access")]
 pub mod remote_access;
 
-#[cfg(feature = "sysinfo")]
-#[cfg_attr(docsrs, doc(cfg(feature = "sysinfo")))]
 pub mod system_info;
 
 #[cfg(feature = "websocket")]

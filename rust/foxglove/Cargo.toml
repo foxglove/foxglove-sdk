@@ -19,8 +19,8 @@ _remote-common = [
   "dep:tokio-util",
   "dep:serde_repr",
   "dep:serde_with",
+  "dep:sysinfo",
 ]
-sysinfo = ["_remote-common", "derive", "dep:sysinfo"]
 websocket = ["_remote-common", "dep:tokio-tungstenite"]
 live_visualization = ["websocket"]
 remote-access = [

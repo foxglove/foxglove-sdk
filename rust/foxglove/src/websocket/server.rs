@@ -51,7 +51,6 @@ pub(crate) struct ServerOptions {
     pub channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     pub server_info: Option<HashMap<String, String>>,
     pub playback_time_range: Option<(u64, u64)>,
-    #[cfg(feature = "sysinfo")]
     pub sysinfo: bool,
 }
 
@@ -199,7 +198,6 @@ pub(crate) struct Server {
     playback_time_range: Option<(u64, u64)>,
     /// When true, spawn a background task that publishes process/system statistics
     /// to the `/sysinfo` topic every 200 milliseconds.
-    #[cfg(feature = "sysinfo")]
     sysinfo: bool,
 }
 
@@ -275,7 +273,6 @@ impl Server {
             stream_config,
             server_info: opts.server_info.unwrap_or_default(),
             playback_time_range: opts.playback_time_range,
-            #[cfg(feature = "sysinfo")]
             sysinfo: opts.sysinfo,
         }
     }
@@ -332,7 +329,6 @@ impl Server {
             }
         });
 
-        #[cfg(feature = "sysinfo")]
         if self.sysinfo {
             crate::system_info::spawn_publisher(
                 self.context.clone(),

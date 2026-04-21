@@ -127,7 +127,6 @@ impl GatewayHandle {
             server_info: None,
             message_backlog_size: None,
             context: std::sync::Weak::new(),
-            #[cfg(feature = "sysinfo")]
             sysinfo: false,
         };
         let services = Arc::new(parking_lot::RwLock::new(ServiceMap::default()));
@@ -175,7 +174,6 @@ pub struct Gateway {
     server_info: Option<HashMap<String, String>>,
     message_backlog_size: Option<usize>,
     context: std::sync::Weak<Context>,
-    #[cfg(feature = "sysinfo")]
     sysinfo: bool,
 }
 
@@ -197,7 +195,6 @@ impl Default for Gateway {
             server_info: None,
             message_backlog_size: None,
             context: Arc::downgrade(&Context::get_default()),
-            #[cfg(feature = "sysinfo")]
             sysinfo: false,
         }
     }
@@ -224,7 +221,6 @@ impl std::fmt::Debug for Gateway {
             .field("server_info", &self.server_info)
             .field("message_backlog_size", &self.message_backlog_size)
             .field("has_context", &(self.context.strong_count() > 0));
-        #[cfg(feature = "sysinfo")]
         dbg.field("sysinfo", &self.sysinfo);
         dbg.finish()
     }
@@ -288,8 +284,6 @@ impl Gateway {
     /// milliseconds for the duration of the gateway's lifetime.
     ///
     /// Defaults to `false`.
-    #[cfg(feature = "sysinfo")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "sysinfo")))]
     pub fn sysinfo(mut self, enabled: bool) -> Self {
         self.sysinfo = enabled;
         self
@@ -510,7 +504,6 @@ impl Gateway {
             server_info: self.server_info,
             message_backlog_size: self.message_backlog_size,
             context: self.context,
-            #[cfg(feature = "sysinfo")]
             sysinfo: self.sysinfo,
         };
         let connection = RemoteAccessConnection::new(params, services);

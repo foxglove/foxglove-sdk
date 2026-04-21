@@ -244,8 +244,6 @@ impl WebSocketServer {
     /// message every 200 milliseconds for the duration of the server's lifetime.
     ///
     /// Defaults to `false`.
-    #[cfg(feature = "sysinfo")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "sysinfo")))]
     pub fn sysinfo(mut self, enabled: bool) -> Self {
         self.options.sysinfo = enabled;
         self
