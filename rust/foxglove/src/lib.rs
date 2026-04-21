@@ -326,8 +326,6 @@
 //!   implement [`Serialize`](serde::Serialize) and [`JsonSchema`][jsonschema-trait].
 //! - `serde`: derives [`Serialize`](serde::Serialize) and [`Deserialize`](serde::Deserialize) for
 //!   all [message types](crate::messages).
-//! - `sysinfo`: enables an opt-in publisher that reports process and system statistics on the
-//!   `/sysinfo` topic when enabled on the [`WebSocketServer`] or [`remote_access::Gateway`] builder.
 //! - `unstable`: features which are under active development and likely to change in an upcoming
 //!   version.
 //! - `websocket`: enables the WebSocket server and client for live visualization. Enabled by
@@ -454,6 +452,11 @@ mod api_client;
 #[cfg(feature = "remote-access")]
 pub mod remote_access;
 
+#[cfg(feature = "_remote-common")]
+#[cfg_attr(
+    docsrs,
+    doc(cfg(any(feature = "remote-access", feature = "websocket")))
+)]
 pub mod system_info;
 
 #[cfg(feature = "websocket")]

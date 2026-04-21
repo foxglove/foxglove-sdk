@@ -333,21 +333,24 @@ impl RemoteAccessConnection {
     ///
     /// If disconnected from the room, reset all state and attempt to restart the run loop.
     pub fn spawn_run_until_cancelled(self: Arc<Self>) -> JoinHandle<()> {
-        if let Some(refresh_interval) = self.sysinfo {
-            crate::system_info::spawn_publisher(
-                self.context.clone(),
-                &self.runtime,
-                self.cancellation_token.clone(),
-                refresh_interval,
-            );
-        }
-        self.runtime.spawn(self.clone().run_until_cancelled())
+        self.runtime.clone().spawn(self.run_until_cancelled())
     }
 
     /// Run the server loop until cancelled.
     ///
     /// If disconnected from the room, reset all state and attempt to restart the run loop.
     async fn run_until_cancelled(self: Arc<Self>) {
+        // Spawn the optional sysinfo publisher as a child task so we can join
+        // it at the end. This surfaces panics through the outer JoinHandle
+        // rather than silently swallowing them when the handle is dropped.
+        let sysinfo_task = self.sysinfo.map(|refresh_interval| {
+            self.runtime.spawn(crate::system_info::publisher_future(
+                self.context.clone(),
+                self.cancellation_token.clone(),
+                refresh_interval,
+            ))
+        });
+
         // Notify the listener of the initial Connecting status. The atomic is already
         // initialized to Connecting, so call the listener directly rather than going
         // through set_status (which would see no change and skip the notification).
@@ -361,6 +364,16 @@ impl RemoteAccessConnection {
         // (e.g. cancelled while connected), this is a no-op since set_status deduplicates.
         self.set_status(ConnectionStatus::ShuttingDown);
         self.set_status(ConnectionStatus::Shutdown);
+
+        // Wait for the sysinfo publisher to exit; cancellation_token is cancelled
+        // by this point so it will observe it on the next tick and exit promptly.
+        if let Some(handle) = sysinfo_task {
+            if let Err(e) = handle.await {
+                if e.is_panic() {
+                    tracing::warn!("sysinfo publisher task panicked: {e}");
+                }
+            }
+        }
     }
 
     /// Connect to the room, and handle all events until cancelled or disconnected from the room.

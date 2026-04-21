@@ -3,16 +3,15 @@
 //!
 //! Enabled per-server via [`WebSocketServer::sysinfo`](crate::WebSocketServer::sysinfo)
 //! and [`Gateway::sysinfo`](crate::remote_access::Gateway::sysinfo), and gated behind
-//! the crate's `sysinfo` feature flag.
+//! the `remote-access` or `websocket` feature flags.
 
+use std::future::Future;
 use std::sync::Weak;
 use std::time::Duration;
 
 use sysinfo::{
     CpuRefreshKind, MINIMUM_CPU_UPDATE_INTERVAL, Pid, ProcessRefreshKind, ProcessesToUpdate, System,
 };
-use tokio::runtime::Handle;
-use tokio::task::JoinHandle;
 use tokio::time::MissedTickBehavior;
 use tokio_util::sync::CancellationToken;
 
@@ -50,18 +49,17 @@ pub struct SystemInfo {
     pub os_version: String,
 }
 
-/// Spawns a background task that refreshes system info at the requested
-/// interval and publishes it to the `/sysinfo` topic on the provided context.
+/// Returns a future that refreshes system info at the requested interval and
+/// publishes it to the `/sysinfo` topic on the provided context.
 ///
 /// `refresh_interval` is clamped to a minimum of 200ms.
 ///
-/// The task exits when `cancel` is triggered, or when the context is dropped.
-pub(crate) fn spawn_publisher(
+/// The future completes when `cancel` is triggered, or when the context is dropped.
+pub(crate) fn publisher_future(
     context: Weak<Context>,
-    runtime: &Handle,
     cancel: CancellationToken,
     refresh_interval: Duration,
-) -> JoinHandle<()> {
+) -> impl Future<Output = ()> + Send + 'static {
     // If we refresh too quickly we'll get invalid values for cpu usage.
     // sysinfo crate exports a platform dependant MINIMUM_CPU_UPDATE_INTERVAL
     // that is 200ms on Linux. However, it is 0 on unknown platforms.
@@ -69,7 +67,7 @@ pub(crate) fn spawn_publisher(
     let refresh_interval = refresh_interval
         .max(MINIMUM_CPU_UPDATE_INTERVAL)
         .max(Duration::from_millis(200));
-    runtime.spawn(run_publisher(context, cancel, refresh_interval))
+    run_publisher(context, cancel, refresh_interval)
 }
 
 async fn run_publisher(
@@ -167,12 +165,11 @@ mod tests {
     async fn publisher_exits_when_cancelled() {
         let ctx = Context::new();
         let cancel = CancellationToken::new();
-        let handle = spawn_publisher(
+        let handle = tokio::spawn(publisher_future(
             Arc::downgrade(&ctx),
-            &tokio::runtime::Handle::current(),
             cancel.clone(),
             Duration::from_millis(200),
-        );
+        ));
 
         // Let the task reach the select loop (past the priming calls).
         tokio::task::yield_now().await;

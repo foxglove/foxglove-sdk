@@ -330,12 +330,17 @@ impl Server {
         });
 
         if let Some(refresh_interval) = self.sysinfo {
-            crate::system_info::spawn_publisher(
+            let fut = crate::system_info::publisher_future(
                 self.context.clone(),
-                &self.runtime,
                 self.cancellation_token.clone(),
                 refresh_interval,
             );
+            // Spawn into the shared JoinSet so panics are surfaced via
+            // `process_task_result` when the server is shut down, rather than
+            // being silently swallowed when the JoinHandle is dropped.
+            if let Some(tasks) = self.tasks.lock().as_mut() {
+                tasks.spawn_on(fut, &self.runtime);
+            }
         }
 
         let maybe_tls = if self.is_tls_configured() {
