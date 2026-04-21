@@ -247,6 +247,7 @@ fn transcode_and_publish(
         rotation: VideoRotation::VideoRotation0,
         timestamp_us: (timestamp_ns / 1000) as i64,
         buffer: buffer.0,
+        frame_metadata: None,
     };
     video_source.capture_frame(&frame);
     Ok(metadata)

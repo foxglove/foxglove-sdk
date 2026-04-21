@@ -73,8 +73,8 @@ indexmap = "2"
 foxglove_derive = { version = "0.22.0", path = "../foxglove_derive", optional = true }
 futures = { version = "0.3.31", optional = true }
 futures-util = { version = "0.3.31", features = ["sink", "std"], optional = true }
-livekit = { version = "0.7.36", optional = true, features = ["rustls-tls-native-roots"] }
-libwebrtc = { version = "0.3.24", optional = true }
+livekit = { git = "https://github.com/livekit/rust-sdks.git", branch = "dc/exp/data_track_send_queue", optional = true, features = ["rustls-tls-native-roots"] }
+libwebrtc = { git = "https://github.com/livekit/rust-sdks.git", branch = "dc/exp/data_track_send_queue", optional = true }
 mcap.workspace = true
 parking_lot = "0.12.4"
 prost-types.workspace = true

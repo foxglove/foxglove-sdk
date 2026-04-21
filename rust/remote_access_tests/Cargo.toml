@@ -6,7 +6,7 @@ publish = false
 
 [dependencies]
 foxglove = { path = "../foxglove", features = ["remote-access", "_protocol"] }
-livekit = { version = "0.7.36", features = ["rustls-tls-native-roots"] }
+livekit = { git = "https://github.com/livekit/rust-sdks.git", branch = "dc/exp/data_track_send_queue", features = ["rustls-tls-native-roots"] }
 livekit-api = { version = "0.4", default-features = false, features = ["access-token"] }
 axum = "0.8"
 reqwest = { version = "0.13", features = ["json"] }
