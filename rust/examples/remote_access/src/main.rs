@@ -75,7 +75,6 @@ async fn main() {
     let handle = Gateway::new()
         .capabilities([Capability::ClientPublish])
         .supported_encodings(["json"])
-        .sysinfo(true)
         .listener(Arc::new(MessageHandler))
         .qos_classifier_fn(|channel: &ChannelDescriptor| {
             if channel.topic() == "/tf_static" {
