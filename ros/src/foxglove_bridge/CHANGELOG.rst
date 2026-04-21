@@ -2,6 +2,11 @@
 Changelog for package foxglove_bridge
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+3.3.0 (2026-04-30)
+------------------
+* Add support for remote access
+* Update Foxglove SDK version to 0.23.0
+
 3.2.6 (2026-04-02)
 ------------------
 * Fix ROS rolling build for rclcpp 31.0.0
