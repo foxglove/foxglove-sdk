@@ -335,8 +335,7 @@ FoxgloveResult<RemoteAccessGateway> RemoteAccessGateway::create(
   // Optional sysinfo refresh interval
   std::optional<uint64_t> sysinfo_refresh_interval_ms;
   if (options.sysinfo_refresh_interval) {
-    sysinfo_refresh_interval_ms =
-      static_cast<uint64_t>(options.sysinfo_refresh_interval->count());
+    sysinfo_refresh_interval_ms = static_cast<uint64_t>(options.sysinfo_refresh_interval->count());
     c_options.sysinfo_refresh_interval_ms = &*sysinfo_refresh_interval_ms;
   }
 
