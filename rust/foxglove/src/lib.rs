@@ -451,7 +451,7 @@ pub mod remote_access;
     docsrs,
     doc(cfg(any(feature = "remote-access", feature = "websocket")))
 )]
-pub mod system_info;
+pub(crate) mod system_info;
 
 #[cfg(feature = "websocket")]
 pub mod websocket;

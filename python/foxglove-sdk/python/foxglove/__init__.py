@@ -229,10 +229,9 @@ try:
             the oldest entries. Defaults to 1024.
         :param foxglove_api_url: Override the Foxglove API base URL.
         :param foxglove_api_timeout: Timeout for Foxglove API requests, in seconds.
-        :param sysinfo_refresh_interval: If set, the gateway publishes process and system
-            statistics to the ``/sysinfo`` topic at this interval, in seconds. The interval is
-            clamped to a minimum that depends on the underlying ``sysinfo`` crate's CPU update
-            interval. Defaults to ``None`` (disabled).
+        :param sysinfo_refresh_interval: If set, the server publishes process and system
+            statistics to the ``/sysinfo`` topic at this interval, in seconds.
+            Clamped to a minimum of 200ms. Defaults to ``None`` (disabled).
         """
         return _foxglove.start_gateway(
             name=name,

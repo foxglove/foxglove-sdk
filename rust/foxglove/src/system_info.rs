@@ -177,6 +177,7 @@ async fn run_publisher(
     // Don't hold a strong reference to the context: if it's dropped externally,
     // the Weak upgrade below will fail and we'll exit cleanly.
     drop(ctx);
+    drop(context);
 
     let pid = Pid::from_u32(std::process::id());
     let kernel_version = System::kernel_version().unwrap_or_default();
@@ -204,11 +205,6 @@ async fn run_publisher(
         tokio::select! {
             () = cancel.cancelled() => break,
             _ = interval.tick() => {}
-        }
-
-        // Exit cleanly if the context has been dropped while we were idle.
-        if context.strong_count() == 0 {
-            break;
         }
 
         system.refresh_memory();
