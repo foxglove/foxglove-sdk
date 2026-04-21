@@ -5,22 +5,95 @@
 //! and [`Gateway::sysinfo`](crate::remote_access::Gateway::sysinfo), and gated behind
 //! the `remote-access` or `websocket` feature flags.
 
+use std::borrow::Cow;
 use std::future::Future;
 use std::sync::Weak;
 use std::time::Duration;
 
+use bytes::BufMut;
+use serde::Serialize;
 use sysinfo::{
     CpuRefreshKind, MINIMUM_CPU_UPDATE_INTERVAL, Pid, ProcessRefreshKind, ProcessesToUpdate, System,
 };
 use tokio::time::MissedTickBehavior;
 use tokio_util::sync::CancellationToken;
 
-use crate::{ChannelBuilder, Context};
+use crate::{ChannelBuilder, Context, Encode, Schema};
 
 const SYSINFO_TOPIC: &str = "/sysinfo";
 
+/// JSON Schema (draft 2020-12) describing [`SystemInfo`] for consumers of the `/sysinfo` topic.
+const SYSINFO_JSON_SCHEMA: &str = r#"{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SystemInfo",
+  "description": "A snapshot of process and system statistics published on the /sysinfo topic.",
+  "type": "object",
+  "properties": {
+    "process_memory": {
+      "type": "number",
+      "description": "Resident memory used by the SDK process, in bytes."
+    },
+    "process_virtual_memory": {
+      "type": "number",
+      "description": "Virtual memory used by the SDK process, in bytes."
+    },
+    "process_cpu_percent": {
+      "type": "number",
+      "description": "CPU usage for the SDK process, as a percent. Values are normalized per logical CPU: 100.0 means a single CPU is fully utilized, so the maximum value is 100.0 * num_cpus."
+    },
+    "total_cpu_percent": {
+      "type": "number",
+      "description": "Total CPU usage across all logical CPUs on the system, as a percent (0.0 to 100.0)."
+    },
+    "num_cpus": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of logical CPUs on the system."
+    },
+    "total_memory": {
+      "type": "number",
+      "description": "Total physical memory on the system, in bytes."
+    },
+    "used_memory": {
+      "type": "number",
+      "description": "Used physical memory on the system, in bytes."
+    },
+    "total_swap": {
+      "type": "number",
+      "description": "Total swap space on the system, in bytes."
+    },
+    "used_swap": {
+      "type": "number",
+      "description": "Used swap space on the system, in bytes."
+    },
+    "kernel_version": {
+      "type": "string",
+      "description": "Kernel version string, or empty if unavailable on this platform."
+    },
+    "os_version": {
+      "type": "string",
+      "description": "OS version string, or empty if unavailable on this platform."
+    }
+  },
+  "required": [
+    "process_memory",
+    "process_virtual_memory",
+    "process_cpu_percent",
+    "total_cpu_percent",
+    "num_cpus",
+    "total_memory",
+    "used_memory",
+    "total_swap",
+    "used_swap",
+    "kernel_version",
+    "os_version"
+  ]
+}"#;
+
 /// A snapshot of process and system statistics published on the `/sysinfo` topic.
-#[derive(Clone, Debug, foxglove_derive::Encode)]
+///
+/// Encoded as JSON on the wire, with a JSON Schema attached to the channel.
+#[derive(Clone, Debug, Serialize)]
 pub struct SystemInfo {
     /// Resident memory used by the SDK process, in bytes.
     pub process_memory: f64,
@@ -47,6 +120,26 @@ pub struct SystemInfo {
     pub kernel_version: String,
     /// OS version string, or empty if unavailable on this platform.
     pub os_version: String,
+}
+
+impl Encode for SystemInfo {
+    type Error = serde_json::Error;
+
+    fn get_schema() -> Option<Schema> {
+        Some(Schema::new(
+            "foxglove.SystemInfo".to_string(),
+            "jsonschema".to_string(),
+            Cow::Borrowed(SYSINFO_JSON_SCHEMA.as_bytes()),
+        ))
+    }
+
+    fn get_message_encoding() -> String {
+        "json".to_string()
+    }
+
+    fn encode(&self, buf: &mut impl BufMut) -> Result<(), Self::Error> {
+        serde_json::to_writer(buf.writer(), self)
+    }
 }
 
 /// Returns a future that refreshes system info at the requested interval and
@@ -154,11 +247,37 @@ mod tests {
     use super::*;
 
     #[test]
-    fn schema_is_protobuf() {
-        assert_eq!(SystemInfo::get_message_encoding(), "protobuf");
+    fn schema_is_jsonschema() {
+        assert_eq!(SystemInfo::get_message_encoding(), "json");
         let schema = SystemInfo::get_schema().expect("SystemInfo has a schema");
-        assert_eq!(schema.encoding, "protobuf");
-        assert!(!schema.data.is_empty());
+        assert_eq!(schema.encoding, "jsonschema");
+        let parsed: serde_json::Value =
+            serde_json::from_slice(&schema.data).expect("schema must be valid JSON");
+        assert_eq!(parsed["type"], "object");
+        assert!(parsed["properties"]["process_memory"].is_object());
+    }
+
+    #[test]
+    fn encodes_as_json() {
+        let info = SystemInfo {
+            process_memory: 1.0,
+            process_virtual_memory: 2.0,
+            process_cpu_percent: 3.0,
+            total_cpu_percent: 4.0,
+            num_cpus: 5,
+            total_memory: 6.0,
+            used_memory: 7.0,
+            total_swap: 8.0,
+            used_swap: 9.0,
+            kernel_version: "k".to_string(),
+            os_version: "o".to_string(),
+        };
+        let mut buf = Vec::new();
+        info.encode(&mut buf).expect("encode");
+        let parsed: serde_json::Value = serde_json::from_slice(&buf).expect("valid JSON");
+        assert_eq!(parsed["num_cpus"], 5);
+        assert_eq!(parsed["kernel_version"], "k");
+        assert_eq!(parsed["os_version"], "o");
     }
 
     #[tokio::test(flavor = "current_thread")]
