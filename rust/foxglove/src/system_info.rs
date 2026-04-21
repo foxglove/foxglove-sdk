@@ -147,7 +147,8 @@ impl Encode for SystemInfo {
 ///
 /// `refresh_interval` is clamped to a minimum of 200ms.
 ///
-/// The future completes when `cancel` is triggered, or when the context is dropped.
+/// The future completes when cancel is triggered (or returns immediately if the
+/// context has already been dropped).
 pub(crate) fn publisher_future(
     context: Weak<Context>,
     cancel: CancellationToken,
