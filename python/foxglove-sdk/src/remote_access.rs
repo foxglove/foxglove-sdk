@@ -416,7 +416,7 @@ impl foxglove::remote_access::QosClassifier for PyQosClassifier {
 
 /// Start a remote access gateway for live visualization and teleop in Foxglove.
 #[pyfunction]
-#[pyo3(signature = (*, name=None, device_token=None, capabilities=None, listener=None, supported_encodings=None, services=None, context=None, channel_filter=None, qos_classifier=None, message_backlog_size=None, foxglove_api_url=None, foxglove_api_timeout=None))]
+#[pyo3(signature = (*, name=None, device_token=None, capabilities=None, listener=None, supported_encodings=None, services=None, context=None, channel_filter=None, qos_classifier=None, message_backlog_size=None, foxglove_api_url=None, foxglove_api_timeout=None, sysinfo_refresh_interval=None))]
 #[allow(clippy::too_many_arguments)]
 pub fn start_gateway(
     py: Python<'_>,
@@ -432,6 +432,7 @@ pub fn start_gateway(
     message_backlog_size: Option<usize>,
     foxglove_api_url: Option<String>,
     foxglove_api_timeout: Option<f64>,
+    sysinfo_refresh_interval: Option<f64>,
 ) -> PyResult<PyRemoteAccessGateway> {
     let mut gateway = Gateway::new();
 
@@ -487,6 +488,15 @@ pub fn start_gateway(
             ))
         })?;
         gateway = gateway.foxglove_api_timeout(duration);
+    }
+
+    if let Some(seconds) = sysinfo_refresh_interval {
+        let duration = Duration::try_from_secs_f64(seconds).map_err(|_| {
+            pyo3::exceptions::PyValueError::new_err(format!(
+                "sysinfo_refresh_interval must be a non-negative finite number, got {seconds}"
+            ))
+        })?;
+        gateway = gateway.sysinfo(Some(duration));
     }
 
     let handle = py

@@ -159,6 +159,8 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
       sdkServerOptions.capabilities | foxglove::WebSocketServerCapabilities::Time;
   }
 
+  sdkServerOptions.sysinfo_refresh_interval = 200ms;
+
   // If TLS is enabled, load the certificate and key files from disk
   if (useTls) {
     if (certfile.empty() || !std::filesystem::exists(certfile)) {
@@ -285,6 +287,7 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
     gatewayOptions.context = _serverContext;
     gatewayOptions.device_token = deviceToken;
     gatewayOptions.supported_encodings = {"cdr", "json"};
+    gatewayOptions.sysinfo_refresh_interval = 200ms;
 
     const auto foxgloveApiUrl = this->get_parameter(PARAM_FOXGLOVE_API_URL).as_string();
     if (!foxgloveApiUrl.empty()) {

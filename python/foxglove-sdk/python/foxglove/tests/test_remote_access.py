@@ -44,6 +44,18 @@ def test_connection_status_enum() -> None:
     assert RemoteAccessConnectionStatus.Shutdown is not None
 
 
+def test_invalid_sysinfo_refresh_interval() -> None:
+    """
+    Negative or non-finite sysinfo refresh intervals should raise a ValueError before
+    we even attempt to connect to the Foxglove API.
+    """
+    with pytest.raises(ValueError):
+        start_gateway(device_token="x", sysinfo_refresh_interval=-1.0)
+
+    with pytest.raises(ValueError):
+        start_gateway(device_token="x", sysinfo_refresh_interval=float("nan"))
+
+
 def test_listener_provides_default_implementation() -> None:
     class DefaultListener(RemoteAccessListener):
         pass

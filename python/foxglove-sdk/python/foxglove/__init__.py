@@ -128,6 +128,7 @@ try:
         session_id: str | None = None,
         channel_filter: SinkChannelFilter | None = None,
         playback_time_range: tuple[int, int] | None = None,
+        sysinfo_refresh_interval: float | None = None,
     ) -> WebSocketServer:
         """
         Start a WebSocket server for live visualization.
@@ -151,6 +152,10 @@ try:
             will be logged.
         :param playback_time_range: Time range of data being played back, in absolute nanoseconds.
             Implies ``Capability.PlaybackControl`` if set.
+        :param sysinfo_refresh_interval: If set, the server publishes process and system
+            statistics to the ``/sysinfo`` topic at this interval, in seconds. The interval is
+            clamped to a minimum that depends on the underlying ``sysinfo`` crate's CPU update
+            interval. Defaults to ``None`` (disabled).
         """
         return _foxglove.start_server(
             name=name,
@@ -165,6 +170,7 @@ try:
             session_id=session_id,
             channel_filter=channel_filter,
             playback_time_range=playback_time_range,
+            sysinfo_refresh_interval=sysinfo_refresh_interval,
         )
 
     __all__ += [
@@ -199,6 +205,7 @@ try:
         message_backlog_size: int | None = None,
         foxglove_api_url: str | None = None,
         foxglove_api_timeout: float | None = None,
+        sysinfo_refresh_interval: float | None = None,
     ) -> RemoteAccessGateway:
         """
         Start a remote access gateway for live visualization and teleop in Foxglove.
@@ -223,6 +230,10 @@ try:
             the oldest entries. Defaults to 1024.
         :param foxglove_api_url: Override the Foxglove API base URL.
         :param foxglove_api_timeout: Timeout for Foxglove API requests, in seconds.
+        :param sysinfo_refresh_interval: If set, the gateway publishes process and system
+            statistics to the ``/sysinfo`` topic at this interval, in seconds. The interval is
+            clamped to a minimum that depends on the underlying ``sysinfo`` crate's CPU update
+            interval. Defaults to ``None`` (disabled).
         """
         return _foxglove.start_gateway(
             name=name,
@@ -237,6 +248,7 @@ try:
             message_backlog_size=message_backlog_size,
             foxglove_api_url=foxglove_api_url,
             foxglove_api_timeout=foxglove_api_timeout,
+            sysinfo_refresh_interval=sysinfo_refresh_interval,
         )
 
     __all__ += ["start_gateway"]

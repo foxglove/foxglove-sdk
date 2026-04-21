@@ -123,6 +123,23 @@ def test_context_can_be_attached_to_server() -> None:
     server2.stop()
 
 
+def test_server_with_sysinfo_refresh_interval() -> None:
+    server = start_server(port=0, sysinfo_refresh_interval=0.5)
+    server.stop()
+
+
+@typing.no_type_check
+def test_server_with_invalid_sysinfo_refresh_interval() -> None:
+    with pytest.raises(ValueError):
+        start_server(port=0, sysinfo_refresh_interval=-1.0)
+
+    with pytest.raises(ValueError):
+        start_server(port=0, sysinfo_refresh_interval=float("nan"))
+
+    with pytest.raises(TypeError):
+        start_server(port=0, sysinfo_refresh_interval="not-a-number")
+
+
 @typing.no_type_check
 def test_server_with_invalid_playback_time_range() -> None:
     with pytest.raises(TypeError):

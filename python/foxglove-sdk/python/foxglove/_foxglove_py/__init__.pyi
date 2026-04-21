@@ -360,6 +360,7 @@ def start_gateway(
     message_backlog_size: int | None = None,
     foxglove_api_url: str | None = None,
     foxglove_api_timeout: float | None = None,
+    sysinfo_refresh_interval: float | None = None,
 ) -> RemoteAccessGateway:
     """
     Start a remote access gateway for live visualization and teleop in Foxglove.
@@ -380,6 +381,7 @@ def start_server(
     session_id: str | None = None,
     channel_filter: SinkChannelFilter | None = None,
     playback_time_range: tuple[int, int] | None = None,
+    sysinfo_refresh_interval: float | None = None,
 ) -> WebSocketServer:
     """
     Start a WebSocket server for live visualization.

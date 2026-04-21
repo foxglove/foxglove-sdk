@@ -12,6 +12,7 @@ use pyo3::exceptions::PyTypeError;
 use pyo3::types::{PyBytes, PyTuple};
 use pyo3::{prelude::*, types::PyString};
 use std::sync::Arc;
+use std::time::Duration;
 
 /// Information about a channel.
 #[pyclass(name = "ChannelView", module = "foxglove.websocket")]
@@ -462,7 +463,7 @@ impl PyServerListener {
 
 /// Start a new Foxglove WebSocket server.
 #[pyfunction]
-#[pyo3(signature = (*, name = None, host="127.0.0.1", port=8765, capabilities=None, server_listener=None, supported_encodings=None, services=None, asset_handler=None, context=None, session_id=None, channel_filter=None, playback_time_range = None))]
+#[pyo3(signature = (*, name = None, host="127.0.0.1", port=8765, capabilities=None, server_listener=None, supported_encodings=None, services=None, asset_handler=None, context=None, session_id=None, channel_filter=None, playback_time_range = None, sysinfo_refresh_interval=None))]
 #[allow(clippy::too_many_arguments)]
 pub fn start_server(
     py: Python<'_>,
@@ -478,6 +479,7 @@ pub fn start_server(
     session_id: Option<String>,
     channel_filter: Option<Py<PyAny>>,
     playback_time_range: Option<Py<PyTuple>>,
+    sysinfo_refresh_interval: Option<f64>,
 ) -> PyResult<PyWebSocketServer> {
     let mut server = WebSocketServer::new().bind(host, port);
 
@@ -518,6 +520,15 @@ pub fn start_server(
         server = server.fetch_asset_handler(Box::new(CallbackAssetHandler {
             handler: Arc::new(asset_handler),
         }));
+    }
+
+    if let Some(seconds) = sysinfo_refresh_interval {
+        let duration = Duration::try_from_secs_f64(seconds).map_err(|_| {
+            pyo3::exceptions::PyValueError::new_err(format!(
+                "sysinfo_refresh_interval must be a non-negative finite number, got {seconds}"
+            ))
+        })?;
+        server = server.sysinfo(Some(duration));
     }
 
     if let Some(playback_time_range) = playback_time_range {
