@@ -10,6 +10,7 @@
 #include <foxglove/playback_state.hpp>
 #include <foxglove/service.hpp>
 
+#include <chrono>
 #include <cstdint>
 #include <functional>
 #include <memory>
@@ -277,6 +278,17 @@ struct WebSocketServerOptions {
   ///
   /// @note Setting this option implies the PlaybackControl capability
   std::optional<std::pair<uint64_t, uint64_t>> playback_time_range = std::nullopt;
+
+  /// @brief Optional refresh interval for publishing process and system statistics to the
+  /// `/sysinfo` topic.
+  ///
+  /// When set, the server publishes a `SystemInfo` message at the given interval for the
+  /// duration of the server's lifetime. The interval is clamped to a minimum of
+  /// `sysinfo::MINIMUM_CPU_UPDATE_INTERVAL`, since CPU usage samples taken more frequently than
+  /// that are not refreshed by the underlying crate.
+  ///
+  /// Defaults to `std::nullopt` (disabled).
+  std::optional<std::chrono::milliseconds> sysinfo_refresh_interval = std::nullopt;
 };
 
 /// @brief A WebSocket server for visualization in Foxglove.

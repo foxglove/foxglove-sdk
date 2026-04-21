@@ -576,6 +576,17 @@ pub struct FoxgloveGatewayOptions<'a> {
 
     /// Optional message backlog size override.
     pub message_backlog_size: Option<&'a usize>,
+
+    /// Optional refresh interval, in milliseconds, for publishing process and system statistics
+    /// to the `/sysinfo` topic.
+    ///
+    /// When provided, the gateway publishes a `SystemInfo` message at the given interval for the
+    /// duration of the gateway's lifetime. The interval is clamped to a minimum of
+    /// `sysinfo::MINIMUM_CPU_UPDATE_INTERVAL`, since CPU usage samples taken more frequently
+    /// than that are not refreshed by the underlying crate.
+    ///
+    /// If null, sysinfo publishing is disabled (the default).
+    pub sysinfo_refresh_interval_ms: Option<&'a u64>,
 }
 
 // Handle
@@ -720,6 +731,11 @@ unsafe fn do_foxglove_gateway_start(
     // Message backlog size
     if let Some(&backlog_size) = options.message_backlog_size {
         gateway = gateway.message_backlog_size(backlog_size);
+    }
+
+    // System info publisher
+    if let Some(&refresh_ms) = options.sysinfo_refresh_interval_ms {
+        gateway = gateway.sysinfo(Some(Duration::from_millis(refresh_ms)));
     }
 
     let handle = gateway.start()?;

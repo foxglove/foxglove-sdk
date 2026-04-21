@@ -8,6 +8,7 @@
 #include <foxglove/parameter.hpp>
 #include <foxglove/service.hpp>
 
+#include <chrono>
 #include <cstdint>
 #include <functional>
 #include <memory>
@@ -196,6 +197,17 @@ struct RemoteAccessGatewayOptions {
   std::optional<uint64_t> foxglove_api_timeout_secs;
   /// @brief Override the message backlog size.
   std::optional<size_t> message_backlog_size;
+
+  /// @brief Optional refresh interval for publishing process and system statistics to the
+  /// `/sysinfo` topic.
+  ///
+  /// When set, the gateway publishes a `SystemInfo` message at the given interval for the
+  /// duration of the gateway's lifetime. The interval is clamped to a minimum of
+  /// `sysinfo::MINIMUM_CPU_UPDATE_INTERVAL`, since CPU usage samples taken more frequently than
+  /// that are not refreshed by the underlying crate.
+  ///
+  /// Defaults to `std::nullopt` (disabled).
+  std::optional<std::chrono::milliseconds> sysinfo_refresh_interval;
 };
 
 /// @brief A remote access gateway for live visualization and teleop in Foxglove.

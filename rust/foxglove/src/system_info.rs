@@ -8,7 +8,9 @@
 use std::sync::Weak;
 use std::time::Duration;
 
-use sysinfo::{CpuRefreshKind, MINIMUM_CPU_UPDATE_INTERVAL, Pid, ProcessRefreshKind, ProcessesToUpdate, System};
+use sysinfo::{
+    CpuRefreshKind, MINIMUM_CPU_UPDATE_INTERVAL, Pid, ProcessRefreshKind, ProcessesToUpdate, System,
+};
 use tokio::runtime::Handle;
 use tokio::task::JoinHandle;
 use tokio::time::MissedTickBehavior;
@@ -29,7 +31,7 @@ pub struct SystemInfo {
     ///
     /// Values are normalized per logical CPU: 100.0 means a single CPU is fully
     /// utilized, so the maximum value is `100.0 * num_cpus`.
-    pub process_cpu_percent: f32,
+    pub process_cpu_percent: f64,
     /// Total CPU usage across all logical CPUs on the system, as a percent (0.0 to 100.0).
     pub total_cpu_percent: f64,
     /// Number of logical CPUs on the system.
@@ -126,7 +128,7 @@ async fn run_publisher(
         let info = SystemInfo {
             process_memory: process_memory as f64,
             process_virtual_memory: process_virtual_memory as f64,
-            process_cpu_percent,
+            process_cpu_percent: process_cpu_percent as f64,
             total_cpu_percent: system.global_cpu_usage() as f64,
             num_cpus,
             total_memory: system.total_memory() as f64,

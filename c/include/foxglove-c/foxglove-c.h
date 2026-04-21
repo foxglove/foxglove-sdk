@@ -2562,6 +2562,18 @@ typedef struct foxglove_gateway_options {
    * Optional message backlog size override.
    */
   const size_t *message_backlog_size;
+  /**
+   * Optional refresh interval, in milliseconds, for publishing process and system statistics
+   * to the `/sysinfo` topic.
+   *
+   * When provided, the gateway publishes a `SystemInfo` message at the given interval for the
+   * duration of the gateway's lifetime. The interval is clamped to a minimum of
+   * `sysinfo::MINIMUM_CPU_UPDATE_INTERVAL`, since CPU usage samples taken more frequently
+   * than that are not refreshed by the underlying crate.
+   *
+   * If null, sysinfo publishing is disabled (the default).
+   */
+  const uint64_t *sysinfo_refresh_interval_ms;
 } foxglove_gateway_options;
 #endif
 
@@ -2850,6 +2862,18 @@ typedef struct foxglove_server_options {
    * - If provided, the `session_id` must be a valid pointer to a null-terminated UTF-8 string.
    */
   const struct foxglove_string *session_id;
+  /**
+   * Optional refresh interval, in milliseconds, for publishing process and system statistics
+   * to the `/sysinfo` topic.
+   *
+   * When provided, the server publishes a `SystemInfo` message at the given interval for the
+   * duration of the server's lifetime. The interval is clamped to a minimum of
+   * `sysinfo::MINIMUM_CPU_UPDATE_INTERVAL`, since CPU usage samples taken more frequently
+   * than that are not refreshed by the underlying crate.
+   *
+   * If null, sysinfo publishing is disabled (the default).
+   */
+  const uint64_t *sysinfo_refresh_interval_ms;
 } foxglove_server_options;
 #endif
 
