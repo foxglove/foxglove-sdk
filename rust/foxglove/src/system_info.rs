@@ -154,7 +154,7 @@ pub(crate) fn publisher_future(
     refresh_interval: Duration,
 ) -> impl Future<Output = ()> + Send + 'static {
     // If we refresh too quickly we'll get invalid values for cpu usage.
-    // sysinfo crate exports a platform dependant MINIMUM_CPU_UPDATE_INTERVAL
+    // sysinfo crate exports a platform dependent MINIMUM_CPU_UPDATE_INTERVAL
     // that is 200ms on Linux. However, it is 0 on unknown platforms.
     // We clamp to 200ms as well to be safe.
     let refresh_interval = refresh_interval
