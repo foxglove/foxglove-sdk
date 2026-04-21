@@ -174,8 +174,7 @@ async fn run_publisher(
     let channel = ChannelBuilder::new(SYSINFO_TOPIC)
         .context(&ctx)
         .build::<SystemInfo>();
-    // Don't hold a strong reference to the context: if it's dropped externally,
-    // the Weak upgrade below will fail and we'll exit cleanly.
+    // We don't need the context anymore, don't keep it alive longer than needed
     drop(ctx);
     drop(context);
 
