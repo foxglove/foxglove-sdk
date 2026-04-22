@@ -1030,7 +1030,7 @@ dependencies = [
 [[package]]
 name = "device-info"
 version = "0.1.0"
-source = "git+https://github.com/livekit/rust-sdks.git?branch=dc%2Fexp%2Fdata_track_send_queue#9314a437a0e7699daf66c7ee706992b4f7545e74"
+source = "git+https://github.com/livekit/rust-sdks.git?branch=dc%2Fexp%2Fdata_track_send_queue#0188167335a52f28490ba9d126bb7f64e70855ed"
 dependencies = [
  "core-foundation 0.10.1",
  "jni",
@@ -1935,7 +1935,7 @@ dependencies = [
  "gobject-sys",
  "libc",
  "system-deps",
- "windows-sys 0.60.2",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -2672,7 +2672,7 @@ dependencies = [
 [[package]]
 name = "libwebrtc"
 version = "0.3.29"
-source = "git+https://github.com/livekit/rust-sdks.git?branch=dc%2Fexp%2Fdata_track_send_queue#9314a437a0e7699daf66c7ee706992b4f7545e74"
+source = "git+https://github.com/livekit/rust-sdks.git?branch=dc%2Fexp%2Fdata_track_send_queue#0188167335a52f28490ba9d126bb7f64e70855ed"
 dependencies = [
  "cxx",
  "glib",
@@ -2718,7 +2718,7 @@ checksum = "6373607a59f0be73a39b6fe456b8192fcc3585f602af20751600e974dd455e77"
 [[package]]
 name = "livekit"
 version = "0.7.36"
-source = "git+https://github.com/livekit/rust-sdks.git?branch=dc%2Fexp%2Fdata_track_send_queue#9314a437a0e7699daf66c7ee706992b4f7545e74"
+source = "git+https://github.com/livekit/rust-sdks.git?branch=dc%2Fexp%2Fdata_track_send_queue#0188167335a52f28490ba9d126bb7f64e70855ed"
 dependencies = [
  "base64 0.22.1",
  "bmrng",
@@ -2767,7 +2767,7 @@ dependencies = [
 [[package]]
 name = "livekit-api"
 version = "0.4.18"
-source = "git+https://github.com/livekit/rust-sdks.git?branch=dc%2Fexp%2Fdata_track_send_queue#9314a437a0e7699daf66c7ee706992b4f7545e74"
+source = "git+https://github.com/livekit/rust-sdks.git?branch=dc%2Fexp%2Fdata_track_send_queue#0188167335a52f28490ba9d126bb7f64e70855ed"
 dependencies = [
  "base64 0.21.7",
  "device-info",
@@ -2798,7 +2798,7 @@ dependencies = [
 [[package]]
 name = "livekit-datatrack"
 version = "0.1.3"
-source = "git+https://github.com/livekit/rust-sdks.git?branch=dc%2Fexp%2Fdata_track_send_queue#9314a437a0e7699daf66c7ee706992b4f7545e74"
+source = "git+https://github.com/livekit/rust-sdks.git?branch=dc%2Fexp%2Fdata_track_send_queue#0188167335a52f28490ba9d126bb7f64e70855ed"
 dependencies = [
  "anyhow",
  "bytes",
@@ -2834,7 +2834,7 @@ dependencies = [
 [[package]]
 name = "livekit-protocol"
 version = "0.7.4"
-source = "git+https://github.com/livekit/rust-sdks.git?branch=dc%2Fexp%2Fdata_track_send_queue#9314a437a0e7699daf66c7ee706992b4f7545e74"
+source = "git+https://github.com/livekit/rust-sdks.git?branch=dc%2Fexp%2Fdata_track_send_queue#0188167335a52f28490ba9d126bb7f64e70855ed"
 dependencies = [
  "futures-util",
  "livekit-runtime 0.4.0 (git+https://github.com/livekit/rust-sdks.git?branch=dc%2Fexp%2Fdata_track_send_queue)",
@@ -2860,7 +2860,7 @@ dependencies = [
 [[package]]
 name = "livekit-runtime"
 version = "0.4.0"
-source = "git+https://github.com/livekit/rust-sdks.git?branch=dc%2Fexp%2Fdata_track_send_queue#9314a437a0e7699daf66c7ee706992b4f7545e74"
+source = "git+https://github.com/livekit/rust-sdks.git?branch=dc%2Fexp%2Fdata_track_send_queue#0188167335a52f28490ba9d126bb7f64e70855ed"
 dependencies = [
  "tokio",
  "tokio-stream",
@@ -4454,7 +4454,7 @@ dependencies = [
  "security-framework 3.6.0",
  "security-framework-sys",
  "webpki-root-certs",
- "windows-sys 0.60.2",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -5879,7 +5879,7 @@ dependencies = [
 [[package]]
 name = "webrtc-sys"
 version = "0.3.27"
-source = "git+https://github.com/livekit/rust-sdks.git?branch=dc%2Fexp%2Fdata_track_send_queue#9314a437a0e7699daf66c7ee706992b4f7545e74"
+source = "git+https://github.com/livekit/rust-sdks.git?branch=dc%2Fexp%2Fdata_track_send_queue#0188167335a52f28490ba9d126bb7f64e70855ed"
 dependencies = [
  "cc",
  "cxx",
@@ -5893,7 +5893,7 @@ dependencies = [
 [[package]]
 name = "webrtc-sys-build"
 version = "0.3.15"
-source = "git+https://github.com/livekit/rust-sdks.git?branch=dc%2Fexp%2Fdata_track_send_queue#9314a437a0e7699daf66c7ee706992b4f7545e74"
+source = "git+https://github.com/livekit/rust-sdks.git?branch=dc%2Fexp%2Fdata_track_send_queue#0188167335a52f28490ba9d126bb7f64e70855ed"
 dependencies = [
  "anyhow",
  "fs2",
