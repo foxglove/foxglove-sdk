@@ -179,6 +179,8 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
   // Setup callbacks
   sdkServerOptions.callbacks.onConnectionGraphSubscribe =
     std::bind(&FoxgloveBridge::subscribeConnectionGraph, this, true);
+  sdkServerOptions.callbacks.onConnectionGraphUnsubscribe =
+    std::bind(&FoxgloveBridge::subscribeConnectionGraph, this, false);
   sdkServerOptions.callbacks.onSubscribe = std::bind(&FoxgloveBridge::subscribe, this, _1, _2);
   sdkServerOptions.callbacks.onUnsubscribe = std::bind(&FoxgloveBridge::unsubscribe, this, _1, _2);
 
