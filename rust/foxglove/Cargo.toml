@@ -8,9 +8,10 @@ repository.workspace = true
 license.workspace = true
 
 [features]
-default = ["derive", "websocket", "lz4", "zstd"]
+default = ["derive", "websocket", "sysinfo", "lz4", "zstd"]
 chrono = ["dep:chrono"]
 derive = ["dep:foxglove_derive"]
+sysinfo = ["dep:sysinfo", "dep:tokio", "tokio/rt-multi-thread", "tokio/time"]
 _remote-common = [
   "dep:base64",
   "dep:flume",
@@ -20,7 +21,6 @@ _remote-common = [
   "dep:serde_repr",
   "dep:serde_with",
 ]
-sysinfo = ["dep:sysinfo", "dep:tokio", "tokio/rt-multi-thread", "tokio/time"]
 websocket = ["_remote-common", "dep:tokio-tungstenite"]
 live_visualization = ["websocket"]
 remote-access = [

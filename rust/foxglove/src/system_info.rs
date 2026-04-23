@@ -7,7 +7,6 @@
 //!
 //! The returned [`SystemInfoHandle`] can be `.await`ed to wait for the
 //! publisher to complete, or aborted with [`SystemInfoHandle::abort`].
-//! The publisher otherwise runs until the associated [`Context`] is dropped.
 
 use std::borrow::Cow;
 use std::future::Future;
@@ -255,8 +254,7 @@ impl SystemInfoPublisher {
 /// Returned by [`SystemInfoPublisher::start`]. The handle can be `.await`ed to
 /// wait for the publisher to finish, or [`abort`](Self::abort)ed to stop it.
 /// Dropping the handle does not stop the publisher; it will continue running
-/// until either [`abort`](Self::abort) is called or the associated [`Context`]
-/// is dropped.
+/// until [`abort`](Self::abort) is called.
 #[must_use = "the publisher will keep running until aborted or the context is dropped, but the handle is the only way to wait for or abort it"]
 #[derive(Debug)]
 pub struct SystemInfoHandle {
