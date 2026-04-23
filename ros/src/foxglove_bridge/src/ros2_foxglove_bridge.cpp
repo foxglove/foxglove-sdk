@@ -235,11 +235,12 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
     sysinfoOptions.refresh_interval = 200ms;
     auto maybeSysinfo = foxglove::SystemInfoPublisher::create(std::move(sysinfoOptions));
     if (!maybeSysinfo.has_value()) {
-      throw std::runtime_error(std::string("Couldn't start system info publisher: ") +
-                               foxglove::strerror(maybeSysinfo.error()));
+      RCLCPP_WARN(this->get_logger(), "Couldn't start system info publisher: %s",
+                  foxglove::strerror(maybeSysinfo.error()));
+    } else {
+      _sysinfoPublisher =
+        std::make_unique<foxglove::SystemInfoPublisher>(std::move(maybeSysinfo.value()));
     }
-    _sysinfoPublisher =
-      std::make_unique<foxglove::SystemInfoPublisher>(std::move(maybeSysinfo.value()));
   }
 
   if (publishClientCount) {
