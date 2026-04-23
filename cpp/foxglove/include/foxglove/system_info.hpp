@@ -28,7 +28,7 @@ struct SystemInfoOptions final {
 
   /// @brief Optional refresh interval.
   ///
-  /// Defaults to 1 second. Clamped to a minimum of 200ms.
+  /// Defaults to 500ms. Clamped to a minimum of 200ms.
   std::optional<std::chrono::milliseconds> refresh_interval;
 };
 
