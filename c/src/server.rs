@@ -3,8 +3,8 @@ use crate::connection_graph::FoxgloveConnectionGraph;
 use crate::fetch_asset::{FetchAssetHandler, FoxgloveFetchAssetResponder};
 use crate::service::FoxgloveService;
 use crate::sink_channel_filter::ChannelFilter;
+use crate::util::parse_key_value_array;
 use bitflags::bitflags;
-use std::collections::HashMap;
 use std::ffi::{CString, c_char, c_void};
 use std::mem::ManuallyDrop;
 use std::sync::Arc;
@@ -466,24 +466,13 @@ unsafe fn do_foxglove_server_start(
         server = server.tls(tls_identity);
     }
     if options.server_info_count > 0 {
-        if options.server_info.is_null() {
-            return Err(foxglove::FoxgloveError::ValueError(
-                "server_info is null".to_string(),
-            ));
-        }
-        let opts_info = options.server_info;
-        let mut server_info = HashMap::new();
-        for i in 0..options.server_info_count {
-            let kv = unsafe { &*opts_info.add(i) };
-            if kv.key.data.is_null() || kv.value.data.is_null() {
-                return Err(foxglove::FoxgloveError::ValueError(
-                    "null key or value in server_info".to_string(),
-                ));
-            }
-            let key = unsafe { kv.key.as_utf8_str() }?;
-            let value = unsafe { kv.value.as_utf8_str() }?;
-            server_info.insert(key.to_string(), value.to_string());
-        }
+        let server_info = unsafe {
+            parse_key_value_array(
+                options.server_info,
+                options.server_info_count,
+                "server_info",
+            )?
+        };
         server = server.server_info(server_info);
     }
 

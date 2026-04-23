@@ -2485,6 +2485,8 @@ typedef struct foxglove_qos_profile {
  *   `FOXGLOVE_DEVICE_TOKEN` environment variable.
  * - If `supported_encodings` is supplied, all entries must contain valid UTF-8, and
  *   `supported_encodings` must have length equal to `supported_encodings_count`.
+ * - If `server_info` is supplied, all entries must contain valid UTF-8, and `server_info` must
+ *   have length equal to `server_info_count`.
  */
 typedef struct foxglove_gateway_options {
   /**
@@ -2498,6 +2500,16 @@ typedef struct foxglove_gateway_options {
   foxglove_gateway_capability capabilities;
   const struct foxglove_string *supported_encodings;
   size_t supported_encodings_count;
+  /**
+   * Optional information about the gateway, which is shared with clients via the ServerInfo
+   * message.
+   *
+   * # Safety
+   * - If provided, the `server_info` must be a valid pointer to an array of valid
+   *   `FoxgloveKeyValue`s with `server_info_count` elements.
+   */
+  const struct foxglove_key_value *server_info;
+  size_t server_info_count;
   /**
    * Context provided to the `sink_channel_filter` callback.
    */
@@ -5541,6 +5553,8 @@ void foxglove_fetch_asset_respond_error(struct foxglove_fetch_asset_responder *r
  * # Safety
  * - `options` must be a valid pointer to a `FoxgloveGatewayOptions` struct with all fields
  *   satisfying the documented safety requirements.
+ * - If `server_info` is supplied in options, all `server_info` must contain valid UTF8, and
+ *   `server_info` must have length equal to `server_info_count`.
  * - `gateway` must be a valid pointer to a `*mut FoxgloveGateway`.
  */
 foxglove_error foxglove_gateway_start(const struct foxglove_gateway_options *FOXGLOVE_NONNULL options,

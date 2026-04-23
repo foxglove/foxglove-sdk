@@ -2,6 +2,12 @@ use foxglove::FoxgloveError;
 use foxglove::bytes::Bytes;
 use std::mem::ManuallyDrop;
 
+#[cfg(not(target_family = "wasm"))]
+use std::collections::HashMap;
+
+#[cfg(not(target_family = "wasm"))]
+use crate::FoxgloveKeyValue;
+
 /// Create a borrowed Bytes from a raw pointer and length.
 ///
 /// # Safety
@@ -51,4 +57,34 @@ pub(crate) unsafe fn vec_from_raw<T>(ptr: *const T, len: usize) -> ManuallyDrop<
         return ManuallyDrop::new(Vec::new());
     }
     unsafe { ManuallyDrop::new(Vec::from_raw_parts(ptr as *mut _, len, len)) }
+}
+
+/// Parse a C array of [`FoxgloveKeyValue`] into a `HashMap<String, String>`.
+///
+/// # Safety
+///
+/// If `count > 0`, `ptr` must be a valid pointer to `count` initialized elements. Each key
+/// and value must contain valid UTF-8.
+#[cfg(not(target_family = "wasm"))]
+pub(crate) unsafe fn parse_key_value_array(
+    ptr: *const FoxgloveKeyValue,
+    count: usize,
+    field_name: &str,
+) -> Result<HashMap<String, String>, FoxgloveError> {
+    if ptr.is_null() {
+        return Err(FoxgloveError::ValueError(format!("{field_name} is null")));
+    }
+    let mut map = HashMap::with_capacity(count);
+    for i in 0..count {
+        let kv = unsafe { &*ptr.add(i) };
+        if kv.key.data.is_null() || kv.value.data.is_null() {
+            return Err(FoxgloveError::ValueError(format!(
+                "null key or value in {field_name}"
+            )));
+        }
+        let key = unsafe { kv.key.as_utf8_str() }?;
+        let value = unsafe { kv.value.as_utf8_str() }?;
+        map.insert(key.to_string(), value.to_string());
+    }
+    Ok(map)
 }
