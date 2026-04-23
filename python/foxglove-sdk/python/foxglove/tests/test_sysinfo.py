@@ -48,9 +48,3 @@ def test_invalid_refresh_interval_raises() -> None:
 
     with pytest.raises(ValueError):
         start_sysinfo_publisher(refresh_interval=float("nan"))
-
-
-def test_drop_stops_publisher() -> None:
-    """The publisher is stopped when the python object is garbage collected."""
-    publisher = start_sysinfo_publisher()
-    del publisher

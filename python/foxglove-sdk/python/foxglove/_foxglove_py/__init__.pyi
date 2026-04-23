@@ -409,7 +409,7 @@ class SystemInfoPublisher:
     A handle to a running system info publisher.
 
     The publisher is started by :py:func:`foxglove.start_sysinfo_publisher` and runs in
-    the background until :py:meth:`stop` is called or this object is garbage collected.
+    the background until :py:meth:`stop` is called.
     """
 
     def stop(self) -> None:
