@@ -6,7 +6,7 @@ use crate::remote_access::participant::Participant;
 use crate::remote_common::ClientId;
 use crate::remote_common::fetch_asset::SendAssetResponse;
 
-/// Represents a connected remote access client (LiveKit participant).
+/// Represents a connected remote access client.
 #[derive(Debug, Clone)]
 pub struct Client {
     /// Locally-significant identifier for this particular instance of this participant.
