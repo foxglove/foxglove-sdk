@@ -12,7 +12,10 @@ use crate::parameter::FoxgloveParameterArray;
 use crate::server::FoxgloveServerStatusLevel;
 use crate::service::FoxgloveService;
 use crate::sink_channel_filter::ChannelFilter;
-use crate::{FoxgloveContext, FoxgloveError, FoxgloveSinkId, FoxgloveString, result_to_c};
+use crate::util::parse_key_value_array;
+use crate::{
+    FoxgloveContext, FoxgloveError, FoxgloveKeyValue, FoxgloveSinkId, FoxgloveString, result_to_c,
+};
 
 /// The reliability policy for a channel's data delivery.
 #[repr(u8)]
@@ -497,6 +500,8 @@ impl foxglove::remote_access::Listener for FoxgloveGatewayCallbacks {
 ///   `FOXGLOVE_DEVICE_TOKEN` environment variable.
 /// - If `supported_encodings` is supplied, all entries must contain valid UTF-8, and
 ///   `supported_encodings` must have length equal to `supported_encodings_count`.
+/// - If `server_info` is supplied, all entries must contain valid UTF-8, and `server_info` must
+///   have length equal to `server_info_count`.
 #[repr(C)]
 pub struct FoxgloveGatewayOptions<'a> {
     /// `context` can be null, or a valid pointer to a context created via `foxglove_context_new`.
@@ -508,6 +513,15 @@ pub struct FoxgloveGatewayOptions<'a> {
     pub capabilities: FoxgloveGatewayCapability,
     pub supported_encodings: *const FoxgloveString,
     pub supported_encodings_count: usize,
+
+    /// Optional information about the gateway, which is shared with clients via the ServerInfo
+    /// message.
+    ///
+    /// # Safety
+    /// - If provided, the `server_info` must be a valid pointer to an array of valid
+    ///   `FoxgloveKeyValue`s with `server_info_count` elements.
+    pub server_info: *const FoxgloveKeyValue,
+    pub server_info_count: usize,
 
     /// Context provided to the `sink_channel_filter` callback.
     pub sink_channel_filter_context: *const c_void,
@@ -604,6 +618,8 @@ impl FoxgloveGateway {
 /// # Safety
 /// - `options` must be a valid pointer to a `FoxgloveGatewayOptions` struct with all fields
 ///   satisfying the documented safety requirements.
+/// - If `server_info` is supplied in options, all `server_info` must contain valid UTF8, and
+///   `server_info` must have length equal to `server_info_count`.
 /// - `gateway` must be a valid pointer to a `*mut FoxgloveGateway`.
 #[unsafe(no_mangle)]
 #[must_use]
@@ -667,6 +683,17 @@ unsafe fn do_foxglove_gateway_start(
             })
             .collect::<Result<Vec<_>, _>>()?,
         );
+    }
+
+    if options.server_info_count > 0 {
+        let server_info = unsafe {
+            parse_key_value_array(
+                options.server_info,
+                options.server_info_count,
+                "server_info",
+            )?
+        };
+        gateway = gateway.server_info(server_info);
     }
 
     // Callbacks
