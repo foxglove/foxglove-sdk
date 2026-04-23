@@ -102,6 +102,11 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
   RCLCPP_INFO(this->get_logger(), "Starting foxglove_bridge (%s, %s@%s)", rosDistro,
               foxglove_bridge::FOXGLOVE_BRIDGE_VERSION, foxglove_bridge::FOXGLOVE_BRIDGE_GIT_HASH);
 
+  std::optional<std::map<std::string, std::string>> rosServerInfo;
+  if (rosDistro && strlen(rosDistro) > 0) {
+    rosServerInfo = std::map<std::string, std::string>{{"ROS_DISTRO", rosDistro}};
+  }
+
   declareParameters(this);
 
   const auto port = static_cast<uint16_t>(this->get_parameter(PARAM_PORT).as_int());
@@ -149,10 +154,7 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
   sdkServerOptions.capabilities = _capabilities;
   sdkServerOptions.context = _serverContext;
 
-  if (rosDistro && strlen(rosDistro) > 0) {
-    std::map<std::string, std::string> serverInfo = {{"ROS_DISTRO", rosDistro}};
-    sdkServerOptions.server_info = std::move(serverInfo);
-  }
+  sdkServerOptions.server_info = rosServerInfo;
 
   if (_useSimTime) {
     sdkServerOptions.capabilities =
@@ -301,6 +303,7 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
     gatewayOptions.context = _serverContext;
     gatewayOptions.device_token = deviceToken;
     gatewayOptions.supported_encodings = {"cdr", "json"};
+    gatewayOptions.server_info = std::move(rosServerInfo);
 
     const auto foxgloveApiUrl = this->get_parameter(PARAM_FOXGLOVE_API_URL).as_string();
     if (!foxgloveApiUrl.empty()) {

@@ -11,6 +11,7 @@
 #include <chrono>
 #include <cstdint>
 #include <functional>
+#include <map>
 #include <memory>
 #include <optional>
 #include <string>
@@ -191,6 +192,12 @@ struct RemoteAccessGatewayOptions {
   /// If set, this callback is invoked for each channel to determine its quality-of-service
   /// profile. If not set, all channels use the default lossy profile.
   QosClassifierFn qos_classifier;
+  /// @cond foxglove_internal
+  /// @brief (internal) Information about the gateway, which is shared with clients.
+  ///
+  /// This option is for internal use only and may change.
+  std::optional<std::map<std::string, std::string>> server_info = std::nullopt;
+  /// @endcond
   /// @brief Override the Foxglove API base URL.
   std::optional<std::string> foxglove_api_url;
   /// @brief Override the Foxglove API timeout (in seconds).
