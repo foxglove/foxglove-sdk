@@ -216,11 +216,21 @@ impl SystemInfoPublisher {
         // sysinfo crate exports a platform dependent MINIMUM_CPU_UPDATE_INTERVAL
         // that is 200ms on Linux. However, it is 0 on unknown platforms.
         // We clamp to 200ms as well to be safe.
-        let refresh_interval = self
+        let requested_interval = self
             .refresh_interval
-            .unwrap_or(DEFAULT_SYSINFO_REFRESH_INTERVAL)
-            .max(MINIMUM_CPU_UPDATE_INTERVAL)
-            .max(Duration::from_millis(200));
+            .unwrap_or(DEFAULT_SYSINFO_REFRESH_INTERVAL);
+
+        let min_interval = MINIMUM_CPU_UPDATE_INTERVAL.max(Duration::from_millis(200));
+
+        let refresh_interval = if requested_interval < min_interval {
+            tracing::info!(
+                "sysinfo refresh interval {requested_interval:?} is below minimum {min_interval:?}, clamping"
+            );
+            min_interval
+        } else {
+            requested_interval
+        };
+
         let topic = self
             .topic
             .unwrap_or_else(|| DEFAULT_SYSINFO_TOPIC.to_string());
