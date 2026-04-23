@@ -9,7 +9,7 @@ use crate::PyContext;
 /// A handle to a running system info publisher.
 ///
 /// The publisher is started by :py:func:`foxglove.start_sysinfo_publisher` and runs in
-/// the background until :py:meth:`stop` is called or this object is garbage collected.
+/// the background until :py:meth:`stop` is called.
 #[pyclass(name = "SystemInfoPublisher", module = "foxglove")]
 pub struct PySystemInfoPublisher(Option<SystemInfoHandle>);
 
@@ -22,12 +22,6 @@ impl PySystemInfoPublisher {
         if let Some(handle) = self.0.take() {
             handle.abort();
         }
-    }
-}
-
-impl Drop for PySystemInfoPublisher {
-    fn drop(&mut self) {
-        self.stop();
     }
 }
 
