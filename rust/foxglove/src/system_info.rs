@@ -90,7 +90,7 @@ const SYSINFO_JSON_SCHEMA: &str = r#"{
 ///
 /// Encoded as JSON on the wire, with a JSON Schema attached to the channel.
 #[derive(Clone, Debug, Serialize)]
-pub struct SystemInfo {
+pub(crate) struct SystemInfo {
     /// Resident memory used by the SDK process, in bytes.
     pub process_memory: f64,
     /// Virtual memory used by the SDK process, in bytes.
