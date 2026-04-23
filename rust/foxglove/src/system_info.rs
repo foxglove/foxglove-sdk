@@ -81,20 +81,7 @@ const SYSINFO_JSON_SCHEMA: &str = r#"{
       "type": "string",
       "description": "OS version string, or empty if unavailable on this platform."
     }
-  },
-  "required": [
-    "process_memory",
-    "process_virtual_memory",
-    "process_cpu_percent",
-    "total_cpu_percent",
-    "num_cpus",
-    "total_memory",
-    "used_memory",
-    "total_swap",
-    "used_swap",
-    "kernel_version",
-    "os_version"
-  ]
+  }
 }"#;
 
 /// A snapshot of process and system statistics published by [`SystemInfoPublisher`].
