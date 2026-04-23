@@ -229,10 +229,12 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
   this->set_parameter(rclcpp::Parameter{PARAM_PORT, _server->port()});
   RCLCPP_INFO(this->get_logger(), "Server listening on port %d", _server->port());
 
-  {
+  if (this->get_parameter(PARAM_SYSINFO).as_bool()) {
     foxglove::SystemInfoOptions sysinfoOptions;
     sysinfoOptions.context = _serverContext;
-    sysinfoOptions.refresh_interval = 200ms;
+    sysinfoOptions.topic = this->get_parameter(PARAM_SYSINFO_TOPIC).as_string();
+    sysinfoOptions.refresh_interval = std::chrono::milliseconds(
+      this->get_parameter(PARAM_SYSINFO_REFRESH_INTERVAL).as_int());
     auto maybeSysinfo = foxglove::SystemInfoPublisher::create(std::move(sysinfoOptions));
     if (!maybeSysinfo.has_value()) {
       RCLCPP_WARN(this->get_logger(), "Couldn't start system info publisher: %s",

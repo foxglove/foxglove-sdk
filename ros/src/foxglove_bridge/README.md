@@ -131,6 +131,9 @@ Parameters are provided to configure the behavior of the bridge. These parameter
 - **certfile**: Path to an X.509 certificate used for WSS. **Must be supplied if `tls` is set to `true`.**
 - **keyfile**: Path to the PEM-encoded PKCS#8 private key used to generate `certfile`. **Must be supplied if `tls` is set to `true`.**
 - **use_sim_time**: Use the `/clock` topic as a time source. Defaults to `false`.
+- **sysinfo**: Publish process and system statistics (CPU, memory, etc.) on a channel. Defaults to `true`.
+- **sysinfo_topic**: Topic name for system info messages. Defaults to `/foxglove_bridge/sysinfo`.
+- **sysinfo_refresh_interval**: Refresh interval for system info messages in milliseconds. Minimum 200ms. Defaults to `500`.
 
 #### Capabilities
 
@@ -146,6 +149,8 @@ The `capabilities` parameter can accept one or more of the following values.
 
 ### Diagnostic topics
 If `publish_client_count` is set to `true`, foxglove_bridge publishes the number of currently connected clients to the topic `/foxglove_bridge/client_count`.
+
+If `sysinfo` is set to `true` (the default), foxglove_bridge publishes process and system statistics to the topic configured by `sysinfo_topic` (default `/foxglove_bridge/sysinfo`).
 ## For developers
 
 ### Building with local SDK changes
