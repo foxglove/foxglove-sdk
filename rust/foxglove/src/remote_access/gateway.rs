@@ -127,7 +127,6 @@ impl GatewayHandle {
             server_info: None,
             message_backlog_size: None,
             context: std::sync::Weak::new(),
-            sysinfo: None,
         };
         let services = Arc::new(parking_lot::RwLock::new(ServiceMap::default()));
         let connection = RemoteAccessConnection::new(params, services);
@@ -174,7 +173,6 @@ pub struct Gateway {
     server_info: Option<HashMap<String, String>>,
     message_backlog_size: Option<usize>,
     context: std::sync::Weak<Context>,
-    sysinfo: Option<Duration>,
 }
 
 impl Default for Gateway {
@@ -195,7 +193,6 @@ impl Default for Gateway {
             server_info: None,
             message_backlog_size: None,
             context: Arc::downgrade(&Context::get_default()),
-            sysinfo: None,
         }
     }
 }
@@ -221,7 +218,6 @@ impl std::fmt::Debug for Gateway {
             .field("server_info", &self.server_info)
             .field("message_backlog_size", &self.message_backlog_size)
             .field("has_context", &(self.context.strong_count() > 0));
-        dbg.field("sysinfo", &self.sysinfo);
         dbg.finish()
     }
 }
@@ -273,19 +269,6 @@ impl Gateway {
     /// Sets the context for this sink.
     pub fn context(mut self, ctx: &Arc<Context>) -> Self {
         self.context = Arc::downgrade(ctx);
-        self
-    }
-
-    /// Enables or disables publishing process and system statistics to the
-    /// `/sysinfo` topic.
-    ///
-    /// When set to `Some(interval)`, the server publishes a
-    /// SystemInfo message at the given `interval` with cpu and memory
-    /// stats for the process and the system. Clamped to a minimum of 200ms.
-    ///
-    /// Defaults to `None` (disabled).
-    pub fn sysinfo(mut self, refresh_interval: Option<Duration>) -> Self {
-        self.sysinfo = refresh_interval;
         self
     }
 
@@ -504,7 +487,6 @@ impl Gateway {
             server_info: self.server_info,
             message_backlog_size: self.message_backlog_size,
             context: self.context,
-            sysinfo: self.sysinfo,
         };
         let connection = RemoteAccessConnection::new(params, services);
         Ok(GatewayHandle::new(Arc::new(connection), runtime))

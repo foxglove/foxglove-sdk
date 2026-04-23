@@ -360,7 +360,6 @@ def start_gateway(
     message_backlog_size: int | None = None,
     foxglove_api_url: str | None = None,
     foxglove_api_timeout: float | None = None,
-    sysinfo_refresh_interval: float | None = None,
 ) -> RemoteAccessGateway:
     """
     Start a remote access gateway for live visualization and teleop in Foxglove.
@@ -381,10 +380,36 @@ def start_server(
     session_id: str | None = None,
     channel_filter: SinkChannelFilter | None = None,
     playback_time_range: tuple[int, int] | None = None,
-    sysinfo_refresh_interval: float | None = None,
 ) -> WebSocketServer:
     """
     Start a WebSocket server for live visualization.
+    """
+    ...
+
+class SystemInfoPublisher:
+    """
+    A handle to a running system info publisher.
+
+    The publisher is started by :py:func:`foxglove.start_sysinfo_publisher` and runs in
+    the background until :py:meth:`stop` is called or this object is garbage collected.
+    """
+
+    def stop(self) -> None:
+        """
+        Stop the publisher. Subsequent calls to ``stop`` are no-ops.
+        """
+        ...
+
+def start_sysinfo_publisher(
+    *,
+    topic: str | None = None,
+    refresh_interval: float | None = None,
+    context: Context | None = None,
+) -> SystemInfoPublisher:
+    """
+    Start the system info publisher.
+
+    Periodically publishes process and system statistics (memory, CPU, OS info) to a channel.
     """
     ...
 

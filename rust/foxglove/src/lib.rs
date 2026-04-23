@@ -432,12 +432,12 @@ mod protocol;
     doc(cfg(any(feature = "remote-access", feature = "websocket")))
 )]
 mod remote_common;
-#[cfg(feature = "_remote-common")]
+#[cfg(any(feature = "_remote-common", feature = "sysinfo"))]
 mod runtime;
-#[cfg(feature = "_remote-common")]
+#[cfg(any(feature = "_remote-common", feature = "sysinfo"))]
 #[cfg_attr(
     docsrs,
-    doc(cfg(any(feature = "remote-access", feature = "websocket")))
+    doc(cfg(any(feature = "remote-access", feature = "websocket", feature = "sysinfo")))
 )]
 pub use runtime::shutdown_runtime;
 
@@ -446,12 +446,9 @@ mod api_client;
 #[cfg(feature = "remote-access")]
 pub mod remote_access;
 
-#[cfg(feature = "_remote-common")]
-#[cfg_attr(
-    docsrs,
-    doc(cfg(any(feature = "remote-access", feature = "websocket")))
-)]
-pub(crate) mod system_info;
+#[cfg(feature = "sysinfo")]
+#[cfg_attr(docsrs, doc(cfg(feature = "sysinfo")))]
+pub mod system_info;
 
 #[cfg(feature = "websocket")]
 pub mod websocket;

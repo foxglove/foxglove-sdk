@@ -159,8 +159,6 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
       sdkServerOptions.capabilities | foxglove::WebSocketServerCapabilities::Time;
   }
 
-  sdkServerOptions.sysinfo_refresh_interval = 200ms;
-
   // If TLS is enabled, load the certificate and key files from disk
   if (useTls) {
     if (certfile.empty() || !std::filesystem::exists(certfile)) {
@@ -231,6 +229,19 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
   this->set_parameter(rclcpp::Parameter{PARAM_PORT, _server->port()});
   RCLCPP_INFO(this->get_logger(), "Server listening on port %d", _server->port());
 
+  {
+    foxglove::SystemInfoOptions sysinfoOptions;
+    sysinfoOptions.context = _serverContext;
+    sysinfoOptions.refresh_interval = 200ms;
+    auto maybeSysinfo = foxglove::SystemInfoPublisher::create(std::move(sysinfoOptions));
+    if (!maybeSysinfo.has_value()) {
+      throw std::runtime_error(std::string("Couldn't start system info publisher: ") +
+                               foxglove::strerror(maybeSysinfo.error()));
+    }
+    _sysinfoPublisher =
+      std::make_unique<foxglove::SystemInfoPublisher>(std::move(maybeSysinfo.value()));
+  }
+
   if (publishClientCount) {
     static const std::string CLIENT_COUNT_TOPIC = "/foxglove_bridge/client_count";
     _clientCountPublisher = this->create_publisher<std_msgs::msg::UInt32>(
@@ -287,7 +298,6 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
     gatewayOptions.context = _serverContext;
     gatewayOptions.device_token = deviceToken;
     gatewayOptions.supported_encodings = {"cdr", "json"};
-    gatewayOptions.sysinfo_refresh_interval = 200ms;
 
     const auto foxgloveApiUrl = this->get_parameter(PARAM_FOXGLOVE_API_URL).as_string();
     if (!foxgloveApiUrl.empty()) {

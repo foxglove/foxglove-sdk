@@ -332,13 +332,6 @@ FoxgloveResult<RemoteAccessGateway> RemoteAccessGateway::create(
     c_options.message_backlog_size = &*options.message_backlog_size;
   }
 
-  // Optional sysinfo refresh interval
-  std::optional<uint64_t> sysinfo_refresh_interval_ms;
-  if (options.sysinfo_refresh_interval) {
-    sysinfo_refresh_interval_ms = static_cast<uint64_t>(options.sysinfo_refresh_interval->count());
-    c_options.sysinfo_refresh_interval_ms = &*sysinfo_refresh_interval_ms;
-  }
-
   foxglove_gateway* gateway = nullptr;
   foxglove_error error = foxglove_gateway_start(&c_options, &gateway);
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || gateway == nullptr) {

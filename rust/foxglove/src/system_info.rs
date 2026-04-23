@@ -1,13 +1,16 @@
-//! Optional publisher that reports process and system statistics on the
-//! `/sysinfo` topic.
+//! Optional publisher that reports process and system statistics.
 //!
-//! Enabled per-server via [`WebSocketServer::sysinfo`](crate::WebSocketServer::sysinfo)
-//! and [`Gateway::sysinfo`](crate::remote_access::Gateway::sysinfo), and gated behind
-//! the `remote-access` or `websocket` feature flags.
+//! Build a [`SystemInfoPublisher`] and call [`SystemInfoPublisher::start`]
+//! to spawn a background task that periodically logs a [`SystemInfo`]
+//! message to a channel. The default channel is `/sysinfo`, and the default
+//! refresh interval is 1 second.
+//!
+//! The returned [`tokio::task::JoinHandle`] can be used to wait for the
+//! publisher to complete, or to abort the publisher with [`JoinHandle::abort`].
+//! The publisher otherwise runs until the associated [`Context`] is dropped.
 
 use std::borrow::Cow;
-use std::future::Future;
-use std::sync::Weak;
+use std::sync::{Arc, Weak};
 use std::time::Duration;
 
 use bytes::BufMut;
@@ -15,12 +18,16 @@ use serde::Serialize;
 use sysinfo::{
     CpuRefreshKind, MINIMUM_CPU_UPDATE_INTERVAL, Pid, ProcessRefreshKind, ProcessesToUpdate, System,
 };
+pub use tokio::task::JoinHandle;
 use tokio::time::MissedTickBehavior;
-use tokio_util::sync::CancellationToken;
 
-use crate::{ChannelBuilder, Context, Encode, Schema};
+use crate::{Channel, ChannelBuilder, Context, Encode, Schema, runtime::get_runtime_handle};
 
-const SYSINFO_TOPIC: &str = "/sysinfo";
+/// The default topic the [`SystemInfoPublisher`] publishes to.
+pub const DEFAULT_SYSINFO_TOPIC: &str = "/sysinfo";
+
+/// The default refresh interval for [`SystemInfoPublisher`].
+pub const DEFAULT_SYSINFO_REFRESH_INTERVAL: Duration = Duration::from_secs(1);
 
 /// JSON Schema (draft 2020-12) describing [`SystemInfo`] for consumers of the `/sysinfo` topic.
 const SYSINFO_JSON_SCHEMA: &str = r#"{
@@ -90,7 +97,7 @@ const SYSINFO_JSON_SCHEMA: &str = r#"{
   ]
 }"#;
 
-/// A snapshot of process and system statistics published on the `/sysinfo` topic.
+/// A snapshot of process and system statistics published by [`SystemInfoPublisher`].
 ///
 /// Encoded as JSON on the wire, with a JSON Schema attached to the channel.
 #[derive(Clone, Debug, Serialize)]
@@ -142,42 +149,119 @@ impl Encode for SystemInfo {
     }
 }
 
-/// Returns a future that refreshes system info at the requested interval and
-/// publishes it to the `/sysinfo` topic on the provided context.
+/// Builder for the system info publisher.
 ///
-/// `refresh_interval` is clamped to a minimum of 200ms.
+/// The publisher creates a channel on the configured [`Context`] and spawns a
+/// background task that periodically logs a [`SystemInfo`] message to the channel.
 ///
-/// The future completes when `cancel` is triggered, or when the context is dropped.
-pub(crate) fn publisher_future(
-    context: Weak<Context>,
-    cancel: CancellationToken,
-    refresh_interval: Duration,
-) -> impl Future<Output = ()> + Send + 'static {
-    // If we refresh too quickly we'll get invalid values for cpu usage.
-    // sysinfo crate exports a platform dependant MINIMUM_CPU_UPDATE_INTERVAL
-    // that is 200ms on Linux. However, it is 0 on unknown platforms.
-    // We clamp to 200ms as well to be safe.
-    let refresh_interval = refresh_interval
-        .max(MINIMUM_CPU_UPDATE_INTERVAL)
-        .max(Duration::from_millis(200));
-    run_publisher(context, cancel, refresh_interval)
+/// # Example
+///
+/// ```no_run
+/// use std::time::Duration;
+/// use foxglove::system_info::SystemInfoPublisher;
+///
+/// # async fn run() {
+/// let handle = SystemInfoPublisher::new()
+///     .refresh_interval(Duration::from_secs(2))
+///     .start();
+/// // ... do other work ...
+/// handle.abort();
+/// # }
+/// ```
+#[must_use]
+#[derive(Debug, Default)]
+pub struct SystemInfoPublisher {
+    topic: Option<String>,
+    refresh_interval: Option<Duration>,
+    context: Option<Weak<Context>>,
+}
+
+impl SystemInfoPublisher {
+    /// Creates a new publisher builder with default settings.
+    ///
+    /// The defaults are:
+    /// - topic: [`DEFAULT_SYSINFO_TOPIC`] (`/sysinfo`)
+    /// - refresh interval: [`DEFAULT_SYSINFO_REFRESH_INTERVAL`] (1 second)
+    /// - context: the global default context
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Overrides the channel topic name.
+    ///
+    /// Defaults to [`DEFAULT_SYSINFO_TOPIC`].
+    pub fn topic(mut self, topic: impl Into<String>) -> Self {
+        self.topic = Some(topic.into());
+        self
+    }
+
+    /// Sets the refresh interval.
+    ///
+    /// The interval is clamped to a minimum of 200ms because the underlying
+    /// `sysinfo` crate cannot reliably compute CPU usage for shorter intervals.
+    ///
+    /// Defaults to [`DEFAULT_SYSINFO_REFRESH_INTERVAL`].
+    pub fn refresh_interval(mut self, interval: Duration) -> Self {
+        self.refresh_interval = Some(interval);
+        self
+    }
+
+    /// Sets the [`Context`] on which the publisher creates its channel.
+    ///
+    /// Defaults to the global default context.
+    pub fn context(mut self, ctx: &Arc<Context>) -> Self {
+        self.context = Some(Arc::downgrade(ctx));
+        self
+    }
+
+    /// Starts the publisher and returns a [`JoinHandle`] for the background task.
+    ///
+    /// The task runs until either:
+    /// - [`JoinHandle::abort`](tokio::task::JoinHandle::abort) is called on
+    ///   the returned handle, or
+    /// - the associated [`Context`] is dropped.
+    ///
+    /// The publisher creates its channel and registers it with the context
+    /// synchronously before spawning the background task. The channel is
+    /// closed when the task exits (whether by abort or context drop).
+    pub fn start(self) -> JoinHandle<()> {
+        // If we refresh too quickly we'll get invalid values for cpu usage.
+        // sysinfo crate exports a platform dependant MINIMUM_CPU_UPDATE_INTERVAL
+        // that is 200ms on Linux. However, it is 0 on unknown platforms.
+        // We clamp to 200ms as well to be safe.
+        let refresh_interval = self
+            .refresh_interval
+            .unwrap_or(DEFAULT_SYSINFO_REFRESH_INTERVAL)
+            .max(MINIMUM_CPU_UPDATE_INTERVAL)
+            .max(Duration::from_millis(200));
+        let topic = self
+            .topic
+            .unwrap_or_else(|| DEFAULT_SYSINFO_TOPIC.to_string());
+        let context = self
+            .context
+            .unwrap_or_else(|| Arc::downgrade(&Context::get_default()));
+
+        // Create the channel synchronously so it's registered before start() returns.
+        let channel = match context.upgrade() {
+            Some(ctx) => ChannelBuilder::new(topic)
+                .context(&ctx)
+                .build::<SystemInfo>(),
+            None => {
+                // Context already dropped: spawn a no-op task so the caller still
+                // gets a JoinHandle they can await/abort.
+                return get_runtime_handle().spawn(async {});
+            }
+        };
+
+        get_runtime_handle().spawn(run_publisher(channel, context, refresh_interval))
+    }
 }
 
 async fn run_publisher(
+    channel: Channel<SystemInfo>,
     context: Weak<Context>,
-    cancel: CancellationToken,
     refresh_interval: Duration,
 ) {
-    let Some(ctx) = context.upgrade() else {
-        return;
-    };
-    let channel = ChannelBuilder::new(SYSINFO_TOPIC)
-        .context(&ctx)
-        .build::<SystemInfo>();
-    // We don't need the context anymore, don't keep it alive longer than needed
-    drop(ctx);
-    drop(context);
-
     let pid = Pid::from_u32(std::process::id());
     let kernel_version = System::kernel_version().unwrap_or_default();
     let os_version = System::os_version().unwrap_or_default();
@@ -201,9 +285,13 @@ async fn run_publisher(
     interval.tick().await;
 
     loop {
-        tokio::select! {
-            () = cancel.cancelled() => break,
-            _ = interval.tick() => {}
+        interval.tick().await;
+
+        // Stop publishing if the context has been dropped. We continue to hold the
+        // channel for the remainder of this task; it will be closed in the cleanup
+        // below. This avoids logging through a channel whose context is gone.
+        if context.strong_count() == 0 {
+            break;
         }
 
         system.refresh_memory();
@@ -231,12 +319,12 @@ async fn run_publisher(
 
         channel.log(&info);
     }
+
+    channel.close();
 }
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
-
     use crate::{Context, Encode};
 
     use super::*;
@@ -276,18 +364,55 @@ mod tests {
     }
 
     #[tokio::test(flavor = "current_thread")]
-    async fn publisher_exits_when_cancelled() {
+    async fn publisher_exits_when_aborted() {
         let ctx = Context::new();
-        let cancel = CancellationToken::new();
-        let handle = tokio::spawn(publisher_future(
-            Arc::downgrade(&ctx),
-            cancel.clone(),
-            Duration::from_millis(200),
-        ));
+        let handle = SystemInfoPublisher::new()
+            .context(&ctx)
+            .refresh_interval(Duration::from_millis(200))
+            .start();
 
         // Let the task reach the select loop (past the priming calls).
         tokio::task::yield_now().await;
-        cancel.cancel();
-        handle.await.expect("publisher task should exit cleanly");
+        handle.abort();
+        let result = handle.await;
+        assert!(result.is_err(), "publisher task should be cancelled");
+        assert!(
+            result.unwrap_err().is_cancelled(),
+            "publisher should exit via abort"
+        );
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn publisher_exits_when_context_dropped() {
+        let ctx = Context::new();
+        let handle = SystemInfoPublisher::new()
+            .context(&ctx)
+            .refresh_interval(Duration::from_millis(200))
+            .start();
+
+        // Drop the user's strong context reference. The publisher holds only a
+        // Weak<Context>, so the next loop iteration should observe strong_count == 0
+        // and exit cleanly.
+        drop(ctx);
+
+        // Wait long enough for at least one tick after the priming interval.
+        tokio::time::timeout(Duration::from_secs(2), handle)
+            .await
+            .expect("publisher should exit after context drop")
+            .expect("publisher should not panic");
+    }
+
+    #[test]
+    fn publisher_uses_default_topic_and_context() {
+        let publisher = SystemInfoPublisher::new();
+        assert!(publisher.topic.is_none());
+        assert!(publisher.refresh_interval.is_none());
+        assert!(publisher.context.is_none());
+    }
+
+    #[test]
+    fn publisher_can_override_topic() {
+        let publisher = SystemInfoPublisher::new().topic("/custom/sysinfo");
+        assert_eq!(publisher.topic.as_deref(), Some("/custom/sysinfo"));
     }
 }

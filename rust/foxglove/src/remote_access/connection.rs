@@ -90,7 +90,6 @@ pub(crate) struct ConnectionParams {
     pub server_info: Option<HashMap<String, String>>,
     pub message_backlog_size: Option<usize>,
     pub context: Weak<Context>,
-    pub sysinfo: Option<Duration>,
 }
 
 /// RemoteAccessConnection manages the connected [`RemoteAccessSession`] to the LiveKit server,
@@ -110,7 +109,6 @@ pub(crate) struct RemoteAccessConnection {
     server_info: Option<HashMap<String, String>>,
     message_backlog_size: Option<usize>,
     context: Weak<Context>,
-    sysinfo: Option<Duration>,
     cancellation_token: CancellationToken,
     services: Arc<parking_lot::RwLock<ServiceMap>>,
     connection_graph: Arc<parking_lot::Mutex<ConnectionGraph>>,
@@ -139,7 +137,6 @@ impl RemoteAccessConnection {
             server_info: params.server_info,
             message_backlog_size: params.message_backlog_size,
             context: params.context,
-            sysinfo: params.sysinfo,
             cancellation_token: CancellationToken::new(),
             services,
             connection_graph: Arc::new(parking_lot::Mutex::new(ConnectionGraph::new())),
@@ -340,17 +337,6 @@ impl RemoteAccessConnection {
     ///
     /// If disconnected from the room, reset all state and attempt to restart the run loop.
     async fn run_until_cancelled(self: Arc<Self>) {
-        // Spawn the optional sysinfo publisher as a child task so we can join
-        // it at the end. This surfaces panics through the outer JoinHandle
-        // rather than silently swallowing them when the handle is dropped.
-        let sysinfo_task = self.sysinfo.map(|refresh_interval| {
-            self.runtime.spawn(crate::system_info::publisher_future(
-                self.context.clone(),
-                self.cancellation_token.clone(),
-                refresh_interval,
-            ))
-        });
-
         // Notify the listener of the initial Connecting status. The atomic is already
         // initialized to Connecting, so call the listener directly rather than going
         // through set_status (which would see no change and skip the notification).
@@ -364,16 +350,6 @@ impl RemoteAccessConnection {
         // (e.g. cancelled while connected), this is a no-op since set_status deduplicates.
         self.set_status(ConnectionStatus::ShuttingDown);
         self.set_status(ConnectionStatus::Shutdown);
-
-        // Wait for the sysinfo publisher to exit; cancellation_token is cancelled
-        // by this point so it will observe it on the next tick and exit promptly.
-        if let Some(handle) = sysinfo_task {
-            if let Err(e) = handle.await {
-                if e.is_panic() {
-                    tracing::warn!("sysinfo publisher task panicked: {e}");
-                }
-            }
-        }
     }
 
     /// Connect to the room, and handle all events until cancelled or disconnected from the room.

@@ -278,15 +278,6 @@ struct WebSocketServerOptions {
   ///
   /// @note Setting this option implies the PlaybackControl capability
   std::optional<std::pair<uint64_t, uint64_t>> playback_time_range = std::nullopt;
-
-  /// @brief Optional refresh interval for publishing process and system statistics to the
-  /// `/sysinfo` topic.
-  ///
-  /// When set, the server publishes a `SystemInfo` message at the given interval for the
-  /// duration of the server's lifetime. Clamped to a minimum of 200ms.
-  ///
-  /// Defaults to `std::nullopt` (disabled).
-  std::optional<std::chrono::milliseconds> sysinfo_refresh_interval = std::nullopt;
 };
 
 /// @brief A WebSocket server for visualization in Foxglove.

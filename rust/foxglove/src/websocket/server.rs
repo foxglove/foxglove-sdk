@@ -51,7 +51,6 @@ pub(crate) struct ServerOptions {
     pub channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     pub server_info: Option<HashMap<String, String>>,
     pub playback_time_range: Option<(u64, u64)>,
-    pub sysinfo: Option<Duration>,
 }
 
 impl std::fmt::Debug for ServerOptions {
@@ -196,9 +195,6 @@ pub(crate) struct Server {
     /// Time range of data being played back, in absolute nanoseconds.
     /// Implies the [`PlaybackControl`](crate::websocket::Capability::PlaybackControl) capability if set.
     playback_time_range: Option<(u64, u64)>,
-    /// When `Some`, spawn a background task that publishes process/system statistics
-    /// to the `/sysinfo` topic at the given interval.
-    sysinfo: Option<Duration>,
 }
 
 impl Server {
@@ -273,7 +269,6 @@ impl Server {
             stream_config,
             server_info: opts.server_info.unwrap_or_default(),
             playback_time_range: opts.playback_time_range,
-            sysinfo: opts.sysinfo,
         }
     }
 
@@ -328,20 +323,6 @@ impl Server {
                 () = cancellation_token.cancelled() => (),
             }
         });
-
-        if let Some(refresh_interval) = self.sysinfo {
-            let fut = crate::system_info::publisher_future(
-                self.context.clone(),
-                self.cancellation_token.clone(),
-                refresh_interval,
-            );
-            // Spawn into the shared JoinSet so panics are surfaced via
-            // `process_task_result` when the server is shut down, rather than
-            // being silently swallowed when the JoinHandle is dropped.
-            if let Some(tasks) = self.tasks.lock().as_mut() {
-                tasks.spawn_on(fut, &self.runtime);
-            }
-        }
 
         let maybe_tls = if self.is_tls_configured() {
             " (TLS enabled)"

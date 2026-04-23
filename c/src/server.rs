@@ -8,7 +8,6 @@ use std::collections::HashMap;
 use std::ffi::{CString, c_char, c_void};
 use std::mem::ManuallyDrop;
 use std::sync::Arc;
-use std::time::Duration;
 
 use crate::parameter::FoxgloveParameterArray;
 use crate::playback_control_request::FoxglovePlaybackControlRequest;
@@ -188,15 +187,6 @@ pub struct FoxgloveServerOptions<'a> {
     /// # Safety
     /// - If provided, the `session_id` must be a valid pointer to a null-terminated UTF-8 string.
     pub session_id: Option<&'a FoxgloveString>,
-
-    /// Optional refresh interval, in milliseconds, for publishing process and system statistics
-    /// to the `/sysinfo` topic.
-    ///
-    /// When provided, the server publishes a `SystemInfo` message at the given interval for the
-    /// duration of the server's lifetime. Clamped to a minimum of 200ms.
-    ///
-    /// If null, sysinfo publishing is disabled (the default).
-    pub sysinfo_refresh_interval_ms: Option<&'a u64>,
 }
 
 #[repr(C)]
@@ -513,10 +503,6 @@ unsafe fn do_foxglove_server_start(
             foxglove::FoxgloveError::Utf8Error(format!("session_id is invalid: {e}"))
         })?;
         server = server.session_id(session_id_str.to_string());
-    }
-
-    if let Some(&refresh_ms) = options.sysinfo_refresh_interval_ms {
-        server = server.sysinfo(Some(Duration::from_millis(refresh_ms)));
     }
 
     let server = server.start_blocking()?;

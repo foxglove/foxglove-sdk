@@ -360,12 +360,6 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
     c_options.session_id = &*session_id;
   }
 
-  std::optional<uint64_t> sysinfo_refresh_interval_ms;
-  if (options.sysinfo_refresh_interval) {
-    sysinfo_refresh_interval_ms = static_cast<uint64_t>(options.sysinfo_refresh_interval->count());
-    c_options.sysinfo_refresh_interval_ms = &*sysinfo_refresh_interval_ms;
-  }
-
   foxglove_websocket_server* server = nullptr;
   foxglove_error error = foxglove_server_start(&c_options, &server);
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || server == nullptr) {

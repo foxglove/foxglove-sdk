@@ -492,6 +492,16 @@ typedef struct foxglove_service_responder foxglove_service_responder;
 #endif
 
 #if !defined(__wasm__)
+/**
+ * Opaque handle to a running system info publisher.
+ *
+ * The handle is created by [`foxglove_system_info_publisher_start`] and freed by
+ * [`foxglove_system_info_publisher_stop`].
+ */
+typedef struct foxglove_system_info_publisher foxglove_system_info_publisher;
+#endif
+
+#if !defined(__wasm__)
 typedef struct foxglove_websocket_server foxglove_websocket_server;
 #endif
 
@@ -2562,16 +2572,6 @@ typedef struct foxglove_gateway_options {
    * Optional message backlog size override.
    */
   const size_t *message_backlog_size;
-  /**
-   * Optional refresh interval, in milliseconds, for publishing process and system statistics
-   * to the `/sysinfo` topic.
-   *
-   * When provided, the gateway publishes a `SystemInfo` message at the given interval for the
-   * duration of the gateway's lifetime. Clamped to a minimum of 200ms.
-   *
-   * If null, sysinfo publishing is disabled (the default).
-   */
-  const uint64_t *sysinfo_refresh_interval_ms;
 } foxglove_gateway_options;
 #endif
 
@@ -2860,16 +2860,6 @@ typedef struct foxglove_server_options {
    * - If provided, the `session_id` must be a valid pointer to a null-terminated UTF-8 string.
    */
   const struct foxglove_string *session_id;
-  /**
-   * Optional refresh interval, in milliseconds, for publishing process and system statistics
-   * to the `/sysinfo` topic.
-   *
-   * When provided, the server publishes a `SystemInfo` message at the given interval for the
-   * duration of the server's lifetime. Clamped to a minimum of 200ms.
-   *
-   * If null, sysinfo publishing is disabled (the default).
-   */
-  const uint64_t *sysinfo_refresh_interval_ms;
 } foxglove_server_options;
 #endif
 
@@ -2935,6 +2925,36 @@ typedef struct foxglove_service_request {
    */
   struct foxglove_bytes payload;
 } foxglove_service_request;
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Options for [`foxglove_system_info_publisher_start`].
+ *
+ * All fields are optional. To use the default for any field, leave the field
+ * zero-initialized (e.g. by setting it via `memset` or `= {0}`).
+ *
+ * # Safety
+ * - `context`, when non-null, must be a valid pointer to a context created via
+ *   `foxglove_context_new`.
+ * - `topic`, when non-empty, must be a valid UTF-8 string.
+ */
+typedef struct foxglove_system_info_publisher_options {
+  /**
+   * Optional context to publish on. When null, the default global context is used.
+   */
+  const struct foxglove_context *context;
+  /**
+   * Optional channel topic name. If `data` is null or `len` is 0, defaults to `/sysinfo`.
+   */
+  struct foxglove_string topic;
+  /**
+   * Optional refresh interval, in milliseconds.
+   *
+   * When null or zero, defaults to 1000 ms (1 second). Clamped to a minimum of 200 ms.
+   */
+  const uint64_t *refresh_interval_ms;
+} foxglove_system_info_publisher_options;
 #endif
 
 #ifdef __cplusplus
@@ -6372,6 +6392,39 @@ void foxglove_service_respond_ok(struct foxglove_service_responder *responder,
  */
 void foxglove_service_respond_error(struct foxglove_service_responder *responder,
                                     struct foxglove_string message);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Start the system info publisher.
+ *
+ * On success, writes a non-null handle to `out_publisher`. On failure, returns an error
+ * code and `out_publisher` is left untouched.
+ *
+ * The returned handle must be freed by calling [`foxglove_system_info_publisher_stop`].
+ *
+ * # Safety
+ * - `options` must be a valid pointer to a [`FoxgloveSystemInfoPublisherOptions`] struct.
+ * - `out_publisher` must be a valid, writable pointer to a `*mut FoxgloveSystemInfoPublisher`.
+ * - See the safety notes on [`FoxgloveSystemInfoPublisherOptions`].
+ */
+foxglove_error foxglove_system_info_publisher_start(const struct foxglove_system_info_publisher_options *options,
+                                                    struct foxglove_system_info_publisher **out_publisher);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Stop the system info publisher and free its resources.
+ *
+ * This aborts the background task. After calling this function, the handle is invalid
+ * and must not be used again. Passing a null pointer is a no-op.
+ *
+ * # Safety
+ * - `publisher`, when non-null, must be a handle returned by
+ *   [`foxglove_system_info_publisher_start`] that has not already been passed to this
+ *   function.
+ */
+foxglove_error foxglove_system_info_publisher_stop(struct foxglove_system_info_publisher *publisher);
 #endif
 
 #ifdef __cplusplus

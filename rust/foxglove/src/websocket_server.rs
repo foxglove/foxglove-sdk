@@ -5,7 +5,6 @@ use std::fmt::{Debug, Display};
 use std::future::Future;
 use std::net::SocketAddr;
 use std::sync::Arc;
-use std::time::Duration;
 
 use crate::sink_channel_filter::{SinkChannelFilter, SinkChannelFilterFn};
 use crate::websocket::PlaybackState;
@@ -235,19 +234,6 @@ impl WebSocketServer {
     /// Sets the context for this sink.
     pub fn context(mut self, ctx: &Arc<Context>) -> Self {
         self.context = ctx.clone();
-        self
-    }
-
-    /// Enables or disables publishing process and system statistics to the
-    /// `/sysinfo` topic.
-    ///
-    /// When set to `Some(interval)`, the server publishes a
-    /// SystemInfo message at the given `interval` with cpu and memory
-    /// stats for the process and the system. Clamped to a minimum of 200ms.
-    ///
-    /// Defaults to `None` (disabled).
-    pub fn sysinfo(mut self, refresh_interval: Option<Duration>) -> Self {
-        self.options.sysinfo = refresh_interval;
         self
     }
 
