@@ -246,6 +246,7 @@ fn transcode_and_publish(
     let frame = VideoFrame {
         rotation: VideoRotation::VideoRotation0,
         timestamp_us: (timestamp_ns / 1000) as i64,
+        frame_metadata: None,
         buffer: buffer.0,
     };
     video_source.capture_frame(&frame);
