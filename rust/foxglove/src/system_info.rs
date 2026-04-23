@@ -245,7 +245,7 @@ impl SystemInfoPublisher {
         };
 
         SystemInfoHandle {
-            inner: get_runtime_handle().spawn(run_publisher(channel, context, refresh_interval)),
+            inner: get_runtime_handle().spawn(run_publisher(channel, refresh_interval)),
         }
     }
 }
@@ -285,11 +285,7 @@ impl Future for SystemInfoHandle {
     }
 }
 
-async fn run_publisher(
-    channel: Channel<SystemInfo>,
-    context: Weak<Context>,
-    refresh_interval: Duration,
-) {
+async fn run_publisher(channel: Channel<SystemInfo>, refresh_interval: Duration) {
     let pid = Pid::from_u32(std::process::id());
     let kernel_version = System::kernel_version().unwrap_or_default();
     let os_version = System::os_version().unwrap_or_default();
@@ -314,13 +310,6 @@ async fn run_publisher(
 
     loop {
         interval.tick().await;
-
-        // Stop publishing if the context has been dropped. We continue to hold the
-        // channel for the remainder of this task; it will be closed in the cleanup
-        // below. This avoids logging through a channel whose context is gone.
-        if context.strong_count() == 0 {
-            break;
-        }
 
         system.refresh_memory();
         system.refresh_processes_specifics(ProcessesToUpdate::Some(&[pid]), false, process_refresh);
@@ -347,8 +336,6 @@ async fn run_publisher(
 
         channel.log(&info);
     }
-
-    channel.close();
 }
 
 #[cfg(test)]
@@ -407,25 +394,6 @@ mod tests {
         tokio::time::timeout(Duration::from_secs(2), handle)
             .await
             .expect("publisher should exit after abort");
-    }
-
-    #[tokio::test(flavor = "current_thread")]
-    async fn publisher_exits_when_context_dropped() {
-        let ctx = Context::new();
-        let handle = SystemInfoPublisher::new()
-            .context(&ctx)
-            .refresh_interval(Duration::from_millis(200))
-            .start();
-
-        // Drop the user's strong context reference. The publisher holds only a
-        // Weak<Context>, so the next loop iteration should observe strong_count == 0
-        // and exit cleanly.
-        drop(ctx);
-
-        // Wait long enough for at least one tick after the priming interval.
-        tokio::time::timeout(Duration::from_secs(2), handle)
-            .await
-            .expect("publisher should exit after context drop");
     }
 
     #[test]

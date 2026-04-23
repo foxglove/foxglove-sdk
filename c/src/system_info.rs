@@ -79,10 +79,10 @@ unsafe fn do_start(
         builder = builder.topic(topic);
     }
 
-    if let Some(&refresh_ms) = options.refresh_interval_ms
-        && refresh_ms > 0
-    {
-        builder = builder.refresh_interval(Duration::from_millis(refresh_ms));
+    if let Some(&refresh_ms) = options.refresh_interval_ms {
+        if refresh_ms > 0 {
+            builder = builder.refresh_interval(Duration::from_millis(refresh_ms));
+        }
     }
 
     let handle = builder.start();
