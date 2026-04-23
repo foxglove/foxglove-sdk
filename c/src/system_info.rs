@@ -33,7 +33,7 @@ pub struct FoxgloveSystemInfoPublisherOptions<'a> {
 
     /// Optional refresh interval, in milliseconds.
     ///
-    /// When null or zero, defaults to 1000 ms (1 second). Clamped to a minimum of 200 ms.
+    /// When null or zero, defaults to 500 ms. Clamped to a minimum of 200 ms.
     pub refresh_interval_ms: Option<&'a u64>,
 }
 
@@ -69,8 +69,9 @@ unsafe fn do_start(
     let mut builder = SystemInfoPublisher::new();
 
     if !options.context.is_null() {
+        // SAFETY: options.context is a valid pointer to a FoxgloveContext created via foxglove_context_new.
         let ctx = ManuallyDrop::new(unsafe { Arc::from_raw(options.context) });
-        builder = builder.context(&ctx);
+        builder = builder.context(Arc::clone(&*ctx));
     }
 
     let topic = unsafe { options.topic.as_utf8_str() }

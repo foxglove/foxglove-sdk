@@ -38,7 +38,7 @@ impl Drop for PySystemInfoPublisher {
 ///
 /// :param topic: The channel topic name. Defaults to ``/sysinfo``.
 /// :type topic: str | None
-/// :param refresh_interval: How often to publish, in seconds. Defaults to ``1.0``.
+/// :param refresh_interval: How often to publish, in seconds. Defaults to ``0.5``.
 ///     Clamped to a minimum of 200ms.
 /// :type refresh_interval: float | None
 /// :param context: The context on which the publisher creates its channel. Defaults to
@@ -69,7 +69,7 @@ pub fn start_sysinfo_publisher(
     }
 
     if let Some(context) = context {
-        builder = builder.context(&context.0);
+        builder = builder.context(context.0.clone());
     }
 
     Ok(PySystemInfoPublisher(Some(builder.start())))

@@ -3,7 +3,7 @@
 //! Build a [`SystemInfoPublisher`] and call [`SystemInfoPublisher::start`]
 //! to spawn a background task that periodically logs a [`SystemInfo`]
 //! message to a channel. The default channel is `/sysinfo`, and the default
-//! refresh interval is 1 second.
+//! refresh interval is 500ms.
 //!
 //! The returned [`SystemInfoHandle`] can be `.await`ed to wait for the
 //! publisher to complete, or aborted with [`SystemInfoHandle::abort`].
@@ -11,7 +11,7 @@
 use std::borrow::Cow;
 use std::future::Future;
 use std::pin::Pin;
-use std::sync::{Arc, Weak};
+use std::sync::Arc;
 use std::task::{Context as TaskContext, Poll};
 use std::time::Duration;
 
@@ -29,7 +29,7 @@ use crate::{Channel, ChannelBuilder, Context, Encode, Schema, runtime::get_runti
 pub const DEFAULT_SYSINFO_TOPIC: &str = "/sysinfo";
 
 /// The default refresh interval for [`SystemInfoPublisher`].
-pub const DEFAULT_SYSINFO_REFRESH_INTERVAL: Duration = Duration::from_secs(1);
+pub const DEFAULT_SYSINFO_REFRESH_INTERVAL: Duration = Duration::from_millis(500);
 
 /// JSON Schema (draft 2020-12) describing [`SystemInfo`] for consumers of the `/sysinfo` topic.
 const SYSINFO_JSON_SCHEMA: &str = r#"{
@@ -162,7 +162,7 @@ impl Encode for SystemInfo {
 pub struct SystemInfoPublisher {
     topic: Option<String>,
     refresh_interval: Option<Duration>,
-    context: Option<Weak<Context>>,
+    context: Option<Arc<Context>>,
 }
 
 impl SystemInfoPublisher {
@@ -170,7 +170,7 @@ impl SystemInfoPublisher {
     ///
     /// The defaults are:
     /// - topic: [`DEFAULT_SYSINFO_TOPIC`] (`/sysinfo`)
-    /// - refresh interval: [`DEFAULT_SYSINFO_REFRESH_INTERVAL`] (1 second)
+    /// - refresh interval: [`DEFAULT_SYSINFO_REFRESH_INTERVAL`] (500ms)
     /// - context: the global default context
     pub fn new() -> Self {
         Self::default()
@@ -198,8 +198,8 @@ impl SystemInfoPublisher {
     /// Sets the [`Context`] on which the publisher creates its channel.
     ///
     /// Defaults to the global default context.
-    pub fn context(mut self, ctx: &Arc<Context>) -> Self {
-        self.context = Some(Arc::downgrade(ctx));
+    pub fn context(mut self, ctx: Arc<Context>) -> Self {
+        self.context = Some(ctx);
         self
     }
 
@@ -234,23 +234,12 @@ impl SystemInfoPublisher {
         let topic = self
             .topic
             .unwrap_or_else(|| DEFAULT_SYSINFO_TOPIC.to_string());
-        let context = self
-            .context
-            .unwrap_or_else(|| Arc::downgrade(&Context::get_default()));
+        let context = self.context.unwrap_or_else(Context::get_default);
 
         // Create the channel synchronously so it's registered before start() returns.
-        let channel = match context.upgrade() {
-            Some(ctx) => ChannelBuilder::new(topic)
-                .context(&ctx)
-                .build::<SystemInfo>(),
-            None => {
-                // Context already dropped: spawn a no-op task so the caller still
-                // gets a handle they can await/abort.
-                return SystemInfoHandle {
-                    inner: get_runtime_handle().spawn(async {}),
-                };
-            }
-        };
+        let channel = ChannelBuilder::new(topic)
+            .context(&context)
+            .build::<SystemInfo>();
 
         SystemInfoHandle {
             inner: get_runtime_handle().spawn(run_publisher(channel, refresh_interval)),
@@ -389,7 +378,7 @@ mod tests {
     async fn publisher_exits_when_aborted() {
         let ctx = Context::new();
         let handle = SystemInfoPublisher::new()
-            .context(&ctx)
+            .context(ctx)
             .refresh_interval(Duration::from_millis(200))
             .start();
 

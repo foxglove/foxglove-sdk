@@ -2951,7 +2951,7 @@ typedef struct foxglove_system_info_publisher_options {
   /**
    * Optional refresh interval, in milliseconds.
    *
-   * When null or zero, defaults to 1000 ms (1 second). Clamped to a minimum of 200 ms.
+   * When null or zero, defaults to 500 ms. Clamped to a minimum of 200 ms.
    */
   const uint64_t *refresh_interval_ms;
 } foxglove_system_info_publisher_options;
