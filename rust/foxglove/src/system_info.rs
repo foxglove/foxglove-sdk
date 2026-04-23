@@ -5,12 +5,15 @@
 //! message to a channel. The default channel is `/sysinfo`, and the default
 //! refresh interval is 1 second.
 //!
-//! The returned [`tokio::task::JoinHandle`] can be used to wait for the
-//! publisher to complete, or to abort the publisher with [`JoinHandle::abort`].
+//! The returned [`SystemInfoHandle`] can be `.await`ed to wait for the
+//! publisher to complete, or aborted with [`SystemInfoHandle::abort`].
 //! The publisher otherwise runs until the associated [`Context`] is dropped.
 
 use std::borrow::Cow;
+use std::future::Future;
+use std::pin::Pin;
 use std::sync::{Arc, Weak};
+use std::task::{Context as TaskContext, Poll};
 use std::time::Duration;
 
 use bytes::BufMut;
@@ -18,7 +21,7 @@ use serde::Serialize;
 use sysinfo::{
     CpuRefreshKind, MINIMUM_CPU_UPDATE_INTERVAL, Pid, ProcessRefreshKind, ProcessesToUpdate, System,
 };
-pub use tokio::task::JoinHandle;
+use tokio::task::JoinHandle;
 use tokio::time::MissedTickBehavior;
 
 use crate::{Channel, ChannelBuilder, Context, Encode, Schema, runtime::get_runtime_handle};
@@ -201,19 +204,18 @@ impl SystemInfoPublisher {
         self
     }
 
-    /// Starts the publisher and returns a [`JoinHandle`] for the background task.
+    /// Starts the publisher and returns a [`SystemInfoHandle`] for the background task.
     ///
     /// The task runs until either:
-    /// - [`JoinHandle::abort`](tokio::task::JoinHandle::abort) is called on
-    ///   the returned handle, or
+    /// - [`SystemInfoHandle::abort`] is called on the returned handle, or
     /// - the associated [`Context`] is dropped.
     ///
     /// The publisher creates its channel and registers it with the context
     /// synchronously before spawning the background task. The channel is
     /// closed when the task exits (whether by abort or context drop).
-    pub fn start(self) -> JoinHandle<()> {
+    pub fn start(self) -> SystemInfoHandle {
         // If we refresh too quickly we'll get invalid values for cpu usage.
-        // sysinfo crate exports a platform dependant MINIMUM_CPU_UPDATE_INTERVAL
+        // sysinfo crate exports a platform dependent MINIMUM_CPU_UPDATE_INTERVAL
         // that is 200ms on Linux. However, it is 0 on unknown platforms.
         // We clamp to 200ms as well to be safe.
         let refresh_interval = self
@@ -235,12 +237,51 @@ impl SystemInfoPublisher {
                 .build::<SystemInfo>(),
             None => {
                 // Context already dropped: spawn a no-op task so the caller still
-                // gets a JoinHandle they can await/abort.
-                return get_runtime_handle().spawn(async {});
+                // gets a handle they can await/abort.
+                return SystemInfoHandle {
+                    inner: get_runtime_handle().spawn(async {}),
+                };
             }
         };
 
-        get_runtime_handle().spawn(run_publisher(channel, context, refresh_interval))
+        SystemInfoHandle {
+            inner: get_runtime_handle().spawn(run_publisher(channel, context, refresh_interval)),
+        }
+    }
+}
+
+/// Handle to a running [`SystemInfoPublisher`] background task.
+///
+/// Returned by [`SystemInfoPublisher::start`]. The handle can be `.await`ed to
+/// wait for the publisher to finish, or [`abort`](Self::abort)ed to stop it.
+/// Dropping the handle does not stop the publisher; it will continue running
+/// until either [`abort`](Self::abort) is called or the associated [`Context`]
+/// is dropped.
+#[must_use = "the publisher will keep running until aborted or the context is dropped, but the handle is the only way to wait for or abort it"]
+#[derive(Debug)]
+pub struct SystemInfoHandle {
+    inner: JoinHandle<()>,
+}
+
+impl SystemInfoHandle {
+    /// Aborts the publisher's background task.
+    ///
+    /// The task is signaled to stop at the next `.await` point. After calling
+    /// this, awaiting the handle will resolve once the task has actually
+    /// terminated.
+    pub fn abort(&self) {
+        self.inner.abort();
+    }
+}
+
+impl Future for SystemInfoHandle {
+    type Output = ();
+
+    fn poll(mut self: Pin<&mut Self>, cx: &mut TaskContext<'_>) -> Poll<Self::Output> {
+        // The publisher task itself never panics or returns an error, and we
+        // intentionally swallow JoinError (e.g. from abort) so that this
+        // handle does not expose tokio types in its public API.
+        Pin::new(&mut self.inner).poll(cx).map(|_| ())
     }
 }
 
@@ -361,12 +402,11 @@ mod tests {
         // Let the task reach the select loop (past the priming calls).
         tokio::task::yield_now().await;
         handle.abort();
-        let result = handle.await;
-        assert!(result.is_err(), "publisher task should be cancelled");
-        assert!(
-            result.unwrap_err().is_cancelled(),
-            "publisher should exit via abort"
-        );
+        // The handle resolves once the task has actually stopped; bound the wait
+        // so we don't hang the test if abort is not honored.
+        tokio::time::timeout(Duration::from_secs(2), handle)
+            .await
+            .expect("publisher should exit after abort");
     }
 
     #[tokio::test(flavor = "current_thread")]
@@ -385,8 +425,7 @@ mod tests {
         // Wait long enough for at least one tick after the priming interval.
         tokio::time::timeout(Duration::from_secs(2), handle)
             .await
-            .expect("publisher should exit after context drop")
-            .expect("publisher should not panic");
+            .expect("publisher should exit after context drop");
     }
 
     #[test]

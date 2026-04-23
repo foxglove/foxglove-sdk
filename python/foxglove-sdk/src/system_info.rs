@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use foxglove::system_info::{JoinHandle, SystemInfoPublisher};
+use foxglove::system_info::{SystemInfoHandle, SystemInfoPublisher};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
@@ -11,7 +11,7 @@ use crate::PyContext;
 /// The publisher is started by :py:func:`foxglove.start_sysinfo_publisher` and runs in
 /// the background until :py:meth:`stop` is called or this object is garbage collected.
 #[pyclass(name = "SystemInfoPublisher", module = "foxglove")]
-pub struct PySystemInfoPublisher(Option<JoinHandle<()>>);
+pub struct PySystemInfoPublisher(Option<SystemInfoHandle>);
 
 #[pymethods]
 impl PySystemInfoPublisher {

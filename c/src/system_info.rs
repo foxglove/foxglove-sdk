@@ -4,7 +4,7 @@ use std::mem::ManuallyDrop;
 use std::sync::Arc;
 use std::time::Duration;
 
-use foxglove::system_info::{JoinHandle, SystemInfoPublisher};
+use foxglove::system_info::{SystemInfoHandle, SystemInfoPublisher};
 
 use crate::{FoxgloveContext, FoxgloveError, FoxgloveString, result_to_c};
 
@@ -12,7 +12,7 @@ use crate::{FoxgloveContext, FoxgloveError, FoxgloveString, result_to_c};
 ///
 /// The handle is created by [`foxglove_system_info_publisher_start`] and freed by
 /// [`foxglove_system_info_publisher_stop`].
-pub struct FoxgloveSystemInfoPublisher(JoinHandle<()>);
+pub struct FoxgloveSystemInfoPublisher(SystemInfoHandle);
 
 /// Options for [`foxglove_system_info_publisher_start`].
 ///
