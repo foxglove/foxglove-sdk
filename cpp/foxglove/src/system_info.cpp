@@ -4,7 +4,9 @@
 
 namespace foxglove {
 
-FoxgloveResult<SystemInfoPublisher> SystemInfoPublisher::create(SystemInfoOptions&& options) {
+FoxgloveResult<SystemInfoPublisher> SystemInfoPublisher::create(
+  SystemInfoOptions&& options  // NOLINT(cppcoreguidelines-rvalue-reference-param-not-moved)
+) {
   foxglove_internal_register_cpp_wrapper();
 
   foxglove_system_info_publisher_options c_options = {};
