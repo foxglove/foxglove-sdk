@@ -205,13 +205,12 @@ impl SystemInfoPublisher {
 
     /// Starts the publisher and returns a [`SystemInfoHandle`] for the background task.
     ///
-    /// The task runs until either:
-    /// - [`SystemInfoHandle::abort`] is called on the returned handle, or
-    /// - the associated [`Context`] is dropped.
+    /// The task is intended to run until [`SystemInfoHandle::abort`] is called on the
+    /// returned handle.
     ///
     /// The publisher creates its channel and registers it with the context
     /// synchronously before spawning the background task. The channel is
-    /// closed when the task exits (whether by abort or context drop).
+    /// closed when the background task exits (for example after `abort`).
     pub fn start(self) -> SystemInfoHandle {
         // If we refresh too quickly we'll get invalid values for cpu usage.
         // sysinfo crate exports a platform dependent MINIMUM_CPU_UPDATE_INTERVAL
@@ -255,7 +254,7 @@ impl SystemInfoPublisher {
 /// wait for the publisher to finish, or [`abort`](Self::abort)ed to stop it.
 /// Dropping the handle does not stop the publisher; it will continue running
 /// until [`abort`](Self::abort) is called.
-#[must_use = "the publisher will keep running until aborted or the context is dropped, but the handle is the only way to wait for or abort it"]
+#[must_use = "the publisher keeps running until aborted; the handle is the only way to wait for or abort it"]
 #[derive(Debug)]
 pub struct SystemInfoHandle {
     inner: JoinHandle<()>,

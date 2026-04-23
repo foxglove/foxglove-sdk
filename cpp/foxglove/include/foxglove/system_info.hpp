@@ -39,8 +39,7 @@ struct SystemInfoOptions final {
 /// interval.
 ///
 /// The publisher runs until it is stopped via `stop()`, or until this object is
-/// destroyed (which calls `stop()` automatically), or until the associated Context is
-/// dropped.
+/// destroyed (which calls `stop()` automatically).
 ///
 /// @note SystemInfoPublisher is movable but not copyable, and is thread-safe.
 class SystemInfoPublisher final {
