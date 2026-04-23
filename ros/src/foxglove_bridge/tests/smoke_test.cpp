@@ -207,12 +207,14 @@ TEST(SmokeTest, testConnectionGraphSubscribeUnsubscribe) {
   wsClient.sendText(nlohmann::json{{"op", "subscribeConnectionGraph"}}.dump());
   EXPECT_TRUE(waitFor([&]() {
     return g_bridge->graphSubscriptionCount() == startCount + 1;
-  })) << "count did not increment; got " << g_bridge->graphSubscriptionCount();
+  }))
+    << "count did not increment; got " << g_bridge->graphSubscriptionCount();
 
   wsClient.sendText(nlohmann::json{{"op", "unsubscribeConnectionGraph"}}.dump());
   EXPECT_TRUE(waitFor([&]() {
     return g_bridge->graphSubscriptionCount() == startCount;
-  })) << "count did not decrement; got " << g_bridge->graphSubscriptionCount();
+  }))
+    << "count did not decrement; got " << g_bridge->graphSubscriptionCount();
 }
 
 TEST(SmokeTest, testSubscription) {
