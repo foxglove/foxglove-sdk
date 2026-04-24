@@ -20,7 +20,8 @@ FoxgloveResult<SystemInfoPublisher> SystemInfoPublisher::create(
 
   std::optional<uint64_t> refresh_interval_ms;
   if (options.refresh_interval) {
-    refresh_interval_ms = static_cast<uint64_t>(std::max(options.refresh_interval->count(), int64_t(0)));
+    refresh_interval_ms =
+      static_cast<uint64_t>(std::max(options.refresh_interval->count(), int64_t(0)));
     c_options.refresh_interval_ms = &*refresh_interval_ms;
   }
 
