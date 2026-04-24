@@ -141,7 +141,8 @@ impl Encode for SystemInfo {
 /// Builder for the system info publisher.
 ///
 /// The publisher creates a channel on the configured [`Context`] and spawns a
-/// background task that periodically logs a [`SystemInfo`] message to the channel.
+/// background task that periodically logs a SystemInfo message to the channel
+/// with stats on CPU and memory usage for the process and the system.
 ///
 /// # Example
 ///
