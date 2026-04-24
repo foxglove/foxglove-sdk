@@ -14,6 +14,9 @@
 
 constexpr char URI[] = "ws://localhost:8765";
 
+// Set in main(); tests use it to observe internal bridge state.
+foxglove_bridge::FoxgloveBridge* g_bridge = nullptr;
+
 // Binary representation of std_msgs/msg/String for "hello world"
 constexpr uint8_t HELLO_WORLD_CDR[] = {0,   1,   0,   0,  12,  0,   0,   0,   104, 101,
                                        108, 108, 111, 32, 119, 111, 114, 108, 100, 0};
@@ -178,6 +181,40 @@ std::shared_ptr<T> deserializeMsg(const rcl_serialized_message_t* msg) {
 TEST(SmokeTest, testConnection) {
   foxglove::test::Client<websocketpp::config::asio_client> wsClient;
   EXPECT_EQ(std::future_status::ready, wsClient.connect(URI).wait_for(DEFAULT_TIMEOUT));
+}
+
+TEST(SmokeTest, testConnectionGraphSubscribeUnsubscribe) {
+  ASSERT_NE(g_bridge, nullptr);
+
+  // Capture starting count in case prior tests left a nonzero residual.
+  const int startCount = g_bridge->graphSubscriptionCount();
+
+  foxglove::test::Client<websocketpp::config::asio_client> wsClient;
+  ASSERT_EQ(std::future_status::ready, wsClient.connect(URI).wait_for(DEFAULT_TIMEOUT));
+
+  // Poll for `pred` to become true, up to DEFAULT_TIMEOUT.
+  auto waitFor = [](const std::function<bool()>& pred) {
+    const auto deadline = std::chrono::steady_clock::now() + DEFAULT_TIMEOUT;
+    while (std::chrono::steady_clock::now() < deadline) {
+      if (pred()) {
+        return true;
+      }
+      std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    }
+    return pred();
+  };
+
+  wsClient.sendText(nlohmann::json{{"op", "subscribeConnectionGraph"}}.dump());
+  EXPECT_TRUE(waitFor([&]() {
+    return g_bridge->graphSubscriptionCount() == startCount + 1;
+  }))
+    << "count did not increment; got " << g_bridge->graphSubscriptionCount();
+
+  wsClient.sendText(nlohmann::json{{"op", "unsubscribeConnectionGraph"}}.dump());
+  EXPECT_TRUE(waitFor([&]() {
+    return g_bridge->graphSubscriptionCount() == startCount;
+  }))
+    << "count did not decrement; got " << g_bridge->graphSubscriptionCount();
 }
 
 TEST(SmokeTest, testSubscription) {
@@ -797,6 +834,7 @@ int main(int argc, char** argv) {
   nodeOptions.append_parameter_override("asset_uri_allowlist",
                                         std::vector<std::string>({"file://.*"}));
   foxglove_bridge::FoxgloveBridge node(nodeOptions);
+  g_bridge = &node;
   executor.add_node(node.get_node_base_interface());
 
   std::thread spinnerThread([&executor]() {
