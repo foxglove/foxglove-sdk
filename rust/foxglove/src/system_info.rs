@@ -352,6 +352,48 @@ mod tests {
     }
 
     #[test]
+    fn schema_properties_match_serialized_fields() {
+        // Guards against drift between the hand-written JSON schema and the
+        // SystemInfo struct: any field added/renamed/removed must be reflected
+        // in both places, otherwise this test fails.
+        let info = SystemInfo {
+            process_memory: 0.0,
+            process_virtual_memory: 0.0,
+            process_cpu_percent: 0.0,
+            total_cpu_percent: 0.0,
+            num_cpus: 0,
+            total_memory: 0.0,
+            used_memory: 0.0,
+            total_swap: 0.0,
+            used_swap: 0.0,
+            kernel_version: String::new(),
+            os_version: String::new(),
+        };
+        let serialized: serde_json::Value =
+            serde_json::to_value(&info).expect("SystemInfo serializes");
+        let serialized_keys: std::collections::BTreeSet<String> = serialized
+            .as_object()
+            .expect("SystemInfo serializes as a JSON object")
+            .keys()
+            .cloned()
+            .collect();
+
+        let schema: serde_json::Value =
+            serde_json::from_str(SYSINFO_JSON_SCHEMA).expect("schema is valid JSON");
+        let schema_keys: std::collections::BTreeSet<String> = schema["properties"]
+            .as_object()
+            .expect("schema has a properties object")
+            .keys()
+            .cloned()
+            .collect();
+
+        assert_eq!(
+            schema_keys, serialized_keys,
+            "JSON schema properties must match SystemInfo serialized field names"
+        );
+    }
+
+    #[test]
     fn encodes_as_json() {
         let info = SystemInfo {
             process_memory: 1.0,

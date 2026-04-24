@@ -390,6 +390,9 @@ FoxgloveBridge::~FoxgloveBridge() {
   if (_rosgraphPollThread) {
     _rosgraphPollThread->join();
   }
+  if (_sysinfoPublisher) {
+    _sysinfoPublisher->stop();
+  }
 #ifdef FOXGLOVE_REMOTE_ACCESS
   if (_gateway) {
     _gateway->stop();
