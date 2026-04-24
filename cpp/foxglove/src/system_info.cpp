@@ -2,6 +2,8 @@
 #include <foxglove/error.hpp>
 #include <foxglove/system_info.hpp>
 
+#include <algorithm>
+
 namespace foxglove {
 
 FoxgloveResult<SystemInfoPublisher> SystemInfoPublisher::create(
