@@ -39,6 +39,8 @@ tokio-util = { version = "0.7", features = ["io", "rt"] }
 tracing = { version = "0.1", features = ["log"] }
 tracing-test = "0.2.5"
 insta = { version = "1.42.2", features = ["json"] }
+livekit = { git = "https://github.com/gasmith/rust-sdks", branch = "revert-protocol-change" }
+libwebrtc = { git = "https://github.com/gasmith/rust-sdks", branch = "revert-protocol-change" }
 
 [workspace.lints.clippy]
 assigning_clones = "warn"
