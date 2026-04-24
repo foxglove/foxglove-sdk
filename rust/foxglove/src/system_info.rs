@@ -1,7 +1,7 @@
 //! Optional publisher that reports process and system statistics.
 //!
 //! Build a [`SystemInfoPublisher`] and call [`SystemInfoPublisher::start`]
-//! to spawn a background task that periodically logs a [`SystemInfo`]
+//! to spawn a background task that periodically logs a SystemInfo
 //! message to a channel. The default channel is `/sysinfo`, and the default
 //! refresh interval is 500ms.
 //!
@@ -31,7 +31,7 @@ pub const DEFAULT_SYSINFO_TOPIC: &str = "/sysinfo";
 /// The default refresh interval for [`SystemInfoPublisher`].
 pub const DEFAULT_SYSINFO_REFRESH_INTERVAL: Duration = Duration::from_millis(500);
 
-/// JSON Schema (draft 2020-12) describing [`SystemInfo`] for consumers of the `/sysinfo` topic.
+/// JSON Schema (draft 2020-12) describing SystemInfo for consumers of the `/sysinfo` topic.
 const SYSINFO_JSON_SCHEMA: &str = r#"{
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "SystemInfo",
@@ -186,7 +186,6 @@ impl SystemInfoPublisher {
 
     /// Sets the refresh interval.
     ///
-    /// The interval is clamped to a minimum of 200ms because the underlying
     /// The interval is clamped to a minimum of 200ms because CPU usage
     /// cannot be reliably computed for shorter intervals.
     ///
