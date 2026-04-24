@@ -7,7 +7,6 @@ RUN apt-get update \
     && apt-get install -y \
         cmake \
         curl \
-        doxygen \
         gcc \
         g++ \
         git \
@@ -20,6 +19,14 @@ RUN apt-get update \
         software-properties-common \
         unzip \
     && rm -rf /var/lib/apt/lists/*
+
+# doxygen — pin to match CI (.github/workflows/docs.yml)
+ARG DOXYGEN_VERSION=1.13.2
+RUN curl -fsSL https://github.com/doxygen/doxygen/releases/download/Release_$(echo ${DOXYGEN_VERSION} | tr '.' '_')/doxygen-${DOXYGEN_VERSION}.linux.bin.tar.gz \
+        -o /tmp/doxygen.tar.gz \
+    && tar -xzf /tmp/doxygen.tar.gz -C /tmp \
+    && cp /tmp/doxygen-${DOXYGEN_VERSION}/bin/doxygen /usr/local/bin/ \
+    && rm -rf /tmp/doxygen.tar.gz /tmp/doxygen-${DOXYGEN_VERSION}
 
 # protoc — pin to match CI (arduino/setup-protoc version in .github/workflows/ci.yml)
 ARG PROTOC_VERSION=29.6
