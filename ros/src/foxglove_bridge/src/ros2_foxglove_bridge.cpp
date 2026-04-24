@@ -231,6 +231,22 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
   this->set_parameter(rclcpp::Parameter{PARAM_PORT, _server->port()});
   RCLCPP_INFO(this->get_logger(), "Server listening on port %d", _server->port());
 
+  if (this->get_parameter(PARAM_SYSINFO).as_bool()) {
+    foxglove::SystemInfoOptions sysinfoOptions;
+    sysinfoOptions.context = _serverContext;
+    sysinfoOptions.topic = this->get_parameter(PARAM_SYSINFO_TOPIC).as_string();
+    sysinfoOptions.refresh_interval =
+      std::chrono::milliseconds(this->get_parameter(PARAM_SYSINFO_REFRESH_INTERVAL).as_int());
+    auto maybeSysinfo = foxglove::SystemInfoPublisher::create(std::move(sysinfoOptions));
+    if (!maybeSysinfo.has_value()) {
+      RCLCPP_WARN(this->get_logger(), "Couldn't start system info publisher: %s",
+                  foxglove::strerror(maybeSysinfo.error()));
+    } else {
+      _sysinfoPublisher =
+        std::make_unique<foxglove::SystemInfoPublisher>(std::move(maybeSysinfo.value()));
+    }
+  }
+
   if (publishClientCount) {
     static const std::string CLIENT_COUNT_TOPIC = "/foxglove_bridge/client_count";
     _clientCountPublisher = this->create_publisher<std_msgs::msg::UInt32>(
@@ -373,6 +389,9 @@ FoxgloveBridge::~FoxgloveBridge() {
   RCLCPP_INFO(this->get_logger(), "Shutting down %s", this->get_name());
   if (_rosgraphPollThread) {
     _rosgraphPollThread->join();
+  }
+  if (_sysinfoPublisher) {
+    _sysinfoPublisher->stop();
   }
 #ifdef FOXGLOVE_REMOTE_ACCESS
   if (_gateway) {

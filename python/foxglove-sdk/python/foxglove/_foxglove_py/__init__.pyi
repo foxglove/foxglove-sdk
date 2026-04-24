@@ -404,6 +404,40 @@ def start_server(
     """
     ...
 
+class SystemInfoPublisher:
+    """
+    A handle to a running system info publisher.
+
+    The publisher is started by :py:func:`foxglove.start_sysinfo_publisher` and runs in
+    the background until :py:meth:`stop` is called.
+    The caller is responsible for calling stop() when done; dropping the handle does not stop the background task.
+    """
+
+    def stop(self) -> None:
+        """
+        Stop the publisher. Subsequent calls to ``stop`` are no-ops.
+        """
+        ...
+
+def start_sysinfo_publisher(
+    *,
+    topic: str | None = None,
+    refresh_interval: float | None = None,
+    context: Context | None = None,
+) -> SystemInfoPublisher:
+    """
+    Start the system info publisher.
+
+    Periodically publishes process and system statistics (memory, CPU, OS info) to a channel.
+
+    :param topic: Channel topic name. Defaults to ``/sysinfo``.
+    :param refresh_interval: How often to publish, in seconds. Defaults to ``0.5``. Clamped to a minimum of 0.2.
+    :param context: The context on which the publisher creates its channel. Defaults to the global default context.
+
+    The caller is responsible for calling stop() on the returned handle when done; dropping the handle does not stop the background task.
+    """
+    ...
+
 def enable_logging(level: int) -> None:
     """
     Forward SDK logs to python's logging facility.

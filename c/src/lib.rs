@@ -37,12 +37,17 @@ mod server;
 mod service;
 #[cfg(not(target_family = "wasm"))]
 mod sink_channel_filter;
+#[cfg(not(target_family = "wasm"))]
+mod system_info;
 
 #[cfg(not(target_family = "wasm"))]
 pub use server::*;
 
 #[cfg(not(target_family = "wasm"))]
 pub use channel::*;
+
+#[cfg(not(target_family = "wasm"))]
+pub use system_info::*;
 
 #[cfg(not(target_family = "wasm"))]
 pub use logging::foxglove_set_log_level;

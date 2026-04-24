@@ -11,6 +11,7 @@ license.workspace = true
 default = ["derive", "websocket", "lz4", "zstd"]
 chrono = ["dep:chrono"]
 derive = ["dep:foxglove_derive"]
+sysinfo = ["dep:sysinfo", "dep:tokio", "tokio/rt-multi-thread", "tokio/time"]
 _remote-common = [
   "dep:base64",
   "dep:flume",
@@ -103,6 +104,7 @@ cdr = { version = "0.2.4", optional = true }
 reqwest = { version = "0.13.1", features = ["json", "rustls"], optional = true }
 percent-encoding = { version = "2.3.2", optional = true }
 semver = { version = "1.0", optional = true }
+sysinfo = { workspace = true, optional = true }
 
 [dev-dependencies]
 assert_matches = "1.5.0"

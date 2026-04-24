@@ -330,7 +330,7 @@ impl RemoteAccessConnection {
     ///
     /// If disconnected from the room, reset all state and attempt to restart the run loop.
     pub fn spawn_run_until_cancelled(self: Arc<Self>) -> JoinHandle<()> {
-        self.runtime.spawn(self.clone().run_until_cancelled())
+        self.runtime.clone().spawn(self.run_until_cancelled())
     }
 
     /// Run the server loop until cancelled.

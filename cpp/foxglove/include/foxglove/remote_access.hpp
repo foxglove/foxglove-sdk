@@ -8,6 +8,7 @@
 #include <foxglove/parameter.hpp>
 #include <foxglove/service.hpp>
 
+#include <chrono>
 #include <cstdint>
 #include <functional>
 #include <map>

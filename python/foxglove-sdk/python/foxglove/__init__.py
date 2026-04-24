@@ -178,6 +178,22 @@ except ImportError:
 
 
 try:
+    from ._foxglove_py import (
+        SystemInfoPublisher,
+        start_sysinfo_publisher,
+    )
+
+    __all__ += [
+        "SystemInfoPublisher",
+        "start_sysinfo_publisher",
+    ]
+
+except ImportError:
+    if sys.platform != "emscripten":
+        raise
+
+
+try:
     from .remote_access import Capability as RemoteAccessCapability
     from .remote_access import (
         QosProfile,
