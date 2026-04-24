@@ -10,8 +10,10 @@ use crate::{FoxgloveContext, FoxgloveError, FoxgloveString, result_to_c};
 
 /// Opaque handle to a running system info publisher.
 ///
-/// The handle is created by [`foxglove_system_info_publisher_start`] and freed by
-/// [`foxglove_system_info_publisher_stop`].
+/// The handle is created by [`foxglove_system_info_publisher_start`]. It is freed by
+/// [`foxglove_system_info_publisher_stop`] (which aborts the background task) or by
+/// [`foxglove_system_info_publisher_detach`] (which leaves the background task
+/// running until the process exits).
 pub struct FoxgloveSystemInfoPublisher(SystemInfoHandle);
 
 /// Options for [`foxglove_system_info_publisher_start`].
@@ -42,7 +44,9 @@ pub struct FoxgloveSystemInfoPublisherOptions<'a> {
 /// On success, writes a non-null handle to `out_publisher`. On failure, returns an error
 /// code and `out_publisher` is left untouched.
 ///
-/// The returned handle must be freed by calling [`foxglove_system_info_publisher_stop`].
+/// The returned handle must be freed by calling either
+/// [`foxglove_system_info_publisher_stop`] (to abort the background task) or
+/// [`foxglove_system_info_publisher_detach`] (to leave the background task running).
 ///
 /// # Safety
 /// - `options` must be a valid pointer to a [`FoxgloveSystemInfoPublisherOptions`] struct.
@@ -71,7 +75,7 @@ unsafe fn do_start(
     if !options.context.is_null() {
         // SAFETY: options.context is a valid pointer to a FoxgloveContext created via foxglove_context_new.
         let ctx = ManuallyDrop::new(unsafe { Arc::from_raw(options.context) });
-        builder = builder.context(Arc::clone(&*ctx));
+        builder = builder.context(&ctx);
     }
 
     let topic = unsafe { options.topic.as_utf8_str() }
@@ -108,5 +112,29 @@ pub unsafe extern "C" fn foxglove_system_info_publisher_stop(
     }
     let publisher = unsafe { Box::from_raw(publisher) };
     publisher.0.abort();
+    FoxgloveError::Ok
+}
+
+/// Free the system info publisher handle without stopping its background task.
+///
+/// The background task continues to run until the process exits. After calling this
+/// function, the handle is invalid and must not be used again. Passing a null pointer
+/// is a no-op.
+///
+/// # Safety
+/// - `publisher`, when non-null, must be a handle returned by
+///   [`foxglove_system_info_publisher_start`] that has not already been passed to
+///   either this function or [`foxglove_system_info_publisher_stop`].
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_system_info_publisher_detach(
+    publisher: *mut FoxgloveSystemInfoPublisher,
+) -> FoxgloveError {
+    if publisher.is_null() {
+        return FoxgloveError::Ok;
+    }
+    // Drop the Box (which drops the inner SystemInfoHandle / tokio JoinHandle), but
+    // do not abort the underlying task. Detaching a tokio JoinHandle leaves the
+    // spawned task running on the runtime.
+    drop(unsafe { Box::from_raw(publisher) });
     FoxgloveError::Ok
 }

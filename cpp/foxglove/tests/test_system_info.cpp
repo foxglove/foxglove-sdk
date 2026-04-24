@@ -47,7 +47,12 @@ TEST_CASE("SystemInfoPublisher with default options") {
   REQUIRE(requireValue(publisher).stop() == foxglove::FoxgloveError::Ok);
 }
 
-TEST_CASE("SystemInfoPublisher destructor stops the publisher") {
+TEST_CASE("SystemInfoPublisher destructor does not stop the publisher") {
+  // The destructor detaches the background task to match Rust/Python behavior:
+  // dropping the handle leaves the publisher running. We can't easily observe
+  // the still-running task here, but we can at least verify destruction does
+  // not crash or block, and that the handle can go out of scope without an
+  // explicit stop().
   auto context = foxglove::Context::create();
   foxglove::SystemInfoOptions options;
   options.context = context;
@@ -57,6 +62,5 @@ TEST_CASE("SystemInfoPublisher destructor stops the publisher") {
     auto publisher = foxglove::SystemInfoPublisher::create(std::move(options));
     REQUIRE(publisher.has_value());
   }
-  // Just make sure we don't crash and the destructor cleans up.
   std::this_thread::sleep_for(std::chrono::milliseconds(50));
 }

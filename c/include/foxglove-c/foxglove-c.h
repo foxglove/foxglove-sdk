@@ -495,8 +495,10 @@ typedef struct foxglove_service_responder foxglove_service_responder;
 /**
  * Opaque handle to a running system info publisher.
  *
- * The handle is created by [`foxglove_system_info_publisher_start`] and freed by
- * [`foxglove_system_info_publisher_stop`].
+ * The handle is created by [`foxglove_system_info_publisher_start`]. It is freed by
+ * [`foxglove_system_info_publisher_stop`] (which aborts the background task) or by
+ * [`foxglove_system_info_publisher_detach`] (which leaves the background task
+ * running until the process exits).
  */
 typedef struct foxglove_system_info_publisher foxglove_system_info_publisher;
 #endif
@@ -6415,7 +6417,9 @@ void foxglove_service_respond_error(struct foxglove_service_responder *responder
  * On success, writes a non-null handle to `out_publisher`. On failure, returns an error
  * code and `out_publisher` is left untouched.
  *
- * The returned handle must be freed by calling [`foxglove_system_info_publisher_stop`].
+ * The returned handle must be freed by calling either
+ * [`foxglove_system_info_publisher_stop`] (to abort the background task) or
+ * [`foxglove_system_info_publisher_detach`] (to leave the background task running).
  *
  * # Safety
  * - `options` must be a valid pointer to a [`FoxgloveSystemInfoPublisherOptions`] struct.
@@ -6439,6 +6443,22 @@ foxglove_error foxglove_system_info_publisher_start(const struct foxglove_system
  *   function.
  */
 foxglove_error foxglove_system_info_publisher_stop(struct foxglove_system_info_publisher *publisher);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Free the system info publisher handle without stopping its background task.
+ *
+ * The background task continues to run until the process exits. After calling this
+ * function, the handle is invalid and must not be used again. Passing a null pointer
+ * is a no-op.
+ *
+ * # Safety
+ * - `publisher`, when non-null, must be a handle returned by
+ *   [`foxglove_system_info_publisher_start`] that has not already been passed to
+ *   either this function or [`foxglove_system_info_publisher_stop`].
+ */
+foxglove_error foxglove_system_info_publisher_detach(struct foxglove_system_info_publisher *publisher);
 #endif
 
 #ifdef __cplusplus

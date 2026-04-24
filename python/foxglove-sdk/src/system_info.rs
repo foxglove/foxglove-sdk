@@ -63,7 +63,7 @@ pub fn start_sysinfo_publisher(
     }
 
     if let Some(context) = context {
-        builder = builder.context(context.0.clone());
+        builder = builder.context(&context.0);
     }
 
     Ok(PySystemInfoPublisher(Some(builder.start())))

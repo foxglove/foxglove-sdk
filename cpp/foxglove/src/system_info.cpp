@@ -31,7 +31,7 @@ FoxgloveResult<SystemInfoPublisher> SystemInfoPublisher::create(
 }
 
 SystemInfoPublisher::SystemInfoPublisher(foxglove_system_info_publisher* impl)
-    : impl_(impl, foxglove_system_info_publisher_stop) {}
+    : impl_(impl, foxglove_system_info_publisher_detach) {}
 
 FoxgloveError SystemInfoPublisher::stop() noexcept {
   if (auto* impl = impl_.release()) {

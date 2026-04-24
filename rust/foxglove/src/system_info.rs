@@ -198,8 +198,8 @@ impl SystemInfoPublisher {
     /// Sets the [`Context`] on which the publisher creates its channel.
     ///
     /// Defaults to the global default context.
-    pub fn context(mut self, ctx: Arc<Context>) -> Self {
-        self.context = Some(ctx);
+    pub fn context(mut self, ctx: &Arc<Context>) -> Self {
+        self.context = Some(ctx.clone());
         self
     }
 
@@ -378,7 +378,7 @@ mod tests {
     async fn publisher_exits_when_aborted() {
         let ctx = Context::new();
         let handle = SystemInfoPublisher::new()
-            .context(ctx)
+            .context(&ctx)
             .refresh_interval(Duration::from_millis(200))
             .start();
 

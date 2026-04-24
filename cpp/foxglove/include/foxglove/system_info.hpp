@@ -38,8 +38,11 @@ struct SystemInfoOptions final {
 /// and spawns a background task that logs a `SystemInfo` message at the configured
 /// interval.
 ///
-/// The publisher runs until it is stopped via `stop()`, or until this object is
-/// destroyed (which calls `stop()` automatically).
+/// The publisher runs until it is explicitly stopped via `stop()`. Destroying this
+/// object does **not** stop the publisher: the background task continues running
+/// until the process exits, matching the Rust and Python SDK behavior of detaching
+/// the underlying task when the handle is dropped. Call `stop()` explicitly to abort
+/// the background task before the process exits.
 ///
 /// @note SystemInfoPublisher is movable but not copyable, and is thread-safe.
 class SystemInfoPublisher final {
@@ -49,8 +52,11 @@ public:
 
   /// @brief Stop the publisher and free its resources.
   ///
-  /// This is called automatically by the destructor. After calling stop(), the
-  /// publisher is in an empty state and further calls to stop() are no-ops.
+  /// Aborts the background task. After calling stop(), the publisher is in an
+  /// empty state and further calls to stop() are no-ops.
+  ///
+  /// This is **not** called automatically by the destructor; if you want the
+  /// publisher to stop when this object goes out of scope, call stop() explicitly.
   FoxgloveError stop() noexcept;
 
 private:
