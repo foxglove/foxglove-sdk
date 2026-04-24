@@ -55,15 +55,14 @@ if (ENDIAN)
   add_compile_definitions(ARCH_IS_BIG_ENDIAN=1)
 endif()
 
-# FLE-419: Update hashes after v0.22.0 is released.
 set(FOXGLOVE_SDK_VERSION "0.22.0")
 
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64")
   set(FOXGLOVE_SDK_PLATFORM "aarch64-unknown-linux-gnu")
-  set(FOXGLOVE_SDK_SHA "INVALID")
+  set(FOXGLOVE_SDK_SHA "122b2b3553e1828d23e8728cdf9913be18be8fb63064118491b0313cb29ebea7")
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
   set(FOXGLOVE_SDK_PLATFORM "x86_64-unknown-linux-gnu")
-  set(FOXGLOVE_SDK_SHA "INVALID")
+  set(FOXGLOVE_SDK_SHA "93d4fef56766162d6ac5a866596f09708fc34543c5194595df48f36dfddbc759")
 else()
   message(FATAL_ERROR "Unsupported platform/architecture combination: ${CMAKE_SYSTEM_PROCESSOR}-${CMAKE_SYSTEM_NAME}")
 endif()

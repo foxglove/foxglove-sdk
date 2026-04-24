@@ -19,6 +19,8 @@ use std::path::PathBuf;
 use remote_access::start_gateway;
 use std::sync::{Arc, OnceLock};
 #[cfg(not(target_family = "wasm"))]
+use system_info::{PySystemInfoPublisher, start_sysinfo_publisher};
+#[cfg(not(target_family = "wasm"))]
 use websocket::start_server;
 
 mod errors;
@@ -31,6 +33,8 @@ mod remote_access;
 mod remote_common;
 mod schemas_wkt;
 mod sink_channel_filter;
+#[cfg(not(target_family = "wasm"))]
+mod system_info;
 #[cfg(not(target_family = "wasm"))]
 mod websocket;
 
@@ -338,6 +342,10 @@ fn _foxglove_py(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(open_mcap, m)?)?;
     #[cfg(not(target_family = "wasm"))]
     m.add_function(wrap_pyfunction!(start_server, m)?)?;
+    #[cfg(not(target_family = "wasm"))]
+    m.add_function(wrap_pyfunction!(start_sysinfo_publisher, m)?)?;
+    #[cfg(not(target_family = "wasm"))]
+    m.add_class::<PySystemInfoPublisher>()?;
     #[cfg(feature = "remote-access")]
     m.add_function(wrap_pyfunction!(start_gateway, m)?)?;
     m.add_function(wrap_pyfunction!(get_channel_for_topic, m)?)?;

@@ -201,6 +201,35 @@ void declareParameters(rclcpp::Node* node) {
   publishClientCountDescription.read_only = true;
   node->declare_parameter(PARAM_PUBLISH_CLIENT_COUNT, false, publishClientCountDescription);
 
+  auto sysinfoDescription = rcl_interfaces::msg::ParameterDescriptor{};
+  sysinfoDescription.name = PARAM_SYSINFO;
+  sysinfoDescription.type = rcl_interfaces::msg::ParameterType::PARAMETER_BOOL;
+  sysinfoDescription.description =
+    "Publish process and system statistics (CPU, memory, etc.) on a channel";
+  sysinfoDescription.read_only = true;
+  node->declare_parameter(PARAM_SYSINFO, true, sysinfoDescription);
+
+  auto sysinfoTopicDescription = rcl_interfaces::msg::ParameterDescriptor{};
+  sysinfoTopicDescription.name = PARAM_SYSINFO_TOPIC;
+  sysinfoTopicDescription.type = rcl_interfaces::msg::ParameterType::PARAMETER_STRING;
+  sysinfoTopicDescription.description =
+    "Topic name for system info messages. Defaults to /foxglove_bridge/sysinfo.";
+  sysinfoTopicDescription.read_only = true;
+  node->declare_parameter(PARAM_SYSINFO_TOPIC, DEFAULT_SYSINFO_TOPIC, sysinfoTopicDescription);
+
+  auto sysinfoRefreshIntervalDescription = rcl_interfaces::msg::ParameterDescriptor{};
+  sysinfoRefreshIntervalDescription.name = PARAM_SYSINFO_REFRESH_INTERVAL;
+  sysinfoRefreshIntervalDescription.type = rcl_interfaces::msg::ParameterType::PARAMETER_INTEGER;
+  sysinfoRefreshIntervalDescription.description =
+    "Refresh interval for system info messages in milliseconds. Minimum 200ms.";
+  sysinfoRefreshIntervalDescription.read_only = true;
+  sysinfoRefreshIntervalDescription.integer_range.resize(1);
+  sysinfoRefreshIntervalDescription.integer_range[0].from_value = 200;
+  sysinfoRefreshIntervalDescription.integer_range[0].to_value = std::numeric_limits<int64_t>::max();
+  sysinfoRefreshIntervalDescription.integer_range[0].step = 1;
+  node->declare_parameter(PARAM_SYSINFO_REFRESH_INTERVAL, DEFAULT_SYSINFO_REFRESH_INTERVAL_MS,
+                          sysinfoRefreshIntervalDescription);
+
   auto remoteAccessDescription = rcl_interfaces::msg::ParameterDescriptor{};
   remoteAccessDescription.name = PARAM_REMOTE_ACCESS;
   remoteAccessDescription.type = rcl_interfaces::msg::ParameterType::PARAMETER_BOOL;

@@ -332,6 +332,16 @@ FoxgloveResult<RemoteAccessGateway> RemoteAccessGateway::create(
     c_options.message_backlog_size = &*options.message_backlog_size;
   }
 
+  std::vector<foxglove_key_value> server_info;
+  if (options.server_info) {
+    server_info.reserve(options.server_info->size());
+    for (auto const& [key, value] : *options.server_info) {
+      server_info.push_back({{key.data(), key.length()}, {value.data(), value.length()}});
+    }
+    c_options.server_info = server_info.data();
+    c_options.server_info_count = server_info.size();
+  }
+
   foxglove_gateway* gateway = nullptr;
   foxglove_error error = foxglove_gateway_start(&c_options, &gateway);
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || gateway == nullptr) {

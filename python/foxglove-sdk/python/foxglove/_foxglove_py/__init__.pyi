@@ -242,17 +242,35 @@ class Parameter:
 
 class ParameterType(Enum):
     """
-    The type of a parameter.
+    An optional type hint for a :py:class:`Parameter`, used to disambiguate values whose
+    intended type cannot be inferred from the wire representation alone.
+
+    A parameter's type is typically derived directly from its value: integers, booleans,
+    strings, dicts, and homogeneous arrays of these are unambiguous on the wire. This enum
+    only enumerates the cases that need an explicit hint:
+
+    - :py:attr:`ParameterType.ByteArray`: a byte array is transmitted as a base64-encoded
+      string, so without a type hint it would be indistinguishable from an ordinary string.
+    - :py:attr:`ParameterType.Float64`: a whole-valued float (e.g. ``1.0``) may be
+      indistinguishable from an integer on the wire; the hint preserves the intended
+      floating-point type.
+    - :py:attr:`ParameterType.Float64Array`: same rationale as ``Float64``, for arrays.
+
+    Parameters of other types (integer, bool, string, dict, arrays of these) leave
+    :py:attr:`Parameter.type` set to ``None``.
     """
 
     ByteArray = ...
-    """A byte array."""
+    """A byte array, transmitted on the wire as a base64-encoded string. The type hint
+    distinguishes it from an ordinary string value."""
 
     Float64 = ...
-    """A floating-point value that can be represented as a `float64`."""
+    """A floating-point value that can be represented as a ``float64``. Used to preserve the
+    floating-point type for whole-valued numbers that would otherwise round-trip as integers."""
 
     Float64Array = ...
-    """An array of floating-point values that can be represented as `float64`s."""
+    """An array of floating-point values that can be represented as ``float64``s. Used to
+    preserve the floating-point type for arrays of whole-valued numbers."""
 
 class ParameterValue:
     """
@@ -383,6 +401,40 @@ def start_server(
 ) -> WebSocketServer:
     """
     Start a WebSocket server for live visualization.
+    """
+    ...
+
+class SystemInfoPublisher:
+    """
+    A handle to a running system info publisher.
+
+    The publisher is started by :py:func:`foxglove.start_sysinfo_publisher` and runs in
+    the background until :py:meth:`stop` is called.
+    The caller is responsible for calling stop() when done; dropping the handle does not stop the background task.
+    """
+
+    def stop(self) -> None:
+        """
+        Stop the publisher. Subsequent calls to ``stop`` are no-ops.
+        """
+        ...
+
+def start_sysinfo_publisher(
+    *,
+    topic: str | None = None,
+    refresh_interval: float | None = None,
+    context: Context | None = None,
+) -> SystemInfoPublisher:
+    """
+    Start the system info publisher.
+
+    Periodically publishes process and system statistics (memory, CPU, OS info) to a channel.
+
+    :param topic: Channel topic name. Defaults to ``/sysinfo``.
+    :param refresh_interval: How often to publish, in seconds. Defaults to ``0.5``. Clamped to a minimum of 0.2.
+    :param context: The context on which the publisher creates its channel. Defaults to the global default context.
+
+    The caller is responsible for calling stop() on the returned handle when done; dropping the handle does not stop the background task.
     """
     ...
 

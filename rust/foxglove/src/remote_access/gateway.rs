@@ -199,8 +199,8 @@ impl Default for Gateway {
 
 impl std::fmt::Debug for Gateway {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Gateway")
-            .field("name", &self.name)
+        let mut dbg = f.debug_struct("Gateway");
+        dbg.field("name", &self.name)
             .field("has_device_token", &self.device_token.is_some())
             .field("foxglove_api_url", &self.foxglove_api_url)
             .field("foxglove_api_timeout", &self.foxglove_api_timeout)
@@ -217,8 +217,8 @@ impl std::fmt::Debug for Gateway {
             .field("has_qos_classifier", &self.qos_classifier.is_some())
             .field("server_info", &self.server_info)
             .field("message_backlog_size", &self.message_backlog_size)
-            .field("has_context", &(self.context.strong_count() > 0))
-            .finish()
+            .field("has_context", &(self.context.strong_count() > 0));
+        dbg.finish()
     }
 }
 

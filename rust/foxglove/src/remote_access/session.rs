@@ -425,6 +425,12 @@ impl RemoteAccessSession {
         }
     }
 
+    /// Cancel the session's `CancellationToken`, signaling all session-scoped
+    /// tasks to stop.
+    pub(crate) fn cancel(&self) {
+        self.cancellation_token.cancel();
+    }
+
     /// Shut down the session: clear all participants (dropping their control
     /// queue senders so flush tasks exit), await the flush task handles, then
     /// close the LiveKit room.

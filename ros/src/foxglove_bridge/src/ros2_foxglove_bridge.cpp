@@ -102,6 +102,11 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
   RCLCPP_INFO(this->get_logger(), "Starting foxglove_bridge (%s, %s@%s)", rosDistro,
               foxglove_bridge::FOXGLOVE_BRIDGE_VERSION, foxglove_bridge::FOXGLOVE_BRIDGE_GIT_HASH);
 
+  std::optional<std::map<std::string, std::string>> rosServerInfo;
+  if (rosDistro && strlen(rosDistro) > 0) {
+    rosServerInfo = std::map<std::string, std::string>{{"ROS_DISTRO", rosDistro}};
+  }
+
   declareParameters(this);
 
   const auto port = static_cast<uint16_t>(this->get_parameter(PARAM_PORT).as_int());
@@ -149,10 +154,7 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
   sdkServerOptions.capabilities = _capabilities;
   sdkServerOptions.context = _serverContext;
 
-  if (rosDistro && strlen(rosDistro) > 0) {
-    std::map<std::string, std::string> serverInfo = {{"ROS_DISTRO", rosDistro}};
-    sdkServerOptions.server_info = std::move(serverInfo);
-  }
+  sdkServerOptions.server_info = rosServerInfo;
 
   if (_useSimTime) {
     sdkServerOptions.capabilities =
@@ -229,6 +231,22 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
   this->set_parameter(rclcpp::Parameter{PARAM_PORT, _server->port()});
   RCLCPP_INFO(this->get_logger(), "Server listening on port %d", _server->port());
 
+  if (this->get_parameter(PARAM_SYSINFO).as_bool()) {
+    foxglove::SystemInfoOptions sysinfoOptions;
+    sysinfoOptions.context = _serverContext;
+    sysinfoOptions.topic = this->get_parameter(PARAM_SYSINFO_TOPIC).as_string();
+    sysinfoOptions.refresh_interval =
+      std::chrono::milliseconds(this->get_parameter(PARAM_SYSINFO_REFRESH_INTERVAL).as_int());
+    auto maybeSysinfo = foxglove::SystemInfoPublisher::create(std::move(sysinfoOptions));
+    if (!maybeSysinfo.has_value()) {
+      RCLCPP_WARN(this->get_logger(), "Couldn't start system info publisher: %s",
+                  foxglove::strerror(maybeSysinfo.error()));
+    } else {
+      _sysinfoPublisher =
+        std::make_unique<foxglove::SystemInfoPublisher>(std::move(maybeSysinfo.value()));
+    }
+  }
+
   if (publishClientCount) {
     static const std::string CLIENT_COUNT_TOPIC = "/foxglove_bridge/client_count";
     _clientCountPublisher = this->create_publisher<std_msgs::msg::UInt32>(
@@ -285,6 +303,7 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
     gatewayOptions.context = _serverContext;
     gatewayOptions.device_token = deviceToken;
     gatewayOptions.supported_encodings = {"cdr", "json"};
+    gatewayOptions.server_info = std::move(rosServerInfo);
 
     const auto foxgloveApiUrl = this->get_parameter(PARAM_FOXGLOVE_API_URL).as_string();
     if (!foxgloveApiUrl.empty()) {
@@ -370,6 +389,9 @@ FoxgloveBridge::~FoxgloveBridge() {
   RCLCPP_INFO(this->get_logger(), "Shutting down %s", this->get_name());
   if (_rosgraphPollThread) {
     _rosgraphPollThread->join();
+  }
+  if (_sysinfoPublisher) {
+    _sysinfoPublisher->stop();
   }
 #ifdef FOXGLOVE_REMOTE_ACCESS
   if (_gateway) {

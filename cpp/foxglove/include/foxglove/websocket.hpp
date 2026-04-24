@@ -10,6 +10,7 @@
 #include <foxglove/playback_state.hpp>
 #include <foxglove/service.hpp>
 
+#include <chrono>
 #include <cstdint>
 #include <functional>
 #include <memory>
