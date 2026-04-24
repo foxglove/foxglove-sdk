@@ -187,7 +187,8 @@ impl SystemInfoPublisher {
     /// Sets the refresh interval.
     ///
     /// The interval is clamped to a minimum of 200ms because the underlying
-    /// `sysinfo` crate cannot reliably compute CPU usage for shorter intervals.
+    /// The interval is clamped to a minimum of 200ms because CPU usage
+    /// cannot be reliably computed for shorter intervals.
     ///
     /// Defaults to [`DEFAULT_SYSINFO_REFRESH_INTERVAL`].
     pub fn refresh_interval(mut self, interval: Duration) -> Self {
