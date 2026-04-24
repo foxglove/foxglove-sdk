@@ -24,6 +24,13 @@ license = "MIT"
 [workspace.dependencies]
 bytes = "1.11.1"
 chrono = { version = "0.4.39" }
+insta = { version = "1.42.2", features = ["json"] }
+# In v0.7.37, livekit introduced a breaking change to the data tracks wire
+# protocol. At the time of writing, no version of the javascript SDK knows how
+# to parse the new format. Tracked by FLE-452.
+libwebrtc = { git = "https://github.com/gasmith/rust-sdks", branch = "revert-protocol-change" }
+livekit = { git = "https://github.com/gasmith/rust-sdks", branch = "revert-protocol-change" }
+livekit-api = { git = "https://github.com/gasmith/rust-sdks", branch = "revert-protocol-change", default-features = false }
 log = "0.4.22"
 mcap = { version = "0.24", default-features = false }
 prost = "0.14"
@@ -38,10 +45,6 @@ tokio-tungstenite = "0.28"
 tokio-util = { version = "0.7", features = ["io", "rt"] }
 tracing = { version = "0.1", features = ["log"] }
 tracing-test = "0.2.5"
-insta = { version = "1.42.2", features = ["json"] }
-livekit = { git = "https://github.com/gasmith/rust-sdks", branch = "revert-protocol-change" }
-livekit-api = { git = "https://github.com/gasmith/rust-sdks", branch = "revert-protocol-change", default-features = false }
-libwebrtc = { git = "https://github.com/gasmith/rust-sdks", branch = "revert-protocol-change" }
 
 [workspace.lints.clippy]
 assigning_clones = "warn"
