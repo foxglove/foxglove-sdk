@@ -406,7 +406,11 @@ impl RemoteAccessConnection {
                 version = %version,
                 "adding existing participant"
             );
-            if let Err(e) = session.add_participant(identity.clone(), version).await {
+            let sid = participant.sid();
+            if let Err(e) = session
+                .add_participant(identity.clone(), sid, version)
+                .await
+            {
                 error!(
                     remote_access_session_id,
                     error = %e,

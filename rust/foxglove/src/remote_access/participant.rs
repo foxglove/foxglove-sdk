@@ -4,7 +4,10 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 use bytes::Bytes;
-use livekit::{ByteStreamWriter, StreamWriter, id::ParticipantIdentity};
+use livekit::{
+    ByteStreamWriter, StreamWriter,
+    id::{ParticipantIdentity, ParticipantSid},
+};
 use semver::Version;
 use tokio_util::sync::CancellationToken;
 
@@ -27,11 +30,19 @@ const DEFAULT_FETCH_ASSET_PER_PARTICIPANT: usize = 32;
 pub(crate) struct Participant {
     /// Locally-significant identifier for this particular instance of this participant.
     client_id: ClientId,
-    /// LiveKit participant ID.
+    /// LiveKit participant identity (stable across disconnect + reconnect).
     participant_id: ParticipantIdentity,
+    /// LiveKit session ID for this specific connection instance. Unique per
+    /// physical connection — unlike `participant_id`, it changes when a
+    /// participant disconnects and reconnects under the same identity. Used
+    /// by the `ParticipantDisconnected` handler to tell a stale disconnect
+    /// (for a prior instance) apart from a legitimate disconnect of the
+    /// current instance.
+    livekit_sid: ParticipantSid,
     /// The remote access protocol version advertised by this participant.
-    /// Stored for future use when branching protocol behavior based on the participant's version.
-    #[expect(dead_code)]
+    /// Captured at `add_participant` time and reused on reset so we don't have to
+    /// re-query the LiveKit room (which would race with reconnection under the
+    /// same identity).
     protocol_version: Version,
     /// Per-participant control plane queue. The receiving end is owned by the
     /// flush task.
@@ -63,8 +74,10 @@ impl Participant {
     ///
     /// Returns the participant (wrapped in `Arc` for shared ownership) and the
     /// flush task's `JoinHandle` (for teardown awaiting).
+    #[allow(clippy::too_many_arguments)]
     pub fn spawn(
         identity: ParticipantIdentity,
+        livekit_sid: ParticipantSid,
         protocol_version: Version,
         writer: ParticipantWriter,
         queue_size: usize,
@@ -112,6 +125,7 @@ impl Participant {
         let participant = Arc::new(Self {
             client_id,
             participant_id: identity,
+            livekit_sid,
             protocol_version,
             control_tx,
             pending_resets,
@@ -126,6 +140,8 @@ impl Participant {
     /// Creates a new participant without spawning a flush task.
     ///
     /// For use in tests that only need a participant with a pre-created channel.
+    /// The stored `livekit_sid` is a fixed placeholder; the race-disambiguation
+    /// tests that depend on distinct SIDs go through [`Participant::spawn`].
     #[cfg(test)]
     pub fn new(
         identity: ParticipantIdentity,
@@ -138,6 +154,8 @@ impl Participant {
         Self {
             client_id: ClientId::next(),
             participant_id: identity,
+            livekit_sid: ParticipantSid::try_from("PA_test".to_string())
+                .expect("valid LiveKit SID prefix"),
             protocol_version,
             control_tx,
             pending_resets,
@@ -172,6 +190,19 @@ impl Participant {
     /// Returns the participant's identity.
     pub fn participant_id(&self) -> &ParticipantIdentity {
         &self.participant_id
+    }
+
+    /// Returns the protocol version advertised by this participant.
+    pub(crate) fn protocol_version(&self) -> &Version {
+        &self.protocol_version
+    }
+
+    /// Returns the LiveKit session ID this participant was added with. Unique
+    /// per physical connection instance — used to disambiguate a stale
+    /// `ParticipantDisconnected` from a legitimate disconnect when the same
+    /// identity has reconnected.
+    pub(crate) fn livekit_sid(&self) -> &ParticipantSid {
+        &self.livekit_sid
     }
 
     /// Try to queue a control plane message. Returns `false` if the queue is
@@ -260,6 +291,14 @@ impl ParticipantWriter {
             }
         }
     }
+}
+
+/// Constructs a `ParticipantSid` for tests. LiveKit requires the `PA_`
+/// prefix; anything stable+unique works for identifying distinct instances.
+#[cfg(test)]
+pub(crate) fn test_sid(label: &str) -> ParticipantSid {
+    ParticipantSid::try_from(format!("PA_{label}"))
+        .expect("test_sid label should form a valid ParticipantSid")
 }
 
 #[cfg(test)]
