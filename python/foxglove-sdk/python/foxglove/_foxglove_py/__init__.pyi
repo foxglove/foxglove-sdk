@@ -410,6 +410,7 @@ class SystemInfoPublisher:
 
     The publisher is started by :py:func:`foxglove.start_sysinfo_publisher` and runs in
     the background until :py:meth:`stop` is called.
+    The caller is responsible for calling stop() when done; dropping the handle does not stop the background task.
     """
 
     def stop(self) -> None:
@@ -428,6 +429,8 @@ def start_sysinfo_publisher(
     Start the system info publisher.
 
     Periodically publishes process and system statistics (memory, CPU, OS info) to a channel.
+
+    The caller is responsible for calling stop() on the returned handle when done; dropping the handle does not stop the background task.
     """
     ...
 
