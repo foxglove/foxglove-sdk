@@ -7,7 +7,7 @@ publish = false
 [dependencies]
 foxglove = { path = "../foxglove", features = ["remote-access", "_protocol"] }
 livekit = { workspace = true, features = ["rustls-tls-native-roots"] }
-livekit-api = { version = "0.4", default-features = false, features = ["access-token"] }
+livekit-api = { workspace = true, features = ["access-token"] }
 axum = "0.8"
 reqwest = { version = "0.13", features = ["json"] }
 tokio.workspace = true

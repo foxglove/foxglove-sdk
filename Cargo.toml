@@ -40,6 +40,7 @@ tracing = { version = "0.1", features = ["log"] }
 tracing-test = "0.2.5"
 insta = { version = "1.42.2", features = ["json"] }
 livekit = { git = "https://github.com/gasmith/rust-sdks", branch = "revert-protocol-change" }
+livekit-api = { git = "https://github.com/gasmith/rust-sdks", branch = "revert-protocol-change", default-features = false }
 libwebrtc = { git = "https://github.com/gasmith/rust-sdks", branch = "revert-protocol-change" }
 
 [workspace.lints.clippy]
