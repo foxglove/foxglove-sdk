@@ -1,28 +1,16 @@
-use std::fmt::Display;
 use std::time::Duration;
 
-use percent_encoding::AsciiSet;
-use reqwest::header::{AUTHORIZATION, HeaderMap, USER_AGENT};
+use reqwest::header::{ACCEPT, AUTHORIZATION, HeaderMap, USER_AGENT};
 use reqwest::{Method, StatusCode};
 use thiserror::Error;
 
 use crate::library_version::{get_sdk_language, get_sdk_version};
 
-use super::types::{DeviceResponse, ErrorResponse, RtcCredentials};
+use super::types::{DeviceResponse, ErrorResponse, WatchHeartbeatRequest, WatchQuery};
 
 const DEFAULT_API_URL: &str = "https://api.foxglove.dev";
 
 const MAX_ERROR_RESPONSE_LEN: u64 = 16_384;
-
-const PATH_ENCODING: AsciiSet = percent_encoding::NON_ALPHANUMERIC
-    .remove(b'-')
-    .remove(b'.')
-    .remove(b'_')
-    .remove(b'~');
-
-fn encode_uri_component(component: &str) -> impl Display + '_ {
-    percent_encoding::percent_encode(component.as_bytes(), &PATH_ENCODING)
-}
 
 #[derive(Clone)]
 pub(crate) struct DeviceToken(String);
@@ -106,6 +94,16 @@ impl RequestBuilder {
         self
     }
 
+    pub fn accept(mut self, value: &'static str) -> Self {
+        self.0 = self.0.header(ACCEPT, value);
+        self
+    }
+
+    pub fn query<T: serde::Serialize + ?Sized>(mut self, query: &T) -> Self {
+        self.0 = self.0.query(query);
+        self
+    }
+
     pub fn json<T: serde::Serialize + ?Sized>(mut self, body: &T) -> Self {
         self.0 = self.0.json(body);
         self
@@ -168,6 +166,7 @@ pub(crate) fn default_user_agent() -> String {
 #[derive(Clone)]
 pub(crate) struct FoxgloveApiClient<A: Clone> {
     http: reqwest::Client,
+    http_streaming: reqwest::Client,
     auth: A,
     base_url: String,
     user_agent: String,
@@ -180,23 +179,43 @@ impl<A: Clone> FoxgloveApiClient<A> {
         user_agent: impl Into<String>,
         timeout_duration: Duration,
     ) -> Result<Self, FoxgloveApiClientError> {
+        // Short-request client has a total request timeout applied to every call.
+        let http = reqwest::ClientBuilder::new()
+            .timeout(timeout_duration)
+            .build()?;
+        // Streaming client omits the total request timeout (which would also kill long-lived
+        // SSE responses) but keeps a connect timeout so that a broken network surfaces quickly.
+        let http_streaming = reqwest::ClientBuilder::new()
+            .connect_timeout(timeout_duration)
+            .build()?;
         Ok(Self {
-            http: reqwest::ClientBuilder::new()
-                .timeout(timeout_duration)
-                .build()?,
+            http,
+            http_streaming,
             auth,
             base_url: base_url.into(),
             user_agent: user_agent.into(),
         })
     }
 
-    fn request(&self, method: Method, path: &str) -> RequestBuilder {
-        let url = format!(
+    fn build_url(&self, path: &str) -> String {
+        format!(
             "{}/{}",
             self.base_url.trim_end_matches('/'),
             path.trim_start_matches('/')
-        );
-        RequestBuilder::new(&self.http, method, &url, &self.user_agent)
+        )
+    }
+
+    fn request(&self, method: Method, path: &str) -> RequestBuilder {
+        RequestBuilder::new(&self.http, method, &self.build_url(path), &self.user_agent)
+    }
+
+    fn streaming_request(&self, method: Method, path: &str) -> RequestBuilder {
+        RequestBuilder::new(
+            &self.http_streaming,
+            method,
+            &self.build_url(path),
+            &self.user_agent,
+        )
     }
 
     pub fn get(&self, endpoint: &str) -> RequestBuilder {
@@ -205,6 +224,10 @@ impl<A: Clone> FoxgloveApiClient<A> {
 
     pub fn post(&self, endpoint: &str) -> RequestBuilder {
         self.request(Method::POST, endpoint)
+    }
+
+    pub fn stream_get(&self, endpoint: &str) -> RequestBuilder {
+        self.streaming_request(Method::GET, endpoint)
     }
 }
 
@@ -230,33 +253,39 @@ impl FoxgloveApiClient<DeviceToken> {
         })
     }
 
-    /// Authorizes a remote visualization session for the given device.
+    /// Opens the long-lived remote access watch SSE stream.
     ///
-    /// This endpoint is not intended for direct usage. Access may be blocked if suspicious
-    /// activity is detected.
-    pub async fn authorize_remote_viz(
+    /// The caller is responsible for parsing `text/event-stream` frames from the returned
+    /// response. The streaming reqwest client does not apply a total-request timeout.
+    pub async fn open_watch_stream(
         &self,
-        device_id: &str,
-        request: super::types::RemoteSessionRequest,
-    ) -> Result<RtcCredentials, FoxgloveApiClientError> {
-        let device_id = encode_uri_component(device_id);
+        query: &WatchQuery,
+    ) -> Result<reqwest::Response, FoxgloveApiClientError> {
         let response = self
-            .post(&format!(
-                "/internal/platform/v1/devices/{device_id}/remote-sessions"
-            ))
+            .stream_get("/internal/platform/v1/remote-sessions/watch")
             .device_token(&self.auth)
-            .json(&request)
+            .accept("text/event-stream")
+            .query(query)
             .send()
             .await?;
+        Ok(response)
+    }
 
-        let bytes = response
-            .bytes()
-            .await
-            .map_err(super::client::RequestError::LoadResponseBytes)?;
-
-        serde_json::from_slice(&bytes).map_err(|e| {
-            FoxgloveApiClientError::Request(super::client::RequestError::ParseResponse(e))
-        })
+    /// Refreshes a watch lease by POSTing to the heartbeat endpoint.
+    ///
+    /// Errors carry the HTTP status code via [`FoxgloveApiClientError::status_code`] so callers
+    /// can disambiguate 409 (another gateway holds the lease) and 410 (the supplied lease is
+    /// no longer active).
+    pub async fn post_watch_heartbeat(
+        &self,
+        watch_lease_id: &str,
+    ) -> Result<(), FoxgloveApiClientError> {
+        self.post("/internal/platform/v1/remote-sessions/watch/heartbeat")
+            .device_token(&self.auth)
+            .json(&WatchHeartbeatRequest { watch_lease_id })
+            .send()
+            .await?;
+        Ok(())
     }
 }
 
@@ -311,7 +340,6 @@ mod tests {
         TEST_DEVICE_ID, TEST_DEVICE_TOKEN, TEST_PROJECT_ID, create_test_api_client,
         create_test_server,
     };
-    use crate::api_client::types::RemoteSessionRequest;
 
     use super::DeviceToken;
 
@@ -337,44 +365,6 @@ mod tests {
             create_test_api_client(server.url(), DeviceToken::new("some-bad-device-token"));
         let result = client.fetch_device_info().await;
 
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn authorize_remote_viz_success() {
-        let server = create_test_server().await;
-        let client = create_test_api_client(server.url(), DeviceToken::new(TEST_DEVICE_TOKEN));
-
-        let result = client
-            .authorize_remote_viz(
-                TEST_DEVICE_ID,
-                RemoteSessionRequest {
-                    remote_access_session_id: None,
-                    protocol_version: None,
-                },
-            )
-            .await
-            .expect("could not authorize remote viz");
-        assert_eq!(result.token, "rtc-token-abc123");
-        assert_eq!(result.url, "wss://rtc.foxglove.dev");
-        assert!(result.remote_access_session_id.is_some());
-        assert!(!result.remote_access_session_id.unwrap().is_empty());
-    }
-
-    #[tokio::test]
-    async fn authorize_remote_viz_unauthorized() {
-        let server = create_test_server().await;
-        let client =
-            create_test_api_client(server.url(), DeviceToken::new("some-bad-device-token"));
-        let result = client
-            .authorize_remote_viz(
-                TEST_DEVICE_ID,
-                RemoteSessionRequest {
-                    remote_access_session_id: None,
-                    protocol_version: None,
-                },
-            )
-            .await;
         assert!(result.is_err());
     }
 }
