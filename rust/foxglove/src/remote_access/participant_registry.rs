@@ -49,14 +49,17 @@ impl ParticipantRegistry {
     }
 
     /// Spawns a [`Participant`] and its flush-task against the supplied
-    /// `writer` and inserts it into the registry.
+    /// `writer` and inserts it into the registry, atomically replacing any
+    /// prior registration for the same identity that has a **different**
+    /// `ParticipantSid`.
     ///
-    /// Each byte slice in `initial_messages` is queued on the participant's
-    /// control-plane channel after the flush-task is spawned but before the
-    /// participant is visible in the registry. This preserves the invariant
-    /// that these bytes (typically `ServerInfo` + channel/service
-    /// advertisements) are the first the flush-task delivers to the viewer,
-    /// ahead of any broadcast that reaches the participant after registration.
+    /// Each byte slice in `initial_messages` is queued on the new
+    /// participant's control-plane channel after the flush-task is spawned
+    /// but before the participant is visible in the registry. This preserves
+    /// the invariant that these bytes (typically `ServerInfo` +
+    /// channel/service advertisements) are the first the flush-task delivers
+    /// to the viewer, ahead of any broadcast that reaches the participant
+    /// after registration.
     ///
     /// `participant_sid` is stored on the new [`Participant`] and indexed in
     /// the registry so any later operation that targets a specific connection
@@ -67,13 +70,29 @@ impl ParticipantRegistry {
     /// `session_cancel` is the session's cancellation token; the spawned
     /// flush-task takes a child of it so the task exits on session close.
     ///
-    /// Returns `false` without spawning or inserting if a participant already
-    /// exists for this identity. Callers that want to avoid opening a stream
-    /// in that case should gate on [`has_participant`] before opening the
-    /// writer; this gate is only a backstop.
-    #[must_use = "register_participant returns false on a same-identity collision; \
-                  callers must check (or debug_assert) the result to catch \
-                  contract violations of the no-concurrent-call rule"]
+    /// # Replacement semantics
+    ///
+    /// LiveKit assigns a fresh [`ParticipantSid`] to each connection
+    /// instance, so a same-identity reconnect arrives with a different SID:
+    ///
+    /// - If no participant is registered for `id`, the new one is inserted
+    ///   and `None` is returned.
+    /// - If a participant is registered with a **different** `participant_sid`,
+    ///   it is removed (its flush-task is cancelled by `Participants`'
+    ///   removal path) and the new one is inserted in its place; the prior
+    ///   `Arc<Participant>` is returned so the caller can run any
+    ///   session-level cleanup (subscription sweep, listener callbacks).
+    ///   This handles the case where LiveKit emits the reconnect's
+    ///   `ParticipantActive` *before* the prior instance's
+    ///   `ParticipantDisconnected`; without atomic replacement the new
+    ///   instance would be silently dropped and the late `Disconnected`
+    ///   would then evict the only registration, stranding the live viewer.
+    /// - If a participant is registered with the **same** `participant_sid`,
+    ///   the existing registration is left untouched, the freshly-spawned
+    ///   participant is cancelled and dropped, and `None` is returned. This
+    ///   path is defensive: in practice LiveKit never reuses a SID across
+    ///   instances, so re-registering an identical `(identity, sid)` pair
+    ///   indicates a redundant call rather than a true reconnect.
     pub(crate) fn register_participant<I>(
         &self,
         id: ParticipantIdentity,
@@ -82,14 +101,10 @@ impl ParticipantRegistry {
         writer: ParticipantWriter,
         session_cancel: &CancellationToken,
         initial_messages: I,
-    ) -> bool
+    ) -> Option<Arc<Participant>>
     where
         I: IntoIterator<Item = Bytes>,
     {
-        if self.participants.read().contains_identity(&id) {
-            return false;
-        }
-
         let (participant, flush_handle) = Participant::spawn(
             id,
             participant_sid,
@@ -105,7 +120,35 @@ impl ParticipantRegistry {
             participant.send_control(msg);
         }
 
-        self.participants.write().insert(participant, flush_handle)
+        let mut participants = self.participants.write();
+
+        // Same-identity reconnect (different SID): atomically remove the prior
+        // registration so this `register_participant` call cannot lose a
+        // race with a late `ParticipantDisconnected` for the prior instance.
+        let prior =
+            if let Some(existing) = participants.get_by_identity(participant.participant_id()) {
+                if existing.participant_sid() == participant.participant_sid() {
+                    // Defensive no-op: same instance is already registered. Drop
+                    // the freshly-spawned participant (and its writer); cancel
+                    // its flush-task so it exits promptly.
+                    participant.cancel();
+                    return None;
+                }
+                let prior_sid = existing.participant_sid().clone();
+                let prior = participants
+                    .remove_by_sid(&prior_sid)
+                    .expect("get_by_identity returned Some; remove must succeed");
+                Some(prior)
+            } else {
+                None
+            };
+
+        let inserted = participants.insert(participant, flush_handle);
+        debug_assert!(
+            inserted,
+            "identity slot is vacant after the conditional remove above; insert must succeed",
+        );
+        prior
     }
 
     /// Removes the participant whose stored `ParticipantSid` matches
@@ -146,11 +189,6 @@ impl ParticipantRegistry {
             .into_iter()
             .filter_map(|id| participants.get_by_identity(&id).cloned())
             .collect()
-    }
-
-    /// Returns true if a participant exists for the given identity.
-    pub(crate) fn has_participant(&self, id: &ParticipantIdentity) -> bool {
-        self.participants.read().contains_identity(id)
     }
 
     /// Returns the number of registered participants.
@@ -219,7 +257,7 @@ mod tests {
         let version = protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone();
 
         let sid = test_sid("alice-1");
-        let inserted = registry.register_participant(
+        let prior = registry.register_participant(
             id.clone(),
             sid.clone(),
             version,
@@ -227,36 +265,105 @@ mod tests {
             &cancel,
             [],
         );
-        assert!(inserted);
-        assert!(registry.has_participant(&id));
+        assert!(prior.is_none(), "no prior registration expected");
+        assert!(registry.get_participant(&id).is_some());
 
         assert!(registry.remove_participant(&sid).is_some());
-        assert!(!registry.has_participant(&id));
+        assert!(registry.get_participant(&id).is_none());
     }
 
+    /// `register_participant` for a same-identity, **different**-SID call must
+    /// atomically replace the prior registration and return the prior
+    /// participant for caller-side cleanup.
     #[tokio::test]
-    async fn insert_is_noop_when_identity_already_present() {
+    async fn register_replaces_prior_participant_with_different_sid() {
         let registry = make_registry();
         let cancel = CancellationToken::new();
         let id = ParticipantIdentity("alice".to_string());
         let version = protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone();
+        let sid_1 = test_sid("alice-1");
+        let sid_2 = test_sid("alice-2");
 
-        assert!(registry.register_participant(
+        assert!(
+            registry
+                .register_participant(
+                    id.clone(),
+                    sid_1.clone(),
+                    version.clone(),
+                    test_writer(),
+                    &cancel,
+                    [],
+                )
+                .is_none()
+        );
+        let original = registry.get_participant(&id).expect("first present");
+        let original_client_id = original.client_id();
+        drop(original);
+
+        let prior = registry
+            .register_participant(
+                id.clone(),
+                sid_2.clone(),
+                version,
+                test_writer(),
+                &cancel,
+                [],
+            )
+            .expect("prior registration must be returned for cleanup");
+        assert_eq!(prior.client_id(), original_client_id);
+        assert_eq!(prior.participant_sid(), &sid_1);
+
+        let current = registry.get_participant(&id).expect("replacement present");
+        assert_eq!(current.participant_sid(), &sid_2);
+        assert_ne!(current.client_id(), original_client_id);
+    }
+
+    /// `register_participant` for a same-identity, **same**-SID call is a
+    /// defensive no-op: the existing registration is preserved and the call
+    /// returns `None`.
+    #[tokio::test]
+    async fn register_is_noop_when_same_identity_and_sid_already_present() {
+        let registry = make_registry();
+        let cancel = CancellationToken::new();
+        let id = ParticipantIdentity("alice".to_string());
+        let version = protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone();
+        let sid = test_sid("alice-1");
+
+        assert!(
+            registry
+                .register_participant(
+                    id.clone(),
+                    sid.clone(),
+                    version.clone(),
+                    test_writer(),
+                    &cancel,
+                    [],
+                )
+                .is_none()
+        );
+        let original = registry.get_participant(&id).expect("first present");
+        let original_client_id = original.client_id();
+        drop(original);
+
+        let prior = registry.register_participant(
             id.clone(),
-            test_sid("alice-1"),
-            version.clone(),
-            test_writer(),
-            &cancel,
-            [],
-        ));
-        assert!(!registry.register_participant(
-            id.clone(),
-            test_sid("alice-2"),
+            sid.clone(),
             version,
             test_writer(),
             &cancel,
             [],
-        ));
+        );
+        assert!(
+            prior.is_none(),
+            "same-(identity, sid) re-register must be a no-op",
+        );
+
+        // The original registration must still be the live one.
+        let current = registry
+            .get_participant(&id)
+            .expect("original still present");
+        assert_eq!(current.client_id(), original_client_id);
+        assert_eq!(current.participant_sid(), &sid);
     }
 
     /// Regression test for the same-identity reconnect race:
@@ -286,14 +393,18 @@ mod tests {
         let sid_2 = test_sid("viewer-1-attempt-2");
 
         // Step 1: attempt 1 joins.
-        assert!(registry.register_participant(
-            id.clone(),
-            sid_1.clone(),
-            version.clone(),
-            test_writer(),
-            &cancel,
-            [],
-        ));
+        assert!(
+            registry
+                .register_participant(
+                    id.clone(),
+                    sid_1.clone(),
+                    version.clone(),
+                    test_writer(),
+                    &cancel,
+                    [],
+                )
+                .is_none()
+        );
         let attempt_1 = registry.get_participant(&id).expect("attempt 1 present");
         assert_eq!(attempt_1.participant_sid(), &sid_1);
 
@@ -305,14 +416,18 @@ mod tests {
         let drained = registry.drain_pending_resets();
         assert_eq!(drained, vec![sid_1.clone()]);
         assert!(registry.remove_participant(&sid_1).is_some());
-        assert!(registry.register_participant(
-            id.clone(),
-            sid_2.clone(),
-            version,
-            test_writer(),
-            &cancel,
-            [],
-        ));
+        assert!(
+            registry
+                .register_participant(
+                    id.clone(),
+                    sid_2.clone(),
+                    version,
+                    test_writer(),
+                    &cancel,
+                    [],
+                )
+                .is_none()
+        );
 
         let attempt_2 = registry.get_participant(&id).expect("attempt 2 present");
         assert_ne!(attempt_2.participant_sid(), &sid_1);
@@ -322,13 +437,86 @@ mod tests {
         let removed = registry.remove_participant(&sid_1);
         assert!(removed.is_none());
         assert!(
-            registry.has_participant(&id),
+            registry.get_participant(&id).is_some(),
             "attempt 2 must still be registered after stale disconnect was ignored",
         );
 
         // Sanity: matching SID does remove.
         let removed = registry.remove_participant(&sid_2);
         assert!(removed.is_some());
-        assert!(!registry.has_participant(&id));
+        assert!(registry.get_participant(&id).is_none());
+    }
+
+    /// Regression test for the symmetric variant of the same-identity reconnect
+    /// race (companion to
+    /// [`stale_disconnect_must_not_remove_reconnected_participant`]):
+    ///
+    /// 1. Attempt 1 (`viewer-1`, SID `S1`) is in the registry. Its flush-task
+    ///    is healthy — no reset is in flight.
+    /// 2. The viewer reconnects under a new SID `S2`. LiveKit emits
+    ///    `ParticipantActive(viewer-1, S2)` BEFORE
+    ///    `ParticipantDisconnected(viewer-1, S1)` — possible under impairment
+    ///    when the server's `disconnect_existing` admits the new join before
+    ///    the old teardown propagates to other participants.
+    /// 3. The session calls `register_participant(viewer-1, S2, ..)`. The
+    ///    registry must REPLACE the prior `S1` registration with the new `S2`
+    ///    one, not silently no-op.
+    /// 4. The late `ParticipantDisconnected(viewer-1, S1)` arrives. SID-keyed
+    ///    `remove_participant` no-ops (the registered SID is now `S2`).
+    ///
+    /// Without the fix, step 3 silently fails (the registry's slot is already
+    /// occupied) and step 4 removes attempt 1 — leaving NOTHING registered for
+    /// `viewer-1` while attempt 2 is alive in the LiveKit room. The viewer is
+    /// stranded and the gateway never sends it data.
+    #[tokio::test]
+    async fn same_identity_reconnect_must_replace_prior_registration() {
+        let registry = make_registry();
+        let cancel = CancellationToken::new();
+        let id = ParticipantIdentity("viewer-1".to_string());
+        let version = protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone();
+        let sid_1 = test_sid("viewer-1-attempt-1");
+        let sid_2 = test_sid("viewer-1-attempt-2");
+
+        // Step 1: attempt 1 joins normally.
+        let prior = registry.register_participant(
+            id.clone(),
+            sid_1.clone(),
+            version.clone(),
+            test_writer(),
+            &cancel,
+            [],
+        );
+        assert!(prior.is_none(), "no prior registration expected");
+        let attempt_1 = registry.get_participant(&id).expect("attempt 1 present");
+        let client_id_1 = attempt_1.client_id();
+        drop(attempt_1);
+
+        // Step 2: reconnect under a new SID. ParticipantActive(S2) arrives
+        // before ParticipantDisconnected(S1). The session calls
+        // `register_participant` for the new instance; the registry must
+        // atomically replace the prior registration and return it.
+        let prior = registry
+            .register_participant(
+                id.clone(),
+                sid_2.clone(),
+                version,
+                test_writer(),
+                &cancel,
+                [],
+            )
+            .expect("prior registration must be returned for cleanup");
+        assert_eq!(prior.participant_sid(), &sid_1);
+        assert_eq!(prior.client_id(), client_id_1);
+
+        // Step 3: late stale Disconnected(S1) arrives. SID-keyed remove must
+        // no-op because the registered SID is now S2.
+        assert!(registry.remove_participant(&sid_1).is_none());
+
+        // Step 4: attempt 2 must still be registered.
+        let current = registry
+            .get_participant(&id)
+            .expect("attempt 2 must remain registered after a late stale Disconnected for the prior SID");
+        assert_eq!(current.participant_sid(), &sid_2);
+        assert_ne!(current.client_id(), client_id_1);
     }
 }

@@ -83,11 +83,6 @@ impl Participants {
         self.by_sid.get(sid)
     }
 
-    /// Returns `true` if a participant with this identity is registered.
-    pub fn contains_identity(&self, identity: &ParticipantIdentity) -> bool {
-        self.by_identity.contains_key(identity)
-    }
-
     /// Iterates over all registered participants.
     pub fn iter(&self) -> impl Iterator<Item = &Arc<Participant>> {
         self.by_identity.values()
