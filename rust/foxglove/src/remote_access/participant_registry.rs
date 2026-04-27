@@ -513,9 +513,9 @@ mod tests {
         assert!(registry.remove_participant(&sid_1).is_none());
 
         // Step 4: attempt 2 must still be registered.
-        let current = registry
-            .get_participant(&id)
-            .expect("attempt 2 must remain registered after a late stale Disconnected for the prior SID");
+        let current = registry.get_participant(&id).expect(
+            "attempt 2 must remain registered after a late stale Disconnected for the prior SID",
+        );
         assert_eq!(current.participant_sid(), &sid_2);
         assert_ne!(current.client_id(), client_id_1);
     }
