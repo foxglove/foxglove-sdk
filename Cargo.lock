@@ -1628,7 +1628,6 @@ dependencies = [
  "maplit",
  "mcap 0.24.0",
  "parking_lot",
- "percent-encoding",
  "prost 0.14.3",
  "prost-types 0.14.3",
  "rcgen",
