@@ -484,6 +484,9 @@ impl RemoteAccessConnection {
                         self.cancellation_token.cancel();
                         return None;
                     }
+                    // A normal session teardown returns here while status remains Connected. Only
+                    // transition back to Connecting once the replacement watch actually fails.
+                    self.set_status(ConnectionStatus::Connecting);
                     warn!(error = %e, "watch stream connect failed");
                     let delay = match e {
                         WatchError::Conflict => {
@@ -687,11 +690,11 @@ impl RemoteAccessConnection {
             _ = session.log_periodic_stats() => {},
         }
 
-        // Update status before cleanup so callers don't see Connected during teardown.
+        // Normal session teardown returns to the watch loop, so keep reporting Connected: the
+        // gateway is still healthy and available for remote access. Cancellation is the only
+        // teardown path that should move out of Connected here.
         if self.cancellation_token.is_cancelled() {
             self.set_status(ConnectionStatus::ShuttingDown);
-        } else {
-            self.set_status(ConnectionStatus::Connecting);
         }
 
         // Clear the active session and remove the sink before closing the room.
