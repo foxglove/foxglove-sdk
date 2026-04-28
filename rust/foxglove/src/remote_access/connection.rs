@@ -272,7 +272,7 @@ impl RemoteAccessConnection {
                 }
                 let client = Arc::new(builder.build()?);
                 let device = client.fetch_device_info().await?;
-                info!(device_id = %device.id, "device context initialized");
+                info!(device_id = %device.id, device_name = %device.name, "device context initialized");
                 Ok::<_, Box<RemoteAccessError>>(DeviceContext { device, client })
             })
             .await
