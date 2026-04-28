@@ -1,0 +1,92 @@
+# Compose override that configures per-link network impairment using classful
+# qdiscs (HTB root + netem leaf classes). This overlay builds on top of the base
+# netem overlay and adds two target containers with static IPs for validating
+# that different destination IPs receive different impairment profiles.
+#
+# Usage:
+#   docker compose \
+#     -f docker-compose.yaml \
+#     -f docker-compose.netem.yml \
+#     -f docker-compose.netem-perlink.yml \
+#     up -d --wait
+#
+# Run per-link tests:
+#   cargo test -p remote_access_tests -- --ignored perlink_
+#
+# Architecture:
+#   - LiveKit + netem sidecar on the "perlink" network (10.99.0.0/24).
+#   - target-a (10.99.0.10): high impairment path (simulates SDK on bad network).
+#   - target-b (10.99.0.20): low impairment path (simulates App on good network).
+#   - The netem sidecar classifies egress by destination IP using HTB + u32 filters.
+
+# The perlink network uses a fixed subnet so that tc u32 filters can classify
+# traffic by destination IP. This is safe because:
+#   - It is a Docker-internal bridge network, not routed to the host or internet.
+#   - 10.0.0.0/8 is RFC 1918 private space; 10.99.0.0/24 is chosen to avoid
+#     overlap with Docker's default bridge (172.17.0.0/16) and compose networks
+#     (172.18+.0.0/16).
+#   - Static IPs are scoped to this bridge — other Docker networks can reuse the
+#     same addresses without conflict.
+#   - CI runners are ephemeral VMs with no pre-existing Docker networks.
+networks:
+  perlink:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.99.0.0/24
+
+x-echo-target: &echo-target
+  image: alpine:3
+  entrypoint: ["/bin/sh", "-c"]
+  command:
+    - |
+      apk add --no-cache socat > /dev/null 2>&1
+      # TCP echo server on port 7000 for latency measurement.
+      socat TCP-LISTEN:7000,fork,reuseaddr EXEC:/bin/cat &
+      # UDP echo server on port 7001 for packet loss measurement.
+      socat UDP-RECVFROM:7001,fork EXEC:/bin/cat &
+      exec sleep infinity
+  healthcheck:
+    # BusyBox nc doesn't support -z; use socat to probe the TCP port instead.
+    test: ["CMD-SHELL", "echo | socat - TCP:localhost:7000,connect-timeout=2"]
+    interval: 2s
+    timeout: 5s
+    retries: 10
+    start_period: 5s
+
+services:
+  livekit:
+    networks:
+      default:
+      perlink:
+        ipv4_address: 10.99.0.2
+
+  target-a:
+    <<: *echo-target
+    networks:
+      perlink:
+        ipv4_address: 10.99.0.10
+
+  target-b:
+    <<: *echo-target
+    networks:
+      perlink:
+        ipv4_address: 10.99.0.20
+
+  netem:
+    environment:
+      # Default class: moderate impairment for unclassified traffic.
+      NETEM_ARGS: "${NETEM_ARGS:-delay 80ms 20ms loss 2%}"
+      # Link A (high impairment): simulates SDK on a bad network.
+      NETEM_LINK_A_DST: "10.99.0.10"
+      NETEM_LINK_A_ARGS: "${NETEM_LINK_A_ARGS:-delay 200ms 50ms loss 5%}"
+      # Link B (low impairment): simulates App on a good network.
+      NETEM_LINK_B_DST: "10.99.0.20"
+      NETEM_LINK_B_ARGS: "${NETEM_LINK_B_ARGS:-delay 10ms 2ms}"
+    depends_on:
+      livekit:
+        condition: service_started
+      target-a:
+        condition: service_healthy
+      target-b:
+        condition: service_healthy

@@ -11,6 +11,8 @@
 //! impairment via the `NETEM_ARGS` environment variable (see
 //! `docker-compose.netem.yml` for details).
 
+mod netem_helpers;
+
 use std::time::Duration;
 
 use anyhow::{Context as _, Result};
@@ -52,11 +54,7 @@ async fn netem_sidecar_adds_measurable_latency() -> Result<()> {
     info!("NETEM_ARGS: {netem_args}");
 
     // Parse the delay value (in ms) from NETEM_ARGS. Format is "delay <N>ms ...".
-    let configured_delay_ms: Option<u64> = netem_args
-        .split_whitespace()
-        .zip(netem_args.split_whitespace().skip(1))
-        .find(|(key, _)| *key == "delay")
-        .and_then(|(_, val)| val.strip_suffix("ms")?.parse().ok());
+    let configured_delay_ms: Option<u64> = netem_helpers::parse_delay_ms(&netem_args);
 
     if configured_delay_ms.is_none() {
         info!("no delay configured in NETEM_ARGS — skipping latency assertion");
@@ -112,11 +110,7 @@ async fn netem_sidecar_drops_packets() -> Result<()> {
     info!("NETEM_ARGS: {netem_args}");
 
     // Parse loss percentage from NETEM_ARGS. Format: "... loss <N>% ...".
-    let loss_pct: Option<f64> = netem_args
-        .split_whitespace()
-        .zip(netem_args.split_whitespace().skip(1))
-        .find(|(key, _)| *key == "loss")
-        .and_then(|(_, val)| val.strip_suffix('%')?.parse().ok());
+    let loss_pct: Option<f64> = netem_helpers::parse_loss_percentage(&netem_args);
 
     if loss_pct.is_none() || loss_pct < Some(2.0) {
         info!("loss < 2% configured in NETEM_ARGS — skipping (need ≥2% for reliable detection)");
