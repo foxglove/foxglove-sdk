@@ -1,4 +1,4 @@
-a change# Foxglove SDK
+ange# Foxglove SDK
 
 The Foxglove SDK allows you to log and visualize multimodal data with [Foxglove](https://foxglove.dev).
 
