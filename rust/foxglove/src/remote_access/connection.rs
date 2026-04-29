@@ -10,7 +10,6 @@ use std::{
 use indexmap::IndexSet;
 
 use livekit::{Room, RoomEvent, RoomOptions};
-use reqwest::StatusCode;
 use tokio::{runtime::Handle, sync::OnceCell, sync::mpsc::UnboundedReceiver, task::JoinHandle};
 use tokio_util::sync::CancellationToken;
 use tracing::{error, info, warn};
@@ -24,24 +23,23 @@ use crate::{
     library_version::get_library_version,
     protocol::v2::{parameter::Parameter, server::ServerInfo},
     remote_access::{
-        AssetHandler, Capability, Client, RemoteAccessError, protocol_version,
+        AssetHandler, Capability, Client, RemoteAccessError,
+        protocol_version::{self, REMOTE_ACCESS_PROTOCOL_VERSION},
         qos::QosClassifier,
         session::{RemoteAccessSession, SessionParams},
-        watch::{HeartbeatExit, Watch, WatchError, WatchOutcome},
+        watch::Watch,
+        watch_loop::{
+            ConnectAction, INITIAL_BACKOFF, MAX_BACKOFF, WatchAction, WatchRetryState,
+            on_connect_error, on_connect_success, on_outcome,
+        },
     },
-    remote_common::connection_graph::ConnectionGraph,
-    remote_common::service::{Service, ServiceId, ServiceMap},
+    remote_common::{
+        connection_graph::ConnectionGraph,
+        service::{Service, ServiceId, ServiceMap},
+    },
 };
 
 type Result<T> = std::result::Result<T, Box<RemoteAccessError>>;
-
-/// Backoff applied after transient control-loop failures, capped at this value. Starts small
-/// and doubles up to the cap. Reset after a successful `hello` handshake.
-const CONTROL_LOOP_MAX_BACKOFF: Duration = Duration::from_secs(30);
-const CONTROL_LOOP_INITIAL_BACKOFF: Duration = Duration::from_secs(1);
-/// Backoff applied when another gateway holds the lease (409 Conflict). Picked conservatively
-/// since the API owns lease TTLs and does not advertise them to the gateway.
-const LEASE_CONFLICT_BACKOFF: Duration = Duration::from_secs(30);
 
 use super::session::DEFAULT_MESSAGE_BACKLOG_SIZE;
 
@@ -110,20 +108,12 @@ struct DeviceContext {
     client: Arc<FoxgloveApiClient<DeviceToken>>,
 }
 
-struct WatchRetryState {
-    previous_lease_id: Option<String>,
-    backoff: Duration,
-}
-
+/// A `wake` from the watch stream paired with the `device_wait_for_viewer` advertised by the
+/// `hello` event of the same stream.
+#[derive(Debug)]
 struct WakeSignal {
     wake: WatchWakeEvent,
     device_wait_for_viewer: Duration,
-}
-
-enum WatchLoopAction {
-    Wake(WakeSignal),
-    Reconnect { previous_lease_id: Option<String> },
-    Stop,
 }
 
 /// RemoteAccessConnection manages the connected [`RemoteAccessSession`] to the LiveKit server,
@@ -305,11 +295,11 @@ impl RemoteAccessConnection {
         info!(
             remote_access_session_id,
             url = wake.url.as_str(),
-            "connecting to LiveKit server"
+            "connecting to room"
         );
         let (room, room_events) =
             Room::connect(&wake.url, &wake.token, RoomOptions::default()).await?;
-        info!(remote_access_session_id, "connected to LiveKit server");
+        info!(remote_access_session_id, "connected to room");
         let server_info = self.create_server_info(remote_access_session_id.unwrap_or(""));
         let session_params = SessionParams {
             room,
@@ -391,72 +381,56 @@ impl RemoteAccessConnection {
 
     async fn watch_until_wake_inner(&self) -> Option<WakeSignal> {
         let device_context = self.device_context_until_ok().await?;
-        let mut retry = WatchRetryState {
-            previous_lease_id: None,
-            backoff: CONTROL_LOOP_INITIAL_BACKOFF,
-        };
+        let mut retry = WatchRetryState::new();
         loop {
-            match self.run_watch_once(device_context, &mut retry).await {
-                WatchLoopAction::Wake(wake_signal) => return Some(wake_signal),
-                WatchLoopAction::Reconnect { previous_lease_id } => {
-                    retry.previous_lease_id = previous_lease_id;
+            // Establish a watch.
+            let watch = self.connect_watch(device_context, &mut retry).await?;
+            let watch_lease_id = watch.lease_id().to_string();
+            let device_wait_for_viewer = watch.device_wait_for_viewer();
+            self.set_status(ConnectionStatus::Connected);
+
+            // Run the watch session.
+            let outcome = watch.run().await;
+            match on_outcome(outcome, watch_lease_id, &mut retry) {
+                WatchAction::Wake(wake) => {
+                    return Some(WakeSignal {
+                        wake,
+                        device_wait_for_viewer,
+                    });
                 }
-                WatchLoopAction::Stop => return None,
+                WatchAction::Reconnect { delay } => {
+                    self.set_status(ConnectionStatus::Connecting);
+                    if let Some(delay) = delay {
+                        tokio::time::sleep(delay).await;
+                    }
+                }
+                WatchAction::StopUnauthorized => {
+                    self.cancellation_token.cancel();
+                    return None;
+                }
+                WatchAction::Stop => return None,
             }
         }
     }
 
     async fn device_context_until_ok(&self) -> Option<&DeviceContext> {
-        let mut backoff = CONTROL_LOOP_INITIAL_BACKOFF;
+        let mut backoff = INITIAL_BACKOFF;
         let device_context = loop {
             match self.get_or_init_device_context().await {
                 Ok(ctx) => break ctx,
                 Err(e) => {
-                    if Self::is_unauthorized_api_error(&e) {
+                    if e.is_unauthorized() {
                         error!(error = %e, "device token unauthorized; stopping remote access gateway");
                         self.cancellation_token.cancel();
                         return None;
                     }
                     warn!(error = %e, "failed to initialize device context; retrying");
                     tokio::time::sleep(backoff).await;
-                    backoff = (backoff * 2).min(CONTROL_LOOP_MAX_BACKOFF);
+                    backoff = (backoff * 2).min(MAX_BACKOFF);
                 }
             }
         };
         Some(device_context)
-    }
-
-    async fn run_watch_once(
-        &self,
-        device_context: &DeviceContext,
-        retry: &mut WatchRetryState,
-    ) -> WatchLoopAction {
-        let Some(mut watch) = self.connect_watch(device_context, retry).await else {
-            return WatchLoopAction::Stop;
-        };
-
-        let lease_id = watch.lease_id().to_string();
-        let heartbeat_interval = watch.heartbeat_interval();
-        let device_wait_for_viewer = watch.device_wait_for_viewer();
-        info!(
-            lease_id,
-            ?heartbeat_interval,
-            ?device_wait_for_viewer,
-            "watch stream established; dormant until wake"
-        );
-        self.set_status(ConnectionStatus::Connected);
-        retry.backoff = CONTROL_LOOP_INITIAL_BACKOFF;
-
-        let outcome = watch.next_outcome().await;
-        watch.close().await;
-
-        self.handle_watch_outcome(
-            outcome,
-            lease_id,
-            device_wait_for_viewer,
-            &mut retry.backoff,
-        )
-        .await
     }
 
     async fn connect_watch(
@@ -466,150 +440,36 @@ impl RemoteAccessConnection {
     ) -> Option<Watch> {
         loop {
             let query = WatchQuery {
-                protocol_version: Some(
-                    protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.to_string(),
-                ),
+                protocol_version: Some(REMOTE_ACCESS_PROTOCOL_VERSION.to_string()),
                 remote_access_session_id: self.remote_access_session_id().map(str::to_string),
                 // Preserve the previous lease across failed connect attempts. It is only consumed
                 // once a replacement watch is established, or once the API tells us another active
                 // lease owns the device.
-                previous_watch_lease_id: retry.previous_lease_id.clone(),
+                previous_watch_lease_id: retry.previous_lease_id().map(str::to_string),
             };
             match Watch::connect(device_context.client.clone(), query).await {
                 Ok(watch) => {
-                    retry.previous_lease_id = None;
+                    on_connect_success(retry);
                     return Some(watch);
                 }
                 Err(e) => {
-                    if matches!(e, WatchError::Unauthorized) {
-                        error!(error = %e, "device token unauthorized; stopping remote access gateway");
-                        self.cancellation_token.cancel();
-                        return None;
-                    }
-                    // A normal session teardown returns here while status remains Connected. Only
-                    // transition back to Connecting once the replacement watch actually fails.
-                    self.set_status(ConnectionStatus::Connecting);
-                    warn!(error = %e, "watch stream connect failed");
-                    let delay = match e {
-                        WatchError::Conflict => {
-                            retry.previous_lease_id = None;
-                            LEASE_CONFLICT_BACKOFF
+                    match on_connect_error(&e, retry) {
+                        ConnectAction::StopUnauthorized => {
+                            error!(error = %e, "device token unauthorized; stopping remote access gateway");
+                            self.cancellation_token.cancel();
+                            return None;
                         }
-                        _ => retry.backoff,
-                    };
-                    tokio::time::sleep(delay).await;
-                    retry.backoff = (retry.backoff * 2).min(CONTROL_LOOP_MAX_BACKOFF);
+                        ConnectAction::RetryAfter(delay) => {
+                            // During normal session teardown, status remains Connected. Only
+                            // transition back to Connecting once the replacement watch actually
+                            // fails.
+                            self.set_status(ConnectionStatus::Connecting);
+                            tokio::time::sleep(delay).await;
+                        }
+                    }
                 }
             }
         }
-    }
-
-    async fn handle_watch_outcome(
-        &self,
-        outcome: WatchOutcome,
-        lease_id: String,
-        device_wait_for_viewer: Duration,
-        backoff: &mut Duration,
-    ) -> WatchLoopAction {
-        match outcome {
-            WatchOutcome::Wake(wake) => {
-                info!(
-                    watch_lease_id = %lease_id,
-                    remote_access_session_id = wake.remote_access_session_id.as_deref(),
-                    "received wake"
-                );
-                WatchLoopAction::Wake(WakeSignal {
-                    wake,
-                    device_wait_for_viewer,
-                })
-            }
-            WatchOutcome::ReadTimeout => {
-                warn!(
-                    watch_lease_id = %lease_id,
-                    "watch stream read-timeout; reconnecting"
-                );
-                self.reconnect_watch(Some(lease_id), None).await
-            }
-            WatchOutcome::StreamEnded => {
-                warn!(
-                    watch_lease_id = %lease_id,
-                    "watch stream ended before wake; reconnecting"
-                );
-                self.reconnect_watch(Some(lease_id), None).await
-            }
-            WatchOutcome::StreamError(e) => {
-                warn!(
-                    watch_lease_id = %lease_id,
-                    error = %e,
-                    "watch stream error; reconnecting"
-                );
-                let delay = *backoff;
-                *backoff = (*backoff * 2).min(CONTROL_LOOP_MAX_BACKOFF);
-                self.reconnect_watch(Some(lease_id), Some(delay)).await
-            }
-            WatchOutcome::HeartbeatLost(reason) => {
-                self.handle_heartbeat_exit(reason, lease_id).await
-            }
-        }
-    }
-
-    async fn handle_heartbeat_exit(
-        &self,
-        reason: HeartbeatExit,
-        lease_id: String,
-    ) -> WatchLoopAction {
-        match reason {
-            HeartbeatExit::Conflict => {
-                warn!(
-                    watch_lease_id = %lease_id,
-                    "another gateway holds the watch lease; backing off"
-                );
-                self.reconnect_watch(None, Some(LEASE_CONFLICT_BACKOFF))
-                    .await
-            }
-            HeartbeatExit::Gone => {
-                warn!(
-                    watch_lease_id = %lease_id,
-                    "watch lease gone; reconnecting to acquire a fresh lease"
-                );
-                self.reconnect_watch(None, None).await
-            }
-            HeartbeatExit::Unauthorized => {
-                error!(
-                    watch_lease_id = %lease_id,
-                    "device token unauthorized; stopping remote access gateway"
-                );
-                self.cancellation_token.cancel();
-                WatchLoopAction::Stop
-            }
-            HeartbeatExit::Failed => {
-                warn!(
-                    watch_lease_id = %lease_id,
-                    "watch heartbeat failed for too long; reconnecting"
-                );
-                self.reconnect_watch(Some(lease_id), None).await
-            }
-            HeartbeatExit::Cancelled => WatchLoopAction::Stop,
-        }
-    }
-
-    async fn reconnect_watch(
-        &self,
-        previous_lease_id: Option<String>,
-        delay: Option<Duration>,
-    ) -> WatchLoopAction {
-        self.set_status(ConnectionStatus::Connecting);
-        if let Some(delay) = delay {
-            tokio::time::sleep(delay).await;
-        }
-        WatchLoopAction::Reconnect { previous_lease_id }
-    }
-
-    fn is_unauthorized_api_error(error: &RemoteAccessError) -> bool {
-        matches!(
-            error,
-            RemoteAccessError::Api(api) if api.status_code() == Some(StatusCode::UNAUTHORIZED)
-        )
     }
 
     /// Joins LiveKit with the wake credentials and runs the session until cancelled,
@@ -625,7 +485,7 @@ impl RemoteAccessConnection {
         let (session, room_events) = match result {
             Ok(pair) => pair,
             Err(e) => {
-                error!(error = %e, "failed to join LiveKit after wake; returning to dormant");
+                error!(error = %e, "failed to join room after wake");
                 self.set_status(ConnectionStatus::Connecting);
                 return;
             }

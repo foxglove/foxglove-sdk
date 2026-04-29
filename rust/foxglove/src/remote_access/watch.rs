@@ -4,7 +4,7 @@
 //! event with a server-generated lease ID and control-loop timeouts, followed by zero or more
 //! heartbeat comments and eventually a single `wake` event carrying LiveKit credentials. While
 //! the stream is open, the gateway POSTs periodic heartbeats to prove liveness and refresh its
-//! lease. See `remote-access-on-demand.md` for the full protocol.
+//! lease.
 
 use std::{pin::Pin, sync::Arc, time::Duration};
 
@@ -16,7 +16,7 @@ use tokio::{
     task::JoinHandle,
     time::{Instant, MissedTickBehavior},
 };
-use tracing::{debug, warn};
+use tracing::{debug, error, info, warn};
 
 use crate::api_client::{
     DeviceToken, FoxgloveApiClient, FoxgloveApiClientError, WatchHelloEvent, WatchQuery,
@@ -124,6 +124,15 @@ impl Watch {
         client: Arc<FoxgloveApiClient<DeviceToken>>,
         query: WatchQuery,
     ) -> Result<Self, WatchError> {
+        Watch::connect_inner(client, query)
+            .await
+            .inspect_err(|e| warn!(error=%e, "watch stream connect failed"))
+    }
+
+    async fn connect_inner(
+        client: Arc<FoxgloveApiClient<DeviceToken>>,
+        query: WatchQuery,
+    ) -> Result<Self, WatchError> {
         let hello_deadline = Instant::now() + HELLO_TIMEOUT;
         let Ok(response) =
             tokio::time::timeout_at(hello_deadline, client.open_watch_stream(&query)).await
@@ -174,6 +183,13 @@ impl Watch {
         let device_wait_for_viewer =
             Duration::from_millis(hello.device_wait_for_viewer_ms).max(MIN_DEVICE_WAIT_FOR_VIEWER);
 
+        info!(
+            watch_lease_id = &hello.watch_lease_id,
+            ?heartbeat_interval,
+            ?device_wait_for_viewer,
+            "watch stream established"
+        );
+
         let (exit_tx, exit_rx) = oneshot::channel::<HeartbeatExit>();
         let heartbeat_handle = tokio::spawn(heartbeat_task(
             client.clone(),
@@ -196,17 +212,19 @@ impl Watch {
         &self.lease_id
     }
 
-    pub fn heartbeat_interval(&self) -> Duration {
-        self.heartbeat_interval
-    }
-
     pub fn device_wait_for_viewer(&self) -> Duration {
         self.device_wait_for_viewer
     }
 
-    /// Awaits the next terminal outcome. The caller should either close this watch or take
-    /// control-loop action as a result; no further events will be returned.
-    pub async fn next_outcome(&mut self) -> WatchOutcome {
+    /// Runs the watch session, logs the outcome, closes the watch, and returns the outcome.
+    pub async fn run(mut self) -> WatchOutcome {
+        let outcome = self.run_inner().await;
+        log_watch_outcome(&outcome, &self.lease_id);
+        self.close().await;
+        outcome
+    }
+
+    async fn run_inner(&mut self) -> WatchOutcome {
         // The RFC requires a read-timeout of at least `2 * heartbeat_interval_ms` so that one
         // missed wire-heartbeat does not falsely trip a reconnect. Add a half-interval cushion
         // to absorb scheduling jitter at the boundary.
@@ -260,7 +278,7 @@ impl Watch {
 
     /// Stops the heartbeat task and waits until it has exited. This satisfies the invariant that
     /// "the gateway must stop heartbeating that lease before reconnecting".
-    pub async fn close(mut self) {
+    async fn close(mut self) {
         if let Some(handle) = self.heartbeat_handle.take() {
             handle.abort();
             let _ = handle.await;
@@ -324,6 +342,54 @@ async fn heartbeat_task(
                 }
             },
         }
+    }
+}
+
+/// Logs a [`WatchOutcome`].
+fn log_watch_outcome(outcome: &WatchOutcome, watch_lease_id: &str) {
+    match outcome {
+        WatchOutcome::Wake(wake) => info!(
+            watch_lease_id,
+            remote_access_session_id = wake.remote_access_session_id.as_deref(),
+            "received wake"
+        ),
+        WatchOutcome::ReadTimeout => {
+            warn!(watch_lease_id, "watch stream read-timeout; reconnecting")
+        }
+        WatchOutcome::StreamEnded => warn!(
+            watch_lease_id,
+            "watch stream ended before wake; reconnecting"
+        ),
+        WatchOutcome::StreamError(e) => warn!(
+            watch_lease_id,
+            error = %e,
+            "watch stream error; reconnecting"
+        ),
+        WatchOutcome::HeartbeatLost(reason) => match reason {
+            HeartbeatExit::Conflict => warn!(
+                watch_lease_id,
+                "another gateway holds the watch lease; backing off"
+            ),
+            HeartbeatExit::Gone => warn!(
+                watch_lease_id,
+                "watch lease gone; reconnecting to acquire a fresh lease"
+            ),
+            HeartbeatExit::Unauthorized => error!(
+                watch_lease_id,
+                "device token unauthorized; stopping remote access gateway"
+            ),
+            HeartbeatExit::Failed => warn!(
+                watch_lease_id,
+                "watch heartbeat failed for too long; reconnecting"
+            ),
+            // The heartbeat task only drops its sender without sending if it panicked or was
+            // externally aborted. Neither happens in normal operation; if it fires in production,
+            // it indicates a bug.
+            HeartbeatExit::Cancelled => error!(
+                watch_lease_id,
+                "heartbeat task exited without a terminal reason; check for panics"
+            ),
+        },
     }
 }
 
@@ -480,8 +546,8 @@ mod tests {
             .expect("watch should connect");
 
         assert_eq!(watch.lease_id(), "lease-1");
-        assert_eq!(watch.device_wait_for_viewer(), Duration::from_secs(45));
-        assert_eq!(watch.heartbeat_interval(), Duration::from_secs(60));
+        assert_eq!(watch.device_wait_for_viewer, Duration::from_secs(45));
+        assert_eq!(watch.heartbeat_interval, Duration::from_secs(60));
         watch.close().await;
     }
 
@@ -529,15 +595,15 @@ mod tests {
             .await
             .expect("watch should connect");
 
-        assert_eq!(watch.device_wait_for_viewer(), MIN_DEVICE_WAIT_FOR_VIEWER);
-        assert_eq!(watch.heartbeat_interval(), MIN_HEARTBEAT_INTERVAL);
+        assert_eq!(watch.device_wait_for_viewer, MIN_DEVICE_WAIT_FOR_VIEWER);
+        assert_eq!(watch.heartbeat_interval, MIN_HEARTBEAT_INTERVAL);
         watch.close().await;
     }
 
     #[tokio::test]
     async fn next_outcome_ignores_non_terminal_frames_until_wake() {
         let wake_json = "{\"remoteAccessSessionId\":\"ras-1\",\"url\":\"wss://example.test\",\"token\":\"token-1\"}";
-        let (mut watch, _exit_tx) = watch_from_frames(
+        let (watch, _exit_tx) = watch_from_frames(
             vec![
                 SseFrame::Comment,
                 event("hello", "{}"),
@@ -547,7 +613,7 @@ mod tests {
             60_000,
         );
 
-        let outcome = watch.next_outcome().await;
+        let outcome = watch.run().await;
 
         let WatchOutcome::Wake(wake) = outcome else {
             panic!("expected wake outcome");
@@ -559,9 +625,9 @@ mod tests {
 
     #[tokio::test]
     async fn next_outcome_reports_malformed_wake() {
-        let (mut watch, _exit_tx) = watch_from_frames(vec![event("wake", "{")], 60_000);
+        let (watch, _exit_tx) = watch_from_frames(vec![event("wake", "{")], 60_000);
 
-        let outcome = watch.next_outcome().await;
+        let outcome = watch.run().await;
 
         assert_matches!(
             outcome,
@@ -571,19 +637,19 @@ mod tests {
 
     #[tokio::test]
     async fn next_outcome_reports_stream_end() {
-        let (mut watch, _exit_tx) = watch_from_frames(Vec::new(), 60_000);
+        let (watch, _exit_tx) = watch_from_frames(Vec::new(), 60_000);
 
-        let outcome = watch.next_outcome().await;
+        let outcome = watch.run().await;
 
         assert_matches!(outcome, WatchOutcome::StreamEnded);
     }
 
     #[tokio::test]
     async fn next_outcome_reports_read_timeout() {
-        let (mut watch, _exit_tx) =
+        let (watch, _exit_tx) =
             watch_from_stream(stream::pending::<Result<SseFrame, reqwest::Error>>(), 1);
 
-        let outcome = tokio::time::timeout(Duration::from_secs(1), watch.next_outcome())
+        let outcome = tokio::time::timeout(Duration::from_secs(1), watch.run())
             .await
             .expect("watch read timeout should fire");
 
@@ -593,10 +659,10 @@ mod tests {
     #[tokio::test]
     async fn next_outcome_prefers_heartbeat_exit() {
         let wake_json = "{\"url\":\"wss://example.test\",\"token\":\"token-1\"}";
-        let (mut watch, exit_tx) = watch_from_frames(vec![event("wake", wake_json)], 60_000);
+        let (watch, exit_tx) = watch_from_frames(vec![event("wake", wake_json)], 60_000);
         exit_tx.send(HeartbeatExit::Gone).unwrap();
 
-        let outcome = watch.next_outcome().await;
+        let outcome = watch.run().await;
 
         assert_matches!(outcome, WatchOutcome::HeartbeatLost(HeartbeatExit::Gone));
     }

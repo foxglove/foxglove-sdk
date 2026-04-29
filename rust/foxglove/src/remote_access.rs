@@ -15,6 +15,7 @@ mod session;
 mod session_state;
 mod sse;
 mod watch;
+mod watch_loop;
 
 pub use crate::remote_common::ClientId;
 pub use crate::remote_common::connection_graph::ConnectionGraph;
@@ -36,6 +37,7 @@ pub use crate::remote_common::fetch_asset::AssetHandler;
 /// Type alias for the remote-access-specific asset responder.
 pub type AssetResponder = crate::remote_common::fetch_asset::AssetResponder<Client>;
 
+use reqwest::StatusCode;
 use thiserror::Error;
 
 use crate::api_client::FoxgloveApiClientError;
@@ -55,6 +57,13 @@ pub(super) enum RemoteAccessError {
     /// An I/O error.
     #[error(transparent)]
     Io(#[from] std::io::Error),
+}
+
+impl RemoteAccessError {
+    /// True if this is an [`Api`](Self::Api) error carrying a 401.
+    pub(super) fn is_unauthorized(&self) -> bool {
+        matches!(self, Self::Api(api) if api.status_code() == Some(StatusCode::UNAUTHORIZED))
+    }
 }
 
 impl From<livekit::StreamError> for RemoteAccessError {

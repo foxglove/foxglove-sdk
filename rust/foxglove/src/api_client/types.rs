@@ -39,7 +39,7 @@ pub(crate) struct WatchHelloEvent {
 }
 
 /// Payload of a `wake` event emitted when viewers are waiting for the device.
-#[derive(Deserialize, Serialize, Clone, Debug)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct WatchWakeEvent {
     #[serde(default)]
