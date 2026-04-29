@@ -66,7 +66,7 @@ pub(super) enum WatchError {
     HelloTimeout,
 
     /// The response had a `2xx` status but a non-SSE `Content-Type`. This is the shape an
-    /// upstream maintenance page or misrouted load balancer would take.
+    /// upstream maintenance page would have.
     #[error("unexpected response content-type: {content_type:?}")]
     UnexpectedContentType { content_type: Option<String> },
 
@@ -134,7 +134,7 @@ impl Watch {
             .inspect_err(|e| match e {
                 WatchError::UnexpectedContentType { content_type } => info!(
                     content_type = content_type.as_deref(),
-                    "watch endpoint returned non-SSE response (likely API maintenance); backing off"
+                    "watch endpoint returned non-SSE response; backing off"
                 ),
                 _ => warn!(error=%e, "watch stream connect failed"),
             })
@@ -169,7 +169,12 @@ impl Watch {
             .headers()
             .get(CONTENT_TYPE)
             .and_then(|v| v.to_str().ok())
-            .map(|v| v.split(';').next().unwrap_or(v).trim().to_ascii_lowercase());
+            .map(|v| {
+                v.split_once(';')
+                    .map_or(v, |(a, _)| a)
+                    .trim()
+                    .to_ascii_lowercase()
+            });
         if content_type.as_deref() != Some("text/event-stream") {
             return Err(WatchError::UnexpectedContentType { content_type });
         }

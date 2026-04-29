@@ -104,10 +104,8 @@ pub(super) fn on_connect_error(err: &WatchError, retry: &mut WatchRetryState) ->
             LEASE_CONFLICT_BACKOFF
         }
         WatchError::UnexpectedContentType { .. } => {
-            // Looks like a maintenance page or misrouted LB. Our prior lease is almost
-            // certainly stale by the time the API is back; drop it. Use a fixed delay
-            // rather than escalating the transient backoff so we recover promptly when
-            // the window ends.
+            // Looks like a maintenance page or misrouted LB. Use a fixed delay rather than
+            // escalating the transient backoff.
             retry.previous_lease_id = None;
             NON_SSE_RESPONSE_BACKOFF
         }
