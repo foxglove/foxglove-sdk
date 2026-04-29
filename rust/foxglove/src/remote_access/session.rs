@@ -985,7 +985,7 @@ impl RemoteAccessSession {
     /// immediately queued for transmission.
     ///
     /// If a participant for `participant_id` is already registered with the
-    /// **same** `livekit_sid`, this is a no-op (the same connection instance
+    /// **same** `participant_sid`, this is a no-op (the same connection instance
     /// is being re-announced — nothing to do). If the registered instance
     /// has a different SID but a `joined_at` that is **later** than
     /// `joined_at`, the incoming registration is also a no-op: it's a
@@ -1462,6 +1462,7 @@ impl RemoteAccessSession {
         // `ParticipantDisconnected` event is already queued and a future reconnect will
         // go through the normal `ParticipantConnected` → `add_participant` path.
         //
+        // If a new instance has already reconnected under the same identity,
         // its SID, attributes, and `joined_at` are what we re-register with
         // — so that (a) a later stale `ParticipantDisconnected` for the
         // *old* instance's SID won't match and tear down this

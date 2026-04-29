@@ -32,6 +32,9 @@ pub(crate) struct Participant {
     client_id: ClientId,
     /// LiveKit participant identity (stable across disconnect + reconnect).
     participant_id: ParticipantIdentity,
+    /// LiveKit session ID for this specific connection instance. Unique per
+    /// physical connection — unlike `participant_id`, it changes when a
+    /// participant disconnects and reconnects under the same identity. Used
     /// to disambiguate connection instances on every operation that targets
     /// one specific instance: `ParticipantDisconnected` event handling,
     /// SID-keyed `remove_participant`, and `pending_resets` bookkeeping.
