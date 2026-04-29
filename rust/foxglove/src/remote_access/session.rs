@@ -185,9 +185,19 @@ impl Sink for RemoteAccessSession {
         let channel_id = channel.id();
 
         // Collect subscriber identities under the session-state lock and
-        // release it before broadcasting. A participant removed between the
-        // collect and the registry resolve is a benign miss — their control
-        // queue has already been drained.
+        // release it before broadcasting. Two races are possible between the
+        // collect and the registry resolve, both benign:
+        //   1. The participant has been removed and not replaced — the resolve
+        //      misses and the message is dropped (their control queue has
+        //      already been drained anyway).
+        //   2. The participant has been removed and a same-identity reconnect
+        //      has registered in their place. The resolve returns the new
+        //      attempt, which receives a MessageData for a channel it never
+        //      subscribed to. The channel ID is session-scoped (already
+        //      advertised on this session), so the viewer drops the unknown
+        //      subscription and continues. Resolution is keyed on
+        //      ParticipantIdentity, so this can never deliver data across
+        //      identities — only the same logical user across a reconnect.
         let reliable_subscribers = {
             let state = self.state.read();
 
