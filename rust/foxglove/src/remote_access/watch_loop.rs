@@ -106,7 +106,6 @@ pub(super) fn on_connect_error(err: &WatchError, retry: &mut WatchRetryState) ->
         WatchError::UnexpectedContentType { .. } => {
             // Looks like a maintenance page or misrouted LB. Use a fixed delay rather than
             // escalating the transient backoff.
-            retry.previous_lease_id = None;
             NON_SSE_RESPONSE_BACKOFF
         }
         _ => {
@@ -254,9 +253,9 @@ mod tests {
     }
 
     #[test]
-    fn connect_error_unexpected_content_type_drops_lease_with_fixed_backoff() {
+    fn connect_error_unexpected_content_type_uses_fixed_backoff() {
         let mut state = WatchRetryState {
-            previous_lease_id: Some("ours".into()),
+            previous_lease_id: Some("keep".into()),
             backoff: Duration::from_secs(2),
         };
         let action = on_connect_error(
@@ -266,7 +265,7 @@ mod tests {
             &mut state,
         );
         assert_eq!(action, ConnectAction::RetryAfter(NON_SSE_RESPONSE_BACKOFF));
-        assert_eq!(state.previous_lease_id, None);
+        assert_eq!(state.previous_lease_id.as_deref(), Some("keep"));
         // Maintenance backoff is fixed; transient backoff is left untouched.
         assert_eq!(state.backoff, Duration::from_secs(2));
     }
