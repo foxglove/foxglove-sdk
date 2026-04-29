@@ -142,7 +142,7 @@ pub(crate) struct RemoteAccessSession {
     remote_access_session_id: Option<String>,
     /// Session-level state: channels, subscriptions, video publishers, client
     /// channels, parameter subscriptions. Participant membership lives on
-    /// [`registry`] instead.
+    /// [`participant_registry`] instead.
     state: RwLock<SessionState>,
     channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     qos_classifier: Option<Arc<dyn QosClassifier>>,
@@ -168,7 +168,7 @@ pub(crate) struct RemoteAccessSession {
     /// Immutable `ServerInfo` message sent to each participant on connect and reset.
     server_info: ServerInfo,
     /// Participant membership and flush-task lifecycle.
-    registry: ParticipantRegistry,
+    participant_registry: ParticipantRegistry,
 }
 
 impl Sink for RemoteAccessSession {
@@ -217,7 +217,7 @@ impl Sink for RemoteAccessSession {
         if let Some(subscribers) = reliable_subscribers {
             let message = MessageData::new(u64::from(channel_id), metadata.log_time, msg);
             let encoded = encode_binary_message(&message);
-            for participant in self.registry.resolve_identities(subscribers) {
+            for participant in self.participant_registry.resolve_identities(subscribers) {
                 participant.send_control(encoded.clone());
             }
         }
@@ -314,7 +314,10 @@ impl Sink for RemoteAccessSession {
         // Fire on_unsubscribe callbacks for subscribers of the removed channel.
         if let Some(listener) = &self.listener {
             let descriptor = channel.descriptor();
-            for participant in self.registry.resolve_identities(subscriber_identities) {
+            for participant in self
+                .participant_registry
+                .resolve_identities(subscriber_identities)
+            {
                 let client = Client::new(
                     participant.client_id(),
                     participant.participant_id().clone(),
@@ -350,7 +353,7 @@ pub(crate) struct SessionParams {
 impl RemoteAccessSession {
     pub(crate) fn new(params: SessionParams) -> Self {
         let (video_metadata_tx, video_metadata_rx) = tokio::sync::watch::channel(());
-        let registry = ParticipantRegistry::new(params.message_backlog_size);
+        let participant_registry = ParticipantRegistry::new(params.message_backlog_size);
         Self {
             sink_id: SinkId::next(),
             room: params.room,
@@ -373,7 +376,7 @@ impl RemoteAccessSession {
             ice_rtt_tracker: parking_lot::Mutex::new(RttTracker::new("ICE")),
             connection_graph: params.connection_graph,
             server_info: params.server_info,
-            registry,
+            participant_registry,
         }
     }
 
@@ -397,7 +400,7 @@ impl RemoteAccessSession {
     pub(crate) fn stats(&self) -> SessionStats {
         let state = self.state.read();
         SessionStats {
-            participants: self.registry.participant_count(),
+            participants: self.participant_registry.participant_count(),
             subscriptions: state.subscription_count(),
             video_tracks: state.video_track_count(),
         }
@@ -420,7 +423,7 @@ impl RemoteAccessSession {
     /// Enqueue a control plane message for all currently connected participants.
     /// If a participant's queue is full, a reset is requested for that participant.
     fn broadcast_control(&self, data: Bytes) {
-        for participant in self.registry.collect_participants() {
+        for participant in self.participant_registry.collect_participants() {
             participant.send_control(data.clone());
         }
     }
@@ -456,7 +459,7 @@ impl RemoteAccessSession {
     pub(crate) async fn close(&self) {
         // Cancel flush-tasks and await them before tearing down the transport.
         // In-flight writes either complete or fail once `room.close()` runs.
-        self.registry.shutdown().await;
+        self.participant_registry.shutdown().await;
         if let Err(e) = self.room.close().await {
             error!(
                 remote_access_session_id = self.remote_access_session_id(),
@@ -567,7 +570,10 @@ impl RemoteAccessSession {
             }
         };
 
-        let Some(participant) = self.registry.get_participant(participant_identity) else {
+        let Some(participant) = self
+            .participant_registry
+            .get_participant(participant_identity)
+        else {
             error!("Unknown participant identity: {:?}", participant_identity);
             return false;
         };
@@ -969,7 +975,7 @@ impl RemoteAccessSession {
     ) -> Result<(), Box<RemoteAccessError>> {
         // Gate on the registry *before* opening the stream: `stream_bytes` is
         // an RPC that should not be wasted on an already-registered identity.
-        if self.registry.has_participant(&participant_id) {
+        if self.participant_registry.has_participant(&participant_id) {
             return Ok(());
         }
 
@@ -999,7 +1005,7 @@ impl RemoteAccessSession {
             "registering participant {participant_id:?} with {} initial messages",
             initial_messages.len()
         );
-        let inserted = self.registry.register_participant(
+        let inserted = self.participant_registry.register_participant(
             participant_id.clone(),
             participant_sid,
             protocol_version,
@@ -1032,7 +1038,7 @@ impl RemoteAccessSession {
     ) {
         let _guard = self.subscription_lock.lock();
         let Some(participant) = self
-            .registry
+            .participant_registry
             .remove_participant(participant_id, expected_sid)
         else {
             info!(
@@ -1108,7 +1114,7 @@ impl RemoteAccessSession {
             // replaced by a reconnection that, by definition, has a different
             // SID; the staleness check inside `reset_participant` skips
             // those, avoiding a spurious teardown of the replacement.
-            for sid in self.registry.drain_pending_resets() {
+            for sid in self.participant_registry.drain_pending_resets() {
                 self.reset_participant(sid).await;
             }
 
@@ -1120,7 +1126,7 @@ impl RemoteAccessSession {
                     }
                 }
                 // Wake when new reset requests arrive.
-                () = self.registry.reset_notify().notified() => {}
+                () = self.participant_registry.reset_notify().notified() => {}
             }
         }
         warn!(
@@ -1376,7 +1382,7 @@ impl RemoteAccessSession {
         // (which has a different SID) won't match here — that's the
         // staleness filter, and avoids tearing down a replacement that has
         // already taken over.
-        let (participant_id, version) = match self.registry.get_participant_by_sid(&target_sid) {
+        let (participant_id, version) = match self.participant_registry.get_participant_by_sid(&target_sid) {
             Some(p) => (p.participant_id().clone(), p.protocol_version().clone()),
             None => {
                 info!(
@@ -1766,7 +1772,7 @@ impl RemoteAccessSession {
 
         // Collect the per-participant messages, then send them after the locks
         // are released to minimize lock scope.
-        let participants = self.registry.collect_participants();
+        let participants = self.participant_registry.collect_participants();
         let to_send: Vec<(Arc<Participant>, Bytes)> = {
             let state = self.state.read();
             participants
@@ -1873,7 +1879,7 @@ impl RemoteAccessSession {
         let mut graph = self.connection_graph.lock();
         let update = graph.update(replacement_graph);
         let encoded = encode_json_message(&update);
-        for participant in self.registry.collect_participants() {
+        for participant in self.participant_registry.collect_participants() {
             if graph.is_subscriber(participant.client_id()) {
                 participant.send_control(encoded.clone());
             }
