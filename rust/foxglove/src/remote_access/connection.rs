@@ -434,18 +434,20 @@ impl RemoteAccessConnection {
         let Some(mut watch) = self.connect_watch(device_context, retry).await else {
             return WatchLoopAction::Stop;
         };
+
+        let lease_id = watch.lease_id().to_string();
+        let heartbeat_interval = watch.heartbeat_interval();
+        let device_wait_for_viewer = watch.device_wait_for_viewer();
         info!(
-            watch_lease_id = watch.lease_id(),
-            heartbeat_interval_ms = watch.hello().heartbeat_interval_ms,
-            device_wait_for_viewer_ms = watch.hello().device_wait_for_viewer_ms,
+            lease_id,
+            ?heartbeat_interval,
+            ?device_wait_for_viewer,
             "watch stream established; dormant until wake"
         );
         self.set_status(ConnectionStatus::Connected);
         retry.backoff = CONTROL_LOOP_INITIAL_BACKOFF;
 
         let outcome = watch.next_outcome().await;
-        let lease_id = watch.lease_id().to_string();
-        let device_wait_for_viewer = Duration::from_millis(watch.hello().device_wait_for_viewer_ms);
         watch.close().await;
 
         self.handle_watch_outcome(

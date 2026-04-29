@@ -31,6 +31,12 @@ const HELLO_TIMEOUT: Duration = Duration::from_secs(30);
 /// Maximum consecutive heartbeat silence tolerated before forcing a watch reconnect.
 const MAX_MISSED_HEARTBEAT_INTERVALS: u32 = 3;
 
+/// Minimum heartbeat interval.
+const MIN_HEARTBEAT_INTERVAL: Duration = Duration::from_secs(1);
+
+/// Minimum device-wait-for-viewer duration.
+const MIN_DEVICE_WAIT_FOR_VIEWER: Duration = Duration::from_secs(5);
+
 /// Errors produced while establishing or reading from a watch stream.
 #[derive(Error, Debug)]
 #[non_exhaustive]
@@ -58,10 +64,6 @@ pub(super) enum WatchError {
     /// The `hello` handshake did not arrive within [`HELLO_TIMEOUT`].
     #[error("timed out waiting for `hello` event")]
     HelloTimeout,
-
-    /// The `hello` event carried unusable control-loop settings.
-    #[error("invalid `hello` event: {0}")]
-    InvalidHello(&'static str),
 
     /// Received an event we could not parse.
     #[error("malformed `{event}` event: {source}")]
@@ -108,7 +110,9 @@ pub(super) enum WatchOutcome {
 /// A connected watch. Spawns an internal heartbeat task on construction and aborts it
 /// on [`close`](Self::close) (or on drop as a safety net).
 pub(super) struct Watch {
-    hello: WatchHelloEvent,
+    lease_id: String,
+    heartbeat_interval: Duration,
+    device_wait_for_viewer: Duration,
     events: Pin<Box<dyn Stream<Item = Result<SseFrame, reqwest::Error>> + Send>>,
     heartbeat_handle: Option<JoinHandle<()>>,
     heartbeat_exit: oneshot::Receiver<HeartbeatExit>,
@@ -163,34 +167,41 @@ impl Watch {
             }
             debug!(event = %event.event, "ignoring unexpected event before hello");
         };
-        if hello.heartbeat_interval_ms == 0 {
-            return Err(WatchError::InvalidHello(
-                "heartbeatIntervalMs must be greater than zero",
-            ));
-        }
+
+        // Clamp durations to reasonable values.
+        let heartbeat_interval =
+            Duration::from_millis(hello.heartbeat_interval_ms).max(MIN_HEARTBEAT_INTERVAL);
+        let device_wait_for_viewer =
+            Duration::from_millis(hello.device_wait_for_viewer_ms).max(MIN_DEVICE_WAIT_FOR_VIEWER);
 
         let (exit_tx, exit_rx) = oneshot::channel::<HeartbeatExit>();
         let heartbeat_handle = tokio::spawn(heartbeat_task(
             client.clone(),
             hello.watch_lease_id.clone(),
-            Duration::from_millis(hello.heartbeat_interval_ms),
+            heartbeat_interval,
             exit_tx,
         ));
 
         Ok(Self {
-            hello,
+            lease_id: hello.watch_lease_id,
+            heartbeat_interval,
+            device_wait_for_viewer,
             events,
             heartbeat_handle: Some(heartbeat_handle),
             heartbeat_exit: exit_rx,
         })
     }
 
-    pub fn hello(&self) -> &WatchHelloEvent {
-        &self.hello
+    pub fn lease_id(&self) -> &str {
+        &self.lease_id
     }
 
-    pub fn lease_id(&self) -> &str {
-        &self.hello.watch_lease_id
+    pub fn heartbeat_interval(&self) -> Duration {
+        self.heartbeat_interval
+    }
+
+    pub fn device_wait_for_viewer(&self) -> Duration {
+        self.device_wait_for_viewer
     }
 
     /// Awaits the next terminal outcome. The caller should either close this watch or take
@@ -199,12 +210,10 @@ impl Watch {
         // The RFC requires a read-timeout of at least `2 * heartbeat_interval_ms` so that one
         // missed wire-heartbeat does not falsely trip a reconnect. Add a half-interval cushion
         // to absorb scheduling jitter at the boundary.
-        let interval_ms = self.hello.heartbeat_interval_ms;
-        let read_timeout = Duration::from_millis(
-            interval_ms
-                .saturating_mul(2)
-                .saturating_add(interval_ms / 2),
-        );
+        let read_timeout = self
+            .heartbeat_interval
+            .saturating_mul(2)
+            .saturating_add(self.heartbeat_interval / 2);
         let events = &mut self.events;
         let heartbeat_exit = &mut self.heartbeat_exit;
         loop {
@@ -431,11 +440,9 @@ mod tests {
     {
         let (exit_tx, exit_rx) = oneshot::channel();
         let watch = Watch {
-            hello: WatchHelloEvent {
-                watch_lease_id: "lease-1".to_string(),
-                device_wait_for_viewer_ms: 45_000,
-                heartbeat_interval_ms,
-            },
+            lease_id: "lease-1".to_string(),
+            device_wait_for_viewer: Duration::from_secs(45),
+            heartbeat_interval: Duration::from_millis(heartbeat_interval_ms),
             events: Box::pin(events),
             heartbeat_handle: None,
             heartbeat_exit: exit_rx,
@@ -473,8 +480,8 @@ mod tests {
             .expect("watch should connect");
 
         assert_eq!(watch.lease_id(), "lease-1");
-        assert_eq!(watch.hello().device_wait_for_viewer_ms, 45_000);
-        assert_eq!(watch.hello().heartbeat_interval_ms, 60_000);
+        assert_eq!(watch.device_wait_for_viewer(), Duration::from_secs(45));
+        assert_eq!(watch.heartbeat_interval(), Duration::from_secs(60));
         watch.close().await;
     }
 
@@ -507,25 +514,24 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn connect_rejects_zero_heartbeat_interval() {
+    async fn connect_clamps_durations() {
         let server = watch_server(WatchResponse {
             status: AxumStatusCode::OK,
             body: concat!(
                 "event: hello\n",
-                "data: {\"watchLeaseId\":\"lease-1\",\"deviceWaitForViewerMs\":45000,\"heartbeatIntervalMs\":0}\n\n",
+                "data: {\"watchLeaseId\":\"lease-1\",\"deviceWaitForViewerMs\":1,\"heartbeatIntervalMs\":2}\n\n",
             ),
         })
         .await;
         let client = test_client(&server);
 
-        let result = Watch::connect(client, WatchQuery::default()).await;
+        let watch = Watch::connect(client, WatchQuery::default())
+            .await
+            .expect("watch should connect");
 
-        assert!(matches!(
-            result,
-            Err(WatchError::InvalidHello(
-                "heartbeatIntervalMs must be greater than zero"
-            ))
-        ));
+        assert_eq!(watch.device_wait_for_viewer(), MIN_DEVICE_WAIT_FOR_VIEWER);
+        assert_eq!(watch.heartbeat_interval(), MIN_HEARTBEAT_INTERVAL);
+        watch.close().await;
     }
 
     #[tokio::test]
@@ -602,11 +608,9 @@ mod tests {
         let (_exit_tx, exit_rx) = oneshot::channel();
 
         let watch = Watch {
-            hello: WatchHelloEvent {
-                watch_lease_id: "lease-1".to_string(),
-                device_wait_for_viewer_ms: 45_000,
-                heartbeat_interval_ms: 60_000,
-            },
+            lease_id: "lease-1".to_string(),
+            device_wait_for_viewer: Duration::from_secs(45),
+            heartbeat_interval: Duration::from_secs(60),
             events: Box::pin(stream::pending::<Result<SseFrame, reqwest::Error>>()),
             heartbeat_handle: Some(heartbeat_handle),
             heartbeat_exit: exit_rx,
