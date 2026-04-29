@@ -264,13 +264,90 @@ jobs:
       - run: make SANITIZE=address,undefined FOXGLOVE_REMOTE_ACCESS=OFF test
         working-directory: cpp
 
+  integration-test:
+    needs: [changes, build]
+    if: needs.changes.outputs.build == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      PREBUILT_ARTIFACT: foxglove-${{ inputs.sdk-version || github.sha }}-cpp-x86_64-unknown-linux-gnu.zip
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          lfs: true
+
+      - name: Install common dependencies
+        uses: ./.github/actions/common-deps
+
+      - name: Install LiveKit C++ SDK dependencies
+        run: |
+          sudo apt-get install -y --no-install-recommends \
+            llvm-dev libclang-dev clang \
+            libdrm-dev libgbm-dev libx11-dev libgl1-mesa-dev \
+            libxext-dev libxcomposite-dev libxdamage-dev libxfixes-dev \
+            libxrandr-dev libxi-dev libxkbcommon-dev \
+            libasound2-dev libpulse-dev \
+            libssl-dev \
+            libabsl-dev \
+            libwayland-dev libdecor-0-dev
+
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+          # Share the cache with the remote-access-enabled linux build job.
+          cache-key: ra-v2
+
+      # Reuse the prebuilt libfoxglove.so from the `build` matrix (x86_64 linux, remote-access
+      # enabled). `FOXGLOVE_PREBUILT_LIB_DIR` lets CMake skip the corrosion/Rust build entirely.
+      - name: Download prebuilt libfoxglove (x86_64 linux, remote-access)
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ env.PREBUILT_ARTIFACT }}
+          path: artifacts
+      - name: Unpack prebuilt libfoxglove
+        run: unzip -q artifacts/${{ env.PREBUILT_ARTIFACT }} -d artifacts
+
+      # Persist the LiveKit/webrtc FetchContent sources and build tree across runs, keyed on the
+      # CMakeLists.txt hash so bumping the LiveKit/jwt-cpp/httplib tags invalidates the cache.
+      - name: Cache LiveKit / webrtc FetchContent
+        uses: actions/cache@v4
+        with:
+          path: cpp/build-integration/_deps
+          key: c-cpp-integration-deps-${{ runner.os }}-${{ hashFiles('cpp/CMakeLists.txt') }}
+          restore-keys: |
+            c-cpp-integration-deps-${{ runner.os }}-
+
+      # ccache is wired up in cpp/CMakeLists.txt (find_program(CCACHE_PROGRAM ccache)), so
+      # installing it + persisting its cache transparently speeds up C/C++ recompiles.
+      - name: Set up ccache
+        uses: hendrikmuhs/ccache-action@v1
+        with:
+          key: c-cpp-integration-${{ runner.os }}
+          max-size: 2G
+
+      - name: Start LiveKit server
+        run: docker compose up -d --wait
+
+      - name: Build and run C++ integration tests
+        working-directory: cpp
+        env:
+          RUSTFLAGS: ""
+          FOXGLOVE_PREBUILT_LIB_DIR: ${{ github.workspace }}/artifacts/foxglove/lib
+        run: |
+          make build-integration
+          ctest --test-dir build-integration --verbose -L integration
+
+      - name: Stop LiveKit server
+        if: always()
+        run: docker compose down
+
   # Gate job for branch protection. Always posts a status so that the required
   # check passes even when the other jobs are skipped. Configure your required
   # status check to reference this job ("C/C++ / c-cpp-status") instead of the
   # individual matrix jobs.
   c-cpp-status:
     name: c-cpp-status
-    needs: [changes, lint, build, test-asan-ubsan]
+    needs: [changes, lint, build, test-asan-ubsan, integration-test]
     if: always()
     runs-on: ubuntu-latest
     steps:
