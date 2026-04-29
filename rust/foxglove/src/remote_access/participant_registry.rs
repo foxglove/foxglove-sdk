@@ -67,6 +67,10 @@ impl ParticipantRegistry {
     /// flush-task write failure — matches this exact instance rather than
     /// some other connection that happens to share the identity.
     ///
+    /// `joined_at` is the LiveKit server-assigned join timestamp (ms since
+    /// epoch) for this connection instance — it disambiguates two
+    /// same-identity registrations independently of arrival order.
+    ///
     /// `session_cancel` is the session's cancellation token; the spawned
     /// flush-task takes a child of it so the task exits on session close.
     ///
@@ -77,26 +81,36 @@ impl ParticipantRegistry {
     ///
     /// - If no participant is registered for `id`, the new one is inserted
     ///   and `None` is returned.
-    /// - If a participant is registered with a **different** `participant_sid`,
-    ///   it is removed (its flush-task is cancelled by `Participants`'
-    ///   removal path) and the new one is inserted in its place; the prior
-    ///   `Arc<Participant>` is returned so the caller can run any
-    ///   session-level cleanup (subscription sweep, listener callbacks).
-    ///   This handles the case where LiveKit emits the reconnect's
-    ///   `ParticipantActive` *before* the prior instance's
+    /// - If a participant is registered with a **different** `participant_sid`
+    ///   and the incoming `joined_at` is **at least** the stored one's, the
+    ///   prior registration is removed (its flush-task is cancelled by
+    ///   `Participants`' removal path), the new one is inserted in its
+    ///   place, and the prior `Arc<Participant>` is returned so the caller
+    ///   can run any session-level cleanup (subscription sweep, listener
+    ///   callbacks). This handles the case where LiveKit emits the
+    ///   reconnect's `ParticipantActive` *before* the prior instance's
     ///   `ParticipantDisconnected`; without atomic replacement the new
     ///   instance would be silently dropped and the late `Disconnected`
     ///   would then evict the only registration, stranding the live viewer.
+    /// - If a participant is registered with a **different** `participant_sid`
+    ///   but the incoming `joined_at` is **older** than the stored one's,
+    ///   the incoming registration is treated as stale: the existing
+    ///   registration is left untouched, the freshly-spawned participant
+    ///   is cancelled and dropped, and `None` is returned. This protects
+    ///   against an out-of-order `ParticipantActive` for a superseded
+    ///   instance overwriting a fresher registration.
     /// - If a participant is registered with the **same** `participant_sid`,
     ///   the existing registration is left untouched, the freshly-spawned
     ///   participant is cancelled and dropped, and `None` is returned. This
     ///   path is defensive: in practice LiveKit never reuses a SID across
     ///   instances, so re-registering an identical `(identity, sid)` pair
     ///   indicates a redundant call rather than a true reconnect.
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn register_participant<I>(
         &self,
         id: ParticipantIdentity,
         participant_sid: ParticipantSid,
+        joined_at: i64,
         protocol_version: Version,
         writer: ParticipantWriter,
         session_cancel: &CancellationToken,
@@ -108,6 +122,7 @@ impl ParticipantRegistry {
         let (participant, flush_handle) = Participant::spawn(
             id,
             participant_sid,
+            joined_at,
             protocol_version,
             writer,
             self.message_backlog_size,
@@ -125,23 +140,39 @@ impl ParticipantRegistry {
         // Same-identity reconnect (different SID): atomically remove the prior
         // registration so this `register_participant` call cannot lose a
         // race with a late `ParticipantDisconnected` for the prior instance.
-        let prior =
-            if let Some(existing) = participants.get_by_identity(participant.participant_id()) {
-                if existing.participant_sid() == participant.participant_sid() {
-                    // Defensive no-op: same instance is already registered. Drop
-                    // the freshly-spawned participant (and its writer); cancel
-                    // its flush-task so it exits promptly.
-                    participant.cancel();
-                    return None;
-                }
-                let prior_sid = existing.participant_sid().clone();
-                let prior = participants
-                    .remove_by_sid(&prior_sid)
-                    .expect("get_by_identity returned Some; remove must succeed");
-                Some(prior)
-            } else {
-                None
-            };
+        // A stale incoming registration (older `joined_at`) is rejected so a
+        // reordered `ParticipantActive` for a superseded instance cannot
+        // stomp the live one.
+        let prior = if let Some(existing) =
+            participants.get_by_identity(participant.participant_id())
+        {
+            if existing.participant_sid() == participant.participant_sid() {
+                // Defensive no-op: same instance is already registered. Drop
+                // the freshly-spawned participant (and its writer); cancel
+                // its flush-task so it exits promptly.
+                participant.cancel();
+                return None;
+            }
+            if existing.joined_at() > participant.joined_at() {
+                tracing::info!(
+                    identity = %participant.participant_id(),
+                    existing_sid = %existing.participant_sid(),
+                    existing_joined_at = existing.joined_at(),
+                    incoming_sid = %participant.participant_sid(),
+                    incoming_joined_at = participant.joined_at(),
+                    "ignoring stale same-identity registration (incoming joined_at precedes registered instance)",
+                );
+                participant.cancel();
+                return None;
+            }
+            let prior_sid = existing.participant_sid().clone();
+            let prior = participants
+                .remove_by_sid(&prior_sid)
+                .expect("get_by_identity returned Some; remove must succeed");
+            Some(prior)
+        } else {
+            None
+        };
 
         let inserted = participants.insert(participant, flush_handle);
         debug_assert!(
@@ -260,6 +291,7 @@ mod tests {
         let prior = registry.register_participant(
             id.clone(),
             sid.clone(),
+            1_000,
             version,
             test_writer(),
             &cancel,
@@ -289,6 +321,7 @@ mod tests {
                 .register_participant(
                     id.clone(),
                     sid_1.clone(),
+                    1_000,
                     version.clone(),
                     test_writer(),
                     &cancel,
@@ -304,6 +337,7 @@ mod tests {
             .register_participant(
                 id.clone(),
                 sid_2.clone(),
+                2_000,
                 version,
                 test_writer(),
                 &cancel,
@@ -334,6 +368,7 @@ mod tests {
                 .register_participant(
                     id.clone(),
                     sid.clone(),
+                    1_000,
                     version.clone(),
                     test_writer(),
                     &cancel,
@@ -348,6 +383,7 @@ mod tests {
         let prior = registry.register_participant(
             id.clone(),
             sid.clone(),
+            1_000,
             version,
             test_writer(),
             &cancel,
@@ -398,6 +434,7 @@ mod tests {
                 .register_participant(
                     id.clone(),
                     sid_1.clone(),
+                    1_000,
                     version.clone(),
                     test_writer(),
                     &cancel,
@@ -421,6 +458,7 @@ mod tests {
                 .register_participant(
                     id.clone(),
                     sid_2.clone(),
+                    2_000,
                     version,
                     test_writer(),
                     &cancel,
@@ -481,6 +519,7 @@ mod tests {
         let prior = registry.register_participant(
             id.clone(),
             sid_1.clone(),
+            1_000,
             version.clone(),
             test_writer(),
             &cancel,
@@ -499,6 +538,7 @@ mod tests {
             .register_participant(
                 id.clone(),
                 sid_2.clone(),
+                2_000,
                 version,
                 test_writer(),
                 &cancel,
@@ -518,5 +558,132 @@ mod tests {
         );
         assert_eq!(current.participant_sid(), &sid_2);
         assert_ne!(current.client_id(), client_id_1);
+    }
+
+    /// `register_participant` must reject a same-identity registration whose
+    /// `joined_at` is older than the currently stored one. Without this
+    /// check, two `ParticipantActive` events processed out of order — the
+    /// older instance landing after the newer one — would stomp the live
+    /// registration with a superseded one.
+    #[tokio::test]
+    async fn register_is_noop_when_incoming_joined_at_precedes_existing() {
+        let registry = make_registry();
+        let cancel = CancellationToken::new();
+        let id = ParticipantIdentity("viewer-1".to_string());
+        let version = protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone();
+        let sid_old = test_sid("viewer-1-attempt-1");
+        let sid_new = test_sid("viewer-1-attempt-2");
+
+        // The newer instance lands first.
+        assert!(
+            registry
+                .register_participant(
+                    id.clone(),
+                    sid_new.clone(),
+                    2_000,
+                    version.clone(),
+                    test_writer(),
+                    &cancel,
+                    [],
+                )
+                .is_none()
+        );
+        let current_client_id = registry
+            .get_participant(&id)
+            .expect("newer instance present")
+            .client_id();
+
+        // A delayed `ParticipantActive` for the older instance arrives. It
+        // must not displace the newer registration.
+        let prior = registry.register_participant(
+            id.clone(),
+            sid_old.clone(),
+            1_000,
+            version,
+            test_writer(),
+            &cancel,
+            [],
+        );
+        assert!(
+            prior.is_none(),
+            "stale same-identity registration must be a no-op",
+        );
+
+        let current = registry
+            .get_participant(&id)
+            .expect("newer instance still registered");
+        assert_eq!(current.participant_sid(), &sid_new);
+        assert_eq!(
+            current.client_id(),
+            current_client_id,
+            "stale registration must not have replaced the newer instance",
+        );
+    }
+
+    /// Companion to the test above: a registration whose `joined_at` is
+    /// newer than the currently stored one must replace it as before. This
+    /// pins down that the monotonicity check uses `>` (strictly older) and
+    /// not `>=`, so equal timestamps still fall through to "later wins"
+    /// rather than blocking a legitimate reconnect.
+    #[tokio::test]
+    async fn register_replaces_when_incoming_joined_at_is_equal_or_newer() {
+        let registry = make_registry();
+        let cancel = CancellationToken::new();
+        let id = ParticipantIdentity("viewer-1".to_string());
+        let version = protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone();
+        let sid_1 = test_sid("viewer-1-attempt-1");
+        let sid_2 = test_sid("viewer-1-attempt-2");
+        let sid_3 = test_sid("viewer-1-attempt-3");
+
+        let _ = registry.register_participant(
+            id.clone(),
+            sid_1.clone(),
+            1_000,
+            version.clone(),
+            test_writer(),
+            &cancel,
+            [],
+        );
+
+        // Equal `joined_at`, different SID: replace (later wins).
+        let prior = registry.register_participant(
+            id.clone(),
+            sid_2.clone(),
+            1_000,
+            version.clone(),
+            test_writer(),
+            &cancel,
+            [],
+        );
+        assert!(
+            prior.is_some(),
+            "equal-joined_at, different-SID must replace"
+        );
+        assert_eq!(
+            registry
+                .get_participant(&id)
+                .expect("replacement present")
+                .participant_sid(),
+            &sid_2,
+        );
+
+        // Strictly newer `joined_at`: replace.
+        let prior = registry.register_participant(
+            id.clone(),
+            sid_3.clone(),
+            2_000,
+            version,
+            test_writer(),
+            &cancel,
+            [],
+        );
+        assert!(prior.is_some(), "newer-joined_at must replace");
+        assert_eq!(
+            registry
+                .get_participant(&id)
+                .expect("replacement present")
+                .participant_sid(),
+            &sid_3,
+        );
     }
 }
