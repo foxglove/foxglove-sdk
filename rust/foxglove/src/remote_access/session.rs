@@ -975,18 +975,58 @@ impl RemoteAccessSession {
     /// `ParticipantDisconnected` event (or a flush-task failure) can be matched
     /// against this instance rather than the identity alone.
     ///
+    /// `joined_at` is the LiveKit-assigned join timestamp (ms since epoch)
+    /// for this connection instance; it lets the registry reject a
+    /// same-identity registration whose `joined_at` is older than the
+    /// currently stored one (out-of-order `ParticipantActive` for a
+    /// superseded instance).
+    ///
     /// When a participant is added, a ServerInfo message and channel Advertisement messages are
     /// immediately queued for transmission.
+    ///
+    /// If a participant for `participant_id` is already registered with the
+    /// **same** `participant_sid`, this is a no-op (the same connection instance
+    /// is being re-announced — nothing to do). If the registered instance
+    /// has a different SID but a `joined_at` that is **later** than
+    /// `joined_at`, the incoming registration is also a no-op: it's a
+    /// reordered `ParticipantActive` for an instance the server has
+    /// already superseded. Otherwise this is treated as a same-identity
+    /// reconnect: the new control stream is opened, the prior registration
+    /// is atomically replaced, and the prior participant's cleanup runs
+    /// (so its subscriptions are torn down and listener `on_unsubscribe` /
+    /// `on_client_unadvertise` callbacks fire). This handles the case where
+    /// LiveKit emits the reconnect's `ParticipantActive` *before* the
+    /// prior instance's `ParticipantDisconnected`.
     pub(crate) async fn add_participant(
-        &self,
+        self: &Arc<Self>,
         participant_id: ParticipantIdentity,
         participant_sid: ParticipantSid,
+        joined_at: i64,
         protocol_version: Version,
     ) -> Result<(), Box<RemoteAccessError>> {
-        // Gate on the registry *before* opening the stream: `stream_bytes` is
-        // an RPC that should not be wasted on an already-registered identity.
-        if self.participant_registry.has_participant(&participant_id) {
-            return Ok(());
+        // Gate on the registry *before* opening the stream: `stream_bytes`
+        // is an RPC that should not be wasted on an already-registered
+        // (identity, sid) pair, and equally not wasted on a stale incoming
+        // instance the registry would reject. A different-SID hit with a
+        // newer-or-equal `joined_at` means the registered instance is
+        // older and we must fall through to open a stream for the new
+        // instance.
+        if let Some(existing) = self.participant_registry.get_participant(&participant_id) {
+            if existing.participant_sid() == &participant_sid {
+                return Ok(());
+            }
+            if existing.joined_at() > joined_at {
+                info!(
+                    remote_access_session_id = self.remote_access_session_id(),
+                    participant_identity = %participant_id,
+                    existing_sid = %existing.participant_sid(),
+                    existing_joined_at = existing.joined_at(),
+                    incoming_sid = %participant_sid,
+                    incoming_joined_at = joined_at,
+                    "skipping add_participant for stale instance (incoming joined_at precedes registered)",
+                );
+                return Ok(());
+            }
         }
 
         let stream = self
@@ -1015,20 +1055,29 @@ impl RemoteAccessSession {
             "registering participant {participant_id:?} with {} initial messages",
             initial_messages.len()
         );
-        let inserted = self.participant_registry.register_participant(
+        // Hold `subscription_lock` across the registry call + any cleanup
+        // for a replaced prior, so a same-identity reconnect ordering is
+        // serialized with concurrent subscribe / unsubscribe / remove paths.
+        let _guard = self.subscription_lock.lock();
+        let replaced = self.participant_registry.register_participant(
             participant_id.clone(),
-            participant_sid,
+            participant_sid.clone(),
+            joined_at,
             protocol_version,
             ParticipantWriter::Livekit(stream),
             &self.cancellation_token,
             initial_messages,
         );
-        debug_assert!(
-            inserted,
-            "register_participant returned false for {participant_id:?}; \
-             concurrent add_participant for the same identity violates the \
-             caller-serialization contract",
-        );
+        if let Some(prior) = replaced {
+            info!(
+                remote_access_session_id = self.remote_access_session_id(),
+                participant_identity = %participant_id,
+                prior_sid = %prior.participant_sid(),
+                new_sid = %participant_sid,
+                "replaced same-identity participant on out-of-order ParticipantActive (new connection instance superseded the prior one)",
+            );
+            self.run_participant_removal_cleanup(&prior);
+        }
         Ok(())
     }
 
@@ -1050,6 +1099,17 @@ impl RemoteAccessSession {
     ) -> Option<Arc<Participant>> {
         let _guard = self.subscription_lock.lock();
         let participant = self.participant_registry.remove_participant(target_sid)?;
+        self.run_participant_removal_cleanup(&participant);
+        Some(participant)
+    }
+
+    /// Runs the post-removal cleanup for `participant`: subscription sweep,
+    /// context unsubscribe, video-track teardown, connection-graph update,
+    /// and listener callbacks.
+    ///
+    /// Caller must hold `subscription_lock` and have already removed
+    /// `participant` from the registry.
+    fn run_participant_removal_cleanup(self: &Arc<Self>, participant: &Arc<Participant>) {
         let client_id = participant.client_id();
         let participant_id = participant.participant_id();
         let removed = self
@@ -1092,8 +1152,6 @@ impl RemoteAccessSession {
                 listener.on_client_unadvertise(&client, descriptor);
             }
         }
-
-        Some(participant)
     }
 
     /// Listen for room events and dispatch them.
@@ -1166,15 +1224,17 @@ impl RemoteAccessSession {
                     return true;
                 };
                 let sid = participant.sid();
+                let joined_at = participant.joined_at();
                 info!(
                     remote_access_session_id,
                     participant_identity = %participant_identity,
                     sid = %sid,
+                    joined_at,
                     version = %version,
                     "participant active in room"
                 );
                 if let Err(e) = self
-                    .add_participant(participant_identity, sid, version)
+                    .add_participant(participant_identity, sid, joined_at, version)
                     .await
                 {
                     error!(remote_access_session_id, error = %e, "failed to add participant: {e}");
@@ -1403,16 +1463,18 @@ impl RemoteAccessSession {
         // go through the normal `ParticipantConnected` → `add_participant` path.
         //
         // If a new instance has already reconnected under the same identity,
-        // its SID and attributes are what we re-register with — so that (a) a
-        // later stale `ParticipantDisconnected` for the *old* instance's SID
-        // won't match and tear down this re-registration, and (b) a
-        // protocol-version change between instances is honoured rather than
-        // assumed-unchanged.
-        let Some((sid, attributes)) = self
+        // its SID, attributes, and `joined_at` are what we re-register with
+        // — so that (a) a later stale `ParticipantDisconnected` for the
+        // *old* instance's SID won't match and tear down this
+        // re-registration, (b) a protocol-version change between instances
+        // is honoured rather than assumed-unchanged, and (c) the registry's
+        // `joined_at` monotonicity check sees a value tied to this specific
+        // instance.
+        let Some((sid, attributes, joined_at)) = self
             .room
             .remote_participants()
             .get(&participant_id)
-            .map(|p| (p.sid(), p.attributes()))
+            .map(|p| (p.sid(), p.attributes(), p.joined_at()))
         else {
             info!(
                 remote_access_session_id,
@@ -1440,10 +1502,14 @@ impl RemoteAccessSession {
             remote_access_session_id,
             participant_identity = %participant_id,
             sid = %sid,
+            joined_at,
             version = %version,
             "resetting participant after control-plane failure",
         );
-        if let Err(e) = self.add_participant(participant_id, sid, version).await {
+        if let Err(e) = self
+            .add_participant(participant_id, sid, joined_at, version)
+            .await
+        {
             error!(
                 remote_access_session_id,
                 error = %e,
@@ -2348,6 +2414,7 @@ mod tests {
         let (participant, handle) = Participant::spawn(
             ParticipantIdentity("test".to_string()),
             test_sid("flush-test"),
+            0,
             protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone(),
             ParticipantWriter::Test(writer.clone()),
             DEFAULT_MESSAGE_BACKLOG_SIZE,

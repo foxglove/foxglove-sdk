@@ -39,6 +39,13 @@ pub(crate) struct Participant {
     /// one specific instance: `ParticipantDisconnected` event handling,
     /// SID-keyed `remove_participant`, and `pending_resets` bookkeeping.
     participant_sid: ParticipantSid,
+    /// Server-assigned join timestamp (ms since epoch) for this specific
+    /// connection instance, copied from
+    /// [`livekit::participant::RemoteParticipant::joined_at`]. Used by the
+    /// registry to enforce monotonicity when two same-identity registrations
+    /// race: a registration whose `joined_at` is older than the currently
+    /// stored instance is dropped instead of replacing it.
+    joined_at: i64,
     /// The remote access protocol version advertised by this participant.
     /// Stored for future use when branching protocol behavior based on the
     /// participant's version. Captured at registration and refreshed on
@@ -86,6 +93,7 @@ impl Participant {
     pub fn spawn(
         identity: ParticipantIdentity,
         participant_sid: ParticipantSid,
+        joined_at: i64,
         protocol_version: Version,
         writer: ParticipantWriter,
         queue_size: usize,
@@ -135,6 +143,7 @@ impl Participant {
             client_id,
             participant_id: identity,
             participant_sid,
+            joined_at,
             protocol_version,
             control_tx,
             pending_resets,
@@ -167,6 +176,7 @@ impl Participant {
             client_id: ClientId::next(),
             participant_id: identity,
             participant_sid,
+            joined_at: 0,
             protocol_version,
             control_tx,
             pending_resets,
@@ -209,6 +219,14 @@ impl Participant {
     /// identity has reconnected.
     pub(crate) fn participant_sid(&self) -> &ParticipantSid {
         &self.participant_sid
+    }
+
+    /// Returns the server-assigned join timestamp (ms since epoch) for this
+    /// connection instance. Used by the participant registry to reject a
+    /// stale same-identity registration whose `joined_at` precedes the
+    /// currently stored instance.
+    pub(crate) fn joined_at(&self) -> i64 {
+        self.joined_at
     }
 
     /// Try to queue a control plane message. Returns `false` if the queue is
