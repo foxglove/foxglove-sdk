@@ -1,7 +1,7 @@
 //! Participant-lifecycle state machine for a remote access session.
 //!
 //! Owns the participant map + per-participant flush-task handles, and the
-//! `pending_resets` / `reset_notify` signalling surfaces that let a flush task
+//! `pending_resets` / `reset_notify` signalling surfaces that let a flush-task
 //! request its own reset. Deliberately knows nothing about LiveKit
 //! [`livekit::Room`]s: the caller (which *does* know about the Room) opens
 //! the control-plane stream and hands the resulting writer in. Tests build
@@ -25,12 +25,12 @@ use crate::remote_access::participants::Participants;
 use crate::remote_common::ClientId;
 
 /// Owns the participant membership state machine: add / remove / lookup, plus
-/// the `pending_resets` channel that lets a flush task request its own reset.
+/// the `pending_resets` channel that lets a flush-task request its own reset.
 pub(crate) struct ParticipantRegistry {
     /// Map of connected participants and their flush-task join handles.
     participants: RwLock<Participants>,
     /// Set of `ClientId`s pending a reset (disconnect + reconnect). Populated by
-    /// [`Participant::send_control`] on queue overflow and by flush tasks on
+    /// [`Participant::send_control`] on queue overflow and by flush-tasks on
     /// write failure.
     pending_resets: Arc<Mutex<HashSet<ClientId>>>,
     /// Notified when a new reset is inserted into `pending_resets`.
@@ -49,31 +49,34 @@ impl ParticipantRegistry {
         }
     }
 
-    /// Spawns a [`Participant`] and its flush task against the supplied
+    /// Spawns a [`Participant`] and its flush-task against the supplied
     /// `writer` and inserts it into the registry.
     ///
     /// Each byte slice in `initial_messages` is queued on the participant's
-    /// control-plane channel after the flush task is spawned but before the
+    /// control-plane channel after the flush-task is spawned but before the
     /// participant is visible in the registry. This preserves the invariant
     /// that these bytes (typically `ServerInfo` + channel/service
-    /// advertisements) are the first the flush task delivers to the viewer,
+    /// advertisements) are the first the flush-task delivers to the viewer,
     /// ahead of any broadcast that reaches the participant after registration.
     ///
-    /// `livekit_sid` is stored on the new [`Participant`] so a later
+    /// `participant_sid` is stored on the new [`Participant`] so a later
     /// `ParticipantDisconnected` event can be matched against this specific
     /// connection instance rather than the identity alone.
     ///
     /// `session_cancel` is the session's cancellation token; the spawned
-    /// flush task takes a child of it so the task exits on session close.
+    /// flush-task takes a child of it so the task exits on session close.
     ///
     /// Returns `false` without spawning or inserting if a participant already
     /// exists for this identity. Callers that want to avoid opening a stream
     /// in that case should gate on [`has_participant`] before opening the
-    /// writer.
+    /// writer; this gate is only a backstop.
+    #[must_use = "register_participant returns false on a same-identity collision; \
+                  callers must check (or debug_assert) the result to catch \
+                  contract violations of the no-concurrent-call rule"]
     pub(crate) fn register_participant<I>(
         &self,
         id: ParticipantIdentity,
-        livekit_sid: ParticipantSid,
+        participant_sid: ParticipantSid,
         version: Version,
         writer: ParticipantWriter,
         session_cancel: &CancellationToken,
@@ -82,9 +85,13 @@ impl ParticipantRegistry {
     where
         I: IntoIterator<Item = Bytes>,
     {
+        if self.participants.read().contains_identity(&id) {
+            return false;
+        }
+
         let (participant, flush_handle) = Participant::spawn(
             id,
-            livekit_sid,
+            participant_sid,
             version,
             writer,
             self.message_backlog_size,
@@ -101,7 +108,7 @@ impl ParticipantRegistry {
     }
 
     /// Removes the participant registered under `id` if — and only if — its
-    /// stored `livekit_sid` matches `expected_sid`. Returns the removed
+    /// stored `participant_sid` matches `expected_sid`. Returns the removed
     /// participant (for its `ClientId`) or `None` if no match (either the
     /// identity isn't registered, or the stored SID belongs to a later
     /// connection instance that must not be torn down).
@@ -113,7 +120,7 @@ impl ParticipantRegistry {
     /// handler uses the disconnected participant's SID; `reset_participant`
     /// uses the stored participant's SID.
     ///
-    /// The flush task is cancelled and its handle detached; the caller is
+    /// The flush-task is cancelled and its handle detached; the caller is
     /// responsible for any further cleanup (subscription sweep, listener
     /// callbacks) via [`SessionState::cleanup_for_removed_identity`].
     pub(crate) fn remove_participant(
@@ -123,7 +130,7 @@ impl ParticipantRegistry {
     ) -> Option<Arc<Participant>> {
         let mut participants = self.participants.write();
         let current = participants.get_by_identity(id)?;
-        if current.livekit_sid() != expected_sid {
+        if current.participant_sid() != expected_sid {
             return None;
         }
         let removed = participants.remove_by_identity(id)?;
@@ -185,7 +192,7 @@ impl ParticipantRegistry {
 
     /// Test-only hook to simulate a flush-task failure by directly inserting
     /// a `ClientId` into the pending-reset set. In production this set is
-    /// only written by flush tasks on write failure and by
+    /// only written by flush-tasks on write failure and by
     /// `Participant::send_control` on queue overflow.
     #[cfg(test)]
     pub(crate) fn pending_resets(&self) -> &Arc<Mutex<HashSet<ClientId>>> {
@@ -198,7 +205,7 @@ impl ParticipantRegistry {
         &self.reset_notify
     }
 
-    /// Cancels every registered participant's flush task and awaits their
+    /// Cancels every registered participant's flush-task and awaits their
     /// completion. After this call the registry is empty.
     ///
     /// For use at session teardown only — the caller must ensure no further
@@ -279,7 +286,7 @@ mod tests {
     /// Regression test for the same-identity reconnect race:
     ///
     /// 1. Attempt 1 (`viewer-1`, LiveKit SID `S1`) is in the registry.
-    /// 2. Its flush task fails its first write and inserts its `ClientId`
+    /// 2. Its flush-task fails its first write and inserts its `ClientId`
     ///    into `pending_resets` (simulated here by calling the set directly).
     /// 3. The reset loop drains `pending_resets` and runs a reset: remove
     ///    attempt 1 (with `S1`), look up the current `RemoteParticipant` from
@@ -289,7 +296,7 @@ mod tests {
     ///    LiveKit for *attempt 1* before it dropped — is then dispatched to
     ///    `remove_participant(viewer-1, S1)`.
     ///
-    /// Because the currently-stored `Participant` has `livekit_sid = S2`, the
+    /// Because the currently-stored `Participant` has `participant_sid = S2`, the
     /// SID-keyed remove is a no-op. Attempt 2 stays registered.
     #[tokio::test]
     async fn stale_disconnect_must_not_remove_reconnected_participant() {
@@ -301,19 +308,19 @@ mod tests {
         let sid_2 = test_sid("viewer-1-attempt-2");
 
         // Step 1: attempt 1 joins.
-        registry.register_participant(
+        assert!(registry.register_participant(
             id.clone(),
             sid_1.clone(),
             version.clone(),
             test_writer(),
             &cancel,
             [],
-        );
+        ));
         let attempt_1 = registry.get_participant(&id).expect("attempt 1 present");
         let client_id_1 = attempt_1.client_id();
-        assert_eq!(attempt_1.livekit_sid(), &sid_1);
+        assert_eq!(attempt_1.participant_sid(), &sid_1);
 
-        // Step 2: simulate attempt 1's flush task failing its first write.
+        // Step 2: simulate attempt 1's flush-task failing its first write.
         registry.pending_resets().lock().insert(client_id_1);
 
         // Step 3: drain + reset. Reset = remove (with the stored SID) +
@@ -324,20 +331,20 @@ mod tests {
             .get_participant_by_client_id(client_id_1)
             .expect("attempt 1 resolves from drained client_id");
         let stored_version = reset_target.protocol_version().clone();
-        let stored_sid = reset_target.livekit_sid().clone();
+        let stored_sid = reset_target.participant_sid().clone();
         registry.remove_participant(reset_target.participant_id(), &stored_sid);
-        registry.register_participant(
+        assert!(registry.register_participant(
             id.clone(),
             sid_2.clone(),
             stored_version,
             test_writer(),
             &cancel,
             [],
-        );
+        ));
 
         let attempt_2 = registry.get_participant(&id).expect("attempt 2 present");
         assert_ne!(attempt_2.client_id(), client_id_1);
-        assert_eq!(attempt_2.livekit_sid(), &sid_2);
+        assert_eq!(attempt_2.participant_sid(), &sid_2);
 
         // Step 4: stale disconnect carries attempt 1's SID. No-op.
         let removed = registry.remove_participant(&id, &sid_1);

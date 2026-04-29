@@ -26,7 +26,7 @@ const DEFAULT_FETCH_ASSET_PER_PARTICIPANT: usize = 32;
 ///
 /// Each participant has an identity, a per-participant control plane queue, and
 /// rate-limiting semaphores. The actual byte-stream writer lives in a dedicated
-/// flush task (spawned by `Participant::spawn`), not in this struct.
+/// flush-task (spawned by `Participant::spawn`), not in this struct.
 pub(crate) struct Participant {
     /// Locally-significant identifier for this particular instance of this participant.
     client_id: ClientId,
@@ -38,14 +38,14 @@ pub(crate) struct Participant {
     /// by the `ParticipantDisconnected` handler to tell a stale disconnect
     /// (for a prior instance) apart from a legitimate disconnect of the
     /// current instance.
-    livekit_sid: ParticipantSid,
+    participant_sid: ParticipantSid,
     /// The remote access protocol version advertised by this participant.
     /// Captured at `add_participant` time and reused on reset so we don't have to
     /// re-query the LiveKit room (which would race with reconnection under the
     /// same identity).
     protocol_version: Version,
     /// Per-participant control plane queue. The receiving end is owned by the
-    /// flush task.
+    /// flush-task.
     control_tx: flume::Sender<Bytes>,
     /// Shared set of `ClientId`s pending a reset. Inserting into this set +
     /// notifying is how we signal `handle_room_events` to disconnect us.
@@ -57,7 +57,7 @@ pub(crate) struct Participant {
     /// Wakes `handle_room_events` when we add ourselves to `pending_resets`.
     reset_notify: Arc<tokio::sync::Notify>,
     /// Per-participant cancellation token. Cancelled when the control queue
-    /// overflows, signaling the flush task to stop immediately.
+    /// overflows, signaling the flush-task to stop immediately.
     cancel: CancellationToken,
     /// Limits concurrent service calls from this participant.
     service_call_sem: Semaphore,
@@ -66,18 +66,18 @@ pub(crate) struct Participant {
 }
 
 impl Participant {
-    /// Creates a new participant with its own control plane channel and flush task.
+    /// Creates a new participant with its own control plane channel and flush-task.
     ///
-    /// The flush task drains the bounded channel into the `writer`. It exits when
+    /// The flush-task drains the bounded channel into the `writer`. It exits when
     /// the per-participant cancellation token fires (queue overflow or session
     /// shutdown) or when all `control_tx` senders are dropped.
     ///
     /// Returns the participant (wrapped in `Arc` for shared ownership) and the
-    /// flush task's `JoinHandle` (for teardown awaiting).
+    /// flush-task's `JoinHandle` (for teardown awaiting).
     #[allow(clippy::too_many_arguments)]
     pub fn spawn(
         identity: ParticipantIdentity,
-        livekit_sid: ParticipantSid,
+        participant_sid: ParticipantSid,
         protocol_version: Version,
         writer: ParticipantWriter,
         queue_size: usize,
@@ -125,7 +125,7 @@ impl Participant {
         let participant = Arc::new(Self {
             client_id,
             participant_id: identity,
-            livekit_sid,
+            participant_sid,
             protocol_version,
             control_tx,
             pending_resets,
@@ -137,14 +137,17 @@ impl Participant {
         (participant, flush_handle)
     }
 
-    /// Creates a new participant without spawning a flush task.
+    /// Creates a new participant without spawning a flush-task.
     ///
-    /// For use in tests that only need a participant with a pre-created channel.
-    /// The stored `livekit_sid` is a fixed placeholder; the race-disambiguation
-    /// tests that depend on distinct SIDs go through [`Participant::spawn`].
+    /// For use in tests that only need a participant with a pre-created
+    /// channel. Callers must supply a `participant_sid` — typically via
+    /// [`test_sid`] — so a test that builds two participants under the same
+    /// identity gets distinct SIDs and the SID-keyed `remove_participant`
+    /// path behaves the same as in production.
     #[cfg(test)]
     pub fn new(
         identity: ParticipantIdentity,
+        participant_sid: ParticipantSid,
         protocol_version: Version,
         control_tx: flume::Sender<Bytes>,
         pending_resets: Arc<parking_lot::Mutex<HashSet<ClientId>>>,
@@ -154,8 +157,7 @@ impl Participant {
         Self {
             client_id: ClientId::next(),
             participant_id: identity,
-            livekit_sid: ParticipantSid::try_from("PA_test".to_string())
-                .expect("valid LiveKit SID prefix"),
+            participant_sid,
             protocol_version,
             control_tx,
             pending_resets,
@@ -181,7 +183,7 @@ impl Participant {
         &self.fetch_asset_sem
     }
 
-    /// Cancel this participant's flush task. The task will exit at the next
+    /// Cancel this participant's flush-task. The task will exit at the next
     /// `select!` iteration.
     pub(crate) fn cancel(&self) {
         self.cancel.cancel();
@@ -201,8 +203,8 @@ impl Participant {
     /// per physical connection instance — used to disambiguate a stale
     /// `ParticipantDisconnected` from a legitimate disconnect when the same
     /// identity has reconnected.
-    pub(crate) fn livekit_sid(&self) -> &ParticipantSid {
-        &self.livekit_sid
+    pub(crate) fn participant_sid(&self) -> &ParticipantSid {
+        &self.participant_sid
     }
 
     /// Try to queue a control plane message. Returns `false` if the queue is
@@ -220,7 +222,7 @@ impl Participant {
                     "control queue disconnected for {}, dropping message",
                     self.participant_id
                 );
-                // Queue already disconnected — flush task has exited. A reset is
+                // Queue already disconnected — flush-task has exited. A reset is
                 // likely already in progress, so don't trigger another one.
                 true
             }
@@ -228,7 +230,7 @@ impl Participant {
     }
 
     /// Queue a control plane message, requesting a participant reset if the
-    /// queue is full. Also cancels the per-participant token so the flush task
+    /// queue is full. Also cancels the per-participant token so the flush-task
     /// stops immediately — no point draining messages for a client being disconnected.
     pub(crate) fn send_control(&self, data: Bytes) {
         if !self.try_queue_control(data) {
@@ -270,7 +272,7 @@ impl std::fmt::Display for Participant {
 /// A writer for a participant's control plane byte stream.
 ///
 /// Wraps an ordered, reliable byte stream to one specific participant.
-/// Owned by the per-participant flush task, not by `Participant` itself.
+/// Owned by the per-participant flush-task, not by `Participant` itself.
 ///
 /// Mocked with a `TestByteStreamWriter` for tests.
 pub(crate) enum ParticipantWriter {

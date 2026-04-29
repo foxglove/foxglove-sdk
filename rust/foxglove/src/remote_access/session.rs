@@ -448,13 +448,13 @@ impl RemoteAccessSession {
         self.cancellation_token.cancel();
     }
 
-    /// Shut down the session: cancel every participant's flush task, await
+    /// Shut down the session: cancel every participant's flush-task, await
     /// their completion, then close the LiveKit room.
     ///
     /// The caller must ensure that `handle_room_events` has stopped so no new
     /// `remove_participant` / `reset_participant` calls can race with us.
     pub(crate) async fn close(&self) {
-        // Cancel flush tasks and await them before tearing down the transport.
+        // Cancel flush-tasks and await them before tearing down the transport.
         // In-flight writes either complete or fail once `room.close()` runs.
         self.registry.shutdown().await;
         if let Err(e) = self.room.close().await {
@@ -954,7 +954,7 @@ impl RemoteAccessSession {
     /// The caller is responsible for ensuring that this method is not called concurrently for the
     /// same participant identity.
     ///
-    /// `livekit_sid` is the LiveKit session ID of the specific connection
+    /// `participant_sid` is the LiveKit session ID of the specific connection
     /// instance being registered; it's stored on the `Participant` so a later
     /// `ParticipantDisconnected` event can be matched against this instance
     /// rather than the identity alone.
@@ -964,7 +964,7 @@ impl RemoteAccessSession {
     pub(crate) async fn add_participant(
         &self,
         participant_id: ParticipantIdentity,
-        livekit_sid: ParticipantSid,
+        participant_sid: ParticipantSid,
         protocol_version: Version,
     ) -> Result<(), Box<RemoteAccessError>> {
         // Gate on the registry *before* opening the stream: `stream_bytes` is
@@ -999,13 +999,19 @@ impl RemoteAccessSession {
             "registering participant {participant_id:?} with {} initial messages",
             initial_messages.len()
         );
-        self.registry.register_participant(
-            participant_id,
-            livekit_sid,
+        let inserted = self.registry.register_participant(
+            participant_id.clone(),
+            participant_sid,
             protocol_version,
             ParticipantWriter::Livekit(stream),
             &self.cancellation_token,
             initial_messages,
+        );
+        debug_assert!(
+            inserted,
+            "register_participant returned false for {participant_id:?}; \
+             concurrent add_participant for the same identity violates the \
+             caller-serialization contract",
         );
         Ok(())
     }
@@ -1376,7 +1382,7 @@ impl RemoteAccessSession {
         // instance if the same identity has already reconnected. The stored
         // SID identifies the exact instance we intend to remove.
         let (version, stored_sid) = match self.registry.get_participant(&participant_id) {
-            Some(p) => (p.protocol_version().clone(), p.livekit_sid().clone()),
+            Some(p) => (p.protocol_version().clone(), p.participant_sid().clone()),
             None => {
                 info!(
                     remote_access_session_id,
@@ -2089,7 +2095,11 @@ mod tests {
     };
 
     fn make_participant_with_rx(name: &str) -> (Arc<Participant>, flume::Receiver<Bytes>) {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        static COUNTER: AtomicUsize = AtomicUsize::new(0);
+        let n = COUNTER.fetch_add(1, Ordering::Relaxed);
         let identity = ParticipantIdentity(name.to_string());
+        let sid = crate::remote_access::participant::test_sid(&format!("{name}-{n}"));
         let version = protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone();
         let (tx, rx) = flume::bounded(16);
         let pending_resets = Arc::new(parking_lot::Mutex::new(HashSet::new()));
@@ -2097,6 +2107,7 @@ mod tests {
         let cancel = CancellationToken::new();
         let participant = Arc::new(Participant::new(
             identity,
+            sid,
             version,
             tx,
             pending_resets,
@@ -2296,11 +2307,11 @@ mod tests {
         );
     }
 
-    // ---- flush task tests ----
+    // ---- flush-task tests ----
 
     /// Spawns a participant with a test writer via `Participant::spawn`.
     /// Returns the participant (for sending), the test writer (for inspecting
-    /// writes), and the flush task's `JoinHandle`.
+    /// writes), and the flush-task's `JoinHandle`.
     fn spawn_test_participant(
         session_cancel: &CancellationToken,
     ) -> (
@@ -2336,7 +2347,7 @@ mod tests {
         participant.send_control(Bytes::from_static(b"hello"));
         participant.send_control(Bytes::from_static(b"world"));
 
-        // Drop the participant to signal the flush task to exit.
+        // Drop the participant to signal the flush-task to exit.
         drop(participant);
         handle.await.unwrap();
 
@@ -2355,7 +2366,7 @@ mod tests {
         drop(participant);
 
         let result = tokio::time::timeout(Duration::from_secs(1), handle).await;
-        assert!(result.is_ok(), "flush task did not exit after sender drop");
+        assert!(result.is_ok(), "flush-task did not exit after sender drop");
     }
 
     #[tokio::test]
@@ -2367,13 +2378,13 @@ mod tests {
         cancel.cancel();
 
         let result = tokio::time::timeout(Duration::from_secs(1), handle).await;
-        assert!(result.is_ok(), "flush task did not exit after cancellation");
+        assert!(result.is_ok(), "flush-task did not exit after cancellation");
     }
 
     #[tokio::test]
     async fn flush_tasks_are_independent() {
         // Two participants spawned independently. Dropping one and awaiting its
-        // flush task should not affect the other.
+        // flush-task should not affect the other.
         let cancel = CancellationToken::new();
         let (participant_a, writer_a, handle_a) = spawn_test_participant(&cancel);
         let (participant_b, writer_b, handle_b) = spawn_test_participant(&cancel);
@@ -2406,6 +2417,7 @@ mod tests {
         let cancel = CancellationToken::new();
         let participant = Participant::new(
             ParticipantIdentity("alice".to_string()),
+            crate::remote_access::participant::test_sid("alice"),
             version,
             tx,
             pending_resets,

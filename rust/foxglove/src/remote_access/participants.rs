@@ -4,7 +4,7 @@
 //! Maintains `ParticipantIdentity` → `Arc<Participant>` and
 //! `ClientId` → `Arc<Participant>` indexes over the same `Arc<Participant>`
 //! values, and a parallel `ParticipantIdentity` → `JoinHandle<()>` map for
-//! each participant's flush task. All three are kept in sync by construction
+//! each participant's flush-task. All three are kept in sync by construction
 //! — mutation is only possible through the inherent methods on [`Participants`].
 
 use std::collections::HashMap;
@@ -105,7 +105,11 @@ mod tests {
     use super::*;
 
     fn make_participant(name: &str) -> Arc<Participant> {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        static COUNTER: AtomicUsize = AtomicUsize::new(0);
+        let n = COUNTER.fetch_add(1, Ordering::Relaxed);
         let identity = ParticipantIdentity(name.to_string());
+        let sid = crate::remote_access::participant::test_sid(&format!("{name}-{n}"));
         let version =
             crate::remote_access::protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone();
         let (tx, _rx) = flume::bounded(16);
@@ -114,6 +118,7 @@ mod tests {
         let cancel = tokio_util::sync::CancellationToken::new();
         Arc::new(Participant::new(
             identity,
+            sid,
             version,
             tx,
             pending_resets,
