@@ -216,12 +216,23 @@ impl Watch {
         self.device_wait_for_viewer
     }
 
-    /// Runs the watch session, logs the outcome, closes the watch, and returns the outcome.
-    pub async fn run(mut self) -> WatchOutcome {
+    /// Returns the heartbeat interval advertised by the server in the `hello` event.
+    pub fn heartbeat_interval(&self) -> Duration {
+        self.heartbeat_interval
+    }
+
+    /// Runs the watch session, logs the outcome, closes the watch, and returns the outcome
+    /// alongside the duration the watch was running for. Callers use the duration to
+    /// distinguish a stream error after a healthy long-lived watch (likely an LB-driven
+    /// drop) from a stream error on a watch that never settled (likely a real fault that
+    /// should trigger backoff).
+    pub async fn run(mut self) -> (WatchOutcome, Duration) {
+        let started_at = Instant::now();
         let outcome = self.run_inner().await;
+        let duration = started_at.elapsed();
         log_watch_outcome(&outcome, &self.lease_id);
         self.close().await;
-        outcome
+        (outcome, duration)
     }
 
     async fn run_inner(&mut self) -> WatchOutcome {
@@ -613,7 +624,7 @@ mod tests {
             60_000,
         );
 
-        let outcome = watch.run().await;
+        let (outcome, _duration) = watch.run().await;
 
         let WatchOutcome::Wake(wake) = outcome else {
             panic!("expected wake outcome");
@@ -627,7 +638,7 @@ mod tests {
     async fn watch_reports_malformed_wake() {
         let (watch, _exit_tx) = watch_from_frames(vec![event("wake", "{")], 60_000);
 
-        let outcome = watch.run().await;
+        let (outcome, _duration) = watch.run().await;
 
         assert_matches!(
             outcome,
@@ -639,7 +650,7 @@ mod tests {
     async fn watch_reports_stream_end() {
         let (watch, _exit_tx) = watch_from_frames(Vec::new(), 60_000);
 
-        let outcome = watch.run().await;
+        let (outcome, _duration) = watch.run().await;
 
         assert_matches!(outcome, WatchOutcome::StreamEnded);
     }
@@ -649,7 +660,7 @@ mod tests {
         let (watch, _exit_tx) =
             watch_from_stream(stream::pending::<Result<SseFrame, reqwest::Error>>(), 1);
 
-        let outcome = tokio::time::timeout(Duration::from_secs(1), watch.run())
+        let (outcome, _duration) = tokio::time::timeout(Duration::from_secs(1), watch.run())
             .await
             .expect("watch read timeout should fire");
 
@@ -662,7 +673,7 @@ mod tests {
         let (watch, exit_tx) = watch_from_frames(vec![event("wake", wake_json)], 60_000);
         exit_tx.send(HeartbeatExit::Gone).unwrap();
 
-        let outcome = watch.run().await;
+        let (outcome, _duration) = watch.run().await;
 
         assert_matches!(outcome, WatchOutcome::HeartbeatLost(HeartbeatExit::Gone));
     }

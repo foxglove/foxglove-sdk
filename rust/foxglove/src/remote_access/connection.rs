@@ -387,22 +387,32 @@ impl RemoteAccessConnection {
             let watch = self.connect_watch(device_context, &mut retry).await?;
             let watch_lease_id = watch.lease_id().to_string();
             let device_wait_for_viewer = watch.device_wait_for_viewer();
+            let heartbeat_interval = watch.heartbeat_interval();
             self.set_status(ConnectionStatus::Connected);
 
             // Run the watch session.
-            let outcome = watch.run().await;
-            match on_outcome(outcome, watch_lease_id, &mut retry) {
+            let (outcome, watch_duration) = watch.run().await;
+            match on_outcome(
+                outcome,
+                watch_lease_id,
+                watch_duration,
+                heartbeat_interval,
+                &mut retry,
+            ) {
                 WatchAction::Wake(wake) => {
                     return Some(WakeSignal {
                         wake,
                         device_wait_for_viewer,
                     });
                 }
-                WatchAction::Reconnect { delay } => {
+                WatchAction::Reconnect => {
+                    // Soft reconnect: try immediately and keep the user-visible status as
+                    // Connected. If the next connect attempt fails, connect_watch flips to
+                    // Connecting and applies its own backoff schedule.
+                }
+                WatchAction::Backoff { delay } => {
                     self.set_status(ConnectionStatus::Connecting);
-                    if let Some(delay) = delay {
-                        tokio::time::sleep(delay).await;
-                    }
+                    tokio::time::sleep(delay).await;
                 }
                 WatchAction::StopUnauthorized => {
                     self.cancellation_token.cancel();

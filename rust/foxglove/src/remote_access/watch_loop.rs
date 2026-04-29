@@ -62,9 +62,16 @@ pub(super) enum ConnectAction {
 pub(super) enum WatchAction {
     /// A `wake` arrived: stop the watch loop and proceed to LiveKit.
     Wake(WatchWakeEvent),
-    /// Reconnect: transition to `Connecting`, optionally sleep `delay`, then iterate. State
-    /// updates (previous lease ID, backoff) have already been applied to the [`WatchRetryState`].
-    Reconnect { delay: Option<Duration> },
+    /// Soft reconnect: iterate immediately. The shell does NOT flip status to `Connecting`;
+    /// the next connect attempt will only flip if it fails, and `connect_watch` owns the
+    /// backoff schedule from there. Used for blips we expect to recover from quickly
+    /// (LB-induced transport drops, read-timeouts, clean stream-end, lease gone). State
+    /// updates (previous lease ID) have already been applied to the [`WatchRetryState`].
+    Reconnect,
+    /// Hard backoff: a known long disruption. The shell flips status to `Connecting` before
+    /// sleeping `delay` and iterating. Used when we know we'll be off the wire long enough
+    /// that callers should see the degradation (e.g. lease conflict).
+    Backoff { delay: Duration },
     /// Cancel the gateway and stop the watch loop (e.g. heartbeat returned 401).
     StopUnauthorized,
     /// Stop the watch loop without cancelling. Reserved for the defensive "heartbeat task
@@ -105,46 +112,61 @@ pub(super) fn on_connect_error(err: &WatchError, retry: &mut WatchRetryState) ->
 ///
 /// `lease_id` is captured from the watch's `hello` before it was closed, and is threaded into
 /// the next connect for transient-error reconnects.
+///
+/// `watch_duration` is how long the watch was running. `heartbeat_interval` is the value
+/// advertised by the server in the `hello` event. A `StreamError` after the watch ran for at
+/// least `heartbeat_interval` is treated as a soft blip (LB-style transient drop) and retries
+/// immediately. Earlier errors fall through to backoff to avoid hot-looping.
 pub(super) fn on_outcome(
     outcome: WatchOutcome,
     lease_id: String,
+    watch_duration: Duration,
+    heartbeat_interval: Duration,
     retry: &mut WatchRetryState,
 ) -> WatchAction {
     match outcome {
         WatchOutcome::Wake(wake) => WatchAction::Wake(wake),
-        // Read-timeout and clean stream-end are both treated as "the API closed the dormant
-        // stream"; reconnect immediately and reuse our lease so the API can recognize it.
+        // Read-timeout and clean stream-end are normal protocol behaviour. Tthe API closed the
+        // dormant stream. Retry immediately and reuse our lease.
         WatchOutcome::ReadTimeout | WatchOutcome::StreamEnded => {
             retry.previous_lease_id = Some(lease_id);
-            WatchAction::Reconnect { delay: None }
+            WatchAction::Reconnect
         }
-        // Transport errors get exponential backoff so we don't hot-loop against a broken path.
+        // Transport errors split on whether the watch ran long enough to be considered
+        // healthy. A long-lived watch that errors is almost certainly an LB-driven drop:
+        // retry immediately and stay Connected. A short-lived watch that errors signals a
+        // real fault:  apply backoff and surface Connecting to callers.
         WatchOutcome::StreamError(_) => {
-            let delay = retry.backoff;
-            retry.double_backoff();
             retry.previous_lease_id = Some(lease_id);
-            WatchAction::Reconnect { delay: Some(delay) }
+            if watch_duration >= heartbeat_interval {
+                WatchAction::Reconnect
+            } else {
+                let delay = retry.backoff;
+                retry.double_backoff();
+                WatchAction::Backoff { delay }
+            }
         }
         WatchOutcome::HeartbeatLost(reason) => match reason {
             // Another gateway took over: drop our lease ID so the next connect does not
-            // advertise it, and back off conservatively.
+            // advertise it, and back off conservatively. The 30s wait is long enough that
+            // callers should see the degradation, so we ask the shell to flip to Connecting.
             HeartbeatExit::Conflict => {
                 retry.previous_lease_id = None;
-                WatchAction::Reconnect {
-                    delay: Some(LEASE_CONFLICT_BACKOFF),
+                WatchAction::Backoff {
+                    delay: LEASE_CONFLICT_BACKOFF,
                 }
             }
             // Lease vanished server-side: drop the ID and reconnect to acquire a fresh lease.
             HeartbeatExit::Gone => {
                 retry.previous_lease_id = None;
-                WatchAction::Reconnect { delay: None }
+                WatchAction::Reconnect
             }
             HeartbeatExit::Unauthorized => WatchAction::StopUnauthorized,
             // Repeated heartbeat failures without a terminal status: the lease may still be
             // valid server-side, so carry it through.
             HeartbeatExit::Failed => {
                 retry.previous_lease_id = Some(lease_id);
-                WatchAction::Reconnect { delay: None }
+                WatchAction::Reconnect
             }
             HeartbeatExit::Cancelled => WatchAction::Stop,
         },
@@ -166,6 +188,10 @@ mod tests {
     fn lease() -> String {
         "lease-abc".into()
     }
+
+    const HEARTBEAT: Duration = Duration::from_secs(10);
+    const HEALTHY: Duration = Duration::from_secs(60);
+    const SHORT: Duration = Duration::from_millis(100);
 
     #[test]
     fn double_backoff_caps_at_max() {
@@ -250,7 +276,13 @@ mod tests {
             previous_lease_id: Some("untouched".into()),
             backoff: Duration::from_secs(8),
         };
-        let action = on_outcome(WatchOutcome::Wake(wake_event()), lease(), &mut state);
+        let action = on_outcome(
+            WatchOutcome::Wake(wake_event()),
+            lease(),
+            HEALTHY,
+            HEARTBEAT,
+            &mut state,
+        );
         assert_eq!(action, WatchAction::Wake(wake_event()));
         // Wake doesn't touch state; the next connect-success will reset it.
         assert_eq!(state.previous_lease_id.as_deref(), Some("untouched"));
@@ -263,8 +295,14 @@ mod tests {
             previous_lease_id: None,
             backoff: Duration::from_secs(8),
         };
-        let action = on_outcome(WatchOutcome::ReadTimeout, lease(), &mut state);
-        assert_eq!(action, WatchAction::Reconnect { delay: None });
+        let action = on_outcome(
+            WatchOutcome::ReadTimeout,
+            lease(),
+            SHORT,
+            HEARTBEAT,
+            &mut state,
+        );
+        assert_eq!(action, WatchAction::Reconnect);
         assert_eq!(state.previous_lease_id, Some(lease()));
         // No backoff change: read-timeout is normal protocol behaviour.
         assert_eq!(state.backoff, Duration::from_secs(8));
@@ -273,14 +311,20 @@ mod tests {
     #[test]
     fn outcome_stream_ended_reconnects_immediately_with_lease() {
         let mut state = WatchRetryState::new();
-        let action = on_outcome(WatchOutcome::StreamEnded, lease(), &mut state);
-        assert_eq!(action, WatchAction::Reconnect { delay: None });
+        let action = on_outcome(
+            WatchOutcome::StreamEnded,
+            lease(),
+            SHORT,
+            HEARTBEAT,
+            &mut state,
+        );
+        assert_eq!(action, WatchAction::Reconnect);
         assert_eq!(state.previous_lease_id, Some(lease()));
         assert_eq!(state.backoff, INITIAL_BACKOFF);
     }
 
     #[test]
-    fn outcome_stream_error_uses_current_backoff_then_doubles() {
+    fn outcome_stream_error_after_healthy_run_reconnects_immediately() {
         let mut state = WatchRetryState {
             previous_lease_id: None,
             backoff: Duration::from_secs(4),
@@ -288,12 +332,33 @@ mod tests {
         let action = on_outcome(
             WatchOutcome::StreamError(WatchError::UnexpectedEof),
             lease(),
+            HEALTHY,
+            HEARTBEAT,
+            &mut state,
+        );
+        assert_eq!(action, WatchAction::Reconnect);
+        assert_eq!(state.previous_lease_id, Some(lease()));
+        // Healthy run: backoff is left to connect_watch — no escalation here.
+        assert_eq!(state.backoff, Duration::from_secs(4));
+    }
+
+    #[test]
+    fn outcome_stream_error_after_short_run_backs_off_and_doubles() {
+        let mut state = WatchRetryState {
+            previous_lease_id: None,
+            backoff: Duration::from_secs(4),
+        };
+        let action = on_outcome(
+            WatchOutcome::StreamError(WatchError::UnexpectedEof),
+            lease(),
+            SHORT,
+            HEARTBEAT,
             &mut state,
         );
         assert_eq!(
             action,
-            WatchAction::Reconnect {
-                delay: Some(Duration::from_secs(4)),
+            WatchAction::Backoff {
+                delay: Duration::from_secs(4),
             }
         );
         assert_eq!(state.previous_lease_id, Some(lease()));
@@ -301,7 +366,7 @@ mod tests {
     }
 
     #[test]
-    fn outcome_stream_error_caps_backoff() {
+    fn outcome_stream_error_short_run_caps_backoff_at_max() {
         let mut state = WatchRetryState {
             previous_lease_id: None,
             backoff: MAX_BACKOFF,
@@ -309,14 +374,11 @@ mod tests {
         let action = on_outcome(
             WatchOutcome::StreamError(WatchError::UnexpectedEof),
             lease(),
+            SHORT,
+            HEARTBEAT,
             &mut state,
         );
-        assert_eq!(
-            action,
-            WatchAction::Reconnect {
-                delay: Some(MAX_BACKOFF),
-            }
-        );
+        assert_eq!(action, WatchAction::Backoff { delay: MAX_BACKOFF });
         assert_eq!(state.backoff, MAX_BACKOFF);
     }
 
@@ -329,12 +391,14 @@ mod tests {
         let action = on_outcome(
             WatchOutcome::HeartbeatLost(HeartbeatExit::Conflict),
             lease(),
+            HEALTHY,
+            HEARTBEAT,
             &mut state,
         );
         assert_eq!(
             action,
-            WatchAction::Reconnect {
-                delay: Some(LEASE_CONFLICT_BACKOFF),
+            WatchAction::Backoff {
+                delay: LEASE_CONFLICT_BACKOFF,
             }
         );
         assert_eq!(state.previous_lease_id, None);
@@ -352,9 +416,11 @@ mod tests {
         let action = on_outcome(
             WatchOutcome::HeartbeatLost(HeartbeatExit::Gone),
             lease(),
+            HEALTHY,
+            HEARTBEAT,
             &mut state,
         );
-        assert_eq!(action, WatchAction::Reconnect { delay: None });
+        assert_eq!(action, WatchAction::Reconnect);
         assert_eq!(state.previous_lease_id, None);
     }
 
@@ -364,6 +430,8 @@ mod tests {
         let action = on_outcome(
             WatchOutcome::HeartbeatLost(HeartbeatExit::Unauthorized),
             lease(),
+            HEALTHY,
+            HEARTBEAT,
             &mut state,
         );
         assert_eq!(action, WatchAction::StopUnauthorized);
@@ -375,9 +443,11 @@ mod tests {
         let action = on_outcome(
             WatchOutcome::HeartbeatLost(HeartbeatExit::Failed),
             lease(),
+            HEALTHY,
+            HEARTBEAT,
             &mut state,
         );
-        assert_eq!(action, WatchAction::Reconnect { delay: None });
+        assert_eq!(action, WatchAction::Reconnect);
         assert_eq!(state.previous_lease_id, Some(lease()));
     }
 
@@ -387,6 +457,8 @@ mod tests {
         let action = on_outcome(
             WatchOutcome::HeartbeatLost(HeartbeatExit::Cancelled),
             lease(),
+            HEALTHY,
+            HEARTBEAT,
             &mut state,
         );
         assert_eq!(action, WatchAction::Stop);
