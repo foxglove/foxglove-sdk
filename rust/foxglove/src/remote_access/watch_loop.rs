@@ -19,6 +19,10 @@ pub(super) const INITIAL_BACKOFF: Duration = Duration::from_secs(1);
 /// Backoff applied when another gateway holds the lease (409 Conflict). Picked conservatively
 /// since the API owns lease TTLs and does not advertise them to the gateway.
 pub(super) const LEASE_CONFLICT_BACKOFF: Duration = Duration::from_secs(30);
+/// Backoff applied when the API returns a 2xx with a non-SSE body — the shape of an upstream
+/// maintenance page. Fixed (not exponential) so the gateway recovers promptly when the
+/// maintenance window ends.
+pub(super) const NON_SSE_RESPONSE_BACKOFF: Duration = Duration::from_secs(30);
 
 /// Mutable state carried across iterations of the watch loop.
 pub(super) struct WatchRetryState {
@@ -98,6 +102,14 @@ pub(super) fn on_connect_error(err: &WatchError, retry: &mut WatchRetryState) ->
             // the next attempt does not advertise it.
             retry.previous_lease_id = None;
             LEASE_CONFLICT_BACKOFF
+        }
+        WatchError::UnexpectedContentType { .. } => {
+            // Looks like a maintenance page or misrouted LB. Our prior lease is almost
+            // certainly stale by the time the API is back; drop it. Use a fixed delay
+            // rather than escalating the transient backoff so we recover promptly when
+            // the window ends.
+            retry.previous_lease_id = None;
+            NON_SSE_RESPONSE_BACKOFF
         }
         _ => {
             let delay = retry.backoff;
@@ -240,6 +252,24 @@ mod tests {
         assert_eq!(action, ConnectAction::RetryAfter(LEASE_CONFLICT_BACKOFF));
         assert_eq!(state.previous_lease_id, None);
         // Conflict uses its own fixed delay and leaves the transient backoff untouched.
+        assert_eq!(state.backoff, Duration::from_secs(2));
+    }
+
+    #[test]
+    fn connect_error_unexpected_content_type_drops_lease_with_fixed_backoff() {
+        let mut state = WatchRetryState {
+            previous_lease_id: Some("ours".into()),
+            backoff: Duration::from_secs(2),
+        };
+        let action = on_connect_error(
+            &WatchError::UnexpectedContentType {
+                content_type: Some("text/html".into()),
+            },
+            &mut state,
+        );
+        assert_eq!(action, ConnectAction::RetryAfter(NON_SSE_RESPONSE_BACKOFF));
+        assert_eq!(state.previous_lease_id, None);
+        // Maintenance backoff is fixed; transient backoff is left untouched.
         assert_eq!(state.backoff, Duration::from_secs(2));
     }
 

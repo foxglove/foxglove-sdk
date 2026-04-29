@@ -9,7 +9,7 @@
 use std::{pin::Pin, sync::Arc, time::Duration};
 
 use futures_util::{Stream, StreamExt};
-use reqwest::StatusCode;
+use reqwest::{StatusCode, header::CONTENT_TYPE};
 use thiserror::Error;
 use tokio::{
     sync::oneshot,
@@ -64,6 +64,11 @@ pub(super) enum WatchError {
     /// The `hello` handshake did not arrive within [`HELLO_TIMEOUT`].
     #[error("timed out waiting for `hello` event")]
     HelloTimeout,
+
+    /// The response had a `2xx` status but a non-SSE `Content-Type`. This is the shape an
+    /// upstream maintenance page or misrouted load balancer would take.
+    #[error("unexpected response content-type: {content_type:?}")]
+    UnexpectedContentType { content_type: Option<String> },
 
     /// Received an event we could not parse.
     #[error("malformed `{event}` event: {source}")]
@@ -126,7 +131,13 @@ impl Watch {
     ) -> Result<Self, WatchError> {
         Watch::connect_inner(client, query)
             .await
-            .inspect_err(|e| warn!(error=%e, "watch stream connect failed"))
+            .inspect_err(|e| match e {
+                WatchError::UnexpectedContentType { content_type } => info!(
+                    content_type = content_type.as_deref(),
+                    "watch endpoint returned non-SSE response (likely API maintenance); backing off"
+                ),
+                _ => warn!(error=%e, "watch stream connect failed"),
+            })
     }
 
     async fn connect_inner(
@@ -151,6 +162,17 @@ impl Watch {
                 return Err(WatchError::Api(e));
             }
         };
+
+        // A 2xx with a non-SSE body is what an upstream maintenance page looks like. Detect it
+        // up front instead of letting the SSE parser silently drain the HTML until HelloTimeout.
+        let content_type = response
+            .headers()
+            .get(CONTENT_TYPE)
+            .and_then(|v| v.to_str().ok())
+            .map(|v| v.split(';').next().unwrap_or(v).trim().to_ascii_lowercase());
+        if content_type.as_deref() != Some("text/event-stream") {
+            return Err(WatchError::UnexpectedContentType { content_type });
+        }
 
         let mut events = sse_event_stream(response.bytes_stream());
 
@@ -428,6 +450,17 @@ mod tests {
     struct WatchResponse {
         status: AxumStatusCode,
         body: &'static str,
+        content_type: &'static str,
+    }
+
+    impl WatchResponse {
+        fn ok_sse(body: &'static str) -> Self {
+            Self {
+                status: AxumStatusCode::OK,
+                body,
+                content_type: "text/event-stream",
+            }
+        }
     }
 
     struct WatchServer {
@@ -468,7 +501,7 @@ mod tests {
     async fn watch_handler(State(response): State<WatchResponse>) -> impl IntoResponse {
         (
             response.status,
-            [(header::CONTENT_TYPE, "text/event-stream")],
+            [(header::CONTENT_TYPE, response.content_type)],
             response.body,
         )
     }
@@ -539,16 +572,13 @@ mod tests {
 
     #[tokio::test]
     async fn connect_reads_hello_after_non_hello_frames() {
-        let server = watch_server(WatchResponse {
-            status: AxumStatusCode::OK,
-            body: concat!(
-                ": keepalive\n",
-                "event: ignored\n",
-                "data: {}\n\n",
-                "event: hello\n",
-                "data: {\"watchLeaseId\":\"lease-1\",\"deviceWaitForViewerMs\":45000,\"heartbeatIntervalMs\":60000}\n\n",
-            ),
-        })
+        let server = watch_server(WatchResponse::ok_sse(concat!(
+            ": keepalive\n",
+            "event: ignored\n",
+            "data: {}\n\n",
+            "event: hello\n",
+            "data: {\"watchLeaseId\":\"lease-1\",\"deviceWaitForViewerMs\":45000,\"heartbeatIntervalMs\":60000}\n\n",
+        )))
         .await;
         let client = test_client(&server);
 
@@ -567,6 +597,7 @@ mod tests {
         let server = watch_server(WatchResponse {
             status: AxumStatusCode::CONFLICT,
             body: "{\"error\":\"lease already held\"}",
+            content_type: "application/json",
         })
         .await;
         let client = test_client(&server);
@@ -581,6 +612,7 @@ mod tests {
         let server = watch_server(WatchResponse {
             status: AxumStatusCode::UNAUTHORIZED,
             body: "{\"error\":\"invalid device token\"}",
+            content_type: "application/json",
         })
         .await;
         let client = test_client(&server);
@@ -591,14 +623,29 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn connect_clamps_durations() {
+    async fn connect_rejects_non_sse_content_type() {
         let server = watch_server(WatchResponse {
             status: AxumStatusCode::OK,
-            body: concat!(
-                "event: hello\n",
-                "data: {\"watchLeaseId\":\"lease-1\",\"deviceWaitForViewerMs\":1,\"heartbeatIntervalMs\":2}\n\n",
-            ),
+            body: "<html><body>Down for maintenance</body></html>",
+            content_type: "text/html; charset=utf-8",
         })
+        .await;
+        let client = test_client(&server);
+
+        let result = Watch::connect(client, WatchQuery::default()).await;
+
+        let Err(WatchError::UnexpectedContentType { content_type }) = result else {
+            panic!("expected UnexpectedContentType");
+        };
+        assert_eq!(content_type.as_deref(), Some("text/html"));
+    }
+
+    #[tokio::test]
+    async fn connect_clamps_durations() {
+        let server = watch_server(WatchResponse::ok_sse(concat!(
+            "event: hello\n",
+            "data: {\"watchLeaseId\":\"lease-1\",\"deviceWaitForViewerMs\":1,\"heartbeatIntervalMs\":2}\n\n",
+        )))
         .await;
         let client = test_client(&server);
 
