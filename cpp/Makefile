@@ -45,7 +45,7 @@ build:
 		-DFOXGLOVE_REMOTE_ACCESS=$(FOXGLOVE_REMOTE_ACCESS) \
 		$(CMAKE_ARGS) \
 		-B $(BUILD_DIR)
-	cmake --build $(BUILD_DIR) -j 8 --config $(CMAKE_BUILD_TYPE)
+	cmake --build $(BUILD_DIR) -j $(or $(PARALLEL_JOBS),8) --config $(CMAKE_BUILD_TYPE)
 
 RA_BUILD_DIR=$(BUILD_DIR)-ra
 
@@ -61,7 +61,7 @@ build-ra:
 		$(if $(FOXGLOVE_PREBUILT_LIB_DIR),-DFOXGLOVE_PREBUILT_LIB_DIR=$(FOXGLOVE_PREBUILT_LIB_DIR)) \
 		$(CMAKE_ARGS) \
 		-B $(RA_BUILD_DIR)
-	cmake --build $(RA_BUILD_DIR) -j 8 --config $(CMAKE_BUILD_TYPE)
+	cmake --build $(RA_BUILD_DIR) -j $(or $(PARALLEL_JOBS),8) --config $(CMAKE_BUILD_TYPE)
 
 .PHONY: test-ra
 test-ra: build-ra
@@ -81,7 +81,7 @@ build-integration:
 		$(if $(FOXGLOVE_PREBUILT_LIB_DIR),-DFOXGLOVE_PREBUILT_LIB_DIR=$(FOXGLOVE_PREBUILT_LIB_DIR)) \
 		$(CMAKE_ARGS) \
 		-B $(INTEGRATION_BUILD_DIR)
-	cmake --build $(INTEGRATION_BUILD_DIR) -j 8 --config $(CMAKE_BUILD_TYPE)
+	cmake --build $(INTEGRATION_BUILD_DIR) -j $(or $(PARALLEL_JOBS),8) --config $(CMAKE_BUILD_TYPE)
 
 .PHONY: test-integration
 test-integration: build-integration
