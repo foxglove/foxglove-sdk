@@ -106,34 +106,24 @@ impl ParticipantRegistry {
         self.participants.write().insert(participant, flush_handle)
     }
 
-    /// Removes the participant registered under `id` if — and only if — its
-    /// stored `participant_sid` matches `expected_sid`. Returns the removed
-    /// participant (for its `ClientId`) or `None` if no match (either the
-    /// identity isn't registered, or the stored SID belongs to a later
-    /// connection instance that must not be torn down).
+    /// Removes the participant whose stored `ParticipantSid` matches
+    /// `target_sid`. Returns the removed participant or `None` if no
+    /// participant with this SID is registered.
     ///
-    /// Identity alone is ambiguous: a `ParticipantDisconnected` for a prior
-    /// instance can arrive after a same-identity reconnect has replaced it.
-    /// Requiring the SID at the call site means the caller has already
-    /// committed to which *specific* instance it's removing — the event
-    /// handler uses the disconnected participant's SID; `reset_participant`
-    /// uses the stored participant's SID.
+    /// SID-keyed: a `ParticipantDisconnected` for a prior instance can arrive
+    /// after a same-identity reconnect has replaced it, but the reconnected
+    /// instance has a *different* SID, so a stale removal misses here rather
+    /// than tearing down the replacement.
     ///
-    /// `Participants::remove_by_identity` cancels the flush-task and detaches
-    /// its handle as part of the removal; the caller is responsible for any
+    /// `Participants::remove_by_sid` cancels the flush-task and detaches its
+    /// handle as part of the removal; the caller is responsible for any
     /// further cleanup (subscription sweep, listener callbacks) via
     /// [`SessionState::cleanup_for_removed_identity`].
     pub(crate) fn remove_participant(
         &self,
-        id: &ParticipantIdentity,
-        expected_sid: &ParticipantSid,
+        target_sid: &ParticipantSid,
     ) -> Option<Arc<Participant>> {
-        let mut participants = self.participants.write();
-        let current = participants.get_by_identity(id)?;
-        if current.participant_sid() != expected_sid {
-            return None;
-        }
-        participants.remove_by_identity(id)
+        self.participants.write().remove_by_sid(target_sid)
     }
 
     /// Returns the participant for the given identity, if any.
@@ -154,14 +144,6 @@ impl ParticipantRegistry {
             .into_iter()
             .filter_map(|id| participants.get_by_identity(&id).cloned())
             .collect()
-    }
-
-    /// Returns the participant matching the given `ParticipantSid`, if any.
-    pub(crate) fn get_participant_by_sid(
-        &self,
-        sid: &ParticipantSid,
-    ) -> Option<Arc<Participant>> {
-        self.participants.read().get_by_sid(sid).cloned()
     }
 
     /// Returns true if a participant exists for the given identity.
@@ -249,7 +231,7 @@ mod tests {
         assert!(inserted);
         assert!(registry.has_participant(&id));
 
-        assert!(registry.remove_participant(&id, &sid).is_some());
+        assert!(registry.remove_participant(&sid).is_some());
         assert!(!registry.has_participant(&id));
     }
 
@@ -290,10 +272,11 @@ mod tests {
     ///    2 with `S2`.
     /// 4. A `ParticipantDisconnected(viewer-1, sid=S1)` event — queued by
     ///    LiveKit for *attempt 1* before it dropped — is then dispatched to
-    ///    `remove_participant(viewer-1, S1)`.
+    ///    `remove_participant(S1)`.
     ///
-    /// Because the currently-stored `Participant` has `participant_sid = S2`, the
-    /// SID-keyed remove is a no-op. Attempt 2 stays registered.
+    /// Because no participant has `participant_sid = S1` anymore (attempt 1
+    /// was removed in step 3, and attempt 2 has S2), the SID-keyed remove is
+    /// a no-op. Attempt 2 stays registered.
     #[tokio::test]
     async fn stale_disconnect_must_not_remove_reconnected_participant() {
         let registry = make_registry();
@@ -322,12 +305,11 @@ mod tests {
         // re-insert under the new SID.
         let drained = registry.drain_pending_resets();
         assert_eq!(drained, vec![sid_1.clone()]);
-        let reset_target = registry
-            .get_participant_by_sid(&sid_1)
-            .expect("attempt 1 resolves from drained sid");
-        let stored_version = reset_target.protocol_version().clone();
-        let stored_id = reset_target.participant_id().clone();
-        registry.remove_participant(&stored_id, &sid_1);
+        let removed = registry
+            .remove_participant(&sid_1)
+            .expect("attempt 1 removes via its SID");
+        let stored_version = removed.protocol_version().clone();
+        drop(removed);
         assert!(registry.register_participant(
             id.clone(),
             sid_2.clone(),
@@ -342,7 +324,7 @@ mod tests {
         assert_eq!(attempt_2.participant_sid(), &sid_2);
 
         // Step 4: stale disconnect carries attempt 1's SID. No-op.
-        let removed = registry.remove_participant(&id, &sid_1);
+        let removed = registry.remove_participant(&sid_1);
         assert!(removed.is_none());
         assert!(
             registry.has_participant(&id),
@@ -350,7 +332,7 @@ mod tests {
         );
 
         // Sanity: matching SID does remove.
-        let removed = registry.remove_participant(&id, &sid_2);
+        let removed = registry.remove_participant(&sid_2);
         assert!(removed.is_some());
         assert!(!registry.has_participant(&id));
     }

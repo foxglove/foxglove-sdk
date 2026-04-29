@@ -1022,34 +1022,26 @@ impl RemoteAccessSession {
         Ok(())
     }
 
-    /// Removes the participant registered under `participant_id` if — and only
-    /// if — its stored LiveKit SID matches `expected_sid`. Runs the full
-    /// cleanup (listener callbacks, context unsubscribe, video track teardown,
-    /// connection-graph update) when removal happens.
+    /// Removes the participant whose stored LiveKit SID matches `target_sid`,
+    /// running the full cleanup (listener callbacks, context unsubscribe,
+    /// video track teardown, connection-graph update) when removal happens.
+    /// Returns the removed `Arc<Participant>` (so callers can capture
+    /// identity / protocol version for re-registration), or `None` if no
+    /// participant with this SID is registered.
     ///
-    /// Callers: `handle_room_event::ParticipantDisconnected` passes the
-    /// event's SID; `reset_participant` passes the stored participant's SID.
-    /// Requiring the SID filters out stale disconnects for a prior connection
-    /// instance that has already been superseded by a same-identity reconnect.
+    /// SID-keyed: a `ParticipantDisconnected` for a prior instance can arrive
+    /// after a same-identity reconnect has replaced it, but the reconnected
+    /// instance has a *different* SID, so a stale removal misses here rather
+    /// than tearing down the replacement. Callers handle the `None` case
+    /// according to their context.
     pub(crate) fn remove_participant(
         self: &Arc<Self>,
-        participant_id: &ParticipantIdentity,
-        expected_sid: &ParticipantSid,
-    ) {
+        target_sid: &ParticipantSid,
+    ) -> Option<Arc<Participant>> {
         let _guard = self.subscription_lock.lock();
-        let Some(participant) = self
-            .participant_registry
-            .remove_participant(participant_id, expected_sid)
-        else {
-            info!(
-                remote_access_session_id = self.remote_access_session_id(),
-                participant_identity = %participant_id,
-                sid = %expected_sid,
-                "ignoring remove for stale participant SID (current registration is for a different instance)",
-            );
-            return;
-        };
+        let participant = self.participant_registry.remove_participant(target_sid)?;
         let client_id = participant.client_id();
+        let participant_id = participant.participant_id();
         let removed = self
             .state
             .write()
@@ -1090,6 +1082,8 @@ impl RemoteAccessSession {
                 listener.on_client_unadvertise(&client, descriptor);
             }
         }
+
+        Some(participant)
     }
 
     /// Listen for room events and dispatch them.
@@ -1188,9 +1182,10 @@ impl RemoteAccessSession {
                 // Match the disconnect against the specific LiveKit connection
                 // instance we registered. If the stored `Participant` was added
                 // for a *later* instance (same identity, different SID — a
-                // reconnect we already reset to), skip the removal: this event
-                // is stale and its target is already gone.
-                self.remove_participant(&participant_identity, &sid);
+                // reconnect we already reset to), the SID-keyed remove misses
+                // and returns `None`: this event is stale and its target is
+                // already gone.
+                self.remove_participant(&sid);
             }
             RoomEvent::DataReceived {
                 payload: _,
@@ -1377,24 +1372,21 @@ impl RemoteAccessSession {
     async fn reset_participant(self: &Arc<Self>, target_sid: ParticipantSid) {
         let remote_access_session_id = self.remote_access_session_id();
 
-        // Look the participant up by SID. The SID identifies the exact
-        // instance that requested the reset, so a same-identity reconnect
-        // (which has a different SID) won't match here — that's the
-        // staleness filter, and avoids tearing down a replacement that has
-        // already taken over.
-        let (participant_id, version) = match self.participant_registry.get_participant_by_sid(&target_sid) {
-            Some(p) => (p.participant_id().clone(), p.protocol_version().clone()),
-            None => {
-                info!(
-                    remote_access_session_id,
-                    participant_sid = %target_sid,
-                    "reset requested for already-removed participant; skipping",
-                );
-                return;
-            }
+        // Remove by SID and capture identity / protocol version from the
+        // returned participant. The SID identifies the exact instance that
+        // requested the reset, so a same-identity reconnect (which has a
+        // different SID) won't match — `None` is the staleness filter.
+        let Some(participant) = self.remove_participant(&target_sid) else {
+            info!(
+                remote_access_session_id,
+                participant_sid = %target_sid,
+                "reset requested for already-removed participant; skipping",
+            );
+            return;
         };
-
-        self.remove_participant(&participant_id, &target_sid);
+        let participant_id = participant.participant_id().clone();
+        let version = participant.protocol_version().clone();
+        drop(participant);
 
         // Best-effort guard: skip re-add if LiveKit has already removed the participant
         // (e.g., because the underlying WebRTC connection dropped). In that case, the

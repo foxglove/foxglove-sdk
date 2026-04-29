@@ -50,17 +50,21 @@ impl Participants {
         true
     }
 
-    /// Removes the participant for the given identity, cancels its flush-task,
-    /// and detaches the task handle. Returns the participant. Cancellation
-    /// makes the task exit at its next `select!` iteration rather than when
-    /// senders eventually drop; the detached handle is then dropped without
-    /// being awaited.
-    pub fn remove_by_identity(
-        &mut self,
-        identity: &ParticipantIdentity,
-    ) -> Option<Arc<Participant>> {
-        let participant = self.by_identity.remove(identity)?;
-        self.by_sid.remove(participant.participant_sid());
+    /// Removes the participant matching `sid`, cancels its flush-task, and
+    /// detaches the task handle. Cancellation makes the task exit at its next
+    /// `select!` iteration rather than when senders eventually drop; the
+    /// detached handle is then dropped without being awaited.
+    ///
+    /// Returns `None` if no participant with this SID is registered. A miss
+    /// is the staleness filter: a `ParticipantDisconnected` for a prior
+    /// connection instance, or a queued reset for a participant that's
+    /// already been removed, will not match here because each connection
+    /// instance gets a unique `ParticipantSid` (a same-identity reconnect
+    /// has a *different* SID).
+    pub fn remove_by_sid(&mut self, sid: &ParticipantSid) -> Option<Arc<Participant>> {
+        let participant = self.by_sid.remove(sid)?;
+        let identity = participant.participant_id();
+        self.by_identity.remove(identity);
         drop(self.flush_handles.remove(identity));
         participant.cancel();
         Some(participant)
@@ -72,6 +76,9 @@ impl Participants {
     }
 
     /// Returns the participant for the given `ParticipantSid`, if present.
+    /// Test-only accessor — production reads the index implicitly via
+    /// [`remove_by_sid`].
+    #[cfg(test)]
     pub fn get_by_sid(&self, sid: &ParticipantSid) -> Option<&Arc<Participant>> {
         self.by_sid.get(sid)
     }
@@ -162,23 +169,23 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn remove_by_identity_clears_both_indexes() {
+    async fn remove_by_sid_clears_both_indexes() {
         let mut ps = Participants::new();
         let p = make_participant("alice");
         let identity = p.participant_id().clone();
         let sid = p.participant_sid().clone();
         ps.insert(p, dummy_handle());
-        assert!(ps.remove_by_identity(&identity).is_some());
+        assert!(ps.remove_by_sid(&sid).is_some());
         assert!(ps.get_by_identity(&identity).is_none());
         assert!(ps.get_by_sid(&sid).is_none());
         assert_eq!(ps.len(), 0);
     }
 
     #[test]
-    fn remove_by_identity_returns_none_for_missing() {
+    fn remove_by_sid_returns_none_for_missing() {
         let mut ps = Participants::new();
-        let missing = ParticipantIdentity("nobody".to_string());
-        assert!(ps.remove_by_identity(&missing).is_none());
+        let missing = crate::remote_access::participant::test_sid("nobody");
+        assert!(ps.remove_by_sid(&missing).is_none());
     }
 
     #[tokio::test]
@@ -206,10 +213,9 @@ mod tests {
     async fn get_by_sid_does_not_match_replaced_participant() {
         let mut ps = Participants::new();
         let original = make_participant("alice");
-        let identity = original.participant_id().clone();
         let original_sid = original.participant_sid().clone();
         ps.insert(original, dummy_handle());
-        ps.remove_by_identity(&identity);
+        ps.remove_by_sid(&original_sid);
 
         let replacement = make_participant("alice");
         let replacement_sid = replacement.participant_sid().clone();
