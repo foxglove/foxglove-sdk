@@ -169,6 +169,10 @@ pub(crate) struct RemoteAccessSession {
     server_info: ServerInfo,
     /// Participant membership and flush-task lifecycle.
     participant_registry: ParticipantRegistry,
+    /// If set, how long the session may remain with zero active participants before returning
+    /// to the dormant watch phase. Advertised by the API via the `hello` event's
+    /// `deviceWaitForViewerMs` field.
+    device_wait_for_viewer: Option<Duration>,
 }
 
 impl Sink for RemoteAccessSession {
@@ -358,6 +362,7 @@ pub(crate) struct SessionParams {
     pub remote_access_session_id: Option<String>,
     pub fetch_asset_handler: Option<Arc<dyn AssetHandler<Client>>>,
     pub server_info: ServerInfo,
+    pub device_wait_for_viewer: Option<Duration>,
 }
 
 impl RemoteAccessSession {
@@ -387,6 +392,7 @@ impl RemoteAccessSession {
             connection_graph: params.connection_graph,
             server_info: params.server_info,
             participant_registry,
+            device_wait_for_viewer: params.device_wait_for_viewer,
         }
     }
 
@@ -1156,12 +1162,19 @@ impl RemoteAccessSession {
 
     /// Listen for room events and dispatch them.
     ///
-    /// Returns when the room is disconnected or the event stream ends.
+    /// Returns when the room is disconnected, the event stream ends, or the session has been
+    /// idle (no active participants) for longer than `device_wait_for_viewer`.
     pub(crate) async fn handle_room_events(
         self: &Arc<Self>,
         mut room_events: tokio::sync::mpsc::UnboundedReceiver<RoomEvent>,
     ) {
         let remote_access_session_id = self.remote_access_session_id();
+        // Track when the room most recently had no active viewers. The idle countdown is
+        // applied symmetrically to the initial join (in case a wake fires but the viewer
+        // never arrives) and to the post-departure case ("after the last viewer leaves").
+        // `device_wait_for_viewer` is sized large enough that the viewer has time to join
+        // after a wake.
+        let mut idle_since: Option<tokio::time::Instant> = None;
         loop {
             // Drain pending resets before waiting for events. This covers the case
             // where a `Notify::notified()` wakeup was lost due to `select!`
@@ -1180,6 +1193,19 @@ impl RemoteAccessSession {
                 self.reset_participant(sid).await;
             }
 
+            // Refresh the idle state based on current participant count.
+            let active = self.participant_registry.participant_count();
+            if active > 0 {
+                idle_since = None;
+            } else if idle_since.is_none() {
+                idle_since = Some(tokio::time::Instant::now());
+            }
+
+            let idle_deadline = match (self.device_wait_for_viewer, idle_since) {
+                (Some(wait), Some(since)) => Some(since + wait),
+                _ => None,
+            };
+
             tokio::select! {
                 event = room_events.recv() => {
                     let Some(event) = event else { break };
@@ -1189,6 +1215,19 @@ impl RemoteAccessSession {
                 }
                 // Wake when new reset requests arrive.
                 () = self.participant_registry.reset_notify().notified() => {}
+                // Fire when the no-viewer grace period expires.
+                () = async {
+                    match idle_deadline {
+                        Some(deadline) => tokio::time::sleep_until(deadline).await,
+                        None => std::future::pending().await,
+                    }
+                } => {
+                    info!(
+                        remote_access_session_id,
+                        "no active viewers within device_wait_for_viewer window; returning to dormant"
+                    );
+                    return;
+                }
             }
         }
         warn!(

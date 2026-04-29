@@ -3,7 +3,6 @@
 mod capability;
 mod client;
 mod connection;
-mod credentials_provider;
 mod gateway;
 mod listener;
 mod participant;
@@ -15,6 +14,9 @@ mod rtt_tracker;
 pub mod service;
 mod session;
 mod session_state;
+mod sse;
+mod watch;
+mod watch_loop;
 
 pub use crate::remote_common::ClientId;
 pub use crate::remote_common::connection_graph::ConnectionGraph;
@@ -36,11 +38,10 @@ pub use crate::remote_common::fetch_asset::AssetHandler;
 /// Type alias for the remote-access-specific asset responder.
 pub type AssetResponder = crate::remote_common::fetch_asset::AssetResponder<Client>;
 
+use reqwest::StatusCode;
 use thiserror::Error;
 
 use crate::api_client::FoxgloveApiClientError;
-
-use self::credentials_provider::CredentialsError;
 
 /// Internal error type for the remote access module.
 #[derive(Error, Debug)]
@@ -51,12 +52,19 @@ pub(super) enum RemoteAccessError {
     /// An error from a LiveKit room connection or operation.
     #[error("Room error: {0}")]
     Room(livekit::RoomError),
-    /// An authentication or credential error.
-    #[error("Authentication error: {0}")]
-    Auth(FoxgloveApiClientError),
+    /// A failed Foxglove API call.
+    #[error("API error: {0}")]
+    Api(FoxgloveApiClientError),
     /// An I/O error.
     #[error(transparent)]
     Io(#[from] std::io::Error),
+}
+
+impl RemoteAccessError {
+    /// True if this is an [`Api`](Self::Api) error carrying a 401.
+    pub(super) fn is_unauthorized(&self) -> bool {
+        matches!(self, Self::Api(api) if api.status_code() == Some(StatusCode::UNAUTHORIZED))
+    }
 }
 
 impl From<livekit::StreamError> for RemoteAccessError {
@@ -74,20 +82,9 @@ impl From<livekit::RoomError> for RemoteAccessError {
     }
 }
 
-/// The only Foxglove API calls in this module are `fetch_device_info` and
-/// `authorize_remote_viz`, both of which are auth-related, so mapping all
-/// API client errors to `Auth` is appropriate here.
 impl From<FoxgloveApiClientError> for RemoteAccessError {
     fn from(error: FoxgloveApiClientError) -> Self {
-        RemoteAccessError::Auth(error)
-    }
-}
-
-impl From<CredentialsError> for RemoteAccessError {
-    fn from(error: CredentialsError) -> Self {
-        match error {
-            CredentialsError::FetchFailed(e) => RemoteAccessError::Auth(e),
-        }
+        RemoteAccessError::Api(error)
     }
 }
 
@@ -109,33 +106,9 @@ impl From<FoxgloveApiClientError> for Box<RemoteAccessError> {
     }
 }
 
-impl From<CredentialsError> for Box<RemoteAccessError> {
-    fn from(e: CredentialsError) -> Self {
-        Box::new(RemoteAccessError::from(e))
-    }
-}
-
 impl From<std::io::Error> for Box<RemoteAccessError> {
     fn from(e: std::io::Error) -> Self {
         Box::new(RemoteAccessError::from(e))
-    }
-}
-
-impl RemoteAccessError {
-    /// Returns `true` if this error is likely auth-related and credentials should be refreshed.
-    ///
-    /// All `Room` errors are treated as potentially auth-related, even though only a subset
-    /// (e.g. `RoomError::Engine(EngineError::Signal(SignalError::Client(401, ...)))`) truly
-    /// indicate expired or invalid credentials. The blanket match is intentional: credential
-    /// refresh is cheap, and the only call site is a retry loop with a 30-second interval, so
-    /// an unnecessary refresh has negligible cost. The native `RoomError` is preserved here so
-    /// that this logic can be refined in the future if needed (e.g. to skip refresh for
-    /// `AlreadyClosed` or `TrackAlreadyPublished`).
-    pub(super) fn should_clear_credentials(&self) -> bool {
-        matches!(
-            self,
-            RemoteAccessError::Auth(_) | RemoteAccessError::Room(_)
-        )
     }
 }
 
@@ -184,27 +157,6 @@ mod tests {
         );
     }
 
-    #[test]
-    fn should_clear_credentials_for_room_errors() {
-        let err = RemoteAccessError::Room(livekit::RoomError::AlreadyClosed);
-        assert!(err.should_clear_credentials());
-    }
-
-    #[test]
-    fn should_not_clear_credentials_for_io_errors() {
-        let err = RemoteAccessError::Io(std::io::Error::new(
-            std::io::ErrorKind::BrokenPipe,
-            "broken",
-        ));
-        assert!(!err.should_clear_credentials());
-    }
-
-    #[test]
-    fn should_not_clear_credentials_for_stream_errors() {
-        let err = RemoteAccessError::Stream(livekit::StreamError::AlreadyClosed);
-        assert!(!err.should_clear_credentials());
-    }
-
     /// Helper to produce a `FoxgloveApiClientError` by sending a request with a bad token
     /// to a mock server that returns 401.
     async fn make_api_client_error() -> FoxgloveApiClientError {
@@ -223,28 +175,11 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn api_client_error_converts_to_auth_variant() {
+    async fn api_client_error_converts_to_api_variant() {
         let err = RemoteAccessError::from(make_api_client_error().await);
         assert!(
-            matches!(err, RemoteAccessError::Auth(_)),
-            "FoxgloveApiClientError should convert to RemoteAccessError::Auth"
+            matches!(err, RemoteAccessError::Api(_)),
+            "FoxgloveApiClientError should convert to RemoteAccessError::Api"
         );
-    }
-
-    #[tokio::test]
-    async fn credentials_error_converts_to_auth_variant() {
-        let api_err = make_api_client_error().await;
-        let cred_err = CredentialsError::FetchFailed(api_err);
-        let err = RemoteAccessError::from(cred_err);
-        assert!(
-            matches!(err, RemoteAccessError::Auth(_)),
-            "CredentialsError::FetchFailed should convert to RemoteAccessError::Auth"
-        );
-    }
-
-    #[tokio::test]
-    async fn should_clear_credentials_for_auth_errors() {
-        let err = RemoteAccessError::from(make_api_client_error().await);
-        assert!(err.should_clear_credentials());
     }
 }
