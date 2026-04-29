@@ -98,12 +98,17 @@ impl Participants {
         self.by_identity.len()
     }
 
-    /// Removes all participants and their flush handles, returning both.
-    pub(crate) fn drain(&mut self) -> (Vec<Arc<Participant>>, Vec<JoinHandle<()>>) {
+    /// Cancels every participant's flush-task, clears all indexes, and
+    /// returns the detached `JoinHandle`s for the caller to await. After
+    /// this returns the registry is empty. Parallels [`remove_by_sid`] in
+    /// owning the cancel-then-detach lifecycle internally.
+    pub(crate) fn drain(&mut self) -> Vec<JoinHandle<()>> {
+        for p in self.by_identity.values() {
+            p.cancel();
+        }
+        self.by_identity.clear();
         self.by_sid.clear();
-        let participants = self.by_identity.drain().map(|(_, p)| p).collect();
-        let handles = self.flush_handles.drain().map(|(_, h)| h).collect();
-        (participants, handles)
+        self.flush_handles.drain().map(|(_, h)| h).collect()
     }
 }
 
@@ -230,14 +235,13 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn drain_clears_both_indexes_and_returns_all() {
+    async fn drain_clears_indexes_and_returns_handles() {
         let mut ps = Participants::new();
         let alice = make_participant("alice");
         let alice_sid = alice.participant_sid().clone();
         ps.insert(alice, dummy_handle());
         ps.insert(make_participant("bob"), dummy_handle());
-        let (taken, handles) = ps.drain();
-        assert_eq!(taken.len(), 2);
+        let handles = ps.drain();
         assert_eq!(handles.len(), 2);
         assert_eq!(ps.len(), 0);
         assert!(ps.get_by_sid(&alice_sid).is_none());

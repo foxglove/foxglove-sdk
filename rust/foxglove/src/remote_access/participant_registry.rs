@@ -188,10 +188,7 @@ impl ParticipantRegistry {
     /// `register_participant` / `remove_participant` / `reset_participant`
     /// calls can race with this one.
     pub(crate) async fn shutdown(&self) {
-        let (participants, handles) = self.participants.write().drain();
-        for p in &participants {
-            p.cancel();
-        }
+        let handles = self.participants.write().drain();
         let _ = futures_util::future::join_all(handles).await;
     }
 }
