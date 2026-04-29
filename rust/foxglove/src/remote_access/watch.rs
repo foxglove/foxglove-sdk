@@ -89,7 +89,7 @@ pub(super) enum HeartbeatExit {
     Cancelled,
 }
 
-/// Outcome of a single `Watch::next_outcome()` call. Each variant is terminal — once
+/// Outcome of a single `Watch::run()` call. Each variant is terminal — once
 /// observed, the caller should stop using this watch and either close it or take an
 /// appropriate control-loop action.
 #[derive(Debug)]
@@ -99,7 +99,7 @@ pub(super) enum WatchOutcome {
     /// The SSE stream closed cleanly without a wake.
     StreamEnded,
     /// No server-sent frame arrived within the SSE read-timeout window (see
-    /// [`Watch::next_outcome`]).
+    /// [`Watch::run`]).
     ReadTimeout,
     /// A transport error occurred while reading the stream.
     StreamError(WatchError),
@@ -601,7 +601,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn next_outcome_ignores_non_terminal_frames_until_wake() {
+    async fn watch_ignores_non_terminal_frames_until_wake() {
         let wake_json = "{\"remoteAccessSessionId\":\"ras-1\",\"url\":\"wss://example.test\",\"token\":\"token-1\"}";
         let (watch, _exit_tx) = watch_from_frames(
             vec![
@@ -624,7 +624,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn next_outcome_reports_malformed_wake() {
+    async fn watch_reports_malformed_wake() {
         let (watch, _exit_tx) = watch_from_frames(vec![event("wake", "{")], 60_000);
 
         let outcome = watch.run().await;
@@ -636,7 +636,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn next_outcome_reports_stream_end() {
+    async fn watch_reports_stream_end() {
         let (watch, _exit_tx) = watch_from_frames(Vec::new(), 60_000);
 
         let outcome = watch.run().await;
@@ -645,7 +645,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn next_outcome_reports_read_timeout() {
+    async fn watch_reports_read_timeout() {
         let (watch, _exit_tx) =
             watch_from_stream(stream::pending::<Result<SseFrame, reqwest::Error>>(), 1);
 
@@ -657,7 +657,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn next_outcome_prefers_heartbeat_exit() {
+    async fn watch_prefers_heartbeat_exit() {
         let wake_json = "{\"url\":\"wss://example.test\",\"token\":\"token-1\"}";
         let (watch, exit_tx) = watch_from_frames(vec![event("wake", wake_json)], 60_000);
         exit_tx.send(HeartbeatExit::Gone).unwrap();
