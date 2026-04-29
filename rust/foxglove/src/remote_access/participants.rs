@@ -61,7 +61,7 @@ impl Participants {
     /// already been removed, will not match here because each connection
     /// instance gets a unique `ParticipantSid` (a same-identity reconnect
     /// has a *different* SID).
-    pub fn remove_by_sid(&mut self, sid: &ParticipantSid) -> Option<Arc<Participant>> {
+    pub(crate) fn remove_by_sid(&mut self, sid: &ParticipantSid) -> Option<Arc<Participant>> {
         let participant = self.by_sid.remove(sid)?;
         let identity = participant.participant_id();
         self.by_identity.remove(identity);
@@ -79,7 +79,7 @@ impl Participants {
     /// Test-only accessor — production reads the index implicitly via
     /// [`remove_by_sid`].
     #[cfg(test)]
-    pub fn get_by_sid(&self, sid: &ParticipantSid) -> Option<&Arc<Participant>> {
+    pub(crate) fn get_by_sid(&self, sid: &ParticipantSid) -> Option<&Arc<Participant>> {
         self.by_sid.get(sid)
     }
 
@@ -99,7 +99,7 @@ impl Participants {
     }
 
     /// Removes all participants and their flush handles, returning both.
-    pub fn drain(&mut self) -> (Vec<Arc<Participant>>, Vec<JoinHandle<()>>) {
+    pub(crate) fn drain(&mut self) -> (Vec<Arc<Participant>>, Vec<JoinHandle<()>>) {
         self.by_sid.clear();
         let participants = self.by_identity.drain().map(|(_, p)| p).collect();
         let handles = self.flush_handles.drain().map(|(_, h)| h).collect();

@@ -34,9 +34,9 @@ pub(crate) struct Participant {
     /// LiveKit session ID for this specific connection instance. Unique per
     /// physical connection — unlike `participant_id`, it changes when a
     /// participant disconnects and reconnects under the same identity. Used
-    /// by the `ParticipantDisconnected` handler to tell a stale disconnect
-    /// (for a prior instance) apart from a legitimate disconnect of the
-    /// current instance.
+    /// to disambiguate connection instances on every operation that targets
+    /// one specific instance: `ParticipantDisconnected` event handling,
+    /// SID-keyed `remove_participant`, and `pending_resets` bookkeeping.
     participant_sid: ParticipantSid,
     /// Per-participant control plane queue. The receiving end is owned by the
     /// flush-task.
@@ -46,10 +46,11 @@ pub(crate) struct Participant {
     /// us. Keyed by `ParticipantSid` (unique per physical connection) rather
     /// than `ParticipantIdentity` (stable across disconnect/reconnect) so a
     /// stale reset request doesn't fire against a reconnected participant
-    /// that happens to reuse the same identity. `ClientId` would also work
-    /// (per-instance), but keeping internal bookkeeping on `ParticipantSid`
-    /// matches the SID-keyed `remove_participant` path and reserves
-    /// `ClientId` for the user-facing `Listener` API.
+    /// that happens to reuse the same identity. `ClientId` is also
+    /// per-instance and would work for staleness disambiguation, but keying
+    /// on `ParticipantSid` matches the SID-keyed `remove_participant` path
+    /// directly; `ClientId` stays the identifier exposed through `Listener`
+    /// callbacks and the connection-graph subscriber index.
     pending_resets: Arc<parking_lot::Mutex<HashSet<ParticipantSid>>>,
     /// Wakes `handle_room_events` when we add ourselves to `pending_resets`.
     reset_notify: Arc<tokio::sync::Notify>,

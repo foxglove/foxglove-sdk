@@ -57,9 +57,11 @@ impl ParticipantRegistry {
     /// advertisements) are the first the flush-task delivers to the viewer,
     /// ahead of any broadcast that reaches the participant after registration.
     ///
-    /// `participant_sid` is stored on the new [`Participant`] so a later
-    /// `ParticipantDisconnected` event can be matched against this specific
-    /// connection instance rather than the identity alone.
+    /// `participant_sid` is stored on the new [`Participant`] and indexed in
+    /// the registry so any later operation that targets a specific connection
+    /// instance — a `ParticipantDisconnected` event, or a queued reset from a
+    /// flush-task write failure — matches this exact instance rather than
+    /// some other connection that happens to share the identity.
     ///
     /// `session_cancel` is the session's cancellation token; the spawned
     /// flush-task takes a child of it so the task exits on session close.

@@ -1022,9 +1022,9 @@ impl RemoteAccessSession {
     /// Removes the participant whose stored LiveKit SID matches `target_sid`,
     /// running the full cleanup (listener callbacks, context unsubscribe,
     /// video track teardown, connection-graph update) when removal happens.
-    /// Returns the removed `Arc<Participant>` (so callers can capture
-    /// identity / protocol version for re-registration), or `None` if no
-    /// participant with this SID is registered.
+    /// Returns the removed `Arc<Participant>` (so callers can capture the
+    /// identity for re-registration), or `None` if no participant with this
+    /// SID is registered.
     ///
     /// SID-keyed: a `ParticipantDisconnected` for a prior instance can arrive
     /// after a same-identity reconnect has replaced it, but the reconnected
@@ -1401,7 +1401,7 @@ impl RemoteAccessSession {
             info!(
                 remote_access_session_id,
                 participant_identity = %participant_id,
-                "participant already left room, skipping re-add after control stream failure",
+                "participant already left room, skipping re-add after control-plane failure",
             );
             return;
         };
@@ -1425,7 +1425,7 @@ impl RemoteAccessSession {
             participant_identity = %participant_id,
             sid = %sid,
             version = %version,
-            "resetting participant after control stream failure",
+            "resetting participant after control-plane failure",
         );
         if let Err(e) = self.add_participant(participant_id, sid).await {
             error!(
