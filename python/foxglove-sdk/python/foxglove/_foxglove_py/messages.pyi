@@ -283,6 +283,29 @@ class CylinderPrimitive:
         """Encodes the CylinderPrimitive."""
         ...
 
+class Event:
+    """
+    A discrete event that occurred at a specific time or over a time range
+    """
+
+    def __init__(
+        self,
+        *,
+        start_time: Timestamp | None = None,
+        end_time: Timestamp | None = None,
+        label: str = "",
+        color: Color | None = None,
+        metadata: list[KeyValuePair] | None = None,
+    ) -> None: ...
+    @staticmethod
+    def get_schema() -> Schema:
+        """Returns the Event schema"""
+        ...
+
+    def encode(self) -> bytes:
+        """Encodes the Event."""
+        ...
+
 class FrameTransform:
     """
         A transform between two reference frames in 3D space. The transform defines the position and orientation of a child frame within a parent frame. Translation moves the origin of the child frame relative to the parent origin. The rotation changes the orientation of the child frame around its origin.
@@ -1102,6 +1125,7 @@ FoxgloveMessage = Union[
     CompressedVideo,
     CylinderPrimitive,
     CubePrimitive,
+    Event,
     FrameTransform,
     FrameTransforms,
     GeoJson,

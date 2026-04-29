@@ -292,6 +292,43 @@ const KeyValuePair: FoxgloveMessageSchema = {
   ],
 };
 
+const Event: FoxgloveMessageSchema = {
+  type: "message",
+  name: "Event",
+  description: "A discrete event that occurred at a specific time or over a time range",
+  fields: [
+    {
+      name: "start_time",
+      type: { type: "nested", schema: Timestamp },
+      description: "Event start time",
+    },
+    {
+      name: "end_time",
+      type: { type: "nested", schema: Timestamp },
+      description: "Event end time. Omit for point events.",
+      optional: true,
+    },
+    {
+      name: "label",
+      type: { type: "primitive", name: "string" },
+      description: "Display name for the event",
+    },
+    {
+      name: "color",
+      type: { type: "nested", schema: Color },
+      description: "Color used to visualize the event",
+      optional: true,
+    },
+    {
+      name: "metadata",
+      type: { type: "nested", schema: KeyValuePair },
+      array: true,
+      description: "Additional key-value metadata. Keys must be unique.",
+      optional: true,
+    },
+  ],
+};
+
 const SceneEntityDeletionType: FoxgloveEnumSchema = {
   type: "enum",
   name: "SceneEntityDeletionType",
@@ -1979,6 +2016,7 @@ export const foxgloveMessageSchemas = {
   CylinderPrimitive,
   CubePrimitive,
   Duration,
+  Event,
   FrameTransform,
   FrameTransforms,
   GeoJSON,
