@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::sync::{Arc, Weak};
 use std::time::Duration;
 
@@ -7,7 +7,10 @@ use futures_util::StreamExt;
 use indexmap::IndexSet;
 use libwebrtc::video_source::{RtcVideoSource, native::NativeVideoSource};
 use livekit::options::{TrackPublishOptions, VideoCodec};
-use livekit::{ByteStreamReader, Room, StreamByteOptions, id::ParticipantIdentity};
+use livekit::{
+    ByteStreamReader, Room, StreamByteOptions,
+    id::{ParticipantIdentity, ParticipantSid},
+};
 use livekit::{StreamWriter, prelude::*};
 use parking_lot::RwLock;
 use semver::Version;
@@ -20,7 +23,6 @@ use tracing::{debug, error, info, trace, warn};
 use crate::protocol::v2::DecodeError;
 use crate::protocol::v2::parameter::Parameter;
 use crate::protocol::v2::server::ParameterValues;
-use crate::remote_common::ClientId;
 use crate::remote_common::connection_graph::ConnectionGraph;
 use crate::remote_common::{
     fetch_asset::AssetResponder,
@@ -40,8 +42,12 @@ use crate::{
     },
     remote_access::qos::{QosClassifier, Reliability},
     remote_access::{
-        AssetHandler, Capability, Listener, RemoteAccessError, client::Client,
-        participant::Participant, protocol_version, rtt_tracker::RttTracker,
+        AssetHandler, Capability, Listener, RemoteAccessError,
+        client::Client,
+        participant::{Participant, ParticipantWriter},
+        participant_registry::ParticipantRegistry,
+        protocol_version,
+        rtt_tracker::RttTracker,
         session_state::SessionState,
     },
 };
@@ -134,6 +140,9 @@ pub(crate) struct RemoteAccessSession {
     room: Room,
     context: Weak<Context>,
     remote_access_session_id: Option<String>,
+    /// Session-level state: channels, subscriptions, video publishers, client
+    /// channels, parameter subscriptions. Participant membership lives on
+    /// [`participant_registry`] instead.
     state: RwLock<SessionState>,
     channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     qos_classifier: Option<Arc<dyn QosClassifier>>,
@@ -158,15 +167,8 @@ pub(crate) struct RemoteAccessSession {
     connection_graph: Arc<parking_lot::Mutex<ConnectionGraph>>,
     /// Immutable `ServerInfo` message sent to each participant on connect and reset.
     server_info: ServerInfo,
-    /// Set of `ClientId`s pending a reset (disconnect + reconnect).
-    /// Populated by `Participant::send_control` on queue overflow and by flush
-    /// tasks on write failure. Drained by `handle_room_events`. See
-    /// [`Participant::pending_resets`] for why this is keyed by `ClientId`.
-    pending_resets: Arc<parking_lot::Mutex<HashSet<ClientId>>>,
-    /// Wakes `handle_room_events` when a new reset is added to `pending_resets`.
-    reset_notify: Arc<tokio::sync::Notify>,
-    /// Size of the per-participant control plane queue.
-    message_backlog_size: usize,
+    /// Participant membership and flush-task lifecycle.
+    participant_registry: ParticipantRegistry,
     /// If set, how long the session may remain with zero active participants before returning
     /// to the dormant watch phase. Advertised by the API via the `hello` event's
     /// `deviceWaitForViewerMs` field.
@@ -186,26 +188,51 @@ impl Sink for RemoteAccessSession {
     ) -> std::result::Result<(), FoxgloveError> {
         let channel_id = channel.id();
 
-        let state = self.state.read();
+        // Collect subscriber identities under the session-state lock and
+        // release it before broadcasting. Two races are possible between the
+        // collect and the registry resolve, both benign:
+        //   1. The participant has been removed and not replaced — the resolve
+        //      misses and the message is dropped (their control queue has
+        //      already been drained anyway).
+        //   2. The participant has been removed and a same-identity reconnect
+        //      has registered in their place. The resolve returns the new
+        //      attempt, which receives a MessageData for a channel it never
+        //      subscribed to. The channel ID is session-scoped (already
+        //      advertised on this session), so the viewer drops the unknown
+        //      subscription and continues. Resolution is keyed on
+        //      ParticipantIdentity, so this can never deliver data across
+        //      identities — only the same logical user across a reconnect.
+        let reliable_subscribers = {
+            let state = self.state.read();
 
-        // Send to video publisher if any subscribers requested a video track.
-        if let Some(publisher) = state.get_video_publisher(&channel_id) {
-            publisher.send(Bytes::copy_from_slice(msg), metadata.log_time);
-        }
+            // Video track publisher: stays inside the state lock since the
+            // publisher handle is not cloneable out of the map.
+            if let Some(publisher) = state.get_video_publisher(&channel_id) {
+                publisher.send(Bytes::copy_from_slice(msg), metadata.log_time);
+            }
 
-        // Send to data subscribers.
-        if state.has_data_subscribers(&channel_id) {
-            if state.qos_profile(&channel_id).reliability == Reliability::Reliable {
-                // Reliable channels: send MessageData via the control bytestream
-                // to each subscribed participant.
-                let message = MessageData::new(u64::from(channel_id), metadata.log_time, msg);
-                let encoded = encode_binary_message(&message);
-                for participant in state.data_subscriber_participants(&channel_id) {
-                    participant.send_control(encoded.clone());
+            if !state.has_data_subscribers(&channel_id) {
+                None
+            } else if state.qos_profile(&channel_id).reliability == Reliability::Reliable {
+                Some(state.data_subscriber_identities(&channel_id))
+            } else {
+                // Lossy channels: send via the eagerly-published data track
+                // inline, while we still hold the state read lock.
+                if let Some(track) = state.get_subscribed_data_track(&channel_id) {
+                    track.log(channel_id, msg, metadata);
                 }
-            } else if let Some(track) = state.get_subscribed_data_track(&channel_id) {
-                // Lossy channels: send via the eagerly-published data track.
-                track.log(channel_id, msg, metadata);
+                None
+            }
+        };
+
+        // Reliable channels: send MessageData via the control bytestream.
+        // Batch-resolve identities so we take the registry lock once rather
+        // than per-subscriber.
+        if let Some(subscribers) = reliable_subscribers {
+            let message = MessageData::new(u64::from(channel_id), metadata.log_time, msg);
+            let encoded = encode_binary_message(&message);
+            for participant in self.participant_registry.resolve_identities(subscribers) {
+                participant.send_control(encoded.clone());
             }
         }
 
@@ -283,8 +310,9 @@ impl Sink for RemoteAccessSession {
         let _guard = self.subscription_lock.lock();
         let channel_id = channel.id();
 
-        // Collect subscriber info before removal for on_unsubscribe callbacks.
-        let subscriber_clients = self.state.read().channel_subscriber_clients(&channel_id);
+        // Collect subscriber identities before removal; we'll resolve them to
+        // `Client`s after via the registry.
+        let subscriber_identities = self.state.read().channel_subscriber_identities(&channel_id);
 
         if !self.state.write().remove_channel(channel_id) {
             return;
@@ -300,8 +328,14 @@ impl Sink for RemoteAccessSession {
         // Fire on_unsubscribe callbacks for subscribers of the removed channel.
         if let Some(listener) = &self.listener {
             let descriptor = channel.descriptor();
-            for (client_id, participant_id) in subscriber_clients {
-                let client = Client::new(client_id, participant_id);
+            for participant in self
+                .participant_registry
+                .resolve_identities(subscriber_identities)
+            {
+                let client = Client::new(
+                    participant.client_id(),
+                    participant.participant_id().clone(),
+                );
                 listener.on_unsubscribe(&client, descriptor);
             }
         }
@@ -334,8 +368,7 @@ pub(crate) struct SessionParams {
 impl RemoteAccessSession {
     pub(crate) fn new(params: SessionParams) -> Self {
         let (video_metadata_tx, video_metadata_rx) = tokio::sync::watch::channel(());
-        let pending_resets = Arc::new(parking_lot::Mutex::new(HashSet::new()));
-        let reset_notify = Arc::new(tokio::sync::Notify::new());
+        let participant_registry = ParticipantRegistry::new(params.message_backlog_size);
         Self {
             sink_id: SinkId::next(),
             room: params.room,
@@ -358,9 +391,7 @@ impl RemoteAccessSession {
             ice_rtt_tracker: parking_lot::Mutex::new(RttTracker::new("ICE")),
             connection_graph: params.connection_graph,
             server_info: params.server_info,
-            pending_resets,
-            reset_notify,
-            message_backlog_size: params.message_backlog_size,
+            participant_registry,
             device_wait_for_viewer: params.device_wait_for_viewer,
         }
     }
@@ -385,7 +416,7 @@ impl RemoteAccessSession {
     pub(crate) fn stats(&self) -> SessionStats {
         let state = self.state.read();
         SessionStats {
-            participants: state.participant_count(),
+            participants: self.participant_registry.participant_count(),
             subscriptions: state.subscription_count(),
             video_tracks: state.video_track_count(),
         }
@@ -408,8 +439,7 @@ impl RemoteAccessSession {
     /// Enqueue a control plane message for all currently connected participants.
     /// If a participant's queue is full, a reset is requested for that participant.
     fn broadcast_control(&self, data: Bytes) {
-        let participants = self.state.read().collect_participants();
-        for participant in participants {
+        for participant in self.participant_registry.collect_participants() {
             participant.send_control(data.clone());
         }
     }
@@ -437,23 +467,15 @@ impl RemoteAccessSession {
         self.cancellation_token.cancel();
     }
 
-    /// Shut down the session: clear all participants (dropping their control
-    /// queue senders so flush tasks exit), await the flush task handles, then
-    /// close the LiveKit room.
+    /// Shut down the session: cancel every participant's flush-task, await
+    /// their completion, then close the LiveKit room.
     ///
     /// The caller must ensure that `handle_room_events` has stopped so no new
     /// `remove_participant` / `reset_participant` calls can race with us.
     pub(crate) async fn close(&self) {
-        let (participants, flush_handles) = self.state.write().take_participants();
-        // Cancel each participant's flush task so it breaks out of the recv/write
-        // select! and doesn't pick up new messages. In-flight writes will complete
-        // or fail once room.close() tears down the transport.
-        for participant in participants {
-            participant.cancel();
-        }
-        for handle in flush_handles {
-            let _ = handle.await;
-        }
+        // Cancel flush-tasks and await them before tearing down the transport.
+        // In-flight writes either complete or fail once `room.close()` runs.
+        self.participant_registry.shutdown().await;
         if let Err(e) = self.room.close().await {
             error!(
                 remote_access_session_id = self.remote_access_session_id(),
@@ -564,7 +586,10 @@ impl RemoteAccessSession {
             }
         };
 
-        let Some(participant) = self.state.read().get_participant(participant_identity) else {
+        let Some(participant) = self
+            .participant_registry
+            .get_participant(participant_identity)
+        else {
             error!("Unknown participant identity: {:?}", participant_identity);
             return false;
         };
@@ -672,9 +697,11 @@ impl RemoteAccessSession {
         drop(state);
 
         let mut state = self.state.write();
-        let subscribe_result = state.subscribe(participant, &channel_ids);
-        let first_video_subscribed = state.subscribe_video(participant, &video_channel_ids);
-        let last_video_unsubscribed = state.unsubscribe_video(participant, &data_channel_ids);
+        let subscribe_result = state.subscribe(participant.participant_id(), &channel_ids);
+        let first_video_subscribed =
+            state.subscribe_video(participant.participant_id(), &video_channel_ids);
+        let last_video_unsubscribed =
+            state.unsubscribe_video(participant.participant_id(), &data_channel_ids);
         drop(state);
 
         if !subscribe_result.first_subscribed.is_empty() {
@@ -716,8 +743,9 @@ impl RemoteAccessSession {
             .collect();
 
         let mut state = self.state.write();
-        let unsubscribe_result = state.unsubscribe(participant, &channel_ids);
-        let last_video_unsubscribed = state.unsubscribe_video(participant, &channel_ids);
+        let unsubscribe_result = state.unsubscribe(participant.participant_id(), &channel_ids);
+        let last_video_unsubscribed =
+            state.unsubscribe_video(participant.participant_id(), &channel_ids);
         drop(state);
 
         if !unsubscribe_result.last_unsubscribed.is_empty() {
@@ -948,20 +976,26 @@ impl RemoteAccessSession {
     /// The caller is responsible for ensuring that this method is not called concurrently for the
     /// same participant identity.
     ///
+    /// `participant_sid` is the LiveKit session ID of the specific connection
+    /// instance being registered; it's stored on the `Participant` so a later
+    /// `ParticipantDisconnected` event (or a flush-task failure) can be matched
+    /// against this instance rather than the identity alone.
+    ///
     /// When a participant is added, a ServerInfo message and channel Advertisement messages are
     /// immediately queued for transmission.
     pub(crate) async fn add_participant(
         &self,
         participant_id: ParticipantIdentity,
+        participant_sid: ParticipantSid,
         protocol_version: Version,
     ) -> Result<(), Box<RemoteAccessError>> {
-        use crate::remote_access::participant::ParticipantWriter;
-
-        if self.state.read().has_participant(&participant_id) {
+        // Gate on the registry *before* opening the stream: `stream_bytes` is
+        // an RPC that should not be wasted on an already-registered identity.
+        if self.participant_registry.has_participant(&participant_id) {
             return Ok(());
         }
 
-        let stream = match self
+        let stream = self
             .room
             .local_participant()
             .stream_bytes(StreamByteOptions {
@@ -970,61 +1004,66 @@ impl RemoteAccessSession {
                 ..StreamByteOptions::default()
             })
             .await
-        {
-            Ok(stream) => stream,
-            Err(e) => {
-                error!("failed to create stream for participant {participant_id}: {e:?}");
-                return Err(e.into());
-            }
-        };
+            .inspect_err(|e| {
+                error!("failed to open control stream for {participant_id}: {e:?}");
+            })?;
 
-        let (participant, flush_handle) = Participant::spawn(
+        // Encode the initial messages (server info + channel / service
+        // advertisements) up front. The registry queues them on the
+        // participant's control-plane channel before inserting the
+        // participant into state, so these are the first bytes the viewer
+        // receives.
+        let mut initial_messages = vec![encode_json_message(&self.server_info)];
+        initial_messages.extend(self.encode_channel_advertisements());
+        initial_messages.extend(self.encode_service_advertisements());
+
+        info!(
+            "registering participant {participant_id:?} with {} initial messages",
+            initial_messages.len()
+        );
+        let inserted = self.participant_registry.register_participant(
             participant_id.clone(),
+            participant_sid,
             protocol_version,
             ParticipantWriter::Livekit(stream),
-            self.message_backlog_size,
-            self.pending_resets.clone(),
-            self.reset_notify.clone(),
             &self.cancellation_token,
+            initial_messages,
         );
-
-        // Send initial messages prior to adding the participant to the state map, to ensure that
-        // these are the first messages delivered to the participant. This is safe to do without
-        // holding the write lock, because this is a new participant — see below.
-        info!("sending server info and advertisements to participant {participant:?}");
-        participant.send_control(encode_json_message(&self.server_info));
-        self.send_channel_advertisements(participant.clone());
-        self.send_service_advertisements(participant.clone());
-
-        // Add the participant to the state map. We assert that this is a new participant, because
-        // we validated that it did not exist in the map at the top of this function, and the
-        // caller is responsible for ensuring this function is not called concurrently for the same
-        // participant identity.
-        let mut state = self.state.write();
-        let did_insert = state.insert_participant(participant);
-        assert!(did_insert);
-        state.insert_flush_handle(participant_id, flush_handle);
+        debug_assert!(
+            inserted,
+            "register_participant returned false for {participant_id:?}; \
+             concurrent add_participant for the same identity violates the \
+             caller-serialization contract",
+        );
         Ok(())
     }
 
-    /// Remove a participant from the session, cleaning up its subscriptions.
+    /// Removes the participant whose stored LiveKit SID matches `target_sid`,
+    /// running the full cleanup (listener callbacks, context unsubscribe,
+    /// video track teardown, connection-graph update) when removal happens.
+    /// Returns the removed `Arc<Participant>` (so callers can capture the
+    /// identity for re-registration), or `None` if no participant with this
+    /// SID is registered.
     ///
-    /// Channels that lose their last subscriber are unsubscribed from the context.
-    pub(crate) fn remove_participant(self: &Arc<Self>, participant_id: &ParticipantIdentity) {
+    /// SID-keyed: a `ParticipantDisconnected` for a prior instance can arrive
+    /// after a same-identity reconnect has replaced it, but the reconnected
+    /// instance has a *different* SID, so a stale removal misses here rather
+    /// than tearing down the replacement. Callers handle the `None` case
+    /// according to their context.
+    pub(crate) fn remove_participant(
+        self: &Arc<Self>,
+        target_sid: &ParticipantSid,
+    ) -> Option<Arc<Participant>> {
         let _guard = self.subscription_lock.lock();
+        let participant = self.participant_registry.remove_participant(target_sid)?;
+        let client_id = participant.client_id();
+        let participant_id = participant.participant_id();
+        let removed = self
+            .state
+            .write()
+            .cleanup_for_removed_identity(participant_id);
 
-        let removed = {
-            let mut state = self.state.write();
-            // Cancel the flush task so it doesn't linger on a dead write.
-            if let Some(p) = state.get_participant(participant_id) {
-                p.cancel();
-            }
-            let removed = state.remove_participant(participant_id);
-            // Detach the flush handle — task exits via cancel or channel close.
-            drop(state.remove_flush_handle(participant_id));
-            removed
-        };
-
+        // Listener / context / video-track / connection-graph aftercare.
         if !removed.last_unsubscribed.is_empty() {
             if let Some(context) = self.context.upgrade() {
                 context.unsubscribe_channels(self.sink_id, &removed.last_unsubscribed);
@@ -1039,18 +1078,16 @@ impl RemoteAccessSession {
             }
         }
 
-        if let Some(client_id) = removed.client_id {
-            if self.has_capability(Capability::ConnectionGraph) {
-                let mut graph = self.connection_graph.lock();
-                if graph.remove_subscriber(client_id) && !graph.has_subscribers() {
-                    if let Some(listener) = &self.listener {
-                        listener.on_connection_graph_unsubscribe();
-                    }
+        if self.has_capability(Capability::ConnectionGraph) {
+            let mut graph = self.connection_graph.lock();
+            if graph.remove_subscriber(client_id) && !graph.has_subscribers() {
+                if let Some(listener) = &self.listener {
+                    listener.on_connection_graph_unsubscribe();
                 }
             }
         }
 
-        if let Some((listener, client_id)) = self.listener.as_ref().zip(removed.client_id) {
+        if let Some(listener) = &self.listener {
             let client = Client::new(client_id, participant_id.clone());
 
             for descriptor in &removed.subscribed_descriptors {
@@ -1061,6 +1098,8 @@ impl RemoteAccessSession {
                 listener.on_client_unadvertise(&client, descriptor);
             }
         }
+
+        Some(participant)
     }
 
     /// Listen for room events and dispatch them.
@@ -1081,30 +1120,23 @@ impl RemoteAccessSession {
         loop {
             // Drain pending resets before waiting for events. This covers the case
             // where a `Notify::notified()` wakeup was lost due to `select!`
-            // cancellation — the client ids are still in the set even if the
+            // cancellation — the SIDs are still in the set even if the
             // notification was consumed by a dropped future.
-            let client_ids: Vec<ClientId> = {
-                let mut set = self.pending_resets.lock();
-                set.drain().collect()
-            };
+            //
             // `handle_room_events` is the single task driving participant
-            // membership during the session lifecycle, so the lookup below
-            // cannot be invalidated before `reset_participant` runs. A
-            // `ClientId` no longer registered means the request is stale —
-            // the participant was already removed and may have been replaced
-            // by a reconnection reusing the same identity; skipping avoids
-            // spuriously tearing down that replacement.
-            for client_id in client_ids {
-                let Some(participant) = self.state.read().get_participant_by_client_id(client_id)
-                else {
-                    continue;
-                };
-                self.reset_participant(participant.participant_id().clone())
-                    .await;
+            // membership during the session lifecycle, so the lookup inside
+            // `reset_participant` cannot be invalidated before it runs. A
+            // `ParticipantSid` no longer registered means the request is
+            // stale — the participant was already removed and may have been
+            // replaced by a reconnection that, by definition, has a different
+            // SID; the staleness check inside `reset_participant` skips
+            // those, avoiding a spurious teardown of the replacement.
+            for sid in self.participant_registry.drain_pending_resets() {
+                self.reset_participant(sid).await;
             }
 
             // Refresh the idle state based on current participant count.
-            let active = self.state.read().participant_count();
+            let active = self.participant_registry.participant_count();
             if active > 0 {
                 idle_since = None;
             } else if idle_since.is_none() {
@@ -1124,7 +1156,7 @@ impl RemoteAccessSession {
                     }
                 }
                 // Wake when new reset requests arrive.
-                () = self.reset_notify.notified() => {}
+                () = self.participant_registry.reset_notify().notified() => {}
                 // Fire when the no-viewer grace period expires.
                 () = async {
                     match idle_deadline {
@@ -1172,23 +1204,37 @@ impl RemoteAccessSession {
                     .await;
                     return true;
                 };
+                let sid = participant.sid();
                 info!(
                     remote_access_session_id,
                     participant_identity = %participant_identity,
+                    sid = %sid,
                     version = %version,
                     "participant active in room"
                 );
-                if let Err(e) = self.add_participant(participant.identity(), version).await {
+                if let Err(e) = self
+                    .add_participant(participant_identity, sid, version)
+                    .await
+                {
                     error!(remote_access_session_id, error = %e, "failed to add participant: {e}");
                 }
             }
             RoomEvent::ParticipantDisconnected(participant) => {
+                let participant_identity = participant.identity();
+                let sid = participant.sid();
                 info!(
                     remote_access_session_id,
-                    participant_identity = %participant.identity(),
+                    participant_identity = %participant_identity,
+                    sid = %sid,
                     "participant disconnected from room"
                 );
-                self.remove_participant(&participant.identity());
+                // Match the disconnect against the specific LiveKit connection
+                // instance we registered. If the stored `Participant` was added
+                // for a *later* instance (same identity, different SID — a
+                // reconnect we already reset to), the SID-keyed remove misses
+                // and returns `None`: this event is stale and its target is
+                // already gone.
+                self.remove_participant(&sid);
             }
             RoomEvent::DataReceived {
                 payload: _,
@@ -1361,57 +1407,82 @@ impl RemoteAccessSession {
     ///
     /// Write failures often coincide with participant disconnection. When that happens,
     /// both a reset notification and a `ParticipantDisconnected` event may be in flight.
-    /// We guard against the common case by checking `remote_participants()` before
-    /// re-adding: if LiveKit has already removed the participant, we skip the re-add
+    /// We guard against the common case by checking `remote_participants()` after
+    /// removing: if LiveKit has already removed the participant, we skip the re-add
     /// and let the normal `ParticipantConnected` flow handle any future reconnection.
+    /// Without this guard, re-adding would open a fresh stream whose first write would
+    /// also fail, re-triggering the reset in an infinite loop.
     ///
     /// This is a best-effort check (TOCTOU): the participant could disconnect between
     /// the check and the `stream_bytes` call inside `add_participant`. In that narrow
     /// window, `add_participant` may open a dead stream, but the subsequent
     /// `ParticipantDisconnected` event will clean it up. This is harmless — just a
     /// wasted `stream_bytes` call and a log line.
-    async fn reset_participant(self: &Arc<Self>, participant_id: ParticipantIdentity) {
+    async fn reset_participant(self: &Arc<Self>, target_sid: ParticipantSid) {
         let remote_access_session_id = self.remote_access_session_id();
 
-        self.remove_participant(&participant_id);
+        // Remove by SID and capture identity from the returned participant.
+        // The SID identifies the exact instance that requested the reset, so
+        // a same-identity reconnect (which has a different SID) won't match
+        // — `None` is the staleness filter.
+        let Some(participant) = self.remove_participant(&target_sid) else {
+            info!(
+                remote_access_session_id,
+                participant_sid = %target_sid,
+                "reset requested for already-removed participant; skipping",
+            );
+            return;
+        };
+        let participant_id = participant.participant_id().clone();
+        drop(participant);
 
         // Best-effort guard: skip re-add if LiveKit has already removed the participant
         // (e.g., because the underlying WebRTC connection dropped). In that case, the
         // `ParticipantDisconnected` event is already queued and a future reconnect will
         // go through the normal `ParticipantConnected` → `add_participant` path.
-        let remote_participant = self
+        //
+        // If a new instance has already reconnected under the same identity,
+        // its SID and attributes are what we re-register with — so that (a) a
+        // later stale `ParticipantDisconnected` for the *old* instance's SID
+        // won't match and tear down this re-registration, and (b) a
+        // protocol-version change between instances is honoured rather than
+        // assumed-unchanged.
+        let Some((sid, attributes)) = self
             .room
             .remote_participants()
             .get(&participant_id)
-            .cloned();
-        let Some(remote_participant) = remote_participant else {
+            .map(|p| (p.sid(), p.attributes()))
+        else {
             info!(
                 remote_access_session_id,
                 participant_identity = %participant_id,
-                "participant already left room, skipping re-add after control stream failure",
+                "participant already left room, skipping re-add after control-plane failure",
             );
             return;
         };
 
+        // Re-validate the protocol version against the freshly-queried
+        // attributes. A same-identity reconnect could in principle bring a
+        // different protocol version; trust the fresh value, just like we
+        // trust the fresh SID.
         let Some(version) = protocol_version::check_participant_protocol_version(
             &participant_id,
-            &remote_participant.attributes(),
+            &attributes,
             remote_access_session_id,
         ) else {
-            warn!(
-                remote_access_session_id,
-                participant_identity = %participant_id,
-                "skipping reset for participant with incompatible protocol version",
-            );
+            self.send_incompatible_version_error(&participant_id, &attributes)
+                .await;
             return;
         };
 
         warn!(
             remote_access_session_id,
             participant_identity = %participant_id,
-            "resetting participant after control stream failure",
+            sid = %sid,
+            version = %version,
+            "resetting participant after control-plane failure",
         );
-        if let Err(e) = self.add_participant(participant_id, version).await {
+        if let Err(e) = self.add_participant(participant_id, sid, version).await {
             error!(
                 remote_access_session_id,
                 error = %e,
@@ -1478,34 +1549,27 @@ impl RemoteAccessSession {
         }
     }
 
-    /// Enqueue all currently cached channel advertisements for delivery to a single participant.
-    fn send_channel_advertisements(&self, participant: Arc<Participant>) {
-        let Some(advertise_msg) = ({
-            let state = self.state.read();
-            state
-                .with_channels(|channels| {
-                    let msg = advertise::advertise_channels(channels.values());
-                    if msg.channels.is_empty() {
-                        return None;
-                    }
-                    let mut msg = msg.into_owned();
-                    state.add_metadata_to_advertisement(&mut msg);
-                    Some(msg)
-                })
-                .flatten()
-        }) else {
-            return;
-        };
-
-        participant.send_control(encode_json_message(&advertise_msg));
+    /// Returns the currently-cached channel advertisements encoded as a single
+    /// framed control-plane message, or `None` if no channels are advertised.
+    fn encode_channel_advertisements(&self) -> Option<Bytes> {
+        let state = self.state.read();
+        let msg = state.with_channels(|channels| {
+            let msg = advertise::advertise_channels(channels.values());
+            if msg.channels.is_empty() {
+                return None;
+            }
+            let mut msg = msg.into_owned();
+            state.add_metadata_to_advertisement(&mut msg);
+            Some(msg)
+        })??;
+        Some(encode_json_message(&msg))
     }
 
-    /// Enqueue service advertisements for delivery to a single participant.
-    fn send_service_advertisements(&self, participant: Arc<Participant>) {
+    /// Returns the currently-cached service advertisements encoded as a single
+    /// framed control-plane message, or `None` if no services are registered.
+    fn encode_service_advertisements(&self) -> Option<Bytes> {
         let services: Vec<_> = self.services.read().values().cloned().collect();
-        if let Some(msg) = build_advertise_services_msg(&services) {
-            participant.send_control(encode_json_message(&msg));
-        }
+        build_advertise_services_msg(&services).map(|msg| encode_json_message(&msg))
     }
 
     /// Broadcasts service advertisements for the given service IDs to all connected participants.
@@ -1763,11 +1827,11 @@ impl RemoteAccessSession {
             return;
         }
 
-        // Collect the per-participant messages while holding the read lock, then
-        // send them after the lock is released to minimize lock scope.
+        // Collect the per-participant messages, then send them after the locks
+        // are released to minimize lock scope.
+        let participants = self.participant_registry.collect_participants();
         let to_send: Vec<(Arc<Participant>, Bytes)> = {
             let state = self.state.read();
-            let participants = state.collect_participants();
             participants
                 .into_iter()
                 .filter_map(|participant| {
@@ -1872,8 +1936,7 @@ impl RemoteAccessSession {
         let mut graph = self.connection_graph.lock();
         let update = graph.update(replacement_graph);
         let encoded = encode_json_message(&update);
-        let participants = self.state.read().collect_participants();
-        for participant in participants {
+        for participant in self.participant_registry.collect_participants() {
             if graph.is_subscriber(participant.client_id()) {
                 participant.send_control(encoded.clone());
             }
@@ -2081,6 +2144,8 @@ impl RemoteAccessSession {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
+
     use super::*;
     use crate::protocol::v2::server::FetchAssetResponse;
     use crate::remote_common::fetch_asset::{
@@ -2088,7 +2153,11 @@ mod tests {
     };
 
     fn make_participant_with_rx(name: &str) -> (Arc<Participant>, flume::Receiver<Bytes>) {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        static COUNTER: AtomicUsize = AtomicUsize::new(0);
+        let n = COUNTER.fetch_add(1, Ordering::Relaxed);
         let identity = ParticipantIdentity(name.to_string());
+        let sid = crate::remote_access::participant::test_sid(&format!("{name}-{n}"));
         let version = protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone();
         let (tx, rx) = flume::bounded(16);
         let pending_resets = Arc::new(parking_lot::Mutex::new(HashSet::new()));
@@ -2096,6 +2165,7 @@ mod tests {
         let cancel = CancellationToken::new();
         let participant = Arc::new(Participant::new(
             identity,
+            sid,
             version,
             tx,
             pending_resets,
@@ -2295,11 +2365,11 @@ mod tests {
         );
     }
 
-    // ---- flush task tests ----
+    // ---- flush-task tests ----
 
     /// Spawns a participant with a test writer via `Participant::spawn`.
     /// Returns the participant (for sending), the test writer (for inspecting
-    /// writes), and the flush task's `JoinHandle`.
+    /// writes), and the flush-task's `JoinHandle`.
     fn spawn_test_participant(
         session_cancel: &CancellationToken,
     ) -> (
@@ -2307,13 +2377,16 @@ mod tests {
         Arc<crate::remote_access::participant::TestByteStreamWriter>,
         tokio::task::JoinHandle<()>,
     ) {
-        use crate::remote_access::participant::{ParticipantWriter, TestByteStreamWriter};
+        use crate::remote_access::participant::{
+            ParticipantWriter, TestByteStreamWriter, test_sid,
+        };
 
         let writer = Arc::new(TestByteStreamWriter::default());
         let pending_resets = Arc::new(parking_lot::Mutex::new(HashSet::new()));
         let reset_notify = Arc::new(tokio::sync::Notify::new());
         let (participant, handle) = Participant::spawn(
             ParticipantIdentity("test".to_string()),
+            test_sid("flush-test"),
             protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone(),
             ParticipantWriter::Test(writer.clone()),
             DEFAULT_MESSAGE_BACKLOG_SIZE,
@@ -2332,7 +2405,7 @@ mod tests {
         participant.send_control(Bytes::from_static(b"hello"));
         participant.send_control(Bytes::from_static(b"world"));
 
-        // Drop the participant to signal the flush task to exit.
+        // Drop the participant to signal the flush-task to exit.
         drop(participant);
         handle.await.unwrap();
 
@@ -2351,7 +2424,7 @@ mod tests {
         drop(participant);
 
         let result = tokio::time::timeout(Duration::from_secs(1), handle).await;
-        assert!(result.is_ok(), "flush task did not exit after sender drop");
+        assert!(result.is_ok(), "flush-task did not exit after sender drop");
     }
 
     #[tokio::test]
@@ -2363,13 +2436,13 @@ mod tests {
         cancel.cancel();
 
         let result = tokio::time::timeout(Duration::from_secs(1), handle).await;
-        assert!(result.is_ok(), "flush task did not exit after cancellation");
+        assert!(result.is_ok(), "flush-task did not exit after cancellation");
     }
 
     #[tokio::test]
     async fn flush_tasks_are_independent() {
         // Two participants spawned independently. Dropping one and awaiting its
-        // flush task should not affect the other.
+        // flush-task should not affect the other.
         let cancel = CancellationToken::new();
         let (participant_a, writer_a, handle_a) = spawn_test_participant(&cancel);
         let (participant_b, writer_b, handle_b) = spawn_test_participant(&cancel);
@@ -2402,6 +2475,7 @@ mod tests {
         let cancel = CancellationToken::new();
         let participant = Participant::new(
             ParticipantIdentity("alice".to_string()),
+            crate::remote_access::participant::test_sid("alice"),
             version,
             tx,
             pending_resets,

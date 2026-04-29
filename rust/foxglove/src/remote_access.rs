@@ -6,6 +6,7 @@ mod connection;
 mod gateway;
 mod listener;
 mod participant;
+mod participant_registry;
 mod participants;
 pub(super) mod protocol_version;
 mod qos;
