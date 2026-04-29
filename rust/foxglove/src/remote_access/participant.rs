@@ -8,7 +8,6 @@ use livekit::{
     ByteStreamWriter, StreamWriter,
     id::{ParticipantIdentity, ParticipantSid},
 };
-use semver::Version;
 use tokio_util::sync::CancellationToken;
 
 use crate::protocol::v2::server::FetchAssetResponse;
@@ -39,11 +38,6 @@ pub(crate) struct Participant {
     /// (for a prior instance) apart from a legitimate disconnect of the
     /// current instance.
     participant_sid: ParticipantSid,
-    /// The remote access protocol version advertised by this participant.
-    /// Captured at `add_participant` time and reused on reset so we don't have to
-    /// re-query the LiveKit room (which would race with reconnection under the
-    /// same identity).
-    protocol_version: Version,
     /// Per-participant control plane queue. The receiving end is owned by the
     /// flush-task.
     control_tx: flume::Sender<Bytes>,
@@ -81,7 +75,6 @@ impl Participant {
     pub fn spawn(
         identity: ParticipantIdentity,
         participant_sid: ParticipantSid,
-        protocol_version: Version,
         writer: ParticipantWriter,
         queue_size: usize,
         pending_resets: Arc<parking_lot::Mutex<HashSet<ParticipantSid>>>,
@@ -130,7 +123,6 @@ impl Participant {
             client_id,
             participant_id: identity,
             participant_sid,
-            protocol_version,
             control_tx,
             pending_resets,
             reset_notify,
@@ -152,7 +144,6 @@ impl Participant {
     pub fn new(
         identity: ParticipantIdentity,
         participant_sid: ParticipantSid,
-        protocol_version: Version,
         control_tx: flume::Sender<Bytes>,
         pending_resets: Arc<parking_lot::Mutex<HashSet<ParticipantSid>>>,
         reset_notify: Arc<tokio::sync::Notify>,
@@ -162,7 +153,6 @@ impl Participant {
             client_id: ClientId::next(),
             participant_id: identity,
             participant_sid,
-            protocol_version,
             control_tx,
             pending_resets,
             reset_notify,
@@ -196,11 +186,6 @@ impl Participant {
     /// Returns the participant's identity.
     pub fn participant_id(&self) -> &ParticipantIdentity {
         &self.participant_id
-    }
-
-    /// Returns the protocol version advertised by this participant.
-    pub(crate) fn protocol_version(&self) -> &Version {
-        &self.protocol_version
     }
 
     /// Returns the LiveKit session ID this participant was added with. Unique

@@ -16,7 +16,6 @@ use std::sync::Arc;
 use bytes::Bytes;
 use livekit::id::{ParticipantIdentity, ParticipantSid};
 use parking_lot::{Mutex, RwLock};
-use semver::Version;
 use tokio::sync::Notify;
 use tokio_util::sync::CancellationToken;
 
@@ -76,7 +75,6 @@ impl ParticipantRegistry {
         &self,
         id: ParticipantIdentity,
         participant_sid: ParticipantSid,
-        version: Version,
         writer: ParticipantWriter,
         session_cancel: &CancellationToken,
         initial_messages: I,
@@ -91,7 +89,6 @@ impl ParticipantRegistry {
         let (participant, flush_handle) = Participant::spawn(
             id,
             participant_sid,
-            version,
             writer,
             self.message_backlog_size,
             self.pending_resets.clone(),
@@ -202,7 +199,6 @@ mod tests {
     use super::*;
 
     use crate::remote_access::participant::{ParticipantWriter, TestByteStreamWriter, test_sid};
-    use crate::remote_access::protocol_version;
 
     fn make_registry() -> ParticipantRegistry {
         ParticipantRegistry::new(16)
@@ -217,13 +213,11 @@ mod tests {
         let registry = make_registry();
         let cancel = CancellationToken::new();
         let id = ParticipantIdentity("alice".to_string());
-        let version = protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone();
 
         let sid = test_sid("alice-1");
         let inserted = registry.register_participant(
             id.clone(),
             sid.clone(),
-            version,
             test_writer(),
             &cancel,
             [],
@@ -240,12 +234,10 @@ mod tests {
         let registry = make_registry();
         let cancel = CancellationToken::new();
         let id = ParticipantIdentity("alice".to_string());
-        let version = protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone();
 
         assert!(registry.register_participant(
             id.clone(),
             test_sid("alice-1"),
-            version.clone(),
             test_writer(),
             &cancel,
             [],
@@ -253,7 +245,6 @@ mod tests {
         assert!(!registry.register_participant(
             id.clone(),
             test_sid("alice-2"),
-            version,
             test_writer(),
             &cancel,
             [],
@@ -282,7 +273,6 @@ mod tests {
         let registry = make_registry();
         let cancel = CancellationToken::new();
         let id = ParticipantIdentity("viewer-1".to_string());
-        let version = protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone();
         let sid_1 = test_sid("viewer-1-attempt-1");
         let sid_2 = test_sid("viewer-1-attempt-2");
 
@@ -290,7 +280,6 @@ mod tests {
         assert!(registry.register_participant(
             id.clone(),
             sid_1.clone(),
-            version.clone(),
             test_writer(),
             &cancel,
             [],
@@ -305,15 +294,10 @@ mod tests {
         // re-insert under the new SID.
         let drained = registry.drain_pending_resets();
         assert_eq!(drained, vec![sid_1.clone()]);
-        let removed = registry
-            .remove_participant(&sid_1)
-            .expect("attempt 1 removes via its SID");
-        let stored_version = removed.protocol_version().clone();
-        drop(removed);
+        assert!(registry.remove_participant(&sid_1).is_some());
         assert!(registry.register_participant(
             id.clone(),
             sid_2.clone(),
-            stored_version,
             test_writer(),
             &cancel,
             [],

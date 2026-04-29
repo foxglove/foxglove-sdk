@@ -13,7 +13,6 @@ use livekit::{
 };
 use livekit::{StreamWriter, prelude::*};
 use parking_lot::RwLock;
-use semver::Version;
 use smallvec::SmallVec;
 use tokio::io::AsyncReadExt;
 use tokio::runtime::Handle;
@@ -962,8 +961,8 @@ impl RemoteAccessSession {
     ///
     /// `participant_sid` is the LiveKit session ID of the specific connection
     /// instance being registered; it's stored on the `Participant` so a later
-    /// `ParticipantDisconnected` event can be matched against this instance
-    /// rather than the identity alone.
+    /// `ParticipantDisconnected` event (or a flush-task failure) can be matched
+    /// against this instance rather than the identity alone.
     ///
     /// When a participant is added, a ServerInfo message and channel Advertisement messages are
     /// immediately queued for transmission.
@@ -971,7 +970,6 @@ impl RemoteAccessSession {
         &self,
         participant_id: ParticipantIdentity,
         participant_sid: ParticipantSid,
-        protocol_version: Version,
     ) -> Result<(), Box<RemoteAccessError>> {
         // Gate on the registry *before* opening the stream: `stream_bytes` is
         // an RPC that should not be wasted on an already-registered identity.
@@ -1008,7 +1006,6 @@ impl RemoteAccessSession {
         let inserted = self.participant_registry.register_participant(
             participant_id.clone(),
             participant_sid,
-            protocol_version,
             ParticipantWriter::Livekit(stream),
             &self.cancellation_token,
             initial_messages,
@@ -1163,10 +1160,7 @@ impl RemoteAccessSession {
                     version = %version,
                     "participant active in room"
                 );
-                if let Err(e) = self
-                    .add_participant(participant_identity, sid, version)
-                    .await
-                {
+                if let Err(e) = self.add_participant(participant_identity, sid).await {
                     error!(remote_access_session_id, error = %e, "failed to add participant: {e}");
                 }
             }
@@ -1372,10 +1366,10 @@ impl RemoteAccessSession {
     async fn reset_participant(self: &Arc<Self>, target_sid: ParticipantSid) {
         let remote_access_session_id = self.remote_access_session_id();
 
-        // Remove by SID and capture identity / protocol version from the
-        // returned participant. The SID identifies the exact instance that
-        // requested the reset, so a same-identity reconnect (which has a
-        // different SID) won't match — `None` is the staleness filter.
+        // Remove by SID and capture identity from the returned participant.
+        // The SID identifies the exact instance that requested the reset, so
+        // a same-identity reconnect (which has a different SID) won't match
+        // — `None` is the staleness filter.
         let Some(participant) = self.remove_participant(&target_sid) else {
             info!(
                 remote_access_session_id,
@@ -1385,7 +1379,6 @@ impl RemoteAccessSession {
             return;
         };
         let participant_id = participant.participant_id().clone();
-        let version = participant.protocol_version().clone();
         drop(participant);
 
         // Best-effort guard: skip re-add if LiveKit has already removed the participant
@@ -1394,14 +1387,16 @@ impl RemoteAccessSession {
         // go through the normal `ParticipantConnected` → `add_participant` path.
         //
         // If a new instance has already reconnected under the same identity,
-        // its SID is what we re-register with — so that a later stale
-        // `ParticipantDisconnected` for the *old* instance's SID won't match
-        // and tear down this re-registration.
-        let Some(sid) = self
+        // its SID and attributes are what we re-register with — so that (a) a
+        // later stale `ParticipantDisconnected` for the *old* instance's SID
+        // won't match and tear down this re-registration, and (b) a
+        // protocol-version change between instances is honoured rather than
+        // assumed-unchanged.
+        let Some((sid, attributes)) = self
             .room
             .remote_participants()
             .get(&participant_id)
-            .map(|p| p.sid())
+            .map(|p| (p.sid(), p.attributes()))
         else {
             info!(
                 remote_access_session_id,
@@ -1411,13 +1406,28 @@ impl RemoteAccessSession {
             return;
         };
 
+        // Re-validate the protocol version against the freshly-queried
+        // attributes. A same-identity reconnect could in principle bring a
+        // different protocol version; trust the fresh value, just like we
+        // trust the fresh SID.
+        let Some(version) = protocol_version::check_participant_protocol_version(
+            &participant_id,
+            &attributes,
+            remote_access_session_id,
+        ) else {
+            self.send_incompatible_version_error(&participant_id, &attributes)
+                .await;
+            return;
+        };
+
         warn!(
             remote_access_session_id,
             participant_identity = %participant_id,
             sid = %sid,
+            version = %version,
             "resetting participant after control stream failure",
         );
-        if let Err(e) = self.add_participant(participant_id, sid, version).await {
+        if let Err(e) = self.add_participant(participant_id, sid).await {
             error!(
                 remote_access_session_id,
                 error = %e,
@@ -2093,7 +2103,6 @@ mod tests {
         let n = COUNTER.fetch_add(1, Ordering::Relaxed);
         let identity = ParticipantIdentity(name.to_string());
         let sid = crate::remote_access::participant::test_sid(&format!("{name}-{n}"));
-        let version = protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone();
         let (tx, rx) = flume::bounded(16);
         let pending_resets = Arc::new(parking_lot::Mutex::new(HashSet::new()));
         let reset_notify = Arc::new(tokio::sync::Notify::new());
@@ -2101,7 +2110,6 @@ mod tests {
         let participant = Arc::new(Participant::new(
             identity,
             sid,
-            version,
             tx,
             pending_resets,
             reset_notify,
@@ -2322,7 +2330,6 @@ mod tests {
         let (participant, handle) = Participant::spawn(
             ParticipantIdentity("test".to_string()),
             test_sid("flush-test"),
-            protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone(),
             ParticipantWriter::Test(writer.clone()),
             DEFAULT_MESSAGE_BACKLOG_SIZE,
             pending_resets,
@@ -2403,7 +2410,6 @@ mod tests {
     }
 
     fn make_test_participant(queue_size: usize) -> (Participant, flume::Receiver<Bytes>) {
-        let version = protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone();
         let (tx, rx) = flume::bounded::<Bytes>(queue_size);
         let pending_resets = Arc::new(parking_lot::Mutex::new(HashSet::new()));
         let reset_notify = Arc::new(tokio::sync::Notify::new());
@@ -2411,7 +2417,6 @@ mod tests {
         let participant = Participant::new(
             ParticipantIdentity("alice".to_string()),
             crate::remote_access::participant::test_sid("alice"),
-            version,
             tx,
             pending_resets,
             reset_notify,
