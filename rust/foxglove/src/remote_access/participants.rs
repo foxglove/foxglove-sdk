@@ -124,6 +124,8 @@ mod tests {
         let n = COUNTER.fetch_add(1, Ordering::Relaxed);
         let identity = ParticipantIdentity(name.to_string());
         let sid = crate::remote_access::participant::test_sid(&format!("{name}-{n}"));
+        let version =
+            crate::remote_access::protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone();
         let (tx, _rx) = flume::bounded(16);
         let pending_resets = Arc::new(parking_lot::Mutex::new(HashSet::new()));
         let reset_notify = Arc::new(tokio::sync::Notify::new());
@@ -131,6 +133,7 @@ mod tests {
         Arc::new(Participant::new(
             identity,
             sid,
+            version,
             tx,
             pending_resets,
             reset_notify,

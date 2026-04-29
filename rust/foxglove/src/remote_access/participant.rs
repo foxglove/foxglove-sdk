@@ -8,6 +8,7 @@ use livekit::{
     ByteStreamWriter, StreamWriter,
     id::{ParticipantIdentity, ParticipantSid},
 };
+use semver::Version;
 use tokio_util::sync::CancellationToken;
 
 use crate::protocol::v2::server::FetchAssetResponse;
@@ -38,6 +39,15 @@ pub(crate) struct Participant {
     /// one specific instance: `ParticipantDisconnected` event handling,
     /// SID-keyed `remove_participant`, and `pending_resets` bookkeeping.
     participant_sid: ParticipantSid,
+    /// The remote access protocol version advertised by this participant.
+    /// Stored for future use when branching protocol behavior based on the
+    /// participant's version. Captured at registration and refreshed on
+    /// reset: `reset_participant` re-validates the freshly-queried
+    /// attributes and the new participant is registered with that fresh
+    /// version, so the stored value reflects the current connection
+    /// instance's advertised version even across same-identity reconnects.
+    #[expect(dead_code)]
+    protocol_version: Version,
     /// Per-participant control plane queue. The receiving end is owned by the
     /// flush-task.
     control_tx: flume::Sender<Bytes>,
@@ -76,6 +86,7 @@ impl Participant {
     pub fn spawn(
         identity: ParticipantIdentity,
         participant_sid: ParticipantSid,
+        protocol_version: Version,
         writer: ParticipantWriter,
         queue_size: usize,
         pending_resets: Arc<parking_lot::Mutex<HashSet<ParticipantSid>>>,
@@ -124,6 +135,7 @@ impl Participant {
             client_id,
             participant_id: identity,
             participant_sid,
+            protocol_version,
             control_tx,
             pending_resets,
             reset_notify,
@@ -145,6 +157,7 @@ impl Participant {
     pub fn new(
         identity: ParticipantIdentity,
         participant_sid: ParticipantSid,
+        protocol_version: Version,
         control_tx: flume::Sender<Bytes>,
         pending_resets: Arc<parking_lot::Mutex<HashSet<ParticipantSid>>>,
         reset_notify: Arc<tokio::sync::Notify>,
@@ -154,6 +167,7 @@ impl Participant {
             client_id: ClientId::next(),
             participant_id: identity,
             participant_sid,
+            protocol_version,
             control_tx,
             pending_resets,
             reset_notify,

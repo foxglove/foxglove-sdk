@@ -13,6 +13,7 @@ use livekit::{
 };
 use livekit::{StreamWriter, prelude::*};
 use parking_lot::RwLock;
+use semver::Version;
 use smallvec::SmallVec;
 use tokio::io::AsyncReadExt;
 use tokio::runtime::Handle;
@@ -970,6 +971,7 @@ impl RemoteAccessSession {
         &self,
         participant_id: ParticipantIdentity,
         participant_sid: ParticipantSid,
+        protocol_version: Version,
     ) -> Result<(), Box<RemoteAccessError>> {
         // Gate on the registry *before* opening the stream: `stream_bytes` is
         // an RPC that should not be wasted on an already-registered identity.
@@ -1006,6 +1008,7 @@ impl RemoteAccessSession {
         let inserted = self.participant_registry.register_participant(
             participant_id.clone(),
             participant_sid,
+            protocol_version,
             ParticipantWriter::Livekit(stream),
             &self.cancellation_token,
             initial_messages,
@@ -1160,7 +1163,10 @@ impl RemoteAccessSession {
                     version = %version,
                     "participant active in room"
                 );
-                if let Err(e) = self.add_participant(participant_identity, sid).await {
+                if let Err(e) = self
+                    .add_participant(participant_identity, sid, version)
+                    .await
+                {
                     error!(remote_access_session_id, error = %e, "failed to add participant: {e}");
                 }
             }
@@ -1427,7 +1433,7 @@ impl RemoteAccessSession {
             version = %version,
             "resetting participant after control-plane failure",
         );
-        if let Err(e) = self.add_participant(participant_id, sid).await {
+        if let Err(e) = self.add_participant(participant_id, sid, version).await {
             error!(
                 remote_access_session_id,
                 error = %e,
@@ -2103,6 +2109,7 @@ mod tests {
         let n = COUNTER.fetch_add(1, Ordering::Relaxed);
         let identity = ParticipantIdentity(name.to_string());
         let sid = crate::remote_access::participant::test_sid(&format!("{name}-{n}"));
+        let version = protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone();
         let (tx, rx) = flume::bounded(16);
         let pending_resets = Arc::new(parking_lot::Mutex::new(HashSet::new()));
         let reset_notify = Arc::new(tokio::sync::Notify::new());
@@ -2110,6 +2117,7 @@ mod tests {
         let participant = Arc::new(Participant::new(
             identity,
             sid,
+            version,
             tx,
             pending_resets,
             reset_notify,
@@ -2330,6 +2338,7 @@ mod tests {
         let (participant, handle) = Participant::spawn(
             ParticipantIdentity("test".to_string()),
             test_sid("flush-test"),
+            protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone(),
             ParticipantWriter::Test(writer.clone()),
             DEFAULT_MESSAGE_BACKLOG_SIZE,
             pending_resets,
@@ -2410,6 +2419,7 @@ mod tests {
     }
 
     fn make_test_participant(queue_size: usize) -> (Participant, flume::Receiver<Bytes>) {
+        let version = protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone();
         let (tx, rx) = flume::bounded::<Bytes>(queue_size);
         let pending_resets = Arc::new(parking_lot::Mutex::new(HashSet::new()));
         let reset_notify = Arc::new(tokio::sync::Notify::new());
@@ -2417,6 +2427,7 @@ mod tests {
         let participant = Participant::new(
             ParticipantIdentity("alice".to_string()),
             crate::remote_access::participant::test_sid("alice"),
+            version,
             tx,
             pending_resets,
             reset_notify,
