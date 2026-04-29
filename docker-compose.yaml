@@ -1,7 +1,6 @@
 services:
   livekit:
-    # Using latest so that if livekit breaks something we find out in CI rather than production (better ideas welcome)
-    image: livekit/livekit-server:latest
+    image: livekit/livekit-server:v1.11
     # Firefox won't connect to 127.0.0.1 for WebRTC, so set another IP here for Firefox
     command:
       [
