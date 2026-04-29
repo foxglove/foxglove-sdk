@@ -2,28 +2,28 @@
 //! join handles.
 //!
 //! Maintains `ParticipantIdentity` → `Arc<Participant>` and
-//! `ClientId` → `Arc<Participant>` indexes over the same `Arc<Participant>`
-//! values, and a parallel `ParticipantIdentity` → `JoinHandle<()>` map for
-//! each participant's flush-task. All three are kept in sync by construction
-//! — mutation is only possible through the inherent methods on [`Participants`].
+//! `ParticipantSid` → `Arc<Participant>` indexes over the same
+//! `Arc<Participant>` values, and a parallel `ParticipantIdentity` →
+//! `JoinHandle<()>` map for each participant's flush-task. All three are kept
+//! in sync by construction — mutation is only possible through the inherent
+//! methods on [`Participants`].
 
 use std::collections::HashMap;
 use std::collections::hash_map::Entry;
 use std::sync::Arc;
 
-use livekit::id::ParticipantIdentity;
+use livekit::id::{ParticipantIdentity, ParticipantSid};
 use tokio::task::JoinHandle;
 
 use crate::remote_access::participant::Participant;
-use crate::remote_common::ClientId;
 
 /// Collection of connected participants, indexed by both `ParticipantIdentity`
-/// and `ClientId`, with each participant's flush-task `JoinHandle` stored
-/// alongside.
+/// and `ParticipantSid`, with each participant's flush-task `JoinHandle`
+/// stored alongside.
 #[derive(Default)]
 pub(crate) struct Participants {
     by_identity: HashMap<ParticipantIdentity, Arc<Participant>>,
-    by_client_id: HashMap<ClientId, Arc<Participant>>,
+    by_sid: HashMap<ParticipantSid, Arc<Participant>>,
     flush_handles: HashMap<ParticipantIdentity, JoinHandle<()>>,
 }
 
@@ -43,8 +43,8 @@ impl Participants {
         let Entry::Vacant(v) = self.by_identity.entry(identity.clone()) else {
             return false;
         };
-        self.by_client_id
-            .insert(participant.client_id(), participant.clone());
+        self.by_sid
+            .insert(participant.participant_sid().clone(), participant.clone());
         self.flush_handles.insert(identity, flush_handle);
         v.insert(participant);
         true
@@ -60,7 +60,7 @@ impl Participants {
         identity: &ParticipantIdentity,
     ) -> Option<Arc<Participant>> {
         let participant = self.by_identity.remove(identity)?;
-        self.by_client_id.remove(&participant.client_id());
+        self.by_sid.remove(participant.participant_sid());
         drop(self.flush_handles.remove(identity));
         participant.cancel();
         Some(participant)
@@ -71,9 +71,9 @@ impl Participants {
         self.by_identity.get(identity)
     }
 
-    /// Returns the participant for the given `client_id`, if present.
-    pub fn get_by_client_id(&self, client_id: ClientId) -> Option<&Arc<Participant>> {
-        self.by_client_id.get(&client_id)
+    /// Returns the participant for the given `ParticipantSid`, if present.
+    pub fn get_by_sid(&self, sid: &ParticipantSid) -> Option<&Arc<Participant>> {
+        self.by_sid.get(sid)
     }
 
     /// Returns `true` if a participant with this identity is registered.
@@ -93,7 +93,7 @@ impl Participants {
 
     /// Removes all participants and their flush handles, returning both.
     pub fn drain(&mut self) -> (Vec<Arc<Participant>>, Vec<JoinHandle<()>>) {
-        self.by_client_id.clear();
+        self.by_sid.clear();
         let participants = self.by_identity.drain().map(|(_, p)| p).collect();
         let handles = self.flush_handles.drain().map(|(_, h)| h).collect();
         (participants, handles)
@@ -155,10 +155,10 @@ mod tests {
         let mut ps = Participants::new();
         let p = make_participant("alice");
         let identity = p.participant_id().clone();
-        let client_id = p.client_id();
+        let sid = p.participant_sid().clone();
         assert!(ps.insert(p, dummy_handle()));
         assert!(ps.get_by_identity(&identity).is_some());
-        assert!(ps.get_by_client_id(client_id).is_some());
+        assert!(ps.get_by_sid(&sid).is_some());
     }
 
     #[tokio::test]
@@ -166,11 +166,11 @@ mod tests {
         let mut ps = Participants::new();
         let p = make_participant("alice");
         let identity = p.participant_id().clone();
-        let client_id = p.client_id();
+        let sid = p.participant_sid().clone();
         ps.insert(p, dummy_handle());
         assert!(ps.remove_by_identity(&identity).is_some());
         assert!(ps.get_by_identity(&identity).is_none());
-        assert!(ps.get_by_client_id(client_id).is_none());
+        assert!(ps.get_by_sid(&sid).is_none());
         assert_eq!(ps.len(), 0);
     }
 
@@ -185,44 +185,44 @@ mod tests {
     async fn duplicate_insert_does_not_disturb_existing_entry() {
         let mut ps = Participants::new();
         let first = make_participant("alice");
-        let first_client_id = first.client_id();
+        let first_sid = first.participant_sid().clone();
         ps.insert(first, dummy_handle());
-        // Second participant has the same identity but a distinct client_id.
+        // Second participant has the same identity but a distinct SID.
         let second = make_participant("alice");
-        let second_client_id = second.client_id();
-        assert_ne!(first_client_id, second_client_id);
+        let second_sid = second.participant_sid().clone();
+        assert_ne!(first_sid, second_sid);
         assert!(!ps.insert(second, dummy_handle()));
-        // Secondary index must not contain the rejected participant's client_id.
-        assert!(ps.get_by_client_id(first_client_id).is_some());
-        assert!(ps.get_by_client_id(second_client_id).is_none());
+        // Secondary index must not contain the rejected participant's SID.
+        assert!(ps.get_by_sid(&first_sid).is_some());
+        assert!(ps.get_by_sid(&second_sid).is_none());
     }
 
     /// Load-bearing invariant for the reset-drain loop: after a participant
     /// is removed and a new one is inserted under the same identity, the old
-    /// `ClientId` must not resolve to the replacement. If it did,
+    /// `ParticipantSid` must not resolve to the replacement. If it did,
     /// `handle_room_events`' drain would spuriously reset the reconnected
     /// participant on a stale flush-failure notification.
     #[tokio::test]
-    async fn get_by_client_id_does_not_match_replaced_participant() {
+    async fn get_by_sid_does_not_match_replaced_participant() {
         let mut ps = Participants::new();
         let original = make_participant("alice");
         let identity = original.participant_id().clone();
-        let original_client_id = original.client_id();
+        let original_sid = original.participant_sid().clone();
         ps.insert(original, dummy_handle());
         ps.remove_by_identity(&identity);
 
         let replacement = make_participant("alice");
-        let replacement_client_id = replacement.client_id();
-        assert_ne!(original_client_id, replacement_client_id);
+        let replacement_sid = replacement.participant_sid().clone();
+        assert_ne!(original_sid, replacement_sid);
         ps.insert(replacement, dummy_handle());
 
         assert!(
-            ps.get_by_client_id(original_client_id).is_none(),
-            "stale ClientId must not resolve to the replacement participant",
+            ps.get_by_sid(&original_sid).is_none(),
+            "stale ParticipantSid must not resolve to the replacement participant",
         );
         assert!(
-            ps.get_by_client_id(replacement_client_id).is_some(),
-            "fresh ClientId must resolve to the current participant",
+            ps.get_by_sid(&replacement_sid).is_some(),
+            "fresh ParticipantSid must resolve to the current participant",
         );
     }
 
@@ -230,14 +230,14 @@ mod tests {
     async fn drain_clears_both_indexes_and_returns_all() {
         let mut ps = Participants::new();
         let alice = make_participant("alice");
-        let alice_client_id = alice.client_id();
+        let alice_sid = alice.participant_sid().clone();
         ps.insert(alice, dummy_handle());
         ps.insert(make_participant("bob"), dummy_handle());
         let (taken, handles) = ps.drain();
         assert_eq!(taken.len(), 2);
         assert_eq!(handles.len(), 2);
         assert_eq!(ps.len(), 0);
-        assert!(ps.get_by_client_id(alice_client_id).is_none());
+        assert!(ps.get_by_sid(&alice_sid).is_none());
     }
 
     #[tokio::test]

@@ -1097,23 +1097,19 @@ impl RemoteAccessSession {
         loop {
             // Drain pending resets before waiting for events. This covers the case
             // where a `Notify::notified()` wakeup was lost due to `select!`
-            // cancellation — the client ids are still in the set even if the
+            // cancellation — the SIDs are still in the set even if the
             // notification was consumed by a dropped future.
             //
             // `handle_room_events` is the single task driving participant
-            // membership during the session lifecycle, so the lookup below
-            // cannot be invalidated before `reset_participant` runs. A
-            // `ClientId` no longer registered means the request is stale —
-            // the participant was already removed and may have been replaced
-            // by a reconnection reusing the same identity; skipping avoids
-            // spuriously tearing down that replacement.
-            for client_id in self.registry.drain_pending_resets() {
-                let Some(participant) = self.registry.get_participant_by_client_id(client_id)
-                else {
-                    continue;
-                };
-                self.reset_participant(participant.participant_id().clone())
-                    .await;
+            // membership during the session lifecycle, so the lookup inside
+            // `reset_participant` cannot be invalidated before it runs. A
+            // `ParticipantSid` no longer registered means the request is
+            // stale — the participant was already removed and may have been
+            // replaced by a reconnection that, by definition, has a different
+            // SID; the staleness check inside `reset_participant` skips
+            // those, avoiding a spurious teardown of the replacement.
+            for sid in self.registry.drain_pending_resets() {
+                self.reset_participant(sid).await;
             }
 
             tokio::select! {
@@ -1372,28 +1368,27 @@ impl RemoteAccessSession {
     /// window, `add_participant` may open a dead stream, but the subsequent
     /// `ParticipantDisconnected` event will clean it up. This is harmless — just a
     /// wasted `stream_bytes` call and a log line.
-    async fn reset_participant(self: &Arc<Self>, participant_id: ParticipantIdentity) {
+    async fn reset_participant(self: &Arc<Self>, target_sid: ParticipantSid) {
         let remote_access_session_id = self.remote_access_session_id();
 
-        // Capture the protocol version and stored SID from the current
-        // participant before we remove them. Reusing the stored version
-        // avoids a second lookup into LiveKit's identity-keyed
-        // `remote_participants()` map, which can return a *different*
-        // instance if the same identity has already reconnected. The stored
-        // SID identifies the exact instance we intend to remove.
-        let (version, stored_sid) = match self.registry.get_participant(&participant_id) {
-            Some(p) => (p.protocol_version().clone(), p.participant_sid().clone()),
+        // Look the participant up by SID. The SID identifies the exact
+        // instance that requested the reset, so a same-identity reconnect
+        // (which has a different SID) won't match here — that's the
+        // staleness filter, and avoids tearing down a replacement that has
+        // already taken over.
+        let (participant_id, version) = match self.registry.get_participant_by_sid(&target_sid) {
+            Some(p) => (p.participant_id().clone(), p.protocol_version().clone()),
             None => {
                 info!(
                     remote_access_session_id,
-                    participant_identity = %participant_id,
+                    participant_sid = %target_sid,
                     "reset requested for already-removed participant; skipping",
                 );
                 return;
             }
         };
 
-        self.remove_participant(&participant_id, &stored_sid);
+        self.remove_participant(&participant_id, &target_sid);
 
         // Best-effort guard: skip re-add if LiveKit has already removed the participant
         // (e.g., because the underlying WebRTC connection dropped). In that case, the

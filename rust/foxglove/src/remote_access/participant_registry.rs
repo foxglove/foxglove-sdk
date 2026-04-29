@@ -22,17 +22,16 @@ use tokio_util::sync::CancellationToken;
 
 use crate::remote_access::participant::{Participant, ParticipantWriter};
 use crate::remote_access::participants::Participants;
-use crate::remote_common::ClientId;
 
 /// Owns the participant membership state machine: add / remove / lookup, plus
 /// the `pending_resets` channel that lets a flush-task request its own reset.
 pub(crate) struct ParticipantRegistry {
     /// Map of connected participants and their flush-task join handles.
     participants: RwLock<Participants>,
-    /// Set of `ClientId`s pending a reset (disconnect + reconnect). Populated by
-    /// [`Participant::send_control`] on queue overflow and by flush-tasks on
-    /// write failure.
-    pending_resets: Arc<Mutex<HashSet<ClientId>>>,
+    /// Set of `ParticipantSid`s pending a reset (disconnect + reconnect).
+    /// Populated by [`Participant::send_control`] on queue overflow and by
+    /// flush-tasks on write failure.
+    pending_resets: Arc<Mutex<HashSet<ParticipantSid>>>,
     /// Notified when a new reset is inserted into `pending_resets`.
     reset_notify: Arc<Notify>,
     /// Size of the per-participant control-plane queue.
@@ -157,15 +156,12 @@ impl ParticipantRegistry {
             .collect()
     }
 
-    /// Returns the participant matching the given `ClientId`, if any.
-    pub(crate) fn get_participant_by_client_id(
+    /// Returns the participant matching the given `ParticipantSid`, if any.
+    pub(crate) fn get_participant_by_sid(
         &self,
-        client_id: ClientId,
+        sid: &ParticipantSid,
     ) -> Option<Arc<Participant>> {
-        self.participants
-            .read()
-            .get_by_client_id(client_id)
-            .cloned()
+        self.participants.read().get_by_sid(sid).cloned()
     }
 
     /// Returns true if a participant exists for the given identity.
@@ -185,16 +181,16 @@ impl ParticipantRegistry {
     }
 
     /// Drains the pending-reset set and returns its contents.
-    pub(crate) fn drain_pending_resets(&self) -> Vec<ClientId> {
+    pub(crate) fn drain_pending_resets(&self) -> Vec<ParticipantSid> {
         self.pending_resets.lock().drain().collect()
     }
 
     /// Test-only hook to simulate a flush-task failure by directly inserting
-    /// a `ClientId` into the pending-reset set. In production this set is
-    /// only written by flush-tasks on write failure and by
+    /// a `ParticipantSid` into the pending-reset set. In production this set
+    /// is only written by flush-tasks on write failure and by
     /// `Participant::send_control` on queue overflow.
     #[cfg(test)]
-    pub(crate) fn pending_resets(&self) -> &Arc<Mutex<HashSet<ClientId>>> {
+    pub(crate) fn pending_resets(&self) -> &Arc<Mutex<HashSet<ParticipantSid>>> {
         &self.pending_resets
     }
 
@@ -285,8 +281,9 @@ mod tests {
     /// Regression test for the same-identity reconnect race:
     ///
     /// 1. Attempt 1 (`viewer-1`, LiveKit SID `S1`) is in the registry.
-    /// 2. Its flush-task fails its first write and inserts its `ClientId`
-    ///    into `pending_resets` (simulated here by calling the set directly).
+    /// 2. Its flush-task fails its first write and inserts its
+    ///    `ParticipantSid` into `pending_resets` (simulated here by calling
+    ///    the set directly).
     /// 3. The reset loop drains `pending_resets` and runs a reset: remove
     ///    attempt 1 (with `S1`), look up the current `RemoteParticipant` from
     ///    LiveKit (attempt 2, SID `S2`, already reconnected), insert attempt
@@ -316,22 +313,21 @@ mod tests {
             [],
         ));
         let attempt_1 = registry.get_participant(&id).expect("attempt 1 present");
-        let client_id_1 = attempt_1.client_id();
         assert_eq!(attempt_1.participant_sid(), &sid_1);
 
         // Step 2: simulate attempt 1's flush-task failing its first write.
-        registry.pending_resets().lock().insert(client_id_1);
+        registry.pending_resets().lock().insert(sid_1.clone());
 
         // Step 3: drain + reset. Reset = remove (with the stored SID) +
         // re-insert under the new SID.
         let drained = registry.drain_pending_resets();
-        assert_eq!(drained, vec![client_id_1]);
+        assert_eq!(drained, vec![sid_1.clone()]);
         let reset_target = registry
-            .get_participant_by_client_id(client_id_1)
-            .expect("attempt 1 resolves from drained client_id");
+            .get_participant_by_sid(&sid_1)
+            .expect("attempt 1 resolves from drained sid");
         let stored_version = reset_target.protocol_version().clone();
-        let stored_sid = reset_target.participant_sid().clone();
-        registry.remove_participant(reset_target.participant_id(), &stored_sid);
+        let stored_id = reset_target.participant_id().clone();
+        registry.remove_participant(&stored_id, &sid_1);
         assert!(registry.register_participant(
             id.clone(),
             sid_2.clone(),
@@ -342,7 +338,7 @@ mod tests {
         ));
 
         let attempt_2 = registry.get_participant(&id).expect("attempt 2 present");
-        assert_ne!(attempt_2.client_id(), client_id_1);
+        assert_ne!(attempt_2.participant_sid(), &sid_1);
         assert_eq!(attempt_2.participant_sid(), &sid_2);
 
         // Step 4: stale disconnect carries attempt 1's SID. No-op.
