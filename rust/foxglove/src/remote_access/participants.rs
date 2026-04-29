@@ -50,10 +50,11 @@ impl Participants {
         true
     }
 
-    /// Removes the participant for the given identity, along with its flush
-    /// handle. Returns the participant; the flush handle is detached and
-    /// dropped so the task exits when its control-plane channel senders are
-    /// all gone (or earlier, if the caller cancels the participant).
+    /// Removes the participant for the given identity, cancels its flush-task,
+    /// and detaches the task handle. Returns the participant. Cancellation
+    /// makes the task exit at its next `select!` iteration rather than when
+    /// senders eventually drop; the detached handle is then dropped without
+    /// being awaited.
     pub fn remove_by_identity(
         &mut self,
         identity: &ParticipantIdentity,
@@ -61,6 +62,7 @@ impl Participants {
         let participant = self.by_identity.remove(identity)?;
         self.by_client_id.remove(&participant.client_id());
         drop(self.flush_handles.remove(identity));
+        participant.cancel();
         Some(participant)
     }
 

@@ -120,9 +120,10 @@ impl ParticipantRegistry {
     /// handler uses the disconnected participant's SID; `reset_participant`
     /// uses the stored participant's SID.
     ///
-    /// The flush-task is cancelled and its handle detached; the caller is
-    /// responsible for any further cleanup (subscription sweep, listener
-    /// callbacks) via [`SessionState::cleanup_for_removed_identity`].
+    /// `Participants::remove_by_identity` cancels the flush-task and detaches
+    /// its handle as part of the removal; the caller is responsible for any
+    /// further cleanup (subscription sweep, listener callbacks) via
+    /// [`SessionState::cleanup_for_removed_identity`].
     pub(crate) fn remove_participant(
         &self,
         id: &ParticipantIdentity,
@@ -133,9 +134,7 @@ impl ParticipantRegistry {
         if current.participant_sid() != expected_sid {
             return None;
         }
-        let removed = participants.remove_by_identity(id)?;
-        removed.cancel();
-        Some(removed)
+        participants.remove_by_identity(id)
     }
 
     /// Returns the participant for the given identity, if any.
