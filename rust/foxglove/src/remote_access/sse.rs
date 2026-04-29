@@ -151,7 +151,6 @@ impl SseParser {
         // current frame. This also ensures consecutive blank lines don't emit empty events.
         if !self.has_data {
             self.pending = SseEvent::default();
-            self.has_data = false;
             return;
         }
         let event = std::mem::take(&mut self.pending);
