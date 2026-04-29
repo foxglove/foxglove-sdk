@@ -234,8 +234,8 @@ impl ParticipantRegistry {
     }
 
     /// Drains the pending-reset set and returns its contents.
-    pub(crate) fn drain_pending_resets(&self) -> Vec<ParticipantSid> {
-        self.pending_resets.lock().drain().collect()
+    pub(crate) fn drain_pending_resets(&self) -> HashSet<ParticipantSid> {
+        std::mem::take(&mut *self.pending_resets.lock())
     }
 
     /// Test-only hook to simulate a flush-task failure by directly inserting
@@ -451,7 +451,7 @@ mod tests {
         // Step 3: drain + reset. Reset = remove (with the stored SID) +
         // re-insert under the new SID.
         let drained = registry.drain_pending_resets();
-        assert_eq!(drained, vec![sid_1.clone()]);
+        assert_eq!(drained, HashSet::from([sid_1.clone()]));
         assert!(registry.remove_participant(&sid_1).is_some());
         assert!(
             registry
