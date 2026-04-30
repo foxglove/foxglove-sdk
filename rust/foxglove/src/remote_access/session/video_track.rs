@@ -66,9 +66,9 @@ pub fn get_video_input_schema(channel: &RawChannel) -> Option<VideoInputSchema> 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct VideoMetadata {
     /// The image encoding (pixel format or compression codec).
-    pub encoding: ImageEncoding,
+    pub(crate) encoding: ImageEncoding,
     /// The coordinate frame ID of the image source (e.g. `"camera_optical_frame"`).
-    pub frame_id: String,
+    pub(crate) frame_id: String,
 }
 
 /// Newtype wrapping [`I420Buffer`] that implements [`Yuv420Buffer`].

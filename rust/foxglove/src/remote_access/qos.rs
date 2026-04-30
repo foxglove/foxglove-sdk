@@ -69,7 +69,7 @@ pub trait QosClassifier: Sync + Send {
     fn classify(&self, channel: &ChannelDescriptor) -> QosProfile;
 }
 
-pub(crate) struct QosClassifierFn<F>(pub F)
+pub(crate) struct QosClassifierFn<F>(pub(crate) F)
 where
     F: Fn(&ChannelDescriptor) -> QosProfile + Sync + Send;
 

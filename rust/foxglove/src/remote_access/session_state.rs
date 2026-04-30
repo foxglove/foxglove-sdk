@@ -15,31 +15,31 @@ use crate::{ChannelDescriptor, ChannelId, RawChannel};
 /// Channels and parameters that lost their last subscriber when a participant was removed.
 pub(crate) struct RemovedSubscriptions {
     /// Channel IDs that lost their last subscriber (of any type).
-    pub last_unsubscribed: SmallVec<[ChannelId; 4]>,
+    pub(crate) last_unsubscribed: SmallVec<[ChannelId; 4]>,
     /// Channel IDs that lost their last video subscriber.
-    pub last_video_unsubscribed: SmallVec<[ChannelId; 4]>,
+    pub(crate) last_video_unsubscribed: SmallVec<[ChannelId; 4]>,
     /// Descriptors for all channels the participant was subscribed to at removal time.
-    pub subscribed_descriptors: SmallVec<[ChannelDescriptor; 4]>,
+    pub(crate) subscribed_descriptors: SmallVec<[ChannelDescriptor; 4]>,
     /// Client channels that were advertised by the removed participant.
-    pub client_channels: Vec<ChannelDescriptor>,
+    pub(crate) client_channels: Vec<ChannelDescriptor>,
     /// Parameter names that lost their last subscriber.
-    pub last_param_unsubscribed: Vec<String>,
+    pub(crate) last_param_unsubscribed: Vec<String>,
 }
 
 /// Result of subscribing a participant to channels.
 pub(crate) struct SubscribeResult {
     /// Channel IDs that gained their first subscriber.
-    pub first_subscribed: SmallVec<[ChannelId; 4]>,
+    pub(crate) first_subscribed: SmallVec<[ChannelId; 4]>,
     /// Descriptors for all channels where this participant was actually added.
-    pub newly_subscribed_descriptors: SmallVec<[ChannelDescriptor; 4]>,
+    pub(crate) newly_subscribed_descriptors: SmallVec<[ChannelDescriptor; 4]>,
 }
 
 /// Result of unsubscribing a participant from channels.
 pub(crate) struct UnsubscribeResult {
     /// Channel IDs that lost their last subscriber.
-    pub last_unsubscribed: SmallVec<[ChannelId; 4]>,
+    pub(crate) last_unsubscribed: SmallVec<[ChannelId; 4]>,
     /// Descriptors for all channels where this participant was actually removed.
-    pub actually_unsubscribed_descriptors: SmallVec<[ChannelDescriptor; 4]>,
+    pub(crate) actually_unsubscribed_descriptors: SmallVec<[ChannelDescriptor; 4]>,
 }
 
 /// State machine for a remote access session.

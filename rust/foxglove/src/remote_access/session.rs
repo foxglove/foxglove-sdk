@@ -347,22 +347,22 @@ impl Sink for RemoteAccessSession {
 }
 
 pub(crate) struct SessionParams {
-    pub room: Room,
-    pub context: Weak<Context>,
-    pub channel_filter: Option<Arc<dyn SinkChannelFilter>>,
-    pub qos_classifier: Option<Arc<dyn QosClassifier>>,
-    pub listener: Option<Arc<dyn Listener>>,
-    pub capabilities: Vec<Capability>,
-    pub supported_encodings: IndexSet<String>,
-    pub runtime: Handle,
-    pub cancellation_token: CancellationToken,
-    pub message_backlog_size: usize,
-    pub services: Arc<parking_lot::RwLock<ServiceMap>>,
-    pub connection_graph: Arc<parking_lot::Mutex<ConnectionGraph>>,
-    pub remote_access_session_id: Option<String>,
-    pub fetch_asset_handler: Option<Arc<dyn AssetHandler<Client>>>,
-    pub server_info: ServerInfo,
-    pub device_wait_for_viewer: Option<Duration>,
+    pub(crate) room: Room,
+    pub(crate) context: Weak<Context>,
+    pub(crate) channel_filter: Option<Arc<dyn SinkChannelFilter>>,
+    pub(crate) qos_classifier: Option<Arc<dyn QosClassifier>>,
+    pub(crate) listener: Option<Arc<dyn Listener>>,
+    pub(crate) capabilities: Vec<Capability>,
+    pub(crate) supported_encodings: IndexSet<String>,
+    pub(crate) runtime: Handle,
+    pub(crate) cancellation_token: CancellationToken,
+    pub(crate) message_backlog_size: usize,
+    pub(crate) services: Arc<parking_lot::RwLock<ServiceMap>>,
+    pub(crate) connection_graph: Arc<parking_lot::Mutex<ConnectionGraph>>,
+    pub(crate) remote_access_session_id: Option<String>,
+    pub(crate) fetch_asset_handler: Option<Arc<dyn AssetHandler<Client>>>,
+    pub(crate) server_info: ServerInfo,
+    pub(crate) device_wait_for_viewer: Option<Duration>,
 }
 
 impl RemoteAccessSession {

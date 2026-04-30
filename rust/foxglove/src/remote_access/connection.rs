@@ -84,20 +84,20 @@ impl ConnectionStatus {
 ///
 /// This should be constructed from the [`crate::remote_access::Gateway`] builder.
 pub(crate) struct ConnectionParams {
-    pub name: Option<String>,
-    pub device_token: String,
-    pub foxglove_api_url: Option<String>,
-    pub foxglove_api_timeout: Option<Duration>,
-    pub listener: Option<Arc<dyn super::Listener>>,
-    pub capabilities: Vec<Capability>,
-    pub supported_encodings: Option<IndexSet<String>>,
-    pub fetch_asset_handler: Option<Arc<dyn AssetHandler<Client>>>,
-    pub runtime: Handle,
-    pub channel_filter: Option<Arc<dyn SinkChannelFilter>>,
-    pub qos_classifier: Option<Arc<dyn QosClassifier>>,
-    pub server_info: Option<HashMap<String, String>>,
-    pub message_backlog_size: Option<usize>,
-    pub context: Weak<Context>,
+    pub(crate) name: Option<String>,
+    pub(crate) device_token: String,
+    pub(crate) foxglove_api_url: Option<String>,
+    pub(crate) foxglove_api_timeout: Option<Duration>,
+    pub(crate) listener: Option<Arc<dyn super::Listener>>,
+    pub(crate) capabilities: Vec<Capability>,
+    pub(crate) supported_encodings: Option<IndexSet<String>>,
+    pub(crate) fetch_asset_handler: Option<Arc<dyn AssetHandler<Client>>>,
+    pub(crate) runtime: Handle,
+    pub(crate) channel_filter: Option<Arc<dyn SinkChannelFilter>>,
+    pub(crate) qos_classifier: Option<Arc<dyn QosClassifier>>,
+    pub(crate) server_info: Option<HashMap<String, String>>,
+    pub(crate) message_backlog_size: Option<usize>,
+    pub(crate) context: Weak<Context>,
 }
 
 /// Pair of device metadata (fetched once via `fetch_device_info`) and the authenticated API
