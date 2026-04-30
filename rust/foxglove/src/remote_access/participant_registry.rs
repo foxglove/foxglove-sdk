@@ -16,7 +16,6 @@ use std::sync::Arc;
 use bytes::Bytes;
 use livekit::id::{ParticipantIdentity, ParticipantSid};
 use parking_lot::{Mutex, RwLock};
-use semver::Version;
 use tokio::sync::Notify;
 use tokio_util::sync::CancellationToken;
 
@@ -111,7 +110,6 @@ impl ParticipantRegistry {
         id: ParticipantIdentity,
         participant_sid: ParticipantSid,
         joined_at: i64,
-        protocol_version: Version,
         writer: ParticipantWriter,
         session_cancel: &CancellationToken,
         initial_messages: I,
@@ -123,7 +121,6 @@ impl ParticipantRegistry {
             id,
             participant_sid,
             joined_at,
-            protocol_version,
             writer,
             self.message_backlog_size,
             self.pending_resets.clone(),
@@ -270,7 +267,6 @@ mod tests {
     use super::*;
 
     use crate::remote_access::participant::{ParticipantWriter, TestByteStreamWriter, test_sid};
-    use crate::remote_access::protocol_version;
 
     fn make_registry() -> ParticipantRegistry {
         ParticipantRegistry::new(16)
@@ -285,14 +281,12 @@ mod tests {
         let registry = make_registry();
         let cancel = CancellationToken::new();
         let id = ParticipantIdentity("alice".to_string());
-        let version = protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone();
 
         let sid = test_sid("alice-1");
         let prior = registry.register_participant(
             id.clone(),
             sid.clone(),
             1_000,
-            version,
             test_writer(),
             &cancel,
             [],
@@ -312,21 +306,12 @@ mod tests {
         let registry = make_registry();
         let cancel = CancellationToken::new();
         let id = ParticipantIdentity("alice".to_string());
-        let version = protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone();
         let sid_1 = test_sid("alice-1");
         let sid_2 = test_sid("alice-2");
 
         assert!(
             registry
-                .register_participant(
-                    id.clone(),
-                    sid_1.clone(),
-                    1_000,
-                    version.clone(),
-                    test_writer(),
-                    &cancel,
-                    [],
-                )
+                .register_participant(id.clone(), sid_1.clone(), 1_000, test_writer(), &cancel, [],)
                 .is_none()
         );
         let original = registry.get_participant(&id).expect("first present");
@@ -334,15 +319,7 @@ mod tests {
         drop(original);
 
         let prior = registry
-            .register_participant(
-                id.clone(),
-                sid_2.clone(),
-                2_000,
-                version,
-                test_writer(),
-                &cancel,
-                [],
-            )
+            .register_participant(id.clone(), sid_2.clone(), 2_000, test_writer(), &cancel, [])
             .expect("prior registration must be returned for cleanup");
         assert_eq!(prior.client_id(), original_client_id);
         assert_eq!(prior.participant_sid(), &sid_1);
@@ -360,20 +337,11 @@ mod tests {
         let registry = make_registry();
         let cancel = CancellationToken::new();
         let id = ParticipantIdentity("alice".to_string());
-        let version = protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone();
         let sid = test_sid("alice-1");
 
         assert!(
             registry
-                .register_participant(
-                    id.clone(),
-                    sid.clone(),
-                    1_000,
-                    version.clone(),
-                    test_writer(),
-                    &cancel,
-                    [],
-                )
+                .register_participant(id.clone(), sid.clone(), 1_000, test_writer(), &cancel, [],)
                 .is_none()
         );
         let original = registry.get_participant(&id).expect("first present");
@@ -384,7 +352,6 @@ mod tests {
             id.clone(),
             sid.clone(),
             1_000,
-            version,
             test_writer(),
             &cancel,
             [],
@@ -424,22 +391,13 @@ mod tests {
         let registry = make_registry();
         let cancel = CancellationToken::new();
         let id = ParticipantIdentity("viewer-1".to_string());
-        let version = protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone();
         let sid_1 = test_sid("viewer-1-attempt-1");
         let sid_2 = test_sid("viewer-1-attempt-2");
 
         // Step 1: attempt 1 joins.
         assert!(
             registry
-                .register_participant(
-                    id.clone(),
-                    sid_1.clone(),
-                    1_000,
-                    version.clone(),
-                    test_writer(),
-                    &cancel,
-                    [],
-                )
+                .register_participant(id.clone(), sid_1.clone(), 1_000, test_writer(), &cancel, [],)
                 .is_none()
         );
         let attempt_1 = registry.get_participant(&id).expect("attempt 1 present");
@@ -455,15 +413,7 @@ mod tests {
         assert!(registry.remove_participant(&sid_1).is_some());
         assert!(
             registry
-                .register_participant(
-                    id.clone(),
-                    sid_2.clone(),
-                    2_000,
-                    version,
-                    test_writer(),
-                    &cancel,
-                    [],
-                )
+                .register_participant(id.clone(), sid_2.clone(), 2_000, test_writer(), &cancel, [],)
                 .is_none()
         );
 
@@ -511,7 +461,6 @@ mod tests {
         let registry = make_registry();
         let cancel = CancellationToken::new();
         let id = ParticipantIdentity("viewer-1".to_string());
-        let version = protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone();
         let sid_1 = test_sid("viewer-1-attempt-1");
         let sid_2 = test_sid("viewer-1-attempt-2");
 
@@ -520,7 +469,6 @@ mod tests {
             id.clone(),
             sid_1.clone(),
             1_000,
-            version.clone(),
             test_writer(),
             &cancel,
             [],
@@ -535,15 +483,7 @@ mod tests {
         // `register_participant` for the new instance; the registry must
         // atomically replace the prior registration and return it.
         let prior = registry
-            .register_participant(
-                id.clone(),
-                sid_2.clone(),
-                2_000,
-                version,
-                test_writer(),
-                &cancel,
-                [],
-            )
+            .register_participant(id.clone(), sid_2.clone(), 2_000, test_writer(), &cancel, [])
             .expect("prior registration must be returned for cleanup");
         assert_eq!(prior.participant_sid(), &sid_1);
         assert_eq!(prior.client_id(), client_id_1);
@@ -570,7 +510,6 @@ mod tests {
         let registry = make_registry();
         let cancel = CancellationToken::new();
         let id = ParticipantIdentity("viewer-1".to_string());
-        let version = protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone();
         let sid_old = test_sid("viewer-1-attempt-1");
         let sid_new = test_sid("viewer-1-attempt-2");
 
@@ -581,7 +520,6 @@ mod tests {
                     id.clone(),
                     sid_new.clone(),
                     2_000,
-                    version.clone(),
                     test_writer(),
                     &cancel,
                     [],
@@ -599,7 +537,6 @@ mod tests {
             id.clone(),
             sid_old.clone(),
             1_000,
-            version,
             test_writer(),
             &cancel,
             [],
@@ -630,7 +567,6 @@ mod tests {
         let registry = make_registry();
         let cancel = CancellationToken::new();
         let id = ParticipantIdentity("viewer-1".to_string());
-        let version = protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone();
         let sid_1 = test_sid("viewer-1-attempt-1");
         let sid_2 = test_sid("viewer-1-attempt-2");
         let sid_3 = test_sid("viewer-1-attempt-3");
@@ -639,7 +575,6 @@ mod tests {
             id.clone(),
             sid_1.clone(),
             1_000,
-            version.clone(),
             test_writer(),
             &cancel,
             [],
@@ -650,7 +585,6 @@ mod tests {
             id.clone(),
             sid_2.clone(),
             1_000,
-            version.clone(),
             test_writer(),
             &cancel,
             [],
@@ -672,7 +606,6 @@ mod tests {
             id.clone(),
             sid_3.clone(),
             2_000,
-            version,
             test_writer(),
             &cancel,
             [],
