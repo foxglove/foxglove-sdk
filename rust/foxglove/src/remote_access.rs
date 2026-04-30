@@ -8,8 +8,6 @@ mod gateway;
 mod listener;
 mod parameter_subscriptions;
 mod participant;
-mod participant_registry;
-mod participants;
 pub(super) mod protocol_version;
 mod qos;
 mod rtt_tracker;

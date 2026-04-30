@@ -19,12 +19,12 @@ use parking_lot::{Mutex, RwLock};
 use tokio::sync::Notify;
 use tokio_util::sync::CancellationToken;
 
-use crate::remote_access::participant::{Participant, ParticipantWriter};
-use crate::remote_access::participants::Participants;
+use super::collection::Participants;
+use super::{Participant, ParticipantWriter};
 
 /// Owns the participant membership state machine: add / remove / lookup, plus
 /// the `pending_resets` channel that lets a flush-task request its own reset.
-pub(super) struct ParticipantRegistry {
+pub(crate) struct ParticipantRegistry {
     /// Map of connected participants and their flush-task join handles.
     participants: RwLock<Participants>,
     /// Set of `ParticipantSid`s pending a reset (disconnect + reconnect).
@@ -38,7 +38,7 @@ pub(super) struct ParticipantRegistry {
 }
 
 impl ParticipantRegistry {
-    pub(super) fn new(message_backlog_size: usize) -> Self {
+    pub(crate) fn new(message_backlog_size: usize) -> Self {
         Self {
             participants: RwLock::new(Participants::new()),
             pending_resets: Arc::new(Mutex::new(HashSet::new())),
@@ -105,7 +105,7 @@ impl ParticipantRegistry {
     ///   instances, so re-registering an identical `(identity, sid)` pair
     ///   indicates a redundant call rather than a true reconnect.
     #[allow(clippy::too_many_arguments)]
-    pub(super) fn register_participant<I>(
+    pub(crate) fn register_participant<I>(
         &self,
         id: ParticipantIdentity,
         participant_sid: ParticipantSid,
@@ -192,7 +192,7 @@ impl ParticipantRegistry {
     /// handle as part of the removal; the caller is responsible for any
     /// further cleanup (subscription sweep, listener callbacks) via
     /// [`SessionState::cleanup_for_removed_identity`].
-    pub(super) fn remove_participant(
+    pub(crate) fn remove_participant(
         &self,
         target_sid: &ParticipantSid,
     ) -> Option<Arc<Participant>> {
@@ -200,7 +200,7 @@ impl ParticipantRegistry {
     }
 
     /// Returns the participant for the given identity, if any.
-    pub(super) fn get_participant(&self, id: &ParticipantIdentity) -> Option<Arc<Participant>> {
+    pub(crate) fn get_participant(&self, id: &ParticipantIdentity) -> Option<Arc<Participant>> {
         self.participants.read().get_by_identity(id).cloned()
     }
 
@@ -208,7 +208,7 @@ impl ParticipantRegistry {
     /// read lock. Identities with no matching registration are silently
     /// skipped (a participant may have been removed between the identity
     /// snapshot and this call; the missed send is harmless).
-    pub(super) fn resolve_identities<I>(&self, identities: I) -> Vec<Arc<Participant>>
+    pub(crate) fn resolve_identities<I>(&self, identities: I) -> Vec<Arc<Participant>>
     where
         I: IntoIterator<Item = ParticipantIdentity>,
     {
@@ -220,18 +220,18 @@ impl ParticipantRegistry {
     }
 
     /// Returns the number of registered participants.
-    pub(super) fn participant_count(&self) -> usize {
+    pub(crate) fn participant_count(&self) -> usize {
         self.participants.read().len()
     }
 
     /// Clones every currently-registered participant into a `Vec`. Useful for
     /// iterating at broadcast points without holding the read lock.
-    pub(super) fn collect_participants(&self) -> Vec<Arc<Participant>> {
+    pub(crate) fn collect_participants(&self) -> Vec<Arc<Participant>> {
         self.participants.read().iter().cloned().collect()
     }
 
     /// Drains the pending-reset set and returns its contents.
-    pub(super) fn drain_pending_resets(&self) -> HashSet<ParticipantSid> {
+    pub(crate) fn drain_pending_resets(&self) -> HashSet<ParticipantSid> {
         std::mem::take(&mut *self.pending_resets.lock())
     }
 
@@ -240,13 +240,13 @@ impl ParticipantRegistry {
     /// is only written by flush-tasks on write failure and by
     /// `Participant::send_control` on queue overflow.
     #[cfg(test)]
-    pub(super) fn pending_resets(&self) -> &Arc<Mutex<HashSet<ParticipantSid>>> {
+    pub(crate) fn pending_resets(&self) -> &Arc<Mutex<HashSet<ParticipantSid>>> {
         &self.pending_resets
     }
 
     /// Shared reference to the reset notifier, for use by the session's event
     /// loop `select!`.
-    pub(super) fn reset_notify(&self) -> &Arc<Notify> {
+    pub(crate) fn reset_notify(&self) -> &Arc<Notify> {
         &self.reset_notify
     }
 
@@ -256,7 +256,7 @@ impl ParticipantRegistry {
     /// For use at session teardown only — the caller must ensure no further
     /// `register_participant` / `remove_participant` / `reset_participant`
     /// calls can race with this one.
-    pub(super) async fn shutdown(&self) {
+    pub(crate) async fn shutdown(&self) {
         let handles = self.participants.write().drain();
         let _ = futures_util::future::join_all(handles).await;
     }
@@ -266,7 +266,7 @@ impl ParticipantRegistry {
 mod tests {
     use super::*;
 
-    use crate::remote_access::participant::{ParticipantWriter, TestByteStreamWriter, test_sid};
+    use super::super::{ParticipantWriter, TestByteStreamWriter, test_sid};
 
     fn make_registry() -> ParticipantRegistry {
         ParticipantRegistry::new(16)
