@@ -4,6 +4,7 @@ Changelog for package foxglove_bridge
 
 3.3.0 (2026-04-30)
 ------------------
+* Fix an issue where the bridge would stay subscribed to the graph even after clients disconnect
 * Add support for remote access
 * Publish process and system statistics (CPU, memory) on ``/foxglove_bridge/sysinfo`` by default
 * Update Foxglove SDK version to 0.23.1
