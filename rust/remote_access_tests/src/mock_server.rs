@@ -1,9 +1,12 @@
 use std::sync::Arc;
+use std::time::Duration;
 
-use axum::extract::{Path, State};
+use axum::extract::{Query, State};
 use axum::http::{HeaderMap, StatusCode};
+use axum::response::sse::{Event, KeepAlive, Sse};
 use axum::{Json, Router};
-use serde::Serialize;
+use futures_util::stream;
+use serde::{Deserialize, Serialize};
 use tokio::net::TcpListener;
 
 use crate::livekit_token;
@@ -12,6 +15,14 @@ pub const TEST_DEVICE_TOKEN: &str = "fox_dt_testtoken";
 pub const TEST_DEVICE_ID: &str = "dev_testdevice";
 const TEST_DEVICE_NAME: &str = "test-device";
 const TEST_PROJECT_ID: &str = "prj_testproj";
+
+/// Heartbeat cadence advertised by the mock to a connecting gateway. Short enough that lost
+/// heartbeats are detected quickly during tests, but long enough that the SSE read-timeout
+/// (a multiple of this) does not race normal test setup.
+const MOCK_HEARTBEAT_INTERVAL_MS: u64 = 5_000;
+/// Idle timeout advertised by the mock. Picked large so existing tests, which leave viewers
+/// connected for a few seconds at most, do not trigger a session-end transition.
+const MOCK_DEVICE_WAIT_FOR_VIEWER_MS: u64 = 300_000;
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -24,10 +35,40 @@ struct DeviceResponse {
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-struct RtcCredentials {
-    token: String,
+struct WatchHello {
+    watch_lease_id: String,
+    device_wait_for_viewer_ms: u64,
+    heartbeat_interval_ms: u64,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct WatchWake {
+    remote_access_session_id: String,
     url: String,
+    token: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct HeartbeatBody {
+    #[serde(default)]
+    #[allow(dead_code)]
+    watch_lease_id: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct WatchQueryParams {
+    #[serde(default)]
+    #[allow(dead_code)]
+    protocol_version: Option<String>,
+    #[serde(default)]
+    #[allow(dead_code)]
     remote_access_session_id: Option<String>,
+    #[serde(default)]
+    #[allow(dead_code)]
+    previous_watch_lease_id: Option<String>,
 }
 
 struct MockState {
@@ -51,7 +92,8 @@ impl Drop for MockServerHandle {
     }
 }
 
-/// Starts a mock Foxglove API server that returns LiveKit tokens for the local dev server.
+/// Starts a mock Foxglove API server that emits a watch stream wake carrying a LiveKit
+/// access token for the local dev server, and accepts heartbeats.
 pub async fn start_mock_server(room_name: &str) -> MockServerHandle {
     let state = Arc::new(MockState {
         room_name: room_name.to_string(),
@@ -63,8 +105,12 @@ pub async fn start_mock_server(room_name: &str) -> MockServerHandle {
             axum::routing::get(device_info_handler),
         )
         .route(
-            "/internal/platform/v1/devices/{device_id}/remote-sessions",
-            axum::routing::post(authorize_handler),
+            "/internal/platform/v1/remote-sessions/watch",
+            axum::routing::get(watch_handler),
+        )
+        .route(
+            "/internal/platform/v1/remote-sessions/watch/heartbeat",
+            axum::routing::post(heartbeat_handler),
         )
         .with_state(state);
 
@@ -99,23 +145,54 @@ async fn device_info_handler(headers: HeaderMap) -> Result<Json<DeviceResponse>,
     }))
 }
 
-async fn authorize_handler(
-    Path(device_id): Path<String>,
+/// Emits a `hello` event followed immediately by a `wake` event carrying a freshly-minted
+/// LiveKit token for the configured room. After the wake the gateway closes its end of the
+/// stream, so we don't need to keep it open.
+async fn watch_handler(
+    Query(_query): Query<WatchQueryParams>,
     State(state): State<Arc<MockState>>,
     headers: HeaderMap,
-) -> Result<Json<RtcCredentials>, StatusCode> {
+) -> Result<Sse<impl futures_util::Stream<Item = Result<Event, axum::Error>>>, StatusCode> {
     validate_device_token(&headers)?;
-    if device_id != TEST_DEVICE_ID {
-        return Err(StatusCode::NOT_FOUND);
-    }
-
-    // Generate a real LiveKit JWT for the local dev server, with the device as identity.
     let token = livekit_token::generate_token(&state.room_name, TEST_DEVICE_ID)
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    Ok(Json(RtcCredentials {
-        token,
+    let lease_id = format!(
+        "rwl_{}",
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    );
+    let hello = WatchHello {
+        watch_lease_id: lease_id,
+        device_wait_for_viewer_ms: MOCK_DEVICE_WAIT_FOR_VIEWER_MS,
+        heartbeat_interval_ms: MOCK_HEARTBEAT_INTERVAL_MS,
+    };
+    let wake = WatchWake {
+        remote_access_session_id: "ras_0000mockSession".into(),
         url: livekit_token::livekit_url(),
-        remote_access_session_id: Some("ras_0000mockSession".into()),
-    }))
+        token,
+    };
+
+    let events = vec![
+        Event::default()
+            .event("hello")
+            .json_data(&hello)
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
+        Event::default()
+            .event("wake")
+            .json_data(&wake)
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
+    ];
+    let body_stream = stream::iter(events.into_iter().map(Ok));
+    Ok(Sse::new(body_stream).keep_alive(KeepAlive::new().interval(Duration::from_secs(15))))
+}
+
+async fn heartbeat_handler(
+    headers: HeaderMap,
+    Json(_body): Json<HeartbeatBody>,
+) -> Result<StatusCode, StatusCode> {
+    validate_device_token(&headers)?;
+    Ok(StatusCode::OK)
 }

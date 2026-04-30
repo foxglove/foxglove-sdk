@@ -4,7 +4,7 @@
 # includes to include paths.
 
 cmake_minimum_required(VERSION 3.22)
-project(foxglove-sdk VERSION 0.22.0)
+project(foxglove-sdk VERSION 0.23.0)
 
 # Enable ccache if available
 find_program(CCACHE_PROGRAM ccache)

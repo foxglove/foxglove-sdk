@@ -1253,7 +1253,7 @@ name = "example_channelless"
 version = "0.0.0"
 dependencies = [
  "env_logger",
- "foxglove 0.22.0",
+ "foxglove 0.23.0",
  "mcap 0.24.0",
  "schemars 1.0.4",
  "serde",
@@ -1265,7 +1265,7 @@ version = "0.0.0"
 dependencies = [
  "clap",
  "env_logger",
- "foxglove 0.22.0",
+ "foxglove 0.23.0",
  "serde_json",
  "tokio",
  "tokio-util",
@@ -1278,7 +1278,7 @@ dependencies = [
  "clap",
  "ctrlc",
  "env_logger",
- "foxglove 0.22.0",
+ "foxglove 0.23.0",
  "schemars 1.0.4",
  "serde",
 ]
@@ -1289,7 +1289,7 @@ version = "0.0.0"
 dependencies = [
  "ctrlc",
  "env_logger",
- "foxglove 0.22.0",
+ "foxglove 0.23.0",
 ]
 
 [[package]]
@@ -1298,7 +1298,7 @@ version = "0.0.0"
 dependencies = [
  "clap",
  "env_logger",
- "foxglove 0.22.0",
+ "foxglove 0.23.0",
  "tokio",
  "tokio-util",
 ]
@@ -1307,7 +1307,7 @@ dependencies = [
 name = "example_prost"
 version = "0.0.0"
 dependencies = [
- "foxglove 0.22.0",
+ "foxglove 0.23.0",
  "prost 0.14.3",
  "prost-build 0.14.3",
 ]
@@ -1318,7 +1318,7 @@ version = "0.0.0"
 dependencies = [
  "ctrlc",
  "env_logger",
- "foxglove 0.22.0",
+ "foxglove 0.23.0",
 ]
 
 [[package]]
@@ -1327,7 +1327,7 @@ version = "0.0.0"
 dependencies = [
  "clap",
  "env_logger",
- "foxglove 0.22.0",
+ "foxglove 0.23.0",
  "serde_json",
  "tokio",
  "tracing",
@@ -1338,7 +1338,7 @@ name = "example_remote_access_fetch_asset"
 version = "0.0.0"
 dependencies = [
  "env_logger",
- "foxglove 0.22.0",
+ "foxglove 0.23.0",
  "log",
  "tokio",
 ]
@@ -1349,7 +1349,7 @@ version = "0.0.0"
 dependencies = [
  "anyhow",
  "env_logger",
- "foxglove 0.22.0",
+ "foxglove 0.23.0",
  "schemars 1.0.4",
  "serde",
  "serde_json",
@@ -1364,7 +1364,7 @@ dependencies = [
  "anyhow",
  "clap",
  "env_logger",
- "foxglove 0.22.0",
+ "foxglove 0.23.0",
  "mcap 0.24.0",
  "tokio",
 ]
@@ -1375,7 +1375,7 @@ version = "0.0.0"
 dependencies = [
  "axum",
  "chrono",
- "foxglove 0.22.0",
+ "foxglove 0.23.0",
  "futures",
  "remote_data_loader_backend_conformance",
  "serde",
@@ -1387,12 +1387,12 @@ dependencies = [
 
 [[package]]
 name = "example_structured_logging"
-version = "0.22.0"
+version = "0.23.0"
 dependencies = [
  "bytes",
  "chrono",
  "env_logger",
- "foxglove 0.22.0",
+ "foxglove 0.23.0",
  "schemars 1.0.4",
  "serde",
  "serde_json",
@@ -1404,7 +1404,7 @@ version = "0.0.0"
 dependencies = [
  "clap",
  "env_logger",
- "foxglove 0.22.0",
+ "foxglove 0.23.0",
  "quaternion",
  "tokio",
 ]
@@ -1416,7 +1416,7 @@ dependencies = [
  "clap",
  "ctrlc",
  "env_logger",
- "foxglove 0.22.0",
+ "foxglove 0.23.0",
 ]
 
 [[package]]
@@ -1425,7 +1425,7 @@ version = "0.0.0"
 dependencies = [
  "clap",
  "env_logger",
- "foxglove 0.22.0",
+ "foxglove 0.23.0",
  "log",
  "tokio",
 ]
@@ -1438,7 +1438,7 @@ dependencies = [
  "bytes",
  "clap",
  "env_logger",
- "foxglove 0.22.0",
+ "foxglove 0.23.0",
  "futures",
  "parking_lot",
  "schemars 1.0.4",
@@ -1458,7 +1458,7 @@ dependencies = [
  "clap",
  "ctrlc",
  "env_logger",
- "foxglove 0.22.0",
+ "foxglove 0.23.0",
  "mcap 0.24.0",
  "tracing",
 ]
@@ -1603,7 +1603,7 @@ dependencies = [
 
 [[package]]
 name = "foxglove"
-version = "0.22.0"
+version = "0.23.0"
 dependencies = [
  "arc-swap",
  "assert_matches",
@@ -1616,7 +1616,7 @@ dependencies = [
  "chrono",
  "delegate",
  "flume",
- "foxglove_derive 0.22.0",
+ "foxglove_derive 0.23.0",
  "futures",
  "futures-util",
  "hexdump",
@@ -1628,7 +1628,6 @@ dependencies = [
  "maplit",
  "mcap 0.24.0",
  "parking_lot",
- "percent-encoding",
  "prost 0.14.3",
  "prost-types 0.14.3",
  "rcgen",
@@ -1659,11 +1658,11 @@ dependencies = [
 
 [[package]]
 name = "foxglove-sdk-python"
-version = "0.22.0"
+version = "0.23.0"
 dependencies = [
  "base64 0.22.1",
  "bytes",
- "foxglove 0.22.0",
+ "foxglove 0.23.0",
  "log",
  "maplit",
  "prost-types 0.13.5",
@@ -1679,13 +1678,13 @@ dependencies = [
 
 [[package]]
 name = "foxglove_c"
-version = "0.22.0"
+version = "0.23.0"
 dependencies = [
  "base64 0.22.1",
  "bitflags",
  "cbindgen",
  "env_logger",
- "foxglove 0.22.0",
+ "foxglove 0.23.0",
  "log",
  "maplit",
  "mcap 0.24.0",
@@ -1718,11 +1717,11 @@ dependencies = [
 
 [[package]]
 name = "foxglove_derive"
-version = "0.22.0"
+version = "0.23.0"
 dependencies = [
  "bytes",
  "chrono",
- "foxglove 0.22.0",
+ "foxglove 0.23.0",
  "proc-macro2",
  "prost 0.14.3",
  "prost-reflect",
@@ -2566,10 +2565,12 @@ dependencies = [
 
 [[package]]
 name = "js-sys"
-version = "0.3.77"
+version = "0.3.95"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1cfaf33c695fc6e08064efbc1f72ec937429614f25eef83af942d0e227c3a28f"
+checksum = "2964e92d1d9dc3364cae4d718d93f227e3abb088e747d92e0395bfdedf1c12ca"
 dependencies = [
+ "cfg-if",
+ "futures-util",
  "once_cell",
  "wasm-bindgen",
 ]
@@ -4143,7 +4144,7 @@ dependencies = [
  "anyhow",
  "axum",
  "dotenvy",
- "foxglove 0.22.0",
+ "foxglove 0.23.0",
  "futures-util",
  "livekit",
  "livekit-api",
@@ -4160,7 +4161,7 @@ dependencies = [
 name = "remote_data_loader_backend_conformance"
 version = "0.0.0"
 dependencies = [
- "foxglove 0.22.0",
+ "foxglove 0.23.0",
  "jsonschema",
  "libtest-mimic",
  "mcap 0.24.0",
@@ -4238,15 +4239,18 @@ dependencies = [
  "rustls-platform-verifier",
  "serde",
  "serde_json",
+ "serde_urlencoded",
  "sync_wrapper",
  "tokio",
  "tokio-rustls 0.26.2",
+ "tokio-util",
  "tower",
  "tower-http",
  "tower-service",
  "url",
  "wasm-bindgen",
  "wasm-bindgen-futures",
+ "wasm-streams",
  "web-sys",
 ]
 
@@ -5736,48 +5740,32 @@ dependencies = [
 
 [[package]]
 name = "wasm-bindgen"
-version = "0.2.100"
+version = "0.2.118"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1edc8929d7499fc4e8f0be2262a241556cfc54a0bea223790e71446f2aab1ef5"
+checksum = "0bf938a0bacb0469e83c1e148908bd7d5a6010354cf4fb73279b7447422e3a89"
 dependencies = [
  "cfg-if",
  "once_cell",
  "rustversion",
  "wasm-bindgen-macro",
-]
-
-[[package]]
-name = "wasm-bindgen-backend"
-version = "0.2.100"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2f0a0651a5c2bc21487bde11ee802ccaf4c51935d0d3d42a6101f98161700bc6"
-dependencies = [
- "bumpalo",
- "log",
- "proc-macro2",
- "quote",
- "syn 2.0.104",
  "wasm-bindgen-shared",
 ]
 
 [[package]]
 name = "wasm-bindgen-futures"
-version = "0.4.50"
+version = "0.4.68"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "555d470ec0bc3bb57890405e5d4322cc9ea83cebb085523ced7be4144dac1e61"
+checksum = "f371d383f2fb139252e0bfac3b81b265689bf45b6874af544ffa4c975ac1ebf8"
 dependencies = [
- "cfg-if",
  "js-sys",
- "once_cell",
  "wasm-bindgen",
- "web-sys",
 ]
 
 [[package]]
 name = "wasm-bindgen-macro"
-version = "0.2.100"
+version = "0.2.118"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7fe63fc6d09ed3792bd0897b314f53de8e16568c2b3f7982f468c0bf9bd0b407"
+checksum = "eeff24f84126c0ec2db7a449f0c2ec963c6a49efe0698c4242929da037ca28ed"
 dependencies = [
  "quote",
  "wasm-bindgen-macro-support",
@@ -5785,22 +5773,22 @@ dependencies = [
 
 [[package]]
 name = "wasm-bindgen-macro-support"
-version = "0.2.100"
+version = "0.2.118"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8ae87ea40c9f689fc23f209965b6fb8a99ad69aeeb0231408be24920604395de"
+checksum = "9d08065faf983b2b80a79fd87d8254c409281cf7de75fc4b773019824196c904"
 dependencies = [
+ "bumpalo",
  "proc-macro2",
  "quote",
  "syn 2.0.104",
- "wasm-bindgen-backend",
  "wasm-bindgen-shared",
 ]
 
 [[package]]
 name = "wasm-bindgen-shared"
-version = "0.2.100"
+version = "0.2.118"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1a05d73b933a847d6cccdda8f838a22ff101ad9bf93e33684f39c1f5f0eece3d"
+checksum = "5fd04d9e306f1907bd13c6361b5c6bfc7b3b3c095ed3f8a9246390f8dbdee129"
 dependencies = [
  "unicode-ident",
 ]
@@ -5828,6 +5816,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "wasm-streams"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9d1ec4f6517c9e11ae630e200b2b65d193279042e28edd4a2cda233e46670bbb"
+dependencies = [
+ "futures-util",
+ "js-sys",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
+]
+
+[[package]]
 name = "wasmparser"
 version = "0.243.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5841,9 +5842,9 @@ dependencies = [
 
 [[package]]
 name = "web-sys"
-version = "0.3.77"
+version = "0.3.95"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "33b6dd2ef9186f1f2072e409e99cd22a975331a6b3591b12c764e0e55c60d5d2"
+checksum = "4f2dfbb17949fa2088e5d39408c48368947b86f7834484e87b73de55bc14d97d"
 dependencies = [
  "js-sys",
  "wasm-bindgen",

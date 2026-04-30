@@ -12,27 +12,35 @@ use indexmap::IndexSet;
 use livekit::{Room, RoomEvent, RoomOptions};
 use tokio::{runtime::Handle, sync::OnceCell, sync::mpsc::UnboundedReceiver, task::JoinHandle};
 use tokio_util::sync::CancellationToken;
-use tracing::{debug, error, info};
+use tracing::{error, info, warn};
 
 use crate::{
     Context, FoxgloveError, SinkChannelFilter, SinkId,
-    api_client::{DeviceToken, FoxgloveApiClientBuilder, RemoteSessionRequest},
+    api_client::{
+        DeviceResponse, DeviceToken, FoxgloveApiClient, FoxgloveApiClientBuilder, WatchQuery,
+        WatchWakeEvent,
+    },
     library_version::get_library_version,
     protocol::v2::{parameter::Parameter, server::ServerInfo},
     remote_access::{
         AssetHandler, Capability, Client, RemoteAccessError,
-        credentials_provider::CredentialsProvider,
-        protocol_version,
+        protocol_version::{self, REMOTE_ACCESS_PROTOCOL_VERSION},
         qos::QosClassifier,
         session::{RemoteAccessSession, SessionParams},
+        watch::Watch,
+        watch_loop::{
+            ConnectAction, INITIAL_BACKOFF, MAX_BACKOFF, WatchAction, WatchRetryState,
+            on_connect_error, on_connect_success, on_outcome,
+        },
     },
-    remote_common::connection_graph::ConnectionGraph,
-    remote_common::service::{Service, ServiceId, ServiceMap},
+    remote_common::{
+        connection_graph::ConnectionGraph,
+        service::{Service, ServiceId, ServiceMap},
+    },
 };
 
 type Result<T> = std::result::Result<T, Box<RemoteAccessError>>;
 
-const AUTH_RETRY_PERIOD: Duration = Duration::from_secs(30);
 use super::session::DEFAULT_MESSAGE_BACKLOG_SIZE;
 
 /// The status of the remote access gateway connection.
@@ -92,6 +100,22 @@ pub(crate) struct ConnectionParams {
     pub context: Weak<Context>,
 }
 
+/// Pair of device metadata (fetched once via `fetch_device_info`) and the authenticated API
+/// client used for subsequent calls (watch stream, heartbeat). Initialized lazily on the first
+/// successful call to [`RemoteAccessConnection::get_or_init_device_context`].
+struct DeviceContext {
+    device: DeviceResponse,
+    client: Arc<FoxgloveApiClient<DeviceToken>>,
+}
+
+/// A `wake` from the watch stream paired with the `device_wait_for_viewer` advertised by the
+/// `hello` event of the same stream.
+#[derive(Debug)]
+struct WakeSignal {
+    wake: WatchWakeEvent,
+    device_wait_for_viewer: Duration,
+}
+
 /// RemoteAccessConnection manages the connected [`RemoteAccessSession`] to the LiveKit server,
 /// and holds the parameters and other state that outlive a session.
 pub(crate) struct RemoteAccessConnection {
@@ -113,10 +137,11 @@ pub(crate) struct RemoteAccessConnection {
     services: Arc<parking_lot::RwLock<ServiceMap>>,
     connection_graph: Arc<parking_lot::Mutex<ConnectionGraph>>,
     session: parking_lot::Mutex<Option<Arc<RemoteAccessSession>>>,
-    credentials_provider: OnceCell<CredentialsProvider>,
+    device_context: OnceCell<DeviceContext>,
     status: AtomicU8,
-    /// The remote access session ID, received from the API server on first successful credential fetch.
-    /// Set once and reused for all subsequent requests.
+    /// The remote access session ID resolved by the first `wake` event. Used purely for log
+    /// correlation and for threading through subsequent watch streams as a client-provided
+    /// correlation ID.
     remote_access_session_id: OnceLock<String>,
 }
 
@@ -141,7 +166,7 @@ impl RemoteAccessConnection {
             services,
             connection_graph: Arc::new(parking_lot::Mutex::new(ConnectionGraph::new())),
             session: parking_lot::Mutex::new(None),
-            credentials_provider: OnceCell::new(),
+            device_context: OnceCell::new(),
             status: AtomicU8::new(ConnectionStatus::Connecting as u8),
             remote_access_session_id: OnceLock::new(),
         }
@@ -214,17 +239,18 @@ impl RemoteAccessConnection {
         }
     }
 
-    /// Returns the remote access session ID, or `None` if not yet initialized.
+    /// Returns the remote access session ID resolved by the first wake event, or `None` if no wake
+    /// has been received yet during this gateway's lifetime.
     fn remote_access_session_id(&self) -> Option<&str> {
-        self.remote_access_session_id.get().map(|s| s.as_str())
+        self.remote_access_session_id.get().map(String::as_str)
     }
 
-    /// Returns the credentials provider, initializing it on first call.
+    /// Returns the device context, initializing it on first call.
     ///
-    /// This fetches device info from the Foxglove API using the device token.
-    /// If the call fails, the OnceCell remains empty and will retry on the next call.
-    async fn get_or_init_provider(&self) -> Result<&CredentialsProvider> {
-        self.credentials_provider
+    /// This builds the authenticated API client and fetches device info. If the call fails,
+    /// the OnceCell remains empty and will retry on the next call.
+    async fn get_or_init_device_context(&self) -> Result<&DeviceContext> {
+        self.device_context
             .get_or_try_init(|| async {
                 let mut builder =
                     FoxgloveApiClientBuilder::new(DeviceToken::new(self.device_token.clone()));
@@ -234,96 +260,71 @@ impl RemoteAccessConnection {
                 if let Some(timeout) = self.foxglove_api_timeout {
                     builder = builder.timeout(timeout);
                 }
-                let provider = CredentialsProvider::new(builder).await?;
-
-                let device_id = provider.device_id();
-                info!(device_id, "credentials provider initialized");
-                Ok(provider)
+                let client = Arc::new(builder.build()?);
+                let device = client.fetch_device_info().await?;
+                info!(device_id = %device.id, device_name = %device.name, "device context initialized");
+                Ok::<_, Box<RemoteAccessError>>(DeviceContext { device, client })
             })
             .await
     }
 
+    /// Connects to LiveKit using the credentials delivered in a `wake` event. The
+    /// `device_wait_for_viewer` is carried from the watch stream's `hello` event and applied
+    /// as the session's idle timeout.
     async fn connect_session(
         &self,
+        wake_signal: WakeSignal,
     ) -> Result<(Arc<RemoteAccessSession>, UnboundedReceiver<RoomEvent>)> {
-        let provider = self.get_or_init_provider().await?;
-
-        let existing_session_id = self.remote_access_session_id().map(str::to_owned);
-        info!(
-            remote_access_session_id = existing_session_id.as_deref(),
-            "requesting LiveKit credentials from API server"
-        );
-        let credentials = match provider
-            .load_credentials(RemoteSessionRequest {
-                remote_access_session_id: existing_session_id,
-                protocol_version: Some(
-                    protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.to_string(),
-                ),
-            })
-            .await
-        {
-            Ok(creds) => {
-                // Set the session ID on first successful fetch.
-                if let Some(ref session_id) = creds.remote_access_session_id {
-                    let _ = self.remote_access_session_id.set(session_id.clone());
-                }
-                creds
+        let WakeSignal {
+            wake,
+            device_wait_for_viewer,
+        } = wake_signal;
+        if let Some(session_id) = wake.remote_access_session_id.as_ref() {
+            let established = self
+                .remote_access_session_id
+                .get_or_init(|| session_id.clone());
+            if established != session_id {
+                warn!(
+                    remote_access_session_id = established.as_str(),
+                    wake_remote_access_session_id = session_id.as_str(),
+                    "wake remote access session ID differs from established ID; keeping established ID"
+                );
             }
-            Err(e) => {
-                return Err(e.into());
-            }
-        };
+        }
         let remote_access_session_id = self.remote_access_session_id();
         info!(
             remote_access_session_id,
-            url = credentials.url.as_str(),
-            "successfully obtained LiveKit credentials"
+            url = wake.url.as_str(),
+            "connecting to room"
         );
-
-        info!(
-            remote_access_session_id,
-            url = credentials.url.as_str(),
-            "connecting to LiveKit server"
-        );
-        let (session, room_events) =
-            match Room::connect(&credentials.url, &credentials.token, RoomOptions::default()).await
-            {
-                Ok((room, room_events)) => {
-                    info!(remote_access_session_id, "connected to LiveKit server");
-                    let server_info =
-                        self.create_server_info(remote_access_session_id.unwrap_or(""));
-                    let session_params = SessionParams {
-                        room,
-                        context: self.context.clone(),
-                        channel_filter: self.channel_filter.clone(),
-                        qos_classifier: self.qos_classifier.clone(),
-                        listener: self.listener.clone(),
-                        capabilities: self.capabilities.clone(),
-                        supported_encodings: self.supported_encodings.clone().unwrap_or_default(),
-                        runtime: self.runtime.clone(),
-                        cancellation_token: self.cancellation_token.child_token(),
-                        message_backlog_size: self
-                            .message_backlog_size
-                            .unwrap_or(DEFAULT_MESSAGE_BACKLOG_SIZE),
-                        services: self.services.clone(),
-                        connection_graph: self.connection_graph.clone(),
-                        remote_access_session_id: self
-                            .remote_access_session_id()
-                            .map(str::to_owned),
-                        fetch_asset_handler: self.fetch_asset_handler.clone(),
-                        server_info,
-                    };
-                    (
-                        Arc::new(RemoteAccessSession::new(session_params)),
-                        room_events,
-                    )
-                }
-                Err(e) => {
-                    return Err(e.into());
-                }
-            };
-
-        Ok((session, room_events))
+        let (room, room_events) =
+            Room::connect(&wake.url, &wake.token, RoomOptions::default()).await?;
+        info!(remote_access_session_id, "connected to room");
+        let server_info = self.create_server_info(remote_access_session_id.unwrap_or(""));
+        let session_params = SessionParams {
+            room,
+            context: self.context.clone(),
+            channel_filter: self.channel_filter.clone(),
+            qos_classifier: self.qos_classifier.clone(),
+            listener: self.listener.clone(),
+            capabilities: self.capabilities.clone(),
+            supported_encodings: self.supported_encodings.clone().unwrap_or_default(),
+            runtime: self.runtime.clone(),
+            cancellation_token: self.cancellation_token.child_token(),
+            message_backlog_size: self
+                .message_backlog_size
+                .unwrap_or(DEFAULT_MESSAGE_BACKLOG_SIZE),
+            services: self.services.clone(),
+            connection_graph: self.connection_graph.clone(),
+            remote_access_session_id: remote_access_session_id.map(str::to_string),
+            fetch_asset_handler: self.fetch_asset_handler.clone(),
+            server_info,
+            device_wait_for_viewer: Some(device_wait_for_viewer),
+        };
+        Ok((
+            Arc::new(RemoteAccessSession::new(session_params)),
+            room_events,
+        ))
     }
 
     /// Run the server loop until cancelled in a new tokio task.
@@ -352,15 +353,154 @@ impl RemoteAccessConnection {
         self.set_status(ConnectionStatus::Shutdown);
     }
 
-    /// Connect to the room, and handle all events until cancelled or disconnected from the room.
+    /// One iteration of the outer control loop: sit dormant on the SSE watch stream until a
+    /// wake arrives (or the connection is cancelled), then join LiveKit and run the session to
+    /// completion. Returns when either phase has finished and it's time for the outer loop to
+    /// decide whether to iterate again.
     async fn run(&self) {
-        let Some((session, room_events)) = self.connect_session_until_ok().await else {
-            // Cancelled/shutting down
-            debug_assert!(self.cancellation_token.is_cancelled());
+        let Some(wake_signal) = self.watch_until_wake().await else {
+            // Either cancelled or the device context could not be initialized; the outer loop
+            // will observe cancellation or retry as appropriate.
             return;
         };
+        self.run_session(wake_signal).await;
+    }
 
-        self.set_status(ConnectionStatus::Connected);
+    /// Runs the dormant phase. Opens the watch stream, heartbeats it, and returns on wake.
+    /// Returns the wake signal with the `device_wait_for_viewer` advertised in the `hello` event
+    /// of the stream on which the wake arrived. Transient failures are retried with exponential
+    /// backoff (capped at [`CONTROL_LOOP_MAX_BACKOFF`]) until either a wake is received or the
+    /// cancellation token fires.
+    async fn watch_until_wake(&self) -> Option<WakeSignal> {
+        tokio::select! {
+            biased;
+            () = self.cancellation_token.cancelled() => None,
+            result = self.watch_until_wake_inner() => result,
+        }
+    }
+
+    async fn watch_until_wake_inner(&self) -> Option<WakeSignal> {
+        let device_context = self.device_context_until_ok().await?;
+        let mut retry = WatchRetryState::new();
+        loop {
+            // Establish a watch.
+            let watch = self.connect_watch(device_context, &mut retry).await?;
+            let watch_lease_id = watch.lease_id().to_string();
+            let device_wait_for_viewer = watch.device_wait_for_viewer();
+            let heartbeat_interval = watch.heartbeat_interval();
+            self.set_status(ConnectionStatus::Connected);
+
+            // Run the watch session.
+            let (outcome, watch_duration) = watch.run().await;
+            match on_outcome(
+                outcome,
+                watch_lease_id,
+                watch_duration,
+                heartbeat_interval,
+                &mut retry,
+            ) {
+                WatchAction::Wake(wake) => {
+                    return Some(WakeSignal {
+                        wake,
+                        device_wait_for_viewer,
+                    });
+                }
+                WatchAction::Reconnect => {
+                    // Soft reconnect: try immediately and keep the user-visible status as
+                    // Connected. If the next connect attempt fails, connect_watch flips to
+                    // Connecting and applies its own backoff schedule.
+                }
+                WatchAction::Backoff { delay } => {
+                    self.set_status(ConnectionStatus::Connecting);
+                    tokio::time::sleep(delay).await;
+                }
+                WatchAction::StopUnauthorized => {
+                    self.cancellation_token.cancel();
+                    return None;
+                }
+                WatchAction::Stop => return None,
+            }
+        }
+    }
+
+    async fn device_context_until_ok(&self) -> Option<&DeviceContext> {
+        let mut backoff = INITIAL_BACKOFF;
+        let device_context = loop {
+            match self.get_or_init_device_context().await {
+                Ok(ctx) => break ctx,
+                Err(e) => {
+                    if e.is_unauthorized() {
+                        error!(error = %e, "device token unauthorized; stopping remote access gateway");
+                        self.cancellation_token.cancel();
+                        return None;
+                    }
+                    warn!(error = %e, "failed to initialize device context; retrying");
+                    tokio::time::sleep(backoff).await;
+                    backoff = (backoff * 2).min(MAX_BACKOFF);
+                }
+            }
+        };
+        Some(device_context)
+    }
+
+    async fn connect_watch(
+        &self,
+        device_context: &DeviceContext,
+        retry: &mut WatchRetryState,
+    ) -> Option<Watch> {
+        loop {
+            let query = WatchQuery {
+                protocol_version: Some(REMOTE_ACCESS_PROTOCOL_VERSION.to_string()),
+                remote_access_session_id: self.remote_access_session_id().map(str::to_string),
+                // Preserve the previous lease across failed connect attempts. It is only consumed
+                // once a replacement watch is established, or once the API tells us another active
+                // lease owns the device.
+                previous_watch_lease_id: retry.previous_lease_id().map(str::to_string),
+            };
+            match Watch::connect(device_context.client.clone(), query).await {
+                Ok(watch) => {
+                    on_connect_success(retry);
+                    return Some(watch);
+                }
+                Err(e) => {
+                    match on_connect_error(&e, retry) {
+                        ConnectAction::StopUnauthorized => {
+                            error!(error = %e, "device token unauthorized; stopping remote access gateway");
+                            self.cancellation_token.cancel();
+                            return None;
+                        }
+                        ConnectAction::RetryAfter(delay) => {
+                            // During normal session teardown, status remains Connected. Only
+                            // transition back to Connecting once the replacement watch actually
+                            // fails.
+                            self.set_status(ConnectionStatus::Connecting);
+                            tokio::time::sleep(delay).await;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// Joins LiveKit with the wake credentials and runs the session until cancelled,
+    /// disconnected, or idle.
+    async fn run_session(&self, wake_signal: WakeSignal) {
+        // If connection and cancellation are both ready, prefer the completed connection so the
+        // room goes through the normal session teardown path, including an explicit room close.
+        let result = tokio::select! {
+            biased;
+            result = self.connect_session(wake_signal) => result,
+            () = self.cancellation_token.cancelled() => return,
+        };
+        let (session, room_events) = match result {
+            Ok(pair) => pair,
+            Err(e) => {
+                error!(error = %e, "failed to join room after wake");
+                self.set_status(ConnectionStatus::Connecting);
+                return;
+            }
+        };
+
         let remote_access_session_id = self.remote_access_session_id();
 
         // Store the active session so that external callers can reach it.
@@ -406,7 +546,12 @@ impl RemoteAccessConnection {
                 version = %version,
                 "adding existing participant"
             );
-            if let Err(e) = session.add_participant(identity.clone(), version).await {
+            let sid = participant.sid();
+            let joined_at = participant.joined_at();
+            if let Err(e) = session
+                .add_participant(identity.clone(), sid, joined_at, version)
+                .await
+            {
                 error!(
                     remote_access_session_id,
                     error = %e,
@@ -422,11 +567,11 @@ impl RemoteAccessConnection {
             _ = session.log_periodic_stats() => {},
         }
 
-        // Update status before cleanup so callers don't see Connected during teardown.
+        // Normal session teardown returns to the watch loop, so keep reporting Connected: the
+        // gateway is still healthy and available for remote access. Cancellation is the only
+        // teardown path that should move out of Connected here.
         if self.cancellation_token.is_cancelled() {
             self.set_status(ConnectionStatus::ShuttingDown);
-        } else {
-            self.set_status(ConnectionStatus::Connecting);
         }
 
         // Clear the active session and remove the sink before closing the room.
@@ -444,7 +589,11 @@ impl RemoteAccessConnection {
         context.remove_sink(session.sink_id());
         session.cancel();
         if let Err(e) = video_metadata_task.await {
-            error!(remote_access_session_id, error = %e, "video metadata watcher failed");
+            error!(
+                remote_access_session_id,
+                error = %e,
+                "video metadata watcher failed"
+            );
         }
 
         info!(remote_access_session_id, "disconnecting from room");
@@ -452,59 +601,6 @@ impl RemoteAccessConnection {
         // exits, that future is dropped, so no more remove_participant calls can
         // race with the flush handle drain inside close().
         session.close().await;
-    }
-
-    /// Connect to the room, retrying indefinitely.
-    ///
-    /// Only returns an error if the connection has been permanently stopped/cancelled (shutting down).
-    ///
-    /// The retry interval is fairly long.
-    /// Note that livekit internally includes a few quick retries for each connect call as well.
-    async fn connect_session_until_ok(
-        &self,
-    ) -> Option<(Arc<RemoteAccessSession>, UnboundedReceiver<RoomEvent>)> {
-        let mut interval = tokio::time::interval(AUTH_RETRY_PERIOD);
-        interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
-        loop {
-            tokio::select! {
-                _ = interval.tick() => {}
-                () = self.cancellation_token.cancelled() => {
-                    return None;
-                }
-            };
-
-            // biased: prefer the connect result so a successfully-created Room
-            // is returned to run(), which will close it during teardown.
-            let result = tokio::select! {
-                biased;
-                result = self.connect_session() => result,
-                () = self.cancellation_token.cancelled() => {
-                    return None;
-                }
-            };
-
-            let remote_access_session_id = self.remote_access_session_id();
-            match result {
-                Ok((session, room_events)) => {
-                    return Some((session, room_events));
-                }
-                Err(e) => {
-                    error!(
-                        remote_access_session_id,
-                        error = %e,
-                        "connection attempt failed, will retry: {e}"
-                    );
-                    // Refresh credentials for auth-related errors, including room errors which
-                    // may be caused by expired or invalid credentials.
-                    if e.should_clear_credentials() {
-                        if let Some(provider) = self.credentials_provider.get() {
-                            debug!(remote_access_session_id, "clearing credentials");
-                            provider.clear().await;
-                        }
-                    }
-                }
-            }
-        }
     }
 
     /// Create and serialize ServerInfo message based on the [`ConnectionParams`].
@@ -520,13 +616,13 @@ impl RemoteAccessConnection {
         let supported_encodings = self.supported_encodings.clone();
         metadata.insert("fg-library".into(), get_library_version());
 
-        // The credentials provider is always initialized before this method is called,
-        // since we must successfully connect (which initializes the provider) before we
-        // can receive room events that trigger server info creation.
+        // The device context is always initialized before this method is called: it must
+        // succeed before any watch stream can open, which must succeed before we can receive
+        // a wake event and join LiveKit.
         let name = self.name.clone().unwrap_or_else(|| {
-            self.credentials_provider
+            self.device_context
                 .get()
-                .map(|p| p.device_name().to_string())
+                .map(|ctx| ctx.device.name.clone())
                 .unwrap_or_default()
         });
 
