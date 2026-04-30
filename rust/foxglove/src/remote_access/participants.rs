@@ -79,7 +79,7 @@ impl Participants {
     /// Test-only accessor — production reads the index implicitly via
     /// [`remove_by_sid`].
     #[cfg(test)]
-    pub(crate) fn get_by_sid(&self, sid: &ParticipantSid) -> Option<&Arc<Participant>> {
+    fn get_by_sid(&self, sid: &ParticipantSid) -> Option<&Arc<Participant>> {
         self.by_sid.get(sid)
     }
 

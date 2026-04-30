@@ -348,7 +348,7 @@ impl SessionState {
 
     /// Removes video metadata for a video channel.
     #[cfg(test)]
-    pub fn remove_video_metadata(&mut self, channel_id: &ChannelId) {
+    fn remove_video_metadata(&mut self, channel_id: &ChannelId) {
         self.video_metadata.remove(channel_id);
     }
 

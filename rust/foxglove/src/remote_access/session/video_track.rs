@@ -37,7 +37,7 @@ pub enum VideoInputSchema {
 /// Detect the video input schema from an (encoding, schema_name) pair.
 ///
 /// Returns `Some(InputSchema)` if the channel carries an image type we can transcode to video.
-pub fn detect_video_schema(encoding: &str, schema_name: &str) -> Option<VideoInputSchema> {
+fn detect_video_schema(encoding: &str, schema_name: &str) -> Option<VideoInputSchema> {
     match (encoding, schema_name) {
         ("protobuf", "foxglove.CompressedImage") => Some(VideoInputSchema::FoxgloveCompressedImage),
         ("protobuf", "foxglove.RawImage") => Some(VideoInputSchema::FoxgloveRawImage),

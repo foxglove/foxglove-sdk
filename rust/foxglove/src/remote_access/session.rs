@@ -60,10 +60,10 @@ pub(crate) use video_track::{
 };
 
 #[derive(Debug)]
-pub(crate) struct SessionStats {
-    pub participants: usize,
-    pub subscriptions: usize,
-    pub video_tracks: usize,
+struct SessionStats {
+    participants: usize,
+    subscriptions: usize,
+    video_tracks: usize,
 }
 
 const CONTROL_CHANNEL_TOPIC: &str = "control";
@@ -413,7 +413,7 @@ impl RemoteAccessSession {
         &self.room
     }
 
-    pub(crate) fn stats(&self) -> SessionStats {
+    fn stats(&self) -> SessionStats {
         let state = self.state.read();
         SessionStats {
             participants: self.participant_registry.participant_count(),

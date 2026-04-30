@@ -12,8 +12,7 @@ pub(crate) const PROTOCOL_VERSION_ATTRIBUTE: &str = "protocolVersion";
 pub(crate) const REMOTE_ACCESS_PROTOCOL_VERSION: semver::Version = semver::Version::new(2, 2, 0);
 
 /// The minimum remote access protocol version this SDK will accept from a connecting participant.
-pub(crate) const REMOTE_ACCESS_MIN_SUPPORTED_PROTOCOL_VERSION: semver::Version =
-    semver::Version::new(2, 2, 0);
+const REMOTE_ACCESS_MIN_SUPPORTED_PROTOCOL_VERSION: semver::Version = semver::Version::new(2, 2, 0);
 
 /// The protocol version assumed when a participant does not advertise one.
 pub(crate) const DEFAULT_PROTOCOL_VERSION: semver::Version = semver::Version::new(2, 2, 0);
@@ -24,7 +23,7 @@ pub(crate) const DEFAULT_PROTOCOL_VERSION: semver::Version = semver::Version::ne
 /// build, so we default to [`DEFAULT_PROTOCOL_VERSION`].
 ///
 /// Returns `None` if the attribute value is present but cannot be parsed as a semver triple.
-pub(crate) fn parse_participant_protocol_version(
+fn parse_participant_protocol_version(
     attributes: &HashMap<String, String>,
 ) -> Option<semver::Version> {
     let Some(version_str) = attributes.get(PROTOCOL_VERSION_ATTRIBUTE) else {
