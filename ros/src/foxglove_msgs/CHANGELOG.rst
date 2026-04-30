@@ -2,6 +2,11 @@
 Changelog for package foxglove_msgs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+3.3.0 (2026-04-30)
+------------------
+* Breaking: Remove Velocity3 schema; LocationFix.velocity now uses Vector3
+* Add Odometry schema
+
 3.2.6 (2026-04-02)
 ------------------
 * Add CompressedPointCloud schema
