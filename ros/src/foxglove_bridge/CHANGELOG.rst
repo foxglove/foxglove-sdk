@@ -5,6 +5,7 @@ Changelog for package foxglove_bridge
 3.3.0 (2026-04-30)
 ------------------
 * Add support for remote access
+* Publish process and system statistics (CPU, memory) on ``/foxglove_bridge/sysinfo`` by default
 * Update Foxglove SDK version to 0.23.0
 
 3.2.6 (2026-04-02)
