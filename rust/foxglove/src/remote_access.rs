@@ -1,10 +1,12 @@
 //! Remote access implementation.
 
 mod capability;
+mod channel_registry;
 mod client;
 mod connection;
 mod gateway;
 mod listener;
+mod parameter_subscriptions;
 mod participant;
 mod participant_registry;
 mod participants;
@@ -13,7 +15,6 @@ mod qos;
 mod rtt_tracker;
 pub mod service;
 mod session;
-mod session_state;
 mod sse;
 mod watch;
 mod watch_loop;
