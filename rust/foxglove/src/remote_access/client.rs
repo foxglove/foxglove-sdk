@@ -21,7 +21,7 @@ pub struct Client {
 
 impl Client {
     /// Instantiate a new client.
-    pub(crate) fn new(client_id: ClientId, participant_id: ParticipantIdentity) -> Self {
+    pub(super) fn new(client_id: ClientId, participant_id: ParticipantIdentity) -> Self {
         Self {
             client_id,
             participant_id,

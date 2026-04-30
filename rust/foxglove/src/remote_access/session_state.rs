@@ -13,33 +13,33 @@ use crate::remote_access::session::{DataTrack, VideoInputSchema, VideoMetadata, 
 use crate::{ChannelDescriptor, ChannelId, RawChannel};
 
 /// Channels and parameters that lost their last subscriber when a participant was removed.
-pub(crate) struct RemovedSubscriptions {
+pub(super) struct RemovedSubscriptions {
     /// Channel IDs that lost their last subscriber (of any type).
-    pub(crate) last_unsubscribed: SmallVec<[ChannelId; 4]>,
+    pub(super) last_unsubscribed: SmallVec<[ChannelId; 4]>,
     /// Channel IDs that lost their last video subscriber.
-    pub(crate) last_video_unsubscribed: SmallVec<[ChannelId; 4]>,
+    pub(super) last_video_unsubscribed: SmallVec<[ChannelId; 4]>,
     /// Descriptors for all channels the participant was subscribed to at removal time.
-    pub(crate) subscribed_descriptors: SmallVec<[ChannelDescriptor; 4]>,
+    pub(super) subscribed_descriptors: SmallVec<[ChannelDescriptor; 4]>,
     /// Client channels that were advertised by the removed participant.
-    pub(crate) client_channels: Vec<ChannelDescriptor>,
+    pub(super) client_channels: Vec<ChannelDescriptor>,
     /// Parameter names that lost their last subscriber.
-    pub(crate) last_param_unsubscribed: Vec<String>,
+    pub(super) last_param_unsubscribed: Vec<String>,
 }
 
 /// Result of subscribing a participant to channels.
-pub(crate) struct SubscribeResult {
+pub(super) struct SubscribeResult {
     /// Channel IDs that gained their first subscriber.
-    pub(crate) first_subscribed: SmallVec<[ChannelId; 4]>,
+    pub(super) first_subscribed: SmallVec<[ChannelId; 4]>,
     /// Descriptors for all channels where this participant was actually added.
-    pub(crate) newly_subscribed_descriptors: SmallVec<[ChannelDescriptor; 4]>,
+    pub(super) newly_subscribed_descriptors: SmallVec<[ChannelDescriptor; 4]>,
 }
 
 /// Result of unsubscribing a participant from channels.
-pub(crate) struct UnsubscribeResult {
+pub(super) struct UnsubscribeResult {
     /// Channel IDs that lost their last subscriber.
-    pub(crate) last_unsubscribed: SmallVec<[ChannelId; 4]>,
+    pub(super) last_unsubscribed: SmallVec<[ChannelId; 4]>,
     /// Descriptors for all channels where this participant was actually removed.
-    pub(crate) actually_unsubscribed_descriptors: SmallVec<[ChannelDescriptor; 4]>,
+    pub(super) actually_unsubscribed_descriptors: SmallVec<[ChannelDescriptor; 4]>,
 }
 
 /// State machine for a remote access session.
@@ -53,7 +53,7 @@ pub(crate) struct UnsubscribeResult {
 ///
 /// A subscriber is a "data subscriber" if they appear in `subscriptions` but not in
 /// `video_subscribers`. See [`Self::has_data_subscribers`].
-pub(crate) struct SessionState {
+pub(super) struct SessionState {
     /// Channels that have been advertised to participants.
     channels: HashMap<ChannelId, Arc<RawChannel>>,
     /// QoS profile per channel.

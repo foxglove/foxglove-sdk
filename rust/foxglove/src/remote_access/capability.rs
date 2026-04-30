@@ -17,7 +17,7 @@ pub enum Capability {
 }
 
 impl Capability {
-    pub(crate) fn as_protocol_capabilities(&self) -> &'static [server_info::Capability] {
+    pub(super) fn as_protocol_capabilities(&self) -> &'static [server_info::Capability] {
         match self {
             Self::ClientPublish => &[server_info::Capability::ClientPublish],
             Self::Parameters => &[

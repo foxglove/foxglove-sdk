@@ -6,16 +6,16 @@ use livekit::id::ParticipantIdentity;
 use tracing::error;
 
 /// The LiveKit participant attribute key used to advertise the remote access protocol version.
-pub(crate) const PROTOCOL_VERSION_ATTRIBUTE: &str = "protocolVersion";
+pub(super) const PROTOCOL_VERSION_ATTRIBUTE: &str = "protocolVersion";
 
 /// The remote access protocol version supported by this SDK build.
-pub(crate) const REMOTE_ACCESS_PROTOCOL_VERSION: semver::Version = semver::Version::new(2, 2, 0);
+pub(super) const REMOTE_ACCESS_PROTOCOL_VERSION: semver::Version = semver::Version::new(2, 2, 0);
 
 /// The minimum remote access protocol version this SDK will accept from a connecting participant.
 const REMOTE_ACCESS_MIN_SUPPORTED_PROTOCOL_VERSION: semver::Version = semver::Version::new(2, 2, 0);
 
 /// The protocol version assumed when a participant does not advertise one.
-pub(crate) const DEFAULT_PROTOCOL_VERSION: semver::Version = semver::Version::new(2, 2, 0);
+pub(super) const DEFAULT_PROTOCOL_VERSION: semver::Version = semver::Version::new(2, 2, 0);
 
 /// Parse the remote access protocol version from a LiveKit participant's attributes.
 ///
@@ -50,7 +50,7 @@ fn parse_participant_protocol_version(
 /// Returns the parsed version if compatible, or `None` if the participant should be rejected.
 /// Callers should use [`REMOTE_ACCESS_PROTOCOL_VERSION`] (not the minimum) when reporting an
 /// incompatibility to the user, since the minimum does not cover major-version mismatches.
-pub(crate) fn check_participant_protocol_version(
+pub(super) fn check_participant_protocol_version(
     participant_identity: &ParticipantIdentity,
     attributes: &HashMap<String, String>,
     remote_access_session_id: Option<&str>,
