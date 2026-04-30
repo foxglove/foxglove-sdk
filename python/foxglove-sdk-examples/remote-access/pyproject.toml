@@ -6,7 +6,7 @@ authors = [{ name = "Foxglove", email = "support@foxglove.dev" }]
 requires-python = ">=3.10"
 readme = "README.md"
 dependencies = [
-    "foxglove-sdk>=0.21.0",
+    "foxglove-sdk>=0.23.0",
 ]
 
 [dependency-groups]
