@@ -415,16 +415,14 @@ void ViewerConnection::send_unsubscribe(const std::vector<uint64_t>& channel_ids
   send_framed_text(msg.dump());
 }
 
-void ViewerConnection::send_client_advertise(
-  const std::vector<std::tuple<uint32_t, std::string, std::string>>& channels
-) {
+void ViewerConnection::send_client_advertise(const std::vector<ClientChannelDesc>& channels) {
   nlohmann::json ch_arr = nlohmann::json::array();
-  for (const auto& [id, topic, encoding] : channels) {
+  for (const auto& ch : channels) {
     ch_arr.push_back({
-      {"id", id},
-      {"topic", topic},
-      {"encoding", encoding},
-      {"schemaName", ""},
+      {"id", ch.id},
+      {"topic", ch.topic},
+      {"encoding", ch.encoding},
+      {"schemaName", ch.schema_name},
     });
   }
   nlohmann::json msg = {{"op", "advertise"}, {"channels", ch_arr}};

@@ -513,7 +513,7 @@ TEST_CASE("livekit: client advertise fires listener callback", "[integration]") 
   auto viewer = ViewerConnection::connect(gw.room_name, "viewer-1");
   viewer.next_server_message();  // skip server info
 
-  viewer.send_client_advertise({{1, "/cmd", "json"}});
+  viewer.send_client_advertise({{1, "/cmd", "json", ""}});
   poll_until([&] {
     return listener.client_advertised_count() == 1;
   });
@@ -521,7 +521,38 @@ TEST_CASE("livekit: client advertise fires listener callback", "[integration]") 
   {
     std::lock_guard<std::mutex> lock(listener.mutex);
     REQUIRE(listener.client_advertised.size() == 1);
-    CHECK(listener.client_advertised[0].second == "/cmd");
+    CHECK(std::get<1>(listener.client_advertised[0]) == "/cmd");
+  }
+
+  viewer.close();
+  gw.stop();
+}
+
+TEST_CASE("livekit: client advertise preserves schema name without schema data", "[integration]") {
+  auto ctx = foxglove::Context::create();
+  MockListener listener;
+
+  TestGatewayOptions opts;
+  opts.callbacks = listener.make_callbacks();
+  opts.capabilities = foxglove::RemoteAccessGatewayCapabilities::ClientPublish;
+  auto gw = TestGateway::start_with_options(ctx, std::move(opts));
+
+  auto viewer = ViewerConnection::connect(gw.room_name, "viewer-1");
+  viewer.next_server_message();
+
+  // Advertise a channel with schema_name but no binary schema data — this is
+  // what the Foxglove teleop panel sends for /cmd_vel.
+  viewer.send_client_advertise({{1, "/cmd_vel", "json", "geometry_msgs/msg/Twist"}});
+
+  poll_until([&] {
+    return listener.client_advertised_count() == 1;
+  });
+
+  {
+    std::lock_guard<std::mutex> lock(listener.mutex);
+    REQUIRE(listener.client_advertised.size() == 1);
+    CHECK(std::get<1>(listener.client_advertised[0]) == "/cmd_vel");
+    CHECK(std::get<2>(listener.client_advertised[0]) == "geometry_msgs/msg/Twist");
   }
 
   viewer.close();
@@ -540,7 +571,7 @@ TEST_CASE("livekit: client unadvertise fires listener callback", "[integration]"
   auto viewer = ViewerConnection::connect(gw.room_name, "viewer-1");
   viewer.next_server_message();
 
-  viewer.send_client_advertise({{42, "/joy", "json"}});
+  viewer.send_client_advertise({{42, "/joy", "json", ""}});
   poll_until([&] {
     return listener.client_advertised_count() == 1;
   });
@@ -560,6 +591,42 @@ TEST_CASE("livekit: client unadvertise fires listener callback", "[integration]"
   gw.stop();
 }
 
+TEST_CASE("livekit: client message data for unadvertised channel sends error", "[integration]") {
+  auto ctx = foxglove::Context::create();
+  MockListener listener;
+
+  TestGatewayOptions opts;
+  opts.callbacks = listener.make_callbacks();
+  opts.capabilities = foxglove::RemoteAccessGatewayCapabilities::ClientPublish;
+  auto gw = TestGateway::start_with_options(ctx, std::move(opts));
+
+  auto viewer = ViewerConnection::connect(gw.room_name, "viewer-1");
+  viewer.expect_server_info();
+
+  // Send MessageData for channel 999, which was never advertised by the client.
+  std::vector<uint8_t> payload = {'r', 'o', 'g', 'u', 'e'};
+  viewer.send_client_message_data(999, payload);
+
+  auto deadline = std::chrono::steady_clock::now() + EVENT_TIMEOUT;
+  nlohmann::json status;
+  while (std::chrono::steady_clock::now() < deadline) {
+    auto msg = viewer.next_server_message();
+    if (msg.value("op", "") == "status") {
+      status = msg;
+      break;
+    }
+  }
+  REQUIRE(!status.empty());
+  CHECK(status["level"].get<int>() == 2);  // Error
+  auto message = status["message"].get<std::string>();
+  CHECK(message.find("not advertised channel") != std::string::npos);
+
+  CHECK(listener.message_data_count() == 0);
+
+  viewer.close();
+  gw.stop();
+}
+
 TEST_CASE("livekit: client disconnect fires unadvertise for advertised channels", "[integration]") {
   auto ctx = foxglove::Context::create();
   MockListener listener;
@@ -572,7 +639,7 @@ TEST_CASE("livekit: client disconnect fires unadvertise for advertised channels"
   auto viewer = ViewerConnection::connect(gw.room_name, "viewer-1");
   viewer.next_server_message();
 
-  viewer.send_client_advertise({{1, "/cmd_vel", "json"}, {2, "/joy", "json"}});
+  viewer.send_client_advertise({{1, "/cmd_vel", "json", ""}, {2, "/joy", "json", ""}});
   poll_until([&] {
     return listener.client_advertised_count() == 2;
   });
@@ -767,7 +834,7 @@ TEST_CASE("livekit: client message data fires listener callback", "[integration]
   auto viewer = ViewerConnection::connect(gw.room_name, "viewer-1");
   viewer.next_server_message();
 
-  viewer.send_client_advertise({{1, "/cmd", "json"}});
+  viewer.send_client_advertise({{1, "/cmd", "json", ""}});
   poll_until([&] {
     return listener.client_advertised_count() == 1;
   });
@@ -833,7 +900,7 @@ TEST_CASE("livekit: client advertise without capability sends error", "[integrat
   auto viewer = ViewerConnection::connect(gw.room_name, "viewer-1");
   viewer.next_server_message();
 
-  viewer.send_client_advertise({{1, "/cmd", "json"}});
+  viewer.send_client_advertise({{1, "/cmd", "json", ""}});
 
   // Read messages until we get a status error
   auto deadline = std::chrono::steady_clock::now() + EVENT_TIMEOUT;
@@ -1157,5 +1224,147 @@ TEST_CASE("livekit: connection graph multiple subscribers", "[integration]") {
     return listener.connection_graph_unsubscribed.load(std::memory_order_relaxed) == 1;
   });
 
+  gw.stop();
+}
+
+// ===========================================================================
+// QoS classifier tests
+// ===========================================================================
+
+TEST_CASE("livekit: reliable channel delivers via control plane", "[integration]") {
+  auto ctx = foxglove::Context::create();
+  auto channel = foxglove::RawChannel::create("/config", "json", std::nullopt, ctx);
+  REQUIRE(channel.has_value());
+
+  TestGatewayOptions opts;
+  opts.qos_classifier = [](const foxglove::ChannelDescriptor& /*ch*/) {
+    return foxglove::QosProfile{foxglove::Reliability::Reliable};
+  };
+  auto gw = TestGateway::start_with_options(ctx, std::move(opts));
+
+  auto viewer = ViewerConnection::connect(gw.room_name, "viewer-1");
+  viewer.expect_server_info();
+  auto advertise = viewer.expect_advertise();
+  REQUIRE(advertise["channels"].size() == 1);
+  auto& adv_ch = advertise["channels"][0];
+  auto channel_id = adv_ch["id"].get<uint64_t>();
+
+  auto meta = adv_ch.value("metadata", nlohmann::json::object());
+  CHECK(meta.value("foxglove.reliable", "") == "true");
+
+  viewer.subscribe_and_wait({channel_id}, [&] {
+    return channel->hasSinks();
+  });
+
+  std::string payload = "config-value";
+  channel->log(reinterpret_cast<const std::byte*>(payload.data()), payload.size());
+
+  // Reliable channels deliver messages on the control plane as binary
+  // MessageData frames, not via a data track.
+  auto msg = viewer.expect_message_data();
+  CHECK(msg.value("channelId", uint64_t{0}) == channel_id);
+  auto data = msg.value("data", std::vector<uint8_t>{});
+  std::string received(data.begin(), data.end());
+  CHECK(received == payload);
+
+  viewer.close();
+  gw.stop();
+}
+
+TEST_CASE("livekit: qos classifier per channel", "[integration]") {
+  auto ctx = foxglove::Context::create();
+  auto reliable_channel = foxglove::RawChannel::create("/config", "json", std::nullopt, ctx);
+  REQUIRE(reliable_channel.has_value());
+  auto lossy_channel = foxglove::RawChannel::create("/data", "json", std::nullopt, ctx);
+  REQUIRE(lossy_channel.has_value());
+
+  TestGatewayOptions opts;
+  opts.qos_classifier = [](const foxglove::ChannelDescriptor& ch) {
+    if (std::string(ch.topic()).rfind("/config", 0) == 0) {
+      return foxglove::QosProfile{foxglove::Reliability::Reliable};
+    }
+    return foxglove::QosProfile{};
+  };
+  auto gw = TestGateway::start_with_options(ctx, std::move(opts));
+
+  auto viewer = ViewerConnection::connect(gw.room_name, "viewer-1");
+  viewer.expect_server_info();
+  auto advertise = viewer.expect_advertise();
+
+  REQUIRE(advertise["channels"].size() == 2);
+  uint64_t reliable_id = 0;
+  uint64_t lossy_id = 0;
+  for (const auto& ch : advertise["channels"]) {
+    auto meta = ch.value("metadata", nlohmann::json::object());
+    if (ch["topic"].get<std::string>() == "/config") {
+      reliable_id = ch["id"].get<uint64_t>();
+      CHECK(meta.value("foxglove.reliable", "") == "true");
+    } else {
+      lossy_id = ch["id"].get<uint64_t>();
+      CHECK(!meta.contains("foxglove.reliable"));
+    }
+  }
+  REQUIRE(reliable_id != 0);
+  REQUIRE(lossy_id != 0);
+
+  viewer.send_subscribe({reliable_id, lossy_id});
+  poll_until([&] {
+    return reliable_channel->hasSinks() && lossy_channel->hasSinks();
+  });
+
+  // The lossy channel should have a data track published.
+  auto data_reader = viewer.expect_device_channel_data_track(lossy_id);
+
+  // Log to the reliable channel — should arrive on the control plane.
+  std::string reliable_payload = "reliable-msg";
+  reliable_channel->log(
+    reinterpret_cast<const std::byte*>(reliable_payload.data()), reliable_payload.size()
+  );
+  auto reliable_msg = viewer.expect_message_data();
+  CHECK(reliable_msg.value("channelId", uint64_t{0}) == reliable_id);
+  auto reliable_data = reliable_msg.value("data", std::vector<uint8_t>{});
+  std::string reliable_received(reliable_data.begin(), reliable_data.end());
+  CHECK(reliable_received == reliable_payload);
+
+  // Log to the lossy channel — should arrive via the data track.
+  std::string lossy_payload = "lossy-msg";
+  lossy_channel->log(
+    reinterpret_cast<const std::byte*>(lossy_payload.data()), lossy_payload.size()
+  );
+  auto lossy_msg = data_reader->next_server_message();
+  CHECK(lossy_msg.value("op", "") == "messageData");
+  CHECK(lossy_msg.value("channelId", uint64_t{0}) == lossy_id);
+
+  viewer.close();
+  gw.stop();
+}
+
+TEST_CASE("livekit: video channel forces lossy over reliable classifier", "[integration]") {
+  auto ctx = foxglove::Context::create();
+  auto video_channel = foxglove::RawChannel::create(
+    "/camera", "protobuf", foxglove::Schema{"foxglove.RawImage", "protobuf", nullptr, 0}, ctx
+  );
+  REQUIRE(video_channel.has_value());
+
+  TestGatewayOptions opts;
+  opts.qos_classifier = [](const foxglove::ChannelDescriptor& /*ch*/) {
+    return foxglove::QosProfile{foxglove::Reliability::Reliable};
+  };
+  auto gw = TestGateway::start_with_options(ctx, std::move(opts));
+
+  auto viewer = ViewerConnection::connect(gw.room_name, "viewer-1");
+  viewer.expect_server_info();
+  auto advertise = viewer.expect_advertise();
+  REQUIRE(advertise["channels"].size() == 1);
+  auto& ch = advertise["channels"][0];
+  CHECK(ch["id"].get<uint64_t>() == video_channel->id());
+
+  // Video detection takes precedence: the channel is advertised as a video
+  // track and NOT as reliable, even though the classifier asked for Reliable.
+  auto meta = ch.value("metadata", nlohmann::json::object());
+  CHECK(meta.value("foxglove.hasVideoTrack", "") == "true");
+  CHECK(!meta.contains("foxglove.reliable"));
+
+  viewer.close();
   gw.stop();
 }

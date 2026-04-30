@@ -16,9 +16,11 @@ namespace foxglove_integration {
 struct MockListener {
   mutable std::mutex mutex;
 
+  /// Each entry is (client_id, topic).
   std::vector<std::pair<uint32_t, std::string>> subscribed;
   std::vector<std::pair<uint32_t, std::string>> unsubscribed;
-  std::vector<std::pair<uint32_t, std::string>> client_advertised;
+  /// Each entry is (client_id, topic, schema_name) for advertised channels.
+  std::vector<std::tuple<uint32_t, std::string, std::string>> client_advertised;
   std::vector<std::pair<uint32_t, std::string>> client_unadvertised;
   std::vector<std::tuple<uint32_t, std::string, std::vector<std::byte>>> message_data;
   std::atomic<uint32_t> connection_graph_subscribed{0};
@@ -36,7 +38,10 @@ struct MockListener {
     };
     cb.onClientAdvertise = [this](uint32_t client_id, const foxglove::ChannelDescriptor& channel) {
       std::lock_guard<std::mutex> lock(mutex);
-      client_advertised.emplace_back(client_id, std::string(channel.topic()));
+      auto schema = channel.schema();
+      client_advertised.emplace_back(
+        client_id, std::string(channel.topic()), schema ? std::string(schema->name) : std::string{}
+      );
     };
     cb.onClientUnadvertise =
       [this](uint32_t client_id, const foxglove::ChannelDescriptor& channel) {

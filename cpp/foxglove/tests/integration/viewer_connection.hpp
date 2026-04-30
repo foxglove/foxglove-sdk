@@ -145,10 +145,16 @@ public:
   /// Sends an Unsubscribe message for the given channel IDs.
   void send_unsubscribe(const std::vector<uint64_t>& channel_ids);
 
+  /// Description of a client-advertised channel.
+  struct ClientChannelDesc {
+    uint32_t id;
+    std::string topic;
+    std::string encoding;
+    std::string schema_name;
+  };
+
   /// Sends a client Advertise message.
-  void send_client_advertise(
-    const std::vector<std::tuple<uint32_t, std::string, std::string>>& channels
-  );
+  void send_client_advertise(const std::vector<ClientChannelDesc>& channels);
 
   /// Sends a client Unadvertise message.
   void send_client_unadvertise(const std::vector<uint32_t>& channel_ids);

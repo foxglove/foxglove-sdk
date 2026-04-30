@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <memory>
 #include <string>
 #include <thread>
@@ -33,6 +34,7 @@ private:
   std::unique_ptr<httplib::Server> server_;
   std::thread thread_;
   std::string url_;
+  std::shared_ptr<std::atomic<bool>> stop_flag_;
 };
 
 /// Starts a mock Foxglove API server that returns LiveKit tokens for the local dev server.

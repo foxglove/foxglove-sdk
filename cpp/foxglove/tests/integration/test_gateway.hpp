@@ -19,6 +19,7 @@ struct TestGatewayOptions {
   foxglove::RemoteAccessGatewayCapabilities capabilities =
     foxglove::RemoteAccessGatewayCapabilities::None;
   foxglove::SinkChannelFilterFn channel_filter;
+  foxglove::QosClassifierFn qos_classifier;
   std::vector<std::string> supported_encodings = {"json"};
 };
 
@@ -46,6 +47,7 @@ public:
     gw_opts.callbacks = std::move(opts.callbacks);
     gw_opts.capabilities = opts.capabilities;
     gw_opts.sink_channel_filter = std::move(opts.channel_filter);
+    gw_opts.qos_classifier = std::move(opts.qos_classifier);
 
     auto result = foxglove::RemoteAccessGateway::create(std::move(gw_opts));
     if (!result.has_value()) {
