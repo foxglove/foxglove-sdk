@@ -50,7 +50,7 @@ const SYSINFO_JSON_SCHEMA: &str = r#"{
       "type": "number",
       "description": "CPU usage for the SDK process, as a percent of total system CPU capacity (0.0 to 100.0). 100.0 means the process is using all logical CPUs at full utilization."
     },
-    "process_busy_cpu_cores": {
+    "process_cpu_cores": {
       "type": "number",
       "description": "CPU usage for the SDK process, expressed in core-equivalents (0.0 to num_cpus). 1.0 means a single logical CPU is fully utilized."
     },
@@ -58,7 +58,7 @@ const SYSINFO_JSON_SCHEMA: &str = r#"{
       "type": "number",
       "description": "Total CPU usage across all logical CPUs on the system, as a percent (0.0 to 100.0)."
     },
-    "total_busy_cpu_cores": {
+    "total_cpu_cores": {
       "type": "number",
       "description": "Total CPU usage across the system, expressed in core-equivalents (0.0 to num_cpus). 1.0 means one logical CPU's worth of work is being done."
     },
@@ -112,14 +112,14 @@ pub(crate) struct SystemInfo {
     /// (0.0 to `num_cpus`).
     ///
     /// 1.0 means a single logical CPU is fully utilized.
-    pub process_busy_cpu_cores: f64,
+    pub process_cpu_cores: f64,
     /// Total CPU usage across all logical CPUs on the system, as a percent (0.0 to 100.0).
     pub total_cpu_percent: f64,
     /// Total CPU usage across the system, expressed in core-equivalents
     /// (0.0 to `num_cpus`).
     ///
     /// 1.0 means one logical CPU's worth of work is being done.
-    pub total_busy_cpu_cores: f64,
+    pub total_cpu_cores: f64,
     /// Number of logical CPUs on the system.
     pub num_cpus: u32,
     /// Total physical memory on the system, in bytes.
@@ -340,22 +340,22 @@ async fn run_publisher(channel: Channel<SystemInfo>, refresh_interval: Duration)
         // CPU usage as a 0-100 percent of total capacity. Convert both to a
         // common pair of representations: a percent of total system capacity
         // and an equivalent number of busy cores.
-        let process_busy_cpu_cores = f64::from(process_cpu_per_core_percent) / 100.0;
+        let process_cpu_cores = f64::from(process_cpu_per_core_percent) / 100.0;
         let process_cpu_percent = if num_cpus > 0 {
             f64::from(process_cpu_per_core_percent) / f64::from(num_cpus)
         } else {
             0.0
         };
         let total_cpu_percent = f64::from(system.global_cpu_usage());
-        let total_busy_cpu_cores = total_cpu_percent * f64::from(num_cpus) / 100.0;
+        let total_cpu_cores = total_cpu_percent * f64::from(num_cpus) / 100.0;
 
         let info = SystemInfo {
             process_memory: process_memory as f64,
             process_virtual_memory: process_virtual_memory as f64,
             process_cpu_percent,
-            process_busy_cpu_cores,
+            process_cpu_cores,
             total_cpu_percent,
-            total_busy_cpu_cores,
+            total_cpu_cores,
             num_cpus,
             total_memory: system.total_memory() as f64,
             used_memory: system.used_memory() as f64,
@@ -395,9 +395,9 @@ mod tests {
             process_memory: 0.0,
             process_virtual_memory: 0.0,
             process_cpu_percent: 0.0,
-            process_busy_cpu_cores: 0.0,
+            process_cpu_cores: 0.0,
             total_cpu_percent: 0.0,
-            total_busy_cpu_cores: 0.0,
+            total_cpu_cores: 0.0,
             num_cpus: 0,
             total_memory: 0.0,
             used_memory: 0.0,
@@ -436,9 +436,9 @@ mod tests {
             process_memory: 1.0,
             process_virtual_memory: 2.0,
             process_cpu_percent: 3.0,
-            process_busy_cpu_cores: 3.5,
+            process_cpu_cores: 3.5,
             total_cpu_percent: 4.0,
-            total_busy_cpu_cores: 4.5,
+            total_cpu_cores: 4.5,
             num_cpus: 5,
             total_memory: 6.0,
             used_memory: 7.0,
