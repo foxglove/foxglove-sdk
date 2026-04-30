@@ -200,21 +200,16 @@ impl Sink for RemoteAccessSession {
     ) -> std::result::Result<(), FoxgloveError> {
         let channel_id = channel.id();
 
-        // Collect subscriber identities under the session-state lock and
-        // release it before broadcasting. Two races are possible between the
-        // collect and the registry resolve, both benign:
-        //   1. The participant has been removed and not replaced — the resolve
-        //      misses and the message is dropped (their control queue has
-        //      already been drained anyway).
-        //   2. The participant has been removed and a same-identity reconnect
-        //      has registered in their place. The resolve returns the new
-        //      attempt, which receives a MessageData for a channel it never
-        //      subscribed to. The channel ID is session-scoped (already
-        //      advertised on this session), so the viewer drops the unknown
-        //      subscription and continues. Resolution is keyed on
-        //      ParticipantIdentity, so this can never deliver data across
-        //      identities — only the same logical user across a reconnect.
-        let reliable_subscribers = {
+        // Resolve identities to Arc<Participant> while still holding the
+        // channel_registry read lock. Doing so closes a same-identity reconnect
+        // race that would otherwise let a freshly-registered attempt 2 receive
+        // a MessageData on a channel it never subscribed to: cleanup of
+        // attempt 1 needs channel_registry.write(), which can't run while we
+        // hold the read, and subscription_lock serializes attempt 2's add
+        // behind that cleanup. The lock-ordering invariant introduced here is
+        // channel_registry → participant_registry; no other path takes them
+        // in the opposite nested order.
+        let reliable_recipients = {
             let state = self.channel_registry.read();
 
             // Video track publisher: stays inside the state lock since the
@@ -224,26 +219,25 @@ impl Sink for RemoteAccessSession {
             }
 
             if !state.has_data_subscribers(&channel_id) {
-                None
+                Vec::new()
             } else if state.qos_profile(&channel_id).reliability == Reliability::Reliable {
-                Some(state.data_subscriber_identities(&channel_id))
+                let identities = state.data_subscriber_identities(&channel_id);
+                self.participant_registry.resolve_identities(identities)
             } else {
                 // Lossy channels: send via the eagerly-published data track
                 // inline, while we still hold the state read lock.
                 if let Some(track) = state.get_subscribed_data_track(&channel_id) {
                     track.log(channel_id, msg, metadata);
                 }
-                None
+                Vec::new()
             }
         };
 
         // Reliable channels: send MessageData via the control bytestream.
-        // Batch-resolve identities so we take the registry lock once rather
-        // than per-subscriber.
-        if let Some(subscribers) = reliable_subscribers {
+        if !reliable_recipients.is_empty() {
             let message = MessageData::new(u64::from(channel_id), metadata.log_time, msg);
             let encoded = encode_binary_message(&message);
-            for participant in self.participant_registry.resolve_identities(subscribers) {
+            for participant in reliable_recipients {
                 participant.send_control(encoded.clone());
             }
         }
