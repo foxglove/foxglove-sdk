@@ -26,7 +26,7 @@ const DEFAULT_FETCH_ASSET_PER_PARTICIPANT: usize = 32;
 /// Each participant has an identity, a per-participant control plane queue, and
 /// rate-limiting semaphores. The actual byte-stream writer lives in a dedicated
 /// flush-task (spawned by `Participant::spawn`), not in this struct.
-pub(crate) struct Participant {
+pub(super) struct Participant {
     /// Locally-significant identifier for this particular instance of this participant.
     client_id: ClientId,
     /// LiveKit participant identity (stable across disconnect + reconnect).
@@ -190,7 +190,7 @@ impl Participant {
 
     /// Cancel this participant's flush-task. The task will exit at the next
     /// `select!` iteration.
-    pub(crate) fn cancel(&self) {
+    pub(super) fn cancel(&self) {
         self.cancel.cancel();
     }
 
@@ -203,7 +203,7 @@ impl Participant {
     /// per physical connection instance — used to disambiguate a stale
     /// `ParticipantDisconnected` from a legitimate disconnect when the same
     /// identity has reconnected.
-    pub(crate) fn participant_sid(&self) -> &ParticipantSid {
+    pub(super) fn participant_sid(&self) -> &ParticipantSid {
         &self.participant_sid
     }
 
@@ -211,14 +211,14 @@ impl Participant {
     /// connection instance. Used by the participant registry to reject a
     /// stale same-identity registration whose `joined_at` precedes the
     /// currently stored instance.
-    pub(crate) fn joined_at(&self) -> i64 {
+    pub(super) fn joined_at(&self) -> i64 {
         self.joined_at
     }
 
     /// Try to queue a control plane message. Returns `false` if the queue is
     /// full and the caller should trigger a participant reset.
     #[must_use]
-    pub(crate) fn try_queue_control(&self, data: Bytes) -> bool {
+    pub(super) fn try_queue_control(&self, data: Bytes) -> bool {
         match self.control_tx.try_send(data) {
             Ok(()) => true,
             Err(flume::TrySendError::Full(_)) => {
@@ -240,7 +240,7 @@ impl Participant {
     /// Queue a control plane message, requesting a participant reset if the
     /// queue is full. Also cancels the per-participant token so the flush-task
     /// stops immediately — no point draining messages for a client being disconnected.
-    pub(crate) fn send_control(&self, data: Bytes) {
+    pub(super) fn send_control(&self, data: Bytes) {
         if !self.try_queue_control(data) {
             self.cancel.cancel();
             self.pending_resets
@@ -251,14 +251,14 @@ impl Participant {
     }
 
     /// Send a fetch asset response to the participant via the control plane queue.
-    pub(crate) fn send_asset_response(&self, data: &[u8], request_id: u32) {
+    pub(super) fn send_asset_response(&self, data: &[u8], request_id: u32) {
         self.send_control(encode_binary_message(&FetchAssetResponse::asset_data(
             request_id, data,
         )));
     }
 
     /// Send a fetch asset error to the participant via the control plane queue.
-    pub(crate) fn send_asset_error(&self, error: &str, request_id: u32) {
+    pub(super) fn send_asset_error(&self, error: &str, request_id: u32) {
         self.send_control(encode_binary_message(&FetchAssetResponse::error_message(
             request_id, error,
         )));
@@ -285,7 +285,7 @@ impl std::fmt::Display for Participant {
 /// Owned by the per-participant flush-task, not by `Participant` itself.
 ///
 /// Mocked with a `TestByteStreamWriter` for tests.
-pub(crate) enum ParticipantWriter {
+pub(super) enum ParticipantWriter {
     Livekit(ByteStreamWriter),
     #[allow(dead_code)]
     #[cfg(test)]
@@ -308,14 +308,14 @@ impl ParticipantWriter {
 /// Constructs a `ParticipantSid` for tests. LiveKit requires the `PA_`
 /// prefix; anything stable+unique works for identifying distinct instances.
 #[cfg(test)]
-pub(crate) fn test_sid(label: &str) -> ParticipantSid {
+pub(super) fn test_sid(label: &str) -> ParticipantSid {
     ParticipantSid::try_from(format!("PA_{label}"))
         .expect("test_sid label should form a valid ParticipantSid")
 }
 
 #[cfg(test)]
 #[derive(Default)]
-pub(crate) struct TestByteStreamWriter {
+pub(super) struct TestByteStreamWriter {
     writes: parking_lot::Mutex<Vec<Bytes>>,
 }
 
@@ -326,7 +326,7 @@ impl TestByteStreamWriter {
     }
 
     #[allow(dead_code)]
-    pub(crate) fn writes(&self) -> Vec<Bytes> {
+    pub(super) fn writes(&self) -> Vec<Bytes> {
         std::mem::take(&mut self.writes.lock())
     }
 }

@@ -83,21 +83,21 @@ impl ConnectionStatus {
 /// Parameters for constructing a [`RemoteAccessConnection`].
 ///
 /// This should be constructed from the [`crate::remote_access::Gateway`] builder.
-pub(crate) struct ConnectionParams {
-    pub name: Option<String>,
-    pub device_token: String,
-    pub foxglove_api_url: Option<String>,
-    pub foxglove_api_timeout: Option<Duration>,
-    pub listener: Option<Arc<dyn super::Listener>>,
-    pub capabilities: Vec<Capability>,
-    pub supported_encodings: Option<IndexSet<String>>,
-    pub fetch_asset_handler: Option<Arc<dyn AssetHandler<Client>>>,
-    pub runtime: Handle,
-    pub channel_filter: Option<Arc<dyn SinkChannelFilter>>,
-    pub qos_classifier: Option<Arc<dyn QosClassifier>>,
-    pub server_info: Option<HashMap<String, String>>,
-    pub message_backlog_size: Option<usize>,
-    pub context: Weak<Context>,
+pub(super) struct ConnectionParams {
+    pub(super) name: Option<String>,
+    pub(super) device_token: String,
+    pub(super) foxglove_api_url: Option<String>,
+    pub(super) foxglove_api_timeout: Option<Duration>,
+    pub(super) listener: Option<Arc<dyn super::Listener>>,
+    pub(super) capabilities: Vec<Capability>,
+    pub(super) supported_encodings: Option<IndexSet<String>>,
+    pub(super) fetch_asset_handler: Option<Arc<dyn AssetHandler<Client>>>,
+    pub(super) runtime: Handle,
+    pub(super) channel_filter: Option<Arc<dyn SinkChannelFilter>>,
+    pub(super) qos_classifier: Option<Arc<dyn QosClassifier>>,
+    pub(super) server_info: Option<HashMap<String, String>>,
+    pub(super) message_backlog_size: Option<usize>,
+    pub(super) context: Weak<Context>,
 }
 
 /// Pair of device metadata (fetched once via `fetch_device_info`) and the authenticated API
@@ -118,7 +118,7 @@ struct WakeSignal {
 
 /// RemoteAccessConnection manages the connected [`RemoteAccessSession`] to the LiveKit server,
 /// and holds the parameters and other state that outlive a session.
-pub(crate) struct RemoteAccessConnection {
+pub(super) struct RemoteAccessConnection {
     name: Option<String>,
     device_token: String,
     foxglove_api_url: Option<String>,
@@ -653,7 +653,7 @@ impl RemoteAccessConnection {
     /// This method will fail if the services capability was not declared, if a service name is
     /// not unique, or if a service has no request encoding and the connection has no supported
     /// encodings.
-    pub(crate) fn add_services(
+    pub(super) fn add_services(
         &self,
         new_services: Vec<Service>,
     ) -> std::result::Result<(), FoxgloveError> {
@@ -710,7 +710,7 @@ impl RemoteAccessConnection {
     /// Removes services by name.
     ///
     /// Unrecognized service names are silently ignored.
-    pub(crate) fn remove_services(&self, names: impl IntoIterator<Item = impl AsRef<str>>) {
+    pub(super) fn remove_services(&self, names: impl IntoIterator<Item = impl AsRef<str>>) {
         let removed_ids: Vec<ServiceId> = {
             let mut services = self.services.write();
             names
@@ -727,7 +727,7 @@ impl RemoteAccessConnection {
         }
     }
 
-    pub(crate) fn shutdown(&self) {
+    pub(super) fn shutdown(&self) {
         self.cancellation_token.cancel();
     }
 }
