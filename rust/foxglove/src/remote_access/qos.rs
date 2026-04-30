@@ -23,7 +23,7 @@ pub enum Reliability {
 /// Construct with [`QosProfile::default()`] or [`QosProfile::builder()`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct QosProfile {
-    pub(crate) reliability: Reliability,
+    pub(super) reliability: Reliability,
 }
 
 impl QosProfile {
@@ -69,7 +69,7 @@ pub trait QosClassifier: Sync + Send {
     fn classify(&self, channel: &ChannelDescriptor) -> QosProfile;
 }
 
-pub(crate) struct QosClassifierFn<F>(pub F)
+pub(super) struct QosClassifierFn<F>(pub(super) F)
 where
     F: Fn(&ChannelDescriptor) -> QosProfile + Sync + Send;
 

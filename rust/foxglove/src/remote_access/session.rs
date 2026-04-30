@@ -13,7 +13,6 @@ use livekit::{
 };
 use livekit::{StreamWriter, prelude::*};
 use parking_lot::RwLock;
-use semver::Version;
 use smallvec::SmallVec;
 use tokio::io::AsyncReadExt;
 use tokio::runtime::Handle;
@@ -53,24 +52,24 @@ use crate::{
 };
 
 mod data_track;
-pub(crate) use data_track::DataTrack;
+pub(super) use data_track::DataTrack;
 mod video_track;
-pub(crate) use video_track::{
+pub(super) use video_track::{
     VideoInputSchema, VideoMetadata, VideoPublisher, get_video_input_schema,
 };
 
 #[derive(Debug)]
-pub(crate) struct SessionStats {
-    pub participants: usize,
-    pub subscriptions: usize,
-    pub video_tracks: usize,
+struct SessionStats {
+    participants: usize,
+    subscriptions: usize,
+    video_tracks: usize,
 }
 
 const CONTROL_CHANNEL_TOPIC: &str = "control";
 const MESSAGE_FRAME_SIZE: usize = 5; // 1 byte opcode + u32 LE length
 const MAX_MESSAGE_SIZE: usize = 16 * 1024 * 1024; // 16 MiB
 
-pub(crate) const DEFAULT_MESSAGE_BACKLOG_SIZE: usize = 1024;
+pub(super) const DEFAULT_MESSAGE_BACKLOG_SIZE: usize = 1024;
 
 /// The operation code for the message framing for protocol v2.
 /// Distinguishes between frames containing JSON messages vs binary messages.
@@ -135,7 +134,7 @@ fn build_advertise_services_msg(services: &[Arc<Service>]) -> Option<AdvertiseSe
 ///
 /// The Sink impl is at the RemoteAccessSession level (not per-participant)
 /// so that it can deliver messages via multi-cast to multiple participants.
-pub(crate) struct RemoteAccessSession {
+pub(super) struct RemoteAccessSession {
     sink_id: SinkId,
     room: Room,
     context: Weak<Context>,
@@ -346,27 +345,27 @@ impl Sink for RemoteAccessSession {
     }
 }
 
-pub(crate) struct SessionParams {
-    pub room: Room,
-    pub context: Weak<Context>,
-    pub channel_filter: Option<Arc<dyn SinkChannelFilter>>,
-    pub qos_classifier: Option<Arc<dyn QosClassifier>>,
-    pub listener: Option<Arc<dyn Listener>>,
-    pub capabilities: Vec<Capability>,
-    pub supported_encodings: IndexSet<String>,
-    pub runtime: Handle,
-    pub cancellation_token: CancellationToken,
-    pub message_backlog_size: usize,
-    pub services: Arc<parking_lot::RwLock<ServiceMap>>,
-    pub connection_graph: Arc<parking_lot::Mutex<ConnectionGraph>>,
-    pub remote_access_session_id: Option<String>,
-    pub fetch_asset_handler: Option<Arc<dyn AssetHandler<Client>>>,
-    pub server_info: ServerInfo,
-    pub device_wait_for_viewer: Option<Duration>,
+pub(super) struct SessionParams {
+    pub(super) room: Room,
+    pub(super) context: Weak<Context>,
+    pub(super) channel_filter: Option<Arc<dyn SinkChannelFilter>>,
+    pub(super) qos_classifier: Option<Arc<dyn QosClassifier>>,
+    pub(super) listener: Option<Arc<dyn Listener>>,
+    pub(super) capabilities: Vec<Capability>,
+    pub(super) supported_encodings: IndexSet<String>,
+    pub(super) runtime: Handle,
+    pub(super) cancellation_token: CancellationToken,
+    pub(super) message_backlog_size: usize,
+    pub(super) services: Arc<parking_lot::RwLock<ServiceMap>>,
+    pub(super) connection_graph: Arc<parking_lot::Mutex<ConnectionGraph>>,
+    pub(super) remote_access_session_id: Option<String>,
+    pub(super) fetch_asset_handler: Option<Arc<dyn AssetHandler<Client>>>,
+    pub(super) server_info: ServerInfo,
+    pub(super) device_wait_for_viewer: Option<Duration>,
 }
 
 impl RemoteAccessSession {
-    pub(crate) fn new(params: SessionParams) -> Self {
+    pub(super) fn new(params: SessionParams) -> Self {
         let (video_metadata_tx, video_metadata_rx) = tokio::sync::watch::channel(());
         let participant_registry = ParticipantRegistry::new(params.message_backlog_size);
         Self {
@@ -401,19 +400,19 @@ impl RemoteAccessSession {
         self.capabilities.contains(&cap)
     }
 
-    pub(crate) fn remote_access_session_id(&self) -> Option<&str> {
+    pub(super) fn remote_access_session_id(&self) -> Option<&str> {
         self.remote_access_session_id.as_deref()
     }
 
-    pub(crate) fn sink_id(&self) -> SinkId {
+    pub(super) fn sink_id(&self) -> SinkId {
         self.sink_id
     }
 
-    pub(crate) fn room(&self) -> &Room {
+    pub(super) fn room(&self) -> &Room {
         &self.room
     }
 
-    pub(crate) fn stats(&self) -> SessionStats {
+    fn stats(&self) -> SessionStats {
         let state = self.state.read();
         SessionStats {
             participants: self.participant_registry.participant_count(),
@@ -447,7 +446,7 @@ impl RemoteAccessSession {
     /// Watches for video metadata changes and re-advertises affected channels.
     ///
     /// Runs until the cancellation token fires.
-    pub(crate) async fn run_video_metadata_watcher(session: Arc<Self>) {
+    pub(super) async fn run_video_metadata_watcher(session: Arc<Self>) {
         let mut video_metadata: HashMap<ChannelId, VideoMetadata> = HashMap::new();
         let mut video_metadata_rx = session.video_metadata_rx.clone();
         loop {
@@ -463,7 +462,7 @@ impl RemoteAccessSession {
 
     /// Cancel the session's `CancellationToken`, signaling all session-scoped
     /// tasks to stop.
-    pub(crate) fn cancel(&self) {
+    pub(super) fn cancel(&self) {
         self.cancellation_token.cancel();
     }
 
@@ -472,7 +471,7 @@ impl RemoteAccessSession {
     ///
     /// The caller must ensure that `handle_room_events` has stopped so no new
     /// `remove_participant` / `reset_participant` calls can race with us.
-    pub(crate) async fn close(&self) {
+    pub(super) async fn close(&self) {
         // Cancel flush-tasks and await them before tearing down the transport.
         // In-flight writes either complete or fail once `room.close()` runs.
         self.participant_registry.shutdown().await;
@@ -486,7 +485,7 @@ impl RemoteAccessSession {
     }
 
     /// Read framed messages from a client byte stream on the control channel.
-    pub(crate) async fn handle_byte_stream_from_client(
+    pub(super) async fn handle_byte_stream_from_client(
         self: &Arc<Self>,
         participant_identity: ParticipantIdentity,
         reader: ByteStreamReader,
@@ -890,7 +889,7 @@ impl RemoteAccessSession {
 
     /// Send an incompatible protocol version error to a participant that will not be added to the
     /// session. Opens a one-shot byte stream, writes the error status, and closes it.
-    pub(crate) async fn send_incompatible_version_error(
+    pub(super) async fn send_incompatible_version_error(
         &self,
         participant_id: &ParticipantIdentity,
         attributes: &std::collections::HashMap<String, String>,
@@ -1003,12 +1002,11 @@ impl RemoteAccessSession {
     /// `on_client_unadvertise` callbacks fire). This handles the case where
     /// LiveKit emits the reconnect's `ParticipantActive` *before* the
     /// prior instance's `ParticipantDisconnected`.
-    pub(crate) async fn add_participant(
+    pub(super) async fn add_participant(
         self: &Arc<Self>,
         participant_id: ParticipantIdentity,
         participant_sid: ParticipantSid,
         joined_at: i64,
-        protocol_version: Version,
     ) -> Result<(), Box<RemoteAccessError>> {
         // Gate on the registry *before* opening the stream: `stream_bytes`
         // is an RPC that should not be wasted on an already-registered
@@ -1069,7 +1067,6 @@ impl RemoteAccessSession {
             participant_id.clone(),
             participant_sid.clone(),
             joined_at,
-            protocol_version,
             ParticipantWriter::Livekit(stream),
             &self.cancellation_token,
             initial_messages,
@@ -1099,7 +1096,7 @@ impl RemoteAccessSession {
     /// instance has a *different* SID, so a stale removal misses here rather
     /// than tearing down the replacement. Callers handle the `None` case
     /// according to their context.
-    pub(crate) fn remove_participant(
+    pub(super) fn remove_participant(
         self: &Arc<Self>,
         target_sid: &ParticipantSid,
     ) -> Option<Arc<Participant>> {
@@ -1164,7 +1161,7 @@ impl RemoteAccessSession {
     ///
     /// Returns when the room is disconnected, the event stream ends, or the session has been
     /// idle (no active participants) for longer than `device_wait_for_viewer`.
-    pub(crate) async fn handle_room_events(
+    pub(super) async fn handle_room_events(
         self: &Arc<Self>,
         mut room_events: tokio::sync::mpsc::UnboundedReceiver<RoomEvent>,
     ) {
@@ -1273,7 +1270,7 @@ impl RemoteAccessSession {
                     "participant active in room"
                 );
                 if let Err(e) = self
-                    .add_participant(participant_identity, sid, joined_at, version)
+                    .add_participant(participant_identity, sid, joined_at)
                     .await
                 {
                     error!(remote_access_session_id, error = %e, "failed to add participant: {e}");
@@ -1545,10 +1542,7 @@ impl RemoteAccessSession {
             version = %version,
             "resetting participant after control-plane failure",
         );
-        if let Err(e) = self
-            .add_participant(participant_id, sid, joined_at, version)
-            .await
-        {
+        if let Err(e) = self.add_participant(participant_id, sid, joined_at).await {
             error!(
                 remote_access_session_id,
                 error = %e,
@@ -1558,7 +1552,7 @@ impl RemoteAccessSession {
     }
 
     /// Periodically logs session statistics for monitoring and debugging.
-    pub(crate) async fn log_periodic_stats(&self) {
+    pub(super) async fn log_periodic_stats(&self) {
         let remote_access_session_id = self.remote_access_session_id();
         let period = Duration::from_secs(30);
         let mut interval = tokio::time::interval_at(tokio::time::Instant::now() + period, period);
@@ -1639,7 +1633,7 @@ impl RemoteAccessSession {
     }
 
     /// Broadcasts service advertisements for the given service IDs to all connected participants.
-    pub(crate) fn advertise_new_services(&self, service_ids: &[ServiceId]) {
+    pub(super) fn advertise_new_services(&self, service_ids: &[ServiceId]) {
         let services: Vec<_> = {
             let services = self.services.read();
             service_ids
@@ -1653,7 +1647,7 @@ impl RemoteAccessSession {
     }
 
     /// Broadcasts service unadvertisements for the given service IDs to all connected participants.
-    pub(crate) fn unadvertise_services(&self, service_ids: &[ServiceId]) {
+    pub(super) fn unadvertise_services(&self, service_ids: &[ServiceId]) {
         let msg = UnadvertiseServices::new(service_ids.iter().copied().map(u32::from));
         self.broadcast_control(encode_json_message(&msg));
     }
@@ -1887,7 +1881,7 @@ impl RemoteAccessSession {
     }
 
     /// Publish parameter values to all participants subscribed to those parameters.
-    pub(crate) fn publish_parameter_values(&self, parameters: Vec<Parameter>) {
+    pub(super) fn publish_parameter_values(&self, parameters: Vec<Parameter>) {
         if !self.has_capability(Capability::Parameters) {
             error!("Server does not support parameters capability");
             return;
@@ -1928,12 +1922,12 @@ impl RemoteAccessSession {
     }
 
     /// Publish a status message to all connected participants.
-    pub(crate) fn publish_status(&self, status: Status) {
+    pub(super) fn publish_status(&self, status: Status) {
         self.broadcast_control(encode_json_message(&status));
     }
 
     /// Remove status messages by ID from all connected participants.
-    pub(crate) fn remove_status(&self, status_ids: Vec<String>) {
+    pub(super) fn remove_status(&self, status_ids: Vec<String>) {
         let message = RemoveStatus::new(status_ids);
         self.broadcast_control(encode_json_message(&message));
     }
@@ -1998,7 +1992,7 @@ impl RemoteAccessSession {
     }
 
     /// Replaces the connection graph and sends updates to subscribed participants.
-    pub(crate) fn replace_connection_graph(&self, replacement_graph: ConnectionGraph) {
+    pub(super) fn replace_connection_graph(&self, replacement_graph: ConnectionGraph) {
         let mut graph = self.connection_graph.lock();
         let update = graph.update(replacement_graph);
         let encoded = encode_json_message(&update);
@@ -2224,7 +2218,6 @@ mod tests {
         let n = COUNTER.fetch_add(1, Ordering::Relaxed);
         let identity = ParticipantIdentity(name.to_string());
         let sid = crate::remote_access::participant::test_sid(&format!("{name}-{n}"));
-        let version = protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone();
         let (tx, rx) = flume::bounded(16);
         let pending_resets = Arc::new(parking_lot::Mutex::new(HashSet::new()));
         let reset_notify = Arc::new(tokio::sync::Notify::new());
@@ -2232,7 +2225,6 @@ mod tests {
         let participant = Arc::new(Participant::new(
             identity,
             sid,
-            version,
             tx,
             pending_resets,
             reset_notify,
@@ -2454,7 +2446,6 @@ mod tests {
             ParticipantIdentity("test".to_string()),
             test_sid("flush-test"),
             0,
-            protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone(),
             ParticipantWriter::Test(writer.clone()),
             DEFAULT_MESSAGE_BACKLOG_SIZE,
             pending_resets,
@@ -2535,7 +2526,6 @@ mod tests {
     }
 
     fn make_test_participant(queue_size: usize) -> (Participant, flume::Receiver<Bytes>) {
-        let version = protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone();
         let (tx, rx) = flume::bounded::<Bytes>(queue_size);
         let pending_resets = Arc::new(parking_lot::Mutex::new(HashSet::new()));
         let reset_notify = Arc::new(tokio::sync::Notify::new());
@@ -2543,7 +2533,6 @@ mod tests {
         let participant = Participant::new(
             ParticipantIdentity("alice".to_string()),
             crate::remote_access::participant::test_sid("alice"),
-            version,
             tx,
             pending_resets,
             reset_notify,

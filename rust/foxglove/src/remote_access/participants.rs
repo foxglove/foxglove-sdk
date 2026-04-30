@@ -21,7 +21,7 @@ use crate::remote_access::participant::Participant;
 /// and `ParticipantSid`, with each participant's flush-task `JoinHandle`
 /// stored alongside.
 #[derive(Default)]
-pub(crate) struct Participants {
+pub(super) struct Participants {
     by_identity: HashMap<ParticipantIdentity, Arc<Participant>>,
     by_sid: HashMap<ParticipantSid, Arc<Participant>>,
     flush_handles: HashMap<ParticipantIdentity, JoinHandle<()>>,
@@ -61,7 +61,7 @@ impl Participants {
     /// already been removed, will not match here because each connection
     /// instance gets a unique `ParticipantSid` (a same-identity reconnect
     /// has a *different* SID).
-    pub(crate) fn remove_by_sid(&mut self, sid: &ParticipantSid) -> Option<Arc<Participant>> {
+    pub(super) fn remove_by_sid(&mut self, sid: &ParticipantSid) -> Option<Arc<Participant>> {
         let participant = self.by_sid.remove(sid)?;
         let identity = participant.participant_id();
         self.by_identity.remove(identity);
@@ -79,7 +79,7 @@ impl Participants {
     /// Test-only accessor — production reads the index implicitly via
     /// [`remove_by_sid`].
     #[cfg(test)]
-    pub(crate) fn get_by_sid(&self, sid: &ParticipantSid) -> Option<&Arc<Participant>> {
+    fn get_by_sid(&self, sid: &ParticipantSid) -> Option<&Arc<Participant>> {
         self.by_sid.get(sid)
     }
 
@@ -97,7 +97,7 @@ impl Participants {
     /// returns the detached `JoinHandle`s for the caller to await. After
     /// this returns the registry is empty. Parallels [`remove_by_sid`] in
     /// owning the cancel-then-detach lifecycle internally.
-    pub(crate) fn drain(&mut self) -> Vec<JoinHandle<()>> {
+    pub(super) fn drain(&mut self) -> Vec<JoinHandle<()>> {
         for p in self.by_identity.values() {
             p.cancel();
         }
@@ -119,8 +119,6 @@ mod tests {
         let n = COUNTER.fetch_add(1, Ordering::Relaxed);
         let identity = ParticipantIdentity(name.to_string());
         let sid = crate::remote_access::participant::test_sid(&format!("{name}-{n}"));
-        let version =
-            crate::remote_access::protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone();
         let (tx, _rx) = flume::bounded(16);
         let pending_resets = Arc::new(parking_lot::Mutex::new(HashSet::new()));
         let reset_notify = Arc::new(tokio::sync::Notify::new());
@@ -128,7 +126,6 @@ mod tests {
         Arc::new(Participant::new(
             identity,
             sid,
-            version,
             tx,
             pending_resets,
             reset_notify,

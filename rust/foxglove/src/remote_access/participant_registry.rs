@@ -16,7 +16,6 @@ use std::sync::Arc;
 use bytes::Bytes;
 use livekit::id::{ParticipantIdentity, ParticipantSid};
 use parking_lot::{Mutex, RwLock};
-use semver::Version;
 use tokio::sync::Notify;
 use tokio_util::sync::CancellationToken;
 
@@ -25,7 +24,7 @@ use crate::remote_access::participants::Participants;
 
 /// Owns the participant membership state machine: add / remove / lookup, plus
 /// the `pending_resets` channel that lets a flush-task request its own reset.
-pub(crate) struct ParticipantRegistry {
+pub(super) struct ParticipantRegistry {
     /// Map of connected participants and their flush-task join handles.
     participants: RwLock<Participants>,
     /// Set of `ParticipantSid`s pending a reset (disconnect + reconnect).
@@ -39,7 +38,7 @@ pub(crate) struct ParticipantRegistry {
 }
 
 impl ParticipantRegistry {
-    pub(crate) fn new(message_backlog_size: usize) -> Self {
+    pub(super) fn new(message_backlog_size: usize) -> Self {
         Self {
             participants: RwLock::new(Participants::new()),
             pending_resets: Arc::new(Mutex::new(HashSet::new())),
@@ -106,12 +105,11 @@ impl ParticipantRegistry {
     ///   instances, so re-registering an identical `(identity, sid)` pair
     ///   indicates a redundant call rather than a true reconnect.
     #[allow(clippy::too_many_arguments)]
-    pub(crate) fn register_participant<I>(
+    pub(super) fn register_participant<I>(
         &self,
         id: ParticipantIdentity,
         participant_sid: ParticipantSid,
         joined_at: i64,
-        protocol_version: Version,
         writer: ParticipantWriter,
         session_cancel: &CancellationToken,
         initial_messages: I,
@@ -123,7 +121,6 @@ impl ParticipantRegistry {
             id,
             participant_sid,
             joined_at,
-            protocol_version,
             writer,
             self.message_backlog_size,
             self.pending_resets.clone(),
@@ -195,7 +192,7 @@ impl ParticipantRegistry {
     /// handle as part of the removal; the caller is responsible for any
     /// further cleanup (subscription sweep, listener callbacks) via
     /// [`SessionState::cleanup_for_removed_identity`].
-    pub(crate) fn remove_participant(
+    pub(super) fn remove_participant(
         &self,
         target_sid: &ParticipantSid,
     ) -> Option<Arc<Participant>> {
@@ -203,7 +200,7 @@ impl ParticipantRegistry {
     }
 
     /// Returns the participant for the given identity, if any.
-    pub(crate) fn get_participant(&self, id: &ParticipantIdentity) -> Option<Arc<Participant>> {
+    pub(super) fn get_participant(&self, id: &ParticipantIdentity) -> Option<Arc<Participant>> {
         self.participants.read().get_by_identity(id).cloned()
     }
 
@@ -211,7 +208,7 @@ impl ParticipantRegistry {
     /// read lock. Identities with no matching registration are silently
     /// skipped (a participant may have been removed between the identity
     /// snapshot and this call; the missed send is harmless).
-    pub(crate) fn resolve_identities<I>(&self, identities: I) -> Vec<Arc<Participant>>
+    pub(super) fn resolve_identities<I>(&self, identities: I) -> Vec<Arc<Participant>>
     where
         I: IntoIterator<Item = ParticipantIdentity>,
     {
@@ -223,18 +220,18 @@ impl ParticipantRegistry {
     }
 
     /// Returns the number of registered participants.
-    pub(crate) fn participant_count(&self) -> usize {
+    pub(super) fn participant_count(&self) -> usize {
         self.participants.read().len()
     }
 
     /// Clones every currently-registered participant into a `Vec`. Useful for
     /// iterating at broadcast points without holding the read lock.
-    pub(crate) fn collect_participants(&self) -> Vec<Arc<Participant>> {
+    pub(super) fn collect_participants(&self) -> Vec<Arc<Participant>> {
         self.participants.read().iter().cloned().collect()
     }
 
     /// Drains the pending-reset set and returns its contents.
-    pub(crate) fn drain_pending_resets(&self) -> HashSet<ParticipantSid> {
+    pub(super) fn drain_pending_resets(&self) -> HashSet<ParticipantSid> {
         std::mem::take(&mut *self.pending_resets.lock())
     }
 
@@ -243,13 +240,13 @@ impl ParticipantRegistry {
     /// is only written by flush-tasks on write failure and by
     /// `Participant::send_control` on queue overflow.
     #[cfg(test)]
-    pub(crate) fn pending_resets(&self) -> &Arc<Mutex<HashSet<ParticipantSid>>> {
+    pub(super) fn pending_resets(&self) -> &Arc<Mutex<HashSet<ParticipantSid>>> {
         &self.pending_resets
     }
 
     /// Shared reference to the reset notifier, for use by the session's event
     /// loop `select!`.
-    pub(crate) fn reset_notify(&self) -> &Arc<Notify> {
+    pub(super) fn reset_notify(&self) -> &Arc<Notify> {
         &self.reset_notify
     }
 
@@ -259,7 +256,7 @@ impl ParticipantRegistry {
     /// For use at session teardown only — the caller must ensure no further
     /// `register_participant` / `remove_participant` / `reset_participant`
     /// calls can race with this one.
-    pub(crate) async fn shutdown(&self) {
+    pub(super) async fn shutdown(&self) {
         let handles = self.participants.write().drain();
         let _ = futures_util::future::join_all(handles).await;
     }
@@ -270,7 +267,6 @@ mod tests {
     use super::*;
 
     use crate::remote_access::participant::{ParticipantWriter, TestByteStreamWriter, test_sid};
-    use crate::remote_access::protocol_version;
 
     fn make_registry() -> ParticipantRegistry {
         ParticipantRegistry::new(16)
@@ -285,14 +281,12 @@ mod tests {
         let registry = make_registry();
         let cancel = CancellationToken::new();
         let id = ParticipantIdentity("alice".to_string());
-        let version = protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone();
 
         let sid = test_sid("alice-1");
         let prior = registry.register_participant(
             id.clone(),
             sid.clone(),
             1_000,
-            version,
             test_writer(),
             &cancel,
             [],
@@ -312,21 +306,12 @@ mod tests {
         let registry = make_registry();
         let cancel = CancellationToken::new();
         let id = ParticipantIdentity("alice".to_string());
-        let version = protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone();
         let sid_1 = test_sid("alice-1");
         let sid_2 = test_sid("alice-2");
 
         assert!(
             registry
-                .register_participant(
-                    id.clone(),
-                    sid_1.clone(),
-                    1_000,
-                    version.clone(),
-                    test_writer(),
-                    &cancel,
-                    [],
-                )
+                .register_participant(id.clone(), sid_1.clone(), 1_000, test_writer(), &cancel, [],)
                 .is_none()
         );
         let original = registry.get_participant(&id).expect("first present");
@@ -334,15 +319,7 @@ mod tests {
         drop(original);
 
         let prior = registry
-            .register_participant(
-                id.clone(),
-                sid_2.clone(),
-                2_000,
-                version,
-                test_writer(),
-                &cancel,
-                [],
-            )
+            .register_participant(id.clone(), sid_2.clone(), 2_000, test_writer(), &cancel, [])
             .expect("prior registration must be returned for cleanup");
         assert_eq!(prior.client_id(), original_client_id);
         assert_eq!(prior.participant_sid(), &sid_1);
@@ -360,20 +337,11 @@ mod tests {
         let registry = make_registry();
         let cancel = CancellationToken::new();
         let id = ParticipantIdentity("alice".to_string());
-        let version = protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone();
         let sid = test_sid("alice-1");
 
         assert!(
             registry
-                .register_participant(
-                    id.clone(),
-                    sid.clone(),
-                    1_000,
-                    version.clone(),
-                    test_writer(),
-                    &cancel,
-                    [],
-                )
+                .register_participant(id.clone(), sid.clone(), 1_000, test_writer(), &cancel, [],)
                 .is_none()
         );
         let original = registry.get_participant(&id).expect("first present");
@@ -384,7 +352,6 @@ mod tests {
             id.clone(),
             sid.clone(),
             1_000,
-            version,
             test_writer(),
             &cancel,
             [],
@@ -424,22 +391,13 @@ mod tests {
         let registry = make_registry();
         let cancel = CancellationToken::new();
         let id = ParticipantIdentity("viewer-1".to_string());
-        let version = protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone();
         let sid_1 = test_sid("viewer-1-attempt-1");
         let sid_2 = test_sid("viewer-1-attempt-2");
 
         // Step 1: attempt 1 joins.
         assert!(
             registry
-                .register_participant(
-                    id.clone(),
-                    sid_1.clone(),
-                    1_000,
-                    version.clone(),
-                    test_writer(),
-                    &cancel,
-                    [],
-                )
+                .register_participant(id.clone(), sid_1.clone(), 1_000, test_writer(), &cancel, [],)
                 .is_none()
         );
         let attempt_1 = registry.get_participant(&id).expect("attempt 1 present");
@@ -455,15 +413,7 @@ mod tests {
         assert!(registry.remove_participant(&sid_1).is_some());
         assert!(
             registry
-                .register_participant(
-                    id.clone(),
-                    sid_2.clone(),
-                    2_000,
-                    version,
-                    test_writer(),
-                    &cancel,
-                    [],
-                )
+                .register_participant(id.clone(), sid_2.clone(), 2_000, test_writer(), &cancel, [],)
                 .is_none()
         );
 
@@ -511,7 +461,6 @@ mod tests {
         let registry = make_registry();
         let cancel = CancellationToken::new();
         let id = ParticipantIdentity("viewer-1".to_string());
-        let version = protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone();
         let sid_1 = test_sid("viewer-1-attempt-1");
         let sid_2 = test_sid("viewer-1-attempt-2");
 
@@ -520,7 +469,6 @@ mod tests {
             id.clone(),
             sid_1.clone(),
             1_000,
-            version.clone(),
             test_writer(),
             &cancel,
             [],
@@ -535,15 +483,7 @@ mod tests {
         // `register_participant` for the new instance; the registry must
         // atomically replace the prior registration and return it.
         let prior = registry
-            .register_participant(
-                id.clone(),
-                sid_2.clone(),
-                2_000,
-                version,
-                test_writer(),
-                &cancel,
-                [],
-            )
+            .register_participant(id.clone(), sid_2.clone(), 2_000, test_writer(), &cancel, [])
             .expect("prior registration must be returned for cleanup");
         assert_eq!(prior.participant_sid(), &sid_1);
         assert_eq!(prior.client_id(), client_id_1);
@@ -570,7 +510,6 @@ mod tests {
         let registry = make_registry();
         let cancel = CancellationToken::new();
         let id = ParticipantIdentity("viewer-1".to_string());
-        let version = protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone();
         let sid_old = test_sid("viewer-1-attempt-1");
         let sid_new = test_sid("viewer-1-attempt-2");
 
@@ -581,7 +520,6 @@ mod tests {
                     id.clone(),
                     sid_new.clone(),
                     2_000,
-                    version.clone(),
                     test_writer(),
                     &cancel,
                     [],
@@ -599,7 +537,6 @@ mod tests {
             id.clone(),
             sid_old.clone(),
             1_000,
-            version,
             test_writer(),
             &cancel,
             [],
@@ -630,7 +567,6 @@ mod tests {
         let registry = make_registry();
         let cancel = CancellationToken::new();
         let id = ParticipantIdentity("viewer-1".to_string());
-        let version = protocol_version::REMOTE_ACCESS_PROTOCOL_VERSION.clone();
         let sid_1 = test_sid("viewer-1-attempt-1");
         let sid_2 = test_sid("viewer-1-attempt-2");
         let sid_3 = test_sid("viewer-1-attempt-3");
@@ -639,7 +575,6 @@ mod tests {
             id.clone(),
             sid_1.clone(),
             1_000,
-            version.clone(),
             test_writer(),
             &cancel,
             [],
@@ -650,7 +585,6 @@ mod tests {
             id.clone(),
             sid_2.clone(),
             1_000,
-            version.clone(),
             test_writer(),
             &cancel,
             [],
@@ -672,7 +606,6 @@ mod tests {
             id.clone(),
             sid_3.clone(),
             2_000,
-            version,
             test_writer(),
             &cancel,
             [],

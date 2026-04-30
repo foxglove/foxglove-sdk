@@ -4,7 +4,7 @@ use tracing::debug;
 const EWMA_ALPHA: f64 = 0.3;
 
 /// Tracks round-trip time measurements with an EWMA, mirroring the app-side approach.
-pub(crate) struct RttTracker {
+pub(super) struct RttTracker {
     label: &'static str,
     first_sample_excluded: bool,
     /// Most recent raw RTT sample, retained for future stats/diagnostics reporting.
