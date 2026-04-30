@@ -134,6 +134,8 @@ Parameters are provided to configure the behavior of the bridge. These parameter
 - **sysinfo**: Publish process and system statistics (CPU, memory, etc.) on a channel. Defaults to `true`.
 - **sysinfo_topic**: Topic name for system info messages. Defaults to `/foxglove_bridge/sysinfo`.
 - **sysinfo_refresh_interval**: Refresh interval for system info messages in milliseconds. Minimum 200ms. Defaults to `500`.
+- **remote_access**: Enable the remote access gateway, allowing the bridge to be reached through Foxglove's platform without exposing a port on the device. Requires the bridge to be built with `FOXGLOVE_BRIDGE_REMOTE_ACCESS=ON` (the default for our published Docker images). Defaults to `false`.
+- **device_token**: Foxglove device token used to authenticate with the Foxglove platform when `remote_access` is enabled. If empty, the bridge falls back to the `FOXGLOVE_DEVICE_TOKEN` environment variable.
 
 #### Capabilities
 
