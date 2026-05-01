@@ -236,63 +236,54 @@ ViewerConnection::ViewerConnection(
 ViewerConnection ViewerConnection::connect(
   const std::string& room_name, const std::string& identity
 ) {
-  auto outer_deadline = std::chrono::steady_clock::now() + EVENT_TIMEOUT;
+  auto token = generate_token(room_name, identity);
+  auto delegate = std::make_shared<TestRoomDelegate>();
+  auto room = std::make_unique<livekit::Room>();
+  room->setDelegate(delegate.get());
 
-  while (true) {
-    auto token = generate_token(room_name, identity);
-    auto delegate = std::make_shared<TestRoomDelegate>();
-    auto room = std::make_unique<livekit::Room>();
-    room->setDelegate(delegate.get());
-
-    auto delegate_weak = std::weak_ptr<TestRoomDelegate>(delegate);
-    room->registerByteStreamHandler(
-      "control",
-      [delegate_weak](
-        std::shared_ptr<livekit::ByteStreamReader> reader, const std::string& participant_identity
-      ) {
-        if (auto d = delegate_weak.lock()) {
-          ViewerEvent ve;
-          ve.type = ViewerEvent::Type::ByteStreamOpened;
-          ve.topic = reader->info().topic;
-          ve.identity = participant_identity;
-          ve.reader = std::move(reader);
-          d->push_event(std::move(ve));
-        }
+  auto delegate_weak = std::weak_ptr<TestRoomDelegate>(delegate);
+  room->registerByteStreamHandler(
+    "control",
+    [delegate_weak](
+      std::shared_ptr<livekit::ByteStreamReader> reader, const std::string& participant_identity
+    ) {
+      if (auto d = delegate_weak.lock()) {
+        ViewerEvent ve;
+        ve.type = ViewerEvent::Type::ByteStreamOpened;
+        ve.topic = reader->info().topic;
+        ve.identity = participant_identity;
+        ve.reader = std::move(reader);
+        d->push_event(std::move(ve));
       }
-    );
-
-    livekit::RoomOptions options;
-    options.auto_subscribe = true;
-    bool connected = room->Connect(livekit_url(), token, options);
-    if (!connected) {
-      throw std::runtime_error("viewer Room::Connect() returned false for " + identity);
     }
+  );
 
-    auto inner_timeout = std::min(
-      CONNECT_RETRY_TIMEOUT,
-      std::chrono::duration_cast<std::chrono::seconds>(
-        outer_deadline - std::chrono::steady_clock::now()
-      )
-    );
-
-    auto event = delegate->wait_for_event(
-      [](const ViewerEvent& e) {
-        return e.type == ViewerEvent::Type::ByteStreamOpened && e.topic == "control";
-      },
-      std::chrono::duration_cast<std::chrono::milliseconds>(inner_timeout)
-    );
-
-    if (event) {
-      FrameReader reader(event->reader);
-      return ViewerConnection(std::move(room), std::move(delegate), std::move(reader));
-    }
-
-    // Gateway not ready yet - destroy room and retry
-    room.reset();
-    if (std::chrono::steady_clock::now() >= outer_deadline) {
-      throw std::runtime_error("timeout waiting for gateway to open byte stream");
-    }
+  livekit::RoomOptions options;
+  options.auto_subscribe = true;
+  if (!room->Connect(livekit_url(), token, options)) {
+    throw std::runtime_error("viewer Room::Connect() returned false for " + identity);
   }
+
+  // Wait the full timeout on a single connection. We deliberately do not
+  // retry by destroying and recreating the Room: LiveKit takes time to
+  // evict the prior instance, so a retry with the same identity races
+  // against eviction and routinely fails with DuplicateIdentity. Holding
+  // the connection open lets the gateway's add_participant flow complete
+  // (it depends on the SUBSCRIBER DTLS handshake, which can be slow under
+  // load on the dev server) and deliver the control byte stream.
+  auto event = delegate->wait_for_event(
+    [](const ViewerEvent& e) {
+      return e.type == ViewerEvent::Type::ByteStreamOpened && e.topic == "control";
+    },
+    std::chrono::duration_cast<std::chrono::milliseconds>(EVENT_TIMEOUT)
+  );
+
+  if (!event) {
+    throw std::runtime_error("timeout waiting for gateway to open byte stream");
+  }
+
+  FrameReader reader(event->reader);
+  return ViewerConnection(std::move(room), std::move(delegate), std::move(reader));
 }
 
 nlohmann::json ViewerConnection::expect_server_info() {

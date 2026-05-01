@@ -20,7 +20,6 @@ constexpr auto EVENT_TIMEOUT = std::chrono::seconds(15);
 constexpr auto READ_TIMEOUT = std::chrono::seconds(10);
 constexpr auto SHUTDOWN_TIMEOUT = std::chrono::seconds(10);
 constexpr auto POLL_INTERVAL = std::chrono::milliseconds(50);
-constexpr auto CONNECT_RETRY_TIMEOUT = std::chrono::seconds(5);
 
 inline void poll_until(
   const std::function<bool()>& cond,

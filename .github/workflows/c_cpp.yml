@@ -345,9 +345,13 @@ jobs:
   # check passes even when the other jobs are skipped. Configure your required
   # status check to reference this job ("C/C++ / c-cpp-status") instead of the
   # individual matrix jobs.
+  #
+  # Note: `integration-test` is intentionally excluded from this gate so that
+  # its long runtime does not block PR merges while it is still running. It
+  # still runs on PRs and posts its own status, but is not required.
   c-cpp-status:
     name: c-cpp-status
-    needs: [changes, lint, build, test-asan-ubsan, integration-test]
+    needs: [changes, lint, build, test-asan-ubsan]
     if: always()
     runs-on: ubuntu-latest
     steps:
