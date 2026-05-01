@@ -511,7 +511,7 @@ TEST_CASE("livekit: client advertise fires listener callback", "[integration]") 
   auto gw = TestGateway::start_with_options(ctx, std::move(opts));
 
   auto viewer = ViewerConnection::connect(gw.room_name, "viewer-1");
-  viewer.next_server_message();  // skip server info
+  viewer.expect_server_info();
 
   viewer.send_client_advertise({{1, "/cmd", "json", ""}});
   poll_until([&] {
@@ -538,7 +538,7 @@ TEST_CASE("livekit: client advertise preserves schema name without schema data",
   auto gw = TestGateway::start_with_options(ctx, std::move(opts));
 
   auto viewer = ViewerConnection::connect(gw.room_name, "viewer-1");
-  viewer.next_server_message();
+  viewer.expect_server_info();
 
   // Advertise a channel with schema_name but no binary schema data — this is
   // what the Foxglove teleop panel sends for /cmd_vel.
@@ -569,7 +569,7 @@ TEST_CASE("livekit: client unadvertise fires listener callback", "[integration]"
   auto gw = TestGateway::start_with_options(ctx, std::move(opts));
 
   auto viewer = ViewerConnection::connect(gw.room_name, "viewer-1");
-  viewer.next_server_message();
+  viewer.expect_server_info();
 
   viewer.send_client_advertise({{42, "/joy", "json", ""}});
   poll_until([&] {
@@ -637,7 +637,7 @@ TEST_CASE("livekit: client disconnect fires unadvertise for advertised channels"
   auto gw = TestGateway::start_with_options(ctx, std::move(opts));
 
   auto viewer = ViewerConnection::connect(gw.room_name, "viewer-1");
-  viewer.next_server_message();
+  viewer.expect_server_info();
 
   viewer.send_client_advertise({{1, "/cmd_vel", "json", ""}, {2, "/joy", "json", ""}});
   poll_until([&] {
@@ -832,7 +832,7 @@ TEST_CASE("livekit: client message data fires listener callback", "[integration]
   auto gw = TestGateway::start_with_options(ctx, std::move(opts));
 
   auto viewer = ViewerConnection::connect(gw.room_name, "viewer-1");
-  viewer.next_server_message();
+  viewer.expect_server_info();
 
   viewer.send_client_advertise({{1, "/cmd", "json", ""}});
   poll_until([&] {
@@ -898,7 +898,7 @@ TEST_CASE("livekit: client advertise without capability sends error", "[integrat
 
   auto gw = TestGateway::start(ctx);
   auto viewer = ViewerConnection::connect(gw.room_name, "viewer-1");
-  viewer.next_server_message();
+  viewer.expect_server_info();
 
   viewer.send_client_advertise({{1, "/cmd", "json", ""}});
 

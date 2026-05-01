@@ -3,7 +3,6 @@
 #include <livekit/data_track_stream.h>
 #include <livekit/remote_data_track.h>
 
-#include <cstring>
 #include <future>
 #include <stdexcept>
 #include <thread>
@@ -37,6 +36,43 @@ namespace foxglove_integration {
 FrameReader::FrameReader(std::shared_ptr<livekit::ByteStreamReader> reader)
     : reader_(std::move(reader)) {}
 
+namespace {
+/// Reads the next chunk from a ByteStreamReader with a timeout by running
+/// readNext() on a worker thread. ByteStreamReader has no close() method and
+/// the underlying readNext() blocks unconditionally on a condition variable
+/// until a chunk arrives or the SFU signals end-of-stream, so on timeout we
+/// have no way to wake the worker. We detach it instead, leaking the OS
+/// thread until process exit, and throw so the test fails cleanly rather
+/// than wedging on the join. The detached lambda owns `reader` (shared_ptr)
+/// and `promise` (moved), so nothing in the parent scope dangles.
+std::vector<uint8_t> read_byte_stream_chunk_with_timeout(
+  const std::shared_ptr<livekit::ByteStreamReader>& reader, std::chrono::milliseconds timeout
+) {
+  std::promise<std::vector<uint8_t>> chunk_promise;
+  auto future = chunk_promise.get_future();
+
+  std::thread worker([reader, promise = std::move(chunk_promise)]() mutable {
+    try {
+      std::vector<uint8_t> chunk;
+      if (!reader->readNext(chunk)) {
+        throw std::runtime_error("byte stream ended unexpectedly");
+      }
+      promise.set_value(std::move(chunk));
+    } catch (...) {
+      promise.set_exception(std::current_exception());
+    }
+  });
+
+  if (future.wait_for(timeout) != std::future_status::ready) {
+    worker.detach();
+    throw std::runtime_error("timeout reading byte stream chunk");
+  }
+
+  worker.join();
+  return future.get();
+}
+}  // namespace
+
 Frame FrameReader::next_frame() {
   auto deadline = std::chrono::steady_clock::now() + READ_TIMEOUT;
   while (true) {
@@ -45,16 +81,12 @@ Frame FrameReader::next_frame() {
       buf_.erase(buf_.begin(), buf_.begin() + static_cast<ptrdiff_t>(result->bytes_consumed));
       return std::move(result->frame);
     }
-    if (std::chrono::steady_clock::now() >= deadline) {
+    auto now = std::chrono::steady_clock::now();
+    if (now >= deadline) {
       throw std::runtime_error("timeout reading byte stream frame");
     }
-    std::vector<uint8_t> chunk;
-    // Note: readNext blocks and can hang indefinitely if no chunk arrives
-    // and the it's never explicitly closed. For the purposes of the
-    // tests, we'll live with that for now.
-    if (!reader_->readNext(chunk)) {
-      throw std::runtime_error("byte stream ended unexpectedly");
-    }
+    auto remaining = std::chrono::duration_cast<std::chrono::milliseconds>(deadline - now);
+    auto chunk = read_byte_stream_chunk_with_timeout(reader_, remaining);
     buf_.insert(buf_.end(), chunk.begin(), chunk.end());
   }
 }
@@ -74,12 +106,10 @@ nlohmann::json FrameReader::next_server_message() {
   msg["_opcode"] = frame.payload[0];
 
   uint8_t bin_op = frame.payload[0];
-  // v2 MessageData binary: opcode(1) + channel_id(u64) + log_time(u64) + data
+  // v2 MessageData binary: opcode(1) + channel_id(u64 LE) + log_time(u64 LE) + data
   if (bin_op == 1 && frame.payload.size() >= 17) {
-    uint64_t channel_id = 0;
-    std::memcpy(&channel_id, frame.payload.data() + 1, 8);
-    uint64_t timestamp = 0;
-    std::memcpy(&timestamp, frame.payload.data() + 9, 8);
+    uint64_t channel_id = read_u64_le(frame.payload.data() + 1);
+    uint64_t timestamp = read_u64_le(frame.payload.data() + 9);
     msg["op"] = "messageData";
     msg["channelId"] = channel_id;
     msg["timestamp"] = timestamp;
@@ -94,9 +124,19 @@ namespace {
 // u16 LE flags + u16 LE data_offset + u32 LE sequence = 8 bytes.
 constexpr size_t DATA_TRACK_FRAME_HEADER_SIZE = 8;
 
+/// Bounded grace period to wait for read() to unblock after close() is called.
+/// If the worker hasn't returned by then, we assume close() failed to wake it
+/// (FFI bug, half-closed stream, race with the SFU, etc.) and detach the
+/// thread so the test fails instead of hanging the runner.
+constexpr auto CLOSE_GRACE = std::chrono::seconds(2);
+
 /// Reads the next DataTrackFrame from a DataTrackStream with a timeout by
 /// running read() on a worker thread and closing the stream if it doesn't
-/// complete in time.
+/// complete in time. If close() fails to unblock read() within CLOSE_GRACE,
+/// the worker is detached (the lambda owns `stream` and `promise`, so the
+/// detached thread keeps everything it touches alive) and a runtime_error
+/// is thrown so the test fails cleanly. The OS thread leaks until process
+/// exit, which is acceptable for an integration test runner.
 livekit::DataTrackFrame read_data_track_frame_with_timeout(
   const std::shared_ptr<livekit::DataTrackStream>& stream, std::chrono::milliseconds timeout
 ) {
@@ -117,6 +157,10 @@ livekit::DataTrackFrame read_data_track_frame_with_timeout(
 
   if (future.wait_for(timeout) != std::future_status::ready) {
     stream->close();
+    if (future.wait_for(CLOSE_GRACE) != std::future_status::ready) {
+      reader.detach();
+      throw std::runtime_error("data track stream did not respond to close() within grace period");
+    }
   }
 
   reader.join();

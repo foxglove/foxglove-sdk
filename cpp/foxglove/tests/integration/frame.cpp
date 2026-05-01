@@ -1,7 +1,5 @@
 #include "frame.hpp"
 
-#include <cstring>
-
 namespace foxglove_integration {
 
 std::vector<uint8_t> frame_text_message(const uint8_t* data, size_t len) {
@@ -42,8 +40,7 @@ std::optional<ParseResult> try_parse_frame(const uint8_t* data, size_t len) {
   if (op != static_cast<uint8_t>(OpCode::Text) && op != static_cast<uint8_t>(OpCode::Binary)) {
     throw std::runtime_error("unknown opcode: " + std::to_string(op));
   }
-  uint32_t payload_len = 0;
-  std::memcpy(&payload_len, data + 1, 4);
+  uint32_t payload_len = read_u32_le(data + 1);
   size_t total = HEADER_SIZE + payload_len;
   if (len < total) {
     return std::nullopt;
