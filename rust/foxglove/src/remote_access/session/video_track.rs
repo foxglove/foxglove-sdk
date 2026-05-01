@@ -166,12 +166,6 @@ impl VideoPublisher {
         }
     }
 
-    /// Returns a reference to the underlying video source.
-    #[allow(dead_code)]
-    pub fn video_source(&self) -> &NativeVideoSource {
-        &self.video_source
-    }
-
     /// Returns the latest video metadata observed by this publisher, if any.
     pub fn metadata(&self) -> arc_swap::Guard<Option<Arc<VideoMetadata>>> {
         self.metadata.load()

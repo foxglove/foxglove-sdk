@@ -75,6 +75,11 @@ public:
   void updateConnectionGraph(
     const std::map<std::string, std::vector<std::string>>& topicNamesAndTypes);
 
+  /// Returns the current connection graph subscriber refcount. Exposed for testing.
+  int graphSubscriptionCount() const noexcept {
+    return _graphSubscriptionCount.load();
+  }
+
 private:
   struct PairHash {
     template <class T1, class T2>
