@@ -53,7 +53,6 @@ impl DataTrack {
         let task = runtime.spawn(async move {
             const INITIAL_BACKOFF: Duration = Duration::from_millis(100);
             const MAX_BACKOFF: Duration = Duration::from_secs(3);
-            const ATTEMPT_TIMEOUT: Duration = Duration::from_secs(5);
             let mut backoff = INITIAL_BACKOFF;
 
             loop {
@@ -62,32 +61,23 @@ impl DataTrack {
                 }
                 let result = tokio::select! {
                     () = session_cancel.cancelled() => return,
-                    result = tokio::time::timeout(
-                        ATTEMPT_TIMEOUT,
-                        local_participant.publish_data_track(name.clone()),
-                    ) => result,
+                    result = local_participant.publish_data_track(name.clone()) => result,
                 };
                 match result {
-                    Ok(Ok(published)) => {
+                    Ok(published) => {
                         track_clone.set(published).ok();
                         debug!("data track {name} published");
                         return;
                     }
-                    Ok(Err(PublishError::DuplicateName)) => {
+                    Err(PublishError::DuplicateName) => {
                         debug!(
                             "data track {name} still being unpublished at SFU, \
                              retrying in {backoff:?}"
                         );
                     }
-                    Ok(Err(e)) => {
+                    Err(e) => {
                         error!(
                             "failed to publish data track {name}: {e:?}, \
-                             retrying in {backoff:?}"
-                        );
-                    }
-                    Err(_) => {
-                        debug!(
-                            "publish_data_track timed out for {name} after {ATTEMPT_TIMEOUT:?}, \
                              retrying in {backoff:?}"
                         );
                     }
