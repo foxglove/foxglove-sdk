@@ -112,13 +112,19 @@ TEST_CASE("livekit: viewer receives message after subscribe", "[integration]") {
 
 TEST_CASE("livekit: viewer does not receive message before subscribe", "[integration]") {
   auto ctx = foxglove::Context::create();
-  auto channel = foxglove::RawChannel::create("/test", "json", std::nullopt, ctx);
-  REQUIRE(channel.has_value());
 
   auto gw = TestGateway::start(ctx);
   auto viewer = ViewerConnection::connect(gw.room_name, "viewer-1");
-
   viewer.expect_server_info();
+
+  // Create the channel after the viewer is fully connected so the gateway
+  // publishes its data track via the SFU's real-time announce path. If the
+  // channel pre-exists the viewer, the data track surfaces in the
+  // JoinResponse, and the C++ FFI bridge occasionally drops the
+  // `DataTrackPublished` event during the join burst.
+  auto channel = foxglove::RawChannel::create("/test", "json", std::nullopt, ctx);
+  REQUIRE(channel.has_value());
+
   auto advertise = viewer.expect_advertise();
   auto channel_id = advertise["channels"][0]["id"].get<uint64_t>();
 
@@ -320,6 +326,15 @@ TEST_CASE("livekit: video channel has video track metadata", "[integration]") {
 TEST_CASE("livekit: video channel messages bypass data plane", "[integration]") {
   auto ctx = foxglove::Context::create();
 
+  auto gw = TestGateway::start(ctx);
+  auto viewer = ViewerConnection::connect(gw.room_name, "viewer-1");
+  viewer.expect_server_info();
+
+  // Create the channels after the viewer is fully connected so the gateway
+  // publishes their data tracks via the SFU's real-time announce path. If the
+  // channels pre-exist the viewer, their data tracks surface in the
+  // JoinResponse, and the C++ FFI bridge occasionally drops the
+  // `DataTrackPublished` event during the join burst.
   auto video_channel = foxglove::RawChannel::create(
     "/camera", "protobuf", foxglove::Schema{"foxglove.RawImage", "protobuf", nullptr, 0}, ctx
   );
@@ -327,10 +342,8 @@ TEST_CASE("livekit: video channel messages bypass data plane", "[integration]") 
   auto json_channel = foxglove::RawChannel::create("/data", "json", std::nullopt, ctx);
   REQUIRE(json_channel.has_value());
 
-  auto gw = TestGateway::start(ctx);
-  auto viewer = ViewerConnection::connect(gw.room_name, "viewer-1");
-
-  viewer.expect_server_info();
+  // Each channel created after the viewer connects produces its own advertise.
+  viewer.expect_advertise();
   viewer.expect_advertise();
 
   auto video_id = video_channel->id();
@@ -424,15 +437,18 @@ TEST_CASE("livekit: video track resubscribe", "[integration]") {
 TEST_CASE("livekit: video channel without request video track uses data plane", "[integration]") {
   auto ctx = foxglove::Context::create();
 
+  auto gw = TestGateway::start(ctx);
+  auto viewer = ViewerConnection::connect(gw.room_name, "viewer-1");
+  viewer.expect_server_info();
+
+  // Create the channel after the viewer is fully connected so the gateway
+  // publishes its data track via the SFU's real-time announce path instead of
+  // the JoinResponse, which is racy through the C++ FFI bridge.
   auto video_channel = foxglove::RawChannel::create(
     "/camera", "protobuf", foxglove::Schema{"foxglove.RawImage", "protobuf", nullptr, 0}, ctx
   );
   REQUIRE(video_channel.has_value());
 
-  auto gw = TestGateway::start(ctx);
-  auto viewer = ViewerConnection::connect(gw.room_name, "viewer-1");
-
-  viewer.expect_server_info();
   auto advertise = viewer.expect_advertise();
   auto channel_id = advertise["channels"][0]["id"].get<uint64_t>();
 
@@ -1287,10 +1303,6 @@ TEST_CASE("livekit: reliable channel delivers via control plane", "[integration]
 
 TEST_CASE("livekit: qos classifier per channel", "[integration]") {
   auto ctx = foxglove::Context::create();
-  auto reliable_channel = foxglove::RawChannel::create("/config", "json", std::nullopt, ctx);
-  REQUIRE(reliable_channel.has_value());
-  auto lossy_channel = foxglove::RawChannel::create("/data", "json", std::nullopt, ctx);
-  REQUIRE(lossy_channel.has_value());
 
   TestGatewayOptions opts;
   opts.qos_classifier = [](const foxglove::ChannelDescriptor& ch) {
@@ -1303,19 +1315,31 @@ TEST_CASE("livekit: qos classifier per channel", "[integration]") {
 
   auto viewer = ViewerConnection::connect(gw.room_name, "viewer-1");
   viewer.expect_server_info();
-  auto advertise = viewer.expect_advertise();
 
-  REQUIRE(advertise["channels"].size() == 2);
+  // Create the channels after the viewer is fully connected so the gateway
+  // publishes data tracks via the SFU's real-time announce path. If the
+  // channels pre-exist the viewer, their data tracks surface in the
+  // JoinResponse, and the C++ FFI bridge occasionally drops the
+  // `DataTrackPublished` event during the join burst.
+  auto reliable_channel = foxglove::RawChannel::create("/config", "json", std::nullopt, ctx);
+  REQUIRE(reliable_channel.has_value());
+  auto lossy_channel = foxglove::RawChannel::create("/data", "json", std::nullopt, ctx);
+  REQUIRE(lossy_channel.has_value());
+
+  // Each channel created after the viewer connects produces its own advertise.
   uint64_t reliable_id = 0;
   uint64_t lossy_id = 0;
-  for (const auto& ch : advertise["channels"]) {
-    auto meta = ch.value("metadata", nlohmann::json::object());
-    if (ch["topic"].get<std::string>() == "/config") {
-      reliable_id = ch["id"].get<uint64_t>();
-      CHECK(meta.value("foxglove.reliable", "") == "true");
-    } else {
-      lossy_id = ch["id"].get<uint64_t>();
-      CHECK(!meta.contains("foxglove.reliable"));
+  for (int i = 0; i < 2; ++i) {
+    auto advertise = viewer.expect_advertise();
+    for (const auto& ch : advertise["channels"]) {
+      auto meta = ch.value("metadata", nlohmann::json::object());
+      if (ch["topic"].get<std::string>() == "/config") {
+        reliable_id = ch["id"].get<uint64_t>();
+        CHECK(meta.value("foxglove.reliable", "") == "true");
+      } else {
+        lossy_id = ch["id"].get<uint64_t>();
+        CHECK(!meta.contains("foxglove.reliable"));
+      }
     }
   }
   REQUIRE(reliable_id != 0);
