@@ -1,0 +1,25 @@
+[package]
+name = "example_ws_record_mcap"
+edition = "2024"
+publish = false
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "ws_record_mcap"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1.0"
+clap = { version = "4.5", features = ["derive"] }
+env_logger = "0.11"
+foxglove = { path = "../../foxglove" }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "signal"] }
+tracing = { version = "0.1", features = ["log"] }
+
+[dev-dependencies]
+example_ws_stream_mcap = { path = "../ws_stream_mcap" }
+mcap = "0.24"
+tempfile = "3"
+tokio = { version = "1", features = ["time"] }
