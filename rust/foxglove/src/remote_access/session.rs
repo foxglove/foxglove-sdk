@@ -69,6 +69,13 @@ const CONTROL_CHANNEL_TOPIC: &str = "control";
 const MESSAGE_FRAME_SIZE: usize = 5; // 1 byte opcode + u32 LE length
 const MAX_MESSAGE_SIZE: usize = 16 * 1024 * 1024; // 16 MiB
 
+/// Upper bound on `livekit::Room::close()`. The LiveKit SDK occasionally hangs
+/// in its data-channel teardown path during room close, so we cap the wait to
+/// keep `RemoteAccessGateway::stop()` (and the associated `ShuttingDown` ->
+/// `Shutdown` status transition) bounded. Any remaining cleanup runs through
+/// the `Room`'s `Drop` impl when the session is released.
+const ROOM_CLOSE_TIMEOUT: Duration = Duration::from_secs(10);
+
 pub(super) const DEFAULT_MESSAGE_BACKLOG_SIZE: usize = 1024;
 
 /// The operation code for the message framing for protocol v2.
@@ -475,12 +482,18 @@ impl RemoteAccessSession {
         // Cancel flush-tasks and await them before tearing down the transport.
         // In-flight writes either complete or fail once `room.close()` runs.
         self.participant_registry.shutdown().await;
-        if let Err(e) = self.room.close().await {
-            error!(
+        match tokio::time::timeout(ROOM_CLOSE_TIMEOUT, self.room.close()).await {
+            Ok(Ok(())) => {}
+            Ok(Err(e)) => error!(
                 remote_access_session_id = self.remote_access_session_id(),
                 error = %e,
                 "failed to close room: {e}",
-            );
+            ),
+            Err(_) => warn!(
+                remote_access_session_id = self.remote_access_session_id(),
+                timeout_secs = ROOM_CLOSE_TIMEOUT.as_secs(),
+                "livekit room close timed out; abandoning room teardown",
+            ),
         }
     }
 

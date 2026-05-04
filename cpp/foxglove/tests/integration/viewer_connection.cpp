@@ -504,7 +504,7 @@ std::shared_ptr<DeviceChannelReader> ViewerConnection::expect_device_channel_dat
     [&expected_name](const ViewerEvent& e) {
       return e.type == ViewerEvent::Type::DataTrackPublished && e.track_name == expected_name;
     },
-    std::chrono::duration_cast<std::chrono::milliseconds>(READ_TIMEOUT)
+    std::chrono::duration_cast<std::chrono::milliseconds>(DATA_TRACK_PUBLISH_TIMEOUT)
   );
   if (!event) {
     throw std::runtime_error("timeout waiting for device channel data track: " + expected_name);

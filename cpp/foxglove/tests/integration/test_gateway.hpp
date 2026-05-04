@@ -4,11 +4,9 @@
 #include <foxglove/remote_access.hpp>
 
 #include <atomic>
-#include <future>
 #include <memory>
 #include <optional>
 #include <string>
-#include <thread>
 #include <utility>
 
 #include "mock_listener.hpp"
@@ -100,30 +98,9 @@ public:
     return gateway_->connectionStatus();
   }
 
-  /// Stops the gateway, bounded by [`SHUTDOWN_TIMEOUT`]. The underlying
-  /// `RemoteAccessGateway::stop()` blocks until the connection's runner task
-  /// completes, which in turn awaits LiveKit's `Room::close()`. That close
-  /// occasionally hangs when a participant disconnects very quickly after the
-  /// session is established (a known LiveKit data-channel teardown race), so
-  /// we run it on a worker thread and detach the thread on timeout. The
-  /// detached worker keeps the gateway alive until it eventually completes
-  /// (or the test process exits and the OS reaps it); either way, the test
-  /// itself is unblocked and can report its result.
   void stop() {
-    if (!gateway_) {
-      return;
-    }
-    auto gateway = std::move(gateway_);
-    std::promise<void> done_promise;
-    auto done_future = done_promise.get_future();
-    std::thread worker([gw = std::move(gateway), p = std::move(done_promise)]() mutable {
-      gw->stop();
-      p.set_value();
-    });
-    if (done_future.wait_for(SHUTDOWN_TIMEOUT) == std::future_status::ready) {
-      worker.join();
-    } else {
-      worker.detach();
+    if (gateway_) {
+      gateway_->stop();
     }
   }
 
