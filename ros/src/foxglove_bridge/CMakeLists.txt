@@ -19,9 +19,13 @@ if (POLICY CMP0135)
   cmake_policy(SET CMP0135 NEW)
 endif()
 
-# Remote access requires glibc >= 2.35 on Linux.
-set(_remote_access_default ON)
-if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+# Remote access requires glibc >= 2.35 on Linux. Detect the build host's glibc
+# (when not cross-compiling) so we can lower the default to OFF on older
+# systems and warn if the user pins it ON.
+set(_glibc_detected FALSE)
+set(_glibc_too_old FALSE)
+set(_glibc_version "")
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND NOT CMAKE_CROSSCOMPILING)
   execute_process(
     COMMAND getconf GNU_LIBC_VERSION
     OUTPUT_VARIABLE _glibc_version_output
@@ -32,13 +36,28 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   if(_glibc_result EQUAL 0 AND _glibc_version_output MATCHES "glibc ([0-9]+)\\.([0-9]+)")
     set(_glibc_major ${CMAKE_MATCH_1})
     set(_glibc_minor ${CMAKE_MATCH_2})
+    set(_glibc_detected TRUE)
+    set(_glibc_version "${_glibc_major}.${_glibc_minor}")
     if(_glibc_major LESS 2 OR (_glibc_major EQUAL 2 AND _glibc_minor LESS 35))
-      message(STATUS "Detected glibc ${_glibc_major}.${_glibc_minor} (< 2.35); defaulting FOXGLOVE_BRIDGE_REMOTE_ACCESS to OFF")
-      set(_remote_access_default OFF)
+      set(_glibc_too_old TRUE)
     endif()
   endif()
 endif()
+
+set(_remote_access_default ON)
+if(NOT DEFINED CACHE{FOXGLOVE_BRIDGE_REMOTE_ACCESS})
+  if(_glibc_too_old)
+    message(STATUS "Detected glibc ${_glibc_version} (< 2.35); defaulting FOXGLOVE_BRIDGE_REMOTE_ACCESS to OFF")
+    set(_remote_access_default OFF)
+  elseif(NOT _glibc_detected)
+    message(STATUS "Could not detect glibc version, defaulting FOXGLOVE_BRIDGE_REMOTE_ACCESS to ON")
+  endif()
+endif()
 option(FOXGLOVE_BRIDGE_REMOTE_ACCESS "Build with remote access gateway support" ${_remote_access_default})
+
+if(FOXGLOVE_BRIDGE_REMOTE_ACCESS AND _glibc_too_old)
+  message(WARNING "FOXGLOVE_BRIDGE_REMOTE_ACCESS=ON but build host has glibc ${_glibc_version} (< 2.35); the link step is likely to fail.")
+endif()
 
 macro(enable_strict_compiler_warnings target)
   if (MSVC)
