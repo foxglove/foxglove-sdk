@@ -69,8 +69,11 @@ async fn netem_partition_recovery_readvertises_all_channels() -> Result<()> {
     );
 
     // Phase 2: Impose a full network partition.
-    info!("imposing partition: 100% packet loss on default netem class");
-    netem_helpers::set_netem_impairment(&container, "default", "loss 100%")?;
+    // Use "all" to update every netem qdisc regardless of mode (flat or
+    // per-link). The "default" target only matches the ff00: handle used in
+    // per-link mode and silently does nothing in flat mode.
+    info!("imposing partition: 100% packet loss on all netem qdiscs");
+    netem_helpers::set_netem_impairment(&container, "all", "loss 100%")?;
 
     // Create a second channel. The gateway will try to send an Advertise
     // message to the viewer, but the partition will prevent delivery. This
@@ -89,7 +92,7 @@ async fn netem_partition_recovery_readvertises_all_channels() -> Result<()> {
     // Phase 3: Lift the partition.
     info!("lifting partition: restoring default impairment");
     let default_args = netem_helpers::default_netem_args();
-    netem_helpers::set_netem_impairment(&container, "default", &default_args)?;
+    netem_helpers::set_netem_impairment(&container, "all", &default_args)?;
 
     // Phase 4: Reconnect and verify recovery.
     // The original viewer connection is likely dead. Close it (ignoring errors)
