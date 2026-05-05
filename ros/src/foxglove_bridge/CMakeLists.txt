@@ -247,10 +247,9 @@ install(TARGETS foxglove_bridge_component
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin
 )
-# Install the SDK shared libraries alongside the bridge component library so
-# the runtime linker can find them via RPATH ($ORIGIN). When remote access is
-# disabled, foxglove-shared is statically linked into foxglove_cpp_shared and
-# does not need to be installed.
+# Install the SDK shared library alongside the bridge component library so the
+# runtime linker can find it via RPATH ($ORIGIN). Not needed when remote access
+# is disabled, since the SDK is statically linked into foxglove_cpp_shared.
 install(FILES $<TARGET_FILE:foxglove_cpp_shared> DESTINATION lib)
 if (FOXGLOVE_BRIDGE_REMOTE_ACCESS)
   install(FILES $<TARGET_FILE:foxglove-shared> DESTINATION lib)
