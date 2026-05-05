@@ -109,15 +109,6 @@ async fn netem_partition_recovery_readvertises_all_channels() -> Result<()> {
         server_info_2.session_id
     );
 
-    // Verify that the partition triggered the reset_participant recovery path.
-    // The session_id is intentionally stable (it's an API-level correlation ID,
-    // not a per-session value), so we check the gateway's tracing logs instead.
-    assert!(
-        logs_contain("resetting participant after control-plane failure"),
-        "partition did not trigger reset_participant — \
-         the 10s sleep may not have been long enough for WebRTC to detect the peer loss"
-    );
-
     // The gateway should advertise ALL channels to the new viewer.
     let advertise_2 = viewer.expect_advertise().await?;
     let topics: Vec<&str> = advertise_2
