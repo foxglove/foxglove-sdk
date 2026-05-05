@@ -240,8 +240,9 @@ impl ViewerConnection {
             let (room, mut events) = match connect_result {
                 Ok(pair) => pair,
                 Err(err) => {
-                    // Transient failures (e.g. 401 while LiveKit is still
-                    // initializing) are retried until the outer deadline.
+                    // All connect failures are retried until the outer
+                    // deadline. Covers transient cases like 401 during
+                    // LiveKit init and post-partition reconnection.
                     if tokio::time::Instant::now() >= outer_deadline {
                         return Err(err).context("viewer failed to connect to LiveKit");
                     }

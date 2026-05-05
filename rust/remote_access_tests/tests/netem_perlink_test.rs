@@ -272,8 +272,8 @@ fn perlink_infra_link_a_has_more_packet_loss_than_link_b() -> Result<()> {
     }
 
     let container = netem_helpers::netem_container_id()?;
-    // 150 packets at ~9.75% effective round-trip loss gives P(0 lost) ≈ 1e-7,
-    // making false failures negligible. Runtime is ~2.5 minutes per link.
+    // 150 packets at 5% one-way loss (egress only; echoes return unshaped)
+    // gives P(0 lost) ≈ 0.95^150 ≈ 5e-4, making false failures negligible.
     let packet_count: u32 = 150;
 
     let (sent_a, received_a) = measure_udp_loss(&container, TARGET_A_IP, packet_count)?;
