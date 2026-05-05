@@ -25,7 +25,7 @@ public:
 
   /// Reads chunks until a complete frame is available and returns it.
   /// Blocks up to READ_TIMEOUT.
-  Frame next_frame();
+  ByteStreamFrame next_frame();
 
   /// Reads the next frame and parses it as a JSON message.
   nlohmann::json next_server_message();

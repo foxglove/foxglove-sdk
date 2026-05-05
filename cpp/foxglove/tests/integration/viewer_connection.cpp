@@ -73,10 +73,10 @@ std::vector<uint8_t> read_byte_stream_chunk_with_timeout(
 }
 }  // namespace
 
-Frame FrameReader::next_frame() {
+ByteStreamFrame FrameReader::next_frame() {
   auto deadline = std::chrono::steady_clock::now() + READ_TIMEOUT;
   while (true) {
-    auto result = try_parse_frame(buf_.data(), buf_.size());
+    auto result = try_parse_bytestream_frame(buf_.data(), buf_.size());
     if (result) {
       buf_.erase(buf_.begin(), buf_.begin() + static_cast<ptrdiff_t>(result->bytes_consumed));
       return std::move(result->frame);
@@ -121,9 +121,6 @@ nlohmann::json FrameReader::next_server_message() {
 // DeviceChannelReader
 
 namespace {
-// u16 LE flags + u16 LE data_offset + u32 LE sequence = 8 bytes.
-constexpr size_t DATA_TRACK_FRAME_HEADER_SIZE = 8;
-
 /// Bounded grace period to wait for read() to unblock after close() is called.
 /// If the worker hasn't returned by then, we assume close() failed to wake it
 /// (FFI bug, half-closed stream, race with the SFU, etc.) and detach the
@@ -178,17 +175,23 @@ nlohmann::json DeviceChannelReader::next_server_message() {
   auto frame = read_data_track_frame_with_timeout(
     stream_, std::chrono::duration_cast<std::chrono::milliseconds>(READ_TIMEOUT)
   );
-  if (frame.payload.size() < DATA_TRACK_FRAME_HEADER_SIZE) {
+  if (frame.payload.size() < 4) {
     throw std::runtime_error(
       "data track frame too small (" + std::to_string(frame.payload.size()) + " bytes)"
+    );
+  }
+  uint16_t data_offset = read_u16_le(frame.payload.data() + 2);
+  if (frame.payload.size() < data_offset) {
+    throw std::runtime_error(
+      "data track frame size (" + std::to_string(frame.payload.size()) +
+      " bytes) is smaller than data_offset (" + std::to_string(data_offset) + ")"
     );
   }
   nlohmann::json msg;
   msg["op"] = "messageData";
   msg["channelId"] = channel_id_;
   msg["timestamp"] = frame.user_timestamp.value_or(0);
-  msg["data"] =
-    std::vector<uint8_t>(frame.payload.begin() + DATA_TRACK_FRAME_HEADER_SIZE, frame.payload.end());
+  msg["data"] = std::vector<uint8_t>(frame.payload.begin() + data_offset, frame.payload.end());
   return msg;
 }
 
@@ -399,13 +402,13 @@ void ViewerConnection::ensure_control_writer() {
 
 void ViewerConnection::send_framed_text(const std::string& json) {
   ensure_control_writer();
-  auto framed = frame_text_message(json);
+  auto framed = bytestream_frame_text_message(json);
   control_writer_->write(framed);
 }
 
 void ViewerConnection::send_framed_binary(const std::vector<uint8_t>& data) {
   ensure_control_writer();
-  auto framed = frame_binary_message(data.data(), data.size());
+  auto framed = bytestream_frame_binary_message(data.data(), data.size());
   control_writer_->write(framed);
 }
 
