@@ -80,13 +80,17 @@ TEST_CASE("livekit: viewer receives channel advertisement", "[integration]") {
 
 TEST_CASE("livekit: viewer receives message after subscribe", "[integration]") {
   auto ctx = foxglove::Context::create();
-  auto channel = foxglove::RawChannel::create("/test", "json", std::nullopt, ctx);
-  REQUIRE(channel.has_value());
 
   auto gw = TestGateway::start(ctx);
   auto viewer = ViewerConnection::connect(gw.room_name, "viewer-1");
-
   viewer.expect_server_info();
+
+  // Create the channel after the viewer is fully connected so the gateway
+  // publishes its data track via the SFU's real-time announce path instead of
+  // the JoinResponse, which is racy through the C++ FFI bridge.
+  auto channel = foxglove::RawChannel::create("/test", "json", std::nullopt, ctx);
+  REQUIRE(channel.has_value());
+
   auto advertise = viewer.expect_advertise();
   auto channel_id = advertise["channels"][0]["id"].get<uint64_t>();
 
@@ -227,14 +231,10 @@ TEST_CASE("livekit: multiple participants receive messages", "[integration]") {
   // does not disturb the others. We deliberately classify the channel as
   // Reliable so messages flow over the control plane (WebSocket) rather than
   // the lossy data-track plane. The data-track path is exercised by other
-  // tests (e.g. "viewer receives message after subscribe"); duplicating that
-  // surface here would couple this fan-out test to a known upstream race in
-  // the LiveKit Rust SDK where a `DataTrackPublished` announce that *is*
-  // present in the SFU's JoinResponse occasionally fails to surface as a
-  // room event on the joining viewer (~6% of runs locally). Reliable
-  // delivery on the control plane sidesteps that race entirely without
-  // weakening what this test asserts: that fan-out works and survives a
-  // peer disconnecting.
+  // tests (e.g. "viewer receives message after subscribe"). Reliable delivery
+  // on the control plane keeps this fan-out test focused on what it asserts
+  // (fan-out works and survives a peer disconnecting) without introducing
+  // data-track timing concerns.
   TestGatewayOptions opts;
   opts.callbacks = listener.make_callbacks();
   opts.qos_classifier = [](const foxglove::ChannelDescriptor& /*ch*/) {
@@ -469,15 +469,18 @@ TEST_CASE("livekit: video channel without request video track uses data plane", 
 TEST_CASE("livekit: video resubscribe switches to data plane", "[integration]") {
   auto ctx = foxglove::Context::create();
 
+  auto gw = TestGateway::start(ctx);
+  auto viewer = ViewerConnection::connect(gw.room_name, "viewer-1");
+  viewer.expect_server_info();
+
+  // Create the channel after the viewer is fully connected so the gateway
+  // publishes its data track via the SFU's real-time announce path instead of
+  // the JoinResponse, which is racy through the C++ FFI bridge.
   auto video_channel = foxglove::RawChannel::create(
     "/camera", "protobuf", foxglove::Schema{"foxglove.RawImage", "protobuf", nullptr, 0}, ctx
   );
   REQUIRE(video_channel.has_value());
 
-  auto gw = TestGateway::start(ctx);
-  auto viewer = ViewerConnection::connect(gw.room_name, "viewer-1");
-
-  viewer.expect_server_info();
   auto advertise = viewer.expect_advertise();
   auto channel_id = advertise["channels"][0]["id"].get<uint64_t>();
 
@@ -1106,12 +1109,8 @@ TEST_CASE("livekit: connection graph unsubscribe stops updates", "[integration]"
   opts.capabilities = foxglove::RemoteAccessGatewayCapabilities::ConnectionGraph;
   auto gw = TestGateway::start_with_options(ctx, std::move(opts));
 
-  auto channel = foxglove::RawChannel::create("/test", "json", std::nullopt, ctx);
-  REQUIRE(channel.has_value());
-
   auto viewer = ViewerConnection::connect(gw.room_name, "viewer-1");
   viewer.expect_server_info();
-  viewer.expect_advertise();
 
   viewer.send_subscribe_connection_graph();
   viewer.expect_connection_graph_update();
@@ -1122,6 +1121,13 @@ TEST_CASE("livekit: connection graph unsubscribe stops updates", "[integration]"
   foxglove::ConnectionGraph graph;
   graph.setPublishedTopic("/camera", {"node_1"});
   CHECK(gw.gateway().publishConnectionGraph(graph) == foxglove::FoxgloveError::Ok);
+
+  // Create the channel after the viewer is fully connected so the gateway
+  // publishes its data track via the SFU's real-time announce path instead of
+  // the JoinResponse, which is racy through the C++ FFI bridge.
+  auto channel = foxglove::RawChannel::create("/test", "json", std::nullopt, ctx);
+  REQUIRE(channel.has_value());
+  viewer.expect_advertise();
 
   // Verify the control channel still works by subscribing and logging
   auto cg_channel_id = channel->id();

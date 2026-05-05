@@ -22,11 +22,14 @@ constexpr auto SHUTDOWN_TIMEOUT = std::chrono::seconds(10);
 constexpr auto POLL_INTERVAL = std::chrono::milliseconds(50);
 
 // Upper bound for waiting on a `DataTrackPublished` event from a remote
-// participant. The gateway's `publish_data_track` task uses a 5s per-attempt
-// timeout and retries with exponential backoff (up to 3s) on transient errors.
-// 15s covers two failed attempts plus backoff plus a successful retry plus SFU
-// update flush, while staying well within the 30s CTest per-test timeout.
-constexpr auto DATA_TRACK_PUBLISH_TIMEOUT = std::chrono::seconds(15);
+// participant. The gateway's `publish_data_track` task uses a 10s per-attempt
+// timeout in the LiveKit Rust SDK and retries with exponential backoff (up to
+// 3s) on transient errors, so a single failed attempt can push the
+// publish-announce-arrives latency well past EVENT_TIMEOUT (15s). 30s covers
+// one failed attempt plus a retry plus SFU update flush, which has been
+// sufficient to eliminate the ~5–8% flake observed at 10s without making
+// real failures noticeably slower to surface.
+constexpr auto DATA_TRACK_PUBLISH_TIMEOUT = std::chrono::seconds(30);
 
 inline void poll_until(
   const std::function<bool()>& cond,
