@@ -69,7 +69,7 @@ services:
         # datagram is echoed back through the netem-shaped egress path.
         socat UDP-RECVFROM:9999,fork EXEC:/bin/cat &
         # Apply netem rules (flat or per-link depending on env vars).
-        /bin/sh /netem-setup.sh
+        /bin/sh /netem-setup.sh || exit 1
         # Keep the container alive so the qdisc rules persist.
         exec sleep infinity
     healthcheck:
