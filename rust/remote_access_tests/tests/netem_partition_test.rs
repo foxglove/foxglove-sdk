@@ -109,11 +109,13 @@ async fn netem_partition_recovery_readvertises_all_channels() -> Result<()> {
         server_info_2.session_id
     );
 
-    // Verify that recovery actually happened: the gateway should have created a
-    // new session after the partition killed the old one.
-    assert_ne!(
-        server_info_1.session_id, server_info_2.session_id,
-        "session_id unchanged — the partition may not have triggered recovery"
+    // Verify that the partition triggered the reset_participant recovery path.
+    // The session_id is intentionally stable (it's an API-level correlation ID,
+    // not a per-session value), so we check the gateway's tracing logs instead.
+    assert!(
+        logs_contain("resetting participant after control-plane failure"),
+        "partition did not trigger reset_participant — \
+         the 10s sleep may not have been long enough for WebRTC to detect the peer loss"
     );
 
     // The gateway should advertise ALL channels to the new viewer.
