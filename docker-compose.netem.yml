@@ -59,17 +59,17 @@ services:
     environment:
       NETEM_ARGS: "${NETEM_ARGS:-delay 80ms 20ms loss 2%}"
     volumes:
-      - ./scripts/netem-setup.sh:/netem-setup.sh:ro
-      - ./scripts/netem-impair.sh:/netem-impair.sh:ro
+      - ./scripts/container/netem_setup.py:/netem_setup.py:ro
+      - ./scripts/container/netem_impair.py:/netem_impair.py:ro
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
-        apk add --no-cache iproute2 socat > /dev/null 2>&1
+        apk add --no-cache iproute2 socat python3 > /dev/null 2>&1
         # Start a UDP echo server for packet loss testing. Each received
         # datagram is echoed back through the netem-shaped egress path.
         socat UDP-RECVFROM:9999,fork EXEC:/bin/cat &
         # Apply netem rules (flat or per-link depending on env vars).
-        /bin/sh /netem-setup.sh || exit 1
+        python3 /netem_setup.py || exit 1
         # Keep the container alive so the qdisc rules persist.
         exec sleep infinity
     healthcheck:
