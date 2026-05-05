@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::time::Duration;
 
 use arc_swap::ArcSwapOption;
 use bytes::Bytes;
@@ -9,6 +10,20 @@ use tracing::{debug, error, warn};
 
 use crate::RawChannel;
 use crate::img2yuv::{ImageEncoding, ImageMessage, Yuv420Buffer};
+use crate::throttler::Throttler;
+
+/// Minimum width and height (in pixels) that we will hand to the libwebrtc video encoder.
+///
+/// H.264, VP8, and VP9 all encode in 16×16 macroblocks. Some encoder backends — notably
+/// `libwebrtc`'s VAAPI H.264 encoder on Linux — do not validate this and can write out of
+/// bounds when given sub-macroblock frames, which manifests as heap corruption later in
+/// the process. Other backends (e.g. OpenH264) reject the frame but continue running.
+/// Enforcing this minimum on our side guarantees safe behavior regardless of the codec
+/// backend selected by libwebrtc.
+const MIN_VIDEO_DIMENSION: u32 = 16;
+
+/// Interval between throttled warnings for repeatedly-too-small frames on a single track.
+const TOO_SMALL_WARN_INTERVAL: Duration = Duration::from_secs(30);
 
 /// The input schema type for a video-capable channel.
 ///
@@ -99,6 +114,10 @@ enum VideoEncodeError {
     Decode(String),
     #[error("failed to convert image to YUV420: {0}")]
     YuvConversion(#[from] crate::img2yuv::Error),
+    #[error(
+        "frame {width}x{height} is below the minimum encoder size {MIN_VIDEO_DIMENSION}x{MIN_VIDEO_DIMENSION}"
+    )]
+    TooSmall { width: u32, height: u32 },
 }
 
 /// Publishes video frames to a LiveKit video track.
@@ -135,6 +154,9 @@ impl VideoPublisher {
         let task_metadata = metadata.clone();
         tokio::spawn(async move {
             let mut last_metadata: Option<VideoMetadata> = None;
+            // Throttles `TooSmall` warnings so a stream of undersized frames doesn't
+            // flood the log; other encode errors stay at debug level and are unthrottled.
+            let mut too_small_throttler = Throttler::new(TOO_SMALL_WARN_INTERVAL);
             while let Ok((data, log_time_ns)) = consumer_rx.recv_async().await {
                 let source = source.clone();
                 let result = tokio::task::spawn_blocking(move || {
@@ -147,6 +169,13 @@ impl VideoPublisher {
                             last_metadata = Some(new_metadata.clone());
                             task_metadata.store(Some(Arc::new(new_metadata)));
                             video_metadata_tx.send_modify(|_| {});
+                        }
+                    }
+                    Ok(Err(VideoEncodeError::TooSmall { width, height })) => {
+                        if too_small_throttler.try_acquire() {
+                            warn!(
+                                "video frame {width}x{height} is below the minimum encoder size {MIN_VIDEO_DIMENSION}x{MIN_VIDEO_DIMENSION}; dropping frame"
+                            );
                         }
                     }
                     Ok(Err(e)) => {
@@ -221,6 +250,11 @@ fn transcode_and_publish(
         return Err(VideoEncodeError::YuvConversion(
             crate::img2yuv::Error::ZeroSized,
         ));
+    }
+
+    // Reject frames smaller than one H.264/VP8/VP9 macroblock. See `MIN_VIDEO_DIMENSION`.
+    if width < MIN_VIDEO_DIMENSION || height < MIN_VIDEO_DIMENSION {
+        return Err(VideoEncodeError::TooSmall { width, height });
     }
 
     // Transcode to YUV 4:2:0.
