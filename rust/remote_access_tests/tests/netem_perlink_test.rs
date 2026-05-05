@@ -33,7 +33,6 @@ use std::process::Command;
 use std::time::Duration;
 
 use anyhow::{Context as _, Result};
-use foxglove::protocol::v2::server::ServerMessage;
 use remote_access_tests::test_helpers::{NETEM_EVENT_TIMEOUT, TestGateway, ViewerConnection};
 use serial_test::serial;
 use tracing::info;
@@ -51,49 +50,6 @@ const TARGET_UDP_PORT: u16 = 7001;
 /// Default netem args for each link, matching docker-compose.netem-perlink.yml.
 const DEFAULT_LINK_A_ARGS: &str = "delay 200ms 50ms loss 5%";
 const DEFAULT_LINK_B_ARGS: &str = "delay 10ms 2ms";
-
-/// Find the Docker container ID for the netem sidecar. Uses `docker ps` with a
-/// name filter instead of `docker compose ps` to avoid compose-file-path and
-/// project-name resolution issues when the test binary's working directory
-/// differs from where compose was invoked.
-fn netem_container_id() -> Result<String> {
-    // The filter uses a regex anchor to match only containers whose name ends
-    // with "-netem-<N>" (the compose default naming convention), avoiding false
-    // matches on unrelated containers that happen to contain "netem" in their name.
-    let output = Command::new("docker")
-        .args([
-            "ps",
-            "-q",
-            "--filter",
-            "name=-netem-[0-9]+$",
-            "--filter",
-            "status=running",
-        ])
-        .output()
-        .context("failed to run docker ps")?;
-
-    anyhow::ensure!(
-        output.status.success(),
-        "docker ps failed ({}): {}",
-        output.status,
-        String::from_utf8_lossy(&output.stderr)
-    );
-
-    let stdout = String::from_utf8(output.stdout).context("invalid UTF-8 from docker ps")?;
-
-    // Take the first matching container. If there are multiple netem containers
-    // (e.g. from different worktrees), the tests will still work since the tc
-    // hierarchy is identical in any running per-link stack.
-    let id = stdout.lines().next().unwrap_or("").trim().to_string();
-
-    anyhow::ensure!(
-        !id.is_empty(),
-        "no running netem container found — is the per-link stack running? \
-         Start with: docker compose -f docker-compose.yaml \
-         -f docker-compose.netem.yml -f docker-compose.netem-perlink.yml up -d --wait"
-    );
-    Ok(id)
-}
 
 /// Execute a command inside the netem container and return stdout.
 fn docker_exec(container: &str, cmd: &[&str]) -> Result<String> {
@@ -212,7 +168,7 @@ fn measure_udp_loss(container: &str, target_ip: &str, count: u32) -> Result<(u32
 #[ignore]
 #[test]
 fn perlink_infra_qdisc_hierarchy_is_installed() -> Result<()> {
-    let container = netem_container_id()?;
+    let container = netem_helpers::netem_container_id()?;
 
     let qdisc_output = docker_exec(&container, &["tc", "qdisc", "show"])?;
     info!("tc qdisc show:\n{qdisc_output}");
@@ -270,7 +226,7 @@ fn perlink_infra_link_a_has_higher_latency_than_link_b() -> Result<()> {
         "test expects link A delay ({delay_a_ms}ms) > link B delay ({delay_b_ms}ms)"
     );
 
-    let container = netem_container_id()?;
+    let container = netem_helpers::netem_container_id()?;
     let measurement_count = 5;
 
     let rtt_a = measure_tcp_rtt(&container, TARGET_A_IP, measurement_count)?;
@@ -315,7 +271,7 @@ fn perlink_infra_link_a_has_more_packet_loss_than_link_b() -> Result<()> {
         return Ok(());
     }
 
-    let container = netem_container_id()?;
+    let container = netem_helpers::netem_container_id()?;
     // 150 packets at ~9.75% effective round-trip loss gives P(0 lost) ≈ 1e-7,
     // making false failures negligible. Runtime is ~2.5 minutes per link.
     let packet_count: u32 = 150;
@@ -391,17 +347,19 @@ async fn perlink_product_viewer_connects_under_classful_qdisc() -> Result<()> {
     Ok(())
 }
 
-/// Verify that a burst of messages is delivered completely and in order under
-/// the classful qdisc hierarchy. Exercises the full data path: connect →
-/// channel ads → subscribe → ordered delivery.
+/// Verify that data track message delivery works under the classful qdisc
+/// hierarchy. Data tracks are lossy, so the message is sent repeatedly until the
+/// viewer receives it (or the test times out). This validates that the data plane
+/// functions correctly under classful qdiscs (HTB root + netem leaf), which is
+/// structurally different from the flat `root netem` tested in `netem_test.rs`.
 #[traced_test]
 #[ignore]
 #[tokio::test]
 #[serial(netem)]
-async fn perlink_product_burst_delivery_under_classful_qdisc() -> Result<()> {
+async fn perlink_product_data_track_delivery_under_classful_qdisc() -> Result<()> {
     let ctx = foxglove::Context::new();
     let channel = ctx
-        .channel_builder("/perlink-burst")
+        .channel_builder("/perlink-data-track")
         .message_encoding("json")
         .build_raw()
         .context("create channel")?;
@@ -417,31 +375,22 @@ async fn perlink_product_burst_delivery_under_classful_qdisc() -> Result<()> {
 
     viewer.subscribe_and_wait(&[channel_id], &channel).await?;
 
-    // Send a burst of messages.
-    let count = 20;
-    for i in 0..count {
-        let payload = format!("msg-{i:04}");
-        channel.log(payload.as_bytes());
-    }
-
-    // Wait for the per-channel byte stream to open, then read all messages from it.
-    let mut ch_reader = viewer.expect_channel_byte_stream().await?;
-    for i in 0..count {
-        let msg = ch_reader.next_server_message().await?;
-        let expected = format!("msg-{i:04}");
-        match msg {
-            ServerMessage::MessageData(data) => {
-                assert_eq!(data.channel_id, channel_id);
-                assert_eq!(
-                    data.data.as_ref(),
-                    expected.as_bytes(),
-                    "message {i} out of order or missing"
-                );
-            }
-            other => anyhow::bail!("expected MessageData, got: {other:?}"),
+    let payload = b"perlink-hello";
+    let sender_channel = channel.clone();
+    let sender = tokio::spawn(async move {
+        let mut interval = tokio::time::interval(Duration::from_millis(1));
+        loop {
+            interval.tick().await;
+            sender_channel.log(payload);
         }
-    }
-    info!("all {count} messages delivered in order under classful qdisc");
+    });
+
+    let msg = viewer
+        .expect_new_data_track_and_message_data(channel_id)
+        .await?;
+    sender.abort();
+    assert_eq!(msg.data.as_ref(), payload);
+    info!("data track message delivered under classful qdisc");
 
     viewer.close().await?;
     gw.stop().await?;
@@ -456,7 +405,7 @@ async fn perlink_product_burst_delivery_under_classful_qdisc() -> Result<()> {
 #[ignore]
 #[test]
 fn perlink_infra_default_class_catches_unclassified_traffic() -> Result<()> {
-    let container = netem_container_id()?;
+    let container = netem_helpers::netem_container_id()?;
 
     // Verify the qdisc hierarchy has a default class. Check all interfaces since
     // the perlink network may not be on eth0.

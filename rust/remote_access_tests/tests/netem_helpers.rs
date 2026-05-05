@@ -1,4 +1,79 @@
-//! Shared helpers for parsing netem argument strings used by netem test suites.
+//! Shared helpers for netem test suites: argument parsing and container control.
+
+#![allow(dead_code)]
+
+use std::process::Command;
+
+use anyhow::{Context as _, Result};
+use tracing::info;
+
+/// Default netem arguments matching `docker-compose.netem.yml`.
+const DEFAULT_NETEM_ARGS: &str = "delay 80ms 20ms loss 2%";
+
+/// Return the default netem args, preferring the `NETEM_ARGS` env var.
+pub fn default_netem_args() -> String {
+    std::env::var("NETEM_ARGS").unwrap_or_else(|_| DEFAULT_NETEM_ARGS.into())
+}
+
+/// Find the netem sidecar container ID.
+///
+/// Uses `docker ps` with a name filter instead of `docker compose ps` to avoid
+/// compose-file-path and project-name resolution issues when the test binary's
+/// working directory differs from where compose was invoked.
+pub fn netem_container_id() -> Result<String> {
+    let output = Command::new("docker")
+        .args([
+            "ps",
+            "-q",
+            "--filter",
+            "name=-netem-[0-9]+$",
+            "--filter",
+            "status=running",
+        ])
+        .output()
+        .context("failed to run docker ps")?;
+
+    anyhow::ensure!(
+        output.status.success(),
+        "docker ps failed ({}): {}",
+        output.status,
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let stdout = String::from_utf8(output.stdout).context("invalid UTF-8 from docker ps")?;
+    let id = stdout.lines().next().unwrap_or("").trim().to_string();
+
+    anyhow::ensure!(
+        !id.is_empty(),
+        "no running netem container found — is the netem stack running? \
+         Start with: docker compose -f docker-compose.yaml \
+         -f docker-compose.netem.yml up -d --wait"
+    );
+    Ok(id)
+}
+
+/// Update netem impairment parameters on the given class. Runs
+/// `netem-impair.sh <class> <args>` inside the netem sidecar.
+pub fn set_netem_impairment(container: &str, class: &str, args: &str) -> Result<()> {
+    let output = Command::new("docker")
+        .args(["exec", container, "/bin/sh", "/netem-impair.sh", class])
+        .args(args.split_whitespace())
+        .output()
+        .context("failed to run netem-impair.sh")?;
+
+    anyhow::ensure!(
+        output.status.success(),
+        "netem-impair.sh failed ({}): {}",
+        output.status,
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    info!(
+        "netem impairment updated: {}",
+        String::from_utf8_lossy(&output.stdout).trim()
+    );
+    Ok(())
+}
 
 /// Parse the base delay (in ms) from a netem args string.
 ///
