@@ -16,6 +16,7 @@ use parking_lot::RwLock;
 use smallvec::SmallVec;
 use tokio::io::AsyncReadExt;
 use tokio::runtime::Handle;
+use tokio::task::JoinHandle;
 use tokio_util::{io::StreamReader, sync::CancellationToken};
 use tracing::{debug, error, info, trace, warn};
 
@@ -63,6 +64,34 @@ struct SessionStats {
     participants: usize,
     subscriptions: usize,
     video_tracks: usize,
+}
+
+/// Tracks in-flight libwebrtc track lifecycle operations spawned by the
+/// session, so that:
+///
+/// * A subsequent `publish_track` for the same video channel waits for the
+///   prior `unpublish_track` (or prior orphan-publish cleanup) to return
+///   before creating a new sender. This avoids overlapping create/destroy on
+///   the per-channel libwebrtc sender — which on Linux + H.264 means
+///   overlapping VAAPI encoder context create/destroy, a path that has
+///   historically been buggy in libwebrtc + Mesa/Intel VA-API drivers.
+/// * `RemoteAccessSession::close` can drive every outstanding operation to
+///   completion before `Room::close` synchronously destroys the
+///   PeerConnection. Cancelling these futures mid-call (e.g. by dropping the
+///   per-test tokio runtime in `#[tokio::test]`) leaves libwebrtc state
+///   half-torn-down, which is fatal when the next session in the same
+///   process brings up a new PeerConnection.
+#[derive(Default)]
+struct TrackTeardowns {
+    /// Most recent in-flight libwebrtc operation per video channel — either
+    /// a publish task or an unpublish task. The next operation for that
+    /// channel awaits this handle before touching libwebrtc state, and
+    /// `close()` awaits any remaining handles before closing the room.
+    video_per_channel: HashMap<ChannelId, JoinHandle<()>>,
+    /// In-flight `DataTrack::close` tasks. Awaited on session close so the
+    /// PeerConnection is not torn down while a data track is still being
+    /// unpublished.
+    data: Vec<JoinHandle<()>>,
 }
 
 const CONTROL_CHANNEL_TOPIC: &str = "control";
@@ -157,6 +186,9 @@ pub(super) struct RemoteAccessSession {
     /// This prevents TOCTOU races between byte-stream message handlers and room-event handlers,
     /// which run on separate tokio tasks.
     subscription_lock: parking_lot::Mutex<()>,
+    /// Bookkeeping for in-flight libwebrtc track lifecycle operations. See
+    /// [`TrackTeardowns`].
+    track_teardowns: parking_lot::Mutex<TrackTeardowns>,
     /// Signaled by video publishers when video metadata changes, prompting
     /// the sender loop to re-advertise affected channels.
     video_metadata_tx: tokio::sync::watch::Sender<()>,
@@ -382,6 +414,7 @@ impl RemoteAccessSession {
             runtime: params.runtime,
             cancellation_token: params.cancellation_token,
             subscription_lock: parking_lot::Mutex::new(()),
+            track_teardowns: parking_lot::Mutex::new(TrackTeardowns::default()),
             video_metadata_tx,
             video_metadata_rx,
             services: params.services,
@@ -467,7 +500,8 @@ impl RemoteAccessSession {
     }
 
     /// Shut down the session: cancel every participant's flush-task, await
-    /// their completion, then close the LiveKit room.
+    /// their completion, drive in-flight libwebrtc track lifecycle operations
+    /// to completion, then close the LiveKit room.
     ///
     /// The caller must ensure that `handle_room_events` has stopped so no new
     /// `remove_participant` / `reset_participant` calls can race with us.
@@ -475,6 +509,23 @@ impl RemoteAccessSession {
         // Cancel flush-tasks and await them before tearing down the transport.
         // In-flight writes either complete or fail once `room.close()` runs.
         self.participant_registry.shutdown().await;
+
+        // Drain in-flight track teardowns so libwebrtc finishes any unpublish
+        // / orphan-cleanup work before `Room::close` destroys the
+        // PeerConnection. Cancelling these mid-call (e.g. by dropping a
+        // per-test tokio runtime) corrupts libwebrtc state for the next
+        // session in the same process.
+        let (video_handles, data_handles) = {
+            let mut t = self.track_teardowns.lock();
+            let video: Vec<_> = std::mem::take(&mut t.video_per_channel)
+                .into_values()
+                .collect();
+            let data = std::mem::take(&mut t.data);
+            (video, data)
+        };
+        let _ = futures_util::future::join_all(video_handles).await;
+        let _ = futures_util::future::join_all(data_handles).await;
+
         if let Err(e) = self.room.close().await {
             error!(
                 remote_access_session_id = self.remote_access_session_id(),
@@ -2095,7 +2146,18 @@ impl RemoteAccessSession {
 
             let local_participant = self.room.local_participant().clone();
             let session = self.clone();
-            tokio::spawn(async move {
+            // Atomically swap the prior in-flight libwebrtc op (if any) for
+            // this channel out of the registry, and register the new publish
+            // task. The new task awaits the prior handle before calling
+            // `publish_track` so that overlapping create/destroy on the
+            // per-channel sender (and the underlying VAAPI encoder context)
+            // is not possible within a single session.
+            let mut teardowns = self.track_teardowns.lock();
+            let prior = teardowns.video_per_channel.remove(&channel_id);
+            let handle = self.runtime.spawn(async move {
+                if let Some(prior) = prior {
+                    let _ = prior.await;
+                }
                 let local_track = LocalTrack::Video(track);
                 // Prefer H.264 so that the libwebrtc VAAPI encoder (H.264-only) can be used
                 // on Linux hosts that have libva + a VA driver available. VP8/VP9/AV1 paths
@@ -2138,6 +2200,7 @@ impl RemoteAccessSession {
                     }
                 }
             });
+            teardowns.video_per_channel.insert(channel_id, handle);
         }
     }
 
@@ -2164,16 +2227,31 @@ impl RemoteAccessSession {
             state.remove_video_track_sid(&channel_id)
         };
 
-        if let Some(sid) = sid {
-            let local_participant = self.room.local_participant().clone();
-            tokio::spawn(async move {
-                if let Err(e) = local_participant.unpublish_track(&sid).await {
-                    error!("failed to unpublish video track {sid}: {e:?}");
-                } else {
-                    debug!("unpublished video track {sid} for channel {channel_id:?}");
-                }
-            });
-        }
+        // No SID stored means publish_track has not yet returned for this
+        // channel; the publish task itself will fall into its orphan-cleanup
+        // branch (see `start_video_tracks`). The publish task's join handle
+        // is already in `track_teardowns.video_per_channel`, so any
+        // subsequent publish for this channel — and `close()` — will await
+        // it. Nothing further to do here.
+        let Some(sid) = sid else { return };
+
+        let local_participant = self.room.local_participant().clone();
+        let mut teardowns = self.track_teardowns.lock();
+        let prior = teardowns.video_per_channel.remove(&channel_id);
+        let handle = self.runtime.spawn(async move {
+            // Drive any prior libwebrtc op for this channel to completion
+            // before issuing the unpublish, so we never have overlapping
+            // create/destroy on the per-channel sender.
+            if let Some(prior) = prior {
+                let _ = prior.await;
+            }
+            if let Err(e) = local_participant.unpublish_track(&sid).await {
+                error!("failed to unpublish video track {sid}: {e:?}");
+            } else {
+                debug!("unpublished video track {sid} for channel {channel_id:?}");
+            }
+        });
+        teardowns.video_per_channel.insert(channel_id, handle);
     }
 
     /// Eagerly publish data tracks for newly advertised channels.
@@ -2197,7 +2275,12 @@ impl RemoteAccessSession {
     /// Tear down the data track for a channel.
     fn teardown_data_track(&self, channel_id: ChannelId) {
         if let Some(mut data_track) = self.state.write().remove_data_track(&channel_id) {
-            self.runtime.spawn(async move { data_track.close().await });
+            // Track the close task so `close()` can drive it to completion
+            // before `Room::close` destroys the PeerConnection. Channel IDs
+            // are never reused, so there is no resubscribe-style race here —
+            // we only need to drain on shutdown.
+            let handle = self.runtime.spawn(async move { data_track.close().await });
+            self.track_teardowns.lock().data.push(handle);
         }
     }
 }
