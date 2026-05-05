@@ -253,9 +253,11 @@ TEST_CASE("livekit: multiple participants receive messages", "[integration]") {
   auto adv1 = viewer1.expect_advertise();
   REQUIRE(adv1["channels"].size() == 1);
   auto channel_id = adv1["channels"][0]["id"].get<uint64_t>();
-  CHECK(adv1["channels"][0]
-          .value("metadata", nlohmann::json::object())
-          .value("foxglove.reliable", "") == "true");
+  CHECK(
+    adv1["channels"][0]
+      .value("metadata", nlohmann::json::object())
+      .value("foxglove.reliable", "") == "true"
+  );
   viewer1.subscribe_and_wait({channel_id}, [&] {
     return channel->hasSinks();
   });

@@ -186,8 +186,7 @@ public:
   /// the time this is called the event (if any) is already in the queue.
   /// Note: this uses wait_for_event and consumes the event from the queue.
   bool has_device_data_track(
-    uint64_t channel_id,
-    std::chrono::milliseconds timeout = std::chrono::milliseconds(500)
+    uint64_t channel_id, std::chrono::milliseconds timeout = std::chrono::milliseconds(500)
   );
 
   /// Waits for a TrackSubscribed event and returns the track name.
