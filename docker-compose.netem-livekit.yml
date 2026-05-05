@@ -36,19 +36,6 @@ volumes:
   netem-cargo-registry:
   netem-cargo-git:
   netem-target:
-  # Tmpfs volume for file-based coordination between gateway-runner and
-  # viewer-runner in per-link tests.
-  coordination:
-    driver_opts:
-      type: tmpfs
-      device: tmpfs
-
-# Note: gateway-runner and viewer-runner intentionally duplicate test-runner's
-# configuration rather than using a YAML anchor. Docker Compose's merge key
-# (<<: *anchor) replaces entire mappings for `volumes` and `environment`, so
-# an anchor would not actually deduplicate the fields that differ (coordination
-# volume, COORDINATION_DIR env var, IP address). Explicit definitions are
-# clearer about what each service actually gets.
 
 services:
   livekit:
@@ -71,7 +58,6 @@ services:
       - netem-cargo-registry:/usr/local/cargo/registry
       - netem-cargo-git:/usr/local/cargo/git
       - netem-target:/workspace/target-docker
-      - coordination:/coordination
     environment:
       CARGO_TARGET_DIR: /workspace/target-docker
       LIVEKIT_URL: "http://10.99.0.2:7880"
@@ -79,7 +65,6 @@ services:
       # The webrtc-sys crate compiles C++ code that requires Clang.
       CXX: clang++
       CC: clang
-      COORDINATION_DIR: /coordination
     networks:
       perlink:
         ipv4_address: 10.99.0.31
@@ -112,14 +97,12 @@ services:
       - netem-cargo-registry:/usr/local/cargo/registry
       - netem-cargo-git:/usr/local/cargo/git
       - netem-target:/workspace/target-docker
-      - coordination:/coordination
     environment:
       CARGO_TARGET_DIR: /workspace/target-docker
       LIVEKIT_URL: "http://10.99.0.2:7880"
       CARGO_TERM_COLOR: always
       CXX: clang++
       CC: clang
-      COORDINATION_DIR: /coordination
     networks:
       perlink:
         ipv4_address: 10.99.0.40
