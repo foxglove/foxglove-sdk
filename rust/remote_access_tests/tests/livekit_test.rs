@@ -804,10 +804,13 @@ async fn livekit_request_video_track_on_non_video_channel_sends_error() -> Resul
     Ok(())
 }
 
-/// Encode a 4x4 rgb8 `foxglove.RawImage` as protobuf bytes.
+/// Encode a 16x16 rgb8 `foxglove.RawImage` as protobuf bytes.
+///
+/// 16x16 is the minimum dimension accepted by the SDK's video encoder pipeline (one
+/// H.264/VP8/VP9 macroblock); smaller frames are dropped with a throttled warning.
 fn encode_raw_image(frame_id: &str) -> Vec<u8> {
-    let width: u32 = 4;
-    let height: u32 = 4;
+    let width: u32 = 16;
+    let height: u32 = 16;
     let step = width * 3; // rgb8: 3 bytes per pixel
     let data = vec![128u8; (step * height) as usize];
     let msg = RawImage {
