@@ -52,11 +52,18 @@ pub fn netem_container_id() -> Result<String> {
     Ok(id)
 }
 
-/// Update netem impairment parameters on the given class. Runs
-/// `netem_impair.py <class> <args>` inside the netem sidecar.
+/// Update netem impairment parameters. Runs `netem_impair.py` inside the netem
+/// sidecar. Pass `"default"` to target only the default HTB class (ff00:), or
+/// `"all"` to update every netem qdisc.
 pub fn set_netem_impairment(container: &str, class: &str, args: &str) -> Result<()> {
-    let output = Command::new("docker")
-        .args(["exec", container, "python3", "/netem_impair.py", class])
+    let mut cmd = Command::new("docker");
+    cmd.args(["exec", container, "python3", "/netem_impair.py"]);
+    // The Python script only recognizes "default" as a keyword; omitting it
+    // targets all qdiscs (the script's default behavior).
+    if class == "default" {
+        cmd.arg("default");
+    }
+    let output = cmd
         .args(args.split_whitespace())
         .output()
         .context("failed to run netem_impair.py")?;
