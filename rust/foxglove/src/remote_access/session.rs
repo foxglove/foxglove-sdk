@@ -74,7 +74,7 @@ const MAX_MESSAGE_SIZE: usize = 16 * 1024 * 1024; // 16 MiB
 /// keep `RemoteAccessGateway::stop()` (and the associated `ShuttingDown` ->
 /// `Shutdown` status transition) bounded. Any remaining cleanup runs through
 /// the `Room`'s `Drop` impl when the session is released.
-const ROOM_CLOSE_TIMEOUT: Duration = Duration::from_secs(10);
+const ROOM_CLOSE_TIMEOUT: Duration = Duration::from_secs(20);
 
 pub(super) const DEFAULT_MESSAGE_BACKLOG_SIZE: usize = 1024;
 
@@ -478,7 +478,7 @@ impl RemoteAccessSession {
     ///
     /// The caller must ensure that `handle_room_events` has stopped so no new
     /// `remove_participant` / `reset_participant` calls can race with us.
-    pub(super) async fn close(&self) {
+    pub(super) async fn close(self: &Arc<Self>) {
         // Cancel flush-tasks and await them before tearing down the transport.
         // In-flight writes either complete or fail once `room.close()` runs.
         self.participant_registry.shutdown().await;
@@ -489,11 +489,34 @@ impl RemoteAccessSession {
                 error = %e,
                 "failed to close room: {e}",
             ),
-            Err(_) => warn!(
-                remote_access_session_id = self.remote_access_session_id(),
-                timeout_secs = ROOM_CLOSE_TIMEOUT.as_secs(),
-                "livekit room close timed out; abandoning room teardown",
-            ),
+            Err(_) => {
+                // LiveKit room.close() can hang indefinitely: #FLE-505
+                // Our workaround here is to use a timeout and try again in the background.
+                // The SFU should detect the device has left and kick it, but failing that
+                // our monitoring code will detect the room has been idle with just the device
+                // for too long, and shut it down.
+                warn!(
+                    remote_access_session_id = self.remote_access_session_id(),
+                    timeout_secs = ROOM_CLOSE_TIMEOUT.as_secs(),
+                    "livekit room close timed out; retrying in background",
+                );
+                let session = Arc::clone(self);
+                tokio::spawn(async move {
+                    match tokio::time::timeout(ROOM_CLOSE_TIMEOUT, session.room.close()).await {
+                        Ok(Ok(())) => {}
+                        Ok(Err(e)) => error!(
+                            remote_access_session_id = session.remote_access_session_id(),
+                            error = %e,
+                            "failed to close room on retry: {e}",
+                        ),
+                        Err(_) => error!(
+                            remote_access_session_id = session.remote_access_session_id(),
+                            timeout_secs = ROOM_CLOSE_TIMEOUT.as_secs(),
+                            "livekit room close timed out on retry; abandoning room teardown",
+                        ),
+                    }
+                });
+            }
         }
     }
 

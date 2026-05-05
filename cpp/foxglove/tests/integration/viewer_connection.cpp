@@ -523,7 +523,7 @@ std::shared_ptr<DeviceChannelReader> ViewerConnection::expect_device_channel_dat
   // subscription activate. The Rust test helper avoids this race with
   // `subscribe().await`, but the C++ FFI does not currently expose an
   // "active" signal.
-  std::this_thread::sleep_for(std::chrono::milliseconds(500));
+  std::this_thread::sleep_for(std::chrono::milliseconds(250));
   return std::make_shared<DeviceChannelReader>(sub.value(), channel_id);
 }
 
