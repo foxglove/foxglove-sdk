@@ -471,7 +471,7 @@ impl RemoteAccessSession {
     ///
     /// The caller must ensure that `handle_room_events` has stopped so no new
     /// `remove_participant` / `reset_participant` calls can race with us.
-    pub(super) async fn close(self: &Arc<Self>) {
+    pub(super) async fn close(&self) {
         // Cancel flush-tasks and await them before tearing down the transport.
         // In-flight writes either complete or fail once `room.close()` runs.
         self.participant_registry.shutdown().await;

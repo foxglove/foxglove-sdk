@@ -184,6 +184,7 @@ public:
   /// Returns true if a DataTrackPublished event for `data-ch-{channel_id}` is
   /// seen within `timeout`. Use a short timeout for negative assertions — by
   /// the time this is called the event (if any) is already in the queue.
+  /// Note: this uses wait_for_event and consumes the event from the queue.
   bool has_device_data_track(
     uint64_t channel_id,
     std::chrono::milliseconds timeout = std::chrono::milliseconds(500)
