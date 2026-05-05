@@ -583,6 +583,12 @@ async fn livekit_video_track_resubscribe() -> Result<()> {
     assert_eq!(track_name, expected_track_name);
     info!("unsubscribe: video track torn down");
 
+    // Give the gateway's spawned unpublish_track future a moment to drain
+    // before we issue a publish for the same track name. Without this, the
+    // LiveKit SDK can serialize the back-to-back renegotiations slowly enough
+    // to exceed EVENT_TIMEOUT.
+    tokio::time::sleep(Duration::from_millis(250)).await;
+
     // Resubscribe with requestVideoTrack — video track should come back.
     viewer
         .send_subscribe_channels(vec![SubscribeChannel {

@@ -440,6 +440,12 @@ TEST_CASE("livekit: video track resubscribe", "[integration]") {
   viewer.send_unsubscribe({channel_id});
   CHECK(viewer.expect_track_unsubscribed() == expected_track_name);
 
+  // Give the gateway's spawned unpublish_track future a moment to drain
+  // before we issue a publish for the same track name. Without this, the
+  // LiveKit SDK can serialize the back-to-back renegotiations slowly enough
+  // to exceed EVENT_TIMEOUT.
+  std::this_thread::sleep_for(250ms);
+
   viewer.send_subscribe_video({channel_id});
   CHECK(viewer.expect_track_subscribed() == expected_track_name);
 
