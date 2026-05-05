@@ -386,7 +386,7 @@ if(FOXGLOVE_BUILD_INTEGRATION_TESTS)
   FetchContent_Declare(
     livekit
     GIT_REPOSITORY https://github.com/livekit/client-sdk-cpp.git
-    GIT_TAG v0.3.3
+    GIT_TAG v0.3.4
   )
   FetchContent_MakeAvailable(livekit)
 

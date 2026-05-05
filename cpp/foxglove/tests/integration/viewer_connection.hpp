@@ -181,6 +181,14 @@ public:
   /// next MessageData from it. Subsequent calls reuse the same reader.
   nlohmann::json expect_new_data_track_and_message_data(uint64_t channel_id);
 
+  /// Returns true if a DataTrackPublished event for `data-ch-{channel_id}` is
+  /// seen within `timeout`. Use a short timeout for negative assertions — by
+  /// the time this is called the event (if any) is already in the queue.
+  bool has_device_data_track(
+    uint64_t channel_id,
+    std::chrono::milliseconds timeout = std::chrono::milliseconds(500)
+  );
+
   /// Waits for a TrackSubscribed event and returns the track name.
   std::string expect_track_subscribed();
 

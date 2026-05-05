@@ -540,6 +540,19 @@ nlohmann::json ViewerConnection::expect_new_data_track_and_message_data(uint64_t
   return device_channel_readers_.at(channel_id)->next_server_message();
 }
 
+bool ViewerConnection::has_device_data_track(
+  uint64_t channel_id, std::chrono::milliseconds timeout
+) {
+  auto expected_name = "data-ch-" + std::to_string(channel_id);
+  auto event = delegate_->wait_for_event(
+    [&expected_name](const ViewerEvent& e) {
+      return e.type == ViewerEvent::Type::DataTrackPublished && e.track_name == expected_name;
+    },
+    timeout
+  );
+  return event.has_value();
+}
+
 std::string ViewerConnection::expect_track_subscribed() {
   auto event = delegate_->wait_for_event(
     [](const ViewerEvent& e) {

@@ -337,6 +337,16 @@ jobs:
           make build-integration
           ctest --test-dir build-integration --verbose -L integration
 
+      - name: Capture LiveKit logs on failure
+        if: failure()
+        run: docker compose logs livekit > livekit.log
+      - name: Upload LiveKit logs
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: livekit-logs
+          path: livekit.log
+
       - name: Stop LiveKit server
         if: always()
         run: docker compose down

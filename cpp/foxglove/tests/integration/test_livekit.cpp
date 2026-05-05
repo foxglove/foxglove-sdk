@@ -104,11 +104,15 @@ TEST_CASE("livekit: viewer receives message after subscribe", "[integration]") {
   channel->log(reinterpret_cast<const std::byte*>(payload1.data()), payload1.size());
   auto msg = ch_reader->next_server_message();
   CHECK(msg.value("op", "") == "messageData");
+  auto data1 = msg.value("data", std::vector<uint8_t>{});
+  CHECK(std::string(data1.begin(), data1.end()) == payload1);
 
   std::string payload2 = "message-2";
   channel->log(reinterpret_cast<const std::byte*>(payload2.data()), payload2.size());
   msg = ch_reader->next_server_message();
   CHECK(msg.value("op", "") == "messageData");
+  auto data2 = msg.value("data", std::vector<uint8_t>{});
+  CHECK(std::string(data2.begin(), data2.end()) == payload2);
 
   viewer.close();
   gw.stop();
@@ -145,6 +149,8 @@ TEST_CASE("livekit: viewer does not receive message before subscribe", "[integra
 
   auto msg = viewer.expect_new_data_track_and_message_data(channel_id);
   CHECK(msg.value("op", "") == "messageData");
+  auto data = msg.value("data", std::vector<uint8_t>{});
+  CHECK(std::string(data.begin(), data.end()) == after);
 
   viewer.close();
   gw.stop();
@@ -365,9 +371,16 @@ TEST_CASE("livekit: video channel messages bypass data plane", "[integration]") 
   std::string json_payload = "json-payload";
   json_channel->log(reinterpret_cast<const std::byte*>(json_payload.data()), json_payload.size());
 
-  // The first message on the data plane should be the JSON one, not video
+  // The JSON data track must carry json_payload, not the video frame.
   auto msg = viewer.expect_new_data_track_and_message_data(json_id);
   CHECK(msg.value("op", "") == "messageData");
+  CHECK(msg.value("channelId", uint64_t{0}) == json_id);
+  auto data = msg.value("data", std::vector<uint8_t>{});
+  CHECK(std::string(data.begin(), data.end()) == json_payload);
+
+  // The video channel must never have published a data track — its frames
+  // bypass the data plane entirely.
+  CHECK(!viewer.has_device_data_track(video_id));
 
   viewer.close();
   gw.stop();
@@ -461,6 +474,8 @@ TEST_CASE("livekit: video channel without request video track uses data plane", 
   video_channel->log(reinterpret_cast<const std::byte*>(payload.data()), payload.size());
   auto msg = viewer.expect_new_data_track_and_message_data(channel_id);
   CHECK(msg.value("op", "") == "messageData");
+  auto data = msg.value("data", std::vector<uint8_t>{});
+  CHECK(std::string(data.begin(), data.end()) == payload);
 
   viewer.close();
   gw.stop();
@@ -500,6 +515,8 @@ TEST_CASE("livekit: video resubscribe switches to data plane", "[integration]") 
   video_channel->log(reinterpret_cast<const std::byte*>(payload.data()), payload.size());
   auto msg = viewer.expect_new_data_track_and_message_data(channel_id);
   CHECK(msg.value("op", "") == "messageData");
+  auto data = msg.value("data", std::vector<uint8_t>{});
+  CHECK(std::string(data.begin(), data.end()) == payload);
 
   viewer.close();
   gw.stop();
@@ -1139,6 +1156,8 @@ TEST_CASE("livekit: connection graph unsubscribe stops updates", "[integration]"
   channel->log(reinterpret_cast<const std::byte*>(payload.data()), payload.size());
   auto msg = viewer.expect_new_data_track_and_message_data(cg_channel_id);
   CHECK(msg.value("op", "") == "messageData");
+  auto data = msg.value("data", std::vector<uint8_t>{});
+  CHECK(std::string(data.begin(), data.end()) == payload);
 
   viewer.close();
   gw.stop();
@@ -1378,6 +1397,8 @@ TEST_CASE("livekit: qos classifier per channel", "[integration]") {
   auto lossy_msg = data_reader->next_server_message();
   CHECK(lossy_msg.value("op", "") == "messageData");
   CHECK(lossy_msg.value("channelId", uint64_t{0}) == lossy_id);
+  auto lossy_data = lossy_msg.value("data", std::vector<uint8_t>{});
+  CHECK(std::string(lossy_data.begin(), lossy_data.end()) == lossy_payload);
 
   viewer.close();
   gw.stop();
