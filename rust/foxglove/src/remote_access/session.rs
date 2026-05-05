@@ -91,7 +91,7 @@ struct TrackTeardowns {
     /// In-flight `DataTrack::close` tasks. Awaited on session close so the
     /// PeerConnection is not torn down while a data track is still being
     /// unpublished.
-    data: Vec<JoinHandle<()>>,
+    join_handles: Vec<JoinHandle<()>>,
 }
 
 const CONTROL_CHANNEL_TOPIC: &str = "control";
@@ -520,7 +520,7 @@ impl RemoteAccessSession {
             let video: Vec<_> = std::mem::take(&mut t.video_per_channel)
                 .into_values()
                 .collect();
-            let data = std::mem::take(&mut t.data);
+            let data = std::mem::take(&mut t.join_handles);
             (video, data)
         };
         let _ = futures_util::future::join_all(video_handles).await;
@@ -2233,6 +2233,13 @@ impl RemoteAccessSession {
         // is already in `track_teardowns.video_per_channel`, so any
         // subsequent publish for this channel — and `close()` — will await
         // it. Nothing further to do here.
+        //
+        // The orphan-cleanup branch triggers because the publish task compares
+        // `state.get_video_publisher(channel_id)` against the `Arc` it
+        // captured at startup; `state.remove_video_publisher` above is what
+        // makes those two values differ, so the task detects it is orphaned
+        // and unpublishes. If either side of that invariant ever changes this
+        // early return must be revisited.
         let Some(sid) = sid else { return };
 
         let local_participant = self.room.local_participant().clone();
@@ -2280,7 +2287,9 @@ impl RemoteAccessSession {
             // are never reused, so there is no resubscribe-style race here —
             // we only need to drain on shutdown.
             let handle = self.runtime.spawn(async move { data_track.close().await });
-            self.track_teardowns.lock().data.push(handle);
+            let mut t = self.track_teardowns.lock();
+            t.join_handles.retain(|h| !h.is_finished());
+            t.join_handles.push(handle);
         }
     }
 }
