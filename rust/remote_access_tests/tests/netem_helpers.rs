@@ -56,6 +56,10 @@ pub fn netem_container_id() -> Result<String> {
 /// sidecar. Pass `"default"` to target only the default HTB class (ff00:), or
 /// `"all"` to update every netem qdisc.
 pub fn set_netem_impairment(container: &str, class: &str, args: &str) -> Result<()> {
+    anyhow::ensure!(
+        class == "default" || class == "all",
+        "invalid netem class {class:?}: expected \"default\" or \"all\""
+    );
     let mut cmd = Command::new("docker");
     cmd.args(["exec", container, "python3", "/netem_impair.py"]);
     // The Python script only recognizes "default" as a keyword; omitting it
