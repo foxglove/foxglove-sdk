@@ -71,6 +71,7 @@ services:
       - netem-cargo-registry:/usr/local/cargo/registry
       - netem-cargo-git:/usr/local/cargo/git
       - netem-target:/workspace/target-docker
+      - coordination:/coordination
     environment:
       CARGO_TARGET_DIR: /workspace/target-docker
       LIVEKIT_URL: "http://10.99.0.2:7880"
@@ -78,6 +79,7 @@ services:
       # The webrtc-sys crate compiles C++ code that requires Clang.
       CXX: clang++
       CC: clang
+      COORDINATION_DIR: /coordination
     networks:
       perlink:
         ipv4_address: 10.99.0.31
@@ -110,12 +112,14 @@ services:
       - netem-cargo-registry:/usr/local/cargo/registry
       - netem-cargo-git:/usr/local/cargo/git
       - netem-target:/workspace/target-docker
+      - coordination:/coordination
     environment:
       CARGO_TARGET_DIR: /workspace/target-docker
       LIVEKIT_URL: "http://10.99.0.2:7880"
       CARGO_TERM_COLOR: always
       CXX: clang++
       CC: clang
+      COORDINATION_DIR: /coordination
     networks:
       perlink:
         ipv4_address: 10.99.0.40
@@ -196,86 +200,6 @@ services:
       retries: 10
     depends_on:
       viewer-runner:
-        condition: service_healthy
-    profiles:
-      - perlink
-
-  # Gateway runner for per-link tests. Runs the gateway side of the test at
-  # 10.99.0.31 (high impairment). See test-runner above for field documentation.
-  gateway-runner:
-    image: rust:1.93.0-bookworm
-    working_dir: /workspace
-    volumes:
-      - .:/workspace
-      - netem-cargo-registry:/usr/local/cargo/registry
-      - netem-cargo-git:/usr/local/cargo/git
-      - netem-target:/workspace/target-docker
-      - coordination:/coordination
-    environment:
-      CARGO_TARGET_DIR: /workspace/target-docker
-      LIVEKIT_URL: "http://10.99.0.2:7880"
-      CARGO_TERM_COLOR: always
-      CXX: clang++
-      CC: clang
-      COORDINATION_DIR: /coordination
-    networks:
-      perlink:
-        ipv4_address: 10.99.0.31
-    entrypoint: ["/bin/sh", "-c"]
-    command:
-      - |
-        if ! command -v clang++ > /dev/null 2>&1; then
-          apt-get update -qq && apt-get install -y -qq clang > /dev/null 2>&1
-        fi
-        exec sleep infinity
-    healthcheck:
-      test: ["CMD-SHELL", "command -v clang++ && test -d /workspace/rust"]
-      interval: 5s
-      timeout: 10s
-      retries: 12
-      start_period: 30s
-    depends_on:
-      livekit:
-        condition: service_healthy
-    profiles:
-      - perlink
-
-  # Viewer runner for per-link tests. Runs the viewer side of the test at
-  # 10.99.0.40 (low impairment). See test-runner above for field documentation.
-  viewer-runner:
-    image: rust:1.93.0-bookworm
-    working_dir: /workspace
-    volumes:
-      - .:/workspace
-      - netem-cargo-registry:/usr/local/cargo/registry
-      - netem-cargo-git:/usr/local/cargo/git
-      - netem-target:/workspace/target-docker
-      - coordination:/coordination
-    environment:
-      CARGO_TARGET_DIR: /workspace/target-docker
-      LIVEKIT_URL: "http://10.99.0.2:7880"
-      CARGO_TERM_COLOR: always
-      CXX: clang++
-      CC: clang
-      COORDINATION_DIR: /coordination
-    networks:
-      perlink:
-        ipv4_address: 10.99.0.40
-    entrypoint: ["/bin/sh", "-c"]
-    command:
-      - |
-        if ! command -v clang++ > /dev/null 2>&1; then
-          apt-get update -qq && apt-get install -y -qq clang > /dev/null 2>&1
-        fi
-        exec sleep infinity
-    healthcheck:
-      test: ["CMD-SHELL", "command -v clang++ && test -d /workspace/rust"]
-      interval: 5s
-      timeout: 10s
-      retries: 12
-      start_period: 30s
-    depends_on:
-      livekit:
         condition: service_healthy
     profiles:
       - perlink
