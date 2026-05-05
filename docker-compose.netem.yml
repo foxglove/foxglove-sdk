@@ -52,7 +52,7 @@ services:
       - "9999:9999/udp" # UDP echo for netem packet loss testing
 
   netem:
-    image: alpine:3
+    image: python:3-alpine
     network_mode: "service:livekit"
     cap_add:
       - NET_ADMIN
@@ -64,11 +64,12 @@ services:
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
-        apk add --no-cache iproute2 socat python3 > /dev/null 2>&1
+        apk add --no-cache iproute2 socat > /dev/null 2>&1
         # Start a UDP echo server for packet loss testing. Each received
         # datagram is echoed back through the netem-shaped egress path.
         socat UDP-RECVFROM:9999,fork EXEC:/bin/cat &
         # Apply netem rules (flat or per-link depending on env vars).
+        # Exit on failure so a broken tc hierarchy doesn't silently persist.
         python3 /netem_setup.py || exit 1
         # Keep the container alive so the qdisc rules persist.
         exec sleep infinity
