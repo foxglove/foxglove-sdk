@@ -650,6 +650,35 @@ impl ViewerConnection {
         }
     }
 
+    /// Asserts that no data track named `data-ch-{channel_id}` has been published.
+    ///
+    /// Drains any in-flight `DataTrackPublished` events for a short window into
+    /// [`pending_data_tracks`](Self::pending_data_tracks), then asserts that none of
+    /// the buffered tracks match the expected name. Use this after eagerly-published
+    /// data tracks for other channels have already been received, so that any
+    /// simultaneously-published track for `channel_id` would also have arrived.
+    pub async fn assert_no_data_track_for_channel(&mut self, channel_id: u64) {
+        let expected_name = format!("data-ch-{channel_id}");
+        let deadline = tokio::time::Instant::now() + Duration::from_millis(300);
+        loop {
+            match tokio::time::timeout_at(deadline, self.events.recv()).await {
+                Err(_) | Ok(None) => break,
+                Ok(Some(RoomEvent::DataTrackPublished(track))) => {
+                    self.pending_data_tracks.push(track);
+                }
+                Ok(Some(_)) => continue,
+            }
+        }
+        assert!(
+            !self
+                .pending_data_tracks
+                .iter()
+                .any(|t| t.info().name() == expected_name),
+            "unexpected data track published for channel {channel_id}: \
+             video-capable channels must not get a data track"
+        );
+    }
+
     /// Reads and returns the next ConnectionGraphUpdate message.
     pub async fn expect_connection_graph_update(
         &mut self,

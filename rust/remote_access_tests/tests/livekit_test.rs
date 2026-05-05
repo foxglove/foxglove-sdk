@@ -473,6 +473,10 @@ async fn livekit_video_channel_messages_bypass_data_plane() -> Result<()> {
     // Wait for the JSON channel's data track to be ready.
     viewer.ensure_device_data_track(json_id).await?;
 
+    // The video channel must never get an eagerly-published data track; its
+    // frames are routed through WebRTC video tracks, not the data plane.
+    viewer.assert_no_data_track_for_channel(video_id).await;
+
     // Log to the video channel first, then the JSON channel.
     // If the video message leaked to the data plane, it would arrive before
     // the JSON message (FIFO ordering).

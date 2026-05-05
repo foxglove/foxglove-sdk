@@ -287,7 +287,7 @@ impl Sink for RemoteAccessSession {
                         qos.reliability = Reliability::Lossy;
                     }
                     state.insert_qos_profile(ch.id(), qos);
-                    if qos.reliability != Reliability::Reliable {
+                    if qos.reliability != Reliability::Reliable && video_schema.is_none() {
                         ids.push(ch.id());
                     }
                 }
