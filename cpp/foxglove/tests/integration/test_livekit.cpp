@@ -378,9 +378,9 @@ TEST_CASE("livekit: video channel messages bypass data plane", "[integration]") 
   auto data = msg.value("data", std::vector<uint8_t>{});
   CHECK(std::string(data.begin(), data.end()) == json_payload);
 
-  // The video channel must never have published a data track — its frames
-  // bypass the data plane entirely.
-  CHECK(!viewer.has_device_data_track(video_id));
+  // We still publish a data track for the video channel,
+  // because it can be subscribed to with request_video_track: false.
+  CHECK(viewer.has_device_data_track(video_id));
 
   viewer.close();
   gw.stop();
