@@ -34,7 +34,7 @@
 #
 # Apply separate impairment profiles to different destination IPs using classful
 # qdiscs (HTB root + netem leaf classes). Enabled automatically when any
-# NETEM_LINK_<NAME>_DST env var is set. See scripts/netem-setup.sh for details.
+# NETEM_LINK_<NAME>_DST env var is set. See scripts/container/netem_setup.py for details.
 #
 # Example:
 #   NETEM_LINK_SDK_DST="172.18.0.3" NETEM_LINK_SDK_ARGS="delay 300ms 100ms loss 10%" \
