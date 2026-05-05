@@ -243,19 +243,7 @@ fn transcode_and_publish(
         .probe_dimensions()
         .map_err(VideoEncodeError::YuvConversion)?;
 
-    // Ensure even dimensions for YUV 4:2:0
-    let width = width & !1;
-    let height = height & !1;
-    if width == 0 || height == 0 {
-        return Err(VideoEncodeError::YuvConversion(
-            crate::img2yuv::Error::ZeroSized,
-        ));
-    }
-
-    // Reject frames smaller than one H.264/VP8/VP9 macroblock. See `MIN_VIDEO_DIMENSION`.
-    if width < MIN_VIDEO_DIMENSION || height < MIN_VIDEO_DIMENSION {
-        return Err(VideoEncodeError::TooSmall { width, height });
-    }
+    let (width, height) = validate_frame_dimensions(width, height)?;
 
     // Transcode to YUV 4:2:0.
     let mut buffer = I420Yuv420(I420Buffer::new(width, height));
@@ -279,6 +267,25 @@ fn transcode_and_publish(
     };
     video_source.capture_frame(&frame);
     Ok(metadata)
+}
+
+/// Validates and normalizes frame dimensions for video encoding.
+///
+/// Aligns dimensions to even values (required for YUV 4:2:0) and rejects frames that are
+/// too small for the encoder's macroblock size. Returns the even-aligned (width, height) on
+/// success.
+fn validate_frame_dimensions(width: u32, height: u32) -> Result<(u32, u32), VideoEncodeError> {
+    let even_width = width & !1;
+    let even_height = height & !1;
+    if even_width == 0 || even_height == 0 {
+        return Err(VideoEncodeError::YuvConversion(
+            crate::img2yuv::Error::ZeroSized,
+        ));
+    }
+    if even_width < MIN_VIDEO_DIMENSION || even_height < MIN_VIDEO_DIMENSION {
+        return Err(VideoEncodeError::TooSmall { width, height });
+    }
+    Ok((even_width, even_height))
 }
 
 /// Decode raw message bytes into an [`ImageMessage`] based on the input schema.
@@ -384,5 +391,84 @@ mod tests {
     fn test_unknown_schema() {
         assert_eq!(detect_video_schema("json", "SomeCustomType"), None);
         assert_eq!(detect_video_schema("protobuf", "foxglove.Pose"), None);
+    }
+
+    #[test]
+    fn validate_frame_dimensions_rejects_too_small() {
+        // Both axes below minimum
+        let err = validate_frame_dimensions(15, 15).unwrap_err();
+        assert!(matches!(
+            err,
+            VideoEncodeError::TooSmall {
+                width: 15,
+                height: 15
+            }
+        ));
+
+        // Width below minimum, height at minimum
+        let err = validate_frame_dimensions(15, 16).unwrap_err();
+        assert!(matches!(
+            err,
+            VideoEncodeError::TooSmall {
+                width: 15,
+                height: 16
+            }
+        ));
+
+        // Height below minimum, width at minimum
+        let err = validate_frame_dimensions(16, 15).unwrap_err();
+        assert!(matches!(
+            err,
+            VideoEncodeError::TooSmall {
+                width: 16,
+                height: 15
+            }
+        ));
+
+        // Odd dimension that rounds down below minimum (17 & !1 == 16, but 15 & !1 == 14)
+        let err = validate_frame_dimensions(15, 17).unwrap_err();
+        assert!(matches!(
+            err,
+            VideoEncodeError::TooSmall {
+                width: 15,
+                height: 17
+            }
+        ));
+    }
+
+    #[test]
+    fn validate_frame_dimensions_accepts_at_minimum() {
+        // Exactly at the minimum boundary
+        assert_eq!(validate_frame_dimensions(16, 16).unwrap(), (16, 16));
+
+        // Just above minimum (odd values get even-aligned down)
+        assert_eq!(validate_frame_dimensions(17, 17).unwrap(), (16, 16));
+
+        // Larger values
+        assert_eq!(validate_frame_dimensions(1920, 1080).unwrap(), (1920, 1080));
+    }
+
+    #[test]
+    fn validate_frame_dimensions_rejects_zero_after_alignment() {
+        // A 1×1 image rounds to 0×0
+        let err = validate_frame_dimensions(1, 1).unwrap_err();
+        assert!(matches!(
+            err,
+            VideoEncodeError::YuvConversion(crate::img2yuv::Error::ZeroSized)
+        ));
+
+        // Width 0
+        let err = validate_frame_dimensions(0, 16).unwrap_err();
+        assert!(matches!(
+            err,
+            VideoEncodeError::YuvConversion(crate::img2yuv::Error::ZeroSized)
+        ));
+
+        // Height 0
+        let err = validate_frame_dimensions(16, 0).unwrap_err();
+        assert!(matches!(
+            err,
+            VideoEncodeError::YuvConversion(crate::img2yuv::Error::ZeroSized)
+        ));
     }
 }
