@@ -53,17 +53,17 @@ pub fn netem_container_id() -> Result<String> {
 }
 
 /// Update netem impairment parameters on the given class. Runs
-/// `netem-impair.sh <class> <args>` inside the netem sidecar.
+/// `netem_impair.py <class> <args>` inside the netem sidecar.
 pub fn set_netem_impairment(container: &str, class: &str, args: &str) -> Result<()> {
     let output = Command::new("docker")
-        .args(["exec", container, "/bin/sh", "/netem-impair.sh", class])
+        .args(["exec", container, "python3", "/netem_impair.py", class])
         .args(args.split_whitespace())
         .output()
-        .context("failed to run netem-impair.sh")?;
+        .context("failed to run netem_impair.py")?;
 
     anyhow::ensure!(
         output.status.success(),
-        "netem-impair.sh failed ({}): {}",
+        "netem_impair.py failed ({}): {}",
         output.status,
         String::from_utf8_lossy(&output.stderr)
     );
