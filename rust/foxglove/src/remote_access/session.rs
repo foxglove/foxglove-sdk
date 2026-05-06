@@ -70,6 +70,15 @@ const CONTROL_CHANNEL_TOPIC: &str = "control";
 const MESSAGE_FRAME_SIZE: usize = 5; // 1 byte opcode + u32 LE length
 const MAX_MESSAGE_SIZE: usize = 16 * 1024 * 1024; // 16 MiB
 
+/// Upper bound on `livekit::Room::close()`. The LiveKit SDK can hang
+/// indefinitely in its data-channel teardown path during room close.
+/// This is a source of sporadic test timeouts in both C++ and Rust integration tests.
+/// Tracked in #FLE-511 and reported to LiveKit.
+///
+/// The SFU eventually evicts the abandoned participant when its DTLS connection times out,
+/// and the `Room`'s `Drop` impl reclaims any local resources we abandon here.
+const ROOM_CLOSE_TIMEOUT: Duration = Duration::from_secs(5);
+
 pub(super) const DEFAULT_MESSAGE_BACKLOG_SIZE: usize = 1024;
 
 /// The operation code for the message framing for protocol v2.
@@ -486,12 +495,18 @@ impl RemoteAccessSession {
         // Cancel flush-tasks and await them before tearing down the transport.
         // In-flight writes either complete or fail once `room.close()` runs.
         self.participant_registry.shutdown().await;
-        if let Err(e) = self.room.close().await {
-            error!(
+        match tokio::time::timeout(ROOM_CLOSE_TIMEOUT, self.room.close()).await {
+            Ok(Ok(())) => {}
+            Ok(Err(e)) => error!(
                 remote_access_session_id = self.remote_access_session_id(),
                 error = %e,
                 "failed to close room: {e}",
-            );
+            ),
+            Err(_) => warn!(
+                remote_access_session_id = self.remote_access_session_id(),
+                timeout_secs = ROOM_CLOSE_TIMEOUT.as_secs(),
+                "livekit room close timed out; abandoning room teardown",
+            ),
         }
     }
 

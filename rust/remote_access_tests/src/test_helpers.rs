@@ -625,6 +625,39 @@ impl ViewerConnection {
             .await
     }
 
+    /// Returns `true` if a `DataTrackPublished` event for `data-ch-{channel_id}`
+    /// is found in the pending queue or arrives within `timeout`.
+    ///
+    /// Uses a short timeout so it can be used for negative assertions — by the
+    /// time this is called the event (if any) is already in the queue.
+    pub async fn has_device_data_track(&mut self, channel_id: u64, timeout: Duration) -> bool {
+        let expected_name = format!("data-ch-{channel_id}");
+        if self
+            .pending_data_tracks
+            .iter()
+            .any(|t| t.info().name() == expected_name)
+        {
+            return true;
+        }
+        let deadline = tokio::time::Instant::now() + timeout;
+        loop {
+            let event = match tokio::time::timeout_at(deadline, self.events.recv()).await {
+                Err(_) | Ok(None) => return false,
+                Ok(Some(e)) => e,
+            };
+            match event {
+                RoomEvent::DataTrackPublished(track) if track.info().name() == expected_name => {
+                    self.pending_data_tracks.push(track);
+                    return true;
+                }
+                RoomEvent::DataTrackPublished(track) => {
+                    self.pending_data_tracks.push(track);
+                }
+                _ => {}
+            }
+        }
+    }
+
     /// Waits for a `ParticipantDisconnected` room event for the given identity.
     ///
     /// Used to synchronize on a participant's departure before sending further messages,

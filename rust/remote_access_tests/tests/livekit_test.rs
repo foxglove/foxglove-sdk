@@ -485,6 +485,14 @@ async fn livekit_video_channel_messages_bypass_data_plane() -> Result<()> {
     assert_eq!(msg.data.as_ref(), b"json-payload");
     info!("video channel correctly bypassed data plane");
 
+    // We still publish a data track for the video channel,
+    // because it can be subscribed to with request_video_track: false.
+    assert!(
+        viewer
+            .has_device_data_track(video_id, Duration::from_millis(500))
+            .await
+    );
+
     viewer.close().await?;
     gw.stop().await?;
     Ok(())
@@ -574,6 +582,12 @@ async fn livekit_video_track_resubscribe() -> Result<()> {
     let track_name = viewer.expect_track_unsubscribed().await?;
     assert_eq!(track_name, expected_track_name);
     info!("unsubscribe: video track torn down");
+
+    // Give the gateway's spawned unpublish_track future a moment to drain
+    // before we issue a publish for the same track name. Without this, the
+    // LiveKit SDK can serialize the back-to-back renegotiations slowly enough
+    // to exceed EVENT_TIMEOUT.
+    tokio::time::sleep(Duration::from_millis(500)).await;
 
     // Resubscribe with requestVideoTrack — video track should come back.
     viewer
