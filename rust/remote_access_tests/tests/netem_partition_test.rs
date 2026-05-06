@@ -27,17 +27,21 @@ use tracing::info;
 /// the `foxglove` crate. The default `#[traced_test]` filter only captures
 /// `remote_access_tests=trace`, which misses the `reset_participant` warn from
 /// the `foxglove` crate. We need to see that log to verify recovery.
+///
+/// Uses `tracing_test::internal` API (pinned at 0.2.5). A `tracing-test`
+/// version bump may require updating this setup.
 fn init_tracing() {
     static INIT: std::sync::Once = std::sync::Once::new();
     INIT.call_once(|| {
         let mock_writer = tracing_test::internal::MockWriter::new(global_log_buf());
         let subscriber = tracing_test::internal::get_subscriber(
             mock_writer,
-            "foxglove::remote_access=warn,remote_access_tests=trace",
+            "foxglove::remote_access=warn,netem_partition_test=trace",
         );
         tracing::dispatcher::set_global_default(subscriber)
             .expect("could not set global tracing subscriber");
     });
+    global_log_buf().lock().unwrap().clear();
 }
 
 fn global_log_buf() -> &'static Mutex<Vec<u8>> {
@@ -117,9 +121,10 @@ async fn netem_partition_recovery_readvertises_all_channels() -> Result<()> {
     info!("created channel B during partition");
 
     // Give WebRTC time to detect the unresponsive peer and for the gateway's
-    // flush-task to hit a write failure, which triggers `reset_participant`.
-    // 10s is conservative — ICE typically detects loss within 5-8s.
-    tokio::time::sleep(Duration::from_secs(10)).await;
+    // flush-task to hit a control stream write failure, which triggers
+    // `reset_participant`. Data track timeouts appear within ~10s, but
+    // byte stream (control channel) write failures can take longer.
+    tokio::time::sleep(Duration::from_secs(20)).await;
 
     // Phase 3: Lift the partition.
     info!("lifting partition: restoring default impairment");
