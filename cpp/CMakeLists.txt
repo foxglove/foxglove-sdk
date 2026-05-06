@@ -234,10 +234,7 @@ endif()
 ### C++
 
 # Generated code (excluded from clang-tidy)
-set(foxglove_generated_srcs
-    "foxglove/src/messages.cpp"
-)
-add_library(foxglove_generated_obj OBJECT "${foxglove_generated_srcs}")
+add_library(foxglove_generated_obj OBJECT "foxglove/src/messages.cpp")
 set_property(TARGET foxglove_generated_obj PROPERTY POSITION_INDEPENDENT_CODE True)
 set_property(TARGET foxglove_generated_obj PROPERTY CXX_STANDARD 17)
 set_property(TARGET foxglove_generated_obj PROPERTY CXX_STANDARD_REQUIRED True)
