@@ -2539,6 +2539,41 @@ mod tests {
         assert_eq!(writer_a.writes(), vec![Bytes::from_static(b"msg_a")]);
     }
 
+    #[tokio::test]
+    async fn flush_task_write_failure_triggers_pending_reset() {
+        use crate::remote_access::participant::{
+            ParticipantWriter, TestByteStreamWriter, test_sid,
+        };
+
+        let cancel = CancellationToken::new();
+        let writer = Arc::new(TestByteStreamWriter::default());
+        writer.set_fail_writes(true);
+
+        let pending_resets = Arc::new(parking_lot::Mutex::new(HashSet::new()));
+        let reset_notify = Arc::new(tokio::sync::Notify::new());
+        let sid = test_sid("write-fail");
+
+        let (participant, handle) = Participant::spawn(
+            ParticipantIdentity("test-viewer".to_string()),
+            sid.clone(),
+            0,
+            ParticipantWriter::Test(writer),
+            DEFAULT_MESSAGE_BACKLOG_SIZE,
+            pending_resets.clone(),
+            reset_notify.clone(),
+            &cancel,
+        );
+
+        participant.send_control(Bytes::from_static(b"trigger failure"));
+
+        // The flush-task should exit after the write error.
+        let result = tokio::time::timeout(Duration::from_secs(1), handle).await;
+        assert!(result.is_ok(), "flush-task did not exit after write failure");
+
+        let resets: Vec<_> = pending_resets.lock().drain().collect();
+        assert_eq!(resets, vec![sid], "write failure should populate pending_resets");
+    }
+
     fn make_test_participant(queue_size: usize) -> (Participant, flume::Receiver<Bytes>) {
         let (tx, rx) = flume::bounded::<Bytes>(queue_size);
         let pending_resets = Arc::new(parking_lot::Mutex::new(HashSet::new()));
