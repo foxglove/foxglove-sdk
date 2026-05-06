@@ -8,6 +8,7 @@ export * from "./CompressedVideo";
 export * from "./CubePrimitive";
 export * from "./CylinderPrimitive";
 export * from "./Duration";
+export * from "./Event";
 export * from "./FrameTransform";
 export * from "./FrameTransforms";
 export * from "./GeoJSON";

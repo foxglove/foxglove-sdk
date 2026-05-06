@@ -763,6 +763,74 @@ impl From<CubePrimitive> for foxglove::messages::CubePrimitive {
     }
 }
 
+/// A discrete event that occurred at a specific time or over a time range
+///
+/// :param start_time: Event start time
+/// :param end_time: Event end time. Omit for point events.
+/// :param label: Display name for the event
+/// :param color: Color used to visualize the event
+/// :param metadata: Additional key-value metadata. Keys must be unique.
+///
+/// See https://docs.foxglove.dev/docs/visualization/message-schemas/event
+#[pyclass(module = "foxglove.messages")]
+#[derive(Clone)]
+pub(crate) struct Event(pub(crate) foxglove::messages::Event);
+#[pymethods]
+impl Event {
+    #[new]
+    #[pyo3(signature = (*, start_time=None, end_time=None, label="", color=None, metadata=None) )]
+    fn new(
+        start_time: Option<Timestamp>,
+        end_time: Option<Timestamp>,
+        label: &str,
+        color: Option<Color>,
+        metadata: Option<Vec<KeyValuePair>>,
+    ) -> Self {
+        Self(foxglove::messages::Event {
+            start_time: start_time.map(Into::into),
+            end_time: end_time.map(Into::into),
+            label: label.to_string(),
+            color: color.map(Into::into),
+            metadata: metadata
+                .unwrap_or_default()
+                .into_iter()
+                .map(|x| x.into())
+                .collect(),
+        })
+    }
+    fn __repr__(&self) -> String {
+        format!(
+            "Event(start_time={:?}, end_time={:?}, label={:?}, color={:?}, metadata={:?})",
+            self.0.start_time, self.0.end_time, self.0.label, self.0.color, self.0.metadata,
+        )
+    }
+    /// Returns the Event schema.
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::messages::Event::get_schema().unwrap().into()
+    }
+    /// Encodes the Event as protobuf.
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("failed to allocate buffer for encoded message")
+    }
+}
+
+impl From<Event> for foxglove::messages::Event {
+    fn from(value: Event) -> Self {
+        value.0
+    }
+}
+
 /// A transform between two reference frames in 3D space. The transform defines the position and orientation of a child frame within a parent frame. Translation moves the origin of the child frame relative to the parent origin. The rotation changes the orientation of the child frame around its origin.
 ///
 /// Examples:
@@ -3462,6 +3530,7 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<CylinderPrimitive>()?;
     module.add_class::<CubePrimitive>()?;
     module.add_class::<Duration>()?;
+    module.add_class::<Event>()?;
     module.add_class::<FrameTransform>()?;
     module.add_class::<FrameTransforms>()?;
     module.add_class::<GeoJson>()?;

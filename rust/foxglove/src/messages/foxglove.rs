@@ -285,6 +285,28 @@ pub struct CylinderPrimitive {
     #[prost(message, optional, tag = "5")]
     pub color: ::core::option::Option<Color>,
 }
+/// A discrete event that occurred at a specific time or over a time range
+///
+/// <https://docs.foxglove.dev/docs/visualization/message-schemas/event>
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct Event {
+    /// Event start time
+    #[prost(message, optional, tag = "1")]
+    pub start_time: ::core::option::Option<crate::messages::Timestamp>,
+    /// Event end time. Omit for point events.
+    #[prost(message, optional, tag = "2")]
+    pub end_time: ::core::option::Option<crate::messages::Timestamp>,
+    /// Display name for the event
+    #[prost(string, tag = "3")]
+    pub label: ::prost::alloc::string::String,
+    /// Color used to visualize the event
+    #[prost(message, optional, tag = "4")]
+    pub color: ::core::option::Option<Color>,
+    /// Additional key-value metadata. Keys must be unique.
+    #[prost(message, repeated, tag = "5")]
+    pub metadata: ::prost::alloc::vec::Vec<KeyValuePair>,
+}
 /// A transform between two reference frames in 3D space. The transform defines the position and orientation of a child frame within a parent frame. Translation moves the origin of the child frame relative to the parent origin. The rotation changes the orientation of the child frame around its origin.
 ///
 /// Examples:
