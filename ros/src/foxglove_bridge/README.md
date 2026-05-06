@@ -202,7 +202,7 @@ Tests can also be run under Docker (again, assuming you've already followed the 
 ```bash
 make docker-test
 # Or to optionally target a specific ROS distro
-# make FOXGLOVE_CPP_SDK_DIR=/sdk/cpp/dist docker-test-<distro codename>
+# make docker-test-<distro codename>
 ```
 
 ## Clients
