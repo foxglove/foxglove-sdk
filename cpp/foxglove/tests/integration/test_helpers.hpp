@@ -18,7 +18,6 @@ namespace foxglove_integration {
 
 constexpr auto EVENT_TIMEOUT = std::chrono::seconds(15);
 constexpr auto READ_TIMEOUT = std::chrono::seconds(10);
-constexpr auto SHUTDOWN_TIMEOUT = std::chrono::seconds(10);
 constexpr auto POLL_INTERVAL = std::chrono::milliseconds(50);
 
 // Upper bound for waiting on a `DataTrackPublished` event from a remote
