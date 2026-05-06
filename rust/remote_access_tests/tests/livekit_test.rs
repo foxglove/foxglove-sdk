@@ -587,7 +587,7 @@ async fn livekit_video_track_resubscribe() -> Result<()> {
     // before we issue a publish for the same track name. Without this, the
     // LiveKit SDK can serialize the back-to-back renegotiations slowly enough
     // to exceed EVENT_TIMEOUT.
-    tokio::time::sleep(Duration::from_millis(250)).await;
+    tokio::time::sleep(Duration::from_millis(500)).await;
 
     // Resubscribe with requestVideoTrack — video track should come back.
     viewer

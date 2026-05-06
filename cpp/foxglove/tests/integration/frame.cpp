@@ -45,6 +45,7 @@ std::optional<ByteStreamParseResult> try_parse_bytestream_frame(const uint8_t* d
   if (len < total) {
     return std::nullopt;
   }
+  // We don't send messages with an empty payload
   if (payload_len == 0) {
     throw std::runtime_error("empty frame payload");
   }

@@ -36,9 +36,11 @@ private:
 };
 
 /// Reads framed data-track frames for a single device channel and exposes them
-/// as JSON messages. Each frame payload begins with an 8-byte header (u16 LE
+/// as JSON messages. Each frame payload currently begins with an 8-byte header (u16 LE
 /// flags, u16 LE data_offset, u32 LE sequence) followed by the raw message
-/// bytes. The channel identity is determined by the data track name.
+/// bytes. The channel identity is determined by the data track name. The header could
+/// have more fields added in the future, so we always read the data_offset at offset 2
+/// and add it to the message start to get the payload start.
 class DeviceChannelReader {
 public:
   DeviceChannelReader(std::shared_ptr<livekit::DataTrackStream> stream, uint64_t channel_id);

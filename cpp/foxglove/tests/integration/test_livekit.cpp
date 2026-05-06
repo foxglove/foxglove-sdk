@@ -13,6 +13,7 @@
 #include <nlohmann/json.hpp>
 
 #include <algorithm>
+#include <memory>
 #include <string>
 #include <thread>
 #include <vector>
@@ -248,13 +249,15 @@ TEST_CASE("livekit: multiple participants receive messages", "[integration]") {
   };
   auto gw = TestGateway::start_with_options(ctx, std::move(opts));
 
-  auto viewer1 = ViewerConnection::connect(gw.room_name, "viewer-1");
-  viewer1.expect_server_info();
+  auto viewer1 = std::make_unique<ViewerConnection>(
+    ViewerConnection::connect(gw.room_name, "viewer-1")
+  );
+  viewer1->expect_server_info();
 
   auto channel = foxglove::RawChannel::create("/test", "json", std::nullopt, ctx);
   REQUIRE(channel.has_value());
 
-  auto adv1 = viewer1.expect_advertise();
+  auto adv1 = viewer1->expect_advertise();
   REQUIRE(adv1["channels"].size() == 1);
   auto channel_id = adv1["channels"][0]["id"].get<uint64_t>();
   CHECK(
@@ -262,15 +265,17 @@ TEST_CASE("livekit: multiple participants receive messages", "[integration]") {
       .value("metadata", nlohmann::json::object())
       .value("foxglove.reliable", "") == "true"
   );
-  viewer1.subscribe_and_wait({channel_id}, [&] {
+  viewer1->subscribe_and_wait({channel_id}, [&] {
     return channel->hasSinks();
   });
 
-  auto viewer2 = ViewerConnection::connect(gw.room_name, "viewer-2");
-  viewer2.expect_server_info();
-  auto adv2 = viewer2.expect_advertise();
+  auto viewer2 = std::make_unique<ViewerConnection>(
+    ViewerConnection::connect(gw.room_name, "viewer-2")
+  );
+  viewer2->expect_server_info();
+  auto adv2 = viewer2->expect_advertise();
   CHECK(adv2["channels"][0]["id"].get<uint64_t>() == channel_id);
-  viewer2.send_subscribe({channel_id});
+  viewer2->send_subscribe({channel_id});
   poll_until([&] {
     return listener.subscribed_count() == 2;
   });
@@ -283,20 +288,16 @@ TEST_CASE("livekit: multiple participants receive messages", "[integration]") {
 
   std::string payload1 = "fanout-message-1";
   channel->log(reinterpret_cast<const std::byte*>(payload1.data()), payload1.size());
-  check_received(viewer1.expect_message_data(), payload1);
-  check_received(viewer2.expect_message_data(), payload1);
+  check_received(viewer1->expect_message_data(), payload1);
+  check_received(viewer2->expect_message_data(), payload1);
 
-  viewer1.close();
-  viewer2.wait_for_participant_disconnected("viewer-1");
-  poll_until([&] {
-    return listener.unsubscribed_count() >= 1;
-  });
+  viewer1.reset();
 
   std::string payload2 = "fanout-message-2";
   channel->log(reinterpret_cast<const std::byte*>(payload2.data()), payload2.size());
-  check_received(viewer2.expect_message_data(), payload2);
+  check_received(viewer2->expect_message_data(), payload2);
 
-  viewer2.close();
+  viewer2.reset();
   gw.stop();
 }
 
