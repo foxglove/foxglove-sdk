@@ -42,12 +42,13 @@ use crate::{
     remote_access::qos::{QosClassifier, Reliability},
     remote_access::{
         AssetHandler, Capability, Listener, RemoteAccessError,
+        channel_registry::ChannelRegistry,
         client::Client,
+        parameter_subscriptions::ParameterSubscriptions,
         participant::{Participant, ParticipantWriter},
         participant_registry::ParticipantRegistry,
         protocol_version,
         rtt_tracker::RttTracker,
-        session_state::SessionState,
     },
 };
 
@@ -148,10 +149,14 @@ pub(super) struct RemoteAccessSession {
     room: Room,
     context: Weak<Context>,
     remote_access_session_id: Option<String>,
-    /// Session-level state: channels, subscriptions, video publishers, client
-    /// channels, parameter subscriptions. Participant membership lives on
-    /// [`participant_registry`] instead.
-    state: RwLock<SessionState>,
+    /// Channel-keyed session state: channels, subscriptions, video publishers,
+    /// and inverse-indexed client-advertised channels. Participant membership
+    /// lives on [`participant_registry`]; parameter subscriptions live on
+    /// [`parameter_subscriptions`].
+    channel_registry: RwLock<ChannelRegistry>,
+    /// Parameter-name → subscriber bookkeeping. Independent lifecycle from
+    /// channel subscriptions, so it lives in its own struct.
+    parameter_subscriptions: RwLock<ParameterSubscriptions>,
     channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     qos_classifier: Option<Arc<dyn QosClassifier>>,
     listener: Option<Arc<dyn Listener>>,
@@ -211,7 +216,7 @@ impl Sink for RemoteAccessSession {
         //      ParticipantIdentity, so this can never deliver data across
         //      identities — only the same logical user across a reconnect.
         let reliable_subscribers = {
-            let state = self.state.read();
+            let state = self.channel_registry.read();
 
             // Video track publisher: stays inside the state lock since the
             // publisher handle is not cloneable out of the map.
@@ -272,7 +277,7 @@ impl Sink for RemoteAccessSession {
         let advertised_ids: std::collections::HashSet<u64> =
             advertise_msg.channels.iter().map(|ch| ch.id).collect();
         let advertised_channel_ids: SmallVec<[ChannelId; 4]> = {
-            let mut state = self.state.write();
+            let mut state = self.channel_registry.write();
             let mut ids = SmallVec::new();
             for &ch in &filtered {
                 if advertised_ids.contains(&u64::from(ch.id())) {
@@ -320,15 +325,20 @@ impl Sink for RemoteAccessSession {
 
         // Collect subscriber identities before removal; we'll resolve them to
         // `Client`s after via the registry.
-        let subscriber_identities = self.state.read().channel_subscriber_identities(&channel_id);
+        let subscriber_identities = self
+            .channel_registry
+            .read()
+            .channel_subscriber_identities(&channel_id);
 
-        if !self.state.write().remove_channel(channel_id) {
+        if !self.channel_registry.write().remove_channel(channel_id) {
             return;
         }
 
         self.teardown_video_track(channel_id);
         self.teardown_data_track(channel_id);
-        self.state.write().remove_video_schema(&channel_id);
+        self.channel_registry
+            .write()
+            .remove_video_schema(&channel_id);
 
         let unadvertise = Unadvertise::new([u64::from(channel_id)]);
         self.broadcast_control(encode_json_message(&unadvertise));
@@ -382,7 +392,8 @@ impl RemoteAccessSession {
             room: params.room,
             context: params.context,
             remote_access_session_id: params.remote_access_session_id,
-            state: RwLock::new(SessionState::new()),
+            channel_registry: RwLock::new(ChannelRegistry::new()),
+            parameter_subscriptions: RwLock::new(ParameterSubscriptions::new()),
             channel_filter: params.channel_filter,
             qos_classifier: params.qos_classifier,
             listener: params.listener,
@@ -422,7 +433,7 @@ impl RemoteAccessSession {
     }
 
     fn stats(&self) -> SessionStats {
-        let state = self.state.read();
+        let state = self.channel_registry.read();
         SessionStats {
             participants: self.participant_registry.participant_count(),
             subscriptions: state.subscription_count(),
@@ -690,7 +701,7 @@ impl RemoteAccessSession {
         let mut channel_ids = SmallVec::<[ChannelId; 4]>::new();
         let mut video_channel_ids = SmallVec::<[ChannelId; 4]>::new();
         let mut data_channel_ids = SmallVec::<[ChannelId; 4]>::new();
-        let state = self.state.read();
+        let state = self.channel_registry.read();
         for ch in &msg.channels {
             let channel_id = ChannelId::new(ch.id);
             if ch.request_video_track {
@@ -710,7 +721,7 @@ impl RemoteAccessSession {
         }
         drop(state);
 
-        let mut state = self.state.write();
+        let mut state = self.channel_registry.write();
         let subscribe_result = state.subscribe(participant.participant_id(), &channel_ids);
         let first_video_subscribed =
             state.subscribe_video(participant.participant_id(), &video_channel_ids);
@@ -756,7 +767,7 @@ impl RemoteAccessSession {
             .map(|&id| ChannelId::new(id))
             .collect();
 
-        let mut state = self.state.write();
+        let mut state = self.channel_registry.write();
         let unsubscribe_result = state.unsubscribe(participant.participant_id(), &channel_ids);
         let last_video_unsubscribed =
             state.unsubscribe_video(participant.participant_id(), &channel_ids);
@@ -850,7 +861,7 @@ impl RemoteAccessSession {
             );
 
             let inserted = self
-                .state
+                .channel_registry
                 .write()
                 .insert_client_channel(participant.participant_id(), descriptor.clone());
 
@@ -885,7 +896,7 @@ impl RemoteAccessSession {
         for channel_id_raw in msg.channel_ids {
             let channel_id = ChannelId::new(channel_id_raw.into());
             let removed = self
-                .state
+                .channel_registry
                 .write()
                 .remove_client_channel(participant.participant_id(), channel_id);
 
@@ -964,7 +975,7 @@ impl RemoteAccessSession {
         }
         let channel_id = ChannelId::new(msg.channel_id.into());
         let descriptor = {
-            let state = self.state.read();
+            let state = self.channel_registry.read();
             state
                 .get_client_channel(participant.participant_id(), channel_id)
                 .cloned()
@@ -1131,7 +1142,11 @@ impl RemoteAccessSession {
         let client_id = participant.client_id();
         let participant_id = participant.participant_id();
         let removed = self
-            .state
+            .channel_registry
+            .write()
+            .cleanup_for_removed_identity(participant_id);
+        let last_param_unsubscribed = self
+            .parameter_subscriptions
             .write()
             .cleanup_for_removed_identity(participant_id);
 
@@ -1144,9 +1159,9 @@ impl RemoteAccessSession {
 
         self.stop_video_tracks(&removed.last_video_unsubscribed);
 
-        if !removed.last_param_unsubscribed.is_empty() {
+        if !last_param_unsubscribed.is_empty() {
             if let Some(listener) = &self.listener {
-                listener.on_parameters_unsubscribe(removed.last_param_unsubscribed);
+                listener.on_parameters_unsubscribe(last_param_unsubscribed);
             }
         }
 
@@ -1627,7 +1642,7 @@ impl RemoteAccessSession {
     /// Returns the currently-cached channel advertisements encoded as a single
     /// framed control-plane message, or `None` if no channels are advertised.
     fn encode_channel_advertisements(&self) -> Option<Bytes> {
-        let state = self.state.read();
+        let state = self.channel_registry.read();
         let msg = state.with_channels(|channels| {
             let msg = advertise::advertise_channels(channels.values());
             if msg.channels.is_empty() {
@@ -1846,9 +1861,9 @@ impl RemoteAccessSession {
         }
         let _guard = self.subscription_lock.lock();
         let new_names = self
-            .state
+            .parameter_subscriptions
             .write()
-            .subscribe_parameters(participant.participant_id(), names);
+            .subscribe(participant.participant_id(), names);
         if !new_names.is_empty() {
             if let Some(listener) = &self.listener {
                 listener.on_parameters_subscribe(new_names);
@@ -1871,9 +1886,9 @@ impl RemoteAccessSession {
         }
         let _guard = self.subscription_lock.lock();
         let old_names = self
-            .state
+            .parameter_subscriptions
             .write()
-            .unsubscribe_parameters(participant.participant_id(), names);
+            .unsubscribe(participant.participant_id(), names);
         if !old_names.is_empty() {
             if let Some(listener) = &self.listener {
                 listener.on_parameters_unsubscribe(old_names);
@@ -1906,15 +1921,14 @@ impl RemoteAccessSession {
         // are released to minimize lock scope.
         let participants = self.participant_registry.collect_participants();
         let to_send: Vec<(Arc<Participant>, Bytes)> = {
-            let state = self.state.read();
+            let subs = self.parameter_subscriptions.read();
             participants
                 .into_iter()
                 .filter_map(|participant| {
                     let filtered: Vec<_> = parameters
                         .iter()
                         .filter(|p| {
-                            state
-                                .parameter_subscribers(&p.name)
+                            subs.subscribers(&p.name)
                                 .is_some_and(|ids| ids.contains(participant.participant_id()))
                         })
                         .cloned()
@@ -2026,7 +2040,7 @@ impl RemoteAccessSession {
     fn republish_video_metadata(&self, advertised: &mut HashMap<ChannelId, VideoMetadata>) {
         // Collect channels whose video metadata has changed.
         let changed: SmallVec<[ChannelId; 4]> = {
-            let state = self.state.read();
+            let state = self.channel_registry.read();
             state
                 .iter_video_publishers()
                 .filter_map(|(&channel_id, publisher)| {
@@ -2046,7 +2060,7 @@ impl RemoteAccessSession {
 
         // Update session state and build the re-advertise message.
         let advertise_msg = {
-            let mut state = self.state.write();
+            let mut state = self.channel_registry.write();
             // Only insert metadata for channels that still exist, guarding against
             // a channel being removed between the read and write locks.
             for &channel_id in &changed {
@@ -2079,7 +2093,7 @@ impl RemoteAccessSession {
     /// Caller must hold `subscription_lock`.
     fn start_video_tracks(self: &Arc<Self>, first_subscribed: &[ChannelId]) {
         let to_start: SmallVec<[(ChannelId, VideoInputSchema); 4]> = {
-            let state = self.state.read();
+            let state = self.channel_registry.read();
             first_subscribed
                 .iter()
                 .filter_map(|&channel_id| {
@@ -2098,7 +2112,7 @@ impl RemoteAccessSession {
             ));
             let expected_publisher = publisher.clone();
 
-            self.state
+            self.channel_registry
                 .write()
                 .insert_video_publisher(channel_id, publisher);
 
@@ -2130,7 +2144,7 @@ impl RemoteAccessSession {
                         // one we created. A teardown+resubscribe cycle could have
                         // replaced it with a different publisher.
                         let store = {
-                            let mut state = session.state.write();
+                            let mut state = session.channel_registry.write();
                             let is_ours = state
                                 .get_video_publisher(&channel_id)
                                 .is_some_and(|p| Arc::ptr_eq(&p, &expected_publisher));
@@ -2172,7 +2186,7 @@ impl RemoteAccessSession {
     /// Caller must hold `subscription_lock`.
     fn teardown_video_track(&self, channel_id: ChannelId) {
         let sid = {
-            let mut state = self.state.write();
+            let mut state = self.channel_registry.write();
             // Removing the publisher drops it, which closes the mpsc channel and
             // terminates the background processing task.
             state.remove_video_publisher(&channel_id);
@@ -2203,7 +2217,7 @@ impl RemoteAccessSession {
                 *channel_id,
                 self.cancellation_token.clone(),
             );
-            self.state
+            self.channel_registry
                 .write()
                 .insert_data_track(*channel_id, data_track);
         }
@@ -2211,7 +2225,7 @@ impl RemoteAccessSession {
 
     /// Tear down the data track for a channel.
     fn teardown_data_track(&self, channel_id: ChannelId) {
-        if let Some(mut data_track) = self.state.write().remove_data_track(&channel_id) {
+        if let Some(mut data_track) = self.channel_registry.write().remove_data_track(&channel_id) {
             self.runtime.spawn(async move { data_track.close().await });
         }
     }
