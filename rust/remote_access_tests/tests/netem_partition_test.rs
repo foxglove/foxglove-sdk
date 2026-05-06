@@ -1,10 +1,12 @@
-//! Integration test for control stream write failure recovery under network
+//! Integration test for control stream write-failure recovery under network
 //! partition (FLE-384).
 //!
-//! Verifies that the SDK gateway recovers correctly when a network partition
-//! causes control stream writes to fail. After the partition is lifted, a
-//! reconnecting viewer should receive a fresh `ServerInfo` and advertisements
-//! for all channels — including those created during the partition.
+//! Verifies the full recovery flow added in PR #1102 (FLE-364): when a network
+//! partition causes control stream writes to fail, the gateway's
+//! `reset_participant` path tears down and reinitializes the participant. After
+//! the partition is lifted, a reconnecting viewer receives a fresh `ServerInfo`
+//! and advertisements for all channels — including those created during the
+//! partition.
 //!
 //! These tests require the netem Docker Compose overlay:
 //!   docker compose -f docker-compose.yaml -f docker-compose.netem.yml up -d --wait
@@ -13,35 +15,61 @@
 
 mod netem_helpers;
 
+use std::sync::Mutex;
 use std::time::Duration;
 
 use anyhow::{Context as _, Result};
 use remote_access_tests::test_helpers::{NETEM_EVENT_TIMEOUT, TestGateway, ViewerConnection};
 use serial_test::serial;
 use tracing::info;
-use tracing_test::traced_test;
 
-/// Verify that a network partition triggers control stream recovery via
-/// `reset_participant` (the code path added in PR #1102 / FLE-364).
+/// Set up a tracing subscriber that captures logs from both the test crate and
+/// the `foxglove` crate. The default `#[traced_test]` filter only captures
+/// `remote_access_tests=trace`, which misses the `reset_participant` warn from
+/// the `foxglove` crate. We need to see that log to verify recovery.
+fn init_tracing() {
+    static INIT: std::sync::Once = std::sync::Once::new();
+    INIT.call_once(|| {
+        let mock_writer = tracing_test::internal::MockWriter::new(global_log_buf());
+        let subscriber = tracing_test::internal::get_subscriber(
+            mock_writer,
+            "foxglove::remote_access=warn,remote_access_tests=trace",
+        );
+        tracing::dispatcher::set_global_default(subscriber)
+            .expect("could not set global tracing subscriber");
+    });
+}
+
+fn global_log_buf() -> &'static Mutex<Vec<u8>> {
+    static BUF: std::sync::OnceLock<Mutex<Vec<u8>>> = std::sync::OnceLock::new();
+    BUF.get_or_init(|| Mutex::new(Vec::new()))
+}
+
+fn logs_contain(needle: &str) -> bool {
+    let buf = global_log_buf().lock().unwrap();
+    let logs = String::from_utf8_lossy(&buf);
+    logs.contains(needle)
+}
+
+/// Verify that a network partition triggers the `reset_participant` recovery
+/// path and that the reconnecting viewer sees a consistent channel registry.
 ///
 /// 1. Connect viewer-1 and verify initial `ServerInfo` + channel advertisement.
 /// 2. Impose a full partition (100% packet loss).
-/// 3. Create a second channel on the gateway. The gateway will attempt to send
-///    an `Advertise` message, which will fail because the partition blocks
-///    egress from LiveKit.
-/// 4. Wait for the write failure to trigger `reset_participant`, which tears
-///    down the old control stream and prepares for re-initialization.
+/// 3. Create a second channel on the gateway while the partition blocks egress.
+/// 4. Wait for the gateway's flush-task to hit a write failure, triggering
+///    `reset_participant`.
 /// 5. Lift the partition, restoring connectivity.
-/// 6. Reconnect as the *same* viewer-1 identity. Same-identity reconnect is
-///    what exercises `reset_participant`'s re-add path — a fresh identity
-///    would bypass it entirely via normal `add_participant`.
-/// 7. Verify viewer-1 receives a fresh `ServerInfo` and advertisements for
+/// 6. Reconnect as the same viewer-1 identity.
+/// 7. Assert that `reset_participant` fired (via its tracing warn).
+/// 8. Verify viewer-1 receives a fresh `ServerInfo` and advertisements for
 ///    *both* channels — including the one created during the partition.
-#[traced_test]
 #[ignore]
 #[tokio::test]
 #[serial(netem)]
 async fn netem_partition_recovery_readvertises_all_channels() -> Result<()> {
+    init_tracing();
+
     let container = netem_helpers::netem_container_id()?;
     let ctx = foxglove::Context::new();
 
@@ -98,10 +126,9 @@ async fn netem_partition_recovery_readvertises_all_channels() -> Result<()> {
     let default_args = netem_helpers::default_netem_args();
     netem_helpers::set_netem_impairment(&container, "all", &default_args)?;
 
-    // Phase 4: Reconnect with the same identity to exercise `reset_participant`.
+    // Phase 4: Reconnect with the same identity.
     // The original connection is likely dead. Close it (ignoring errors) and
-    // reconnect as "viewer-1" — same-identity reconnect triggers the
-    // `reset_participant` re-add path when the gateway detects the new SID.
+    // reconnect as "viewer-1".
     let close_result = viewer.close().await;
     info!("closed old viewer connection: {close_result:?}");
 
@@ -110,11 +137,18 @@ async fn netem_partition_recovery_readvertises_all_channels() -> Result<()> {
             .await?;
     let server_info_2 = viewer.expect_server_info().await?;
     info!(
-        "phase 4: reconnected as same identity, got fresh ServerInfo (session={:?})",
+        "phase 4: reconnected, got fresh ServerInfo (session={:?})",
         server_info_2.session_id
     );
 
-    // The gateway should advertise ALL channels to the new viewer.
+    // Verify that the partition triggered the reset_participant recovery path.
+    assert!(
+        logs_contain("resetting participant after control-plane failure"),
+        "partition did not trigger reset_participant — \
+         the 10s sleep may not have been long enough for WebRTC to detect the peer loss"
+    );
+
+    // The gateway should advertise ALL channels to the reconnected viewer.
     let advertise_2 = viewer.expect_advertise().await?;
     let topics: Vec<&str> = advertise_2
         .channels
