@@ -62,7 +62,6 @@ struct ViewerEvent {
     TrackSubscribed,
     TrackUnsubscribed,
     ParticipantDisconnected,
-    RoomEos,
     DataTrackPublished,
   };
   Type type;
@@ -82,7 +81,6 @@ public:
   void onParticipantDisconnected(
     livekit::Room& room, const livekit::ParticipantDisconnectedEvent& event
   ) override;
-  void onRoomEos(livekit::Room& room, const livekit::RoomEosEvent& event) override;
   void onDataTrackPublished(livekit::Room& room, const livekit::DataTrackPublishedEvent& event)
     override;
 

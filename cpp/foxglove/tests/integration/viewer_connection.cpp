@@ -209,12 +209,6 @@ void TestRoomDelegate::onParticipantDisconnected(
   push_event(std::move(ve));
 }
 
-void TestRoomDelegate::onRoomEos(livekit::Room& /*room*/, const livekit::RoomEosEvent&) {
-  ViewerEvent ve;
-  ve.type = ViewerEvent::Type::RoomEos;
-  push_event(std::move(ve));
-}
-
 void TestRoomDelegate::onDataTrackPublished(
   livekit::Room& /*room*/, const livekit::DataTrackPublishedEvent& event
 ) {

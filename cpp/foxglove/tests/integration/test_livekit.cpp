@@ -226,15 +226,17 @@ TEST_CASE("livekit: multiple participants receive messages", "[integration]") {
   auto ctx = foxglove::Context::create();
   MockListener listener;
 
-  // The spirit of this test is fan-out: a single channel logged once at the
-  // gateway is delivered to every subscribed viewer, and one viewer leaving
-  // does not disturb the others. We deliberately classify the channel as
-  // Reliable so messages flow over the control plane (WebSocket) rather than
-  // the lossy data-track plane. The data-track path is exercised by other
-  // tests (e.g. "viewer receives message after subscribe"). Reliable delivery
-  // on the control plane keeps this fan-out test focused on what it asserts
-  // (fan-out works and survives a peer disconnecting) without introducing
-  // data-track timing concerns.
+  // Fan-out on the reliable (control-plane) path: a single channel logged once
+  // at the gateway is delivered to every subscribed viewer. We classify the
+  // channel as Reliable so messages flow over WebSocket rather than the lossy
+  // data-track plane; the data-track path is exercised by other tests (e.g.
+  // "viewer receives message after subscribe"). After both viewers receive the
+  // first message, we tear down viewer1 locally (`reset()` destroys the Room)
+  // and immediately log again; we assert only that viewer2 still receives the
+  // second payload. We do not synchronize on the gateway or LiveKit observing
+  // viewer1's disconnect before publishing, so this does not verify that other
+  // participants remain stable across a completed remote leave—only reliable
+  // fan-out to a remaining subscriber after one viewer's connection is dropped.
   TestGatewayOptions opts;
   opts.callbacks = listener.make_callbacks();
   opts.qos_classifier = [](const foxglove::ChannelDescriptor& /*ch*/) {
