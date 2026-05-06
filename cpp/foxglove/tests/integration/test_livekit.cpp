@@ -58,14 +58,15 @@ TEST_CASE("livekit: viewer receives server info", "[integration]") {
 
 TEST_CASE("livekit: viewer receives channel advertisement", "[integration]") {
   auto ctx = foxglove::Context::create();
+
+  auto gw = TestGateway::start(ctx);
+  auto viewer = ViewerConnection::connect(gw.room_name, "viewer-1");
+  auto server_info = viewer.expect_server_info();
+
   auto channel = foxglove::RawChannel::create("/test", "json", std::nullopt, ctx);
   REQUIRE(channel.has_value());
   auto channel_id = channel->id();
 
-  auto gw = TestGateway::start(ctx);
-  auto viewer = ViewerConnection::connect(gw.room_name, "viewer-1");
-
-  auto server_info = viewer.expect_server_info();
   auto advertise = viewer.expect_advertise();
 
   auto& channels = advertise["channels"];
@@ -158,13 +159,14 @@ TEST_CASE("livekit: viewer does not receive message before subscribe", "[integra
 
 TEST_CASE("livekit: viewer receives unadvertise on channel close", "[integration]") {
   auto ctx = foxglove::Context::create();
-  auto channel = foxglove::RawChannel::create("/test", "json", std::nullopt, ctx);
-  REQUIRE(channel.has_value());
 
   auto gw = TestGateway::start(ctx);
   auto viewer = ViewerConnection::connect(gw.room_name, "viewer-1");
-
   viewer.expect_server_info();
+
+  auto channel = foxglove::RawChannel::create("/test", "json", std::nullopt, ctx);
+  REQUIRE(channel.has_value());
+
   auto advertise = viewer.expect_advertise();
   auto channel_id = advertise["channels"][0]["id"].get<uint64_t>();
 
@@ -202,19 +204,19 @@ TEST_CASE("livekit: viewer receives advertisement for late channel", "[integrati
 TEST_CASE("livekit: channel filter excludes filtered channels", "[integration]") {
   auto ctx = foxglove::Context::create();
 
-  auto allowed = foxglove::RawChannel::create("/allowed/data", "json", std::nullopt, ctx);
-  REQUIRE(allowed.has_value());
-  auto blocked = foxglove::RawChannel::create("/blocked/data", "json", std::nullopt, ctx);
-  REQUIRE(blocked.has_value());
-
   TestGatewayOptions opts;
   opts.channel_filter = [](const foxglove::ChannelDescriptor& ch) {
     return std::string(ch.topic()).find("/allowed") == 0;
   };
   auto gw = TestGateway::start_with_options(ctx, std::move(opts));
   auto viewer = ViewerConnection::connect(gw.room_name, "viewer-1");
-
   viewer.expect_server_info();
+
+  auto allowed = foxglove::RawChannel::create("/allowed/data", "json", std::nullopt, ctx);
+  REQUIRE(allowed.has_value());
+  auto blocked = foxglove::RawChannel::create("/blocked/data", "json", std::nullopt, ctx);
+  REQUIRE(blocked.has_value());
+
   auto advertise = viewer.expect_advertise();
 
   REQUIRE(advertise["channels"].size() == 1);
@@ -229,8 +231,6 @@ TEST_CASE("livekit: channel filter excludes filtered channels", "[integration]")
 TEST_CASE("livekit: multiple participants receive messages", "[integration]") {
   auto ctx = foxglove::Context::create();
   MockListener listener;
-  auto channel = foxglove::RawChannel::create("/test", "json", std::nullopt, ctx);
-  REQUIRE(channel.has_value());
 
   // The spirit of this test is fan-out: a single channel logged once at the
   // gateway is delivered to every subscribed viewer, and one viewer leaving
@@ -250,6 +250,10 @@ TEST_CASE("livekit: multiple participants receive messages", "[integration]") {
 
   auto viewer1 = ViewerConnection::connect(gw.room_name, "viewer-1");
   viewer1.expect_server_info();
+
+  auto channel = foxglove::RawChannel::create("/test", "json", std::nullopt, ctx);
+  REQUIRE(channel.has_value());
+
   auto adv1 = viewer1.expect_advertise();
   REQUIRE(adv1["channels"].size() == 1);
   auto channel_id = adv1["channels"][0]["id"].get<uint64_t>();
@@ -303,20 +307,23 @@ TEST_CASE("livekit: multiple participants receive messages", "[integration]") {
 TEST_CASE("livekit: video channel has video track metadata", "[integration]") {
   auto ctx = foxglove::Context::create();
 
+  auto gw = TestGateway::start(ctx);
+  auto viewer = ViewerConnection::connect(gw.room_name, "viewer-1");
+
+  viewer.expect_server_info();
+
   foxglove::Schema video_schema{"foxglove.RawImage", "protobuf", nullptr, 0};
   auto video_channel = foxglove::RawChannel::create("/camera", "protobuf", video_schema, ctx);
   REQUIRE(video_channel.has_value());
   auto json_channel = foxglove::RawChannel::create("/data", "json", std::nullopt, ctx);
   REQUIRE(json_channel.has_value());
 
-  auto gw = TestGateway::start(ctx);
-  auto viewer = ViewerConnection::connect(gw.room_name, "viewer-1");
+  auto adv1 = viewer.expect_advertise();
+  auto adv2 = viewer.expect_advertise();
 
-  viewer.expect_server_info();
-  auto advertise = viewer.expect_advertise();
-
-  REQUIRE(advertise["channels"].size() == 2);
-  for (const auto& ch : advertise["channels"]) {
+  for (const auto* adv : {&adv1, &adv2}) {
+    REQUIRE((*adv)["channels"].size() == 1);
+    const auto& ch = (*adv)["channels"][0];
     if (ch["id"].get<uint64_t>() == video_channel->id()) {
       auto meta = ch.value("metadata", nlohmann::json::object());
       CHECK(meta.value("foxglove.hasVideoTrack", "") == "true");
@@ -391,15 +398,16 @@ TEST_CASE("livekit: video channel messages bypass data plane", "[integration]") 
 TEST_CASE("livekit: video track lifecycle", "[integration]") {
   auto ctx = foxglove::Context::create();
 
+  auto gw = TestGateway::start(ctx);
+  auto viewer = ViewerConnection::connect(gw.room_name, "viewer-1");
+
+  viewer.expect_server_info();
+
   auto video_channel = foxglove::RawChannel::create(
     "/camera", "protobuf", foxglove::Schema{"foxglove.RawImage", "protobuf", nullptr, 0}, ctx
   );
   REQUIRE(video_channel.has_value());
 
-  auto gw = TestGateway::start(ctx);
-  auto viewer = ViewerConnection::connect(gw.room_name, "viewer-1");
-
-  viewer.expect_server_info();
   auto advertise = viewer.expect_advertise();
   auto channel_id = advertise["channels"][0]["id"].get<uint64_t>();
 
@@ -421,15 +429,16 @@ TEST_CASE("livekit: video track lifecycle", "[integration]") {
 TEST_CASE("livekit: video track resubscribe", "[integration]") {
   auto ctx = foxglove::Context::create();
 
+  auto gw = TestGateway::start(ctx);
+  auto viewer = ViewerConnection::connect(gw.room_name, "viewer-1");
+
+  viewer.expect_server_info();
+
   auto video_channel = foxglove::RawChannel::create(
     "/camera", "protobuf", foxglove::Schema{"foxglove.RawImage", "protobuf", nullptr, 0}, ctx
   );
   REQUIRE(video_channel.has_value());
 
-  auto gw = TestGateway::start(ctx);
-  auto viewer = ViewerConnection::connect(gw.room_name, "viewer-1");
-
-  viewer.expect_server_info();
   auto advertise = viewer.expect_advertise();
   auto channel_id = advertise["channels"][0]["id"].get<uint64_t>();
 
@@ -533,13 +542,14 @@ TEST_CASE("livekit: video resubscribe switches to data plane", "[integration]") 
 TEST_CASE("livekit: request video track on non-video channel sends error", "[integration]") {
   auto ctx = foxglove::Context::create();
 
-  auto json_channel = foxglove::RawChannel::create("/json_data", "json", std::nullopt, ctx);
-  REQUIRE(json_channel.has_value());
-
   auto gw = TestGateway::start(ctx);
   auto viewer = ViewerConnection::connect(gw.room_name, "viewer-1");
 
   viewer.expect_server_info();
+
+  auto json_channel = foxglove::RawChannel::create("/json_data", "json", std::nullopt, ctx);
+  REQUIRE(json_channel.has_value());
+
   auto advertise = viewer.expect_advertise();
   auto channel_id = advertise["channels"][0]["id"].get<uint64_t>();
 
@@ -729,15 +739,16 @@ TEST_CASE("livekit: subscribe fires listener callback", "[integration]") {
   auto ctx = foxglove::Context::create();
   MockListener listener;
 
-  auto channel = foxglove::RawChannel::create("/camera", "json", std::nullopt, ctx);
-  REQUIRE(channel.has_value());
-
   TestGatewayOptions opts;
   opts.callbacks = listener.make_callbacks();
   auto gw = TestGateway::start_with_options(ctx, std::move(opts));
 
   auto viewer = ViewerConnection::connect(gw.room_name, "viewer-1");
   viewer.expect_server_info();
+
+  auto channel = foxglove::RawChannel::create("/camera", "json", std::nullopt, ctx);
+  REQUIRE(channel.has_value());
+
   auto advertise = viewer.expect_advertise();
   auto channel_id = advertise["channels"][0]["id"].get<uint64_t>();
 
@@ -763,15 +774,16 @@ TEST_CASE("livekit: unsubscribe fires listener callback", "[integration]") {
   auto ctx = foxglove::Context::create();
   MockListener listener;
 
-  auto channel = foxglove::RawChannel::create("/lidar", "json", std::nullopt, ctx);
-  REQUIRE(channel.has_value());
-
   TestGatewayOptions opts;
   opts.callbacks = listener.make_callbacks();
   auto gw = TestGateway::start_with_options(ctx, std::move(opts));
 
   auto viewer = ViewerConnection::connect(gw.room_name, "viewer-1");
   viewer.expect_server_info();
+
+  auto channel = foxglove::RawChannel::create("/lidar", "json", std::nullopt, ctx);
+  REQUIRE(channel.has_value());
+
   auto advertise = viewer.expect_advertise();
   auto channel_id = advertise["channels"][0]["id"].get<uint64_t>();
 
@@ -801,15 +813,16 @@ TEST_CASE("livekit: disconnect fires unsubscribe for subscribed channels", "[int
   auto ctx = foxglove::Context::create();
   MockListener listener;
 
-  auto channel = foxglove::RawChannel::create("/imu", "json", std::nullopt, ctx);
-  REQUIRE(channel.has_value());
-
   TestGatewayOptions opts;
   opts.callbacks = listener.make_callbacks();
   auto gw = TestGateway::start_with_options(ctx, std::move(opts));
 
   auto viewer = ViewerConnection::connect(gw.room_name, "viewer-1");
   viewer.expect_server_info();
+
+  auto channel = foxglove::RawChannel::create("/imu", "json", std::nullopt, ctx);
+  REQUIRE(channel.has_value());
+
   auto advertise = viewer.expect_advertise();
   auto channel_id = advertise["channels"][0]["id"].get<uint64_t>();
 
@@ -838,15 +851,16 @@ TEST_CASE("livekit: channel close fires unsubscribe for subscribers", "[integrat
   auto ctx = foxglove::Context::create();
   MockListener listener;
 
-  auto channel = foxglove::RawChannel::create("/radar", "json", std::nullopt, ctx);
-  REQUIRE(channel.has_value());
-
   TestGatewayOptions opts;
   opts.callbacks = listener.make_callbacks();
   auto gw = TestGateway::start_with_options(ctx, std::move(opts));
 
   auto viewer = ViewerConnection::connect(gw.room_name, "viewer-1");
   viewer.expect_server_info();
+
+  auto channel = foxglove::RawChannel::create("/radar", "json", std::nullopt, ctx);
+  REQUIRE(channel.has_value());
+
   auto advertise = viewer.expect_advertise();
   auto channel_id = advertise["channels"][0]["id"].get<uint64_t>();
 
@@ -987,9 +1001,6 @@ TEST_CASE("livekit: connection status lifecycle", "[integration]") {
   std::mutex status_mutex;
   std::vector<foxglove::RemoteAccessConnectionStatus> statuses;
 
-  auto channel = foxglove::RawChannel::create("/status-test", "json", std::nullopt, ctx);
-  REQUIRE(channel.has_value());
-
   TestGatewayOptions opts;
   opts.callbacks.onConnectionStatusChanged = [&](foxglove::RemoteAccessConnectionStatus status) {
     std::lock_guard<std::mutex> lock(status_mutex);
@@ -1009,9 +1020,18 @@ TEST_CASE("livekit: connection status lifecycle", "[integration]") {
   CHECK(gw.connection_status() == foxglove::RemoteAccessConnectionStatus::Connected);
 
   auto viewer = ViewerConnection::connect(gw.room_name, "viewer-status");
+
+  viewer.expect_server_info();
+
+  auto channel = foxglove::RawChannel::create("/status-test", "json", std::nullopt, ctx);
+  REQUIRE(channel.has_value());
+
+  viewer.expect_advertise();
+
   viewer.subscribe_and_wait({channel->id()}, [&] {
     return channel->hasSinks();
   });
+
   viewer.close();
 
   gw.stop();
@@ -1020,7 +1040,6 @@ TEST_CASE("livekit: connection status lifecycle", "[integration]") {
   REQUIRE(statuses.size() >= 4);
   CHECK(statuses[0] == foxglove::RemoteAccessConnectionStatus::Connecting);
   CHECK(statuses[1] == foxglove::RemoteAccessConnectionStatus::Connected);
-  // ShuttingDown and Shutdown should be at the end
   CHECK(statuses[statuses.size() - 2] == foxglove::RemoteAccessConnectionStatus::ShuttingDown);
   CHECK(statuses[statuses.size() - 1] == foxglove::RemoteAccessConnectionStatus::Shutdown);
 }
@@ -1296,8 +1315,6 @@ TEST_CASE("livekit: connection graph multiple subscribers", "[integration]") {
 
 TEST_CASE("livekit: reliable channel delivers via control plane", "[integration]") {
   auto ctx = foxglove::Context::create();
-  auto channel = foxglove::RawChannel::create("/config", "json", std::nullopt, ctx);
-  REQUIRE(channel.has_value());
 
   TestGatewayOptions opts;
   opts.qos_classifier = [](const foxglove::ChannelDescriptor& /*ch*/) {
@@ -1307,6 +1324,10 @@ TEST_CASE("livekit: reliable channel delivers via control plane", "[integration]
 
   auto viewer = ViewerConnection::connect(gw.room_name, "viewer-1");
   viewer.expect_server_info();
+
+  auto channel = foxglove::RawChannel::create("/config", "json", std::nullopt, ctx);
+  REQUIRE(channel.has_value());
+
   auto advertise = viewer.expect_advertise();
   REQUIRE(advertise["channels"].size() == 1);
   auto& adv_ch = advertise["channels"][0];
@@ -1414,10 +1435,6 @@ TEST_CASE("livekit: qos classifier per channel", "[integration]") {
 
 TEST_CASE("livekit: video channel forces lossy over reliable classifier", "[integration]") {
   auto ctx = foxglove::Context::create();
-  auto video_channel = foxglove::RawChannel::create(
-    "/camera", "protobuf", foxglove::Schema{"foxglove.RawImage", "protobuf", nullptr, 0}, ctx
-  );
-  REQUIRE(video_channel.has_value());
 
   TestGatewayOptions opts;
   opts.qos_classifier = [](const foxglove::ChannelDescriptor& /*ch*/) {
@@ -1427,6 +1444,12 @@ TEST_CASE("livekit: video channel forces lossy over reliable classifier", "[inte
 
   auto viewer = ViewerConnection::connect(gw.room_name, "viewer-1");
   viewer.expect_server_info();
+
+  auto video_channel = foxglove::RawChannel::create(
+    "/camera", "protobuf", foxglove::Schema{"foxglove.RawImage", "protobuf", nullptr, 0}, ctx
+  );
+  REQUIRE(video_channel.has_value());
+
   auto advertise = viewer.expect_advertise();
   REQUIRE(advertise["channels"].size() == 1);
   auto& ch = advertise["channels"][0];

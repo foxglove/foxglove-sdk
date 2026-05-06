@@ -3,6 +3,7 @@
 #include <livekit/data_track_stream.h>
 #include <livekit/remote_data_track.h>
 
+#include <chrono>
 #include <future>
 #include <stdexcept>
 #include <thread>
@@ -37,6 +38,7 @@ FrameReader::FrameReader(std::shared_ptr<livekit::ByteStreamReader> reader)
     : reader_(std::move(reader)) {}
 
 namespace {
+
 /// Reads the next chunk from a ByteStreamReader with a timeout by running
 /// readNext() on a worker thread. ByteStreamReader has no close() method and
 /// the underlying readNext() blocks unconditionally on a condition variable
@@ -63,7 +65,8 @@ std::vector<uint8_t> read_byte_stream_chunk_with_timeout(
     }
   });
 
-  if (future.wait_for(timeout) != std::future_status::ready) {
+  auto status = future.wait_for(timeout);
+  if (status != std::future_status::ready) {
     worker.detach();
     throw std::runtime_error("timeout reading byte stream chunk");
   }
@@ -283,54 +286,67 @@ ViewerConnection::ViewerConnection(
 ViewerConnection ViewerConnection::connect(
   const std::string& room_name, const std::string& identity
 ) {
-  auto token = generate_token(room_name, identity);
-  auto delegate = std::make_shared<TestRoomDelegate>();
-  auto room = std::make_unique<livekit::Room>();
-  room->setDelegate(delegate.get());
+  // The C++ LiveKit SDK's Room::Connect() registers its FFI event listener
+  // AFTER the connection completes. Events emitted by the Rust side between
+  // connection establishment and listener registration are dropped. If the
+  // gateway sends the control byte-stream header during that window, the
+  // ByteStreamOpened event is lost. Retry with a short inner timeout so we can
+  // reconnect and catch the byte stream on a subsequent attempt. The byte
+  // stream header typically arrives 2-3s after Room::Connect() returns, so
+  // the inner timeout must exceed that.
+  constexpr auto INNER_TIMEOUT = std::chrono::seconds(5);
+  constexpr auto CONNECT_TIMEOUT = std::chrono::seconds(15);
+  auto outer_deadline = std::chrono::steady_clock::now() + CONNECT_TIMEOUT;
 
-  auto delegate_weak = std::weak_ptr<TestRoomDelegate>(delegate);
-  room->registerByteStreamHandler(
-    "control",
-    [delegate_weak](
-      std::shared_ptr<livekit::ByteStreamReader> reader, const std::string& participant_identity
-    ) {
-      if (auto d = delegate_weak.lock()) {
-        ViewerEvent ve;
-        ve.type = ViewerEvent::Type::ByteStreamOpened;
-        ve.topic = reader->info().topic;
-        ve.identity = participant_identity;
-        ve.reader = std::move(reader);
-        d->push_event(std::move(ve));
+  while (true) {
+    auto token = generate_token(room_name, identity);
+    auto delegate = std::make_shared<TestRoomDelegate>();
+    auto room = std::make_unique<livekit::Room>();
+    room->setDelegate(delegate.get());
+
+    auto delegate_weak = std::weak_ptr<TestRoomDelegate>(delegate);
+    room->registerByteStreamHandler(
+      "control",
+      [delegate_weak](
+        std::shared_ptr<livekit::ByteStreamReader> reader, const std::string& participant_identity
+      ) {
+        if (auto d = delegate_weak.lock()) {
+          ViewerEvent ve;
+          ve.type = ViewerEvent::Type::ByteStreamOpened;
+          ve.topic = reader->info().topic;
+          ve.identity = participant_identity;
+          ve.reader = std::move(reader);
+          d->push_event(std::move(ve));
+        }
       }
+    );
+
+    livekit::RoomOptions options;
+    options.auto_subscribe = true;
+    if (!room->Connect(livekit_url(), token, options)) {
+      throw std::runtime_error("viewer Room::Connect() returned false for " + identity);
     }
-  );
 
-  livekit::RoomOptions options;
-  options.auto_subscribe = true;
-  if (!room->Connect(livekit_url(), token, options)) {
-    throw std::runtime_error("viewer Room::Connect() returned false for " + identity);
+    auto now = std::chrono::steady_clock::now();
+    auto inner_deadline = std::min(now + INNER_TIMEOUT, outer_deadline);
+    auto wait_ms = std::chrono::duration_cast<std::chrono::milliseconds>(inner_deadline - now);
+
+    auto event = delegate->wait_for_event(
+      [](const ViewerEvent& e) {
+        return e.type == ViewerEvent::Type::ByteStreamOpened && e.topic == "control";
+      },
+      wait_ms
+    );
+
+    if (event) {
+      FrameReader reader(event->reader);
+      return ViewerConnection(std::move(room), std::move(delegate), std::move(reader));
+    }
+
+    if (std::chrono::steady_clock::now() >= outer_deadline) {
+      throw std::runtime_error("timeout waiting for gateway to open byte stream");
+    }
   }
-
-  // Wait the full timeout on a single connection. We deliberately do not
-  // retry by destroying and recreating the Room: LiveKit takes time to
-  // evict the prior instance, so a retry with the same identity races
-  // against eviction and routinely fails with DuplicateIdentity. Holding
-  // the connection open lets the gateway's add_participant flow complete
-  // (it depends on the SUBSCRIBER DTLS handshake, which can be slow under
-  // load on the dev server) and deliver the control byte stream.
-  auto event = delegate->wait_for_event(
-    [](const ViewerEvent& e) {
-      return e.type == ViewerEvent::Type::ByteStreamOpened && e.topic == "control";
-    },
-    std::chrono::duration_cast<std::chrono::milliseconds>(EVENT_TIMEOUT)
-  );
-
-  if (!event) {
-    throw std::runtime_error("timeout waiting for gateway to open byte stream");
-  }
-
-  FrameReader reader(event->reader);
-  return ViewerConnection(std::move(room), std::move(delegate), std::move(reader));
 }
 
 nlohmann::json ViewerConnection::expect_server_info() {

@@ -4,9 +4,12 @@
 #include <foxglove/remote_access.hpp>
 
 #include <atomic>
+#include <chrono>
+#include <future>
 #include <memory>
 #include <optional>
 #include <string>
+#include <thread>
 #include <utility>
 
 #include "mock_listener.hpp"
@@ -98,9 +101,32 @@ public:
     return gateway_->connectionStatus();
   }
 
+  /// Stops the gateway, with a bounded shutdown budget as a safety net. The
+  /// underlying `Gateway::stop_blocking` should already return promptly
+  /// (the session's `room.close()` is bounded by `ROOM_CLOSE_TIMEOUT`). We
+  /// keep an outer guard here so that any hang in the FFI shutdown path
+  /// doesn't consume the entire 30s CTest per-test budget; if it trips,
+  /// the worker thread is detached and the test fails fast with a clear
+  /// message instead of a generic CTest timeout.
   void stop() {
-    if (gateway_) {
-      gateway_->stop();
+    if (!gateway_) {
+      return;
+    }
+    constexpr auto SHUTDOWN_TIMEOUT = std::chrono::seconds(10);
+    auto gateway = std::move(gateway_);
+    auto promise = std::make_shared<std::promise<void>>();
+    auto future = promise->get_future();
+
+    std::thread worker([gateway = std::move(gateway), promise]() mutable {
+      gateway->stop();
+      promise->set_value();
+    });
+
+    if (future.wait_for(SHUTDOWN_TIMEOUT) == std::future_status::ready) {
+      worker.join();
+    } else {
+      worker.detach();
+      throw std::runtime_error("gateway stop did not complete within shutdown budget");
     }
   }
 

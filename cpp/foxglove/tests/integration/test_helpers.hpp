@@ -16,16 +16,17 @@
 
 namespace foxglove_integration {
 
-constexpr auto EVENT_TIMEOUT = std::chrono::seconds(15);
-constexpr auto READ_TIMEOUT = std::chrono::seconds(10);
+constexpr auto EVENT_TIMEOUT = std::chrono::seconds(8);
+constexpr auto READ_TIMEOUT = std::chrono::seconds(5);
 constexpr auto POLL_INTERVAL = std::chrono::milliseconds(50);
 
 // Upper bound for waiting on a `DataTrackPublished` event from a remote
 // participant. The gateway's `publish_data_track` task uses a 10s per-attempt
 // timeout in the LiveKit Rust SDK and retries with exponential backoff (up to
-// 3s) on transient errors, so a single failed attempt can push the
-// publish-announce-arrives latency well past EVENT_TIMEOUT (15s).
-constexpr auto DATA_TRACK_PUBLISH_TIMEOUT = std::chrono::seconds(25);
+// 3s) on transient errors. 15s covers one failed attempt plus a retry plus SFU
+// announce flush, while leaving headroom within the 30s CTest per-test timeout
+// even when ViewerConnection::connect uses part of its retry budget.
+constexpr auto DATA_TRACK_PUBLISH_TIMEOUT = std::chrono::seconds(15);
 
 inline void poll_until(
   const std::function<bool()>& cond,
