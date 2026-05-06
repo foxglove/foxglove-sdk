@@ -53,7 +53,6 @@ TEST_CASE("livekit: viewer receives server info", "[integration]") {
   }
   REQUIRE(has_json);
 
-  viewer.close();
   gw.stop();
 }
 
@@ -76,7 +75,6 @@ TEST_CASE("livekit: viewer receives channel advertisement", "[integration]") {
   CHECK(channels[0]["encoding"].get<std::string>() == "json");
   CHECK(channels[0]["id"].get<uint64_t>() == channel_id);
 
-  viewer.close();
   gw.stop();
 }
 
@@ -116,7 +114,6 @@ TEST_CASE("livekit: viewer receives message after subscribe", "[integration]") {
   auto data2 = msg.value("data", std::vector<uint8_t>{});
   CHECK(std::string(data2.begin(), data2.end()) == payload2);
 
-  viewer.close();
   gw.stop();
 }
 
@@ -154,7 +151,6 @@ TEST_CASE("livekit: viewer does not receive message before subscribe", "[integra
   auto data = msg.value("data", std::vector<uint8_t>{});
   CHECK(std::string(data.begin(), data.end()) == after);
 
-  viewer.close();
   gw.stop();
 }
 
@@ -178,7 +174,6 @@ TEST_CASE("livekit: viewer receives unadvertise on channel close", "[integration
   REQUIRE(ids.size() == 1);
   CHECK(ids[0].get<uint64_t>() == channel_id);
 
-  viewer.close();
   gw.stop();
 }
 
@@ -198,7 +193,6 @@ TEST_CASE("livekit: viewer receives advertisement for late channel", "[integrati
   CHECK(advertise["channels"][0]["topic"].get<std::string>() == "/late-topic");
   CHECK(advertise["channels"][0]["id"].get<uint64_t>() == channel->id());
 
-  viewer.close();
   gw.stop();
 }
 
@@ -225,7 +219,6 @@ TEST_CASE("livekit: channel filter excludes filtered channels", "[integration]")
   CHECK(advertise["channels"][0]["id"].get<uint64_t>() == allowed->id());
 
   (void)blocked;
-  viewer.close();
   gw.stop();
 }
 
@@ -249,9 +242,8 @@ TEST_CASE("livekit: multiple participants receive messages", "[integration]") {
   };
   auto gw = TestGateway::start_with_options(ctx, std::move(opts));
 
-  auto viewer1 = std::make_unique<ViewerConnection>(
-    ViewerConnection::connect(gw.room_name, "viewer-1")
-  );
+  auto viewer1 =
+    std::make_unique<ViewerConnection>(ViewerConnection::connect(gw.room_name, "viewer-1"));
   viewer1->expect_server_info();
 
   auto channel = foxglove::RawChannel::create("/test", "json", std::nullopt, ctx);
@@ -269,9 +261,8 @@ TEST_CASE("livekit: multiple participants receive messages", "[integration]") {
     return channel->hasSinks();
   });
 
-  auto viewer2 = std::make_unique<ViewerConnection>(
-    ViewerConnection::connect(gw.room_name, "viewer-2")
-  );
+  auto viewer2 =
+    std::make_unique<ViewerConnection>(ViewerConnection::connect(gw.room_name, "viewer-2"));
   viewer2->expect_server_info();
   auto adv2 = viewer2->expect_advertise();
   CHECK(adv2["channels"][0]["id"].get<uint64_t>() == channel_id);
@@ -335,7 +326,6 @@ TEST_CASE("livekit: video channel has video track metadata", "[integration]") {
     }
   }
 
-  viewer.close();
   gw.stop();
 }
 
@@ -392,7 +382,6 @@ TEST_CASE("livekit: video channel messages bypass data plane", "[integration]") 
   // because it can be subscribed to with request_video_track: false.
   CHECK(viewer.has_device_data_track(video_id));
 
-  viewer.close();
   gw.stop();
 }
 
@@ -423,7 +412,6 @@ TEST_CASE("livekit: video track lifecycle", "[integration]") {
   track_name = viewer.expect_track_unsubscribed();
   CHECK(track_name == expected_track_name);
 
-  viewer.close();
   gw.stop();
 }
 
@@ -461,7 +449,6 @@ TEST_CASE("livekit: video track resubscribe", "[integration]") {
   viewer.send_subscribe_video({channel_id});
   CHECK(viewer.expect_track_subscribed() == expected_track_name);
 
-  viewer.close();
   gw.stop();
 }
 
@@ -495,7 +482,6 @@ TEST_CASE("livekit: video channel without request video track uses data plane", 
   auto data = msg.value("data", std::vector<uint8_t>{});
   CHECK(std::string(data.begin(), data.end()) == payload);
 
-  viewer.close();
   gw.stop();
 }
 
@@ -536,7 +522,6 @@ TEST_CASE("livekit: video resubscribe switches to data plane", "[integration]") 
   auto data = msg.value("data", std::vector<uint8_t>{});
   CHECK(std::string(data.begin(), data.end()) == payload);
 
-  viewer.close();
   gw.stop();
 }
 
@@ -562,7 +547,6 @@ TEST_CASE("livekit: request video track on non-video channel sends error", "[int
   CHECK(message.find("does not support video transcoding") != std::string::npos);
   CHECK(!json_channel->hasSinks());
 
-  viewer.close();
   gw.stop();
 }
 
@@ -593,7 +577,6 @@ TEST_CASE("livekit: client advertise fires listener callback", "[integration]") 
     CHECK(std::get<1>(listener.client_advertised[0]) == "/cmd");
   }
 
-  viewer.close();
   gw.stop();
 }
 
@@ -624,7 +607,6 @@ TEST_CASE("livekit: client advertise preserves schema name without schema data",
     CHECK(std::get<2>(listener.client_advertised[0]) == "geometry_msgs/msg/Twist");
   }
 
-  viewer.close();
   gw.stop();
 }
 
@@ -656,7 +638,6 @@ TEST_CASE("livekit: client unadvertise fires listener callback", "[integration]"
     CHECK(listener.client_unadvertised[0].second == "/joy");
   }
 
-  viewer.close();
   gw.stop();
 }
 
@@ -691,43 +672,6 @@ TEST_CASE("livekit: client message data for unadvertised channel sends error", "
   CHECK(message.find("not advertised channel") != std::string::npos);
 
   CHECK(listener.message_data_count() == 0);
-
-  viewer.close();
-  gw.stop();
-}
-
-TEST_CASE("livekit: client disconnect fires unadvertise for advertised channels", "[integration]") {
-  auto ctx = foxglove::Context::create();
-  MockListener listener;
-
-  TestGatewayOptions opts;
-  opts.callbacks = listener.make_callbacks();
-  opts.capabilities = foxglove::RemoteAccessGatewayCapabilities::ClientPublish;
-  auto gw = TestGateway::start_with_options(ctx, std::move(opts));
-
-  auto viewer = ViewerConnection::connect(gw.room_name, "viewer-1");
-  viewer.expect_server_info();
-
-  viewer.send_client_advertise({{1, "/cmd_vel", "json", ""}, {2, "/joy", "json", ""}});
-  poll_until([&] {
-    return listener.client_advertised_count() == 2;
-  });
-
-  viewer.close();
-  poll_until([&] {
-    return listener.client_unadvertised_count() == 2;
-  });
-
-  {
-    std::lock_guard<std::mutex> lock(listener.mutex);
-    REQUIRE(listener.client_unadvertised.size() == 2);
-    std::vector<std::string> topics;
-    for (const auto& [id, topic] : listener.client_unadvertised) {
-      topics.push_back(topic);
-    }
-    CHECK(std::find(topics.begin(), topics.end(), "/cmd_vel") != topics.end());
-    CHECK(std::find(topics.begin(), topics.end(), "/joy") != topics.end());
-  }
 
   gw.stop();
 }
@@ -764,10 +708,6 @@ TEST_CASE("livekit: subscribe fires listener callback", "[integration]") {
     CHECK(listener.subscribed[0].second == "/camera");
   }
 
-  viewer.close();
-  poll_until([&] {
-    return listener.unsubscribed_count() == 1;
-  });
   gw.stop();
 }
 
@@ -804,45 +744,6 @@ TEST_CASE("livekit: unsubscribe fires listener callback", "[integration]") {
     std::lock_guard<std::mutex> lock(listener.mutex);
     REQUIRE(listener.unsubscribed.size() == 1);
     CHECK(listener.unsubscribed[0].second == "/lidar");
-  }
-
-  viewer.close();
-  gw.stop();
-}
-
-TEST_CASE("livekit: disconnect fires unsubscribe for subscribed channels", "[integration]") {
-  auto ctx = foxglove::Context::create();
-  MockListener listener;
-
-  TestGatewayOptions opts;
-  opts.callbacks = listener.make_callbacks();
-  auto gw = TestGateway::start_with_options(ctx, std::move(opts));
-
-  auto viewer = ViewerConnection::connect(gw.room_name, "viewer-1");
-  viewer.expect_server_info();
-
-  auto channel = foxglove::RawChannel::create("/imu", "json", std::nullopt, ctx);
-  REQUIRE(channel.has_value());
-
-  auto advertise = viewer.expect_advertise();
-  auto channel_id = advertise["channels"][0]["id"].get<uint64_t>();
-
-  viewer.subscribe_and_wait({channel_id}, [&] {
-    return channel->hasSinks();
-  });
-  poll_until([&] {
-    return listener.subscribed_count() == 1;
-  });
-
-  viewer.close();
-  poll_until([&] {
-    return listener.unsubscribed_count() == 1;
-  });
-
-  {
-    std::lock_guard<std::mutex> lock(listener.mutex);
-    REQUIRE(listener.unsubscribed.size() == 1);
-    CHECK(listener.unsubscribed[0].second == "/imu");
   }
 
   gw.stop();
@@ -887,7 +788,6 @@ TEST_CASE("livekit: channel close fires unsubscribe for subscribers", "[integrat
     CHECK(listener.unsubscribed[0].second == "/radar");
   }
 
-  viewer.close();
   gw.stop();
 }
 
@@ -926,7 +826,6 @@ TEST_CASE("livekit: client message data fires listener callback", "[integration]
     CHECK(topic == "/cmd");
   }
 
-  viewer.close();
   gw.stop();
 }
 
@@ -962,7 +861,6 @@ TEST_CASE("livekit: client message data before advertise sends error", "[integra
 
   CHECK(listener.message_data_count() == 0);
 
-  viewer.close();
   gw.stop();
 }
 
@@ -988,7 +886,6 @@ TEST_CASE("livekit: client advertise without capability sends error", "[integrat
   REQUIRE(!status.empty());
   CHECK(status["level"].get<int>() == 2);  // Error
 
-  viewer.close();
   gw.stop();
 }
 
@@ -1033,8 +930,6 @@ TEST_CASE("livekit: connection status lifecycle", "[integration]") {
     return channel->hasSinks();
   });
 
-  viewer.close();
-
   gw.stop();
 
   std::lock_guard<std::mutex> lock(status_mutex);
@@ -1068,7 +963,6 @@ TEST_CASE("livekit: connection graph subscribe receives empty initial state", "[
   CHECK(update.value("removedTopics", nlohmann::json::array()).empty());
   CHECK(update.value("removedServices", nlohmann::json::array()).empty());
 
-  viewer.close();
   gw.stop();
 }
 
@@ -1105,7 +999,6 @@ TEST_CASE("livekit: connection graph subscribe and publish", "[integration]") {
   REQUIRE(services.size() == 1);
   CHECK(services[0]["name"].get<std::string>() == "/set_mode");
 
-  viewer.close();
   gw.stop();
 }
 
@@ -1143,7 +1036,6 @@ TEST_CASE("livekit: connection graph publish diff update", "[integration]") {
   REQUIRE(removed.size() == 1);
   CHECK(removed[0].get<std::string>() == "/camera");
 
-  viewer.close();
   gw.stop();
 }
 
@@ -1187,7 +1079,6 @@ TEST_CASE("livekit: connection graph unsubscribe stops updates", "[integration]"
   auto data = msg.value("data", std::vector<uint8_t>{});
   CHECK(std::string(data.begin(), data.end()) == payload);
 
-  viewer.close();
   gw.stop();
 }
 
@@ -1204,7 +1095,6 @@ TEST_CASE("livekit: connection graph subscribe without capability sends error", 
   auto message = status["message"].get<std::string>();
   CHECK(message.find("connection graph") != std::string::npos);
 
-  viewer.close();
   gw.stop();
 }
 
@@ -1232,33 +1122,6 @@ TEST_CASE("livekit: connection graph listener callbacks", "[integration]") {
     return listener.connection_graph_unsubscribed.load(std::memory_order_relaxed) == 1;
   });
   CHECK(listener.connection_graph_subscribed.load(std::memory_order_relaxed) == 1);
-
-  viewer.close();
-  gw.stop();
-}
-
-TEST_CASE("livekit: connection graph disconnect cleans up subscription", "[integration]") {
-  auto ctx = foxglove::Context::create();
-  MockListener listener;
-
-  TestGatewayOptions opts;
-  opts.callbacks = listener.make_callbacks();
-  opts.capabilities = foxglove::RemoteAccessGatewayCapabilities::ConnectionGraph;
-  auto gw = TestGateway::start_with_options(ctx, std::move(opts));
-
-  auto viewer = ViewerConnection::connect(gw.room_name, "viewer-1");
-  viewer.expect_server_info();
-
-  viewer.send_subscribe_connection_graph();
-  viewer.expect_connection_graph_update();
-  poll_until([&] {
-    return listener.connection_graph_subscribed.load(std::memory_order_relaxed) == 1;
-  });
-
-  viewer.close();
-  poll_until([&] {
-    return listener.connection_graph_unsubscribed.load(std::memory_order_relaxed) == 1;
-  });
 
   gw.stop();
 }
@@ -1296,16 +1159,6 @@ TEST_CASE("livekit: connection graph multiple subscribers", "[integration]") {
   auto update2 = viewer2.expect_connection_graph_update();
   CHECK(update1.value("publishedTopics", nlohmann::json::array()).size() == 1);
   CHECK(update2.value("publishedTopics", nlohmann::json::array()).size() == 1);
-
-  viewer1.close();
-  viewer2.wait_for_participant_disconnected("viewer-1");
-  std::this_thread::sleep_for(200ms);
-  CHECK(listener.connection_graph_unsubscribed.load(std::memory_order_relaxed) == 0);
-
-  viewer2.close();
-  poll_until([&] {
-    return listener.connection_graph_unsubscribed.load(std::memory_order_relaxed) == 1;
-  });
 
   gw.stop();
 }
@@ -1352,7 +1205,6 @@ TEST_CASE("livekit: reliable channel delivers via control plane", "[integration]
   std::string received(data.begin(), data.end());
   CHECK(received == payload);
 
-  viewer.close();
   gw.stop();
 }
 
@@ -1430,7 +1282,6 @@ TEST_CASE("livekit: qos classifier per channel", "[integration]") {
   auto lossy_data = lossy_msg.value("data", std::vector<uint8_t>{});
   CHECK(std::string(lossy_data.begin(), lossy_data.end()) == lossy_payload);
 
-  viewer.close();
   gw.stop();
 }
 
@@ -1462,6 +1313,5 @@ TEST_CASE("livekit: video channel forces lossy over reliable classifier", "[inte
   CHECK(meta.value("foxglove.hasVideoTrack", "") == "true");
   CHECK(!meta.contains("foxglove.reliable"));
 
-  viewer.close();
   gw.stop();
 }

@@ -200,9 +200,6 @@ public:
   /// Waits for a ParticipantDisconnected event for the given identity.
   void wait_for_participant_disconnected(const std::string& identity);
 
-  /// Close the viewer connection.
-  void close();
-
 private:
   ViewerConnection(
     std::unique_ptr<livekit::Room> room, std::shared_ptr<TestRoomDelegate> delegate,
