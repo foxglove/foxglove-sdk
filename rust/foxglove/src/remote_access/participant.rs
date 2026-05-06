@@ -297,10 +297,7 @@ impl ParticipantWriter {
         match self {
             ParticipantWriter::Livekit(stream) => stream.write(bytes).await.map_err(|e| e.into()),
             #[cfg(test)]
-            ParticipantWriter::Test(writer) => {
-                writer.record(bytes);
-                Ok(())
-            }
+            ParticipantWriter::Test(writer) => writer.record(bytes),
         }
     }
 }
@@ -317,16 +314,31 @@ pub(super) fn test_sid(label: &str) -> ParticipantSid {
 #[derive(Default)]
 pub(super) struct TestByteStreamWriter {
     writes: parking_lot::Mutex<Vec<Bytes>>,
+    fail_writes: std::sync::atomic::AtomicBool,
 }
 
 #[cfg(test)]
 impl TestByteStreamWriter {
-    fn record(&self, data: &[u8]) {
+    fn record(&self, data: &[u8]) -> Result<()> {
+        if self.fail_writes.load(std::sync::atomic::Ordering::Relaxed) {
+            return Err(Box::new(RemoteAccessError::Io(std::io::Error::new(
+                std::io::ErrorKind::BrokenPipe,
+                "simulated write failure",
+            ))));
+        }
         self.writes.lock().push(Bytes::copy_from_slice(data));
+        Ok(())
     }
 
     #[allow(dead_code)]
     pub(super) fn writes(&self) -> Vec<Bytes> {
         std::mem::take(&mut self.writes.lock())
+    }
+
+    /// Configure the writer to return errors on all subsequent writes.
+    #[allow(dead_code)]
+    pub(super) fn set_fail_writes(&self, fail: bool) {
+        self.fail_writes
+            .store(fail, std::sync::atomic::Ordering::Relaxed);
     }
 }
