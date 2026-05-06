@@ -21,19 +21,22 @@ use serial_test::serial;
 use tracing::info;
 use tracing_test::traced_test;
 
-/// Verify that a network partition triggers control stream recovery.
+/// Verify that a network partition triggers control stream recovery via
+/// `reset_participant` (the code path added in PR #1102 / FLE-364).
 ///
-/// 1. Connect a viewer and verify initial `ServerInfo` + channel advertisement.
-/// 2. Impose a full partition (100% packet loss) on the default netem class.
+/// 1. Connect viewer-1 and verify initial `ServerInfo` + channel advertisement.
+/// 2. Impose a full partition (100% packet loss).
 /// 3. Create a second channel on the gateway. The gateway will attempt to send
 ///    an `Advertise` message, which will fail because the partition blocks
 ///    egress from LiveKit.
-/// 4. Wait for the partition to cause write failures and (likely) a viewer
-///    disconnect.
+/// 4. Wait for the write failure to trigger `reset_participant`, which tears
+///    down the old control stream and prepares for re-initialization.
 /// 5. Lift the partition, restoring connectivity.
-/// 6. Reconnect the viewer and verify it receives a fresh `ServerInfo` and
-///    advertisements for *both* channels — proving the gateway recovered and
-///    re-advertised all state.
+/// 6. Reconnect as the *same* viewer-1 identity. Same-identity reconnect is
+///    what exercises `reset_participant`'s re-add path — a fresh identity
+///    would bypass it entirely via normal `add_participant`.
+/// 7. Verify viewer-1 receives a fresh `ServerInfo` and advertisements for
+///    *both* channels — including the one created during the partition.
 #[traced_test]
 #[ignore]
 #[tokio::test]
@@ -85,8 +88,9 @@ async fn netem_partition_recovery_readvertises_all_channels() -> Result<()> {
         .context("create channel B")?;
     info!("created channel B during partition");
 
-    // Give the partition time to cause write failures and/or disconnect.
-    // WebRTC data channels need time to detect the unresponsive peer.
+    // Give WebRTC time to detect the unresponsive peer and for the gateway's
+    // flush-task to hit a write failure, which triggers `reset_participant`.
+    // 10s is conservative — ICE typically detects loss within 5-8s.
     tokio::time::sleep(Duration::from_secs(10)).await;
 
     // Phase 3: Lift the partition.
@@ -94,18 +98,19 @@ async fn netem_partition_recovery_readvertises_all_channels() -> Result<()> {
     let default_args = netem_helpers::default_netem_args();
     netem_helpers::set_netem_impairment(&container, "all", &default_args)?;
 
-    // Phase 4: Reconnect and verify recovery.
-    // The original viewer connection is likely dead. Close it (ignoring errors)
-    // and establish a fresh connection.
+    // Phase 4: Reconnect with the same identity to exercise `reset_participant`.
+    // The original connection is likely dead. Close it (ignoring errors) and
+    // reconnect as "viewer-1" — same-identity reconnect triggers the
+    // `reset_participant` re-add path when the gateway detects the new SID.
     let close_result = viewer.close().await;
     info!("closed old viewer connection: {close_result:?}");
 
     let mut viewer =
-        ViewerConnection::connect_with_timeout(&gw.room_name, "viewer-2", NETEM_EVENT_TIMEOUT)
+        ViewerConnection::connect_with_timeout(&gw.room_name, "viewer-1", NETEM_EVENT_TIMEOUT)
             .await?;
     let server_info_2 = viewer.expect_server_info().await?;
     info!(
-        "phase 4: reconnected, got fresh ServerInfo (session={:?})",
+        "phase 4: reconnected as same identity, got fresh ServerInfo (session={:?})",
         server_info_2.session_id
     );
 
