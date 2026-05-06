@@ -131,10 +131,7 @@ async fn netem_partition_recovery_readvertises_all_channels() -> Result<()> {
         advertise_2.channels.len()
     );
 
-    // Keep channels alive until after assertions to prevent early cleanup.
-    drop(channel_a);
-    drop(channel_b);
-
+    let _ = (channel_a, channel_b);
     viewer.close().await?;
     gw.stop().await?;
     Ok(())
