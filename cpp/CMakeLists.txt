@@ -250,17 +250,46 @@ target_include_directories(foxglove_generated_obj PRIVATE
 target_compile_options(foxglove_generated_obj PRIVATE ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
 target_link_options(foxglove_generated_obj PRIVATE ${SANITIZER_LINK_OPTIONS})
 
-# Hand-written C++ code
-file(GLOB_RECURSE foxglove_cpp_srcs CONFIGURE_DEPENDS
-    "foxglove/include/*.hpp"
-    "foxglove/src/*.hpp"
-    "foxglove/src/*.cpp"
-)
-list(REMOVE_ITEM foxglove_cpp_srcs
-    "${CMAKE_CURRENT_SOURCE_DIR}/foxglove/include/foxglove/messages.hpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/foxglove/src/messages.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/foxglove/include/foxglove/remote_access.hpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/foxglove/src/remote_access.cpp"
+# Hand-written C++ code. Enumerated explicitly rather than globbed so that
+# adding or renaming a source forces a corresponding update here.
+# messages.{hpp,cpp} live in foxglove_generated_obj; remote_access.{hpp,cpp}
+# live in foxglove_ra_cpp_obj.
+set(foxglove_cpp_srcs
+    foxglove/include/foxglove/arena.hpp
+    foxglove/include/foxglove/channel.hpp
+    foxglove/include/foxglove/connection_graph.hpp
+    foxglove/include/foxglove/context.hpp
+    foxglove/include/foxglove/error.hpp
+    foxglove/include/foxglove/expected.hpp
+    foxglove/include/foxglove/fetch_asset.hpp
+    foxglove/include/foxglove/foxglove.hpp
+    foxglove/include/foxglove/mcap.hpp
+    foxglove/include/foxglove/parameter.hpp
+    foxglove/include/foxglove/playback_control_request.hpp
+    foxglove/include/foxglove/playback_state.hpp
+    foxglove/include/foxglove/remote_data_loader_backend.hpp
+    foxglove/include/foxglove/schema.hpp
+    foxglove/include/foxglove/schemas.hpp
+    foxglove/include/foxglove/server.hpp
+    foxglove/include/foxglove/server/connection_graph.hpp
+    foxglove/include/foxglove/server/fetch_asset.hpp
+    foxglove/include/foxglove/server/parameter.hpp
+    foxglove/include/foxglove/server/service.hpp
+    foxglove/include/foxglove/service.hpp
+    foxglove/include/foxglove/system_info.hpp
+    foxglove/include/foxglove/websocket.hpp
+    foxglove/src/mcap_internal.hpp
+    foxglove/src/channel.cpp
+    foxglove/src/connection_graph.cpp
+    foxglove/src/context.cpp
+    foxglove/src/error.cpp
+    foxglove/src/fetch_asset.cpp
+    foxglove/src/foxglove.cpp
+    foxglove/src/mcap.cpp
+    foxglove/src/parameter.cpp
+    foxglove/src/service.cpp
+    foxglove/src/system_info.cpp
+    foxglove/src/websocket.cpp
 )
 
 add_library(foxglove_cpp_obj OBJECT "${foxglove_cpp_srcs}")
