@@ -235,7 +235,6 @@ endif()
 
 # Generated code (excluded from clang-tidy)
 set(foxglove_generated_srcs
-    "foxglove/include/foxglove/messages.hpp"
     "foxglove/src/messages.cpp"
 )
 add_library(foxglove_generated_obj OBJECT "${foxglove_generated_srcs}")
@@ -252,33 +251,9 @@ target_link_options(foxglove_generated_obj PRIVATE ${SANITIZER_LINK_OPTIONS})
 
 # Hand-written C++ code. Enumerated explicitly rather than globbed so that
 # adding or renaming a source forces a corresponding update here.
-# messages.{hpp,cpp} live in foxglove_generated_obj; remote_access.{hpp,cpp}
-# live in foxglove_ra_cpp_obj.
+# messages.cpp lives in foxglove_generated_obj; remote_access.cpp lives in
+# foxglove_ra_cpp_obj.
 set(foxglove_cpp_srcs
-    foxglove/include/foxglove/arena.hpp
-    foxglove/include/foxglove/channel.hpp
-    foxglove/include/foxglove/connection_graph.hpp
-    foxglove/include/foxglove/context.hpp
-    foxglove/include/foxglove/error.hpp
-    foxglove/include/foxglove/expected.hpp
-    foxglove/include/foxglove/fetch_asset.hpp
-    foxglove/include/foxglove/foxglove.hpp
-    foxglove/include/foxglove/mcap.hpp
-    foxglove/include/foxglove/parameter.hpp
-    foxglove/include/foxglove/playback_control_request.hpp
-    foxglove/include/foxglove/playback_state.hpp
-    foxglove/include/foxglove/remote_data_loader_backend.hpp
-    foxglove/include/foxglove/schema.hpp
-    foxglove/include/foxglove/schemas.hpp
-    foxglove/include/foxglove/server.hpp
-    foxglove/include/foxglove/server/connection_graph.hpp
-    foxglove/include/foxglove/server/fetch_asset.hpp
-    foxglove/include/foxglove/server/parameter.hpp
-    foxglove/include/foxglove/server/service.hpp
-    foxglove/include/foxglove/service.hpp
-    foxglove/include/foxglove/system_info.hpp
-    foxglove/include/foxglove/websocket.hpp
-    foxglove/src/mcap_internal.hpp
     foxglove/src/channel.cpp
     foxglove/src/connection_graph.cpp
     foxglove/src/context.cpp
@@ -347,7 +322,6 @@ endforeach()
 
 if(FOXGLOVE_REMOTE_ACCESS)
   add_library(foxglove_ra_cpp_obj OBJECT
-    "foxglove/include/foxglove/remote_access.hpp"
     "foxglove/src/remote_access.cpp"
   )
   set_property(TARGET foxglove_ra_cpp_obj PROPERTY POSITION_INDEPENDENT_CODE True)
