@@ -19,7 +19,45 @@ if (POLICY CMP0135)
   cmake_policy(SET CMP0135 NEW)
 endif()
 
-option(FOXGLOVE_BRIDGE_REMOTE_ACCESS "Build with remote access gateway support" ON)
+# Remote access requires glibc >= 2.35 on Linux. Detect the build host's glibc
+# (when not cross-compiling) so we can lower the default to OFF on older
+# systems and warn if the user pins it ON.
+set(_glibc_detected FALSE)
+set(_glibc_too_old FALSE)
+set(_glibc_version "")
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND NOT CMAKE_CROSSCOMPILING)
+  execute_process(
+    COMMAND getconf GNU_LIBC_VERSION
+    OUTPUT_VARIABLE _glibc_version_output
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET
+    RESULT_VARIABLE _glibc_result
+  )
+  if(_glibc_result EQUAL 0 AND _glibc_version_output MATCHES "glibc ([0-9]+)\\.([0-9]+)")
+    set(_glibc_major ${CMAKE_MATCH_1})
+    set(_glibc_minor ${CMAKE_MATCH_2})
+    set(_glibc_detected TRUE)
+    set(_glibc_version "${_glibc_major}.${_glibc_minor}")
+    if(_glibc_major LESS 2 OR (_glibc_major EQUAL 2 AND _glibc_minor LESS 35))
+      set(_glibc_too_old TRUE)
+    endif()
+  endif()
+endif()
+
+set(_remote_access_default ON)
+if(NOT DEFINED CACHE{FOXGLOVE_BRIDGE_REMOTE_ACCESS})
+  if(_glibc_too_old)
+    message(STATUS "Detected glibc ${_glibc_version} (< 2.35); defaulting FOXGLOVE_BRIDGE_REMOTE_ACCESS to OFF")
+    set(_remote_access_default OFF)
+  elseif(NOT _glibc_detected)
+    message(STATUS "Could not detect glibc version, defaulting FOXGLOVE_BRIDGE_REMOTE_ACCESS to ON")
+  endif()
+endif()
+option(FOXGLOVE_BRIDGE_REMOTE_ACCESS "Build with remote access gateway support" ${_remote_access_default})
+
+if(FOXGLOVE_BRIDGE_REMOTE_ACCESS AND _glibc_too_old)
+  message(WARNING "FOXGLOVE_BRIDGE_REMOTE_ACCESS=ON but build host has glibc ${_glibc_version} (< 2.35); the link step is likely to fail.")
+endif()
 
 macro(enable_strict_compiler_warnings target)
   if (MSVC)
@@ -76,6 +114,10 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(foxglove_sdk)
 file(GLOB_RECURSE FOXGLOVE_SDK_SOURCES CONFIGURE_DEPENDS "${foxglove_sdk_SOURCE_DIR}/src/*.cpp")
+# Exclude remote access sources when remote access is disabled.
+if (NOT FOXGLOVE_BRIDGE_REMOTE_ACCESS)
+  list(FILTER FOXGLOVE_SDK_SOURCES EXCLUDE REGEX ".*remote_access\\.cpp$")
+endif()
 
 add_library(foxglove_cpp_shared SHARED)
 target_include_directories(foxglove_cpp_shared SYSTEM
@@ -84,11 +126,18 @@ target_include_directories(foxglove_cpp_shared SYSTEM
     $<INSTALL_INTERFACE:include>
 )
 target_sources(foxglove_cpp_shared PRIVATE ${FOXGLOVE_SDK_SOURCES})
-# Import the prebuilt C shared library from the fetched SDK
-add_library(foxglove-shared SHARED IMPORTED)
-set_target_properties(foxglove-shared PROPERTIES
-  IMPORTED_LOCATION ${foxglove_sdk_SOURCE_DIR}/lib/libfoxglove.so
-)
+# Import the prebuilt C library from the fetched SDK.
+if (FOXGLOVE_BRIDGE_REMOTE_ACCESS)
+  add_library(foxglove-shared SHARED IMPORTED)
+  set_target_properties(foxglove-shared PROPERTIES
+    IMPORTED_LOCATION ${foxglove_sdk_SOURCE_DIR}/lib/libfoxglove.so
+  )
+else()
+  add_library(foxglove-shared STATIC IMPORTED)
+  set_target_properties(foxglove-shared PROPERTIES
+    IMPORTED_LOCATION ${foxglove_sdk_SOURCE_DIR}/lib/libfoxglove.a
+  )
+endif()
 target_link_libraries(foxglove_cpp_shared PRIVATE foxglove-shared)
 set_target_properties(foxglove_cpp_shared PROPERTIES
   INSTALL_RPATH "$ORIGIN"
@@ -217,10 +266,13 @@ install(TARGETS foxglove_bridge_component
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin
 )
-# Install the SDK shared libraries alongside the bridge component library so
-# the runtime linker can find them via RPATH ($ORIGIN).
+# Install the SDK shared library alongside the bridge component library so the
+# runtime linker can find it via RPATH ($ORIGIN). Not needed when remote access
+# is disabled, since the SDK is statically linked into foxglove_cpp_shared.
 install(FILES $<TARGET_FILE:foxglove_cpp_shared> DESTINATION lib)
-install(FILES $<TARGET_FILE:foxglove-shared> DESTINATION lib)
+if (FOXGLOVE_BRIDGE_REMOTE_ACCESS)
+  install(FILES $<TARGET_FILE:foxglove-shared> DESTINATION lib)
+endif()
 install(TARGETS foxglove_bridge
   DESTINATION lib/${PROJECT_NAME}
 )
