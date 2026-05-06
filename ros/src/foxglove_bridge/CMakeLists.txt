@@ -113,10 +113,25 @@ FetchContent_Declare(
   URL_HASH SHA256=${FOXGLOVE_SDK_SHA}
 )
 FetchContent_MakeAvailable(foxglove_sdk)
-file(GLOB_RECURSE FOXGLOVE_SDK_SOURCES CONFIGURE_DEPENDS "${foxglove_sdk_SOURCE_DIR}/src/*.cpp")
-# Exclude remote access sources when remote access is disabled.
-if (NOT FOXGLOVE_BRIDGE_REMOTE_ACCESS)
-  list(FILTER FOXGLOVE_SDK_SOURCES EXCLUDE REGEX ".*remote_access\\.cpp$")
+# Enumerated explicitly rather than globbed so that adding or renaming an SDK
+# source forces a corresponding update here. Keep in sync with cpp/foxglove/src/*.cpp.
+set(FOXGLOVE_SDK_SOURCES
+  ${foxglove_sdk_SOURCE_DIR}/src/channel.cpp
+  ${foxglove_sdk_SOURCE_DIR}/src/connection_graph.cpp
+  ${foxglove_sdk_SOURCE_DIR}/src/context.cpp
+  ${foxglove_sdk_SOURCE_DIR}/src/error.cpp
+  ${foxglove_sdk_SOURCE_DIR}/src/fetch_asset.cpp
+  ${foxglove_sdk_SOURCE_DIR}/src/foxglove.cpp
+  ${foxglove_sdk_SOURCE_DIR}/src/mcap.cpp
+  ${foxglove_sdk_SOURCE_DIR}/src/messages.cpp
+  ${foxglove_sdk_SOURCE_DIR}/src/parameter.cpp
+  ${foxglove_sdk_SOURCE_DIR}/src/service.cpp
+  ${foxglove_sdk_SOURCE_DIR}/src/system_info.cpp
+  ${foxglove_sdk_SOURCE_DIR}/src/websocket.cpp
+)
+# Include remote access sources when remote access is enabled.
+if (FOXGLOVE_BRIDGE_REMOTE_ACCESS)
+  list(APPEND FOXGLOVE_SDK_SOURCES ${foxglove_sdk_SOURCE_DIR}/src/remote_access.cpp)
 endif()
 
 add_library(foxglove_cpp_shared SHARED)
