@@ -520,17 +520,21 @@ endif()
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
-# Install C++ libraries
+# Install C++ libraries. RUNTIME is needed on Windows where shared libraries are .dll
+# (a RUNTIME artifact); ARCHIVE covers POSIX static libs and the Windows .dll.lib import lib.
 if(FOXGLOVE_REMOTE_ACCESS)
   install(TARGETS foxglove_cpp_shared
     EXPORT foxglove-sdkTargets
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_LIBDIR}
   )
 else()
   install(TARGETS foxglove_cpp_static foxglove_cpp_shared
     EXPORT foxglove-sdkTargets
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_LIBDIR}
   )
   # Install the Rust/C static library
   install(FILES $<TARGET_FILE:foxglove-static>
@@ -538,10 +542,16 @@ else()
   )
 endif()
 
-# Install the Rust/C shared library
+# Install the Rust/C shared library (.so / .dylib / .dll)
 install(FILES $<TARGET_FILE:foxglove-shared>
   DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
+# On Windows, also install the import library (foxglove.dll.lib) that consumers link against.
+if(WIN32)
+  install(FILES "$<TARGET_PROPERTY:foxglove-shared,IMPORTED_IMPLIB>"
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  )
+endif()
 
 # Install C++ headers
 install(DIRECTORY foxglove/include/
