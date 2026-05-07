@@ -96,7 +96,7 @@ build-cpp:
 
 .PHONY: build-cpp-tidy
 build-cpp-tidy:
-	make -C cpp CLANG_TIDY=true build
+	make -C cpp build-clang-tidy
 
 .PHONY: lint-cpp
 lint-cpp:

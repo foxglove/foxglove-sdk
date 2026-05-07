@@ -159,13 +159,6 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_L
   set(FOXGLOVE_CORROSION_CXXFLAGS "-fpermissive")
 endif()
 
-option(CLANG_TIDY "Run clang-tidy static analysis" OFF)
-if(CLANG_TIDY)
-  find_program(CLANG_TIDY_EXE NAMES clang-tidy REQUIRED)
-  message(STATUS "Found clang-tidy: ${CLANG_TIDY_EXE}")
-  set(CMAKE_CXX_CLANG_TIDY "${CLANG_TIDY_EXE}")
-endif()
-
 ### C
 
 # FOXGLOVE_PREBUILT_LIB_DIR: path to a directory containing pre-built libfoxglove.{a,so,lib,dll,dylib}.

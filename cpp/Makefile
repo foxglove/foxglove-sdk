@@ -2,9 +2,6 @@
 all: build
 
 BUILD_DIR=build
-ifdef CLANG_TIDY
-BUILD_DIR=build-tidy
-endif
 ifdef SANITIZE
 comma:=,
 BUILD_DIR=build-sanitize-$(subst $(comma),-,$(SANITIZE))
@@ -38,7 +35,6 @@ build:
 		-DCMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE) \
 		-DCMAKE_EXPORT_COMPILE_COMMANDS=true \
 		$(if $(SANITIZE),-DSANITIZE=$(SANITIZE) -DRust_TOOLCHAIN=nightly) \
-		$(if $(CLANG_TIDY),-DCLANG_TIDY=$(CLANG_TIDY)) \
 		$(if $(CXXFLAGS),-DCMAKE_CXX_FLAGS="$(CXXFLAGS)") \
 		$(if $(FOXGLOVE_BUILD_EXAMPLES),-DFOXGLOVE_BUILD_EXAMPLES=$(FOXGLOVE_BUILD_EXAMPLES)) \
 		$(if $(FOXGLOVE_PREBUILT_LIB_DIR),-DFOXGLOVE_PREBUILT_LIB_DIR=$(FOXGLOVE_PREBUILT_LIB_DIR)) \
@@ -75,6 +71,19 @@ clean-integration:
 .PHONY: test
 test: build
 	cd $(BUILD_DIR) && ctest --verbose
+
+# Convenience targets for clang-tidy runs. Override BUILD_DIR (so artifacts don't collide with
+# the regular `build/` tree) and append the cmake builtin that wires clang-tidy into every
+# C++ compile. Target-specific variables inherit into the `build` / `test` prerequisites.
+.PHONY: build-clang-tidy
+build-clang-tidy: BUILD_DIR=build-tidy
+build-clang-tidy: override CMAKE_ARGS+=-DCMAKE_CXX_CLANG_TIDY=clang-tidy
+build-clang-tidy: build
+
+.PHONY: test-clang-tidy
+test-clang-tidy: BUILD_DIR=build-tidy
+test-clang-tidy: override CMAKE_ARGS+=-DCMAKE_CXX_CLANG_TIDY=clang-tidy
+test-clang-tidy: test
 
 .PHONY: docs
 docs: $(BUILD_DIR)/docs/html

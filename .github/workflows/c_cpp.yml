@@ -56,8 +56,7 @@ jobs:
         run: make -f Container.mk build-cpp-dist
       - name: Test with clang tidy
         run: |
-          make test \
-            CLANG_TIDY=true \
+          make test-clang-tidy \
             CMAKE_BUILD_TYPE=Debug \
             CXXFLAGS="-Werror -Wpedantic" \
             FOXGLOVE_BUILD_EXAMPLES=ON \
