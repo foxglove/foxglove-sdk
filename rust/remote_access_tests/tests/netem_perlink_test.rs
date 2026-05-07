@@ -337,8 +337,7 @@ async fn perlink_product_viewer_connects_under_classful_qdisc() -> Result<()> {
     loop {
         let remaining = deadline - tokio::time::Instant::now();
         let mut viewer =
-            ViewerConnection::connect_with_timeout(&gw.room_name, "viewer-1", remaining)
-                .await?;
+            ViewerConnection::connect_with_timeout(&gw.room_name, "viewer-1", remaining).await?;
         match viewer.expect_server_info().await {
             Ok(server_info) => {
                 assert!(
