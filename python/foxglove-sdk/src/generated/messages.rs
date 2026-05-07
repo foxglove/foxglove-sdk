@@ -19,6 +19,27 @@ pub(crate) enum LinePrimitiveLineType {
     LineList = 2,
 }
 
+#[pymethods]
+impl LinePrimitiveLineType {
+    #[getter]
+    fn name(&self) -> &'static str {
+        match self {
+            Self::LineStrip => "LineStrip",
+            Self::LineLoop => "LineLoop",
+            Self::LineList => "LineList",
+        }
+    }
+
+    #[getter]
+    fn value(&self) -> i32 {
+        match self {
+            Self::LineStrip => 0,
+            Self::LineLoop => 1,
+            Self::LineList => 2,
+        }
+    }
+}
+
 /// Log level
 #[pyclass(eq, eq_int, module = "foxglove.messages")]
 #[derive(PartialEq, Clone)]
@@ -31,12 +52,58 @@ pub(crate) enum LogLevel {
     Fatal = 5,
 }
 
+#[pymethods]
+impl LogLevel {
+    #[getter]
+    fn name(&self) -> &'static str {
+        match self {
+            Self::Unknown => "Unknown",
+            Self::Debug => "Debug",
+            Self::Info => "Info",
+            Self::Warning => "Warning",
+            Self::Error => "Error",
+            Self::Fatal => "Fatal",
+        }
+    }
+
+    #[getter]
+    fn value(&self) -> i32 {
+        match self {
+            Self::Unknown => 0,
+            Self::Debug => 1,
+            Self::Info => 2,
+            Self::Warning => 3,
+            Self::Error => 4,
+            Self::Fatal => 5,
+        }
+    }
+}
+
 /// An enumeration indicating which entities should match a SceneEntityDeletion command
 #[pyclass(eq, eq_int, module = "foxglove.messages")]
 #[derive(PartialEq, Clone)]
 pub(crate) enum SceneEntityDeletionType {
     MatchingId = 0,
     All = 1,
+}
+
+#[pymethods]
+impl SceneEntityDeletionType {
+    #[getter]
+    fn name(&self) -> &'static str {
+        match self {
+            Self::MatchingId => "MatchingId",
+            Self::All => "All",
+        }
+    }
+
+    #[getter]
+    fn value(&self) -> i32 {
+        match self {
+            Self::MatchingId => 0,
+            Self::All => 1,
+        }
+    }
 }
 
 /// Numeric type
@@ -54,6 +121,39 @@ pub(crate) enum PackedElementFieldNumericType {
     Float64 = 8,
 }
 
+#[pymethods]
+impl PackedElementFieldNumericType {
+    #[getter]
+    fn name(&self) -> &'static str {
+        match self {
+            Self::Unknown => "Unknown",
+            Self::Uint8 => "Uint8",
+            Self::Int8 => "Int8",
+            Self::Uint16 => "Uint16",
+            Self::Int16 => "Int16",
+            Self::Uint32 => "Uint32",
+            Self::Int32 => "Int32",
+            Self::Float32 => "Float32",
+            Self::Float64 => "Float64",
+        }
+    }
+
+    #[getter]
+    fn value(&self) -> i32 {
+        match self {
+            Self::Unknown => 0,
+            Self::Uint8 => 1,
+            Self::Int8 => 2,
+            Self::Uint16 => 3,
+            Self::Int16 => 4,
+            Self::Uint32 => 5,
+            Self::Int32 => 6,
+            Self::Float32 => 7,
+            Self::Float64 => 8,
+        }
+    }
+}
+
 /// Type of points annotation
 #[pyclass(eq, eq_int, module = "foxglove.messages")]
 #[derive(PartialEq, Clone)]
@@ -65,6 +165,31 @@ pub(crate) enum PointsAnnotationType {
     LineList = 4,
 }
 
+#[pymethods]
+impl PointsAnnotationType {
+    #[getter]
+    fn name(&self) -> &'static str {
+        match self {
+            Self::Unknown => "Unknown",
+            Self::Points => "Points",
+            Self::LineLoop => "LineLoop",
+            Self::LineStrip => "LineStrip",
+            Self::LineList => "LineList",
+        }
+    }
+
+    #[getter]
+    fn value(&self) -> i32 {
+        match self {
+            Self::Unknown => 0,
+            Self::Points => 1,
+            Self::LineLoop => 2,
+            Self::LineStrip => 3,
+            Self::LineList => 4,
+        }
+    }
+}
+
 /// Type of position covariance
 #[pyclass(eq, eq_int, module = "foxglove.messages")]
 #[derive(PartialEq, Clone)]
@@ -73,6 +198,29 @@ pub(crate) enum LocationFixPositionCovarianceType {
     Approximated = 1,
     DiagonalKnown = 2,
     Known = 3,
+}
+
+#[pymethods]
+impl LocationFixPositionCovarianceType {
+    #[getter]
+    fn name(&self) -> &'static str {
+        match self {
+            Self::Unknown => "Unknown",
+            Self::Approximated => "Approximated",
+            Self::DiagonalKnown => "DiagonalKnown",
+            Self::Known => "Known",
+        }
+    }
+
+    #[getter]
+    fn value(&self) -> i32 {
+        match self {
+            Self::Unknown => 0,
+            Self::Approximated => 1,
+            Self::DiagonalKnown => 2,
+            Self::Known => 3,
+        }
+    }
 }
 
 /// A primitive representing an arrow

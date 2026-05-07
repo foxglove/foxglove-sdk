@@ -30,6 +30,25 @@ describe("generatePyclass", () => {
          B = 1,
      }
 
+     #[pymethods]
+     impl ExampleMessageExampleEnum {
+         #[getter]
+         fn name(&self) -> &'static str {
+             match self {
+                 Self::A => "A",
+                 Self::B => "B",
+             }
+         }
+
+         #[getter]
+         fn value(&self) -> i32 {
+             match self {
+                 Self::A => 0,
+                 Self::B => 1,
+             }
+         }
+     }
+
      "
     `);
   });
