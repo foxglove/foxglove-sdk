@@ -187,29 +187,19 @@ if(FOXGLOVE_PREBUILT_LIB_DIR)
     endforeach()
   endif()
 else()
+  # RA builds only produce the cdylib (shared library). A staticlib is not provided because the
+  # LiveKit/WebRTC dependency has strict ABI requirements and would leak internal symbols into
+  # the consumer's binary.
+  set(_corrosion_args MANIFEST_PATH ../c/Cargo.toml CRATES foxglove_c FLAGS ${SANITIZER_CARGO_FLAGS})
   if(FOXGLOVE_REMOTE_ACCESS)
-    # RA builds only produce the cdylib (shared library). A staticlib is not provided because
-    # the LiveKit/WebRTC dependency has strict ABI requirements and would leak internal symbols
-    # into the consumer's binary.
-    corrosion_import_crate(
-      MANIFEST_PATH ../c/Cargo.toml
-      CRATES foxglove_c
-      CRATE_TYPES cdylib
-      FEATURES remote-access
-      FLAGS ${SANITIZER_CARGO_FLAGS}
-    )
-  else()
-    corrosion_import_crate(
-      MANIFEST_PATH ../c/Cargo.toml
-      CRATES foxglove_c
-      FLAGS ${SANITIZER_CARGO_FLAGS}
-    )
+    list(APPEND _corrosion_args CRATE_TYPES cdylib FEATURES remote-access)
   endif()
+  corrosion_import_crate(${_corrosion_args})
   if(DEFINED SANITIZE)
-    # Rust does not have flags for certain sanitizers so we strip them out
-    string(REGEX REPLACE undefined "" rust_sanitizers ${SANITIZE})
-    string(REGEX REPLACE ,, , rust_sanitizers ${rust_sanitizers})
-    string(REGEX REPLACE ,$ "" rust_sanitizers ${rust_sanitizers})
+    # Rust doesn't support all the sanitizer flags clang accepts, so drop the ones it can't use.
+    string(REPLACE "," ";" _rust_sanitizers "${SANITIZE}")
+    list(REMOVE_ITEM _rust_sanitizers undefined)
+    list(JOIN _rust_sanitizers "," rust_sanitizers)
     message(WARNING "Enabling -Zsanitizer=${rust_sanitizers} for Rust")
     corrosion_add_target_rustflags(foxglove -Zsanitizer=${rust_sanitizers} -Cforce-frame-pointers=yes)
   endif()
