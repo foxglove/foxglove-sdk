@@ -16,10 +16,16 @@ cmake -DUSE_PACKAGE_MANAGER_DEPENDENCIES=OFF ..
 
 ## Local development
 
-Build the library and examples:
+Build the library:
 
 ```
 make build
+```
+
+Build the library and example programs:
+
+```
+make build FOXGLOVE_BUILD_EXAMPLES=ON
 ```
 
 Run clang-format:
@@ -28,10 +34,10 @@ Run clang-format:
 make lint
 ```
 
-Run clang-tidy:
+Run clang-tidy (writes to a separate `build-tidy/` directory so it doesn't invalidate the regular `build/`):
 
 ```
-make CLANG_TIDY=true build
+make build-clang-tidy
 ```
 
 Build and run tests:
@@ -54,7 +60,7 @@ Run with Address & Undefined Behavior sanitizers:
 make SANITIZE=address,undefined test
 ```
 
-Run example programs (note that a different `build` directory may be used depending on build settings like sanitizers):
+Run example programs (build them first with `make build FOXGLOVE_BUILD_EXAMPLES=ON`; note that a different `build` directory may be used depending on build settings like sanitizers):
 
 ```
 ./build/example_server
@@ -99,10 +105,10 @@ See detailed instructions on dependencies and visualizing data in the [example's
 
 #### Building the Example
 
-Once OpenCV is installed, build the example:
+Once OpenCV is installed, build with examples enabled:
 
 ```bash
-make BUILD_OPENCV_EXAMPLE=ON build
+make build FOXGLOVE_BUILD_EXAMPLES=ON
 ```
 
-This will create the `example_rgb_camera_visualization` executable in the build directory.
+The OpenCV example is detected automatically: if `find_package(OpenCV)` succeeds, `example_rgb_camera_visualization` is added to the build; otherwise it's silently skipped.
