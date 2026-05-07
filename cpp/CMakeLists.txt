@@ -41,11 +41,15 @@ if(catch2_SOURCE_DIR)
 endif()
 include(Catch)
 
-find_or_fetch(Corrosion
-  GIT_REPOSITORY https://github.com/corrosion-rs/corrosion.git
-  GIT_TAG v0.5.1
-  VERSION 0.5.1
-)
+# Corrosion drives the Rust build. When FOXGLOVE_PREBUILT_LIB_DIR is set, the Rust C library
+# is imported from there directly, so corrosion is unused — skip the fetch in that case.
+if(NOT FOXGLOVE_PREBUILT_LIB_DIR)
+  find_or_fetch(Corrosion
+    GIT_REPOSITORY https://github.com/corrosion-rs/corrosion.git
+    GIT_TAG v0.5.1
+    VERSION 0.5.1
+  )
+endif()
 
 set(LWS_WITH_SSL OFF CACHE BOOL "" FORCE)
 set(LWS_WITH_SHARED OFF CACHE BOOL "" FORCE)
