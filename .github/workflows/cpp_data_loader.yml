@@ -10,10 +10,10 @@ on:
       sdk-version:
         required: true
         type: string
-    outputs:
-      artifact_pattern:
-        description: "pattern to match all uploaded artifact names"
-        value: ${{ jobs.build.outputs.artifact_pattern }}
+      ref:
+        description: "Git ref to check out. Defaults to the workflow's ref."
+        required: false
+        type: string
 
 jobs:
   build:
@@ -21,6 +21,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref }}
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           target: wasm32-unknown-unknown
