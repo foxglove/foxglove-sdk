@@ -23,13 +23,13 @@ use tracing_test::traced_test;
 /// Verify that a reconnecting viewer sees a consistent channel registry after
 /// a network partition.
 ///
-/// 1. Connect a viewer and verify initial `ServerInfo` + channel advertisement.
-/// 2. Impose a full partition (100% packet loss).
-/// 3. Create a second channel on the gateway while the partition blocks egress.
-/// 4. Sleep to allow the partition to take effect (not directly asserted).
-/// 5. Lift the partition, restoring connectivity.
-/// 6. Reconnect and verify a fresh `ServerInfo` and advertisements for *both*
-///    channels — including the one created during the partition.
+/// Phase 1: Connect a viewer and verify initial `ServerInfo` + channel ad.
+/// Phase 2: Impose a full partition (100% loss), create a second channel,
+///          then wait for the partition to disrupt existing connections.
+/// Phase 3: Lift the partition.
+/// Phase 4: Reconnect and verify a fresh `ServerInfo` and advertisements
+///          for *both* channels — including the one created during the
+///          partition.
 #[traced_test]
 #[ignore]
 #[tokio::test]
@@ -84,9 +84,9 @@ async fn netem_partition_recovery_readvertises_all_channels() -> Result<()> {
         .context("create channel B")?;
     info!("created channel B during partition");
 
-    // Allow time for the partition to disrupt in-flight traffic. This sleep
-    // is not directly asserted — it gives the network stack time to observe
-    // the loss before we lift the partition.
+    // Wait for the partition to disrupt existing connections. Netem takes
+    // effect immediately, but WebRTC needs time to detect the unresponsive
+    // peer before we lift the partition.
     tokio::time::sleep(Duration::from_secs(10)).await;
 
     // Phase 3: Lift the partition.

@@ -41,7 +41,8 @@ pub fn netem_container_id() -> Result<String> {
     );
 
     let stdout = String::from_utf8(output.stdout).context("invalid UTF-8 from docker ps")?;
-    let id = stdout.lines().next().unwrap_or("").trim().to_string();
+    let mut lines = stdout.lines().filter(|l| !l.trim().is_empty());
+    let id = lines.next().unwrap_or("").trim().to_string();
 
     anyhow::ensure!(
         !id.is_empty(),
@@ -49,12 +50,15 @@ pub fn netem_container_id() -> Result<String> {
          Start with: docker compose -f docker-compose.yaml \
          -f docker-compose.netem.yml up -d --wait"
     );
+    if lines.next().is_some() {
+        tracing::warn!("multiple netem containers found, using {id}");
+    }
     Ok(id)
 }
 
 /// Update netem impairment parameters. Runs `netem_impair.py` inside the netem
 /// sidecar. Pass `"default"` to target only the default HTB class (ff00:), or
-/// `"all"` to update every netem qdisc.
+/// `"all"` to update every netem qdisc (per-link classes and the default class).
 pub fn set_netem_impairment(container: &str, class: &str, args: &str) -> Result<()> {
     anyhow::ensure!(
         class == "default" || class == "all",
