@@ -244,17 +244,21 @@ target_compile_options(foxglove_generated_obj PRIVATE ${SANITIZER_COMPILE_OPTION
 foxglove_strict_warnings(foxglove_generated_obj)
 target_link_options(foxglove_generated_obj PRIVATE ${SANITIZER_LINK_OPTIONS})
 
-# Hand-written C++ code
-file(GLOB_RECURSE foxglove_cpp_srcs CONFIGURE_DEPENDS
-    "foxglove/include/*.hpp"
-    "foxglove/src/*.hpp"
-    "foxglove/src/*.cpp"
-)
-list(REMOVE_ITEM foxglove_cpp_srcs
-    "${CMAKE_CURRENT_SOURCE_DIR}/foxglove/include/foxglove/messages.hpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/foxglove/src/messages.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/foxglove/include/foxglove/remote_access.hpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/foxglove/src/remote_access.cpp"
+# Hand-written C++ code. Excludes messages.cpp (built in foxglove_generated_obj) and
+# remote_access.cpp (built in foxglove_ra_cpp_obj when RA is on). Add new files here
+# explicitly when you create them; we do not glob.
+set(foxglove_cpp_srcs
+    "foxglove/src/channel.cpp"
+    "foxglove/src/connection_graph.cpp"
+    "foxglove/src/context.cpp"
+    "foxglove/src/error.cpp"
+    "foxglove/src/fetch_asset.cpp"
+    "foxglove/src/foxglove.cpp"
+    "foxglove/src/mcap.cpp"
+    "foxglove/src/parameter.cpp"
+    "foxglove/src/service.cpp"
+    "foxglove/src/system_info.cpp"
+    "foxglove/src/websocket.cpp"
 )
 
 add_library(foxglove_cpp_obj OBJECT "${foxglove_cpp_srcs}")
@@ -343,12 +347,15 @@ endif()
 
 ### Tests
 
-file(GLOB_RECURSE foxglove_test_srcs CONFIGURE_DEPENDS
-    "foxglove/tests/*.hpp"
-    "foxglove/tests/*.cpp"
+set(foxglove_test_srcs
+    "foxglove/tests/test_arena.cpp"
+    "foxglove/tests/test_channel.cpp"
+    "foxglove/tests/test_mcap.cpp"
+    "foxglove/tests/test_messages.cpp"
+    "foxglove/tests/test_parameter.cpp"
+    "foxglove/tests/test_system_info.cpp"
+    "foxglove/tests/test_websocket.cpp"
 )
-# Exclude integration test sources from the unit test binary.
-list(FILTER foxglove_test_srcs EXCLUDE REGEX "foxglove/tests/integration/")
 add_executable(tests "${foxglove_test_srcs}")
 set_property(TARGET tests PROPERTY CXX_STANDARD 17)
 set_property(TARGET tests PROPERTY CXX_STANDARD_REQUIRED True)
@@ -405,9 +412,13 @@ if(FOXGLOVE_BUILD_INTEGRATION_TESTS)
   )
   FetchContent_MakeAvailable(jwt-cpp)
 
-  file(GLOB foxglove_integration_test_srcs CONFIGURE_DEPENDS
-      "foxglove/tests/integration/*.hpp"
-      "foxglove/tests/integration/*.cpp"
+  set(foxglove_integration_test_srcs
+      "foxglove/tests/integration/frame.cpp"
+      "foxglove/tests/integration/livekit_setup.cpp"
+      "foxglove/tests/integration/livekit_token.cpp"
+      "foxglove/tests/integration/mock_server.cpp"
+      "foxglove/tests/integration/test_livekit.cpp"
+      "foxglove/tests/integration/viewer_connection.cpp"
   )
   add_executable(integration_tests "${foxglove_integration_test_srcs}")
   set_property(TARGET integration_tests PROPERTY CXX_STANDARD 17)
