@@ -1,15 +1,20 @@
 @PACKAGE_INIT@
 
-# Whether the SDK was built with remote access gateway support.
+# Whether the SDK was built with remote access gateway support. Note that this only describes
+# the C++ shared wrapper / Rust cdylib: the static C lib in this dist (when present) is always
+# the non-RA flavor.
 set(FOXGLOVE_SDK_REMOTE_ACCESS @FOXGLOVE_REMOTE_ACCESS@)
 
 set(_foxglove_lib_dir "${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@")
 
-# Set up the Rust/C static library as an imported target (not available in RA builds).
-if(NOT FOXGLOVE_SDK_REMOTE_ACCESS AND NOT TARGET foxglove-static)
+# Set up the Rust/C static library as an imported target if it was shipped in this dist.
+# It's always the no-RA flavor; the RA-on dist ships it for consumers (e.g. the ROS bridge)
+# that statically link the SDK without RA.
+set(_foxglove_static_path "${_foxglove_lib_dir}/${CMAKE_STATIC_LIBRARY_PREFIX}foxglove${CMAKE_STATIC_LIBRARY_SUFFIX}")
+if(EXISTS "${_foxglove_static_path}" AND NOT TARGET foxglove-static)
   add_library(foxglove-static STATIC IMPORTED)
   set_target_properties(foxglove-static PROPERTIES
-    IMPORTED_LOCATION "${_foxglove_lib_dir}/${CMAKE_STATIC_LIBRARY_PREFIX}foxglove${CMAKE_STATIC_LIBRARY_SUFFIX}"
+    IMPORTED_LOCATION "${_foxglove_static_path}"
   )
   if(WIN32)
     set_property(TARGET foxglove-static APPEND PROPERTY
@@ -23,6 +28,7 @@ if(NOT FOXGLOVE_SDK_REMOTE_ACCESS AND NOT TARGET foxglove-static)
       INTERFACE_LINK_LIBRARIES pthread dl m)
   endif()
 endif()
+unset(_foxglove_static_path)
 
 # Set up the Rust/C shared library as an imported target.
 if(NOT TARGET foxglove-shared)

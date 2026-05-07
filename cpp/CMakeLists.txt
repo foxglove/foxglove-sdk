@@ -166,10 +166,14 @@ endif()
 # redundant Rust builds and Windows long-path issues with corrosion's nested build directory.
 if(FOXGLOVE_PREBUILT_LIB_DIR)
   get_filename_component(FOXGLOVE_PREBUILT_LIB_DIR "${FOXGLOVE_PREBUILT_LIB_DIR}" ABSOLUTE)
-  if(NOT FOXGLOVE_REMOTE_ACCESS)
+  # Import the static C lib whenever it's present in the prebuilt dir. The dist build stages
+  # both a non-RA staticlib and an RA-enabled cdylib so consumers can pick at link time; in
+  # a single-flavor (non-RA) staging, only this branch fires for the static side.
+  set(_foxglove_static_path "${FOXGLOVE_PREBUILT_LIB_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}foxglove${CMAKE_STATIC_LIBRARY_SUFFIX}")
+  if(EXISTS "${_foxglove_static_path}")
     add_library(foxglove-static STATIC IMPORTED GLOBAL)
     set_target_properties(foxglove-static PROPERTIES
-      IMPORTED_LOCATION "${FOXGLOVE_PREBUILT_LIB_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}foxglove${CMAKE_STATIC_LIBRARY_SUFFIX}"
+      IMPORTED_LOCATION "${_foxglove_static_path}"
     )
   endif()
   add_library(foxglove-shared SHARED IMPORTED GLOBAL)
@@ -265,12 +269,18 @@ target_compile_options(foxglove_cpp_obj PRIVATE ${SANITIZER_COMPILE_OPTIONS})
 foxglove_strict_warnings(foxglove_cpp_obj)
 target_link_options(foxglove_cpp_obj PRIVATE ${SANITIZER_LINK_OPTIONS})
 
-if(NOT FOXGLOVE_REMOTE_ACCESS)
+# Build the static C++ wrapper whenever the static C lib is available. By design it never
+# includes remote_access.cpp and never defines FOXGLOVE_REMOTE_ACCESS — the static path is
+# always the no-RA path, even when the build is otherwise RA-enabled (the dist build stages
+# both flavors so consumers like the ROS bridge can pick).
+if(TARGET foxglove-static)
   add_library(foxglove_cpp_static STATIC
     $<TARGET_OBJECTS:foxglove_cpp_obj>
     $<TARGET_OBJECTS:foxglove_generated_obj>
   )
-  target_link_libraries(foxglove_cpp_static PRIVATE foxglove-static)
+  # PUBLIC: a downstream consumer that statically links foxglove_cpp_static needs to also
+  # pull in foxglove-static at executable link time to resolve the underlying C symbols.
+  target_link_libraries(foxglove_cpp_static PUBLIC foxglove-static)
 endif()
 
 add_library(foxglove_cpp_shared SHARED
@@ -291,7 +301,7 @@ else()
 endif()
 
 set(_foxglove_cpp_targets foxglove_cpp_shared)
-if(NOT FOXGLOVE_REMOTE_ACCESS)
+if(TARGET foxglove_cpp_static)
   list(APPEND _foxglove_cpp_targets foxglove_cpp_static)
 endif()
 foreach(_target ${_foxglove_cpp_targets})
@@ -513,18 +523,20 @@ endif()
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
-# Install C++ wrapper libraries. _foxglove_cpp_targets was built earlier (in the C++ wrapper
-# section): foxglove_cpp_shared, plus foxglove_cpp_static when not RA. RUNTIME is needed on
-# Windows where shared libraries are .dll (a RUNTIME artifact); ARCHIVE covers POSIX static
-# libs and the Windows .dll.lib import lib.
+# Install C++ wrapper libraries. _foxglove_cpp_targets was built earlier in the C++ wrapper
+# section: foxglove_cpp_shared, plus foxglove_cpp_static whenever the static C lib is
+# available (which the dist build stages alongside the cdylib). RUNTIME is needed on Windows
+# where shared libraries are .dll (a RUNTIME artifact); ARCHIVE covers POSIX static libs and
+# the Windows .dll.lib import lib.
 install(TARGETS ${_foxglove_cpp_targets}
   EXPORT foxglove-sdkTargets
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   RUNTIME DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
-# Install the Rust/C static library too (RA off only; with RA on we ship only the cdylib).
-if(NOT FOXGLOVE_REMOTE_ACCESS)
+# Install the Rust/C static library when it's been imported (set up earlier whenever the
+# .a is present in FOXGLOVE_PREBUILT_LIB_DIR, or by corrosion in non-RA builds).
+if(TARGET foxglove-static)
   install(FILES $<TARGET_FILE:foxglove-static>
     DESTINATION ${CMAKE_INSTALL_LIBDIR}
   )
