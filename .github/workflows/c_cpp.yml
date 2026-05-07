@@ -59,6 +59,7 @@ jobs:
           make test \
             CLANG_TIDY=true \
             CMAKE_BUILD_TYPE=Debug \
+            CXXFLAGS="-Werror -Wpedantic" \
             FOXGLOVE_BUILD_EXAMPLES=ON \
             FOXGLOVE_PREBUILT_LIB_DIR=dist/lib
         working-directory: cpp
@@ -203,13 +204,14 @@ jobs:
       # Build and test C++ using the pre-built Rust libraries.
       - name: Build C++ library
         if: "!contains(matrix.target, 'apple-ios')"
-        run: make build
+        run: |
+          make build \
+            FOXGLOVE_PREBUILT_LIB_DIR="${{ github.workspace }}/artifacts/foxglove/lib" \
+            FOXGLOVE_REMOTE_ACCESS=${{ matrix.remote_access && 'ON' || 'OFF' }} \
+            FOXGLOVE_BUILD_EXAMPLES=ON \
+            CXXFLAGS="${{ runner.os == 'Windows' && '/WX' || '-Werror -Wpedantic' }}" \
+            CMAKE_ARGS="${{ matrix.cmake_args || '' }}"
         working-directory: cpp
-        env:
-          FOXGLOVE_PREBUILT_LIB_DIR: ${{ github.workspace }}/artifacts/foxglove/lib
-          FOXGLOVE_REMOTE_ACCESS: ${{ matrix.remote_access && 'ON' || 'OFF' }}
-          FOXGLOVE_BUILD_EXAMPLES: ON
-          CMAKE_ARGS: ${{ matrix.cmake_args || '' }}
       - name: Test C++ library
         if: "!matrix.cross && !contains(matrix.target, 'apple-ios')"
         run: ctest --test-dir build --verbose
@@ -269,7 +271,12 @@ jobs:
             libglib2.0-dev libva-dev \
             libwebsockets-dev nlohmann-json3-dev
 
-      - run: make SANITIZE=address,undefined FOXGLOVE_REMOTE_ACCESS=OFF FOXGLOVE_BUILD_EXAMPLES=ON test
+      - run: |
+          make test \
+            CXXFLAGS="-Werror -Wpedantic" \
+            FOXGLOVE_BUILD_EXAMPLES=ON \
+            FOXGLOVE_REMOTE_ACCESS=OFF \
+            SANITIZE=address,undefined
         working-directory: cpp
 
   integration-test:
@@ -341,10 +348,11 @@ jobs:
         working-directory: cpp
         env:
           RUSTFLAGS: ""
-          FOXGLOVE_PREBUILT_LIB_DIR: ${{ github.workspace }}/artifacts/foxglove/lib
-          FOXGLOVE_BUILD_EXAMPLES: ON
         run: |
-          make build-integration
+          make build-integration \
+            FOXGLOVE_PREBUILT_LIB_DIR="${{ github.workspace }}/artifacts/foxglove/lib" \
+            FOXGLOVE_BUILD_EXAMPLES=ON \
+            CXXFLAGS="-Werror -Wpedantic"
           ctest --test-dir build-integration --verbose -L integration
 
       - name: Capture LiveKit logs on failure

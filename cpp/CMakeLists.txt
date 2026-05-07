@@ -139,14 +139,19 @@ if(DEFINED SANITIZE)
   set(SANITIZER_CARGO_FLAGS -Zbuild-std)
 endif()
 
-option(STRICT "Enable strict compiler warnings" ON)
-if (STRICT)
-  if(CMAKE_CXX_COMPILER_ID MATCHES ".*Clang")
-    set (STRICT_COMPILE_OPTIONS -Wall -Wextra -Wpedantic -Werror -Wold-style-cast -Wmost -Wunused-exception-parameter)
-  elseif(MSVC)
-    set (STRICT_COMPILE_OPTIONS /W4 /WX)
+# Apply the SDK's standard set of compiler warnings to a target as PRIVATE options, so they
+# are scoped to the SDK's own translation units and never propagate to consumers. CI jobs
+# additionally set CXXFLAGS=-Werror -Wpedantic (or /WX on MSVC) to upgrade these to build
+# failures, but local builds remain warning-only.
+function(foxglove_strict_warnings target)
+  if(MSVC)
+    target_compile_options(${target} PRIVATE /W4)
+  elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    target_compile_options(${target} PRIVATE -Wall -Wextra -Wold-style-cast -Wunused-exception-parameter)
+  else()  # GCC
+    target_compile_options(${target} PRIVATE -Wall -Wextra -Wold-style-cast)
   endif()
-endif()
+endfunction()
 
 # GCC 11 (e.g. Ubuntu 22.04) requires -fpermissive for some constructs compiled by webrtc-sys.
 # Propagate to Rust crate builds that compile C++ via the cc crate.
@@ -248,7 +253,8 @@ target_include_directories(foxglove_generated_obj PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/foxglove/include
   ${CMAKE_CURRENT_SOURCE_DIR}/../c/include
 )
-target_compile_options(foxglove_generated_obj PRIVATE ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
+target_compile_options(foxglove_generated_obj PRIVATE ${SANITIZER_COMPILE_OPTIONS})
+foxglove_strict_warnings(foxglove_generated_obj)
 target_link_options(foxglove_generated_obj PRIVATE ${SANITIZER_LINK_OPTIONS})
 
 # Hand-written C++ code
@@ -272,7 +278,8 @@ target_include_directories(foxglove_cpp_obj PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/foxglove/include
   ${CMAKE_CURRENT_SOURCE_DIR}/../c/include
 )
-target_compile_options(foxglove_cpp_obj PRIVATE ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
+target_compile_options(foxglove_cpp_obj PRIVATE ${SANITIZER_COMPILE_OPTIONS})
+foxglove_strict_warnings(foxglove_cpp_obj)
 target_link_options(foxglove_cpp_obj PRIVATE ${SANITIZER_LINK_OPTIONS})
 
 if(NOT FOXGLOVE_REMOTE_ACCESS)
@@ -310,7 +317,8 @@ foreach(_target ${_foxglove_cpp_targets})
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../c/include>
     $<INSTALL_INTERFACE:include>
   )
-  target_compile_options(${_target} PRIVATE ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
+  target_compile_options(${_target} PRIVATE ${SANITIZER_COMPILE_OPTIONS})
+  foxglove_strict_warnings(${_target})
   target_link_options(${_target} PRIVATE ${SANITIZER_LINK_OPTIONS})
 endforeach()
 
@@ -329,7 +337,8 @@ if(FOXGLOVE_REMOTE_ACCESS)
     ${CMAKE_CURRENT_SOURCE_DIR}/foxglove/include
     ${CMAKE_CURRENT_SOURCE_DIR}/../c/include
   )
-  target_compile_options(foxglove_ra_cpp_obj PRIVATE ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
+  target_compile_options(foxglove_ra_cpp_obj PRIVATE ${SANITIZER_COMPILE_OPTIONS})
+  foxglove_strict_warnings(foxglove_ra_cpp_obj)
   target_link_options(foxglove_ra_cpp_obj PRIVATE ${SANITIZER_LINK_OPTIONS})
 
   # Augment the shared library with RA objects
@@ -466,7 +475,8 @@ if(FOXGLOVE_BUILD_EXAMPLES)
     cmake_parse_arguments(PARSE_ARGV 1 ARG "" "" "SOURCES;LIBS")
     add_executable(${name} ${ARG_SOURCES})
     set_target_properties(${name} PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED True)
-    target_compile_options(${name} PRIVATE ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
+    target_compile_options(${name} PRIVATE ${SANITIZER_COMPILE_OPTIONS})
+    foxglove_strict_warnings(${name})
     target_link_options(${name} PRIVATE ${SANITIZER_LINK_OPTIONS})
     target_link_libraries(${name} foxglove_cpp_shared ${ARG_LIBS})
     # Mark third-party include directories as SYSTEM to suppress warnings.
