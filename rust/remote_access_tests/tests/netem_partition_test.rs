@@ -26,7 +26,7 @@ use tracing_test::traced_test;
 /// 1. Connect a viewer and verify initial `ServerInfo` + channel advertisement.
 /// 2. Impose a full partition (100% packet loss).
 /// 3. Create a second channel on the gateway while the partition blocks egress.
-/// 4. Wait for WebRTC to detect the unresponsive peer.
+/// 4. Sleep to allow the partition to take effect (not directly asserted).
 /// 5. Lift the partition, restoring connectivity.
 /// 6. Reconnect and verify a fresh `ServerInfo` and advertisements for *both*
 ///    channels — including the one created during the partition.
@@ -39,7 +39,7 @@ async fn netem_partition_recovery_readvertises_all_channels() -> Result<()> {
     let ctx = foxglove::Context::new();
 
     // Create the first channel before any viewer connects.
-    let channel_a = ctx
+    let _channel_a = ctx
         .channel_builder("/partition-test/before")
         .message_encoding("json")
         .build_raw()
@@ -65,6 +65,10 @@ async fn netem_partition_recovery_readvertises_all_channels() -> Result<()> {
     );
 
     // Phase 2: Impose a full network partition.
+    // NOTE: if the test panics between here and the restore at phase 3, the
+    // netem container stays at 100% loss until `docker compose down`. CI
+    // handles this via `if: always()`; locally, restart the netem stack.
+    //
     // Use "all" to update every netem qdisc regardless of mode (flat or
     // per-link). The "default" target only matches the ff00: handle used in
     // per-link mode and silently does nothing in flat mode.
@@ -73,14 +77,16 @@ async fn netem_partition_recovery_readvertises_all_channels() -> Result<()> {
 
     // Create a second channel. The gateway will try to send an Advertise
     // message to the viewer, but the partition will prevent delivery.
-    let channel_b = ctx
+    let _channel_b = ctx
         .channel_builder("/partition-test/during")
         .message_encoding("json")
         .build_raw()
         .context("create channel B")?;
     info!("created channel B during partition");
 
-    // Give WebRTC time to detect the unresponsive peer.
+    // Allow time for the partition to disrupt in-flight traffic. This sleep
+    // is not directly asserted — it gives the network stack time to observe
+    // the loss before we lift the partition.
     tokio::time::sleep(Duration::from_secs(10)).await;
 
     // Phase 3: Lift the partition.
@@ -131,7 +137,6 @@ async fn netem_partition_recovery_readvertises_all_channels() -> Result<()> {
         advertise_2.channels.len()
     );
 
-    let _ = (channel_a, channel_b);
     viewer.close().await?;
     gw.stop().await?;
     Ok(())

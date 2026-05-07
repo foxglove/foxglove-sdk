@@ -84,9 +84,7 @@ jobs:
 
   netem-perlink-test:
     runs-on: ubuntu-latest
-    # UDP loss test sends 150 packets per link with 2s timeout each (~5 min
-    # total), plus build and Docker setup overhead.
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v6
         with:
@@ -108,9 +106,22 @@ jobs:
           up -d --wait
 
       - name: Run per-link netem integration tests
-        run: |
-          cargo test -p remote_access_tests -- --ignored perlink_infra_
-          cargo test -p remote_access_tests -- --ignored perlink_product_
+        run: cargo test -p remote_access_tests -- --ignored perlink_
+
+      - name: Capture LiveKit logs on failure
+        if: failure()
+        run: >
+          docker compose
+          -f docker-compose.yaml
+          -f docker-compose.netem.yml
+          -f docker-compose.netem-perlink.yml
+          logs livekit > livekit.log
+      - name: Upload LiveKit logs
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: livekit-logs-perlink
+          path: livekit.log
 
       - name: Stop per-link netem stack
         if: always()

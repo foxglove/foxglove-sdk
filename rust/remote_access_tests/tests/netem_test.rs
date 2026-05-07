@@ -24,10 +24,6 @@ use serial_test::serial;
 use tracing::info;
 use tracing_test::traced_test;
 
-/// Default netem arguments matching the `NETEM_ARGS` default in
-/// `docker-compose.netem.yml`. Keep these in sync.
-const DEFAULT_NETEM_ARGS: &str = "delay 80ms 20ms loss 2%";
-
 // ===========================================================================
 // Sidecar validation
 // ===========================================================================
@@ -50,7 +46,7 @@ const DEFAULT_NETEM_ARGS: &str = "delay 80ms 20ms loss 2%";
 async fn netem_sidecar_adds_measurable_latency() -> Result<()> {
     // Read the same env var the compose sidecar uses, falling back to the
     // default defined in docker-compose.netem.yml.
-    let netem_args = std::env::var("NETEM_ARGS").unwrap_or_else(|_| DEFAULT_NETEM_ARGS.into());
+    let netem_args = netem_helpers::default_netem_args();
     info!("NETEM_ARGS: {netem_args}");
 
     // Parse the delay value (in ms) from NETEM_ARGS. Format is "delay <N>ms ...".
@@ -106,7 +102,7 @@ async fn netem_sidecar_adds_measurable_latency() -> Result<()> {
 #[tokio::test]
 #[serial(netem)]
 async fn netem_sidecar_drops_packets() -> Result<()> {
-    let netem_args = std::env::var("NETEM_ARGS").unwrap_or_else(|_| DEFAULT_NETEM_ARGS.into());
+    let netem_args = netem_helpers::default_netem_args();
     info!("NETEM_ARGS: {netem_args}");
 
     // Parse loss percentage from NETEM_ARGS. Format: "... loss <N>% ...".

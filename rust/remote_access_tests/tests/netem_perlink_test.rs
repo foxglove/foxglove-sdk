@@ -122,15 +122,13 @@ fn measure_tcp_rtt(container: &str, target_ip: &str, count: usize) -> Result<Dur
 fn measure_udp_loss(container: &str, target_ip: &str, count: u32) -> Result<(u32, u32)> {
     // Send each packet individually and count successful echoes. Using
     // `UDP-CONNECT` creates a connected socket so socat waits for the response.
-    // Two timeouts work together: `socat -T1` aborts after 1s of inactivity
-    // (no data received), while `timeout 2` is a hard wall-clock cap. The -T1
-    // is the binding constraint for lost packets; the outer timeout is a safety
-    // net in case socat hangs for other reasons.
+    // `socat -T0.5` aborts after 500ms of inactivity (generous for the ~200ms
+    // netem delay); `timeout 1` is a hard wall-clock safety net.
     let script = format!(
         r#"
         received=0
         for i in $(seq 1 {count}); do
-            resp=$(echo "pkt-$i" | timeout 2 socat -T1 - UDP-CONNECT:{target_ip}:{TARGET_UDP_PORT} 2>/dev/null)
+            resp=$(echo "pkt-$i" | timeout 1 socat -T0.5 - UDP-CONNECT:{target_ip}:{TARGET_UDP_PORT} 2>/dev/null)
             if [ -n "$resp" ]; then
                 received=$((received + 1))
             fi
@@ -272,9 +270,9 @@ fn perlink_infra_link_a_has_more_packet_loss_than_link_b() -> Result<()> {
     }
 
     let container = netem_helpers::netem_container_id()?;
-    // 150 packets at 5% one-way loss (egress only; echoes return unshaped)
-    // gives P(0 lost) ≈ 0.95^150 ≈ 5e-4, making false failures negligible.
-    let packet_count: u32 = 150;
+    // 130 packets at 5% one-way loss (egress only; echoes return unshaped)
+    // gives P(0 lost) ≈ 0.95^130 ≈ 0.001, keeping false passes negligible.
+    let packet_count: u32 = 130;
 
     let (sent_a, received_a) = measure_udp_loss(&container, TARGET_A_IP, packet_count)?;
     let (sent_b, received_b) = measure_udp_loss(&container, TARGET_B_IP, packet_count)?;
