@@ -1,0 +1,59 @@
+name: Schema stability
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+jobs:
+  msg-schema-check:
+    name: msg-schema-check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Check for modified or deleted ROS .msg files
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          HAS_OVERRIDE: ${{ contains(github.event.pull_request.labels.*.name, 'breaking:msg-schema') }}
+        run: |
+          set -euo pipefail
+
+          # --diff-filter=MD: only Modified or Deleted files. Pure additions of
+          # new .msg files don't break existing downstream consumers and don't
+          # need an override.
+          changed=$(git diff --name-only --diff-filter=MD \
+            "$BASE_SHA"..."$HEAD_SHA" \
+            -- 'schemas/ros1/*.msg' 'schemas/ros2/*.msg')
+
+          if [ -z "$changed" ]; then
+            echo "No modified or deleted ROS .msg files."
+            exit 0
+          fi
+
+          {
+            echo "## Modified or deleted ROS .msg files"
+            echo
+            echo '```'
+            echo "$changed"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$HAS_OVERRIDE" = "true" ]; then
+            {
+              echo
+              echo "Override label \`breaking:msg-schema\` is present — allowing intentional schema break."
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "Override label is present; allowing this PR."
+            exit 0
+          fi
+
+          {
+            echo
+            echo "This PR modifies or deletes ROS .msg files, which can break downstream consumers."
+            echo "If this is intentional and approved by reviewers, add the \`breaking:msg-schema\` label to override."
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "::error::Modified or deleted ROS .msg files require the 'breaking:msg-schema' label."
+          exit 1
