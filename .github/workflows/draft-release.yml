@@ -57,6 +57,7 @@ jobs:
           git push -f origin "${{ env.SDK_BRANCH }}"
     outputs:
       prev-version: ${{ steps.bump-version.outputs.prev-version }}
+      sdk-branch: ${{ env.SDK_BRANCH }}
 
   c-cpp:
     needs: bump
@@ -65,14 +66,14 @@ jobs:
       pull-requests: read
     with:
       sdk-version: ${{ github.event.inputs.version }}
-      ref: ${{ env.SDK_BRANCH }}
+      ref: ${{ needs.bump.outputs.sdk-branch }}
 
   cpp-data-loader:
     needs: bump
     uses: ./.github/workflows/cpp_data_loader.yml
     with:
       sdk-version: ${{ github.event.inputs.version }}
-      ref: ${{ env.SDK_BRANCH }}
+      ref: ${{ needs.bump.outputs.sdk-branch }}
 
   draft:
     runs-on: ubuntu-latest
@@ -100,7 +101,7 @@ jobs:
           gh release create "${{ env.SDK_TAG }}" \
             ./ci_artifacts/* \
             --title "${{ env.SDK_TAG }}" \
-            --target "${{ env.SDK_BRANCH }}" \
+            --target "${{ needs.bump.outputs.sdk-branch }}" \
             --generate-notes \
             --notes-start-tag "sdk/v${{ needs.bump.outputs.prev-version }}" \
             --draft
