@@ -59,6 +59,7 @@ jobs:
           make test \
             CLANG_TIDY=true \
             CMAKE_BUILD_TYPE=Debug \
+            FOXGLOVE_BUILD_EXAMPLES=ON \
             FOXGLOVE_PREBUILT_LIB_DIR=dist/lib
         working-directory: cpp
 
@@ -207,6 +208,7 @@ jobs:
         env:
           FOXGLOVE_PREBUILT_LIB_DIR: ${{ github.workspace }}/artifacts/foxglove/lib
           FOXGLOVE_REMOTE_ACCESS: ${{ matrix.remote_access && 'ON' || 'OFF' }}
+          FOXGLOVE_BUILD_EXAMPLES: ON
           CMAKE_ARGS: ${{ matrix.cmake_args || '' }}
       - name: Test C++ library
         if: "!matrix.cross && !contains(matrix.target, 'apple-ios')"
@@ -267,7 +269,7 @@ jobs:
             libglib2.0-dev libva-dev \
             libwebsockets-dev nlohmann-json3-dev
 
-      - run: make SANITIZE=address,undefined FOXGLOVE_REMOTE_ACCESS=OFF test
+      - run: make SANITIZE=address,undefined FOXGLOVE_REMOTE_ACCESS=OFF FOXGLOVE_BUILD_EXAMPLES=ON test
         working-directory: cpp
 
   integration-test:
@@ -340,6 +342,7 @@ jobs:
         env:
           RUSTFLAGS: ""
           FOXGLOVE_PREBUILT_LIB_DIR: ${{ github.workspace }}/artifacts/foxglove/lib
+          FOXGLOVE_BUILD_EXAMPLES: ON
         run: |
           make build-integration
           ctest --test-dir build-integration --verbose -L integration
