@@ -65,14 +65,14 @@ jobs:
       pull-requests: read
     with:
       sdk-version: ${{ github.event.inputs.version }}
-      ref: release/sdk/${{ github.event.inputs.version }}
+      ref: ${{ env.SDK_BRANCH }}
 
   cpp-data-loader:
     needs: bump
     uses: ./.github/workflows/cpp_data_loader.yml
     with:
       sdk-version: ${{ github.event.inputs.version }}
-      ref: release/sdk/${{ github.event.inputs.version }}
+      ref: ${{ env.SDK_BRANCH }}
 
   draft:
     runs-on: ubuntu-latest
