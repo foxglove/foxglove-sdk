@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10.2)
+cmake_minimum_required(VERSION 3.12)
 
 if(POLICY CMP0048)
   cmake_policy(SET CMP0048 NEW)
@@ -116,23 +116,24 @@ FetchContent_MakeAvailable(foxglove_sdk)
 # Enumerated explicitly rather than globbed so that adding or renaming an SDK
 # source forces a corresponding update here. Keep in sync with cpp/foxglove/src/*.cpp.
 set(FOXGLOVE_SDK_SOURCES
-  ${foxglove_sdk_SOURCE_DIR}/src/channel.cpp
-  ${foxglove_sdk_SOURCE_DIR}/src/connection_graph.cpp
-  ${foxglove_sdk_SOURCE_DIR}/src/context.cpp
-  ${foxglove_sdk_SOURCE_DIR}/src/error.cpp
-  ${foxglove_sdk_SOURCE_DIR}/src/fetch_asset.cpp
-  ${foxglove_sdk_SOURCE_DIR}/src/foxglove.cpp
-  ${foxglove_sdk_SOURCE_DIR}/src/mcap.cpp
-  ${foxglove_sdk_SOURCE_DIR}/src/messages.cpp
-  ${foxglove_sdk_SOURCE_DIR}/src/parameter.cpp
-  ${foxglove_sdk_SOURCE_DIR}/src/service.cpp
-  ${foxglove_sdk_SOURCE_DIR}/src/system_info.cpp
-  ${foxglove_sdk_SOURCE_DIR}/src/websocket.cpp
+  src/channel.cpp
+  src/connection_graph.cpp
+  src/context.cpp
+  src/error.cpp
+  src/fetch_asset.cpp
+  src/foxglove.cpp
+  src/mcap.cpp
+  src/messages.cpp
+  src/parameter.cpp
+  src/service.cpp
+  src/system_info.cpp
+  src/websocket.cpp
 )
 # Include remote access sources when remote access is enabled.
 if (FOXGLOVE_BRIDGE_REMOTE_ACCESS)
-  list(APPEND FOXGLOVE_SDK_SOURCES ${foxglove_sdk_SOURCE_DIR}/src/remote_access.cpp)
+  list(APPEND FOXGLOVE_SDK_SOURCES src/remote_access.cpp)
 endif()
+list(TRANSFORM FOXGLOVE_SDK_SOURCES PREPEND "${foxglove_sdk_SOURCE_DIR}/")
 
 add_library(foxglove_cpp_shared SHARED)
 target_include_directories(foxglove_cpp_shared SYSTEM
