@@ -11,6 +11,8 @@
 //! impairment via the `NETEM_ARGS` environment variable (see
 //! `docker-compose.netem.yml` for details).
 
+mod netem_helpers;
+
 use std::time::Duration;
 
 use anyhow::{Context as _, Result};
@@ -21,10 +23,6 @@ use remote_access_tests::test_helpers::{
 use serial_test::serial;
 use tracing::info;
 use tracing_test::traced_test;
-
-/// Default netem arguments matching the `NETEM_ARGS` default in
-/// `docker-compose.netem.yml`. Keep these in sync.
-const DEFAULT_NETEM_ARGS: &str = "delay 80ms 20ms loss 2%";
 
 // ===========================================================================
 // Sidecar validation
@@ -48,15 +46,11 @@ const DEFAULT_NETEM_ARGS: &str = "delay 80ms 20ms loss 2%";
 async fn netem_sidecar_adds_measurable_latency() -> Result<()> {
     // Read the same env var the compose sidecar uses, falling back to the
     // default defined in docker-compose.netem.yml.
-    let netem_args = std::env::var("NETEM_ARGS").unwrap_or_else(|_| DEFAULT_NETEM_ARGS.into());
+    let netem_args = netem_helpers::default_netem_args();
     info!("NETEM_ARGS: {netem_args}");
 
     // Parse the delay value (in ms) from NETEM_ARGS. Format is "delay <N>ms ...".
-    let configured_delay_ms: Option<u64> = netem_args
-        .split_whitespace()
-        .zip(netem_args.split_whitespace().skip(1))
-        .find(|(key, _)| *key == "delay")
-        .and_then(|(_, val)| val.strip_suffix("ms")?.parse().ok());
+    let configured_delay_ms: Option<u64> = netem_helpers::parse_delay_ms(&netem_args);
 
     if configured_delay_ms.is_none() {
         info!("no delay configured in NETEM_ARGS — skipping latency assertion");
@@ -108,15 +102,11 @@ async fn netem_sidecar_adds_measurable_latency() -> Result<()> {
 #[tokio::test]
 #[serial(netem)]
 async fn netem_sidecar_drops_packets() -> Result<()> {
-    let netem_args = std::env::var("NETEM_ARGS").unwrap_or_else(|_| DEFAULT_NETEM_ARGS.into());
+    let netem_args = netem_helpers::default_netem_args();
     info!("NETEM_ARGS: {netem_args}");
 
     // Parse loss percentage from NETEM_ARGS. Format: "... loss <N>% ...".
-    let loss_pct: Option<f64> = netem_args
-        .split_whitespace()
-        .zip(netem_args.split_whitespace().skip(1))
-        .find(|(key, _)| *key == "loss")
-        .and_then(|(_, val)| val.strip_suffix('%')?.parse().ok());
+    let loss_pct: Option<f64> = netem_helpers::parse_loss_percentage(&netem_args);
 
     if loss_pct.is_none() || loss_pct < Some(2.0) {
         info!("loss < 2% configured in NETEM_ARGS — skipping (need ≥2% for reliable detection)");
