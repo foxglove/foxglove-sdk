@@ -34,7 +34,7 @@ use tracing_test::traced_test;
 #[ignore]
 #[tokio::test]
 #[serial(netem)]
-async fn netem_partition_recovery_readvertises_all_channels() -> Result<()> {
+async fn netem_channel_registry_consistent_after_partition() -> Result<()> {
     let container = netem_helpers::netem_container_id()?;
     let ctx = foxglove::Context::new();
 

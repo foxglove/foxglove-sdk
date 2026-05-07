@@ -7,33 +7,33 @@
 #   docker compose \
 #     -f docker-compose.yaml \
 #     -f docker-compose.netem.yml \
-#     -f docker-compose.netem-perlink.yml \
+#     -f docker-compose.netem-netem-targets.yml \
 #     up -d --wait
 #
 # Run per-link tests:
-#   cargo test -p remote_access_tests -- --ignored perlink_
+#   cargo test -p remote_access_tests -- --ignored netem-targets_
 #
 # Architecture:
-#   - LiveKit + netem sidecar on the "perlink" network (10.99.0.0/24).
-#   - target-a (10.99.0.10): high impairment path (simulates SDK on bad network).
-#   - target-b (10.99.0.20): low impairment path (simulates App on good network).
+#   - LiveKit + netem sidecar on the "netem-targets" network (10.98.0.0/24).
+#   - target-a (10.98.0.10): high impairment path (simulates SDK on bad network).
+#   - target-b (10.98.0.20): low impairment path (simulates App on good network).
 #   - The netem sidecar classifies egress by destination IP using HTB + u32 filters.
 
-# The perlink network uses a fixed subnet so that tc u32 filters can classify
+# The netem-targets network uses a fixed subnet so that tc u32 filters can classify
 # traffic by destination IP. This is safe because:
 #   - It is a Docker-internal bridge network, not routed to the host or internet.
-#   - 10.0.0.0/8 is RFC 1918 private space; 10.99.0.0/24 is chosen to avoid
+#   - 10.0.0.0/8 is RFC 1918 private space; 10.98.0.0/24 is chosen to avoid
 #     overlap with Docker's default bridge (172.17.0.0/16) and compose networks
 #     (172.18+.0.0/16).
 #   - Static IPs are scoped to this bridge — other Docker networks can reuse the
 #     same addresses without conflict.
 #   - CI runners are ephemeral VMs with no pre-existing Docker networks.
 networks:
-  perlink:
+  netem-targets:
     driver: bridge
     ipam:
       config:
-        - subnet: 10.99.0.0/24
+        - subnet: 10.98.0.0/24
 
 x-echo-target: &echo-target
   image: alpine:3
@@ -58,30 +58,30 @@ services:
   livekit:
     networks:
       default:
-      perlink:
-        ipv4_address: 10.99.0.2
+      netem-targets:
+        ipv4_address: 10.98.0.2
 
   target-a:
     <<: *echo-target
     networks:
-      perlink:
-        ipv4_address: 10.99.0.10
+      netem-targets:
+        ipv4_address: 10.98.0.10
 
   target-b:
     <<: *echo-target
     networks:
-      perlink:
-        ipv4_address: 10.99.0.20
+      netem-targets:
+        ipv4_address: 10.98.0.20
 
   netem:
     environment:
       # Default class: moderate impairment for unclassified traffic.
       NETEM_ARGS: "${NETEM_ARGS:-delay 80ms 20ms loss 2%}"
       # Link A (high impairment): simulates SDK on a bad network.
-      NETEM_LINK_A_DST: "10.99.0.10"
+      NETEM_LINK_A_DST: "10.98.0.10"
       NETEM_LINK_A_ARGS: "${NETEM_LINK_A_ARGS:-delay 200ms 50ms loss 5%}"
       # Link B (low impairment): simulates App on a good network.
-      NETEM_LINK_B_DST: "10.99.0.20"
+      NETEM_LINK_B_DST: "10.98.0.20"
       NETEM_LINK_B_ARGS: "${NETEM_LINK_B_ARGS:-delay 10ms 2ms}"
     depends_on:
       livekit:

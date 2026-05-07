@@ -19,10 +19,10 @@
 //! Run with: `cargo test -p remote_access_tests -- --ignored perlink_`
 //!
 //! The per-link overlay creates two target containers on a custom network
-//! (10.99.0.0/24) with static IPs. The netem sidecar classifies egress traffic
+//! (10.98.0.0/24) with static IPs. The netem sidecar classifies egress traffic
 //! by destination IP, applying different impairment profiles to each link:
-//!   - Link A (10.99.0.10): high impairment (default: 200ms delay, 5% loss).
-//!   - Link B (10.99.0.20): low impairment (default: 10ms delay, no loss).
+//!   - Link A (10.98.0.10): high impairment (default: 200ms delay, 5% loss).
+//!   - Link B (10.98.0.20): low impairment (default: 10ms delay, no loss).
 //!
 //! Tests run network probes from within the netem sidecar (via `docker exec`)
 //! because the netem qdisc only shapes egress from that network namespace.
@@ -39,9 +39,9 @@ use tracing::info;
 use tracing_test::traced_test;
 
 /// IP address of target-a (high impairment link).
-const TARGET_A_IP: &str = "10.99.0.10";
+const TARGET_A_IP: &str = "10.98.0.10";
 /// IP address of target-b (low impairment link).
-const TARGET_B_IP: &str = "10.99.0.20";
+const TARGET_B_IP: &str = "10.98.0.20";
 /// TCP echo port on targets.
 const TARGET_TCP_PORT: u16 = 7000;
 /// UDP echo port on targets.
