@@ -157,12 +157,13 @@ If `sysinfo` is set to `true` (the default), foxglove_bridge publishes process a
 
 ### Building with local SDK changes
 
-After making SDK changes, don't forget to re-build the SDK and its C++ library:
+After making SDK changes, re-build the SDK and stage it into the `cpp/dist`
+layout that the bridge consumes:
 
 ```bash
-make -C ../cpp       # Build SDK in your local environment
+make -C .. -f Container.mk build-cpp-dist  # Build SDK in your local environment
 # OR
-make -C .. build-cpp # Use Docker for SDK build
+make -C .. build-cpp-dist                  # Use Docker for SDK build
 ```
 
 The build commands above for end users pull a pre-built Foxglove SDK binary release from GitHub and link against it when building. This
@@ -171,21 +172,21 @@ locally, but it also means that local changes you make to the SDK won't be refle
 
 A `make` flag is provided to customize how `foxglove_bridge` satisfies its Foxglove SDK dependency:
 
-- `USE_LOCAL_SDK`: If `ON`, the build will look for the Foxglove SDK in the local file tree, not artifacts from GitHub. For example, if you've built the C++ SDK by running `make build-cpp` in the root directory, this will hook those built files up to the `foxglove_bridge` build. `OFF` by default.
+- `FOXGLOVE_CPP_SDK_DIR`: Absolute path to a `cpp/dist`-style SDK directory (produced by `make build-cpp-dist`). When set, the build links against the SDK at that path instead of downloading the released artifacts from GitHub. Unset by default.
 
 To rebuild the bridge with your locally re-built Foxglove SDK:
 
 ```bash
-make USE_LOCAL_SDK=ON
+make FOXGLOVE_CPP_SDK_DIR=$(realpath ../cpp/dist)
 ```
 
 If you want to build the bridge using Docker:
 
 ```bash
-make USE_LOCAL_SDK=ON docker-build
+make FOXGLOVE_CPP_SDK_DIR=/sdk/cpp/dist docker-build
 
 # Or to optionally target a specific ROS distro
-# make USE_LOCAL_SDK=ON docker-build-<distro codename>
+# make FOXGLOVE_CPP_SDK_DIR=/sdk/cpp/dist docker-build-<distro codename>
 ```
 
 ### Running tests
@@ -201,7 +202,7 @@ Tests can also be run under Docker (again, assuming you've already followed the 
 ```bash
 make docker-test
 # Or to optionally target a specific ROS distro
-# make USE_LOCAL_SDK=ON docker-test-<distro codename>
+# make docker-test-<distro codename>
 ```
 
 ## Clients
