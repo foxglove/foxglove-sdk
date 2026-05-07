@@ -113,36 +113,20 @@ FetchContent_Declare(
   URL_HASH SHA256=${FOXGLOVE_SDK_SHA}
 )
 FetchContent_MakeAvailable(foxglove_sdk)
-file(GLOB_RECURSE FOXGLOVE_SDK_SOURCES CONFIGURE_DEPENDS "${foxglove_sdk_SOURCE_DIR}/src/*.cpp")
-# Exclude remote access sources when remote access is disabled.
-if (NOT FOXGLOVE_BRIDGE_REMOTE_ACCESS)
-  list(FILTER FOXGLOVE_SDK_SOURCES EXCLUDE REGEX ".*remote_access\\.cpp$")
-endif()
 
-add_library(foxglove_cpp_shared SHARED)
-target_include_directories(foxglove_cpp_shared SYSTEM
-  PUBLIC
-    $<BUILD_INTERFACE:${foxglove_sdk_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>
-)
-target_sources(foxglove_cpp_shared PRIVATE ${FOXGLOVE_SDK_SOURCES})
-# Import the prebuilt C library from the fetched SDK.
+# The dist ships a CMake package; load it as a regular find_package consumer rather than
+# recompiling the SDK from sources.
+list(PREPEND CMAKE_PREFIX_PATH "${foxglove_sdk_SOURCE_DIR}")
+find_package(foxglove-sdk REQUIRED CONFIG)
+
+# Pick the SDK wrapper flavor based on the bridge's RA setting. The dist always ships both:
+#   foxglove-sdk::foxglove_cpp_shared  - RA-enabled, links libfoxglove.so (with WebRTC/LiveKit)
+#   foxglove-sdk::foxglove_cpp_static  - no-RA,      links libfoxglove.a
 if (FOXGLOVE_BRIDGE_REMOTE_ACCESS)
-  add_library(foxglove-shared SHARED IMPORTED)
-  set_target_properties(foxglove-shared PROPERTIES
-    IMPORTED_LOCATION ${foxglove_sdk_SOURCE_DIR}/lib/libfoxglove.so
-  )
+  set(FOXGLOVE_SDK_TARGET foxglove-sdk::foxglove_cpp_shared)
 else()
-  add_library(foxglove-shared STATIC IMPORTED)
-  set_target_properties(foxglove-shared PROPERTIES
-    IMPORTED_LOCATION ${foxglove_sdk_SOURCE_DIR}/lib/libfoxglove.a
-  )
+  set(FOXGLOVE_SDK_TARGET foxglove-sdk::foxglove_cpp_static)
 endif()
-target_link_libraries(foxglove_cpp_shared PRIVATE foxglove-shared)
-set_target_properties(foxglove_cpp_shared PROPERTIES
-  INSTALL_RPATH "$ORIGIN"
-  BUILD_WITH_INSTALL_RPATH TRUE
-)
 
 find_program(GIT_SCM git DOC "Git version control")
 if (GIT_SCM)
@@ -203,7 +187,7 @@ if (FOXGLOVE_BRIDGE_REMOTE_ACCESS)
 endif()
 
 target_link_libraries(foxglove_bridge_component
-  foxglove_cpp_shared
+  ${FOXGLOVE_SDK_TARGET}
   ${rosgraph_msgs_TARGETS}
   ${std_msgs_TARGETS}
   ament_index_cpp::ament_index_cpp
@@ -266,12 +250,16 @@ install(TARGETS foxglove_bridge_component
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin
 )
-# Install the SDK shared library alongside the bridge component library so the
-# runtime linker can find it via RPATH ($ORIGIN). Not needed when remote access
-# is disabled, since the SDK is statically linked into foxglove_cpp_shared.
-install(FILES $<TARGET_FILE:foxglove_cpp_shared> DESTINATION lib)
+# Install the SDK runtime libraries alongside the bridge component when the bridge links
+# the shared SDK wrapper, so the runtime linker can find them via $ORIGIN RPATH. With the
+# static wrapper (FOXGLOVE_BRIDGE_REMOTE_ACCESS=OFF) the SDK is linked into the bridge and
+# nothing extra has to ship.
 if (FOXGLOVE_BRIDGE_REMOTE_ACCESS)
-  install(FILES $<TARGET_FILE:foxglove-shared> DESTINATION lib)
+  install(FILES
+    $<TARGET_FILE:foxglove-sdk::foxglove_cpp_shared>
+    $<TARGET_FILE:foxglove-shared>
+    DESTINATION lib
+  )
 endif()
 install(TARGETS foxglove_bridge
   DESTINATION lib/${PROJECT_NAME}

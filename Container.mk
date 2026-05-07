@@ -114,24 +114,40 @@ test-cpp:
 test-cpp-sanitize:
 	make -C cpp SANITIZE=address,undefined FOXGLOVE_REMOTE_ACCESS=OFF test
 
-# Build the C/C++ SDK into a directory suitable for use as
-# FETCHCONTENT_SOURCE_DIR_FOXGLOVE_SDK in CMake.
+# Build the C/C++ SDK as a CMake-installable package suitable for use via find_package or
+# FetchContent + add_subdirectory. Two cargo invocations stage both Rust C lib flavors
+# (a non-RA staticlib and a cdylib that may or may not have RA, per FOXGLOVE_REMOTE_ACCESS)
+# under cpp/build-dist/prebuilt; cmake then builds both C++ wrapper flavors against them
+# and installs everything (libs, headers, and the foxglove-sdk CMake package files) into
+# CPP_SDK_DIR.
 CPP_SDK_DIR ?= cpp/dist
 FOXGLOVE_REMOTE_ACCESS ?= ON
 STATICLIB_NAME ?= libfoxglove.a
 CDYLIB_NAME ?= libfoxglove.so
 CARGO_LIB_DIR = target/$(if $(CARGO_BUILD_TARGET),$(CARGO_BUILD_TARGET)/)release
+DIST_BUILD_DIR = cpp/build-dist
+DIST_PREBUILT_DIR = $(DIST_BUILD_DIR)/prebuilt
 .PHONY: build-cpp-dist
 build-cpp-dist:
+	# Build the staticlib (always non-RA) and cdylib (RA per FOXGLOVE_REMOTE_ACCESS).
 	cd c && FOXGLOVE_SDK_LANGUAGE=c cargo rustc --release --lib --crate-type staticlib
 	cd c && FOXGLOVE_SDK_LANGUAGE=c cargo rustc --release --lib --crate-type cdylib \
 		$(if $(filter ON,$(FOXGLOVE_REMOTE_ACCESS)),--features remote-access)
-	mkdir -p $(CPP_SDK_DIR)/lib $(CPP_SDK_DIR)/include $(CPP_SDK_DIR)/src
-	cp $(CARGO_LIB_DIR)/$(STATICLIB_NAME) $(CPP_SDK_DIR)/lib/
-	cp $(CARGO_LIB_DIR)/$(CDYLIB_NAME) $(CPP_SDK_DIR)/lib/
+	# Stage both libs (plus the Windows import lib if present) for cmake's prebuilt path.
+	rm -rf $(DIST_BUILD_DIR) $(CPP_SDK_DIR)
+	mkdir -p $(DIST_PREBUILT_DIR)
+	cp $(CARGO_LIB_DIR)/$(STATICLIB_NAME) $(DIST_PREBUILT_DIR)/
+	cp $(CARGO_LIB_DIR)/$(CDYLIB_NAME) $(DIST_PREBUILT_DIR)/
 	if [ -f "$(CARGO_LIB_DIR)/$(CDYLIB_NAME).lib" ]; then \
-		cp "$(CARGO_LIB_DIR)/$(CDYLIB_NAME).lib" "$(CPP_SDK_DIR)/lib/"; \
+		cp "$(CARGO_LIB_DIR)/$(CDYLIB_NAME).lib" "$(DIST_PREBUILT_DIR)/"; \
 	fi
-	cp -R c/include/foxglove-c $(CPP_SDK_DIR)/include/
-	cp -R cpp/foxglove/include/foxglove $(CPP_SDK_DIR)/include/
-	cp -R cpp/foxglove/src/* $(CPP_SDK_DIR)/src/
+	# Configure + build + install the C++ wrappers and CMake package files.
+	cmake -S cpp -B $(DIST_BUILD_DIR) \
+		-DCMAKE_BUILD_TYPE=Release \
+		-DFOXGLOVE_REMOTE_ACCESS=$(FOXGLOVE_REMOTE_ACCESS) \
+		-DFOXGLOVE_BUILD_EXAMPLES=OFF \
+		-DFOXGLOVE_PREBUILT_LIB_DIR=$(abspath $(DIST_PREBUILT_DIR)) \
+		-DCMAKE_INSTALL_PREFIX=$(abspath $(CPP_SDK_DIR)) \
+		-DCMAKE_INSTALL_LIBDIR=lib
+	cmake --build $(DIST_BUILD_DIR) --config Release -j $(or $(PARALLEL_JOBS),8)
+	cmake --install $(DIST_BUILD_DIR)
