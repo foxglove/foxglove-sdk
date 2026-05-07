@@ -513,23 +513,18 @@ endif()
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
-# Install C++ libraries. RUNTIME is needed on Windows where shared libraries are .dll
-# (a RUNTIME artifact); ARCHIVE covers POSIX static libs and the Windows .dll.lib import lib.
-if(FOXGLOVE_REMOTE_ACCESS)
-  install(TARGETS foxglove_cpp_shared
-    EXPORT foxglove-sdkTargets
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    RUNTIME DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  )
-else()
-  install(TARGETS foxglove_cpp_static foxglove_cpp_shared
-    EXPORT foxglove-sdkTargets
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    RUNTIME DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  )
-  # Install the Rust/C static library
+# Install C++ wrapper libraries. _foxglove_cpp_targets was built earlier (in the C++ wrapper
+# section): foxglove_cpp_shared, plus foxglove_cpp_static when not RA. RUNTIME is needed on
+# Windows where shared libraries are .dll (a RUNTIME artifact); ARCHIVE covers POSIX static
+# libs and the Windows .dll.lib import lib.
+install(TARGETS ${_foxglove_cpp_targets}
+  EXPORT foxglove-sdkTargets
+  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  RUNTIME DESTINATION ${CMAKE_INSTALL_LIBDIR}
+)
+# Install the Rust/C static library too (RA off only; with RA on we ship only the cdylib).
+if(NOT FOXGLOVE_REMOTE_ACCESS)
   install(FILES $<TARGET_FILE:foxglove-static>
     DESTINATION ${CMAKE_INSTALL_LIBDIR}
   )
