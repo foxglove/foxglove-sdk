@@ -8,7 +8,7 @@
 //! These tests require the netem Docker Compose overlay:
 //!   docker compose -f docker-compose.yaml -f docker-compose.netem.yml up -d --wait
 //!
-//! Run with: `cargo test -p remote_access_tests -- --ignored netem_partition_`
+//! Run with: `cargo test -p remote_access_tests -- --ignored netem_channel_registry_`
 
 mod netem_helpers;
 

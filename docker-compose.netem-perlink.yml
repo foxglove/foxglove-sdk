@@ -7,11 +7,11 @@
 #   docker compose \
 #     -f docker-compose.yaml \
 #     -f docker-compose.netem.yml \
-#     -f docker-compose.netem-netem-targets.yml \
+#     -f docker-compose.netem-perlink.yml \
 #     up -d --wait
 #
 # Run per-link tests:
-#   cargo test -p remote_access_tests -- --ignored netem-targets_
+#   cargo test -p remote_access_tests -- --ignored perlink_
 #
 # Architecture:
 #   - LiveKit + netem sidecar on the "netem-targets" network (10.98.0.0/24).
