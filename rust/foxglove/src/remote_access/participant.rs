@@ -1,5 +1,10 @@
 //! Per-participant state for a remote access session.
 
+mod collection;
+mod registry;
+
+pub(super) use registry::ParticipantRegistry;
+
 use std::collections::HashSet;
 use std::sync::Arc;
 
