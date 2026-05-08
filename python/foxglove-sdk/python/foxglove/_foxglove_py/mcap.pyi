@@ -101,6 +101,9 @@ class MCAPWriter:
     def flush(self) -> None:
         """
         Finishes the current chunk (if any) and flushes the underlying writer.
+
+        Note that compression ratios tend to improve over the lifetime of a chunk, so
+        flushing frequently with chunked output may reduce overall compression.
         """
         ...
 

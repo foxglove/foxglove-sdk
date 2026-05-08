@@ -448,6 +448,9 @@ pub unsafe extern "C" fn foxglove_mcap_close(
 
 /// Finishes the current chunk (if any) and flushes the underlying writer.
 ///
+/// Note that compression ratios tend to improve over the lifetime of a chunk, so flushing
+/// frequently with chunked output may reduce overall compression.
+///
 /// Returns 0 on success, or returns a FoxgloveError code on error.
 ///
 /// # Safety

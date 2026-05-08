@@ -266,6 +266,9 @@ impl PyMcapWriter {
     }
 
     /// Finishes the current chunk (if any) and flushes the underlying writer.
+    ///
+    /// Note that compression ratios tend to improve over the lifetime of a chunk, so flushing
+    /// frequently with chunked output may reduce overall compression.
     fn flush(&self) -> PyResult<()> {
         if let Some(writer) = &self.0 {
             writer.flush().map_err(PyFoxgloveError::from)?;
