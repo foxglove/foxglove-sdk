@@ -115,6 +115,11 @@ FoxgloveError McapWriter::close() {
   return FoxgloveError(error);
 }
 
+FoxgloveError McapWriter::flush() {
+  foxglove_error error = foxglove_mcap_flush(impl_.get());
+  return FoxgloveError(error);
+}
+
 FoxgloveError McapWriter::attach(const Attachment& attachment) {
   foxglove_mcap_attachment c_attachment;
   c_attachment.log_time = attachment.log_time;

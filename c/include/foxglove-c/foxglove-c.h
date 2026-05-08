@@ -5146,6 +5146,21 @@ foxglove_error foxglove_mcap_close(struct foxglove_mcap_writer *writer);
 
 #if !defined(__wasm__)
 /**
+ * Finishes the current chunk (if any) and flushes the underlying writer.
+ *
+ * Note that compression ratios tend to improve over the lifetime of a chunk, so flushing
+ * frequently with chunked output may reduce overall compression.
+ *
+ * Returns 0 on success, or returns a FoxgloveError code on error.
+ *
+ * # Safety
+ * `writer` must be a valid pointer to a `FoxgloveMcapWriter` created via `foxglove_mcap_open`.
+ */
+foxglove_error foxglove_mcap_flush(struct foxglove_mcap_writer *writer);
+#endif
+
+#if !defined(__wasm__)
+/**
  * Write metadata to an MCAP file.
  *
  * Metadata consists of key-value string pairs associated with a name.

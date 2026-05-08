@@ -265,6 +265,19 @@ impl PyMcapWriter {
         Ok(())
     }
 
+    /// Finishes the current chunk (if any) and flushes the underlying writer.
+    ///
+    /// Note that compression ratios tend to improve over the lifetime of a chunk, so flushing
+    /// frequently with chunked output may reduce overall compression.
+    fn flush(&self) -> PyResult<()> {
+        if let Some(writer) = &self.0 {
+            writer.flush().map_err(PyFoxgloveError::from)?;
+        } else {
+            return Err(PyFoxgloveError::from(foxglove::FoxgloveError::SinkClosed).into());
+        }
+        Ok(())
+    }
+
     /// Write metadata to the MCAP file.
     ///
     /// Metadata consists of key-value string pairs associated with a name.
