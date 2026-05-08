@@ -13,6 +13,7 @@
 #include <atomic>
 #include <condition_variable>
 #include <cstring>
+#include <iostream>
 #include <libwebsockets.h>
 #include <mutex>
 #include <queue>

@@ -1,8 +1,9 @@
 #pragma once
 
 #include <cstdint>
-#include <iostream>
-#include <sstream>
+#include <memory>
+#include <ostream>
+#include <type_traits>
 
 #include "expected.hpp"
 
@@ -75,7 +76,8 @@ const char* strerror(FoxgloveError error);
 /// @cond foxglove_internal
 class WarnStream {
 public:
-  WarnStream() = default;
+  WarnStream();
+  ~WarnStream();
   WarnStream(const WarnStream&) = delete;
   WarnStream(WarnStream&&) = delete;
   WarnStream& operator=(const WarnStream&) = delete;
@@ -91,26 +93,25 @@ public:
       // array, treat it as a C-style string. Otherwise, it's just a pointer.
       using ElementType = std::remove_cv_t<std::remove_all_extents_t<T>>;
       if constexpr (std::is_same_v<ElementType, char>) {
-        buffer_ << static_cast<const char*>(value);
+        stream() << static_cast<const char*>(value);
       } else {
-        buffer_ << static_cast<const void*>(value);
+        stream() << static_cast<const void*>(value);
       }
     } else {
-      buffer_ << value;
+      stream() << value;
     }
 #endif
     return *this;
   }
 
-  ~WarnStream() {
-#ifndef FOXGLOVE_DISABLE_CPP_WARNINGS
-    auto msg = buffer_.str();
-    std::cerr << "[foxglove] " << msg << "\n";
-#endif
-  }
-
 private:
-  std::ostringstream buffer_;
+  // PIMPL'd so the public header doesn't pull in <sstream>/<iostream>; the
+  // ostringstream and the std::cerr write live in the SDK .so, keeping libstdc++
+  // iostream/locale internals out of consumer translation units.
+  std::ostream& stream();
+
+  struct Impl;
+  std::unique_ptr<Impl> impl_;
 };
 
 /// @private
