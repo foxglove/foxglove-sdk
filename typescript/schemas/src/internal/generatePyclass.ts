@@ -382,16 +382,42 @@ function generateMessageClass(schema: FoxgloveMessageSchema): string {
 }
 
 function generateEnumClass(schema: FoxgloveEnumSchema): string {
+  const name = enumName(schema);
+  const variants = schema.values.map((value) => ({
+    rustName: constantToTitleCase(value.name),
+    value: value.value,
+  }));
+
   const enumLines = [
     rustDoc(schema.description),
     `#[pyclass(eq, eq_int, module = "foxglove.messages")]`,
     `#[derive(PartialEq, Clone)]`,
-    `pub(crate) enum ${enumName(schema)} {`,
-    ...schema.values.map((value) => `    ${constantToTitleCase(value.name)} = ${value.value},`),
-    "}\n\n",
+    `pub(crate) enum ${name} {`,
+    ...variants.map((v) => `    ${v.rustName} = ${v.value},`),
+    "}\n",
   ];
 
-  return enumLines.join("\n");
+  // Stubs declare these as `Enum` subclasses, so make `name` and `value` work at runtime.
+  const pymethodsLines = [
+    `#[pymethods]`,
+    `impl ${name} {`,
+    `    #[getter]`,
+    `    fn name(&self) -> &'static str {`,
+    `        match self {`,
+    ...variants.map((v) => `            Self::${v.rustName} => "${v.rustName}",`),
+    `        }`,
+    `    }`,
+    ``,
+    `    #[getter]`,
+    `    fn value(&self) -> i32 {`,
+    `        match self {`,
+    ...variants.map((v) => `            Self::${v.rustName} => ${v.value},`),
+    `        }`,
+    `    }`,
+    `}\n\n`,
+  ];
+
+  return enumLines.join("\n") + "\n" + pymethodsLines.join("\n");
 }
 
 /**

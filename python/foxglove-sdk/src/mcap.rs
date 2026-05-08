@@ -86,6 +86,25 @@ pub enum PyMcapCompression {
     Lz4 = 1,
 }
 
+#[pymethods]
+impl PyMcapCompression {
+    #[getter]
+    fn name(&self) -> &'static str {
+        match self {
+            Self::Zstd => "Zstd",
+            Self::Lz4 => "Lz4",
+        }
+    }
+
+    #[getter]
+    fn value(&self) -> i32 {
+        match self {
+            Self::Zstd => 0,
+            Self::Lz4 => 1,
+        }
+    }
+}
+
 impl From<PyMcapCompression> for McapCompression {
     fn from(value: PyMcapCompression) -> Self {
         match value {

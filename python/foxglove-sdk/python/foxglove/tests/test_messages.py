@@ -67,3 +67,11 @@ def test_messages_can_construct_types() -> None:
     encoded = msg.encode()
     assert isinstance(encoded, bytes)
     assert len(encoded) == 34
+
+
+def test_enum_name_and_value() -> None:
+    """Codegen'd enums expose `.name` and `.value` like stdlib Enum."""
+    from foxglove.messages import LogLevel
+
+    assert LogLevel.Info.name == "Info"
+    assert LogLevel.Info.value == 2

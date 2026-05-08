@@ -214,6 +214,27 @@ pub enum PyParameterType {
     Float64Array,
 }
 
+#[pymethods]
+impl PyParameterType {
+    #[getter]
+    fn name(&self) -> &'static str {
+        match self {
+            Self::ByteArray => "ByteArray",
+            Self::Float64 => "Float64",
+            Self::Float64Array => "Float64Array",
+        }
+    }
+
+    #[getter]
+    fn value(&self) -> i32 {
+        match self {
+            Self::ByteArray => 0,
+            Self::Float64 => 1,
+            Self::Float64Array => 2,
+        }
+    }
+}
+
 impl From<PyParameterType> for foxglove::websocket::ParameterType {
     fn from(value: PyParameterType) -> Self {
         match value {
@@ -574,6 +595,27 @@ pub enum PyStatusLevel {
     Info,
     Warning,
     Error,
+}
+
+#[pymethods]
+impl PyStatusLevel {
+    #[getter]
+    fn name(&self) -> &'static str {
+        match self {
+            Self::Info => "Info",
+            Self::Warning => "Warning",
+            Self::Error => "Error",
+        }
+    }
+
+    #[getter]
+    fn value(&self) -> i32 {
+        match self {
+            Self::Info => 0,
+            Self::Warning => 1,
+            Self::Error => 2,
+        }
+    }
 }
 
 impl From<PyStatusLevel> for StatusLevel {
