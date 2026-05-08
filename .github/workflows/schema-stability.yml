@@ -5,7 +5,25 @@ on:
     types: [opened, synchronize, reopened, labeled, unlabeled]
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      should_run: ${{ steps.paths.outputs.msg == 'true' }}
+    steps:
+      - uses: dorny/paths-filter@v4
+        id: paths
+        with:
+          filters: |
+            msg:
+              - 'schemas/ros1/**'
+              - 'schemas/ros2/**'
+              - '.github/workflows/schema-stability.yml'
+
   msg-schema-check:
+    needs: changes
+    if: needs.changes.outputs.should_run == 'true'
     name: msg-schema-check
     runs-on: ubuntu-latest
     steps:
@@ -59,3 +77,16 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
           echo "::error::Modified or deleted ROS .msg files require the 'breaking:msg-schema' label."
           exit 1
+
+  # Gate job for branch protection. Always posts a status so that the required
+  # check passes even when msg-schema-check is skipped. Configure your required
+  # status check to reference this job ("Schema stability / msg-schema-status")
+  # instead of msg-schema-check.
+  msg-schema-status:
+    name: msg-schema-status
+    needs: [changes, msg-schema-check]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1
