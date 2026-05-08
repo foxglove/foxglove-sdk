@@ -175,6 +175,11 @@ public:
   /// @brief Stops logging events and flushes buffered data.
   FoxgloveError close();
 
+  /// @brief Finishes the current chunk (if any) and flushes the underlying writer.
+  ///
+  /// @return FoxgloveError::Ok on success, or an error code on failure
+  FoxgloveError flush();
+
   /// @brief Default move constructor.
   McapWriter(McapWriter&&) = default;
   /// @brief Default move assignment.

@@ -98,6 +98,12 @@ class MCAPWriter:
         """
         ...
 
+    def flush(self) -> None:
+        """
+        Finishes the current chunk (if any) and flushes the underlying writer.
+        """
+        ...
+
     def write_metadata(self, name: str, metadata: dict[str, str]) -> None:
         """
         Write metadata to the MCAP file.

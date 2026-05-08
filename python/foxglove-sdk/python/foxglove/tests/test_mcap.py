@@ -369,6 +369,28 @@ def test_attach_after_close(tmp_mcap: Path) -> None:
         )
 
 
+def test_flush_writes_data_without_closing(tmp_mcap: Path) -> None:
+    """flush() should persist buffered data while keeping the writer open."""
+    writer = open_mcap(tmp_mcap)
+    for ii in range(20):
+        chan.log({"foo": ii})
+    size_before = tmp_mcap.stat().st_size
+    writer.flush()
+    size_after = tmp_mcap.stat().st_size
+    assert size_after > size_before
+    # Writer is still open: closing should still work and grow the file further.
+    writer.close()
+    assert tmp_mcap.stat().st_size > size_after
+
+
+def test_flush_after_close(tmp_mcap: Path) -> None:
+    """flush() after close should raise."""
+    writer = open_mcap(tmp_mcap)
+    writer.close()
+    with pytest.raises(Exception):  # FoxgloveError for SinkClosed
+        writer.flush()
+
+
 # =============================================================================
 # Tests for file-like object support
 # =============================================================================

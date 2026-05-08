@@ -129,6 +129,18 @@ impl<W: Write + Seek> McapSink<W> {
         Ok(Some(writer.writer.into_inner()))
     }
 
+    /// Finishes the current chunk (if any) and flushes the underlying writer.
+    ///
+    /// # Returns
+    /// * `Ok(())` if the writer was flushed successfully
+    /// * `Err(FoxgloveError::SinkClosed)` if the writer has been closed
+    /// * `Err(FoxgloveError)` if there was an error writing to the file
+    pub fn flush(&self) -> Result<(), FoxgloveError> {
+        let mut guard = self.inner.lock();
+        let writer = guard.as_mut().ok_or(FoxgloveError::SinkClosed)?;
+        writer.writer.flush().map_err(FoxgloveError::from)
+    }
+
     /// Writes MCAP metadata to the file.
     ///
     /// If the metadata map is empty, this method returns early without writing anything.
@@ -701,6 +713,54 @@ mod tests {
             .find(|(name, _)| name == "image.png")
             .expect("image.png not found");
         assert_eq!(image.1, &[0x89, 0x50, 0x4E, 0x47]);
+    }
+
+    #[test]
+    fn test_flush_writes_data_to_underlying_writer() {
+        let temp_file = NamedTempFile::new().expect("create tempfile");
+        let temp_path = temp_file.path().to_owned();
+
+        let ctx = Context::new();
+        let ch = new_test_channel(&ctx, "foo".to_string(), "foo_schema".to_string());
+        let writer = McapSink::new(&temp_file, WriteOptions::default(), None)
+            .expect("failed to create writer");
+
+        writer
+            .log(&ch, b"msg1", &Metadata { log_time: 1 })
+            .expect("failed to log");
+
+        // Before flushing, the file should not yet contain the chunk record.
+        let size_before = std::fs::metadata(&temp_path).unwrap().len();
+        writer.flush().expect("failed to flush");
+        let size_after = std::fs::metadata(&temp_path).unwrap().len();
+        assert!(
+            size_after > size_before,
+            "expected file size to grow after flush ({size_before} -> {size_after})"
+        );
+
+        // Subsequent log+finish should still produce a readable MCAP.
+        writer
+            .log(&ch, b"msg2", &Metadata { log_time: 2 })
+            .expect("failed to log");
+        writer.finish().expect("failed to finish");
+
+        let mut messages = Vec::new();
+        foreach_mcap_message(&temp_path, |msg| messages.push(msg.data.to_vec()))
+            .expect("failed to read messages");
+        assert_eq!(messages, vec![b"msg1".to_vec(), b"msg2".to_vec()]);
+    }
+
+    #[test]
+    fn test_flush_after_close() {
+        let temp_file = NamedTempFile::new().expect("create tempfile");
+
+        let writer = McapSink::new(&temp_file, WriteOptions::default(), None)
+            .expect("failed to create writer");
+
+        writer.finish().expect("failed to finish recording");
+
+        let result = writer.flush();
+        assert!(matches!(result, Err(FoxgloveError::SinkClosed)));
     }
 
     #[test]

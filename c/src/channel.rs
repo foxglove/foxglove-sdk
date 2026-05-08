@@ -286,6 +286,13 @@ impl McapWriterVariant {
             McapWriterVariant::Custom(writer) => writer.attach(attachment),
         }
     }
+
+    fn flush(&self) -> Result<(), foxglove::FoxgloveError> {
+        match self {
+            McapWriterVariant::File(writer) => writer.flush(),
+            McapWriterVariant::Custom(writer) => writer.flush(),
+        }
+    }
 }
 
 /// An MCAP attachment to store in an MCAP file.
@@ -437,6 +444,32 @@ pub unsafe extern "C" fn foxglove_mcap_close(
 
     // We don't care about the return value
     unsafe { result_to_c(result, std::ptr::null_mut()) }
+}
+
+/// Finishes the current chunk (if any) and flushes the underlying writer.
+///
+/// Returns 0 on success, or returns a FoxgloveError code on error.
+///
+/// # Safety
+/// `writer` must be a valid pointer to a `FoxgloveMcapWriter` created via `foxglove_mcap_open`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_mcap_flush(
+    writer: Option<&mut FoxgloveMcapWriter>,
+) -> FoxgloveError {
+    let Some(writer) = writer else {
+        tracing::error!("foxglove_mcap_flush called with null writer");
+        return FoxgloveError::ValueError;
+    };
+    let Some(writer_handle) = writer.0.as_ref() else {
+        return FoxgloveError::SinkClosed;
+    };
+    match writer_handle.flush() {
+        Ok(()) => FoxgloveError::Ok,
+        Err(e) => {
+            tracing::error!("foxglove_mcap_flush failed: {e}");
+            e.into()
+        }
+    }
 }
 
 /// Write metadata to an MCAP file.
