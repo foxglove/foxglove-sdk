@@ -100,6 +100,7 @@ jobs:
         run: |
           gh release create "${{ env.SDK_TAG }}" \
             ./ci_artifacts/* \
+            --repo "${{ github.repository }}" \
             --title "${{ env.SDK_TAG }}" \
             --target "${{ needs.bump.outputs.sdk-branch }}" \
             --generate-notes \

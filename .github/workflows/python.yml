@@ -210,10 +210,6 @@ jobs:
             target: x86_64
             manylinux: auto
             artifact-suffix: ""
-          - runner: ubuntu-22.04
-            target: x86
-            manylinux: auto
-            artifact-suffix: ""
           - runner: ubuntu-22.04-arm
             target: aarch64
             manylinux: "2_28"
@@ -237,14 +233,6 @@ jobs:
             target: armv7
             manylinux: auto
             artifact-suffix: ""
-          - runner: ubuntu-22.04
-            target: s390x
-            manylinux: auto
-            artifact-suffix: ""
-          - runner: ubuntu-22.04
-            target: ppc64le
-            manylinux: auto
-            artifact-suffix: ""
     steps:
       - uses: actions/setup-python@v6
         with:
@@ -259,7 +247,7 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.platform.target }}
-          args: --release --out dist --find-interpreter ${{ matrix.platform.extra-args }}
+          args: --release --out dist -i python3.10 ${{ matrix.platform.extra-args }}
           sccache: "false"
           manylinux: ${{ matrix.platform.manylinux }}
           before-script-linux: ${{ matrix.platform.before-script }}
@@ -280,8 +268,6 @@ jobs:
           - runner: ubuntu-22.04
             target: x86_64
           - runner: ubuntu-22.04
-            target: x86
-          - runner: ubuntu-22.04
             target: aarch64
           - runner: ubuntu-22.04
             target: armv7
@@ -299,7 +285,7 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.platform.target }}
-          args: --release --out dist --find-interpreter
+          args: --release --out dist -i python3.10
           sccache: "false"
           manylinux: musllinux_1_2
           docker-options: "--env MATURIN_NO_MISSING_BUILD_BACKEND_WARNING=1"
@@ -332,12 +318,7 @@ jobs:
         if: ${{ matrix.platform.target == 'x86' }}
         with:
           architecture: x86
-          python-version: |
-            3.14
-            3.13
-            3.12
-            3.11
-            3.10
+          python-version: "3.10"
 
       - name: Install NASM
         if: ${{ matrix.platform.target == 'x86_64' }}
@@ -354,7 +335,7 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.platform.target }}
-          args: --release --out dist --find-interpreter ${{ matrix.platform.extra-args }}
+          args: --release --out dist -i python3.10 ${{ matrix.platform.extra-args }}
           sccache: "false"
           docker-options: "--env MATURIN_NO_MISSING_BUILD_BACKEND_WARNING=1"
         env:
@@ -392,7 +373,7 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.platform.target }}
-          args: --release --out dist --find-interpreter ${{ matrix.platform.extra-args }}
+          args: --release --out dist -i python3.10 ${{ matrix.platform.extra-args }}
           sccache: "false"
           docker-options: "--env MATURIN_NO_MISSING_BUILD_BACKEND_WARNING=1"
       - name: Upload wheels
