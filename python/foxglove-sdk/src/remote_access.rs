@@ -11,7 +11,7 @@ use pyo3::types::PyBytes;
 
 use crate::PyContext;
 use crate::errors::PyFoxgloveError;
-use crate::remote_common::{PyParameter, PyService, PyStatusLevel};
+use crate::remote_common::{PyConnectionGraph, PyParameter, PyService, PyStatusLevel};
 use crate::sink_channel_filter::{PyChannelDescriptor, PySinkChannelFilter};
 
 /// A client connected to a running remote access gateway.
@@ -73,6 +73,8 @@ impl From<ConnectionStatus> for PyConnectionStatus {
 pub enum PyRemoteAccessCapability {
     /// Allow clients to advertise channels to send data messages to the server.
     ClientPublish,
+    /// Allow clients to subscribe and make connection graph updates.
+    ConnectionGraph,
     /// Allow clients to get, set, and subscribe to parameter updates.
     Parameters,
     /// Allow clients to call services.
@@ -83,6 +85,7 @@ impl From<PyRemoteAccessCapability> for Capability {
     fn from(value: PyRemoteAccessCapability) -> Self {
         match value {
             PyRemoteAccessCapability::ClientPublish => Capability::ClientPublish,
+            PyRemoteAccessCapability::ConnectionGraph => Capability::ConnectionGraph,
             PyRemoteAccessCapability::Parameters => Capability::Parameters,
             PyRemoteAccessCapability::Services => Capability::Services,
         }
@@ -226,6 +229,30 @@ impl Listener for PyRemoteAccessListener {
             tracing::error!("Callback failed: {}", err);
         }
     }
+
+    fn on_connection_graph_subscribe(&self) {
+        let result: PyResult<()> = Python::with_gil(|py| {
+            self.listener
+                .bind(py)
+                .call_method("on_connection_graph_subscribe", (), None)?;
+            Ok(())
+        });
+        if let Err(err) = result {
+            tracing::error!("Callback failed: {}", err);
+        }
+    }
+
+    fn on_connection_graph_unsubscribe(&self) {
+        let result: PyResult<()> = Python::with_gil(|py| {
+            self.listener
+                .bind(py)
+                .call_method("on_connection_graph_unsubscribe", (), None)?;
+            Ok(())
+        });
+        if let Err(err) = result {
+            tracing::error!("Callback failed: {}", err);
+        }
+    }
 }
 
 impl PyRemoteAccessListener {
@@ -334,6 +361,23 @@ impl PyRemoteAccessGateway {
         if let Some(handle) = &self.0 {
             handle.remove_status(ids);
         }
+    }
+
+    /// Publishes a connection graph update to all subscribed clients. An update is published to
+    /// clients as a difference from the current graph to the replacement graph. When a client first
+    /// subscribes to connection graph updates, it receives the current graph.
+    ///
+    /// :param graph: The connection graph to publish.
+    /// :type graph: ConnectionGraph
+    pub fn publish_connection_graph(&self, graph: Bound<'_, PyConnectionGraph>) -> PyResult<()> {
+        let Some(handle) = &self.0 else {
+            return Ok(());
+        };
+        let graph = graph.extract::<PyConnectionGraph>()?;
+        handle
+            .publish_connection_graph(graph.into())
+            .map_err(PyFoxgloveError::from)
+            .map_err(PyErr::from)
     }
 
     /// Gracefully disconnect from the remote access gateway.
