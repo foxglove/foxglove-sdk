@@ -210,10 +210,6 @@ jobs:
             target: x86_64
             manylinux: auto
             artifact-suffix: ""
-          - runner: ubuntu-22.04
-            target: x86
-            manylinux: auto
-            artifact-suffix: ""
           - runner: ubuntu-22.04-arm
             target: aarch64
             manylinux: "2_28"
@@ -235,14 +231,6 @@ jobs:
             artifact-suffix: ""
           - runner: ubuntu-22.04
             target: armv7
-            manylinux: auto
-            artifact-suffix: ""
-          - runner: ubuntu-22.04
-            target: s390x
-            manylinux: auto
-            artifact-suffix: ""
-          - runner: ubuntu-22.04
-            target: ppc64le
             manylinux: auto
             artifact-suffix: ""
     steps:
@@ -279,8 +267,6 @@ jobs:
         platform:
           - runner: ubuntu-22.04
             target: x86_64
-          - runner: ubuntu-22.04
-            target: x86
           - runner: ubuntu-22.04
             target: aarch64
           - runner: ubuntu-22.04
