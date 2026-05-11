@@ -317,7 +317,7 @@ jobs:
       # Persist the LiveKit/webrtc FetchContent sources and build tree across runs, keyed on the
       # CMakeLists.txt hash so bumping the LiveKit/jwt-cpp/httplib tags invalidates the cache.
       - name: Cache LiveKit / webrtc FetchContent
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: cpp/build-integration/_deps
           key: c-cpp-integration-deps-${{ runner.os }}-${{ hashFiles('cpp/CMakeLists.txt') }}
