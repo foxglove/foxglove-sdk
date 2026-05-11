@@ -25,8 +25,8 @@ Remote access is available on the following platforms:
 |----------------|-------------|---------------|
 | Linux (glibc)  | x86_64      | Yes (manylinux_2_28, glibc >= 2.28) |
 | Linux (glibc)  | aarch64     | Yes (manylinux_2_28, glibc >= 2.28) |
-| Linux (glibc)  | x86, armv7, s390x, ppc64le | No |
-| Linux (musl)   | all         | No            |
+| Linux (glibc)  | armv7       | No            |
+| Linux (musl)   | x86_64, aarch64, armv7 | No |
 | macOS          | aarch64     | Yes           |
 | macOS          | x86_64      | Yes           |
 | Windows        | x86_64      | Yes           |
