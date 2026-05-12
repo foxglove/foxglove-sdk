@@ -963,6 +963,7 @@ pub unsafe extern "C" fn foxglove_channel_log(
         tracing::error!("foxglove_channel_log called with null data but data_len > 0");
         return FoxgloveError::ValueError;
     } else {
+        // Safety: data is non-null and data_len > 0
         unsafe { std::slice::from_raw_parts(data, data_len) }
     };
     // avoid decrementing ref count
