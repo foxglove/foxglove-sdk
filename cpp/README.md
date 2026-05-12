@@ -95,7 +95,7 @@ The gateway-related C declarations in `foxglove-c/foxglove-c.h` are guarded by `
 
 ### RGB Camera Visualization Example
 
-See detailed instructions on dependencies and visualizing data in the [example's readme](cpp/examples/rgb-camera-visualization/README.md).
+See detailed instructions on dependencies and visualizing data in the [example's readme](examples/rgb-camera-visualization/README.md).
 
 #### Building the Example
 
