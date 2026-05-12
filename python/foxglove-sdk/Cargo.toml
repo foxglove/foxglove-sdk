@@ -9,7 +9,7 @@ name = "foxglove_py"
 crate-type = ["cdylib"]
 
 [features]
-remote-access = ["foxglove/remote-access"]
+remote-access = ["foxglove/remote-access", "foxglove/aws-lc-rs"]
 
 [lints]
 workspace = true
