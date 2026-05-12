@@ -1633,6 +1633,7 @@ dependencies = [
  "rcgen",
  "regex",
  "reqwest 0.13.2",
+ "rustls",
  "schemars 1.0.4",
  "semver",
  "serde",

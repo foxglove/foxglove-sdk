@@ -29,6 +29,7 @@ remote-access = [
   "dep:livekit",
   "dep:libwebrtc",
   "dep:reqwest",
+  "dep:rustls",
   "dep:semver",
 ]
 lz4 = ["mcap/lz4"]
@@ -74,6 +75,7 @@ foxglove_derive = { version = "0.23.2", path = "../foxglove_derive", optional = 
 futures = { version = "0.3.31", optional = true }
 futures-util = { version = "0.3.31", features = ["sink", "std"], optional = true }
 livekit = { version = "0.7.37", optional = true, features = ["rustls-tls-native-roots"] }
+rustls = { version = "0.23", optional = true, default-features = false, features = ["aws-lc-rs"] }
 libwebrtc = { version = "0.3.24", optional = true }
 mcap.workspace = true
 parking_lot = "0.12.4"

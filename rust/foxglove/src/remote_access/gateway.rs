@@ -412,6 +412,10 @@ impl Gateway {
     /// Returns an error if no device token is provided and the `FOXGLOVE_DEVICE_TOKEN`
     /// environment variable is not set.
     pub fn start(mut self) -> Result<GatewayHandle, FoxgloveError> {
+        // Install aws-lc-rs as the default crypto provider, because we have both ring and aws-lc-rs in the dependency tree.
+        // See FLE-231 for introducing explicit crate features to select the crypto provider.
+        let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
+
         let device_token = self
             .device_token
             .or_else(|| std::env::var(FOXGLOVE_DEVICE_TOKEN_ENV).ok())
