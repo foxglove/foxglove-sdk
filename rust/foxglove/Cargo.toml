@@ -37,6 +37,7 @@ tls = [
   "websocket",
   "tokio-tungstenite/rustls-tls-native-roots",
   "dep:aws-lc-rs",
+  "dep:rustls",
   "dep:tokio-rustls",
 ]
 stream = ["dep:futures", "dep:tokio"]
