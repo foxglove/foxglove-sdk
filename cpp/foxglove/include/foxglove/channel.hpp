@@ -132,7 +132,11 @@ public:
   /// @note Logging is thread-safe. The data will be logged atomically
   /// before or after data logged from other threads.
   ///
-  /// @param data The message data.
+  /// Zero-length messages are supported: pass `data_len == 0` with either a null `data`
+  /// pointer or any non-null pointer. The contents of `data` are not read when
+  /// `data_len == 0`.
+  ///
+  /// @param data The message data. May be null when `data_len == 0`.
   /// @param data_len The length of the message data, in bytes.
   /// @param log_time The timestamp of the message, as nanoseconds since epoch. If omitted, the
   /// current time is used.
