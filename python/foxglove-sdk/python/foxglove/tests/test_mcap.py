@@ -57,6 +57,32 @@ def test_explicit_close(tmp_mcap: Path) -> None:
     assert tmp_mcap.stat().st_size > size_before_close
 
 
+def test_log_zero_length_messages_round_trip(tmp_mcap: Path) -> None:
+    """Zero-length messages should be logged successfully and read back from MCAP."""
+    import mcap.reader
+    from foxglove import Schema
+
+    raw_chan = Channel(
+        "raw-empty",
+        message_encoding="raw",
+        schema=Schema(name="raw", encoding="raw", data=b""),
+    )
+    with open_mcap(tmp_mcap):
+        raw_chan.log(b"")
+        raw_chan.log(b"non-empty")
+        raw_chan.log(b"")
+
+    with open(tmp_mcap, "rb") as f:
+        reader = mcap.reader.make_reader(f)
+        payloads = [
+            message.data
+            for _, channel, message in reader.iter_messages()
+            if channel.topic == "raw-empty"
+        ]
+
+    assert payloads == [b"", b"non-empty", b""]
+
+
 def test_context_manager(tmp_mcap: Path) -> None:
     with open_mcap(tmp_mcap):
         for ii in range(20):

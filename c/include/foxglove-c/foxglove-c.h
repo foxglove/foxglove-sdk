@@ -5367,9 +5367,12 @@ void foxglove_channel_metadata_iter_free(struct foxglove_channel_metadata_iterat
 /**
  * Log a message on a channel.
  *
+ * Zero-length messages are supported: pass `data_len == 0` with either a null `data` pointer
+ * or any non-null pointer. The contents of `data` are not read when `data_len == 0`.
+ *
  * # Safety
- * `data` must be non-null, and the range `[data, data + data_len)` must contain initialized data
- * contained within a single allocated object.
+ * If `data_len > 0`, `data` must be non-null and the range `[data, data + data_len)` must
+ * contain initialized data contained within a single allocated object.
  *
  * `log_time` Some(nanoseconds since epoch timestamp) or None to use the current time.
  */

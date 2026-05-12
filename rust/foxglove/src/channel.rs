@@ -281,6 +281,26 @@ mod test {
 
     #[traced_test]
     #[test]
+    fn test_log_empty_message_reaches_sink() {
+        let ctx = Context::new();
+        let recording_sink = Arc::new(RecordingSink::new());
+        assert!(ctx.add_sink(recording_sink.clone()));
+
+        let channel = new_test_channel(&ctx).unwrap();
+        channel.log(b"");
+        assert!(!logs_contain(ERROR_LOGGING_MESSAGE));
+
+        let messages = recording_sink.take_messages();
+        assert_eq!(messages.len(), 1, "empty message should still be delivered");
+        assert_eq!(messages[0].channel_id, channel.id());
+        assert!(
+            messages[0].msg.is_empty(),
+            "sink should receive the zero-length payload",
+        );
+    }
+
+    #[traced_test]
+    #[test]
     fn test_channel_close() {
         let ctx = Context::new();
         let ch = new_test_channel(&ctx).unwrap();

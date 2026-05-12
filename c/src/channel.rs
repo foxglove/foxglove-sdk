@@ -932,9 +932,12 @@ pub unsafe extern "C" fn foxglove_channel_metadata_iter_free(
 
 /// Log a message on a channel.
 ///
+/// Zero-length messages are supported: pass `data_len == 0` with either a null `data` pointer
+/// or any non-null pointer. The contents of `data` are not read when `data_len == 0`.
+///
 /// # Safety
-/// `data` must be non-null, and the range `[data, data + data_len)` must contain initialized data
-/// contained within a single allocated object.
+/// If `data_len > 0`, `data` must be non-null and the range `[data, data + data_len)` must
+/// contain initialized data contained within a single allocated object.
 ///
 /// `log_time` Some(nanoseconds since epoch timestamp) or None to use the current time.
 #[unsafe(no_mangle)]
@@ -952,10 +955,16 @@ pub unsafe extern "C" fn foxglove_channel_log(
         tracing::error!("foxglove_channel_log called with null channel");
         return FoxgloveError::ValueError;
     };
-    if data.is_null() || data_len == 0 {
-        tracing::error!("foxglove_channel_log called with null or empty data");
+    let msg: &[u8] = if data_len == 0 {
+        // Allow a null data pointer for zero-length messages so callers don't have to
+        // construct a dummy non-null pointer just to log an empty payload.
+        &[]
+    } else if data.is_null() {
+        tracing::error!("foxglove_channel_log called with null data but data_len > 0");
         return FoxgloveError::ValueError;
-    }
+    } else {
+        unsafe { std::slice::from_raw_parts(data, data_len) }
+    };
     // avoid decrementing ref count
     let channel = ManuallyDrop::new(unsafe {
         Arc::from_raw(channel as *const _ as *const foxglove::RawChannel)
@@ -964,7 +973,7 @@ pub unsafe extern "C" fn foxglove_channel_log(
     let sink_id = std::num::NonZeroU64::new(sink_id).map(foxglove::SinkId::new);
 
     channel.log_with_meta_to_sink(
-        unsafe { std::slice::from_raw_parts(data, data_len) },
+        msg,
         foxglove::PartialMetadata {
             log_time: log_time.copied(),
         },
