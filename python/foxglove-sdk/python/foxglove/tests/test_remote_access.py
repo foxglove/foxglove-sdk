@@ -34,6 +34,8 @@ def test_capability_enum() -> None:
     assert Capability.Services is not None
     assert Capability.ClientPublish != Capability.Services
     assert Capability.ConnectionGraph != Capability.ClientPublish
+    assert Capability.Services.name == "Services"
+    assert Capability.Services.value == 2
 
 
 def test_connection_status_enum() -> None:

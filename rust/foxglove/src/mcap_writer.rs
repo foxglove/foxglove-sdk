@@ -161,6 +161,14 @@ impl<W: Write + Seek + Send + 'static> McapWriterHandle<W> {
         self.sink.finish()
     }
 
+    /// Finishes the current chunk (if any) and flushes the underlying writer.
+    ///
+    /// Note that compression ratios tend to improve over the lifetime of a chunk, so flushing
+    /// frequently with chunked output may reduce overall compression.
+    pub fn flush(&self) -> Result<(), FoxgloveError> {
+        self.sink.flush()
+    }
+
     /// Writes MCAP metadata to the file.
     ///
     /// If the metadata map is empty, this method returns early without writing anything.

@@ -146,6 +146,32 @@ TEST_CASE_METHOD(McapTestFile, "different contexts") {
   REQUIRE_THAT(content, !ContainsSubstring("Hello, world!"));
 }
 
+TEST_CASE_METHOD(McapTestFile, "flush writes data without closing") {
+  auto context = foxglove::Context::create();
+
+  foxglove::McapWriterOptions options;
+  options.context = context;
+  options.path = path();
+  auto writer = foxglove::McapWriter::create(options);
+  REQUIRE(writer.has_value());
+
+  foxglove::Schema schema;
+  schema.name = "ExampleSchema";
+  auto channel_result = foxglove::RawChannel::create("example_flush", "json", schema, context);
+  auto& channel = requireValue(channel_result);
+  std::string data = "Hello, flush!";
+  channel.log(reinterpret_cast<const std::byte*>(data.data()), data.size());
+
+  // The buffered data should be persisted on flush, well before close.
+  auto size_before = std::filesystem::file_size(path());
+  auto error = writer->flush();
+  REQUIRE(error == foxglove::FoxgloveError::Ok);
+  auto size_after = std::filesystem::file_size(path());
+  REQUIRE(size_after > size_before);
+
+  writer->close();
+}
+
 TEST_CASE_METHOD(McapTestFile, "specify profile") {
   auto context = foxglove::Context::create();
 

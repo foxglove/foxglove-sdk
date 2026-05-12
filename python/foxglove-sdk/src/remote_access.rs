@@ -56,6 +56,29 @@ pub enum PyConnectionStatus {
     Shutdown = 3,
 }
 
+#[pymethods]
+impl PyConnectionStatus {
+    #[getter]
+    fn name(&self) -> &'static str {
+        match self {
+            Self::Connecting => "Connecting",
+            Self::Connected => "Connected",
+            Self::ShuttingDown => "ShuttingDown",
+            Self::Shutdown => "Shutdown",
+        }
+    }
+
+    #[getter]
+    fn value(&self) -> i32 {
+        match self {
+            Self::Connecting => 0,
+            Self::Connected => 1,
+            Self::ShuttingDown => 2,
+            Self::Shutdown => 3,
+        }
+    }
+}
+
 impl From<ConnectionStatus> for PyConnectionStatus {
     fn from(value: ConnectionStatus) -> Self {
         match value {
@@ -79,6 +102,27 @@ pub enum PyRemoteAccessCapability {
     Parameters,
     /// Allow clients to call services.
     Services,
+}
+
+#[pymethods]
+impl PyRemoteAccessCapability {
+    #[getter]
+    fn name(&self) -> &'static str {
+        match self {
+            Self::ClientPublish => "ClientPublish",
+            Self::Parameters => "Parameters",
+            Self::Services => "Services",
+        }
+    }
+
+    #[getter]
+    fn value(&self) -> i32 {
+        match self {
+            Self::ClientPublish => 0,
+            Self::Parameters => 1,
+            Self::Services => 2,
+        }
+    }
 }
 
 impl From<PyRemoteAccessCapability> for Capability {
@@ -396,6 +440,25 @@ pub enum PyReliability {
     Lossy,
     /// Data is sent over the reliable control channel (ordered, guaranteed delivery).
     Reliable,
+}
+
+#[pymethods]
+impl PyReliability {
+    #[getter]
+    fn name(&self) -> &'static str {
+        match self {
+            Self::Lossy => "Lossy",
+            Self::Reliable => "Reliable",
+        }
+    }
+
+    #[getter]
+    fn value(&self) -> i32 {
+        match self {
+            Self::Lossy => 0,
+            Self::Reliable => 1,
+        }
+    }
 }
 
 impl From<PyReliability> for Reliability {

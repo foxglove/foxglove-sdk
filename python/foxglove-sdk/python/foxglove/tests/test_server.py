@@ -63,6 +63,12 @@ def test_server_interface() -> None:
     server.stop()
 
 
+def test_status_level_enum() -> None:
+    """Hand-written `#[pyclass]` enums expose `.name` and `.value`."""
+    assert StatusLevel.Info.name == "Info"
+    assert StatusLevel.Info.value == 0
+
+
 def test_server_listener_provides_default_implementation() -> None:
     class DefaultServerListener(ServerListener):
         pass

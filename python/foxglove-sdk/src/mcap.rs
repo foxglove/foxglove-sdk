@@ -86,6 +86,25 @@ pub enum PyMcapCompression {
     Lz4 = 1,
 }
 
+#[pymethods]
+impl PyMcapCompression {
+    #[getter]
+    fn name(&self) -> &'static str {
+        match self {
+            Self::Zstd => "Zstd",
+            Self::Lz4 => "Lz4",
+        }
+    }
+
+    #[getter]
+    fn value(&self) -> i32 {
+        match self {
+            Self::Zstd => 0,
+            Self::Lz4 => 1,
+        }
+    }
+}
+
 impl From<PyMcapCompression> for McapCompression {
     fn from(value: PyMcapCompression) -> Self {
         match value {
@@ -261,6 +280,19 @@ impl PyMcapWriter {
     fn close(&mut self) -> PyResult<()> {
         if let Some(writer) = self.0.take() {
             writer.close().map_err(PyFoxgloveError::from)?;
+        }
+        Ok(())
+    }
+
+    /// Finishes the current chunk (if any) and flushes the underlying writer.
+    ///
+    /// Note that compression ratios tend to improve over the lifetime of a chunk, so flushing
+    /// frequently with chunked output may reduce overall compression.
+    fn flush(&self) -> PyResult<()> {
+        if let Some(writer) = &self.0 {
+            writer.flush().map_err(PyFoxgloveError::from)?;
+        } else {
+            return Err(PyFoxgloveError::from(foxglove::FoxgloveError::SinkClosed).into());
         }
         Ok(())
     }
