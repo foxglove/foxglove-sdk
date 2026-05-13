@@ -355,10 +355,10 @@
 //!
 //! [aws-lc-rs] is the recommended default. [ring] is offered as an alternative for targets
 //! where building aws-lc-rs is impractical. If both features are enabled (e.g. `--all-features`),
-//! `aws-lc-rs` is preferred. Foxglove installs the selected provider lazily, the first time
-//! it opens a TLS connection. Applications that want to install a different provider should
-//! call [`rustls::crypto::CryptoProvider::install_default`] themselves before any Foxglove
-//! TLS code runs.
+//! `aws-lc-rs` is preferred. Foxglove installs the selected provider before opening any TLS
+//! connections. Applications that want to install a different provider should call
+//! [`rustls::crypto::CryptoProvider::install_default`] themselves before any Foxglove TLS
+//! code runs.
 //!
 //! [aws-lc-rs]: https://github.com/aws/aws-lc-rs
 //! [ring]: https://github.com/briansmith/ring
