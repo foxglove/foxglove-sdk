@@ -8,7 +8,7 @@ repository.workspace = true
 license.workspace = true
 
 [features]
-default = ["aws-lc-rs", "derive", "lz4", "websocket", "zstd"]
+default = ["derive", "lz4", "websocket", "zstd"]
 chrono = ["dep:chrono"]
 derive = ["dep:foxglove_derive"]
 sysinfo = ["dep:sysinfo", "dep:tokio", "tokio/rt-multi-thread", "tokio/time"]
@@ -41,11 +41,10 @@ websocket-tls = [
 ]
 
 # Selects the rustls crypto backend installed as the process-wide default before
-# Foxglove opens any TLS connections (for `websocket-tls` and `remote-access`). At
-# least one of `aws-lc-rs` or `ring` must be enabled when those features are in
-# use; `aws-lc-rs` is part of the default feature set. If both are enabled (e.g.
-# `--all-features`), `aws-lc-rs` is preferred.
-aws-lc-rs = ["dep:aws-lc-rs", "rustls?/aws-lc-rs", "tokio-rustls?/aws-lc-rs"]
+# Foxglove opens any TLS connections (for `websocket-tls` and `remote-access`).
+# Exactly one of `aws-lc-rs` or `ring` must be enabled when those features are
+# in use. If both are enabled (e.g. `--all-features`), `aws-lc-rs` is preferred.
+aws-lc-rs = ["rustls?/aws-lc-rs", "tokio-rustls?/aws-lc-rs"]
 ring = ["rustls?/ring", "tokio-rustls?/ring"]
 stream = ["dep:futures", "dep:tokio"]
 data_provider = ["remote_data_loader_backend"]
@@ -71,7 +70,6 @@ workspace = true
 
 [dependencies]
 arc-swap = "1.7.1"
-aws-lc-rs = { version = "1.13.3", optional = true, features = ["bindgen"] }
 base64 = { version = "0.22", optional = true }
 bimap = "0.6.3"
 bytes.workspace = true
