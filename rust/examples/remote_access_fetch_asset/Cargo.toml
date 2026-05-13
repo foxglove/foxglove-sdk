@@ -7,7 +7,7 @@ publish = false
 workspace = true
 
 [dependencies]
-foxglove = { path = "../../foxglove", features = ["remote-access"] }
+foxglove = { path = "../../foxglove", features = ["remote-access", "aws-lc-rs"] }
 tokio = { version = "1.47", features = ["full"] }
 env_logger = "0.11.5"
 log = "0.4"
