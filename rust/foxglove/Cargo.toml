@@ -42,7 +42,7 @@ websocket-tls = [
 
 # Selects the rustls crypto backend installed as the process-wide default before
 # Foxglove opens any TLS connections (for `websocket-tls` and `remote-access`).
-# Exactly one of `aws-lc-rs` or `ring` must be enabled when those features are
+# At least one of `aws-lc-rs` or `ring` must be enabled when those features are
 # in use. If both are enabled (e.g. `--all-features`), `aws-lc-rs` is preferred.
 aws-lc-rs = ["rustls?/aws-lc-rs", "tokio-rustls?/aws-lc-rs"]
 ring = ["rustls?/ring", "tokio-rustls?/ring"]

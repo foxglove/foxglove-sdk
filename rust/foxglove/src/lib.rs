@@ -345,7 +345,7 @@
 //!
 //! The `remote-access` and `websocket-tls` features rely on [rustls] for TLS, which requires
 //! a crypto provider to be installed as the process-wide default. The `aws-lc-rs` and `ring`
-//! crate features select which backend Foxglove installs; exactly one of them must be enabled
+//! crate features select which backend Foxglove installs; at least one of them must be enabled
 //! when a TLS-using feature is in use. Neither is enabled by default, so picking one is part
 //! of opting into TLS:
 //!
