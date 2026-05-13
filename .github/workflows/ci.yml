@@ -46,6 +46,8 @@ jobs:
           done
       # Validate that we can build without default features.
       - run: cargo build -p foxglove --no-default-features
+      # Validate that the ring-only crypto backend path compiles.
+      - run: cargo check -p foxglove --no-default-features --features "remote-access,ring"
       # Validate that we can build against the MSRV (minimum specified rust version).
       - run: cargo +1.85.0 build -p foxglove
       - run: cargo clippy --no-deps --all-targets --tests -- -D warnings
