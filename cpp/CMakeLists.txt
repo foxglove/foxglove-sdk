@@ -551,8 +551,11 @@ install(FILES $<TARGET_FILE:foxglove-shared>
   DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
 # On Windows, also install the import library (foxglove.dll.lib) that consumers link against.
+# Use $<TARGET_LINKER_FILE:> rather than reading the IMPORTED_IMPLIB property directly: on
+# multi-config generators (Visual Studio), Corrosion sets IMPORTED_IMPLIB_<CONFIG> and leaves
+# the generic IMPORTED_IMPLIB property empty, which would otherwise resolve to an empty path.
 if(WIN32)
-  install(FILES "$<TARGET_PROPERTY:foxglove-shared,IMPORTED_IMPLIB>"
+  install(FILES $<TARGET_LINKER_FILE:foxglove-shared>
     DESTINATION ${CMAKE_INSTALL_LIBDIR}
   )
 endif()
