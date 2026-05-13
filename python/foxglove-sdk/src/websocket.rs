@@ -737,6 +737,8 @@ impl PyWebSocketServer {
     /// clients as a difference from the current graph to the replacement graph. When a client first
     /// subscribes to connection graph updates, it receives the current graph.
     ///
+    /// Raises an error if the server wasn't started with Capability.ConnectionGraph.
+    ///
     /// :param graph: The connection graph to publish.
     /// :type graph: ConnectionGraph
     pub fn publish_connection_graph(&self, graph: Bound<'_, PyConnectionGraph>) -> PyResult<()> {

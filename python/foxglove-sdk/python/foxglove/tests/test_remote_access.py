@@ -127,7 +127,8 @@ def test_connection_graph_capability_in_remote_access() -> None:
     """
     Verify ConnectionGraph capability is importable from remote_access module.
     """
-    from foxglove.remote_access import Capability, ConnectionGraph as CG
+    from foxglove.remote_access import Capability
+    from foxglove.remote_access import ConnectionGraph as CG
 
     assert CG is not None
     assert Capability.ConnectionGraph is not None
