@@ -6,5 +6,8 @@
 /// one automatically. See FLE-231 for introducing explicit crate features to
 /// select the crypto provider.
 pub(crate) fn install_default_crypto_provider() {
-    let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
+    let provider = rustls::crypto::aws_lc_rs::default_provider();
+    if provider.install_default().is_err() {
+        tracing::debug!("rustls crypto provider already installed; using the existing provider");
+    }
 }
