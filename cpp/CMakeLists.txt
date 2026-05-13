@@ -549,24 +549,22 @@ else()
   )
 endif()
 
-# Install the Rust/C shared library. POSIX (.so/.dylib) goes to LIBDIR; Windows (.dll) goes
-# to BINDIR to match the convention above. install(FILES) can't split by artifact type the
-# way install(TARGETS) does, so we branch on WIN32 explicitly.
+# Install the Rust/C shared library. install(FILES) can't split by artifact type the way
+# install(TARGETS) does, so split on WIN32 explicitly:
+#   - POSIX: .so/.dylib is both the linker file and the loaded artifact → LIBDIR.
+#   - Windows: .dll goes to BINDIR (discovered via %PATH%), and the paired .dll.lib import
+#     library (link-time only) goes to LIBDIR. Use $<TARGET_LINKER_FILE:> rather than the
+#     IMPORTED_IMPLIB property directly: on multi-config generators (Visual Studio),
+#     Corrosion sets IMPORTED_IMPLIB_<CONFIG> and leaves the generic property empty.
 if(WIN32)
   install(FILES $<TARGET_FILE:foxglove-shared>
     DESTINATION ${CMAKE_INSTALL_BINDIR}
   )
-else()
-  install(FILES $<TARGET_FILE:foxglove-shared>
+  install(FILES $<TARGET_LINKER_FILE:foxglove-shared>
     DESTINATION ${CMAKE_INSTALL_LIBDIR}
   )
-endif()
-# On Windows, also install the import library (foxglove.dll.lib) that consumers link against.
-# Use $<TARGET_LINKER_FILE:> rather than reading the IMPORTED_IMPLIB property directly: on
-# multi-config generators (Visual Studio), Corrosion sets IMPORTED_IMPLIB_<CONFIG> and leaves
-# the generic IMPORTED_IMPLIB property empty, which would otherwise resolve to an empty path.
-if(WIN32)
-  install(FILES $<TARGET_LINKER_FILE:foxglove-shared>
+else()
+  install(FILES $<TARGET_FILE:foxglove-shared>
     DESTINATION ${CMAKE_INSTALL_LIBDIR}
   )
 endif()
