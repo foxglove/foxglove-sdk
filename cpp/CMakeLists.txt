@@ -524,21 +524,24 @@ endif()
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
-# Install C++ libraries. RUNTIME is needed on Windows where shared libraries are .dll
-# (a RUNTIME artifact); ARCHIVE covers POSIX static libs and the Windows .dll.lib import lib.
+# Install C++ libraries. Windows DLLs are a RUNTIME artifact that belongs in BINDIR (bin/)
+# so they're discoverable on %PATH% next to consuming executables — the GNU convention
+# encoded by GNUInstallDirs. POSIX shared libs (.so/.dylib) are LIBRARY artifacts and live
+# in LIBDIR. ARCHIVE covers POSIX static libs and the Windows .dll.lib import lib (link-time
+# only, not loaded at runtime), both of which belong in LIBDIR.
 if(FOXGLOVE_REMOTE_ACCESS)
   install(TARGETS foxglove_cpp_shared
     EXPORT foxglove-sdkTargets
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    RUNTIME DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
   )
 else()
   install(TARGETS foxglove_cpp_static foxglove_cpp_shared
     EXPORT foxglove-sdkTargets
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    RUNTIME DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
   )
   # Install the Rust/C static library
   install(FILES $<TARGET_FILE:foxglove-static>
@@ -546,10 +549,18 @@ else()
   )
 endif()
 
-# Install the Rust/C shared library (.so / .dylib / .dll)
-install(FILES $<TARGET_FILE:foxglove-shared>
-  DESTINATION ${CMAKE_INSTALL_LIBDIR}
-)
+# Install the Rust/C shared library. POSIX (.so/.dylib) goes to LIBDIR; Windows (.dll) goes
+# to BINDIR to match the convention above. install(FILES) can't split by artifact type the
+# way install(TARGETS) does, so we branch on WIN32 explicitly.
+if(WIN32)
+  install(FILES $<TARGET_FILE:foxglove-shared>
+    DESTINATION ${CMAKE_INSTALL_BINDIR}
+  )
+else()
+  install(FILES $<TARGET_FILE:foxglove-shared>
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  )
+endif()
 # On Windows, also install the import library (foxglove.dll.lib) that consumers link against.
 # Use $<TARGET_LINKER_FILE:> rather than reading the IMPORTED_IMPLIB property directly: on
 # multi-config generators (Visual Studio), Corrosion sets IMPORTED_IMPLIB_<CONFIG> and leaves
