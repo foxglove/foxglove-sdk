@@ -760,7 +760,7 @@ impl PyWebSocketServer {
 pub enum PyCapability {
     /// Allow clients to advertise channels to send data messages to the server.
     ClientPublish,
-    /// Allow clients to subscribe and make connection graph updates
+    /// Allow clients to subscribe to connection graph updates
     ConnectionGraph,
     /// Allow clients to get & set parameters.
     Parameters,

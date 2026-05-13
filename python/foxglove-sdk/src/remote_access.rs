@@ -96,7 +96,7 @@ impl From<ConnectionStatus> for PyConnectionStatus {
 pub enum PyRemoteAccessCapability {
     /// Allow clients to advertise channels to send data messages to the server.
     ClientPublish,
-    /// Allow clients to subscribe and make connection graph updates.
+    /// Allow clients to subscribe to connection graph updates.
     ConnectionGraph,
     /// Allow clients to get, set, and subscribe to parameter updates.
     Parameters,
@@ -110,6 +110,7 @@ impl PyRemoteAccessCapability {
     fn name(&self) -> &'static str {
         match self {
             Self::ClientPublish => "ClientPublish",
+            Self::ConnectionGraph => "ConnectionGraph",
             Self::Parameters => "Parameters",
             Self::Services => "Services",
         }
@@ -119,8 +120,9 @@ impl PyRemoteAccessCapability {
     fn value(&self) -> i32 {
         match self {
             Self::ClientPublish => 0,
-            Self::Parameters => 1,
-            Self::Services => 2,
+            Self::ConnectionGraph => 1,
+            Self::Parameters => 2,
+            Self::Services => 3,
         }
     }
 }
@@ -411,10 +413,13 @@ impl PyRemoteAccessGateway {
     /// clients as a difference from the current graph to the replacement graph. When a client first
     /// subscribes to connection graph updates, it receives the current graph.
     ///
+    /// Raises an error if the gateway wasn't started with Capability.ConnectionGraph.
+    ///
     /// :param graph: The connection graph to publish.
     /// :type graph: ConnectionGraph
     pub fn publish_connection_graph(&self, graph: Bound<'_, PyConnectionGraph>) -> PyResult<()> {
         let Some(handle) = &self.0 else {
+            tracing::debug!("publish_connection_graph called after gateway stopped; ignoring");
             return Ok(());
         };
         let graph = graph.extract::<PyConnectionGraph>()?;

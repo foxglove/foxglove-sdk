@@ -148,6 +148,10 @@ class RemoteAccessListener(Protocol):
         Called when the first client subscribes to the connection graph.
 
         Requires :py:data:`Capability.ConnectionGraph`.
+
+        .. warning::
+            Do not call :py:meth:`~foxglove.RemoteAccessGateway.publish_connection_graph`
+            from within this callback; doing so will deadlock.
         """
         return None
 
@@ -156,6 +160,10 @@ class RemoteAccessListener(Protocol):
         Called when the last client unsubscribes from the connection graph.
 
         Requires :py:data:`Capability.ConnectionGraph`.
+
+        .. warning::
+            Do not call :py:meth:`~foxglove.RemoteAccessGateway.publish_connection_graph`
+            from within this callback; doing so will deadlock.
         """
         return None
 

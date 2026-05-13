@@ -123,7 +123,7 @@ pub const FOXGLOVE_GATEWAY_CAPABILITY_CLIENT_PUBLISH: u8 = 1 << 0;
 pub const FOXGLOVE_GATEWAY_CAPABILITY_PARAMETERS: u8 = 1 << 1;
 /// Allow clients to call services.
 pub const FOXGLOVE_GATEWAY_CAPABILITY_SERVICES: u8 = 1 << 2;
-/// Allow clients to subscribe and make connection graph updates.
+/// Allow clients to subscribe to connection graph updates.
 pub const FOXGLOVE_GATEWAY_CAPABILITY_CONNECTION_GRAPH: u8 = 1 << 3;
 /// Allow clients to request assets.
 pub const FOXGLOVE_GATEWAY_CAPABILITY_ASSETS: u8 = 1 << 4;

@@ -24,7 +24,7 @@ class Capability(Enum):
     """Allow clients to advertise channels to send data messages to the server."""
 
     ConnectionGraph = ...
-    """Allow clients to subscribe and make connection graph updates"""
+    """Allow clients to subscribe to connection graph updates"""
 
     Parameters = ...
     """Allow clients to get & set parameters."""
