@@ -69,7 +69,6 @@ macro(enable_strict_compiler_warnings target)
   endif()
 endmacro()
 
-find_package(nlohmann_json QUIET)
 find_package(Threads REQUIRED)
 
 if(NOT CMAKE_BUILD_TYPE)
@@ -187,10 +186,6 @@ target_include_directories(foxglove_bridge_component
     $<INSTALL_INTERFACE:include>
 )
 
-if (nlohmann_json_FOUND)
-  target_link_libraries(foxglove_bridge_component nlohmann_json::nlohmann_json)
-endif()
-
 target_compile_definitions(foxglove_bridge_component
   PRIVATE
     RESOURCE_RETRIEVER_VERSION_MAJOR=${resource_retriever_VERSION_MAJOR}
@@ -236,14 +231,18 @@ enable_strict_compiler_warnings(foxglove_bridge)
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
   find_package(ament_lint_auto REQUIRED)
+  find_package(nlohmann_json REQUIRED)
   find_package(OpenSSL REQUIRED)
   find_package(websocketpp REQUIRED)
 
   ament_lint_auto_find_test_dependencies()
 
+  # smoke_test pulls in tests/client/test_client.hpp, which uses nlohmann::json for the
+  # test WebSocket client's serializers. utils_test doesn't touch it.
   ament_add_gtest(smoke_test tests/smoke_test.cpp TIMEOUT 600)
   target_link_libraries(smoke_test
     foxglove_bridge_component
+    nlohmann_json::nlohmann_json
     ${std_msgs_TARGETS}
     ${std_srvs_TARGETS}
     rclcpp::rclcpp

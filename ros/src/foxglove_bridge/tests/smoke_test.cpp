@@ -4,6 +4,7 @@
 #include <thread>
 
 #include <gtest/gtest.h>
+#include <nlohmann/json.hpp>
 #include <std_msgs/msg/string.hpp>
 #include <std_srvs/srv/set_bool.hpp>
 #include <websocketpp/config/asio_client.hpp>
