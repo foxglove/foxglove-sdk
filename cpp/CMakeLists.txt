@@ -595,6 +595,7 @@ install(EXPORT foxglove-sdkTargets
 install(FILES
   "${CMAKE_CURRENT_BINARY_DIR}/foxglove-sdkConfig.cmake"
   "${CMAKE_CURRENT_BINARY_DIR}/foxglove-sdkConfigVersion.cmake"
+  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/foxglove-c-imports.cmake"
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake/foxglove-static-platform-links.cmake"
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/foxglove-sdk
 )

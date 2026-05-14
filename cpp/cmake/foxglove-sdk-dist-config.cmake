@@ -51,33 +51,16 @@ set(_foxglove_lib_dir "${_foxglove_prefix}/lib")
 set(_foxglove_include_dir "${_foxglove_prefix}/include")
 set(_foxglove_src_dir "${_foxglove_prefix}/src")
 
-# Non-RA static C lib (libfoxglove.a). Always shipped; import as foxglove-static.
-# Platform link libs that the C lib's symbol surface depends on are applied by the
-# shared foxglove-static-platform-links.cmake (also used by the in-tree build).
-if(NOT TARGET foxglove-static)
-  set(_p "${_foxglove_lib_dir}/${CMAKE_STATIC_LIBRARY_PREFIX}foxglove${CMAKE_STATIC_LIBRARY_SUFFIX}")
-  if(EXISTS "${_p}")
-    add_library(foxglove-static STATIC IMPORTED)
-    set_target_properties(foxglove-static PROPERTIES IMPORTED_LOCATION "${_p}")
-    include("${CMAKE_CURRENT_LIST_DIR}/foxglove-static-platform-links.cmake")
-  endif()
-  unset(_p)
-endif()
-
-# RA shared C lib (libfoxglove.so/.dylib/.dll). Always shipped; import as foxglove-shared.
-# On Windows, the paired .dll.lib import library lives at IMPORTED_IMPLIB.
-if(NOT TARGET foxglove-shared)
-  set(_p "${_foxglove_lib_dir}/${CMAKE_SHARED_LIBRARY_PREFIX}foxglove${CMAKE_SHARED_LIBRARY_SUFFIX}")
-  if(EXISTS "${_p}")
-    add_library(foxglove-shared SHARED IMPORTED)
-    set_target_properties(foxglove-shared PROPERTIES IMPORTED_LOCATION "${_p}")
-    if(WIN32 AND EXISTS "${_foxglove_lib_dir}/foxglove.dll.lib")
-      set_target_properties(foxglove-shared PROPERTIES
-        IMPORTED_IMPLIB "${_foxglove_lib_dir}/foxglove.dll.lib")
-    endif()
-  endif()
-  unset(_p)
-endif()
+# Import the prebuilt Rust/C library targets. The dist puts all libs (including
+# the .dll on Windows) under lib/ rather than splitting per GNUInstallDirs, so a
+# single dir works for both STATIC_LIB and SHARED_LIB. The helper applies the
+# platform link libs to foxglove-static and handles the Windows import library.
+include("${CMAKE_CURRENT_LIST_DIR}/foxglove-c-imports.cmake")
+foxglove_sdk_import_c_libs(
+  STATIC_LIB "${_foxglove_lib_dir}/${CMAKE_STATIC_LIBRARY_PREFIX}foxglove${CMAKE_STATIC_LIBRARY_SUFFIX}"
+  SHARED_LIB "${_foxglove_lib_dir}/${CMAKE_SHARED_LIBRARY_PREFIX}foxglove${CMAKE_SHARED_LIBRARY_SUFFIX}"
+  SHARED_IMPLIB "${_foxglove_lib_dir}/foxglove.dll.lib"
+)
 
 # C++ wrapper source list, derived from the shared foxglove-sources.cmake file
 # (also used by the in-tree build). The dist concatenates handwritten + generated
