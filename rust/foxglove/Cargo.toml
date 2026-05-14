@@ -8,7 +8,7 @@ repository.workspace = true
 license.workspace = true
 
 [features]
-default = ["derive", "lz4", "websocket", "zstd"]
+default = ["aws-lc-rs", "derive", "lz4", "websocket", "zstd"]
 chrono = ["dep:chrono"]
 derive = ["dep:foxglove_derive"]
 sysinfo = ["dep:sysinfo", "dep:tokio", "tokio/rt-multi-thread", "tokio/time"]
@@ -42,8 +42,8 @@ websocket-tls = [
 
 # Selects the rustls crypto backend installed as the process-wide default before
 # Foxglove opens any TLS connections (for `websocket-tls` and `remote-access`).
-# At least one of `aws-lc-rs` or `ring` must be enabled when those features are
-# in use. If both are enabled (e.g. `--all-features`), `aws-lc-rs` is preferred.
+# `aws-lc-rs` is in the default feature set; `ring` is offered as an alternative
+# for targets where building aws-lc-sys is impractical.
 aws-lc-rs = ["rustls?/aws-lc-rs", "tokio-rustls?/aws-lc-rs"]
 ring = ["rustls?/ring", "tokio-rustls?/ring"]
 stream = ["dep:futures", "dep:tokio"]
