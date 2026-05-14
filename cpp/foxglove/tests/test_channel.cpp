@@ -7,6 +7,8 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
 
+#include <array>
+#include <cstddef>
 #include <string>
 
 #include "common/file_cleanup.hpp"
@@ -134,4 +136,15 @@ TEST_CASE("channel with no metadata returns an empty value from metadata()") {
 
   auto chan_metadata = requireValue(channel).metadata();
   REQUIRE(requireValue(chan_metadata).empty());
+}
+
+TEST_CASE("channel.log() accepts a zero-length message") {
+  auto context = foxglove::Context::create();
+  auto channel_result = foxglove::RawChannel::create("/empty-msg", "json", std::nullopt, context);
+  auto& channel = requireValue(channel_result);
+
+  REQUIRE(channel.log(nullptr, 0) == foxglove::FoxgloveError::Ok);
+
+  const std::array<std::byte, 1> dummy{std::byte{0}};
+  REQUIRE(channel.log(dummy.data(), 0) == foxglove::FoxgloveError::Ok);
 }

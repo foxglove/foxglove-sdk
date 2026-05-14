@@ -561,6 +561,48 @@ async fn test_log_only_to_subscribers() {
     let _ = server.stop();
 }
 
+#[traced_test]
+#[tokio::test]
+async fn test_server_transmits_empty_message() {
+    let ctx = Context::new();
+    let server = create_server(&ctx, ServerOptions::default());
+    let ch = new_channel("/empty", &ctx);
+
+    let addr = server
+        .start("127.0.0.1", 0)
+        .await
+        .expect("Failed to start server");
+
+    let mut client = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
+    expect_recv!(client, ServerMessage::ServerInfo);
+    expect_recv!(client, ServerMessage::Advertise);
+
+    let subscription_id = 7;
+    client
+        .send(&Subscribe::new([Subscription::new(
+            subscription_id,
+            ch.id().into(),
+        )]))
+        .await
+        .expect("Failed to subscribe");
+
+    assert_eventually(|| ch.num_sinks() == 1).await;
+
+    let metadata = PartialMetadata {
+        log_time: Some(987654),
+    };
+    ch.log_with_meta(b"", metadata);
+
+    let msg = expect_recv!(client, ServerMessage::MessageData);
+    assert_eq!(msg.subscription_id, subscription_id);
+    assert_eq!(msg.log_time, 987654);
+    assert!(msg.data.is_empty(), "expected empty MessageData payload");
+
+    let _ = server.stop();
+}
+
 #[tokio::test]
 async fn test_on_unsubscribe_called_after_disconnect() {
     let recording_listener = Arc::new(RecordingServerListener::new());
@@ -956,6 +998,12 @@ async fn test_client_advertising() {
         .await
         .expect("Failed to send binary message");
 
+    // Send a zero-length message payload on the same channel.
+    client
+        .send(&client::MessageData::new(channel_id, &[][..]))
+        .await
+        .expect("Failed to send empty MessageData");
+
     // Does not error on a binary message with no opcode
     client
         .send(Message::binary(vec![]))
@@ -975,17 +1023,23 @@ async fn test_client_advertising() {
         .expect("Failed to send unadvertise");
 
     assert_eventually(|| {
-        dbg!(recording_listener.message_data_len()) == 1
+        dbg!(recording_listener.message_data_len()) == 2
             && dbg!(recording_listener.client_advertise_len()) == 1
             && dbg!(recording_listener.client_unadvertise_len()) == 1
     })
     .await;
 
-    // Server should have received one message
-    let mut received = recording_listener.take_message_data();
-    let message_data = received.pop().expect("No message received");
-    assert_eq!(message_data.channel.id, ClientChannelId::new(1));
-    assert_eq!(message_data.data, data);
+    // Server should have received both messages (in order): the non-empty payload first,
+    // then the zero-length payload.
+    let received = recording_listener.take_message_data();
+    assert_eq!(received.len(), 2);
+    assert_eq!(received[0].channel.id, ClientChannelId::new(1));
+    assert_eq!(received[0].data, data);
+    assert_eq!(received[1].channel.id, ClientChannelId::new(1));
+    assert!(
+        received[1].data.is_empty(),
+        "expected zero-length client MessageData",
+    );
 
     // Server should have ignored the duplicate advertisement
     let advertisements = recording_listener.take_client_advertise();

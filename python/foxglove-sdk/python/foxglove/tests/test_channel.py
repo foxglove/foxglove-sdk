@@ -241,3 +241,11 @@ def test_log_message_to_specific_sink(new_topic: str) -> None:
     ctx = Context()
     ch = Channel(new_topic, context=ctx)
     ch.log("test", sink_id=1)
+
+
+def test_log_zero_length_message(new_topic: str) -> None:
+    """Zero-length messages must be accepted by channel.log()."""
+    schema = Schema(name="raw", encoding="raw", data=b"")
+    channel = Channel(new_topic, message_encoding="raw", schema=schema)
+    channel.log(b"")
+    channel.log("")

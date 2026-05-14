@@ -441,6 +441,9 @@ mod runtime;
 )]
 pub use runtime::shutdown_runtime;
 
+#[cfg(any(feature = "tls", feature = "remote-access"))]
+mod crypto;
+
 #[cfg(feature = "remote-access")]
 mod api_client;
 #[cfg(feature = "remote-access")]

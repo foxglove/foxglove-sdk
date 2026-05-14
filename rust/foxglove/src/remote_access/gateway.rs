@@ -412,6 +412,8 @@ impl Gateway {
     /// Returns an error if no device token is provided and the `FOXGLOVE_DEVICE_TOKEN`
     /// environment variable is not set.
     pub fn start(mut self) -> Result<GatewayHandle, FoxgloveError> {
+        crate::crypto::install_default_crypto_provider();
+
         let device_token = self
             .device_token
             .or_else(|| std::env::var(FOXGLOVE_DEVICE_TOKEN_ENV).ok())
