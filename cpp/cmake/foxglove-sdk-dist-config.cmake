@@ -79,24 +79,17 @@ if(NOT TARGET foxglove-shared)
   unset(_p)
 endif()
 
-# Explicit list of the C++ wrapper sources the dist ships (under src/). messages.cpp is
-# included because, unlike the in-tree build, the dist doesn't split generated vs
-# hand-written sources; consumers compile them all into one wrapper library.
+# C++ wrapper source list, derived from the shared foxglove-sources.cmake file
+# (also used by the in-tree build). The dist concatenates handwritten + generated
+# because, unlike the in-tree build, consumers compile them all into one wrapper.
+include("${CMAKE_CURRENT_LIST_DIR}/foxglove-sources.cmake")
 set(FOXGLOVE_SDK_CPP_SOURCES
-  "${_foxglove_src_dir}/channel.cpp"
-  "${_foxglove_src_dir}/connection_graph.cpp"
-  "${_foxglove_src_dir}/context.cpp"
-  "${_foxglove_src_dir}/error.cpp"
-  "${_foxglove_src_dir}/fetch_asset.cpp"
-  "${_foxglove_src_dir}/foxglove.cpp"
-  "${_foxglove_src_dir}/mcap.cpp"
-  "${_foxglove_src_dir}/messages.cpp"
-  "${_foxglove_src_dir}/parameter.cpp"
-  "${_foxglove_src_dir}/service.cpp"
-  "${_foxglove_src_dir}/system_info.cpp"
-  "${_foxglove_src_dir}/websocket.cpp"
+  ${FOXGLOVE_CPP_HANDWRITTEN_SOURCES}
+  ${FOXGLOVE_CPP_GENERATED_SOURCES}
 )
-set(FOXGLOVE_SDK_CPP_REMOTE_ACCESS_SOURCE "${_foxglove_src_dir}/remote_access.cpp")
+list(TRANSFORM FOXGLOVE_SDK_CPP_SOURCES PREPEND "${_foxglove_src_dir}/")
+set(FOXGLOVE_SDK_CPP_REMOTE_ACCESS_SOURCE ${FOXGLOVE_CPP_REMOTE_ACCESS_SOURCES})
+list(TRANSFORM FOXGLOVE_SDK_CPP_REMOTE_ACCESS_SOURCE PREPEND "${_foxglove_src_dir}/")
 set(FOXGLOVE_SDK_INCLUDE_DIRS "${_foxglove_include_dir}")
 
 # foxglove_sdk_add_cpp_library(<name>

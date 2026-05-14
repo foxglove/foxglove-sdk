@@ -228,11 +228,12 @@ include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/foxglove-static-platform-links.cmake"
 
 ### C++
 
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/foxglove-sources.cmake")
+
 # Generated code (excluded from clang-tidy)
-set(foxglove_generated_srcs
-    "foxglove/include/foxglove/messages.hpp"
-    "foxglove/src/messages.cpp"
-)
+set(foxglove_generated_srcs ${FOXGLOVE_CPP_GENERATED_SOURCES})
+list(TRANSFORM foxglove_generated_srcs PREPEND "foxglove/src/")
+list(APPEND foxglove_generated_srcs "foxglove/include/foxglove/messages.hpp")
 add_library(foxglove_generated_obj OBJECT "${foxglove_generated_srcs}")
 set_property(TARGET foxglove_generated_obj PROPERTY POSITION_INDEPENDENT_CODE True)
 set_property(TARGET foxglove_generated_obj PROPERTY CXX_STANDARD 17)
@@ -245,22 +246,11 @@ target_include_directories(foxglove_generated_obj PRIVATE
 target_compile_options(foxglove_generated_obj PRIVATE ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
 target_link_options(foxglove_generated_obj PRIVATE ${SANITIZER_LINK_OPTIONS})
 
-# Hand-written C++ code. Excludes messages.cpp (built in foxglove_generated_obj) and
-# remote_access.cpp (built in foxglove_ra_cpp_obj when RA is on). Add new files here
-# explicitly when you create them; we do not glob.
-set(foxglove_cpp_srcs
-    "foxglove/src/channel.cpp"
-    "foxglove/src/connection_graph.cpp"
-    "foxglove/src/context.cpp"
-    "foxglove/src/error.cpp"
-    "foxglove/src/fetch_asset.cpp"
-    "foxglove/src/foxglove.cpp"
-    "foxglove/src/mcap.cpp"
-    "foxglove/src/parameter.cpp"
-    "foxglove/src/service.cpp"
-    "foxglove/src/system_info.cpp"
-    "foxglove/src/websocket.cpp"
-)
+# Hand-written C++ code. Source list comes from cmake/foxglove-sources.cmake (shared
+# with the dist config). messages.cpp lives in foxglove_generated_obj; remote_access.cpp
+# lives in foxglove_ra_cpp_obj when RA is on.
+set(foxglove_cpp_srcs ${FOXGLOVE_CPP_HANDWRITTEN_SOURCES})
+list(TRANSFORM foxglove_cpp_srcs PREPEND "foxglove/src/")
 
 add_library(foxglove_cpp_obj OBJECT "${foxglove_cpp_srcs}")
 set_property(TARGET foxglove_cpp_obj PROPERTY POSITION_INDEPENDENT_CODE True)
@@ -316,10 +306,10 @@ endforeach()
 ### Remote Access (optional)
 
 if(FOXGLOVE_REMOTE_ACCESS)
-  add_library(foxglove_ra_cpp_obj OBJECT
-    "foxglove/include/foxglove/remote_access.hpp"
-    "foxglove/src/remote_access.cpp"
-  )
+  set(foxglove_ra_cpp_srcs ${FOXGLOVE_CPP_REMOTE_ACCESS_SOURCES})
+  list(TRANSFORM foxglove_ra_cpp_srcs PREPEND "foxglove/src/")
+  list(APPEND foxglove_ra_cpp_srcs "foxglove/include/foxglove/remote_access.hpp")
+  add_library(foxglove_ra_cpp_obj OBJECT "${foxglove_ra_cpp_srcs}")
   set_property(TARGET foxglove_ra_cpp_obj PROPERTY POSITION_INDEPENDENT_CODE True)
   set_property(TARGET foxglove_ra_cpp_obj PROPERTY CXX_STANDARD 17)
   set_property(TARGET foxglove_ra_cpp_obj PROPERTY CXX_STANDARD_REQUIRED True)
