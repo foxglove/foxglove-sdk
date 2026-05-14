@@ -75,15 +75,10 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE RelWithDebInfo)
 endif()
 
-# Determine wheter to use standalone or boost asio
-option(USE_ASIO_STANDALONE "Build with standalone ASIO" ON)
-if(USE_ASIO_STANDALONE)
-  message(STATUS "Using standalone ASIO")
-  add_definitions(-DASIO_STANDALONE)
-else()
-  message(STATUS "Using Boost ASIO")
-  find_package(Boost REQUIRED)
-endif(USE_ASIO_STANDALONE)
+# websocketpp's templates dispatch on ASIO_STANDALONE: defined → standalone asio (header-
+# only, supplied by the `asio` system package), undefined → boost::asio (which would also
+# need Boost.System linked). We only support the standalone path.
+add_definitions(-DASIO_STANDALONE)
 
 # Detect big-endian architectures
 include(TestBigEndian)
@@ -161,10 +156,15 @@ endif()
 set(ROS_BUILD_TYPE "ament_cmake")
 
 find_package(ament_cmake REQUIRED)
+find_package(ament_index_cpp REQUIRED)
+find_package(rcl_interfaces REQUIRED)
+find_package(rcpputils REQUIRED)
+find_package(rcutils REQUIRED)
 find_package(rosgraph_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_components REQUIRED)
 find_package(resource_retriever REQUIRED)
+find_package(rosidl_typesupport_introspection_cpp REQUIRED)
 find_package(rosx_introspection REQUIRED)
 find_package(std_msgs REQUIRED)
 
@@ -199,13 +199,16 @@ endif()
 
 target_link_libraries(foxglove_bridge_component
   foxglove_cpp_shared
+  ${rcl_interfaces_TARGETS}
   ${rosgraph_msgs_TARGETS}
   ${std_msgs_TARGETS}
   ament_index_cpp::ament_index_cpp
   rclcpp::rclcpp
   rclcpp_components::component
-  rclcpp_components::component_manager
+  rcpputils::rcpputils
+  rcutils::rcutils
   resource_retriever::resource_retriever
+  rosidl_typesupport_introspection_cpp::rosidl_typesupport_introspection_cpp
   rosx_introspection::rosx_introspection
 )
 
@@ -222,9 +225,8 @@ add_executable(foxglove_bridge
 target_include_directories(foxglove_bridge SYSTEM PRIVATE ${rclcpp_INCLUDE_DIRS})
 target_link_libraries(foxglove_bridge
   foxglove_bridge_component
+  ${rcl_interfaces_TARGETS}
   rclcpp::rclcpp
-  rclcpp_components::component
-  rclcpp_components::component_manager
 )
 enable_strict_compiler_warnings(foxglove_bridge)
 
@@ -232,7 +234,7 @@ if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
   find_package(ament_lint_auto REQUIRED)
   find_package(nlohmann_json REQUIRED)
-  find_package(OpenSSL REQUIRED)
+  find_package(std_srvs REQUIRED)
   find_package(websocketpp REQUIRED)
 
   ament_lint_auto_find_test_dependencies()
@@ -246,9 +248,7 @@ if(BUILD_TESTING)
     ${std_msgs_TARGETS}
     ${std_srvs_TARGETS}
     rclcpp::rclcpp
-    rclcpp_components::component
-    rclcpp_components::component_manager
-    OpenSSL::SSL
+    websocketpp::websocketpp
   )
   enable_strict_compiler_warnings(smoke_test)
 

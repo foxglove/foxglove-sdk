@@ -1,4 +1,4 @@
-
+#include <rcl_interfaces/msg/parameter_descriptor.hpp>
 
 #include <foxglove_bridge/common.hpp>
 #include <foxglove_bridge/param_utils.hpp>
