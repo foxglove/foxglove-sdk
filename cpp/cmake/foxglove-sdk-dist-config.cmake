@@ -146,22 +146,34 @@ function(foxglove_sdk_add_cpp_library name)
     endif()
   endif()
 
+  # Link visibility differs by wrapper TYPE:
+  # - STATIC wrapper: the wrapper.a is just an archive of object files; consumers must
+  #   link the underlying C lib themselves at exe link time. PUBLIC propagates it via
+  #   the wrapper's INTERFACE_LINK_LIBRARIES.
+  # - SHARED wrapper: the wrapper.so encapsulates the C lib (statically bundled for the
+  #   non-RA case, dynamically linked via NEEDED for the RA case). Consumers see the
+  #   wrapper.so only and shouldn't pick up the underlying C lib on their own link line.
+  #   PRIVATE keeps it off INTERFACE_LINK_LIBRARIES.
+  if(_arg_TYPE STREQUAL "STATIC")
+    set(_link_scope PUBLIC)
+  else()
+    set(_link_scope PRIVATE)
+  endif()
+
   if(_arg_REMOTE_ACCESS)
     if(NOT TARGET foxglove-shared)
       message(FATAL_ERROR "foxglove_sdk_add_cpp_library(${name}): REMOTE_ACCESS=ON requested but libfoxglove.so was not shipped in this dist.")
     endif()
-    target_link_libraries(${name} PUBLIC foxglove-shared)
+    target_link_libraries(${name} ${_link_scope} foxglove-shared)
+    # The define stays PUBLIC: consumer translation units include foxglove/remote_access.hpp,
+    # which depends on foxglove-c/foxglove-c.h's `#if defined(FOXGLOVE_REMOTE_ACCESS)`
+    # guards. That's an API-level concern, separate from the link-time encapsulation above.
     target_compile_definitions(${name} PUBLIC FOXGLOVE_REMOTE_ACCESS)
   else()
-    # STATIC + non-RA: the wrapper is a static archive; foxglove-static is propagated
-    # to consumers via PUBLIC so they pull in the C symbols at executable link time.
-    # SHARED + non-RA: foxglove-static is statically bundled into the SHARED wrapper at
-    # the wrapper's own link step. Consumers of the wrapper.so never see the static lib
-    # directly; the C symbols live inside the wrapper.so.
     if(NOT TARGET foxglove-static)
       message(FATAL_ERROR "foxglove_sdk_add_cpp_library(${name}): no static C library was shipped in this dist.")
     endif()
-    target_link_libraries(${name} PUBLIC foxglove-static)
+    target_link_libraries(${name} ${_link_scope} foxglove-static)
   endif()
 endfunction()
 
