@@ -64,12 +64,12 @@ The core SDK is written in Rust, with bindings for Python and C/C++, plus TypeSc
 ### Rust
 
 - Prior to committing changes or considering them completed, for the modified rust project(s) run:
-  `cargo test --all-features`
+  `cargo test --features full`
   `cargo test --no-default-features`
   `cargo fmt`
   Run cargo check and clippy for the entire workspace:
-  `cargo check --all-features`
-  `cargo clippy --no-deps --tests --all-features -- -D warnings`
+  `cargo check --features full`
+  `cargo clippy --no-deps --tests --features full -- -D warnings`
 - Prefer `crate::` import over `super::` import; though importing `super::*` is fine within a test module (`mod tests`)
 - Use `mod tests` rather than `mod test` for declaring unit tests in a submodule
 - The MSRV (Minimum Supported Rust Version) is defined in Cargo.toml. Don't use Rust features that aren't stabilized as of this version.
