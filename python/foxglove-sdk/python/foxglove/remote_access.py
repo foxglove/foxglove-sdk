@@ -4,6 +4,7 @@ from typing import Protocol
 
 from foxglove import (
     ChannelDescriptor,
+    ConnectionGraph,
     MessageSchema,
     Parameter,
     ParameterType,
@@ -142,10 +143,37 @@ class RemoteAccessListener(Protocol):
         """
         return None
 
+    def on_connection_graph_subscribe(self) -> None:
+        """
+        Called when the first client subscribes to the connection graph.
+
+        Requires :py:data:`Capability.ConnectionGraph`.
+
+        .. warning::
+            Do not call
+            :py:meth:`~foxglove.remote_access.RemoteAccessGateway.publish_connection_graph`
+            from within this callback; doing so will deadlock.
+        """
+        return None
+
+    def on_connection_graph_unsubscribe(self) -> None:
+        """
+        Called when the last client unsubscribes from the connection graph.
+
+        Requires :py:data:`Capability.ConnectionGraph`.
+
+        .. warning::
+            Do not call
+            :py:meth:`~foxglove.remote_access.RemoteAccessGateway.publish_connection_graph`
+            from within this callback; doing so will deadlock.
+        """
+        return None
+
 
 __all__ = [
     "Capability",
     "Client",
+    "ConnectionGraph",
     "MessageSchema",
     "Parameter",
     "ParameterType",

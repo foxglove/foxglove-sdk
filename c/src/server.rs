@@ -25,7 +25,7 @@ pub struct FoxgloveServerCapability {
 }
 /// Allow clients to advertise channels to send data messages to the server.
 pub const FOXGLOVE_SERVER_CAPABILITY_CLIENT_PUBLISH: u8 = 1 << 0;
-/// Allow clients to subscribe and make connection graph updates
+/// Allow clients to subscribe to connection graph updates
 pub const FOXGLOVE_SERVER_CAPABILITY_CONNECTION_GRAPH: u8 = 1 << 1;
 /// Allow clients to get & set parameters.
 pub const FOXGLOVE_SERVER_CAPABILITY_PARAMETERS: u8 = 1 << 2;

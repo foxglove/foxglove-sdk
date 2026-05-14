@@ -59,7 +59,7 @@ enum class WebSocketServerCapabilities : uint8_t {
   None = 0,
   /// Allow clients to advertise channels to send data messages to the server.
   ClientPublish = 1 << 0,
-  /// Allow clients to subscribe and make connection graph updates
+  /// Allow clients to subscribe to connection graph updates
   ConnectionGraph = 1 << 1,
   /// Allow clients to get & set parameters.
   Parameters = 1 << 2,

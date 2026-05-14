@@ -2,6 +2,7 @@ from enum import Enum
 
 from foxglove import (
     ChannelDescriptor,
+    ConnectionGraph,
     MessageSchema,
     Parameter,
     ParameterType,
@@ -39,6 +40,9 @@ class Capability(Enum):
 
     ClientPublish = ...
     """Allow clients to advertise channels to send data messages to the server."""
+
+    ConnectionGraph = ...
+    """Allow clients to subscribe to connection graph updates."""
 
     Parameters = ...
     """Allow clients to get, set, and subscribe to parameter updates."""
@@ -99,6 +103,16 @@ class RemoteAccessGateway:
 
     def remove_status(self, ids: list[str]) -> None:
         """Removes status messages by ID from all connected participants."""
+        ...
+
+    def publish_connection_graph(self, graph: ConnectionGraph) -> None:
+        """
+        Publishes a connection graph update to all subscribed clients. An update is published to
+        clients as a difference from the current graph to the replacement graph. When a client first
+        subscribes to connection graph updates, it receives the current graph.
+
+        Raises an error if the gateway wasn't started with :py:attr:`Capability.ConnectionGraph`.
+        """
         ...
 
     def stop(self) -> None:

@@ -12,7 +12,7 @@ pub enum Capability {
     /// Allow clients to request assets. If you supply an asset handler to the gateway, this
     /// capability will be advertised automatically.
     Assets,
-    /// Allow clients to subscribe and make connection graph updates.
+    /// Allow clients to subscribe to connection graph updates.
     ConnectionGraph,
 }
 

@@ -24,7 +24,7 @@ class Capability(Enum):
     """Allow clients to advertise channels to send data messages to the server."""
 
     ConnectionGraph = ...
-    """Allow clients to subscribe and make connection graph updates"""
+    """Allow clients to subscribe to connection graph updates"""
 
     Parameters = ...
     """Allow clients to get & set parameters."""
@@ -219,5 +219,7 @@ class WebSocketServer:
         Publishes a connection graph update to all subscribed clients. An update is published to
         clients as a difference from the current graph to the replacement graph. When a client first
         subscribes to connection graph updates, it receives the current graph.
+
+        Raises an error if the server wasn't started with :py:attr:`Capability.ConnectionGraph`.
         """
         ...

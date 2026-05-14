@@ -51,7 +51,7 @@
 
 #if defined(FOXGLOVE_REMOTE_ACCESS)
 /**
- * Allow clients to subscribe and make connection graph updates.
+ * Allow clients to subscribe to connection graph updates.
  */
 #define FOXGLOVE_GATEWAY_CAPABILITY_CONNECTION_GRAPH (1 << 3)
 #endif
@@ -72,7 +72,7 @@
 
 #if !defined(__wasm__)
 /**
- * Allow clients to subscribe and make connection graph updates
+ * Allow clients to subscribe to connection graph updates
  */
 #define FOXGLOVE_SERVER_CAPABILITY_CONNECTION_GRAPH (1 << 1)
 #endif
