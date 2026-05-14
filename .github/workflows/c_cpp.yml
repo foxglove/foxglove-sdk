@@ -128,12 +128,15 @@ jobs:
             staticlib_name: libfoxglove.a
             cdylib_name: libfoxglove.dylib
             cross: true
-          # iOS simulator
+          # iOS simulator: use the `ring` rustls backend to avoid building aws-lc-sys
+          # for this target, which requires an external bindgen workaround
+          # (https://github.com/aws/aws-lc-rs/issues/761).
           - runner: macos-15
             target: aarch64-apple-ios-sim
             staticlib_name: libfoxglove.a
             cdylib_name: libfoxglove.dylib
             cross: true
+            crypto_provider: ring
           - runner: macos-15
             target: x86_64-apple-ios
             staticlib_name: libfoxglove.a
@@ -157,18 +160,10 @@ jobs:
           # builds from the non-remote-access-enabled linux builds.
           cache-key: ${{ matrix.remote_access && 'ra-v2' || '' }}
 
+      # aws-lc-sys requires iOS 13+ to build. Only set this when using the
+      # aws-lc-rs backend (the default); `ring` has no such constraint.
       - run: echo "IPHONEOS_DEPLOYMENT_TARGET=13.0.0" >> $GITHUB_ENV
-        # Min version needed for libaws_lc_sys
-        if: contains(matrix.target, 'apple-ios')
-      - if: matrix.target == 'aarch64-apple-ios-sim'
-        run: |
-          # https://github.com/aws/aws-lc-rs/issues/761
-          unset CARGO_BUILD_TARGET
-          cargo install bindgen-cli --version 0.72.0
-          echo "AWS_LC_SYS_EXTERNAL_BINDGEN=1" >> $GITHUB_ENV
-          echo "~/.cargo/bin" >> $GITHUB_PATH
-      - if: matrix.target == 'aarch64-apple-ios-sim'
-        run: which bindgen
+        if: contains(matrix.target, 'apple-ios') && (matrix.crypto_provider || 'aws-lc-rs') == 'aws-lc-rs'
 
       - name: Install remote access build dependencies (Linux)
         if: matrix.remote_access && runner.os == 'Linux'
@@ -193,6 +188,7 @@ jobs:
           make -f Container.mk build-cpp-dist
           CPP_SDK_DIR=artifacts/foxglove
           FOXGLOVE_REMOTE_ACCESS=${{ matrix.remote_access && 'ON' || 'OFF' }}
+          FOXGLOVE_CRYPTO_PROVIDER=${{ matrix.crypto_provider || 'aws-lc-rs' }}
           STATICLIB_NAME=${{ matrix.staticlib_name }}
           CDYLIB_NAME=${{ matrix.cdylib_name }}
 

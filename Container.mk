@@ -118,13 +118,19 @@ test-cpp-sanitize:
 # FETCHCONTENT_SOURCE_DIR_FOXGLOVE_SDK in CMake.
 CPP_SDK_DIR ?= cpp/dist
 FOXGLOVE_REMOTE_ACCESS ?= ON
+# Selects the rustls crypto backend for the C SDK. Either `aws-lc-rs` (default)
+# or `ring`. Override to `ring` on targets where building aws-lc-sys is painful
+# (e.g. `aarch64-apple-ios-sim`, which would otherwise need an external bindgen).
+FOXGLOVE_CRYPTO_PROVIDER ?= aws-lc-rs
 STATICLIB_NAME ?= libfoxglove.a
 CDYLIB_NAME ?= libfoxglove.so
 CARGO_LIB_DIR = target/$(if $(CARGO_BUILD_TARGET),$(CARGO_BUILD_TARGET)/)release
 .PHONY: build-cpp-dist
 build-cpp-dist:
-	cd c && FOXGLOVE_SDK_LANGUAGE=c cargo rustc --release --lib --crate-type staticlib
+	cd c && FOXGLOVE_SDK_LANGUAGE=c cargo rustc --release --lib --crate-type staticlib \
+		--no-default-features --features $(FOXGLOVE_CRYPTO_PROVIDER)
 	cd c && FOXGLOVE_SDK_LANGUAGE=c cargo rustc --release --lib --crate-type cdylib \
+		--no-default-features --features $(FOXGLOVE_CRYPTO_PROVIDER) \
 		$(if $(filter ON,$(FOXGLOVE_REMOTE_ACCESS)),--features remote-access)
 	mkdir -p $(CPP_SDK_DIR)/lib $(CPP_SDK_DIR)/include $(CPP_SDK_DIR)/src
 	cp $(CARGO_LIB_DIR)/$(STATICLIB_NAME) $(CPP_SDK_DIR)/lib/
