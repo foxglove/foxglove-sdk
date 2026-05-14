@@ -160,8 +160,9 @@ jobs:
           # builds from the non-remote-access-enabled linux builds.
           cache-key: ${{ matrix.remote_access && 'ra-v2' || '' }}
 
-      # aws-lc-sys requires iOS 13+ to build. Only set this when using the
-      # aws-lc-rs backend (the default); `ring` has no such constraint.
+      # aws-lc-sys requires iOS 13+ to build. The conditional treats an unset
+      # `crypto_provider` as the aws-lc-rs default, and skips this step for any
+      # explicit opt-out (today only `ring`).
       - run: echo "IPHONEOS_DEPLOYMENT_TARGET=13.0.0" >> $GITHUB_ENV
         if: contains(matrix.target, 'apple-ios') && (matrix.crypto_provider || 'aws-lc-rs') == 'aws-lc-rs'
 
