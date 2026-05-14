@@ -75,11 +75,6 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE RelWithDebInfo)
 endif()
 
-# websocketpp's templates dispatch on ASIO_STANDALONE: defined → standalone asio (header-
-# only, supplied by the `asio` system package), undefined → boost::asio (which would also
-# need Boost.System linked). We only support the standalone path.
-add_definitions(-DASIO_STANDALONE)
-
 # Detect big-endian architectures
 include(TestBigEndian)
 TEST_BIG_ENDIAN(ENDIAN)
@@ -242,6 +237,10 @@ if(BUILD_TESTING)
   # smoke_test pulls in tests/client/test_client.hpp, which uses nlohmann::json for the
   # test WebSocket client's serializers. utils_test doesn't touch it.
   ament_add_gtest(smoke_test tests/smoke_test.cpp TIMEOUT 600)
+  # ASIO_STANDALONE makes websocketpp's templates dispatch to standalone asio (header-only,
+  # supplied by the `asio` system package) rather than boost::asio. Only smoke_test pulls
+  # in websocketpp at all — production sources don't touch it — so the define is scoped here.
+  target_compile_definitions(smoke_test PRIVATE ASIO_STANDALONE)
   target_link_libraries(smoke_test
     foxglove_bridge_component
     nlohmann_json::nlohmann_json

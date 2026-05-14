@@ -26,11 +26,11 @@
     <test_depend>ament_lint_auto</test_depend>
     <test_depend>std_msgs</test_depend>
     <test_depend>std_srvs</test_depend>
+    <test_depend>asio</test_depend>
     <test_depend>libwebsocketpp-dev</test_depend>
     <test_depend>nlohmann-json-dev</test_depend>
 
     <!-- Common dependencies -->
-    <build_depend>asio</build_depend>
     <build_depend>ros_environment</build_depend>
 
     <depend>rcl_interfaces</depend>
