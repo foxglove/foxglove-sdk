@@ -51,24 +51,15 @@ set(_foxglove_lib_dir "${_foxglove_prefix}/lib")
 set(_foxglove_include_dir "${_foxglove_prefix}/include")
 set(_foxglove_src_dir "${_foxglove_prefix}/src")
 
-# Non-RA static C lib (libfoxglove.a). Always shipped; import as foxglove-static. Carries
-# platform link libs that the C lib's symbol surface depends on (Bcrypt etc. on Windows,
-# Security/CoreFoundation on macOS, pthread/dl/m for older glibc on Linux).
+# Non-RA static C lib (libfoxglove.a). Always shipped; import as foxglove-static.
+# Platform link libs that the C lib's symbol surface depends on are applied by the
+# shared foxglove-static-platform-links.cmake (also used by the in-tree build).
 if(NOT TARGET foxglove-static)
   set(_p "${_foxglove_lib_dir}/${CMAKE_STATIC_LIBRARY_PREFIX}foxglove${CMAKE_STATIC_LIBRARY_SUFFIX}")
   if(EXISTS "${_p}")
     add_library(foxglove-static STATIC IMPORTED)
     set_target_properties(foxglove-static PROPERTIES IMPORTED_LOCATION "${_p}")
-    if(WIN32)
-      set_property(TARGET foxglove-static APPEND PROPERTY
-        INTERFACE_LINK_LIBRARIES Bcrypt SChannel Crypt32 Ncrypt)
-    elseif(APPLE)
-      set_property(TARGET foxglove-static APPEND PROPERTY
-        INTERFACE_LINK_LIBRARIES "-framework Security" "-framework CoreFoundation")
-    elseif(UNIX)
-      set_property(TARGET foxglove-static APPEND PROPERTY
-        INTERFACE_LINK_LIBRARIES pthread dl m)
-    endif()
+    include("${CMAKE_CURRENT_LIST_DIR}/foxglove-static-platform-links.cmake")
   endif()
   unset(_p)
 endif()

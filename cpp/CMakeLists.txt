@@ -223,16 +223,7 @@ else()
   endif()
 endif()
 
-if(TARGET foxglove-static)
-  if(WIN32)
-    target_link_libraries(foxglove-static INTERFACE Bcrypt SChannel Crypt32 Ncrypt)
-  elseif(APPLE)
-    target_link_libraries(foxglove-static INTERFACE "-framework Security" "-framework CoreFoundation")
-  elseif(UNIX)
-    # Required for the Rust standard library on older glibc (< 2.34) where these are separate libraries.
-    target_link_libraries(foxglove-static INTERFACE pthread dl m)
-  endif()
-endif()
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/foxglove-static-platform-links.cmake")
 
 
 ### C++
@@ -614,5 +605,6 @@ install(EXPORT foxglove-sdkTargets
 install(FILES
   "${CMAKE_CURRENT_BINARY_DIR}/foxglove-sdkConfig.cmake"
   "${CMAKE_CURRENT_BINARY_DIR}/foxglove-sdkConfigVersion.cmake"
+  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/foxglove-static-platform-links.cmake"
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/foxglove-sdk
 )
