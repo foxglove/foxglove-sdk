@@ -23,6 +23,19 @@
 #   <prefix>/lib/cmake/foxglove-sdk/foxglove-sdkConfig.cmake  → up 3 → <prefix>
 get_filename_component(_foxglove_prefix "${CMAKE_CURRENT_LIST_DIR}/../../.." ABSOLUTE)
 
+# Records the actual remote-access flavor of the shipped cdylib. Container.mk's
+# build-cpp-dist writes this file alongside this config; it sets
+# FOXGLOVE_SDK_CDYLIB_REMOTE_ACCESS to ON or OFF to reflect whether libfoxglove.so
+# was built with --features remote-access. The helper below uses it to reject
+# REMOTE_ACCESS=ON requests against a non-RA dist instead of silently producing
+# a wrapper that links the wrong cdylib.
+include("${CMAKE_CURRENT_LIST_DIR}/dist-flavor.cmake" OPTIONAL RESULT_VARIABLE _foxglove_flavor_path)
+if(NOT _foxglove_flavor_path)
+  # Older dists predate the marker; assume RA, matching the historical default.
+  set(FOXGLOVE_SDK_CDYLIB_REMOTE_ACCESS ON)
+endif()
+unset(_foxglove_flavor_path)
+
 # Standard check_required_components macro for find_package(... COMPONENTS ...).
 macro(check_required_components _NAME)
   foreach(comp ${${_NAME}_FIND_COMPONENTS})
@@ -163,6 +176,9 @@ function(foxglove_sdk_add_cpp_library name)
   if(_arg_REMOTE_ACCESS)
     if(NOT TARGET foxglove-shared)
       message(FATAL_ERROR "foxglove_sdk_add_cpp_library(${name}): REMOTE_ACCESS=ON requested but libfoxglove.so was not shipped in this dist.")
+    endif()
+    if(NOT FOXGLOVE_SDK_CDYLIB_REMOTE_ACCESS)
+      message(FATAL_ERROR "foxglove_sdk_add_cpp_library(${name}): REMOTE_ACCESS=ON requested but this dist's libfoxglove.so was built without the remote-access feature. Rebuild the dist with FOXGLOVE_REMOTE_ACCESS=ON (the default).")
     endif()
     target_link_libraries(${name} ${_link_scope} foxglove-shared)
     # The define stays PUBLIC: consumer translation units include foxglove/remote_access.hpp,
