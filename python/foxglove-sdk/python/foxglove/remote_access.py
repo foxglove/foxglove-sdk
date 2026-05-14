@@ -150,7 +150,8 @@ class RemoteAccessListener(Protocol):
         Requires :py:data:`Capability.ConnectionGraph`.
 
         .. warning::
-            Do not call :py:meth:`~foxglove.remote_access.RemoteAccessGateway.publish_connection_graph`
+            Do not call
+            :py:meth:`~foxglove.remote_access.RemoteAccessGateway.publish_connection_graph`
             from within this callback; doing so will deadlock.
         """
         return None
@@ -162,7 +163,8 @@ class RemoteAccessListener(Protocol):
         Requires :py:data:`Capability.ConnectionGraph`.
 
         .. warning::
-            Do not call :py:meth:`~foxglove.remote_access.RemoteAccessGateway.publish_connection_graph`
+            Do not call
+            :py:meth:`~foxglove.remote_access.RemoteAccessGateway.publish_connection_graph`
             from within this callback; doing so will deadlock.
         """
         return None
