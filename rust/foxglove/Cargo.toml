@@ -43,9 +43,12 @@ websocket-tls = [
 # Selects the rustls crypto backend installed as the process-wide default before
 # Foxglove opens any TLS connections (for `websocket-tls` and `remote-access`).
 # `aws-lc-rs` is in the default feature set; `ring` is offered as an alternative
-# for targets where building aws-lc-sys is impractical.
+# for targets where building aws-lc-sys is impractical. These features are
+# mutually exclusive when a TLS-using feature is enabled: see `src/crypto.rs`.
+# To use `ring`, disable default features and select it explicitly.
 aws-lc-rs = ["rustls?/aws-lc-rs", "tokio-rustls?/aws-lc-rs"]
 ring = ["rustls?/ring", "tokio-rustls?/ring"]
+
 stream = ["dep:futures", "dep:tokio"]
 data_provider = ["remote_data_loader_backend"]
 remote_data_loader_backend = ["dep:chrono", "chrono/serde", "dep:serde_with", "dep:serde-constant"]
@@ -65,6 +68,26 @@ img2yuv = ["img2yuv-png", "img2yuv-jpeg", "img2yuv-webp", "img2yuv-ros1", "img2y
 img2yuv-ros1 = ["img2yuv-core", "dep:regex"]
 img2yuv-ros2 = ["img2yuv-core", "dep:cdr", "dep:regex"]
 
+# The full set of supported features, with opinionated choices for mutually-
+# exclusive feature sets.
+full = [
+  "aws-lc-rs",
+  "chrono",
+  "data_provider",
+  "derive",
+  "img2yuv",
+  "live_visualization",
+  "lz4",
+  "remote-access",
+  "schemars",
+  "schemars-chrono",
+  "serde",
+  "stream",
+  "sysinfo",
+  "websocket",
+  "websocket-tls",
+  "zstd",
+]
 [lints]
 workspace = true
 
@@ -125,5 +148,5 @@ tempfile = "3.15.0"
 tracing-test.workspace = true
 
 [package.metadata.docs.rs]
-all-features = true
+features = ["full"]
 rustdoc-args = ["--cfg", "docsrs"]

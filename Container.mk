@@ -59,12 +59,12 @@ build-rust:
 
 .PHONY: build-rust-foxglove-msrv
 build-rust-foxglove-msrv:
-	cargo +$(MSRV_RUST_VERSION) build -p foxglove --all-features
+	cargo +$(MSRV_RUST_VERSION) build -p foxglove --features full
 
 .PHONY: test-rust
 test-rust:
-	cargo test -p foxglove --all-features
-	cargo test -p foxglove_c --all-features
+	cargo test -p foxglove --features full
+	cargo test -p foxglove_c --features full
 	cargo test -p foxglove_data_loader
 	cargo test -p foxglove_derive
 	cargo test -p foxglove-sdk-python --features remote-access
@@ -75,7 +75,7 @@ test-rust-foxglove-no-default-features:
 
 .PHONY: docs-rust
 docs-rust:
-	cargo +nightly rustdoc -p foxglove --all-features -- -D warnings --cfg docsrs
+	cargo +nightly rustdoc -p foxglove --features full -- -D warnings --cfg docsrs
 
 .PHONY: clean-cpp
 clean-cpp:
