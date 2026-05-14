@@ -41,11 +41,15 @@ if(catch2_SOURCE_DIR)
 endif()
 include(Catch)
 
-find_or_fetch(Corrosion
-  GIT_REPOSITORY https://github.com/corrosion-rs/corrosion.git
-  GIT_TAG v0.5.1
-  VERSION 0.5.1
-)
+# Corrosion drives the Rust build. When FOXGLOVE_PREBUILT_LIB_DIR is set, the Rust C library
+# is imported from there directly, so corrosion is unused — skip the fetch in that case.
+if(NOT FOXGLOVE_PREBUILT_LIB_DIR)
+  find_or_fetch(Corrosion
+    GIT_REPOSITORY https://github.com/corrosion-rs/corrosion.git
+    GIT_TAG v0.5.1
+    VERSION 0.5.1
+  )
+endif()
 
 set(LWS_WITH_SSL OFF CACHE BOOL "" FORCE)
 set(LWS_WITH_SHARED OFF CACHE BOOL "" FORCE)
@@ -520,17 +524,24 @@ endif()
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
-# Install C++ libraries
+# Install C++ libraries. Windows DLLs are a RUNTIME artifact that belongs in BINDIR (bin/)
+# so they're discoverable on %PATH% next to consuming executables — the GNU convention
+# encoded by GNUInstallDirs. POSIX shared libs (.so/.dylib) are LIBRARY artifacts and live
+# in LIBDIR. ARCHIVE covers POSIX static libs and the Windows .dll.lib import lib (link-time
+# only, not loaded at runtime), both of which belong in LIBDIR.
 if(FOXGLOVE_REMOTE_ACCESS)
   install(TARGETS foxglove_cpp_shared
     EXPORT foxglove-sdkTargets
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
   )
 else()
   install(TARGETS foxglove_cpp_static foxglove_cpp_shared
     EXPORT foxglove-sdkTargets
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
   )
   # Install the Rust/C static library
   install(FILES $<TARGET_FILE:foxglove-static>
@@ -538,10 +549,25 @@ else()
   )
 endif()
 
-# Install the Rust/C shared library
-install(FILES $<TARGET_FILE:foxglove-shared>
-  DESTINATION ${CMAKE_INSTALL_LIBDIR}
-)
+# Install the Rust/C shared library. install(FILES) can't split by artifact type the way
+# install(TARGETS) does, so split on WIN32 explicitly:
+#   - POSIX: .so/.dylib is both the linker file and the loaded artifact → LIBDIR.
+#   - Windows: .dll goes to BINDIR (discovered via %PATH%), and the paired .dll.lib import
+#     library (link-time only) goes to LIBDIR. Use $<TARGET_LINKER_FILE:> rather than the
+#     IMPORTED_IMPLIB property directly: on multi-config generators (Visual Studio),
+#     Corrosion sets IMPORTED_IMPLIB_<CONFIG> and leaves the generic property empty.
+if(WIN32)
+  install(FILES $<TARGET_FILE:foxglove-shared>
+    DESTINATION ${CMAKE_INSTALL_BINDIR}
+  )
+  install(FILES $<TARGET_LINKER_FILE:foxglove-shared>
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  )
+else()
+  install(FILES $<TARGET_FILE:foxglove-shared>
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  )
+endif()
 
 # Install C++ headers
 install(DIRECTORY foxglove/include/
