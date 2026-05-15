@@ -6,7 +6,7 @@ generate:
 PYTHON_REMOTE_ACCESS ?= ON
 
 ifeq ($(PYTHON_REMOTE_ACCESS),ON)
-MATURIN_PEP517_ARGS += --features remote-access
+MATURIN_PEP517_ARGS += --features full
 endif
 
 .PHONY: build-python
@@ -59,15 +59,15 @@ build-rust:
 
 .PHONY: build-rust-foxglove-msrv
 build-rust-foxglove-msrv:
-	cargo +$(MSRV_RUST_VERSION) build -p foxglove --all-features
+	cargo +$(MSRV_RUST_VERSION) build -p foxglove --features full
 
 .PHONY: test-rust
 test-rust:
-	cargo test -p foxglove --all-features
-	cargo test -p foxglove_c --all-features
+	cargo test -p foxglove --features full
+	cargo test -p foxglove_c --features full
 	cargo test -p foxglove_data_loader
 	cargo test -p foxglove_derive
-	cargo test -p foxglove-sdk-python --features remote-access
+	cargo test -p foxglove-sdk-python --features full
 
 .PHONY: test-rust-foxglove-no-default-features
 test-rust-foxglove-no-default-features:
@@ -75,7 +75,7 @@ test-rust-foxglove-no-default-features:
 
 .PHONY: docs-rust
 docs-rust:
-	cargo +nightly rustdoc -p foxglove --all-features -- -D warnings --cfg docsrs
+	cargo +nightly rustdoc -p foxglove --features full -- -D warnings --cfg docsrs
 
 .PHONY: clean-cpp
 clean-cpp:
@@ -118,13 +118,19 @@ test-cpp-sanitize:
 # FETCHCONTENT_SOURCE_DIR_FOXGLOVE_SDK in CMake.
 CPP_SDK_DIR ?= cpp/dist
 FOXGLOVE_REMOTE_ACCESS ?= ON
+# Selects the rustls crypto backend for the C SDK. Either `aws-lc-rs` (default)
+# or `ring`. Override to `ring` on targets where building aws-lc-sys is painful
+# (e.g. `aarch64-apple-ios-sim`, which would otherwise need an external bindgen).
+FOXGLOVE_CRYPTO_PROVIDER ?= aws-lc-rs
 STATICLIB_NAME ?= libfoxglove.a
 CDYLIB_NAME ?= libfoxglove.so
 CARGO_LIB_DIR = target/$(if $(CARGO_BUILD_TARGET),$(CARGO_BUILD_TARGET)/)release
 .PHONY: build-cpp-dist
 build-cpp-dist:
-	cd c && FOXGLOVE_SDK_LANGUAGE=c cargo rustc --release --lib --crate-type staticlib
+	cd c && FOXGLOVE_SDK_LANGUAGE=c cargo rustc --release --lib --crate-type staticlib \
+		--no-default-features --features $(FOXGLOVE_CRYPTO_PROVIDER)
 	cd c && FOXGLOVE_SDK_LANGUAGE=c cargo rustc --release --lib --crate-type cdylib \
+		--no-default-features --features $(FOXGLOVE_CRYPTO_PROVIDER) \
 		$(if $(filter ON,$(FOXGLOVE_REMOTE_ACCESS)),--features remote-access)
 	mkdir -p $(CPP_SDK_DIR)/lib $(CPP_SDK_DIR)/include $(CPP_SDK_DIR)/src
 	cp $(CARGO_LIB_DIR)/$(STATICLIB_NAME) $(CPP_SDK_DIR)/lib/

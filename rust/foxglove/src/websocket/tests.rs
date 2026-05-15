@@ -2,7 +2,7 @@ use assert_matches::assert_matches;
 use bytes::{BufMut, Bytes, BytesMut};
 use futures_util::FutureExt;
 use maplit::hashmap;
-#[cfg(feature = "tls")]
+#[cfg(feature = "websocket-tls")]
 use rcgen::{CertificateParams, Issuer, KeyPair};
 use std::borrow::Cow;
 use std::collections::HashMap;
@@ -34,7 +34,7 @@ use super::ws_protocol::server::{
 use crate::library_version::get_library_version;
 use crate::testutil::{RecordingServerListener, assert_eventually};
 use crate::testutil::{WebSocketClient, WebSocketClientError};
-#[cfg(feature = "tls")]
+#[cfg(feature = "websocket-tls")]
 use crate::websocket::TlsIdentity;
 use crate::websocket::handshake::SUBPROTOCOL;
 use crate::websocket::server::{ServerOptions, create_server as do_create_server};
@@ -122,7 +122,7 @@ async fn test_client_connect() {
 
 #[traced_test]
 #[tokio::test]
-#[cfg(feature = "tls")]
+#[cfg(feature = "websocket-tls")]
 async fn test_secure_client_connect() {
     let ctx = Context::new();
     let ca_params = CertificateParams::default();
@@ -163,7 +163,7 @@ async fn test_secure_client_connect() {
     let _ = server.stop();
 }
 
-#[cfg(feature = "tls")]
+#[cfg(feature = "websocket-tls")]
 #[traced_test]
 #[tokio::test]
 async fn test_invalid_tls_config() {

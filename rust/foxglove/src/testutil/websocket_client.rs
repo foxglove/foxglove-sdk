@@ -1,10 +1,10 @@
 use std::time::Duration;
 
 use futures_util::{SinkExt, StreamExt};
-#[cfg(feature = "tls")]
+#[cfg(feature = "websocket-tls")]
 use rcgen::Certificate;
 use tokio::net::TcpStream;
-#[cfg(feature = "tls")]
+#[cfg(feature = "websocket-tls")]
 use tokio_rustls::rustls;
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tokio_tungstenite::tungstenite::http::HeaderValue;
@@ -29,7 +29,7 @@ pub enum WebSocketClientError {
     Tungstenite(#[from] tungstenite::Error),
     #[error(transparent)]
     Timeout(#[from] tokio::time::error::Elapsed),
-    #[cfg(feature = "tls")]
+    #[cfg(feature = "websocket-tls")]
     #[error(transparent)]
     Rustls(#[from] rustls::Error),
 }
@@ -41,7 +41,7 @@ pub struct WebSocketClient {
 
 impl WebSocketClient {
     /// Connects to a server and validates the handshake response.
-    #[cfg(feature = "tls")]
+    #[cfg(feature = "websocket-tls")]
     pub async fn connect_secure(
         addr: impl AsRef<str>,
         trusted_cert: Certificate,

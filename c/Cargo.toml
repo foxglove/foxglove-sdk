@@ -10,8 +10,22 @@ crate-type = ["staticlib", "cdylib"]
 
 # The `remote_access` feature gates `mod gateway` in src/lib.rs. It can be enabled via
 # the CMake option FOXGLOVE_REMOTE_ACCESS, which passes this feature to corrosion.
+#
+# Exactly one of `aws-lc-rs` or `ring` must be enabled to select the rustls crypto
+# backend used by `websocket-tls` and `remote-access`. `aws-lc-rs` is the default;
+# `ring` exists as an escape hatch for targets where building aws-lc-sys is painful
+# (e.g. the iOS simulator). The two are mutually exclusive: enabling both is a
+# compile error in foxglove. To use `ring`, set `--no-default-features` and select
+# it explicitly.
 [features]
+default = ["aws-lc-rs"]
 remote-access = ["foxglove/remote-access"]
+aws-lc-rs = ["foxglove/aws-lc-rs"]
+ring = ["foxglove/ring"]
+
+# The full set of supported features, with opinionated choices for mutually-
+# exclusive feature sets.
+full = ["aws-lc-rs", "remote-access"]
 
 [lints]
 workspace = true
@@ -26,8 +40,8 @@ foxglove = { path = "../rust/foxglove", default-features = false }
 foxglove = { path = "../rust/foxglove", default-features = false, features = [
   "lz4",
   "sysinfo",
-  "tls",
   "websocket",
+  "websocket-tls",
   "zstd",
 ] }
 base64 = "0.22.1"

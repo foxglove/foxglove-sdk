@@ -1,14 +1,14 @@
-//! Support for TLS in the WebSocket server, if the "tls" feature is enabled.
+//! Support for TLS in the WebSocket server, if the "websocket-tls" feature is enabled.
 //! When disabled, provides no-op implementations over plain streams.
 
-#[cfg(not(feature = "tls"))]
+#[cfg(not(feature = "websocket-tls"))]
 mod no_tls;
-#[cfg(not(feature = "tls"))]
+#[cfg(not(feature = "websocket-tls"))]
 pub(crate) use no_tls::{StreamConfiguration, TlsStream};
 
-#[cfg(feature = "tls")]
+#[cfg(feature = "websocket-tls")]
 mod rust_tls;
-#[cfg(feature = "tls")]
+#[cfg(feature = "websocket-tls")]
 pub(crate) use rust_tls::{StreamConfiguration, TlsStream};
 use tokio::net::TcpStream;
 use tokio_util::either::Either;

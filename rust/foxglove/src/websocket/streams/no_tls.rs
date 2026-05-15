@@ -1,4 +1,4 @@
-//! Facades for TLS support when the "tls" feature is disabled.
+//! Facades for TLS support when the "websocket-tls" feature is disabled.
 
 use crate::{
     FoxgloveError,
