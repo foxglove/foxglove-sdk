@@ -1196,7 +1196,7 @@ name = "example_channelless"
 version = "0.0.0"
 dependencies = [
  "env_logger",
- "foxglove 0.23.2",
+ "foxglove 0.24.0",
  "mcap 0.24.0",
  "schemars 1.0.4",
  "serde",
@@ -1208,7 +1208,7 @@ version = "0.0.0"
 dependencies = [
  "clap",
  "env_logger",
- "foxglove 0.23.2",
+ "foxglove 0.24.0",
  "serde_json",
  "tokio",
  "tokio-util",
@@ -1221,7 +1221,7 @@ dependencies = [
  "clap",
  "ctrlc",
  "env_logger",
- "foxglove 0.23.2",
+ "foxglove 0.24.0",
  "schemars 1.0.4",
  "serde",
 ]
@@ -1232,7 +1232,7 @@ version = "0.0.0"
 dependencies = [
  "ctrlc",
  "env_logger",
- "foxglove 0.23.2",
+ "foxglove 0.24.0",
 ]
 
 [[package]]
@@ -1241,7 +1241,7 @@ version = "0.0.0"
 dependencies = [
  "clap",
  "env_logger",
- "foxglove 0.23.2",
+ "foxglove 0.24.0",
  "tokio",
  "tokio-util",
 ]
@@ -1250,7 +1250,7 @@ dependencies = [
 name = "example_prost"
 version = "0.0.0"
 dependencies = [
- "foxglove 0.23.2",
+ "foxglove 0.24.0",
  "prost 0.14.3",
  "prost-build 0.14.3",
 ]
@@ -1261,7 +1261,7 @@ version = "0.0.0"
 dependencies = [
  "ctrlc",
  "env_logger",
- "foxglove 0.23.2",
+ "foxglove 0.24.0",
 ]
 
 [[package]]
@@ -1270,7 +1270,7 @@ version = "0.0.0"
 dependencies = [
  "clap",
  "env_logger",
- "foxglove 0.23.2",
+ "foxglove 0.24.0",
  "serde_json",
  "tokio",
  "tracing",
@@ -1281,7 +1281,7 @@ name = "example_remote_access_fetch_asset"
 version = "0.0.0"
 dependencies = [
  "env_logger",
- "foxglove 0.23.2",
+ "foxglove 0.24.0",
  "log",
  "tokio",
 ]
@@ -1292,7 +1292,7 @@ version = "0.0.0"
 dependencies = [
  "anyhow",
  "env_logger",
- "foxglove 0.23.2",
+ "foxglove 0.24.0",
  "schemars 1.0.4",
  "serde",
  "serde_json",
@@ -1307,7 +1307,7 @@ dependencies = [
  "anyhow",
  "clap",
  "env_logger",
- "foxglove 0.23.2",
+ "foxglove 0.24.0",
  "mcap 0.24.0",
  "tokio",
 ]
@@ -1318,7 +1318,7 @@ version = "0.0.0"
 dependencies = [
  "axum",
  "chrono",
- "foxglove 0.23.2",
+ "foxglove 0.24.0",
  "futures",
  "remote_data_loader_backend_conformance",
  "serde",
@@ -1330,12 +1330,12 @@ dependencies = [
 
 [[package]]
 name = "example_structured_logging"
-version = "0.23.2"
+version = "0.24.0"
 dependencies = [
  "bytes",
  "chrono",
  "env_logger",
- "foxglove 0.23.2",
+ "foxglove 0.24.0",
  "schemars 1.0.4",
  "serde",
  "serde_json",
@@ -1347,7 +1347,7 @@ version = "0.0.0"
 dependencies = [
  "clap",
  "env_logger",
- "foxglove 0.23.2",
+ "foxglove 0.24.0",
  "quaternion",
  "tokio",
 ]
@@ -1359,7 +1359,7 @@ dependencies = [
  "clap",
  "ctrlc",
  "env_logger",
- "foxglove 0.23.2",
+ "foxglove 0.24.0",
 ]
 
 [[package]]
@@ -1368,7 +1368,7 @@ version = "0.0.0"
 dependencies = [
  "clap",
  "env_logger",
- "foxglove 0.23.2",
+ "foxglove 0.24.0",
  "log",
  "tokio",
 ]
@@ -1381,7 +1381,7 @@ dependencies = [
  "bytes",
  "clap",
  "env_logger",
- "foxglove 0.23.2",
+ "foxglove 0.24.0",
  "futures",
  "parking_lot",
  "schemars 1.0.4",
@@ -1401,7 +1401,7 @@ dependencies = [
  "clap",
  "ctrlc",
  "env_logger",
- "foxglove 0.23.2",
+ "foxglove 0.24.0",
  "mcap 0.24.0",
  "tracing",
 ]
@@ -1546,7 +1546,7 @@ dependencies = [
 
 [[package]]
 name = "foxglove"
-version = "0.23.2"
+version = "0.24.0"
 dependencies = [
  "arc-swap",
  "assert_matches",
@@ -1558,7 +1558,7 @@ dependencies = [
  "chrono",
  "delegate",
  "flume",
- "foxglove_derive 0.23.2",
+ "foxglove_derive 0.24.0",
  "futures",
  "futures-util",
  "hexdump",
@@ -1601,11 +1601,11 @@ dependencies = [
 
 [[package]]
 name = "foxglove-sdk-python"
-version = "0.23.2"
+version = "0.24.0"
 dependencies = [
  "base64 0.22.1",
  "bytes",
- "foxglove 0.23.2",
+ "foxglove 0.24.0",
  "log",
  "maplit",
  "prost-types 0.13.5",
@@ -1621,13 +1621,13 @@ dependencies = [
 
 [[package]]
 name = "foxglove_c"
-version = "0.23.2"
+version = "0.24.0"
 dependencies = [
  "base64 0.22.1",
  "bitflags",
  "cbindgen",
  "env_logger",
- "foxglove 0.23.2",
+ "foxglove 0.24.0",
  "log",
  "maplit",
  "mcap 0.24.0",
@@ -1660,11 +1660,11 @@ dependencies = [
 
 [[package]]
 name = "foxglove_derive"
-version = "0.23.2"
+version = "0.24.0"
 dependencies = [
  "bytes",
  "chrono",
- "foxglove 0.23.2",
+ "foxglove 0.24.0",
  "proc-macro2",
  "prost 0.14.3",
  "prost-reflect",
@@ -4077,7 +4077,7 @@ dependencies = [
  "anyhow",
  "axum",
  "dotenvy",
- "foxglove 0.23.2",
+ "foxglove 0.24.0",
  "futures-util",
  "livekit",
  "livekit-api",
@@ -4094,7 +4094,7 @@ dependencies = [
 name = "remote_data_loader_backend_conformance"
 version = "0.0.0"
 dependencies = [
- "foxglove 0.23.2",
+ "foxglove 0.24.0",
  "jsonschema",
  "libtest-mimic",
  "mcap 0.24.0",
