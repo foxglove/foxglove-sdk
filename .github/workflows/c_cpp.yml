@@ -159,6 +159,9 @@ jobs:
           # Set a cache key to distinguish the remote-access-enabled linux
           # builds from the non-remote-access-enabled linux builds.
           cache-key: ${{ matrix.remote_access && 'ra-v2' || '' }}
+          # Don't cache ~/.cargo/bin — caching rustup proxies has poisoned
+          # the iOS-sim runner with a rustup-init binary masquerading as cargo.
+          cache-bin: false
 
       # aws-lc-sys requires iOS 13+ to build. The conditional treats an unset
       # `crypto_provider` as the aws-lc-rs default, and skips this step for any
