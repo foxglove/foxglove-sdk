@@ -1136,7 +1136,7 @@ impl RemoteAccessSession {
         let last_param_unsubscribed = self
             .parameter_subscriptions
             .write()
-            .cleanup_for_removed_identity(participant_id);
+            .cleanup_for_removed_participant(participant_sid);
 
         // Listener / context / video-track / connection-graph aftercare.
         if !removed.last_unsubscribed.is_empty() {
@@ -1851,7 +1851,7 @@ impl RemoteAccessSession {
         let new_names = self
             .parameter_subscriptions
             .write()
-            .subscribe(participant.participant_id(), names);
+            .subscribe(participant.participant_sid(), names);
         if !new_names.is_empty() {
             if let Some(listener) = &self.listener {
                 listener.on_parameters_subscribe(new_names);
@@ -1876,7 +1876,7 @@ impl RemoteAccessSession {
         let old_names = self
             .parameter_subscriptions
             .write()
-            .unsubscribe(participant.participant_id(), names);
+            .unsubscribe(participant.participant_sid(), names);
         if !old_names.is_empty() {
             if let Some(listener) = &self.listener {
                 listener.on_parameters_unsubscribe(old_names);
@@ -1917,7 +1917,7 @@ impl RemoteAccessSession {
                         .iter()
                         .filter(|p| {
                             subs.subscribers(&p.name)
-                                .is_some_and(|ids| ids.contains(participant.participant_id()))
+                                .is_some_and(|sids| sids.contains(participant.participant_sid()))
                         })
                         .cloned()
                         .collect();
