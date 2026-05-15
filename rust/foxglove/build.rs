@@ -17,18 +17,38 @@
 use std::env;
 use std::path::PathBuf;
 
+enum NvencRequirement {
+    Required,
+    Warn,
+    Off,
+}
+
 fn main() {
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-env-changed=CUDA_HOME");
-    println!("cargo:rerun-if-env-changed=FOXGLOVE_REMOTE_ACCESS_QUIET");
+    println!("cargo:rerun-if-env-changed=FOXGLOVE_REMOTE_ACCESS_NVENC");
+    println!("cargo:rerun-if-env-changed=PROFILE");
 
+    // We are only interested in nvenv support if we're compiling in remote access support
     if env::var_os("CARGO_FEATURE_REMOTE_ACCESS").is_none() {
         return;
     }
 
-    // docs.rs builds with --all-features; don't surface build environment
-    // warnings there.
+    // Don't surface warnings if we're building docs.
     if env::var_os("DOCS_RS").is_some() {
+        return;
+    }
+
+    let nvenc_requirement = match env::var("FOXGLOVE_REMOTE_ACCESS_NVENC")
+        .unwrap_or_else(|_| "warn".to_string())
+        .to_ascii_lowercase()
+        .as_str()
+    {
+        "required" => NvencRequirement::Required,
+        "off" => NvencRequirement::Off,
+        _ => NvencRequirement::Warn,
+    };
+    if matches!(nvenc_requirement, NvencRequirement::Off) {
         return;
     }
 
@@ -56,32 +76,19 @@ fn main() {
         return;
     }
 
-    let cuda_home_display = cuda_home.display();
     let header_display = cuda_header.display();
-    let lines: [String; 13] = [
-        format!(
-            "remote-access feature enabled, but CUDA headers were not found at {header_display}."
-        ),
-        "  libwebrtc will fall back to software H.264 encoding for live video, which uses"
-            .to_string(),
-        "  significantly more CPU and produces lower-quality output than NVENC on NVIDIA GPUs."
-            .to_string(),
-        "  To enable hardware-accelerated H.264/H.265 encoding via NVENC:".to_string(),
-        "    1. Install the CUDA Toolkit headers (only the headers are needed at build time):"
-            .to_string(),
-        "         Ubuntu/Debian: sudo apt install nvidia-cuda-toolkit".to_string(),
-        "         Or download from https://developer.nvidia.com/cuda-downloads".to_string(),
-        format!("    2. Verify {header_display} exists, or set CUDA_HOME to your install prefix."),
-        "    3. Force a rebuild of webrtc-sys so it picks up the new headers:".to_string(),
-        "         cargo clean -p webrtc-sys".to_string(),
-        format!(
-            "         CUDA_HOME={cuda_home_display} cargo build --release --features remote-access"
-        ),
-        "  At runtime the binary dlopen()s libcuda.so.1 and libnvcuvid.so.1; install the"
-            .to_string(),
-        "  matching NVIDIA driver on the deployment host.".to_string(),
-    ];
-    for line in lines {
-        println!("cargo:warning={line}");
+    let warning = format!(
+        "cuda.h was not found at {header_display}\nH.264 software encoding will be used for video encoding instead of nvenc\nLearn more: https://docs.rs/foxglove/latest/foxglove/#remote-access-gateway"
+    );
+    match nvenc_requirement {
+        NvencRequirement::Warn => {
+            for line in warning.split('\n') {
+                println!("cargo:warning={line}");
+            }
+        }
+        NvencRequirement::Required => {
+            panic!("{warning}");
+        }
+        NvencRequirement::Off => {}
     }
 }

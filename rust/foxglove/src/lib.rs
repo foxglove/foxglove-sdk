@@ -311,6 +311,15 @@
 //! # }
 //! ```
 //!
+//! Nvidia Encoder is used to accelerate video encoding when available. This requires cuda.h to be installed.
+//! Without that, it will fall back to software H.264 encoding which is slower and lower quality.
+//! It looks for `/usr/local/cuda/include/cuda.h` or `$CUDA_HOME/include/cuda.h` if `CUDA_HOME` is set.
+//! You can install cuda via `apt install nvidia-cuda-toolkit` on Ubuntu.
+//! A warning is printed during compilation if remote access is enabled for a target that supports nvenc
+//! (Linux x86/aarch64/arm) but cuda.h wasn't found and hardware acceleration is disabled.
+//! This can be turned off by setting `FOXGLOVE_REMOTE_ACCESS_NVENC=off` before compiling.
+//! The warning can be escalated to an error by setting `FOXGLOVE_REMOTE_ACCESS_NVENC=required`.
+//!
 //! # Feature flags
 //!
 //! The Foxglove SDK defines the following feature flags:
