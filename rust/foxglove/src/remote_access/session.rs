@@ -669,11 +669,11 @@ impl RemoteAccessSession {
         true
     }
 
-    /// Returns `true` if `participant`'s SID has already been replaced in
-    /// the participant registry by a reordered same-identity reconnect.
-    /// Insert paths must call this under `subscription_lock`; otherwise
-    /// state keyed by the swept SID can be reinserted post-cleanup and
-    /// leak until session shutdown.
+    /// Returns true if this participant's SID is still in the registry. The SID may have been
+    /// removed if the participant has disconnected, or reconnected as a new session.
+    ///
+    /// Handlers that insert subscriptions and client advertisements (which are scoped to the
+    /// participant session) must perform this check after acquiring [`Self::subscription_lock`].
     fn is_participant_registered(&self, participant: &Participant) -> bool {
         self.participant_registry
             .is_sid_registered(participant.participant_sid())
