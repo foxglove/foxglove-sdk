@@ -669,6 +669,17 @@ impl RemoteAccessSession {
         true
     }
 
+    /// Returns `true` if `participant`'s SID has already been replaced in
+    /// the participant registry by a reordered same-identity reconnect.
+    /// Insert paths must call this under `subscription_lock`; otherwise
+    /// state keyed by the swept SID can be reinserted post-cleanup and
+    /// leak until session shutdown.
+    fn participant_already_swept(&self, participant: &Participant) -> bool {
+        !self
+            .participant_registry
+            .is_sid_registered(participant.participant_sid())
+    }
+
     /// Subscribes the participant to the requested channels and notifies the listener.
     ///
     /// Channels the participant is already subscribed to are silently skipped.
@@ -679,17 +690,7 @@ impl RemoteAccessSession {
         msg: client::Subscribe,
     ) {
         let _guard = self.subscription_lock.lock();
-
-        // Re-check the participant under the lock: a reordered same-identity
-        // reconnect could have replaced this SID and run its removal cleanup
-        // between `handle_client_control_message`'s identity lookup and our
-        // acquisition of `subscription_lock`. If so, skip — otherwise the
-        // sweep we missed will never run again for this SID and the
-        // subscriptions inserted below leak until session shutdown.
-        if !self
-            .participant_registry
-            .is_sid_registered(participant.participant_sid())
-        {
+        if self.participant_already_swept(participant) {
             return;
         }
 
@@ -807,17 +808,7 @@ impl RemoteAccessSession {
         // handle_client_message resolves the participant and the point where
         // insert_client_channel asserts its presence, causing a panic.
         let _guard = self.subscription_lock.lock();
-
-        // Re-check the participant under the lock: a reordered same-identity
-        // reconnect could have replaced this SID and run its removal cleanup
-        // between `handle_client_control_message`'s identity lookup and our
-        // acquisition of `subscription_lock`. If so, skip — otherwise the
-        // sweep we missed will never run again for this SID and the
-        // client-channel entry inserted below leaks until session shutdown.
-        if !self
-            .participant_registry
-            .is_sid_registered(participant.participant_sid())
-        {
+        if self.participant_already_swept(participant) {
             return;
         }
 
@@ -986,6 +977,13 @@ impl RemoteAccessSession {
             );
             return;
         }
+
+        // Avoid surfacing a misleading "Client has not advertised channel"
+        // error for a channel the prior attempt legitimately advertised.
+        if self.participant_already_swept(participant) {
+            return;
+        }
+
         let channel_id = ChannelId::new(msg.channel_id.into());
         let descriptor = {
             let state = self.channel_registry.read();
@@ -1874,17 +1872,7 @@ impl RemoteAccessSession {
             return;
         }
         let _guard = self.subscription_lock.lock();
-
-        // Re-check the participant under the lock: a reordered same-identity
-        // reconnect could have replaced this SID and run its removal cleanup
-        // between `handle_client_control_message`'s identity lookup and our
-        // acquisition of `subscription_lock`. If so, skip — otherwise the
-        // sweep we missed will never run again for this SID and the
-        // parameter subscriptions inserted below leak until session shutdown.
-        if !self
-            .participant_registry
-            .is_sid_registered(participant.participant_sid())
-        {
+        if self.participant_already_swept(participant) {
             return;
         }
 

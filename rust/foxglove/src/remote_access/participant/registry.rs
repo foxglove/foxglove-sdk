@@ -205,12 +205,8 @@ impl ParticipantRegistry {
     }
 
     /// Returns `true` if a participant with the given `ParticipantSid` is
-    /// currently registered. Insert paths under `subscription_lock` use this
-    /// to skip mutations on behalf of a participant whose registration was
-    /// already swept by a reordered same-identity reconnect; without this
-    /// check, SID-keyed entries can be reinserted into channel / parameter
-    /// state after their cleanup ran, and nothing will sweep them again
-    /// until session shutdown.
+    /// currently registered. See `RemoteAccessSession::participant_already_swept`
+    /// for the use case this exists to support.
     pub(crate) fn is_sid_registered(&self, sid: &ParticipantSid) -> bool {
         self.participants.read().get_by_sid(sid).is_some()
     }
