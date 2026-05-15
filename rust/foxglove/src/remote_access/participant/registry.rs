@@ -205,8 +205,7 @@ impl ParticipantRegistry {
     }
 
     /// Returns `true` if a participant with the given `ParticipantSid` is
-    /// currently registered. See `RemoteAccessSession::participant_already_swept`
-    /// for the use case this exists to support.
+    /// currently registered.
     pub(crate) fn is_sid_registered(&self, sid: &ParticipantSid) -> bool {
         self.participants.read().get_by_sid(sid).is_some()
     }
