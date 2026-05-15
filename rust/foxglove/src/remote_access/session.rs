@@ -200,21 +200,12 @@ impl Sink for RemoteAccessSession {
     ) -> std::result::Result<(), FoxgloveError> {
         let channel_id = channel.id();
 
-        // Collect subscriber identities under the session-state lock and
-        // release it before broadcasting. Two races are possible between the
-        // collect and the registry resolve, both benign:
-        //   1. The participant has been removed and not replaced — the resolve
-        //      misses and the message is dropped (their control queue has
-        //      already been drained anyway).
-        //   2. The participant has been removed and a same-identity reconnect
-        //      has registered in their place. The resolve returns the new
-        //      attempt, which receives a MessageData for a channel it never
-        //      subscribed to. The channel ID is session-scoped (already
-        //      advertised on this session), so the viewer drops the unknown
-        //      subscription and continues. Resolution is keyed on
-        //      ParticipantIdentity, so this can never deliver data across
-        //      identities — only the same logical user across a reconnect.
-        let reliable_subscribers = {
+        // Snapshot subscriber SIDs under the channel-registry read lock and
+        // release it before resolving against the participant registry. A
+        // same-identity reconnect arrives with a *different* `ParticipantSid`,
+        // so a stale snapshotted SID resolves to `None` in the participant
+        // registry rather than the new attempt
+        let reliable_sids = {
             let state = self.channel_registry.read();
 
             // Video track publisher: stays inside the state lock since the
@@ -224,26 +215,26 @@ impl Sink for RemoteAccessSession {
             }
 
             if !state.has_data_subscribers(&channel_id) {
-                None
+                SmallVec::new()
             } else if state.qos_profile(&channel_id).reliability == Reliability::Reliable {
-                Some(state.data_subscriber_identities(&channel_id))
+                state.data_subscriber_sids(&channel_id)
             } else {
                 // Lossy channels: send via the eagerly-published data track
                 // inline, while we still hold the state read lock.
                 if let Some(track) = state.get_subscribed_data_track(&channel_id) {
                     track.log(channel_id, msg, metadata);
                 }
-                None
+                SmallVec::new()
             }
         };
 
         // Reliable channels: send MessageData via the control bytestream.
-        // Batch-resolve identities so we take the registry lock once rather
-        // than per-subscriber.
-        if let Some(subscribers) = reliable_subscribers {
+        // Batch-resolve SIDs so we take the registry lock once rather than
+        // per-subscriber.
+        if !reliable_sids.is_empty() {
             let message = MessageData::new(u64::from(channel_id), metadata.log_time, msg);
             let encoded = encode_binary_message(&message);
-            for participant in self.participant_registry.resolve_identities(subscribers) {
+            for participant in self.participant_registry.resolve_sids(reliable_sids) {
                 participant.send_control(encoded.clone());
             }
         }
@@ -322,12 +313,12 @@ impl Sink for RemoteAccessSession {
         let _guard = self.subscription_lock.lock();
         let channel_id = channel.id();
 
-        // Collect subscriber identities before removal; we'll resolve them to
+        // Snapshot subscriber SIDs before removal; we'll resolve them to
         // `Client`s after via the registry.
-        let subscriber_identities = self
+        let subscriber_sids = self
             .channel_registry
             .read()
-            .channel_subscriber_identities(&channel_id);
+            .channel_subscriber_sids(&channel_id);
 
         if !self.channel_registry.write().remove_channel(channel_id) {
             return;
@@ -345,10 +336,7 @@ impl Sink for RemoteAccessSession {
         // Fire on_unsubscribe callbacks for subscribers of the removed channel.
         if let Some(listener) = &self.listener {
             let descriptor = channel.descriptor();
-            for participant in self
-                .participant_registry
-                .resolve_identities(subscriber_identities)
-            {
+            for participant in self.participant_registry.resolve_sids(subscriber_sids) {
                 let client = Client::new(
                     participant.client_id(),
                     participant.participant_id().clone(),
@@ -721,11 +709,11 @@ impl RemoteAccessSession {
         drop(state);
 
         let mut state = self.channel_registry.write();
-        let subscribe_result = state.subscribe(participant.participant_id(), &channel_ids);
+        let subscribe_result = state.subscribe(participant.participant_sid(), &channel_ids);
         let first_video_subscribed =
-            state.subscribe_video(participant.participant_id(), &video_channel_ids);
+            state.subscribe_video(participant.participant_sid(), &video_channel_ids);
         let last_video_unsubscribed =
-            state.unsubscribe_video(participant.participant_id(), &data_channel_ids);
+            state.unsubscribe_video(participant.participant_sid(), &data_channel_ids);
         drop(state);
 
         if !subscribe_result.first_subscribed.is_empty() {
@@ -767,9 +755,9 @@ impl RemoteAccessSession {
             .collect();
 
         let mut state = self.channel_registry.write();
-        let unsubscribe_result = state.unsubscribe(participant.participant_id(), &channel_ids);
+        let unsubscribe_result = state.unsubscribe(participant.participant_sid(), &channel_ids);
         let last_video_unsubscribed =
-            state.unsubscribe_video(participant.participant_id(), &channel_ids);
+            state.unsubscribe_video(participant.participant_sid(), &channel_ids);
         drop(state);
 
         if !unsubscribe_result.last_unsubscribed.is_empty() {
@@ -1140,10 +1128,11 @@ impl RemoteAccessSession {
     fn run_participant_removal_cleanup(self: &Arc<Self>, participant: &Arc<Participant>) {
         let client_id = participant.client_id();
         let participant_id = participant.participant_id();
+        let participant_sid = participant.participant_sid();
         let removed = self
             .channel_registry
             .write()
-            .cleanup_for_removed_identity(participant_id);
+            .cleanup_for_removed_participant(participant_sid, participant_id);
         let last_param_unsubscribed = self
             .parameter_subscriptions
             .write()

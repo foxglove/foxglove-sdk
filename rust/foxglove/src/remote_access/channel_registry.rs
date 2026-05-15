@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::collections::hash_map::Entry;
 use std::sync::Arc;
 
-use livekit::id::{ParticipantIdentity, TrackSid};
+use livekit::id::{ParticipantIdentity, ParticipantSid, TrackSid};
 use smallvec::SmallVec;
 use tracing::{debug, info};
 
@@ -55,18 +55,24 @@ pub(super) struct UnsubscribeResult {
 ///
 /// A subscriber is a "data subscriber" if they appear in `subscriptions` but not in
 /// `video_subscribers`. See [`Self::has_data_subscribers`].
+///
+/// Subscription maps are keyed by [`ParticipantSid`] rather than
+/// [`ParticipantIdentity`] so a same-identity reconnect cannot inherit the
+/// prior connection's subscriptions: each connection instance gets a fresh
+/// SID, and a stale snapshotted SID resolves to `None` in the participant
+/// registry rather than the new instance.
 pub(super) struct ChannelRegistry {
     /// Channels that have been advertised to participants.
     channels: HashMap<ChannelId, Arc<RawChannel>>,
     /// QoS profile per channel.
     qos_profiles: HashMap<ChannelId, QosProfile>,
-    /// All subscriber identities per channel, regardless of subscription type.
-    subscriptions: HashMap<ChannelId, SmallVec<[ParticipantIdentity; 1]>>,
+    /// All subscriber SIDs per channel, regardless of subscription type.
+    subscriptions: HashMap<ChannelId, SmallVec<[ParticipantSid; 1]>>,
     /// Data tracks for advertised channels.
     /// Lifecycle follows channel advertise/unadvertise, not subscribe/unsubscribe.
     data_tracks: HashMap<ChannelId, DataTrack>,
-    /// Video subscriber identities per channel.
-    video_subscribers: HashMap<ChannelId, SmallVec<[ParticipantIdentity; 1]>>,
+    /// Video subscriber SIDs per channel.
+    video_subscribers: HashMap<ChannelId, SmallVec<[ParticipantSid; 1]>>,
     /// Detected video input schemas for channels.
     video_schemas: HashMap<ChannelId, VideoInputSchema>,
     /// Active video publishers, keyed by channel ID.
@@ -95,24 +101,26 @@ impl ChannelRegistry {
         }
     }
 
-    /// Sweeps `identity` out of every channel-subscription map and returns the
-    /// descriptors of channels that lost their last subscriber (and other
-    /// aftercare info) for the caller to fire listener callbacks on.
+    /// Sweeps `sid` out of every channel-subscription map and removes the
+    /// `identity`-keyed client-channel set, returning the descriptors of
+    /// channels that lost their last subscriber (and other aftercare info)
+    /// for the caller to fire listener callbacks on.
     ///
     /// Does not touch the participant registry — the caller is expected to
-    /// have already removed the participant entry there. No-op if `identity`
-    /// has no subscriptions or client channels.
+    /// have already removed the participant entry there. No-op if `sid` has
+    /// no subscriptions and `identity` has no client channels.
     #[must_use]
-    pub fn cleanup_for_removed_identity(
+    pub fn cleanup_for_removed_participant(
         &mut self,
+        sid: &ParticipantSid,
         identity: &ParticipantIdentity,
     ) -> RemovedSubscriptions {
-        info!("cleaning up state for removed identity {identity:?}");
+        info!("cleaning up state for removed participant sid={sid:?} identity={identity:?}");
 
         let mut last_unsubscribed: SmallVec<[ChannelId; 4]> = SmallVec::new();
         let mut subscribed_descriptors: SmallVec<[ChannelDescriptor; 4]> = SmallVec::new();
         for (&channel_id, subscribers) in &mut self.subscriptions {
-            if let Some(pos) = subscribers.iter().position(|id| id == identity) {
+            if let Some(pos) = subscribers.iter().position(|s| s == sid) {
                 subscribers.swap_remove(pos);
                 debug_assert!(
                     self.channels.contains_key(&channel_id),
@@ -129,7 +137,7 @@ impl ChannelRegistry {
 
         let mut last_video_unsubscribed: SmallVec<[ChannelId; 4]> = SmallVec::new();
         self.video_subscribers.retain(|&channel_id, subscribers| {
-            subscribers.retain(|id| id != identity);
+            subscribers.retain(|s| s != sid);
             if subscribers.is_empty() {
                 last_video_unsubscribed.push(channel_id);
                 false
@@ -199,11 +207,11 @@ impl ChannelRegistry {
         self.channels.get(channel_id).map(|ch| ch.descriptor())
     }
 
-    /// Returns all subscriber identities for the given channel.
-    pub fn channel_subscriber_identities(
+    /// Returns all subscriber SIDs for the given channel.
+    pub fn channel_subscriber_sids(
         &self,
         channel_id: &ChannelId,
-    ) -> SmallVec<[ParticipantIdentity; 4]> {
+    ) -> SmallVec<[ParticipantSid; 4]> {
         self.subscriptions
             .get(channel_id)
             .map(|s| s.iter().cloned().collect())
@@ -228,20 +236,20 @@ impl ChannelRegistry {
             .unwrap_or_default()
     }
 
-    /// Returns identities of participants that have data subscriptions for a channel.
+    /// Returns SIDs of participants that have data subscriptions for a channel.
     ///
     /// A "data subscriber" is one in `subscriptions` but not `video_subscribers`.
-    pub fn data_subscriber_identities(
+    pub fn data_subscriber_sids(
         &self,
         channel_id: &ChannelId,
-    ) -> SmallVec<[ParticipantIdentity; 4]> {
+    ) -> SmallVec<[ParticipantSid; 4]> {
         let Some(subscribers) = self.subscriptions.get(channel_id) else {
             return SmallVec::new();
         };
         let video_subs = self.video_subscribers.get(channel_id);
         subscribers
             .iter()
-            .filter(|identity| !video_subs.is_some_and(|vs| vs.contains(identity)))
+            .filter(|sid| !video_subs.is_some_and(|vs| vs.contains(sid)))
             .cloned()
             .collect()
     }
@@ -365,7 +373,7 @@ impl ChannelRegistry {
         }
     }
 
-    /// Subscribes a participant to the given channels.
+    /// Subscribes a participant (identified by `sid`) to the given channels.
     ///
     /// Returns:
     /// - `first_subscribed`: channel IDs that gained their first subscriber (for context notifications).
@@ -374,20 +382,20 @@ impl ChannelRegistry {
     #[must_use]
     pub fn subscribe(
         &mut self,
-        identity: &ParticipantIdentity,
+        sid: &ParticipantSid,
         channel_ids: &[ChannelId],
     ) -> SubscribeResult {
         let mut first_subscribed: SmallVec<[ChannelId; 4]> = SmallVec::new();
         let mut newly_subscribed_descriptors: SmallVec<[ChannelDescriptor; 4]> = SmallVec::new();
         for &channel_id in channel_ids {
             let subscribers = self.subscriptions.entry(channel_id).or_default();
-            if subscribers.contains(identity) {
-                info!("{identity:?} is already subscribed to channel {channel_id:?}; ignoring");
+            if subscribers.contains(sid) {
+                info!("{sid:?} is already subscribed to channel {channel_id:?}; ignoring");
                 continue;
             }
             let is_first = subscribers.is_empty();
-            subscribers.push(identity.clone());
-            debug!("{identity:?} subscribed to channel {channel_id:?}");
+            subscribers.push(sid.clone());
+            debug!("{sid:?} subscribed to channel {channel_id:?}");
             debug_assert!(
                 self.channels.contains_key(&channel_id),
                 "Subscribing to channel {channel_id:?} which is not advertised"
@@ -405,7 +413,7 @@ impl ChannelRegistry {
         }
     }
 
-    /// Unsubscribes a participant from the given channels.
+    /// Unsubscribes a participant (identified by `sid`) from the given channels.
     ///
     /// Returns:
     /// - `last_unsubscribed`: channel IDs that lost their last subscriber (for context notifications).
@@ -414,7 +422,7 @@ impl ChannelRegistry {
     #[must_use]
     pub fn unsubscribe(
         &mut self,
-        identity: &ParticipantIdentity,
+        sid: &ParticipantSid,
         channel_ids: &[ChannelId],
     ) -> UnsubscribeResult {
         let mut last_unsubscribed: SmallVec<[ChannelId; 4]> = SmallVec::new();
@@ -422,15 +430,15 @@ impl ChannelRegistry {
             SmallVec::new();
         for &channel_id in channel_ids {
             let Some(subscribers) = self.subscriptions.get_mut(&channel_id) else {
-                info!("{identity:?} is not subscribed to channel {channel_id:?}; ignoring");
+                info!("{sid:?} is not subscribed to channel {channel_id:?}; ignoring");
                 continue;
             };
-            let Some(pos) = subscribers.iter().position(|id| id == identity) else {
-                info!("{identity:?} is not subscribed to channel {channel_id:?}; ignoring");
+            let Some(pos) = subscribers.iter().position(|s| s == sid) else {
+                info!("{sid:?} is not subscribed to channel {channel_id:?}; ignoring");
                 continue;
             };
             subscribers.swap_remove(pos);
-            debug!("{identity:?} unsubscribed from channel {channel_id:?}");
+            debug!("{sid:?} unsubscribed from channel {channel_id:?}");
             debug_assert!(
                 self.channels.contains_key(&channel_id),
                 "Unsubscribing from channel {channel_id:?} which is not advertised"
@@ -458,7 +466,7 @@ impl ChannelRegistry {
         self.video_track_sids.len()
     }
 
-    /// Adds a participant to video subscribers for the given channels.
+    /// Adds a participant (identified by `sid`) to video subscribers for the given channels.
     ///
     /// The caller is responsible for calling [`Self::subscribe`] separately, if necessary.
     ///
@@ -466,17 +474,17 @@ impl ChannelRegistry {
     #[must_use]
     pub fn subscribe_video(
         &mut self,
-        identity: &ParticipantIdentity,
+        sid: &ParticipantSid,
         channel_ids: &[ChannelId],
     ) -> SmallVec<[ChannelId; 4]> {
         let mut first_subscribed: SmallVec<[ChannelId; 4]> = SmallVec::new();
         for &channel_id in channel_ids {
             let subscribers = self.video_subscribers.entry(channel_id).or_default();
-            if subscribers.contains(identity) {
+            if subscribers.contains(sid) {
                 continue;
             }
             let is_first = subscribers.is_empty();
-            subscribers.push(identity.clone());
+            subscribers.push(sid.clone());
             if is_first {
                 first_subscribed.push(channel_id);
             }
@@ -484,7 +492,7 @@ impl ChannelRegistry {
         first_subscribed
     }
 
-    /// Removes a participant from video subscribers for the given channels.
+    /// Removes a participant (identified by `sid`) from video subscribers for the given channels.
     ///
     /// The caller is responsible for calling [`Self::unsubscribe`] separately, if necessary.
     ///
@@ -492,7 +500,7 @@ impl ChannelRegistry {
     #[must_use]
     pub fn unsubscribe_video(
         &mut self,
-        identity: &ParticipantIdentity,
+        sid: &ParticipantSid,
         channel_ids: &[ChannelId],
     ) -> SmallVec<[ChannelId; 4]> {
         let mut last_unsubscribed: SmallVec<[ChannelId; 4]> = SmallVec::new();
@@ -500,7 +508,7 @@ impl ChannelRegistry {
             let Some(subscribers) = self.video_subscribers.get_mut(&channel_id) else {
                 continue;
             };
-            let Some(pos) = subscribers.iter().position(|id| id == identity) else {
+            let Some(pos) = subscribers.iter().position(|s| s == sid) else {
                 continue;
             };
             subscribers.swap_remove(pos);
@@ -558,6 +566,10 @@ mod tests {
         ParticipantIdentity(name.to_string())
     }
 
+    fn make_sid(label: &str) -> ParticipantSid {
+        crate::remote_access::participant::test_sid(label)
+    }
+
     fn make_channel(topic: &str) -> Arc<RawChannel> {
         use crate::{ChannelBuilder, Context, Schema};
         let ctx = Context::new();
@@ -584,11 +596,11 @@ mod tests {
     #[test]
     fn first_subscriber_is_reported() {
         let mut state = ChannelRegistry::new();
-        let id = make_identity("alice");
+        let sid = make_sid("alice");
         let ch = make_channel("/topic1");
         state.insert_channel(&ch);
 
-        let result = state.subscribe(&id, &[ch.id()]);
+        let result = state.subscribe(&sid, &[ch.id()]);
         assert_eq!(result.first_subscribed.as_slice(), &[ch.id()]);
         assert_eq!(result.newly_subscribed_descriptors.len(), 1);
         assert_eq!(result.newly_subscribed_descriptors[0].id(), ch.id());
@@ -597,13 +609,13 @@ mod tests {
     #[test]
     fn second_subscriber_is_not_reported_as_first() {
         let mut state = ChannelRegistry::new();
-        let id_a = make_identity("alice");
-        let id_b = make_identity("bob");
+        let sid_a = make_sid("alice");
+        let sid_b = make_sid("bob");
         let ch = make_channel("/topic1");
         state.insert_channel(&ch);
 
-        let _ = state.subscribe(&id_a, &[ch.id()]);
-        let result = state.subscribe(&id_b, &[ch.id()]);
+        let _ = state.subscribe(&sid_a, &[ch.id()]);
+        let result = state.subscribe(&sid_b, &[ch.id()]);
         assert!(result.first_subscribed.is_empty());
         assert_eq!(result.newly_subscribed_descriptors.len(), 1);
     }
@@ -611,12 +623,12 @@ mod tests {
     #[test]
     fn duplicate_subscribe_is_idempotent() {
         let mut state = ChannelRegistry::new();
-        let id = make_identity("alice");
+        let sid = make_sid("alice");
         let ch = make_channel("/topic1");
         state.insert_channel(&ch);
 
-        let _ = state.subscribe(&id, &[ch.id()]);
-        let result = state.subscribe(&id, &[ch.id()]);
+        let _ = state.subscribe(&sid, &[ch.id()]);
+        let result = state.subscribe(&sid, &[ch.id()]);
         assert!(result.first_subscribed.is_empty());
         assert!(result.newly_subscribed_descriptors.is_empty());
         assert_eq!(state.subscriptions[&ch.id()].len(), 1);
@@ -625,13 +637,13 @@ mod tests {
     #[test]
     fn subscribe_multiple_channels_at_once() {
         let mut state = ChannelRegistry::new();
-        let id = make_identity("alice");
+        let sid = make_sid("alice");
         let ch1 = make_channel("/topic1");
         let ch2 = make_channel("/topic2");
         state.insert_channel(&ch1);
         state.insert_channel(&ch2);
 
-        let result = state.subscribe(&id, &[ch1.id(), ch2.id()]);
+        let result = state.subscribe(&sid, &[ch1.id(), ch2.id()]);
         assert_eq!(result.first_subscribed.len(), 2);
         assert_eq!(result.newly_subscribed_descriptors.len(), 2);
     }
@@ -639,12 +651,12 @@ mod tests {
     #[test]
     fn last_unsubscriber_is_reported() {
         let mut state = ChannelRegistry::new();
-        let id = make_identity("alice");
+        let sid = make_sid("alice");
         let ch = make_channel("/topic1");
         state.insert_channel(&ch);
 
-        let _ = state.subscribe(&id, &[ch.id()]);
-        let result = state.unsubscribe(&id, &[ch.id()]);
+        let _ = state.subscribe(&sid, &[ch.id()]);
+        let result = state.unsubscribe(&sid, &[ch.id()]);
         assert_eq!(result.last_unsubscribed.as_slice(), &[ch.id()]);
         assert_eq!(result.actually_unsubscribed_descriptors.len(), 1);
     }
@@ -652,15 +664,15 @@ mod tests {
     #[test]
     fn unsubscribe_with_remaining_subscribers_is_not_reported() {
         let mut state = ChannelRegistry::new();
-        let id_a = make_identity("alice");
-        let id_b = make_identity("bob");
+        let sid_a = make_sid("alice");
+        let sid_b = make_sid("bob");
         let ch = make_channel("/topic1");
         state.insert_channel(&ch);
 
-        let _ = state.subscribe(&id_a, &[ch.id()]);
-        let _ = state.subscribe(&id_b, &[ch.id()]);
+        let _ = state.subscribe(&sid_a, &[ch.id()]);
+        let _ = state.subscribe(&sid_b, &[ch.id()]);
 
-        let result = state.unsubscribe(&id_a, &[ch.id()]);
+        let result = state.unsubscribe(&sid_a, &[ch.id()]);
         assert!(result.last_unsubscribed.is_empty());
         assert_eq!(state.subscriptions[&ch.id()].len(), 1);
     }
@@ -668,8 +680,8 @@ mod tests {
     #[test]
     fn unsubscribe_when_not_subscribed_is_noop() {
         let mut state = ChannelRegistry::new();
-        let id = make_identity("alice");
-        let result = state.unsubscribe(&id, &[ChannelId::new(1)]);
+        let sid = make_sid("alice");
+        let result = state.unsubscribe(&sid, &[ChannelId::new(1)]);
         assert!(result.last_unsubscribed.is_empty());
     }
 
@@ -678,50 +690,51 @@ mod tests {
     #[test]
     fn first_video_subscriber_is_reported() {
         let mut state = ChannelRegistry::new();
-        let id = make_identity("alice");
-        let first = state.subscribe_video(&id, &[ChannelId::new(1)]);
+        let sid = make_sid("alice");
+        let first = state.subscribe_video(&sid, &[ChannelId::new(1)]);
         assert_eq!(first.as_slice(), &[ChannelId::new(1)]);
     }
 
     #[test]
     fn last_video_unsubscriber_is_reported() {
         let mut state = ChannelRegistry::new();
-        let id = make_identity("alice");
-        let _ = state.subscribe_video(&id, &[ChannelId::new(1)]);
-        let last = state.unsubscribe_video(&id, &[ChannelId::new(1)]);
+        let sid = make_sid("alice");
+        let _ = state.subscribe_video(&sid, &[ChannelId::new(1)]);
+        let last = state.unsubscribe_video(&sid, &[ChannelId::new(1)]);
         assert_eq!(last.as_slice(), &[ChannelId::new(1)]);
     }
 
     #[test]
     fn video_only_subscriber_is_not_a_data_subscriber() {
         let mut state = ChannelRegistry::new();
-        let id = make_identity("alice");
+        let sid = make_sid("alice");
         let ch = make_channel("/topic1");
         state.insert_channel(&ch);
-        let _ = state.subscribe(&id, &[ch.id()]);
-        let _ = state.subscribe_video(&id, &[ch.id()]);
+        let _ = state.subscribe(&sid, &[ch.id()]);
+        let _ = state.subscribe_video(&sid, &[ch.id()]);
         assert!(!state.has_data_subscribers(&ch.id()));
     }
 
     #[test]
     fn switching_from_video_to_data() {
         let mut state = ChannelRegistry::new();
-        let id = make_identity("alice");
+        let sid = make_sid("alice");
         let ch = make_channel("/topic1");
         state.insert_channel(&ch);
-        let _ = state.subscribe(&id, &[ch.id()]);
-        let _ = state.subscribe_video(&id, &[ch.id()]);
+        let _ = state.subscribe(&sid, &[ch.id()]);
+        let _ = state.subscribe_video(&sid, &[ch.id()]);
         assert!(!state.has_data_subscribers(&ch.id()));
-        let _ = state.unsubscribe_video(&id, &[ch.id()]);
+        let _ = state.unsubscribe_video(&sid, &[ch.id()]);
         assert!(state.has_data_subscribers(&ch.id()));
     }
 
-    // ---- cleanup_for_removed_identity ----
+    // ---- cleanup_for_removed_participant ----
 
     #[test]
-    fn cleanup_missing_identity_is_noop() {
+    fn cleanup_missing_participant_is_noop() {
         let mut state = ChannelRegistry::new();
-        let cleanup = state.cleanup_for_removed_identity(&make_identity("nobody"));
+        let cleanup = state
+            .cleanup_for_removed_participant(&make_sid("nobody"), &make_identity("nobody"));
         assert!(cleanup.last_unsubscribed.is_empty());
         assert!(cleanup.last_video_unsubscribed.is_empty());
         assert!(cleanup.subscribed_descriptors.is_empty());
@@ -731,12 +744,13 @@ mod tests {
     #[test]
     fn cleanup_sweeps_subscriptions() {
         let mut state = ChannelRegistry::new();
+        let sid = make_sid("alice");
         let id = make_identity("alice");
         let ch = make_channel("/topic1");
         state.insert_channel(&ch);
-        let _ = state.subscribe(&id, &[ch.id()]);
+        let _ = state.subscribe(&sid, &[ch.id()]);
 
-        let cleanup = state.cleanup_for_removed_identity(&id);
+        let cleanup = state.cleanup_for_removed_participant(&sid, &id);
         assert_eq!(cleanup.last_unsubscribed.as_slice(), &[ch.id()]);
         assert!(!state.has_data_subscribers(&ch.id()));
     }
@@ -744,17 +758,18 @@ mod tests {
     #[test]
     fn cleanup_reports_only_last_unsubscribed_channels() {
         let mut state = ChannelRegistry::new();
+        let sid_a = make_sid("alice");
         let id_a = make_identity("alice");
-        let id_b = make_identity("bob");
+        let sid_b = make_sid("bob");
         let ch1 = make_channel("/topic1");
         let ch2 = make_channel("/topic2");
         state.insert_channel(&ch1);
         state.insert_channel(&ch2);
 
-        let _ = state.subscribe(&id_a, &[ch1.id(), ch2.id()]);
-        let _ = state.subscribe(&id_b, &[ch1.id()]);
+        let _ = state.subscribe(&sid_a, &[ch1.id(), ch2.id()]);
+        let _ = state.subscribe(&sid_b, &[ch1.id()]);
 
-        let cleanup = state.cleanup_for_removed_identity(&id_a);
+        let cleanup = state.cleanup_for_removed_participant(&sid_a, &id_a);
         // ch1 still has bob, so only ch2 should be reported.
         assert_eq!(cleanup.last_unsubscribed.as_slice(), &[ch2.id()]);
         assert_eq!(state.subscriptions[&ch1.id()].len(), 1);
@@ -763,13 +778,14 @@ mod tests {
     #[test]
     fn cleanup_sweeps_video_subscriptions() {
         let mut state = ChannelRegistry::new();
+        let sid = make_sid("alice");
         let id = make_identity("alice");
         let ch = make_channel("/topic1");
         state.insert_channel(&ch);
-        let _ = state.subscribe(&id, &[ch.id()]);
-        let _ = state.subscribe_video(&id, &[ch.id()]);
+        let _ = state.subscribe(&sid, &[ch.id()]);
+        let _ = state.subscribe_video(&sid, &[ch.id()]);
 
-        let cleanup = state.cleanup_for_removed_identity(&id);
+        let cleanup = state.cleanup_for_removed_participant(&sid, &id);
         assert_eq!(cleanup.last_unsubscribed.as_slice(), &[ch.id()]);
         assert_eq!(cleanup.last_video_unsubscribed.as_slice(), &[ch.id()]);
     }
@@ -777,25 +793,27 @@ mod tests {
     #[test]
     fn cleanup_returns_subscribed_descriptors() {
         let mut state = ChannelRegistry::new();
+        let sid = make_sid("alice");
         let id = make_identity("alice");
         let ch1 = make_channel("/topic1");
         let ch2 = make_channel("/topic2");
         state.insert_channel(&ch1);
         state.insert_channel(&ch2);
-        let _ = state.subscribe(&id, &[ch1.id(), ch2.id()]);
+        let _ = state.subscribe(&sid, &[ch1.id(), ch2.id()]);
 
-        let cleanup = state.cleanup_for_removed_identity(&id);
+        let cleanup = state.cleanup_for_removed_participant(&sid, &id);
         assert_eq!(cleanup.subscribed_descriptors.len(), 2);
     }
 
     #[test]
     fn cleanup_sweeps_client_channels() {
         let mut state = ChannelRegistry::new();
+        let sid = make_sid("alice");
         let id = make_identity("alice");
         state.insert_client_channel(&id, make_client_channel(1, "/cmd_vel"));
         state.insert_client_channel(&id, make_client_channel(2, "/joy"));
 
-        let cleanup = state.cleanup_for_removed_identity(&id);
+        let cleanup = state.cleanup_for_removed_participant(&sid, &id);
         assert_eq!(cleanup.client_channels.len(), 2);
         assert!(
             state
@@ -808,16 +826,17 @@ mod tests {
     #[test]
     fn cleanup_for_mixed_video_preferences() {
         let mut state = ChannelRegistry::new();
+        let sid_a = make_sid("alice");
         let id_a = make_identity("alice");
-        let id_b = make_identity("bob");
+        let sid_b = make_sid("bob");
         let ch = make_channel("/topic1");
         state.insert_channel(&ch);
-        let _ = state.subscribe(&id_a, &[ch.id()]);
-        let _ = state.subscribe(&id_b, &[ch.id()]);
-        let _ = state.subscribe_video(&id_a, &[ch.id()]);
+        let _ = state.subscribe(&sid_a, &[ch.id()]);
+        let _ = state.subscribe(&sid_b, &[ch.id()]);
+        let _ = state.subscribe_video(&sid_a, &[ch.id()]);
 
         // Remove alice: channel keeps bob, loses its last video subscriber.
-        let cleanup = state.cleanup_for_removed_identity(&id_a);
+        let cleanup = state.cleanup_for_removed_participant(&sid_a, &id_a);
         assert!(cleanup.last_unsubscribed.is_empty());
         assert_eq!(cleanup.last_video_unsubscribed.as_slice(), &[ch.id()]);
         assert!(state.has_data_subscribers(&ch.id()));
@@ -826,42 +845,42 @@ mod tests {
     // ---- channel + client-channel lookups ----
 
     #[test]
-    fn channel_subscriber_identities_empty_for_unknown_channel() {
+    fn channel_subscriber_sids_empty_for_unknown_channel() {
         let state = ChannelRegistry::new();
         assert!(
             state
-                .channel_subscriber_identities(&ChannelId::new(999))
+                .channel_subscriber_sids(&ChannelId::new(999))
                 .is_empty()
         );
     }
 
     #[test]
-    fn channel_subscriber_identities_returns_subscribers() {
+    fn channel_subscriber_sids_returns_subscribers() {
         let mut state = ChannelRegistry::new();
-        let id_a = make_identity("alice");
-        let id_b = make_identity("bob");
+        let sid_a = make_sid("alice");
+        let sid_b = make_sid("bob");
         let ch = make_channel("/topic1");
         state.insert_channel(&ch);
-        let _ = state.subscribe(&id_a, &[ch.id()]);
-        let _ = state.subscribe(&id_b, &[ch.id()]);
+        let _ = state.subscribe(&sid_a, &[ch.id()]);
+        let _ = state.subscribe(&sid_b, &[ch.id()]);
 
-        let result = state.channel_subscriber_identities(&ch.id());
+        let result = state.channel_subscriber_sids(&ch.id());
         assert_eq!(result.len(), 2);
-        assert!(result.contains(&id_a));
-        assert!(result.contains(&id_b));
+        assert!(result.contains(&sid_a));
+        assert!(result.contains(&sid_b));
     }
 
     #[test]
-    fn channel_subscriber_identities_empty_after_remove_channel() {
+    fn channel_subscriber_sids_empty_after_remove_channel() {
         let mut state = ChannelRegistry::new();
-        let id = make_identity("alice");
+        let sid = make_sid("alice");
         let ch = make_channel("/topic1");
         state.insert_channel(&ch);
-        let _ = state.subscribe(&id, &[ch.id()]);
-        assert_eq!(state.channel_subscriber_identities(&ch.id()).len(), 1);
+        let _ = state.subscribe(&sid, &[ch.id()]);
+        assert_eq!(state.channel_subscriber_sids(&ch.id()).len(), 1);
 
         state.remove_channel(ch.id());
-        assert!(state.channel_subscriber_identities(&ch.id()).is_empty());
+        assert!(state.channel_subscriber_sids(&ch.id()).is_empty());
     }
 
     #[test]
@@ -955,33 +974,29 @@ mod tests {
         assert_eq!(state.qos_profile(&ch.id()).reliability, Reliability::Lossy);
     }
 
-    // ---- data_subscriber_identities ----
+    // ---- data_subscriber_sids ----
 
     #[test]
-    fn data_subscriber_identities_empty_when_no_subscribers() {
+    fn data_subscriber_sids_empty_when_no_subscribers() {
         let state = ChannelRegistry::new();
-        assert!(
-            state
-                .data_subscriber_identities(&ChannelId::new(1))
-                .is_empty()
-        );
+        assert!(state.data_subscriber_sids(&ChannelId::new(1)).is_empty());
     }
 
     #[test]
-    fn data_subscriber_identities_returns_data_only_subscribers() {
+    fn data_subscriber_sids_returns_data_only_subscribers() {
         let mut state = ChannelRegistry::new();
-        let id_a = make_identity("alice");
-        let id_b = make_identity("bob");
+        let sid_a = make_sid("alice");
+        let sid_b = make_sid("bob");
         let ch = make_channel("/data");
         state.insert_channel(&ch);
         // Both subscribe (data). Bob also subscribes to video.
-        let _ = state.subscribe(&id_a, &[ch.id()]);
-        let _ = state.subscribe(&id_b, &[ch.id()]);
-        let _ = state.subscribe_video(&id_b, &[ch.id()]);
+        let _ = state.subscribe(&sid_a, &[ch.id()]);
+        let _ = state.subscribe(&sid_b, &[ch.id()]);
+        let _ = state.subscribe_video(&sid_b, &[ch.id()]);
 
-        let subs = state.data_subscriber_identities(&ch.id());
+        let subs = state.data_subscriber_sids(&ch.id());
         assert_eq!(subs.len(), 1);
-        assert_eq!(&subs[0], &id_a);
+        assert_eq!(&subs[0], &sid_a);
     }
 
     // ---- advertise-metadata rendering ----
