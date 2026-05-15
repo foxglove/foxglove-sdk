@@ -56,6 +56,8 @@ cd python/foxglove-sdk-examples/write-mcap-file
 uv run --with ../../foxglove-sdk main.py [args]
 ```
 
+Other examples include `so101-visualization`, `ws-server`, and **`oak-luxonis-4d`** (Luxonis OAK-4 / DepthAI v3 → Foxglove).
+
 Keep in mind that uv does two layers of caching.
 There's the .venv in your project directory, plus a global cache at ~/.cache/uv.
 
