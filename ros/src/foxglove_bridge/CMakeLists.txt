@@ -90,14 +90,14 @@ endif()
 # cmake-glue change don't yet, so the FetchContent download path is broken until a
 # release ships with that glue. For local development, point the override at a
 # `make build-cpp-dist`-produced tree.
-set(FOXGLOVE_SDK_VERSION "0.23.1")
+set(FOXGLOVE_SDK_VERSION "0.24.0")
 
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64")
   set(FOXGLOVE_SDK_PLATFORM "aarch64-unknown-linux-gnu")
-  set(FOXGLOVE_SDK_SHA "ec20bcf1aa769fc9b76d84ff3e15c0df3f0a2b3ee56eb7ee45e3f1e4306620bc")
+  set(FOXGLOVE_SDK_SHA "27f689210f277bbf05cddc96df14e1149ac34c9b68a6f05ba14f2c7baa7ee6ae")
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
   set(FOXGLOVE_SDK_PLATFORM "x86_64-unknown-linux-gnu")
-  set(FOXGLOVE_SDK_SHA "b949295e80eb1a9bb356e657b9c2579c886717fac290c4e48a5e9846063bf2e8")
+  set(FOXGLOVE_SDK_SHA "4381e1759f08b76f3bb2bf27ac4ab480caeb5cd71b8119221866c469534490c4")
 else()
   message(FATAL_ERROR "Unsupported platform/architecture combination: ${CMAKE_SYSTEM_PROCESSOR}-${CMAKE_SYSTEM_NAME}")
 endif()
