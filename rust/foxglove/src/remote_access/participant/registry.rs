@@ -204,6 +204,17 @@ impl ParticipantRegistry {
         self.participants.read().get_by_identity(id).cloned()
     }
 
+    /// Returns `true` if a participant with the given `ParticipantSid` is
+    /// currently registered. Insert paths under `subscription_lock` use this
+    /// to skip mutations on behalf of a participant whose registration was
+    /// already swept by a reordered same-identity reconnect; without this
+    /// check, SID-keyed entries can be reinserted into channel / parameter
+    /// state after their cleanup ran, and nothing will sweep them again
+    /// until session shutdown.
+    pub(crate) fn is_sid_registered(&self, sid: &ParticipantSid) -> bool {
+        self.participants.read().get_by_sid(sid).is_some()
+    }
+
     /// Resolves a batch of `ParticipantSid`s to `Arc<Participant>`s under a
     /// single read lock. SIDs with no matching registration are silently
     /// skipped — and a SID never resolves to a different connection instance

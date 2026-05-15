@@ -204,7 +204,7 @@ impl Sink for RemoteAccessSession {
         // release it before resolving against the participant registry. A
         // same-identity reconnect arrives with a *different* `ParticipantSid`,
         // so a stale snapshotted SID resolves to `None` in the participant
-        // registry rather than the new attempt
+        // registry rather than the new attempt.
         let reliable_sids = {
             let state = self.channel_registry.read();
 
@@ -680,6 +680,19 @@ impl RemoteAccessSession {
     ) {
         let _guard = self.subscription_lock.lock();
 
+        // Re-check the participant under the lock: a reordered same-identity
+        // reconnect could have replaced this SID and run its removal cleanup
+        // between `handle_client_control_message`'s identity lookup and our
+        // acquisition of `subscription_lock`. If so, skip — otherwise the
+        // sweep we missed will never run again for this SID and the
+        // subscriptions inserted below leak until session shutdown.
+        if !self
+            .participant_registry
+            .is_sid_registered(participant.participant_sid())
+        {
+            return;
+        }
+
         // Collect new & modified subscriptions.
         //
         // If the client's subscription request is unsatisfiable, reject it with an error status
@@ -794,6 +807,19 @@ impl RemoteAccessSession {
         // handle_client_message resolves the participant and the point where
         // insert_client_channel asserts its presence, causing a panic.
         let _guard = self.subscription_lock.lock();
+
+        // Re-check the participant under the lock: a reordered same-identity
+        // reconnect could have replaced this SID and run its removal cleanup
+        // between `handle_client_control_message`'s identity lookup and our
+        // acquisition of `subscription_lock`. If so, skip — otherwise the
+        // sweep we missed will never run again for this SID and the
+        // client-channel entry inserted below leaks until session shutdown.
+        if !self
+            .participant_registry
+            .is_sid_registered(participant.participant_sid())
+        {
+            return;
+        }
 
         if !self.has_capability(Capability::ClientPublish) {
             self.send_error(
@@ -1848,6 +1874,20 @@ impl RemoteAccessSession {
             return;
         }
         let _guard = self.subscription_lock.lock();
+
+        // Re-check the participant under the lock: a reordered same-identity
+        // reconnect could have replaced this SID and run its removal cleanup
+        // between `handle_client_control_message`'s identity lookup and our
+        // acquisition of `subscription_lock`. If so, skip — otherwise the
+        // sweep we missed will never run again for this SID and the
+        // parameter subscriptions inserted below leak until session shutdown.
+        if !self
+            .participant_registry
+            .is_sid_registered(participant.participant_sid())
+        {
+            return;
+        }
+
         let new_names = self
             .parameter_subscriptions
             .write()

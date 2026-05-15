@@ -207,10 +207,7 @@ impl ChannelRegistry {
     }
 
     /// Returns all subscriber SIDs for the given channel.
-    pub fn channel_subscriber_sids(
-        &self,
-        channel_id: &ChannelId,
-    ) -> SmallVec<[ParticipantSid; 4]> {
+    pub fn channel_subscriber_sids(&self, channel_id: &ChannelId) -> SmallVec<[ParticipantSid; 4]> {
         self.subscriptions
             .get(channel_id)
             .map(|s| s.iter().cloned().collect())
@@ -238,10 +235,7 @@ impl ChannelRegistry {
     /// Returns SIDs of participants that have data subscriptions for a channel.
     ///
     /// A "data subscriber" is one in `subscriptions` but not `video_subscribers`.
-    pub fn data_subscriber_sids(
-        &self,
-        channel_id: &ChannelId,
-    ) -> SmallVec<[ParticipantSid; 4]> {
+    pub fn data_subscriber_sids(&self, channel_id: &ChannelId) -> SmallVec<[ParticipantSid; 4]> {
         let Some(subscribers) = self.subscriptions.get(channel_id) else {
             return SmallVec::new();
         };

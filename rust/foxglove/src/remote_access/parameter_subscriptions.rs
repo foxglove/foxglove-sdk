@@ -64,10 +64,7 @@ impl ParameterSubscriptions {
     ///
     /// Returns parameter names that lost their last subscriber. No-op if `sid` was not
     /// subscribed to any parameter.
-    pub(super) fn cleanup_for_removed_participant(
-        &mut self,
-        sid: &ParticipantSid,
-    ) -> Vec<String> {
+    pub(super) fn cleanup_for_removed_participant(&mut self, sid: &ParticipantSid) -> Vec<String> {
         let mut last_unsubscribed = Vec::new();
         self.subscribers_by_name.retain(|name, subscribers| {
             subscribers.remove(sid);
