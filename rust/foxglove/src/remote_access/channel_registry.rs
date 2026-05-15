@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::collections::hash_map::Entry;
 use std::sync::Arc;
 
-use livekit::id::{ParticipantIdentity, ParticipantSid, TrackSid};
+use livekit::id::{ParticipantSid, TrackSid};
 use smallvec::SmallVec;
 use tracing::{debug, info};
 
@@ -56,11 +56,11 @@ pub(super) struct UnsubscribeResult {
 /// A subscriber is a "data subscriber" if they appear in `subscriptions` but not in
 /// `video_subscribers`. See [`Self::has_data_subscribers`].
 ///
-/// Subscription maps are keyed by [`ParticipantSid`] rather than
-/// [`ParticipantIdentity`] so a same-identity reconnect cannot inherit the
-/// prior connection's subscriptions: each connection instance gets a fresh
-/// SID, and a stale snapshotted SID resolves to `None` in the participant
-/// registry rather than the new instance.
+/// All per-participant maps (`subscriptions`, `video_subscribers`,
+/// `client_channels`) are keyed by [`ParticipantSid`] rather than identity, so
+/// a same-identity reconnect cannot inherit the prior connection's state: each
+/// connection instance gets a fresh SID, and a stale snapshotted SID resolves
+/// to `None` in the participant registry rather than the new instance.
 pub(super) struct ChannelRegistry {
     /// Channels that have been advertised to participants.
     channels: HashMap<ChannelId, Arc<RawChannel>>,
@@ -81,8 +81,8 @@ pub(super) struct ChannelRegistry {
     video_track_sids: HashMap<ChannelId, TrackSid>,
     /// Video metadata last advertised for each video channel.
     video_metadata: HashMap<ChannelId, VideoMetadata>,
-    /// Client-advertised channels, keyed by participant identity then client-assigned channel ID.
-    client_channels: HashMap<ParticipantIdentity, HashMap<ChannelId, ChannelDescriptor>>,
+    /// Client-advertised channels, keyed by participant SID then client-assigned channel ID.
+    client_channels: HashMap<ParticipantSid, HashMap<ChannelId, ChannelDescriptor>>,
 }
 
 impl ChannelRegistry {
@@ -102,20 +102,19 @@ impl ChannelRegistry {
     }
 
     /// Sweeps `sid` out of every channel-subscription map and removes the
-    /// `identity`-keyed client-channel set, returning the descriptors of
-    /// channels that lost their last subscriber (and other aftercare info)
-    /// for the caller to fire listener callbacks on.
+    /// participant's client-channel set, returning the descriptors of channels
+    /// that lost their last subscriber (and other aftercare info) for the
+    /// caller to fire listener callbacks on.
     ///
     /// Does not touch the participant registry — the caller is expected to
     /// have already removed the participant entry there. No-op if `sid` has
-    /// no subscriptions and `identity` has no client channels.
+    /// no subscriptions or client channels.
     #[must_use]
     pub fn cleanup_for_removed_participant(
         &mut self,
         sid: &ParticipantSid,
-        identity: &ParticipantIdentity,
     ) -> RemovedSubscriptions {
-        info!("cleaning up state for removed participant sid={sid:?} identity={identity:?}");
+        info!("cleaning up state for removed participant sid={sid:?}");
 
         let mut last_unsubscribed: SmallVec<[ChannelId; 4]> = SmallVec::new();
         let mut subscribed_descriptors: SmallVec<[ChannelDescriptor; 4]> = SmallVec::new();
@@ -148,7 +147,7 @@ impl ChannelRegistry {
 
         let client_channels = self
             .client_channels
-            .remove(identity)
+            .remove(sid)
             .map(|map| map.into_values().collect())
             .unwrap_or_default();
 
@@ -166,10 +165,10 @@ impl ChannelRegistry {
     /// had a channel with the same ID advertised.
     pub fn insert_client_channel(
         &mut self,
-        identity: &ParticipantIdentity,
+        sid: &ParticipantSid,
         channel: ChannelDescriptor,
     ) -> bool {
-        let map = self.client_channels.entry(identity.clone()).or_default();
+        let map = self.client_channels.entry(sid.clone()).or_default();
         match map.entry(channel.id()) {
             Entry::Occupied(_) => false,
             Entry::Vacant(v) => {
@@ -182,22 +181,22 @@ impl ChannelRegistry {
     /// Returns a client-advertised channel for a participant, if present.
     pub fn get_client_channel(
         &self,
-        identity: &ParticipantIdentity,
+        sid: &ParticipantSid,
         channel_id: ChannelId,
     ) -> Option<&ChannelDescriptor> {
-        self.client_channels.get(identity)?.get(&channel_id)
+        self.client_channels.get(sid)?.get(&channel_id)
     }
 
     /// Removes and returns a client-advertised channel for a participant.
     pub fn remove_client_channel(
         &mut self,
-        identity: &ParticipantIdentity,
+        sid: &ParticipantSid,
         channel_id: ChannelId,
     ) -> Option<ChannelDescriptor> {
-        let map = self.client_channels.get_mut(identity)?;
+        let map = self.client_channels.get_mut(sid)?;
         let descriptor = map.remove(&channel_id)?;
         if map.is_empty() {
-            self.client_channels.remove(identity);
+            self.client_channels.remove(sid);
         }
         Some(descriptor)
     }
@@ -562,10 +561,6 @@ mod tests {
     use super::*;
     use crate::img2yuv::{ImageEncoding, RawImageEncoding};
 
-    fn make_identity(name: &str) -> ParticipantIdentity {
-        ParticipantIdentity(name.to_string())
-    }
-
     fn make_sid(label: &str) -> ParticipantSid {
         crate::remote_access::participant::test_sid(label)
     }
@@ -733,8 +728,7 @@ mod tests {
     #[test]
     fn cleanup_missing_participant_is_noop() {
         let mut state = ChannelRegistry::new();
-        let cleanup = state
-            .cleanup_for_removed_participant(&make_sid("nobody"), &make_identity("nobody"));
+        let cleanup = state.cleanup_for_removed_participant(&make_sid("nobody"));
         assert!(cleanup.last_unsubscribed.is_empty());
         assert!(cleanup.last_video_unsubscribed.is_empty());
         assert!(cleanup.subscribed_descriptors.is_empty());
@@ -745,12 +739,11 @@ mod tests {
     fn cleanup_sweeps_subscriptions() {
         let mut state = ChannelRegistry::new();
         let sid = make_sid("alice");
-        let id = make_identity("alice");
         let ch = make_channel("/topic1");
         state.insert_channel(&ch);
         let _ = state.subscribe(&sid, &[ch.id()]);
 
-        let cleanup = state.cleanup_for_removed_participant(&sid, &id);
+        let cleanup = state.cleanup_for_removed_participant(&sid);
         assert_eq!(cleanup.last_unsubscribed.as_slice(), &[ch.id()]);
         assert!(!state.has_data_subscribers(&ch.id()));
     }
@@ -759,7 +752,6 @@ mod tests {
     fn cleanup_reports_only_last_unsubscribed_channels() {
         let mut state = ChannelRegistry::new();
         let sid_a = make_sid("alice");
-        let id_a = make_identity("alice");
         let sid_b = make_sid("bob");
         let ch1 = make_channel("/topic1");
         let ch2 = make_channel("/topic2");
@@ -769,7 +761,7 @@ mod tests {
         let _ = state.subscribe(&sid_a, &[ch1.id(), ch2.id()]);
         let _ = state.subscribe(&sid_b, &[ch1.id()]);
 
-        let cleanup = state.cleanup_for_removed_participant(&sid_a, &id_a);
+        let cleanup = state.cleanup_for_removed_participant(&sid_a);
         // ch1 still has bob, so only ch2 should be reported.
         assert_eq!(cleanup.last_unsubscribed.as_slice(), &[ch2.id()]);
         assert_eq!(state.subscriptions[&ch1.id()].len(), 1);
@@ -779,13 +771,12 @@ mod tests {
     fn cleanup_sweeps_video_subscriptions() {
         let mut state = ChannelRegistry::new();
         let sid = make_sid("alice");
-        let id = make_identity("alice");
         let ch = make_channel("/topic1");
         state.insert_channel(&ch);
         let _ = state.subscribe(&sid, &[ch.id()]);
         let _ = state.subscribe_video(&sid, &[ch.id()]);
 
-        let cleanup = state.cleanup_for_removed_participant(&sid, &id);
+        let cleanup = state.cleanup_for_removed_participant(&sid);
         assert_eq!(cleanup.last_unsubscribed.as_slice(), &[ch.id()]);
         assert_eq!(cleanup.last_video_unsubscribed.as_slice(), &[ch.id()]);
     }
@@ -794,14 +785,13 @@ mod tests {
     fn cleanup_returns_subscribed_descriptors() {
         let mut state = ChannelRegistry::new();
         let sid = make_sid("alice");
-        let id = make_identity("alice");
         let ch1 = make_channel("/topic1");
         let ch2 = make_channel("/topic2");
         state.insert_channel(&ch1);
         state.insert_channel(&ch2);
         let _ = state.subscribe(&sid, &[ch1.id(), ch2.id()]);
 
-        let cleanup = state.cleanup_for_removed_participant(&sid, &id);
+        let cleanup = state.cleanup_for_removed_participant(&sid);
         assert_eq!(cleanup.subscribed_descriptors.len(), 2);
     }
 
@@ -809,15 +799,14 @@ mod tests {
     fn cleanup_sweeps_client_channels() {
         let mut state = ChannelRegistry::new();
         let sid = make_sid("alice");
-        let id = make_identity("alice");
-        state.insert_client_channel(&id, make_client_channel(1, "/cmd_vel"));
-        state.insert_client_channel(&id, make_client_channel(2, "/joy"));
+        state.insert_client_channel(&sid, make_client_channel(1, "/cmd_vel"));
+        state.insert_client_channel(&sid, make_client_channel(2, "/joy"));
 
-        let cleanup = state.cleanup_for_removed_participant(&sid, &id);
+        let cleanup = state.cleanup_for_removed_participant(&sid);
         assert_eq!(cleanup.client_channels.len(), 2);
         assert!(
             state
-                .remove_client_channel(&id, ChannelId::new(1))
+                .remove_client_channel(&sid, ChannelId::new(1))
                 .is_none(),
             "map entry must be gone",
         );
@@ -827,7 +816,6 @@ mod tests {
     fn cleanup_for_mixed_video_preferences() {
         let mut state = ChannelRegistry::new();
         let sid_a = make_sid("alice");
-        let id_a = make_identity("alice");
         let sid_b = make_sid("bob");
         let ch = make_channel("/topic1");
         state.insert_channel(&ch);
@@ -836,7 +824,7 @@ mod tests {
         let _ = state.subscribe_video(&sid_a, &[ch.id()]);
 
         // Remove alice: channel keeps bob, loses its last video subscriber.
-        let cleanup = state.cleanup_for_removed_participant(&sid_a, &id_a);
+        let cleanup = state.cleanup_for_removed_participant(&sid_a);
         assert!(cleanup.last_unsubscribed.is_empty());
         assert_eq!(cleanup.last_video_unsubscribed.as_slice(), &[ch.id()]);
         assert!(state.has_data_subscribers(&ch.id()));
@@ -886,18 +874,18 @@ mod tests {
     #[test]
     fn insert_client_channel_is_noop_for_duplicate() {
         let mut state = ChannelRegistry::new();
-        let id = make_identity("alice");
+        let sid = make_sid("alice");
         let ch = make_client_channel(1, "/cmd");
-        assert!(state.insert_client_channel(&id, ch.clone()));
-        assert!(!state.insert_client_channel(&id, ch));
+        assert!(state.insert_client_channel(&sid, ch.clone()));
+        assert!(!state.insert_client_channel(&sid, ch));
     }
 
     #[test]
     fn remove_client_channel_returns_descriptor() {
         let mut state = ChannelRegistry::new();
-        let id = make_identity("alice");
-        state.insert_client_channel(&id, make_client_channel(1, "/cmd"));
-        let removed = state.remove_client_channel(&id, ChannelId::new(1));
+        let sid = make_sid("alice");
+        state.insert_client_channel(&sid, make_client_channel(1, "/cmd"));
+        let removed = state.remove_client_channel(&sid, ChannelId::new(1));
         assert_eq!(removed.unwrap().topic(), "/cmd");
     }
 
@@ -906,7 +894,7 @@ mod tests {
         let state = ChannelRegistry::new();
         assert!(
             state
-                .get_client_channel(&make_identity("nobody"), ChannelId::new(1))
+                .get_client_channel(&make_sid("nobody"), ChannelId::new(1))
                 .is_none()
         );
     }

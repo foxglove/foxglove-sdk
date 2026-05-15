@@ -850,7 +850,7 @@ impl RemoteAccessSession {
             let inserted = self
                 .channel_registry
                 .write()
-                .insert_client_channel(participant.participant_id(), descriptor.clone());
+                .insert_client_channel(participant.participant_sid(), descriptor.clone());
 
             if !inserted {
                 self.send_warning(
@@ -885,7 +885,7 @@ impl RemoteAccessSession {
             let removed = self
                 .channel_registry
                 .write()
-                .remove_client_channel(participant.participant_id(), channel_id);
+                .remove_client_channel(participant.participant_sid(), channel_id);
 
             match removed {
                 None => debug!(
@@ -964,7 +964,7 @@ impl RemoteAccessSession {
         let descriptor = {
             let state = self.channel_registry.read();
             state
-                .get_client_channel(participant.participant_id(), channel_id)
+                .get_client_channel(participant.participant_sid(), channel_id)
                 .cloned()
         };
         let Some(descriptor) = descriptor else {
@@ -1132,7 +1132,7 @@ impl RemoteAccessSession {
         let removed = self
             .channel_registry
             .write()
-            .cleanup_for_removed_participant(participant_sid, participant_id);
+            .cleanup_for_removed_participant(participant_sid);
         let last_param_unsubscribed = self
             .parameter_subscriptions
             .write()
