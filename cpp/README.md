@@ -119,8 +119,8 @@ src/                                               # C++ wrapper sources
 ```cmake
 find_package(foxglove-sdk CONFIG REQUIRED HINTS /path/to/dist)
 foxglove_sdk_add_cpp_library(my_wrapper
-    TYPE SHARED            # or STATIC
-    REMOTE_ACCESS ON       # or OFF
+    TYPE SHARED            # SHARED (default) or STATIC
+    REMOTE_ACCESS ON       # ON or OFF (default)
 )
 target_link_libraries(my_app PRIVATE my_wrapper)
 ```

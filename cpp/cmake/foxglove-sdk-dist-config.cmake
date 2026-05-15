@@ -29,12 +29,7 @@ get_filename_component(_foxglove_prefix "${CMAKE_CURRENT_LIST_DIR}/../../.." ABS
 # was built with --features remote-access. The helper below uses it to reject
 # REMOTE_ACCESS=ON requests against a non-RA dist instead of silently producing
 # a wrapper that links the wrong cdylib.
-include("${CMAKE_CURRENT_LIST_DIR}/dist-flavor.cmake" OPTIONAL RESULT_VARIABLE _foxglove_flavor_path)
-if(NOT _foxglove_flavor_path)
-  # Older dists predate the marker; assume RA, matching the historical default.
-  set(FOXGLOVE_SDK_CDYLIB_REMOTE_ACCESS ON)
-endif()
-unset(_foxglove_flavor_path)
+include("${CMAKE_CURRENT_LIST_DIR}/dist-flavor.cmake")
 
 # Standard check_required_components macro for find_package(... COMPONENTS ...).
 macro(check_required_components _NAME)
@@ -71,8 +66,8 @@ set(FOXGLOVE_SDK_CPP_SOURCES
   ${FOXGLOVE_CPP_GENERATED_SOURCES}
 )
 list(TRANSFORM FOXGLOVE_SDK_CPP_SOURCES PREPEND "${_foxglove_src_dir}/")
-set(FOXGLOVE_SDK_CPP_REMOTE_ACCESS_SOURCE ${FOXGLOVE_CPP_REMOTE_ACCESS_SOURCES})
-list(TRANSFORM FOXGLOVE_SDK_CPP_REMOTE_ACCESS_SOURCE PREPEND "${_foxglove_src_dir}/")
+set(FOXGLOVE_SDK_CPP_REMOTE_ACCESS_SOURCES ${FOXGLOVE_CPP_REMOTE_ACCESS_SOURCES})
+list(TRANSFORM FOXGLOVE_SDK_CPP_REMOTE_ACCESS_SOURCES PREPEND "${_foxglove_src_dir}/")
 set(FOXGLOVE_SDK_INCLUDE_DIRS "${_foxglove_include_dir}")
 
 # foxglove_sdk_add_cpp_library(<name>
@@ -93,6 +88,8 @@ function(foxglove_sdk_add_cpp_library name)
   cmake_parse_arguments(_arg "" "TYPE;REMOTE_ACCESS" "" ${ARGN})
   if(NOT _arg_TYPE)
     set(_arg_TYPE SHARED)
+  elseif(NOT _arg_TYPE STREQUAL "SHARED" AND NOT _arg_TYPE STREQUAL "STATIC")
+    message(FATAL_ERROR "foxglove_sdk_add_cpp_library(${name}): TYPE must be SHARED or STATIC (got '${_arg_TYPE}').")
   endif()
   if(NOT _arg_REMOTE_ACCESS)
     set(_arg_REMOTE_ACCESS OFF)
@@ -104,7 +101,7 @@ function(foxglove_sdk_add_cpp_library name)
 
   set(_srcs ${FOXGLOVE_SDK_CPP_SOURCES})
   if(_arg_REMOTE_ACCESS)
-    list(APPEND _srcs "${FOXGLOVE_SDK_CPP_REMOTE_ACCESS_SOURCE}")
+    list(APPEND _srcs "${FOXGLOVE_SDK_CPP_REMOTE_ACCESS_SOURCES}")
   endif()
 
   add_library(${name} ${_arg_TYPE} ${_srcs})

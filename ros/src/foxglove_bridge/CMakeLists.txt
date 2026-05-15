@@ -117,10 +117,8 @@ FetchContent_MakeAvailable(foxglove_sdk)
 # the config at <sdk>/lib/cmake/foxglove-sdk/foxglove-sdkConfig.cmake.
 find_package(foxglove-sdk CONFIG REQUIRED HINTS "${foxglove_sdk_SOURCE_DIR}")
 
-# Build the C++ wrapper as a SHARED library either way: with RA, dynamic-link the RA
-# cdylib (libfoxglove.so); without RA, statically bundle the non-RA staticlib
-# (libfoxglove.a) into the wrapper so the C symbols travel inside the wrapper.so and the
-# bridge component doesn't need a separate runtime dep.
+# Always build the C++ wrapper as a SHARED library: with RA, dynamic-link the RA
+# cdylib (libfoxglove.so); without RA, statically link the staticlib into the wrapper.
 if (FOXGLOVE_BRIDGE_REMOTE_ACCESS)
   foxglove_sdk_add_cpp_library(foxglove_cpp_shared TYPE SHARED REMOTE_ACCESS ON)
 else()
