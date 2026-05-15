@@ -674,9 +674,8 @@ impl RemoteAccessSession {
     /// Insert paths must call this under `subscription_lock`; otherwise
     /// state keyed by the swept SID can be reinserted post-cleanup and
     /// leak until session shutdown.
-    fn participant_already_swept(&self, participant: &Participant) -> bool {
-        !self
-            .participant_registry
+    fn is_participant_registered(&self, participant: &Participant) -> bool {
+        self.participant_registry
             .is_sid_registered(participant.participant_sid())
     }
 
@@ -690,7 +689,7 @@ impl RemoteAccessSession {
         msg: client::Subscribe,
     ) {
         let _guard = self.subscription_lock.lock();
-        if self.participant_already_swept(participant) {
+        if !self.is_participant_registered(participant) {
             return;
         }
 
@@ -808,7 +807,7 @@ impl RemoteAccessSession {
         // handle_client_message resolves the participant and the point where
         // insert_client_channel asserts its presence, causing a panic.
         let _guard = self.subscription_lock.lock();
-        if self.participant_already_swept(participant) {
+        if !self.is_participant_registered(participant) {
             return;
         }
 
@@ -978,12 +977,6 @@ impl RemoteAccessSession {
             return;
         }
 
-        // Avoid surfacing a misleading "Client has not advertised channel"
-        // error for a channel the prior attempt legitimately advertised.
-        if self.participant_already_swept(participant) {
-            return;
-        }
-
         let channel_id = ChannelId::new(msg.channel_id.into());
         let descriptor = {
             let state = self.channel_registry.read();
@@ -992,6 +985,10 @@ impl RemoteAccessSession {
                 .cloned()
         };
         let Some(descriptor) = descriptor else {
+            // If the participant was removed concurrently, don't send an error.
+            if !self.is_participant_registered(participant) {
+                return;
+            }
             self.send_error(
                 participant,
                 format!("Client has not advertised channel: {}", msg.channel_id),
@@ -1872,7 +1869,7 @@ impl RemoteAccessSession {
             return;
         }
         let _guard = self.subscription_lock.lock();
-        if self.participant_already_swept(participant) {
+        if !self.is_participant_registered(participant) {
             return;
         }
 
