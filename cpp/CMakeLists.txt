@@ -223,25 +223,16 @@ else()
   endif()
 endif()
 
-if(TARGET foxglove-static)
-  if(WIN32)
-    target_link_libraries(foxglove-static INTERFACE Bcrypt SChannel Crypt32 Ncrypt)
-  elseif(APPLE)
-    target_link_libraries(foxglove-static INTERFACE "-framework Security" "-framework CoreFoundation")
-  elseif(UNIX)
-    # Required for the Rust standard library on older glibc (< 2.34) where these are separate libraries.
-    target_link_libraries(foxglove-static INTERFACE pthread dl m)
-  endif()
-endif()
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/foxglove-static-platform-links.cmake")
 
 
 ### C++
 
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/foxglove-sources.cmake")
+
 # Generated code (excluded from clang-tidy)
-set(foxglove_generated_srcs
-    "foxglove/include/foxglove/messages.hpp"
-    "foxglove/src/messages.cpp"
-)
+set(foxglove_generated_srcs ${FOXGLOVE_CPP_GENERATED_SOURCES})
+list(TRANSFORM foxglove_generated_srcs PREPEND "foxglove/src/")
 add_library(foxglove_generated_obj OBJECT "${foxglove_generated_srcs}")
 set_property(TARGET foxglove_generated_obj PROPERTY POSITION_INDEPENDENT_CODE True)
 set_property(TARGET foxglove_generated_obj PROPERTY CXX_STANDARD 17)
@@ -254,18 +245,11 @@ target_include_directories(foxglove_generated_obj PRIVATE
 target_compile_options(foxglove_generated_obj PRIVATE ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
 target_link_options(foxglove_generated_obj PRIVATE ${SANITIZER_LINK_OPTIONS})
 
-# Hand-written C++ code
-file(GLOB_RECURSE foxglove_cpp_srcs CONFIGURE_DEPENDS
-    "foxglove/include/*.hpp"
-    "foxglove/src/*.hpp"
-    "foxglove/src/*.cpp"
-)
-list(REMOVE_ITEM foxglove_cpp_srcs
-    "${CMAKE_CURRENT_SOURCE_DIR}/foxglove/include/foxglove/messages.hpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/foxglove/src/messages.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/foxglove/include/foxglove/remote_access.hpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/foxglove/src/remote_access.cpp"
-)
+# Hand-written C++ code. Source list comes from cmake/foxglove-sources.cmake (shared
+# with the dist config). messages.cpp lives in foxglove_generated_obj; remote_access.cpp
+# lives in foxglove_ra_cpp_obj when RA is on.
+set(foxglove_cpp_srcs ${FOXGLOVE_CPP_HANDWRITTEN_SOURCES})
+list(TRANSFORM foxglove_cpp_srcs PREPEND "foxglove/src/")
 
 add_library(foxglove_cpp_obj OBJECT "${foxglove_cpp_srcs}")
 set_property(TARGET foxglove_cpp_obj PROPERTY POSITION_INDEPENDENT_CODE True)
@@ -321,10 +305,9 @@ endforeach()
 ### Remote Access (optional)
 
 if(FOXGLOVE_REMOTE_ACCESS)
-  add_library(foxglove_ra_cpp_obj OBJECT
-    "foxglove/include/foxglove/remote_access.hpp"
-    "foxglove/src/remote_access.cpp"
-  )
+  set(foxglove_ra_cpp_srcs ${FOXGLOVE_CPP_REMOTE_ACCESS_SOURCES})
+  list(TRANSFORM foxglove_ra_cpp_srcs PREPEND "foxglove/src/")
+  add_library(foxglove_ra_cpp_obj OBJECT "${foxglove_ra_cpp_srcs}")
   set_property(TARGET foxglove_ra_cpp_obj PROPERTY POSITION_INDEPENDENT_CODE True)
   set_property(TARGET foxglove_ra_cpp_obj PROPERTY CXX_STANDARD 17)
   set_property(TARGET foxglove_ra_cpp_obj PROPERTY CXX_STANDARD_REQUIRED True)
@@ -344,12 +327,15 @@ endif()
 
 ### Tests
 
-file(GLOB_RECURSE foxglove_test_srcs CONFIGURE_DEPENDS
-    "foxglove/tests/*.hpp"
-    "foxglove/tests/*.cpp"
+set(foxglove_test_srcs
+    "foxglove/tests/test_arena.cpp"
+    "foxglove/tests/test_channel.cpp"
+    "foxglove/tests/test_mcap.cpp"
+    "foxglove/tests/test_messages.cpp"
+    "foxglove/tests/test_parameter.cpp"
+    "foxglove/tests/test_system_info.cpp"
+    "foxglove/tests/test_websocket.cpp"
 )
-# Exclude integration test sources from the unit test binary.
-list(FILTER foxglove_test_srcs EXCLUDE REGEX "foxglove/tests/integration/")
 add_executable(tests "${foxglove_test_srcs}")
 set_property(TARGET tests PROPERTY CXX_STANDARD 17)
 set_property(TARGET tests PROPERTY CXX_STANDARD_REQUIRED True)
@@ -406,9 +392,13 @@ if(FOXGLOVE_BUILD_INTEGRATION_TESTS)
   )
   FetchContent_MakeAvailable(jwt-cpp)
 
-  file(GLOB foxglove_integration_test_srcs CONFIGURE_DEPENDS
-      "foxglove/tests/integration/*.hpp"
-      "foxglove/tests/integration/*.cpp"
+  set(foxglove_integration_test_srcs
+      "foxglove/tests/integration/frame.cpp"
+      "foxglove/tests/integration/livekit_setup.cpp"
+      "foxglove/tests/integration/livekit_token.cpp"
+      "foxglove/tests/integration/mock_server.cpp"
+      "foxglove/tests/integration/test_livekit.cpp"
+      "foxglove/tests/integration/viewer_connection.cpp"
   )
   add_executable(integration_tests "${foxglove_integration_test_srcs}")
   set_property(TARGET integration_tests PROPERTY CXX_STANDARD 17)
@@ -603,5 +593,7 @@ install(EXPORT foxglove-sdkTargets
 install(FILES
   "${CMAKE_CURRENT_BINARY_DIR}/foxglove-sdkConfig.cmake"
   "${CMAKE_CURRENT_BINARY_DIR}/foxglove-sdkConfigVersion.cmake"
+  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/foxglove-c-imports.cmake"
+  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/foxglove-static-platform-links.cmake"
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/foxglove-sdk
 )

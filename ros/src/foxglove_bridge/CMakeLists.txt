@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10.2)
+cmake_minimum_required(VERSION 3.17)
 
 if(POLICY CMP0048)
   cmake_policy(SET CMP0048 NEW)
@@ -82,6 +82,14 @@ if (ENDIAN)
   add_compile_definitions(ARCH_IS_BIG_ENDIAN=1)
 endif()
 
+# Fetch the released SDK zip from GitHub. To build against a locally-modified SDK,
+# override FETCHCONTENT_SOURCE_DIR_FOXGLOVE_SDK (cmake's standard FetchContent override)
+# to point at a `cpp/dist`-shaped directory — the ros/Makefile's FOXGLOVE_CPP_SDK_DIR
+# variable does this for you (see ros/README.md). The dist directory needs to contain
+# lib/cmake/foxglove-sdk/foxglove-sdkConfig.cmake; release zips built before the SDK's
+# cmake-glue change don't yet, so the FetchContent download path is broken until a
+# release ships with that glue. For local development, point the override at a
+# `make build-cpp-dist`-produced tree.
 set(FOXGLOVE_SDK_VERSION "0.23.1")
 
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64")
@@ -102,34 +110,21 @@ FetchContent_Declare(
   URL_HASH SHA256=${FOXGLOVE_SDK_SHA}
 )
 FetchContent_MakeAvailable(foxglove_sdk)
-file(GLOB_RECURSE FOXGLOVE_SDK_SOURCES CONFIGURE_DEPENDS "${foxglove_sdk_SOURCE_DIR}/src/*.cpp")
-# Exclude remote access sources when remote access is disabled.
-if (NOT FOXGLOVE_BRIDGE_REMOTE_ACCESS)
-  list(FILTER FOXGLOVE_SDK_SOURCES EXCLUDE REGEX ".*remote_access\\.cpp$")
-endif()
 
-add_library(foxglove_cpp_shared SHARED)
-target_include_directories(foxglove_cpp_shared SYSTEM
-  PUBLIC
-    $<BUILD_INTERFACE:${foxglove_sdk_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>
-)
-target_sources(foxglove_cpp_shared PRIVATE ${FOXGLOVE_SDK_SOURCES})
-# Import the prebuilt C library from the fetched SDK.
+# The dist's CMake package config defines IMPORTED targets for the prebuilt C libraries
+# (foxglove-static, foxglove-shared) and the foxglove_sdk_add_cpp_library() helper, which
+# compiles the SDK's C++ wrapper sources against our toolchain. find_package looks for
+# the config at <sdk>/lib/cmake/foxglove-sdk/foxglove-sdkConfig.cmake.
+find_package(foxglove-sdk CONFIG REQUIRED HINTS "${foxglove_sdk_SOURCE_DIR}")
+
+# Always build the C++ wrapper as a SHARED library: with RA, dynamic-link the RA
+# cdylib (libfoxglove.so); without RA, statically link the staticlib into the wrapper.
 if (FOXGLOVE_BRIDGE_REMOTE_ACCESS)
-  add_library(foxglove-shared SHARED IMPORTED)
-  set_target_properties(foxglove-shared PROPERTIES
-    IMPORTED_LOCATION ${foxglove_sdk_SOURCE_DIR}/lib/libfoxglove.so
-  )
+  foxglove_sdk_add_cpp_library(foxglove_cpp_shared TYPE SHARED REMOTE_ACCESS ON)
 else()
-  add_library(foxglove-shared STATIC IMPORTED)
-  set_target_properties(foxglove-shared PROPERTIES
-    IMPORTED_LOCATION ${foxglove_sdk_SOURCE_DIR}/lib/libfoxglove.a
-  )
+  foxglove_sdk_add_cpp_library(foxglove_cpp_shared TYPE SHARED REMOTE_ACCESS OFF)
 endif()
-target_link_libraries(foxglove_cpp_shared PRIVATE foxglove-shared)
 set_target_properties(foxglove_cpp_shared PROPERTIES
-  INSTALL_RPATH "$ORIGIN"
   BUILD_WITH_INSTALL_RPATH TRUE
 )
 
