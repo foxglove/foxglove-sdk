@@ -191,7 +191,7 @@ impl ParticipantRegistry {
     /// `Participants::remove_by_sid` cancels the flush-task and detaches its
     /// handle as part of the removal; the caller is responsible for any
     /// further cleanup (subscription sweep, listener callbacks) via
-    /// [`SessionState::cleanup_for_removed_identity`].
+    /// [`SessionState::cleanup_for_removed_participant`].
     pub(crate) fn remove_participant(
         &self,
         target_sid: &ParticipantSid,
@@ -204,18 +204,26 @@ impl ParticipantRegistry {
         self.participants.read().get_by_identity(id).cloned()
     }
 
-    /// Resolves a batch of identities to `Arc<Participant>`s under a single
-    /// read lock. Identities with no matching registration are silently
-    /// skipped (a participant may have been removed between the identity
-    /// snapshot and this call; the missed send is harmless).
-    pub(crate) fn resolve_identities<I>(&self, identities: I) -> Vec<Arc<Participant>>
+    /// Returns `true` if a participant with the given `ParticipantSid` is
+    /// currently registered.
+    pub(crate) fn is_sid_registered(&self, sid: &ParticipantSid) -> bool {
+        self.participants.read().get_by_sid(sid).is_some()
+    }
+
+    /// Resolves a batch of `ParticipantSid`s to `Arc<Participant>`s under a
+    /// single read lock. SIDs with no matching registration are silently
+    /// skipped — and a SID never resolves to a different connection instance
+    /// than the one it was minted for, because LiveKit assigns a fresh SID
+    /// per connection. A same-identity reconnect therefore has a *different*
+    /// SID, so a stale SID resolves to `None` here rather than misdelivering
+    /// to the replacement.
+    pub(crate) fn resolve_sids<I>(&self, sids: I) -> Vec<Arc<Participant>>
     where
-        I: IntoIterator<Item = ParticipantIdentity>,
+        I: IntoIterator<Item = ParticipantSid>,
     {
         let participants = self.participants.read();
-        identities
-            .into_iter()
-            .filter_map(|id| participants.get_by_identity(&id).cloned())
+        sids.into_iter()
+            .filter_map(|sid| participants.get_by_sid(&sid).cloned())
             .collect()
     }
 
