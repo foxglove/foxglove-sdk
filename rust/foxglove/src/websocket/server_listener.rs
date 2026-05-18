@@ -7,6 +7,12 @@ use crate::websocket::PlaybackState;
 /// These methods are invoked from the client's main poll loop and must not block. If blocking or
 /// long-running behavior is required, the implementation should use [`tokio::task::spawn`] (or
 /// [`tokio::task::spawn_blocking`]).
+///
+/// The parameter callbacks ([`Self::on_get_parameters`], [`Self::on_set_parameters`],
+/// [`Self::on_parameters_subscribe`], [`Self::on_parameters_unsubscribe`]) are deprecated. Use
+/// [`ParameterHandler`](super::ParameterHandler) instead, which provides responder-based
+/// asynchronous completion. When a `ParameterHandler` is registered on the server, the deprecated
+/// callbacks are not invoked.
 pub trait ServerListener: Send + Sync {
     /// Callback invoked when a client message is received.
     fn on_message_data(&self, _client: Client, _client_channel: &ClientChannel, _payload: &[u8]) {}
@@ -26,6 +32,9 @@ pub trait ServerListener: Send + Sync {
     /// Callback invoked when a client requests parameters. Requires
     /// [`Capability::Parameters`][super::Capability::Parameters]. Should return the named
     /// parameters, or all parameters if param_names is empty.
+    #[deprecated(
+        note = "Use ParameterHandler instead. This callback is not invoked when a ParameterHandler is registered on the server."
+    )]
     fn on_get_parameters(
         &self,
         _client: Client,
@@ -44,6 +53,9 @@ pub trait ServerListener: Send + Sync {
     ///
     /// Note that only `parameters` which have changed are included in the callback, but the return
     /// value must include all parameters.
+    #[deprecated(
+        note = "Use ParameterHandler instead. This callback is not invoked when a ParameterHandler is registered on the server."
+    )]
     fn on_set_parameters(
         &self,
         _client: Client,
@@ -54,9 +66,15 @@ pub trait ServerListener: Send + Sync {
     }
     /// Callback invoked when a client subscribes to the named parameters for the first time.
     /// Requires [`Capability::Parameters`][super::Capability::Parameters].
+    #[deprecated(
+        note = "Use ParameterHandler instead. This callback is not invoked when a ParameterHandler is registered on the server."
+    )]
     fn on_parameters_subscribe(&self, _param_names: Vec<String>) {}
     /// Callback invoked when the last client unsubscribes from the named parameters.
     /// Requires [`Capability::Parameters`][super::Capability::Parameters].
+    #[deprecated(
+        note = "Use ParameterHandler instead. This callback is not invoked when a ParameterHandler is registered on the server."
+    )]
     fn on_parameters_unsubscribe(&self, _param_names: Vec<String>) {}
     /// Callback invoked when the first client subscribes to the connection graph. Requires
     /// [`Capability::ConnectionGraph`][super::Capability::ConnectionGraph].

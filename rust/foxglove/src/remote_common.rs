@@ -4,6 +4,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 
 pub(crate) mod connection_graph;
 pub(crate) mod fetch_asset;
+pub(crate) mod parameters;
 pub(crate) mod semaphore;
 pub(crate) mod service;
 

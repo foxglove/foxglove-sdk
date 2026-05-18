@@ -37,6 +37,13 @@ pub use crate::remote_common::fetch_asset::AssetHandler;
 /// Type alias for the remote-access-specific asset responder.
 pub type AssetResponder = crate::remote_common::fetch_asset::AssetResponder<Client>;
 
+// Re-export parameter handler types.
+pub use crate::remote_common::parameters::{ParameterHandler, SendParameterResponse};
+/// Type alias for the remote-access-specific Get parameters responder.
+pub type GetParametersResponder = crate::remote_common::parameters::GetParametersResponder<Client>;
+/// Type alias for the remote-access-specific Set parameters responder.
+pub type SetParametersResponder = crate::remote_common::parameters::SetParametersResponder<Client>;
+
 use reqwest::StatusCode;
 use thiserror::Error;
 

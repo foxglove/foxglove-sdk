@@ -789,6 +789,8 @@ type QosClassifierFn =
 pub struct TestGatewayOptions {
     pub filter: Option<ChannelFilterFn>,
     pub listener: Option<Arc<dyn foxglove::remote_access::Listener>>,
+    pub parameter_handler:
+        Option<Arc<dyn foxglove::remote_access::ParameterHandler<foxglove::remote_access::Client>>>,
     pub capabilities: Vec<foxglove::remote_access::Capability>,
     pub services: Vec<Service>,
     pub qos_classifier: Option<QosClassifierFn>,
@@ -862,6 +864,9 @@ impl TestGateway {
         }
         if let Some(listener) = options.listener {
             gateway = gateway.listener(listener);
+        }
+        if let Some(handler) = options.parameter_handler {
+            gateway = gateway.parameter_handler(handler);
         }
         if !options.capabilities.is_empty() {
             gateway = gateway.capabilities(options.capabilities);

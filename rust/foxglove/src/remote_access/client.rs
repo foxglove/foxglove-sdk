@@ -2,9 +2,13 @@ use std::sync::{Arc, Weak};
 
 use livekit::id::ParticipantIdentity;
 
+use crate::protocol::common::parameter::Parameter;
+use crate::protocol::common::server::status::Status;
 use crate::remote_access::participant::Participant;
+use crate::remote_access::session::{RemoteAccessSession, encode_json_message};
 use crate::remote_common::ClientId;
 use crate::remote_common::fetch_asset::SendAssetResponse;
+use crate::remote_common::parameters::SendParameterResponse;
 
 /// Represents a connected remote access client.
 #[derive(Debug, Clone)]
@@ -13,10 +17,10 @@ pub struct Client {
     client_id: ClientId,
     /// LiveKit participant ID.
     participant_id: ParticipantIdentity,
-    /// Weak reference to the participant, used for sending asset responses.
-    /// Only set when created via `with_sender`. Using Weak allows the participant
-    /// to be cleaned up even if a slow handler is still holding a Client reference.
+    /// Weak reference to the participant, used for sending asset/parameter responses.
     participant: Option<Weak<Participant>>,
+    /// Weak reference to the owning session, used to broadcast parameter values to all subscribers.
+    session: Option<Weak<RemoteAccessSession>>,
 }
 
 impl Client {
@@ -26,19 +30,22 @@ impl Client {
             client_id,
             participant_id,
             participant: None,
+            session: None,
         }
     }
 
-    /// Instantiate a new client with the ability to send asset responses.
+    /// Instantiate a new client capable of sending responses asset/parameter responses.
     pub(super) fn with_sender(
         client_id: ClientId,
         participant_id: ParticipantIdentity,
         participant: &Arc<Participant>,
+        session: Weak<RemoteAccessSession>,
     ) -> Self {
         Self {
             client_id,
             participant_id,
             participant: Some(Arc::downgrade(participant)),
+            session: Some(session),
         }
     }
 
@@ -53,6 +60,20 @@ impl Client {
     #[doc(hidden)]
     pub fn participant_id(&self) -> &str {
         &self.participant_id.0
+    }
+
+    /// Send a status message to this client. Does nothing if the client has no sender or if the
+    /// participant has been dropped.
+    pub fn send_status(&self, status: Status) {
+        let Some(participant) = self.participant.as_ref().and_then(|w| w.upgrade()) else {
+            tracing::debug!(
+                client_id = ?self.client_id,
+                participant_id = ?self.participant_id,
+                "participant disconnected, dropping status message"
+            );
+            return;
+        };
+        participant.send_control(encode_json_message(&status));
     }
 }
 
@@ -82,5 +103,40 @@ impl SendAssetResponse for Client {
             Ok(data) => participant.send_asset_response(data, request_id),
             Err(err) => participant.send_asset_error(err, request_id),
         }
+    }
+}
+
+impl SendParameterResponse for Client {
+    fn send_parameter_values(&self, parameters: Vec<Parameter>, request_id: Option<String>) {
+        let Some(participant) = self.participant.as_ref().and_then(|w| w.upgrade()) else {
+            tracing::debug!(
+                client_id = ?self.client_id,
+                participant_id = ?self.participant_id,
+                "participant disconnected, dropping parameter values response"
+            );
+            return;
+        };
+        use crate::protocol::common::server::ParameterValues;
+        let mut msg = ParameterValues::new(parameters.into_iter().filter(|p| p.value.is_some()));
+        if let Some(id) = request_id {
+            msg = msg.with_id(id);
+        }
+        participant.send_control(encode_json_message(&msg));
+    }
+
+    fn broadcast_parameter_values(&self, parameters: Vec<Parameter>) {
+        let Some(session) = self.session.as_ref().and_then(|w| w.upgrade()) else {
+            tracing::debug!(
+                client_id = ?self.client_id,
+                participant_id = ?self.participant_id,
+                "session unavailable, dropping parameter broadcast"
+            );
+            return;
+        };
+        session.publish_parameter_values(parameters);
+    }
+
+    fn send_error(&self, message: &str) {
+        self.send_status(Status::error(message));
     }
 }

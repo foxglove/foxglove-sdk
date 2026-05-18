@@ -27,8 +27,8 @@ use super::ws_protocol::client::ClientMessage;
 use super::ws_protocol::server::MessageData;
 use super::ws_protocol::{self, ParseError};
 use super::{
-    AssetResponder, Capability, Client, ClientChannel, ClientChannelId, ClientId, Parameter,
-    Status, StatusLevel, advertise,
+    AssetResponder, Capability, Client, ClientChannel, ClientChannelId, ClientId,
+    GetParametersResponder, Parameter, SetParametersResponder, Status, StatusLevel, advertise,
 };
 use crate::remote_common::semaphore::Semaphore;
 
@@ -41,6 +41,7 @@ const MAX_SEND_RETRIES: usize = 10;
 const ADVERTISE_CHANNEL_BATCH_SIZE: usize = 100;
 const DEFAULT_SERVICE_CALLS_PER_CLIENT: usize = 32;
 const DEFAULT_FETCH_ASSET_CALLS_PER_CLIENT: usize = 32;
+const DEFAULT_PARAMETER_CALLS_PER_CLIENT: usize = 32;
 
 /// A reason for shutting down a client connection.
 #[derive(Debug, Clone, Copy)]
@@ -69,6 +70,9 @@ pub(super) struct ConnectedClient {
     control_plane_tx: flume::Sender<Message>,
     service_call_sem: Semaphore,
     fetch_asset_sem: Semaphore,
+    /// Caps the number of in-flight parameter handler invocations (get + set combined) per
+    /// client. Subscribe / unsubscribe are bookkeeping-only and not gated.
+    parameter_sem: Semaphore,
     /// Subscriptions from this client
     subscriptions: parking_lot::Mutex<BiHashMap<ChannelId, SubscriptionId>>,
     /// Channels advertised by this client
@@ -179,6 +183,7 @@ impl ConnectedClient {
             control_plane_tx,
             service_call_sem: Semaphore::new(DEFAULT_SERVICE_CALLS_PER_CLIENT),
             fetch_asset_sem: Semaphore::new(DEFAULT_FETCH_ASSET_CALLS_PER_CLIENT),
+            parameter_sem: Semaphore::new(DEFAULT_PARAMETER_CALLS_PER_CLIENT),
             subscriptions: parking_lot::Mutex::default(),
             advertised_channels: parking_lot::Mutex::default(),
             server: server.clone(),
@@ -202,6 +207,12 @@ impl ConnectedClient {
 
     pub fn weak(&self) -> &Weak<Self> {
         &self.weak_self
+    }
+
+    /// Returns the weak reference to the owning server, used by `Client` to broadcast parameter
+    /// values directly to all subscribers.
+    pub(super) fn server_weak(&self) -> &Weak<Server> {
+        &self.server
     }
 
     pub fn addr(&self) -> SocketAddr {
@@ -511,6 +522,19 @@ impl ConnectedClient {
             return;
         }
 
+        // ParameterHandler takes precedence over the deprecated ServerListener callbacks.
+        if let Some(handler) = server.parameter_handler() {
+            let Some(guard) = self.parameter_sem.try_acquire() else {
+                self.send_error("Too many concurrent parameter requests".to_string());
+                return;
+            };
+            let responder =
+                GetParametersResponder::new(Client::new(self), request_id.clone(), guard);
+            handler.get(Client::new(self), param_names, request_id, responder);
+            return;
+        }
+
+        #[allow(deprecated)]
         if let Some(handler) = server.listener() {
             let parameters =
                 handler.on_get_parameters(Client::new(self), param_names, request_id.as_deref());
@@ -529,6 +553,19 @@ impl ConnectedClient {
             return;
         }
 
+        // ParameterHandler takes precedence over the deprecated ServerListener callbacks.
+        if let Some(handler) = server.parameter_handler() {
+            let Some(guard) = self.parameter_sem.try_acquire() else {
+                self.send_error("Too many concurrent parameter requests".to_string());
+                return;
+            };
+            let responder =
+                SetParametersResponder::new(Client::new(self), request_id.clone(), guard);
+            handler.set(Client::new(self), parameters, request_id, responder);
+            return;
+        }
+
+        #[allow(deprecated)]
         let updated_parameters = if let Some(handler) = server.listener() {
             let updated =
                 handler.on_set_parameters(Client::new(self), parameters, request_id.as_deref());
@@ -554,7 +591,6 @@ impl ConnectedClient {
         if let Some(id) = request_id {
             msg = msg.with_id(id);
         }
-
         self.send_control_msg(&msg);
     }
 
