@@ -528,6 +528,7 @@ impl ConnectedClient {
             return;
         }
 
+        #[allow(deprecated)]
         if let Some(handler) = server.listener() {
             let parameters =
                 handler.on_get_parameters(Client::new(self), param_names, request_id.as_deref());
@@ -558,6 +559,7 @@ impl ConnectedClient {
             return;
         }
 
+        #[allow(deprecated)]
         let updated_parameters = if let Some(handler) = server.listener() {
             let updated =
                 handler.on_set_parameters(Client::new(self), parameters, request_id.as_deref());

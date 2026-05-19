@@ -1242,6 +1242,7 @@ dependencies = [
  "clap",
  "env_logger",
  "foxglove 0.24.0",
+ "log",
  "tokio",
  "tokio-util",
 ]

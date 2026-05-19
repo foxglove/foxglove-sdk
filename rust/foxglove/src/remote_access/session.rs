@@ -1832,6 +1832,7 @@ impl RemoteAccessSession {
             return;
         }
 
+        #[allow(deprecated)]
         if let Some(listener) = self.listener.as_ref() {
             let client = Client::new(
                 participant.client_id(),
@@ -1874,6 +1875,7 @@ impl RemoteAccessSession {
             return;
         }
 
+        #[allow(deprecated)]
         let updated_parameters = if let Some(listener) = self.listener.as_ref() {
             let client = Client::new(
                 participant.client_id(),
