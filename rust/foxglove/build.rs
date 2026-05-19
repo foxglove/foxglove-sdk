@@ -34,7 +34,11 @@ fn main() {
     // The cuda check is only meaningful when remote-access is also enabled,
     // since that's the only thing that pulls in webrtc-sys / NVENC support.
     if env::var_os("CARGO_FEATURE_REMOTE_ACCESS").is_none() {
-        return;
+        panic!(
+            "The `require-cuda` feature is enabled, but the`remote-access` feature is not enabled.\n\
+            Enable the `remote-access` feature or disable the `require-cuda` feature.\n\
+            Learn more: https://docs.rs/foxglove/latest/foxglove/#nvenc-hardware-acceleration"
+        );
     }
 
     // Don't surface errors when building docs.
