@@ -8,20 +8,23 @@ use std::sync::{Arc, Mutex};
 
 use anyhow::Result;
 use foxglove::protocol::v2::server::server_info;
-use foxglove::remote_access::{Capability, Listener, Parameter};
+use foxglove::remote_access::{
+    AnyClient, Capability, GetParametersResponder, Parameter, ParameterHandler,
+    SetParametersResponder,
+};
 use remote_access_tests::test_helpers::{TestGateway, TestGatewayOptions, ViewerConnection};
 use serial_test::serial;
 use tracing::info;
 use tracing_test::traced_test;
 
 // ---------------------------------------------------------------------------
-// Mock listener that records parameter callbacks
+// Mock parameter handler that records subscribe/unsubscribe calls
 // ---------------------------------------------------------------------------
 
-/// A mock [`Listener`] that handles parameter get/set requests and records
+/// A mock [`ParameterHandler`] that handles parameter get/set requests and records
 /// subscribe/unsubscribe callbacks.
-struct ParameterListener {
-    /// Parameters returned by `on_get_parameters`. Set by the test before sending requests.
+struct ParameterHandlerImpl {
+    /// Parameters returned by `get`. Set by the test before sending requests.
     stored_parameters: Mutex<Vec<Parameter>>,
     /// Records parameter names from subscribe callbacks.
     subscribed: Mutex<Vec<Vec<String>>>,
@@ -29,7 +32,7 @@ struct ParameterListener {
     unsubscribed: Mutex<Vec<Vec<String>>>,
 }
 
-impl ParameterListener {
+impl ParameterHandlerImpl {
     fn new(initial_parameters: Vec<Parameter>) -> Self {
         Self {
             stored_parameters: Mutex::new(initial_parameters),
@@ -47,31 +50,34 @@ impl ParameterListener {
     }
 }
 
-impl Listener for ParameterListener {
-    fn on_get_parameters(
+impl ParameterHandler for ParameterHandlerImpl {
+    fn get(
         &self,
-        _client: &foxglove::remote_access::Client,
-        param_names: Vec<String>,
-        _request_id: Option<&str>,
-    ) -> Vec<Parameter> {
+        _client: AnyClient,
+        names: Vec<String>,
+        _request_id: Option<String>,
+        responder: GetParametersResponder,
+    ) {
         let params = self.stored_parameters.lock().unwrap();
-        if param_names.is_empty() {
+        let values = if names.is_empty() {
             params.clone()
         } else {
             params
                 .iter()
-                .filter(|p| param_names.contains(&p.name))
+                .filter(|p| names.contains(&p.name))
                 .cloned()
                 .collect()
-        }
+        };
+        responder.respond(values);
     }
 
-    fn on_set_parameters(
+    fn set(
         &self,
-        _client: &foxglove::remote_access::Client,
+        _client: AnyClient,
         parameters: Vec<Parameter>,
-        _request_id: Option<&str>,
-    ) -> Vec<Parameter> {
+        _request_id: Option<String>,
+        responder: SetParametersResponder,
+    ) {
         let mut stored = self.stored_parameters.lock().unwrap();
         for param in &parameters {
             if let Some(existing) = stored.iter_mut().find(|p| p.name == param.name) {
@@ -80,15 +86,15 @@ impl Listener for ParameterListener {
                 stored.push(param.clone());
             }
         }
-        stored.clone()
+        responder.respond(stored.clone());
     }
 
-    fn on_parameters_subscribe(&self, param_names: Vec<String>) {
-        self.subscribed.lock().unwrap().push(param_names);
+    fn subscribe(&self, names: Vec<String>) {
+        self.subscribed.lock().unwrap().push(names);
     }
 
-    fn on_parameters_unsubscribe(&self, param_names: Vec<String>) {
-        self.unsubscribed.lock().unwrap().push(param_names);
+    fn unsubscribe(&self, names: Vec<String>) {
+        self.unsubscribed.lock().unwrap().push(names);
     }
 }
 
@@ -103,12 +109,12 @@ impl Listener for ParameterListener {
 #[serial(livekit)]
 async fn livekit_parameter_server_info_capabilities() -> Result<()> {
     let ctx = foxglove::Context::new();
-    let listener = Arc::new(ParameterListener::new(vec![]));
+    let handler = Arc::new(ParameterHandlerImpl::new(vec![]));
     let gw = TestGateway::start_with_options(
         &ctx,
         TestGatewayOptions {
             capabilities: vec![Capability::Parameters],
-            listener: Some(listener),
+            parameter_handler: Some(handler),
             ..Default::default()
         },
     )
@@ -148,12 +154,12 @@ async fn livekit_parameter_get_parameters() -> Result<()> {
         Parameter::string("foo", "hello"),
         Parameter::float64("bar", 42.0),
     ];
-    let listener = Arc::new(ParameterListener::new(params));
+    let handler = Arc::new(ParameterHandlerImpl::new(params));
     let gw = TestGateway::start_with_options(
         &ctx,
         TestGatewayOptions {
             capabilities: vec![Capability::Parameters],
-            listener: Some(listener),
+            parameter_handler: Some(handler),
             ..Default::default()
         },
     )
@@ -186,14 +192,14 @@ async fn livekit_parameter_get_parameters() -> Result<()> {
 #[serial(livekit)]
 async fn livekit_parameter_set_parameters() -> Result<()> {
     let ctx = foxglove::Context::new();
-    let listener = Arc::new(ParameterListener::new(vec![Parameter::string(
+    let handler = Arc::new(ParameterHandlerImpl::new(vec![Parameter::string(
         "color", "red",
     )]));
     let gw = TestGateway::start_with_options(
         &ctx,
         TestGatewayOptions {
             capabilities: vec![Capability::Parameters],
-            listener: Some(listener),
+            parameter_handler: Some(handler),
             ..Default::default()
         },
     )
@@ -228,12 +234,12 @@ async fn livekit_parameter_set_parameters() -> Result<()> {
 #[serial(livekit)]
 async fn livekit_parameter_subscribe_and_publish() -> Result<()> {
     let ctx = foxglove::Context::new();
-    let listener = Arc::new(ParameterListener::new(vec![]));
+    let handler = Arc::new(ParameterHandlerImpl::new(vec![]));
     let gw = TestGateway::start_with_options(
         &ctx,
         TestGatewayOptions {
             capabilities: vec![Capability::Parameters],
-            listener: Some(listener.clone()),
+            parameter_handler: Some(handler.clone()),
             ..Default::default()
         },
     )
@@ -250,11 +256,11 @@ async fn livekit_parameter_subscribe_and_publish() -> Result<()> {
     // Give the gateway time to process the subscription.
     tokio::time::sleep(std::time::Duration::from_millis(500)).await;
 
-    // Verify the listener was notified of the subscription.
-    let subscribed = listener.take_subscribed();
+    // Verify the handler was notified of the subscription.
+    let subscribed = handler.take_subscribed();
     assert!(
         !subscribed.is_empty(),
-        "listener should have received on_parameters_subscribe"
+        "handler should have received subscribe callback"
     );
 
     // Publish parameter values from the gateway handle.
@@ -280,7 +286,7 @@ async fn livekit_parameter_subscribe_and_publish() -> Result<()> {
 #[serial(livekit)]
 async fn livekit_parameter_set_notifies_subscriber_with_all_params() -> Result<()> {
     let ctx = foxglove::Context::new();
-    let listener = Arc::new(ParameterListener::new(vec![
+    let handler = Arc::new(ParameterHandlerImpl::new(vec![
         Parameter::string("color", "red"),
         Parameter::float64("size", 10.0),
     ]));
@@ -288,7 +294,7 @@ async fn livekit_parameter_set_notifies_subscriber_with_all_params() -> Result<(
         &ctx,
         TestGatewayOptions {
             capabilities: vec![Capability::Parameters],
-            listener: Some(listener),
+            parameter_handler: Some(handler),
             ..Default::default()
         },
     )
@@ -340,12 +346,12 @@ async fn livekit_parameter_set_notifies_subscriber_with_all_params() -> Result<(
 #[serial(livekit)]
 async fn livekit_parameter_publish_filters_by_subscription() -> Result<()> {
     let ctx = foxglove::Context::new();
-    let listener = Arc::new(ParameterListener::new(vec![]));
+    let handler = Arc::new(ParameterHandlerImpl::new(vec![]));
     let gw = TestGateway::start_with_options(
         &ctx,
         TestGatewayOptions {
             capabilities: vec![Capability::Parameters],
-            listener: Some(listener),
+            parameter_handler: Some(handler),
             ..Default::default()
         },
     )
@@ -382,12 +388,12 @@ async fn livekit_parameter_publish_filters_by_subscription() -> Result<()> {
 #[serial(livekit)]
 async fn livekit_parameter_unsubscribe_stops_delivery() -> Result<()> {
     let ctx = foxglove::Context::new();
-    let listener = Arc::new(ParameterListener::new(vec![]));
+    let handler = Arc::new(ParameterHandlerImpl::new(vec![]));
     let gw = TestGateway::start_with_options(
         &ctx,
         TestGatewayOptions {
             capabilities: vec![Capability::Parameters],
-            listener: Some(listener.clone()),
+            parameter_handler: Some(handler.clone()),
             ..Default::default()
         },
     )
@@ -409,11 +415,11 @@ async fn livekit_parameter_unsubscribe_stops_delivery() -> Result<()> {
     viewer.send_unsubscribe_parameter_updates(&["temp"]).await?;
     tokio::time::sleep(std::time::Duration::from_millis(500)).await;
 
-    // Verify the listener was notified of the unsubscription.
-    let unsubscribed = listener.take_unsubscribed();
+    // Verify the handler was notified of the unsubscription.
+    let unsubscribed = handler.take_unsubscribed();
     assert!(
         !unsubscribed.is_empty(),
-        "listener should have received on_parameters_unsubscribe"
+        "handler should have received unsubscribe callback"
     );
 
     // Publish again — viewer should NOT receive this.

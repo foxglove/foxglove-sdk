@@ -28,8 +28,8 @@ use super::ws_protocol::server::{
     AdvertiseServices, RemoveStatus, ServerInfo, UnadvertiseServices,
 };
 use super::{
-    AssetHandler, Capability, ClientId, ConnectionGraph, Parameter, ServerListener, Status,
-    advertise, handshake,
+    AssetHandler, Capability, ClientId, ConnectionGraph, Parameter, ParameterHandler,
+    ServerListener, Status, advertise, handshake,
 };
 
 // Queue up to 1024 messages per connected client before dropping messages
@@ -47,6 +47,7 @@ pub(crate) struct ServerOptions {
     pub supported_encodings: Option<IndexSet<String>>,
     pub runtime: Option<Handle>,
     pub fetch_asset_handler: Option<Arc<dyn AssetHandler>>,
+    pub parameter_handler: Option<Arc<dyn ParameterHandler>>,
     pub tls_identity: Option<TlsIdentity>,
     pub channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     pub server_info: Option<HashMap<String, String>>,
@@ -185,6 +186,9 @@ pub(crate) struct Server {
     services: parking_lot::RwLock<ServiceMap>,
     /// Handler for fetch asset requests
     fetch_asset_handler: Option<Arc<dyn AssetHandler>>,
+    /// Handler for client parameter operations. When set, takes precedence over the deprecated
+    /// parameter callbacks on [`ServerListener`].
+    parameter_handler: Option<Arc<dyn ParameterHandler>>,
     /// Client tasks.
     tasks: parking_lot::Mutex<Option<JoinSet<()>>>,
     /// Configuration to support TLS streams when enabled.
@@ -242,6 +246,12 @@ impl Server {
             capabilities.insert(Capability::Assets);
         }
 
+        // If the server was declared with a parameter handler, automatically add the "parameters"
+        // capability.
+        if opts.parameter_handler.is_some() {
+            capabilities.insert(Capability::Parameters);
+        }
+
         Server {
             weak_self,
             context: Arc::downgrade(ctx),
@@ -265,6 +275,7 @@ impl Server {
             cancellation_token: CancellationToken::new(),
             services: parking_lot::RwLock::new(ServiceMap::from_iter(opts.services.into_values())),
             fetch_asset_handler: opts.fetch_asset_handler,
+            parameter_handler: opts.parameter_handler,
             tasks: parking_lot::Mutex::default(),
             stream_config,
             server_info: opts.server_info.unwrap_or_default(),
@@ -291,6 +302,11 @@ impl Server {
     /// Returns a reference to the fetch asset handler.
     pub(super) fn fetch_asset_handler(&self) -> Option<&dyn AssetHandler> {
         self.fetch_asset_handler.as_deref()
+    }
+
+    /// Returns a reference to the parameter handler, if registered.
+    pub(super) fn parameter_handler(&self) -> Option<&dyn ParameterHandler> {
+        self.parameter_handler.as_deref()
     }
 
     /// Returns a reference to the server listener.
@@ -431,9 +447,11 @@ impl Server {
             }
         }
 
-        // Notify listener.
+        // Notify handler. ParameterHandler takes precedence over the deprecated listener method.
         if !new_names.is_empty() {
-            if let Some(listener) = self.listener.as_ref() {
+            if let Some(handler) = self.parameter_handler.as_ref() {
+                handler.subscribe(new_names);
+            } else if let Some(listener) = self.listener.as_ref() {
                 listener.on_parameters_subscribe(new_names);
             }
         }
@@ -454,9 +472,11 @@ impl Server {
             }
         }
 
-        // Notify listener.
+        // Notify handler. ParameterHandler takes precedence over the deprecated listener method.
         if !old_names.is_empty() {
-            if let Some(listener) = self.listener.as_ref() {
+            if let Some(handler) = self.parameter_handler.as_ref() {
+                handler.unsubscribe(old_names);
+            } else if let Some(listener) = self.listener.as_ref() {
                 listener.on_parameters_unsubscribe(old_names);
             }
         }
@@ -477,9 +497,11 @@ impl Server {
             subs.remove(name);
         }
 
-        // Notify listener.
+        // Notify handler. ParameterHandler takes precedence over the deprecated listener method.
         if !old_names.is_empty() {
-            if let Some(listener) = self.listener.as_ref() {
+            if let Some(handler) = self.parameter_handler.as_ref() {
+                handler.unsubscribe(old_names);
+            } else if let Some(listener) = self.listener.as_ref() {
                 listener.on_parameters_unsubscribe(old_names);
             }
         }

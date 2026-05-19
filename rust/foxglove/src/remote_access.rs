@@ -33,8 +33,11 @@ pub use crate::protocol::v2::parameter::{Parameter, ParameterType, ParameterValu
 // Re-export status types so callers can publish and remove status messages.
 pub use crate::protocol::v2::server::status::{Level as StatusLevel, Status};
 
-// Re-export fetch-asset types.
+// Re-export fetch-asset and parameter handler types.
 pub use crate::remote_common::fetch_asset::{AssetHandler, AssetResponder};
+pub use crate::remote_common::parameters::{
+    GetParametersResponder, ParameterHandler, SetParametersResponder,
+};
 
 use reqwest::StatusCode;
 use thiserror::Error;
