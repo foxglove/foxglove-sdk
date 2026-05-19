@@ -719,7 +719,7 @@ unsafe fn do_foxglove_gateway_start(
 
     // Fetch asset handler
     if let Some(fetch_asset) = options.fetch_asset {
-        gateway = gateway.fetch_asset_handler(Box::new(FetchAssetHandler::new(
+        gateway = gateway.fetch_asset_handler(Arc::new(FetchAssetHandler::new(
             options.fetch_asset_context,
             fetch_asset,
         )));

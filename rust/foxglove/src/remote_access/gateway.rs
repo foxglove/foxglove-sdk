@@ -167,7 +167,7 @@ pub struct Gateway {
     capabilities: Vec<Capability>,
     supported_encodings: Option<IndexSet<String>>,
     services: HashMap<String, Service>,
-    fetch_asset_handler: Option<Box<dyn AssetHandler>>,
+    fetch_asset_handler: Option<Arc<dyn AssetHandler>>,
     runtime: Option<Handle>,
     channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     qos_classifier: Option<Arc<dyn QosClassifier>>,
@@ -374,7 +374,7 @@ impl Gateway {
 
     /// Configure the handler for fetching assets.
     /// There can only be one asset handler, exclusive with the other fetch_asset_handler methods.
-    pub fn fetch_asset_handler(mut self, handler: Box<dyn AssetHandler>) -> Self {
+    pub fn fetch_asset_handler(mut self, handler: Arc<dyn AssetHandler>) -> Self {
         self.fetch_asset_handler = Some(handler);
         self
     }
@@ -387,7 +387,7 @@ impl Gateway {
         T: AsRef<[u8]>,
         Err: Display,
     {
-        self.fetch_asset_handler = Some(Box::new(BlockingAssetHandlerFn(Arc::new(handler))));
+        self.fetch_asset_handler = Some(Arc::new(BlockingAssetHandlerFn(Arc::new(handler))));
         self
     }
 
@@ -400,7 +400,7 @@ impl Gateway {
         T: AsRef<[u8]>,
         Err: Display,
     {
-        self.fetch_asset_handler = Some(Box::new(AsyncAssetHandlerFn(Arc::new(handler))));
+        self.fetch_asset_handler = Some(Arc::new(AsyncAssetHandlerFn(Arc::new(handler))));
         self
     }
 
@@ -483,7 +483,7 @@ impl Gateway {
             listener: self.listener,
             capabilities: self.capabilities,
             supported_encodings: self.supported_encodings,
-            fetch_asset_handler: self.fetch_asset_handler.map(Arc::from),
+            fetch_asset_handler: self.fetch_asset_handler,
             runtime: runtime.clone(),
             channel_filter: self.channel_filter,
             qos_classifier: self.qos_classifier,

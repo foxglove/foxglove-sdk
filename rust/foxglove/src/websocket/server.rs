@@ -46,7 +46,7 @@ pub(crate) struct ServerOptions {
     pub services: HashMap<String, Service>,
     pub supported_encodings: Option<IndexSet<String>>,
     pub runtime: Option<Handle>,
-    pub fetch_asset_handler: Option<Box<dyn AssetHandler>>,
+    pub fetch_asset_handler: Option<Arc<dyn AssetHandler>>,
     pub tls_identity: Option<TlsIdentity>,
     pub channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     pub server_info: Option<HashMap<String, String>>,
@@ -184,7 +184,7 @@ pub(crate) struct Server {
     /// Registered services.
     services: parking_lot::RwLock<ServiceMap>,
     /// Handler for fetch asset requests
-    fetch_asset_handler: Option<Box<dyn AssetHandler>>,
+    fetch_asset_handler: Option<Arc<dyn AssetHandler>>,
     /// Client tasks.
     tasks: parking_lot::Mutex<Option<JoinSet<()>>>,
     /// Configuration to support TLS streams when enabled.

@@ -16,6 +16,7 @@
 
 use std::collections::HashMap;
 use std::path::Path;
+use std::sync::Arc;
 use std::time::Duration;
 
 use foxglove::LazyChannel;
@@ -67,7 +68,7 @@ async fn main() {
     let asset_server = AssetServer::new();
 
     let handle = Gateway::new()
-        .fetch_asset_handler(Box::new(asset_server))
+        .fetch_asset_handler(Arc::new(asset_server))
         .start()
         .expect("Failed to start remote access gateway");
 

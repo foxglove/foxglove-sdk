@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::path::Path;
+use std::sync::Arc;
 use std::time::Duration;
 
 use clap::Parser;
@@ -66,7 +67,7 @@ async fn main() {
     let server = foxglove::WebSocketServer::new()
         .name(env!("CARGO_PKG_NAME"))
         .bind(&args.host, args.port)
-        .fetch_asset_handler(Box::new(asset_server))
+        .fetch_asset_handler(Arc::new(asset_server))
         .start()
         .await
         .expect("Server failed to start");
