@@ -3,52 +3,41 @@
 //! When the `remote-access` feature is enabled, the crate pulls in
 //! `livekit` / `libwebrtc` / `webrtc-sys`. On targets where `webrtc-sys`
 //! tries to compile NVIDIA NVENC support (Linux on x86_64 / aarch64 / arm),
-//! its build script silently falls back to software H.264/H.265 encoding if
-//! `cuda.h` is not found at build time. That fallback is easy to miss and
-//! results in dramatically higher CPU usage and lower video quality for live
+//! its build script falls back to software H.264/H.265 encoding if `cuda.h`
+//! is not found at build time. Upstream does emit a `cargo:warning=` for the
+//! fallback, but cargo hides build-script warnings from non-path (registry)
+//! dependencies, so the fallback silently slips through in practice. The
+//! result is dramatically higher CPU usage and lower video quality for live
 //! remote access.
 //!
-//! This script mirrors the detection performed by `webrtc-sys`'s own
-//! `build.rs` (look for `$CUDA_HOME/include/cuda.h`, defaulting to
-//! `/usr/local/cuda`) and emits a `cargo:warning=` with installation
-//! instructions when the headers are missing on a target where webrtc-sys
-//! would otherwise have built NVENC support.
+//! When the `cuda` feature is enabled, this script mirrors the set of
+//! targets `webrtc-sys`'s own `build.rs` builds NVENC support for and
+//! performs the same `cuda.h` lookup (`$CUDA_HOME/include/cuda.h`,
+//! defaulting to `/usr/local/cuda/include/cuda.h`). If the header is
+//! missing on a target where webrtc-sys would otherwise have built NVENC
+//! support, the build fails with installation instructions.
 
 use std::env;
 use std::path::PathBuf;
 
-enum NvencRequirement {
-    Required,
-    Warn,
-    Off,
-}
-
 fn main() {
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-env-changed=CUDA_HOME");
-    println!("cargo:rerun-if-env-changed=FOXGLOVE_REMOTE_ACCESS_NVENC");
-    println!("cargo:rerun-if-env-changed=PROFILE");
 
-    // We are only interested in nvenv support if we're compiling in remote access support
+    // The `cuda` feature is what opts in to the cuda.h check. Without it we
+    // do nothing.
+    if env::var_os("CARGO_FEATURE_CUDA").is_none() {
+        return;
+    }
+
+    // The cuda check is only meaningful when remote-access is also enabled,
+    // since that's the only thing that pulls in webrtc-sys / NVENC support.
     if env::var_os("CARGO_FEATURE_REMOTE_ACCESS").is_none() {
         return;
     }
 
-    // Don't surface warnings if we're building docs.
+    // Don't surface errors when building docs.
     if env::var_os("DOCS_RS").is_some() {
-        return;
-    }
-
-    let nvenc_requirement = match env::var("FOXGLOVE_REMOTE_ACCESS_NVENC")
-        .unwrap_or_else(|_| "warn".to_string())
-        .to_ascii_lowercase()
-        .as_str()
-    {
-        "required" => NvencRequirement::Required,
-        "off" => NvencRequirement::Off,
-        _ => NvencRequirement::Warn,
-    };
-    if matches!(nvenc_requirement, NvencRequirement::Off) {
         return;
     }
 
@@ -56,8 +45,9 @@ fn main() {
     let target_arch = env::var("CARGO_CFG_TARGET_ARCH").unwrap_or_default();
 
     // webrtc-sys only compiles NVENC support on Linux for x86 / aarch64 / arm
-    // (see webrtc-sys/build.rs). Stay silent on platforms where it would not
-    // have been built regardless of CUDA availability.
+    // (see webrtc-sys/build.rs). Match the same set of targets, expressed in
+    // cargo's `CARGO_CFG_TARGET_ARCH` vocabulary (which uses "x86" rather
+    // than the "i686" upstream parses out of the target triple).
     if target_os != "linux" {
         return;
     }
@@ -77,18 +67,10 @@ fn main() {
     }
 
     let header_display = cuda_header.display();
-    let warning = format!(
-        "cuda.h was not found at {header_display}\nH.264 software encoding will be used for video encoding instead of nvenc\nLearn more: https://docs.rs/foxglove/latest/foxglove/#remote-access-gateway"
+    panic!(
+        "The `cuda` feature is enabled but cuda.h was not found at {header_display}.\n\
+         Install the CUDA toolkit (e.g. `apt install nvidia-cuda-toolkit` on Ubuntu, \
+         then export CUDA_HOME=/usr) or disable the `cuda` feature.\n\
+         Learn more: https://docs.rs/foxglove/latest/foxglove/#nvenc-hardware-acceleration"
     );
-    match nvenc_requirement {
-        NvencRequirement::Warn => {
-            for line in warning.split('\n') {
-                println!("cargo:warning={line}");
-            }
-        }
-        NvencRequirement::Required => {
-            panic!("{warning}");
-        }
-        NvencRequirement::Off => {}
-    }
 }

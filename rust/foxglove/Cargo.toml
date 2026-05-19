@@ -32,6 +32,11 @@ remote-access = [
   "dep:rustls",
   "dep:semver",
 ]
+# Opts into a build-time check that NVENC hardware acceleration for video
+# encoding will be available. Only meaningful in combination with
+# `remote-access`; see [NVENC hardware acceleration](#nvenc-hardware-acceleration)
+# for details.
+cuda = []
 lz4 = ["mcap/lz4"]
 websocket-tls = [
   "websocket",

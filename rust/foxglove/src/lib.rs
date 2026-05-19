@@ -311,14 +311,28 @@
 //! # }
 //! ```
 //!
-//! Nvidia Encoder is used to accelerate video encoding when available. This requires cuda.h to be installed.
-//! Without that, it will fall back to software H.264 encoding which is slower and lower quality.
-//! It looks for `/usr/local/cuda/include/cuda.h` or `$CUDA_HOME/include/cuda.h` if `CUDA_HOME` is set.
-//! You can install cuda via `apt install nvidia-cuda-toolkit` on Ubuntu.
-//! A warning is printed during compilation if remote access is enabled for a target that supports nvenc
-//! (Linux x86/aarch64/arm) but cuda.h wasn't found and hardware acceleration is disabled.
-//! This can be turned off by setting `FOXGLOVE_REMOTE_ACCESS_NVENC=off` before compiling.
-//! The warning can be escalated to an error by setting `FOXGLOVE_REMOTE_ACCESS_NVENC=required`.
+//! #### NVENC hardware acceleration
+//!
+//! When available, NVIDIA NVENC is used to accelerate H.264 video encoding for the remote
+//! access gateway. Without it, the gateway falls back to software H.264 encoding, which is
+//! slower and lower quality.
+//!
+//! NVENC requires `cuda.h` to be present at build time. The webrtc-sys build script looks
+//! for it at `$CUDA_HOME/include/cuda.h`, defaulting to `/usr/local/cuda/include/cuda.h`
+//! when `CUDA_HOME` is unset.
+//!
+//! On Ubuntu you can install the headers with `apt install nvidia-cuda-toolkit`, but note
+//! that package places `cuda.h` at `/usr/include/cuda.h` rather than `/usr/local/cuda/include/`,
+//! so you also need to set `CUDA_HOME=/usr` for webrtc-sys (and this crate's build script)
+//! to find it.
+//!
+//! Because webrtc-sys silently falls back to software encoding when `cuda.h` is missing
+//! (it emits a `cargo:warning=`, but cargo hides build-script warnings from registry
+//! dependencies), you can enable the `cuda` feature on this crate to opt into a build-time
+//! check on targets where webrtc-sys would otherwise have built NVENC support (Linux on
+//! x86_64 / x86 / aarch64 / arm). With `cuda` enabled, the build fails if `cuda.h` is not
+//! found, ensuring you never accidentally ship a release without hardware-accelerated
+//! video encoding.
 //!
 //! # Feature flags
 //!
@@ -328,6 +342,9 @@
 //!   default. Mutually exclusive with `ring`. See [Crypto backend](#crypto-backend).
 //! - `chrono`: enables [chrono] conversions for [`Duration`][crate::messages::Duration] and
 //!   [`Timestamp`][crate::messages::Timestamp].
+//! - `cuda`: opts into a build-time check that `cuda.h` is present on targets where
+//!   webrtc-sys would build NVENC support. Only meaningful in combination with
+//!   `remote-access`. See [NVENC hardware acceleration](#nvenc-hardware-acceleration).
 //! - `derive`: enables the use of `#[derive(Encode)]` to derive the [`Encode`] trait for logging
 //!   custom structs. Enabled by default.
 //! - `full`: the full set of supported features, with opinionated picks for mutually exclusive
