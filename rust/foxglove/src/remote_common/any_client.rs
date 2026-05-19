@@ -5,9 +5,6 @@ use crate::remote_common::ClientId;
 use crate::remote_common::fetch_asset::SendAssetResponse;
 
 /// A client handle abstracted over the transport that delivered the request.
-///
-/// For the rare case where a handler needs transport-specific behavior, use [`Self::as_websocket`]
-/// or [`Self::as_remote_access`].
 #[derive(Debug, Clone)]
 pub struct AnyClient(AnyClientInner);
 
