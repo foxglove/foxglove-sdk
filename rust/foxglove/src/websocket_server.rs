@@ -13,7 +13,8 @@ use crate::websocket::TlsIdentity;
 use crate::websocket::service::Service;
 use crate::websocket::{
     AnyClient, AssetHandler, AsyncAssetHandlerFn, BlockingAssetHandlerFn, Capability,
-    ConnectionGraph, Parameter, Server, ServerOptions, ShutdownHandle, Status, create_server,
+    ConnectionGraph, Parameter, ParameterHandler, Server, ServerOptions, ShutdownHandle, Status,
+    create_server,
 };
 use crate::{AppUrl, ChannelDescriptor, Context, FoxgloveError, runtime::get_runtime_handle};
 
@@ -167,6 +168,16 @@ impl WebSocketServer {
         Err: Display,
     {
         self.options.fetch_asset_handler = Some(Box::new(AsyncAssetHandlerFn(Arc::new(handler))));
+        self
+    }
+
+    /// Configure the handler for client-initiated parameter operations.
+    ///
+    /// When set, the handler takes precedence over the deprecated parameter callbacks on
+    /// [`ServerListener`](crate::websocket::ServerListener). Automatically adds
+    /// [`Capability::Parameters`] to the set of advertised capabilities.
+    pub fn parameter_handler(mut self, handler: Arc<dyn ParameterHandler>) -> Self {
+        self.options.parameter_handler = Some(handler);
         self
     }
 
