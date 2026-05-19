@@ -26,16 +26,19 @@
     <test_depend>ament_lint_auto</test_depend>
     <test_depend>std_msgs</test_depend>
     <test_depend>std_srvs</test_depend>
-    <test_depend>libssl-dev</test_depend>
+    <test_depend>asio</test_depend>
     <test_depend>libwebsocketpp-dev</test_depend>
+    <test_depend>nlohmann-json-dev</test_depend>
 
     <!-- Common dependencies -->
-    <build_depend>asio</build_depend>
-    <build_depend>nlohmann-json-dev</build_depend>
     <build_depend>ros_environment</build_depend>
 
+    <depend>rcl_interfaces</depend>
+    <depend>rcpputils</depend>
+    <depend>rcutils</depend>
     <depend>resource_retriever</depend>
     <depend>rosgraph_msgs</depend>
+    <depend>rosidl_typesupport_introspection_cpp</depend>
     <depend>std_msgs</depend>
 
     <!-- The export tag contains other, unspecified, tags -->

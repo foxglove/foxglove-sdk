@@ -1,4 +1,11 @@
+// The build system normally defines FOXGLOVE_REMOTE_ACCESS for us — e.g.,
+// foxglove_sdk_add_cpp_library() in the dist's cmake config, or the in-tree
+// foxglove_cpp_shared target. The guard lets this file still compile cleanly if it's
+// invoked outside cmake (or by a consumer that hand-rolls the wrapper build), where
+// foxglove-c/foxglove-c.h's RA-guarded declarations would otherwise be invisible.
+#ifndef FOXGLOVE_REMOTE_ACCESS
 #define FOXGLOVE_REMOTE_ACCESS
+#endif
 #include <foxglove-c/foxglove-c.h>
 #include <foxglove/channel.hpp>
 #include <foxglove/context.hpp>

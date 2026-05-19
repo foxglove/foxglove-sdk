@@ -91,6 +91,55 @@ Link against `foxglove_cpp_shared` and include the same C and C++ headers as the
 
 The gateway-related C declarations in `foxglove-c/foxglove-c.h` are guarded by `#if defined(FOXGLOVE_REMOTE_ACCESS)`. When using CMake and linking against `foxglove_cpp_shared` built with `FOXGLOVE_REMOTE_ACCESS=ON`, this define is propagated automatically. Otherwise, define `FOXGLOVE_REMOTE_ACCESS` before including the header.
 
+## Distribution
+
+The C++ SDK is also shipped as a redistributable dist — a self-contained directory tree with prebuilt C libraries, C++ wrapper sources, and a CMake package config consumers wire up via `find_package`. This is what downstream packages (e.g. the ROS `foxglove_bridge`) consume in lieu of a system install.
+
+### Building the dist
+
+From the repo root, in Docker (Ubuntu 22.04 base, for glibc 2.35 compatibility with the released artifacts):
+
+```
+make build-cpp-dist
+```
+
+Output lands at `cpp/dist/`, with layout:
+
+```
+lib/libfoxglove.a                                  # non-RA static C lib
+lib/libfoxglove.so                                 # RA cdylib
+lib/cmake/foxglove-sdk/foxglove-sdkConfig.cmake    # cmake glue
+include/foxglove-c/                                # C headers
+include/foxglove/                                  # C++ headers
+src/                                               # C++ wrapper sources
+```
+
+### Consuming the dist via CMake
+
+```cmake
+find_package(foxglove-sdk CONFIG REQUIRED HINTS /path/to/dist)
+foxglove_sdk_add_cpp_library(my_wrapper
+    TYPE SHARED            # SHARED (default) or STATIC
+    REMOTE_ACCESS ON       # ON or OFF (default)
+)
+target_link_libraries(my_app PRIVATE my_wrapper)
+```
+
+`foxglove_sdk_add_cpp_library` compiles the dist's C++ wrapper sources against your toolchain and links the appropriate C library.
+
+Supported (`TYPE`, `REMOTE_ACCESS`) combinations:
+
+| `TYPE`  | `REMOTE_ACCESS` | Result                                                                                                  |
+| ------- | --------------- | ------------------------------------------------------------------------------------------------------- |
+| SHARED  | ON              | Dynamic-links `libfoxglove.so` (RA), adds `remote_access.cpp`, defines `FOXGLOVE_REMOTE_ACCESS`.        |
+| SHARED  | OFF             | Statically bundles `libfoxglove.a` (non-RA) into the SHARED wrapper.                                    |
+| STATIC  | OFF             | Static wrapper, propagates `libfoxglove.a` to consumers.                                                |
+| STATIC  | ON              | Unsupported — no static RA library is shipped (LiveKit/WebRTC has strict ABI requirements that would leak into static consumers). |
+
+### Why the C++ wrapper is shipped as source
+
+The C++ ABI is not stable across the toolchains downstream Linux distributions use, so the dist ships the C++ wrapper as source files that consumers compile against their own compiler. Only the C library is shipped prebuilt — its C ABI is stable.
+
 ## Examples
 
 ### RGB Camera Visualization Example

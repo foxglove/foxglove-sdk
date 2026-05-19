@@ -54,7 +54,7 @@ enum class RemoteAccessGatewayCapabilities : uint8_t {
   Parameters = 1 << 1,
   /// Allow clients to call services.
   Services = 1 << 2,
-  /// Allow clients to subscribe and make connection graph updates.
+  /// Allow clients to subscribe to connection graph updates.
   ConnectionGraph = 1 << 3,
   /// Allow clients to request assets.
   Assets = 1 << 4,

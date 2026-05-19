@@ -152,12 +152,24 @@ class ServerListener(Protocol):
     def on_connection_graph_subscribe(self) -> None:
         """
         Called by the server when the first client subscribes to the connection graph.
+
+        Requires :py:data:`Capability.ConnectionGraph`.
+
+        .. warning::
+            Do not call :py:meth:`~foxglove.websocket.WebSocketServer.publish_connection_graph`
+            from within this callback; doing so will deadlock.
         """
         return None
 
     def on_connection_graph_unsubscribe(self) -> None:
         """
         Called by the server when the last client unsubscribes from the connection graph.
+
+        Requires :py:data:`Capability.ConnectionGraph`.
+
+        .. warning::
+            Do not call :py:meth:`~foxglove.websocket.WebSocketServer.publish_connection_graph`
+            from within this callback; doing so will deadlock.
         """
         return None
 

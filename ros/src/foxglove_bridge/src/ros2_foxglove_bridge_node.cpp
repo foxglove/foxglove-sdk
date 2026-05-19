@@ -1,4 +1,4 @@
-#include <rclcpp_components/component_manager.hpp>
+#include <rcl_interfaces/msg/parameter_descriptor.hpp>
 
 #include <foxglove_bridge/ros2_foxglove_bridge.hpp>
 

@@ -8,7 +8,7 @@ use std::sync::Arc;
 
 use crate::sink_channel_filter::{SinkChannelFilter, SinkChannelFilterFn};
 use crate::websocket::PlaybackState;
-#[cfg(feature = "tls")]
+#[cfg(feature = "websocket-tls")]
 use crate::websocket::TlsIdentity;
 use crate::websocket::service::Service;
 use crate::websocket::{
@@ -104,7 +104,7 @@ impl WebSocketServer {
     /// If enabled, the server will only accept connections using wss://.
     /// If TLS configuration fails, starting the server will result in an error.
     #[doc(hidden)]
-    #[cfg(feature = "tls")]
+    #[cfg(feature = "websocket-tls")]
     pub fn tls(mut self, tls_identity: TlsIdentity) -> Self {
         self.options.tls_identity = Some(tls_identity);
         self

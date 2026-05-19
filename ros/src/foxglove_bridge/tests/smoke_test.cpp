@@ -4,9 +4,16 @@
 #include <thread>
 
 #include <gtest/gtest.h>
+#include <nlohmann/json.hpp>
+#include <rclcpp/rclcpp.hpp>
 #include <std_msgs/msg/string.hpp>
 #include <std_srvs/srv/set_bool.hpp>
-#include <websocketpp/config/asio_client.hpp>
+// Use the no-TLS variant: <websocketpp/config/asio_client.hpp> is misleadingly named —
+// it defines `asio_tls_client` and pulls in <websocketpp/transport/asio/security/tls.hpp>,
+// which references OpenSSL symbols (CONF_modules_unload etc.) in inline cleanup code.
+// smoke_test only talks ws:// (not wss://) so the TLS half is dead code, and including
+// it just forces an OpenSSL link dep on the test binary for no benefit.
+#include <websocketpp/config/asio_no_tls_client.hpp>
 
 #include <foxglove_bridge/ros2_foxglove_bridge.hpp>
 

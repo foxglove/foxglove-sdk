@@ -18,7 +18,7 @@ pub enum Capability {
     /// Allow clients to request assets. If you supply an asset handler to the server, this
     /// capability will be advertised automatically.
     Assets,
-    /// Allow clients to subscribe and make connection graph updates
+    /// Allow clients to subscribe to connection graph updates
     ConnectionGraph,
     /// Indicates that the server is capable of responding to playback control requests from
     /// controls in the Foxglove app. This requires the server to specify the `data_start_time`

@@ -46,18 +46,20 @@ jobs:
           done
       # Validate that we can build without default features.
       - run: cargo build -p foxglove --no-default-features
+      # Validate that the ring-only crypto backend path compiles.
+      - run: cargo check -p foxglove --no-default-features --features "remote-access,ring"
       # Validate that we can build against the MSRV (minimum specified rust version).
       - run: cargo +1.85.0 build -p foxglove
       - run: cargo clippy --no-deps --all-targets --tests -- -D warnings
-      - run: cargo +nightly rustdoc -p foxglove --all-features -- -D warnings --cfg docsrs
+      - run: cargo +nightly rustdoc -p foxglove --features full -- -D warnings --cfg docsrs
       - run: "[ -d ./target/doc/foxglove ] || exit 1"
       - name: Check for ws-protocol references in public docs
         run: '! grep -R "foxglove/ws-protocol" ./target/doc/foxglove'
-      - run: cargo test -p foxglove --all-features
+      - run: cargo test -p foxglove --features full
         timeout-minutes: 5
       - run: cargo test -p foxglove --no-default-features
         timeout-minutes: 5
-      - run: cargo test -p foxglove_c --all-features
+      - run: cargo test -p foxglove_c --features full
       - run: cargo test -p foxglove_data_loader
       - run: cargo test -p foxglove_derive
       - run: cargo test -p foxglove-sdk-python --features remote-access

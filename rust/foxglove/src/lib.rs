@@ -324,13 +324,19 @@
 //!
 //! The Foxglove SDK defines the following feature flags:
 //!
+//! - `aws-lc-rs`: selects [aws-lc-rs] as the rustls crypto backend used for TLS. Enabled by
+//!   default. Mutually exclusive with `ring`. See [Crypto backend](#crypto-backend).
 //! - `chrono`: enables [chrono] conversions for [`Duration`][crate::messages::Duration] and
 //!   [`Timestamp`][crate::messages::Timestamp].
 //! - `derive`: enables the use of `#[derive(Encode)]` to derive the [`Encode`] trait for logging
 //!   custom structs. Enabled by default.
+//! - `full`: the full set of supported features, with opinionated picks for mutually exclusive
+//!   choices.
 //! - `lz4`: enables support for the LZ4 compression algorithm for mcap files. Enabled by default.
 //! - `remote-access`: enables the remote access gateway for live visualization and teleop via
-//!   WebRTC.
+//!   WebRTC. Requires a crypto backend; `aws-lc-rs` is enabled by default.
+//! - `ring`: selects [ring] as the rustls crypto backend used for TLS. Alternative to
+//!   `aws-lc-rs`; mutually exclusive with it. See [Crypto backend](#crypto-backend).
 //! - `schemars`: provides a blanket implementation of the [`Encode`] trait for types that
 //!   implement [`Serialize`](serde::Serialize) and [`JsonSchema`][jsonschema-trait].
 //! - `serde`: derives [`Serialize`](serde::Serialize) and [`Deserialize`](serde::Deserialize) for
@@ -344,6 +350,34 @@
 //!
 //! If you do not require WebSocket features, you can disable that flag to reduce the
 //! compiled size of the SDK.
+//!
+//! ## Crypto backend
+//!
+//! The `remote-access` and `websocket-tls` features rely on [rustls] for TLS, which requires
+//! a crypto provider to be installed as the process-wide default. The `aws-lc-rs` and `ring`
+//! crate features select which backend Foxglove installs and are **mutually exclusive**:
+//! enabling both is a compile error. `aws-lc-rs` is in the default feature set, so opting
+//! into TLS with default features just works:
+//!
+//! ```toml
+//! foxglove = { version = "...", features = ["remote-access"] }
+//! ```
+//!
+//! [ring] is offered as an alternative for targets where building aws-lc-sys is impractical
+//! (e.g. the iOS simulator). To use it, disable default features and select `ring` explicitly:
+//!
+//! ```toml
+//! foxglove = { version = "...", default-features = false, features = ["remote-access", "ring", ...] }
+//! ```
+//!
+//! Foxglove installs the selected provider before opening any TLS connections. Applications
+//! that want to install a different provider should call
+//! [`rustls::crypto::CryptoProvider::install_default`] themselves before any Foxglove TLS code
+//! runs.
+//!
+//! [aws-lc-rs]: https://github.com/aws/aws-lc-rs
+//! [ring]: https://github.com/briansmith/ring
+//! [rustls]: https://github.com/rustls/rustls
 //!
 //! # Requirements
 //!
@@ -450,7 +484,7 @@ mod runtime;
 )]
 pub use runtime::shutdown_runtime;
 
-#[cfg(any(feature = "tls", feature = "remote-access"))]
+#[cfg(any(feature = "websocket-tls", feature = "remote-access"))]
 mod crypto;
 
 #[cfg(feature = "remote-access")]

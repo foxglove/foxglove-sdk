@@ -76,10 +76,7 @@ impl Participants {
     }
 
     /// Returns the participant for the given `ParticipantSid`, if present.
-    /// Test-only accessor — production reads the index implicitly via
-    /// [`remove_by_sid`].
-    #[cfg(test)]
-    fn get_by_sid(&self, sid: &ParticipantSid) -> Option<&Arc<Participant>> {
+    pub fn get_by_sid(&self, sid: &ParticipantSid) -> Option<&Arc<Participant>> {
         self.by_sid.get(sid)
     }
 

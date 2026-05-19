@@ -1,6 +1,6 @@
 #include "foxglove_bridge/parameter_interface.hpp"
 
-#include <nlohmann/json.hpp>
+#include <rcl_interfaces/msg/parameter_event.hpp>
 #include <rclcpp/qos.hpp>
 #include <rclcpp/version.h>
 
