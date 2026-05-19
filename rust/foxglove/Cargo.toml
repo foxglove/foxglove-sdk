@@ -78,7 +78,6 @@ img2yuv-ros2 = ["img2yuv-core", "dep:cdr", "dep:regex"]
 full = [
   "aws-lc-rs",
   "chrono",
-  "cuda",
   "data_provider",
   "derive",
   "img2yuv",
