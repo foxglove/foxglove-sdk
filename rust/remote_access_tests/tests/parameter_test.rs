@@ -9,7 +9,7 @@ use std::sync::{Arc, Mutex};
 use anyhow::Result;
 use foxglove::protocol::v2::server::server_info;
 use foxglove::remote_access::{
-    AnyClient, Capability, GetParametersResponder, Parameter, ParameterHandler,
+    AnyClient, Capability, Client, GetParametersResponder, Listener, Parameter, ParameterHandler,
     SetParametersResponder,
 };
 use remote_access_tests::test_helpers::{TestGateway, TestGatewayOptions, ViewerConnection};
@@ -427,6 +427,267 @@ async fn livekit_parameter_unsubscribe_stops_delivery() -> Result<()> {
         .publish_parameter_values(vec![Parameter::float64("temp", 30.0)]);
 
     // Wait briefly, then verify no message was received by trying to read with a short timeout.
+    let result = tokio::time::timeout(
+        std::time::Duration::from_secs(2),
+        viewer.expect_parameter_values(),
+    )
+    .await;
+    assert!(
+        result.is_err(),
+        "should not receive parameter values after unsubscribing"
+    );
+
+    viewer.close().await?;
+    gw.stop().await?;
+    Ok(())
+}
+
+// ===========================================================================
+// Legacy Listener parameter callbacks
+// ===========================================================================
+//
+// These tests cover the deprecated `Listener::on_*_parameters*` paths in
+// `session.rs`. They duplicate a representative subset of the
+// `ParameterHandler` tests above so each legacy branch keeps integration
+// coverage until the callbacks are removed. Delete this section when the
+// listener parameter callbacks are removed.
+
+/// Mock [`Listener`] that handles parameter get/set requests synchronously and
+/// records subscribe/unsubscribe callbacks.
+struct ParameterListener {
+    stored_parameters: Mutex<Vec<Parameter>>,
+    subscribed: Mutex<Vec<Vec<String>>>,
+    unsubscribed: Mutex<Vec<Vec<String>>>,
+}
+
+impl ParameterListener {
+    fn new(initial_parameters: Vec<Parameter>) -> Self {
+        Self {
+            stored_parameters: Mutex::new(initial_parameters),
+            subscribed: Mutex::new(Vec::new()),
+            unsubscribed: Mutex::new(Vec::new()),
+        }
+    }
+
+    fn take_subscribed(&self) -> Vec<Vec<String>> {
+        std::mem::take(&mut *self.subscribed.lock().unwrap())
+    }
+
+    fn take_unsubscribed(&self) -> Vec<Vec<String>> {
+        std::mem::take(&mut *self.unsubscribed.lock().unwrap())
+    }
+}
+
+impl Listener for ParameterListener {
+    fn on_get_parameters(
+        &self,
+        _client: &Client,
+        param_names: Vec<String>,
+        _request_id: Option<&str>,
+    ) -> Vec<Parameter> {
+        let params = self.stored_parameters.lock().unwrap();
+        if param_names.is_empty() {
+            params.clone()
+        } else {
+            params
+                .iter()
+                .filter(|p| param_names.contains(&p.name))
+                .cloned()
+                .collect()
+        }
+    }
+
+    fn on_set_parameters(
+        &self,
+        _client: &Client,
+        parameters: Vec<Parameter>,
+        _request_id: Option<&str>,
+    ) -> Vec<Parameter> {
+        let mut stored = self.stored_parameters.lock().unwrap();
+        for param in &parameters {
+            if let Some(existing) = stored.iter_mut().find(|p| p.name == param.name) {
+                *existing = param.clone();
+            } else {
+                stored.push(param.clone());
+            }
+        }
+        stored.clone()
+    }
+
+    fn on_parameters_subscribe(&self, param_names: Vec<String>) {
+        self.subscribed.lock().unwrap().push(param_names);
+    }
+
+    fn on_parameters_unsubscribe(&self, param_names: Vec<String>) {
+        self.unsubscribed.lock().unwrap().push(param_names);
+    }
+}
+
+/// Listener variant of [`livekit_parameter_get_parameters`].
+#[traced_test]
+#[ignore]
+#[tokio::test]
+#[serial(livekit)]
+async fn livekit_parameter_get_parameters_via_listener() -> Result<()> {
+    let ctx = foxglove::Context::new();
+    let listener = Arc::new(ParameterListener::new(vec![
+        Parameter::string("foo", "hello"),
+        Parameter::float64("bar", 42.0),
+    ]));
+    let gw = TestGateway::start_with_options(
+        &ctx,
+        TestGatewayOptions {
+            capabilities: vec![Capability::Parameters],
+            listener: Some(listener),
+            ..Default::default()
+        },
+    )
+    .await?;
+
+    let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+    let _server_info = viewer.expect_server_info().await?;
+
+    viewer
+        .send_get_parameters_with_id(&["foo"], "req-1")
+        .await?;
+    let response = viewer.expect_parameter_values().await?;
+    info!("ParameterValues: {response:?}");
+
+    assert_eq!(response.id.as_deref(), Some("req-1"));
+    assert_eq!(response.parameters.len(), 1);
+    assert_eq!(response.parameters[0].name, "foo");
+
+    viewer.close().await?;
+    gw.stop().await?;
+    Ok(())
+}
+
+/// Listener variant of [`livekit_parameter_set_parameters`].
+#[traced_test]
+#[ignore]
+#[tokio::test]
+#[serial(livekit)]
+async fn livekit_parameter_set_parameters_via_listener() -> Result<()> {
+    let ctx = foxglove::Context::new();
+    let listener = Arc::new(ParameterListener::new(vec![Parameter::string(
+        "color", "red",
+    )]));
+    let gw = TestGateway::start_with_options(
+        &ctx,
+        TestGatewayOptions {
+            capabilities: vec![Capability::Parameters],
+            listener: Some(listener),
+            ..Default::default()
+        },
+    )
+    .await?;
+
+    let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+    let _server_info = viewer.expect_server_info().await?;
+
+    viewer
+        .send_set_parameters_with_id(vec![Parameter::string("color", "blue")], "set-1")
+        .await?;
+    let response = viewer.expect_parameter_values().await?;
+    info!("ParameterValues: {response:?}");
+
+    assert_eq!(response.id.as_deref(), Some("set-1"));
+    assert!(
+        response.parameters.iter().any(|p| p.name == "color"),
+        "response should include the 'color' parameter"
+    );
+
+    viewer.close().await?;
+    gw.stop().await?;
+    Ok(())
+}
+
+/// Listener variant of [`livekit_parameter_subscribe_and_publish`].
+#[traced_test]
+#[ignore]
+#[tokio::test]
+#[serial(livekit)]
+async fn livekit_parameter_subscribe_and_publish_via_listener() -> Result<()> {
+    let ctx = foxglove::Context::new();
+    let listener = Arc::new(ParameterListener::new(vec![]));
+    let gw = TestGateway::start_with_options(
+        &ctx,
+        TestGatewayOptions {
+            capabilities: vec![Capability::Parameters],
+            listener: Some(listener.clone()),
+            ..Default::default()
+        },
+    )
+    .await?;
+
+    let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+    let _server_info = viewer.expect_server_info().await?;
+
+    viewer
+        .send_subscribe_parameter_updates(&["speed", "mode"])
+        .await?;
+    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+
+    let subscribed = listener.take_subscribed();
+    assert!(
+        !subscribed.is_empty(),
+        "listener should have received on_parameters_subscribe"
+    );
+
+    gw.handle
+        .publish_parameter_values(vec![Parameter::float64("speed", 99.0)]);
+
+    let response = viewer.expect_parameter_values().await?;
+    info!("ParameterValues after publish: {response:?}");
+    assert_eq!(response.parameters.len(), 1);
+    assert_eq!(response.parameters[0].name, "speed");
+
+    viewer.close().await?;
+    gw.stop().await?;
+    Ok(())
+}
+
+/// Listener variant of [`livekit_parameter_unsubscribe_stops_delivery`].
+#[traced_test]
+#[ignore]
+#[tokio::test]
+#[serial(livekit)]
+async fn livekit_parameter_unsubscribe_stops_delivery_via_listener() -> Result<()> {
+    let ctx = foxglove::Context::new();
+    let listener = Arc::new(ParameterListener::new(vec![]));
+    let gw = TestGateway::start_with_options(
+        &ctx,
+        TestGatewayOptions {
+            capabilities: vec![Capability::Parameters],
+            listener: Some(listener.clone()),
+            ..Default::default()
+        },
+    )
+    .await?;
+
+    let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+    let _server_info = viewer.expect_server_info().await?;
+
+    viewer.send_subscribe_parameter_updates(&["temp"]).await?;
+    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+
+    gw.handle
+        .publish_parameter_values(vec![Parameter::float64("temp", 20.0)]);
+    let response = viewer.expect_parameter_values().await?;
+    assert_eq!(response.parameters.len(), 1);
+
+    viewer.send_unsubscribe_parameter_updates(&["temp"]).await?;
+    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+
+    let unsubscribed = listener.take_unsubscribed();
+    assert!(
+        !unsubscribed.is_empty(),
+        "listener should have received on_parameters_unsubscribe"
+    );
+
+    gw.handle
+        .publish_parameter_values(vec![Parameter::float64("temp", 30.0)]);
+
     let result = tokio::time::timeout(
         std::time::Duration::from_secs(2),
         viewer.expect_parameter_values(),
