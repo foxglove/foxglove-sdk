@@ -6,9 +6,8 @@ use crate::remote_common::fetch_asset::SendAssetResponse;
 
 /// A client handle abstracted over the transport that delivered the request.
 ///
-/// Use this in handler implementations that don't care whether the request originated from a
-/// WebSocket client or a remote-access participant. For the rare case where a handler needs
-/// transport-specific behavior, use [`Self::as_websocket`] or [`Self::as_remote_access`].
+/// For the rare case where a handler needs transport-specific behavior, use [`Self::as_websocket`]
+/// or [`Self::as_remote_access`].
 #[derive(Debug, Clone)]
 pub struct AnyClient(AnyClientInner);
 
@@ -32,7 +31,7 @@ impl AnyClient {
     }
 
     /// Send a status message to this client.
-    pub fn send_status(&self, status: Status) {
+    fn send_status(&self, status: Status) {
         match &self.0 {
             #[cfg(feature = "websocket")]
             AnyClientInner::WebSocket(c) => c.send_status(status),

@@ -59,7 +59,7 @@ impl Client {
 
     /// Send a status message to this client. Does nothing if the client has no sender or if the
     /// participant has been dropped.
-    pub fn send_status(&self, status: Status) {
+    pub(crate) fn send_status(&self, status: Status) {
         let Some(participant) = self.participant.as_ref().and_then(|w| w.upgrade()) else {
             tracing::debug!(
                 client_id = ?self.client_id,

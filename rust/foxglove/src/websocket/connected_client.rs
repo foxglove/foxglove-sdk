@@ -554,6 +554,7 @@ impl ConnectedClient {
         if let Some(id) = request_id {
             msg = msg.with_id(id);
         }
+
         self.send_control_msg(&msg);
     }
 
