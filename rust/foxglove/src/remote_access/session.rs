@@ -2737,7 +2737,7 @@ mod tests {
     }
 
     #[test]
-    fn set_parameters_responder_drop_sends_error_no_broadcast() {
+    fn set_parameters_responder_drop_sends_error() {
         let (participant, rx) = make_participant_with_rx("alice");
         let client = test_client(&participant);
         let guard = participant.parameter_sem().try_acquire().unwrap();
@@ -2748,8 +2748,6 @@ mod tests {
         let status: Status = recv_json(&rx);
         assert_eq!(status.level, StatusLevel::Error);
         assert!(status.message.contains("failed to send a response"));
-        // Nothing else queued (no broadcast attempt would land here anyway since the test
-        // client has no session ref, but this asserts the drop didn't enqueue extra).
         assert!(rx.try_recv().is_err());
     }
 }
