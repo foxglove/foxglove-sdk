@@ -7,7 +7,7 @@ use crate::remote_common::semaphore::SemaphoreGuard;
 
 /// Internal trait implemented by each transport's `Client` type so that [`AnyClient`] can
 /// dispatch asset responses without exposing the per-transport surface.
-pub(crate) trait SendAssetResponse: Clone + Send + 'static {
+pub(crate) trait SendAssetResponse {
     fn send_asset_response(&self, result: Result<&[u8], &str>, request_id: u32);
 }
 
