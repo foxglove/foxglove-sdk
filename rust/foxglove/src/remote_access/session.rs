@@ -1180,6 +1180,7 @@ impl RemoteAccessSession {
             if let Some(handler) = self.parameter_handler.as_ref() {
                 handler.unsubscribe(last_param_unsubscribed);
             } else if let Some(listener) = &self.listener {
+                #[allow(deprecated)]
                 listener.on_parameters_unsubscribe(last_param_unsubscribed);
             }
         }
@@ -1839,6 +1840,7 @@ impl RemoteAccessSession {
             return;
         }
 
+        #[allow(deprecated)]
         if let Some(listener) = self.listener.as_ref() {
             let client = Client::new(
                 participant.client_id(),
@@ -1882,6 +1884,7 @@ impl RemoteAccessSession {
             return;
         }
 
+        #[allow(deprecated)]
         let updated_parameters = if let Some(listener) = self.listener.as_ref() {
             let client = Client::new(
                 participant.client_id(),
@@ -1927,6 +1930,7 @@ impl RemoteAccessSession {
             if let Some(handler) = self.parameter_handler.as_ref() {
                 handler.subscribe(new_names);
             } else if let Some(listener) = &self.listener {
+                #[allow(deprecated)]
                 listener.on_parameters_subscribe(new_names);
             }
         }
@@ -1955,6 +1959,7 @@ impl RemoteAccessSession {
             if let Some(handler) = self.parameter_handler.as_ref() {
                 handler.unsubscribe(old_names);
             } else if let Some(listener) = &self.listener {
+                #[allow(deprecated)]
                 listener.on_parameters_unsubscribe(old_names);
             }
         }

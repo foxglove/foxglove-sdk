@@ -6,6 +6,10 @@ publish = false
 [lints]
 workspace = true
 
+[features]
+default = []
+remote-access = ["foxglove/remote-access"]
+
 [dependencies]
 foxglove = { path = "../../foxglove", features = ["unstable"] }
 tokio = { version = "1.47", features = ["full"] }

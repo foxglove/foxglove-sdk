@@ -452,6 +452,7 @@ impl Server {
             if let Some(handler) = self.parameter_handler.as_ref() {
                 handler.subscribe(new_names);
             } else if let Some(listener) = self.listener.as_ref() {
+                #[allow(deprecated)]
                 listener.on_parameters_subscribe(new_names);
             }
         }
@@ -477,6 +478,7 @@ impl Server {
             if let Some(handler) = self.parameter_handler.as_ref() {
                 handler.unsubscribe(old_names);
             } else if let Some(listener) = self.listener.as_ref() {
+                #[allow(deprecated)]
                 listener.on_parameters_unsubscribe(old_names);
             }
         }
@@ -502,6 +504,7 @@ impl Server {
             if let Some(handler) = self.parameter_handler.as_ref() {
                 handler.unsubscribe(old_names);
             } else if let Some(listener) = self.listener.as_ref() {
+                #[allow(deprecated)]
                 listener.on_parameters_unsubscribe(old_names);
             }
         }
