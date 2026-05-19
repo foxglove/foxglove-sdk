@@ -2,7 +2,9 @@ use std::sync::{Arc, Weak};
 
 use livekit::id::ParticipantIdentity;
 
+use crate::protocol::common::server::status::Status;
 use crate::remote_access::participant::Participant;
+use crate::remote_access::session::encode_json_message;
 use crate::remote_common::ClientId;
 use crate::remote_common::fetch_asset::SendAssetResponse;
 
@@ -53,6 +55,20 @@ impl Client {
     #[doc(hidden)]
     pub fn participant_id(&self) -> &str {
         &self.participant_id.0
+    }
+
+    /// Send a status message to this client. Does nothing if the client has no sender or if the
+    /// participant has been dropped.
+    pub fn send_status(&self, status: Status) {
+        let Some(participant) = self.participant.as_ref().and_then(|w| w.upgrade()) else {
+            tracing::debug!(
+                client_id = ?self.client_id,
+                participant_id = ?self.participant_id,
+                "participant disconnected, dropping status message"
+            );
+            return;
+        };
+        participant.send_control(encode_json_message(&status));
     }
 }
 

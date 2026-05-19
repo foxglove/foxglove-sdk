@@ -8,7 +8,6 @@ mod client_channel;
 mod connected_client;
 mod connection_graph;
 mod cow_vec;
-mod fetch_asset;
 pub(crate) mod handshake;
 mod server;
 mod server_listener;
@@ -20,13 +19,14 @@ mod tests;
 #[doc(hidden)]
 pub mod ws_protocol;
 
+pub use crate::remote_common::AnyClient;
+pub use crate::remote_common::fetch_asset::{AssetHandler, AssetResponder};
+pub(crate) use crate::remote_common::fetch_asset::{AsyncAssetHandlerFn, BlockingAssetHandlerFn};
 pub use capability::Capability;
 pub use channel_view::ChannelView;
 pub use client::{Client, ClientId};
 pub use client_channel::{ClientChannel, ClientChannelId};
 pub use connection_graph::ConnectionGraph;
-pub use fetch_asset::{AssetHandler, AssetResponder};
-pub(crate) use fetch_asset::{AsyncAssetHandlerFn, BlockingAssetHandlerFn};
 pub use server::ShutdownHandle;
 pub(crate) use server::{Server, ServerOptions, create_server};
 pub use server_listener::ServerListener;

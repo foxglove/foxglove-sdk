@@ -22,7 +22,7 @@ use foxglove::LazyChannel;
 use foxglove::messages::{
     Color, ModelPrimitive, Pose, Quaternion, SceneEntity, SceneUpdate, Vector3,
 };
-use foxglove::remote_access::{AssetHandler, AssetResponder, Client, Gateway};
+use foxglove::remote_access::{AssetHandler, AssetResponder, Gateway};
 use log::info;
 
 const PELICAN_URI: &str = "package://pelican/pelican.stl";
@@ -42,7 +42,7 @@ impl AssetServer {
     }
 }
 
-impl AssetHandler<Client> for AssetServer {
+impl AssetHandler for AssetServer {
     fn fetch(&self, uri: String, responder: AssetResponder) {
         match self.assets.get(&uri) {
             Some(asset) => {

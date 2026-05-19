@@ -17,6 +17,7 @@ mod sse;
 mod watch;
 mod watch_loop;
 
+pub use crate::remote_common::AnyClient;
 pub use crate::remote_common::ClientId;
 pub use crate::remote_common::connection_graph::ConnectionGraph;
 pub use capability::Capability;
@@ -33,9 +34,7 @@ pub use crate::protocol::v2::parameter::{Parameter, ParameterType, ParameterValu
 pub use crate::protocol::v2::server::status::{Level as StatusLevel, Status};
 
 // Re-export fetch-asset types.
-pub use crate::remote_common::fetch_asset::AssetHandler;
-/// Type alias for the remote-access-specific asset responder.
-pub type AssetResponder = crate::remote_common::fetch_asset::AssetResponder<Client>;
+pub use crate::remote_common::fetch_asset::{AssetHandler, AssetResponder};
 
 use reqwest::StatusCode;
 use thiserror::Error;
