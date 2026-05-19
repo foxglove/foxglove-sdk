@@ -23,10 +23,11 @@ use std::path::PathBuf;
 fn main() {
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-env-changed=CUDA_HOME");
+    println!("cargo:rerun-if-env-changed=DOCS_RS");
 
     // The `cuda` feature is what opts in to the cuda.h check. Without it we
     // do nothing.
-    if env::var_os("CARGO_FEATURE_CUDA").is_none() {
+    if env::var_os("CARGO_FEATURE_REQUIRE_CUDA").is_none() {
         return;
     }
 

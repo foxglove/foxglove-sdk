@@ -321,18 +321,17 @@
 //! for it at `$CUDA_HOME/include/cuda.h`, defaulting to `/usr/local/cuda/include/cuda.h`
 //! when `CUDA_HOME` is unset.
 //!
-//! On Ubuntu you can install the headers with `apt install nvidia-cuda-toolkit`, but note
-//! that package places `cuda.h` at `/usr/include/cuda.h` rather than `/usr/local/cuda/include/`,
+//! On Ubuntu you can install the headers with `apt install nvidia-cuda-toolkit`, but some versions of
+//! that package place `cuda.h` at `/usr/include/cuda.h` rather than `/usr/local/cuda/include/`,
 //! so you also need to set `CUDA_HOME=/usr` for webrtc-sys (and this crate's build script)
 //! to find it.
 //!
 //! Because webrtc-sys silently falls back to software encoding when `cuda.h` is missing
 //! (it emits a `cargo:warning=`, but cargo hides build-script warnings from registry
-//! dependencies), you can enable the `cuda` feature on this crate to opt into a build-time
-//! check on targets where webrtc-sys would otherwise have built NVENC support (Linux on
-//! x86_64 / x86 / aarch64 / arm). With `cuda` enabled, the build fails if `cuda.h` is not
-//! found, ensuring you never accidentally ship a release without hardware-accelerated
-//! video encoding.
+//! dependencies), you can enable the `require-cuda` feature on this crate to opt into a
+//! build-time check on targets where webrtc-sys would otherwise have built NVENC support
+//! Linux on x86_64 / x86 / aarch64 / arm with remote access enabled. With `require-cuda`
+//! the build fails if `cuda.h` is not found.
 //!
 //! # Feature flags
 //!

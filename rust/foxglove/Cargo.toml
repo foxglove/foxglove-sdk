@@ -36,7 +36,7 @@ remote-access = [
 # encoding will be available. Only meaningful in combination with
 # `remote-access`; see [NVENC hardware acceleration](#nvenc-hardware-acceleration)
 # for details.
-cuda = []
+require-cuda = []
 lz4 = ["mcap/lz4"]
 websocket-tls = [
   "websocket",
