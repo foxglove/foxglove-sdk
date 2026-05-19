@@ -282,8 +282,6 @@ impl Default for RecordingGetBehavior {
 pub(crate) struct RecordingParameterHandler {
     parameters_get: Mutex<Vec<GetParameters>>,
     parameters_set: Mutex<Vec<SetParameters>>,
-    parameters_subscribe: Mutex<Vec<Vec<String>>>,
-    parameters_unsubscribe: Mutex<Vec<Vec<String>>>,
     get_behavior: Mutex<RecordingGetBehavior>,
     set_behavior: Mutex<RecordingSetBehavior>,
 }
@@ -293,8 +291,6 @@ impl RecordingParameterHandler {
         Self {
             parameters_get: Mutex::default(),
             parameters_set: Mutex::default(),
-            parameters_subscribe: Mutex::default(),
-            parameters_unsubscribe: Mutex::default(),
             get_behavior: Mutex::new(RecordingGetBehavior::default()),
             set_behavior: Mutex::new(RecordingSetBehavior::default()),
         }
@@ -316,28 +312,12 @@ impl RecordingParameterHandler {
         self.parameters_set.lock().len()
     }
 
-    pub fn parameters_subscribe_len(&self) -> usize {
-        self.parameters_subscribe.lock().len()
-    }
-
-    pub fn parameters_unsubscribe_len(&self) -> usize {
-        self.parameters_unsubscribe.lock().len()
-    }
-
     pub fn take_parameters_get(&self) -> Vec<GetParameters> {
         std::mem::take(&mut self.parameters_get.lock())
     }
 
     pub fn take_parameters_set(&self) -> Vec<SetParameters> {
         std::mem::take(&mut self.parameters_set.lock())
-    }
-
-    pub fn take_parameters_subscribe(&self) -> Vec<Vec<String>> {
-        std::mem::take(&mut self.parameters_subscribe.lock())
-    }
-
-    pub fn take_parameters_unsubscribe(&self) -> Vec<Vec<String>> {
-        std::mem::take(&mut self.parameters_unsubscribe.lock())
     }
 }
 
@@ -379,14 +359,6 @@ impl ParameterHandler for RecordingParameterHandler {
             RecordingSetBehavior::With(values) => responder.respond(values),
             RecordingSetBehavior::DropResponder => drop(responder),
         }
-    }
-
-    fn subscribe(&self, names: Vec<String>) {
-        self.parameters_subscribe.lock().push(names);
-    }
-
-    fn unsubscribe(&self, names: Vec<String>) {
-        self.parameters_unsubscribe.lock().push(names);
     }
 }
 

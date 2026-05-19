@@ -6,7 +6,7 @@ use crate::remote_common::semaphore::SemaphoreGuard;
 
 /// Internal trait implemented by each transport's `Client` type so that [`AnyClient`] can
 /// dispatch parameter responses without exposing the per-transport surface.
-pub(crate) trait SendParameterResponse: Clone + Send + 'static {
+pub(crate) trait SendParameterResponse {
     /// Send a `ParameterValues` message to the requesting client.
     fn send_parameter_values(&self, parameters: Vec<Parameter>, request_id: Option<String>);
 
@@ -54,18 +54,6 @@ pub trait ParameterHandler: Send + Sync + 'static {
         request_id: Option<String>,
         responder: SetParametersResponder,
     );
-
-    /// Invoked when a parameter name acquires its first subscriber.
-    ///
-    /// Default implementation is a no-op; override if you need to track which parameters have
-    /// active subscribers (e.g. to subscribe to upstream parameter-update events).
-    fn subscribe(&self, _names: Vec<String>) {}
-
-    /// Invoked when a parameter name loses its last subscriber (or its last subscriber
-    /// disconnects).
-    ///
-    /// Default implementation is a no-op; override symmetrically with [`Self::subscribe`].
-    fn unsubscribe(&self, _names: Vec<String>) {}
 }
 
 /// Responder for a client `getParameters` request.

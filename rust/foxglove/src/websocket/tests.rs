@@ -2119,6 +2119,7 @@ async fn test_parameter_handler_get_drop_sends_error_status() {
 #[traced_test]
 #[tokio::test]
 async fn test_parameter_handler_set_echoes_and_broadcasts() {
+    let listener = Arc::new(RecordingServerListener::new());
     let handler = Arc::new(RecordingParameterHandler::new());
 
     let ctx = Context::new();
@@ -2126,6 +2127,7 @@ async fn test_parameter_handler_set_echoes_and_broadcasts() {
         &ctx,
         ServerOptions {
             capabilities: Some(IndexSet::from([Capability::Parameters])),
+            listener: Some(listener.clone()),
             parameter_handler: Some(handler.clone()),
             ..Default::default()
         },
@@ -2149,7 +2151,7 @@ async fn test_parameter_handler_set_echoes_and_broadcasts() {
         .await
         .expect("Failed to send subscribe parameter updates");
 
-    assert_eventually(|| dbg!(handler.parameters_subscribe_len()) == 1).await;
+    assert_eventually(|| dbg!(listener.parameters_subscribe_len()) == 1).await;
 
     let parameters = vec![
         Parameter::float64("foo", 2.0),
@@ -2183,6 +2185,7 @@ async fn test_parameter_handler_set_echoes_and_broadcasts() {
 #[traced_test]
 #[tokio::test]
 async fn test_parameter_handler_set_drop_sends_error_no_broadcast() {
+    let listener = Arc::new(RecordingServerListener::new());
     let handler = Arc::new(RecordingParameterHandler::new());
     handler.set_set_behavior(RecordingSetBehavior::DropResponder);
 
@@ -2191,6 +2194,7 @@ async fn test_parameter_handler_set_drop_sends_error_no_broadcast() {
         &ctx,
         ServerOptions {
             capabilities: Some(IndexSet::from([Capability::Parameters])),
+            listener: Some(listener.clone()),
             parameter_handler: Some(handler.clone()),
             ..Default::default()
         },
@@ -2212,7 +2216,7 @@ async fn test_parameter_handler_set_drop_sends_error_no_broadcast() {
         .await
         .expect("Failed to send subscribe parameter updates");
 
-    assert_eventually(|| dbg!(handler.parameters_subscribe_len()) == 1).await;
+    assert_eventually(|| dbg!(listener.parameters_subscribe_len()) == 1).await;
 
     setter
         .send(&SetParameters::new(vec![Parameter::float64("foo", 2.0)]).with_id("set-1"))
@@ -2237,60 +2241,8 @@ async fn test_parameter_handler_set_drop_sends_error_no_broadcast() {
 
 #[traced_test]
 #[tokio::test]
-async fn test_parameter_handler_subscribe_unsubscribe() {
-    let handler = Arc::new(RecordingParameterHandler::new());
-
-    let ctx = Context::new();
-    let server = create_server(
-        &ctx,
-        ServerOptions {
-            capabilities: Some(IndexSet::from([Capability::Parameters])),
-            parameter_handler: Some(handler.clone()),
-            ..Default::default()
-        },
-    );
-    let addr = server
-        .start("127.0.0.1", 0)
-        .await
-        .expect("Failed to start server");
-
-    let mut client = WebSocketClient::connect(format!("{addr}"))
-        .await
-        .expect("Failed to connect");
-    expect_recv!(client, ServerMessage::ServerInfo);
-
-    client
-        .send(&SubscribeParameterUpdates::new(["foo", "bar"]))
-        .await
-        .expect("Failed to send subscribe parameter updates");
-
-    assert_eventually(|| dbg!(handler.parameters_subscribe_len()) == 1).await;
-
-    let subbed = handler.take_parameters_subscribe().pop().unwrap();
-    let mut subbed_sorted = subbed.clone();
-    subbed_sorted.sort();
-    assert_eq!(subbed_sorted, vec!["bar".to_string(), "foo".to_string()]);
-
-    client
-        .send(&UnsubscribeParameterUpdates::new(["foo", "bar"]))
-        .await
-        .expect("Failed to send unsubscribe parameter updates");
-
-    assert_eventually(|| dbg!(handler.parameters_unsubscribe_len()) == 1).await;
-
-    let unsubbed = handler.take_parameters_unsubscribe().pop().unwrap();
-    let mut unsubbed_sorted = unsubbed.clone();
-    unsubbed_sorted.sort();
-    assert_eq!(unsubbed_sorted, vec!["bar".to_string(), "foo".to_string()]);
-
-    let _ = server.stop();
-}
-
-#[traced_test]
-#[tokio::test]
 async fn test_parameter_handler_takes_precedence_over_listener() {
-    // Both registered. Handler should win for all four parameter callbacks; listener's
-    // parameter methods must not fire.
+    // Both registered. Handler should win for get/set; listener still receives sub/unsub.
     let listener = Arc::new(RecordingServerListener::new());
     let handler = Arc::new(RecordingParameterHandler::new());
     handler.set_get_behavior(RecordingGetBehavior::Respond(vec![Parameter::float64(
@@ -2337,16 +2289,14 @@ async fn test_parameter_handler_takes_precedence_over_listener() {
     assert_eventually(|| {
         dbg!(handler.parameters_get_len()) >= 1
             && dbg!(handler.parameters_set_len()) >= 1
-            && dbg!(handler.parameters_subscribe_len()) >= 1
-            && dbg!(handler.parameters_unsubscribe_len()) >= 1
+            && dbg!(listener.parameters_subscribe_len()) >= 1
+            && dbg!(listener.parameters_unsubscribe_len()) >= 1
     })
     .await;
 
-    // Listener parameter methods were never invoked.
+    // Listener get/set methods were never invoked.
     assert_eq!(listener.take_parameters_get().len(), 0);
     assert_eq!(listener.take_parameters_set().len(), 0);
-    assert_eq!(listener.take_parameters_subscribe().len(), 0);
-    assert_eq!(listener.take_parameters_unsubscribe().len(), 0);
 
     let _ = server.stop();
 }

@@ -1176,10 +1176,7 @@ impl RemoteAccessSession {
         self.stop_video_tracks(&removed.last_video_unsubscribed);
 
         if !last_param_unsubscribed.is_empty() {
-            // ParameterHandler takes precedence over the deprecated Listener parameter callbacks.
-            if let Some(handler) = self.parameter_handler.as_ref() {
-                handler.unsubscribe(last_param_unsubscribed);
-            } else if let Some(listener) = &self.listener {
+            if let Some(listener) = &self.listener {
                 listener.on_parameters_unsubscribe(last_param_unsubscribed);
             }
         }
@@ -1923,10 +1920,7 @@ impl RemoteAccessSession {
             .write()
             .subscribe(participant.participant_sid(), names);
         if !new_names.is_empty() {
-            // ParameterHandler takes precedence over the deprecated Listener parameter callbacks.
-            if let Some(handler) = self.parameter_handler.as_ref() {
-                handler.subscribe(new_names);
-            } else if let Some(listener) = &self.listener {
+            if let Some(listener) = &self.listener {
                 listener.on_parameters_subscribe(new_names);
             }
         }
@@ -1951,10 +1945,7 @@ impl RemoteAccessSession {
             .write()
             .unsubscribe(participant.participant_sid(), names);
         if !old_names.is_empty() {
-            // ParameterHandler takes precedence over the deprecated Listener parameter callbacks.
-            if let Some(handler) = self.parameter_handler.as_ref() {
-                handler.unsubscribe(old_names);
-            } else if let Some(listener) = &self.listener {
+            if let Some(listener) = &self.listener {
                 listener.on_parameters_unsubscribe(old_names);
             }
         }

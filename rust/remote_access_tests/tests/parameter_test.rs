@@ -9,7 +9,7 @@ use std::sync::{Arc, Mutex};
 use anyhow::Result;
 use foxglove::protocol::v2::server::server_info;
 use foxglove::remote_access::{
-    AnyClient, Capability, Client, GetParametersResponder, Listener, Parameter, ParameterHandler,
+    AnyClient, Capability, GetParametersResponder, Listener, Parameter, ParameterHandler,
     SetParametersResponder,
 };
 use remote_access_tests::test_helpers::{TestGateway, TestGatewayOptions, ViewerConnection};
@@ -18,13 +18,13 @@ use tracing::info;
 use tracing_test::traced_test;
 
 // ---------------------------------------------------------------------------
-// Mock parameter handler that records subscribe/unsubscribe calls
+// Mock listener that records parameter callbacks
 // ---------------------------------------------------------------------------
 
-/// A mock [`ParameterHandler`] that handles parameter get/set requests and records
+/// A mock [`Listener`] that handles parameter get/set requests and records
 /// subscribe/unsubscribe callbacks.
-struct ParameterHandlerImpl {
-    /// Parameters returned by `get`. Set by the test before sending requests.
+struct ParameterListener {
+    /// Parameters returned by `on_get_parameters`. Set by the test before sending requests.
     stored_parameters: Mutex<Vec<Parameter>>,
     /// Records parameter names from subscribe callbacks.
     subscribed: Mutex<Vec<Vec<String>>>,
@@ -32,7 +32,7 @@ struct ParameterHandlerImpl {
     unsubscribed: Mutex<Vec<Vec<String>>>,
 }
 
-impl ParameterHandlerImpl {
+impl ParameterListener {
     fn new(initial_parameters: Vec<Parameter>) -> Self {
         Self {
             stored_parameters: Mutex::new(initial_parameters),
@@ -47,6 +47,69 @@ impl ParameterHandlerImpl {
 
     fn take_unsubscribed(&self) -> Vec<Vec<String>> {
         std::mem::take(&mut *self.unsubscribed.lock().unwrap())
+    }
+}
+
+impl Listener for ParameterListener {
+    fn on_get_parameters(
+        &self,
+        _client: &foxglove::remote_access::Client,
+        param_names: Vec<String>,
+        _request_id: Option<&str>,
+    ) -> Vec<Parameter> {
+        let params = self.stored_parameters.lock().unwrap();
+        if param_names.is_empty() {
+            params.clone()
+        } else {
+            params
+                .iter()
+                .filter(|p| param_names.contains(&p.name))
+                .cloned()
+                .collect()
+        }
+    }
+
+    fn on_set_parameters(
+        &self,
+        _client: &foxglove::remote_access::Client,
+        parameters: Vec<Parameter>,
+        _request_id: Option<&str>,
+    ) -> Vec<Parameter> {
+        let mut stored = self.stored_parameters.lock().unwrap();
+        for param in &parameters {
+            if let Some(existing) = stored.iter_mut().find(|p| p.name == param.name) {
+                *existing = param.clone();
+            } else {
+                stored.push(param.clone());
+            }
+        }
+        stored.clone()
+    }
+
+    fn on_parameters_subscribe(&self, param_names: Vec<String>) {
+        self.subscribed.lock().unwrap().push(param_names);
+    }
+
+    fn on_parameters_unsubscribe(&self, param_names: Vec<String>) {
+        self.unsubscribed.lock().unwrap().push(param_names);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Mock parameter handler
+// ---------------------------------------------------------------------------
+
+/// A mock [`ParameterHandler`] that handles parameter get/set requests.
+struct ParameterHandlerImpl {
+    /// Parameters returned by `get`. Set by the test before sending requests.
+    stored_parameters: Mutex<Vec<Parameter>>,
+}
+
+impl ParameterHandlerImpl {
+    fn new(initial_parameters: Vec<Parameter>) -> Self {
+        Self {
+            stored_parameters: Mutex::new(initial_parameters),
+        }
     }
 }
 
@@ -87,14 +150,6 @@ impl ParameterHandler for ParameterHandlerImpl {
             }
         }
         responder.respond(stored.clone());
-    }
-
-    fn subscribe(&self, names: Vec<String>) {
-        self.subscribed.lock().unwrap().push(names);
-    }
-
-    fn unsubscribe(&self, names: Vec<String>) {
-        self.unsubscribed.lock().unwrap().push(names);
     }
 }
 
@@ -235,11 +290,13 @@ async fn livekit_parameter_set_parameters() -> Result<()> {
 async fn livekit_parameter_subscribe_and_publish() -> Result<()> {
     let ctx = foxglove::Context::new();
     let handler = Arc::new(ParameterHandlerImpl::new(vec![]));
+    let listener = Arc::new(ParameterListener::new(vec![]));
     let gw = TestGateway::start_with_options(
         &ctx,
         TestGatewayOptions {
             capabilities: vec![Capability::Parameters],
-            parameter_handler: Some(handler.clone()),
+            parameter_handler: Some(handler),
+            listener: Some(listener.clone()),
             ..Default::default()
         },
     )
@@ -256,11 +313,11 @@ async fn livekit_parameter_subscribe_and_publish() -> Result<()> {
     // Give the gateway time to process the subscription.
     tokio::time::sleep(std::time::Duration::from_millis(500)).await;
 
-    // Verify the handler was notified of the subscription.
-    let subscribed = handler.take_subscribed();
+    // Verify the listener was notified of the subscription.
+    let subscribed = listener.take_subscribed();
     assert!(
         !subscribed.is_empty(),
-        "handler should have received subscribe callback"
+        "listener should have received on_parameters_subscribe"
     );
 
     // Publish parameter values from the gateway handle.
@@ -389,11 +446,13 @@ async fn livekit_parameter_publish_filters_by_subscription() -> Result<()> {
 async fn livekit_parameter_unsubscribe_stops_delivery() -> Result<()> {
     let ctx = foxglove::Context::new();
     let handler = Arc::new(ParameterHandlerImpl::new(vec![]));
+    let listener = Arc::new(ParameterListener::new(vec![]));
     let gw = TestGateway::start_with_options(
         &ctx,
         TestGatewayOptions {
             capabilities: vec![Capability::Parameters],
-            parameter_handler: Some(handler.clone()),
+            parameter_handler: Some(handler),
+            listener: Some(listener.clone()),
             ..Default::default()
         },
     )
@@ -415,11 +474,11 @@ async fn livekit_parameter_unsubscribe_stops_delivery() -> Result<()> {
     viewer.send_unsubscribe_parameter_updates(&["temp"]).await?;
     tokio::time::sleep(std::time::Duration::from_millis(500)).await;
 
-    // Verify the handler was notified of the unsubscription.
-    let unsubscribed = handler.take_unsubscribed();
+    // Verify the listener was notified of the unsubscription.
+    let unsubscribed = listener.take_unsubscribed();
     assert!(
         !unsubscribed.is_empty(),
-        "handler should have received unsubscribe callback"
+        "listener should have received on_parameters_unsubscribe"
     );
 
     // Publish again — viewer should NOT receive this.
@@ -451,77 +510,6 @@ async fn livekit_parameter_unsubscribe_stops_delivery() -> Result<()> {
 // `ParameterHandler` tests above so each legacy branch keeps integration
 // coverage until the callbacks are removed. Delete this section when the
 // listener parameter callbacks are removed.
-
-/// Mock [`Listener`] that handles parameter get/set requests synchronously and
-/// records subscribe/unsubscribe callbacks.
-struct ParameterListener {
-    stored_parameters: Mutex<Vec<Parameter>>,
-    subscribed: Mutex<Vec<Vec<String>>>,
-    unsubscribed: Mutex<Vec<Vec<String>>>,
-}
-
-impl ParameterListener {
-    fn new(initial_parameters: Vec<Parameter>) -> Self {
-        Self {
-            stored_parameters: Mutex::new(initial_parameters),
-            subscribed: Mutex::new(Vec::new()),
-            unsubscribed: Mutex::new(Vec::new()),
-        }
-    }
-
-    fn take_subscribed(&self) -> Vec<Vec<String>> {
-        std::mem::take(&mut *self.subscribed.lock().unwrap())
-    }
-
-    fn take_unsubscribed(&self) -> Vec<Vec<String>> {
-        std::mem::take(&mut *self.unsubscribed.lock().unwrap())
-    }
-}
-
-impl Listener for ParameterListener {
-    fn on_get_parameters(
-        &self,
-        _client: &Client,
-        param_names: Vec<String>,
-        _request_id: Option<&str>,
-    ) -> Vec<Parameter> {
-        let params = self.stored_parameters.lock().unwrap();
-        if param_names.is_empty() {
-            params.clone()
-        } else {
-            params
-                .iter()
-                .filter(|p| param_names.contains(&p.name))
-                .cloned()
-                .collect()
-        }
-    }
-
-    fn on_set_parameters(
-        &self,
-        _client: &Client,
-        parameters: Vec<Parameter>,
-        _request_id: Option<&str>,
-    ) -> Vec<Parameter> {
-        let mut stored = self.stored_parameters.lock().unwrap();
-        for param in &parameters {
-            if let Some(existing) = stored.iter_mut().find(|p| p.name == param.name) {
-                *existing = param.clone();
-            } else {
-                stored.push(param.clone());
-            }
-        }
-        stored.clone()
-    }
-
-    fn on_parameters_subscribe(&self, param_names: Vec<String>) {
-        self.subscribed.lock().unwrap().push(param_names);
-    }
-
-    fn on_parameters_unsubscribe(&self, param_names: Vec<String>) {
-        self.unsubscribed.lock().unwrap().push(param_names);
-    }
-}
 
 /// Listener variant of [`livekit_parameter_get_parameters`].
 #[traced_test]

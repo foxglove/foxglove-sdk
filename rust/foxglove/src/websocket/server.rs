@@ -447,11 +447,8 @@ impl Server {
             }
         }
 
-        // Notify handler. ParameterHandler takes precedence over the deprecated listener method.
         if !new_names.is_empty() {
-            if let Some(handler) = self.parameter_handler.as_ref() {
-                handler.subscribe(new_names);
-            } else if let Some(listener) = self.listener.as_ref() {
+            if let Some(listener) = self.listener.as_ref() {
                 listener.on_parameters_subscribe(new_names);
             }
         }
@@ -472,11 +469,8 @@ impl Server {
             }
         }
 
-        // Notify handler. ParameterHandler takes precedence over the deprecated listener method.
         if !old_names.is_empty() {
-            if let Some(handler) = self.parameter_handler.as_ref() {
-                handler.unsubscribe(old_names);
-            } else if let Some(listener) = self.listener.as_ref() {
+            if let Some(listener) = self.listener.as_ref() {
                 listener.on_parameters_unsubscribe(old_names);
             }
         }
@@ -497,11 +491,8 @@ impl Server {
             subs.remove(name);
         }
 
-        // Notify handler. ParameterHandler takes precedence over the deprecated listener method.
         if !old_names.is_empty() {
-            if let Some(handler) = self.parameter_handler.as_ref() {
-                handler.unsubscribe(old_names);
-            } else if let Some(listener) = self.listener.as_ref() {
+            if let Some(listener) = self.listener.as_ref() {
                 listener.on_parameters_unsubscribe(old_names);
             }
         }
