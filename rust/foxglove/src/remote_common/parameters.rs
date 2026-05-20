@@ -124,9 +124,14 @@ impl Drop for GetParametersResponder {
 /// generic error status to the requesting client.
 ///
 /// When the request carried a `request_id`, the values passed to [`Self::respond`] are echoed
-/// back to the requester; otherwise the responder does nothing on the wire. The responder does
-/// not notify other subscribers; see [`ParameterHandler::set`] for the rationale and how to
-/// broadcast updates.
+/// back to the requester; otherwise the responder does nothing on the wire.
+///
+/// # Differences from the legacy listener
+///
+/// The responder does not notify other parameter subscribers. This is a behavior change from
+/// the `ServerListener::on_set_parameters` / `Listener::on_set_parameters` path, which
+/// publishes the returned values to subscribers automatically. See [`ParameterHandler::set`]
+/// for the rationale and how to broadcast updates from a handler implementation.
 #[must_use]
 #[derive(Debug)]
 pub struct SetParametersResponder {
