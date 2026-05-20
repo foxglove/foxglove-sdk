@@ -74,6 +74,7 @@ impl ParameterListener {
     }
 }
 
+#[allow(deprecated)]
 impl Listener for ParameterListener {
     fn on_get_parameters(
         &self,
