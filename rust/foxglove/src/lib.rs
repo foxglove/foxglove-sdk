@@ -311,6 +311,25 @@
 //! # }
 //! ```
 //!
+//! #### NVENC hardware acceleration
+//!
+//! When available, NVIDIA NVENC is used to accelerate H.264 video encoding for the remote
+//! access gateway. Without it, the gateway falls back to software H.264 encoding, which is
+//! slower and lower quality.
+//!
+//! NVENC requires `cuda.h` to be present at build time. The webrtc-sys build script looks
+//! for it at `$CUDA_HOME/include/cuda.h`, defaulting to `/usr/local/cuda/include/cuda.h`
+//! when `CUDA_HOME` is unset.
+//!
+//! On Ubuntu you can install the headers with `apt install nvidia-cuda-toolkit`, but some versions of
+//! that package place `cuda.h` at `/usr/include/cuda.h` rather than `/usr/local/cuda/include/`,
+//! so you also need to set `CUDA_HOME=/usr` for webrtc-sys (and this crate's build script)
+//! to find it.
+//!
+//! You can enable the `require-cuda` feature on this crate to make it a build error if
+//! `remote-access` is disabled, the target does not support NVENC, or `cuda.h` is not
+//! found on a target where NVENC would be built.
+//!
 //! # Feature flags
 //!
 //! The Foxglove SDK defines the following feature flags:
@@ -319,6 +338,9 @@
 //!   default. Mutually exclusive with `ring`. See [Crypto backend](#crypto-backend).
 //! - `chrono`: enables [chrono] conversions for [`Duration`][crate::messages::Duration] and
 //!   [`Timestamp`][crate::messages::Timestamp].
+//! - `require-cuda`: opts into build-time checks that `remote-access` is enabled, the target
+//!   supports NVENC, and `cuda.h` is present where NVENC would be built. See
+//!   [NVENC hardware acceleration](#nvenc-hardware-acceleration).
 //! - `derive`: enables the use of `#[derive(Encode)]` to derive the [`Encode`] trait for logging
 //!   custom structs. Enabled by default.
 //! - `full`: the full set of supported features, with opinionated picks for mutually exclusive
