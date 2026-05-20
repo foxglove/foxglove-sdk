@@ -1,9 +1,11 @@
 //! Types shared between the WebSocket server and the remote-access gateway.
 //!
-//! Handler traits and supporting types in this module are transport-agnostic: an implementation
-//! of [`ParameterHandler`], [`AssetHandler`], or service [`Handler`] can be registered with either
-//! sink. The transport-specific [`crate::websocket`] and [`crate::remote_access`] modules
-//! re-export the same items for convenience.
+//! Everything in this module is transport-agnostic: handler traits ([`ParameterHandler`],
+//! [`AssetHandler`], service [`Handler`]) implemented against these types can be registered with
+//! either the WebSocket server or the remote-access gateway, and data and identity types
+//! ([`Parameter`], [`Status`], [`ConnectionGraph`], [`ClientId`], [`Service`], ...) are the same
+//! concrete types used by both. The transport-specific [`crate::websocket`] and
+//! [`crate::remote_access`] modules re-export the same items for convenience.
 
 use std::sync::atomic::{AtomicU32, Ordering};
 
