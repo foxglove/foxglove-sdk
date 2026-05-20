@@ -9,7 +9,7 @@ name = "foxglove"
 crate-type = ["staticlib", "cdylib"]
 
 # The `remote_access` feature gates `mod gateway` in src/lib.rs. It can be enabled via
-# the CMake option FOXGLOVE_REMOTE_ACCESS, which passes this feature to corrosion.
+# the Container.mk option FOXGLOVE_REMOTE_ACCESS, which passes this feature to corrosion.
 # Likewise FOXGLOVE_REQUIRE_CUDA enables the require-cuda feature, which will error
 # if cuda.h is not found: https://docs.rs/foxglove/latest/foxglove/#nvenc-hardware-acceleration
 #

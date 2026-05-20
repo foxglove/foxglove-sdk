@@ -47,10 +47,8 @@ jobs:
 
       # Install CUDA headers so that `make test-python` (which uses
       # `--features full`, including `require-cuda`) can find `cuda.h`.
-      - name: Install CUDA toolkit
-        run: |
-          sudo apt-get install -y --no-install-recommends nvidia-cuda-dev
-          echo "CUDA_HOME=/usr" >> $GITHUB_ENV
+      - name: Install CUDA headers
+        uses: ./.github/actions/install-cuda-headers
 
       - run: corepack enable
       - uses: actions/setup-node@v6

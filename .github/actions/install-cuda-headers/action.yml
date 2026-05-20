@@ -1,0 +1,13 @@
+name: Install CUDA headers
+description: >-
+  Install the nvidia-cuda-dev headers package and export CUDA_HOME so builds
+  can find cuda.h and compile with NVENC support. Assumes apt-get update has
+  already been run (e.g. by the common-deps action).
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: |
+        sudo apt-get install -y --no-install-recommends nvidia-cuda-dev
+        echo "CUDA_HOME=/usr" >> $GITHUB_ENV
