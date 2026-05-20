@@ -2628,7 +2628,7 @@ mod tests {
 
         let cancel = CancellationToken::new();
         let writer = Arc::new(TestByteStreamWriter::default());
-        writer.set_fail_writes(true);
+        writer.set_always_fail_writes(true);
 
         let pending_resets = Arc::new(parking_lot::Mutex::new(HashSet::new()));
         let reset_notify = Arc::new(tokio::sync::Notify::new());
@@ -2659,6 +2659,14 @@ mod tests {
             resets,
             vec![sid],
             "write failure should populate pending_resets"
+        );
+
+        // Confirm this was the write-failure path, not queue-overflow. Queue
+        // overflow cancels the participant via a child token; write failure
+        // does not.
+        assert!(
+            !cancel.is_cancelled(),
+            "cancel token should not fire on write-failure path"
         );
     }
 

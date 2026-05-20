@@ -353,7 +353,7 @@ impl TestByteStreamWriter {
 
     /// Configure the writer to return errors on all subsequent writes.
     #[allow(dead_code)]
-    pub(super) fn set_fail_writes(&self, fail: bool) {
+    pub(super) fn set_always_fail_writes(&self, fail: bool) {
         self.fail_writes
             .store(fail, std::sync::atomic::Ordering::Relaxed);
     }
