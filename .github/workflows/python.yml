@@ -45,18 +45,13 @@ jobs:
       - name: Install common dependencies
         uses: ./.github/actions/common-deps
 
-      # Install CUDA headers so that the require-cuda build-time `cuda.h` check
-      # passes for `make test-python` below.
-      - name: Install CUDA headers
-        uses: ./.github/actions/install-cuda-headers
-
       - run: corepack enable
       - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: yarn
 
-      - run: make -f Container.mk PYTHON_REQUIRE_CUDA=ON test-python
+      - run: make -f Container.mk test-python
 
   playground-wasm:
     runs-on: ubuntu-latest

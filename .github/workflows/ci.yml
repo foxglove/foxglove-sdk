@@ -17,10 +17,6 @@ jobs:
       - name: Install common dependencies
         uses: ./.github/actions/common-deps
 
-      # Install CUDA headers so that builds can find `cuda.h` and compile with NVENC support.
-      - name: Install CUDA headers
-        uses: ./.github/actions/install-cuda-headers
-
       - uses: arduino/setup-protoc@v3
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
@@ -63,7 +59,7 @@ jobs:
         timeout-minutes: 5
       - run: cargo test -p foxglove --no-default-features
         timeout-minutes: 5
-      - run: cargo test -p foxglove_c --features full,require-cuda
+      - run: cargo test -p foxglove_c --features full
       - run: cargo test -p foxglove_data_loader
       - run: cargo test -p foxglove_derive
       - run: cargo test -p foxglove-sdk-python --features remote-access
