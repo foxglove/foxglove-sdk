@@ -1007,10 +1007,21 @@ TEST_CASE("ParameterHandler publish after respond broadcasts to subscribers") {
     server->publishParameterValues(std::move(to_publish));
   };
 
+  std::mutex sub_mutex;
+  std::condition_variable sub_cv;
+  bool subscribed = false;
+  foxglove::WebSocketServerCallbacks callbacks;
+  callbacks.onParametersSubscribe = [&](const std::vector<std::string_view>& /*names*/) {
+    std::scoped_lock lock{sub_mutex};
+    subscribed = true;
+    sub_cv.notify_one();
+  };
+
   foxglove::WebSocketServerOptions options;
   options.context = foxglove::Context::create();
   options.name = "unit-test";
   options.port = 0;
+  options.callbacks = std::move(callbacks);
   options.parameter_handler = std::move(handler);
   auto server_result = foxglove::WebSocketServer::create(std::move(options));
   auto server = std::move(requireValue(server_result));
@@ -1033,16 +1044,12 @@ TEST_CASE("ParameterHandler publish after respond broadcasts to subscribers") {
     })"
   );
 
-  // Give the server a moment to register the subscription before the set.
-  // (Without this we could race and the publish would have no subscribers.)
+  // Wait for the server to register the subscription before sending the set.
   {
-    auto pre = subscriber.filterRecv(
-      [](const std::string&) {
-        return false;
-      },
-      std::chrono::milliseconds(200)
-    );
-    (void)pre;
+    std::unique_lock lock{sub_mutex};
+    REQUIRE(sub_cv.wait_for(lock, kTestTimeout, [&] {
+      return subscribed;
+    }));
   }
 
   setter.send(
