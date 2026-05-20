@@ -33,19 +33,16 @@ jobs:
         uses: ./.github/actions/common-deps
         with:
           python-version: "3.13"
-      # Install CUDA headers so that `make -f Container.mk docs-python` (which uses
-      # `--features full`, including `require-cuda`) can find `cuda.h`.
-      - name: Install CUDA toolkit
-        run: |
-          sudo apt-get install -y --no-install-recommends nvidia-cuda-toolkit
-          echo "CUDA_HOME=/usr" >> $GITHUB_ENV
       - run: corepack enable
       - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: yarn
       - uses: astral-sh/setup-uv@v7
-      - run: make -f Container.mk docs-python
+      # Building docs doesn't need NVENC hardware acceleration to actually work
+      # at runtime, so skip the build-time `cuda.h` check rather than installing
+      # the CUDA toolkit on the runner.
+      - run: make -f Container.mk PYTHON_REQUIRE_CUDA=OFF docs-python
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
         with:

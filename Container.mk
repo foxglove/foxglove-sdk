@@ -4,9 +4,18 @@ generate:
 	yarn generate
 
 PYTHON_REMOTE_ACCESS ?= ON
+# Opts into a build-time check that NVENC hardware acceleration for video
+# encoding will be available (cuda.h is present on supported targets). Only
+# meaningful when remote-access is also enabled, so it defaults to whatever
+# PYTHON_REMOTE_ACCESS is set to.
+PYTHON_REQUIRE_CUDA ?= $(PYTHON_REMOTE_ACCESS)
 
 ifeq ($(PYTHON_REMOTE_ACCESS),ON)
+ifeq ($(PYTHON_REQUIRE_CUDA),ON)
 MATURIN_PEP517_ARGS += --features full
+else
+MATURIN_PEP517_ARGS += --features remote-access
+endif
 endif
 
 .PHONY: build-python

@@ -20,7 +20,7 @@ jobs:
       # Install CUDA headers so that builds can find `cuda.h` and compile with NVENC support.
       - name: Install CUDA toolkit
         run: |
-          sudo apt-get install -y --no-install-recommends nvidia-cuda-toolkit
+          sudo apt-get install -y --no-install-recommends nvidia-cuda-dev
           echo "CUDA_HOME=/usr" >> $GITHUB_ENV
 
       - uses: arduino/setup-protoc@v3

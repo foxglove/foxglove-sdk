@@ -47,7 +47,7 @@ jobs:
             clang-format-19 clang-tidy-19 \
             gcc g++ libglib2.0-dev libva-dev  \
             libwebsockets-dev nlohmann-json3-dev \
-            nvidia-cuda-toolkit
+            nvidia-cuda-dev
           echo "/usr/lib/llvm-19/bin" >> $GITHUB_PATH
           echo "CUDA_HOME=/usr" >> $GITHUB_ENV
       - run: clang-format --version
@@ -173,7 +173,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libglib2.0-dev libva-dev libwebsockets-dev \
-            nvidia-cuda-toolkit
+            nvidia-cuda-dev
           echo "CC=gcc" >> $GITHUB_ENV
           echo "CXX=g++" >> $GITHUB_ENV
           echo "CUDA_HOME=/usr" >> $GITHUB_ENV

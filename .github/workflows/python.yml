@@ -49,7 +49,7 @@ jobs:
       # `--features full`, including `require-cuda`) can find `cuda.h`.
       - name: Install CUDA toolkit
         run: |
-          sudo apt-get install -y --no-install-recommends nvidia-cuda-toolkit
+          sudo apt-get install -y --no-install-recommends nvidia-cuda-dev
           echo "CUDA_HOME=/usr" >> $GITHUB_ENV
 
       - run: corepack enable
@@ -205,7 +205,7 @@ jobs:
             before-script: |
               if command -v apt-get; then
                 apt-get update
-                apt-get install -y libva-dev nvidia-cuda-toolkit
+                apt-get install -y libva-dev nvidia-cuda-dev
                 ln -snf /usr /usr/local/cuda
               elif command -v yum; then
                 yum install -y libva-devel yum-utils
@@ -233,7 +233,7 @@ jobs:
             before-script: |
               if command -v apt-get; then
                 apt-get update
-                apt-get install -y libva-dev nvidia-cuda-toolkit
+                apt-get install -y libva-dev nvidia-cuda-dev
                 ln -snf /usr /usr/local/cuda
               elif command -v yum; then
                 yum install -y libva-devel yum-utils
