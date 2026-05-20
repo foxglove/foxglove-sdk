@@ -242,7 +242,7 @@ impl ViewerConnection {
                 Err(err) => {
                     // All connect failures are retried until the outer
                     // deadline. Covers transient cases like 401 during
-                    // LiveKit init and post-partition reconnection.
+                    // LiveKit init.
                     if tokio::time::Instant::now() >= outer_deadline {
                         return Err(err).context("viewer failed to connect to LiveKit");
                     }
