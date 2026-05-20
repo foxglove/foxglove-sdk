@@ -12,7 +12,9 @@ use foxglove::remote_access::{
     AnyClient, Capability, GetParametersResponder, Listener, Parameter, ParameterHandler,
     SetParametersResponder,
 };
-use remote_access_tests::test_helpers::{TestGateway, TestGatewayOptions, ViewerConnection};
+use remote_access_tests::test_helpers::{
+    TestGateway, TestGatewayOptions, ViewerConnection, poll_until,
+};
 use serial_test::serial;
 use tracing::info;
 use tracing_test::traced_test;
@@ -26,6 +28,10 @@ use tracing_test::traced_test;
 struct ParameterListener {
     /// Parameters returned by `on_get_parameters`. Set by the test before sending requests.
     stored_parameters: Mutex<Vec<Parameter>>,
+    /// Records parameter names from `on_get_parameters` calls.
+    get_calls: Mutex<Vec<Vec<String>>>,
+    /// Records parameters from `on_set_parameters` calls.
+    set_calls: Mutex<Vec<Vec<Parameter>>>,
     /// Records parameter names from subscribe callbacks.
     subscribed: Mutex<Vec<Vec<String>>>,
     /// Records parameter names from unsubscribe callbacks.
@@ -36,9 +42,27 @@ impl ParameterListener {
     fn new(initial_parameters: Vec<Parameter>) -> Self {
         Self {
             stored_parameters: Mutex::new(initial_parameters),
+            get_calls: Mutex::new(Vec::new()),
+            set_calls: Mutex::new(Vec::new()),
             subscribed: Mutex::new(Vec::new()),
             unsubscribed: Mutex::new(Vec::new()),
         }
+    }
+
+    fn get_calls_len(&self) -> usize {
+        self.get_calls.lock().unwrap().len()
+    }
+
+    fn set_calls_len(&self) -> usize {
+        self.set_calls.lock().unwrap().len()
+    }
+
+    fn subscribed_len(&self) -> usize {
+        self.subscribed.lock().unwrap().len()
+    }
+
+    fn unsubscribed_len(&self) -> usize {
+        self.unsubscribed.lock().unwrap().len()
     }
 
     fn take_subscribed(&self) -> Vec<Vec<String>> {
@@ -57,6 +81,7 @@ impl Listener for ParameterListener {
         param_names: Vec<String>,
         _request_id: Option<&str>,
     ) -> Vec<Parameter> {
+        self.get_calls.lock().unwrap().push(param_names.clone());
         let params = self.stored_parameters.lock().unwrap();
         if param_names.is_empty() {
             params.clone()
@@ -75,6 +100,7 @@ impl Listener for ParameterListener {
         parameters: Vec<Parameter>,
         _request_id: Option<&str>,
     ) -> Vec<Parameter> {
+        self.set_calls.lock().unwrap().push(parameters.clone());
         let mut stored = self.stored_parameters.lock().unwrap();
         for param in &parameters {
             if let Some(existing) = stored.iter_mut().find(|p| p.name == param.name) {
@@ -103,13 +129,27 @@ impl Listener for ParameterListener {
 struct ParameterHandlerImpl {
     /// Parameters returned by `get`. Set by the test before sending requests.
     stored_parameters: Mutex<Vec<Parameter>>,
+    /// Records parameter names from `get` calls.
+    get_calls: Mutex<Vec<Vec<String>>>,
+    /// Records parameters from `set` calls.
+    set_calls: Mutex<Vec<Vec<Parameter>>>,
 }
 
 impl ParameterHandlerImpl {
     fn new(initial_parameters: Vec<Parameter>) -> Self {
         Self {
             stored_parameters: Mutex::new(initial_parameters),
+            get_calls: Mutex::new(Vec::new()),
+            set_calls: Mutex::new(Vec::new()),
         }
+    }
+
+    fn get_calls_len(&self) -> usize {
+        self.get_calls.lock().unwrap().len()
+    }
+
+    fn set_calls_len(&self) -> usize {
+        self.set_calls.lock().unwrap().len()
     }
 }
 
@@ -121,6 +161,7 @@ impl ParameterHandler for ParameterHandlerImpl {
         _request_id: Option<String>,
         responder: GetParametersResponder,
     ) {
+        self.get_calls.lock().unwrap().push(names.clone());
         let params = self.stored_parameters.lock().unwrap();
         let values = if names.is_empty() {
             params.clone()
@@ -141,6 +182,7 @@ impl ParameterHandler for ParameterHandlerImpl {
         _request_id: Option<String>,
         responder: SetParametersResponder,
     ) {
+        self.set_calls.lock().unwrap().push(parameters.clone());
         let mut stored = self.stored_parameters.lock().unwrap();
         for param in &parameters {
             if let Some(existing) = stored.iter_mut().find(|p| p.name == param.name) {
@@ -435,6 +477,56 @@ async fn livekit_parameter_unsubscribe_stops_delivery() -> Result<()> {
         result.is_err(),
         "should not receive parameter values after unsubscribing"
     );
+
+    viewer.close().await?;
+    gw.stop().await?;
+    Ok(())
+}
+
+/// Test that when both a `ParameterHandler` and a `Listener` are registered,
+/// the handler wins for get/set while the listener still receives sub/unsub.
+#[traced_test]
+#[ignore]
+#[tokio::test]
+#[serial(livekit)]
+async fn livekit_parameter_handler_takes_precedence_over_listener() -> Result<()> {
+    let ctx = foxglove::Context::new();
+    let handler = Arc::new(ParameterHandlerImpl::new(vec![Parameter::float64(
+        "foo", 1.0,
+    )]));
+    let listener = Arc::new(ParameterListener::new(vec![]));
+    let gw = TestGateway::start_with_options(
+        &ctx,
+        TestGatewayOptions {
+            capabilities: vec![Capability::Parameters],
+            parameter_handler: Some(handler.clone()),
+            listener: Some(listener.clone()),
+            ..Default::default()
+        },
+    )
+    .await?;
+
+    let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+    let _server_info = viewer.expect_server_info().await?;
+
+    viewer.send_subscribe_parameter_updates(&["foo"]).await?;
+    viewer.send_get_parameters_with_id(&["foo"], "g1").await?;
+    viewer
+        .send_set_parameters_with_id(vec![Parameter::float64("foo", 3.0)], "s1")
+        .await?;
+    viewer.send_unsubscribe_parameter_updates(&["foo"]).await?;
+
+    poll_until(|| {
+        handler.get_calls_len() >= 1
+            && handler.set_calls_len() >= 1
+            && listener.subscribed_len() >= 1
+            && listener.unsubscribed_len() >= 1
+    })
+    .await;
+
+    // Listener get/set methods were never invoked.
+    assert_eq!(listener.get_calls_len(), 0);
+    assert_eq!(listener.set_calls_len(), 0);
 
     viewer.close().await?;
     gw.stop().await?;
