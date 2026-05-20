@@ -2,10 +2,16 @@
 
 use std::sync::atomic::{AtomicU32, Ordering};
 
+#[cfg(any(feature = "websocket", feature = "remote-access"))]
+pub(crate) mod any_client;
 pub(crate) mod connection_graph;
+#[cfg(any(feature = "websocket", feature = "remote-access"))]
 pub(crate) mod fetch_asset;
 pub(crate) mod semaphore;
 pub(crate) mod service;
+
+#[cfg(any(feature = "websocket", feature = "remote-access"))]
+pub use any_client::AnyClient;
 
 /// Identifies a client connection. Unique for the duration of the server's lifetime.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]

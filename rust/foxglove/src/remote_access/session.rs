@@ -24,6 +24,7 @@ use crate::protocol::v2::parameter::Parameter;
 use crate::protocol::v2::server::ParameterValues;
 use crate::remote_common::connection_graph::ConnectionGraph;
 use crate::remote_common::{
+    AnyClient,
     fetch_asset::AssetResponder,
     service::{CallId, Service, ServiceId, ServiceMap},
 };
@@ -160,7 +161,7 @@ pub(super) struct RemoteAccessSession {
     qos_classifier: Option<Arc<dyn QosClassifier>>,
     listener: Option<Arc<dyn Listener>>,
     capabilities: Vec<Capability>,
-    fetch_asset_handler: Option<Arc<dyn AssetHandler<Client>>>,
+    fetch_asset_handler: Option<Arc<dyn AssetHandler>>,
     runtime: Handle,
     cancellation_token: CancellationToken,
     services: Arc<parking_lot::RwLock<ServiceMap>>,
@@ -365,7 +366,7 @@ pub(super) struct SessionParams {
     pub(super) services: Arc<parking_lot::RwLock<ServiceMap>>,
     pub(super) connection_graph: Arc<parking_lot::Mutex<ConnectionGraph>>,
     pub(super) remote_access_session_id: Option<String>,
-    pub(super) fetch_asset_handler: Option<Arc<dyn AssetHandler<Client>>>,
+    pub(super) fetch_asset_handler: Option<Arc<dyn AssetHandler>>,
     pub(super) server_info: ServerInfo,
     pub(super) device_wait_for_viewer: Option<Duration>,
 }
@@ -1787,11 +1788,11 @@ impl RemoteAccessSession {
             "Gateway advertised the Assets capability without providing a handler; \
              this should have been caught in Gateway::start()",
         );
-        let client = Client::with_sender(
+        let client = AnyClient::from_remote_access(Client::with_sender(
             participant.client_id(),
             participant.participant_id().clone(),
             participant,
-        );
+        ));
         let responder = AssetResponder::new(client, request_id, guard);
         handler.fetch(uri, responder);
     }
@@ -2275,12 +2276,12 @@ mod tests {
         (participant, rx)
     }
 
-    fn test_client(participant: &Arc<Participant>) -> Client {
-        Client::with_sender(
+    fn test_client(participant: &Arc<Participant>) -> AnyClient {
+        AnyClient::from_remote_access(Client::with_sender(
             participant.client_id(),
             participant.participant_id().clone(),
             participant,
-        )
+        ))
     }
 
     // ---- fetch asset tests ----
@@ -2409,7 +2410,7 @@ mod tests {
         let responder = AssetResponder::new(test_client(&participant), 7, guard);
 
         let handler = BlockingAssetHandlerFn(Arc::new(
-            |_client: Client, _uri: String| -> Result<&[u8], &str> { Ok(b"<robot/>") },
+            |_client: AnyClient, _uri: String| -> Result<&[u8], &str> { Ok(b"<robot/>") },
         ));
         handler.fetch("package://test/model.urdf".to_string(), responder);
 
@@ -2430,7 +2431,7 @@ mod tests {
         let responder = AssetResponder::new(test_client(&participant), 9, guard);
 
         let handler = BlockingAssetHandlerFn(Arc::new(
-            |_client: Client, _uri: String| -> Result<&[u8], &str> { Err("not found") },
+            |_client: AnyClient, _uri: String| -> Result<&[u8], &str> { Err("not found") },
         ));
         handler.fetch("package://missing".to_string(), responder);
 
@@ -2450,9 +2451,10 @@ mod tests {
         let guard = participant.fetch_asset_sem().try_acquire().unwrap();
         let responder = AssetResponder::new(test_client(&participant), 8, guard);
 
-        let handler = AsyncAssetHandlerFn(Arc::new(|_client: Client, _uri: String| async move {
-            Ok::<_, String>(b"PNG data".to_vec())
-        }));
+        let handler =
+            AsyncAssetHandlerFn(Arc::new(|_client: AnyClient, _uri: String| async move {
+                Ok::<_, String>(b"PNG data".to_vec())
+            }));
         handler.fetch("https://example.com/asset.png".to_string(), responder);
 
         let msg = tokio::time::timeout(Duration::from_secs(1), rx.recv_async())

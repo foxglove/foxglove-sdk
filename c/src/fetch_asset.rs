@@ -1,34 +1,10 @@
 use std::ffi::c_void;
 
-use foxglove::websocket;
+use foxglove::websocket::{AssetHandler, AssetResponder};
 
 use crate::{FoxgloveString, bytes::FoxgloveBytes};
 
-enum AssetResponderVariant {
-    WebSocket(websocket::AssetResponder),
-    #[cfg(feature = "remote-access")]
-    Gateway(foxglove::remote_access::AssetResponder),
-}
-
-impl AssetResponderVariant {
-    fn respond_ok(self, data: &[u8]) {
-        match self {
-            Self::WebSocket(r) => r.respond_ok(data),
-            #[cfg(feature = "remote-access")]
-            Self::Gateway(r) => r.respond_ok(data),
-        }
-    }
-
-    fn respond_err(self, message: impl AsRef<str>) {
-        match self {
-            Self::WebSocket(r) => r.respond_err(message),
-            #[cfg(feature = "remote-access")]
-            Self::Gateway(r) => r.respond_err(message),
-        }
-    }
-}
-
-pub struct FoxgloveFetchAssetResponder(AssetResponderVariant);
+pub struct FoxgloveFetchAssetResponder(AssetResponder);
 impl FoxgloveFetchAssetResponder {
     /// Moves the responder to the heap and returns a raw pointer.
     ///
@@ -74,27 +50,14 @@ impl FetchAssetHandler {
 unsafe impl Send for FetchAssetHandler {}
 unsafe impl Sync for FetchAssetHandler {}
 
-impl websocket::AssetHandler<websocket::Client> for FetchAssetHandler {
-    fn fetch(&self, uri: String, responder: websocket::AssetResponder) {
+impl AssetHandler for FetchAssetHandler {
+    fn fetch(&self, uri: String, responder: AssetResponder) {
         let c_uri = FoxgloveString::from(&uri);
-        let c_responder =
-            FoxgloveFetchAssetResponder(AssetResponderVariant::WebSocket(responder)).into_raw();
+        let c_responder = FoxgloveFetchAssetResponder(responder).into_raw();
         // SAFETY: It's the callback implementation's responsibility to ensure that this callback
-        // function pointer remains valid for the lifetime of the WebSocket server, as described in
-        // the safety requirements of `foxglove_server_options.fetch_asset`.
-        unsafe { (self.callback)(self.callback_context, &raw const c_uri, c_responder) };
-    }
-}
-
-#[cfg(feature = "remote-access")]
-impl foxglove::remote_access::AssetHandler<foxglove::remote_access::Client> for FetchAssetHandler {
-    fn fetch(&self, uri: String, responder: foxglove::remote_access::AssetResponder) {
-        let c_uri = FoxgloveString::from(&uri);
-        let c_responder =
-            FoxgloveFetchAssetResponder(AssetResponderVariant::Gateway(responder)).into_raw();
-        // SAFETY: It's the callback implementation's responsibility to ensure that this callback
-        // function pointer remains valid for the lifetime of the gateway, as described in
-        // the safety requirements of `foxglove_gateway_options.fetch_asset`.
+        // function pointer remains valid for the lifetime of the server / gateway, as described
+        // in the safety requirements of `foxglove_server_options.fetch_asset` /
+        // `foxglove_gateway_options.fetch_asset`.
         unsafe { (self.callback)(self.callback_context, &raw const c_uri, c_responder) };
     }
 }

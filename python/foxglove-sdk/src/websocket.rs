@@ -557,7 +557,7 @@ pub fn start_server(
     }
 
     if let Some(asset_handler) = asset_handler {
-        server = server.fetch_asset_handler(Box::new(CallbackAssetHandler {
+        server = server.fetch_asset_handler(Arc::new(CallbackAssetHandler {
             handler: Arc::new(asset_handler),
         }));
     }

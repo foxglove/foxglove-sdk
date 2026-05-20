@@ -1487,7 +1487,7 @@ async fn test_fetch_asset() {
         &ctx,
         ServerOptions {
             capabilities: Some(IndexSet::from([Capability::Assets])),
-            fetch_asset_handler: Some(Box::new(BlockingAssetHandlerFn(Arc::new(
+            fetch_asset_handler: Some(Arc::new(BlockingAssetHandlerFn(Arc::new(
                 |_client, uri: String| {
                     if uri.ends_with("error") {
                         Err("test error")
