@@ -122,7 +122,9 @@ struct ParameterHandler {
   /// @param client_id The requesting client's ID.
   /// @param request_id A request ID unique to this client. May be empty.
   /// @param param_names A list of parameter names to fetch, or empty to
-  /// request all parameters.
+  /// request all parameters. The buffer is valid for the duration of this
+  /// call; if the callback wishes to store these values (e.g. to hand them
+  /// off to another thread along with the responder), it must copy them out.
   /// @param responder The responder used to complete the request.
   std::function<void(
     uint32_t client_id, std::optional<std::string_view> request_id,
@@ -142,7 +144,10 @@ struct ParameterHandler {
   ///
   /// @param client_id The requesting client's ID.
   /// @param request_id A request ID unique to this client. May be empty.
-  /// @param params A list of parameter values the client wishes to set.
+  /// @param params A list of parameter values the client wishes to set. The
+  /// buffer is valid for the duration of this call; if the callback wishes
+  /// to store these values (e.g. to hand them off to another thread along
+  /// with the responder), it must copy them out via `ParameterView::clone`.
   /// @param responder The responder used to complete the request.
   std::function<void(
     uint32_t client_id, std::optional<std::string_view> request_id,
