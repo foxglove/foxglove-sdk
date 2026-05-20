@@ -170,11 +170,11 @@ struct WebSocketServerCallbacks {
   [[deprecated(
     "Use ParameterHandler instead. This callback is not invoked when a ParameterHandler is "
     "registered on the server."
-  )]] std::function<std::vector<Parameter>(
-    uint32_t client_id, std::optional<std::string_view> request_id,
-    const std::vector<std::string_view>& param_names
-  )>
-    onGetParameters;
+  )]] std::
+    function<std::vector<Parameter>(
+      uint32_t client_id, std::optional<std::string_view> request_id,
+      const std::vector<std::string_view>& param_names
+    )> onGetParameters;
 
   /// @brief Callback invoked when a client sets parameters.
   ///
@@ -192,11 +192,11 @@ struct WebSocketServerCallbacks {
   [[deprecated(
     "Use ParameterHandler instead. This callback is not invoked when a ParameterHandler is "
     "registered on the server."
-  )]] std::function<std::vector<Parameter>(
-    uint32_t client_id, std::optional<std::string_view> request_id,
-    const std::vector<ParameterView>& params
-  )>
-    onSetParameters;
+  )]] std::
+    function<std::vector<Parameter>(
+      uint32_t client_id, std::optional<std::string_view> request_id,
+      const std::vector<ParameterView>& params
+    )> onSetParameters;
 
   /// @brief Callback invoked when a client subscribes to the named parameters
   /// for the first time.

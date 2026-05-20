@@ -125,11 +125,11 @@ struct RemoteAccessGatewayCallbacks {
   [[deprecated(
     "Use ParameterHandler instead. This callback is not invoked when a ParameterHandler is "
     "registered on the gateway."
-  )]] std::function<std::vector<Parameter>(
-    uint32_t client_id, std::optional<std::string_view> request_id,
-    const std::vector<std::string_view>& param_names
-  )>
-    onGetParameters;
+  )]] std::
+    function<std::vector<Parameter>(
+      uint32_t client_id, std::optional<std::string_view> request_id,
+      const std::vector<std::string_view>& param_names
+    )> onGetParameters;
 
   /// @brief Callback invoked when a client sets parameters.
   ///
@@ -140,11 +140,11 @@ struct RemoteAccessGatewayCallbacks {
   [[deprecated(
     "Use ParameterHandler instead. This callback is not invoked when a ParameterHandler is "
     "registered on the gateway."
-  )]] std::function<std::vector<Parameter>(
-    uint32_t client_id, std::optional<std::string_view> request_id,
-    const std::vector<ParameterView>& params
-  )>
-    onSetParameters;
+  )]] std::
+    function<std::vector<Parameter>(
+      uint32_t client_id, std::optional<std::string_view> request_id,
+      const std::vector<ParameterView>& params
+    )> onSetParameters;
 
   /// @brief Callback invoked when a client subscribes to parameters for the first time.
   ///

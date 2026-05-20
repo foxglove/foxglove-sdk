@@ -732,7 +732,8 @@ TEST_CASE("ParameterHandler get and set echo to requester") {
   foxglove::ParameterHandler handler;
   handler.onGet = [&](
                     uint32_t /*client_id*/,
-                    std::optional<std::string_view> request_id,
+                    std::optional<std::string_view>
+                      request_id,
                     const std::vector<std::string_view>& param_names,
                     foxglove::GetParametersResponder&& responder
                   ) {
@@ -757,7 +758,8 @@ TEST_CASE("ParameterHandler get and set echo to requester") {
   };
   handler.onSet = [&](
                     uint32_t /*client_id*/,
-                    std::optional<std::string_view> request_id,
+                    std::optional<std::string_view>
+                      request_id,
                     const std::vector<foxglove::ParameterView>& params,
                     foxglove::SetParametersResponder&& responder
                   ) {
@@ -969,7 +971,9 @@ TEST_CASE("ParameterHandler dropping responder sends error status") {
   auto parsed = Json::parse(*status);
   // Status protocol: level 0=info, 1=warning, 2=error.
   REQUIRE(parsed["level"] == 2);
-  REQUIRE_THAT(parsed["message"].get<std::string>(), ContainsSubstring("failed to send a response"));
+  REQUIRE_THAT(
+    parsed["message"].get<std::string>(), ContainsSubstring("failed to send a response")
+  );
 
   REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
 }
@@ -1032,9 +1036,12 @@ TEST_CASE("ParameterHandler publish after respond broadcasts to subscribers") {
   // Give the server a moment to register the subscription before the set.
   // (Without this we could race and the publish would have no subscribers.)
   {
-    auto pre =
-      subscriber.filterRecv([](const std::string&) { return false; }, std::chrono::milliseconds(200)
-      );
+    auto pre = subscriber.filterRecv(
+      [](const std::string&) {
+        return false;
+      },
+      std::chrono::milliseconds(200)
+    );
     (void)pre;
   }
 
