@@ -25,9 +25,11 @@ pub(crate) trait SendParameterResponse {
 pub trait ParameterHandler: Send + Sync + 'static {
     /// Handle a client request to get parameter values.
     ///
-    /// `names` is the requested parameter names, or empty to request all parameters. Take
-    /// ownership of `responder` and eventually call [`GetParametersResponder::respond`].
-    /// Dropping the responder without responding sends a generic error status to the client.
+    /// `names` is the requested parameter names, or empty to request all parameters. The
+    /// implementation **must** take ownership of `responder` and eventually call
+    /// [`GetParametersResponder::respond`] (pass an empty vec if no values are available).
+    /// Dropping the responder without responding is reserved for unrecoverable internal errors
+    /// and sends a generic error status to the client.
     fn get(
         &self,
         client: AnyClient,
@@ -38,14 +40,17 @@ pub trait ParameterHandler: Send + Sync + 'static {
 
     /// Handle a client request to set parameter values.
     ///
-    /// Take ownership of `responder` and eventually call [`SetParametersResponder::respond`]
-    /// with the parameters that were actually updated. Those values are echoed back to the
-    /// requesting client when `request_id` is present. Dropping the responder without responding
-    /// sends a generic error status to the client.
+    /// The implementation **must** take ownership of `responder` and eventually call
+    /// [`SetParametersResponder::respond`] with the parameters that were actually applied, even
+    /// if the request could not be handled (pass an empty vec in that case). Dropping the
+    /// responder without responding is reserved for unrecoverable internal errors and sends a
+    /// generic error status to the client.
     ///
-    /// The responder does not notify other parameter subscribers. A handler may be shared
-    /// across multiple sinks, so it is the implementer's responsibility to broadcast updates
-    /// to subscribers on each sink (for example, via
+    /// When `request_id` is present, the parameters passed to
+    /// [`SetParametersResponder::respond`] are echoed back to the requesting client. The
+    /// responder does not notify other parameter subscribers: a handler may be shared across
+    /// multiple sinks, so it is the implementer's responsibility to broadcast updates to
+    /// subscribers on each sink (for example, via
     /// [`WebSocketServerHandle::publish_parameter_values`](crate::WebSocketServerHandle::publish_parameter_values)
     /// or
     /// [`GatewayHandle::publish_parameter_values`](crate::remote_access::GatewayHandle::publish_parameter_values)).
@@ -60,8 +65,9 @@ pub trait ParameterHandler: Send + Sync + 'static {
 
 /// Responder for a client `getParameters` request.
 ///
-/// Take ownership and call [`Self::respond`] when the requested parameter values are available.
-/// Dropping the responder without responding sends a generic error status to the client.
+/// The handler **must** call [`Self::respond`] with the requested parameter values (pass an
+/// empty vec if none are available). Dropping the responder without responding is reserved for
+/// unrecoverable internal errors and sends a generic error status to the requesting client.
 #[must_use]
 #[derive(Debug)]
 pub struct GetParametersResponder {
@@ -112,14 +118,15 @@ impl Drop for GetParametersResponder {
 
 /// Responder for a client `setParameters` request.
 ///
-/// Take ownership and call [`Self::respond`] with the parameters that were actually applied. The
-/// responder echoes those values to the requesting client when the request carried a
-/// `request_id`, and does nothing otherwise.
+/// The handler **must** call [`Self::respond`] with the parameters that were actually applied,
+/// even when the request could not be handled (pass an empty vec in that case). Dropping the
+/// responder without responding is reserved for unrecoverable internal errors and sends a
+/// generic error status to the requesting client.
 ///
-/// The responder does not notify other subscribers; see [`ParameterHandler::set`] for the
-/// rationale and how to broadcast updates.
-///
-/// Dropping the responder without responding sends an error status to the requesting client.
+/// When the request carried a `request_id`, the values passed to [`Self::respond`] are echoed
+/// back to the requester; otherwise the responder does nothing on the wire. The responder does
+/// not notify other subscribers; see [`ParameterHandler::set`] for the rationale and how to
+/// broadcast updates.
 #[must_use]
 #[derive(Debug)]
 pub struct SetParametersResponder {
