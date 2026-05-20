@@ -31,7 +31,7 @@ fn main() {
         return;
     }
 
-    // The cuda check is only meaningful when remote-access is also enabled,
+    // The require-cuda check is only meaningful when remote-access is also enabled,
     // since that's the only thing that pulls in webrtc-sys / NVENC support.
     if env::var_os("CARGO_FEATURE_REMOTE_ACCESS").is_none() {
         panic!(
