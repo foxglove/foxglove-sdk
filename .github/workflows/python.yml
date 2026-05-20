@@ -213,7 +213,7 @@ jobs:
                   *) cuda_arch="$arch" ;;
                 esac
                 yum-config-manager --add-repo "https://developer.download.nvidia.com/compute/cuda/repos/rhel8/${cuda_arch}/cuda-rhel8.repo"
-                yum install -y cuda-toolkit-12-6
+                yum install -y cuda-cudart-devel-12-6 cuda-driver-devel-12-6
                 ln -snf /usr/local/cuda-12.6 /usr/local/cuda
               else
                 echo "No supported package manager found"
@@ -241,7 +241,7 @@ jobs:
                   *) cuda_arch="$arch" ;;
                 esac
                 yum-config-manager --add-repo "https://developer.download.nvidia.com/compute/cuda/repos/rhel8/${cuda_arch}/cuda-rhel8.repo"
-                yum install -y cuda-toolkit-12-6
+                yum install -y cuda-cudart-devel-12-6 cuda-driver-devel-12-6
                 ln -snf /usr/local/cuda-12.6 /usr/local/cuda
               else
                 echo "No supported package manager found"
