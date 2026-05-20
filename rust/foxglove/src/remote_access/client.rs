@@ -5,7 +5,7 @@ use livekit::id::ParticipantIdentity;
 use crate::protocol::common::parameter::Parameter;
 use crate::protocol::common::server::status::Status;
 use crate::remote_access::participant::Participant;
-use crate::remote_access::session::{RemoteAccessSession, encode_json_message};
+use crate::remote_access::session::encode_json_message;
 use crate::remote_common::ClientId;
 use crate::remote_common::fetch_asset::SendAssetResponse;
 use crate::remote_common::parameters::SendParameterResponse;
@@ -19,8 +19,6 @@ pub struct Client {
     participant_id: ParticipantIdentity,
     /// Weak reference to the participant, used for sending asset/parameter responses.
     participant: Option<Weak<Participant>>,
-    /// Weak reference to the owning session, used to broadcast parameter values to all subscribers.
-    session: Option<Weak<RemoteAccessSession>>,
 }
 
 impl Client {
@@ -30,7 +28,6 @@ impl Client {
             client_id,
             participant_id,
             participant: None,
-            session: None,
         }
     }
 
@@ -39,13 +36,11 @@ impl Client {
         client_id: ClientId,
         participant_id: ParticipantIdentity,
         participant: &Arc<Participant>,
-        session: Weak<RemoteAccessSession>,
     ) -> Self {
         Self {
             client_id,
             participant_id,
             participant: Some(Arc::downgrade(participant)),
-            session: Some(session),
         }
     }
 
@@ -122,17 +117,5 @@ impl SendParameterResponse for Client {
             msg = msg.with_id(id);
         }
         participant.send_control(encode_json_message(&msg));
-    }
-
-    fn broadcast_parameter_values(&self, parameters: Vec<Parameter>) {
-        let Some(session) = self.session.as_ref().and_then(|w| w.upgrade()) else {
-            tracing::debug!(
-                client_id = ?self.client_id,
-                participant_id = ?self.participant_id,
-                "session unavailable, dropping parameter broadcast"
-            );
-            return;
-        };
-        session.publish_parameter_values(parameters);
     }
 }

@@ -147,7 +147,6 @@ fn build_advertise_services_msg(services: &[Arc<Service>]) -> Option<AdvertiseSe
 /// so that it can deliver messages via multi-cast to multiple participants.
 pub(super) struct RemoteAccessSession {
     sink_id: SinkId,
-    weak_self: Weak<Self>,
     room: Room,
     context: Weak<Context>,
     remote_access_session_id: Option<String>,
@@ -379,9 +378,8 @@ impl RemoteAccessSession {
     pub(super) fn new(params: SessionParams) -> Arc<Self> {
         let (video_metadata_tx, video_metadata_rx) = tokio::sync::watch::channel(());
         let participant_registry = ParticipantRegistry::new(params.message_backlog_size);
-        Arc::new_cyclic(|weak_self| Self {
+        Arc::new(Self {
             sink_id: SinkId::next(),
-            weak_self: weak_self.clone(),
             room: params.room,
             context: params.context,
             remote_access_session_id: params.remote_access_session_id,
@@ -1798,7 +1796,6 @@ impl RemoteAccessSession {
             participant.client_id(),
             participant.participant_id().clone(),
             participant,
-            self.weak_self.clone(),
         ));
         let responder = AssetResponder::new(client, request_id, guard);
         handler.fetch(uri, responder);
@@ -1829,7 +1826,6 @@ impl RemoteAccessSession {
                 participant.client_id(),
                 participant.participant_id().clone(),
                 participant,
-                self.weak_self.clone(),
             ));
             let responder = GetParametersResponder::new(client.clone(), request_id.clone(), guard);
             handler.get(client, param_names, request_id, responder);
@@ -1872,7 +1868,6 @@ impl RemoteAccessSession {
                 participant.client_id(),
                 participant.participant_id().clone(),
                 participant,
-                self.weak_self.clone(),
             ));
             let responder = SetParametersResponder::new(client.clone(), request_id.clone(), guard);
             handler.set(client, parameters, request_id, responder);
@@ -2322,7 +2317,6 @@ mod tests {
             participant.client_id(),
             participant.participant_id().clone(),
             participant,
-            Weak::new(),
         ))
     }
 

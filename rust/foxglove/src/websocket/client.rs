@@ -3,7 +3,6 @@ use std::sync::Weak;
 use super::Parameter;
 use super::Status;
 use super::connected_client::ConnectedClient;
-use super::server::Server;
 use crate::SinkId;
 pub use crate::remote_common::ClientId;
 use crate::remote_common::fetch_asset::SendAssetResponse;
@@ -15,7 +14,6 @@ pub struct Client {
     id: ClientId,
     sink_id: SinkId,
     client: Weak<ConnectedClient>,
-    server: Weak<Server>,
 }
 
 impl Client {
@@ -24,7 +22,6 @@ impl Client {
             id: client.id(),
             sink_id: client.sink_id(),
             client: client.weak().clone(),
-            server: client.server_weak().clone(),
         }
     }
 
@@ -61,12 +58,6 @@ impl SendParameterResponse for Client {
     fn send_parameter_values(&self, parameters: Vec<Parameter>, request_id: Option<String>) {
         if let Some(client) = self.client.upgrade() {
             client.update_parameters(parameters, request_id);
-        }
-    }
-
-    fn broadcast_parameter_values(&self, parameters: Vec<Parameter>) {
-        if let Some(server) = self.server.upgrade() {
-            server.publish_parameter_values(parameters);
         }
     }
 }

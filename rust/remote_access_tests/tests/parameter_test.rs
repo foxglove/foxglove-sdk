@@ -335,66 +335,6 @@ async fn livekit_parameter_subscribe_and_publish() -> Result<()> {
     Ok(())
 }
 
-/// Test that when viewer A sets a parameter while viewer B is subscribed, B
-/// receives ALL parameters (not just the one that was set) with no request ID.
-#[traced_test]
-#[ignore]
-#[tokio::test]
-#[serial(livekit)]
-async fn livekit_parameter_set_notifies_subscriber_with_all_params() -> Result<()> {
-    let ctx = foxglove::Context::new();
-    let handler = Arc::new(ParameterHandlerImpl::new(vec![
-        Parameter::string("color", "red"),
-        Parameter::float64("size", 10.0),
-    ]));
-    let gw = TestGateway::start_with_options(
-        &ctx,
-        TestGatewayOptions {
-            capabilities: vec![Capability::Parameters],
-            parameter_handler: Some(handler),
-            ..Default::default()
-        },
-    )
-    .await?;
-
-    // Viewer B subscribes to all parameters.
-    let mut viewer_b = ViewerConnection::connect(&gw.room_name, "viewer-b").await?;
-    let _server_info_b = viewer_b.expect_server_info().await?;
-    viewer_b
-        .send_subscribe_parameter_updates(&["color", "size"])
-        .await?;
-    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
-
-    // Viewer A sets a parameter (no subscription).
-    let mut viewer_a = ViewerConnection::connect(&gw.room_name, "viewer-a").await?;
-    let _server_info_a = viewer_a.expect_server_info().await?;
-    viewer_a
-        .send_set_parameters_with_id(vec![Parameter::string("color", "blue")], "set-a")
-        .await?;
-
-    // Viewer A gets the response with the request ID.
-    let response_a = viewer_a.expect_parameter_values().await?;
-    assert_eq!(response_a.id.as_deref(), Some("set-a"));
-
-    // Viewer B should receive a notification with ALL parameters and NO request ID.
-    let response_b = viewer_b.expect_parameter_values().await?;
-    info!("Viewer B received: {response_b:?}");
-    assert!(
-        response_b.id.is_none(),
-        "subscriber notification should have no request ID"
-    );
-    assert!(
-        response_b.parameters.len() >= 2,
-        "subscriber should receive all parameters, got {}",
-        response_b.parameters.len()
-    );
-
-    viewer_a.close().await?;
-    viewer_b.close().await?;
-    gw.stop().await?;
-    Ok(())
-}
-
 /// Test that `publish_parameter_values` filters by subscription: a viewer only
 /// receives parameters it subscribed to.
 #[traced_test]

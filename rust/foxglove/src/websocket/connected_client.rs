@@ -209,12 +209,6 @@ impl ConnectedClient {
         &self.weak_self
     }
 
-    /// Returns the weak reference to the owning server, used by `Client` to broadcast parameter
-    /// values directly to all subscribers.
-    pub(super) fn server_weak(&self) -> &Weak<Server> {
-        &self.server
-    }
-
     pub fn addr(&self) -> SocketAddr {
         self.addr
     }

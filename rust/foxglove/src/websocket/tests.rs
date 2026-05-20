@@ -2118,8 +2118,7 @@ async fn test_parameter_handler_get_drop_sends_error_status() {
 
 #[traced_test]
 #[tokio::test]
-async fn test_parameter_handler_set_echoes_and_broadcasts() {
-    let listener = Arc::new(RecordingServerListener::new());
+async fn test_parameter_handler_set_echoes() {
     let handler = Arc::new(RecordingParameterHandler::new());
 
     let ctx = Context::new();
@@ -2127,7 +2126,6 @@ async fn test_parameter_handler_set_echoes_and_broadcasts() {
         &ctx,
         ServerOptions {
             capabilities: Some(IndexSet::from([Capability::Parameters])),
-            listener: Some(listener.clone()),
             parameter_handler: Some(handler.clone()),
             ..Default::default()
         },
@@ -2137,43 +2135,21 @@ async fn test_parameter_handler_set_echoes_and_broadcasts() {
         .await
         .expect("Failed to start server");
 
-    // The setter; will subscribe to "foo" and then issue a set with request_id.
     let mut setter = WebSocketClient::connect(format!("{addr}"))
         .await
         .expect("Failed to connect setter");
-    // A second client subscribes to "foo" to receive the broadcast.
-    let mut subscriber = WebSocketClient::connect(format!("{addr}"))
-        .await
-        .expect("Failed to connect subscriber");
+    expect_recv!(setter, ServerMessage::ServerInfo);
 
-    subscriber
-        .send(&SubscribeParameterUpdates::new(["foo"]))
-        .await
-        .expect("Failed to send subscribe parameter updates");
-
-    assert_eventually(|| dbg!(listener.parameters_subscribe_len()) == 1).await;
-
-    let parameters = vec![
-        Parameter::float64("foo", 2.0),
-        Parameter::string("ignored", "by-subscriber"),
-    ];
+    let parameters = vec![Parameter::float64("foo", 2.0)];
     setter
         .send(&SetParameters::new(parameters.clone()).with_id("set-1"))
         .await
         .expect("Failed to send set parameters");
 
-    expect_recv!(setter, ServerMessage::ServerInfo);
-    expect_recv!(subscriber, ServerMessage::ServerInfo);
-
     // Setter receives an echoed ParameterValues with the request_id (RecordingSetBehavior::Echo).
     let echo = expect_recv!(setter, ServerMessage::ParameterValues);
     assert_eq!(echo.id, Some("set-1".into()));
     assert_eq!(echo.parameters, parameters);
-
-    // Subscriber receives a broadcast filtered to its subscription set ("foo").
-    let broadcast = expect_recv!(subscriber, ServerMessage::ParameterValues);
-    assert_eq!(broadcast.id, None);
-    assert_eq!(broadcast.parameters, parameters[..1].to_vec());
 
     let captured = handler.take_parameters_set().pop().unwrap();
     assert_eq!(captured.request_id, Some("set-1".to_string()));
@@ -2184,17 +2160,14 @@ async fn test_parameter_handler_set_echoes_and_broadcasts() {
 
 #[traced_test]
 #[tokio::test]
-async fn test_parameter_handler_set_drop_sends_error_no_broadcast() {
-    let listener = Arc::new(RecordingServerListener::new());
+async fn test_parameter_handler_set_no_echo_without_request_id() {
     let handler = Arc::new(RecordingParameterHandler::new());
-    handler.set_set_behavior(RecordingSetBehavior::DropResponder);
 
     let ctx = Context::new();
     let server = create_server(
         &ctx,
         ServerOptions {
             capabilities: Some(IndexSet::from([Capability::Parameters])),
-            listener: Some(listener.clone()),
             parameter_handler: Some(handler.clone()),
             ..Default::default()
         },
@@ -2207,26 +2180,50 @@ async fn test_parameter_handler_set_drop_sends_error_no_broadcast() {
     let mut setter = WebSocketClient::connect(format!("{addr}"))
         .await
         .expect("Failed to connect setter");
-    let mut subscriber = WebSocketClient::connect(format!("{addr}"))
-        .await
-        .expect("Failed to connect subscriber");
+    expect_recv!(setter, ServerMessage::ServerInfo);
 
-    subscriber
-        .send(&SubscribeParameterUpdates::new(["foo"]))
+    setter
+        .send(&SetParameters::new(vec![Parameter::float64("foo", 2.0)]))
         .await
-        .expect("Failed to send subscribe parameter updates");
+        .expect("Failed to send set parameters");
 
-    assert_eventually(|| dbg!(listener.parameters_subscribe_len()) == 1).await;
+    assert_eventually(|| dbg!(handler.parameters_set_len()) == 1).await;
+
+    // No echo expected because the request had no request_id.
+    server.stop().unwrap().wait().await;
+    expect_recv_close!(setter);
+}
+
+#[traced_test]
+#[tokio::test]
+async fn test_parameter_handler_set_drop_sends_error_status() {
+    let handler = Arc::new(RecordingParameterHandler::new());
+    handler.set_set_behavior(RecordingSetBehavior::DropResponder);
+
+    let ctx = Context::new();
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            capabilities: Some(IndexSet::from([Capability::Parameters])),
+            parameter_handler: Some(handler.clone()),
+            ..Default::default()
+        },
+    );
+    let addr = server
+        .start("127.0.0.1", 0)
+        .await
+        .expect("Failed to start server");
+
+    let mut setter = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect setter");
+    expect_recv!(setter, ServerMessage::ServerInfo);
 
     setter
         .send(&SetParameters::new(vec![Parameter::float64("foo", 2.0)]).with_id("set-1"))
         .await
         .expect("Failed to send set parameters");
 
-    expect_recv!(setter, ServerMessage::ServerInfo);
-    expect_recv!(subscriber, ServerMessage::ServerInfo);
-
-    // Setter sees an error advisory.
     let status = expect_recv!(setter, ServerMessage::Status);
     assert_eq!(
         status.level,
@@ -2234,9 +2231,7 @@ async fn test_parameter_handler_set_drop_sends_error_no_broadcast() {
     );
     assert!(status.message.contains("failed to send a response"));
 
-    // No ParameterValues should be broadcast to the subscriber.
-    server.stop().unwrap().wait().await;
-    expect_recv_close!(subscriber);
+    let _ = server.stop();
 }
 
 #[traced_test]

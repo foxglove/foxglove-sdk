@@ -9,10 +9,6 @@ use crate::remote_common::semaphore::SemaphoreGuard;
 pub(crate) trait SendParameterResponse {
     /// Send a `ParameterValues` message to the requesting client.
     fn send_parameter_values(&self, parameters: Vec<Parameter>, request_id: Option<String>);
-
-    /// Broadcast updated parameter values to all clients subscribed to those parameters on the
-    /// transport that owns this client.
-    fn broadcast_parameter_values(&self, parameters: Vec<Parameter>);
 }
 
 /// Handler for client-initiated parameter operations.
@@ -25,7 +21,7 @@ pub(crate) trait SendParameterResponse {
 ///
 /// Per the protocol spec, a [`Parameter`] with `value: None` represents an unset/deleted
 /// parameter and is not transmitted to clients. Such entries are filtered out of any response
-/// or broadcast emitted by the responders below.
+/// emitted by the responders below.
 pub trait ParameterHandler: Send + Sync + 'static {
     /// Handle a client request to get parameter values.
     ///
@@ -44,9 +40,15 @@ pub trait ParameterHandler: Send + Sync + 'static {
     ///
     /// Take ownership of `responder` and eventually call [`SetParametersResponder::respond`]
     /// with the parameters that were actually updated. Those values are echoed back to the
-    /// requesting client when `request_id` is present, and broadcast to all clients subscribed
-    /// to those parameter names. Dropping the responder without responding sends a generic
-    /// error status to the client and does *not* broadcast anything.
+    /// requesting client when `request_id` is present. Dropping the responder without responding
+    /// sends a generic error status to the client.
+    ///
+    /// The responder does not notify other parameter subscribers. A handler may be shared
+    /// across multiple sinks, so it is the implementer's responsibility to broadcast updates
+    /// to subscribers on each sink (for example, via
+    /// [`WebSocketServerHandle::publish_parameter_values`](crate::WebSocketServerHandle::publish_parameter_values)
+    /// or
+    /// [`GatewayHandle::publish_parameter_values`](crate::remote_access::GatewayHandle::publish_parameter_values)).
     fn set(
         &self,
         client: AnyClient,
@@ -111,11 +113,13 @@ impl Drop for GetParametersResponder {
 /// Responder for a client `setParameters` request.
 ///
 /// Take ownership and call [`Self::respond`] with the parameters that were actually applied. The
-/// responder echoes those values to the requesting client (when the request carried a
-/// `request_id`) and broadcasts them to all clients subscribed to those parameter names.
+/// responder echoes those values to the requesting client when the request carried a
+/// `request_id`, and does nothing otherwise.
 ///
-/// Dropping the responder without responding sends an error status to the requesting client and
-/// does not broadcast anything.
+/// The responder does not notify other subscribers; see [`ParameterHandler::set`] for the
+/// rationale and how to broadcast updates.
+///
+/// Dropping the responder without responding sends an error status to the requesting client.
 #[must_use]
 #[derive(Debug)]
 pub struct SetParametersResponder {
@@ -144,17 +148,16 @@ impl SetParametersResponder {
     }
 
     /// Acknowledge the set request with the values that were actually applied. Echoes to the
-    /// requester when the request carried a `request_id`, and broadcasts to subscribers.
+    /// requester when the request carried a `request_id`, otherwise does nothing.
     ///
     /// Entries with `value: None` are dropped before serialization (see the note on the
     /// [`ParameterHandler`] trait).
     pub fn respond(mut self, parameters: Vec<Parameter>) {
-        if let Some(inner) = self.inner.take() {
-            if inner.request_id.is_some() {
-                self.client
-                    .send_parameter_values(parameters.clone(), inner.request_id);
-            }
-            self.client.broadcast_parameter_values(parameters);
+        if let Some(inner) = self.inner.take()
+            && inner.request_id.is_some()
+        {
+            self.client
+                .send_parameter_values(parameters, inner.request_id);
         }
     }
 }

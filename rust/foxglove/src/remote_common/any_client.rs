@@ -97,15 +97,6 @@ impl AnyClient {
         }
     }
 
-    pub(crate) fn broadcast_parameter_values(&self, parameters: Vec<Parameter>) {
-        match &self.0 {
-            #[cfg(feature = "websocket")]
-            AnyClientInner::WebSocket(c) => c.broadcast_parameter_values(parameters),
-            #[cfg(feature = "remote-access")]
-            AnyClientInner::RemoteAccess(c) => c.broadcast_parameter_values(parameters),
-        }
-    }
-
     pub(crate) fn send_asset_response(&self, result: Result<&[u8], &str>, request_id: u32) {
         match &self.0 {
             #[cfg(feature = "websocket")]
