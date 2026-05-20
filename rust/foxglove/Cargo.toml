@@ -84,6 +84,7 @@ full = [
   "live_visualization",
   "lz4",
   "remote-access",
+  "require-cuda",
   "schemars",
   "schemars-chrono",
   "serde",

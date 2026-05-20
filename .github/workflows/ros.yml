@@ -38,9 +38,11 @@ jobs:
       - run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            libglib2.0-dev libva-dev libwebsockets-dev
+            libglib2.0-dev libva-dev libwebsockets-dev \
+            nvidia-cuda-toolkit
           echo "CC=gcc" >> $GITHUB_ENV
           echo "CXX=g++" >> $GITHUB_ENV
+          echo "CUDA_HOME=/usr" >> $GITHUB_ENV
 
       - name: Build C++ SDK
         run: make -f Container.mk build-cpp-dist

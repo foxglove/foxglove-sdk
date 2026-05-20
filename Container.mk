@@ -75,7 +75,7 @@ test-rust-foxglove-no-default-features:
 
 .PHONY: docs-rust
 docs-rust:
-	cargo +nightly rustdoc -p foxglove --features full -- -D warnings --cfg docsrs
+	DOCS_RS=1 cargo +nightly rustdoc -p foxglove --features full -- -D warnings --cfg docsrs
 
 .PHONY: clean-cpp
 clean-cpp:
@@ -118,6 +118,11 @@ test-cpp-sanitize:
 # FETCHCONTENT_SOURCE_DIR_FOXGLOVE_SDK in CMake.
 CPP_SDK_DIR ?= cpp/dist
 FOXGLOVE_REMOTE_ACCESS ?= ON
+# Opts into a build-time check that NVENC hardware acceleration for video
+# encoding will be available (cuda.h is present on supported targets). Only
+# meaningful when remote-access is also enabled, so it defaults to whatever
+# FOXGLOVE_REMOTE_ACCESS is set to.
+FOXGLOVE_REQUIRE_CUDA ?= $(FOXGLOVE_REMOTE_ACCESS)
 # Selects the rustls crypto backend for the C SDK. Either `aws-lc-rs` (default)
 # or `ring`. Override to `ring` on targets where building aws-lc-sys is painful
 # (e.g. `aarch64-apple-ios-sim`, which would otherwise need an external bindgen).
@@ -131,7 +136,8 @@ build-cpp-dist:
 		--no-default-features --features $(FOXGLOVE_CRYPTO_PROVIDER)
 	cd c && FOXGLOVE_SDK_LANGUAGE=c cargo rustc --release --lib --crate-type cdylib \
 		--no-default-features --features $(FOXGLOVE_CRYPTO_PROVIDER) \
-		$(if $(filter ON,$(FOXGLOVE_REMOTE_ACCESS)),--features remote-access)
+		$(if $(filter ON,$(FOXGLOVE_REMOTE_ACCESS)),--features remote-access) \
+		$(if $(filter ON,$(FOXGLOVE_REQUIRE_CUDA)),--features require-cuda)
 	mkdir -p $(CPP_SDK_DIR)/lib $(CPP_SDK_DIR)/include $(CPP_SDK_DIR)/src $(CPP_SDK_DIR)/lib/cmake/foxglove-sdk
 	cp $(CARGO_LIB_DIR)/$(STATICLIB_NAME) $(CPP_SDK_DIR)/lib/
 	cp $(CARGO_LIB_DIR)/$(CDYLIB_NAME) $(CPP_SDK_DIR)/lib/

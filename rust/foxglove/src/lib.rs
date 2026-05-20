@@ -341,9 +341,6 @@
 //!   default. Mutually exclusive with `ring`. See [Crypto backend](#crypto-backend).
 //! - `chrono`: enables [chrono] conversions for [`Duration`][crate::messages::Duration] and
 //!   [`Timestamp`][crate::messages::Timestamp].
-//! - `cuda`: opts into a build-time check that `cuda.h` is present on targets where
-//!   webrtc-sys would build NVENC support. Only meaningful in combination with
-//!   `remote-access`. See [NVENC hardware acceleration](#nvenc-hardware-acceleration).
 //! - `derive`: enables the use of `#[derive(Encode)]` to derive the [`Encode`] trait for logging
 //!   custom structs. Enabled by default.
 //! - `full`: the full set of supported features, with opinionated picks for mutually exclusive
@@ -351,6 +348,9 @@
 //! - `lz4`: enables support for the LZ4 compression algorithm for mcap files. Enabled by default.
 //! - `remote-access`: enables the remote access gateway for live visualization and teleop via
 //!   WebRTC. Requires a crypto backend; `aws-lc-rs` is enabled by default.
+//! - `require-cuda`: opts into a build-time check that `cuda.h` is present on targets where
+//!   webrtc-sys would build NVENC support. Requires `remote-access` to also be enabled.
+//!   See [NVENC hardware acceleration](#nvenc-hardware-acceleration).
 //! - `ring`: selects [ring] as the rustls crypto backend used for TLS. Alternative to
 //!   `aws-lc-rs`; mutually exclusive with it. See [Crypto backend](#crypto-backend).
 //! - `schemars`: provides a blanket implementation of the [`Encode`] trait for types that
