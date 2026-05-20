@@ -330,13 +330,13 @@ pub(super) fn test_sid(label: &str) -> ParticipantSid {
 #[derive(Default)]
 pub(super) struct TestByteStreamWriter {
     writes: parking_lot::Mutex<Vec<Bytes>>,
-    fail_writes: std::sync::atomic::AtomicBool,
+    always_fail_writes: std::sync::atomic::AtomicBool,
 }
 
 #[cfg(test)]
 impl TestByteStreamWriter {
     fn record(&self, data: &[u8]) -> Result<()> {
-        if self.fail_writes.load(std::sync::atomic::Ordering::Relaxed) {
+        if self.always_fail_writes.load(std::sync::atomic::Ordering::Relaxed) {
             return Err(Box::new(RemoteAccessError::Io(std::io::Error::new(
                 std::io::ErrorKind::BrokenPipe,
                 "simulated write failure",
@@ -354,7 +354,7 @@ impl TestByteStreamWriter {
     /// Configure the writer to return errors on all subsequent writes.
     #[allow(dead_code)]
     pub(super) fn set_always_fail_writes(&self, fail: bool) {
-        self.fail_writes
+        self.always_fail_writes
             .store(fail, std::sync::atomic::Ordering::Relaxed);
     }
 }

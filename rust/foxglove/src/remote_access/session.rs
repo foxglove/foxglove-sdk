@@ -2661,9 +2661,9 @@ mod tests {
             "write failure should populate pending_resets"
         );
 
-        // Confirm this was the write-failure path, not queue-overflow. Queue
-        // overflow cancels the participant via a child token; write failure
-        // does not.
+        // Confirm this was the write-failure path, not queue-overflow.
+        // Queue overflow fires `Participant::cancel` via `send_control`;
+        // write failure does not.
         assert!(
             !cancel.is_cancelled(),
             "cancel token should not fire on write-failure path"
