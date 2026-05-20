@@ -2649,10 +2649,17 @@ mod tests {
 
         // The flush-task should exit after the write error.
         let result = tokio::time::timeout(Duration::from_secs(1), handle).await;
-        assert!(result.is_ok(), "flush-task did not exit after write failure");
+        assert!(
+            result.is_ok(),
+            "flush-task did not exit after write failure"
+        );
 
         let resets: Vec<_> = pending_resets.lock().drain().collect();
-        assert_eq!(resets, vec![sid], "write failure should populate pending_resets");
+        assert_eq!(
+            resets,
+            vec![sid],
+            "write failure should populate pending_resets"
+        );
     }
 
     fn make_test_participant(queue_size: usize) -> (Participant, flume::Receiver<Bytes>) {
