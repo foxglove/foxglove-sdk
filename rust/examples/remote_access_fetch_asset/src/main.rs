@@ -16,13 +16,14 @@
 
 use std::collections::HashMap;
 use std::path::Path;
+use std::sync::Arc;
 use std::time::Duration;
 
 use foxglove::LazyChannel;
 use foxglove::messages::{
     Color, ModelPrimitive, Pose, Quaternion, SceneEntity, SceneUpdate, Vector3,
 };
-use foxglove::remote_access::{AssetHandler, AssetResponder, Client, Gateway};
+use foxglove::remote_access::{AssetHandler, AssetResponder, Gateway};
 use log::info;
 
 const PELICAN_URI: &str = "package://pelican/pelican.stl";
@@ -42,7 +43,7 @@ impl AssetServer {
     }
 }
 
-impl AssetHandler<Client> for AssetServer {
+impl AssetHandler for AssetServer {
     fn fetch(&self, uri: String, responder: AssetResponder) {
         match self.assets.get(&uri) {
             Some(asset) => {
@@ -67,7 +68,7 @@ async fn main() {
     let asset_server = AssetServer::new();
 
     let handle = Gateway::new()
-        .fetch_asset_handler(Box::new(asset_server))
+        .fetch_asset_handler(Arc::new(asset_server))
         .start()
         .expect("Failed to start remote access gateway");
 

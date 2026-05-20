@@ -12,8 +12,8 @@ use crate::websocket::PlaybackState;
 use crate::websocket::TlsIdentity;
 use crate::websocket::service::Service;
 use crate::websocket::{
-    AssetHandler, AsyncAssetHandlerFn, BlockingAssetHandlerFn, Capability, Client, ConnectionGraph,
-    Parameter, Server, ServerOptions, ShutdownHandle, Status, create_server,
+    AnyClient, AssetHandler, AsyncAssetHandlerFn, BlockingAssetHandlerFn, Capability,
+    ConnectionGraph, Parameter, Server, ServerOptions, ShutdownHandle, Status, create_server,
 };
 use crate::{AppUrl, ChannelDescriptor, Context, FoxgloveError, runtime::get_runtime_handle};
 
@@ -140,7 +140,7 @@ impl WebSocketServer {
 
     /// Configure the handler for fetching assets.
     /// There can only be one asset handler, exclusive with the other fetch_asset_handler methods.
-    pub fn fetch_asset_handler(mut self, handler: Box<dyn AssetHandler<Client>>) -> Self {
+    pub fn fetch_asset_handler(mut self, handler: Arc<dyn AssetHandler>) -> Self {
         self.options.fetch_asset_handler = Some(handler);
         self
     }
@@ -149,24 +149,24 @@ impl WebSocketServer {
     /// There can only be one asset handler, exclusive with the other fetch_asset_handler methods.
     pub fn fetch_asset_handler_blocking_fn<F, T, Err>(mut self, handler: F) -> Self
     where
-        F: Fn(Client, String) -> Result<T, Err> + Send + Sync + 'static,
+        F: Fn(AnyClient, String) -> Result<T, Err> + Send + Sync + 'static,
         T: AsRef<[u8]>,
         Err: Display,
     {
         self.options.fetch_asset_handler =
-            Some(Box::new(BlockingAssetHandlerFn(Arc::new(handler))));
+            Some(Arc::new(BlockingAssetHandlerFn(Arc::new(handler))));
         self
     }
     /// Configure an asynchronous function as a fetch asset handler.
     /// There can only be one asset handler, exclusive with the other fetch_asset_handler methods.
     pub fn fetch_asset_handler_async_fn<F, Fut, T, Err>(mut self, handler: F) -> Self
     where
-        F: Fn(Client, String) -> Fut + Send + Sync + 'static,
+        F: Fn(AnyClient, String) -> Fut + Send + Sync + 'static,
         Fut: Future<Output = Result<T, Err>> + Send + 'static,
         T: AsRef<[u8]>,
         Err: Display,
     {
-        self.options.fetch_asset_handler = Some(Box::new(AsyncAssetHandlerFn(Arc::new(handler))));
+        self.options.fetch_asset_handler = Some(Arc::new(AsyncAssetHandlerFn(Arc::new(handler))));
         self
     }
 

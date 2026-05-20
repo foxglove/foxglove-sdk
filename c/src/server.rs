@@ -431,7 +431,7 @@ unsafe fn do_foxglove_server_start(
         server = server.listener(Arc::new(callbacks.clone()));
     }
     if let Some(fetch_asset) = options.fetch_asset {
-        server = server.fetch_asset_handler(Box::new(FetchAssetHandler::new(
+        server = server.fetch_asset_handler(Arc::new(FetchAssetHandler::new(
             options.fetch_asset_context,
             fetch_asset,
         )));
