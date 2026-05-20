@@ -23,7 +23,6 @@ use std::path::PathBuf;
 fn main() {
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-env-changed=CUDA_HOME");
-    println!("cargo:rerun-if-env-changed=DOCS_RS");
 
     // The `require-cuda` feature is what opts in to the cuda.h check. Without it we
     // do nothing.
@@ -41,11 +40,6 @@ fn main() {
         );
     }
 
-    // Don't surface errors when building docs.
-    if env::var_os("DOCS_RS").is_some() {
-        return;
-    }
-
     let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
     let target_arch = env::var("CARGO_CFG_TARGET_ARCH").unwrap_or_default();
 
@@ -53,13 +47,16 @@ fn main() {
     // (see webrtc-sys/build.rs). Match the same set of targets, expressed in
     // cargo's `CARGO_CFG_TARGET_ARCH` vocabulary (which uses "x86" rather
     // than the "i686" upstream parses out of the target triple).
-    if target_os != "linux" {
-        return;
-    }
-    let cuda_supported_arch =
-        matches!(target_arch.as_str(), "x86_64" | "x86" | "aarch64") || target_arch.contains("arm");
-    if !cuda_supported_arch {
-        return;
+    let nvenc_target = target_os == "linux"
+        && (matches!(target_arch.as_str(), "x86_64" | "x86" | "aarch64")
+            || target_arch.contains("arm"));
+    if !nvenc_target {
+        panic!(
+            "The `require-cuda` feature is enabled, but NVENC is only available\n\
+             when building for Linux on x86_64, x86, aarch64, or arm, not ({target_os}-{target_arch}).\n\
+             Disable the `require-cuda` feature for unsupported targets.\n\
+             Learn more: https://docs.rs/foxglove/latest/foxglove/#nvenc-hardware-acceleration"
+        );
     }
 
     let cuda_home = env::var_os("CUDA_HOME")

@@ -327,8 +327,8 @@
 //! to find it.
 //!
 //! You can enable the `require-cuda` feature on this crate to make it a build error if
-//! `cuda.h` is not found and NVENC support won't be built. This only applies when
-//! remote access is enabled and the target supports NVENC.
+//! `remote-access` is disabled, the target does not support NVENC, or `cuda.h` is not
+//! found on a target where NVENC would be built.
 //!
 //! # Feature flags
 //!
@@ -338,9 +338,9 @@
 //!   default. Mutually exclusive with `ring`. See [Crypto backend](#crypto-backend).
 //! - `chrono`: enables [chrono] conversions for [`Duration`][crate::messages::Duration] and
 //!   [`Timestamp`][crate::messages::Timestamp].
-//! - `require-cuda`: opts into a build-time check that `cuda.h` is present on targets where
-//!   webrtc-sys would build NVENC support. Only meaningful in combination with
-//!   `remote-access`. See [NVENC hardware acceleration](#nvenc-hardware-acceleration).
+//! - `require-cuda`: opts into build-time checks that `remote-access` is enabled, the target
+//!   supports NVENC, and `cuda.h` is present where NVENC would be built. See
+//!   [NVENC hardware acceleration](#nvenc-hardware-acceleration).
 //! - `derive`: enables the use of `#[derive(Encode)]` to derive the [`Encode`] trait for logging
 //!   custom structs. Enabled by default.
 //! - `full`: the full set of supported features, with opinionated picks for mutually exclusive
