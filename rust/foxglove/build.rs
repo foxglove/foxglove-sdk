@@ -10,7 +10,7 @@
 //! result is dramatically higher CPU usage and lower video quality for live
 //! remote access.
 //!
-//! When the `cuda` feature is enabled, this script mirrors the set of
+//! When the `require-cuda` feature is enabled, this script mirrors the set of
 //! targets `webrtc-sys`'s own `build.rs` builds NVENC support for and
 //! performs the same `cuda.h` lookup (`$CUDA_HOME/include/cuda.h`,
 //! defaulting to `/usr/local/cuda/include/cuda.h`). If the header is
@@ -25,17 +25,17 @@ fn main() {
     println!("cargo:rerun-if-env-changed=CUDA_HOME");
     println!("cargo:rerun-if-env-changed=DOCS_RS");
 
-    // The `cuda` feature is what opts in to the cuda.h check. Without it we
+    // The `require-cuda` feature is what opts in to the cuda.h check. Without it we
     // do nothing.
     if env::var_os("CARGO_FEATURE_REQUIRE_CUDA").is_none() {
         return;
     }
 
-    // The cuda check is only meaningful when remote-access is also enabled,
+    // The require-cuda check is only meaningful when remote-access is also enabled,
     // since that's the only thing that pulls in webrtc-sys / NVENC support.
     if env::var_os("CARGO_FEATURE_REMOTE_ACCESS").is_none() {
         panic!(
-            "The `require-cuda` feature is enabled, but the`remote-access` feature is not enabled.\n\
+            "The `require-cuda` feature is enabled, but the `remote-access` feature is not enabled.\n\
             Enable the `remote-access` feature or disable the `require-cuda` feature.\n\
             Learn more: https://docs.rs/foxglove/latest/foxglove/#nvenc-hardware-acceleration"
         );
@@ -73,9 +73,9 @@ fn main() {
 
     let header_display = cuda_header.display();
     panic!(
-        "The `cuda` feature is enabled but cuda.h was not found at {header_display}.\n\
+        "The `require-cuda` feature is enabled but cuda.h was not found at {header_display}.\n\
          Install the CUDA toolkit (e.g. `apt install nvidia-cuda-toolkit` on Ubuntu, \
-         then export CUDA_HOME=/usr) or disable the `cuda` feature.\n\
+         then export CUDA_HOME=/usr) or disable the `require-cuda` feature.\n\
          Learn more: https://docs.rs/foxglove/latest/foxglove/#nvenc-hardware-acceleration"
     );
 }

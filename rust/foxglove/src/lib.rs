@@ -326,12 +326,9 @@
 //! so you also need to set `CUDA_HOME=/usr` for webrtc-sys (and this crate's build script)
 //! to find it.
 //!
-//! Because webrtc-sys silently falls back to software encoding when `cuda.h` is missing
-//! (it emits a `cargo:warning=`, but cargo hides build-script warnings from registry
-//! dependencies), you can enable the `require-cuda` feature on this crate to opt into a
-//! build-time check on targets where webrtc-sys would otherwise have built NVENC support
-//! Linux on x86_64 / x86 / aarch64 / arm with remote access enabled. With `require-cuda`
-//! the build fails if `cuda.h` is not found.
+//! You can enable the `require-cuda` feature on this crate to make it a build error if
+//! `cuda.h` is not found and NVENC support won't be built. This only applies when
+//! remote access is enabled and the target supports NVENC.
 //!
 //! # Feature flags
 //!
@@ -341,7 +338,7 @@
 //!   default. Mutually exclusive with `ring`. See [Crypto backend](#crypto-backend).
 //! - `chrono`: enables [chrono] conversions for [`Duration`][crate::messages::Duration] and
 //!   [`Timestamp`][crate::messages::Timestamp].
-//! - `cuda`: opts into a build-time check that `cuda.h` is present on targets where
+//! - `require-cuda`: opts into a build-time check that `cuda.h` is present on targets where
 //!   webrtc-sys would build NVENC support. Only meaningful in combination with
 //!   `remote-access`. See [NVENC hardware acceleration](#nvenc-hardware-acceleration).
 //! - `derive`: enables the use of `#[derive(Encode)]` to derive the [`Encode`] trait for logging
