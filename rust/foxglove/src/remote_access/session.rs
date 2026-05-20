@@ -2693,9 +2693,6 @@ mod tests {
 
     #[test]
     fn set_parameters_responder_echoes_when_request_id_set() {
-        // The broadcast path requires a session, which we cannot construct in a unit test.
-        // The Client built by test_client() has no session ref, so broadcast is a no-op; we
-        // verify the echo path here.
         let (participant, rx) = make_participant_with_rx("alice");
         let client = test_client(&participant);
         let guard = participant.parameter_sem().try_acquire().unwrap();
@@ -2717,7 +2714,7 @@ mod tests {
 
         responder.respond(vec![CommonParameter::float64("foo", 2.0)]);
 
-        // No echo, and broadcast is a no-op since the test client has no session.
+        // No echo without a request_id.
         assert!(rx.try_recv().is_err());
     }
 
