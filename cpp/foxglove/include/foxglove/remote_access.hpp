@@ -81,6 +81,18 @@ inline RemoteAccessGatewayCapabilities operator&(
 ///
 /// @note These callbacks may be invoked concurrently from multiple threads.
 /// You must synchronize access to your mutable internal state or shared resources.
+// Wrap the struct declaration in deprecation suppression so that synthesized
+// special-member functions (which trivially reference the deprecated fields
+// below) don't fire warnings at every consumer that constructs, destroys,
+// copies, or moves this struct. The field-level [[deprecated]] still warns
+// when user code reads or assigns the deprecated members directly.
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#elif defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable : 4996)
+#endif
 struct RemoteAccessGatewayCallbacks {
   /// @brief Callback invoked when the gateway connection status changes.
   std::function<void(RemoteAccessConnectionStatus status)> onConnectionStatusChanged;
@@ -107,7 +119,13 @@ struct RemoteAccessGatewayCallbacks {
   /// @brief Callback invoked when a client requests parameters.
   ///
   /// Requires RemoteAccessGatewayCapabilities::Parameters.
-  std::function<std::vector<Parameter>(
+  ///
+  /// @deprecated Use ParameterHandler instead. This callback is not invoked
+  /// when a ParameterHandler is registered on the gateway.
+  [[deprecated(
+    "Use ParameterHandler instead. This callback is not invoked when a ParameterHandler is "
+    "registered on the gateway."
+  )]] std::function<std::vector<Parameter>(
     uint32_t client_id, std::optional<std::string_view> request_id,
     const std::vector<std::string_view>& param_names
   )>
@@ -116,7 +134,13 @@ struct RemoteAccessGatewayCallbacks {
   /// @brief Callback invoked when a client sets parameters.
   ///
   /// Requires RemoteAccessGatewayCapabilities::Parameters.
-  std::function<std::vector<Parameter>(
+  ///
+  /// @deprecated Use ParameterHandler instead. This callback is not invoked
+  /// when a ParameterHandler is registered on the gateway.
+  [[deprecated(
+    "Use ParameterHandler instead. This callback is not invoked when a ParameterHandler is "
+    "registered on the gateway."
+  )]] std::function<std::vector<Parameter>(
     uint32_t client_id, std::optional<std::string_view> request_id,
     const std::vector<ParameterView>& params
   )>
@@ -146,6 +170,11 @@ struct RemoteAccessGatewayCallbacks {
   /// @warning Do not call publishConnectionGraph from within this callback; doing so will deadlock.
   std::function<void()> onConnectionGraphUnsubscribe;
 };
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic pop
+#elif defined(_MSC_VER)
+#pragma warning(pop)
+#endif
 
 /// @brief The reliability policy for a channel's data delivery.
 enum class Reliability : uint8_t {

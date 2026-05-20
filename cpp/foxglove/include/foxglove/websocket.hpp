@@ -116,6 +116,18 @@ inline WebSocketServerCapabilities operator&(
 ///
 /// @note These callbacks may be invoked concurrently from multiple threads.
 /// You must synchronize access to your mutable internal state or shared resources.
+// Wrap the struct declaration in deprecation suppression so that synthesized
+// special-member functions (which trivially reference the deprecated fields
+// below) don't fire warnings at every consumer that constructs, destroys,
+// copies, or moves this struct. The field-level [[deprecated]] still warns
+// when user code reads or assigns the deprecated members directly.
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#elif defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable : 4996)
+#endif
 struct WebSocketServerCallbacks {
   /// @brief Callback invoked when a client subscribes to a channel.
   ///
@@ -152,7 +164,13 @@ struct WebSocketServerCallbacks {
   /// @param request_id A request ID unique to this client. May be NULL.
   /// @param param_names A list of parameter names to fetch. If empty, this
   /// method should return all parameters.
-  std::function<std::vector<Parameter>(
+  ///
+  /// @deprecated Use ParameterHandler instead. This callback is not invoked
+  /// when a ParameterHandler is registered on the server.
+  [[deprecated(
+    "Use ParameterHandler instead. This callback is not invoked when a ParameterHandler is "
+    "registered on the server."
+  )]] std::function<std::vector<Parameter>(
     uint32_t client_id, std::optional<std::string_view> request_id,
     const std::vector<std::string_view>& param_names
   )>
@@ -168,7 +186,13 @@ struct WebSocketServerCallbacks {
   /// @param client_id The client ID.
   /// @param request_id A request ID unique to this client. May be NULL.
   /// @param param_names A list of updated parameter values.
-  std::function<std::vector<Parameter>(
+  ///
+  /// @deprecated Use ParameterHandler instead. This callback is not invoked
+  /// when a ParameterHandler is registered on the server.
+  [[deprecated(
+    "Use ParameterHandler instead. This callback is not invoked when a ParameterHandler is "
+    "registered on the server."
+  )]] std::function<std::vector<Parameter>(
     uint32_t client_id, std::optional<std::string_view> request_id,
     const std::vector<ParameterView>& params
   )>
@@ -223,6 +247,11 @@ struct WebSocketServerCallbacks {
   )>
     onPlaybackControlRequest;
 };
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic pop
+#elif defined(_MSC_VER)
+#pragma warning(pop)
+#endif
 
 /// @cond foxglove_internal
 /// @brief TLS configuration for a WebSocket server.

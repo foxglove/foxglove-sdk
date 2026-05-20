@@ -13,6 +13,17 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
 ) {
   foxglove_internal_register_cpp_wrapper();
 
+// The legacy onGetParameters/onSetParameters callbacks below are marked
+// [[deprecated]] for consumers, but this file is the internal bridge that
+// forwards them to the C ABI and must keep reading them.
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#elif defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable : 4996)
+#endif
+
   bool has_any_callbacks =
     options.callbacks.onSubscribe || options.callbacks.onUnsubscribe ||
     options.callbacks.onClientAdvertise || options.callbacks.onMessageData ||
@@ -436,6 +447,12 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
     std::move(sink_channel_filter),
     std::move(parameter_handler)
   );
+
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic pop
+#elif defined(_MSC_VER)
+#pragma warning(pop)
+#endif
 }
 
 WebSocketServer::WebSocketServer(

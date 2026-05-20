@@ -540,6 +540,16 @@ TEST_CASE("Parameter callbacks") {
     server_set_parameters;
 
   foxglove::WebSocketServerCallbacks callbacks;
+// This test exercises the legacy onGetParameters/onSetParameters callbacks,
+// which are intentionally marked [[deprecated]]. ParameterHandler is covered by
+// its own tests.
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#elif defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable : 4996)
+#endif
   callbacks.onGetParameters = [&](
                                 uint32_t client_id [[maybe_unused]],
                                 std::optional<std::string_view>
@@ -589,6 +599,11 @@ TEST_CASE("Parameter callbacks") {
     result.emplace_back("bytes", data.data(), data.size());
     return result;
   };
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic pop
+#elif defined(_MSC_VER)
+#pragma warning(pop)
+#endif
   auto context = foxglove::Context::create();
   auto server =
     startServer(context, foxglove::WebSocketServerCapabilities::Parameters, std::move(callbacks));
