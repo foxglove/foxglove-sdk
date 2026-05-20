@@ -32,7 +32,10 @@ use super::ws_protocol::server::{
     ServiceCallFailure, ServiceCallResponse, Status, advertise_services,
 };
 use crate::library_version::get_library_version;
-use crate::testutil::{RecordingServerListener, assert_eventually};
+use crate::testutil::{
+    RecordingGetBehavior, RecordingParameterHandler, RecordingServerListener, RecordingSetBehavior,
+    assert_eventually,
+};
 use crate::testutil::{WebSocketClient, WebSocketClientError};
 #[cfg(feature = "websocket-tls")]
 use crate::websocket::TlsIdentity;
@@ -2029,4 +2032,266 @@ async fn test_playback_control_without_time_range() {
     };
 
     create_server(&ctx, options);
+}
+
+#[traced_test]
+#[tokio::test]
+async fn test_parameter_handler_get_responds_with_values() {
+    let parameters = vec![Parameter::float64("foo", 1.0)];
+    let handler = Arc::new(RecordingParameterHandler::new());
+    handler.set_get_behavior(RecordingGetBehavior::Respond(parameters.clone()));
+
+    let ctx = Context::new();
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            capabilities: Some(IndexSet::from([Capability::Parameters])),
+            parameter_handler: Some(handler.clone()),
+            ..Default::default()
+        },
+    );
+    let addr = server
+        .start("127.0.0.1", 0)
+        .await
+        .expect("Failed to start server");
+
+    let mut client = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
+    expect_recv!(client, ServerMessage::ServerInfo);
+
+    client
+        .send(&GetParameters::new(["foo", "bar"]).with_id("req-1"))
+        .await
+        .expect("Failed to send get parameters");
+
+    let msg = expect_recv!(client, ServerMessage::ParameterValues);
+    assert_eq!(msg.id, Some("req-1".into()));
+    assert_eq!(msg.parameters, parameters);
+
+    let captured = handler.take_parameters_get().pop().unwrap();
+    assert_eq!(captured.param_names, vec!["foo", "bar"]);
+    assert_eq!(captured.request_id, Some("req-1".to_string()));
+
+    let _ = server.stop();
+}
+
+#[traced_test]
+#[tokio::test]
+async fn test_parameter_handler_get_drop_sends_error_status() {
+    let handler = Arc::new(RecordingParameterHandler::new());
+    handler.set_get_behavior(RecordingGetBehavior::DropResponder);
+
+    let ctx = Context::new();
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            capabilities: Some(IndexSet::from([Capability::Parameters])),
+            parameter_handler: Some(handler.clone()),
+            ..Default::default()
+        },
+    );
+    let addr = server
+        .start("127.0.0.1", 0)
+        .await
+        .expect("Failed to start server");
+
+    let mut client = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
+    expect_recv!(client, ServerMessage::ServerInfo);
+
+    client
+        .send(&GetParameters::new(["foo"]).with_id("req-1"))
+        .await
+        .expect("Failed to send get parameters");
+
+    let status = expect_recv!(client, ServerMessage::Status);
+    assert_eq!(
+        status.level,
+        super::ws_protocol::server::status::Level::Error
+    );
+    assert!(status.message.contains("failed to send a response"));
+
+    let _ = server.stop();
+}
+
+#[traced_test]
+#[tokio::test]
+async fn test_parameter_handler_set_echoes() {
+    let handler = Arc::new(RecordingParameterHandler::new());
+
+    let ctx = Context::new();
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            capabilities: Some(IndexSet::from([Capability::Parameters])),
+            parameter_handler: Some(handler.clone()),
+            ..Default::default()
+        },
+    );
+    let addr = server
+        .start("127.0.0.1", 0)
+        .await
+        .expect("Failed to start server");
+
+    let mut setter = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect setter");
+    expect_recv!(setter, ServerMessage::ServerInfo);
+
+    let parameters = vec![Parameter::float64("foo", 2.0)];
+    setter
+        .send(&SetParameters::new(parameters.clone()).with_id("set-1"))
+        .await
+        .expect("Failed to send set parameters");
+
+    // Setter receives an echoed ParameterValues with the request_id (RecordingSetBehavior::Echo).
+    let echo = expect_recv!(setter, ServerMessage::ParameterValues);
+    assert_eq!(echo.id, Some("set-1".into()));
+    assert_eq!(echo.parameters, parameters);
+
+    let captured = handler.take_parameters_set().pop().unwrap();
+    assert_eq!(captured.request_id, Some("set-1".to_string()));
+    assert_eq!(captured.parameters, parameters);
+
+    let _ = server.stop();
+}
+
+#[traced_test]
+#[tokio::test]
+async fn test_parameter_handler_set_no_echo_without_request_id() {
+    let handler = Arc::new(RecordingParameterHandler::new());
+
+    let ctx = Context::new();
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            capabilities: Some(IndexSet::from([Capability::Parameters])),
+            parameter_handler: Some(handler.clone()),
+            ..Default::default()
+        },
+    );
+    let addr = server
+        .start("127.0.0.1", 0)
+        .await
+        .expect("Failed to start server");
+
+    let mut setter = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect setter");
+    expect_recv!(setter, ServerMessage::ServerInfo);
+
+    setter
+        .send(&SetParameters::new(vec![Parameter::float64("foo", 2.0)]))
+        .await
+        .expect("Failed to send set parameters");
+
+    assert_eventually(|| dbg!(handler.parameters_set_len()) == 1).await;
+
+    // No echo expected because the request had no request_id.
+    server.stop().unwrap().wait().await;
+    expect_recv_close!(setter);
+}
+
+#[traced_test]
+#[tokio::test]
+async fn test_parameter_handler_set_drop_sends_error_status() {
+    let handler = Arc::new(RecordingParameterHandler::new());
+    handler.set_set_behavior(RecordingSetBehavior::DropResponder);
+
+    let ctx = Context::new();
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            capabilities: Some(IndexSet::from([Capability::Parameters])),
+            parameter_handler: Some(handler.clone()),
+            ..Default::default()
+        },
+    );
+    let addr = server
+        .start("127.0.0.1", 0)
+        .await
+        .expect("Failed to start server");
+
+    let mut setter = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect setter");
+    expect_recv!(setter, ServerMessage::ServerInfo);
+
+    setter
+        .send(&SetParameters::new(vec![Parameter::float64("foo", 2.0)]).with_id("set-1"))
+        .await
+        .expect("Failed to send set parameters");
+
+    let status = expect_recv!(setter, ServerMessage::Status);
+    assert_eq!(
+        status.level,
+        super::ws_protocol::server::status::Level::Error
+    );
+    assert!(status.message.contains("failed to send a response"));
+
+    let _ = server.stop();
+}
+
+#[traced_test]
+#[tokio::test]
+async fn test_parameter_handler_takes_precedence_over_listener() {
+    // Both registered. Handler should win for get/set; listener still receives sub/unsub.
+    let listener = Arc::new(RecordingServerListener::new());
+    let handler = Arc::new(RecordingParameterHandler::new());
+    handler.set_get_behavior(RecordingGetBehavior::Respond(vec![Parameter::float64(
+        "foo", 1.0,
+    )]));
+
+    let ctx = Context::new();
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            capabilities: Some(IndexSet::from([Capability::Parameters])),
+            listener: Some(listener.clone()),
+            parameter_handler: Some(handler.clone()),
+            ..Default::default()
+        },
+    );
+    let addr = server
+        .start("127.0.0.1", 0)
+        .await
+        .expect("Failed to start server");
+
+    let mut client = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
+    expect_recv!(client, ServerMessage::ServerInfo);
+
+    client
+        .send(&SubscribeParameterUpdates::new(["foo"]))
+        .await
+        .expect("Failed to send subscribe");
+    client
+        .send(&GetParameters::new(["foo"]).with_id("g1"))
+        .await
+        .expect("Failed to send get");
+    client
+        .send(&SetParameters::new(vec![Parameter::float64("foo", 3.0)]).with_id("s1"))
+        .await
+        .expect("Failed to send set");
+    client
+        .send(&UnsubscribeParameterUpdates::new(["foo"]))
+        .await
+        .expect("Failed to send unsubscribe");
+
+    assert_eventually(|| {
+        dbg!(handler.parameters_get_len()) >= 1
+            && dbg!(handler.parameters_set_len()) >= 1
+            && dbg!(listener.parameters_subscribe_len()) >= 1
+            && dbg!(listener.parameters_unsubscribe_len()) >= 1
+    })
+    .await;
+
+    // Listener get/set methods were never invoked.
+    assert_eq!(listener.take_parameters_get().len(), 0);
+    assert_eq!(listener.take_parameters_set().len(), 0);
+
+    let _ = server.stop();
 }

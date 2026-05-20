@@ -7,6 +7,8 @@ pub(crate) mod any_client;
 pub(crate) mod connection_graph;
 #[cfg(any(feature = "websocket", feature = "remote-access"))]
 pub(crate) mod fetch_asset;
+#[cfg(any(feature = "websocket", feature = "remote-access"))]
+pub(crate) mod parameters;
 pub(crate) mod semaphore;
 pub(crate) mod service;
 

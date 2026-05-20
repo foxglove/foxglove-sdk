@@ -1,8 +1,10 @@
 //! Transport-agnostic client handle for handler traits.
 
+use crate::protocol::common::parameter::Parameter;
 use crate::protocol::common::server::status::Status;
 use crate::remote_common::ClientId;
 use crate::remote_common::fetch_asset::SendAssetResponse;
+use crate::remote_common::parameters::SendParameterResponse;
 
 /// A client handle abstracted over the transport that delivered the request.
 #[derive(Debug, Clone)]
@@ -80,6 +82,19 @@ impl AnyClient {
     #[cfg(feature = "remote-access")]
     pub(crate) fn from_remote_access(client: crate::remote_access::Client) -> Self {
         Self(AnyClientInner::RemoteAccess(client))
+    }
+
+    pub(crate) fn send_parameter_values(
+        &self,
+        parameters: Vec<Parameter>,
+        request_id: Option<String>,
+    ) {
+        match &self.0 {
+            #[cfg(feature = "websocket")]
+            AnyClientInner::WebSocket(c) => c.send_parameter_values(parameters, request_id),
+            #[cfg(feature = "remote-access")]
+            AnyClientInner::RemoteAccess(c) => c.send_parameter_values(parameters, request_id),
+        }
     }
 
     pub(crate) fn send_asset_response(&self, result: Result<&[u8], &str>, request_id: u32) {

@@ -22,6 +22,9 @@ pub mod ws_protocol;
 pub use crate::remote_common::AnyClient;
 pub use crate::remote_common::fetch_asset::{AssetHandler, AssetResponder};
 pub(crate) use crate::remote_common::fetch_asset::{AsyncAssetHandlerFn, BlockingAssetHandlerFn};
+pub use crate::remote_common::parameters::{
+    GetParametersResponder, ParameterHandler, SetParametersResponder,
+};
 pub use capability::Capability;
 pub use channel_view::ChannelView;
 pub use client::{Client, ClientId};
