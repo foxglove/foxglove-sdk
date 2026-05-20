@@ -11,6 +11,8 @@
 # interfaces (not just eth0) is necessary because rootless Podman with pasta
 # networking forwards published-port traffic through the loopback interface.
 #
+# ## Flat mode (default)
+#
 # Configure via the NETEM_ARGS environment variable. It accepts any arguments
 # valid after `tc qdisc replace dev <iface> root netem`. Defaults to moderate
 # impairment (80ms delay, 20ms jitter, 2% packet loss).
@@ -34,9 +36,9 @@
 # qdiscs (HTB root + netem leaf classes). Enabled automatically when any
 # NETEM_LINK_<NAME>_DST env var is set. See scripts/container/netem_setup.py for details.
 #
-# Per-link mode requires a network overlay (e.g. docker-compose.netem-livekit.yml)
-# that creates a bridge network with static IPs for the containers you want to
-# impair independently. The NETEM_LINK_*_DST env vars must match those IPs.
+# To apply per-link impairment to a real stack, use an overlay that pins peers
+# to known IPs. See `docker-compose.netem-perlink.yml` for a working example
+# with target containers on a fixed-subnet bridge network.
 #
 # Requirements:
 #   - Linux host: works natively.
