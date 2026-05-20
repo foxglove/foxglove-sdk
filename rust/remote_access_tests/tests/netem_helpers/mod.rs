@@ -7,7 +7,6 @@
 use std::process::Command;
 
 use anyhow::{Context as _, Result};
-use tracing::info;
 
 /// Default netem arguments matching `docker-compose.netem.yml`.
 const DEFAULT_NETEM_ARGS: &str = "delay 80ms 20ms loss 2%";
@@ -56,29 +55,6 @@ pub fn netem_container_id() -> Result<String> {
         tracing::warn!("multiple netem containers found, using {id}");
     }
     Ok(id)
-}
-
-/// Update netem impairment parameters on all qdiscs. Runs `netem_impair.py`
-/// inside the netem sidecar.
-pub fn set_netem_impairment(container: &str, args: &str) -> Result<()> {
-    let output = Command::new("docker")
-        .args(["exec", container, "python3", "/netem_impair.py"])
-        .args(args.split_whitespace())
-        .output()
-        .context("failed to run netem_impair.py")?;
-
-    anyhow::ensure!(
-        output.status.success(),
-        "netem_impair.py failed ({}): {}",
-        output.status,
-        String::from_utf8_lossy(&output.stderr)
-    );
-
-    info!(
-        "netem impairment updated: {}",
-        String::from_utf8_lossy(&output.stdout).trim()
-    );
-    Ok(())
 }
 
 /// Parse the base delay (in ms) from a netem args string.
