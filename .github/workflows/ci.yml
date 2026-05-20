@@ -17,8 +17,7 @@ jobs:
       - name: Install common dependencies
         uses: ./.github/actions/common-deps
 
-      # Install CUDA headers so that builds with `--features full` (which
-      # includes `require-cuda`) can find `cuda.h` and verify NVENC support.
+      # Install CUDA headers so that builds can find `cuda.h` and compile with NVENC support.
       - name: Install CUDA toolkit
         run: |
           sudo apt-get install -y --no-install-recommends nvidia-cuda-toolkit
@@ -58,7 +57,7 @@ jobs:
       # Validate that we can build against the MSRV (minimum specified rust version).
       - run: cargo +1.85.0 build -p foxglove
       - run: cargo clippy --no-deps --all-targets --tests -- -D warnings
-      - run: DOCS_RS=1 cargo +nightly rustdoc -p foxglove --features full -- -D warnings --cfg docsrs
+      - run: cargo +nightly rustdoc -p foxglove --features full -- -D warnings --cfg docsrs
       - run: "[ -d ./target/doc/foxglove ] || exit 1"
       - name: Check for ws-protocol references in public docs
         run: '! grep -R "foxglove/ws-protocol" ./target/doc/foxglove'

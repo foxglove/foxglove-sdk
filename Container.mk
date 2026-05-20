@@ -75,7 +75,7 @@ test-rust-foxglove-no-default-features:
 
 .PHONY: docs-rust
 docs-rust:
-	DOCS_RS=1 cargo +nightly rustdoc -p foxglove --features full -- -D warnings --cfg docsrs
+	cargo +nightly rustdoc -p foxglove --features full -- -D warnings --cfg docsrs
 
 .PHONY: clean-cpp
 clean-cpp:
