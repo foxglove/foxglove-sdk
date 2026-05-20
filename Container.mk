@@ -6,12 +6,13 @@ generate:
 PYTHON_REMOTE_ACCESS ?= ON
 # Opts into a build-time check that NVENC hardware acceleration for video
 # encoding will be available (cuda.h is present on supported targets). Only
-# meaningful when remote-access is also enabled, so it defaults to whatever
-# PYTHON_REMOTE_ACCESS is set to.
-PYTHON_REQUIRE_CUDA ?= $(PYTHON_REMOTE_ACCESS)
+# meaningful when remote-access is also enabled. Defaults to OFF because the
+# check fails the build on hosts without the CUDA toolkit; opt in explicitly
+# (e.g. in CI) where you want the loud failure.
+PYTHON_REQUIRE_CUDA ?= OFF
 
 ifeq ($(PYTHON_REMOTE_ACCESS),ON)
-MATURIN_PEP517_ARGS += --features full
+MATURIN_PEP517_ARGS += --features remote-access
 ifeq ($(PYTHON_REQUIRE_CUDA),ON)
 MATURIN_PEP517_ARGS += --features require-cuda
 endif
@@ -128,9 +129,10 @@ CPP_SDK_DIR ?= cpp/dist
 FOXGLOVE_REMOTE_ACCESS ?= ON
 # Opts into a build-time check that NVENC hardware acceleration for video
 # encoding will be available (cuda.h is present on supported targets). Only
-# meaningful when remote-access is also enabled, so it defaults to whatever
-# FOXGLOVE_REMOTE_ACCESS is set to.
-FOXGLOVE_REQUIRE_CUDA ?= $(FOXGLOVE_REMOTE_ACCESS)
+# meaningful when remote-access is also enabled. Defaults to OFF because the
+# check fails the build on hosts without the CUDA toolkit; opt in explicitly
+# (e.g. in CI) where you want the loud failure.
+FOXGLOVE_REQUIRE_CUDA ?= OFF
 # Selects the rustls crypto backend for the C SDK. Either `aws-lc-rs` (default)
 # or `ring`. Override to `ring` on targets where building aws-lc-sys is painful
 # (e.g. `aarch64-apple-ios-sim`, which would otherwise need an external bindgen).

@@ -55,7 +55,7 @@ jobs:
       - run: make lint
         working-directory: cpp
       - name: Build C libs
-        run: make -f Container.mk build-cpp-dist
+        run: make -f Container.mk FOXGLOVE_REQUIRE_CUDA=ON build-cpp-dist
       - name: Test with clang tidy
         run: |
           make test \
@@ -80,19 +80,23 @@ jobs:
             skip_upload: true
             cross: false
 
-          # Linux (remote access enabled)
+          # Linux (remote access enabled). require_cuda is only set on the
+          # targets where webrtc-sys builds NVENC support and where this job
+          # installs nvidia-cuda-dev below.
           - runner: ubuntu-22.04-arm
             target: aarch64-unknown-linux-gnu
             staticlib_name: libfoxglove.a
             cdylib_name: libfoxglove.so
             cross: false
             remote_access: true
+            require_cuda: true
           - runner: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
             staticlib_name: libfoxglove.a
             cdylib_name: libfoxglove.so
             cross: false
             remote_access: true
+            require_cuda: true
 
           # macOS (remote access enabled)
           - runner: macos-15
@@ -193,6 +197,7 @@ jobs:
           make -f Container.mk build-cpp-dist
           CPP_SDK_DIR=artifacts/foxglove
           FOXGLOVE_REMOTE_ACCESS=${{ matrix.remote_access && 'ON' || 'OFF' }}
+          FOXGLOVE_REQUIRE_CUDA=${{ matrix.require_cuda && 'ON' || 'OFF' }}
           FOXGLOVE_CRYPTO_PROVIDER=${{ matrix.crypto_provider || 'aws-lc-rs' }}
           STATICLIB_NAME=${{ matrix.staticlib_name }}
           CDYLIB_NAME=${{ matrix.cdylib_name }}

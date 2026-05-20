@@ -45,8 +45,8 @@ jobs:
       - name: Install common dependencies
         uses: ./.github/actions/common-deps
 
-      # Install CUDA headers so that `make test-python` (which uses
-      # `--features full`, including `require-cuda`) can find `cuda.h`.
+      # Install CUDA headers so that the require-cuda build-time `cuda.h` check
+      # passes for `make test-python` below.
       - name: Install CUDA headers
         uses: ./.github/actions/install-cuda-headers
 
@@ -56,7 +56,7 @@ jobs:
           node-version: 22
           cache: yarn
 
-      - run: make -f Container.mk test-python
+      - run: make -f Container.mk PYTHON_REQUIRE_CUDA=ON test-python
 
   playground-wasm:
     runs-on: ubuntu-latest

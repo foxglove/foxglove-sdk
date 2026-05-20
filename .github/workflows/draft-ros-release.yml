@@ -39,7 +39,7 @@ jobs:
           echo "CUDA_HOME=/usr" >> $GITHUB_ENV
 
       - name: Build C++ SDK
-        run: make -f Container.mk build-cpp-dist
+        run: make -f Container.mk FOXGLOVE_REQUIRE_CUDA=ON build-cpp-dist
 
       - name: Upload SDK artifact
         uses: actions/upload-artifact@v7

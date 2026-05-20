@@ -25,7 +25,7 @@ require-cuda = ["foxglove/require-cuda"]
 
 # The full set of supported features, with opinionated choices for mutually-
 # exclusive feature sets.
-full = ["aws-lc-rs", "remote-access", "require-cuda"]
+full = ["aws-lc-rs", "remote-access"]
 
 [lints]
 workspace = true
