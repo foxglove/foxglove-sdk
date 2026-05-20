@@ -1,3 +1,5 @@
+//! Shared asset-fetching primitives.
+
 use std::fmt::Display;
 use std::future::Future;
 use std::sync::Arc;
