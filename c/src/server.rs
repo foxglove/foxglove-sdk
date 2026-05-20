@@ -10,6 +10,7 @@ use std::mem::ManuallyDrop;
 use std::sync::Arc;
 
 use crate::parameter::FoxgloveParameterArray;
+use crate::parameter_handler::FoxgloveParameterHandler;
 use crate::playback_control_request::FoxglovePlaybackControlRequest;
 use crate::playback_state::FoxglovePlaybackState;
 
@@ -187,6 +188,13 @@ pub struct FoxgloveServerOptions<'a> {
     /// # Safety
     /// - If provided, the `session_id` must be a valid pointer to a null-terminated UTF-8 string.
     pub session_id: Option<&'a FoxgloveString>,
+
+    /// Optional parameter handler.
+    ///
+    /// When set, this handler takes precedence over the deprecated `on_get_parameters` /
+    /// `on_set_parameters` callbacks on `foxglove_server_callbacks`. Registering a handler
+    /// automatically enables the `FOXGLOVE_SERVER_CAPABILITY_PARAMETERS` capability.
+    pub parameter_handler: Option<&'a FoxgloveParameterHandler>,
 }
 
 #[repr(C)]
@@ -429,6 +437,9 @@ unsafe fn do_foxglove_server_start(
     }
     if let Some(callbacks) = options.callbacks {
         server = server.listener(Arc::new(callbacks.clone()));
+    }
+    if let Some(handler) = options.parameter_handler {
+        server = server.parameter_handler(handler.clone().into_arc());
     }
     if let Some(fetch_asset) = options.fetch_asset {
         server = server.fetch_asset_handler(Arc::new(FetchAssetHandler::new(

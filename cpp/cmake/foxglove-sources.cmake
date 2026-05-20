@@ -18,6 +18,7 @@ set(FOXGLOVE_CPP_HANDWRITTEN_SOURCES
   foxglove.cpp
   mcap.cpp
   parameter.cpp
+  parameter_handler.cpp
   service.cpp
   system_info.cpp
   websocket.cpp

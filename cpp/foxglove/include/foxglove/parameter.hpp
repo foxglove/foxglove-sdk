@@ -718,6 +718,8 @@ public:
 private:
   friend class WebSocketServer;
   friend class RemoteAccessGateway;
+  friend class GetParametersResponder;
+  friend class SetParametersResponder;
 
   struct Deleter {
     void operator()(foxglove_parameter_array* ptr) const noexcept;

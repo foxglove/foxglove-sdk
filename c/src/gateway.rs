@@ -9,6 +9,7 @@ use crate::channel_descriptor::FoxgloveChannelDescriptor;
 use crate::connection_graph::FoxgloveConnectionGraph;
 use crate::fetch_asset::{FetchAssetHandler, FoxgloveFetchAssetResponder};
 use crate::parameter::FoxgloveParameterArray;
+use crate::parameter_handler::FoxgloveParameterHandler;
 use crate::server::FoxgloveServerStatusLevel;
 use crate::service::FoxgloveService;
 use crate::sink_channel_filter::ChannelFilter;
@@ -590,6 +591,13 @@ pub struct FoxgloveGatewayOptions<'a> {
 
     /// Optional message backlog size override.
     pub message_backlog_size: Option<&'a usize>,
+
+    /// Optional parameter handler.
+    ///
+    /// When set, this handler takes precedence over the deprecated `on_get_parameters` /
+    /// `on_set_parameters` callbacks on `foxglove_gateway_callbacks`. Registering a handler
+    /// automatically enables the `FOXGLOVE_GATEWAY_CAPABILITY_PARAMETERS` capability.
+    pub parameter_handler: Option<&'a FoxgloveParameterHandler>,
 }
 
 // Handle
@@ -699,6 +707,11 @@ unsafe fn do_foxglove_gateway_start(
     // Callbacks
     if let Some(callbacks) = options.callbacks {
         gateway = gateway.listener(Arc::new(callbacks.clone()));
+    }
+
+    // Parameter handler
+    if let Some(handler) = options.parameter_handler {
+        gateway = gateway.parameter_handler(handler.clone().into_arc());
     }
 
     // Channel filter

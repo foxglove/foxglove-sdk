@@ -6,6 +6,7 @@
 #include <foxglove/error.hpp>
 #include <foxglove/fetch_asset.hpp>
 #include <foxglove/parameter.hpp>
+#include <foxglove/parameter_handler.hpp>
 #include <foxglove/service.hpp>
 
 #include <chrono>
@@ -192,6 +193,12 @@ struct RemoteAccessGatewayOptions {
   /// If set, this callback is invoked for each channel to determine its quality-of-service
   /// profile. If not set, all channels use the default lossy profile.
   QosClassifierFn qos_classifier;
+  /// @brief A parameter handler.
+  ///
+  /// When set, this handler takes precedence over the deprecated
+  /// `onGetParameters` / `onSetParameters` callbacks. Registering a handler
+  /// automatically enables the `Parameters` capability.
+  ParameterHandler parameter_handler;
   /// @cond foxglove_internal
   /// @brief (internal) Information about the gateway, which is shared with clients.
   ///
@@ -280,13 +287,15 @@ private:
     foxglove_gateway* gateway, std::unique_ptr<RemoteAccessGatewayCallbacks> callbacks,
     std::unique_ptr<FetchAssetHandler> fetch_asset,
     std::unique_ptr<SinkChannelFilterFn> sink_channel_filter,
-    std::unique_ptr<QosClassifierFn> qos_classifier
+    std::unique_ptr<QosClassifierFn> qos_classifier,
+    std::unique_ptr<ParameterHandler> parameter_handler
   );
 
   std::unique_ptr<RemoteAccessGatewayCallbacks> callbacks_;
   std::unique_ptr<FetchAssetHandler> fetch_asset_;
   std::unique_ptr<SinkChannelFilterFn> sink_channel_filter_;
   std::unique_ptr<QosClassifierFn> qos_classifier_;
+  std::unique_ptr<ParameterHandler> parameter_handler_;
   std::unique_ptr<foxglove_gateway, foxglove_error (*)(foxglove_gateway*)> impl_;
 };
 

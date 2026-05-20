@@ -480,6 +480,18 @@ typedef struct foxglove_gateway foxglove_gateway;
 #endif
 
 #if !defined(__wasm__)
+/**
+ * Responder for a `getParameters` request from a client.
+ *
+ * Obtained via the `get` callback of `foxglove_parameter_handler`. The implementation must
+ * eventually call either `foxglove_get_parameters_responder_respond` or
+ * `foxglove_get_parameters_responder_drop`, exactly once, in order to complete the request. It is
+ * safe to invoke these functions synchronously from the context of the callback.
+ */
+typedef struct foxglove_get_parameters_responder foxglove_get_parameters_responder;
+#endif
+
+#if !defined(__wasm__)
 typedef struct foxglove_mcap_writer foxglove_mcap_writer;
 #endif
 
@@ -489,6 +501,18 @@ typedef struct foxglove_service foxglove_service;
 
 #if !defined(__wasm__)
 typedef struct foxglove_service_responder foxglove_service_responder;
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Responder for a `setParameters` request from a client.
+ *
+ * Obtained via the `set` callback of `foxglove_parameter_handler`. The implementation must
+ * eventually call either `foxglove_set_parameters_responder_respond` or
+ * `foxglove_set_parameters_responder_drop`, exactly once, in order to complete the request. It is
+ * safe to invoke these functions synchronously from the context of the callback.
+ */
+typedef struct foxglove_set_parameters_responder foxglove_set_parameters_responder;
 #endif
 
 #if !defined(__wasm__)
@@ -2486,6 +2510,69 @@ typedef struct foxglove_qos_profile {
 } foxglove_qos_profile;
 #endif
 
+#if !defined(__wasm__)
+/**
+ * Handler for client-initiated parameter operations.
+ *
+ * When supplied to `foxglove_server_options` or `foxglove_gateway_options`, the handler takes
+ * precedence over the deprecated `on_get_parameters` / `on_set_parameters` callbacks on
+ * `foxglove_server_callbacks` / `foxglove_gateway_callbacks`. The handler also automatically
+ * enables the `FOXGLOVE_SERVER_CAPABILITY_PARAMETERS` (or `FOXGLOVE_GATEWAY_CAPABILITY_PARAMETERS`)
+ * capability when it is registered, but the caller is still responsible for setting that
+ * capability bit if subscribe/unsubscribe notifications are also desired.
+ *
+ * These methods are invoked from time-sensitive contexts and must not block. If long-running
+ * behavior is required, the implementation should hand the responder off to another thread and
+ * return immediately.
+ */
+typedef struct foxglove_parameter_handler {
+  /**
+   * A user-defined value that will be passed to callback functions.
+   */
+  const void *context;
+  /**
+   * Callback invoked when a client requests parameters.
+   *
+   * The `request_id` argument may be NULL.
+   *
+   * The `param_names` argument may be NULL only when `param_names_len` is zero. The buffer is
+   * valid for the duration of this call; if the callback wishes to store these values, it must
+   * copy them out.
+   *
+   * The implementation takes ownership of `responder`, and must eventually complete it by
+   * calling either `foxglove_get_parameters_responder_respond` or
+   * `foxglove_get_parameters_responder_drop`, exactly once. Dropping the responder without
+   * responding sends a generic error status to the requesting client.
+   */
+  void (*get)(const void *context,
+              uint32_t client_id,
+              const struct foxglove_string *request_id,
+              const struct foxglove_string *param_names,
+              size_t param_names_len,
+              struct foxglove_get_parameters_responder *responder);
+  /**
+   * Callback invoked when a client sets parameters.
+   *
+   * The `request_id` argument may be NULL.
+   *
+   * The `params` argument is guaranteed to be non-NULL. The buffer is valid for the duration of
+   * this call; if the callback wishes to store these values, it must copy them out.
+   *
+   * The implementation takes ownership of `responder`, and must eventually complete it by
+   * calling either `foxglove_set_parameters_responder_respond` or
+   * `foxglove_set_parameters_responder_drop`, exactly once. The values passed to `respond` are
+   * echoed back to the requester (when `request_id` is non-NULL) and broadcast to subscribers.
+   * Dropping the responder without responding sends a generic error status to the requesting
+   * client and does not broadcast anything.
+   */
+  void (*set)(const void *context,
+              uint32_t client_id,
+              const struct foxglove_string *request_id,
+              const struct foxglove_parameter_array *params,
+              struct foxglove_set_parameters_responder *responder);
+} foxglove_parameter_handler;
+#endif
+
 #if defined(FOXGLOVE_REMOTE_ACCESS)
 /**
  * Options for creating a remote access gateway.
@@ -2586,6 +2673,14 @@ typedef struct foxglove_gateway_options {
    * Optional message backlog size override.
    */
   const size_t *message_backlog_size;
+  /**
+   * Optional parameter handler.
+   *
+   * When set, this handler takes precedence over the deprecated `on_get_parameters` /
+   * `on_set_parameters` callbacks on `foxglove_gateway_callbacks`. Registering a handler
+   * automatically enables the `FOXGLOVE_GATEWAY_CAPABILITY_PARAMETERS` capability.
+   */
+  const struct foxglove_parameter_handler *parameter_handler;
 } foxglove_gateway_options;
 #endif
 
@@ -2874,6 +2969,14 @@ typedef struct foxglove_server_options {
    * - If provided, the `session_id` must be a valid pointer to a null-terminated UTF-8 string.
    */
   const struct foxglove_string *session_id;
+  /**
+   * Optional parameter handler.
+   *
+   * When set, this handler takes precedence over the deprecated `on_get_parameters` /
+   * `on_set_parameters` callbacks on `foxglove_server_callbacks`. Registering a handler
+   * automatically enables the `FOXGLOVE_SERVER_CAPABILITY_PARAMETERS` capability.
+   */
+  const struct foxglove_parameter_handler *parameter_handler;
 } foxglove_server_options;
 #endif
 
@@ -6172,6 +6275,64 @@ foxglove_error foxglove_parameter_value_dict_insert(struct foxglove_parameter_va
  * - `dict` is a valid pointer to a value allocated by `foxglove_parameter_value_dict_create`.
  */
 void foxglove_parameter_value_dict_free(struct foxglove_parameter_value_dict *dict);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Completes a `getParameters` request by sending parameter values to the client.
+ *
+ * # Safety
+ * - `responder` must be a pointer to a `foxglove_get_parameters_responder` obtained via a `get`
+ *   callback. This value is moved into this function, and must not be accessed afterwards.
+ * - `params` must be a valid pointer to a value allocated by `foxglove_parameter_array_create`.
+ *   This value is moved into this function, and must not be accessed afterwards. A NULL value is
+ *   treated as an empty array.
+ */
+void foxglove_get_parameters_responder_respond(struct foxglove_get_parameters_responder *responder,
+                                               struct foxglove_parameter_array *params);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Drops a `getParameters` responder without responding.
+ *
+ * This sends a generic error status to the requesting client.
+ *
+ * # Safety
+ * - `responder` must be a pointer to a `foxglove_get_parameters_responder` obtained via a `get`
+ *   callback. This value is moved into this function, and must not be accessed afterwards.
+ */
+void foxglove_get_parameters_responder_drop(struct foxglove_get_parameters_responder *responder);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Completes a `setParameters` request with the values that were actually applied.
+ *
+ * Echoes to the requester when the request carried a `request_id`, and broadcasts to subscribers.
+ *
+ * # Safety
+ * - `responder` must be a pointer to a `foxglove_set_parameters_responder` obtained via a `set`
+ *   callback. This value is moved into this function, and must not be accessed afterwards.
+ * - `params` must be a valid pointer to a value allocated by `foxglove_parameter_array_create`.
+ *   This value is moved into this function, and must not be accessed afterwards. A NULL value is
+ *   treated as an empty array.
+ */
+void foxglove_set_parameters_responder_respond(struct foxglove_set_parameters_responder *responder,
+                                               struct foxglove_parameter_array *params);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Drops a `setParameters` responder without responding.
+ *
+ * This sends a generic error status to the requesting client and does not broadcast anything.
+ *
+ * # Safety
+ * - `responder` must be a pointer to a `foxglove_set_parameters_responder` obtained via a `set`
+ *   callback. This value is moved into this function, and must not be accessed afterwards.
+ */
+void foxglove_set_parameters_responder_drop(struct foxglove_set_parameters_responder *responder);
 #endif
 
 #if !defined(__wasm__)
