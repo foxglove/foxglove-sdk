@@ -5,9 +5,12 @@
  *
  * This implements a parameter server using the `ParameterHandler` API.
  * Get/set requests from clients are enqueued on a worker thread, which owns
- * the parameter store and fulfils each responder. The worker also publishes
- * a periodic "elapsed" update to subscribers, so the parameter store has
- * exactly one owner and no synchronization is required.
+ * the parameter store and fulfils each responder. Because
+ * `SetParametersResponder` only echoes the applied values to the requester,
+ * the worker is also responsible for publishing those updates to other
+ * parameter subscribers; the same path is used to publish a periodic
+ * "elapsed" tick. The parameter store has exactly one owner, so no
+ * synchronization is required.
  *
  * When built with remote-access support (`FOXGLOVE_REMOTE_ACCESS`) and the
  * `FOXGLOVE_DEVICE_TOKEN` environment variable is set, the example also
@@ -197,6 +200,22 @@ int main() {
     queue.shutdown();
   };
 
+  // Publishes parameter values to all subscribers across the server and (if
+  // configured) the remote-access gateway.
+  auto publish = [&](std::vector<foxglove::Parameter> params) {
+#ifdef FOXGLOVE_REMOTE_ACCESS
+    if (gateway) {
+      std::vector<foxglove::Parameter> cloned;
+      cloned.reserve(params.size());
+      for (const auto& p : params) {
+        cloned.push_back(p.clone());
+      }
+      gateway->publishParameterValues(std::move(cloned));
+    }
+#endif
+    server.publishParameterValues(std::move(params));
+  };
+
   auto start_time = std::chrono::steady_clock::now();
   auto next_tick = start_time + 1s;
   while (!done) {
@@ -208,7 +227,7 @@ int main() {
     auto maybe_op = queue.pop(remaining);
     if (maybe_op) {
       std::visit(
-        [&param_store](auto& op) {
+        [&](auto& op) {
           using T = std::decay_t<decltype(op)>;
           if constexpr (std::is_same_v<T, GetOp>) {
             std::vector<foxglove::Parameter> result;
@@ -227,22 +246,28 @@ int main() {
             std::move(op.responder).respond(std::move(result));
           } else if constexpr (std::is_same_v<T, SetOp>) {
             std::vector<foxglove::Parameter> result;
+            std::vector<foxglove::Parameter> applied;
             for (auto& param : op.parameters) {
               const std::string name(param.name());
               if (auto it = param_store.find(name); it != param_store.end()) {
                 if (name.rfind("read_only_", 0) == 0) {
                   // Echo back the existing value so the client sees no change.
                   result.push_back(it->second.clone());
-                } else {
-                  it->second = param.clone();
-                  result.push_back(std::move(param));
+                  continue;
                 }
+                it->second = param.clone();
               } else {
                 param_store.emplace(name, param.clone());
-                result.push_back(std::move(param));
               }
+              applied.push_back(param.clone());
+              result.push_back(std::move(param));
             }
             std::move(op.responder).respond(std::move(result));
+            // SetParametersResponder only echoes to the requester, so publish
+            // applied changes to subscribers ourselves.
+            if (!applied.empty()) {
+              publish(std::move(applied));
+            }
           }
         },
         *maybe_op
@@ -254,16 +279,9 @@ int main() {
         std::chrono::duration<double>(std::chrono::steady_clock::now() - start_time).count();
       auto elapsed = foxglove::Parameter("elapsed", elapsed_secs);
       param_store.insert_or_assign("elapsed", elapsed.clone());
-#ifdef FOXGLOVE_REMOTE_ACCESS
-      if (gateway) {
-        std::vector<foxglove::Parameter> gateway_publish;
-        gateway_publish.emplace_back(elapsed.clone());
-        gateway->publishParameterValues(std::move(gateway_publish));
-      }
-#endif
       std::vector<foxglove::Parameter> to_publish;
       to_publish.emplace_back(std::move(elapsed));
-      server.publishParameterValues(std::move(to_publish));
+      publish(std::move(to_publish));
       next_tick += 1s;
     }
   }

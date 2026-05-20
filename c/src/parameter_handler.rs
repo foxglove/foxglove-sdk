@@ -98,10 +98,13 @@ pub struct FoxgloveParameterHandler {
     ///
     /// The implementation takes ownership of `responder`, and must eventually complete it by
     /// calling either `foxglove_set_parameters_responder_respond` or
-    /// `foxglove_set_parameters_responder_drop`, exactly once. The values passed to `respond` are
-    /// echoed back to the requester (when `request_id` is non-NULL) and broadcast to subscribers.
-    /// Dropping the responder without responding sends a generic error status to the requesting
-    /// client and does not broadcast anything.
+    /// `foxglove_set_parameters_responder_drop`, exactly once. When `request_id` is non-NULL,
+    /// the values passed to `respond` are echoed back to the requesting client; otherwise the
+    /// responder does nothing on the wire. The responder does not notify other parameter
+    /// subscribers, so the implementer is responsible for broadcasting applied updates to
+    /// subscribers on each sink (for example, via `foxglove_server_publish_parameter_values`
+    /// and `foxglove_gateway_publish_parameter_values`). Dropping the responder without
+    /// responding sends a generic error status to the requesting client.
     pub set: Option<
         unsafe extern "C" fn(
             context: *const c_void,
@@ -246,7 +249,10 @@ pub unsafe extern "C" fn foxglove_get_parameters_responder_drop(
 
 /// Completes a `setParameters` request with the values that were actually applied.
 ///
-/// Echoes to the requester when the request carried a `request_id`, and broadcasts to subscribers.
+/// Echoes those values back to the requesting client when the request carried a `request_id`;
+/// otherwise does nothing on the wire. Does not notify other parameter subscribers; the caller is
+/// responsible for broadcasting applied updates to subscribers on each sink (for example, via
+/// `foxglove_server_publish_parameter_values` and `foxglove_gateway_publish_parameter_values`).
 ///
 /// # Safety
 /// - `responder` must be a pointer to a `foxglove_set_parameters_responder` obtained via a `set`
@@ -280,7 +286,7 @@ pub unsafe extern "C" fn foxglove_set_parameters_responder_respond(
 
 /// Drops a `setParameters` responder without responding.
 ///
-/// This sends a generic error status to the requesting client and does not broadcast anything.
+/// This sends a generic error status to the requesting client.
 ///
 /// # Safety
 /// - `responder` must be a pointer to a `foxglove_set_parameters_responder` obtained via a `set`

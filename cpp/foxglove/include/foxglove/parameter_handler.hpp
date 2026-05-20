@@ -57,17 +57,23 @@ private:
 ///
 /// This is the means by which a parameter handler responds to a set request
 /// from a client. Each request is paired with a unique responder instance, and
-/// must be used exactly once. The values passed to `respond()` are echoed back
-/// to the requester (when the request carried a request_id) and broadcast to
-/// all clients subscribed to those parameter names. Dropping the responder
-/// without responding sends a generic error status to the requesting client
-/// and does not broadcast anything.
+/// must be used exactly once. When the request carried a request_id, the
+/// values passed to `respond()` are echoed back to the requesting client;
+/// otherwise the responder does nothing on the wire. The responder does not
+/// notify other parameter subscribers; a handler may be shared across multiple
+/// sinks, so it is the implementer's responsibility to broadcast applied
+/// updates to subscribers on each sink (for example, via
+/// `WebSocketServer::publishParameterValues` and
+/// `RemoteAccessGateway::publishParameterValues`). Dropping the responder
+/// without responding sends a generic error status to the requesting client.
 class SetParametersResponder final {
 public:
   /// @brief Acknowledge the set request with the values that were actually
   /// applied.
   ///
-  /// Entries with an unset value are dropped before serialization.
+  /// Echoes those values back to the requesting client when the request
+  /// carried a request_id; otherwise does nothing on the wire. Entries with an
+  /// unset value are dropped before serialization.
   ///
   /// @param params Parameter values that were applied.
   void respond(std::vector<Parameter>&& params) && noexcept;
@@ -129,7 +135,10 @@ struct ParameterHandler {
   /// The implementation takes ownership of `responder`, and must eventually
   /// complete it by calling `responder.respond(...)` with the values that
   /// were actually applied, or letting it go out of scope to send a generic
-  /// error status.
+  /// error status. When the request carried a request_id, the responded
+  /// values are echoed back to the requester; the responder does not notify
+  /// other parameter subscribers, so the implementer must publish applied
+  /// updates separately (see `SetParametersResponder`).
   ///
   /// @param client_id The requesting client's ID.
   /// @param request_id A request ID unique to this client. May be empty.
