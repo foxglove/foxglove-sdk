@@ -3,6 +3,7 @@ use std::sync::{Arc, Weak};
 use livekit::id::ParticipantIdentity;
 
 use crate::protocol::common::parameter::Parameter;
+use crate::protocol::common::server::ParameterValues;
 use crate::protocol::common::server::status::Status;
 use crate::remote_access::participant::Participant;
 use crate::remote_access::session::encode_json_message;
@@ -111,7 +112,6 @@ impl SendParameterResponse for Client {
             );
             return;
         };
-        use crate::protocol::common::server::ParameterValues;
         let mut msg = ParameterValues::new(parameters.into_iter().filter(|p| p.value.is_some()));
         if let Some(id) = request_id {
             msg = msg.with_id(id);
