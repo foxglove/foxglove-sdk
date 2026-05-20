@@ -28,7 +28,9 @@ pub use service::{
     CallId, Handler, Request, Responder, Service, ServiceBuilder, ServiceSchema, SyncHandler,
 };
 
-pub use crate::protocol::common::parameter::{Parameter, ParameterType, ParameterValue};
+pub use crate::protocol::common::parameter::{
+    DecodeError as ParameterDecodeError, Parameter, ParameterType, ParameterValue,
+};
 pub use crate::protocol::common::server::status::{Level as StatusLevel, Status};
 
 /// Identifies a client connection. Unique for the duration of the server's lifetime.
