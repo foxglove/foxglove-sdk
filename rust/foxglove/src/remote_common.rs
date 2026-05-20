@@ -1,10 +1,10 @@
 //! Types shared between the WebSocket server and the remote-access gateway.
 //!
 //! Everything in this module is transport-agnostic: handler traits ([`ParameterHandler`],
-//! [`AssetHandler`], service [`Handler`]) implemented against these types can be registered with
+//! [`AssetHandler`], [`service::Handler`]) implemented against these types can be registered with
 //! either the WebSocket server or the remote-access gateway, and data and identity types
-//! ([`Parameter`], [`Status`], [`ConnectionGraph`], [`ClientId`], [`Service`], ...) are the same
-//! concrete types used by both. The transport-specific [`crate::websocket`] and
+//! ([`Parameter`], [`Status`], [`ConnectionGraph`], [`ClientId`], [`service::Service`], ...) are
+//! the same concrete types used by both. The transport-specific [`crate::websocket`] and
 //! [`crate::remote_access`] modules re-export the same items for convenience.
 
 use std::sync::atomic::{AtomicU32, Ordering};
@@ -17,7 +17,7 @@ pub(crate) mod fetch_asset;
 #[cfg(any(feature = "websocket", feature = "remote-access"))]
 pub(crate) mod parameters;
 pub(crate) mod semaphore;
-pub(crate) mod service;
+pub mod service;
 
 #[cfg(any(feature = "websocket", feature = "remote-access"))]
 pub use any_client::AnyClient;
@@ -26,9 +26,6 @@ pub use connection_graph::ConnectionGraph;
 pub use fetch_asset::{AssetHandler, AssetResponder};
 #[cfg(any(feature = "websocket", feature = "remote-access"))]
 pub use parameters::{GetParametersResponder, ParameterHandler, SetParametersResponder};
-pub use service::{
-    CallId, Handler, Request, Responder, Service, ServiceBuilder, ServiceSchema, SyncHandler,
-};
 
 pub use crate::protocol::common::parameter::{
     DecodeError as ParameterDecodeError, Parameter, ParameterType, ParameterValue,
