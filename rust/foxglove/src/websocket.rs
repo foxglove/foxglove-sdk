@@ -18,12 +18,12 @@ mod tests;
 #[doc(hidden)]
 pub mod ws_protocol;
 
+pub(crate) use crate::remote_common::fetch_asset::{AsyncAssetHandlerFn, BlockingAssetHandlerFn};
 pub use crate::remote_common::{
     AnyClient, AssetHandler, AssetResponder, ClientId, ConnectionGraph, GetParametersResponder,
     Parameter, ParameterDecodeError, ParameterHandler, ParameterType, ParameterValue,
     SetParametersResponder, Status, StatusLevel,
 };
-pub(crate) use crate::remote_common::fetch_asset::{AsyncAssetHandlerFn, BlockingAssetHandlerFn};
 pub use capability::Capability;
 pub use channel_view::ChannelView;
 pub use client::Client;
