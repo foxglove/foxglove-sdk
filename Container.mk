@@ -11,10 +11,9 @@ PYTHON_REMOTE_ACCESS ?= ON
 PYTHON_REQUIRE_CUDA ?= $(PYTHON_REMOTE_ACCESS)
 
 ifeq ($(PYTHON_REMOTE_ACCESS),ON)
-ifeq ($(PYTHON_REQUIRE_CUDA),ON)
 MATURIN_PEP517_ARGS += --features full
-else
-MATURIN_PEP517_ARGS += --features remote-access
+ifeq ($(PYTHON_REQUIRE_CUDA),ON)
+MATURIN_PEP517_ARGS += --features require-cuda
 endif
 endif
 
