@@ -249,18 +249,21 @@ int main() {
             std::vector<foxglove::Parameter> applied;
             for (auto& param : op.parameters) {
               const std::string name(param.name());
-              if (auto it = param_store.find(name); it != param_store.end()) {
+              auto it = param_store.find(name);
+              if (it != param_store.end()) {
                 if (name.rfind("read_only_", 0) == 0) {
                   // Echo back the existing value so the client sees no change.
                   result.push_back(it->second.clone());
                   continue;
                 }
-                it->second = param.clone();
+                it->second = std::move(param);
               } else {
-                param_store.emplace(name, param.clone());
+                it = param_store.emplace(name, std::move(param)).first;
               }
-              applied.push_back(param.clone());
-              result.push_back(std::move(param));
+              // The store now owns the value. Clone twice: `applied` is
+              // broadcast to subscribers, `result` is echoed to the requester.
+              applied.push_back(it->second.clone());
+              result.push_back(it->second.clone());
             }
             std::move(op.responder).respond(std::move(result));
             // SetParametersResponder only echoes to the requester, so publish
