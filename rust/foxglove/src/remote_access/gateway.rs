@@ -19,6 +19,7 @@ use super::qos::{QosClassifier, QosClassifierFn, QosProfile};
 
 use super::connection::{ConnectionParams, ConnectionStatus, RemoteAccessConnection};
 use super::{Capability, Listener};
+use crate::remote_common::parameters::ParameterHandler;
 
 /// A handle to the remote access gateway connection.
 ///
@@ -122,6 +123,7 @@ impl GatewayHandle {
             capabilities: Vec::new(),
             supported_encodings: None,
             fetch_asset_handler: None,
+            parameter_handler: None,
             runtime: runtime.clone(),
             channel_filter: None,
             qos_classifier: None,
@@ -168,6 +170,7 @@ pub struct Gateway {
     supported_encodings: Option<IndexSet<String>>,
     services: HashMap<String, Service>,
     fetch_asset_handler: Option<Arc<dyn AssetHandler>>,
+    parameter_handler: Option<Arc<dyn ParameterHandler>>,
     runtime: Option<Handle>,
     channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     qos_classifier: Option<Arc<dyn QosClassifier>>,
@@ -188,6 +191,7 @@ impl Default for Gateway {
             supported_encodings: None,
             services: HashMap::new(),
             fetch_asset_handler: None,
+            parameter_handler: None,
             runtime: None,
             channel_filter: None,
             qos_classifier: None,
@@ -213,6 +217,7 @@ impl std::fmt::Debug for Gateway {
                 "has_fetch_asset_handler",
                 &self.fetch_asset_handler.is_some(),
             )
+            .field("has_parameter_handler", &self.parameter_handler.is_some())
             .field("has_runtime", &self.runtime.is_some())
             .field("has_channel_filter", &self.channel_filter.is_some())
             .field("has_qos_classifier", &self.qos_classifier.is_some())
@@ -404,6 +409,13 @@ impl Gateway {
         self
     }
 
+    /// Configure the handler for client-initiated parameter operations. When set, takes
+    /// precedence over the deprecated parameter callbacks on [`Listener`].
+    pub fn parameter_handler(mut self, handler: Arc<dyn ParameterHandler>) -> Self {
+        self.parameter_handler = Some(handler);
+        self
+    }
+
     /// Starts the remote access gateway, which will establish a connection in the background.
     ///
     /// Returns a handle that can optionally be used to manage the gateway.
@@ -462,6 +474,11 @@ impl Gateway {
         if self.fetch_asset_handler.is_some() && !self.capabilities.contains(&Capability::Assets) {
             self.capabilities.push(Capability::Assets);
         }
+        // If the gateway was declared with a parameter handler, automatically add the "parameters" capability.
+        if self.parameter_handler.is_some() && !self.capabilities.contains(&Capability::Parameters)
+        {
+            self.capabilities.push(Capability::Parameters);
+        }
         // Conversely, the "assets" capability requires a fetch asset handler.
         if self.capabilities.contains(&Capability::Assets) && self.fetch_asset_handler.is_none() {
             return Err(FoxgloveError::ConfigurationError(
@@ -484,6 +501,7 @@ impl Gateway {
             capabilities: self.capabilities,
             supported_encodings: self.supported_encodings,
             fetch_asset_handler: self.fetch_asset_handler,
+            parameter_handler: self.parameter_handler,
             runtime: runtime.clone(),
             channel_filter: self.channel_filter,
             qos_classifier: self.qos_classifier,

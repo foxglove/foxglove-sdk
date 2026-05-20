@@ -25,6 +25,7 @@ type Result<T> = std::result::Result<T, Box<RemoteAccessError>>;
 
 const DEFAULT_SERVICE_CALLS_PER_PARTICIPANT: usize = 32;
 const DEFAULT_FETCH_ASSET_PER_PARTICIPANT: usize = 32;
+const DEFAULT_PARAMETER_CALLS_PER_PARTICIPANT: usize = 32;
 
 /// A participant in the remote access session.
 ///
@@ -73,6 +74,9 @@ pub(super) struct Participant {
     service_call_sem: Semaphore,
     /// Limits concurrent fetch asset requests from this participant.
     fetch_asset_sem: Semaphore,
+    /// Limits concurrent parameter handler invocations (get + set combined) from this
+    /// participant. Subscribe / unsubscribe are bookkeeping-only and not gated.
+    parameter_sem: Semaphore,
 }
 
 impl Participant {
@@ -144,6 +148,7 @@ impl Participant {
             cancel,
             service_call_sem: Semaphore::new(DEFAULT_SERVICE_CALLS_PER_PARTICIPANT),
             fetch_asset_sem: Semaphore::new(DEFAULT_FETCH_ASSET_PER_PARTICIPANT),
+            parameter_sem: Semaphore::new(DEFAULT_PARAMETER_CALLS_PER_PARTICIPANT),
         });
         (participant, flush_handle)
     }
@@ -175,6 +180,7 @@ impl Participant {
             cancel,
             service_call_sem: Semaphore::new(DEFAULT_SERVICE_CALLS_PER_PARTICIPANT),
             fetch_asset_sem: Semaphore::new(DEFAULT_FETCH_ASSET_PER_PARTICIPANT),
+            parameter_sem: Semaphore::new(DEFAULT_PARAMETER_CALLS_PER_PARTICIPANT),
         }
     }
 
@@ -191,6 +197,11 @@ impl Participant {
     /// Returns the fetch asset semaphore for this participant.
     pub fn fetch_asset_sem(&self) -> &Semaphore {
         &self.fetch_asset_sem
+    }
+
+    /// Returns the parameter handler semaphore for this participant.
+    pub fn parameter_sem(&self) -> &Semaphore {
+        &self.parameter_sem
     }
 
     /// Cancel this participant's flush-task. The task will exit at the next

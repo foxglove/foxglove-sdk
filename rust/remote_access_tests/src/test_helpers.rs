@@ -52,6 +52,8 @@ pub const SHUTDOWN_TIMEOUT: Duration = Duration::from_secs(10);
 pub const POLL_INTERVAL: Duration = Duration::from_millis(50);
 /// Per-attempt timeout when waiting for a byte stream during connection retries.
 pub const CONNECT_RETRY_TIMEOUT: Duration = Duration::from_secs(5);
+/// Sleep between connection retry attempts when `Room::connect` fails transiently.
+pub const CONNECT_RETRY_SLEEP: Duration = Duration::from_millis(500);
 
 /// Type alias for a channel filter function passed to [`TestGateway::start_with_filter`].
 pub type ChannelFilterFn =
@@ -229,13 +231,26 @@ impl ViewerConnection {
         let outer_deadline = tokio::time::Instant::now() + timeout;
         loop {
             let token = livekit_token::generate_token(room_name, viewer_identity)?;
-            let (room, mut events) = Room::connect(
+            let connect_result = Room::connect(
                 &livekit_token::livekit_url(),
                 &token,
                 RoomOptions::default(),
             )
-            .await
-            .context("viewer failed to connect to LiveKit")?;
+            .await;
+            let (room, mut events) = match connect_result {
+                Ok(pair) => pair,
+                Err(err) => {
+                    // All connect failures are retried until the outer
+                    // deadline. Covers transient cases like 401 during
+                    // LiveKit init.
+                    if tokio::time::Instant::now() >= outer_deadline {
+                        return Err(err).context("viewer failed to connect to LiveKit");
+                    }
+                    info!("{viewer_identity} connect failed ({err:#}), retrying...");
+                    tokio::time::sleep(CONNECT_RETRY_SLEEP).await;
+                    continue;
+                }
+            };
             info!("{viewer_identity} connected to room, waiting for byte stream");
 
             // Wait for a ByteStreamOpened event. Use a shorter inner timeout so
@@ -789,6 +804,7 @@ type QosClassifierFn =
 pub struct TestGatewayOptions {
     pub filter: Option<ChannelFilterFn>,
     pub listener: Option<Arc<dyn foxglove::remote_access::Listener>>,
+    pub parameter_handler: Option<Arc<dyn foxglove::remote_access::ParameterHandler>>,
     pub capabilities: Vec<foxglove::remote_access::Capability>,
     pub services: Vec<Service>,
     pub qos_classifier: Option<QosClassifierFn>,
@@ -862,6 +878,9 @@ impl TestGateway {
         }
         if let Some(listener) = options.listener {
             gateway = gateway.listener(listener);
+        }
+        if let Some(handler) = options.parameter_handler {
+            gateway = gateway.parameter_handler(handler);
         }
         if !options.capabilities.is_empty() {
             gateway = gateway.capabilities(options.capabilities);
