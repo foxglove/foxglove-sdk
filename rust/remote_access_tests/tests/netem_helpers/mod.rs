@@ -1,5 +1,7 @@
 //! Shared helpers for netem test suites: argument parsing and container control.
 
+// Each test file includes this module separately via `mod netem_helpers;` and
+// uses a different subset of functions.
 #![allow(dead_code)]
 
 use std::process::Command;
@@ -56,22 +58,11 @@ pub fn netem_container_id() -> Result<String> {
     Ok(id)
 }
 
-/// Update netem impairment parameters. Runs `netem_impair.py` inside the netem
-/// sidecar. Pass `"default"` to target only the default HTB class (ff00:), or
-/// `"all"` to update every netem qdisc (per-link classes and the default class).
-pub fn set_netem_impairment(container: &str, class: &str, args: &str) -> Result<()> {
-    anyhow::ensure!(
-        class == "default" || class == "all",
-        "invalid netem class {class:?}: expected \"default\" or \"all\""
-    );
-    let mut cmd = Command::new("docker");
-    cmd.args(["exec", container, "python3", "/netem_impair.py"]);
-    // The Python script only recognizes "default" as a keyword; omitting it
-    // targets all qdiscs (the script's default behavior).
-    if class == "default" {
-        cmd.arg("default");
-    }
-    let output = cmd
+/// Update netem impairment parameters on all qdiscs. Runs `netem_impair.py`
+/// inside the netem sidecar.
+pub fn set_netem_impairment(container: &str, args: &str) -> Result<()> {
+    let output = Command::new("docker")
+        .args(["exec", container, "python3", "/netem_impair.py"])
         .args(args.split_whitespace())
         .output()
         .context("failed to run netem_impair.py")?;
@@ -124,23 +115,18 @@ pub fn parse_loss_percentage(netem_args: &str) -> Option<f64> {
         .and_then(|(_, val)| val.strip_suffix('%')?.parse().ok())
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+#[test]
+fn parse_delay_basic() {
+    assert_eq!(parse_delay_ms("delay 200ms 50ms loss 5%"), Some(200));
+    assert_eq!(parse_delay_ms("delay 10ms 2ms"), Some(10));
+    assert_eq!(parse_delay_ms("loss 5%"), None);
+    assert_eq!(parse_delay_ms(""), None);
+}
 
-    #[test]
-    fn parse_delay_basic() {
-        assert_eq!(parse_delay_ms("delay 200ms 50ms loss 5%"), Some(200));
-        assert_eq!(parse_delay_ms("delay 10ms 2ms"), Some(10));
-        assert_eq!(parse_delay_ms("loss 5%"), None);
-        assert_eq!(parse_delay_ms(""), None);
-    }
-
-    #[test]
-    fn parse_loss_basic() {
-        assert_eq!(parse_loss_percentage("delay 200ms 50ms loss 5%"), Some(5.0));
-        assert_eq!(parse_loss_percentage("delay 10ms 2ms"), None);
-        assert_eq!(parse_loss_percentage("loss 0.1%"), Some(0.1));
-        assert_eq!(parse_loss_percentage(""), None);
-    }
+#[test]
+fn parse_loss_basic() {
+    assert_eq!(parse_loss_percentage("delay 200ms 50ms loss 5%"), Some(5.0));
+    assert_eq!(parse_loss_percentage("delay 10ms 2ms"), None);
+    assert_eq!(parse_loss_percentage("loss 0.1%"), Some(0.1));
+    assert_eq!(parse_loss_percentage(""), None);
 }

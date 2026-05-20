@@ -68,12 +68,8 @@ async fn netem_channel_registry_consistent_after_partition() -> Result<()> {
     // NOTE: if the test panics between here and the restore at phase 3, the
     // netem container stays at 100% loss until `docker compose down`. CI
     // handles this via `if: always()`; locally, restart the netem stack.
-    //
-    // Use "all" to update every netem qdisc regardless of mode (flat or
-    // per-link). The "default" target only matches the ff00: handle used in
-    // per-link mode and silently does nothing in flat mode.
     info!("imposing partition: 100% packet loss on all netem qdiscs");
-    netem_helpers::set_netem_impairment(&container, "all", "loss 100%")?;
+    netem_helpers::set_netem_impairment(&container, "loss 100%")?;
 
     // Create a second channel. The gateway will try to send an Advertise
     // message to the viewer, but the partition will prevent delivery.
@@ -92,7 +88,7 @@ async fn netem_channel_registry_consistent_after_partition() -> Result<()> {
     // Phase 3: Lift the partition.
     info!("lifting partition: restoring default impairment");
     let default_args = netem_helpers::default_netem_args();
-    netem_helpers::set_netem_impairment(&container, "all", &default_args)?;
+    netem_helpers::set_netem_impairment(&container, &default_args)?;
 
     // Phase 4: Reconnect and verify recovery.
     // The original viewer connection is likely dead. Close it (ignoring errors)
