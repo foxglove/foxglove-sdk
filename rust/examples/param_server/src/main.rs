@@ -2,9 +2,10 @@
 //!
 //! The handler implements [`ParameterHandler`] by enqueueing each get/set request on an mpsc
 //! channel and returning immediately. A single worker task drains the channel, mutates a local
-//! parameter store, and fulfils each responder. The same worker also publishes a periodic
-//! "elapsed" update to subscribers, so the parameter store has exactly one owner and no
-//! synchronization is required.
+//! parameter store, and fulfils each responder. Because [`SetParametersResponder`] only echoes
+//! the applied values to the requester, the worker is also responsible for publishing those
+//! updates to other parameter subscribers; the same path is used to publish a periodic
+//! "elapsed" tick. The parameter store has exactly one owner, so no synchronization is required.
 //!
 //! This is the recommended shape for handlers that need to perform non-trivial work to compute a
 //! response: it keeps the SDK's internal threads unblocked.
@@ -90,10 +91,10 @@ impl ParameterHandler for ParamHandler {
     }
 }
 
-/// Owns the parameter store. Drains parameter ops one at a time, and on a separate tick updates
-/// the "elapsed" parameter and broadcasts it to subscribers. Shutdown is signalled via a
-/// `CancellationToken`; after the loop exits, the worker stops the server (and the gateway, if
-/// configured).
+/// Owns the parameter store. Drains parameter ops one at a time, broadcasting any applied
+/// set-updates to subscribers, and on a separate tick updates the "elapsed" parameter and
+/// broadcasts it as well. Shutdown is signalled via a `CancellationToken`; after the loop
+/// exits, the worker stops the server (and the gateway, if configured).
 struct ParamWorker {
     store: HashMap<String, Parameter>,
     rx: mpsc::Receiver<ParameterOp>,
@@ -150,6 +151,7 @@ impl ParamWorker {
     fn handle_set(&mut self, mut parameters: Vec<Parameter>, responder: SetParametersResponder) {
         let names: Vec<&str> = parameters.iter().map(|p| p.name.as_str()).collect();
         log::info!("set: {names:?}");
+        let mut applied = Vec::with_capacity(parameters.len());
         for param in &mut parameters {
             if let Some(existing) = self.store.get_mut(&param.name) {
                 if param.name.starts_with("read_only_") {
@@ -159,15 +161,21 @@ impl ParamWorker {
                         .send_warning(format!("parameter {} is read only", param.name));
                     param.value.clone_from(&existing.value);
                     param.r#type.clone_from(&existing.r#type);
-                } else {
-                    existing.value.clone_from(&param.value);
-                    existing.r#type.clone_from(&param.r#type);
+                    continue;
                 }
+                existing.value.clone_from(&param.value);
+                existing.r#type.clone_from(&param.r#type);
             } else {
                 self.store.insert(param.name.clone(), param.clone());
             }
+            applied.push(param.clone());
         }
         responder.respond(parameters);
+        // SetParametersResponder echoes only to the requester, so the worker must publish the
+        // applied updates to subscribers itself.
+        if !applied.is_empty() {
+            self.publish(applied);
+        }
     }
 
     fn update_and_publish_elapsed(&mut self, start: Instant) {
@@ -177,11 +185,15 @@ impl ParamWorker {
             r#type: Some(ParameterType::Float64),
         };
         self.store.insert(elapsed.name.clone(), elapsed.clone());
+        self.publish(vec![elapsed]);
+    }
+
+    fn publish(&self, parameters: Vec<Parameter>) {
         #[cfg(feature = "remote-access")]
         if let Some(gateway) = &self.gateway {
-            gateway.publish_parameter_values(vec![elapsed.clone()]);
+            gateway.publish_parameter_values(parameters.clone());
         }
-        self.server.publish_parameter_values(vec![elapsed]);
+        self.server.publish_parameter_values(parameters);
     }
 }
 
