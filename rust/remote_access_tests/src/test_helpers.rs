@@ -303,6 +303,9 @@ impl ViewerConnection {
 
     /// Connects and completes the handshake (ServerInfo + Advertise), retrying
     /// the entire flow if the byte stream drops under network impairment.
+    ///
+    /// Only use this when the gateway has at least one channel — the gateway
+    /// skips the Advertise message when there are no channels to advertise.
     pub async fn connect_and_handshake(
         room_name: &str,
         viewer_identity: &str,
