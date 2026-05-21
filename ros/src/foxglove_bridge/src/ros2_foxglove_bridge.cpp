@@ -245,10 +245,6 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
                                                              ? UnresponsiveNodePolicy::Ignore
                                                              : UnresponsiveNodePolicy::Retry);
     _paramInterface->setParamUpdateCallback(std::bind(&FoxgloveBridge::parameterUpdates, this, _1));
-
-    // Start the worker thread that drains the queue and dispatches into _paramInterface.
-    _paramWorkerThread =
-      std::make_unique<std::thread>(std::bind(&FoxgloveBridge::parameterWorkerLoop, this));
   }
 
   if (publishClientCount) {
@@ -294,10 +290,6 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
     _clientCountPublisher->publish(
       init_msg);  // Initialize transient local topic to current connection count
   }
-
-  // Start the thread polling for rosgraph changes
-  _rosgraphPollThread =
-    std::make_unique<std::thread>(std::bind(&FoxgloveBridge::rosgraphPollThread, this));
 
   _subscriptionCallbackGroup = this->create_callback_group(rclcpp::CallbackGroupType::Reentrant);
   _clientPublishCallbackGroup =
@@ -452,6 +444,14 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
     RCLCPP_INFO(this->get_logger(), "Remote access gateway started");
   }
 #endif
+
+  if (_paramInterface) {
+    _paramWorkerThread =
+      std::make_unique<std::thread>(std::bind(&FoxgloveBridge::parameterWorkerLoop, this));
+  }
+
+  _rosgraphPollThread =
+    std::make_unique<std::thread>(std::bind(&FoxgloveBridge::rosgraphPollThread, this));
 }
 
 FoxgloveBridge::~FoxgloveBridge() {
@@ -472,10 +472,10 @@ FoxgloveBridge::~FoxgloveBridge() {
   // Stop the parameter worker after the server and gateway are stopped, so no new ops
   // arrive while we're shutting it down. Any ops still in the queue get dropped.
   if (_paramWorkerThread) {
+    std::queue<ParameterOp> drained;
     {
       std::lock_guard<std::mutex> lock(_paramOpMutex);
       _paramOpShutdown = true;
-      std::queue<ParameterOp> drained;
       std::swap(_paramOpQueue, drained);
     }
     _paramOpCv.notify_all();
