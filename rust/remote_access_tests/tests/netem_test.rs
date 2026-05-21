@@ -284,21 +284,9 @@ async fn netem_burst_delivery_under_impairment() -> Result<()> {
     )
     .await?;
 
-    let deadline = tokio::time::Instant::now() + NETEM_EVENT_TIMEOUT;
-    let mut viewer = loop {
-        let remaining = deadline - tokio::time::Instant::now();
-        let mut v =
-            ViewerConnection::connect_with_timeout(&gw.room_name, "viewer-1", remaining).await?;
-        match v.expect_server_info().await {
-            Ok(_server_info) => break v,
-            Err(e) if tokio::time::Instant::now() < deadline => {
-                info!("byte stream dropped before ServerInfo ({e:#}), retrying");
-                let _ = v.close().await;
-                continue;
-            }
-            Err(e) => return Err(e).context("ServerInfo not received under impairment"),
-        }
-    };
+    let (mut viewer, _server_info, _advertise) =
+        ViewerConnection::connect_and_handshake(&gw.room_name, "viewer-1", NETEM_EVENT_TIMEOUT)
+            .await?;
 
     viewer.send_subscribe_connection_graph().await?;
     let _initial = viewer.expect_connection_graph_update().await?;
