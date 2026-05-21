@@ -2519,10 +2519,12 @@ typedef struct foxglove_qos_profile {
  *
  * When supplied to `foxglove_server_options` or `foxglove_gateway_options`, the handler takes
  * precedence over the deprecated `on_get_parameters` / `on_set_parameters` callbacks on
- * `foxglove_server_callbacks` / `foxglove_gateway_callbacks`. The handler also automatically
- * enables the `FOXGLOVE_SERVER_CAPABILITY_PARAMETERS` (or `FOXGLOVE_GATEWAY_CAPABILITY_PARAMETERS`)
- * capability when it is registered, but the caller is still responsible for setting that
- * capability bit if subscribe/unsubscribe notifications are also desired.
+ * `foxglove_server_callbacks` / `foxglove_gateway_callbacks`. Registering a handler also
+ * automatically advertises the `FOXGLOVE_SERVER_CAPABILITY_PARAMETERS` (or
+ * `FOXGLOVE_GATEWAY_CAPABILITY_PARAMETERS`) capability. Subscribe/unsubscribe notifications
+ * still go through the `on_parameters_subscribe` / `on_parameters_unsubscribe` callbacks on
+ * `foxglove_server_callbacks` / `foxglove_gateway_callbacks`; wire those up separately if you
+ * want to be notified.
  *
  * Both `get` and `set` are required: if a handler is supplied with either set to NULL,
  * `foxglove_server_start` / `foxglove_gateway_start` returns `FOXGLOVE_ERROR_VALUE_ERROR`.

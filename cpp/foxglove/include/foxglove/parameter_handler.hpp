@@ -113,8 +113,12 @@ private:
 ///
 /// When supplied to a `WebSocketServerOptions` or `RemoteAccessGatewayOptions`,
 /// this handler takes precedence over the deprecated `onGetParameters` /
-/// `onSetParameters` callbacks. Registering a handler automatically enables
-/// the `Parameters` capability.
+/// `onSetParameters` callbacks. Registering a handler also automatically
+/// advertises the `Parameters` capability. Subscribe/unsubscribe notifications
+/// still go through the `onParametersSubscribe` / `onParametersUnsubscribe`
+/// callbacks on `WebSocketServerCallbacks` /
+/// `RemoteAccessGatewayCallbacks`; wire those up separately if you want to be
+/// notified.
 ///
 /// Both `onGet` and `onSet` are required: if a `ParameterHandler` is provided
 /// with only one of these set, `WebSocketServer::create` /

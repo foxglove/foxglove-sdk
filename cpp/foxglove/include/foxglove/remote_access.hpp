@@ -226,7 +226,10 @@ struct RemoteAccessGatewayOptions {
   ///
   /// When set, this handler takes precedence over the deprecated
   /// `onGetParameters` / `onSetParameters` callbacks. Registering a handler
-  /// automatically enables the `Parameters` capability.
+  /// also automatically advertises the `Parameters` capability. Subscribe /
+  /// unsubscribe notifications still go through the `onParametersSubscribe` /
+  /// `onParametersUnsubscribe` callbacks on `RemoteAccessGatewayCallbacks`;
+  /// wire those up separately if you want to be notified.
   ///
   /// Both `ParameterHandler::onGet` and `ParameterHandler::onSet` are
   /// required when a handler is supplied; setting only one returns
