@@ -336,7 +336,10 @@ pub(super) struct TestByteStreamWriter {
 #[cfg(test)]
 impl TestByteStreamWriter {
     fn record(&self, data: &[u8]) -> Result<()> {
-        if self.always_fail_writes.load(std::sync::atomic::Ordering::Relaxed) {
+        if self
+            .always_fail_writes
+            .load(std::sync::atomic::Ordering::Relaxed)
+        {
             return Err(Box::new(RemoteAccessError::Io(std::io::Error::new(
                 std::io::ErrorKind::BrokenPipe,
                 "simulated write failure",
