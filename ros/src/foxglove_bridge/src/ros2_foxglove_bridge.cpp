@@ -1,5 +1,6 @@
 #include <filesystem>
 #include <fstream>
+#include <type_traits>
 #include <unordered_set>
 
 #include <rclcpp/version.h>
