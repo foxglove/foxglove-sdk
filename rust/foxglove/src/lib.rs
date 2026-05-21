@@ -317,18 +317,16 @@
 //! access gateway. Without it, the gateway falls back to software H.264 encoding, which is
 //! slower and lower quality.
 //!
-//! NVENC requires `cuda.h` to be present at build time. The webrtc-sys build script looks
-//! for it at `$CUDA_HOME/include/cuda.h`, defaulting to `/usr/local/cuda/include/cuda.h`
+//! NVENC requires `cuda.h` to be present at build time, defaulting to `/usr/local/cuda/include/cuda.h`
 //! when `CUDA_HOME` is unset.
 //!
-//! On Ubuntu you can install the headers with `apt install nvidia-cuda-toolkit`, but some versions of
-//! that package place `cuda.h` at `/usr/include/cuda.h` rather than `/usr/local/cuda/include/`,
-//! so you also need to set `CUDA_HOME=/usr` for webrtc-sys (and this crate's build script)
-//! to find it.
+//! On Ubuntu you can install the headers with `apt install nvidia-cuda-toolkit` or `apt install nvidia-cuda-dev`.
+//! If that places `cuda.h` at `/usr/include/cuda.h` rather than `/usr/local/cuda/include/`,
+//! you will also need to set `CUDA_HOME=/usr` so the build can find it.
 //!
 //! You can enable the `require-cuda` feature on this crate to make it a build error if
-//! `cuda.h` is not found and NVENC support won't be built. This only applies when
-//! remote access is enabled and the target supports NVENC.
+//! `cuda.h` is not found and NVENC support won't be built. If remote access is disabled
+//! or the target doesn't support NVENC this will also cause a build error.
 //!
 //! # Feature flags
 //!

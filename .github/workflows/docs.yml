@@ -39,10 +39,7 @@ jobs:
           node-version: 22
           cache: yarn
       - uses: astral-sh/setup-uv@v7
-      # Building docs doesn't need NVENC hardware acceleration to actually work
-      # at runtime, so skip the build-time `cuda.h` check rather than installing
-      # the CUDA toolkit on the runner.
-      - run: make -f Container.mk PYTHON_REQUIRE_CUDA=OFF docs-python
+      - run: make -f Container.mk docs-python
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
         with:
