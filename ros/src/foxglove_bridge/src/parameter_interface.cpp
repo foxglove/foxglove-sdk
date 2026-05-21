@@ -377,13 +377,18 @@ void ParameterInterface::unsubscribeParams(const std::vector<std::string_view>& 
     const auto& [nodeName, paramN] = getNodeAndParamName(paramName);
 
     const auto subscribedNodeParamsIt = _subscribedParamsByNode.find(nodeName);
-    if (subscribedNodeParamsIt != _subscribedParamsByNode.end()) {
-      subscribedNodeParamsIt->second.erase(subscribedNodeParamsIt->second.find(paramN));
+    if (subscribedNodeParamsIt == _subscribedParamsByNode.end()) {
+      continue;
+    }
+    const auto innerIt = subscribedNodeParamsIt->second.find(paramN);
+    if (innerIt == subscribedNodeParamsIt->second.end()) {
+      continue;
+    }
+    subscribedNodeParamsIt->second.erase(innerIt);
 
-      if (subscribedNodeParamsIt->second.empty()) {
-        _subscribedParamsByNode.erase(subscribedNodeParamsIt);
-        _paramSubscriptionsByNode.erase(_paramSubscriptionsByNode.find(nodeName));
-      }
+    if (subscribedNodeParamsIt->second.empty()) {
+      _subscribedParamsByNode.erase(subscribedNodeParamsIt);
+      _paramSubscriptionsByNode.erase(nodeName);
     }
   }
 }
