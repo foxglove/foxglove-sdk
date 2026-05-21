@@ -105,12 +105,6 @@ private:
 int main() {
   foxglove::setLogLevel(foxglove::LogLevel::Debug);
 
-  std::signal(SIGINT, [](int) {
-    if (sigint_handler) {
-      sigint_handler();
-    }
-  });
-
   std::unordered_map<std::string, foxglove::Parameter> param_store;
   param_store.emplace(
     "read_only_str", foxglove::Parameter("read_only_str", std::string("can't change me"))
@@ -171,6 +165,11 @@ int main() {
     done = true;
     queue.shutdown();
   };
+  std::signal(SIGINT, [](int) {
+    if (sigint_handler) {
+      sigint_handler();
+    }
+  });
 
   auto start_time = std::chrono::steady_clock::now();
   auto next_tick = start_time + 1s;
