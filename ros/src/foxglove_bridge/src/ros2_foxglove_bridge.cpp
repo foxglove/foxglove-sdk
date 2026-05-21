@@ -203,10 +203,23 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
       std::bind(&FoxgloveBridge::subscribeParameters, this, _1);
     sdkServerOptions.callbacks.onParametersUnsubscribe =
       std::bind(&FoxgloveBridge::unsubscribeParameters, this, _1);
+    // TODO: migrate to ParameterHandler (gasmith/fle-534-async-params-bridge).
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#elif defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable : 4996)
+#endif
     sdkServerOptions.callbacks.onGetParameters =
       std::bind(&FoxgloveBridge::getParameters, this, _1, _2, _3);
     sdkServerOptions.callbacks.onSetParameters =
       std::bind(&FoxgloveBridge::setParameters, this, _1, _2, _3);
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic pop
+#elif defined(_MSC_VER)
+#pragma warning(pop)
+#endif
 
     _paramInterface = std::make_shared<ParameterInterface>(this, paramWhitelistPatterns,
                                                            ignoreUnresponsiveParamNodes
@@ -362,10 +375,23 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
         std::bind(&FoxgloveBridge::subscribeParameters, this, _1);
       gatewayOptions.callbacks.onParametersUnsubscribe =
         std::bind(&FoxgloveBridge::unsubscribeParameters, this, _1);
+      // TODO: migrate to ParameterHandler (gasmith/fle-534-async-params-bridge).
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#elif defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable : 4996)
+#endif
       gatewayOptions.callbacks.onGetParameters =
         std::bind(&FoxgloveBridge::getParameters, this, _1, _2, _3);
       gatewayOptions.callbacks.onSetParameters =
         std::bind(&FoxgloveBridge::setParameters, this, _1, _2, _3);
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic pop
+#elif defined(_MSC_VER)
+#pragma warning(pop)
+#endif
     }
 
     if (hasCapability(_capabilities, foxglove::WebSocketServerCapabilities::ConnectionGraph)) {
