@@ -32,6 +32,8 @@ impl PySystemInfoPublisher {
 /// system statistics (memory, CPU, OS info). See :py:func:`foxglove.start_sysinfo_publisher`
 /// for the full list of published metrics.
 ///
+/// The caller is responsible for calling stop() on the returned handle when done; dropping the handle does not stop the background task.
+///
 /// :param topic: The channel topic name. Defaults to ``/sysinfo``.
 /// :type topic: str | None
 /// :param refresh_interval: How often to publish, in seconds. Defaults to ``0.5``.
