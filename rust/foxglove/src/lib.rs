@@ -325,8 +325,8 @@
 //! you will also need to set `CUDA_HOME=/usr` so the build can find it.
 //!
 //! You can enable the `require-cuda` feature on this crate to make it a build error if
-//! `cuda.h` is not found and NVENC support won't be built. If remote access is disabled
-//! or the target doesn't support NVENC this will also cause a build error.
+//! `remote-access` is disabled, the target does not support NVENC, or `cuda.h` is not
+//! found on a target where NVENC would be built.
 //!
 //! # Feature flags
 //!

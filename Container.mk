@@ -13,9 +13,9 @@ PYTHON_REQUIRE_CUDA ?= OFF
 
 ifeq ($(PYTHON_REMOTE_ACCESS),ON)
 MATURIN_PEP517_ARGS += --features remote-access
+endif
 ifeq ($(PYTHON_REQUIRE_CUDA),ON)
 MATURIN_PEP517_ARGS += --features require-cuda
-endif
 endif
 
 .PHONY: build-python
