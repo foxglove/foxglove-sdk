@@ -330,66 +330,70 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
   }
 
   foxglove_parameter_handler c_parameter_handler = {};
-  if (options.parameter_handler.onGet || options.parameter_handler.onSet) {
+  {
+    const bool has_on_get = bool(options.parameter_handler.onGet);
+    const bool has_on_set = bool(options.parameter_handler.onSet);
+    if (has_on_get != has_on_set) {
+      warn() << "ParameterHandler requires both onGet and onSet to be set";
+      return tl::unexpected(FoxgloveError::ValueError);
+    }
+  }
+  if (options.parameter_handler.onGet && options.parameter_handler.onSet) {
     parameter_handler = std::make_unique<ParameterHandler>(std::move(options.parameter_handler));
     c_parameter_handler.context = parameter_handler.get();
-    if (parameter_handler->onGet) {
-      c_parameter_handler.get = [](
-                                  const void* context,
-                                  uint32_t client_id,
-                                  const struct foxglove_string* c_request_id,
-                                  const struct foxglove_string* c_param_names,
-                                  size_t param_names_len,
-                                  foxglove_get_parameters_responder* c_responder
-                                ) {
-        std::optional<std::string_view> request_id;
-        if (c_request_id != nullptr) {
-          request_id.emplace(c_request_id->data, c_request_id->len);
+    c_parameter_handler.get = [](
+                                const void* context,
+                                uint32_t client_id,
+                                const struct foxglove_string* c_request_id,
+                                const struct foxglove_string* c_param_names,
+                                size_t param_names_len,
+                                foxglove_get_parameters_responder* c_responder
+                              ) {
+      std::optional<std::string_view> request_id;
+      if (c_request_id != nullptr) {
+        request_id.emplace(c_request_id->data, c_request_id->len);
+      }
+      std::vector<std::string_view> param_names;
+      if (c_param_names != nullptr) {
+        param_names.reserve(param_names_len);
+        for (size_t i = 0; i < param_names_len; ++i) {
+          param_names.emplace_back(c_param_names[i].data, c_param_names[i].len);
         }
-        std::vector<std::string_view> param_names;
-        if (c_param_names != nullptr) {
-          param_names.reserve(param_names_len);
-          for (size_t i = 0; i < param_names_len; ++i) {
-            param_names.emplace_back(c_param_names[i].data, c_param_names[i].len);
-          }
-        }
-        GetParametersResponder responder(c_responder);
-        try {
-          (static_cast<const ParameterHandler*>(context))
-            ->onGet(client_id, request_id, param_names, std::move(responder));
-        } catch (const std::exception& exc) {
-          warn() << "ParameterHandler.onGet callback failed: " << exc.what();
-        }
-      };
-    }
-    if (parameter_handler->onSet) {
-      c_parameter_handler.set = [](
-                                  const void* context,
-                                  uint32_t client_id,
-                                  const struct foxglove_string* c_request_id,
-                                  const foxglove_parameter_array* c_params,
-                                  foxglove_set_parameters_responder* c_responder
-                                ) {
-        std::optional<std::string_view> request_id;
-        if (c_request_id != nullptr) {
-          request_id.emplace(c_request_id->data, c_request_id->len);
-        }
-        SetParametersResponder responder(c_responder);
-        if (c_params == nullptr) {
-          // Should not happen; the C implementation never passes a null pointer.
-          responder.respond({});
-          return;
-        }
-        try {
-          (static_cast<const ParameterHandler*>(context))
-            ->onSet(
-              client_id, request_id, ParameterArrayView(c_params).parameters(), std::move(responder)
-            );
-        } catch (const std::exception& exc) {
-          warn() << "ParameterHandler.onSet callback failed: " << exc.what();
-        }
-      };
-    }
+      }
+      GetParametersResponder responder(c_responder);
+      try {
+        (static_cast<const ParameterHandler*>(context))
+          ->onGet(client_id, request_id, param_names, std::move(responder));
+      } catch (const std::exception& exc) {
+        warn() << "ParameterHandler.onGet callback failed: " << exc.what();
+      }
+    };
+    c_parameter_handler.set = [](
+                                const void* context,
+                                uint32_t client_id,
+                                const struct foxglove_string* c_request_id,
+                                const foxglove_parameter_array* c_params,
+                                foxglove_set_parameters_responder* c_responder
+                              ) {
+      std::optional<std::string_view> request_id;
+      if (c_request_id != nullptr) {
+        request_id.emplace(c_request_id->data, c_request_id->len);
+      }
+      SetParametersResponder responder(c_responder);
+      if (c_params == nullptr) {
+        // Should not happen; the C implementation never passes a null pointer.
+        std::move(responder).respond({});
+        return;
+      }
+      try {
+        (static_cast<const ParameterHandler*>(context))
+          ->onSet(
+            client_id, request_id, ParameterArrayView(c_params).parameters(), std::move(responder)
+          );
+      } catch (const std::exception& exc) {
+        warn() << "ParameterHandler.onSet callback failed: " << exc.what();
+      }
+    };
     c_options.parameter_handler = &c_parameter_handler;
   }
 

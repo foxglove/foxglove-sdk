@@ -109,11 +109,18 @@ private:
 /// `onSetParameters` callbacks. Registering a handler automatically enables
 /// the `Parameters` capability.
 ///
+/// Both `onGet` and `onSet` are required: if a `ParameterHandler` is provided
+/// with only one of these set, `WebSocketServer::create` /
+/// `RemoteAccessGateway::create` returns `FoxgloveError::ValueError`. To omit
+/// a handler entirely, leave both callbacks unset.
+///
 /// @note These callbacks are invoked from time-sensitive contexts and must not
 /// block. If long-running work is required, the implementation should hand the
 /// responder off to another thread and return immediately.
 struct ParameterHandler {
   /// @brief Callback invoked when a client requests parameters.
+  ///
+  /// Required when a `ParameterHandler` is registered.
   ///
   /// The implementation takes ownership of `responder`, and must eventually
   /// complete it by calling `responder.respond(...)`, or letting it go out of
@@ -133,6 +140,8 @@ struct ParameterHandler {
     onGet;
 
   /// @brief Callback invoked when a client sets parameters.
+  ///
+  /// Required when a `ParameterHandler` is registered.
   ///
   /// The implementation takes ownership of `responder`, and must eventually
   /// complete it by calling `responder.respond(...)` with the values that

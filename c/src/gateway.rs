@@ -597,6 +597,9 @@ pub struct FoxgloveGatewayOptions<'a> {
     /// When set, this handler takes precedence over the deprecated `on_get_parameters` /
     /// `on_set_parameters` callbacks on `foxglove_gateway_callbacks`. Registering a handler
     /// automatically enables the `FOXGLOVE_GATEWAY_CAPABILITY_PARAMETERS` capability.
+    ///
+    /// When provided, both `get` and `set` on the handler are required; otherwise
+    /// `foxglove_gateway_start` returns `FOXGLOVE_ERROR_VALUE_ERROR`.
     pub parameter_handler: Option<&'a FoxgloveParameterHandler>,
 }
 
@@ -711,6 +714,7 @@ unsafe fn do_foxglove_gateway_start(
 
     // Parameter handler
     if let Some(handler) = options.parameter_handler {
+        handler.validate()?;
         gateway = gateway.parameter_handler(handler.clone().into_arc());
     }
 

@@ -180,6 +180,7 @@ int main() {
 #ifdef FOXGLOVE_REMOTE_ACCESS
   // Optionally start a remote-access gateway when FOXGLOVE_DEVICE_TOKEN is set.
   std::optional<foxglove::RemoteAccessGateway> gateway;
+  // NOLINTNEXTLINE(concurrency-mt-unsafe): single-threaded example startup.
   if (std::getenv("FOXGLOVE_DEVICE_TOKEN") != nullptr) {
     foxglove::RemoteAccessGatewayOptions ra_options = {};
     ra_options.name = "param-server";

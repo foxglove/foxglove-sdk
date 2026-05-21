@@ -2521,6 +2521,9 @@ typedef struct foxglove_qos_profile {
  * capability when it is registered, but the caller is still responsible for setting that
  * capability bit if subscribe/unsubscribe notifications are also desired.
  *
+ * Both `get` and `set` are required: if a handler is supplied with either set to NULL,
+ * `foxglove_server_start` / `foxglove_gateway_start` returns `FOXGLOVE_ERROR_VALUE_ERROR`.
+ *
  * These methods are invoked from time-sensitive contexts and must not block. If long-running
  * behavior is required, the implementation should hand the responder off to another thread and
  * return immediately.
@@ -2532,6 +2535,8 @@ typedef struct foxglove_parameter_handler {
   const void *context;
   /**
    * Callback invoked when a client requests parameters.
+   *
+   * Required: must not be NULL when this handler is registered.
    *
    * The `request_id` argument may be NULL.
    *
@@ -2552,6 +2557,8 @@ typedef struct foxglove_parameter_handler {
               struct foxglove_get_parameters_responder *responder);
   /**
    * Callback invoked when a client sets parameters.
+   *
+   * Required: must not be NULL when this handler is registered.
    *
    * The `request_id` argument may be NULL.
    *
@@ -2682,6 +2689,9 @@ typedef struct foxglove_gateway_options {
    * When set, this handler takes precedence over the deprecated `on_get_parameters` /
    * `on_set_parameters` callbacks on `foxglove_gateway_callbacks`. Registering a handler
    * automatically enables the `FOXGLOVE_GATEWAY_CAPABILITY_PARAMETERS` capability.
+   *
+   * When provided, both `get` and `set` on the handler are required; otherwise
+   * `foxglove_gateway_start` returns `FOXGLOVE_ERROR_VALUE_ERROR`.
    */
   const struct foxglove_parameter_handler *parameter_handler;
 } foxglove_gateway_options;
@@ -2978,6 +2988,9 @@ typedef struct foxglove_server_options {
    * When set, this handler takes precedence over the deprecated `on_get_parameters` /
    * `on_set_parameters` callbacks on `foxglove_server_callbacks`. Registering a handler
    * automatically enables the `FOXGLOVE_SERVER_CAPABILITY_PARAMETERS` capability.
+   *
+   * When provided, both `get` and `set` on the handler are required; otherwise
+   * `foxglove_server_start` returns `FOXGLOVE_ERROR_VALUE_ERROR`.
    */
   const struct foxglove_parameter_handler *parameter_handler;
 } foxglove_server_options;

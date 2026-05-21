@@ -57,6 +57,9 @@ impl FoxgloveSetParametersResponder {
 /// capability when it is registered, but the caller is still responsible for setting that
 /// capability bit if subscribe/unsubscribe notifications are also desired.
 ///
+/// Both `get` and `set` are required: if a handler is supplied with either set to NULL,
+/// `foxglove_server_start` / `foxglove_gateway_start` returns `FOXGLOVE_ERROR_VALUE_ERROR`.
+///
 /// These methods are invoked from time-sensitive contexts and must not block. If long-running
 /// behavior is required, the implementation should hand the responder off to another thread and
 /// return immediately.
@@ -67,6 +70,8 @@ pub struct FoxgloveParameterHandler {
     pub context: *const c_void,
 
     /// Callback invoked when a client requests parameters.
+    ///
+    /// Required: must not be NULL when this handler is registered.
     ///
     /// The `request_id` argument may be NULL.
     ///
@@ -90,6 +95,8 @@ pub struct FoxgloveParameterHandler {
     >,
 
     /// Callback invoked when a client sets parameters.
+    ///
+    /// Required: must not be NULL when this handler is registered.
     ///
     /// The `request_id` argument may be NULL.
     ///
@@ -122,6 +129,19 @@ unsafe impl Send for FoxgloveParameterHandler {}
 unsafe impl Sync for FoxgloveParameterHandler {}
 
 impl FoxgloveParameterHandler {
+    /// Validates that both `get` and `set` are non-null.
+    ///
+    /// Mirrors the Rust [`ParameterHandler`] trait, which requires both methods.
+    pub(crate) fn validate(&self) -> Result<(), foxglove::FoxgloveError> {
+        if self.get.is_none() || self.set.is_none() {
+            return Err(foxglove::FoxgloveError::ValueError(
+                "foxglove_parameter_handler requires both `get` and `set` to be non-NULL"
+                    .to_string(),
+            ));
+        }
+        Ok(())
+    }
+
     /// Constructs an Arc<dyn ParameterHandler> trait object for use with the SDK server / gateway
     /// builders.
     pub(crate) fn into_arc(self) -> Arc<dyn ParameterHandler> {
@@ -137,11 +157,10 @@ impl ParameterHandler for FoxgloveParameterHandler {
         request_id: Option<String>,
         responder: GetParametersResponder,
     ) {
-        let Some(get) = self.get else {
-            // Dropping the responder sends an error status to the client.
-            drop(responder);
-            return;
-        };
+        // Validated to be Some at registration time (see `FoxgloveParameterHandler::validate`).
+        let get = self
+            .get
+            .expect("foxglove_parameter_handler.get is required");
         let c_request_id = request_id.as_ref().map(FoxgloveString::from);
         let c_names: Vec<_> = names.iter().map(FoxgloveString::from).collect();
         let c_responder = FoxgloveGetParametersResponder(responder).into_raw();
@@ -169,10 +188,10 @@ impl ParameterHandler for FoxgloveParameterHandler {
         request_id: Option<String>,
         responder: SetParametersResponder,
     ) {
-        let Some(set) = self.set else {
-            drop(responder);
-            return;
-        };
+        // Validated to be Some at registration time (see `FoxgloveParameterHandler::validate`).
+        let set = self
+            .set
+            .expect("foxglove_parameter_handler.set is required");
         let c_request_id = request_id.as_ref().map(FoxgloveString::from);
         let params: FoxgloveParameterArray = parameters.into_iter().collect();
         let c_params = params.into_raw();

@@ -722,6 +722,60 @@ TEST_CASE("Parameter callbacks") {
   REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
 }
 
+TEST_CASE("ParameterHandler requires both onGet and onSet") {
+  auto stub_get = [](
+                    uint32_t /*client_id*/,
+                    std::optional<std::string_view> /*request_id*/,
+                    const std::vector<std::string_view>& /*names*/,
+                    foxglove::GetParametersResponder&& responder
+                  ) {
+    std::move(responder).respond({});
+  };
+  auto stub_set = [](
+                    uint32_t /*client_id*/,
+                    std::optional<std::string_view> /*request_id*/,
+                    const std::vector<foxglove::ParameterView>& /*params*/,
+                    foxglove::SetParametersResponder&& responder
+                  ) {
+    std::move(responder).respond({});
+  };
+
+  // onGet without onSet is rejected.
+  {
+    foxglove::WebSocketServerOptions options;
+    options.context = foxglove::Context::create();
+    options.name = "unit-test";
+    options.port = 0;
+    options.parameter_handler.onGet = stub_get;
+    auto result = foxglove::WebSocketServer::create(std::move(options));
+    REQUIRE(!result.has_value());
+    REQUIRE(result.error() == foxglove::FoxgloveError::ValueError);
+  }
+
+  // onSet without onGet is rejected.
+  {
+    foxglove::WebSocketServerOptions options;
+    options.context = foxglove::Context::create();
+    options.name = "unit-test";
+    options.port = 0;
+    options.parameter_handler.onSet = stub_set;
+    auto result = foxglove::WebSocketServer::create(std::move(options));
+    REQUIRE(!result.has_value());
+    REQUIRE(result.error() == foxglove::FoxgloveError::ValueError);
+  }
+
+  // No handler at all is fine.
+  {
+    foxglove::WebSocketServerOptions options;
+    options.context = foxglove::Context::create();
+    options.name = "unit-test";
+    options.port = 0;
+    auto result = foxglove::WebSocketServer::create(std::move(options));
+    REQUIRE(result.has_value());
+    REQUIRE(result.value().stop() == foxglove::FoxgloveError::Ok);
+  }
+}
+
 TEST_CASE("ParameterHandler get and set echo to requester") {
   std::mutex mutex;
   std::condition_variable cv;
@@ -869,6 +923,14 @@ TEST_CASE("ParameterHandler set without request_id does not echo") {
   bool got_set = false;
 
   foxglove::ParameterHandler handler;
+  handler.onGet = [](
+                    uint32_t /*client_id*/,
+                    std::optional<std::string_view> /*request_id*/,
+                    const std::vector<std::string_view>& /*names*/,
+                    foxglove::GetParametersResponder&& responder
+                  ) {
+    std::move(responder).respond({});
+  };
   handler.onSet = [&](
                     uint32_t /*client_id*/,
                     std::optional<std::string_view> /*request_id*/,
@@ -928,6 +990,14 @@ TEST_CASE("ParameterHandler set without request_id does not echo") {
 
 TEST_CASE("ParameterHandler dropping responder sends error status") {
   foxglove::ParameterHandler handler;
+  handler.onGet = [](
+                    uint32_t /*client_id*/,
+                    std::optional<std::string_view> /*request_id*/,
+                    const std::vector<std::string_view>& /*names*/,
+                    foxglove::GetParametersResponder&& responder
+                  ) {
+    std::move(responder).respond({});
+  };
   handler.onSet = [](
                     uint32_t /*client_id*/,
                     std::optional<std::string_view> /*request_id*/,
@@ -984,6 +1054,14 @@ TEST_CASE("ParameterHandler publish after respond broadcasts to subscribers") {
   std::atomic<foxglove::WebSocketServer*> server_ptr{nullptr};
 
   foxglove::ParameterHandler handler;
+  handler.onGet = [](
+                    uint32_t /*client_id*/,
+                    std::optional<std::string_view> /*request_id*/,
+                    const std::vector<std::string_view>& /*names*/,
+                    foxglove::GetParametersResponder&& responder
+                  ) {
+    std::move(responder).respond({});
+  };
   handler.onSet = [&server_ptr](
                     uint32_t /*client_id*/,
                     std::optional<std::string_view> /*request_id*/,

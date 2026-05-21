@@ -227,6 +227,10 @@ struct RemoteAccessGatewayOptions {
   /// When set, this handler takes precedence over the deprecated
   /// `onGetParameters` / `onSetParameters` callbacks. Registering a handler
   /// automatically enables the `Parameters` capability.
+  ///
+  /// Both `ParameterHandler::onGet` and `ParameterHandler::onSet` are
+  /// required when a handler is supplied; setting only one returns
+  /// `FoxgloveError::ValueError` from `RemoteAccessGateway::create`.
   ParameterHandler parameter_handler;
   /// @cond foxglove_internal
   /// @brief (internal) Information about the gateway, which is shared with clients.

@@ -297,6 +297,10 @@ struct WebSocketServerOptions {
   /// When set, this handler takes precedence over the deprecated
   /// `onGetParameters` / `onSetParameters` callbacks. Registering a handler
   /// automatically enables the `Parameters` capability.
+  ///
+  /// Both `ParameterHandler::onGet` and `ParameterHandler::onSet` are
+  /// required when a handler is supplied; setting only one returns
+  /// `FoxgloveError::ValueError` from `WebSocketServer::create`.
   ParameterHandler parameter_handler;
   /// @brief (internal) TLS configuration for the server.
   ///

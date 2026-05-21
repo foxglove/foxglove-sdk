@@ -194,6 +194,9 @@ pub struct FoxgloveServerOptions<'a> {
     /// When set, this handler takes precedence over the deprecated `on_get_parameters` /
     /// `on_set_parameters` callbacks on `foxglove_server_callbacks`. Registering a handler
     /// automatically enables the `FOXGLOVE_SERVER_CAPABILITY_PARAMETERS` capability.
+    ///
+    /// When provided, both `get` and `set` on the handler are required; otherwise
+    /// `foxglove_server_start` returns `FOXGLOVE_ERROR_VALUE_ERROR`.
     pub parameter_handler: Option<&'a FoxgloveParameterHandler>,
 }
 
@@ -439,6 +442,7 @@ unsafe fn do_foxglove_server_start(
         server = server.listener(Arc::new(callbacks.clone()));
     }
     if let Some(handler) = options.parameter_handler {
+        handler.validate()?;
         server = server.parameter_handler(handler.clone().into_arc());
     }
     if let Some(fetch_asset) = options.fetch_asset {
