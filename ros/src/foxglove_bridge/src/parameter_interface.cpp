@@ -178,7 +178,7 @@ ParameterInterface::ParameterInterface(rclcpp::Node* node,
 
 ParameterList ParameterInterface::getParams(const std::vector<std::string_view>& paramNames,
                                             const std::chrono::duration<double>& timeout) {
-  std::lock_guard<std::mutex> lock(_mutex);
+  std::unique_lock<std::mutex> lock(_mutex);
 
   std::unordered_map<std::string, std::vector<std::string>> paramNamesByNodeName;
   const auto thisNode = _node->get_fully_qualified_name();
@@ -249,7 +249,11 @@ ParameterList ParameterInterface::getParams(const std::vector<std::string_view>&
                            paramClientIt->second, nodeName, nodeParamNames, timeout));
   }
 
+  // Don't hold _mutex across blocking waits; parameter-event callbacks may need it to make progress.
+  lock.unlock();
+
   ParameterList result;
+  std::vector<std::string> nodesToIgnore;
   for (auto& [nodeName, future] : getParametersFuture) {
     try {
       // Move the parameters from the future into result. Must be done using rvalue reference
@@ -262,12 +266,12 @@ ParameterList ParameterInterface::getParams(const std::vector<std::string_view>&
                    nodeName.c_str(), e.what());
 
       if (_unresponsiveNodePolicy == UnresponsiveNodePolicy::Ignore) {
-        // Certain nodes may fail to handle incoming service requests — for example, if they're
+        // Certain nodes may fail to handle incoming service requests, for example, if they're
         // stuck in a busy loop or otherwise unresponsive. In such cases, attempting to retrieve
         // parameter names or values can result in timeouts. To avoid repeated failures, these nodes
         // are added to an ignore list, and future parameter-related service calls to them will be
         // skipped.
-        _ignoredNodeNames.insert(nodeName);
+        nodesToIgnore.push_back(nodeName);
         RCLCPP_WARN(_node->get_logger(),
                     "Adding node %s to the ignore list to prevent repeated timeouts or failures in "
                     "future parameter requests.",
@@ -276,12 +280,19 @@ ParameterList ParameterInterface::getParams(const std::vector<std::string_view>&
     }
   }
 
+  if (!nodesToIgnore.empty()) {
+    lock.lock();
+    for (auto& nodeName : nodesToIgnore) {
+      _ignoredNodeNames.insert(std::move(nodeName));
+    }
+  }
+
   return result;
 }
 
 void ParameterInterface::setParams(const ParameterList& parameters,
                                    const std::chrono::duration<double>& timeout) {
-  std::lock_guard<std::mutex> lock(_mutex);
+  std::unique_lock<std::mutex> lock(_mutex);
 
   rclcpp::ParameterMap paramsByNode;
   for (const auto& param : parameters) {
@@ -308,6 +319,9 @@ void ParameterInterface::setParams(const ParameterList& parameters,
                                                 &ParameterInterface::setNodeParameters, this,
                                                 paramClientIt->second, nodeName, params, timeout));
   }
+
+  // Don't hold _mutex across blocking waits; parameter-event callbacks may need it to make progress.
+  lock.unlock();
 
   for (auto& future : setParametersFuture) {
     try {
@@ -355,16 +369,25 @@ void ParameterInterface::subscribeParams(const std::vector<std::string_view>& pa
                      nodeName.c_str(), msg->changed_parameters.size());
 
         ParameterList result;
-        const auto& subscribedNodeParams = _subscribedParamsByNode[nodeName];
-        for (const auto& param : msg->changed_parameters) {
-          if (subscribedNodeParams.find(param.name) != subscribedNodeParams.end()) {
-            result.push_back(fromRosParam(
-              rclcpp::Parameter(prependNodeNameToParamName(param.name, nodeName), param.value)));
+        ParamUpdateFunc paramUpdateFunc;
+        {
+          std::lock_guard<std::mutex> lock(_mutex);
+          const auto it = _subscribedParamsByNode.find(nodeName);
+          if (it == _subscribedParamsByNode.end()) {
+            return;
           }
+          const auto& subscribedNodeParams = it->second;
+          for (const auto& param : msg->changed_parameters) {
+            if (subscribedNodeParams.find(param.name) != subscribedNodeParams.end()) {
+              result.push_back(fromRosParam(
+                rclcpp::Parameter(prependNodeNameToParamName(param.name, nodeName), param.value)));
+            }
+          }
+          paramUpdateFunc = _paramUpdateFunc;
         }
 
-        if (!result.empty() && _paramUpdateFunc) {
-          _paramUpdateFunc(result);
+        if (!result.empty() && paramUpdateFunc) {
+          paramUpdateFunc(result);
         }
       });
   }
