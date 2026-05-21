@@ -175,10 +175,9 @@ async fn netem_viewer_connects_under_impairment() -> Result<()> {
     let ctx = foxglove::Context::new();
     let gw = TestGateway::start(&ctx).await?;
 
-    let mut viewer =
-        ViewerConnection::connect_with_timeout(&gw.room_name, "viewer-1", NETEM_EVENT_TIMEOUT)
+    let (viewer, server_info, _advertise) =
+        ViewerConnection::connect_and_handshake(&gw.room_name, "viewer-1", NETEM_EVENT_TIMEOUT)
             .await?;
-    let server_info = viewer.expect_server_info().await?;
 
     assert!(
         server_info.session_id.is_some(),
@@ -206,12 +205,9 @@ async fn netem_channel_advertisement_under_impairment() -> Result<()> {
         .context("create channel")?;
 
     let gw = TestGateway::start(&ctx).await?;
-    let mut viewer =
-        ViewerConnection::connect_with_timeout(&gw.room_name, "viewer-1", NETEM_EVENT_TIMEOUT)
+    let (viewer, _server_info, advertise) =
+        ViewerConnection::connect_and_handshake(&gw.room_name, "viewer-1", NETEM_EVENT_TIMEOUT)
             .await?;
-
-    let _server_info = viewer.expect_server_info().await?;
-    let advertise = viewer.expect_advertise().await?;
 
     assert_eq!(advertise.channels.len(), 1);
     assert_eq!(advertise.channels[0].topic, "/netem-test");
@@ -239,12 +235,9 @@ async fn netem_message_delivery_under_impairment() -> Result<()> {
         .context("create channel")?;
 
     let gw = TestGateway::start(&ctx).await?;
-    let mut viewer =
-        ViewerConnection::connect_with_timeout(&gw.room_name, "viewer-1", NETEM_EVENT_TIMEOUT)
+    let (mut viewer, _server_info, advertise) =
+        ViewerConnection::connect_and_handshake(&gw.room_name, "viewer-1", NETEM_EVENT_TIMEOUT)
             .await?;
-
-    let _server_info = viewer.expect_server_info().await?;
-    let advertise = viewer.expect_advertise().await?;
     let channel_id = advertise.channels[0].id;
 
     viewer.subscribe_and_wait(&[channel_id], &channel).await?;
@@ -291,11 +284,21 @@ async fn netem_burst_delivery_under_impairment() -> Result<()> {
     )
     .await?;
 
-    let mut viewer =
-        ViewerConnection::connect_with_timeout(&gw.room_name, "viewer-1", NETEM_EVENT_TIMEOUT)
-            .await?;
-
-    let _server_info = viewer.expect_server_info().await?;
+    let deadline = tokio::time::Instant::now() + NETEM_EVENT_TIMEOUT;
+    let mut viewer = loop {
+        let remaining = deadline - tokio::time::Instant::now();
+        let mut v =
+            ViewerConnection::connect_with_timeout(&gw.room_name, "viewer-1", remaining).await?;
+        match v.expect_server_info().await {
+            Ok(_server_info) => break v,
+            Err(e) if tokio::time::Instant::now() < deadline => {
+                info!("byte stream dropped before ServerInfo ({e:#}), retrying");
+                let _ = v.close().await;
+                continue;
+            }
+            Err(e) => return Err(e).context("ServerInfo not received under impairment"),
+        }
+    };
 
     viewer.send_subscribe_connection_graph().await?;
     let _initial = viewer.expect_connection_graph_update().await?;

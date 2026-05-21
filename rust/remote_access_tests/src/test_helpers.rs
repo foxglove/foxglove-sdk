@@ -301,6 +301,43 @@ impl ViewerConnection {
         }
     }
 
+    /// Connects and completes the handshake (ServerInfo + Advertise), retrying
+    /// the entire flow if the byte stream drops under network impairment.
+    pub async fn connect_and_handshake(
+        room_name: &str,
+        viewer_identity: &str,
+        timeout: Duration,
+    ) -> Result<(
+        Self,
+        foxglove::protocol::v2::server::ServerInfo,
+        foxglove::protocol::v2::server::Advertise<'static>,
+    )> {
+        let deadline = tokio::time::Instant::now() + timeout;
+        loop {
+            let remaining = deadline - tokio::time::Instant::now();
+            let mut viewer =
+                Self::connect_with_timeout(room_name, viewer_identity, remaining).await?;
+            let handshake = async {
+                let server_info = viewer.expect_server_info().await?;
+                let advertise = viewer.expect_advertise().await?;
+                anyhow::Ok((server_info, advertise))
+            };
+            match handshake.await {
+                Ok((server_info, advertise)) => {
+                    return Ok((viewer, server_info, advertise));
+                }
+                Err(e) if tokio::time::Instant::now() < deadline => {
+                    info!("byte stream dropped during handshake ({e:#}), retrying");
+                    let _ = viewer.close().await;
+                    continue;
+                }
+                Err(e) => {
+                    return Err(e).context("handshake failed under impairment");
+                }
+            }
+        }
+    }
+
     /// Reads and validates the initial ServerInfo message.
     pub async fn expect_server_info(
         &mut self,
