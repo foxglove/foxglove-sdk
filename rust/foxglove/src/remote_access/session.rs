@@ -2634,6 +2634,7 @@ mod tests {
         let reset_notify = Arc::new(tokio::sync::Notify::new());
         let sid = test_sid("write-fail");
 
+        let writer_ref = writer.clone();
         let (participant, handle) = Participant::spawn(
             ParticipantIdentity("test-viewer".to_string()),
             sid.clone(),
@@ -2661,12 +2662,12 @@ mod tests {
             "write failure should populate pending_resets"
         );
 
-        // Confirm this was the write-failure path, not queue-overflow.
-        // Queue overflow fires `Participant::cancel` via `send_control`;
-        // write failure does not.
-        assert!(
-            !cancel.is_cancelled(),
-            "cancel token should not fire on write-failure path"
+        // Confirm the flush task actually attempted a write (proving the
+        // reset came from the write-failure path, not queue overflow).
+        assert_eq!(
+            writer_ref.attempted_writes(),
+            1,
+            "flush task should have attempted exactly one write"
         );
     }
 
