@@ -12,12 +12,6 @@
  * "elapsed" tick. The parameter store has exactly one owner, so no
  * synchronization is required.
  *
- * When built with remote-access support (`FOXGLOVE_REMOTE_ACCESS`) and the
- * `FOXGLOVE_DEVICE_TOKEN` environment variable is set, the example also
- * starts a remote-access gateway that shares the same parameter handler, so
- * the parameter store is reachable from both WebSocket clients and remote
- * Foxglove sessions.
- *
  * View and edit parameters from a Parameters panel in Foxglove:
  * https://docs.foxglove.dev/docs/visualization/panels/parameters
  */
@@ -27,15 +21,10 @@
 #include <foxglove/parameter_handler.hpp>
 #include <foxglove/websocket.hpp>
 
-#ifdef FOXGLOVE_REMOTE_ACCESS
-#include <foxglove/remote_access.hpp>
-#endif
-
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
 #include <csignal>
-#include <cstdlib>
 #include <functional>
 #include <iostream>
 #include <mutex>
@@ -134,8 +123,7 @@ int main() {
   OpQueue queue;
 
   // Build a parameter handler that just enqueues each request onto the worker
-  // queue. The same handler is shared between the WebSocket server and (when
-  // available) the remote-access gateway.
+  // queue.
   foxglove::ParameterHandler handler;
   handler.onGet = [&queue](
                     uint32_t /*client_id*/,
@@ -178,52 +166,10 @@ int main() {
   }
   auto server = std::move(server_result.value());
 
-#ifdef FOXGLOVE_REMOTE_ACCESS
-  // Optionally start a remote-access gateway when FOXGLOVE_DEVICE_TOKEN is set.
-  std::optional<foxglove::RemoteAccessGateway> gateway;
-#if defined(_MSC_VER)
-#pragma warning(push)
-#pragma warning(disable : 4996)  // 'getenv': MSVC deprecation; single-threaded example startup.
-#endif
-  // NOLINTNEXTLINE(concurrency-mt-unsafe): single-threaded example startup.
-  const bool have_device_token = std::getenv("FOXGLOVE_DEVICE_TOKEN") != nullptr;
-#if defined(_MSC_VER)
-#pragma warning(pop)
-#endif
-  if (have_device_token) {
-    foxglove::RemoteAccessGatewayOptions ra_options = {};
-    ra_options.name = "param-server";
-    ra_options.parameter_handler = handler;
-    auto gateway_result = foxglove::RemoteAccessGateway::create(std::move(ra_options));
-    if (!gateway_result.has_value()) {
-      std::cerr << "Failed to start remote-access gateway: "
-                << foxglove::strerror(gateway_result.error()) << '\n';
-      return 1;
-    }
-    gateway.emplace(std::move(gateway_result.value()));
-  }
-#endif
-
   std::atomic_bool done = false;
   sigint_handler = [&] {
     done = true;
     queue.shutdown();
-  };
-
-  // Publishes parameter values to all subscribers across the server and (if
-  // configured) the remote-access gateway.
-  auto publish = [&](std::vector<foxglove::Parameter> params) {
-#ifdef FOXGLOVE_REMOTE_ACCESS
-    if (gateway) {
-      std::vector<foxglove::Parameter> cloned;
-      cloned.reserve(params.size());
-      for (const auto& p : params) {
-        cloned.push_back(p.clone());
-      }
-      gateway->publishParameterValues(std::move(cloned));
-    }
-#endif
-    server.publishParameterValues(std::move(params));
   };
 
   auto start_time = std::chrono::steady_clock::now();
@@ -279,7 +225,7 @@ int main() {
             // SetParametersResponder only echoes to the requester, so publish
             // applied changes to subscribers ourselves.
             if (!applied.empty()) {
-              publish(std::move(applied));
+              server.publishParameterValues(std::move(applied));
             }
           }
         },
@@ -294,16 +240,11 @@ int main() {
       param_store.insert_or_assign("elapsed", elapsed.clone());
       std::vector<foxglove::Parameter> to_publish;
       to_publish.emplace_back(std::move(elapsed));
-      publish(std::move(to_publish));
+      server.publishParameterValues(std::move(to_publish));
       next_tick += 1s;
     }
   }
 
-#ifdef FOXGLOVE_REMOTE_ACCESS
-  if (gateway) {
-    gateway->stop();
-  }
-#endif
   server.stop();
   return 0;
 }
