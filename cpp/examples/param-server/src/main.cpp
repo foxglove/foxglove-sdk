@@ -181,8 +181,16 @@ int main() {
 #ifdef FOXGLOVE_REMOTE_ACCESS
   // Optionally start a remote-access gateway when FOXGLOVE_DEVICE_TOKEN is set.
   std::optional<foxglove::RemoteAccessGateway> gateway;
+#if defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable : 4996)  // 'getenv': MSVC deprecation; single-threaded example startup.
+#endif
   // NOLINTNEXTLINE(concurrency-mt-unsafe): single-threaded example startup.
-  if (std::getenv("FOXGLOVE_DEVICE_TOKEN") != nullptr) {
+  const bool have_device_token = std::getenv("FOXGLOVE_DEVICE_TOKEN") != nullptr;
+#if defined(_MSC_VER)
+#pragma warning(pop)
+#endif
+  if (have_device_token) {
     foxglove::RemoteAccessGatewayOptions ra_options = {};
     ra_options.name = "param-server";
     ra_options.parameter_handler = handler;
