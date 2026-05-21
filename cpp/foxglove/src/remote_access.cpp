@@ -381,6 +381,8 @@ FoxgloveResult<RemoteAccessGateway> RemoteAccessGateway::create(
         }
         SetParametersResponder responder(c_responder);
         if (c_params == nullptr) {
+          // Should not happen; the C implementation never passes a null pointer.
+          responder.respond({});
           return;
         }
         try {
