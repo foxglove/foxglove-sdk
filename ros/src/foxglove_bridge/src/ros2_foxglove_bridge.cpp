@@ -199,46 +199,9 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
 
   if (hasCapability(sdkServerOptions.capabilities,
                     foxglove::WebSocketServerCapabilities::Parameters)) {
-    sdkServerOptions.callbacks.onParametersSubscribe =
-      [this](const std::vector<std::string_view>& names) {
-        SubscribeParamsOp op;
-        op.names.reserve(names.size());
-        for (const auto& name : names) {
-          op.names.emplace_back(name);
-        }
-        enqueueParameterOp(std::move(op));
-      };
-    sdkServerOptions.callbacks.onParametersUnsubscribe =
-      [this](const std::vector<std::string_view>& names) {
-        UnsubscribeParamsOp op;
-        op.names.reserve(names.size());
-        for (const auto& name : names) {
-          op.names.emplace_back(name);
-        }
-        enqueueParameterOp(std::move(op));
-      };
-    sdkServerOptions.parameter_handler.onGet =
-      [this](uint32_t /*clientId*/, std::optional<std::string_view> /*requestId*/,
-             const std::vector<std::string_view>& names,
-             foxglove::GetParametersResponder&& responder) {
-        GetParamsOp op{{}, std::move(responder)};
-        op.names.reserve(names.size());
-        for (const auto& name : names) {
-          op.names.emplace_back(name);
-        }
-        enqueueParameterOp(std::move(op));
-      };
-    sdkServerOptions.parameter_handler.onSet =
-      [this](uint32_t /*clientId*/, std::optional<std::string_view> /*requestId*/,
-             const std::vector<foxglove::ParameterView>& params,
-             foxglove::SetParametersResponder&& responder) {
-        SetParamsOp op{{}, std::move(responder)};
-        op.parameters.reserve(params.size());
-        for (const auto& param : params) {
-          op.parameters.emplace_back(param.clone());
-        }
-        enqueueParameterOp(std::move(op));
-      };
+    wireParameterCallbacks(sdkServerOptions.callbacks.onParametersSubscribe,
+                           sdkServerOptions.callbacks.onParametersUnsubscribe,
+                           sdkServerOptions.parameter_handler);
 
     _paramInterface = std::make_shared<ParameterInterface>(this, paramWhitelistPatterns,
                                                            ignoreUnresponsiveParamNodes
@@ -386,46 +349,9 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
     }
 
     if (hasCapability(_capabilities, foxglove::WebSocketServerCapabilities::Parameters)) {
-      gatewayOptions.callbacks.onParametersSubscribe =
-        [this](const std::vector<std::string_view>& names) {
-          SubscribeParamsOp op;
-          op.names.reserve(names.size());
-          for (const auto& name : names) {
-            op.names.emplace_back(name);
-          }
-          enqueueParameterOp(std::move(op));
-        };
-      gatewayOptions.callbacks.onParametersUnsubscribe =
-        [this](const std::vector<std::string_view>& names) {
-          UnsubscribeParamsOp op;
-          op.names.reserve(names.size());
-          for (const auto& name : names) {
-            op.names.emplace_back(name);
-          }
-          enqueueParameterOp(std::move(op));
-        };
-      gatewayOptions.parameter_handler.onGet =
-        [this](uint32_t /*clientId*/, std::optional<std::string_view> /*requestId*/,
-               const std::vector<std::string_view>& names,
-               foxglove::GetParametersResponder&& responder) {
-          GetParamsOp op{{}, std::move(responder)};
-          op.names.reserve(names.size());
-          for (const auto& name : names) {
-            op.names.emplace_back(name);
-          }
-          enqueueParameterOp(std::move(op));
-        };
-      gatewayOptions.parameter_handler.onSet =
-        [this](uint32_t /*clientId*/, std::optional<std::string_view> /*requestId*/,
-               const std::vector<foxglove::ParameterView>& params,
-               foxglove::SetParametersResponder&& responder) {
-          SetParamsOp op{{}, std::move(responder)};
-          op.parameters.reserve(params.size());
-          for (const auto& param : params) {
-            op.parameters.emplace_back(param.clone());
-          }
-          enqueueParameterOp(std::move(op));
-        };
+      wireParameterCallbacks(gatewayOptions.callbacks.onParametersSubscribe,
+                             gatewayOptions.callbacks.onParametersUnsubscribe,
+                             gatewayOptions.parameter_handler);
     }
 
     if (hasCapability(_capabilities, foxglove::WebSocketServerCapabilities::ConnectionGraph)) {
@@ -1210,6 +1136,48 @@ void FoxgloveBridge::clientMessage(ClientId clientId, ChannelId clientChannelId,
                              std::to_string(clientChannelId) + " from client ID " +
                              std::to_string(clientId) + ": " + ex.what());
   }
+}
+
+void FoxgloveBridge::wireParameterCallbacks(
+  std::function<void(const std::vector<std::string_view>&)>& onSubscribe,
+  std::function<void(const std::vector<std::string_view>&)>& onUnsubscribe,
+  foxglove::ParameterHandler& handler) {
+  onSubscribe = [this](const std::vector<std::string_view>& names) {
+    SubscribeParamsOp op;
+    op.names.reserve(names.size());
+    for (const auto& name : names) {
+      op.names.emplace_back(name);
+    }
+    enqueueParameterOp(std::move(op));
+  };
+  onUnsubscribe = [this](const std::vector<std::string_view>& names) {
+    UnsubscribeParamsOp op;
+    op.names.reserve(names.size());
+    for (const auto& name : names) {
+      op.names.emplace_back(name);
+    }
+    enqueueParameterOp(std::move(op));
+  };
+  handler.onGet = [this](uint32_t /*clientId*/, std::optional<std::string_view> /*requestId*/,
+                         const std::vector<std::string_view>& names,
+                         foxglove::GetParametersResponder&& responder) {
+    GetParamsOp op{{}, std::move(responder)};
+    op.names.reserve(names.size());
+    for (const auto& name : names) {
+      op.names.emplace_back(name);
+    }
+    enqueueParameterOp(std::move(op));
+  };
+  handler.onSet = [this](uint32_t /*clientId*/, std::optional<std::string_view> /*requestId*/,
+                         const std::vector<foxglove::ParameterView>& params,
+                         foxglove::SetParametersResponder&& responder) {
+    SetParamsOp op{{}, std::move(responder)};
+    op.parameters.reserve(params.size());
+    for (const auto& param : params) {
+      op.parameters.emplace_back(param.clone());
+    }
+    enqueueParameterOp(std::move(op));
+  };
 }
 
 void FoxgloveBridge::enqueueParameterOp(ParameterOp&& op) {

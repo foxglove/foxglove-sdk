@@ -188,6 +188,14 @@ private:
   using ParameterOp =
     std::variant<GetParamsOp, SetParamsOp, SubscribeParamsOp, UnsubscribeParamsOp>;
 
+  // Wire the parameter-related callbacks/handler on a server or gateway options struct.
+  // Both options structs share these field types; this helper keeps the WS and gateway
+  // sites in sync.
+  void wireParameterCallbacks(
+    std::function<void(const std::vector<std::string_view>&)>& onSubscribe,
+    std::function<void(const std::vector<std::string_view>&)>& onUnsubscribe,
+    foxglove::ParameterHandler& handler);
+
   void enqueueParameterOp(ParameterOp&& op);
   void parameterWorkerLoop();
   void handleGetParams(GetParamsOp&& op);
