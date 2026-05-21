@@ -2553,9 +2553,8 @@ typedef struct foxglove_parameter_handler {
    *
    * The `request_id` argument may be NULL.
    *
-   * The `param_names` argument may be NULL only when `param_names_len` is zero. The buffer is
-   * valid for the duration of this call; if the callback wishes to store these values, it must
-   * copy them out.
+   * The `param_names` argument is guaranteed to be non-NULL. The buffer is valid for the
+   * duration of this call; if the callback wishes to store these values, it must copy them out.
    *
    * The implementation takes ownership of `responder` and **must** complete it by calling
    * `foxglove_get_parameters_responder_respond` exactly once (pass an empty array if no values
