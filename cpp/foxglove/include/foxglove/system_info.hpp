@@ -38,7 +38,7 @@ struct SystemInfoOptions final {
 /// and spawns a background task that logs a `SystemInfo` message at the configured
 /// interval with stats on CPU and memory usage for the process and the system.
 ///
-/// Published metrics
+/// @par Published metrics
 ///
 /// Each message is a JSON object with a JSON Schema attached to the channel.
 /// The following fields are published:
