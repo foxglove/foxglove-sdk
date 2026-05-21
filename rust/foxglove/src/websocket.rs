@@ -6,7 +6,6 @@ mod channel_view;
 mod client;
 mod client_channel;
 mod connected_client;
-mod connection_graph;
 mod cow_vec;
 pub(crate) mod handshake;
 mod server;
@@ -19,25 +18,19 @@ mod tests;
 #[doc(hidden)]
 pub mod ws_protocol;
 
-pub use crate::remote_common::AnyClient;
-pub use crate::remote_common::fetch_asset::{AssetHandler, AssetResponder};
 pub(crate) use crate::remote_common::fetch_asset::{AsyncAssetHandlerFn, BlockingAssetHandlerFn};
-pub use crate::remote_common::parameters::{
-    GetParametersResponder, ParameterHandler, SetParametersResponder,
+pub use crate::remote_common::{
+    AnyClient, AssetHandler, AssetResponder, ClientId, ConnectionGraph, GetParametersResponder,
+    Parameter, ParameterDecodeError, ParameterHandler, ParameterType, ParameterValue,
+    SetParametersResponder, Status, StatusLevel,
 };
 pub use capability::Capability;
 pub use channel_view::ChannelView;
-pub use client::{Client, ClientId};
+pub use client::Client;
 pub use client_channel::{ClientChannel, ClientChannelId};
-pub use connection_graph::ConnectionGraph;
 pub use server::ShutdownHandle;
 pub(crate) use server::{Server, ServerOptions, create_server};
 pub use server_listener::ServerListener;
 pub use streams::TlsIdentity;
 pub use ws_protocol::client::{PlaybackCommand, PlaybackControlRequest};
-pub use ws_protocol::parameter::{
-    DecodeError as ParameterDecodeError, Parameter, ParameterType, ParameterValue,
-};
-pub use ws_protocol::server::status::{Level as StatusLevel, Status};
-
 pub use ws_protocol::server::playback_state::{PlaybackState, PlaybackStatus};

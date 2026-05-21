@@ -487,7 +487,7 @@ mod protocol;
     docsrs,
     doc(cfg(any(feature = "remote-access", feature = "websocket")))
 )]
-mod remote_common;
+pub mod remote_common;
 #[cfg(any(feature = "_remote-common", feature = "sysinfo"))]
 mod runtime;
 #[cfg(any(feature = "_remote-common", feature = "sysinfo"))]
