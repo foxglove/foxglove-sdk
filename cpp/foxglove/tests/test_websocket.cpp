@@ -813,9 +813,9 @@ TEST_CASE("ParameterHandler get and set echo to requester") {
       return server_get.has_value();
     });
     REQUIRE(ok);
-    REQUIRE(server_get->first.has_value());
-    REQUIRE(*server_get->first == "get-1");
-    REQUIRE_THAT(server_get->second, Equals(std::vector<std::string>{"foo", "bar"}));
+    const auto& got = requireValue(server_get);
+    REQUIRE(requireValue(got.first) == "get-1");
+    REQUIRE_THAT(got.second, Equals(std::vector<std::string>{"foo", "bar"}));
   }
   {
     auto parsed = Json::parse(client.recv());
@@ -845,8 +845,8 @@ TEST_CASE("ParameterHandler get and set echo to requester") {
       return server_set.has_value();
     });
     REQUIRE(ok);
-    REQUIRE(server_set->first.has_value());
-    REQUIRE(*server_set->first == "set-1");
+    const auto& set_got = requireValue(server_set);
+    REQUIRE(requireValue(set_got.first) == "set-1");
   }
   {
     auto parsed = Json::parse(client.recv());
@@ -967,8 +967,7 @@ TEST_CASE("ParameterHandler dropping responder sends error status") {
     },
     kTestTimeout
   );
-  REQUIRE(status.has_value());
-  auto parsed = Json::parse(*status);
+  auto parsed = Json::parse(requireValue(status));
   // Status protocol: level 0=info, 1=warning, 2=error.
   REQUIRE(parsed["level"] == 2);
   REQUIRE_THAT(
@@ -1078,8 +1077,7 @@ TEST_CASE("ParameterHandler publish after respond broadcasts to subscribers") {
     },
     kTestTimeout
   );
-  REQUIRE(broadcast.has_value());
-  auto parsed = Json::parse(*broadcast);
+  auto parsed = Json::parse(requireValue(broadcast));
   auto expected = Json::parse(R"({
     "op": "parameterValues",
     "parameters": [{ "name": "foo", "value": 7.0 }]
