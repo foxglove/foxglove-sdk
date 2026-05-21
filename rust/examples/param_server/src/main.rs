@@ -28,7 +28,7 @@ use std::time::{Duration, Instant};
 use clap::Parser;
 #[cfg(feature = "remote-access")]
 use foxglove::remote_access::{Gateway, GatewayHandle};
-use foxglove::websocket::{
+use foxglove::remote_common::{
     AnyClient, GetParametersResponder, Parameter, ParameterHandler, ParameterType, ParameterValue,
     SetParametersResponder,
 };
