@@ -10,10 +10,11 @@ use crate::parameter::FoxgloveParameterArray;
 
 /// Responder for a `getParameters` request from a client.
 ///
-/// Obtained via the `get` callback of `foxglove_parameter_handler`. The implementation must
-/// eventually call either `foxglove_get_parameters_responder_respond` or
-/// `foxglove_get_parameters_responder_drop`, exactly once, in order to complete the request. It is
-/// safe to invoke these functions synchronously from the context of the callback.
+/// Obtained via the `get` callback of `foxglove_parameter_handler`. The implementation **must**
+/// complete the request by calling `foxglove_get_parameters_responder_respond` exactly once (pass
+/// an empty array if no values are available). It is safe to invoke that function synchronously
+/// from the context of the callback. `foxglove_get_parameters_responder_drop` is reserved for
+/// unrecoverable internal errors, and sends a generic error status to the requesting client.
 pub struct FoxgloveGetParametersResponder(GetParametersResponder);
 
 impl FoxgloveGetParametersResponder {
@@ -30,10 +31,12 @@ impl FoxgloveGetParametersResponder {
 
 /// Responder for a `setParameters` request from a client.
 ///
-/// Obtained via the `set` callback of `foxglove_parameter_handler`. The implementation must
-/// eventually call either `foxglove_set_parameters_responder_respond` or
-/// `foxglove_set_parameters_responder_drop`, exactly once, in order to complete the request. It is
-/// safe to invoke these functions synchronously from the context of the callback.
+/// Obtained via the `set` callback of `foxglove_parameter_handler`. The implementation **must**
+/// complete the request by calling `foxglove_set_parameters_responder_respond` exactly once with
+/// the values that were actually applied (pass an empty array if the request could not be
+/// handled). It is safe to invoke that function synchronously from the context of the callback.
+/// `foxglove_set_parameters_responder_drop` is reserved for unrecoverable internal errors, and
+/// sends a generic error status to the requesting client.
 pub struct FoxgloveSetParametersResponder(SetParametersResponder);
 
 impl FoxgloveSetParametersResponder {
@@ -79,10 +82,10 @@ pub struct FoxgloveParameterHandler {
     /// valid for the duration of this call; if the callback wishes to store these values, it must
     /// copy them out.
     ///
-    /// The implementation takes ownership of `responder`, and must eventually complete it by
-    /// calling either `foxglove_get_parameters_responder_respond` or
-    /// `foxglove_get_parameters_responder_drop`, exactly once. Dropping the responder without
-    /// responding sends a generic error status to the requesting client.
+    /// The implementation takes ownership of `responder` and **must** complete it by calling
+    /// `foxglove_get_parameters_responder_respond` exactly once (pass an empty array if no values
+    /// are available). `foxglove_get_parameters_responder_drop` is reserved for unrecoverable
+    /// internal errors, and sends a generic error status to the requesting client.
     pub get: Option<
         unsafe extern "C" fn(
             context: *const c_void,
@@ -103,15 +106,17 @@ pub struct FoxgloveParameterHandler {
     /// The `params` argument is guaranteed to be non-NULL. The buffer is valid for the duration of
     /// this call; if the callback wishes to store these values, it must copy them out.
     ///
-    /// The implementation takes ownership of `responder`, and must eventually complete it by
-    /// calling either `foxglove_set_parameters_responder_respond` or
-    /// `foxglove_set_parameters_responder_drop`, exactly once. When `request_id` is non-NULL,
-    /// the values passed to `respond` are echoed back to the requesting client; otherwise the
-    /// responder does nothing on the wire. The responder does not notify other parameter
-    /// subscribers, so the implementer is responsible for broadcasting applied updates to
-    /// subscribers on each sink (for example, via `foxglove_server_publish_parameter_values`
-    /// and `foxglove_gateway_publish_parameter_values`). Dropping the responder without
-    /// responding sends a generic error status to the requesting client.
+    /// The implementation takes ownership of `responder` and **must** complete it by calling
+    /// `foxglove_set_parameters_responder_respond` exactly once with the values that were
+    /// actually applied (pass an empty array if the request could not be handled).
+    /// `foxglove_set_parameters_responder_drop` is reserved for unrecoverable internal errors,
+    /// and sends a generic error status to the requesting client.
+    ///
+    /// When `request_id` is non-NULL, the values passed to `respond` are echoed back to the
+    /// requesting client; otherwise the responder does nothing on the wire. The responder does
+    /// not notify other parameter subscribers, so the implementer is responsible for broadcasting
+    /// applied updates to subscribers on each sink (for example, via
+    /// `foxglove_server_publish_parameter_values` and `foxglove_gateway_publish_parameter_values`).
     pub set: Option<
         unsafe extern "C" fn(
             context: *const c_void,
@@ -249,7 +254,9 @@ pub unsafe extern "C" fn foxglove_get_parameters_responder_respond(
 
 /// Drops a `getParameters` responder without responding.
 ///
-/// This sends a generic error status to the requesting client.
+/// Reserved for unrecoverable internal errors; sends a generic error status to the requesting
+/// client. In all other cases, complete the request with
+/// `foxglove_get_parameters_responder_respond` (passing an empty array if no values are available).
 ///
 /// # Safety
 /// - `responder` must be a pointer to a `foxglove_get_parameters_responder` obtained via a `get`
@@ -305,7 +312,10 @@ pub unsafe extern "C" fn foxglove_set_parameters_responder_respond(
 
 /// Drops a `setParameters` responder without responding.
 ///
-/// This sends a generic error status to the requesting client.
+/// Reserved for unrecoverable internal errors; sends a generic error status to the requesting
+/// client. In all other cases, complete the request with
+/// `foxglove_set_parameters_responder_respond` (passing an empty array if the request could not
+/// be handled).
 ///
 /// # Safety
 /// - `responder` must be a pointer to a `foxglove_set_parameters_responder` obtained via a `set`
