@@ -249,7 +249,8 @@ ParameterList ParameterInterface::getParams(const std::vector<std::string_view>&
                            paramClientIt->second, nodeName, nodeParamNames, timeout));
   }
 
-  // Don't hold _mutex across blocking waits; parameter-event callbacks may need it to make progress.
+  // Don't hold _mutex across blocking waits; parameter-event callbacks may need it to make
+  // progress.
   lock.unlock();
 
   ParameterList result;
@@ -320,7 +321,8 @@ void ParameterInterface::setParams(const ParameterList& parameters,
                                                 paramClientIt->second, nodeName, params, timeout));
   }
 
-  // Don't hold _mutex across blocking waits; parameter-event callbacks may need it to make progress.
+  // Don't hold _mutex across blocking waits; parameter-event callbacks may need it to make
+  // progress.
   lock.unlock();
 
   for (auto& future : setParametersFuture) {
