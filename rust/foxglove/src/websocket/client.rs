@@ -4,7 +4,7 @@ use super::Parameter;
 use super::Status;
 use super::connected_client::ConnectedClient;
 use crate::SinkId;
-pub use crate::remote_common::ClientId;
+use crate::remote_common::ClientId;
 use crate::remote_common::fetch_asset::SendAssetResponse;
 use crate::remote_common::parameters::SendParameterResponse;
 

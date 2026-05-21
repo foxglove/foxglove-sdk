@@ -17,27 +17,17 @@ mod sse;
 mod watch;
 mod watch_loop;
 
-pub use crate::remote_common::AnyClient;
-pub use crate::remote_common::ClientId;
-pub use crate::remote_common::connection_graph::ConnectionGraph;
+pub use crate::remote_common::{
+    AnyClient, AssetHandler, AssetResponder, ClientId, ConnectionGraph, GetParametersResponder,
+    Parameter, ParameterDecodeError, ParameterHandler, ParameterType, ParameterValue,
+    SetParametersResponder, Status, StatusLevel,
+};
 pub use capability::Capability;
 pub use client::Client;
 pub use connection::ConnectionStatus;
 pub use gateway::{Gateway, GatewayHandle};
 pub use listener::Listener;
 pub use qos::{QosClassifier, QosProfile, QosProfileBuilder, Reliability};
-
-// Re-export parameter types so callers can construct parameter values.
-pub use crate::protocol::v2::parameter::{Parameter, ParameterType, ParameterValue};
-
-// Re-export status types so callers can publish and remove status messages.
-pub use crate::protocol::v2::server::status::{Level as StatusLevel, Status};
-
-// Re-export fetch-asset and parameter handler types.
-pub use crate::remote_common::fetch_asset::{AssetHandler, AssetResponder};
-pub use crate::remote_common::parameters::{
-    GetParametersResponder, ParameterHandler, SetParametersResponder,
-};
 
 use reqwest::StatusCode;
 use thiserror::Error;
