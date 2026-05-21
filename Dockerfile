@@ -45,7 +45,7 @@ ENV PATH="/usr/lib/llvm-19/bin:${PATH}"
 
 # rust
 ARG MSRV_RUST_VERSION=1.85.0
-RUN curl https://sh.rustup.rs -fsS | bash -s -- -y
+RUN curl https://sh.rustup.rs -fsS | bash -s -- -y --profile minimal
 ENV PATH="/root/.cargo/bin:${PATH}"
 RUN rustup toolchain install nightly --component rust-src
 RUN rustup toolchain install ${MSRV_RUST_VERSION}
