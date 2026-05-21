@@ -35,6 +35,7 @@ use crate::{
     },
     remote_common::{
         connection_graph::ConnectionGraph,
+        parameters::ParameterHandler,
         service::{Service, ServiceId, ServiceMap},
     },
 };
@@ -92,6 +93,7 @@ pub(super) struct ConnectionParams {
     pub(super) capabilities: Vec<Capability>,
     pub(super) supported_encodings: Option<IndexSet<String>>,
     pub(super) fetch_asset_handler: Option<Arc<dyn AssetHandler>>,
+    pub(super) parameter_handler: Option<Arc<dyn ParameterHandler>>,
     pub(super) runtime: Handle,
     pub(super) channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     pub(super) qos_classifier: Option<Arc<dyn QosClassifier>>,
@@ -127,6 +129,7 @@ pub(super) struct RemoteAccessConnection {
     capabilities: Vec<Capability>,
     supported_encodings: Option<IndexSet<String>>,
     fetch_asset_handler: Option<Arc<dyn AssetHandler>>,
+    parameter_handler: Option<Arc<dyn ParameterHandler>>,
     runtime: Handle,
     channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     qos_classifier: Option<Arc<dyn QosClassifier>>,
@@ -156,6 +159,7 @@ impl RemoteAccessConnection {
             capabilities: params.capabilities,
             supported_encodings: params.supported_encodings,
             fetch_asset_handler: params.fetch_asset_handler,
+            parameter_handler: params.parameter_handler,
             runtime: params.runtime,
             channel_filter: params.channel_filter,
             qos_classifier: params.qos_classifier,
@@ -318,13 +322,11 @@ impl RemoteAccessConnection {
             connection_graph: self.connection_graph.clone(),
             remote_access_session_id: remote_access_session_id.map(str::to_string),
             fetch_asset_handler: self.fetch_asset_handler.clone(),
+            parameter_handler: self.parameter_handler.clone(),
             server_info,
             device_wait_for_viewer: Some(device_wait_for_viewer),
         };
-        Ok((
-            Arc::new(RemoteAccessSession::new(session_params)),
-            room_events,
-        ))
+        Ok((RemoteAccessSession::new(session_params), room_events))
     }
 
     /// Run the server loop until cancelled in a new tokio task.

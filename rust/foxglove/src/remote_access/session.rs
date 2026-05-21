@@ -26,6 +26,7 @@ use crate::remote_common::connection_graph::ConnectionGraph;
 use crate::remote_common::{
     AnyClient,
     fetch_asset::AssetResponder,
+    parameters::{GetParametersResponder, ParameterHandler, SetParametersResponder},
     service::{CallId, Service, ServiceId, ServiceMap},
 };
 use crate::time::millis_since_epoch;
@@ -162,6 +163,7 @@ pub(super) struct RemoteAccessSession {
     listener: Option<Arc<dyn Listener>>,
     capabilities: Vec<Capability>,
     fetch_asset_handler: Option<Arc<dyn AssetHandler>>,
+    parameter_handler: Option<Arc<dyn ParameterHandler>>,
     runtime: Handle,
     cancellation_token: CancellationToken,
     services: Arc<parking_lot::RwLock<ServiceMap>>,
@@ -367,15 +369,16 @@ pub(super) struct SessionParams {
     pub(super) connection_graph: Arc<parking_lot::Mutex<ConnectionGraph>>,
     pub(super) remote_access_session_id: Option<String>,
     pub(super) fetch_asset_handler: Option<Arc<dyn AssetHandler>>,
+    pub(super) parameter_handler: Option<Arc<dyn ParameterHandler>>,
     pub(super) server_info: ServerInfo,
     pub(super) device_wait_for_viewer: Option<Duration>,
 }
 
 impl RemoteAccessSession {
-    pub(super) fn new(params: SessionParams) -> Self {
+    pub(super) fn new(params: SessionParams) -> Arc<Self> {
         let (video_metadata_tx, video_metadata_rx) = tokio::sync::watch::channel(());
         let participant_registry = ParticipantRegistry::new(params.message_backlog_size);
-        Self {
+        Arc::new(Self {
             sink_id: SinkId::next(),
             room: params.room,
             context: params.context,
@@ -387,6 +390,7 @@ impl RemoteAccessSession {
             listener: params.listener,
             capabilities: params.capabilities,
             fetch_asset_handler: params.fetch_asset_handler,
+            parameter_handler: params.parameter_handler,
             runtime: params.runtime,
             cancellation_token: params.cancellation_token,
             subscription_lock: parking_lot::Mutex::new(()),
@@ -400,7 +404,7 @@ impl RemoteAccessSession {
             server_info: params.server_info,
             participant_registry,
             device_wait_for_viewer: params.device_wait_for_viewer,
-        }
+        })
     }
 
     /// Returns true if the given capability is enabled for this session.
@@ -1812,6 +1816,23 @@ impl RemoteAccessSession {
             return;
         }
 
+        // ParameterHandler takes precedence over the deprecated Listener parameter callbacks.
+        if let Some(handler) = self.parameter_handler.as_ref() {
+            let Some(guard) = participant.parameter_sem().try_acquire() else {
+                self.send_error(participant, "Too many concurrent parameter requests".into());
+                return;
+            };
+            let client = AnyClient::from_remote_access(Client::with_sender(
+                participant.client_id(),
+                participant.participant_id().clone(),
+                participant,
+            ));
+            let responder = GetParametersResponder::new(client.clone(), request_id.clone(), guard);
+            handler.get(client, param_names, request_id, responder);
+            return;
+        }
+
+        #[allow(deprecated)]
         if let Some(listener) = self.listener.as_ref() {
             let client = Client::new(
                 participant.client_id(),
@@ -1838,6 +1859,23 @@ impl RemoteAccessSession {
             return;
         }
 
+        // ParameterHandler takes precedence over the deprecated Listener parameter callbacks.
+        if let Some(handler) = self.parameter_handler.as_ref() {
+            let Some(guard) = participant.parameter_sem().try_acquire() else {
+                self.send_error(participant, "Too many concurrent parameter requests".into());
+                return;
+            };
+            let client = AnyClient::from_remote_access(Client::with_sender(
+                participant.client_id(),
+                participant.participant_id().clone(),
+                participant,
+            ));
+            let responder = SetParametersResponder::new(client.clone(), request_id.clone(), guard);
+            handler.set(client, parameters, request_id, responder);
+            return;
+        }
+
+        #[allow(deprecated)]
         let updated_parameters = if let Some(listener) = self.listener.as_ref() {
             let client = Client::new(
                 participant.client_id(),
@@ -2603,5 +2641,97 @@ mod tests {
         drop(rx);
         // Disconnected returns true (no reset needed).
         assert!(participant.try_queue_control(Bytes::from_static(b"msg")));
+    }
+
+    // ---- parameter handler responder tests ----
+
+    use crate::protocol::common::parameter::Parameter as CommonParameter;
+    use crate::protocol::common::server::ParameterValues;
+    use crate::protocol::common::server::status::{Level as StatusLevel, Status};
+    use crate::remote_common::parameters::{GetParametersResponder, SetParametersResponder};
+
+    /// Decode the next control message — which is framed as 1 byte opcode + 4 byte LE length +
+    /// JSON payload — as a `T`.
+    fn recv_json<T: serde::de::DeserializeOwned>(rx: &flume::Receiver<Bytes>) -> T {
+        let bytes = rx.try_recv().expect("expected control message");
+        assert!(
+            bytes.len() >= 5,
+            "control msg too short: {} bytes",
+            bytes.len()
+        );
+        assert_eq!(bytes[0], 1, "expected JSON opcode (1), got {}", bytes[0]);
+        let len = u32::from_le_bytes([bytes[1], bytes[2], bytes[3], bytes[4]]) as usize;
+        let payload = &bytes[5..5 + len];
+        serde_json::from_slice(payload).expect("failed to decode control msg payload")
+    }
+
+    #[test]
+    fn get_parameters_responder_sends_values() {
+        let (participant, rx) = make_participant_with_rx("alice");
+        let client = test_client(&participant);
+        let guard = participant.parameter_sem().try_acquire().unwrap();
+        let responder = GetParametersResponder::new(client, Some("req-1".to_string()), guard);
+
+        responder.respond(vec![CommonParameter::float64("foo", 1.0)]);
+
+        let msg: ParameterValues = recv_json(&rx);
+        assert_eq!(msg.id.as_deref(), Some("req-1"));
+        assert_eq!(msg.parameters, vec![CommonParameter::float64("foo", 1.0)]);
+    }
+
+    #[test]
+    fn get_parameters_responder_drop_sends_error() {
+        let (participant, rx) = make_participant_with_rx("alice");
+        let client = test_client(&participant);
+        let guard = participant.parameter_sem().try_acquire().unwrap();
+        let responder = GetParametersResponder::new(client, Some("req-1".to_string()), guard);
+
+        drop(responder);
+
+        let status: Status = recv_json(&rx);
+        assert_eq!(status.level, StatusLevel::Error);
+        assert!(status.message.contains("failed to send a response"));
+    }
+
+    #[test]
+    fn set_parameters_responder_echoes_when_request_id_set() {
+        let (participant, rx) = make_participant_with_rx("alice");
+        let client = test_client(&participant);
+        let guard = participant.parameter_sem().try_acquire().unwrap();
+        let responder = SetParametersResponder::new(client, Some("set-1".to_string()), guard);
+
+        responder.respond(vec![CommonParameter::float64("foo", 2.0)]);
+
+        let msg: ParameterValues = recv_json(&rx);
+        assert_eq!(msg.id.as_deref(), Some("set-1"));
+        assert_eq!(msg.parameters, vec![CommonParameter::float64("foo", 2.0)]);
+    }
+
+    #[test]
+    fn set_parameters_responder_no_echo_without_request_id() {
+        let (participant, rx) = make_participant_with_rx("alice");
+        let client = test_client(&participant);
+        let guard = participant.parameter_sem().try_acquire().unwrap();
+        let responder = SetParametersResponder::new(client, None, guard);
+
+        responder.respond(vec![CommonParameter::float64("foo", 2.0)]);
+
+        // No echo without a request_id.
+        assert!(rx.try_recv().is_err());
+    }
+
+    #[test]
+    fn set_parameters_responder_drop_sends_error() {
+        let (participant, rx) = make_participant_with_rx("alice");
+        let client = test_client(&participant);
+        let guard = participant.parameter_sem().try_acquire().unwrap();
+        let responder = SetParametersResponder::new(client, Some("set-1".to_string()), guard);
+
+        drop(responder);
+
+        let status: Status = recv_json(&rx);
+        assert_eq!(status.level, StatusLevel::Error);
+        assert!(status.message.contains("failed to send a response"));
+        assert!(rx.try_recv().is_err());
     }
 }

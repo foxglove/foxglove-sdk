@@ -1,10 +1,12 @@
 use std::sync::Weak;
 
+use super::Parameter;
 use super::Status;
 use super::connected_client::ConnectedClient;
 use crate::SinkId;
 pub use crate::remote_common::ClientId;
 use crate::remote_common::fetch_asset::SendAssetResponse;
+use crate::remote_common::parameters::SendParameterResponse;
 
 /// A connected client session with the WebSocket server.
 #[derive(Debug, Clone)]
@@ -48,6 +50,14 @@ impl SendAssetResponse for Client {
                 Ok(asset) => client.send_asset_response(asset, request_id),
                 Err(err) => client.send_asset_error(err, request_id),
             }
+        }
+    }
+}
+
+impl SendParameterResponse for Client {
+    fn send_parameter_values(&self, parameters: Vec<Parameter>, request_id: Option<String>) {
+        if let Some(client) = self.client.upgrade() {
+            client.update_parameters(parameters, request_id);
         }
     }
 }

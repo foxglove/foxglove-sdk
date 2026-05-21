@@ -5,7 +5,8 @@ use parking_lot::Mutex;
 
 use crate::ChannelId;
 use crate::websocket::{
-    ChannelView, Client, ClientChannel, ClientChannelId, ClientId, Parameter, ServerListener,
+    AnyClient, ChannelView, Client, ClientChannel, ClientChannelId, ClientId,
+    GetParametersResponder, Parameter, ParameterHandler, ServerListener, SetParametersResponder,
 };
 
 #[allow(dead_code)]
@@ -246,6 +247,118 @@ impl ServerListener for RecordingServerListener {
 
     fn on_connection_graph_unsubscribe(&self) {
         self.inc_connection_graph_unsubscribe();
+    }
+}
+
+/// Behavior for the `RecordingParameterHandler` set callback: how should `set` respond?
+#[derive(Clone, Default)]
+#[allow(dead_code)] // tests pick subsets of these variants
+pub(crate) enum RecordingSetBehavior {
+    /// Respond with the parameters the handler was given.
+    #[default]
+    Echo,
+    /// Respond with the configured override.
+    With(Vec<Parameter>),
+    /// Drop the responder without responding (triggers the error fallback).
+    DropResponder,
+}
+
+/// Behavior for the `RecordingParameterHandler` get callback.
+#[derive(Clone)]
+pub(crate) enum RecordingGetBehavior {
+    /// Respond with the configured values.
+    Respond(Vec<Parameter>),
+    /// Drop the responder without responding.
+    DropResponder,
+}
+
+impl Default for RecordingGetBehavior {
+    fn default() -> Self {
+        Self::Respond(Vec::new())
+    }
+}
+
+/// Test double for [`ParameterHandler`] that records calls and lets each test tune the responses.
+pub(crate) struct RecordingParameterHandler {
+    parameters_get: Mutex<Vec<GetParameters>>,
+    parameters_set: Mutex<Vec<SetParameters>>,
+    get_behavior: Mutex<RecordingGetBehavior>,
+    set_behavior: Mutex<RecordingSetBehavior>,
+}
+
+impl RecordingParameterHandler {
+    pub fn new() -> Self {
+        Self {
+            parameters_get: Mutex::default(),
+            parameters_set: Mutex::default(),
+            get_behavior: Mutex::new(RecordingGetBehavior::default()),
+            set_behavior: Mutex::new(RecordingSetBehavior::default()),
+        }
+    }
+
+    pub fn set_get_behavior(&self, behavior: RecordingGetBehavior) {
+        *self.get_behavior.lock() = behavior;
+    }
+
+    pub fn set_set_behavior(&self, behavior: RecordingSetBehavior) {
+        *self.set_behavior.lock() = behavior;
+    }
+
+    pub fn parameters_get_len(&self) -> usize {
+        self.parameters_get.lock().len()
+    }
+
+    pub fn parameters_set_len(&self) -> usize {
+        self.parameters_set.lock().len()
+    }
+
+    pub fn take_parameters_get(&self) -> Vec<GetParameters> {
+        std::mem::take(&mut self.parameters_get.lock())
+    }
+
+    pub fn take_parameters_set(&self) -> Vec<SetParameters> {
+        std::mem::take(&mut self.parameters_set.lock())
+    }
+}
+
+impl ParameterHandler for RecordingParameterHandler {
+    fn get(
+        &self,
+        client: AnyClient,
+        names: Vec<String>,
+        request_id: Option<String>,
+        responder: GetParametersResponder,
+    ) {
+        self.parameters_get.lock().push(GetParameters {
+            client_id: client.id(),
+            param_names: names,
+            request_id,
+        });
+        let behavior = self.get_behavior.lock().clone();
+        match behavior {
+            RecordingGetBehavior::Respond(values) => responder.respond(values),
+            RecordingGetBehavior::DropResponder => drop(responder),
+        }
+    }
+
+    fn set(
+        &self,
+        client: AnyClient,
+        parameters: Vec<Parameter>,
+        request_id: Option<String>,
+        responder: SetParametersResponder,
+    ) {
+        self.parameters_set.lock().push(SetParameters {
+            client_id: client.id(),
+            parameters: parameters.clone(),
+            request_id,
+        });
+        let behavior = self.set_behavior.lock().clone();
+        match behavior {
+            RecordingSetBehavior::Echo => responder.respond(parameters),
+            RecordingSetBehavior::With(values) => responder.respond(values),
+            RecordingSetBehavior::DropResponder => drop(responder),
+        }
     }
 }
 
