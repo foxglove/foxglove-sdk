@@ -81,11 +81,8 @@ inline RemoteAccessGatewayCapabilities operator&(
 ///
 /// @note These callbacks may be invoked concurrently from multiple threads.
 /// You must synchronize access to your mutable internal state or shared resources.
-// Wrap the struct declaration in deprecation suppression so that synthesized
-// special-member functions (which trivially reference the deprecated fields
-// below) don't fire warnings at every consumer that constructs, destroys,
-// copies, or moves this struct. The field-level [[deprecated]] still warns
-// when user code reads or assigns the deprecated members directly.
+// Suppress -Wdeprecated-declarations for synthesized special members; the
+// field-level [[deprecated]] still warns on direct use.
 #if defined(__GNUC__) || defined(__clang__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"

@@ -31,13 +31,8 @@ public:
   /// @param params Parameter values to send.
   void respond(std::vector<Parameter>&& params) && noexcept;
 
-  /// @brief Default destructor. If the responder has not been consumed by
-  /// `respond()`, sends a generic error status to the requesting client; this
-  /// path is reserved for unrecoverable internal errors.
   ~GetParametersResponder() = default;
-  /// @brief Default move constructor.
   GetParametersResponder(GetParametersResponder&&) noexcept = default;
-  /// @brief Default move assignment.
   GetParametersResponder& operator=(GetParametersResponder&&) noexcept = default;
   GetParametersResponder(const GetParametersResponder&) = delete;
   GetParametersResponder& operator=(const GetParametersResponder&) = delete;
@@ -84,13 +79,8 @@ public:
   /// @param params Parameter values that were applied.
   void respond(std::vector<Parameter>&& params) && noexcept;
 
-  /// @brief Default destructor. If the responder has not been consumed by
-  /// `respond()`, sends a generic error status to the requesting client; this
-  /// path is reserved for unrecoverable internal errors.
   ~SetParametersResponder() = default;
-  /// @brief Default move constructor.
   SetParametersResponder(SetParametersResponder&&) noexcept = default;
-  /// @brief Default move assignment.
   SetParametersResponder& operator=(SetParametersResponder&&) noexcept = default;
   SetParametersResponder(const SetParametersResponder&) = delete;
   SetParametersResponder& operator=(const SetParametersResponder&) = delete;
@@ -133,11 +123,8 @@ struct ParameterHandler {
   ///
   /// Required when a `ParameterHandler` is registered.
   ///
-  /// The implementation takes ownership of `responder` and **must** eventually
-  /// complete it by calling `responder.respond(...)` exactly once (pass an
-  /// empty vector if no values are available). Letting the responder go out of
-  /// scope without responding is reserved for unrecoverable internal errors,
-  /// and sends a generic error status to the requesting client.
+  /// The implementation takes ownership of `responder`; see
+  /// `GetParametersResponder` for the completion contract.
   ///
   /// @param client_id The requesting client's ID.
   /// @param request_id A request ID unique to this client. May be std::nullopt.
@@ -156,15 +143,10 @@ struct ParameterHandler {
   ///
   /// Required when a `ParameterHandler` is registered.
   ///
-  /// The implementation takes ownership of `responder` and **must** eventually
-  /// complete it by calling `responder.respond(...)` exactly once with the
-  /// values that were actually applied (pass an empty vector if the request
-  /// could not be handled). Letting the responder go out of scope without
-  /// responding is reserved for unrecoverable internal errors, and sends a
-  /// generic error status to the requesting client. When the request carried
-  /// a request_id, the responded values are echoed back to the requester; the
-  /// responder does not notify other parameter subscribers, so the implementer
-  /// must publish applied updates separately (see `SetParametersResponder`).
+  /// The implementation takes ownership of `responder`; see
+  /// `SetParametersResponder` for the completion contract, the request_id
+  /// echo behavior, and the implementer's responsibility to broadcast applied
+  /// updates to other parameter subscribers.
   ///
   /// @param client_id The requesting client's ID.
   /// @param request_id A request ID unique to this client. May be std::nullopt.

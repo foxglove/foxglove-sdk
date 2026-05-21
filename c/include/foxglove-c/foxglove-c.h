@@ -486,8 +486,8 @@ typedef struct foxglove_gateway foxglove_gateway;
  * Obtained via the `get` callback of `foxglove_parameter_handler`. The implementation **must**
  * complete the request by calling `foxglove_get_parameters_responder_respond` exactly once (pass
  * an empty array if no values are available). It is safe to invoke that function synchronously
- * from the context of the callback. `foxglove_get_parameters_responder_drop` is reserved for
- * unrecoverable internal errors, and sends a generic error status to the requesting client.
+ * from the context of the callback. See `foxglove_get_parameters_responder_drop` for the
+ * drop-without-responding contract.
  */
 typedef struct foxglove_get_parameters_responder foxglove_get_parameters_responder;
 #endif
@@ -512,8 +512,13 @@ typedef struct foxglove_service_responder foxglove_service_responder;
  * complete the request by calling `foxglove_set_parameters_responder_respond` exactly once with
  * the values that were actually applied (pass an empty array if the request could not be
  * handled). It is safe to invoke that function synchronously from the context of the callback.
- * `foxglove_set_parameters_responder_drop` is reserved for unrecoverable internal errors, and
- * sends a generic error status to the requesting client.
+ * See `foxglove_set_parameters_responder_drop` for the drop-without-responding contract.
+ *
+ * When the request carried a `request_id`, the values passed to `respond` are echoed back to the
+ * requesting client; otherwise the responder does nothing on the wire. The responder does not
+ * notify other parameter subscribers, so the implementer is responsible for broadcasting applied
+ * updates to subscribers on each sink (for example, via `foxglove_server_publish_parameter_values`
+ * and `foxglove_gateway_publish_parameter_values`).
  */
 typedef struct foxglove_set_parameters_responder foxglove_set_parameters_responder;
 #endif
@@ -2556,10 +2561,8 @@ typedef struct foxglove_parameter_handler {
    * The `param_names` argument is guaranteed to be non-NULL. The buffer is valid for the
    * duration of this call; if the callback wishes to store these values, it must copy them out.
    *
-   * The implementation takes ownership of `responder` and **must** complete it by calling
-   * `foxglove_get_parameters_responder_respond` exactly once (pass an empty array if no values
-   * are available). `foxglove_get_parameters_responder_drop` is reserved for unrecoverable
-   * internal errors, and sends a generic error status to the requesting client.
+   * The implementation takes ownership of `responder`; see `FoxgloveGetParametersResponder`
+   * for the completion contract.
    */
   void (*get)(const void *context,
               uint32_t client_id,
@@ -2577,17 +2580,9 @@ typedef struct foxglove_parameter_handler {
    * The `params` argument is guaranteed to be non-NULL. The buffer is valid for the duration of
    * this call; if the callback wishes to store these values, it must copy them out.
    *
-   * The implementation takes ownership of `responder` and **must** complete it by calling
-   * `foxglove_set_parameters_responder_respond` exactly once with the values that were
-   * actually applied (pass an empty array if the request could not be handled).
-   * `foxglove_set_parameters_responder_drop` is reserved for unrecoverable internal errors,
-   * and sends a generic error status to the requesting client.
-   *
-   * When `request_id` is non-NULL, the values passed to `respond` are echoed back to the
-   * requesting client; otherwise the responder does nothing on the wire. The responder does
-   * not notify other parameter subscribers, so the implementer is responsible for broadcasting
-   * applied updates to subscribers on each sink (for example, via
-   * `foxglove_server_publish_parameter_values` and `foxglove_gateway_publish_parameter_values`).
+   * The implementation takes ownership of `responder`; see `FoxgloveSetParametersResponder`
+   * for the completion contract, the `request_id` echo behavior, and the implementer's
+   * responsibility to broadcast applied updates to other parameter subscribers.
    */
   void (*set)(const void *context,
               uint32_t client_id,
