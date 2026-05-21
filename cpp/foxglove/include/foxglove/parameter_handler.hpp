@@ -140,7 +140,7 @@ struct ParameterHandler {
   /// and sends a generic error status to the requesting client.
   ///
   /// @param client_id The requesting client's ID.
-  /// @param request_id A request ID unique to this client. May be empty.
+  /// @param request_id A request ID unique to this client. May be std::nullopt.
   /// @param param_names A list of parameter names to fetch, or empty to
   /// request all parameters. The buffer is valid for the duration of this
   /// call; if the callback wishes to store these values (e.g. to hand them
@@ -167,7 +167,7 @@ struct ParameterHandler {
   /// must publish applied updates separately (see `SetParametersResponder`).
   ///
   /// @param client_id The requesting client's ID.
-  /// @param request_id A request ID unique to this client. May be empty.
+  /// @param request_id A request ID unique to this client. May be std::nullopt.
   /// @param params A list of parameter values the client wishes to set. The
   /// buffer is valid for the duration of this call; if the callback wishes
   /// to store these values (e.g. to hand them off to another thread along
