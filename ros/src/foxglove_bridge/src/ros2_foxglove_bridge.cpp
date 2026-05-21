@@ -203,7 +203,7 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
       std::bind(&FoxgloveBridge::subscribeParameters, this, _1);
     sdkServerOptions.callbacks.onParametersUnsubscribe =
       std::bind(&FoxgloveBridge::unsubscribeParameters, this, _1);
-    // TODO: migrate to ParameterHandler (gasmith/fle-534-async-params-bridge).
+    // FLE-534: migrate to ParameterHandler
 #if defined(__GNUC__) || defined(__clang__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -375,7 +375,7 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
         std::bind(&FoxgloveBridge::subscribeParameters, this, _1);
       gatewayOptions.callbacks.onParametersUnsubscribe =
         std::bind(&FoxgloveBridge::unsubscribeParameters, this, _1);
-      // TODO: migrate to ParameterHandler (gasmith/fle-534-async-params-bridge).
+      // FLE-534: migrate to ParameterHandler
 #if defined(__GNUC__) || defined(__clang__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
