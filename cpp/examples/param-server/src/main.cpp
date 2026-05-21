@@ -232,9 +232,9 @@ int main() {
       );
     }
 
-    if (std::chrono::steady_clock::now() >= next_tick) {
-      auto elapsed_secs =
-        std::chrono::duration<double>(std::chrono::steady_clock::now() - start_time).count();
+    now = std::chrono::steady_clock::now();
+    if (now >= next_tick) {
+      auto elapsed_secs = std::chrono::duration<double>(now - start_time).count();
       auto elapsed = foxglove::Parameter("elapsed", elapsed_secs);
       param_store.insert_or_assign("elapsed", elapsed.clone());
       std::vector<foxglove::Parameter> to_publish;
