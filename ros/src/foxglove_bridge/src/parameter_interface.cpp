@@ -286,7 +286,7 @@ void ParameterInterface::setParams(const ParameterList& parameters,
   rclcpp::ParameterMap paramsByNode;
   for (const auto& param : parameters) {
     if (!isWhitelisted(std::string(param.name()), _paramWhitelistPatterns)) {
-      return;
+      continue;
     }
 
     const auto rosParam = toRosParam(param);
@@ -324,7 +324,7 @@ void ParameterInterface::subscribeParams(const std::vector<std::string_view>& pa
   std::unordered_set<std::string> nodesToSubscribe;
   for (const auto& paramName : paramNames) {
     if (!isWhitelisted(std::string(paramName), _paramWhitelistPatterns)) {
-      return;
+      continue;
     }
 
     const auto& [nodeName, paramN] = getNodeAndParamName(paramName);
