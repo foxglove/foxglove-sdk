@@ -222,9 +222,12 @@ try:
 
         :param topic: The channel topic name. Defaults to ``/sysinfo``.
         :param refresh_interval: How often to publish, in seconds. Defaults to ``0.5``.
-            Clamped to a minimum of 200ms.
+            Clamped to a minimum of 0.2s.
         :param context: The context on which the publisher creates its channel. Defaults to
             the global default context.
+        :returns: A handle that can be used to stop the publisher.
+
+        The caller is responsible for calling stop() on the returned handle when done; dropping the handle does not stop the background task.
         """
         return _start_sysinfo_publisher(
             topic=topic,
