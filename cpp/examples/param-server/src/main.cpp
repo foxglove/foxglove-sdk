@@ -88,7 +88,8 @@ public:
   }
 
   /// Block until an op is available, or shutdown is signalled. Returns
-  /// `std::nullopt` if the queue is shut down and empty.
+  /// `std::nullopt` if the queue is shut down and empty, or if the timeout
+  /// expires.
   std::optional<ParameterOp> pop(std::chrono::milliseconds timeout) {
     std::unique_lock<std::mutex> lock(mu_);
     cv_.wait_for(lock, timeout, [&] {
