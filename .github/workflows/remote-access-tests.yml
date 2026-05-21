@@ -17,6 +17,11 @@ jobs:
       - name: Install common dependencies
         uses: ./.github/actions/common-deps
 
+      - name: Install CUDA headers for NVENC
+        run: |
+          sudo apt-get install -y --no-install-recommends nvidia-cuda-dev
+          echo "CUDA_HOME=/usr" >> $GITHUB_ENV
+
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: stable
@@ -58,6 +63,11 @@ jobs:
       - name: Install common dependencies
         uses: ./.github/actions/common-deps
 
+      - name: Install CUDA headers for NVENC
+        run: |
+          sudo apt-get install -y --no-install-recommends nvidia-cuda-dev
+          echo "CUDA_HOME=/usr" >> $GITHUB_ENV
+
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: stable
@@ -92,6 +102,11 @@ jobs:
 
       - name: Install common dependencies
         uses: ./.github/actions/common-deps
+
+      - name: Install CUDA headers for NVENC
+        run: |
+          sudo apt-get install -y --no-install-recommends nvidia-cuda-dev
+          echo "CUDA_HOME=/usr" >> $GITHUB_ENV
 
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
