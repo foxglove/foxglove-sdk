@@ -32,7 +32,9 @@ public:
   void respond(std::vector<Parameter>&& params) && noexcept;
 
   ~GetParametersResponder() = default;
+  /// @brief Default move constructor.
   GetParametersResponder(GetParametersResponder&&) noexcept = default;
+  /// @brief Default move assignment.
   GetParametersResponder& operator=(GetParametersResponder&&) noexcept = default;
   GetParametersResponder(const GetParametersResponder&) = delete;
   GetParametersResponder& operator=(const GetParametersResponder&) = delete;
@@ -80,7 +82,9 @@ public:
   void respond(std::vector<Parameter>&& params) && noexcept;
 
   ~SetParametersResponder() = default;
+  /// @brief Default move constructor.
   SetParametersResponder(SetParametersResponder&&) noexcept = default;
+  /// @brief Default move assignment.
   SetParametersResponder& operator=(SetParametersResponder&&) noexcept = default;
   SetParametersResponder(const SetParametersResponder&) = delete;
   SetParametersResponder& operator=(const SetParametersResponder&) = delete;
