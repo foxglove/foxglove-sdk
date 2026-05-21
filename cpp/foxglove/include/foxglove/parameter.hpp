@@ -21,6 +21,12 @@ struct foxglove_parameter_array;
 
 namespace foxglove {
 
+/// @cond foxglove_internal
+namespace internal {
+struct ForwarderAccess;
+}
+/// @endcond
+
 /// @brief An optional type hint for a `Parameter`, used to disambiguate values whose intended
 /// type cannot be inferred from the wire representation alone.
 ///
@@ -720,6 +726,7 @@ private:
   friend class RemoteAccessGateway;
   friend class GetParametersResponder;
   friend class SetParametersResponder;
+  friend struct internal::ForwarderAccess;
 
   struct Deleter {
     void operator()(foxglove_parameter_array* ptr) const noexcept;

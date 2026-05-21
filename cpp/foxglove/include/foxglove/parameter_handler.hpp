@@ -14,6 +14,12 @@ struct foxglove_set_parameters_responder;
 
 namespace foxglove {
 
+/// @cond foxglove_internal
+namespace internal {
+struct ForwarderAccess;
+}
+/// @endcond
+
 /// @brief Responder for a client `getParameters` request.
 ///
 /// This is the means by which a parameter handler responds to a get request
@@ -47,6 +53,7 @@ public:
 private:
   friend class WebSocketServer;
   friend class RemoteAccessGateway;
+  friend struct internal::ForwarderAccess;
 
   struct Deleter {
     void operator()(foxglove_get_parameters_responder* ptr) const noexcept;
@@ -102,6 +109,7 @@ public:
 private:
   friend class WebSocketServer;
   friend class RemoteAccessGateway;
+  friend struct internal::ForwarderAccess;
 
   struct Deleter {
     void operator()(foxglove_set_parameters_responder* ptr) const noexcept;
