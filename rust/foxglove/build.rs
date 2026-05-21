@@ -15,7 +15,7 @@
 //! performs the same `cuda.h` lookup (`$CUDA_HOME/include/cuda.h`,
 //! defaulting to `/usr/local/cuda/include/cuda.h`). If the header is
 //! missing on a target where webrtc-sys would otherwise have built NVENC
-//! support, the build fails with installation instructions.
+//! support, the build fails with a reference to the docs.
 
 use std::env;
 use std::path::PathBuf;
@@ -47,11 +47,9 @@ fn main() {
     // (see webrtc-sys/build.rs). Match the same set of targets, expressed in
     // cargo's `CARGO_CFG_TARGET_ARCH` vocabulary (which uses "x86" rather
     // than the "i686" upstream parses out of the target triple).
-    if target_os != "linux" {
-        return;
-    }
-    let cuda_supported_arch =
-        matches!(target_arch.as_str(), "x86_64" | "x86" | "aarch64") || target_arch.contains("arm");
+    let cuda_supported_arch = target_os == "linux"
+        && (matches!(target_arch.as_str(), "x86_64" | "x86" | "aarch64")
+            || target_arch.contains("arm"));
     if !cuda_supported_arch {
         panic!(
             "The `require-cuda` feature is enabled, but the target architecture `{target_arch}` does not support NVENC.\n\
