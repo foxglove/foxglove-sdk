@@ -2441,6 +2441,10 @@ typedef struct foxglove_gateway_callbacks {
    * This function should return the named parameters, or all parameters if `param_names` is
    * empty. The return value must be allocated with `foxglove_parameter_array_create`. Ownership
    * of this value is transferred to the callee. A NULL return value is treated as empty.
+   *
+   * Deprecated: prefer `foxglove_gateway_options::parameter_handler`. If a
+   * `FoxgloveParameterHandler` is registered, it takes precedence and this callback is not
+   * invoked.
    */
   struct foxglove_parameter_array *(*on_get_parameters)(const void *context,
                                                         uint32_t client_id,
@@ -2461,6 +2465,10 @@ typedef struct foxglove_gateway_callbacks {
    * This function should return the updated parameters. The return value must be allocated with
    * `foxglove_parameter_array_create`. Ownership is transferred to the callee. A NULL return
    * value is treated as empty.
+   *
+   * Deprecated: prefer `foxglove_gateway_options::parameter_handler`. If a
+   * `FoxgloveParameterHandler` is registered, it takes precedence and this callback is not
+   * invoked.
    */
   struct foxglove_parameter_array *(*on_set_parameters)(const void *context,
                                                         uint32_t client_id,
@@ -2808,6 +2816,10 @@ typedef struct foxglove_server_callbacks {
    * empty. The return value must be allocated with `foxglove_parameter_array_create`. Ownership
    * of this value is transferred to the callee, who is responsible for freeing it. A NULL return
    * value is treated as an empty array.
+   *
+   * Deprecated: prefer `foxglove_server_options::parameter_handler`. If a
+   * `FoxgloveParameterHandler` is registered, it takes precedence and this callback is not
+   * invoked.
    */
   struct foxglove_parameter_array *(*on_get_parameters)(const void *context,
                                                         uint32_t client_id,
@@ -2831,6 +2843,10 @@ typedef struct foxglove_server_callbacks {
    *
    * All clients subscribed to updates for the returned parameters will be notified. Note that if a
    * returned parameter is unset, it will not be published to clients.
+   *
+   * Deprecated: prefer `foxglove_server_options::parameter_handler`. If a
+   * `FoxgloveParameterHandler` is registered, it takes precedence and this callback is not
+   * invoked.
    */
   struct foxglove_parameter_array *(*on_set_parameters)(const void *context,
                                                         uint32_t client_id,

@@ -269,6 +269,10 @@ pub struct FoxgloveServerCallbacks {
     /// empty. The return value must be allocated with `foxglove_parameter_array_create`. Ownership
     /// of this value is transferred to the callee, who is responsible for freeing it. A NULL return
     /// value is treated as an empty array.
+    ///
+    /// Deprecated: prefer `foxglove_server_options::parameter_handler`. If a
+    /// `FoxgloveParameterHandler` is registered, it takes precedence and this callback is not
+    /// invoked.
     pub on_get_parameters: Option<
         unsafe extern "C" fn(
             context: *const c_void,
@@ -294,6 +298,10 @@ pub struct FoxgloveServerCallbacks {
     ///
     /// All clients subscribed to updates for the returned parameters will be notified. Note that if a
     /// returned parameter is unset, it will not be published to clients.
+    ///
+    /// Deprecated: prefer `foxglove_server_options::parameter_handler`. If a
+    /// `FoxgloveParameterHandler` is registered, it takes precedence and this callback is not
+    /// invoked.
     pub on_set_parameters: Option<
         unsafe extern "C" fn(
             context: *const c_void,

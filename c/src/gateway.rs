@@ -248,6 +248,10 @@ pub struct FoxgloveGatewayCallbacks {
     /// This function should return the named parameters, or all parameters if `param_names` is
     /// empty. The return value must be allocated with `foxglove_parameter_array_create`. Ownership
     /// of this value is transferred to the callee. A NULL return value is treated as empty.
+    ///
+    /// Deprecated: prefer `foxglove_gateway_options::parameter_handler`. If a
+    /// `FoxgloveParameterHandler` is registered, it takes precedence and this callback is not
+    /// invoked.
     pub on_get_parameters: Option<
         unsafe extern "C" fn(
             context: *const c_void,
@@ -271,6 +275,10 @@ pub struct FoxgloveGatewayCallbacks {
     /// This function should return the updated parameters. The return value must be allocated with
     /// `foxglove_parameter_array_create`. Ownership is transferred to the callee. A NULL return
     /// value is treated as empty.
+    ///
+    /// Deprecated: prefer `foxglove_gateway_options::parameter_handler`. If a
+    /// `FoxgloveParameterHandler` is registered, it takes precedence and this callback is not
+    /// invoked.
     pub on_set_parameters: Option<
         unsafe extern "C" fn(
             context: *const c_void,
