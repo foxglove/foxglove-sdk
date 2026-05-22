@@ -162,6 +162,30 @@ impl Encode for SystemInfo {
 /// background task that periodically logs a SystemInfo message to the channel
 /// with stats on CPU and memory usage for the process and the system.
 ///
+/// # Published metrics
+///
+/// Each message is a JSON object with a JSON Schema attached to the channel.
+/// The following fields are published:
+///
+/// | Field | Type | Description |
+/// | --- | --- | --- |
+/// | `process_memory` | number | Resident memory used by the SDK process, in bytes. |
+/// | `process_virtual_memory` | number | Virtual memory used by the SDK process, in bytes. |
+/// | `process_cpu_percent` | number | CPU usage for the SDK process, as a percent of total system CPU capacity (0.0 to 100.0). |
+/// | `process_cpu_cores` | number | CPU usage for the SDK process, expressed in core-equivalents (0.0 to `num_cpus`). 1.0 means a single logical CPU is fully utilized. |
+/// | `total_cpu_percent` | number | Total CPU usage across all logical CPUs on the system, as a percent (0.0 to 100.0). |
+/// | `total_cpu_cores` | number | Total CPU usage across the system, expressed in core-equivalents (0.0 to `num_cpus`). 1.0 means one logical CPU's worth of work is being done. |
+/// | `num_cpus` | integer | Number of logical CPUs on the system. |
+/// | `total_memory` | number | Total physical memory on the system, in bytes. |
+/// | `used_memory` | number | Used physical memory on the system, in bytes. |
+/// | `total_swap` | number | Total swap space on the system, in bytes. |
+/// | `used_swap` | number | Used swap space on the system, in bytes. |
+/// | `kernel_version` | string | Kernel version string, or empty if unknown. |
+/// | `os_version` | string | OS version string, or empty if unknown. |
+///
+/// CPU usage values are computed from the difference between consecutive
+/// samples, so they reflect activity over the most recent refresh interval.
+///
 /// # Example
 ///
 /// ```no_run
