@@ -32,6 +32,8 @@ struct SystemInfoOptions final {
   std::optional<std::chrono::milliseconds> refresh_interval;
 };
 
+// Keep this comment in sync with rust/foxglove/src/system_info.rs
+
 /// @brief A publisher that periodically logs process and system statistics on a channel.
 ///
 /// The publisher creates a channel on the configured Context (defaulting to `/sysinfo`)

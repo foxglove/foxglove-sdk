@@ -181,6 +181,7 @@ try:
     from ._foxglove_py import SystemInfoPublisher
     from ._foxglove_py import start_sysinfo_publisher as _start_sysinfo_publisher
 
+    # Keep this doc string in sync with rust/foxglove/src/system_info.rs
     def start_sysinfo_publisher(
         *,
         topic: str | None = None,
