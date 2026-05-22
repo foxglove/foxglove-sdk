@@ -220,7 +220,8 @@ try:
         CPU usage values are computed from the difference between consecutive samples, so they
         reflect activity over the most recent refresh interval.
 
-        The caller is responsible for calling stop() on the returned handle when done; dropping the handle does not stop the background task.
+        The caller is responsible for calling stop() on the returned handle when done;
+        dropping the handle does not stop the background task.
 
         :param topic: The channel topic name. Defaults to ``/sysinfo``.
         :param refresh_interval: How often to publish, in seconds. Defaults to ``0.5``.
