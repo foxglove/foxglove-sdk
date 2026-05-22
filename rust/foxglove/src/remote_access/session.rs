@@ -2183,6 +2183,7 @@ impl RemoteAccessSession {
                 // are software-only in our builds, so H.264 is at worst parity elsewhere.
                 let publish_options = TrackPublishOptions {
                     video_codec: VideoCodec::H264,
+                    simulcast: false,
                     ..Default::default()
                 };
                 match local_participant
