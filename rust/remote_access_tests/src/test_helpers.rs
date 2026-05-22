@@ -564,6 +564,45 @@ impl ViewerConnection {
         }
     }
 
+    /// Waits for a `TrackSubscribed` event for a video track and returns
+    /// `(track_name, video_track, publication)`.
+    ///
+    /// Use this when the test needs to wrap the track in a `NativeVideoStream`
+    /// to receive decoded frames (e.g. to validate packet-trailer metadata).
+    /// Errors if the next subscribed track is not a video track.
+    pub async fn expect_video_track_subscribed(
+        &mut self,
+    ) -> Result<(
+        String,
+        livekit::prelude::RemoteVideoTrack,
+        livekit::prelude::RemoteTrackPublication,
+    )> {
+        let deadline = tokio::time::Instant::now() + EVENT_TIMEOUT;
+        loop {
+            let event = tokio::time::timeout_at(deadline, self.events.recv())
+                .await
+                .context("timeout waiting for TrackSubscribed event")?
+                .context("room events channel closed")?;
+            match event {
+                RoomEvent::TrackSubscribed {
+                    track, publication, ..
+                } => {
+                    let name = publication.name();
+                    match track {
+                        livekit::prelude::RemoteTrack::Video(video) => {
+                            return Ok((name, video, publication));
+                        }
+                        other => anyhow::bail!("expected video track for {name}, got: {other:?}"),
+                    }
+                }
+                RoomEvent::DataTrackPublished(track) => {
+                    self.pending_data_tracks.push(track);
+                }
+                _ => continue,
+            }
+        }
+    }
+
     /// Waits for a `TrackUnsubscribed` room event and returns the track name.
     pub async fn expect_track_unsubscribed(&mut self) -> Result<String> {
         let deadline = tokio::time::Instant::now() + EVENT_TIMEOUT;
