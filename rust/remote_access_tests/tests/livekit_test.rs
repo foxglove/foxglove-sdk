@@ -544,6 +544,51 @@ async fn livekit_video_track_lifecycle() -> Result<()> {
     Ok(())
 }
 
+/// Test that the gateway advertises the `PtfUserTimestamp` packet-trailer feature on its
+/// published video tracks, so receivers know to look for the original image capture
+/// timestamp in `VideoFrame::frame_metadata.user_timestamp`.
+#[traced_test]
+#[ignore]
+#[tokio::test]
+#[serial(livekit)]
+async fn livekit_video_track_advertises_user_timestamp_feature() -> Result<()> {
+    use livekit::prelude::PacketTrailerFeature;
+
+    let ctx = foxglove::Context::new();
+
+    let video_channel = ctx
+        .channel_builder("/camera")
+        .message_encoding("protobuf")
+        .schema(Schema::new("foxglove.RawImage", "protobuf", &b""[..]))
+        .build_raw()
+        .context("create video channel")?;
+
+    let gw = TestGateway::start(&ctx).await?;
+    let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+
+    let _server_info = viewer.expect_server_info().await?;
+    let advertise = viewer.expect_advertise().await?;
+    let channel_id = advertise.channels[0].id;
+
+    viewer
+        .subscribe_video_and_wait(&[channel_id], &video_channel)
+        .await?;
+    let (track_name, publication) = viewer.expect_track_subscribed_publication().await?;
+    assert_eq!(track_name, format!("video-ch-{channel_id}"));
+
+    let features = publication.packet_trailer_features();
+    assert!(
+        features.contains(&PacketTrailerFeature::PtfUserTimestamp),
+        "published video track must advertise PtfUserTimestamp so receivers can recover \
+         the original image timestamp from frame_metadata.user_timestamp; got: {features:?}"
+    );
+    info!("video track advertises packet_trailer_features = {features:?}");
+
+    viewer.close().await?;
+    gw.stop().await?;
+    Ok(())
+}
+
 /// Test that a video track can be re-established after an unsubscribe/resubscribe cycle.
 /// Validates that the video schema persists across teardown so the track can be recreated.
 #[traced_test]

@@ -535,6 +535,17 @@ impl ViewerConnection {
 
     /// Waits for a `TrackSubscribed` room event and returns the track name.
     pub async fn expect_track_subscribed(&mut self) -> Result<String> {
+        let (name, _publication) = self.expect_track_subscribed_publication().await?;
+        Ok(name)
+    }
+
+    /// Waits for a `TrackSubscribed` room event and returns `(track_name, publication)`.
+    ///
+    /// Use this when the test needs to inspect publication metadata (e.g.
+    /// `packet_trailer_features()`) rather than just observe that a track appeared.
+    pub async fn expect_track_subscribed_publication(
+        &mut self,
+    ) -> Result<(String, livekit::prelude::RemoteTrackPublication)> {
         let deadline = tokio::time::Instant::now() + EVENT_TIMEOUT;
         loop {
             let event = tokio::time::timeout_at(deadline, self.events.recv())
@@ -543,7 +554,7 @@ impl ViewerConnection {
                 .context("room events channel closed")?;
             match event {
                 RoomEvent::TrackSubscribed { publication, .. } => {
-                    return Ok(publication.name());
+                    return Ok((publication.name(), publication));
                 }
                 RoomEvent::DataTrackPublished(track) => {
                     self.pending_data_tracks.push(track);
