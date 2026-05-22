@@ -52,10 +52,10 @@ fn main() {
             || target_arch.contains("arm"));
     if !cuda_supported_arch {
         panic!(
-            "The `require-cuda` feature is enabled, but the target architecture `{target_arch}` does not support NVENC.\n\
-             NVENC is only built by webrtc-sys on Linux for x86_64, x86, aarch64, and arm targets.\n\
-             Disable the `require-cuda` feature for this target.\n\
-             Learn more: https://docs.rs/foxglove/latest/foxglove/#nvenc-hardware-acceleration"
+            "The `require-cuda` feature is enabled, but NVENC is only built by webrtc-sys on Linux \n\
+                for x86_64, x86, aarch64, and arm targets, not `{target_os}-{target_arch}`.\n\
+                Disable the `require-cuda` feature for this target.\n\
+                Learn more: https://docs.rs/foxglove/latest/foxglove/#nvenc-hardware-acceleration"
         );
     }
 
