@@ -2178,9 +2178,11 @@ impl RemoteAccessSession {
             let session = self.clone();
             tokio::spawn(async move {
                 let local_track = LocalTrack::Video(track);
-                // Prefer H.264 so that the libwebrtc VAAPI encoder (H.264-only) can be used
-                // on Linux hosts that have libva + a VA driver available. VP8/VP9/AV1 paths
+                // Prefer H.264 so that the libwebrtc nvenc encoder (H.264-only) can be used
+                // on Linux hosts that have nvenc available. VP8/VP9/AV1 paths
                 // are software-only in our builds, so H.264 is at worst parity elsewhere.
+                // Disable simulcast. We expect viewers will be mostly homogenous, and
+                // simulcast is a lot of work for the robot without much to gain.
                 let publish_options = TrackPublishOptions {
                     video_codec: VideoCodec::H264,
                     simulcast: false,
