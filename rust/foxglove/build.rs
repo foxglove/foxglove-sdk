@@ -53,9 +53,9 @@ fn main() {
     if !cuda_supported_arch {
         panic!(
             "The `require-cuda` feature is enabled, but NVENC is only built by webrtc-sys on Linux \n\
-                for x86_64, x86, aarch64, and arm targets, not `{target_os}-{target_arch}`.\n\
-                Disable the `require-cuda` feature for this target.\n\
-                Learn more: https://docs.rs/foxglove/latest/foxglove/#nvenc-hardware-acceleration"
+            for x86_64, x86, aarch64, and arm targets, not `{target_os}-{target_arch}`.\n\
+            Disable the `require-cuda` feature for this target.\n\
+            Learn more: https://docs.rs/foxglove/latest/foxglove/#nvenc-hardware-acceleration"
         );
     }
 
