@@ -41,6 +41,7 @@ using namespace std::chrono_literals;
 namespace {
 
 // Set by the SIGINT handler.
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 std::atomic<bool> g_shutdown{false};
 static_assert(decltype(g_shutdown)::is_always_lock_free);
 
