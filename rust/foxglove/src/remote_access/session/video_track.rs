@@ -278,6 +278,15 @@ fn build_video_frame(
     // receiving app can recover on every decoded frame. The track must be
     // published with `TrackPublishOptions::packet_trailer_features.user_timestamp
     // = true` for this to actually traverse the wire.
+    //
+    // Note: FrameMetadata::user_timestamp is documented as microseconds
+    // but we store nanoseconds here. This works because this is both serialized
+    // and deserialized as a 64-bit integer (PacketTrailerMetadata.userTimestamp is a bigint in JavaScript)
+    // and the foxglove app expects a nanoseconds timestamp.
+    //
+    // However, libwebrtc keys its trailer map by capture_time_us / 1000 (ms resolution)
+    // Multiple frames within the same millisecond will collide; only the last one's user_timestamp survives the lookup.
+    // We're not expecting frame rates in the kilohertz range, so this acceptable.
     let frame = VideoFrame {
         rotation: VideoRotation::VideoRotation0,
         timestamp_us: (timestamp_ns / 1000) as i64,
@@ -403,7 +412,10 @@ mod tests {
         // timestamp_us continues to be derived from the same source.
         assert_eq!(frame.timestamp_us, (expected_ns / 1000) as i64);
         assert_eq!(metadata.frame_id, "camera_optical_frame");
-        assert_eq!(metadata.encoding, ImageEncoding::Raw(RawImageEncoding::Rgb8));
+        assert_eq!(
+            metadata.encoding,
+            ImageEncoding::Raw(RawImageEncoding::Rgb8)
+        );
     }
 
     #[test]

@@ -652,7 +652,7 @@ async fn livekit_video_frame_user_timestamp_round_trips() -> Result<()> {
     viewer
         .subscribe_video_and_wait(&[channel_id], &video_channel)
         .await?;
-    let (track_name, video_track, _publication) = viewer.expect_video_track_subscribed().await?;
+    let (track_name, video_track) = viewer.expect_video_track_subscribed().await?;
     assert_eq!(track_name, format!("video-ch-{channel_id}"));
 
     // Construct the receiver-side stream before we start publishing so we don't

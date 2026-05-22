@@ -565,18 +565,17 @@ impl ViewerConnection {
     }
 
     /// Waits for a `TrackSubscribed` event for a video track and returns
-    /// `(track_name, video_track, publication)`.
+    /// `(track_name, video_track)`.
     ///
     /// Use this when the test needs to wrap the track in a `NativeVideoStream`
     /// to receive decoded frames (e.g. to validate packet-trailer metadata).
-    /// Errors if the next subscribed track is not a video track.
+    ///
+    /// The next track subscribed on the wire must be a video track; otherwise this
+    /// fails permanently. Use [`expect_track_subscribed_publication`] if you need
+    /// to tolerate other track kinds (e.g. audio arriving first).
     pub async fn expect_video_track_subscribed(
         &mut self,
-    ) -> Result<(
-        String,
-        livekit::prelude::RemoteVideoTrack,
-        livekit::prelude::RemoteTrackPublication,
-    )> {
+    ) -> Result<(String, livekit::prelude::RemoteVideoTrack)> {
         let deadline = tokio::time::Instant::now() + EVENT_TIMEOUT;
         loop {
             let event = tokio::time::timeout_at(deadline, self.events.recv())
@@ -590,7 +589,7 @@ impl ViewerConnection {
                     let name = publication.name();
                     match track {
                         livekit::prelude::RemoteTrack::Video(video) => {
-                            return Ok((name, video, publication));
+                            return Ok((name, video));
                         }
                         other => anyhow::bail!("expected video track for {name}, got: {other:?}"),
                     }
