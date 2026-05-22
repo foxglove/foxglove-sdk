@@ -317,8 +317,8 @@
 //! access gateway. Without it, the gateway falls back to software H.264 encoding, which is
 //! slower and lower quality.
 //!
-//! NVENC requires `cuda.h` to be present at build time, defaulting to `/usr/local/cuda/include/cuda.h`
-//! when `CUDA_HOME` is unset.
+//! NVENC requires `cuda.h` to be present at `/usr/local/cuda/include/cuda.h`
+//! when `CUDA_HOME` is unset, otherwise at $CUDA_HOME/include/cuda.h.
 //!
 //! On Ubuntu you can install the headers with `apt install nvidia-cuda-toolkit` or `apt install nvidia-cuda-dev`.
 //! If that places `cuda.h` at `/usr/include/cuda.h` rather than `/usr/local/cuda/include/`,
