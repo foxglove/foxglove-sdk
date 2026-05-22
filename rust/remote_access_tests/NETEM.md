@@ -31,6 +31,7 @@ graph TD
 ```
 
 **Traffic flow (gateway example):**
+
 - gateway → LiveKit: runner sends, passes through gateway netem sidecar egress (upload shaping)
 - LiveKit → gateway: LiveKit sends, passes through LiveKit netem sidecar egress, classified to gateway class (download shaping)
 
@@ -101,14 +102,14 @@ card traffic traverses the impaired gateway link (upload shaped by
 
 ## Default impairment profiles
 
-When no NETEM_* environment (see Custom Impairment) variables are set, the impairment is:
+When no NETEM\_\* environment (see Custom Impairment) variables are set, the impairment is:
 
-| Link | Direction | Default | Simulates |
-|------|-----------|---------|-----------|
-| Gateway ↔ LiveKit | upload (gateway → LK) | delay 30ms 10ms loss 2% rate 15mbit | Device on Starlink |
+| Link               | Direction               | Default                              | Simulates          |
+| ------------------ | ----------------------- | ------------------------------------ | ------------------ |
+| Gateway ↔ LiveKit | upload (gateway → LK)   | delay 30ms 10ms loss 2% rate 15mbit  | Device on Starlink |
 | Gateway ↔ LiveKit | download (LK → gateway) | delay 30ms 10ms loss 2% rate 100mbit | Device on Starlink |
-| Viewer ↔ LiveKit | upload (viewer → LK) | delay 5ms rate 100mbit | User on fiber |
-| Viewer ↔ LiveKit | download (LK → viewer) | delay 5ms rate 500mbit | User on fiber |
+| Viewer ↔ LiveKit  | upload (viewer → LK)    | delay 5ms rate 100mbit               | User on fiber      |
+| Viewer ↔ LiveKit  | download (LK → viewer)  | delay 5ms rate 500mbit               | User on fiber      |
 
 ## Custom impairment
 
@@ -127,7 +128,7 @@ yarn start-netem --perlink
 
 Update impairment without restarting containers or dropping connections. Only newly enqueued packets use the updated parameters.
 
-Each update replaces *all* settings. Replacing "delay 500ms loss 20%" with "delay 400ms" (loss is not mentioned) *resets* loss to 0%.
+Each update replaces _all_ settings. Replacing "delay 500ms loss 20%" with "delay 400ms" (loss is not mentioned) _resets_ loss to 0%.
 
 ```sh
 COMPOSE="docker compose -f docker-compose.yaml -f docker-compose.netem.yml -f docker-compose.netem-livekit.yml"
@@ -145,6 +146,64 @@ $COMPOSE exec netem python3 /netem_impair.py delay 100ms loss 3%
 > **Limitation:** Per-link download impairment cannot be updated independently
 > with `netem_impair.py`. It updates all netem qdiscs at once. To change a
 > single link's download, restart the stack with updated env vars.
+
+## Streaming heavy topics under uplink congestion
+
+Play back a heavy MCAP recording (e.g. point clouds) from inside the
+`gateway-runner` container so its egress to LiveKit traverses the
+`gateway-netem` sidecar. Use this to experience Foxglove under bandwidth-bound
+conditions and to compare profiles live.
+
+### Prerequisites
+
+- `host.docker.internal` set up on macOS (see the per-link Quick start above).
+- The Foxglove app stack running on the host with `LIVEKIT_HOST` overridden,
+  same as in the per-link Quick start.
+- An MCAP recording on the host. Provide its **absolute** path via
+  `MCAP_HOST_PATH` (or as the positional arg to `yarn stream-mcap`).
+
+### Run it
+
+```sh
+# Terminal 1: start the per-link stack with severe gateway upload.
+NETEM_GATEWAY_UPLOAD="delay 100ms 30ms loss 5% rate 2mbit" \
+yarn start-netem --perlink
+
+# Terminal 2: stream a heavy MCAP through gateway-runner.
+FOXGLOVE_API_URL=http://localhost:3000/api \
+FOXGLOVE_DEVICE_TOKEN=fox_dt_... \
+MCAP_HOST_PATH=/abs/path/to/heavy.mcap \
+yarn stream-mcap
+```
+
+`yarn stream-mcap` bind-mounts the file at `/workspace/recording.mcap` inside
+the container (via `MCAP_HOST_PATH` on `docker-compose.netem-livekit.yml`),
+builds `example_remote_access_stream_mcap` (~90s the first time, incremental
+thereafter), and runs it. Open `http://localhost:8080` and connect to the
+device to watch the playback under the active impairment.
+
+### Switch profiles mid-stream
+
+While the stream is running, change the gateway-upload impairment without
+restarting the stack:
+
+```sh
+yarn netem-impair --profile starlink     # delay 30ms 10ms loss 2% rate 15mbit
+yarn netem-impair --profile 4g           # delay 50ms 15ms loss 3% rate 10mbit
+yarn netem-impair --profile wifi-walls   # delay 15ms 10ms loss 8% rate 2mbit
+yarn netem-impair --profile severe       # delay 100ms 30ms loss 5% rate 2mbit
+yarn netem-impair --profile pristine     # delay 0ms
+
+# Or pass raw netem args:
+yarn netem-impair -- delay 500ms loss 10%
+```
+
+`severe` is tuned to saturate heavy-topic uplinks; adjust from there.
+
+> **Limitation:** `yarn netem-impair` only affects the gateway upload link.
+> Per-link downloads (`NETEM_GATEWAY_DOWNLOAD`, `NETEM_VIEWER_DOWNLOAD`) and
+> the viewer upload (`NETEM_VIEWER_UPLOAD`) require restarting the stack with
+> new env vars — see "Changing impairment live" above for why.
 
 ## Scenarios
 

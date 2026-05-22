@@ -19,8 +19,10 @@
     "generate": "ts-node ./scripts/generate.ts",
     "lint:ci": "eslint .",
     "lint": "eslint --fix .",
+    "netem-impair": "ts-node ./scripts/netemImpair.ts",
     "run-python-sdk-examples": "ts-node ./scripts/runPythonSdkExamples.ts --install-sdk-from-path",
     "start-netem": "ts-node ./scripts/startNetem.ts",
+    "stream-mcap": "ts-node ./scripts/streamMcap.ts",
     "test": "jest"
   },
   "devDependencies": {

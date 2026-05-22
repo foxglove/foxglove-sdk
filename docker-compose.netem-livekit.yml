@@ -22,6 +22,14 @@
 #     network (e.g., fiber).
 #   - The netem sidecar classifies egress from LiveKit by destination IP using
 #     HTB + u32 filters, applying configurable impairment per link.
+#
+# MCAP mount:
+#   gateway-runner bind-mounts `${MCAP_HOST_PATH:-./scripts/fixtures/empty.mcap}`
+#   at `/workspace/recording.mcap` so the `remote_access_stream_mcap` example
+#   can play back a host-side recording from inside the container. Set
+#   MCAP_HOST_PATH to an absolute path before `yarn start-netem --perlink` (or
+#   use `yarn stream-mcap`, which sets it for you). With no override, the empty
+#   fixture is mounted so the stack still comes up cleanly.
 
 networks:
   perlink:
@@ -58,6 +66,7 @@ services:
       - netem-cargo-registry:/usr/local/cargo/registry
       - netem-cargo-git:/usr/local/cargo/git
       - netem-target:/workspace/target-docker
+      - ${MCAP_HOST_PATH:-./scripts/fixtures/empty.mcap}:/workspace/recording.mcap:ro
     environment:
       CARGO_TARGET_DIR: /workspace/target-docker
       LIVEKIT_URL: "http://10.99.0.2:7880"
