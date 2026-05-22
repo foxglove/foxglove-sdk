@@ -48,7 +48,6 @@ jobs:
             gcc g++ libglib2.0-dev libva-dev  \
             libwebsockets-dev nlohmann-json3-dev
           echo "/usr/lib/llvm-19/bin" >> $GITHUB_PATH
-          echo "CUDA_HOME=/usr" >> $GITHUB_ENV
       - run: clang-format --version
       - run: clang-tidy --version
       - run: make lint
