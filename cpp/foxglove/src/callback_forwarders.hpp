@@ -217,9 +217,9 @@ void wireSinkChannelFilter(
 
 /// Validate and wire a ParameterHandler. Returns ValueError if exactly one of
 /// onGet/onSet is set. If both are unset, leaves c_options.parameter_handler
-/// untouched and returns nullopt.
+/// untouched and returns Ok.
 template<class COptions>
-std::optional<FoxgloveError> wireParameterHandler(
+FoxgloveError wireParameterHandler(
   COptions& c_options, foxglove_parameter_handler& c_handler, ParameterHandler&& cpp_handler,
   std::unique_ptr<ParameterHandler>& out
 ) {
@@ -230,14 +230,14 @@ std::optional<FoxgloveError> wireParameterHandler(
     return FoxgloveError::ValueError;
   }
   if (!has_on_get) {
-    return std::nullopt;
+    return FoxgloveError::Ok;
   }
   out = std::make_unique<ParameterHandler>(std::move(cpp_handler));
   c_handler.context = out.get();
   c_handler.get = &forwardParameterHandlerGet;
   c_handler.set = &forwardParameterHandlerSet;
   c_options.parameter_handler = &c_handler;
-  return std::nullopt;
+  return FoxgloveError::Ok;
 }
 
 }  // namespace foxglove::internal

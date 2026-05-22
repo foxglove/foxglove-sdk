@@ -82,7 +82,7 @@ void forwardOnClientUnadvertise(
 foxglove_qos_profile forwardQosClassifier(
   const void* context, const foxglove_channel_descriptor* channel
 ) {
-  if (!context) {
+  if (context == nullptr) {
     return {FOXGLOVE_RELIABILITY_LOSSY};
   }
   try {
@@ -177,7 +177,9 @@ bool wireGatewayCallbacks(foxglove_gateway_callbacks& c, const RemoteAccessGatew
 
 }  // namespace
 
-FoxgloveResult<RemoteAccessGateway> RemoteAccessGateway::create(RemoteAccessGatewayOptions&& options
+FoxgloveResult<RemoteAccessGateway> RemoteAccessGateway::create(
+  RemoteAccessGatewayOptions&&
+    options  // NOLINT(cppcoreguidelines-rvalue-reference-param-not-moved)
 ) {
   foxglove_internal_register_cpp_wrapper();
 
@@ -230,8 +232,9 @@ FoxgloveResult<RemoteAccessGateway> RemoteAccessGateway::create(RemoteAccessGate
   foxglove_parameter_handler c_parameter_handler = {};
   if (auto err = internal::wireParameterHandler(
         c_options, c_parameter_handler, std::move(options.parameter_handler), parameter_handler
-      )) {
-    return tl::unexpected(*err);
+      );
+      err != FoxgloveError::Ok) {
+    return tl::unexpected(err);
   }
 
   // Optional API URL

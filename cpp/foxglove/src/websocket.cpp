@@ -203,7 +203,9 @@ bool wireServerCallbacks(foxglove_server_callbacks& c, const WebSocketServerCall
 
 }  // namespace
 
-FoxgloveResult<WebSocketServer> WebSocketServer::create(WebSocketServerOptions&& options) {
+FoxgloveResult<WebSocketServer> WebSocketServer::create(
+  WebSocketServerOptions&& options  // NOLINT(cppcoreguidelines-rvalue-reference-param-not-moved)
+) {
   foxglove_internal_register_cpp_wrapper();
 
   foxglove_server_callbacks c_callbacks = {};
@@ -242,8 +244,9 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(WebSocketServerOptions&&
   foxglove_parameter_handler c_parameter_handler = {};
   if (auto err = internal::wireParameterHandler(
         c_options, c_parameter_handler, std::move(options.parameter_handler), parameter_handler
-      )) {
-    return tl::unexpected(*err);
+      );
+      err != FoxgloveError::Ok) {
+    return tl::unexpected(err);
   }
 
   std::vector<foxglove_key_value> server_info;

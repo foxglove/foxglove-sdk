@@ -32,7 +32,7 @@ void forwardFetchAsset(
 }
 
 bool forwardSinkChannelFilter(const void* context, const foxglove_channel_descriptor* channel) {
-  if (!context) {
+  if (context == nullptr) {
     return true;
   }
   try {
@@ -78,15 +78,11 @@ void forwardParameterHandlerSet(
   // sends the generic error to the client if anything below throws.
   auto responder = ForwarderAccess::makeSetResponder(c_responder);
   callbackGuard("ParameterHandler.onSet", [&] {
-    if (c_params == nullptr) {
-      // Should not happen; the C implementation never passes a null pointer.
-      std::move(responder).respond({});
-      return;
-    }
     std::optional<std::string_view> request_id;
     if (c_request_id != nullptr) {
       request_id.emplace(c_request_id->data, c_request_id->len);
     }
+    // The C ABI guarantees that c_params is never null.
     (static_cast<const ParameterHandler*>(context))
       ->onSet(
         client_id, request_id, ParameterArrayView(c_params).parameters(), std::move(responder)
