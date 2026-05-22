@@ -28,8 +28,13 @@ public:
   ///
   /// Entries with an unset value are dropped before serialization.
   ///
+  /// May throw `std::runtime_error` if the underlying parameter-array
+  /// allocation fails. If this happens, the responder is left intact;
+  /// dropping it (without another `respond()`) sends the generic error
+  /// status to the client.
+  ///
   /// @param params Parameter values to send.
-  void respond(std::vector<Parameter>&& params) && noexcept;
+  void respond(std::vector<Parameter>&& params) &&;
 
   ~GetParametersResponder() = default;
   /// @brief Default move constructor.
@@ -78,8 +83,13 @@ public:
   /// carried a request_id; otherwise does nothing on the wire. Entries with an
   /// unset value are dropped before serialization.
   ///
+  /// May throw `std::runtime_error` if the underlying parameter-array
+  /// allocation fails. If this happens, the responder is left intact;
+  /// dropping it (without another `respond()`) sends the generic error
+  /// status to the client.
+  ///
   /// @param params Parameter values that were applied.
-  void respond(std::vector<Parameter>&& params) && noexcept;
+  void respond(std::vector<Parameter>&& params) &&;
 
   ~SetParametersResponder() = default;
   /// @brief Default move constructor.

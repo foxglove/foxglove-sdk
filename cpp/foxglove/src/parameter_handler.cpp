@@ -8,7 +8,7 @@ void GetParametersResponder::Deleter::operator()(foxglove_get_parameters_respond
   foxglove_get_parameters_responder_drop(ptr);
 }
 
-void GetParametersResponder::respond(std::vector<Parameter>&& params) && noexcept {
+void GetParametersResponder::respond(std::vector<Parameter>&& params) && {
   ParameterArray array(std::move(params));
   foxglove_get_parameters_responder_respond(impl_.release(), array.release());
 }
@@ -18,7 +18,7 @@ void SetParametersResponder::Deleter::operator()(foxglove_set_parameters_respond
   foxglove_set_parameters_responder_drop(ptr);
 }
 
-void SetParametersResponder::respond(std::vector<Parameter>&& params) && noexcept {
+void SetParametersResponder::respond(std::vector<Parameter>&& params) && {
   ParameterArray array(std::move(params));
   foxglove_set_parameters_responder_respond(impl_.release(), array.release());
 }
