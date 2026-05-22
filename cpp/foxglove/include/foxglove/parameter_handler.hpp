@@ -142,6 +142,7 @@ struct ParameterHandler {
   ///
   /// @param client_id The requesting client's ID.
   /// @param request_id A request ID unique to this client. May be std::nullopt.
+  /// When present, the buffer is valid for the duration of this call.
   /// @param param_names A list of parameter names to fetch, or empty to
   /// request all parameters. The buffer is valid for the duration of this
   /// call; if the callback wishes to store these values (e.g. to hand them
@@ -164,6 +165,7 @@ struct ParameterHandler {
   ///
   /// @param client_id The requesting client's ID.
   /// @param request_id A request ID unique to this client. May be std::nullopt.
+  /// When present, the buffer is valid for the duration of this call.
   /// @param params A list of parameter values the client wishes to set. The
   /// buffer is valid for the duration of this call; if the callback wishes
   /// to store these values (e.g. to hand them off to another thread along
