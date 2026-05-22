@@ -30,11 +30,11 @@ jobs:
         run: docker compose up -d --wait
 
       - name: Run LiveKit integration tests
-        run: cargo test -p remote_access_tests -- --ignored livekit_
+        run: cargo test -p remote_access_tests --features require-cuda -- --ignored livekit_
 
       - name: Run auth integration tests
         if: ${{ !github.event.pull_request.head.repo.fork && github.actor != 'dependabot[bot]' }}
-        run: cargo test -p remote_access_tests -- --ignored auth_
+        run: cargo test -p remote_access_tests --features require-cuda -- --ignored auth_
         env:
           FOXGLOVE_API_KEY: ${{ secrets.REMOTE_ACCESS_TESTS_API_KEY }}
 
@@ -76,7 +76,7 @@ jobs:
         run: docker compose -f docker-compose.yaml -f docker-compose.netem.yml up -d --wait
 
       - name: Run netem integration tests
-        run: cargo test -p remote_access_tests -- --ignored netem_
+        run: cargo test -p remote_access_tests --features require-cuda -- --ignored netem_
 
       - name: Capture LiveKit logs on failure
         if: failure()
@@ -121,7 +121,7 @@ jobs:
           up -d --wait
 
       - name: Run per-link netem integration tests
-        run: cargo test -p remote_access_tests -- --ignored perlink_
+        run: cargo test -p remote_access_tests --features require-cuda -- --ignored perlink_
 
       - name: Capture LiveKit logs on failure
         if: failure()
