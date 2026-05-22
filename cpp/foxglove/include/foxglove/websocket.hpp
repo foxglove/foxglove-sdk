@@ -278,6 +278,14 @@ struct WebSocketServerOptions {
   ///
   /// @note Setting this option implies the PlaybackControl capability
   std::optional<std::pair<uint64_t, uint64_t>> playback_time_range = std::nullopt;
+  /// @brief Override the message backlog size.
+  ///
+  /// The server buffers outgoing log entries into a queue per connected client. If the backlog size
+  /// is exceeded, the oldest entries are dropped. Control-plane messages use a separate queue of
+  /// the same size; if that queue fills, the slow client is disconnected.
+  ///
+  /// By default, the server buffers 1024 messages per client.
+  std::optional<size_t> message_backlog_size;
 };
 
 /// @brief A WebSocket server for visualization in Foxglove.

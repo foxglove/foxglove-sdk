@@ -137,6 +137,8 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
   const auto ignoreUnresponsiveParamNodes =
     this->get_parameter(PARAM_IGN_UNRESPONSIVE_PARAM_NODES).as_bool();
   const bool publishClientCount = this->get_parameter(PARAM_PUBLISH_CLIENT_COUNT).as_bool();
+  const auto messageBacklogSize =
+    static_cast<size_t>(this->get_parameter(PARAM_MESSAGE_BACKLOG_SIZE).as_int());
 
   const bool debug = this->get_parameter(PARAM_DEBUG).as_bool();
   if (debug) {
@@ -155,6 +157,7 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
   sdkServerOptions.context = _serverContext;
 
   sdkServerOptions.server_info = rosServerInfo;
+  sdkServerOptions.message_backlog_size = messageBacklogSize;
 
   if (_useSimTime) {
     sdkServerOptions.capabilities =
@@ -306,6 +309,7 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
     gatewayOptions.device_token = deviceToken;
     gatewayOptions.supported_encodings = {"cdr", "json"};
     gatewayOptions.server_info = std::move(rosServerInfo);
+    gatewayOptions.message_backlog_size = messageBacklogSize;
 
     const auto foxgloveApiUrl = this->get_parameter(PARAM_FOXGLOVE_API_URL).as_string();
     if (!foxgloveApiUrl.empty()) {

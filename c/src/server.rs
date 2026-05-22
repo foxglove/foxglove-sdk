@@ -187,6 +187,9 @@ pub struct FoxgloveServerOptions<'a> {
     /// # Safety
     /// - If provided, the `session_id` must be a valid pointer to a null-terminated UTF-8 string.
     pub session_id: Option<&'a FoxgloveString>,
+
+    /// Optional message backlog size override.
+    pub message_backlog_size: Option<&'a usize>,
 }
 
 #[repr(C)]
@@ -492,6 +495,10 @@ unsafe fn do_foxglove_server_start(
             foxglove::FoxgloveError::Utf8Error(format!("session_id is invalid: {e}"))
         })?;
         server = server.session_id(session_id_str.to_string());
+    }
+
+    if let Some(&backlog_size) = options.message_backlog_size {
+        server = server.message_backlog_size(backlog_size);
     }
 
     let server = server.start_blocking()?;

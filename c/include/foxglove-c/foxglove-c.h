@@ -2874,6 +2874,10 @@ typedef struct foxglove_server_options {
    * - If provided, the `session_id` must be a valid pointer to a null-terminated UTF-8 string.
    */
   const struct foxglove_string *session_id;
+  /**
+   * Optional message backlog size override.
+   */
+  const size_t *message_backlog_size;
 } foxglove_server_options;
 #endif
 

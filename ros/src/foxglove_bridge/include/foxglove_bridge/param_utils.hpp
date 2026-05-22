@@ -32,6 +32,7 @@ constexpr char PARAM_PUBLISH_CLIENT_COUNT[] = "publish_client_count";
 constexpr char PARAM_SYSINFO[] = "sysinfo";
 constexpr char PARAM_SYSINFO_TOPIC[] = "sysinfo_topic";
 constexpr char PARAM_SYSINFO_REFRESH_INTERVAL[] = "sysinfo_refresh_interval";
+constexpr char PARAM_MESSAGE_BACKLOG_SIZE[] = "message_backlog_size";
 
 constexpr char PARAM_REMOTE_ACCESS[] = "remote_access";
 constexpr char PARAM_DEVICE_TOKEN[] = "device_token";
@@ -44,6 +45,7 @@ constexpr int64_t DEFAULT_MIN_QOS_DEPTH = 1;
 constexpr int64_t DEFAULT_MAX_QOS_DEPTH = 25;
 constexpr char DEFAULT_SYSINFO_TOPIC[] = "/foxglove_bridge/sysinfo";
 constexpr int64_t DEFAULT_SYSINFO_REFRESH_INTERVAL_MS = 500;
+constexpr int64_t DEFAULT_MESSAGE_BACKLOG_SIZE = 1024;
 
 void declareParameters(rclcpp::Node* node);
 
