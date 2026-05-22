@@ -25,7 +25,6 @@
 #include <chrono>
 #include <condition_variable>
 #include <csignal>
-#include <functional>
 #include <iostream>
 #include <mutex>
 #include <optional>
@@ -39,10 +38,11 @@
 
 using namespace std::chrono_literals;
 
-// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-static std::function<void()> sigint_handler;
-
 namespace {
+
+// Set by the SIGINT handler.
+std::atomic<bool> g_shutdown{false};
+static_assert(decltype(g_shutdown)::is_always_lock_free);
 
 struct GetOp {
   std::vector<std::string> names;
@@ -68,21 +68,11 @@ public:
     cv_.notify_one();
   }
 
-  void shutdown() {
-    {
-      std::lock_guard<std::mutex> lock(mu_);
-      shutdown_ = true;
-    }
-    cv_.notify_all();
-  }
-
-  /// Block until an op is available, or shutdown is signalled. Returns
-  /// `std::nullopt` if the queue is shut down and empty, or if the timeout
-  /// expires.
+  /// Block until an op is available or the timeout expires.
   std::optional<ParameterOp> pop(std::chrono::milliseconds timeout) {
     std::unique_lock<std::mutex> lock(mu_);
     cv_.wait_for(lock, timeout, [&] {
-      return shutdown_ || !queue_.empty();
+      return !queue_.empty();
     });
     if (queue_.empty()) {
       return std::nullopt;
@@ -96,7 +86,6 @@ private:
   std::mutex mu_;
   std::condition_variable cv_;
   std::queue<ParameterOp> queue_;
-  bool shutdown_ = false;
 };
 
 }  // namespace
@@ -160,20 +149,13 @@ int main() {
   }
   auto server = std::move(server_result.value());
 
-  std::atomic_bool done = false;
-  sigint_handler = [&] {
-    done = true;
-    queue.shutdown();
-  };
   std::signal(SIGINT, [](int) {
-    if (sigint_handler) {
-      sigint_handler();
-    }
+    g_shutdown.store(true, std::memory_order_relaxed);
   });
 
   auto start_time = std::chrono::steady_clock::now();
   auto next_tick = start_time + 1s;
-  while (!done) {
+  while (!g_shutdown.load(std::memory_order_relaxed)) {
     auto now = std::chrono::steady_clock::now();
     auto remaining = std::chrono::duration_cast<std::chrono::milliseconds>(next_tick - now);
     if (remaining.count() < 0) {
