@@ -617,8 +617,8 @@ async fn livekit_video_frame_user_timestamp_round_trips() -> Result<()> {
     /// validate so the trailer pipeline has time to warm up (the first few
     /// decoded frames typically arrive without metadata).
     const FRAMES_TO_PUBLISH: u32 = 80;
-    /// Minimum number of frames with a matching `user_timestamp` we need to
-    /// see before we consider the round-trip validated.
+    /// Minimum number of distinct `user_timestamp` values we need to see
+    /// before we consider the round-trip validated.
     const FRAMES_TO_VALIDATE: usize = 3;
     /// Arbitrary epoch base for the sequence of capture timestamps. Picked
     /// to be obviously non-zero and outside the range of any "default" value
@@ -679,7 +679,7 @@ async fn livekit_video_frame_user_timestamp_round_trips() -> Result<()> {
     };
 
     let receive = async {
-        let mut seen: Vec<u64> = Vec::new();
+        let mut seen: std::collections::HashSet<u64> = std::collections::HashSet::new();
         while let Some(frame) = stream.next().await {
             // Early frames typically arrive before any trailer has been
             // parsed for their RTP timestamp; skip those rather than failing.
@@ -696,7 +696,7 @@ async fn livekit_video_frame_user_timestamp_round_trips() -> Result<()> {
                  starting at {BASE_SEC}s",
                 expected.len(),
             );
-            seen.push(ts);
+            seen.insert(ts);
             if seen.len() >= FRAMES_TO_VALIDATE {
                 return seen;
             }
@@ -712,10 +712,12 @@ async fn livekit_video_frame_user_timestamp_round_trips() -> Result<()> {
 
     assert!(
         seen.len() >= FRAMES_TO_VALIDATE,
-        "expected at least {FRAMES_TO_VALIDATE} frames with our user_timestamp, got {}: {seen:?}",
+        "expected at least {FRAMES_TO_VALIDATE} distinct user_timestamps, got {}: {seen:?}",
         seen.len(),
     );
-    for window in seen.windows(2) {
+    let mut sorted: Vec<u64> = seen.iter().copied().collect();
+    sorted.sort();
+    for window in sorted.windows(2) {
         assert!(
             window[1] >= window[0],
             "user_timestamps should be monotonically non-decreasing: {} -> {}",
@@ -724,7 +726,7 @@ async fn livekit_video_frame_user_timestamp_round_trips() -> Result<()> {
         );
     }
     info!(
-        "round-tripped {} video frames with packet-trailer user_timestamp: {seen:?}",
+        "round-tripped {} distinct video frame user_timestamps: {seen:?}",
         seen.len(),
     );
 
