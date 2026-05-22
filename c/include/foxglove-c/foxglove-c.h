@@ -2583,9 +2583,9 @@ typedef struct foxglove_gateway_options {
    */
   const uint64_t *foxglove_api_timeout_secs;
   /**
-   * Optional message backlog size override.
+   * Message backlog size override. A value of 0 means use the default (1024).
    */
-  const size_t *message_backlog_size;
+  size_t message_backlog_size;
 } foxglove_gateway_options;
 #endif
 
@@ -2875,9 +2875,9 @@ typedef struct foxglove_server_options {
    */
   const struct foxglove_string *session_id;
   /**
-   * Optional message backlog size override.
+   * Message backlog size override. A value of 0 means use the default (1024).
    */
-  const size_t *message_backlog_size;
+  size_t message_backlog_size;
 } foxglove_server_options;
 #endif
 

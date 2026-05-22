@@ -199,16 +199,16 @@ struct RemoteAccessGatewayOptions {
   std::optional<std::map<std::string, std::string>> server_info = std::nullopt;
   /// @endcond
   /// @brief Override the Foxglove API base URL.
-  std::optional<std::string> foxglove_api_url;
+  std::optional<std::string> foxglove_api_url = std::nullopt;
   /// @brief Override the Foxglove API timeout (in seconds).
-  std::optional<uint64_t> foxglove_api_timeout_secs;
+  std::optional<uint64_t> foxglove_api_timeout_secs = std::nullopt;
   /// @brief Override the message backlog size.
   ///
   /// Each participant gets an independent queue of this size. If a participant's queue fills up
   /// (because it is not reading fast enough), it will be disconnected and asked to reconnect.
   ///
   /// By default, each participant gets a queue of 1024 messages.
-  std::optional<size_t> message_backlog_size;
+  std::optional<size_t> message_backlog_size = std::nullopt;
 };
 
 /// @brief A remote access gateway for live visualization and teleop in Foxglove.

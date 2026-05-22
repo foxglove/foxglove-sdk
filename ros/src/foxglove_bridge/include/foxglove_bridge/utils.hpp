@@ -1,6 +1,8 @@
 #pragma once
 
 #include <algorithm>
+#include <cstdint>
+#include <limits>
 #include <regex>
 #include <stdexcept>
 #include <string>
@@ -8,6 +10,12 @@
 #include <vector>
 
 namespace foxglove_bridge {
+
+/// Clamp an int64 ROS parameter value to [min, size_t::max] and convert to size_t.
+inline size_t clampToSizeT(int64_t value, int64_t min = 0) {
+  const int64_t max = static_cast<int64_t>(std::numeric_limits<size_t>::max());
+  return static_cast<size_t>(std::clamp(value, min, max));
+}
 
 inline bool isWhitelisted(const std::string& name, const std::vector<std::regex>& regexPatterns) {
   return std::find_if(regexPatterns.begin(), regexPatterns.end(), [name](const auto& regex) {

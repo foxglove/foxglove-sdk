@@ -285,7 +285,7 @@ struct WebSocketServerOptions {
   /// the same size; if that queue fills, the slow client is disconnected.
   ///
   /// By default, the server buffers 1024 messages per client.
-  std::optional<size_t> message_backlog_size;
+  std::optional<size_t> message_backlog_size = std::nullopt;
 };
 
 /// @brief A WebSocket server for visualization in Foxglove.

@@ -236,8 +236,8 @@ void declareParameters(rclcpp::Node* node) {
   messageBacklogSizeDescription.type = rcl_interfaces::msg::ParameterType::PARAMETER_INTEGER;
   messageBacklogSizeDescription.description =
     "Maximum number of outgoing messages to buffer per client (WebSocket) or participant "
-    "(remote access gateway) before dropping. Applied as the default for both the WebSocket "
-    "server and the remote access gateway.";
+    "(remote access gateway) before disconnecting the participant. Applied for both the "
+    "WebSocket server and the remote access gateway.";
   messageBacklogSizeDescription.read_only = true;
   messageBacklogSizeDescription.integer_range.resize(1);
   messageBacklogSizeDescription.integer_range[0].from_value = 1;

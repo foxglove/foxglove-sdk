@@ -1,6 +1,7 @@
 #include <rcl_interfaces/msg/parameter_descriptor.hpp>
 
 #include <foxglove_bridge/ros2_foxglove_bridge.hpp>
+#include <foxglove_bridge/utils.hpp>
 
 int main(int argc, char* argv[]) {
   rclcpp::init(argc, argv);
@@ -23,7 +24,7 @@ int main(int argc, char* argv[]) {
     constexpr int DEFAULT_NUM_THREADS = 0;
     dummyNode->declare_parameter(numThreadsDescription.name, DEFAULT_NUM_THREADS,
                                  numThreadsDescription);
-    numThreads = static_cast<size_t>(dummyNode->get_parameter(numThreadsDescription.name).as_int());
+    numThreads = clampToSizeT(dummyNode->get_parameter(numThreadsDescription.name).as_int());
   }
 
   {
