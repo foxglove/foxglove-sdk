@@ -7,6 +7,7 @@
 
 #include <foxglove_bridge/ros2_foxglove_bridge.hpp>
 #include <foxglove_bridge/version.hpp>
+#include <foxglove_bridge/utils.hpp>
 
 namespace foxglove_bridge {
 namespace {
