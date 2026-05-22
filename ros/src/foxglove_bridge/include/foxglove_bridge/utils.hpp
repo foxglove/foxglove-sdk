@@ -12,9 +12,18 @@
 namespace foxglove_bridge {
 
 /// Clamp an int64 ROS parameter value to [min, size_t::max] and convert to size_t.
+///
+/// The upper bound is checked in unsigned space: on 64-bit platforms,
+/// size_t::max (2^64 - 1) doesn't fit in int64_t, so casting it to int64_t
+/// wraps to -1, which would break a naive std::clamp(value, min, max) by
+/// inverting the bounds and returning -1 (i.e. SIZE_MAX) for every input.
 inline size_t clampToSizeT(int64_t value, int64_t min = 0) {
-  const int64_t max = static_cast<int64_t>(std::numeric_limits<size_t>::max());
-  return static_cast<size_t>(std::clamp(value, min, max));
+  if (value < min) {
+    return static_cast<size_t>(min);
+  }
+  const auto u = static_cast<uint64_t>(value);
+  constexpr auto kMax = static_cast<uint64_t>(std::numeric_limits<size_t>::max());
+  return static_cast<size_t>(std::min(u, kMax));
 }
 
 inline bool isWhitelisted(const std::string& name, const std::vector<std::regex>& regexPatterns) {
