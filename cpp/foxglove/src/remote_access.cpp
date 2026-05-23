@@ -20,6 +20,17 @@ FoxgloveResult<RemoteAccessGateway> RemoteAccessGateway::create(
 ) {
   foxglove_internal_register_cpp_wrapper();
 
+// The legacy onGetParameters/onSetParameters callbacks below are marked
+// [[deprecated]] for consumers, but this file is the internal bridge that
+// forwards them to the C ABI and must keep reading them.
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#elif defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable : 4996)
+#endif
+
   bool has_any_callbacks =
     options.callbacks.onConnectionStatusChanged || options.callbacks.onSubscribe ||
     options.callbacks.onUnsubscribe || options.callbacks.onMessageData ||
@@ -31,6 +42,7 @@ FoxgloveResult<RemoteAccessGateway> RemoteAccessGateway::create(
   std::unique_ptr<RemoteAccessGatewayCallbacks> callbacks;
   std::unique_ptr<FetchAssetHandler> fetch_asset;
   std::unique_ptr<SinkChannelFilterFn> sink_channel_filter;
+  std::unique_ptr<ParameterHandler> parameter_handler;
 
   foxglove_gateway_callbacks c_callbacks = {};
 
@@ -322,6 +334,74 @@ FoxgloveResult<RemoteAccessGateway> RemoteAccessGateway::create(
     };
   }
 
+  foxglove_parameter_handler c_parameter_handler = {};
+  {
+    const bool has_on_get = bool(options.parameter_handler.onGet);
+    const bool has_on_set = bool(options.parameter_handler.onSet);
+    if (has_on_get != has_on_set) {
+      warn() << "ParameterHandler requires both onGet and onSet to be set";
+      return tl::unexpected(FoxgloveError::ValueError);
+    }
+  }
+  if (options.parameter_handler.onGet && options.parameter_handler.onSet) {
+    parameter_handler = std::make_unique<ParameterHandler>(std::move(options.parameter_handler));
+    c_parameter_handler.context = parameter_handler.get();
+    c_parameter_handler.get = [](
+                                const void* context,
+                                uint32_t client_id,
+                                const struct foxglove_string* c_request_id,
+                                const struct foxglove_string* c_param_names,
+                                size_t param_names_len,
+                                foxglove_get_parameters_responder* c_responder
+                              ) {
+      std::optional<std::string_view> request_id;
+      if (c_request_id != nullptr) {
+        request_id.emplace(c_request_id->data, c_request_id->len);
+      }
+      std::vector<std::string_view> param_names;
+      if (c_param_names != nullptr) {
+        param_names.reserve(param_names_len);
+        for (size_t i = 0; i < param_names_len; ++i) {
+          param_names.emplace_back(c_param_names[i].data, c_param_names[i].len);
+        }
+      }
+      GetParametersResponder responder(c_responder);
+      try {
+        (static_cast<const ParameterHandler*>(context))
+          ->onGet(client_id, request_id, param_names, std::move(responder));
+      } catch (const std::exception& exc) {
+        warn() << "ParameterHandler.onGet callback failed: " << exc.what();
+      }
+    };
+    c_parameter_handler.set = [](
+                                const void* context,
+                                uint32_t client_id,
+                                const struct foxglove_string* c_request_id,
+                                const foxglove_parameter_array* c_params,
+                                foxglove_set_parameters_responder* c_responder
+                              ) {
+      std::optional<std::string_view> request_id;
+      if (c_request_id != nullptr) {
+        request_id.emplace(c_request_id->data, c_request_id->len);
+      }
+      SetParametersResponder responder(c_responder);
+      if (c_params == nullptr) {
+        // Should not happen; the C implementation never passes a null pointer.
+        std::move(responder).respond({});
+        return;
+      }
+      try {
+        (static_cast<const ParameterHandler*>(context))
+          ->onSet(
+            client_id, request_id, ParameterArrayView(c_params).parameters(), std::move(responder)
+          );
+      } catch (const std::exception& exc) {
+        warn() << "ParameterHandler.onSet callback failed: " << exc.what();
+      }
+    };
+    c_options.parameter_handler = &c_parameter_handler;
+  }
+
   // Optional API URL
   foxglove_string api_url = {};
   if (options.foxglove_api_url) {
@@ -360,20 +440,29 @@ FoxgloveResult<RemoteAccessGateway> RemoteAccessGateway::create(
     std::move(callbacks),
     std::move(fetch_asset),
     std::move(sink_channel_filter),
-    std::move(qos_classifier)
+    std::move(qos_classifier),
+    std::move(parameter_handler)
   );
+
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic pop
+#elif defined(_MSC_VER)
+#pragma warning(pop)
+#endif
 }
 
 RemoteAccessGateway::RemoteAccessGateway(
   foxglove_gateway* gateway, std::unique_ptr<RemoteAccessGatewayCallbacks> callbacks,
   std::unique_ptr<FetchAssetHandler> fetch_asset,
   std::unique_ptr<SinkChannelFilterFn> sink_channel_filter,
-  std::unique_ptr<QosClassifierFn> qos_classifier
+  std::unique_ptr<QosClassifierFn> qos_classifier,
+  std::unique_ptr<ParameterHandler> parameter_handler
 )
     : callbacks_(std::move(callbacks))
     , fetch_asset_(std::move(fetch_asset))
     , sink_channel_filter_(std::move(sink_channel_filter))
     , qos_classifier_(std::move(qos_classifier))
+    , parameter_handler_(std::move(parameter_handler))
     , impl_(gateway, foxglove_gateway_stop) {}
 
 RemoteAccessConnectionStatus RemoteAccessGateway::connectionStatus() const {

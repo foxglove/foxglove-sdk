@@ -2,6 +2,8 @@
 #include <foxglove/channel.hpp>
 #include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
+#include <foxglove/parameter.hpp>
+#include <foxglove/parameter_handler.hpp>
 #include <foxglove/playback_control_request.hpp>
 #include <foxglove/websocket.hpp>
 
@@ -540,6 +542,15 @@ TEST_CASE("Parameter callbacks") {
     server_set_parameters;
 
   foxglove::WebSocketServerCallbacks callbacks;
+// This test exercises the legacy onGetParameters/onSetParameters callbacks,
+// which are intentionally marked [[deprecated]].
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#elif defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable : 4996)
+#endif
   callbacks.onGetParameters = [&](
                                 uint32_t client_id [[maybe_unused]],
                                 std::optional<std::string_view>
@@ -589,6 +600,11 @@ TEST_CASE("Parameter callbacks") {
     result.emplace_back("bytes", data.data(), data.size());
     return result;
   };
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic pop
+#elif defined(_MSC_VER)
+#pragma warning(pop)
+#endif
   auto context = foxglove::Context::create();
   auto server =
     startServer(context, foxglove::WebSocketServerCapabilities::Parameters, std::move(callbacks));
@@ -701,6 +717,449 @@ TEST_CASE("Parameter callbacks") {
         { "name": "bytes", "type": "byte_array", "value": "c2VjcmV0" }
       ]
     })");
+  REQUIRE(parsed == expected);
+
+  REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
+}
+
+TEST_CASE("ParameterHandler requires both onGet and onSet") {
+  auto stub_get = [](
+                    uint32_t /*client_id*/,
+                    std::optional<std::string_view> /*request_id*/,
+                    const std::vector<std::string_view>& /*names*/,
+                    foxglove::GetParametersResponder&& responder
+                  ) {
+    std::move(responder).respond({});
+  };
+  auto stub_set = [](
+                    uint32_t /*client_id*/,
+                    std::optional<std::string_view> /*request_id*/,
+                    const std::vector<foxglove::ParameterView>& /*params*/,
+                    foxglove::SetParametersResponder&& responder
+                  ) {
+    std::move(responder).respond({});
+  };
+
+  // onGet without onSet is rejected.
+  {
+    foxglove::WebSocketServerOptions options;
+    options.context = foxglove::Context::create();
+    options.name = "unit-test";
+    options.port = 0;
+    options.parameter_handler.onGet = stub_get;
+    auto result = foxglove::WebSocketServer::create(std::move(options));
+    REQUIRE(!result.has_value());
+    REQUIRE(result.error() == foxglove::FoxgloveError::ValueError);
+  }
+
+  // onSet without onGet is rejected.
+  {
+    foxglove::WebSocketServerOptions options;
+    options.context = foxglove::Context::create();
+    options.name = "unit-test";
+    options.port = 0;
+    options.parameter_handler.onSet = stub_set;
+    auto result = foxglove::WebSocketServer::create(std::move(options));
+    REQUIRE(!result.has_value());
+    REQUIRE(result.error() == foxglove::FoxgloveError::ValueError);
+  }
+
+  // No handler at all is fine.
+  {
+    foxglove::WebSocketServerOptions options;
+    options.context = foxglove::Context::create();
+    options.name = "unit-test";
+    options.port = 0;
+    auto result = foxglove::WebSocketServer::create(std::move(options));
+    REQUIRE(result.has_value());
+    REQUIRE(result.value().stop() == foxglove::FoxgloveError::Ok);
+  }
+}
+
+TEST_CASE("ParameterHandler get and set echo to requester") {
+  std::mutex mutex;
+  std::condition_variable cv;
+  // Protected by mutex:
+  std::optional<std::pair<std::optional<std::string>, std::vector<std::string>>> server_get;
+  std::optional<std::pair<std::optional<std::string>, std::vector<foxglove::Parameter>>> server_set;
+
+  foxglove::ParameterHandler handler;
+  handler.onGet = [&](
+                    uint32_t /*client_id*/,
+                    std::optional<std::string_view>
+                      request_id,
+                    const std::vector<std::string_view>& param_names,
+                    foxglove::GetParametersResponder&& responder
+                  ) {
+    {
+      std::scoped_lock lock{mutex};
+      std::optional<std::string> owned_id;
+      if (request_id.has_value()) {
+        owned_id.emplace(*request_id);
+      }
+      std::vector<std::string> owned_names;
+      owned_names.reserve(param_names.size());
+      for (const auto& name : param_names) {
+        owned_names.emplace_back(name);
+      }
+      server_get = std::make_pair(owned_id, std::move(owned_names));
+      cv.notify_one();
+    }
+    std::vector<foxglove::Parameter> result;
+    result.emplace_back("foo", 1.5);
+    result.emplace_back("bar", "BAR");
+    std::move(responder).respond(std::move(result));
+  };
+  handler.onSet = [&](
+                    uint32_t /*client_id*/,
+                    std::optional<std::string_view>
+                      request_id,
+                    const std::vector<foxglove::ParameterView>& params,
+                    foxglove::SetParametersResponder&& responder
+                  ) {
+    {
+      std::scoped_lock lock{mutex};
+      std::optional<std::string> owned_id;
+      if (request_id.has_value()) {
+        owned_id.emplace(*request_id);
+      }
+      std::vector<foxglove::Parameter> owned;
+      owned.reserve(params.size());
+      for (const auto& p : params) {
+        owned.emplace_back(p.clone());
+      }
+      server_set = std::make_pair(owned_id, std::move(owned));
+      cv.notify_one();
+    }
+    // Echo the requested values back verbatim.
+    std::vector<foxglove::Parameter> applied;
+    applied.reserve(params.size());
+    for (const auto& p : params) {
+      applied.emplace_back(p.clone());
+    }
+    std::move(responder).respond(std::move(applied));
+  };
+
+  foxglove::WebSocketServerOptions options;
+  options.context = foxglove::Context::create();
+  options.name = "unit-test";
+  options.port = 0;
+  options.parameter_handler = std::move(handler);
+  auto server_result = foxglove::WebSocketServer::create(std::move(options));
+  auto server = std::move(requireValue(server_result));
+
+  WebSocketClient client;
+  client.start(server.port());
+  client.waitForConnection();
+
+  REQUIRE(Json::parse(client.recv())["op"] == "serverInfo");
+
+  client.send(
+    R"({
+      "op": "getParameters",
+      "id": "get-1",
+      "parameterNames": ["foo", "bar"]
+    })"
+  );
+  {
+    std::unique_lock lock{mutex};
+    auto ok = cv.wait_for(lock, kTestTimeout, [&] {
+      return server_get.has_value();
+    });
+    REQUIRE(ok);
+    const auto& got = requireValue(server_get);
+    REQUIRE(requireValue(got.first) == "get-1");
+    REQUIRE_THAT(got.second, Equals(std::vector<std::string>{"foo", "bar"}));
+  }
+  {
+    auto parsed = Json::parse(client.recv());
+    auto expected = Json::parse(R"({
+      "op": "parameterValues",
+      "id": "get-1",
+      "parameters": [
+        { "name": "foo", "type": "float64", "value": 1.5 },
+        { "name": "bar", "value": "BAR" }
+      ]
+    })");
+    REQUIRE(parsed == expected);
+  }
+
+  client.send(
+    R"({
+      "op": "setParameters",
+      "id": "set-1",
+      "parameters": [
+        { "name": "foo", "type": "float64", "value": 2.5 }
+      ]
+    })"
+  );
+  {
+    std::unique_lock lock{mutex};
+    auto ok = cv.wait_for(lock, kTestTimeout, [&] {
+      return server_set.has_value();
+    });
+    REQUIRE(ok);
+    const auto& set_got = requireValue(server_set);
+    REQUIRE(requireValue(set_got.first) == "set-1");
+  }
+  {
+    auto parsed = Json::parse(client.recv());
+    auto expected = Json::parse(R"({
+      "op": "parameterValues",
+      "id": "set-1",
+      "parameters": [
+        { "name": "foo", "type": "float64", "value": 2.5 }
+      ]
+    })");
+    REQUIRE(parsed == expected);
+  }
+
+  REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
+}
+
+TEST_CASE("ParameterHandler set without request_id does not echo") {
+  std::mutex mutex;
+  std::condition_variable cv;
+  bool got_set = false;
+
+  foxglove::ParameterHandler handler;
+  handler.onGet = [](
+                    uint32_t /*client_id*/,
+                    std::optional<std::string_view> /*request_id*/,
+                    const std::vector<std::string_view>& /*names*/,
+                    foxglove::GetParametersResponder&& responder
+                  ) {
+    std::move(responder).respond({});
+  };
+  handler.onSet = [&](
+                    uint32_t /*client_id*/,
+                    std::optional<std::string_view> /*request_id*/,
+                    const std::vector<foxglove::ParameterView>& params,
+                    foxglove::SetParametersResponder&& responder
+                  ) {
+    std::vector<foxglove::Parameter> applied;
+    applied.reserve(params.size());
+    for (const auto& p : params) {
+      applied.emplace_back(p.clone());
+    }
+    std::move(responder).respond(std::move(applied));
+    {
+      std::scoped_lock lock{mutex};
+      got_set = true;
+      cv.notify_one();
+    }
+  };
+
+  foxglove::WebSocketServerOptions options;
+  options.context = foxglove::Context::create();
+  options.name = "unit-test";
+  options.port = 0;
+  options.parameter_handler = std::move(handler);
+  auto server_result = foxglove::WebSocketServer::create(std::move(options));
+  auto server = std::move(requireValue(server_result));
+
+  WebSocketClient client;
+  client.start(server.port());
+  client.waitForConnection();
+  REQUIRE(Json::parse(client.recv())["op"] == "serverInfo");
+
+  client.send(
+    R"({
+      "op": "setParameters",
+      "parameters": [{ "name": "foo", "value": 1.0 }]
+    })"
+  );
+
+  // Wait for the handler to run.
+  {
+    std::unique_lock lock{mutex};
+    auto ok = cv.wait_for(lock, kTestTimeout, [&] {
+      return got_set;
+    });
+    REQUIRE(ok);
+  }
+
+  // No parameterValues echo should arrive because the request had no id.
+  auto msg = client.filterRecv([](const std::string& payload) {
+    return Json::parse(payload)["op"] == "parameterValues";
+  });
+  REQUIRE(!msg.has_value());
+
+  REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
+}
+
+TEST_CASE("ParameterHandler dropping responder sends error status") {
+  foxglove::ParameterHandler handler;
+  handler.onGet = [](
+                    uint32_t /*client_id*/,
+                    std::optional<std::string_view> /*request_id*/,
+                    const std::vector<std::string_view>& /*names*/,
+                    foxglove::GetParametersResponder&& responder
+                  ) {
+    std::move(responder).respond({});
+  };
+  handler.onSet = [](
+                    uint32_t /*client_id*/,
+                    std::optional<std::string_view> /*request_id*/,
+                    const std::vector<foxglove::ParameterView>& /*params*/,
+                    foxglove::SetParametersResponder&& responder
+                  ) {
+    // Drop the responder without calling respond(): SDK must send an error
+    // status back to the requester.
+    foxglove::SetParametersResponder dropped(std::move(responder));
+    (void)dropped;
+  };
+
+  foxglove::WebSocketServerOptions options;
+  options.context = foxglove::Context::create();
+  options.name = "unit-test";
+  options.port = 0;
+  options.parameter_handler = std::move(handler);
+  auto server_result = foxglove::WebSocketServer::create(std::move(options));
+  auto server = std::move(requireValue(server_result));
+
+  WebSocketClient client;
+  client.start(server.port());
+  client.waitForConnection();
+  REQUIRE(Json::parse(client.recv())["op"] == "serverInfo");
+
+  client.send(
+    R"({
+      "op": "setParameters",
+      "id": "set-drop",
+      "parameters": [{ "name": "foo", "value": 1.0 }]
+    })"
+  );
+
+  auto status = client.filterRecv(
+    [](const std::string& payload) {
+      return Json::parse(payload)["op"] == "status";
+    },
+    kTestTimeout
+  );
+  auto parsed = Json::parse(requireValue(status));
+  // Status protocol: level 0=info, 1=warning, 2=error.
+  REQUIRE(parsed["level"] == 2);
+  REQUIRE_THAT(
+    parsed["message"].get<std::string>(), ContainsSubstring("failed to send a response")
+  );
+
+  REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
+}
+
+TEST_CASE("ParameterHandler publish after respond broadcasts to subscribers") {
+  // After responding, the handler must call server.publishParameterValues to
+  // broadcast applied changes; the responder itself only echoes to the
+  // requester.
+  std::atomic<foxglove::WebSocketServer*> server_ptr{nullptr};
+
+  foxglove::ParameterHandler handler;
+  handler.onGet = [](
+                    uint32_t /*client_id*/,
+                    std::optional<std::string_view> /*request_id*/,
+                    const std::vector<std::string_view>& /*names*/,
+                    foxglove::GetParametersResponder&& responder
+                  ) {
+    std::move(responder).respond({});
+  };
+  handler.onSet = [&server_ptr](
+                    uint32_t /*client_id*/,
+                    std::optional<std::string_view> /*request_id*/,
+                    const std::vector<foxglove::ParameterView>& params,
+                    foxglove::SetParametersResponder&& responder
+                  ) {
+    std::vector<foxglove::Parameter> applied;
+    applied.reserve(params.size());
+    for (const auto& p : params) {
+      applied.emplace_back(p.clone());
+    }
+    std::vector<foxglove::Parameter> to_publish;
+    to_publish.reserve(applied.size());
+    for (const auto& p : applied) {
+      to_publish.emplace_back(p.clone());
+    }
+    std::move(responder).respond(std::move(applied));
+    auto* server = server_ptr.load();
+    REQUIRE(server != nullptr);
+    server->publishParameterValues(std::move(to_publish));
+  };
+
+  std::mutex sub_mutex;
+  std::condition_variable sub_cv;
+  bool subscribed = false;
+  foxglove::WebSocketServerCallbacks callbacks;
+  callbacks.onParametersSubscribe = [&](const std::vector<std::string_view>& /*names*/) {
+    std::scoped_lock lock{sub_mutex};
+    subscribed = true;
+    sub_cv.notify_one();
+  };
+
+  foxglove::WebSocketServerOptions options;
+  options.context = foxglove::Context::create();
+  options.name = "unit-test";
+  options.port = 0;
+  options.callbacks = std::move(callbacks);
+  options.parameter_handler = std::move(handler);
+  auto server_result = foxglove::WebSocketServer::create(std::move(options));
+  auto server = std::move(requireValue(server_result));
+  server_ptr.store(&server);
+
+  WebSocketClient setter;
+  setter.start(server.port());
+  setter.waitForConnection();
+  REQUIRE(Json::parse(setter.recv())["op"] == "serverInfo");
+
+  WebSocketClient subscriber;
+  subscriber.start(server.port());
+  subscriber.waitForConnection();
+  REQUIRE(Json::parse(subscriber.recv())["op"] == "serverInfo");
+
+  subscriber.send(
+    R"({
+      "op": "subscribeParameterUpdates",
+      "parameterNames": ["foo"]
+    })"
+  );
+
+  // Wait for the server to register the subscription before sending the set.
+  {
+    std::unique_lock lock{sub_mutex};
+    REQUIRE(sub_cv.wait_for(lock, kTestTimeout, [&] {
+      return subscribed;
+    }));
+  }
+
+  setter.send(
+    R"({
+      "op": "setParameters",
+      "id": "set-pub",
+      "parameters": [{ "name": "foo", "value": 7.0 }]
+    })"
+  );
+
+  // Setter gets an echo with the request_id.
+  auto echo = setter.filterRecv(
+    [](const std::string& payload) {
+      auto p = Json::parse(payload);
+      return p["op"] == "parameterValues" && p.value("id", "") == "set-pub";
+    },
+    kTestTimeout
+  );
+  REQUIRE(echo.has_value());
+
+  // Subscriber gets a broadcast (no id), filtered to its subscribed names.
+  auto broadcast = subscriber.filterRecv(
+    [](const std::string& payload) {
+      auto p = Json::parse(payload);
+      return p["op"] == "parameterValues" && !p.contains("id");
+    },
+    kTestTimeout
+  );
+  auto parsed = Json::parse(requireValue(broadcast));
+  auto expected = Json::parse(R"({
+    "op": "parameterValues",
+    "parameters": [{ "name": "foo", "value": 7.0 }]
+  })");
   REQUIRE(parsed == expected);
 
   REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
