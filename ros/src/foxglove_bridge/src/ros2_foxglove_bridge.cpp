@@ -113,8 +113,8 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
   const auto port = static_cast<uint16_t>(
     std::clamp(this->get_parameter(PARAM_PORT).as_int(), int64_t{0}, int64_t{65535}));
   const auto address = this->get_parameter(PARAM_ADDRESS).as_string();
-  _minQosDepth = clampToSizeT(this->get_parameter(PARAM_MIN_QOS_DEPTH).as_int());
-  _maxQosDepth = clampToSizeT(this->get_parameter(PARAM_MAX_QOS_DEPTH).as_int());
+  _minQosDepth = saturatingToSizeT(this->get_parameter(PARAM_MIN_QOS_DEPTH).as_int());
+  _maxQosDepth = saturatingToSizeT(this->get_parameter(PARAM_MAX_QOS_DEPTH).as_int());
   const bool useTls = this->get_parameter(PARAM_USETLS).as_bool();
   const std::string certfile = this->get_parameter(PARAM_CERTFILE).as_string();
   const std::string keyfile = this->get_parameter(PARAM_KEYFILE).as_string();
@@ -140,7 +140,7 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
     this->get_parameter(PARAM_IGN_UNRESPONSIVE_PARAM_NODES).as_bool();
   const bool publishClientCount = this->get_parameter(PARAM_PUBLISH_CLIENT_COUNT).as_bool();
   const auto messageBacklogSize =
-    clampToSizeT(this->get_parameter(PARAM_MESSAGE_BACKLOG_SIZE).as_int(), 1);
+    saturatingToSizeT(this->get_parameter(PARAM_MESSAGE_BACKLOG_SIZE).as_int());
 
   const bool debug = this->get_parameter(PARAM_DEBUG).as_bool();
   if (debug) {

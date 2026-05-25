@@ -24,7 +24,7 @@ int main(int argc, char* argv[]) {
     constexpr int DEFAULT_NUM_THREADS = 0;
     dummyNode->declare_parameter(numThreadsDescription.name, DEFAULT_NUM_THREADS,
                                  numThreadsDescription);
-    numThreads = clampToSizeT(dummyNode->get_parameter(numThreadsDescription.name).as_int());
+    numThreads = saturatingToSizeT(dummyNode->get_parameter(numThreadsDescription.name).as_int());
   }
 
   {
