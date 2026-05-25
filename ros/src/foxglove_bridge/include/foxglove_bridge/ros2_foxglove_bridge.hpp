@@ -2,12 +2,16 @@
 
 #include <atomic>
 #include <chrono>
+#include <condition_variable>
 #include <deque>
 #include <map>
 #include <memory>
+#include <mutex>
+#include <queue>
 #include <regex>
 #include <thread>
 #include <unordered_set>
+#include <variant>
 
 #include <rclcpp/rclcpp.hpp>
 #include <rmw/types.h>
@@ -17,6 +21,7 @@
 
 #include <foxglove/fetch_asset.hpp>
 #include <foxglove/foxglove.hpp>
+#include <foxglove/parameter_handler.hpp>
 #include <foxglove/system_info.hpp>
 #include <foxglove/websocket.hpp>
 #ifdef FOXGLOVE_REMOTE_ACCESS
@@ -163,19 +168,58 @@ private:
   void clientMessage(ClientId clientId, ChannelId clientChannelId, const std::byte* data,
                      size_t dataLen);
 
-  std::vector<foxglove::Parameter> setParameters(
-    const uint32_t clientId, const std::optional<std::string_view>& requestId,
-    const std::vector<foxglove::ParameterView>& parameterViews);
+  // Each parameter op carries enough state to be handled by the worker thread.
+  // Get and Set ops own their responders; Subscribe/Unsubscribe carry just the
+  // parameter names so they serialize with get/set on the same queue.
+  struct GetParamsOp {
+    std::vector<std::string> names;
+    foxglove::GetParametersResponder responder;
+  };
+  struct SetParamsOp {
+    std::vector<foxglove::Parameter> parameters;
+    foxglove::SetParametersResponder responder;
+  };
+  struct SubscribeParamsOp {
+    std::vector<std::string> names;
+  };
+  struct UnsubscribeParamsOp {
+    std::vector<std::string> names;
+  };
+  using ParameterOp =
+    std::variant<GetParamsOp, SetParamsOp, SubscribeParamsOp, UnsubscribeParamsOp>;
 
-  std::vector<foxglove::Parameter> getParameters(
-    const uint32_t clientId, const std::optional<std::string_view>& requestId,
-    const std::vector<std::string_view>& parameterNames);
+  // Wire the parameter-related callbacks/handler on a server or gateway options struct.
+  // Both options structs share these field types; this helper keeps the WS and gateway
+  // sites in sync.
+  void wireParameterCallbacks(
+    std::function<void(const std::vector<std::string_view>&)>& onSubscribe,
+    std::function<void(const std::vector<std::string_view>&)>& onUnsubscribe,
+    foxglove::ParameterHandler& handler);
 
-  void subscribeParameters(const std::vector<std::string_view>& parameterNames);
-
-  void unsubscribeParameters(const std::vector<std::string_view>& parameterNames);
+  void enqueueParameterOp(ParameterOp&& op);
+  void parameterWorkerLoop();
+  void handleGetParams(GetParamsOp&& op);
+  void handleSetParams(SetParamsOp&& op);
+  void handleSubscribeParams(SubscribeParamsOp&& op);
+  void handleUnsubscribeParams(UnsubscribeParamsOp&& op);
 
   void parameterUpdates(const std::vector<foxglove::Parameter>& parameters);
+
+  std::mutex _paramOpMutex;
+  std::condition_variable _paramOpCv;
+  std::queue<ParameterOp> _paramOpQueue;
+  bool _paramOpShutdown = false;
+  std::unique_ptr<std::thread> _paramWorkerThread;
+
+  // Parameter subscription refcount, owned by the worker thread.
+  //
+  // The websocket server and remote access gateway each independently maintain
+  // state about parameter subscriptions on behalf of clients. They each fire
+  // onParametersSubscribe when the first subscriber subscribes to a particular
+  // parameter, and onParametersUnsubscribe when the last subscriber
+  // unsubscribes. We use this map to aggregate subscriptions across the two
+  // transports.
+  std::unordered_map<std::string, int> _paramSubscriberCount;
 
   void rosMessageHandler(ChannelId channelId, std::shared_ptr<const rclcpp::SerializedMessage> msg,
                          const rclcpp::MessageInfo& messageInfo);

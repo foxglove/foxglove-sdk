@@ -10,6 +10,7 @@
 # Add new source files here. The in-tree build and the dist both pick them up.
 
 set(FOXGLOVE_CPP_HANDWRITTEN_SOURCES
+  callback_forwarders.cpp
   channel.cpp
   connection_graph.cpp
   context.cpp
@@ -18,6 +19,7 @@ set(FOXGLOVE_CPP_HANDWRITTEN_SOURCES
   foxglove.cpp
   mcap.cpp
   parameter.cpp
+  parameter_handler.cpp
   service.cpp
   system_info.cpp
   websocket.cpp
