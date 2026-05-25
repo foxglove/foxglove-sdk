@@ -28,6 +28,8 @@ mod logging;
 #[cfg(not(target_family = "wasm"))]
 mod parameter;
 #[cfg(not(target_family = "wasm"))]
+mod parameter_handler;
+#[cfg(not(target_family = "wasm"))]
 mod playback_control_request;
 #[cfg(not(target_family = "wasm"))]
 mod playback_state;

@@ -9,6 +9,12 @@ struct foxglove_fetch_asset_responder;
 
 namespace foxglove {
 
+/// @cond foxglove_internal
+namespace internal {
+struct ForwarderAccess;
+}
+/// @endcond
+
 /// @brief A fetch asset responder.
 ///
 /// This is the means by which a fetch asset implementation responds to a
@@ -46,6 +52,7 @@ public:
 private:
   friend class WebSocketServer;
   friend class RemoteAccessGateway;
+  friend struct internal::ForwarderAccess;
 
   struct Deleter {
     void operator()(foxglove_fetch_asset_responder* ptr) const noexcept;

@@ -9,6 +9,7 @@ use crate::channel_descriptor::FoxgloveChannelDescriptor;
 use crate::connection_graph::FoxgloveConnectionGraph;
 use crate::fetch_asset::{FetchAssetHandler, FoxgloveFetchAssetResponder};
 use crate::parameter::FoxgloveParameterArray;
+use crate::parameter_handler::FoxgloveParameterHandler;
 use crate::server::FoxgloveServerStatusLevel;
 use crate::service::FoxgloveService;
 use crate::sink_channel_filter::ChannelFilter;
@@ -247,6 +248,10 @@ pub struct FoxgloveGatewayCallbacks {
     /// This function should return the named parameters, or all parameters if `param_names` is
     /// empty. The return value must be allocated with `foxglove_parameter_array_create`. Ownership
     /// of this value is transferred to the callee. A NULL return value is treated as empty.
+    ///
+    /// Deprecated: prefer `foxglove_gateway_options::parameter_handler`. If a
+    /// `FoxgloveParameterHandler` is registered, it takes precedence and this callback is not
+    /// invoked.
     pub on_get_parameters: Option<
         unsafe extern "C" fn(
             context: *const c_void,
@@ -270,6 +275,10 @@ pub struct FoxgloveGatewayCallbacks {
     /// This function should return the updated parameters. The return value must be allocated with
     /// `foxglove_parameter_array_create`. Ownership is transferred to the callee. A NULL return
     /// value is treated as empty.
+    ///
+    /// Deprecated: prefer `foxglove_gateway_options::parameter_handler`. If a
+    /// `FoxgloveParameterHandler` is registered, it takes precedence and this callback is not
+    /// invoked.
     pub on_set_parameters: Option<
         unsafe extern "C" fn(
             context: *const c_void,
@@ -590,6 +599,16 @@ pub struct FoxgloveGatewayOptions<'a> {
 
     /// Message backlog size override. A value of 0 means use the default (1024).
     pub message_backlog_size: usize,
+
+    /// Optional parameter handler.
+    ///
+    /// When set, this handler takes precedence over the deprecated `on_get_parameters` /
+    /// `on_set_parameters` callbacks on `foxglove_gateway_callbacks`. Registering a handler
+    /// automatically enables the `FOXGLOVE_GATEWAY_CAPABILITY_PARAMETERS` capability.
+    ///
+    /// When provided, both `get` and `set` on the handler are required; otherwise
+    /// `foxglove_gateway_start` returns `FOXGLOVE_ERROR_VALUE_ERROR`.
+    pub parameter_handler: Option<&'a FoxgloveParameterHandler>,
 }
 
 // Handle
@@ -699,6 +718,12 @@ unsafe fn do_foxglove_gateway_start(
     // Callbacks
     if let Some(callbacks) = options.callbacks {
         gateway = gateway.listener(Arc::new(callbacks.clone()));
+    }
+
+    // Parameter handler
+    if let Some(handler) = options.parameter_handler {
+        handler.validate()?;
+        gateway = gateway.parameter_handler(handler.clone().into_arc());
     }
 
     // Channel filter
