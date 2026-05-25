@@ -284,9 +284,10 @@ fn build_video_frame(
     // and deserialized as a 64-bit integer (PacketTrailerMetadata.userTimestamp is a bigint in JavaScript)
     // and the foxglove app expects a nanoseconds timestamp.
     //
-    // However, libwebrtc keys its trailer map by capture_time_us / 1000 (ms resolution)
-    // Multiple frames within the same millisecond will collide; only the last one's user_timestamp survives the lookup.
-    // We're not expecting frame rates in the kilohertz range, so this acceptable.
+    // The VideoFrame and FrameMetadata take separate paths through libwebrtc's send pipeline.
+    // In order to reunite them later, libwebrtc stores FrameMetadata in a lookup table keyed by timestamp_us / 1000.
+    // If multiple frames are received within the same millisecond, there will be a collision in this lookup table.
+    // We're not expecting frame rates in the kilohertz range, so this should not be a problem in practice.
     let frame = VideoFrame {
         rotation: VideoRotation::VideoRotation0,
         timestamp_us: (timestamp_ns / 1000) as i64,

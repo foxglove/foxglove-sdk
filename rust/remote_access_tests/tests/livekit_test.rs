@@ -679,7 +679,7 @@ async fn livekit_video_frame_user_timestamp_round_trips() -> Result<()> {
     };
 
     let receive = async {
-        let mut seen: std::collections::HashSet<u64> = std::collections::HashSet::new();
+        let mut seen: Vec<u64> = Vec::new();
         while let Some(frame) = stream.next().await {
             // Early frames typically arrive before any trailer has been
             // parsed for their RTP timestamp; skip those rather than failing.
@@ -696,7 +696,10 @@ async fn livekit_video_frame_user_timestamp_round_trips() -> Result<()> {
                  starting at {BASE_SEC}s",
                 expected.len(),
             );
-            seen.insert(ts);
+            if seen.last() == Some(&ts) {
+                continue;
+            }
+            seen.push(ts);
             if seen.len() >= FRAMES_TO_VALIDATE {
                 return seen;
             }
@@ -710,21 +713,22 @@ async fn livekit_video_frame_user_timestamp_round_trips() -> Result<()> {
     publish_task.abort();
     let _ = publish_task.await;
 
+    // `seen` collapses adjacent duplicates, so its values are the distinct
+    // user_timestamps in receive order. Validate that they're monotonically
+    // increasing (non-decreasing would always hold trivially after dedup).
+    for window in seen.windows(2) {
+        assert!(
+            window[1] > window[0],
+            "user_timestamps should be monotonically increasing: {} -> {}",
+            window[0],
+            window[1],
+        );
+    }
     assert!(
         seen.len() >= FRAMES_TO_VALIDATE,
         "expected at least {FRAMES_TO_VALIDATE} distinct user_timestamps, got {}: {seen:?}",
         seen.len(),
     );
-    let mut sorted: Vec<u64> = seen.iter().copied().collect();
-    sorted.sort();
-    for window in sorted.windows(2) {
-        assert!(
-            window[1] >= window[0],
-            "user_timestamps should be monotonically non-decreasing: {} -> {}",
-            window[0],
-            window[1],
-        );
-    }
     info!(
         "round-tripped {} distinct video frame user_timestamps: {seen:?}",
         seen.len(),
