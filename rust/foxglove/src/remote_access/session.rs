@@ -2183,6 +2183,8 @@ impl RemoteAccessSession {
                 // are software-only in our builds, so H.264 is at worst parity elsewhere.
                 // Disable simulcast. We expect viewers will be mostly homogenous, and
                 // simulcast is a lot of work for the robot without much to gain.
+                // We observed that nvenc aggressively enforces the target bitrate,
+                // and combined with simulcast results in very low quality video with compression artifacts.
                 let publish_options = TrackPublishOptions {
                     video_codec: VideoCodec::H264,
                     simulcast: false,

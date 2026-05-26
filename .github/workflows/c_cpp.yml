@@ -174,10 +174,15 @@ jobs:
         if: matrix.remote_access && runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libglib2.0-dev libva-dev libwebsockets-dev \
-            nvidia-cuda-dev
+          sudo apt-get install -y libglib2.0-dev libva-dev libwebsockets-dev
           echo "CC=gcc" >> $GITHUB_ENV
           echo "CXX=g++" >> $GITHUB_ENV
+
+      - name: Install CUDA build dependencies
+        if: matrix.require_cuda && runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y nvidia-cuda-dev
           echo "CUDA_HOME=/usr" >> $GITHUB_ENV
       - name: Use Clang
         if: matrix.compiler == 'clang'
