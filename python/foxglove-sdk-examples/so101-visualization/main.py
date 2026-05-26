@@ -1,8 +1,6 @@
 import argparse
 import datetime
-import logging
 import math
-import os
 import time
 
 import foxglove
@@ -111,8 +109,7 @@ def publish_camera_frame(camera: OpenCVCamera, image_channel: RawImageChannel) -
 def main():
     args = parse_args()
 
-    if "FOXGLOVE_LOG_LEVEL" not in os.environ:
-        foxglove.set_log_level("INFO")
+    foxglove.set_log_level("INFO")
 
     print(f"Loading URDF from {URDF_FILE} ...")
     robot = URDF.load(URDF_FILE)

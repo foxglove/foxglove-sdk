@@ -1,6 +1,4 @@
-import logging
 import math
-import os
 import time
 
 import foxglove
@@ -14,8 +12,7 @@ from foxglove.messages import (
     Vector3,
 )
 
-if "FOXGLOVE_LOG_LEVEL" not in os.environ:
-    foxglove.set_log_level("INFO")
+foxglove.set_log_level("INFO")
 
 # Our example logs data on a couple of different topics, so we'll create a
 # channel for each. We can use a channel like SceneUpdateChannel to log

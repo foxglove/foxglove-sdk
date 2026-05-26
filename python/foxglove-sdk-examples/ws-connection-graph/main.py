@@ -1,5 +1,4 @@
 import logging
-import os
 import time
 
 import foxglove
@@ -24,8 +23,7 @@ class SubscriptionWatcher(ServerListener):
 
 
 def main() -> None:
-    if "FOXGLOVE_LOG_LEVEL" not in os.environ:
-        foxglove.set_log_level("INFO")
+    foxglove.set_log_level("INFO")
 
     graph = ConnectionGraph()
     graph.set_published_topic("/example-topic", ["1", "2"])

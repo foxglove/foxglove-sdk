@@ -7,7 +7,6 @@ https://docs.foxglove.dev/docs/visualization/panels/service-call
 
 import argparse
 import logging
-import os
 
 import foxglove
 from foxglove.websocket import (
@@ -54,8 +53,7 @@ def main():
     This example demonstrates how to use the Foxglove WebSocket API to implement services which can
     be called from the Foxglove app.
     """
-    if "FOXGLOVE_LOG_LEVEL" not in os.environ:
-        foxglove.set_log_level("INFO")
+    foxglove.set_log_level("INFO")
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--port", type=int, default=8765)
