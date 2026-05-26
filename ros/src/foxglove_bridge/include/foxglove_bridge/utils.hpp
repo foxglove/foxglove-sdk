@@ -13,7 +13,7 @@ namespace foxglove_bridge {
 
 /// Clamp an int64 value to [0, size_t::max] and convert to size_t.
 inline size_t saturatingToSizeT(int64_t value, int64_t min = 0) {
-  min = std::max(min, 0);
+  min = std::max(min, int64_t(0));
   if (value <= min) {
     return static_cast<size_t>(min);
   }
