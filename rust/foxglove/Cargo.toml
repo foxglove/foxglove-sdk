@@ -114,7 +114,7 @@ rustls = { version = "0.23", optional = true, default-features = false, features
   "std",
   "tls12",
 ] }
-libwebrtc = { version = "0.3.24", optional = true }
+libwebrtc = { version = "0.3.30", optional = true }
 mcap.workspace = true
 parking_lot = "0.12.4"
 prost-types.workspace = true
