@@ -71,7 +71,7 @@ fn main() {
     let header_display = cuda_header.display();
     panic!(
         "The `require-cuda` feature is enabled but cuda.h was not found at {header_display}.\n\
-         Install the CUDA toolkit (e.g. `apt install nvidia-cuda-toolkit` on Ubuntu, \
+         Install the CUDA toolkit (e.g. `apt install nvidia-cuda-dev` on Ubuntu, \
          then export CUDA_HOME=/usr) or disable the `require-cuda` feature.\n\
          Learn more: https://docs.rs/foxglove/latest/foxglove/#nvenc-hardware-acceleration"
     );
