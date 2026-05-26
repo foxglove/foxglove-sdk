@@ -1,5 +1,6 @@
 #include <filesystem>
 #include <fstream>
+#include <type_traits>
 #include <unordered_set>
 
 #include <rclcpp/version.h>
@@ -199,14 +200,9 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
 
   if (hasCapability(sdkServerOptions.capabilities,
                     foxglove::WebSocketServerCapabilities::Parameters)) {
-    sdkServerOptions.callbacks.onParametersSubscribe =
-      std::bind(&FoxgloveBridge::subscribeParameters, this, _1);
-    sdkServerOptions.callbacks.onParametersUnsubscribe =
-      std::bind(&FoxgloveBridge::unsubscribeParameters, this, _1);
-    sdkServerOptions.callbacks.onGetParameters =
-      std::bind(&FoxgloveBridge::getParameters, this, _1, _2, _3);
-    sdkServerOptions.callbacks.onSetParameters =
-      std::bind(&FoxgloveBridge::setParameters, this, _1, _2, _3);
+    wireParameterCallbacks(sdkServerOptions.callbacks.onParametersSubscribe,
+                           sdkServerOptions.callbacks.onParametersUnsubscribe,
+                           sdkServerOptions.parameter_handler);
 
     _paramInterface = std::make_shared<ParameterInterface>(this, paramWhitelistPatterns,
                                                            ignoreUnresponsiveParamNodes
@@ -258,10 +254,6 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
     _clientCountPublisher->publish(
       init_msg);  // Initialize transient local topic to current connection count
   }
-
-  // Start the thread polling for rosgraph changes
-  _rosgraphPollThread =
-    std::make_unique<std::thread>(std::bind(&FoxgloveBridge::rosgraphPollThread, this));
 
   _subscriptionCallbackGroup = this->create_callback_group(rclcpp::CallbackGroupType::Reentrant);
   _clientPublishCallbackGroup =
@@ -358,14 +350,9 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
     }
 
     if (hasCapability(_capabilities, foxglove::WebSocketServerCapabilities::Parameters)) {
-      gatewayOptions.callbacks.onParametersSubscribe =
-        std::bind(&FoxgloveBridge::subscribeParameters, this, _1);
-      gatewayOptions.callbacks.onParametersUnsubscribe =
-        std::bind(&FoxgloveBridge::unsubscribeParameters, this, _1);
-      gatewayOptions.callbacks.onGetParameters =
-        std::bind(&FoxgloveBridge::getParameters, this, _1, _2, _3);
-      gatewayOptions.callbacks.onSetParameters =
-        std::bind(&FoxgloveBridge::setParameters, this, _1, _2, _3);
+      wireParameterCallbacks(gatewayOptions.callbacks.onParametersSubscribe,
+                             gatewayOptions.callbacks.onParametersUnsubscribe,
+                             gatewayOptions.parameter_handler);
     }
 
     if (hasCapability(_capabilities, foxglove::WebSocketServerCapabilities::ConnectionGraph)) {
@@ -384,6 +371,14 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
     RCLCPP_INFO(this->get_logger(), "Remote access gateway started");
   }
 #endif
+
+  if (_paramInterface) {
+    _paramWorkerThread =
+      std::make_unique<std::thread>(std::bind(&FoxgloveBridge::parameterWorkerLoop, this));
+  }
+
+  _rosgraphPollThread =
+    std::make_unique<std::thread>(std::bind(&FoxgloveBridge::rosgraphPollThread, this));
 }
 
 FoxgloveBridge::~FoxgloveBridge() {
@@ -401,6 +396,18 @@ FoxgloveBridge::~FoxgloveBridge() {
   }
 #endif
   _server->stop();
+  // Stop the parameter worker after the server and gateway are stopped, so no new ops
+  // arrive while we're shutting it down. Any ops still in the queue get dropped.
+  if (_paramWorkerThread) {
+    std::queue<ParameterOp> drained;
+    {
+      std::lock_guard<std::mutex> lock(_paramOpMutex);
+      _paramOpShutdown = true;
+      std::swap(_paramOpQueue, drained);
+    }
+    _paramOpCv.notify_all();
+    _paramWorkerThread->join();
+  }
   RCLCPP_INFO(this->get_logger(), "Shutdown complete");
 }
 
@@ -1132,55 +1139,167 @@ void FoxgloveBridge::clientMessage(ClientId clientId, ChannelId clientChannelId,
   }
 }
 
-std::vector<foxglove::Parameter> FoxgloveBridge::setParameters(
-  const ClientId clientId [[maybe_unused]], const std::optional<std::string_view>& requestId,
-  const std::vector<foxglove::ParameterView>& parameterViews) {
-  // Copy parameters to a vector
-  std::vector<foxglove::Parameter> parameters;
-  std::transform(parameterViews.cbegin(), parameterViews.cend(), std::back_inserter(parameters),
-                 [](const foxglove::ParameterView& pv) {
-                   return pv.clone();
-                 });
-
-  _paramInterface->setParams(parameters, std::chrono::seconds(5));
-
-  // REVIEW: The previous implementation would publish updated parameters to the client only if a
-  // request ID was passed. Since the SDK server publishes any parameters returned from this
-  // function, to maintain the same behavior, we only return a non-empty vector if a request ID was
-  // passed. If feels like too much of a kludge, we can remove this check but will need to either:
-  //
-  // (1) Update tests/client implementations to be robust to multiple parameter updates being
-  // received if they are subscribed to parameter updates AND set a parameter, or (2) Update the SDK
-  // server to avoid double-publishing parameters to a client that's setting a param and is
-  // subscribed to parameter updates.
-  if (requestId.has_value()) {
-    // Get parameters again and publish them to the SDK server
-    std::vector<std::string_view> parameterNames;
-    parameterNames.reserve(parameters.size());
-    for (const auto& param : parameters) {
-      parameterNames.push_back(param.name());
+void FoxgloveBridge::wireParameterCallbacks(
+  std::function<void(const std::vector<std::string_view>&)>& onSubscribe,
+  std::function<void(const std::vector<std::string_view>&)>& onUnsubscribe,
+  foxglove::ParameterHandler& handler) {
+  onSubscribe = [this](const std::vector<std::string_view>& names) {
+    SubscribeParamsOp op;
+    op.names.reserve(names.size());
+    for (const auto& name : names) {
+      op.names.emplace_back(name);
     }
+    enqueueParameterOp(std::move(op));
+  };
+  onUnsubscribe = [this](const std::vector<std::string_view>& names) {
+    UnsubscribeParamsOp op;
+    op.names.reserve(names.size());
+    for (const auto& name : names) {
+      op.names.emplace_back(name);
+    }
+    enqueueParameterOp(std::move(op));
+  };
+  handler.onGet = [this](uint32_t /*clientId*/, std::optional<std::string_view> /*requestId*/,
+                         const std::vector<std::string_view>& names,
+                         foxglove::GetParametersResponder&& responder) {
+    GetParamsOp op{{}, std::move(responder)};
+    op.names.reserve(names.size());
+    for (const auto& name : names) {
+      op.names.emplace_back(name);
+    }
+    enqueueParameterOp(std::move(op));
+  };
+  handler.onSet = [this](uint32_t /*clientId*/, std::optional<std::string_view> /*requestId*/,
+                         const std::vector<foxglove::ParameterView>& params,
+                         foxglove::SetParametersResponder&& responder) {
+    SetParamsOp op{{}, std::move(responder)};
+    op.parameters.reserve(params.size());
+    for (const auto& param : params) {
+      op.parameters.emplace_back(param.clone());
+    }
+    enqueueParameterOp(std::move(op));
+  };
+}
 
-    auto updatedParameters = _paramInterface->getParams(parameterNames, std::chrono::seconds(5));
-    return updatedParameters;
+void FoxgloveBridge::enqueueParameterOp(ParameterOp&& op) {
+  {
+    std::lock_guard<std::mutex> lock(_paramOpMutex);
+    if (_paramOpShutdown) {
+      // Worker is gone; drop the op. Get/Set responders will send the requesting client an
+      // error status on destruction; Subscribe/Unsubscribe are fire-and-forget.
+      return;
+    }
+    _paramOpQueue.push(std::move(op));
   }
-
-  return {};
+  _paramOpCv.notify_one();
 }
 
-std::vector<foxglove::Parameter> FoxgloveBridge::getParameters(
-  const ClientId clientId [[maybe_unused]],
-  const std::optional<std::string_view>& requestId [[maybe_unused]],
-  const std::vector<std::string_view>& parameterNames) {
-  return _paramInterface->getParams(parameterNames, std::chrono::seconds(5));
+void FoxgloveBridge::parameterWorkerLoop() {
+  std::unique_lock<std::mutex> lock(_paramOpMutex);
+  while (true) {
+    _paramOpCv.wait(lock, [&] {
+      return _paramOpShutdown || !_paramOpQueue.empty();
+    });
+    if (_paramOpShutdown && _paramOpQueue.empty()) {
+      return;
+    }
+    auto op = std::move(_paramOpQueue.front());
+    _paramOpQueue.pop();
+    lock.unlock();
+
+    std::visit(
+      [this](auto& concrete) {
+        using T = std::decay_t<decltype(concrete)>;
+        if constexpr (std::is_same_v<T, GetParamsOp>) {
+          this->handleGetParams(std::move(concrete));
+        } else if constexpr (std::is_same_v<T, SetParamsOp>) {
+          this->handleSetParams(std::move(concrete));
+        } else if constexpr (std::is_same_v<T, SubscribeParamsOp>) {
+          this->handleSubscribeParams(std::move(concrete));
+        } else if constexpr (std::is_same_v<T, UnsubscribeParamsOp>) {
+          this->handleUnsubscribeParams(std::move(concrete));
+        }
+      },
+      op);
+
+    lock.lock();
+  }
 }
 
-void FoxgloveBridge::subscribeParameters(const std::vector<std::string_view>& parameterNames) {
-  _paramInterface->subscribeParams(parameterNames);
+void FoxgloveBridge::handleGetParams(GetParamsOp&& op) {
+  std::vector<std::string_view> views(op.names.begin(), op.names.end());
+  try {
+    auto values = _paramInterface->getParams(views, std::chrono::seconds(5));
+    std::move(op.responder).respond(std::move(values));
+  } catch (const std::exception& ex) {
+    RCLCPP_ERROR(this->get_logger(), "getParams failed: %s", ex.what());
+    // Dropping the responder sends the client an error status.
+  }
 }
 
-void FoxgloveBridge::unsubscribeParameters(const std::vector<std::string_view>& parameterNames) {
-  _paramInterface->unsubscribeParams(parameterNames);
+void FoxgloveBridge::handleSetParams(SetParamsOp&& op) {
+  if (op.parameters.empty()) {
+    // Nothing to apply; avoid the degenerate getParams({}, ...) which would enumerate every
+    // parameter on every node.
+    std::move(op.responder).respond({});
+    return;
+  }
+  try {
+    _paramInterface->setParams(op.parameters, std::chrono::seconds(5));
+    // Fetch the actually-applied values so we can echo them back to the requester.
+    std::vector<std::string_view> names;
+    names.reserve(op.parameters.size());
+    for (const auto& param : op.parameters) {
+      names.emplace_back(param.name());
+    }
+    auto updated = _paramInterface->getParams(names, std::chrono::seconds(5));
+    std::move(op.responder).respond(std::move(updated));
+  } catch (const std::exception& ex) {
+    RCLCPP_ERROR(this->get_logger(), "setParams failed: %s", ex.what());
+    // Dropping the responder sends the client an error status.
+  }
+}
+
+void FoxgloveBridge::handleSubscribeParams(SubscribeParamsOp&& op) {
+  std::vector<std::string_view> toForward;
+  toForward.reserve(op.names.size());
+  for (const auto& name : op.names) {
+    if (++_paramSubscriberCount[name] == 1) {
+      toForward.emplace_back(name);
+    }
+  }
+  if (toForward.empty()) {
+    return;
+  }
+  try {
+    _paramInterface->subscribeParams(toForward);
+  } catch (const std::exception& ex) {
+    RCLCPP_ERROR(this->get_logger(), "subscribeParams failed: %s", ex.what());
+  }
+}
+
+void FoxgloveBridge::handleUnsubscribeParams(UnsubscribeParamsOp&& op) {
+  std::vector<std::string_view> toForward;
+  toForward.reserve(op.names.size());
+  for (const auto& name : op.names) {
+    auto it = _paramSubscriberCount.find(name);
+    if (it == _paramSubscriberCount.end()) {
+      RCLCPP_WARN(this->get_logger(), "Unsubscribe for untracked parameter '%s'", name.c_str());
+      continue;
+    }
+    if (--it->second == 0) {
+      toForward.emplace_back(name);  // `name` lives in `op.names` until this function returns
+      _paramSubscriberCount.erase(it);
+    }
+  }
+  if (toForward.empty()) {
+    return;
+  }
+  try {
+    _paramInterface->unsubscribeParams(toForward);
+  } catch (const std::exception& ex) {
+    RCLCPP_ERROR(this->get_logger(), "unsubscribeParams failed: %s", ex.what());
+  }
 }
 
 void FoxgloveBridge::parameterUpdates(const std::vector<foxglove::Parameter>& parameters) {

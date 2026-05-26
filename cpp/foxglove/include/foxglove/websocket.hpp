@@ -6,6 +6,7 @@
 #include <foxglove/error.hpp>
 #include <foxglove/fetch_asset.hpp>
 #include <foxglove/parameter.hpp>
+#include <foxglove/parameter_handler.hpp>
 #include <foxglove/playback_control_request.hpp>
 #include <foxglove/playback_state.hpp>
 #include <foxglove/service.hpp>
@@ -115,6 +116,15 @@ inline WebSocketServerCapabilities operator&(
 ///
 /// @note These callbacks may be invoked concurrently from multiple threads.
 /// You must synchronize access to your mutable internal state or shared resources.
+// Suppress -Wdeprecated-declarations for synthesized special members; the
+// field-level [[deprecated]] still warns on direct use.
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#elif defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable : 4996)
+#endif
 struct WebSocketServerCallbacks {
   /// @brief Callback invoked when a client subscribes to a channel.
   ///
@@ -151,11 +161,17 @@ struct WebSocketServerCallbacks {
   /// @param request_id A request ID unique to this client. May be NULL.
   /// @param param_names A list of parameter names to fetch. If empty, this
   /// method should return all parameters.
-  std::function<std::vector<Parameter>(
-    uint32_t client_id, std::optional<std::string_view> request_id,
-    const std::vector<std::string_view>& param_names
-  )>
-    onGetParameters;
+  ///
+  /// @deprecated Use ParameterHandler instead. This callback is not invoked
+  /// when a ParameterHandler is registered on the server.
+  [[deprecated(
+    "Use ParameterHandler instead. This callback is not invoked when a ParameterHandler is "
+    "registered on the server."
+  )]] std::
+    function<std::vector<Parameter>(
+      uint32_t client_id, std::optional<std::string_view> request_id,
+      const std::vector<std::string_view>& param_names
+    )> onGetParameters;
 
   /// @brief Callback invoked when a client sets parameters.
   ///
@@ -167,11 +183,17 @@ struct WebSocketServerCallbacks {
   /// @param client_id The client ID.
   /// @param request_id A request ID unique to this client. May be NULL.
   /// @param param_names A list of updated parameter values.
-  std::function<std::vector<Parameter>(
-    uint32_t client_id, std::optional<std::string_view> request_id,
-    const std::vector<ParameterView>& params
-  )>
-    onSetParameters;
+  ///
+  /// @deprecated Use ParameterHandler instead. This callback is not invoked
+  /// when a ParameterHandler is registered on the server.
+  [[deprecated(
+    "Use ParameterHandler instead. This callback is not invoked when a ParameterHandler is "
+    "registered on the server."
+  )]] std::
+    function<std::vector<Parameter>(
+      uint32_t client_id, std::optional<std::string_view> request_id,
+      const std::vector<ParameterView>& params
+    )> onSetParameters;
 
   /// @brief Callback invoked when a client subscribes to the named parameters
   /// for the first time.
@@ -222,6 +244,11 @@ struct WebSocketServerCallbacks {
   )>
     onPlaybackControlRequest;
 };
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic pop
+#elif defined(_MSC_VER)
+#pragma warning(pop)
+#endif
 
 /// @cond foxglove_internal
 /// @brief TLS configuration for a WebSocket server.
@@ -262,6 +289,19 @@ struct WebSocketServerOptions {
   FetchAssetHandler fetch_asset;
   /// @brief A sink channel filter callback.
   SinkChannelFilterFn sink_channel_filter;
+  /// @brief A parameter handler.
+  ///
+  /// When set, this handler takes precedence over the deprecated
+  /// `onGetParameters` / `onSetParameters` callbacks. Registering a handler
+  /// also automatically advertises the `Parameters` capability. Subscribe /
+  /// unsubscribe notifications still go through the `onParametersSubscribe` /
+  /// `onParametersUnsubscribe` callbacks on `WebSocketServerCallbacks`; wire
+  /// those up separately if you want to be notified.
+  ///
+  /// Both `ParameterHandler::onGet` and `ParameterHandler::onSet` are
+  /// required when a handler is supplied; setting only one returns
+  /// `FoxgloveError::ValueError` from `WebSocketServer::create`.
+  ParameterHandler parameter_handler;
   /// @brief (internal) TLS configuration for the server.
   ///
   /// This option is under active development and may change.
@@ -394,12 +434,14 @@ private:
   WebSocketServer(
     foxglove_websocket_server* server, std::unique_ptr<WebSocketServerCallbacks> callbacks,
     std::unique_ptr<FetchAssetHandler> fetch_asset,
-    std::unique_ptr<SinkChannelFilterFn> sink_channel_filter
+    std::unique_ptr<SinkChannelFilterFn> sink_channel_filter,
+    std::unique_ptr<ParameterHandler> parameter_handler
   );
 
   std::unique_ptr<WebSocketServerCallbacks> callbacks_;
   std::unique_ptr<FetchAssetHandler> fetch_asset_;
   std::unique_ptr<SinkChannelFilterFn> sink_channel_filter_;
+  std::unique_ptr<ParameterHandler> parameter_handler_;
   std::unique_ptr<foxglove_websocket_server, foxglove_error (*)(foxglove_websocket_server*)> impl_;
 };
 
