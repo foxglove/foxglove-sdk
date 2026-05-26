@@ -209,10 +209,12 @@ yarn netem-impair -- delay 500ms loss 10%
 
 `severe` is tuned to saturate heavy-topic uplinks; adjust from there.
 
-> **Limitation:** `yarn netem-impair` only affects the gateway upload link.
-> Per-link downloads (`NETEM_GATEWAY_DOWNLOAD`, `NETEM_VIEWER_DOWNLOAD`) and
-> the viewer upload (`NETEM_VIEWER_UPLOAD`) require restarting the stack with
-> new env vars — see "Changing impairment live" above for why.
+> **Scope:** `yarn netem-impair` hardcodes the `gateway-netem` sidecar, so it
+> only retunes the gateway upload link. The underlying `netem_impair.py` is not
+> limited to uploads — exec'd into the LiveKit-side `netem` sidecar it updates
+> all download links at once (see "Changing impairment live" above). Per-link
+> viewer/download retuning still requires a stack restart with new
+> `NETEM_VIEWER_UPLOAD` / `NETEM_*_DOWNLOAD` env vars.
 
 ## Scenarios
 
