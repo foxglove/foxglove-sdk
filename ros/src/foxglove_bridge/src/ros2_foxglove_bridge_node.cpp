@@ -24,7 +24,8 @@ int main(int argc, char* argv[]) {
     constexpr int DEFAULT_NUM_THREADS = 0;
     dummyNode->declare_parameter(numThreadsDescription.name, DEFAULT_NUM_THREADS,
                                  numThreadsDescription);
-    numThreads = foxglove_bridge::saturatingToSizeT(dummyNode->get_parameter(numThreadsDescription.name).as_int());
+    numThreads = foxglove_bridge::saturatingToSizeT(
+      dummyNode->get_parameter(numThreadsDescription.name).as_int());
   }
 
   {
