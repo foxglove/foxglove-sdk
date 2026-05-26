@@ -119,10 +119,6 @@ class ExampleListener(ServerListener):
 
 
 def main() -> None:
-    logging.basicConfig(
-        level=logging.DEBUG,
-        format="%(asctime)s [%(levelname)s] %(message)s",
-    )
     if "FOXGLOVE_LOG_LEVEL" not in os.environ:
         foxglove.set_log_level("INFO")
 

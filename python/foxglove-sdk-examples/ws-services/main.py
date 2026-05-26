@@ -54,10 +54,6 @@ def main():
     This example demonstrates how to use the Foxglove WebSocket API to implement services which can
     be called from the Foxglove app.
     """
-    logging.basicConfig(
-        level=logging.DEBUG,
-        format="%(asctime)s [%(levelname)s] %(message)s",
-    )
     if "FOXGLOVE_LOG_LEVEL" not in os.environ:
         foxglove.set_log_level("INFO")
 

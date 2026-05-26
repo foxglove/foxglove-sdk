@@ -111,10 +111,6 @@ def publish_camera_frame(camera: OpenCVCamera, image_channel: RawImageChannel) -
 def main():
     args = parse_args()
 
-    logging.basicConfig(
-        level=logging.DEBUG,
-        format="%(asctime)s [%(levelname)s] %(message)s",
-    )
     if "FOXGLOVE_LOG_LEVEL" not in os.environ:
         foxglove.set_log_level("INFO")
 
