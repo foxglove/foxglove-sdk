@@ -4,6 +4,9 @@ edition.workspace = true
 rust-version.workspace = true
 publish = false
 
+[features]
+require-cuda = ["foxglove/require-cuda"]
+
 [dependencies]
 foxglove = { path = "../foxglove", features = ["remote-access", "_protocol"] }
 livekit = { version = "0.7.37", features = ["rustls-tls-native-roots"] }
