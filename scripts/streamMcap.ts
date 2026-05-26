@@ -3,7 +3,7 @@
 //
 // Usage:
 //   MCAP_HOST_PATH=/abs/path/to/heavy.mcap \
-//   FOXGLOVE_API_URL=http://localhost:3000/api \
+//   FOXGLOVE_API_URL=http://host.docker.internal:3000/api \
 //   FOXGLOVE_DEVICE_TOKEN=fox_dt_... \
 //   yarn stream-mcap
 //
@@ -11,16 +11,23 @@
 //   yarn stream-mcap /abs/path/to/heavy.mcap
 //
 // Prerequisites:
-//   - The per-link stack from `yarn start-netem --perlink` is running, OR
-//     this command will bring it up (with default impairment profiles).
 //   - FOXGLOVE_API_URL and FOXGLOVE_DEVICE_TOKEN are set in the environment.
+//     The API URL must be reachable from inside `gateway-runner`, which only
+//     joins the `perlink` network — use `http://host.docker.internal:3000/api`,
+//     not `http://localhost:3000/api`.
 //   - The Foxglove app + web frontend are running on the host. See
 //     rust/remote_access_tests/NETEM.md for the full setup.
 //
 // What it does:
 //   1. Resolves the MCAP path to an absolute path and validates it.
-//   2. Re-ups the per-link stack with MCAP_HOST_PATH exported so the file is
-//      bind-mounted at /workspace/recording.mcap inside gateway-runner.
+//   2. Brings up (or refreshes) the per-link stack with MCAP_HOST_PATH exported
+//      so the file is bind-mounted at /workspace/recording.mcap inside
+//      gateway-runner. This invocation owns the stack — `yarn start-netem
+//      --perlink` from a separate terminal is NOT required, and any
+//      NETEM_GATEWAY_UPLOAD set in that other terminal would be wiped here
+//      when compose recreates the runner. To set a non-default starting
+//      profile, export NETEM_GATEWAY_UPLOAD before invoking this command, or
+//      use `yarn netem-impair --profile <name>` after the stack is up.
 //   3. Builds `example_remote_access_stream_mcap` inside the container
 //      (incremental after the first run, ~90s the first time).
 //   4. Execs the streamer with the bind-mounted file.
@@ -61,6 +68,14 @@ function resolveMcapPath(positional: string | undefined): string {
     );
     process.exit(1);
   }
+  // Compose splits bind-mount specs on `:` (host:container:options), so a `:`
+  // in the host path silently corrupts the mount. Reject up front.
+  if (raw.includes(":")) {
+    console.error(
+      `Error: MCAP path must not contain ':' (compose treats ':' as a bind-mount separator): ${raw}`,
+    );
+    process.exit(1);
+  }
   const abs = path.resolve(raw);
   try {
     fs.accessSync(abs, fs.constants.R_OK);
@@ -81,7 +96,7 @@ function requireEnv(name: string): void {
     console.error(
       `Error: ${name} is not set.\n` +
         "  Both FOXGLOVE_API_URL and FOXGLOVE_DEVICE_TOKEN are required; for example:\n" +
-        "    export FOXGLOVE_API_URL=http://localhost:3000/api\n" +
+        "    export FOXGLOVE_API_URL=http://host.docker.internal:3000/api\n" +
         "    export FOXGLOVE_DEVICE_TOKEN=fox_dt_...",
     );
     process.exit(1);
@@ -93,9 +108,11 @@ function run(opts: Options, positional: string | undefined): void {
   requireEnv("FOXGLOVE_DEVICE_TOKEN");
   const mcapPath = resolveMcapPath(positional);
 
-  // Re-up the stack with the bind-mount pointing at the host file. Compose
-  // expands ${MCAP_HOST_PATH} at this point; the gateway-runner restarts only
-  // if the mount source actually changed.
+  // Bring up (or refresh) the stack with the bind-mount pointing at the host
+  // file. Compose expands ${MCAP_HOST_PATH} here; gateway-runner is recreated
+  // if any compose-visible config (including this mount source) changed since
+  // the last `up`. That recreation also restarts `gateway-netem`, resetting
+  // its qdisc to NETEM_GATEWAY_UPLOAD's value in *this* env.
   const upEnv: NodeJS.ProcessEnv = { ...process.env, MCAP_HOST_PATH: mcapPath };
   console.log(`Mounting ${mcapPath} -> /workspace/recording.mcap`);
   compose(upEnv, ...PROFILE_ARGS, "up", "-d", "--wait");
@@ -121,20 +138,33 @@ function run(opts: Options, positional: string | undefined): void {
   console.log("Starting MCAP stream. Open http://localhost:8080 to view.");
   console.log("Switch profiles mid-stream with: yarn netem-impair --profile <name>");
   console.log("");
-  compose(
-    upEnv,
-    "exec",
-    "-e",
-    `FOXGLOVE_API_URL=${process.env.FOXGLOVE_API_URL ?? ""}`,
-    "-e",
-    `FOXGLOVE_DEVICE_TOKEN=${process.env.FOXGLOVE_DEVICE_TOKEN ?? ""}`,
-    "-e",
-    `RUST_LOG=${opts.rustLog}`,
-    "gateway-runner",
-    "/workspace/target-docker/release/example_remote_access_stream_mcap",
-    "--file",
-    "/workspace/recording.mcap",
-  );
+  // Operators stop the streamer with Ctrl-C, which makes `docker exec` exit
+  // 130. Treat that as a clean shutdown rather than throwing an unhandled
+  // exception.
+  try {
+    compose(
+      upEnv,
+      "exec",
+      "-e",
+      `FOXGLOVE_API_URL=${process.env.FOXGLOVE_API_URL ?? ""}`,
+      "-e",
+      `FOXGLOVE_DEVICE_TOKEN=${process.env.FOXGLOVE_DEVICE_TOKEN ?? ""}`,
+      "-e",
+      `RUST_LOG=${opts.rustLog}`,
+      "gateway-runner",
+      "/workspace/target-docker/release/example_remote_access_stream_mcap",
+      "--file",
+      "/workspace/recording.mcap",
+    );
+  } catch (err) {
+    const status = (err as { status?: number; signal?: string }).status;
+    const signal = (err as { status?: number; signal?: string }).signal;
+    if (status === 130 || signal === "SIGINT" || signal === "SIGTERM") {
+      console.log("\nStreamer stopped.");
+      return;
+    }
+    throw err;
+  }
 }
 
 program

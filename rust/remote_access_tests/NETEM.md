@@ -165,22 +165,31 @@ conditions and to compare profiles live.
 ### Run it
 
 ```sh
-# Terminal 1: start the per-link stack with severe gateway upload.
-NETEM_GATEWAY_UPLOAD="delay 100ms 30ms loss 5% rate 2mbit" \
-yarn start-netem --perlink
-
-# Terminal 2: stream a heavy MCAP through gateway-runner.
-FOXGLOVE_API_URL=http://localhost:3000/api \
+# In one terminal: stream a heavy MCAP through gateway-runner.
+FOXGLOVE_API_URL=http://host.docker.internal:3000/api \
 FOXGLOVE_DEVICE_TOKEN=fox_dt_... \
 MCAP_HOST_PATH=/abs/path/to/heavy.mcap \
 yarn stream-mcap
 ```
 
-`yarn stream-mcap` bind-mounts the file at `/workspace/recording.mcap` inside
-the container (via `MCAP_HOST_PATH` on `docker-compose.netem-livekit.yml`),
-builds `example_remote_access_stream_mcap` (~90s the first time, incremental
-thereafter), and runs it. Open `http://localhost:8080` and connect to the
-device to watch the playback under the active impairment.
+`yarn stream-mcap` owns the stack lifecycle: it brings up (or refreshes) the
+per-link compose stack with the file bind-mounted at
+`/workspace/recording.mcap` inside `gateway-runner`, builds
+`example_remote_access_stream_mcap` (~90s the first time, incremental
+thereafter), and runs it.
+
+Once the stream is up, apply the impairment profile you want with
+`yarn netem-impair` (see next section). Don't try to set
+`NETEM_GATEWAY_UPLOAD` in a separate `yarn start-netem --perlink` terminal:
+`yarn stream-mcap` runs `docker compose up` itself, sees a config drift, and
+recreates `gateway-runner` — which also restarts `gateway-netem` and resets
+its qdisc to whatever `NETEM_GATEWAY_UPLOAD` resolves to _in stream-mcap's
+environment_ (the Starlink default if unset). The cleanest workflow is:
+`yarn stream-mcap` to start, then `yarn netem-impair --profile severe` to
+apply impairment.
+
+Open `http://localhost:8080` and connect to the device to watch the
+playback.
 
 ### Switch profiles mid-stream
 
