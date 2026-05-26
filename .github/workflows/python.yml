@@ -194,13 +194,22 @@ jobs:
           - runner: ubuntu-22.04
             target: x86_64
             manylinux: "2_28"
-            extra-args: --features pyo3/extension-module,remote-access
+            extra-args: --features pyo3/extension-module,remote-access,require-cuda
             before-script: |
               if command -v apt-get; then
                 apt-get update
-                apt-get install -y libva-dev
+                apt-get install -y libva-dev nvidia-cuda-dev
+                ln -snf /usr /usr/local/cuda
               elif command -v yum; then
-                yum install -y libva-devel
+                yum install -y libva-devel yum-utils
+                arch=$(uname -m)
+                case "$arch" in
+                  aarch64) cuda_arch=sbsa ;;
+                  *) cuda_arch="$arch" ;;
+                esac
+                yum-config-manager --add-repo "https://developer.download.nvidia.com/compute/cuda/repos/rhel8/${cuda_arch}/cuda-rhel8.repo"
+                yum install -y cuda-cudart-devel-12-6 cuda-driver-devel-12-6
+                ln -snf /usr/local/cuda-12.6 /usr/local/cuda
               else
                 echo "No supported package manager found"
                 exit 1
@@ -213,13 +222,22 @@ jobs:
           - runner: ubuntu-22.04-arm
             target: aarch64
             manylinux: "2_28"
-            extra-args: --features pyo3/extension-module,remote-access
+            extra-args: --features pyo3/extension-module,remote-access,require-cuda
             before-script: |
               if command -v apt-get; then
                 apt-get update
-                apt-get install -y libva-dev
+                apt-get install -y libva-dev nvidia-cuda-dev
+                ln -snf /usr /usr/local/cuda
               elif command -v yum; then
-                yum install -y libva-devel
+                yum install -y libva-devel yum-utils
+                arch=$(uname -m)
+                case "$arch" in
+                  aarch64) cuda_arch=sbsa ;;
+                  *) cuda_arch="$arch" ;;
+                esac
+                yum-config-manager --add-repo "https://developer.download.nvidia.com/compute/cuda/repos/rhel8/${cuda_arch}/cuda-rhel8.repo"
+                yum install -y cuda-cudart-devel-12-6 cuda-driver-devel-12-6
+                ln -snf /usr/local/cuda-12.6 /usr/local/cuda
               else
                 echo "No supported package manager found"
                 exit 1

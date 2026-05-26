@@ -6,7 +6,7 @@ use bytes::Bytes;
 use futures_util::StreamExt;
 use indexmap::IndexSet;
 use libwebrtc::video_source::{RtcVideoSource, native::NativeVideoSource};
-use livekit::options::{TrackPublishOptions, VideoCodec};
+use livekit::options::{PacketTrailerFeatures, TrackPublishOptions, VideoCodec};
 use livekit::{
     ByteStreamReader, Room, StreamByteOptions,
     id::{ParticipantIdentity, ParticipantSid},
@@ -2178,11 +2178,24 @@ impl RemoteAccessSession {
             let session = self.clone();
             tokio::spawn(async move {
                 let local_track = LocalTrack::Video(track);
-                // Prefer H.264 so that the libwebrtc VAAPI encoder (H.264-only) can be used
-                // on Linux hosts that have libva + a VA driver available. VP8/VP9/AV1 paths
+                // Enable the `user_timestamp` packet-trailer feature so the original image
+                // capture timestamp (set on each `VideoFrame::frame_metadata`) is carried
+                // in-band end-to-end, where it can be recovered on the receiving side.
+                // `PacketTrailerFeatures` is `#[non_exhaustive]`, so we build it
+                // explicitly rather than with a struct literal.
+                let mut packet_trailer_features = PacketTrailerFeatures::default();
+                packet_trailer_features.user_timestamp = true;
+                // Prefer H.264 so that the libwebrtc nvenc encoder (H.264-only) can be used
+                // on Linux hosts that have nvenc available. VP8/VP9/AV1 paths
                 // are software-only in our builds, so H.264 is at worst parity elsewhere.
+                // Disable simulcast. We expect viewers will be mostly homogenous, and
+                // simulcast is a lot of work for the robot without much to gain.
+                // We observed that nvenc aggressively enforces the target bitrate,
+                // and combined with simulcast results in very low quality video with compression artifacts.
                 let publish_options = TrackPublishOptions {
                     video_codec: VideoCodec::H264,
+                    packet_trailer_features,
+                    simulcast: false,
                     ..Default::default()
                 };
                 match local_participant

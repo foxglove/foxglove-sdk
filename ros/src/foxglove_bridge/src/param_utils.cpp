@@ -231,6 +231,22 @@ void declareParameters(rclcpp::Node* node) {
   node->declare_parameter(PARAM_SYSINFO_REFRESH_INTERVAL, DEFAULT_SYSINFO_REFRESH_INTERVAL_MS,
                           sysinfoRefreshIntervalDescription);
 
+  auto messageBacklogSizeDescription = rcl_interfaces::msg::ParameterDescriptor{};
+  messageBacklogSizeDescription.name = PARAM_MESSAGE_BACKLOG_SIZE;
+  messageBacklogSizeDescription.type = rcl_interfaces::msg::ParameterType::PARAMETER_INTEGER;
+  messageBacklogSizeDescription.description =
+    "Maximum number of outgoing messages to buffer per connected WebSocket client or "
+    "remote access gateway participant. The WebSocket server drops the oldest data-plane "
+    "message on overflow and disconnects clients whose control-plane queue fills. The "
+    "remote access gateway disconnects participants whose queue fills.";
+  messageBacklogSizeDescription.read_only = true;
+  messageBacklogSizeDescription.integer_range.resize(1);
+  messageBacklogSizeDescription.integer_range[0].from_value = 1;
+  messageBacklogSizeDescription.integer_range[0].to_value = std::numeric_limits<int64_t>::max();
+  messageBacklogSizeDescription.integer_range[0].step = 1;
+  node->declare_parameter(PARAM_MESSAGE_BACKLOG_SIZE, DEFAULT_MESSAGE_BACKLOG_SIZE,
+                          messageBacklogSizeDescription);
+
   auto remoteAccessDescription = rcl_interfaces::msg::ParameterDescriptor{};
   remoteAccessDescription.name = PARAM_REMOTE_ACCESS;
   remoteAccessDescription.type = rcl_interfaces::msg::ParameterType::PARAMETER_BOOL;
