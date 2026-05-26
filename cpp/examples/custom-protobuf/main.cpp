@@ -12,7 +12,7 @@
 #include "protos/fruit.pb.h"
 
 int main(int argc, const char* argv[]) {
-  foxglove::setLogLevel(foxglove::LogLevel::Debug);
+  foxglove::setLogLevel(foxglove::LogLevel::Info);
 
   // Make it easy to override the path when running in a container
   const char* output_path = std::getenv("MCAP_OUTPUT_PATH");

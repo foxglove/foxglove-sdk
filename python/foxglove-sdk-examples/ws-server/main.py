@@ -1,6 +1,7 @@
 import datetime
 import json
 import logging
+import os
 import time
 from math import cos, sin
 
@@ -118,7 +119,12 @@ class ExampleListener(ServerListener):
 
 
 def main() -> None:
-    foxglove.set_log_level(logging.DEBUG)
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format="%(asctime)s [%(levelname)s] %(message)s",
+    )
+    if "FOXGLOVE_LOG_LEVEL" not in os.environ:
+        foxglove.set_log_level("INFO")
 
     listener = ExampleListener()
 

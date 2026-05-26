@@ -17,7 +17,7 @@
 using namespace std::chrono_literals;
 
 int main() {
-  foxglove::setLogLevel(foxglove::LogLevel::Debug);
+  foxglove::setLogLevel(foxglove::LogLevel::Info);
 
   static std::function<void()> sigint_handler;
 

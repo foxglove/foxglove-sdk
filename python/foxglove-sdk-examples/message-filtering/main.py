@@ -1,4 +1,5 @@
 import logging
+import os
 import struct
 import time
 from math import cos, sin
@@ -33,7 +34,12 @@ def live_viz_filter(ch: ChannelDescriptor) -> bool:
 
 
 def main() -> None:
-    foxglove.set_log_level(logging.DEBUG)
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format="%(asctime)s [%(levelname)s] %(message)s",
+    )
+    if "FOXGLOVE_LOG_LEVEL" not in os.environ:
+        foxglove.set_log_level("INFO")
 
     small_mcap = foxglove.open_mcap(
         "example-topic-splitting-small.mcap", channel_filter=drop_large_topics

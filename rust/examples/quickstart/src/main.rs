@@ -15,7 +15,7 @@ static SCENE: LazyChannel<SceneUpdate> = LazyChannel::new("/scene");
 static SIZE: LazyRawChannel = LazyRawChannel::new("/size", "json");
 
 fn main() {
-    let env = env_logger::Env::default().default_filter_or("debug");
+    let env = env_logger::Env::default().default_filter_or("info");
     env_logger::init_from_env(env);
 
     let done = Arc::new(AtomicBool::default());

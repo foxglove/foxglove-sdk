@@ -1,4 +1,5 @@
 import logging
+import os
 import time
 from typing import Optional
 
@@ -25,7 +26,12 @@ def asset_handler(uri: str) -> Optional[bytes]:
 
 
 def main() -> None:
-    foxglove.set_log_level(logging.DEBUG)
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format="%(asctime)s [%(levelname)s] %(message)s",
+    )
+    if "FOXGLOVE_LOG_LEVEL" not in os.environ:
+        foxglove.set_log_level("INFO")
 
     server = foxglove.start_server(
         asset_handler=asset_handler,

@@ -24,7 +24,7 @@ struct Config {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let env = env_logger::Env::default().default_filter_or("debug");
+    let env = env_logger::Env::default().default_filter_or("info");
     env_logger::init_from_env(env);
 
     let config = Config::parse();

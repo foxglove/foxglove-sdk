@@ -1,6 +1,7 @@
 import json
 import logging
 import math
+import os
 import time
 
 import foxglove
@@ -84,7 +85,12 @@ def render_color_ramp(frame: int) -> bytes:
 
 
 def main() -> None:
-    foxglove.set_log_level(logging.INFO)
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format="%(asctime)s [%(levelname)s] %(message)s",
+    )
+    if "FOXGLOVE_LOG_LEVEL" not in os.environ:
+        foxglove.set_log_level("INFO")
 
     gateway = foxglove.start_gateway(
         name="remote-access-example-python",

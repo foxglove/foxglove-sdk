@@ -6,6 +6,7 @@ https://docs.foxglove.dev/docs/visualization/panels/parameters
 """
 
 import logging
+import os
 import time
 from typing import List, Optional
 
@@ -63,7 +64,12 @@ class ParameterStore(foxglove.websocket.ServerListener):
 
 
 def main() -> None:
-    foxglove.set_log_level(logging.DEBUG)
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format="%(asctime)s [%(levelname)s] %(message)s",
+    )
+    if "FOXGLOVE_LOG_LEVEL" not in os.environ:
+        foxglove.set_log_level("INFO")
 
     initial_values: list[Parameter] = [
         Parameter("p0"),
