@@ -597,8 +597,8 @@ pub struct FoxgloveGatewayOptions<'a> {
     /// Optional Foxglove API timeout in seconds.
     pub foxglove_api_timeout_secs: Option<&'a u64>,
 
-    /// Optional message backlog size override.
-    pub message_backlog_size: Option<&'a usize>,
+    /// Message backlog size override. A value of 0 means use the default (1024).
+    pub message_backlog_size: usize,
 
     /// Optional parameter handler.
     ///
@@ -770,8 +770,8 @@ unsafe fn do_foxglove_gateway_start(
     }
 
     // Message backlog size
-    if let Some(&backlog_size) = options.message_backlog_size {
-        gateway = gateway.message_backlog_size(backlog_size);
+    if options.message_backlog_size != 0 {
+        gateway = gateway.message_backlog_size(options.message_backlog_size);
     }
 
     let handle = gateway.start()?;

@@ -20,6 +20,7 @@
   <arg name="sysinfo"                         default="true" />
   <arg name="sysinfo_topic"                   default="/foxglove_bridge/sysinfo" />
   <arg name="sysinfo_refresh_interval"        default="500" />
+  <arg name="message_backlog_size"            default="1024" />
   <arg name="asset_uri_allowlist"             default="['^package://(?:[-\\w%]+/)*[-\\w%.]+\\.(?:dae|fbx|glb|gltf|jpeg|jpg|mtl|obj|png|stl|tif|tiff|urdf|webp|xacro)$']" />  <!-- Needs double-escape -->
   <arg name="ignore_unresponsive_param_nodes" default="true" />
   <arg name="remote_access"                  default="false" />
@@ -49,6 +50,7 @@
     <param name="sysinfo"                         value="$(var sysinfo)" />
     <param name="sysinfo_topic"                   value="$(var sysinfo_topic)" />
     <param name="sysinfo_refresh_interval"        value="$(var sysinfo_refresh_interval)" />
+    <param name="message_backlog_size"            value="$(var message_backlog_size)" />
     <param name="ignore_unresponsive_param_nodes" value="$(var ignore_unresponsive_param_nodes)" />
     <param name="remote_access"                  value="$(var remote_access)" />
     <param name="device_token"                   value="$(var device_token)" />

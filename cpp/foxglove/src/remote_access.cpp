@@ -249,10 +249,7 @@ FoxgloveResult<RemoteAccessGateway> RemoteAccessGateway::create(
     c_options.foxglove_api_timeout_secs = &*options.foxglove_api_timeout_secs;
   }
 
-  // Optional backlog size
-  if (options.message_backlog_size) {
-    c_options.message_backlog_size = &*options.message_backlog_size;
-  }
+  c_options.message_backlog_size = options.message_backlog_size.value_or(0);
 
   std::vector<foxglove_key_value> server_info;
   if (options.server_info) {

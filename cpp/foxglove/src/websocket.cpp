@@ -276,6 +276,8 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
     c_options.session_id = &*session_id;
   }
 
+  c_options.message_backlog_size = options.message_backlog_size.value_or(0);
+
   foxglove_websocket_server* server = nullptr;
   foxglove_error error = foxglove_server_start(&c_options, &server);
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || server == nullptr) {
