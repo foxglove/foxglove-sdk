@@ -7,8 +7,8 @@
 #include <resource_retriever/retriever.hpp>
 
 #include <foxglove_bridge/ros2_foxglove_bridge.hpp>
-#include <foxglove_bridge/version.hpp>
 #include <foxglove_bridge/utils.hpp>
+#include <foxglove_bridge/version.hpp>
 
 namespace foxglove_bridge {
 namespace {

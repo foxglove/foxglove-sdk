@@ -17,7 +17,8 @@ inline size_t saturatingToSizeT(int64_t value, int64_t min = 0) {
   if (value <= min) {
     return static_cast<size_t>(min);
   }
-  // Check the upper bound as uint64_t to avoid wrapping on platforms where int64_t is larger than size_t
+  // Check the upper bound as uint64_t to avoid wrapping on platforms where int64_t is larger than
+  // size_t
   const auto u = static_cast<uint64_t>(value);
   constexpr auto kMax = static_cast<uint64_t>(std::numeric_limits<size_t>::max());
   return static_cast<size_t>(std::min(u, kMax));
