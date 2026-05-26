@@ -3,8 +3,8 @@ import time
 
 import foxglove
 
-# The foxglove module provides a set_log_level function for convenience in scripts, which will call
-# logging.basicConfig() for you. Many examples use that, but for more involved applications, you'll
+# The foxglove module provides a set_log_level and set_default_log_level functions for convenience in scripts,
+# which will call logging.basicConfig() for you. Many examples use that, but for more involved applications, you'll
 # likely want to configure logging yourself.
 
 # Debug level by default, and specify a format
