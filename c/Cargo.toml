@@ -9,7 +9,9 @@ name = "foxglove"
 crate-type = ["staticlib", "cdylib"]
 
 # The `remote_access` feature gates `mod gateway` in src/lib.rs. It can be enabled via
-# the CMake option FOXGLOVE_REMOTE_ACCESS, which passes this feature to corrosion.
+# the Container.mk option FOXGLOVE_REMOTE_ACCESS, which passes this feature to corrosion.
+# Likewise FOXGLOVE_REQUIRE_CUDA enables the require-cuda feature, which will error
+# if cuda.h is not found: https://docs.rs/foxglove/latest/foxglove/#nvenc-hardware-acceleration
 #
 # Exactly one of `aws-lc-rs` or `ring` must be enabled to select the rustls crypto
 # backend used by `websocket-tls` and `remote-access`. `aws-lc-rs` is the default;
@@ -20,6 +22,7 @@ crate-type = ["staticlib", "cdylib"]
 [features]
 default = ["aws-lc-rs"]
 remote-access = ["foxglove/remote-access"]
+require-cuda = ["foxglove/require-cuda"]
 aws-lc-rs = ["foxglove/aws-lc-rs"]
 ring = ["foxglove/ring"]
 

@@ -4,9 +4,18 @@ generate:
 	yarn generate
 
 PYTHON_REMOTE_ACCESS ?= ON
+# Opts into a build-time check that NVENC hardware acceleration for video
+# encoding will be available (cuda.h is present on supported targets). Only
+# meaningful when remote-access is also enabled. Defaults to OFF because the
+# check fails the build on hosts without the CUDA toolkit; opt in explicitly
+# (e.g. in CI) where you want the loud failure.
+PYTHON_REQUIRE_CUDA ?= OFF
 
 ifeq ($(PYTHON_REMOTE_ACCESS),ON)
-MATURIN_PEP517_ARGS += --features full
+MATURIN_PEP517_ARGS += --features remote-access
+endif
+ifeq ($(PYTHON_REQUIRE_CUDA),ON)
+MATURIN_PEP517_ARGS += --features require-cuda
 endif
 
 .PHONY: build-python
@@ -118,6 +127,12 @@ test-cpp-sanitize:
 # FETCHCONTENT_SOURCE_DIR_FOXGLOVE_SDK in CMake.
 CPP_SDK_DIR ?= cpp/dist
 FOXGLOVE_REMOTE_ACCESS ?= ON
+# Opts into a build-time check that NVENC hardware acceleration for video
+# encoding will be available (cuda.h is present on supported targets). Only
+# meaningful when remote-access is also enabled. Defaults to OFF because the
+# check fails the build on hosts without the CUDA toolkit; opt in explicitly
+# (e.g. in CI) where you want the loud failure.
+FOXGLOVE_REQUIRE_CUDA ?= OFF
 # Selects the rustls crypto backend for the C SDK. Either `aws-lc-rs` (default)
 # or `ring`. Override to `ring` on targets where building aws-lc-sys is painful
 # (e.g. `aarch64-apple-ios-sim`, which would otherwise need an external bindgen).
@@ -131,7 +146,8 @@ build-cpp-dist:
 		--no-default-features --features $(FOXGLOVE_CRYPTO_PROVIDER)
 	cd c && FOXGLOVE_SDK_LANGUAGE=c cargo rustc --release --lib --crate-type cdylib \
 		--no-default-features --features $(FOXGLOVE_CRYPTO_PROVIDER) \
-		$(if $(filter ON,$(FOXGLOVE_REMOTE_ACCESS)),--features remote-access)
+		$(if $(filter ON,$(FOXGLOVE_REMOTE_ACCESS)),--features remote-access) \
+		$(if $(filter ON,$(FOXGLOVE_REQUIRE_CUDA)),--features require-cuda)
 	mkdir -p $(CPP_SDK_DIR)/lib $(CPP_SDK_DIR)/include $(CPP_SDK_DIR)/src $(CPP_SDK_DIR)/lib/cmake/foxglove-sdk
 	cp $(CARGO_LIB_DIR)/$(STATICLIB_NAME) $(CPP_SDK_DIR)/lib/
 	cp $(CARGO_LIB_DIR)/$(CDYLIB_NAME) $(CPP_SDK_DIR)/lib/

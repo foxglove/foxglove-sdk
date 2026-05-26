@@ -504,7 +504,7 @@ impl PyServerListener {
 
 /// Start a new Foxglove WebSocket server.
 #[pyfunction]
-#[pyo3(signature = (*, name = None, host="127.0.0.1", port=8765, capabilities=None, server_listener=None, supported_encodings=None, services=None, asset_handler=None, context=None, session_id=None, channel_filter=None, playback_time_range = None))]
+#[pyo3(signature = (*, name = None, host="127.0.0.1", port=8765, capabilities=None, server_listener=None, supported_encodings=None, services=None, asset_handler=None, context=None, session_id=None, channel_filter=None, playback_time_range = None, message_backlog_size=None))]
 #[allow(clippy::too_many_arguments)]
 pub fn start_server(
     py: Python<'_>,
@@ -520,6 +520,7 @@ pub fn start_server(
     session_id: Option<String>,
     channel_filter: Option<Py<PyAny>>,
     playback_time_range: Option<Py<PyTuple>>,
+    message_backlog_size: Option<usize>,
 ) -> PyResult<PyWebSocketServer> {
     let mut server = WebSocketServer::new().bind(host, port);
 
@@ -572,6 +573,10 @@ pub fn start_server(
         let start_time = bound_time_range.get_item(0)?.extract::<u64>()?;
         let end_time = bound_time_range.get_item(1)?.extract::<u64>()?;
         server = server.playback_time_range(start_time, end_time);
+    }
+
+    if let Some(size) = message_backlog_size {
+        server = server.message_backlog_size(size);
     }
 
     let handle = py

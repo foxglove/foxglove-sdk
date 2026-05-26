@@ -317,14 +317,12 @@
 //! access gateway. Without it, the gateway falls back to software H.264 encoding, which is
 //! slower and lower quality.
 //!
-//! NVENC requires `cuda.h` to be present at build time. The webrtc-sys build script looks
-//! for it at `$CUDA_HOME/include/cuda.h`, defaulting to `/usr/local/cuda/include/cuda.h`
-//! when `CUDA_HOME` is unset.
+//! NVENC is available on Linux for x86_64, arm, and aarch64. It requires `cuda.h` to be present
+//! at `/usr/local/cuda/include/cuda.h` or at $CUDA_HOME/include/cuda.h if you set `CUDA_HOME`.
 //!
-//! On Ubuntu you can install the headers with `apt install nvidia-cuda-toolkit`, but some versions of
-//! that package place `cuda.h` at `/usr/include/cuda.h` rather than `/usr/local/cuda/include/`,
-//! so you also need to set `CUDA_HOME=/usr` for webrtc-sys (and this crate's build script)
-//! to find it.
+//! On Ubuntu you can install the headers with `apt install nvidia-cuda-toolkit` or `apt install nvidia-cuda-dev`.
+//! If that places `cuda.h` at `/usr/include/cuda.h` rather than `/usr/local/cuda/include/`,
+//! you will also need to set `CUDA_HOME=/usr` so the build can find it.
 //!
 //! You can enable the `require-cuda` feature on this crate to make it a build error if
 //! `remote-access` is disabled, the target does not support NVENC, or `cuda.h` is not
@@ -338,9 +336,6 @@
 //!   default. Mutually exclusive with `ring`. See [Crypto backend](#crypto-backend).
 //! - `chrono`: enables [chrono] conversions for [`Duration`][crate::messages::Duration] and
 //!   [`Timestamp`][crate::messages::Timestamp].
-//! - `require-cuda`: opts into build-time checks that `remote-access` is enabled, the target
-//!   supports NVENC, and `cuda.h` is present where NVENC would be built. See
-//!   [NVENC hardware acceleration](#nvenc-hardware-acceleration).
 //! - `derive`: enables the use of `#[derive(Encode)]` to derive the [`Encode`] trait for logging
 //!   custom structs. Enabled by default.
 //! - `full`: the full set of supported features, with opinionated picks for mutually exclusive
@@ -348,6 +343,9 @@
 //! - `lz4`: enables support for the LZ4 compression algorithm for mcap files. Enabled by default.
 //! - `remote-access`: enables the remote access gateway for live visualization and teleop via
 //!   WebRTC. Requires a crypto backend; `aws-lc-rs` is enabled by default.
+//! - `require-cuda`: opts into a build-time check that `cuda.h` is present on targets where
+//!   webrtc-sys would build NVENC support. Requires `remote-access` to also be enabled.
+//!   See [NVENC hardware acceleration](#nvenc-hardware-acceleration).
 //! - `ring`: selects [ring] as the rustls crypto backend used for TLS. Alternative to
 //!   `aws-lc-rs`; mutually exclusive with it. See [Crypto backend](#crypto-backend).
 //! - `schemars`: provides a blanket implementation of the [`Encode`] trait for types that
