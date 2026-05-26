@@ -128,6 +128,7 @@ try:
         session_id: str | None = None,
         channel_filter: SinkChannelFilter | None = None,
         playback_time_range: tuple[int, int] | None = None,
+        message_backlog_size: int | None = None,
     ) -> WebSocketServer:
         """
         Start a WebSocket server for live visualization.
@@ -151,6 +152,8 @@ try:
             will be logged.
         :param playback_time_range: Time range of data being played back, in absolute nanoseconds.
             Implies ``Capability.PlaybackControl`` if set.
+        :param message_backlog_size: The maximum number of messages to buffer per client before
+            dropping the oldest entries. Defaults to 1024.
         """
         return _foxglove.start_server(
             name=name,
@@ -165,6 +168,7 @@ try:
             session_id=session_id,
             channel_filter=channel_filter,
             playback_time_range=playback_time_range,
+            message_backlog_size=message_backlog_size,
         )
 
     __all__ += [
