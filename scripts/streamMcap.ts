@@ -31,6 +31,13 @@
 //   3. Builds `example_remote_access_stream_mcap` inside the container
 //      (incremental after the first run, ~90s the first time).
 //   4. Execs the streamer with the bind-mounted file.
+//
+// Unlike `yarn start-netem`, this script intentionally LEAVES THE STACK
+// RUNNING when the streamer exits, so `yarn netem-impair` keeps working and
+// re-running `yarn stream-mcap` is fast. Tear the stack down yourself when
+// done:
+//   docker compose -f docker-compose.yaml -f docker-compose.netem.yml \
+//     -f docker-compose.netem-livekit.yml --profile perlink down
 
 import { program } from "commander";
 import { execFileSync } from "node:child_process";
@@ -46,6 +53,10 @@ const COMPOSE_FILES = [
   "docker-compose.netem-livekit.yml",
 ];
 const PROFILE_ARGS = ["--profile", "perlink"];
+const DOWN_HINT =
+  "Tear down the stack when done: docker compose " +
+  COMPOSE_FILES.join(" ") +
+  " --profile perlink down";
 
 interface Options {
   rustLog: string;
@@ -58,6 +69,13 @@ function compose(env: NodeJS.ProcessEnv, ...args: string[]): void {
   });
 }
 
+/** True if the error from `execFileSync` means the child was interrupted (Ctrl-C). */
+function wasSignaled(err: unknown): boolean {
+  const status = (err as { status?: number; signal?: string }).status;
+  const signal = (err as { status?: number; signal?: string }).signal;
+  return status === 130 || signal === "SIGINT" || signal === "SIGTERM";
+}
+
 function resolveMcapPath(positional: string | undefined): string {
   const raw = positional ?? process.env.MCAP_HOST_PATH;
   if (raw == null || raw.length === 0) {
@@ -68,15 +86,16 @@ function resolveMcapPath(positional: string | undefined): string {
     );
     process.exit(1);
   }
+  const abs = path.resolve(raw);
   // Compose splits bind-mount specs on `:` (host:container:options), so a `:`
-  // in the host path silently corrupts the mount. Reject up front.
-  if (raw.includes(":")) {
+  // anywhere in the resolved path silently corrupts the mount. `path.resolve`
+  // can introduce a `:` via the cwd even when `raw` has none, so check `abs`.
+  if (abs.includes(":")) {
     console.error(
-      `Error: MCAP path must not contain ':' (compose treats ':' as a bind-mount separator): ${raw}`,
+      `Error: MCAP path must not contain ':' (compose treats ':' as a bind-mount separator): ${abs}`,
     );
     process.exit(1);
   }
-  const abs = path.resolve(raw);
   try {
     fs.accessSync(abs, fs.constants.R_OK);
   } catch {
@@ -114,34 +133,33 @@ function run(opts: Options, positional: string | undefined): void {
   // the last `up`. That recreation also restarts `gateway-netem`, resetting
   // its qdisc to NETEM_GATEWAY_UPLOAD's value in *this* env.
   const upEnv: NodeJS.ProcessEnv = { ...process.env, MCAP_HOST_PATH: mcapPath };
-  console.log(`Mounting ${mcapPath} -> /workspace/recording.mcap`);
-  compose(upEnv, ...PROFILE_ARGS, "up", "-d", "--wait");
 
-  // Build the streamer inside the container. Inherits stdio so the operator
-  // sees cargo progress in real time.
-  console.log("");
-  console.log("Building example_remote_access_stream_mcap inside gateway-runner...");
-  compose(
-    upEnv,
-    "exec",
-    "gateway-runner",
-    "cargo",
-    "build",
-    "-p",
-    "example_remote_access_stream_mcap",
-    "--release",
-  );
-
-  // Forward only the env vars the streamer needs; everything else stays in
-  // the container's default environment.
-  console.log("");
-  console.log("Starting MCAP stream. Open http://localhost:8080 to view.");
-  console.log("Switch profiles mid-stream with: yarn netem-impair --profile <name>");
-  console.log("");
-  // Operators stop the streamer with Ctrl-C, which makes `docker exec` exit
-  // 130. Treat that as a clean shutdown rather than throwing an unhandled
-  // exception.
+  // The compose calls below inherit stdio, so their own errors print directly.
+  // A single try/catch keeps a Ctrl-C (or container failure) from burying that
+  // output under a node stack trace.
   try {
+    console.log(`Mounting ${mcapPath} -> /workspace/recording.mcap`);
+    compose(upEnv, ...PROFILE_ARGS, "up", "-d", "--wait");
+
+    console.log("");
+    console.log("Building example_remote_access_stream_mcap inside gateway-runner...");
+    compose(
+      upEnv,
+      "exec",
+      "gateway-runner",
+      "cargo",
+      "build",
+      "-p",
+      "example_remote_access_stream_mcap",
+      "--release",
+    );
+
+    // Forward only the env vars the streamer needs; everything else stays in
+    // the container's default environment.
+    console.log("");
+    console.log("Starting MCAP stream. Open http://localhost:8080 to view.");
+    console.log("Switch profiles mid-stream with: yarn netem-impair --profile <name>");
+    console.log("");
     compose(
       upEnv,
       "exec",
@@ -157,20 +175,22 @@ function run(opts: Options, positional: string | undefined): void {
       "/workspace/recording.mcap",
     );
   } catch (err) {
-    const status = (err as { status?: number; signal?: string }).status;
-    const signal = (err as { status?: number; signal?: string }).signal;
-    if (status === 130 || signal === "SIGINT" || signal === "SIGTERM") {
+    if (wasSignaled(err)) {
       console.log("\nStreamer stopped.");
+      console.log(DOWN_HINT);
       return;
     }
     throw err;
   }
+
+  console.log("");
+  console.log(DOWN_HINT);
 }
 
 program
   .description("Stream a host-side MCAP file through the per-link netem stack's gateway-runner.")
   .argument("[mcap-path]", "Absolute path to an MCAP file (overrides MCAP_HOST_PATH)")
-  .option("--rust-log <value>", "RUST_LOG value passed into the container", "foxglove=info,info")
+  .option("--rust-log <value>", "RUST_LOG value passed into the container", "foxglove=debug,info")
   .action((positional: string | undefined, opts: Options) => {
     run(opts, positional);
   })

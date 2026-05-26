@@ -12,9 +12,12 @@
 // settings reset to 0 — for example, switching from "delay 500ms loss 20%"
 // to "delay 400ms" resets loss to 0%.
 //
-// Limitation: only the gateway-upload link can be updated live. To change
-// gateway-download or viewer-* impairment, restart the stack with new
-// NETEM_* environment variables (see rust/remote_access_tests/NETEM.md).
+// Scope: this wrapper hardcodes the `gateway-netem` sidecar, so it only
+// retunes the gateway-upload link. The underlying `netem_impair.py` is not so
+// limited — exec'd into the LiveKit-side `netem` sidecar it updates all
+// download links at once (see "Changing impairment live" in
+// rust/remote_access_tests/NETEM.md). Per-link viewer/download retuning still
+// requires a stack restart with new NETEM_* env vars.
 
 import { program } from "commander";
 import { execFileSync } from "node:child_process";
@@ -80,7 +83,19 @@ function resolveArgs(opts: Options, trailing: string[]): string[] {
 function run(opts: Options, trailing: string[]): void {
   const netemArgs = resolveArgs(opts, trailing);
   console.log(`gateway upload: netem ${netemArgs.join(" ")}`);
-  compose("exec", "gateway-netem", "python3", "/netem_impair.py", ...netemArgs);
+  try {
+    compose("exec", "gateway-netem", "python3", "/netem_impair.py", ...netemArgs);
+  } catch {
+    // The most common cause is that the per-link stack isn't running, which
+    // produces an opaque docker error. Point the operator at the fix instead
+    // of dumping a node stack trace.
+    console.error(
+      "\nError: could not reach the gateway-netem sidecar.\n" +
+        "  Is the per-link stack running? Start it with `yarn stream-mcap` or\n" +
+        "  `yarn start-netem --perlink` first.",
+    );
+    process.exit(1);
+  }
 }
 
 program
