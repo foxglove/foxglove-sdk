@@ -5,13 +5,29 @@ use pyo3_log::Logger;
 
 /// Initialize pyo3 logging, ignoring errors if a logger has already been initialized.
 pub(crate) fn init_logging() {
-    let Ok(env_var) = env::var("FOXGLOVE_LOG_LEVEL") else {
-        let _ = pyo3_log::try_init();
-        return;
+    if let Ok(env_var) = env::var("FOXGLOVE_LOG_LEVEL") {
+        install_from_spec(&env_var);
+    }
+}
+
+pub(crate) fn enable_logging(level: u32) {
+    let level = match level {
+        50.. => LevelFilter::Off,
+        40.. => LevelFilter::Error,
+        30.. => LevelFilter::Warn,
+        20.. => LevelFilter::Info,
+        10.. => LevelFilter::Debug,
+        0.. => LevelFilter::Trace,
     };
 
-    let config = parse_log_env(&env_var);
-    let mut logger = Logger::default();
+    let env_var = env::var("FOXGLOVE_LOG_LEVEL")
+        .unwrap_or_else(|_| format!("foxglove={level}").to_lowercase());
+    install_from_spec(&env_var);
+}
+
+fn install_from_spec(spec: &str) {
+    let config = parse_log_env(spec);
+    let mut logger = Logger::default().filter(LevelFilter::Off);
 
     for (target, level) in config {
         if target.is_empty() {

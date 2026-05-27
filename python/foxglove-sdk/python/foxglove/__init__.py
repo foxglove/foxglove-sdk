@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import atexit
 import logging
-import os
 import sys
 from collections.abc import Callable
 from typing import TYPE_CHECKING, TypeAlias, Union
@@ -324,13 +323,14 @@ except ImportError:
 
 def set_log_level(level: int | str = "INFO") -> None:
     """
-    Enable SDK logging.
+    Enable SDK diagnostic logging.
 
     This function will call logging.basicConfig() for convenience in scripts, but in general you
     should configure logging yourself before calling this function:
     https://docs.python.org/3/library/logging.html
 
-    Overrides ``FOXGLOVE_LOG_LEVEL`` environment variable.
+    If the ``FOXGLOVE_LOG_LEVEL`` environment variable is set, it controls Rust log filtering.
+    Otherwise this enables logs from the Foxglove Rust SDK at the given level.
 
     :param level: The logging level to set. This accepts the same values as `logging.setLevel` and
         defaults to "INFO". The SDK will not log at levels "CRITICAL" or higher.
@@ -338,22 +338,6 @@ def set_log_level(level: int | str = "INFO") -> None:
     # This will raise a ValueError for invalid levels if the user has not already configured
     logging.basicConfig(level=level, format="%(asctime)s [%(levelname)s] %(message)s")
     _foxglove.enable_logging(_normalize_level(level))
-
-
-def set_default_log_level(level: int | str = "INFO") -> None:
-    """
-    Set the SDK log level, unless ``FOXGLOVE_LOG_LEVEL`` is set in the environment.
-    Like :func:`set_log_level`, this also calls :func:`logging.basicConfig` so that bridged SDK
-    log records are visible. Use this in scripts and examples that want a sensible default
-    without overriding a user's ``FOXGLOVE_LOG_LEVEL``.
-
-    :param level: The logging level to set. This accepts the same values as `logging.setLevel` and
-        defaults to "INFO". The SDK will not log at levels "CRITICAL" or higher.
-    """
-    # This will raise a ValueError for invalid levels if the user has not already configured
-    logging.basicConfig(level=level, format="%(asctime)s [%(levelname)s] %(message)s")
-    if "FOXGLOVE_LOG_LEVEL" not in os.environ:
-        _foxglove.enable_logging(_normalize_level(level))
 
 
 def _level_names() -> dict[str, int]:

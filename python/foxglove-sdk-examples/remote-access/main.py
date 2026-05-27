@@ -84,7 +84,7 @@ def render_color_ramp(frame: int) -> bytes:
 
 
 def main() -> None:
-    foxglove.set_default_log_level("INFO")
+    foxglove.set_log_level("INFO")
 
     gateway = foxglove.start_gateway(
         name="remote-access-example-python",
