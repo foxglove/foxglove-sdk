@@ -35,6 +35,47 @@ so joint *N* in the URDF tracks motor index *N − 1* from the YAML.
 
 \* yes, `join3` (missing 't') is a typo in the upstream SolidWorks-exported URDF; the script handles it correctly.
 
+### Mounted camera: Luxonis OAK 4 Pro
+
+The URDF also includes a Luxonis OAK-4 family camera bolted above `link5`
+(the wrist-pitch link), mirroring the upstream
+[`depthai_descriptions/urdf/include/base_macro.urdf.xacro`](https://github.com/luxonis/depthai-ros/blob/kilted/depthai_descriptions/urdf/include/base_macro.urdf.xacro)
+frame layout but flattened to plain URDF (no `xacro` toolchain required):
+
+```
+link5  [oak_mount_joint]        →  oak                 (mount base frame; tune origin here)
+oak    [oak_model_origin_joint] →  oak_model_origin    (visual mesh, +rpy="1.5708 0 1.5708")
+```
+
+The mesh
+([`urdf/reBot-DevArm_description_fixend/meshes/OAK4-D.stl`](./urdf/reBot-DevArm_description_fixend/meshes/OAK4-D.stl))
+and its
+[`OAK4-D.LICENSE`](./urdf/reBot-DevArm_description_fixend/meshes/OAK4-D.LICENSE)
+are taken from
+[luxonis/depthai-ros@kilted](https://github.com/luxonis/depthai-ros/tree/kilted/depthai_descriptions/urdf/models)
+under the MIT license and dropped into the same package as the rest of the arm
+meshes. The URDF references it by a **relative** path
+(`../meshes/OAK4-D.stl`, resolved against the URDF file's own URL) so Foxglove
+loads it without any cross-package `package://` lookup — which is what
+upstream-style `package://depthai_descriptions/...` URIs require, and which
+some Foxglove versions handle inconsistently.
+
+The upstream package does not yet ship a dedicated `OAK4-D-PRO.stl` (see
+[issue #772](https://github.com/luxonis/depthai-ros/issues/772)), so we use
+the geometrically closest `OAK4-D.stl` — the driver itself does the same
+fallback.
+
+To **tune the physical mount**, edit `oak_mount_joint`'s `<origin xyz="..." rpy="..."/>`
+in the URDF (default `xyz="0.0 0.0 0.06"`, i.e. 6 cm directly above `link5`'s
+origin, no rotation). The Foxglove asset handler re-serves the URDF on every
+3D-panel reload, so you'll see the change after _Custom Layer → URDF → Reload_.
+
+If you're also running a depthai_ros driver / [`oak-luxonis-4d`](../oak-luxonis-4d)
+streamer in parallel, it will publish the camera-internal optical frames
+(`oak_rgb_camera_optical_frame`, `oak_left_camera_optical_frame`,
+`oak_imu_frame`, …) on `/tf` rooted at this `oak` frame, so live camera /
+point-cloud topics will line up with the arm visualization automatically.
+
 ## Prerequisites
 
 - A reBot Arm B601 connected and powered, with the host able to reach it over

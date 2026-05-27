@@ -445,4 +445,65 @@
     <axis
       xyz="0 0 0" />
   </joint>
+
+  <!-- =================================================================== -->
+  <!-- Luxonis OAK 4 Pro camera, mounted above link5.                      -->
+  <!--                                                                     -->
+  <!-- Mesh: ../meshes/OAK4-D.stl (relative to this URDF file). Sourced    -->
+  <!-- from luxonis/depthai-ros (kilted branch); MIT license preserved at  -->
+  <!-- ../meshes/OAK4-D.LICENSE. The upstream package does not yet ship a  -->
+  <!-- dedicated OAK4-D-PRO mesh — see                                     -->
+  <!-- https://github.com/luxonis/depthai-ros/issues/772 — so we use the   -->
+  <!-- closest available model.                                            -->
+  <!--                                                                     -->
+  <!-- The mesh is referenced by a relative path (not `package://`) so     -->
+  <!-- Foxglove's 3D-panel URDF loader can fetch it directly relative to   -->
+  <!-- the URDF URL, without a cross-package asset lookup that some        -->
+  <!-- versions of Foxglove handle inconsistently.                         -->
+  <!--                                                                     -->
+  <!-- Frame layout mirrors the upstream `base` xacro macro                -->
+  <!-- (depthai_descriptions/urdf/include/base_macro.urdf.xacro):          -->
+  <!--                                                                     -->
+  <!--   link5  [oak_mount_joint]         -> oak                           -->
+  <!--   oak    [oak_model_origin_joint]  -> oak_model_origin              -->
+  <!--                                                                     -->
+  <!-- `oak_mount_joint` is the camera mount point you can tune (xyz / rpy -->
+  <!-- below) so the model lines up with the real-world physical mount.    -->
+  <!-- `oak_model_origin_joint` applies the conventional                   -->
+  <!-- rpy="1.5708 0 1.5708" rotation that aligns the SolidWorks-exported  -->
+  <!-- STL axes with the ROS / depthai_descriptions convention, so the     -->
+  <!-- camera's optical Z+ points where the lens looks.                    -->
+  <!--                                                                     -->
+  <!-- If a depthai_ros driver / Foxglove streamer is also running, it     -->
+  <!-- will publish the optical frames (oak_rgb_camera_optical_frame,      -->
+  <!-- oak_left_camera_optical_frame, oak_imu_frame, ...) on /tf with the  -->
+  <!-- `oak` base frame as their root, so the visualization stays          -->
+  <!-- consistent end-to-end.                                              -->
+  <!-- =================================================================== -->
+
+  <link name="oak" />
+
+  <joint name="oak_mount_joint" type="fixed">
+    <origin xyz="0.0 0.0 0.06" rpy="0 0 0" />
+    <parent link="link5" />
+    <child link="oak" />
+  </joint>
+
+  <link name="oak_model_origin">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="../meshes/OAK4-D.stl" />
+      </geometry>
+      <material name="oak_housing">
+        <color rgba="0.10 0.10 0.10 1.0" />
+      </material>
+    </visual>
+  </link>
+
+  <joint name="oak_model_origin_joint" type="fixed">
+    <origin xyz="0 0 0" rpy="1.5708 0 1.5708" />
+    <parent link="oak" />
+    <child link="oak_model_origin" />
+  </joint>
 </robot>
