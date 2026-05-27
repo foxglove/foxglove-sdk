@@ -322,7 +322,7 @@ export const CompressedAudio = {
     "data": {
       "type": "string",
       "contentEncoding": "base64",
-      "description": "Compressed audio data\n\nSpecifically, the requirements for different `format` values are:\n\n- `opus`\n  - Each message should contain a complete opus packet as described in https://datatracker.ietf.org/doc/html/rfc6716#section-3.\n- `mp4a.40.2`\n  - Each message should contain a complete MPEG-4 AAC LC ADTS audio packet as described in section 1.A.3.2 of ISO/IEC 14496-3:2019\n\nAny combination of sample rate and number of channels allowed by the respective audio format is supported.\n"
+      "description": "Compressed audio data\n\nSpecifically, the requirements for different `format` values are:\n\n- `opus`\n  - Each message should contain a complete raw Opus packet, without Ogg, WebM, or other container framing, as described in https://datatracker.ietf.org/doc/html/rfc6716#section-3.\n- `mp4a.40.2`\n  - Each message should contain a complete MPEG-4 AAC LC ADTS frame, including the ADTS header, as described in section 1.A.3.2 of ISO/IEC 14496-3:2019.\n\nAny combination of sample rate and number of channels allowed by the respective audio format is supported.\n"
     }
   }
 };
