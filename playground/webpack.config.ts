@@ -105,24 +105,29 @@ export default (_env: unknown, argv: WebpackArgv): Configuration => {
           // Don't duplicate webpack dev server overlay
           overlay: false,
         }),
-      new PyodideCdnDownloadPlugin([
-        // Pyodide is distributed with a list of packages that it knows about. These filenames match
-        // the ones it will try to download at runtime when calling pyodide.loadPackage(). See the
-        // list at: https://pyodide.org/en/stable/usage/packages-in-pyodide.html
-        "jedi-0.19.1-py2.py3-none-any.whl",
-        "micropip-0.9.0-py3-none-any.whl",
-        "numpy-2.0.2-cp312-cp312-pyodide_2024_0_wasm32.whl",
-        "openblas-0.3.26.zip",
-        "opencv_python-4.10.0.84-cp312-cp312-pyodide_2024_0_wasm32.whl",
-        "packaging-24.2-py3-none-any.whl",
-        "pandas-2.2.3-cp312-cp312-pyodide_2024_0_wasm32.whl",
-        "parso-0.8.4-py2.py3-none-any.whl",
-        "protobuf-5.29.2-cp312-cp312-pyodide_2024_0_wasm32.whl",
-        "python_dateutil-2.9.0.post0-py2.py3-none-any.whl",
-        "pytz-2024.1-py2.py3-none-any.whl",
-        "scipy-1.14.1-cp312-cp312-pyodide_2024_0_wasm32.whl",
-        "six-1.16.0-py2.py3-none-any.whl",
-      ]),
+      new PyodideCdnDownloadPlugin({
+        pyodideCdnPackages: [
+          // Pyodide is distributed with a list of packages that it knows about. These filenames match
+          // the ones it will try to download at runtime when calling pyodide.loadPackage(). See the
+          // list at: https://pyodide.org/en/stable/usage/packages-in-pyodide.html
+          "micropip-0.9.0-py3-none-any.whl",
+          "numpy-2.0.2-cp312-cp312-pyodide_2024_0_wasm32.whl",
+          "openblas-0.3.26.zip",
+          "opencv_python-4.10.0.84-cp312-cp312-pyodide_2024_0_wasm32.whl",
+          "packaging-24.2-py3-none-any.whl",
+          "pandas-2.2.3-cp312-cp312-pyodide_2024_0_wasm32.whl",
+          "parso-0.8.4-py2.py3-none-any.whl",
+          "protobuf-5.29.2-cp312-cp312-pyodide_2024_0_wasm32.whl",
+          "python_dateutil-2.9.0.post0-py2.py3-none-any.whl",
+          "pytz-2024.1-py2.py3-none-any.whl",
+          "scipy-1.14.1-cp312-cp312-pyodide_2024_0_wasm32.whl",
+          "six-1.16.0-py2.py3-none-any.whl",
+        ],
+        pypiPackageUrls: [
+          // upgraded version of jedi to fix https://github.com/davidhalter/jedi/issues/2087 and https://github.com/davidhalter/jedi/issues/2073
+          "https://files.pythonhosted.org/packages/9a/93/242e2eab5fe682ffcb8b0084bde703a41d51e17ee0f3a31ff0d9d813620a/jedi-0.20.0-py2.py3-none-any.whl",
+        ],
+      }),
     ],
   };
 };
@@ -133,15 +138,19 @@ export default (_env: unknown, argv: WebpackArgv): Configuration => {
  * See available packages at: https://pyodide.org/en/stable/usage/packages-in-pyodide.html
  */
 class PyodideCdnDownloadPlugin {
-  #packages: string[];
   #assets: Promise<Array<{ name: string; data: Buffer }>>;
 
-  constructor(packages: string[]) {
-    this.#packages = packages;
+  constructor(params: { pyodideCdnPackages: string[]; pypiPackageUrls: string[] }) {
+    const assets = params.pyodideCdnPackages
+      .map((name) => ({
+        name,
+        url: `https://cdn.jsdelivr.net/pyodide/v${pyodideVersion}/full/${name}`,
+      }))
+      .concat(params.pypiPackageUrls.map((url) => ({ name: url.split("/").at(-1)!, url })));
+
     this.#assets = Promise.all(
-      this.#packages.map(async (name) => {
-        console.log("fetching", name);
-        const url = `https://cdn.jsdelivr.net/pyodide/v${pyodideVersion}/full/${name}`;
+      assets.map(async ({ name, url }) => {
+        console.log("fetching", url);
         const data = await (await fetch(url)).arrayBuffer();
         return { name, data: Buffer.from(data) };
       }),
