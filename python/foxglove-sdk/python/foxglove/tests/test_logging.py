@@ -25,8 +25,6 @@ def test_logging_config_with_env() -> None:
 import logging
 import foxglove
 
-logging.basicConfig(level=logging.DEBUG)
-
 server = foxglove.start_server(port=0)
 server.stop()
 
