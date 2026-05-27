@@ -81,6 +81,48 @@ streamer in parallel, it will publish the camera-internal optical frames
 `oak_imu_frame`, …) on `/tf` rooted at this `oak` frame, so live camera /
 point-cloud topics will line up with the arm visualization automatically.
 
+### Built-in OAK point cloud streamer
+
+This demo also ships its own minimal OAK-4 publisher in
+[`oak_streamer.py`](./oak_streamer.py) — a single library file with one
+`OakStreamer` class — so you don't need to run `../oak-luxonis-4d` in a
+second process to see live depth in Foxglove.
+
+What it does (when an OAK device is attached and `depthai` is installed):
+
+- Opens a DepthAI v3 pipeline (color + stereo + `dai.node.RGBD`) and
+  publishes a **colored point cloud** on `/oak/depth/points` (XYZ float32 +
+  separate `red` / `green` / `blue` / `alpha` Uint8 fields — Foxglove's
+  *"RGBA (separate fields)"* color mode).
+- Reads the device calibration and publishes the **depthai-ros-style**
+  static TF tree (`oak_{rgb,left,right}_camera_{frame,optical_frame}`,
+  `oak_imu_frame`) **rooted at the URDF's `oak` link**, so the camera
+  visualization, point cloud, and URDF share one consistent TF tree.
+- Re-stamps the TF tree on every received cloud, so Foxglove sees fresh
+  timestamps and never marks the device transforms as stale.
+- Runs in its own daemon thread with `start()` / `stop()`. `main.py` only
+  calls these two methods.
+- **Auto-degrades**: if `depthai` is missing or no OAK is plugged in,
+  `OakStreamer.start()` logs a warning and exits cleanly — the homing and
+  sinusoidal-sway demo keeps running.
+
+Tunables (top of `main.py`):
+
+| Constant                | Meaning                                                                                       |
+| ----------------------- | --------------------------------------------------------------------------------------------- |
+| `ENABLE_OAK_STREAMER`   | Master switch (`True` by default). Set `False` to disable the camera publisher.               |
+| `OAK_TF_PREFIX`         | TF naming prefix; matches depthai-ros (`{prefix}_rgb_camera_optical_frame`, etc.).            |
+| `OAK_TF_BASE_FRAME`     | Root frame the device TF tree attaches to. Must match a URDF link (default `oak` on `link5`). |
+| `OAK_PCL_TOPIC`         | Foxglove topic for the colored point cloud.                                                   |
+| `OAK_RGBD_SIZE`         | Color / stereo / RGBD output resolution (width, height).                                      |
+| `OAK_RGBD_FPS`          | Pipeline FPS.                                                                                 |
+| `OAK_IR_LASER_INTENSITY`| IR dot-projector intensity, 0..1; matches the Luxonis stereo example default.                 |
+
+In Foxglove: add a **3D panel**, follow frame `world` (or `base_link`),
+enable the URDF custom layer (already in [`foxglove/rebotarm_layout.json`](./foxglove/rebotarm_layout.json)),
+then add the `/oak/depth/points` PointCloud topic — set its color mode to
+*"RGBA (separate fields)"* if it isn't auto-detected.
+
 ## Prerequisites
 
 - A reBot Arm B601 connected and powered, with the host able to reach it over

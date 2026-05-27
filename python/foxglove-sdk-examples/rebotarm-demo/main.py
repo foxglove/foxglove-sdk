@@ -36,6 +36,7 @@ from foxglove.messages import (
 from scipy.spatial.transform import Rotation as R
 from yourdfpy import URDF
 
+from oak_streamer import OakStreamer, OakStreamerConfig, is_depthai_available
 from reBotArm_control_py.actuator import RobotArm
 
 
@@ -104,6 +105,19 @@ BASE_FRAME_ID = "base_link"
 TF_PUBLISH_HZ = 30.0
 _TF_PUBLISH_INTERVAL = 1.0 / TF_PUBLISH_HZ
 
+# OAK-4 camera streaming. When True, the demo also spins up an `OakStreamer`
+# that publishes a colored point cloud + device static TF onto the same /tf
+# topic used by the URDF visualization. The streamer auto-degrades to a no-op
+# if depthai is not installed or no OAK device is attached, so leaving this
+# True is safe even without a camera connected.
+ENABLE_OAK_STREAMER = True
+OAK_TF_PREFIX = "oak"               # depthai-ros style: oak_rgb_camera_optical_frame, etc.
+OAK_TF_BASE_FRAME = "oak"           # matches the URDF link bolted on link5
+OAK_PCL_TOPIC = "/oak/depth/points"
+OAK_RGBD_SIZE: tuple[int, int] = (640, 400)
+OAK_RGBD_FPS = 30
+OAK_IR_LASER_INTENSITY = 0.7        # 0..1; matches the upstream Luxonis example default
+
 
 # --------------------------------------------------------------------------- #
 # Global control flags / time base
@@ -126,6 +140,9 @@ _urdf: Optional[URDF] = None
 # Built in setup_foxglove() by walking robot.robot.joints in order.
 _urdf_joint_index: dict[str, int] = {}
 _last_tf_pub_t: float = 0.0
+
+# OAK streamer instance (created by setup_oak_streamer, joined in main's finally)
+_oak_streamer: Optional[OakStreamer] = None
 
 
 def _signal_handler(signum, frame):
@@ -274,6 +291,45 @@ def setup_foxglove() -> foxglove.WebSocketServer:
         f"           (the SDK asset handler serves it from {URDF_ROOT})"
     )
     return _fox_server
+
+
+def setup_oak_streamer() -> None:
+    """Start the OAK-4 RGBD point cloud streamer, if enabled.
+
+    The streamer shares the existing ``/tf`` channel created by
+    ``setup_foxglove`` so the device's static TF tree (oak_rgb_camera_frame,
+    oak_*_camera_optical_frame, oak_imu_frame, ...) gets published alongside
+    the URDF transforms on the same topic — they hang off the wrist-mounted
+    ``oak`` link defined in the URDF, giving a single consistent TF tree.
+
+    Auto-degrades to a no-op if depthai is missing or no OAK device is
+    attached; the demo keeps running regardless.
+    """
+    global _oak_streamer
+
+    if not ENABLE_OAK_STREAMER:
+        print("[oak] ENABLE_OAK_STREAMER=False; skipping OAK point cloud setup")
+        return
+    if not is_depthai_available():
+        print("[oak] depthai package not available; OAK point cloud disabled "
+              "(install with: uv add depthai)")
+        return
+
+    _oak_streamer = OakStreamer(
+        OakStreamerConfig(
+            tf_prefix=OAK_TF_PREFIX,
+            tf_base_frame=OAK_TF_BASE_FRAME,
+            pcl_topic=OAK_PCL_TOPIC,
+            rgbd_size=OAK_RGBD_SIZE,
+            rgbd_fps=OAK_RGBD_FPS,
+            ir_laser_intensity=OAK_IR_LASER_INTENSITY,
+            tf_channel=_tf_channel,  # share URDF's /tf topic so trees stay merged
+            log_prefix="[oak]",
+        )
+    )
+    _oak_streamer.start()
+    print(f"[oak] streamer started (point cloud on {OAK_PCL_TOPIC}, "
+          f"static + live TF under '{OAK_TF_BASE_FRAME}' frame)")
 
 
 def maybe_publish_tf(arm: RobotArm, *, force: bool = False) -> None:
@@ -569,6 +625,7 @@ def main() -> None:
     arm: RobotArm | None = None
 
     setup_foxglove()
+    setup_oak_streamer()
 
     try:
         arm = RobotArm()
@@ -614,6 +671,16 @@ def main() -> None:
         print(f"\n[error] {type(e).__name__}: {e}")
         raise
     finally:
+        # Stop the OAK streamer first so its worker thread is no longer
+        # holding the USB device / publishing into a teardown-in-progress
+        # server. It runs on its own thread so this does not block the
+        # arm safe-return below.
+        if _oak_streamer is not None:
+            try:
+                _oak_streamer.stop(timeout=3.0)
+            except Exception as e:
+                print(f"[oak] streamer stop error: {e}")
+
         if arm is not None:
             if _start_pose_rad is not None:
                 print("\n[stop] returning arm to starting position...")

@@ -503,7 +503,7 @@
       rpy="0 1.5708 0"      [camera looks along link5's +Z (sky-pointing)]
   -->
   <joint name="oak_mount_joint" type="fixed">
-    <origin xyz="0.0320 0.0 -0.074" rpy="3.14159 0 0" />
+    <origin xyz="0.0320 0.0 -0.08291" rpy="3.14159 0 0" />
     <parent link="link5" />
     <child link="oak" />
   </joint>

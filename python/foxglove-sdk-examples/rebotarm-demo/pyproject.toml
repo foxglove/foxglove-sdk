@@ -11,6 +11,10 @@ dependencies = [
     "foxglove-sdk>=0.4.0",
     "yourdfpy",
     "scipy>=1.10",
+    # OAK-4 RGBD point cloud streaming via oak_streamer.py. Importing this is
+    # optional at runtime: if depthai is missing or no device is attached, the
+    # streamer logs a warning and disables itself; the rest of the demo runs.
+    "depthai>=3.0.0",
 ]
 
 [tool.uv.sources]
