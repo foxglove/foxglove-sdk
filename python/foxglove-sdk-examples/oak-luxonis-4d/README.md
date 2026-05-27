@@ -9,6 +9,7 @@ Example: run a **DepthAI v3** pipeline on an **OAK-4** family device (e.g. [OAK-
 | `/oak/rgb/image_raw` | `foxglove.RawImage` | `bgr8` preview |
 | `/oak/rgb/video` | `foxglove.CompressedVideo` | H.264 (NV12 → on-device encode) |
 | `/oak/depth/image` | `foxglove.RawImage` | `16UC1`, stereo depth (mm) |
+| `/oak/depth/points` | `foxglove.PointCloud` | XYZ float32 point cloud in meters from DepthAI `PointCloud` with `setRunOnHost(False)`; no host-side depth projection fallback |
 | `/oak/rgb/camera_info` | `foxglove.CameraCalibration` | Color intrinsics + `P` for undistort (see `--camera-info-timing`) |
 | `/oak/depth/camera_info` | `foxglove.CameraCalibration` | Rectified stereo / depth projection (`stereoRectify` + `P`) |
 | `/oak/imu` | JSON (sensor_msgs-like) | Accel m/s², gyro rad/s |
@@ -41,6 +42,24 @@ cd foxglove-sdk/python/foxglove-sdk-examples/oak-luxonis-4d
 uv run python main.py
 ```
 
+By default, `main.py` reads `config.json` from this folder. Edit that file to toggle streams and set common camera / stereo / IMU / TF defaults:
+
+```json
+{
+  "streams": {
+    "raw_rgb": true,
+    "h264": true,
+    "depth": true,
+    "point_cloud": true,
+    "imu": true,
+    "calibration": true,
+    "tf": true
+  }
+}
+```
+
+Use `--config path/to/config.json` for another profile. CLI flags still override the config, including both positive and negative toggles such as `--depth` / `--no-depth`, `--point-cloud` / `--no-point-cloud`, `--imu` / `--no-imu`, and `--tf` / `--no-tf`.
+
 From the monorepo with a local SDK build:
 
 ```bash
@@ -48,9 +67,9 @@ cd python/foxglove-sdk-examples/oak-luxonis-4d
 uv run --with ../../foxglove-sdk main.py
 ```
 
-Optional flags: `--no-raw-rgb`, `--no-h264`, `--no-depth`, `--no-imu`, `--no-calibration`, **`--no-tf`**, **`--tf-once`** (publish `/tf` only at startup; default is continuous `/tf` with vision timestamps), **`--tf-prefix`** (default `oak`), **`--tf-base-frame`** (default `oak`, rig root for the “extra” camera in EEPROM), `--record PATH.mcap`, `--rgb-width`, `--rgb-height`, `--fps`, `--stereo-width`, `--stereo-height`, IMU tuning (`--imu-max-packets`, `--imu-accel-hz`, `--imu-gyro-hz`, `--imu-batch-threshold`, `--imu-max-batch-reports`), and **`--camera-info-timing`**: `with_images` (default) republishes `/oak/rgb/camera_info` and `/oak/depth/camera_info` **with the same timestamp as each frame** (best for rectification / sync); `once` sends a single latched message at startup only.
+Optional flags: `--config`, `--raw-rgb` / `--no-raw-rgb`, `--h264` / `--no-h264`, `--depth` / `--no-depth`, `--point-cloud` / `--no-point-cloud`, `--imu` / `--no-imu`, `--calibration` / `--no-calibration`, **`--tf` / `--no-tf`**, **`--tf-once`** (publish `/tf` only at startup; default is continuous `/tf` with vision timestamps), **`--tf-prefix`** (default `oak`), **`--tf-base-frame`** (default `oak`, rig root for the “extra” camera in EEPROM), `--record PATH.mcap`, `--rgb-width`, `--rgb-height`, `--fps`, `--stereo-width`, `--stereo-height`, IMU tuning (`--imu-max-packets`, `--imu-accel-hz`, `--imu-gyro-hz`, `--imu-batch-threshold`, `--imu-max-batch-reports`), and **`--camera-info-timing`**: `with_images` (default) republishes `/oak/rgb/camera_info` and `/oak/depth/camera_info` **with the same timestamp as each frame** (best for rectification / sync); `once` sends a single latched message at startup only.
 
-Depth uses the **left** stereo optical frame (`oak_left_camera_optical_frame`). `camera_info` for depth is **rectified** (`stereoRectify`); small alignment residuals vs. raw factory B→A are the same class of issue as in ROS if you compare rectified depth to color.
+Depth and point cloud use the **left** stereo optical frame (`oak_left_camera_optical_frame`). `camera_info` for depth is **rectified** (`stereoRectify`); small alignment residuals vs. raw factory B→A are the same class of issue as in ROS if you compare rectified depth to color. DepthAI `PointCloud` defaults to millimeters, so this example requests `dai.LengthUnit.METER`, falls back to converting millimeters to meters when needed, and sanity-checks the actual Z values before publishing to Foxglove. Point cloud requires DepthAI v3.6+ `dai.node.PointCloud` and RVC4 device-side execution; if it cannot be forced to run on the device, the script logs a warning and does **not** calculate it on the computer.
 
 Color uses **one NV12** stream from CAM_A, split to the host (BGR preview) and on-device H.264, matching the official [video_encode](https://raw.githubusercontent.com/luxonis/depthai-core/main/examples/python/VideoEncoder/video_encode.py) pattern. If RGB is still empty, try lower resolution, e.g. `--rgb-width 960 --rgb-height 540`.
 
@@ -60,6 +79,7 @@ Color uses **one NV12** stream from CAM_A, split to the host (BGR preview) and o
 2. Add panels:
    - **Image** → `/oak/rgb/image_raw` (BGR / raw).
    - **Image** → `/oak/depth/image` (set color mode for 16-bit / depth as needed).
+   - **3D** → `/oak/depth/points` (PointCloud).
    - **Compressed video** → `/oak/rgb/video` (H.264).
    - **Plot** → `/oak/imu` (e.g. `linear_acceleration.x` or `angular_velocity.z` in the message JSON).
 
@@ -70,6 +90,7 @@ Color uses **one NV12** stream from CAM_A, split to the host (BGR preview) and o
 - [depthai-ros / `depthai_bridge` (TF + URDF)](https://github.com/luxonis/depthai-ros)
 - [DepthAI v3 camera examples](https://docs.luxonis.com/software-v3/depthai/examples/#Depthai%20Examples-Camera)
 - [Stereo depth](https://docs.luxonis.com/software-v3/depthai/examples/stereo_depth/stereo_depth)
+- [PointCloud node](https://docs.luxonis.com/software-v3/depthai/depthai-components/nodes/pointcloud)
 - [IMU](https://docs.luxonis.com/software-v3/depthai/examples/imu/imu_accelerometer_gyroscope)
 - [Foxglove SDK](https://docs.foxglove.dev/docs/sdk/introduction)
 

@@ -10,6 +10,7 @@ import json
 import logging
 import time
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 import cv2
@@ -21,6 +22,7 @@ from foxglove.channels import (
     CameraCalibrationChannel,
     CompressedVideoChannel,
     FrameTransformsChannel,
+    PointCloudChannel,
     RawImageChannel,
 )
 from foxglove.messages import (
@@ -28,11 +30,17 @@ from foxglove.messages import (
     CompressedVideo,
     FrameTransform,
     FrameTransforms,
+    PackedElementField,
+    PackedElementFieldNumericType,
+    PointCloud,
+    Pose,
     Quaternion,
     RawImage,
     Timestamp,
     Vector3,
 )
+
+DEFAULT_CONFIG_PATH = Path(__file__).with_name("config.json")
 
 
 @dataclass(frozen=True)
@@ -148,79 +156,182 @@ IMU_JSON_SCHEMA: dict[str, Any] = {
 }
 
 
-def parse_args() -> argparse.Namespace:
-    p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--rgb-width", type=int, default=1280)
-    p.add_argument("--rgb-height", type=int, default=720)
-    p.add_argument("--fps", type=int, default=30)
-    p.add_argument("--stereo-width", type=int, default=640)
-    p.add_argument("--stereo-height", type=int, default=400)
-    p.add_argument("--no-raw-rgb", action="store_true")
-    p.add_argument("--no-h264", action="store_true")
-    p.add_argument("--no-depth", action="store_true")
-    p.add_argument("--no-imu", action="store_true")
-    p.add_argument(
-        "--no-calibration",
+def _get_config_value(cfg: dict[str, Any], dotted_key: str, default: Any) -> Any:
+    cur: Any = cfg
+    for part in dotted_key.split("."):
+        if not isinstance(cur, dict) or part not in cur:
+            return default
+        cur = cur[part]
+    return cur
+
+
+def _load_config(path: str) -> dict[str, Any]:
+    config_path = Path(path).expanduser()
+    if not config_path.is_absolute():
+        config_path = Path.cwd() / config_path
+    if not config_path.exists():
+        return {}
+    try:
+        with config_path.open("r", encoding="utf-8") as f:
+            loaded = json.load(f)
+    except Exception as ex:
+        raise SystemExit(f"Could not read config {config_path}: {ex}") from ex
+    if not isinstance(loaded, dict):
+        raise SystemExit(f"Config {config_path} must contain a JSON object")
+    return loaded
+
+
+def _add_toggle(
+    parser: argparse.ArgumentParser,
+    name: str,
+    *,
+    default_enabled: bool,
+    help_enabled: str,
+    help_disabled: str,
+) -> None:
+    dest = f"no_{name.replace('-', '_')}"
+    parser.add_argument(
+        f"--{name}",
+        dest=dest,
+        action="store_false",
+        help=help_enabled,
+    )
+    parser.add_argument(
+        f"--no-{name}",
+        dest=dest,
         action="store_true",
-        help="Disable all CameraCalibration topics",
+        help=help_disabled,
+    )
+    parser.set_defaults(**{dest: not default_enabled})
+
+
+def parse_args() -> argparse.Namespace:
+    config_parser = argparse.ArgumentParser(add_help=False)
+    config_parser.add_argument("--config", default=str(DEFAULT_CONFIG_PATH))
+    config_args, _ = config_parser.parse_known_args()
+    cfg = _load_config(config_args.config)
+
+    p = argparse.ArgumentParser(description=__doc__, parents=[config_parser])
+    p.add_argument("--rgb-width", type=int, default=_get_config_value(cfg, "camera.rgb_width", 1280))
+    p.add_argument("--rgb-height", type=int, default=_get_config_value(cfg, "camera.rgb_height", 720))
+    p.add_argument("--fps", type=int, default=_get_config_value(cfg, "camera.fps", 30))
+    p.add_argument(
+        "--stereo-width",
+        type=int,
+        default=_get_config_value(cfg, "stereo.width", 640),
+    )
+    p.add_argument(
+        "--stereo-height",
+        type=int,
+        default=_get_config_value(cfg, "stereo.height", 400),
+    )
+    _add_toggle(
+        p,
+        "raw-rgb",
+        default_enabled=bool(_get_config_value(cfg, "streams.raw_rgb", True)),
+        help_enabled="Enable raw RGB preview (overrides config)",
+        help_disabled="Disable raw RGB preview",
+    )
+    _add_toggle(
+        p,
+        "h264",
+        default_enabled=bool(_get_config_value(cfg, "streams.h264", True)),
+        help_enabled="Enable H.264 video (overrides config)",
+        help_disabled="Disable H.264 video",
+    )
+    _add_toggle(
+        p,
+        "depth",
+        default_enabled=bool(_get_config_value(cfg, "streams.depth", True)),
+        help_enabled="Enable stereo depth (overrides config)",
+        help_disabled="Disable stereo depth",
+    )
+    _add_toggle(
+        p,
+        "point-cloud",
+        default_enabled=bool(_get_config_value(cfg, "streams.point_cloud", True)),
+        help_enabled="Enable device-side point cloud (overrides config)",
+        help_disabled="Disable device-side point cloud",
+    )
+    _add_toggle(
+        p,
+        "imu",
+        default_enabled=bool(_get_config_value(cfg, "streams.imu", True)),
+        help_enabled="Enable IMU publishing (overrides config)",
+        help_disabled="Disable IMU publishing",
+    )
+    _add_toggle(
+        p,
+        "calibration",
+        default_enabled=bool(_get_config_value(cfg, "streams.calibration", True)),
+        help_enabled="Enable CameraCalibration topics (overrides config)",
+        help_disabled="Disable all CameraCalibration topics",
     )
     p.add_argument(
         "--camera-info-timing",
         choices=("with_images", "once"),
-        default="with_images",
+        default=_get_config_value(cfg, "calibration.timing", "with_images"),
         help="Publish camera_info with each frame (synced timestamps) or once at startup",
     )
-    p.add_argument(
-        "--no-tf",
-        action="store_true",
-        help="Disable FrameTransforms on /tf and /tf_static (device extrinsics)",
+    _add_toggle(
+        p,
+        "tf",
+        default_enabled=bool(_get_config_value(cfg, "streams.tf", True)),
+        help_enabled="Enable FrameTransforms on /tf and /tf_static (overrides config)",
+        help_disabled="Disable FrameTransforms on /tf and /tf_static",
     )
     p.add_argument(
         "--tf-prefix",
-        default="oak",
+        default=_get_config_value(cfg, "tf.prefix", "oak"),
         help="TF frame prefix (matches depthai-ros: {prefix}_rgb_camera_optical_frame, etc.)",
     )
     p.add_argument(
         "--tf-base-frame",
-        default="oak",
+        default=_get_config_value(cfg, "tf.base_frame", "oak"),
         help="Root frame attached to the camera rig (depthai-ros default base_frame)",
     )
     p.add_argument(
         "--tf-once",
         action="store_true",
+        default=not bool(_get_config_value(cfg, "tf.continuous", True)),
         help="Publish /tf only once at startup (default: republish /tf on each RGB frame for live TF)",
     )
-    p.add_argument("--record", type=str, default="", help="Write MCAP to this path")
+    p.add_argument(
+        "--record",
+        type=str,
+        default=_get_config_value(cfg, "record", ""),
+        help="Write MCAP to this path",
+    )
     p.add_argument(
         "--imu-max-packets",
         type=int,
-        default=32,
+        default=_get_config_value(cfg, "imu.max_packets", 32),
         help="Max IMU samples to publish per IMU batch (prevents starving vision streams)",
     )
     p.add_argument(
         "--imu-accel-hz",
         type=int,
-        default=100,
+        default=_get_config_value(cfg, "imu.accel_hz", 100),
         metavar="HZ",
         help="Accelerometer report rate (Hz); lower = less USB load (e.g. 50, 100, 200)",
     )
     p.add_argument(
         "--imu-gyro-hz",
         type=int,
-        default=100,
+        default=_get_config_value(cfg, "imu.gyro_hz", 100),
         metavar="HZ",
         help="Gyroscope report rate (Hz); lower = less USB load (e.g. 50, 100, 200, 400)",
     )
     p.add_argument(
         "--imu-batch-threshold",
         type=int,
-        default=10,
+        default=_get_config_value(cfg, "imu.batch_threshold", 10),
         help="Device batches this many IMU samples before sending (reduces 'host too slow' warnings)",
     )
     p.add_argument(
         "--imu-max-batch-reports",
         type=int,
-        default=40,
+        default=_get_config_value(cfg, "imu.max_batch_reports", 40),
         help="Max IMU packets per device batch; must be > --imu-batch-threshold",
     )
     return p.parse_args()
@@ -933,6 +1044,103 @@ def depth_imgframe_to_raw16_packed(dp: dai.ImgFrame) -> tuple[bytes, int, int, i
     return fr.tobytes(), w, h, row_bytes
 
 
+POINT_CLOUD_FIELDS = [
+    PackedElementField(name="x", offset=0, type=PackedElementFieldNumericType.Float32),
+    PackedElementField(name="y", offset=4, type=PackedElementFieldNumericType.Float32),
+    PackedElementField(name="z", offset=8, type=PackedElementFieldNumericType.Float32),
+]
+POINT_CLOUD_POSE = Pose(
+    position=Vector3(x=0.0, y=0.0, z=0.0),
+    orientation=Quaternion(x=0.0, y=0.0, z=0.0, w=1.0),
+)
+POINT_CLOUD_MM_HEURISTIC_THRESHOLD_M = 50.0
+_point_cloud_auto_scale_warned = False
+
+
+def depthai_length_unit_to_meters(unit: Any) -> float:
+    """Scale DepthAI PointCloud coordinates into Foxglove's meter-based scene."""
+    unit_scales = {
+        "METER": 1.0,
+        "CENTIMETER": 0.01,
+        "MILLIMETER": 0.001,
+        "INCH": 0.0254,
+        "FOOT": 0.3048,
+    }
+    for name, scale in unit_scales.items():
+        if unit == getattr(dai.LengthUnit, name, None):
+            return scale
+    name = getattr(unit, "name", str(unit)).rsplit(".", maxsplit=1)[-1].upper()
+    return unit_scales.get(name, 1.0)
+
+
+def pointcloud_scale_to_meters(xyz: np.ndarray, configured_scale: float) -> float:
+    """
+    Return the scale to publish DepthAI XYZ in meters.
+
+    Some device-side PointCloud paths still emit millimeter-scale coordinates even
+    after accepting METER configuration, so verify the actual depth magnitude.
+    """
+    if configured_scale != 1.0:
+        return configured_scale
+    positive_z = np.abs(xyz[:, 2][xyz[:, 2] > 0])
+    if positive_z.size == 0:
+        return configured_scale
+    median_z = float(np.median(positive_z))
+    if median_z > POINT_CLOUD_MM_HEURISTIC_THRESHOLD_M:
+        global _point_cloud_auto_scale_warned
+        if not _point_cloud_auto_scale_warned:
+            logging.warning(
+                "PointCloud: DepthAI reported meter output, but median Z is %.3f; "
+                "treating coordinates as millimeters and scaling to meters for Foxglove",
+                median_z,
+            )
+            _point_cloud_auto_scale_warned = True
+        return 0.001
+    return configured_scale
+
+
+def pointcloud_data_to_msg(
+    pcl_data: Any,
+    ts: Timestamp,
+    frame_id: str,
+    unit_scale_to_meters: float,
+) -> PointCloud | None:
+    """
+    Convert device-generated ``dai.PointCloudData`` to Foxglove ``PointCloud``.
+
+    DepthAI's configured output unit is converted to meters for Foxglove.
+    """
+    try:
+        points = pcl_data.getPoints()
+    except Exception:
+        return None
+    if not isinstance(points, np.ndarray) or points.size == 0:
+        return None
+    if points.ndim == 3 and points.shape[2] >= 3:
+        points = points.reshape((-1, points.shape[2]))
+    if points.ndim != 2 or points.shape[1] < 3:
+        return None
+    xyz = points[:, :3]
+    finite = np.isfinite(xyz).all(axis=1)
+    if not bool(finite.any()):
+        return None
+    xyz = xyz[finite]
+    if xyz.dtype != np.float32:
+        xyz = xyz.astype(np.float32, copy=False)
+    scale_to_meters = pointcloud_scale_to_meters(xyz, unit_scale_to_meters)
+    if scale_to_meters != 1.0:
+        xyz = xyz * np.float32(scale_to_meters)
+    xyz = np.ascontiguousarray(xyz)
+    return PointCloud(
+        timestamp=ts,
+        frame_id=frame_id,
+        pose=POINT_CLOUD_POSE,
+        point_stride=12,
+        fields=POINT_CLOUD_FIELDS,
+        data=xyz.tobytes(),
+    )
+
+
 def main() -> None:
     args = parse_args()
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
@@ -940,6 +1148,7 @@ def main() -> None:
 
     want_cal = not args.no_calibration
     want_tf = not args.no_tf
+    want_point_cloud = not args.no_point_cloud
 
     rgb_optical = f"{args.tf_prefix}_rgb_camera_optical_frame"
     depth_optical = f"{args.tf_prefix}_left_camera_optical_frame"
@@ -948,6 +1157,7 @@ def main() -> None:
     rgb_ch = RawImageChannel(topic="/oak/rgb/image_raw")
     vid_ch = CompressedVideoChannel(topic="/oak/rgb/video")
     depth_ch = RawImageChannel(topic="/oak/depth/image")
+    point_cloud_ch = PointCloudChannel(topic="/oak/depth/points")
     rgb_cal_ch = CameraCalibrationChannel(topic="/oak/rgb/camera_info")
     depth_cal_ch = CameraCalibrationChannel(topic="/oak/depth/camera_info")
     tf_ch: FrameTransformsChannel | None = None
@@ -1032,6 +1242,7 @@ def main() -> None:
     fps_rgb = FpsCounter("rgb")
     fps_enc = FpsCounter("h264")
     fps_depth = FpsCounter("depth")
+    fps_pcl = FpsCounter("point_cloud")
     fps_imu = FpsCounter("imu")
 
     publish_cal_with_images = (
@@ -1044,6 +1255,8 @@ def main() -> None:
         rgb_q: Any = None
         enc_q: Any = None
         depth_q: Any = None
+        point_cloud_q: Any = None
+        point_cloud_unit_scale_to_meters = 0.001
         imu_q: Any = None
 
         color = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
@@ -1082,7 +1295,16 @@ def main() -> None:
             )
             enc_q = encoder.out.createOutputQueue(maxSize=4, blocking=False)
 
-        if not args.no_depth:
+        depth_pipeline_enabled = not args.no_depth or want_point_cloud
+        point_cloud_available = want_point_cloud
+        if want_point_cloud and not hasattr(dai.node, "PointCloud"):
+            logging.warning(
+                "Point cloud enabled, but this DepthAI build has no dai.node.PointCloud; "
+                "not computing point cloud on host."
+            )
+            point_cloud_available = False
+
+        if depth_pipeline_enabled:
             left = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_B)
             right = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_C)
             stereo = pipeline.create(dai.node.StereoDepth)
@@ -1106,7 +1328,54 @@ def main() -> None:
                     stereo.setEnableFrameSync(True)
                 except Exception:
                     pass
-            depth_q = stereo.depth.createOutputQueue(maxSize=4, blocking=False)
+            if not args.no_depth:
+                depth_q = stereo.depth.createOutputQueue(maxSize=4, blocking=False)
+
+            if point_cloud_available:
+                point_cloud = pipeline.create(dai.node.PointCloud)
+                if hasattr(point_cloud, "setRunOnHost"):
+                    try:
+                        point_cloud.setRunOnHost(False)
+                    except Exception as ex:
+                        logging.warning(
+                            "Point cloud enabled, but device-side PointCloud failed (%s); "
+                            "not computing point cloud on host.",
+                            ex,
+                        )
+                        point_cloud_available = False
+                else:
+                    logging.warning(
+                        "Point cloud enabled, but DepthAI PointCloud cannot be forced to run on device; "
+                        "not computing point cloud on host."
+                    )
+                    point_cloud_available = False
+
+                if point_cloud_available:
+                    if hasattr(point_cloud, "initialConfig"):
+                        try:
+                            point_cloud.initialConfig.setLengthUnit(dai.LengthUnit.METER)
+                            unit = (
+                                point_cloud.initialConfig.getLengthUnit()
+                                if hasattr(point_cloud.initialConfig, "getLengthUnit")
+                                else dai.LengthUnit.METER
+                            )
+                            point_cloud_unit_scale_to_meters = depthai_length_unit_to_meters(unit)
+                        except Exception as ex:
+                            logging.warning(
+                                "PointCloud: could not set DepthAI output unit to meters (%s); "
+                                "assuming default millimeters and converting for Foxglove",
+                                ex,
+                            )
+                    stereo.depth.link(point_cloud.inputDepth)
+                    point_cloud_q = point_cloud.outputPointCloud.createOutputQueue(
+                        maxSize=2,
+                        blocking=False,
+                    )
+                    logging.info(
+                        "PointCloud: device-side DepthAI node enabled on /oak/depth/points "
+                        "(scale to meters: %.6g)",
+                        point_cloud_unit_scale_to_meters,
+                    )
 
         if not args.no_imu:
             imu = pipeline.create(dai.node.IMU)
@@ -1139,6 +1408,7 @@ def main() -> None:
         rgb_warned = False
         depth_warned_payload = False
         depth_warned_type = False
+        point_cloud_warned = False
 
         try:
             while pipeline.isRunning():
@@ -1264,6 +1534,32 @@ def main() -> None:
                                 if publish_cal_with_images and depth_cal_template is not None:
                                     depth_cal_ch.log(depth_cal_template.to_msg(ts))
                                 fps_depth.tick()
+
+                    if point_cloud_q is not None:
+                        pcl_data = point_cloud_q.tryGet()
+                        if pcl_data is not None:
+                            progressed = True
+                            try:
+                                ts = imu_ts_to_foxglove(pcl_data.getTimestamp())
+                            except Exception:
+                                ts = republish_tf_ts or Timestamp.now()
+                            pcl_msg = pointcloud_data_to_msg(
+                                pcl_data,
+                                ts,
+                                depth_optical,
+                                point_cloud_unit_scale_to_meters,
+                            )
+                            if pcl_msg is None:
+                                if not point_cloud_warned:
+                                    logging.warning(
+                                        "PointCloud: device output could not be serialized to Foxglove PointCloud"
+                                    )
+                                    point_cloud_warned = True
+                            else:
+                                point_cloud_ch.log(pcl_msg)
+                                if republish_tf_ts is None:
+                                    republish_tf_ts = ts
+                                fps_pcl.tick()
 
                     if (
                         publish_tf_live

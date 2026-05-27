@@ -1,0 +1,36 @@
+{
+  "streams": {
+    "raw_rgb": true,
+    "h264": true,
+    "depth": true,
+    "point_cloud": true,
+    "imu": true,
+    "calibration": true,
+    "tf": true
+  },
+  "camera": {
+    "rgb_width": 1280,
+    "rgb_height": 720,
+    "fps": 30
+  },
+  "stereo": {
+    "width": 640,
+    "height": 400
+  },
+  "calibration": {
+    "timing": "with_images"
+  },
+  "tf": {
+    "prefix": "oak",
+    "base_frame": "oak",
+    "continuous": true
+  },
+  "imu": {
+    "accel_hz": 100,
+    "gyro_hz": 100,
+    "batch_threshold": 10,
+    "max_batch_reports": 40,
+    "max_packets": 32
+  },
+  "record": ""
+}
