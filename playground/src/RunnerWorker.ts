@@ -81,7 +81,6 @@ def set_layout(layout: "foxglove.layouts.Layout", /) -> None:
     ...
 
 mod = ModuleType("playground")
-mod.__package__ = None
 mod.__doc__ = "Functions available in the SDK playground."
 mod.set_layout = set_layout
 mod
