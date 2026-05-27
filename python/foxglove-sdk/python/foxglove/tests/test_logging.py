@@ -25,31 +25,7 @@ def test_logging_config_with_env() -> None:
 import logging
 import foxglove
 
-server = foxglove.start_server(port=0)
-server.stop()
-
-print("test_init_with_env_complete")
-"""
-
-    # Default: logging is disabled unless enabled by the user or environment.
-    env = os.environ.copy()
-    env.pop("FOXGLOVE_LOG_LEVEL", None)
-
-    result = subprocess.run(
-        [sys.executable, "-c", test_script],
-        env=env,
-        capture_output=True,
-        text=True,
-        timeout=5,
-    )
-    assert "test_init_with_env_complete" in result.stdout
-    assert "Started server" not in result.stderr
-
-    test_script = """
-import logging
-import foxglove
-
-foxglove.set_log_level("DEBUG")
+logging.basicConfig(level=logging.DEBUG)
 
 server = foxglove.start_server(port=0)
 server.stop()
@@ -57,9 +33,9 @@ server.stop()
 print("test_init_with_env_complete")
 """
 
-    # set_log_level enables Foxglove SDK logs by default.
+    # Default: unset
     env = os.environ.copy()
-    env.pop("FOXGLOVE_LOG_LEVEL", None)
+    env["FOXGLOVE_LOG_LEVEL"] = ""
 
     result = subprocess.run(
         [sys.executable, "-c", test_script],
@@ -71,7 +47,7 @@ print("test_init_with_env_complete")
     assert "test_init_with_env_complete" in result.stdout
     assert "Started server" in result.stderr
 
-    # Environment filters take precedence over set_log_level.
+    # Quiet the WS server logging
     env = os.environ.copy()
     env["FOXGLOVE_LOG_LEVEL"] = "debug,foxglove::websocket::server=warn"
 
