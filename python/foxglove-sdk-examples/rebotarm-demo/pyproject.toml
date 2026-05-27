@@ -1,0 +1,20 @@
+[project]
+name = "rebotarm-demo"
+version = "0.1.0"
+description = "reBot Arm B601 slow sinusoidal sway demo (POS_VEL mode) using reBotArm_control_py"
+authors = [{ name = "Foxglove", email = "support@foxglove.dev" }]
+requires-python = ">=3.10"
+readme = "README.md"
+dependencies = [
+    "rebotarm-control-py",
+    "numpy>=1.24",
+]
+
+[tool.uv.sources]
+rebotarm-control-py = { path = "../../../../reBotArm_control_py", editable = true }
+
+[dependency-groups]
+dev = ["mypy>=1,<2"]
+
+[tool.uv]
+package = false
