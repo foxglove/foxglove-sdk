@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import atexit
 import logging
+import os
 import sys
 from collections.abc import Callable
 from typing import TYPE_CHECKING, TypeAlias, Union
@@ -323,21 +324,36 @@ except ImportError:
 
 def set_log_level(level: int | str = "INFO") -> None:
     """
-    Enable SDK diagnostic logging.
+    Sets the global log level for the Foxglove SDK.
 
-    This function will call logging.basicConfig() for convenience in scripts, but in general you
-    should configure logging yourself before calling this function:
-    https://docs.python.org/3/library/logging.html
+    This is mainly a convenience function for scripts and examples that want a sensible default.
+    Prefer setting FOXGLOVE_LOG_LEVEL environment variable over calling this function.
+    If FOXGLOVE_LOG_LEVEL is set, this function does nothing.
 
-    If the ``FOXGLOVE_LOG_LEVEL`` environment variable is set, it controls Rust log filtering.
-    Otherwise this enables logs from the Foxglove Rust SDK at the given level.
+    See :func:`foxglove.enable_logging` for a way to unconditionally set the SDK log level.
 
     :param level: The logging level to set. This accepts the same values as `logging.setLevel` and
         defaults to "INFO". The SDK will not log at levels "CRITICAL" or higher.
     """
-    # This will raise a ValueError for invalid levels if the user has not already configured
+
+    if "FOXGLOVE_LOG_LEVEL" in os.environ:
+        return
+
+    if isinstance(level, str):
+        level_map = (
+            logging.getLevelNamesMapping()
+            if hasattr(logging, "getLevelNamesMapping")
+            else _level_names()
+        )
+        try:
+            level = level_map[level]
+        except KeyError:
+            raise ValueError(f"Unknown log level: {level}")
+    else:
+        level = max(0, min(2**32 - 1, level))
+
     logging.basicConfig(level=level, format="%(asctime)s [%(levelname)s] %(message)s")
-    _foxglove.enable_logging(_normalize_level(level))
+    _foxglove.enable_logging(level)
 
 
 def _level_names() -> dict[str, int]:
@@ -352,20 +368,6 @@ def _level_names() -> dict[str, int]:
         "DEBUG": logging.DEBUG,
         "NOTSET": logging.NOTSET,
     }
-
-
-def _normalize_level(level: int | str) -> int:
-    if isinstance(level, str):
-        level_map = (
-            logging.getLevelNamesMapping()
-            if hasattr(logging, "getLevelNamesMapping")
-            else _level_names()
-        )
-        try:
-            return level_map[level]
-        except KeyError:
-            raise ValueError(f"Unknown log level: {level}")
-    return max(0, min(2**32 - 1, level))
 
 
 def init_notebook_buffer(context: Context | None = None) -> NotebookBuffer:
