@@ -49,7 +49,6 @@ print("test_init_with_env_complete")
 import logging
 import foxglove
 
-logging.basicConfig(level=logging.DEBUG)
 foxglove.set_log_level("DEBUG")
 
 server = foxglove.start_server(port=0)
@@ -74,7 +73,7 @@ print("test_init_with_env_complete")
 
     # Environment filters take precedence over set_log_level.
     env = os.environ.copy()
-    env["FOXGLOVE_LOG_LEVEL"] = "foxglove::websocket::server=warn"
+    env["FOXGLOVE_LOG_LEVEL"] = "debug,foxglove::websocket::server=warn"
 
     result = subprocess.run(
         [sys.executable, "-c", test_script],
