@@ -66,9 +66,14 @@ the geometrically closest `OAK4-D.stl` — the driver itself does the same
 fallback.
 
 To **tune the physical mount**, edit `oak_mount_joint`'s `<origin xyz="..." rpy="..."/>`
-in the URDF (default `xyz="0.0 0.0 0.06"`, i.e. 6 cm directly above `link5`'s
-origin, no rotation). The Foxglove asset handler re-serves the URDF on every
-3D-panel reload, so you'll see the change after _Custom Layer → URDF → Reload_.
+in the URDF. The current default is `xyz="0.0320 0.0 -0.037"` (placement on
+`link5`) with `rpy="3.14159 0 0"` — a 180° roll around `link5`'s X axis that
+flips the camera right-side-up, since `link5`'s local +Z does not point "up"
+in the canonical depthai camera frame. If your physical orientation differs,
+the URDF comment above the joint lists common alternative `rpy` values
+(camera-backward, sky-pointing, etc.). The Foxglove asset handler re-serves
+the URDF on every 3D-panel reload, so you'll see the change after
+_Custom Layer → URDF → Reload_.
 
 If you're also running a depthai_ros driver / [`oak-luxonis-4d`](../oak-luxonis-4d)
 streamer in parallel, it will publish the camera-internal optical frames
@@ -113,13 +118,29 @@ The script will:
    wait for you to press **Enter** to begin homing (or **Ctrl+C** to abort).
 3. Once converged, start the sinusoidal sway.
 
-On shutdown — whether triggered by **Ctrl+C**, a runtime exception, or the
-control loop dying unexpectedly — the script will stop the demo controller,
-drive the arm back to the captured start pose (still in POS_VEL at the homing
-velocity cap), wait up to `RETURN_TIMEOUT_S` for convergence plus a short
-settle, and only then disable + disconnect. Press **Ctrl+C a second time** to
-skip the safe-return and disconnect immediately (use this only if the arm is
-in an unrecoverable state — the motors will go limp).
+On shutdown — whether triggered by **Ctrl+C**, **`SIGTERM`** (`kill <pid>`),
+a runtime exception, or the control loop dying unexpectedly — the script will
+stop the demo controller, drive the arm back to the captured start pose (still
+in POS_VEL at the homing velocity cap), wait up to `RETURN_TIMEOUT_S` for
+convergence plus a short settle, and only then disable + disconnect.
+
+### Escape hatches (in order of escalating aggression)
+
+The script catches `SIGINT` (`Ctrl+C`) and `SIGTERM` (`kill <pid>`) the same way
+and tiers its response by repeat count:
+
+| Press / signal #   | Behavior                                                                                                                  |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------- |
+| **1st**            | Graceful: stop demo, safe-return to start pose, disable, disconnect.                                                      |
+| **2nd**            | Skip safe-return; just disable and disconnect (motors go limp where they are).                                            |
+| **3rd**            | `os._exit(130)` immediately — bypasses Python's `finally` entirely. Motors stay in their last commanded state. Last resort. |
+| **watchdog timer** | If the graceful path hangs (e.g. `motorbridge` is wedged in a serial read), a background daemon thread hard-exits after `SHUTDOWN_TIMEOUT_S` (~21 s), or `FORCE_STOP_GRACE_S` (~4 s) once the 2nd press has flipped the script into force-stop mode. |
+
+This means even if the script appears unresponsive to `Ctrl+C` because the
+underlying serial / USB layer is stuck inside a C-level call where Python
+signal handlers can't preempt, the watchdog will reap the process in bounded
+time — you should never need `kill -9`. If you do, run `pkill -KILL -f rebotarm-demo`
+from another shell.
 
 ## View in Foxglove
 
@@ -158,6 +179,8 @@ All tunables live at the top of [`main.py`](./main.py):
 | `RETURN_TIMEOUT_S` | Max time spent driving back to the start pose on shutdown (s). |
 | `RETURN_SETTLE_S` | Extra settle time after converging back to start before disconnect (s). |
 | `RETURN_TOLERANCE_RAD` | Per-joint convergence threshold for the safe-return move (rad). |
+| `SHUTDOWN_TIMEOUT_S` | Absolute upper bound for graceful shutdown before the watchdog hard-exits (s). |
+| `FORCE_STOP_GRACE_S` | Tightened deadline after the 2nd Ctrl+C/SIGTERM, applied to the disconnect phase only (s). |
 
 ## Safety
 
@@ -171,3 +194,8 @@ your workspace is cluttered enough that this could collide, either keep the
 start pose well clear of obstacles before launching the script, or press
 **Ctrl+C twice** to skip the safe-return (the arm will then go limp where it
 is, so support it manually).
+
+A third Ctrl+C — or the watchdog firing — exits the Python process via
+`os._exit(130)` without disabling the motors. They stay holding the last
+commanded torque/position, which is usually fine but can surprise you: be
+ready to e-stop or kill power if the arm is in an awkward pose.

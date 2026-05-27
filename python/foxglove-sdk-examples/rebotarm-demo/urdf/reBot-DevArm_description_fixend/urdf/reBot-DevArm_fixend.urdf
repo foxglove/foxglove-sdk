@@ -483,8 +483,27 @@
 
   <link name="oak" />
 
+  <!--
+    Mount transform from link5 to the camera's canonical depthai frame
+    (`oak`: +X forward / out the lens, +Y left, +Z up).
+
+    xyz  : translation of the `oak` origin in link5's frame. Tune this so
+           the visualized housing sits where the physical camera bolts on.
+    rpy  : orientation of the `oak` frame relative to link5.
+
+           link5's local +Z does not point "up" in the canonical camera
+           sense, so without any rotation the camera renders upside-down
+           in Foxglove. A 180-degree roll around X flips the camera around
+           its own forward (lens) axis so its "top" now points opposite to
+           link5's +Z, matching how the camera is physically bolted on.
+
+    Common alternatives if your physical mount differs:
+      rpy="3.14159 0 0"     [default, upside-down -> right-side-up]
+      rpy="0 0 3.14159"     [camera looks backward along link5's -X]
+      rpy="0 1.5708 0"      [camera looks along link5's +Z (sky-pointing)]
+  -->
   <joint name="oak_mount_joint" type="fixed">
-    <origin xyz="0.0 0.0 0.06" rpy="0 0 0" />
+    <origin xyz="0.0320 0.0 -0.074" rpy="3.14159 0 0" />
     <parent link="link5" />
     <child link="oak" />
   </joint>

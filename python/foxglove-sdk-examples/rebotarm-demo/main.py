@@ -16,7 +16,9 @@ where ramp(t) = clip(t / RAMP_IN_S, 0, 1) softly grows the amplitude during
 the first few seconds to avoid any sudden jolt at the start of oscillation.
 """
 import logging
+import os
 import signal
+import threading
 import time
 from pathlib import Path
 from typing import Optional
@@ -80,6 +82,15 @@ RETURN_TOLERANCE_RAD = 0.02    # convergence threshold for the return move
 RETURN_PROGRESS_EVERY_S = 1.0  # progress print cadence during safe-return
 RETURN_TICK_HZ = 50.0          # rate at which we re-issue pos_vel during safe-return
 
+# Shutdown watchdog: upper bound on how long graceful shutdown is allowed to
+# run before we hard-exit the process. This is the safety net that guarantees
+# the script can be killed even if motorbridge is wedged inside a C-level
+# serial read where Python signal handlers can't preempt.
+SHUTDOWN_TIMEOUT_S = RETURN_TIMEOUT_S + RETURN_SETTLE_S + 8.0   # ~21 s
+# After the operator hits Ctrl+C a second time (`_force_stop`) we abandon the
+# safe-return phase entirely and only allow this much time for disconnect.
+FORCE_STOP_GRACE_S = 4.0
+
 # Oscillation telemetry cadence (every N control ticks; 500 Hz -> ~10 Hz)
 PRINT_EVERY = 50
 
@@ -117,22 +128,79 @@ _urdf_joint_index: dict[str, int] = {}
 _last_tf_pub_t: float = 0.0
 
 
-def _sigint_handler(signum, frame):
+def _signal_handler(signum, frame):
+    """Three-tier escape hatch for both SIGINT (Ctrl+C) and SIGTERM (kill <pid>):
+
+    * **1st signal** -> graceful shutdown: stop the demo, safe-return to start,
+      then disconnect.
+    * **2nd signal** -> ``_force_stop``: skip safe-return, just disconnect.
+    * **3rd (or higher) signal** -> immediate ``os._exit(130)`` bypassing
+      ``finally`` entirely. Motors stay in their last commanded state, so
+      use it only when the script is already wedged.
+
+    A background watchdog thread (see ``_shutdown_watchdog``) also force-exits
+    after ``SHUTDOWN_TIMEOUT_S`` (or ``FORCE_STOP_GRACE_S`` once ``_force_stop``
+    is set), so the process is guaranteed to die in bounded time even if the
+    operator never sends a third signal.
+    """
     global _running, _force_stop, _sigint_count
     _sigint_count += 1
+    name = signal.Signals(signum).name if isinstance(signum, int) else str(signum)
     if _sigint_count == 1:
         print(
-            "\n[demo_mode] Ctrl+C received, will return to starting position "
-            "(press Ctrl+C again to skip safe-return and disconnect immediately)..."
+            f"\n[demo_mode] {name} received, will return to starting position. "
+            "Send signal again to skip safe-return, or a 3rd time to force-exit."
         )
         _running = False
-    else:
-        print("\n[demo_mode] second Ctrl+C, skipping safe-return")
+    elif _sigint_count == 2:
+        print(f"\n[demo_mode] 2nd {name}, skipping safe-return (will still disconnect)")
         _force_stop = True
         _running = False
+    else:
+        print(
+            f"\n[demo_mode] 3rd {name}, force-exiting NOW via os._exit(130) "
+            "(motors stay in last commanded state)"
+        )
+        os._exit(130)
 
 
-signal.signal(signal.SIGINT, _sigint_handler)
+def _shutdown_watchdog() -> None:
+    """Hard-exit the process if shutdown takes too long.
+
+    Sleeps until any signal arrives, then enforces an absolute deadline on the
+    rest of the shutdown sequence. Once ``_force_stop`` flips (second signal),
+    the deadline tightens to ``FORCE_STOP_GRACE_S`` so the operator gets a
+    fast disconnect even if motorbridge is wedged in a serial read.
+
+    Runs as a daemon so it does not block normal exit.
+    """
+    while _sigint_count == 0:
+        time.sleep(0.2)
+
+    deadline = time.monotonic() + SHUTDOWN_TIMEOUT_S
+    tightened = False
+    while True:
+        now = time.monotonic()
+        if _force_stop and not tightened:
+            deadline = min(deadline, now + FORCE_STOP_GRACE_S)
+            tightened = True
+        if now >= deadline:
+            remaining_signals = max(0, 3 - _sigint_count)
+            print(
+                f"\n[watchdog] shutdown exceeded deadline; force-exiting via os._exit(130) "
+                f"(would have taken {remaining_signals} more signal(s) to do this manually)"
+            )
+            os._exit(130)
+        time.sleep(0.2)
+
+
+signal.signal(signal.SIGINT, _signal_handler)
+signal.signal(signal.SIGTERM, _signal_handler)
+threading.Thread(
+    target=_shutdown_watchdog,
+    name="rebotarm-shutdown-watchdog",
+    daemon=True,
+).start()
 
 
 # --------------------------------------------------------------------------- #
@@ -488,8 +556,14 @@ def main() -> None:
           f"demo vlim: {VLIM_RAD_S:.2f} rad/s  soft-start: {RAMP_IN_S:.1f}s")
     print("  expected behavior: home first, then 6 joints sway slowly with")
     print("                     phase-shifted sines around the home pose")
-    print("  on shutdown / Ctrl+C / exception: drive back to the pose the arm")
-    print("  was in at program start, then disconnect (press Ctrl+C twice to skip)")
+    print("  on shutdown / Ctrl+C / SIGTERM / exception: drive back to the pose")
+    print("  the arm was in at program start, then disconnect.")
+    print("  Escape hatches:")
+    print("    1x Ctrl+C  -> graceful safe-return + disconnect")
+    print("    2x Ctrl+C  -> skip safe-return, disconnect immediately")
+    print(f"    3x Ctrl+C  -> os._exit(130) (motors stay put; instant kill)")
+    print(f"    watchdog   -> auto force-exit after ~{SHUTDOWN_TIMEOUT_S:.0f}s "
+          f"(or ~{FORCE_STOP_GRACE_S:.0f}s after the 2nd press)")
     print("=" * 70)
 
     arm: RobotArm | None = None
