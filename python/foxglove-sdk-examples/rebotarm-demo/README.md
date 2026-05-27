@@ -48,11 +48,19 @@ uv run python main.py
 
 The script will:
 
-1. Connect and enable the arm, switch into POS_VEL mode at the homing speed.
+1. Connect and enable the arm, **capture the pose it is currently in** (the
+   "start pose"), then switch into POS_VEL mode at the homing speed.
 2. Print the start pose, the target home pose, and the per-joint deltas, then
    wait for you to press **Enter** to begin homing (or **Ctrl+C** to abort).
-3. Once converged, start the sinusoidal sway. Press **Ctrl+C** at any time to
-   stop and disconnect safely.
+3. Once converged, start the sinusoidal sway.
+
+On shutdown — whether triggered by **Ctrl+C**, a runtime exception, or the
+control loop dying unexpectedly — the script will stop the demo controller,
+drive the arm back to the captured start pose (still in POS_VEL at the homing
+velocity cap), wait up to `RETURN_TIMEOUT_S` for convergence plus a short
+settle, and only then disable + disconnect. Press **Ctrl+C a second time** to
+skip the safe-return and disconnect immediately (use this only if the arm is
+in an unrecoverable state — the motors will go limp).
 
 ## Tuning
 
@@ -69,9 +77,19 @@ All tunables live at the top of [`main.py`](./main.py):
 | `RAMP_IN_S` | Soft-start ramp duration after homing (s). |
 | `HOMING_TOLERANCE_RAD` | Per-joint convergence threshold for homing (rad). |
 | `HOMING_TIMEOUT_S` | Abort homing after this many seconds without converging. |
+| `RETURN_TIMEOUT_S` | Max time spent driving back to the start pose on shutdown (s). |
+| `RETURN_SETTLE_S` | Extra settle time after converging back to start before disconnect (s). |
+| `RETURN_TOLERANCE_RAD` | Per-joint convergence threshold for the safe-return move (rad). |
 
 ## Safety
 
 Always be ready to press the e-stop. The homing phase moves in a straight
 joint-space line which can sweep through poses that are not safe in every
 workspace; verify the move before you press Enter.
+
+The on-shutdown safe-return *also* moves in a straight joint-space line — from
+wherever the arm happens to be at shutdown back to the captured start pose. If
+your workspace is cluttered enough that this could collide, either keep the
+start pose well clear of obstacles before launching the script, or press
+**Ctrl+C twice** to skip the safe-return (the arm will then go limp where it
+is, so support it manually).
