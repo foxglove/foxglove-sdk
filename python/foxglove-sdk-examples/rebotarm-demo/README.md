@@ -1,6 +1,6 @@
 # reBot Arm — Demo Mode (slow sinusoidal sway)
 
-Example: slowly sway a [reBot Arm B601](https://github.com/reBOT-Robotics) 6-DOF arm around a fixed home pose, using the [`reBotArm_control_py`](../../../../reBotArm_control_py) Python control library.
+Example: slowly sway a [reBot Arm B601](https://github.com/reBOT-Robotics) 6-DOF arm around a fixed home pose, using the [`reBotArm_control_py`](../../../../reBotArm_control_py) Python control library, with a live URDF visualization streamed to [Foxglove](https://foxglove.dev) over a WebSocket server.
 
 The example runs in two phases:
 
@@ -16,6 +16,24 @@ Control law during oscillation:
 ```
 q_target[i] = home[i] + ramp(t) * amplitude[i] * sin(2*pi*f*t + phase[i])
 ```
+
+## Foxglove integration
+
+Throughout all phases (homing, oscillation, return-to-start) the script:
+
+- Starts a Foxglove WebSocket server on `ws://localhost:8765`.
+- Registers an `asset_handler` that serves `package://reBot-DevArm_description_fixend/...`
+  URIs from the bundled [`urdf/`](./urdf) folder (URDF file + STL meshes).
+- Publishes `FrameTransforms` on `/tf` at ~30 Hz using [yourdfpy](https://github.com/clemense/yourdfpy)
+  for forward kinematics from the live joint positions read off the motor bus.
+
+The bundled URDF [`reBot-DevArm_fixend.urdf`](./urdf/reBot-DevArm_description_fixend/urdf/reBot-DevArm_fixend.urdf)
+defines the six revolute joints (`joint1`, `joint2`, `join3`*, `joint4`, `joint5`,
+`joint6`) plus the fixed `end_joint`. They are mapped positionally to the motor
+channels declared in [`reBotArm_control_py/config/arm.yaml`](../../../../reBotArm_control_py/config/arm.yaml),
+so joint *N* in the URDF tracks motor index *N − 1* from the YAML.
+
+\* yes, `join3` (missing 't') is a typo in the upstream SolidWorks-exported URDF; the script handles it correctly.
 
 ## Prerequisites
 
@@ -61,6 +79,25 @@ velocity cap), wait up to `RETURN_TIMEOUT_S` for convergence plus a short
 settle, and only then disable + disconnect. Press **Ctrl+C a second time** to
 skip the safe-return and disconnect immediately (use this only if the arm is
 in an unrecoverable state — the motors will go limp).
+
+## View in Foxglove
+
+1. Open [Foxglove](https://app.foxglove.dev) and choose _Open connection_ → _Foxglove WebSocket_,
+   then enter the URL printed by the SDK (default `ws://localhost:8765`).
+2. **Import the bundled layout**: in the layout dropdown, pick _Import from file…_
+   and select
+   [`foxglove/rebotarm_layout.json`](./foxglove/rebotarm_layout.json). It pre-configures a 3D panel
+   following `base_link`, a grid, and a URDF custom layer wired to
+   `package://reBot-DevArm_description_fixend/urdf/reBot-DevArm_fixend.urdf` — Foxglove
+   pulls both the URDF and every STL mesh through the SDK's `asset_handler`, so no extra
+   server setup or file paths are needed on your side.
+3. If you'd rather wire it up manually, add a **Custom Layer → URDF** to a 3D panel with:
+   - **Source**: URL
+   - **URL**: `package://reBot-DevArm_description_fixend/urdf/reBot-DevArm_fixend.urdf`
+   - Make sure the panel's **Follow frame** is `base_link` (or `world`).
+
+   As soon as the script publishes the first `/tf` message you should see all six links
+   articulate in real time.
 
 ## Tuning
 

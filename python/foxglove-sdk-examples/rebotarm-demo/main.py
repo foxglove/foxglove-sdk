@@ -15,10 +15,24 @@ Control law during oscillation:
 where ramp(t) = clip(t / RAMP_IN_S, 0, 1) softly grows the amplitude during
 the first few seconds to avoid any sudden jolt at the start of oscillation.
 """
+import logging
 import signal
 import time
+from pathlib import Path
+from typing import Optional
 
+import foxglove
 import numpy as np
+from foxglove.channels import FrameTransformsChannel
+from foxglove.messages import (
+    FrameTransform,
+    FrameTransforms,
+    Quaternion,
+    Timestamp,
+    Vector3,
+)
+from scipy.spatial.transform import Rotation as R
+from yourdfpy import URDF
 
 from reBotArm_control_py.actuator import RobotArm
 
@@ -69,6 +83,16 @@ RETURN_TICK_HZ = 50.0          # rate at which we re-issue pos_vel during safe-r
 # Oscillation telemetry cadence (every N control ticks; 500 Hz -> ~10 Hz)
 PRINT_EVERY = 50
 
+# Foxglove publishing parameters
+URDF_ROOT = Path(__file__).resolve().parent / "urdf"
+URDF_PACKAGE = "reBot-DevArm_description_fixend"
+URDF_REL_PATH = f"{URDF_PACKAGE}/urdf/reBot-DevArm_fixend.urdf"
+URDF_PACKAGE_URI = f"package://{URDF_REL_PATH}"
+WORLD_FRAME_ID = "world"
+BASE_FRAME_ID = "base_link"
+TF_PUBLISH_HZ = 30.0
+_TF_PUBLISH_INTERVAL = 1.0 / TF_PUBLISH_HZ
+
 
 # --------------------------------------------------------------------------- #
 # Global control flags / time base
@@ -82,6 +106,15 @@ _amplitude_rad: np.ndarray = np.deg2rad(AMPLITUDE_DEG)
 _vlim_arr: np.ndarray = np.full(6, VLIM_RAD_S, dtype=np.float64)
 _homing_vlim_arr: np.ndarray = np.full(6, HOMING_VLIM_RAD_S, dtype=np.float64)
 _start_pose_rad: np.ndarray | None = None  # captured once, right after enable
+
+# Foxglove publishing state (populated by setup_foxglove)
+_fox_server: Optional[foxglove.WebSocketServer] = None
+_tf_channel: Optional[FrameTransformsChannel] = None
+_urdf: Optional[URDF] = None
+# Mapping from URDF revolute-joint name to index in arm.get_positions().
+# Built in setup_foxglove() by walking robot.robot.joints in order.
+_urdf_joint_index: dict[str, int] = {}
+_last_tf_pub_t: float = 0.0
 
 
 def _sigint_handler(signum, frame):
@@ -100,6 +133,157 @@ def _sigint_handler(signum, frame):
 
 
 signal.signal(signal.SIGINT, _sigint_handler)
+
+
+# --------------------------------------------------------------------------- #
+# Foxglove integration: URDF + asset server + /tf publishing
+# --------------------------------------------------------------------------- #
+
+def asset_handler(uri: str) -> Optional[bytes]:
+    """Resolve ``package://`` URDF + mesh URIs from the bundled ``urdf/`` folder.
+
+    Foxglove's 3D panel issues these requests for the URDF custom layer and
+    for any ``<mesh filename="package://...">`` references inside the URDF.
+    Paths are constrained to live under ``URDF_ROOT`` to prevent traversal.
+    """
+    if not uri.startswith("package://"):
+        return None
+    rel = uri[len("package://") :]
+    candidate = (URDF_ROOT / rel).resolve()
+    try:
+        candidate.relative_to(URDF_ROOT.resolve())
+    except ValueError:
+        return None
+    if not candidate.is_file():
+        return None
+    try:
+        return candidate.read_bytes()
+    except OSError:
+        return None
+
+
+def setup_foxglove() -> foxglove.WebSocketServer:
+    """Load the URDF, start the Foxglove WS server with the asset handler,
+    and create the ``/tf`` channel. Returns the running server handle.
+    """
+    global _fox_server, _tf_channel, _urdf, _urdf_joint_index
+
+    foxglove.set_log_level(logging.INFO)
+
+    urdf_path = URDF_ROOT / URDF_REL_PATH
+    if not urdf_path.is_file():
+        raise FileNotFoundError(f"URDF not found at {urdf_path}")
+    print(f"[foxglove] loading URDF from {urdf_path}")
+    # load_meshes=False keeps yourdfpy from trying to resolve `package://` STL
+    # references on disk during URDF parsing; Foxglove fetches them later via
+    # asset_handler.
+    _urdf = URDF.load(
+        str(urdf_path),
+        load_meshes=False,
+        build_scene_graph=True,
+        build_collision_scene_graph=False,
+    )
+
+    # Map URDF revolute joints to arm.get_positions() indices in URDF order.
+    # The reBotArm URDF has joints "joint1, joint2, join3 (typo), joint4,
+    # joint5, joint6" plus a fixed "end_joint"; we only animate the revolute
+    # ones, paired positionally with motor channels 0..5 from arm.yaml.
+    _urdf_joint_index = {}
+    for joint in _urdf.robot.joints:
+        if joint.type == "revolute":
+            _urdf_joint_index[joint.name] = len(_urdf_joint_index)
+    print(
+        "[foxglove] URDF revolute joints (in order): "
+        + ", ".join(f"{name}->q[{idx}]" for name, idx in _urdf_joint_index.items())
+    )
+
+    _tf_channel = FrameTransformsChannel(topic="/tf")
+    _fox_server = foxglove.start_server(asset_handler=asset_handler)
+    print(f"[foxglove] server: {_fox_server.app_url()}")
+    print(
+        f"[foxglove] add a 3D panel + URDF custom layer with URL\n"
+        f"           {URDF_PACKAGE_URI}\n"
+        f"           (the SDK asset handler serves it from {URDF_ROOT})"
+    )
+    return _fox_server
+
+
+def maybe_publish_tf(arm: RobotArm, *, force: bool = False) -> None:
+    """Publish ``FrameTransforms`` for every URDF joint at up to ``TF_PUBLISH_HZ``.
+
+    Safe to call from any thread that is allowed to read arm state. Throttles
+    publishes so callers can invoke this from tight inner loops without flooding
+    Foxglove. Pass ``force=True`` to publish unconditionally (e.g. once at the
+    end of a phase).
+    """
+    global _last_tf_pub_t
+
+    if _tf_channel is None or _urdf is None:
+        return
+
+    now = time.perf_counter()
+    if not force and (now - _last_tf_pub_t) < _TF_PUBLISH_INTERVAL:
+        return
+    _last_tf_pub_t = now
+
+    try:
+        positions = arm.get_positions()
+    except Exception as e:
+        print(f"[foxglove] could not read arm positions ({e}); skipping /tf tick")
+        return
+
+    cfg: dict[str, float] = {}
+    for joint in _urdf.robot.joints:
+        idx = _urdf_joint_index.get(joint.name)
+        if idx is not None and idx < len(positions):
+            cfg[joint.name] = float(positions[idx])
+        else:
+            cfg[joint.name] = 0.0  # fixed joints / unmapped -> identity
+    try:
+        _urdf.update_cfg(cfg)
+    except Exception as e:
+        print(f"[foxglove] URDF FK update failed ({e}); skipping /tf tick")
+        return
+
+    # Stamp every transform in this bundle with the same wall-clock time so the
+    # TF tree is internally consistent for one Foxglove tick. Foxglove rejects
+    # transforms with the default zero timestamp (1970-01-01) as stale, which
+    # is what caused the "invalid timestamps" you saw.
+    ts = Timestamp.now()
+    transforms: list[FrameTransform] = [
+        FrameTransform(
+            timestamp=ts,
+            parent_frame_id=WORLD_FRAME_ID,
+            child_frame_id=BASE_FRAME_ID,
+            translation=Vector3(x=0.0, y=0.0, z=0.0),
+            rotation=Quaternion(x=0.0, y=0.0, z=0.0, w=1.0),
+        )
+    ]
+    for joint in _urdf.robot.joints:
+        try:
+            T_local = _urdf.get_transform(
+                frame_to=joint.child, frame_from=joint.parent
+            )
+        except Exception:
+            continue
+        t = T_local[:3, 3]
+        q = R.from_matrix(T_local[:3, :3]).as_quat()  # (x, y, z, w)
+        transforms.append(
+            FrameTransform(
+                timestamp=ts,
+                parent_frame_id=joint.parent,
+                child_frame_id=joint.child,
+                translation=Vector3(x=float(t[0]), y=float(t[1]), z=float(t[2])),
+                rotation=Quaternion(
+                    x=float(q[0]), y=float(q[1]), z=float(q[2]), w=float(q[3])
+                ),
+            )
+        )
+
+    try:
+        _tf_channel.log(FrameTransforms(transforms=transforms))
+    except Exception as e:
+        print(f"[foxglove] /tf publish failed ({e})")
 
 
 # --------------------------------------------------------------------------- #
@@ -152,6 +336,8 @@ def home_arm(arm: RobotArm) -> bool:
             print(f"  t={elapsed:5.1f}s  max_err={np.degrees(max_err):6.2f} deg  "
                   f"q(deg)=" + " ".join(f"{v:+7.2f}" for v in np.degrees(q_cur)))
             last_print = elapsed
+
+        maybe_publish_tf(arm)
 
         if max_err < HOMING_TOLERANCE_RAD:
             converged = True
@@ -237,6 +423,8 @@ def return_to_start(
             print(f"  [return] t={elapsed:4.1f}s  max_err={np.degrees(max_err):6.2f} deg")
             last_print = elapsed
 
+        maybe_publish_tf(arm)
+
         if max_err < RETURN_TOLERANCE_RAD:
             if converged_at < 0.0:
                 converged_at = elapsed
@@ -306,6 +494,8 @@ def main() -> None:
 
     arm: RobotArm | None = None
 
+    setup_foxglove()
+
     try:
         arm = RobotArm()
         arm.connect()
@@ -342,6 +532,7 @@ def main() -> None:
                 print("[error] control loop stopped unexpectedly; "
                       "treating as fault and returning to start")
                 break
+            maybe_publish_tf(arm)
             time.sleep(0.05)
     except Exception as e:
         # Re-raised after the finally block so the caller sees the traceback,
@@ -364,6 +555,12 @@ def main() -> None:
             except Exception as e:
                 print(f"[disconnect] error: {e}")
             print("[done] disconnected safely")
+
+        if _fox_server is not None:
+            try:
+                _fox_server.stop()
+            except Exception as e:
+                print(f"[foxglove] server stop error: {e}")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,82 @@
+{
+  "configById": {
+    "3D!rebotarm": {
+      "cameraState": {
+        "distance": 1.6,
+        "perspective": true,
+        "phi": 60,
+        "target": [0, 0, 0],
+        "targetOffset": [0, 0, 0.15],
+        "targetOrientation": [0, 0, 0, 1],
+        "thetaOffset": 45,
+        "fovy": 45,
+        "near": 0.05,
+        "far": 5000
+      },
+      "followMode": "follow-none",
+      "followTf": "base_link",
+      "scene": {
+        "transforms": {
+          "editable": false,
+          "showLabel": true,
+          "enablePreloading": true,
+          "visible": false
+        },
+        "meshUpAxis": "z_up"
+      },
+      "transforms": {},
+      "topics": {
+        "/tf": { "visible": true }
+      },
+      "layers": {
+        "grid": {
+          "visible": true,
+          "frameLocked": true,
+          "label": "Grid",
+          "instanceId": "rebotarm-grid",
+          "layerId": "foxglove.Grid",
+          "size": 2,
+          "divisions": 20,
+          "lineWidth": 1,
+          "color": "#248eff",
+          "position": [0, 0, 0],
+          "rotation": [0, 0, 0]
+        },
+        "urdf": {
+          "displayMode": "auto",
+          "fallbackColor": "#cccccc",
+          "showAxis": false,
+          "axisScale": 1,
+          "showOutlines": true,
+          "opacity": 1,
+          "visible": true,
+          "frameLocked": true,
+          "instanceId": "rebotarm-urdf",
+          "label": "reBot-DevArm URDF",
+          "layerId": "foxglove.Urdf",
+          "sourceType": "url",
+          "url": "package://reBot-DevArm_description_fixend/urdf/reBot-DevArm_fixend.urdf",
+          "filePath": "",
+          "parameter": "",
+          "topic": "",
+          "framePrefix": "",
+          "order": 2
+        }
+      },
+      "publish": {
+        "type": "point",
+        "poseTopic": "/move_base_simple/goal",
+        "pointTopic": "/clicked_point",
+        "poseEstimateTopic": "/initialpose",
+        "poseEstimateXDeviation": 0.5,
+        "poseEstimateYDeviation": 0.5,
+        "poseEstimateThetaDeviation": 0.26179939
+      },
+      "imageMode": {}
+    }
+  },
+  "globalVariables": {},
+  "userNodes": {},
+  "playbackConfig": { "speed": 1 },
+  "layout": "3D!rebotarm"
+}
