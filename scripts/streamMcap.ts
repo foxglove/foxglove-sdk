@@ -180,7 +180,13 @@ function run(opts: Options, positional: string | undefined): void {
       console.log(DOWN_HINT);
       return;
     }
-    throw err;
+    // A non-signal failure (cargo build error, `up --wait` healthcheck
+    // timeout, streamer panic) already printed its own error to the inherited
+    // stderr. Exit with the child's status so that error stays the last thing
+    // the operator sees, instead of throwing and dumping a node stack trace on
+    // top of it.
+    console.error("\n" + DOWN_HINT);
+    process.exit((err as { status?: number }).status ?? 1);
   }
 
   console.log("");

@@ -53,6 +53,15 @@ function compose(...args: string[]): void {
   });
 }
 
+// Like `compose`, but captures stdout instead of inheriting it. Used for
+// queries (e.g. `ps -q`) whose output we need to inspect.
+function composeCapture(...args: string[]): string {
+  return execFileSync("docker", ["compose", ...COMPOSE_FILES, ...args], {
+    encoding: "utf8",
+    env: process.env,
+  });
+}
+
 function resolveArgs(opts: Options, trailing: string[]): string[] {
   const hasProfile = opts.profile != null;
   const hasTrailing = trailing.length > 0;
@@ -82,19 +91,35 @@ function resolveArgs(opts: Options, trailing: string[]): string[] {
 
 function run(opts: Options, trailing: string[]): void {
   const netemArgs = resolveArgs(opts, trailing);
-  console.log(`gateway upload: netem ${netemArgs.join(" ")}`);
+
+  // Check the sidecar is up front. `ps -q` prints its container ID when
+  // running and nothing otherwise, so we can give the "stack not running"
+  // hint only when that's actually the cause — rather than blaming the stack
+  // for every failure (e.g. rejected netem args, which exit non-zero from the
+  // python script with its own error already on stderr).
+  let sidecarId = "";
   try {
-    compose("exec", "gateway-netem", "python3", "/netem_impair.py", ...netemArgs);
+    sidecarId = composeCapture("ps", "gateway-netem", "-q").trim();
   } catch {
-    // The most common cause is that the per-link stack isn't running, which
-    // produces an opaque docker error. Point the operator at the fix instead
-    // of dumping a node stack trace.
+    sidecarId = "";
+  }
+  if (sidecarId === "") {
     console.error(
-      "\nError: could not reach the gateway-netem sidecar.\n" +
-        "  Is the per-link stack running? Start it with `yarn stream-mcap` or\n" +
+      "Error: the gateway-netem sidecar isn't running.\n" +
+        "  Start the per-link stack with `yarn stream-mcap` or\n" +
         "  `yarn start-netem --perlink` first.",
     );
     process.exit(1);
+  }
+
+  console.log(`gateway upload: netem ${netemArgs.join(" ")}`);
+  try {
+    compose("exec", "gateway-netem", "python3", "/netem_impair.py", ...netemArgs);
+  } catch (err) {
+    // The sidecar is running, so the failure came from netem_impair.py itself
+    // (most likely rejected args). Its stderr is already inherited, so just
+    // exit with its status instead of dumping a node stack trace on top.
+    process.exit((err as { status?: number }).status ?? 1);
   }
 }
 
