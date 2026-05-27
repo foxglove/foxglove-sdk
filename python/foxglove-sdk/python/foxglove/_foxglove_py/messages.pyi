@@ -84,8 +84,8 @@ class ArrowPrimitive:
     A primitive representing an arrow
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         pose: Pose | None = None,
         shaft_length: float = 0.0,
@@ -93,7 +93,7 @@ class ArrowPrimitive:
         head_length: float = 0.0,
         head_diameter: float = 0.0,
         color: Color | None = None,
-    ) -> None: ...
+    ) -> "ArrowPrimitive": ...
     @staticmethod
     def get_schema() -> Schema:
         """Returns the ArrowPrimitive schema"""
@@ -108,8 +108,8 @@ class CameraCalibration:
     Camera calibration parameters
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         timestamp: Timestamp | None = None,
         frame_id: str = "",
@@ -120,7 +120,7 @@ class CameraCalibration:
         K: list[float] | None = None,
         R: list[float] | None = None,
         P: list[float] | None = None,
-    ) -> None: ...
+    ) -> "CameraCalibration": ...
     @staticmethod
     def get_schema() -> Schema:
         """Returns the CameraCalibration schema"""
@@ -135,8 +135,8 @@ class CircleAnnotation:
     A circle annotation on a 2D image
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         timestamp: Timestamp | None = None,
         position: Point2 | None = None,
@@ -145,7 +145,7 @@ class CircleAnnotation:
         fill_color: Color | None = None,
         outline_color: Color | None = None,
         metadata: list[KeyValuePair] | None = None,
-    ) -> None: ...
+    ) -> "CircleAnnotation": ...
     @staticmethod
     def get_schema() -> Schema:
         """Returns the CircleAnnotation schema"""
@@ -160,9 +160,9 @@ class Color:
     A color in RGBA format
     """
 
-    def __init__(
-        self, *, r: float = 0.0, g: float = 0.0, b: float = 0.0, a: float = 0.0
-    ) -> None: ...
+    def __new__(
+        cls, *, r: float = 0.0, g: float = 0.0, b: float = 0.0, a: float = 0.0
+    ) -> "Color": ...
     @staticmethod
     def get_schema() -> Schema:
         """Returns the Color schema"""
@@ -177,14 +177,14 @@ class CompressedImage:
     A compressed image
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         timestamp: Timestamp | None = None,
         frame_id: str = "",
         data: bytes = b"",
         format: str = "",
-    ) -> None: ...
+    ) -> "CompressedImage": ...
     @staticmethod
     def get_schema() -> Schema:
         """Returns the CompressedImage schema"""
@@ -199,15 +199,15 @@ class CompressedPointCloud:
     A compressed point cloud. A decoder for `format` must decompress `data`, using metadata stored in the compressed payload to recover point positions and any additional per-point attributes. The decoded point cloud must include at least 2 coordinate fields from `x`, `y`, and `z`; `red`, `green`, `blue`, and `alpha` are optional for customizing each point's color.
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         timestamp: Timestamp | None = None,
         frame_id: str = "",
         pose: Pose | None = None,
         data: bytes = b"",
         format: str = "",
-    ) -> None: ...
+    ) -> "CompressedPointCloud": ...
     @staticmethod
     def get_schema() -> Schema:
         """Returns the CompressedPointCloud schema"""
@@ -222,14 +222,14 @@ class CompressedVideo:
     A single frame of a compressed video bitstream
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         timestamp: Timestamp | None = None,
         frame_id: str = "",
         data: bytes = b"",
         format: str = "",
-    ) -> None: ...
+    ) -> "CompressedVideo": ...
     @staticmethod
     def get_schema() -> Schema:
         """Returns the CompressedVideo schema"""
@@ -244,13 +244,13 @@ class CubePrimitive:
     A primitive representing a cube or rectangular prism
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         pose: Pose | None = None,
         size: Vector3 | None = None,
         color: Color | None = None,
-    ) -> None: ...
+    ) -> "CubePrimitive": ...
     @staticmethod
     def get_schema() -> Schema:
         """Returns the CubePrimitive schema"""
@@ -265,15 +265,15 @@ class CylinderPrimitive:
     A primitive representing a cylinder, elliptic cylinder, or truncated cone
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         pose: Pose | None = None,
         size: Vector3 | None = None,
         bottom_scale: float = 0.0,
         top_scale: float = 0.0,
         color: Color | None = None,
-    ) -> None: ...
+    ) -> "CylinderPrimitive": ...
     @staticmethod
     def get_schema() -> Schema:
         """Returns the CylinderPrimitive schema"""
@@ -294,15 +294,15 @@ class FrameTransform:
     - With translation (x=1, y=2, z=0) and a 90-degree rotation around the z-axis (x=0, y=0, z=0.707, w=0.707), a point at (x=1, y=0, z=0) in the child frame maps to (x=-1, y=3, z=0) in the parent frame.
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         timestamp: Timestamp | None = None,
         parent_frame_id: str = "",
         child_frame_id: str = "",
         translation: Vector3 | None = None,
         rotation: Quaternion | None = None,
-    ) -> None: ...
+    ) -> "FrameTransform": ...
     @staticmethod
     def get_schema() -> Schema:
         """Returns the FrameTransform schema"""
@@ -317,7 +317,9 @@ class FrameTransforms:
     An array of FrameTransform messages
     """
 
-    def __init__(self, *, transforms: list[FrameTransform] | None = None) -> None: ...
+    def __new__(
+        cls, *, transforms: list[FrameTransform] | None = None
+    ) -> "FrameTransforms": ...
     @staticmethod
     def get_schema() -> Schema:
         """Returns the FrameTransforms schema"""
@@ -332,7 +334,7 @@ class GeoJson:
     GeoJSON data for annotating maps
     """
 
-    def __init__(self, *, geojson: str = "") -> None: ...
+    def __new__(cls, *, geojson: str = "") -> "GeoJson": ...
     @staticmethod
     def get_schema() -> Schema:
         """Returns the GeoJson schema"""
@@ -347,8 +349,8 @@ class Grid:
     A 2D grid of data
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         timestamp: Timestamp | None = None,
         frame_id: str = "",
@@ -359,7 +361,7 @@ class Grid:
         cell_stride: int = 0,
         fields: list[PackedElementField] | None = None,
         data: bytes = b"",
-    ) -> None: ...
+    ) -> "Grid": ...
     @staticmethod
     def get_schema() -> Schema:
         """Returns the Grid schema"""
@@ -374,15 +376,15 @@ class ImageAnnotations:
     Array of annotations for a 2D image
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         timestamp: Timestamp | None = None,
         circles: list[CircleAnnotation] | None = None,
         points: list[PointsAnnotation] | None = None,
         texts: list[TextAnnotation] | None = None,
         metadata: list[KeyValuePair] | None = None,
-    ) -> None: ...
+    ) -> "ImageAnnotations": ...
     @staticmethod
     def get_schema() -> Schema:
         """Returns the ImageAnnotations schema"""
@@ -397,15 +399,15 @@ class JointState:
     The state of a single joint (revolute or prismatic).
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         name: str = "",
         position: float | None = None,
         velocity: float | None = None,
         acceleration: float | None = None,
         effort: float | None = None,
-    ) -> None: ...
+    ) -> "JointState": ...
     @staticmethod
     def get_schema() -> Schema:
         """Returns the JointState schema"""
@@ -420,12 +422,12 @@ class JointStates:
     The state of a set of joints at a given time.
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         timestamp: Timestamp | None = None,
         joints: list[JointState] | None = None,
-    ) -> None: ...
+    ) -> "JointStates": ...
     @staticmethod
     def get_schema() -> Schema:
         """Returns the JointStates schema"""
@@ -440,7 +442,7 @@ class KeyValuePair:
     A key with its associated value
     """
 
-    def __init__(self, *, key: str = "", value: str = "") -> None: ...
+    def __new__(cls, *, key: str = "", value: str = "") -> "KeyValuePair": ...
     @staticmethod
     def get_schema() -> Schema:
         """Returns the KeyValuePair schema"""
@@ -455,8 +457,8 @@ class LaserScan:
     A single scan from a planar laser range-finder
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         timestamp: Timestamp | None = None,
         frame_id: str = "",
@@ -465,7 +467,7 @@ class LaserScan:
         end_angle: float = 0.0,
         ranges: list[float] | None = None,
         intensities: list[float] | None = None,
-    ) -> None: ...
+    ) -> "LaserScan": ...
     @staticmethod
     def get_schema() -> Schema:
         """Returns the LaserScan schema"""
@@ -480,8 +482,8 @@ class LinePrimitive:
     A primitive representing a series of points connected by lines
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         type: LinePrimitiveLineType = LinePrimitiveLineType.LineStrip,
         pose: Pose | None = None,
@@ -491,7 +493,7 @@ class LinePrimitive:
         color: Color | None = None,
         colors: list[Color] | None = None,
         indices: list[int] | None = None,
-    ) -> None: ...
+    ) -> "LinePrimitive": ...
     @staticmethod
     def get_schema() -> Schema:
         """Returns the LinePrimitive schema"""
@@ -506,8 +508,8 @@ class LocationFix:
     A navigation satellite fix for any Global Navigation Satellite System
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         timestamp: Timestamp | None = None,
         frame_id: str = "",
@@ -520,7 +522,7 @@ class LocationFix:
         velocity: Vector3 | None = None,
         color: Color | None = None,
         metadata: list[KeyValuePair] | None = None,
-    ) -> None: ...
+    ) -> "LocationFix": ...
     @staticmethod
     def get_schema() -> Schema:
         """Returns the LocationFix schema"""
@@ -535,7 +537,7 @@ class LocationFixes:
     A group of LocationFix messages
     """
 
-    def __init__(self, *, fixes: list[LocationFix] | None = None) -> None: ...
+    def __new__(cls, *, fixes: list[LocationFix] | None = None) -> "LocationFixes": ...
     @staticmethod
     def get_schema() -> Schema:
         """Returns the LocationFixes schema"""
@@ -550,8 +552,8 @@ class Log:
     A log message
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         timestamp: Timestamp | None = None,
         level: LogLevel = LogLevel.Unknown,
@@ -559,7 +561,7 @@ class Log:
         name: str = "",
         file: str = "",
         line: int = 0,
-    ) -> None: ...
+    ) -> "Log": ...
     @staticmethod
     def get_schema() -> Schema:
         """Returns the Log schema"""
@@ -574,8 +576,8 @@ class ModelPrimitive:
     A primitive representing a 3D model file loaded from an external URL or embedded data
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         pose: Pose | None = None,
         scale: Vector3 | None = None,
@@ -584,7 +586,7 @@ class ModelPrimitive:
         url: str = "",
         media_type: str = "",
         data: bytes = b"",
-    ) -> None: ...
+    ) -> "ModelPrimitive": ...
     @staticmethod
     def get_schema() -> Schema:
         """Returns the ModelPrimitive schema"""
@@ -599,8 +601,8 @@ class Odometry:
     An estimate of position, orientation, and velocity for an object or reference frame in 3D space
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         timestamp: Timestamp | None = None,
         frame_id: str = "",
@@ -611,7 +613,7 @@ class Odometry:
         pose_covariance: list[float] | None = None,
         velocity_covariance: list[float] | None = None,
         metadata: list[KeyValuePair] | None = None,
-    ) -> None: ...
+    ) -> "Odometry": ...
     @staticmethod
     def get_schema() -> Schema:
         """Returns the Odometry schema"""
@@ -626,13 +628,13 @@ class PackedElementField:
     A field present within each element in a byte array of packed elements.
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         name: str = "",
         offset: int = 0,
         type: PackedElementFieldNumericType = PackedElementFieldNumericType.Unknown,
-    ) -> None: ...
+    ) -> "PackedElementField": ...
     @staticmethod
     def get_schema() -> Schema:
         """Returns the PackedElementField schema"""
@@ -647,7 +649,7 @@ class Point2:
     A point representing a position in 2D space
     """
 
-    def __init__(self, *, x: float = 0.0, y: float = 0.0) -> None: ...
+    def __new__(cls, *, x: float = 0.0, y: float = 0.0) -> "Point2": ...
     @staticmethod
     def get_schema() -> Schema:
         """Returns the Point2 schema"""
@@ -662,7 +664,7 @@ class Point3:
     A point representing a position in 3D space
     """
 
-    def __init__(self, *, x: float = 0.0, y: float = 0.0, z: float = 0.0) -> None: ...
+    def __new__(cls, *, x: float = 0.0, y: float = 0.0, z: float = 0.0) -> "Point3": ...
     @staticmethod
     def get_schema() -> Schema:
         """Returns the Point3 schema"""
@@ -677,13 +679,13 @@ class Point3InFrame:
     A timestamped point for a position in 3D space
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         timestamp: Timestamp | None = None,
         frame_id: str = "",
         point: Point3 | None = None,
-    ) -> None: ...
+    ) -> "Point3InFrame": ...
     @staticmethod
     def get_schema() -> Schema:
         """Returns the Point3InFrame schema"""
@@ -698,8 +700,8 @@ class PointCloud:
     A collection of N-dimensional points, which may contain additional fields with information like normals, intensity, etc.
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         timestamp: Timestamp | None = None,
         frame_id: str = "",
@@ -707,7 +709,7 @@ class PointCloud:
         point_stride: int = 0,
         fields: list[PackedElementField] | None = None,
         data: bytes = b"",
-    ) -> None: ...
+    ) -> "PointCloud": ...
     @staticmethod
     def get_schema() -> Schema:
         """Returns the PointCloud schema"""
@@ -722,8 +724,8 @@ class PointsAnnotation:
     An array of points on a 2D image
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         timestamp: Timestamp | None = None,
         type: PointsAnnotationType = PointsAnnotationType.Unknown,
@@ -733,7 +735,7 @@ class PointsAnnotation:
         fill_color: Color | None = None,
         thickness: float = 0.0,
         metadata: list[KeyValuePair] | None = None,
-    ) -> None: ...
+    ) -> "PointsAnnotation": ...
     @staticmethod
     def get_schema() -> Schema:
         """Returns the PointsAnnotation schema"""
@@ -748,9 +750,9 @@ class Pose:
     A position and orientation for an object or reference frame in 3D space
     """
 
-    def __init__(
-        self, *, position: Vector3 | None = None, orientation: Quaternion | None = None
-    ) -> None: ...
+    def __new__(
+        cls, *, position: Vector3 | None = None, orientation: Quaternion | None = None
+    ) -> "Pose": ...
     @staticmethod
     def get_schema() -> Schema:
         """Returns the Pose schema"""
@@ -765,13 +767,13 @@ class PoseInFrame:
     A timestamped pose for an object or reference frame in 3D space
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         timestamp: Timestamp | None = None,
         frame_id: str = "",
         pose: Pose | None = None,
-    ) -> None: ...
+    ) -> "PoseInFrame": ...
     @staticmethod
     def get_schema() -> Schema:
         """Returns the PoseInFrame schema"""
@@ -786,13 +788,13 @@ class PosesInFrame:
     An array of timestamped poses for an object or reference frame in 3D space
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         timestamp: Timestamp | None = None,
         frame_id: str = "",
         poses: list[Pose] | None = None,
-    ) -> None: ...
+    ) -> "PosesInFrame": ...
     @staticmethod
     def get_schema() -> Schema:
         """Returns the PosesInFrame schema"""
@@ -807,9 +809,9 @@ class Quaternion:
     A [quaternion](https://eater.net/quaternions) representing a rotation in 3D space
     """
 
-    def __init__(
-        self, *, x: float = 0.0, y: float = 0.0, z: float = 0.0, w: float = 0.0
-    ) -> None: ...
+    def __new__(
+        cls, *, x: float = 0.0, y: float = 0.0, z: float = 0.0, w: float = 0.0
+    ) -> "Quaternion": ...
     @staticmethod
     def get_schema() -> Schema:
         """Returns the Quaternion schema"""
@@ -824,15 +826,15 @@ class RawAudio:
     A single block of an audio bitstream
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         timestamp: Timestamp | None = None,
         data: bytes = b"",
         format: str = "",
         sample_rate: int = 0,
         number_of_channels: int = 0,
-    ) -> None: ...
+    ) -> "RawAudio": ...
     @staticmethod
     def get_schema() -> Schema:
         """Returns the RawAudio schema"""
@@ -847,8 +849,8 @@ class RawImage:
     A raw image
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         timestamp: Timestamp | None = None,
         frame_id: str = "",
@@ -857,7 +859,7 @@ class RawImage:
         encoding: str = "",
         step: int = 0,
         data: bytes = b"",
-    ) -> None: ...
+    ) -> "RawImage": ...
     @staticmethod
     def get_schema() -> Schema:
         """Returns the RawImage schema"""
@@ -872,8 +874,8 @@ class SceneEntity:
     A visual element in a 3D scene. An entity may be composed of multiple primitives which all share the same frame of reference.
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         timestamp: Timestamp | None = None,
         frame_id: str = "",
@@ -889,7 +891,7 @@ class SceneEntity:
         triangles: list[TriangleListPrimitive] | None = None,
         texts: list[TextPrimitive] | None = None,
         models: list[ModelPrimitive] | None = None,
-    ) -> None: ...
+    ) -> "SceneEntity": ...
     @staticmethod
     def get_schema() -> Schema:
         """Returns the SceneEntity schema"""
@@ -904,13 +906,13 @@ class SceneEntityDeletion:
     Command to remove previously published entities
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         timestamp: Timestamp | None = None,
         type: SceneEntityDeletionType = SceneEntityDeletionType.MatchingId,
         id: str = "",
-    ) -> None: ...
+    ) -> "SceneEntityDeletion": ...
     @staticmethod
     def get_schema() -> Schema:
         """Returns the SceneEntityDeletion schema"""
@@ -925,12 +927,12 @@ class SceneUpdate:
     An update to the entities displayed in a 3D scene
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         deletions: list[SceneEntityDeletion] | None = None,
         entities: list[SceneEntity] | None = None,
-    ) -> None: ...
+    ) -> "SceneUpdate": ...
     @staticmethod
     def get_schema() -> Schema:
         """Returns the SceneUpdate schema"""
@@ -945,13 +947,13 @@ class SpherePrimitive:
     A primitive representing a sphere or ellipsoid
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         pose: Pose | None = None,
         size: Vector3 | None = None,
         color: Color | None = None,
-    ) -> None: ...
+    ) -> "SpherePrimitive": ...
     @staticmethod
     def get_schema() -> Schema:
         """Returns the SpherePrimitive schema"""
@@ -966,8 +968,8 @@ class TextAnnotation:
     A text label on a 2D image
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         timestamp: Timestamp | None = None,
         position: Point2 | None = None,
@@ -976,7 +978,7 @@ class TextAnnotation:
         text_color: Color | None = None,
         background_color: Color | None = None,
         metadata: list[KeyValuePair] | None = None,
-    ) -> None: ...
+    ) -> "TextAnnotation": ...
     @staticmethod
     def get_schema() -> Schema:
         """Returns the TextAnnotation schema"""
@@ -991,8 +993,8 @@ class TextPrimitive:
     A primitive representing a text label
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         pose: Pose | None = None,
         billboard: bool = False,
@@ -1000,7 +1002,7 @@ class TextPrimitive:
         scale_invariant: bool = False,
         color: Color | None = None,
         text: str = "",
-    ) -> None: ...
+    ) -> "TextPrimitive": ...
     @staticmethod
     def get_schema() -> Schema:
         """Returns the TextPrimitive schema"""
@@ -1015,15 +1017,15 @@ class TriangleListPrimitive:
     A primitive representing a set of triangles or a surface tiled by triangles
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         pose: Pose | None = None,
         points: list[Point3] | None = None,
         color: Color | None = None,
         colors: list[Color] | None = None,
         indices: list[int] | None = None,
-    ) -> None: ...
+    ) -> "TriangleListPrimitive": ...
     @staticmethod
     def get_schema() -> Schema:
         """Returns the TriangleListPrimitive schema"""
@@ -1038,7 +1040,7 @@ class Vector2:
     A vector in 2D space that represents a direction only
     """
 
-    def __init__(self, *, x: float = 0.0, y: float = 0.0) -> None: ...
+    def __new__(cls, *, x: float = 0.0, y: float = 0.0) -> "Vector2": ...
     @staticmethod
     def get_schema() -> Schema:
         """Returns the Vector2 schema"""
@@ -1053,7 +1055,9 @@ class Vector3:
     A vector in 3D space that represents a direction only
     """
 
-    def __init__(self, *, x: float = 0.0, y: float = 0.0, z: float = 0.0) -> None: ...
+    def __new__(
+        cls, *, x: float = 0.0, y: float = 0.0, z: float = 0.0
+    ) -> "Vector3": ...
     @staticmethod
     def get_schema() -> Schema:
         """Returns the Vector3 schema"""
@@ -1068,8 +1072,8 @@ class VoxelGrid:
     A 3D grid of data
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         timestamp: Timestamp | None = None,
         frame_id: str = "",
@@ -1082,7 +1086,7 @@ class VoxelGrid:
         cell_stride: int = 0,
         fields: list[PackedElementField] | None = None,
         data: bytes = b"",
-    ) -> None: ...
+    ) -> "VoxelGrid": ...
     @staticmethod
     def get_schema() -> Schema:
         """Returns the VoxelGrid schema"""
