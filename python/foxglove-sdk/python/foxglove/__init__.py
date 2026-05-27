@@ -330,8 +330,6 @@ def set_log_level(level: int | str = "INFO") -> None:
     Prefer setting FOXGLOVE_LOG_LEVEL environment variable over calling this function.
     If FOXGLOVE_LOG_LEVEL is set, this function does nothing.
 
-    See :func:`foxglove.enable_logging` for a way to unconditionally set the SDK log level.
-
     :param level: The logging level to set. This accepts the same values as `logging.setLevel` and
         defaults to "INFO". The SDK will not log at levels "CRITICAL" or higher.
     """
