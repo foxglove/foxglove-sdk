@@ -845,9 +845,6 @@ pub struct CompressedAudio {
     /// Timestamp of the start of the audio chunk
     pub timestamp: *const FoxgloveTimestamp,
 
-    /// Audio format. Supported values are `opus` for raw Opus packets and `mp4a.40.2` for AAC-LC ADTS frames.
-    pub format: FoxgloveString,
-
     /// Compressed audio data. Packet duration is determined by the codec during encoding.
     ///
     /// - `opus`
@@ -859,6 +856,9 @@ pub struct CompressedAudio {
     ///   - The ADTS header supplies stream parameters such as sample rate and channel configuration.
     pub data: *const c_uchar,
     pub data_len: usize,
+
+    /// Audio format. Supported values are `opus` for raw Opus packets and `mp4a.40.2` for AAC-LC ADTS frames.
+    pub format: FoxgloveString,
 }
 
 #[cfg(not(target_family = "wasm"))]
@@ -902,8 +902,8 @@ impl BorrowToNative for CompressedAudio {
 
         Ok(ManuallyDrop::new(foxglove::messages::CompressedAudio {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
-            format: ManuallyDrop::into_inner(format),
             data: ManuallyDrop::into_inner(unsafe { bytes_from_raw(self.data, self.data_len) }),
+            format: ManuallyDrop::into_inner(format),
         }))
     }
 }

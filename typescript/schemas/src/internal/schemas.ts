@@ -91,12 +91,6 @@ const CompressedAudio: FoxgloveMessageSchema = {
       description: "Timestamp of the start of the audio chunk",
     },
     {
-      name: "format",
-      type: { type: "primitive", name: "string" },
-      description:
-        "Audio format. Supported values are `opus` for raw Opus packets and `mp4a.40.2` for AAC-LC ADTS frames.",
-    },
-    {
       name: "data",
       type: { type: "primitive", name: "bytes" },
       description: `Compressed audio data. Packet duration is determined by the codec during encoding.
@@ -108,6 +102,12 @@ const CompressedAudio: FoxgloveMessageSchema = {
 - \`mp4a.40.2\`
   - Each message must contain a complete MPEG-4 AAC-LC ADTS frame, including the ADTS header, as described in section 1.A.3.2 of ISO/IEC 14496-3:2019.
   - The ADTS header supplies stream parameters such as sample rate and channel configuration.`,
+    },
+    {
+      name: "format",
+      type: { type: "primitive", name: "string" },
+      description:
+        "Audio format. Supported values are `opus` for raw Opus packets and `mp4a.40.2` for AAC-LC ADTS frames.",
     },
   ],
 };

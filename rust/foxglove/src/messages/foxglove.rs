@@ -161,9 +161,6 @@ pub struct CompressedAudio {
     /// Timestamp of the start of the audio chunk
     #[prost(message, optional, tag = "1")]
     pub timestamp: ::core::option::Option<crate::messages::Timestamp>,
-    /// Audio format. Supported values are `opus` for raw Opus packets and `mp4a.40.2` for AAC-LC ADTS frames.
-    #[prost(string, tag = "2")]
-    pub format: ::prost::alloc::string::String,
     /// Compressed audio data. Packet duration is determined by the codec during encoding.
     ///
     /// - `opus`
@@ -173,9 +170,12 @@ pub struct CompressedAudio {
     /// - `mp4a.40.2`
     ///    - Each message must contain a complete MPEG-4 AAC-LC ADTS frame, including the ADTS header, as described in section 1.A.3.2 of ISO/IEC 14496-3:2019.
     ///    - The ADTS header supplies stream parameters such as sample rate and channel configuration.
-    #[prost(bytes = "bytes", tag = "3")]
+    #[prost(bytes = "bytes", tag = "2")]
     #[cfg_attr(feature = "serde", serde(with = "crate::messages::serde_bytes"))]
     pub data: ::prost::bytes::Bytes,
+    /// Audio format. Supported values are `opus` for raw Opus packets and `mp4a.40.2` for AAC-LC ADTS frames.
+    #[prost(string, tag = "3")]
+    pub format: ::prost::alloc::string::String,
 }
 /// A compressed image
 ///

@@ -606,19 +606,6 @@ Timestamp of the start of the audio chunk
 </td>
 </tr>
 <tr>
-<td><code>format</code></td>
-<td>
-
-string
-
-</td>
-<td>
-
-Audio format. Supported values are `opus` for raw Opus packets and `mp4a.40.2` for AAC-LC ADTS frames.
-
-</td>
-</tr>
-<tr>
 <td><code>data</code></td>
 <td>
 
@@ -636,6 +623,19 @@ Compressed audio data. Packet duration is determined by the codec during encodin
 - `mp4a.40.2`
   - Each message must contain a complete MPEG-4 AAC-LC ADTS frame, including the ADTS header, as described in section 1.A.3.2 of ISO/IEC 14496-3:2019.
   - The ADTS header supplies stream parameters such as sample rate and channel configuration.
+
+</td>
+</tr>
+<tr>
+<td><code>format</code></td>
+<td>
+
+string
+
+</td>
+<td>
+
+Audio format. Supported values are `opus` for raw Opus packets and `mp4a.40.2` for AAC-LC ADTS frames.
 
 </td>
 </tr>

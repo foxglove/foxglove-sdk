@@ -9,9 +9,6 @@ table CompressedAudio {
   /// Timestamp of the start of the audio chunk
   timestamp:Time (id: 0);
 
-  /// Audio format. Supported values are `opus` for raw Opus packets and `mp4a.40.2` for AAC-LC ADTS frames.
-  format:string (id: 1);
-
   /// Compressed audio data. Packet duration is determined by the codec during encoding.
   /// 
   /// - `opus`
@@ -21,7 +18,10 @@ table CompressedAudio {
   /// - `mp4a.40.2`
   ///   - Each message must contain a complete MPEG-4 AAC-LC ADTS frame, including the ADTS header, as described in section 1.A.3.2 of ISO/IEC 14496-3:2019.
   ///   - The ADTS header supplies stream parameters such as sample rate and channel configuration.
-  data:[uint8] (id: 2);
+  data:[uint8] (id: 1);
+
+  /// Audio format. Supported values are `opus` for raw Opus packets and `mp4a.40.2` for AAC-LC ADTS frames.
+  format:string (id: 2);
 }
 
 root_type CompressedAudio;

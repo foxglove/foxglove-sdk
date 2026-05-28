@@ -1806,9 +1806,9 @@ void compressedAudioToC(
 ) {
   dest.timestamp =
     src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
-  dest.format = {src.format.data(), src.format.size()};
   dest.data = reinterpret_cast<const unsigned char*>(src.data.data());
   dest.data_len = src.data.size();
+  dest.format = {src.format.data(), src.format.size()};
 }
 
 void compressedImageToC(

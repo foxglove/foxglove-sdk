@@ -8,9 +8,6 @@ export type CompressedAudio = {
   /** Timestamp of the start of the audio chunk */
   timestamp: Time;
 
-  /** Audio format. Supported values are `opus` for raw Opus packets and `mp4a.40.2` for AAC-LC ADTS frames. */
-  format: string;
-
   /**
    * Compressed audio data. Packet duration is determined by the codec during encoding.
    * 
@@ -23,4 +20,7 @@ export type CompressedAudio = {
    *   - The ADTS header supplies stream parameters such as sample rate and channel configuration.
    */
   data: Uint8Array;
+
+  /** Audio format. Supported values are `opus` for raw Opus packets and `mp4a.40.2` for AAC-LC ADTS frames. */
+  format: string;
 };

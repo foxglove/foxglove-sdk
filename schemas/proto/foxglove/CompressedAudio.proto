@@ -11,9 +11,6 @@ message CompressedAudio {
   // Timestamp of the start of the audio chunk
   google.protobuf.Timestamp timestamp = 1;
 
-  // Audio format. Supported values are `opus` for raw Opus packets and `mp4a.40.2` for AAC-LC ADTS frames.
-  string format = 2;
-
   // Compressed audio data. Packet duration is determined by the codec during encoding.
   // 
   // - `opus`
@@ -23,5 +20,8 @@ message CompressedAudio {
   // - `mp4a.40.2`
   //   - Each message must contain a complete MPEG-4 AAC-LC ADTS frame, including the ADTS header, as described in section 1.A.3.2 of ISO/IEC 14496-3:2019.
   //   - The ADTS header supplies stream parameters such as sample rate and channel configuration.
-  bytes data = 3;
+  bytes data = 2;
+
+  // Audio format. Supported values are `opus` for raw Opus packets and `mp4a.40.2` for AAC-LC ADTS frames.
+  string format = 3;
 }

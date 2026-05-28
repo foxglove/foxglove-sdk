@@ -848,10 +848,6 @@ typedef struct foxglove_compressed_audio {
    */
   const struct foxglove_timestamp *timestamp;
   /**
-   * Audio format. Supported values are `opus` for raw Opus packets and `mp4a.40.2` for AAC-LC ADTS frames.
-   */
-  struct foxglove_string format;
-  /**
    * Compressed audio data. Packet duration is determined by the codec during encoding.
    *
    * - `opus`
@@ -864,6 +860,10 @@ typedef struct foxglove_compressed_audio {
    */
   const unsigned char *data;
   size_t data_len;
+  /**
+   * Audio format. Supported values are `opus` for raw Opus packets and `mp4a.40.2` for AAC-LC ADTS frames.
+   */
+  struct foxglove_string format;
 } foxglove_compressed_audio;
 
 /**

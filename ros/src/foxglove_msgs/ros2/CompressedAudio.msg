@@ -6,9 +6,6 @@
 # Timestamp of the start of the audio chunk
 builtin_interfaces/Time timestamp
 
-# Audio format. Supported values are `opus` for raw Opus packets and `mp4a.40.2` for AAC-LC ADTS frames.
-string format
-
 # Compressed audio data. Packet duration is determined by the codec during encoding.
 # 
 # - `opus`
@@ -19,3 +16,6 @@ string format
 #   - Each message must contain a complete MPEG-4 AAC-LC ADTS frame, including the ADTS header, as described in section 1.A.3.2 of ISO/IEC 14496-3:2019.
 #   - The ADTS header supplies stream parameters such as sample rate and channel configuration.
 uint8[] data
+
+# Audio format. Supported values are `opus` for raw Opus packets and `mp4a.40.2` for AAC-LC ADTS frames.
+string format

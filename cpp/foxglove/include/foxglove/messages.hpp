@@ -404,10 +404,6 @@ struct CompressedAudio {
   /// @brief Timestamp of the start of the audio chunk
   std::optional<Timestamp> timestamp;
 
-  /// @brief Audio format. Supported values are `opus` for raw Opus packets and `mp4a.40.2` for
-  /// AAC-LC ADTS frames.
-  std::string format;
-
   /// @brief Compressed audio data. Packet duration is determined by the codec during encoding.
   ///
   /// - `opus`
@@ -423,6 +419,10 @@ struct CompressedAudio {
   ///   as described in section 1.A.3.2 of ISO/IEC 14496-3:2019.
   ///   - The ADTS header supplies stream parameters such as sample rate and channel configuration.
   std::vector<std::byte> data;
+
+  /// @brief Audio format. Supported values are `opus` for raw Opus packets and `mp4a.40.2` for
+  /// AAC-LC ADTS frames.
+  std::string format;
 
   /// @brief Encoded the CompressedAudio as protobuf to the provided buffer.
   ///

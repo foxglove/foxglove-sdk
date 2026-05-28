@@ -562,7 +562,6 @@ impl From<Color> for foxglove::messages::Color {
 /// A single chunk of a compressed audio bitstream
 ///
 /// :param timestamp: Timestamp of the start of the audio chunk
-/// :param format: Audio format. Supported values are `opus` for raw Opus packets and `mp4a.40.2` for AAC-LC ADTS frames.
 /// :param data: Compressed audio data. Packet duration is determined by the codec during encoding.
 ///     
 ///     - `opus`
@@ -572,6 +571,7 @@ impl From<Color> for foxglove::messages::Color {
 ///     - `mp4a.40.2`
 ///       - Each message must contain a complete MPEG-4 AAC-LC ADTS frame, including the ADTS header, as described in section 1.A.3.2 of ISO/IEC 14496-3:2019.
 ///       - The ADTS header supplies stream parameters such as sample rate and channel configuration.
+/// :param format: Audio format. Supported values are `opus` for raw Opus packets and `mp4a.40.2` for AAC-LC ADTS frames.
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/compressed-audio
 #[pyclass(module = "foxglove.messages")]
@@ -580,20 +580,20 @@ pub(crate) struct CompressedAudio(pub(crate) foxglove::messages::CompressedAudio
 #[pymethods]
 impl CompressedAudio {
     #[new]
-    #[pyo3(signature = (*, timestamp=None, format="", data=None) )]
-    fn new(timestamp: Option<Timestamp>, format: &str, data: Option<Bound<'_, PyBytes>>) -> Self {
+    #[pyo3(signature = (*, timestamp=None, data=None, format="") )]
+    fn new(timestamp: Option<Timestamp>, data: Option<Bound<'_, PyBytes>>, format: &str) -> Self {
         Self(foxglove::messages::CompressedAudio {
             timestamp: timestamp.map(Into::into),
-            format: format.to_string(),
             data: data
                 .map(|x| Bytes::copy_from_slice(x.as_bytes()))
                 .unwrap_or_default(),
+            format: format.to_string(),
         })
     }
     fn __repr__(&self) -> String {
         format!(
-            "CompressedAudio(timestamp={:?}, format={:?}, data={:?})",
-            self.0.timestamp, self.0.format, self.0.data,
+            "CompressedAudio(timestamp={:?}, data={:?}, format={:?})",
+            self.0.timestamp, self.0.data, self.0.format,
         )
     }
     /// Returns the CompressedAudio schema.

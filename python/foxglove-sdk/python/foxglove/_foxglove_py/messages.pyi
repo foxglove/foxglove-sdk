@@ -178,7 +178,7 @@ class CompressedAudio:
     """
 
     def __init__(
-        self, *, timestamp: Timestamp | None = None, format: str = "", data: bytes = b""
+        self, *, timestamp: Timestamp | None = None, data: bytes = b"", format: str = ""
     ) -> None: ...
     @staticmethod
     def get_schema() -> Schema:
