@@ -25,7 +25,7 @@ def asset_handler(uri: str) -> Optional[bytes]:
 
 
 def main() -> None:
-    foxglove.set_log_level(logging.DEBUG)
+    foxglove.set_log_level("INFO")
 
     server = foxglove.start_server(
         asset_handler=asset_handler,

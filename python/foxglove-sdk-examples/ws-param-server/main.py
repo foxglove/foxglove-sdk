@@ -63,7 +63,7 @@ class ParameterStore(foxglove.websocket.ServerListener):
 
 
 def main() -> None:
-    foxglove.set_log_level(logging.DEBUG)
+    foxglove.set_log_level("INFO")
 
     initial_values: list[Parameter] = [
         Parameter("p0"),

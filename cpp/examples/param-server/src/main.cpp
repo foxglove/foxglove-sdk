@@ -93,7 +93,7 @@ private:
 
 // NOLINTNEXTLINE(bugprone-exception-escape)
 int main() {
-  foxglove::setLogLevel(foxglove::LogLevel::Debug);
+  foxglove::setLogLevel(foxglove::LogLevel::Info);
 
   std::unordered_map<std::string, foxglove::Parameter> param_store;
   param_store.emplace(

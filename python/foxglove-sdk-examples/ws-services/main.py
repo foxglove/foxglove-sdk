@@ -53,7 +53,7 @@ def main():
     This example demonstrates how to use the Foxglove WebSocket API to implement services which can
     be called from the Foxglove app.
     """
-    foxglove.set_log_level("DEBUG")
+    foxglove.set_log_level("INFO")
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--port", type=int, default=8765)
