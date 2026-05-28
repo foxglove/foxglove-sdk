@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import atexit
 import logging
-import os
 import sys
 from collections.abc import Callable
 from typing import TYPE_CHECKING, TypeAlias, Union
